@@ -13,6 +13,7 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
     { icon: <Terminal size={20} />, label: "Investigación", href: "/research" },
     { icon: <LayoutGrid size={20} />, label: "Proyectos", href: "/projects" },
     { icon: <Database size={20} />, label: "Base Oficial", href: "/base" },
+    { icon: <Settings size={20} />, label: "Configuración", href: "/configuracion" },
   ];
 
   return (
