@@ -31,6 +31,7 @@ interface AgentApi {
   path: string;
   authType: string;
   active: boolean;
+  docs: string;
   config: string;
   createdAt: string;
   updatedAt: string;
@@ -125,6 +126,9 @@ export default function ConfiguracionPage() {
   const [discovered, setDiscovered] = useState<DiscoveredModel[]>([]);
   const [discovering, setDiscovering] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [testingApiId, setTestingApiId] = useState<string | null>(null);
+  const [apiTestResult, setApiTestResult] = useState<{ id: string; result: any } | null>(null);
+  const [expandedApiId, setExpandedApiId] = useState<string | null>(null);
 
   const toast = (type: Toast["type"], message: string) => {
     const id = Math.random().toString(36).slice(2);
@@ -222,6 +226,24 @@ export default function ConfiguracionPage() {
       toast("success", active ? "API activada" : "API inhabilitada");
     } catch (err: any) {
       toast("error", err.message);
+    }
+  };
+
+  const runApiTest = async (api: AgentApi) => {
+    setTestingApiId(api.id);
+    setApiTestResult(null);
+    try {
+      const res = await fetch(`/api/config/apis/${api.id}/test`, { method: "POST" });
+      const data = await res.json();
+      setApiTestResult({ id: api.id, result: data });
+      if (data.ok) toast("success", `Test OK ${data.latencyMs}ms`);
+      else if (data.skipped) toast("info", data.reason);
+      else toast("error", data.error || `HTTP ${data.status}`);
+    } catch (err: any) {
+      toast("error", err.message);
+      setApiTestResult({ id: api.id, result: { ok: false, error: err.message } });
+    } finally {
+      setTestingApiId(null);
     }
   };
 
@@ -474,7 +496,7 @@ export default function ConfiguracionPage() {
         <div className="space-y-8">
           <div className="glass-panel p-6 space-y-2">
             <h3 className="text-xs font-bold uppercase flex items-center gap-2"><Globe className="w-3 h-3" /> Catálogo de APIs del agente</h3>
-            <p className="text-[10px] text-[#666] uppercase tracking-widest">Activa o inhabilita las APIs que el bot de Telegram podrá consumir.</p>
+            <p className="text-[10px] text-[#666] uppercase tracking-widest">Documentación, activación y test por módulo/submódulo.</p>
           </div>
           {Object.entries(
             apis.reduce((acc, api) => {
@@ -489,35 +511,98 @@ export default function ConfiguracionPage() {
               {Object.entries(submodules).map(([submodule, items]) => (
                 <div key={submodule} className="space-y-2">
                   <h5 className="text-[9px] font-bold uppercase tracking-widest text-[#666]">{submodule.replace(/_/g, " ")}</h5>
-                  {items.map((api) => (
-                    <div key={api.id} className="glass-panel p-4 flex items-center justify-between hover:bg-white/[0.02]">
-                      <div className="flex items-start gap-4">
-                        <div className={`h-2 w-2 rounded-full mt-1.5 ${api.active ? "bg-neonCyan shadow-[0_0_8px_#00F0FF]" : "bg-white/10"}`} />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold uppercase">{api.name}</span>
-                            <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{api.method}</span>
-                            <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{api.category}</span>
-                            {api.authType !== "none" && <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{api.authType}</span>}
+                  {items.map((api) => {
+                    const docs = (() => {
+                      try {
+                        return JSON.parse(api.docs || "{}") as { params?: any[]; request?: any; response?: any };
+                      } catch {
+                        return {};
+                      }
+                    })();
+                    const isExpanded = expandedApiId === api.id;
+                    return (
+                      <div key={api.id} className="glass-panel p-4 space-y-3 hover:bg-white/[0.02]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-start gap-4">
+                            <div className={`h-2 w-2 rounded-full mt-1.5 ${api.active ? "bg-neonCyan shadow-[0_0_8px_#00F0FF]" : "bg-white/10"}`} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold uppercase">{api.name}</span>
+                                <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{api.method}</span>
+                                <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{api.category}</span>
+                                {api.authType !== "none" && <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{api.authType}</span>}
+                              </div>
+                              <p className="text-[10px] text-[#666] mt-0.5">{api.description}</p>
+                              <code className="text-[9px] text-[#444] font-geist-mono">{api.path}</code>
+                            </div>
                           </div>
-                          <p className="text-[10px] text-[#666] mt-0.5">{api.description}</p>
-                          <code className="text-[9px] text-[#444] font-geist-mono">{api.path}</code>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setExpandedApiId(isExpanded ? null : api.id)}
+                              className="px-3 py-1.5 border border-white/10 text-[9px] font-black uppercase tracking-widest hover:border-neonCyan"
+                            >
+                              {isExpanded ? "Ocultar" : "Docs"}
+                            </button>
+                            <button
+                              onClick={() => runApiTest(api)}
+                              disabled={testingApiId === api.id || !api.active}
+                              className="flex items-center gap-1 px-3 py-1.5 border border-white/10 text-[9px] font-black uppercase tracking-widest hover:border-neonCyan disabled:opacity-30"
+                            >
+                              {testingApiId === api.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />} Test
+                            </button>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <span className="text-[9px] uppercase tracking-widest text-[#666]">{api.active ? "Activo" : "Inactivo"}</span>
+                              <input type="checkbox" checked={api.active} onChange={(e) => toggleApi(api.id, e.target.checked)} className="sr-only peer" />
+                              <div className="w-8 h-4 bg-white/10 rounded-full peer-checked:bg-neonCyan relative transition-colors">
+                                <div className="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4" />
+                              </div>
+                            </label>
+                          </div>
                         </div>
+
+                        {isExpanded && (
+                          <div className="space-y-3 border-t border-white/5 pt-3">
+                            {docs.params && docs.params.length > 0 && (
+                              <div>
+                                <div className="text-[9px] uppercase tracking-widest text-[#666] mb-1">Parámetros</div>
+                                <div className="space-y-1">
+                                  {docs.params.map((p: any, i: number) => (
+                                    <div key={i} className="text-[10px] text-[#888]">
+                                      <span className="text-neonCyan font-bold">{p.name}</span>
+                                      <span className="text-[#444]"> ({p.type}{p.in ? ` · ${p.in}` : ""}{p.required ? "" : " · opcional"})</span>
+                                      {p.desc && <span className="text-[#666]"> — {p.desc}</span>}
+                                      {p.default && <span className="text-[#444]"> [default: {p.default}]</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {docs.request !== undefined && docs.request !== null && (
+                              <div>
+                                <div className="text-[9px] uppercase tracking-widest text-[#666] mb-1">Ejemplo request</div>
+                                <pre className="text-[10px] text-[#888] bg-black/30 p-2 rounded overflow-auto max-h-32 font-geist-mono">{typeof docs.request === "string" ? docs.request : JSON.stringify(docs.request, null, 2)}</pre>
+                              </div>
+                            )}
+                            {docs.response !== undefined && docs.response !== null && (
+                              <div>
+                                <div className="text-[9px] uppercase tracking-widest text-[#666] mb-1">Ejemplo response</div>
+                                <pre className="text-[10px] text-[#888] bg-black/30 p-2 rounded overflow-auto max-h-32 font-geist-mono">{JSON.stringify(docs.response, null, 2)}</pre>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {apiTestResult?.id === api.id && (
+                          <div className={`border-t border-white/5 pt-3 ${apiTestResult.result.ok ? "border-l-2 border-l-green-500 pl-3" : apiTestResult.result.skipped ? "" : "border-l-2 border-l-red-500 pl-3"}`}>
+                            <div className="text-[9px] uppercase tracking-widest text-[#666] mb-1">
+                              {apiTestResult.result.skipped ? "Test omitido" : apiTestResult.result.ok ? `Test OK ${apiTestResult.result.latencyMs}ms` : "Test fallido"}
+                            </div>
+                            <pre className="text-[10px] text-[#888] bg-black/30 p-2 rounded overflow-auto max-h-40 font-geist-mono">{JSON.stringify(apiTestResult.result, null, 2)}</pre>
+                          </div>
+                        )}
                       </div>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <span className="text-[9px] uppercase tracking-widest text-[#666]">{api.active ? "Activo" : "Inactivo"}</span>
-                        <input
-                          type="checkbox"
-                          checked={api.active}
-                          onChange={(e) => toggleApi(api.id, e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-8 h-4 bg-white/10 rounded-full peer-checked:bg-neonCyan relative transition-colors">
-                          <div className="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4" />
-                        </div>
-                      </label>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
             </div>

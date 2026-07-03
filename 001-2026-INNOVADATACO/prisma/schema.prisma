@@ -96,6 +96,7 @@ model AgentApi {
   path        String
   authType    String   @default("none") // none | apiKey | token
   active      Boolean  @default(true)
+  docs        String   @default("{}") // JSON: params, request, response
   config      String   @default("{}") // JSON: headers, timeout, baseUrl
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

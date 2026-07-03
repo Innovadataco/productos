@@ -3,17 +3,23 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const APIS = [
-  // Configuración / Modelos IA
   {
     key: "list_models",
     name: "Listar modelos IA",
-    description: "Devuelve todos los modelos de IA configurados.",
+    description: "Devuelve todos los modelos de IA configurados en la plataforma.",
     module: "configuracion",
     submodule: "modelos_ia",
     category: "internal",
     method: "GET",
     path: "/api/config/models",
     authType: "none",
+    docs: JSON.stringify({
+      params: [],
+      request: null,
+      response: [
+        { id: "cmr123", name: "Qwen Local", provider: "ollama", modelPath: "qwen2.5:32b", active: true },
+      ],
+    }),
   },
   {
     key: "create_model",
@@ -25,6 +31,26 @@ const APIS = [
     method: "POST",
     path: "/api/config/models",
     authType: "none",
+    docs: JSON.stringify({
+      params: [
+        { name: "name", type: "string", required: true, desc: "Nombre visible del modelo" },
+        { name: "provider", type: "ollama | openai | mock", required: true },
+        { name: "modelPath", type: "string", required: true, desc: "ID del modelo en el proveedor" },
+        { name: "baseUrl", type: "string", required: false, desc: "URL del servicio (Ollama)" },
+        { name: "apiKey", type: "string", required: false, desc: "Requerido para OpenAI" },
+        { name: "scope", type: "local | cloud", required: false, default: "local" },
+        { name: "config", type: "JSON", required: false, desc: "temperature, top_p, max_tokens, systemPrompt" },
+      ],
+      request: {
+        name: "Qwen Local",
+        provider: "ollama",
+        modelPath: "qwen2.5:32b",
+        baseUrl: "http://localhost:11434",
+        scope: "local",
+        config: JSON.stringify({ temperature: 0.2, top_p: 0.9, max_tokens: 1024, systemPrompt: "Eres un experto legal colombiano." }),
+      },
+      response: { id: "cmr123", name: "Qwen Local", provider: "ollama", active: false },
+    }),
   },
   {
     key: "update_model",
@@ -36,6 +62,11 @@ const APIS = [
     method: "PUT",
     path: "/api/config/models/{id}",
     authType: "none",
+    docs: JSON.stringify({
+      params: [{ name: "id", type: "string", in: "path", required: true }],
+      request: { active: true },
+      response: { id: "cmr123", name: "Qwen Local", active: true },
+    }),
   },
   {
     key: "delete_model",
@@ -47,17 +78,27 @@ const APIS = [
     method: "DELETE",
     path: "/api/config/models/{id}",
     authType: "none",
+    docs: JSON.stringify({
+      params: [{ name: "id", type: "string", in: "path", required: true }],
+      request: null,
+      response: { id: "cmr123", deleted: true },
+    }),
   },
   {
     key: "test_model",
     name: "Testear modelo IA",
-    description: "Envía un prompt de prueba a un modelo IA.",
+    description: "Envía un prompt de prueba a un modelo IA y devuelve la respuesta cruda.",
     module: "configuracion",
     submodule: "modelos_ia",
     category: "internal",
     method: "POST",
     path: "/api/config/models/test",
     authType: "none",
+    docs: JSON.stringify({
+      params: [{ name: "id", type: "string", in: "body", required: true, desc: "ID del modelo a probar" }],
+      request: { id: "cmr123" },
+      response: { ok: true, text: "...", rawText: "...", latencyMs: 200, usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 } },
+    }),
   },
   {
     key: "discover_models",
@@ -69,8 +110,12 @@ const APIS = [
     method: "GET",
     path: "/api/config/models/discover?baseUrl={baseUrl}",
     authType: "none",
+    docs: JSON.stringify({
+      params: [{ name: "baseUrl", type: "string", in: "query", required: false, default: "http://localhost:11434" }],
+      request: null,
+      response: { models: [{ name: "qwen2.5:32b", model: "qwen2.5:32b", parameter_size: "32B" }] },
+    }),
   },
-  // Configuración / APIs
   {
     key: "list_apis",
     name: "Listar APIs",
@@ -81,31 +126,47 @@ const APIS = [
     method: "GET",
     path: "/api/config/apis",
     authType: "none",
+    docs: JSON.stringify({
+      params: [],
+      request: null,
+      response: [{ id: "cmrApi", key: "list_apis", name: "Listar APIs", module: "configuracion", submodule: "apis", active: true }],
+    }),
   },
   {
     key: "toggle_api",
     name: "Activar/inhabilitar API",
-    description: "Cambia el estado activo/inactivo de una API.",
+    description: "Cambia el estado activo/inactivo de una API del agente.",
     module: "configuracion",
     submodule: "apis",
     category: "internal",
     method: "PATCH",
     path: "/api/config/apis/{id}/toggle",
     authType: "none",
+    docs: JSON.stringify({
+      params: [
+        { name: "id", type: "string", in: "path", required: true },
+        { name: "active", type: "boolean", in: "body", required: true },
+      ],
+      request: { active: false },
+      response: { id: "cmrApi", key: "toggle_api", active: false },
+    }),
   },
-  // Configuración / Auditoría
   {
     key: "list_audit",
     name: "Listar auditoría",
-    description: "Devuelve los eventos de auditoría recientes.",
+    description: "Devuelve los eventos de auditoría recientes de la plataforma.",
     module: "configuracion",
     submodule: "auditoria",
     category: "internal",
     method: "GET",
     path: "/api/config/audit?limit={limit}",
     authType: "none",
+    docs: JSON.stringify({
+      params: [{ name: "limit", type: "number", in: "query", required: false, default: 100 }],
+      request: null,
+      response: [{ id: "cmrLog", action: "upload_pdf", status: "success", message: "PDF procesado", createdAt: "2026-07-03T00:00:00Z" }],
+    }),
   },
-  // Base Oficial / Carga Documental
   {
     key: "upload_document",
     name: "Subir documento oficial",
@@ -116,20 +177,36 @@ const APIS = [
     method: "POST",
     path: "/api/documents",
     authType: "none",
+    docs: JSON.stringify({
+      params: [
+        { name: "file", type: "file", in: "formData", required: true, desc: "PDF" },
+        { name: "tipo", type: "string", in: "formData", required: false, default: "otro" },
+        { name: "sector", type: "string", in: "formData", required: false },
+        { name: "entidad", type: "string", in: "formData", required: false },
+        { name: "fechaExpedicion", type: "YYYY-MM-DD", in: "formData", required: false },
+        { name: "numero", type: "string", in: "formData", required: false },
+        { name: "padreId", type: "string", in: "formData", required: false },
+      ],
+      request: "multipart/form-data",
+      response: { id: "cmrDoc", titulo: "Resolución 123", status: "completed" },
+    }),
   },
-  // Base Oficial / Búsqueda RAG
   {
     key: "search_documents",
     name: "Buscar documentos",
-    description: "Realiza búsqueda semántica por texto en la base oficial.",
+    description: "Realiza búsqueda por términos en la base oficial.",
     module: "base_oficial",
     submodule: "busqueda_rag",
     category: "internal",
     method: "POST",
     path: "/api/documents/search",
     authType: "none",
+    docs: JSON.stringify({
+      params: [{ name: "query", type: "string", in: "body", required: true }],
+      request: { query: "transporte público" },
+      response: [{ id: "cmrDoc", titulo: "Resolución 123", score: 3, resumen: "..." }],
+    }),
   },
-  // Base Oficial / Repositorio
   {
     key: "list_documents",
     name: "Listar documentos",
@@ -140,20 +217,31 @@ const APIS = [
     method: "GET",
     path: "/api/documents",
     authType: "none",
+    docs: JSON.stringify({
+      params: [],
+      request: null,
+      response: [{ id: "cmrDoc", titulo: "Resolución 123", tipo: "resolucion", entidad: "MinTransporte" }],
+    }),
   },
-  // Investigación IA / Odin Analysis
   {
     key: "analyze_document",
     name: "Analizar documento",
-    description: "Ejecuta análisis inteligente sobre un documento de la base oficial.",
+    description: "Ejecuta análisis estratégico Odin sobre un documento o texto.",
     module: "investigacion",
     submodule: "odin_analysis",
     category: "internal",
     method: "POST",
     path: "/api/research/analyze",
     authType: "none",
+    docs: JSON.stringify({
+      params: [
+        { name: "documentId", type: "string", in: "body", required: false, desc: "ID del documento en base oficial" },
+        { name: "text", type: "string", in: "body", required: false, desc: "Texto libre a analizar (alternativa a documentId)" },
+      ],
+      request: { text: "Texto del documento a analizar..." },
+      response: { ok: true, analysis: { summary: "...", milestones: [], risks: [], recommendations: [] }, rawText: "...", latencyMs: 200, usage: {} },
+    }),
   },
-  // Infraestructura / Modelos locales
   {
     key: "ollama_local",
     name: "Ollama local",
@@ -161,12 +249,16 @@ const APIS = [
     module: "infraestructura",
     submodule: "modelos_locales",
     category: "external",
-    method: "POST",
-    path: "{baseUrl}/api/generate",
+    method: "GET",
+    path: "{baseUrl}/api/tags",
     authType: "none",
     config: JSON.stringify({ baseUrl: "http://localhost:11434" }),
+    docs: JSON.stringify({
+      params: [{ name: "baseUrl", type: "string", in: "config", required: false, default: "http://localhost:11434" }],
+      request: null,
+      response: { models: [{ name: "qwen2.5:32b" }] },
+    }),
   },
-  // Infraestructura / Modelos cloud
   {
     key: "openai_api",
     name: "OpenAI API",
@@ -177,17 +269,21 @@ const APIS = [
     method: "POST",
     path: "https://api.openai.com/v1/chat/completions",
     authType: "apiKey",
+    docs: JSON.stringify({
+      params: [
+        { name: "Authorization", type: "Bearer token", in: "header", required: true, desc: "OPENAI_API_KEY" },
+        { name: "model", type: "string", in: "body", required: true },
+        { name: "messages", type: "array", in: "body", required: true },
+      ],
+      request: { model: "gpt-4o-mini", messages: [{ role: "user", content: "Hola" }] },
+      response: { choices: [{ message: { content: "..." } }] },
+    }),
   },
 ];
 
 async function main() {
-  for (const api of APIS) {
-    await prisma.agentApi.upsert({
-      where: { key: api.key },
-      update: {},
-      create: api,
-    });
-  }
+  await prisma.agentApi.deleteMany();
+  await prisma.agentApi.createMany({ data: APIS });
   console.log(`Sembradas ${APIS.length} APIs.`);
 }
 
