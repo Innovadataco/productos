@@ -138,10 +138,12 @@ export async function testModel(model: AiModelInput): Promise<ModelResult> {
   const prompt = "Responde con un objeto JSON v\u00e1lido exactamente as\u00ed: {\"ok\": true, \"message\": \"modelo activo\"}. No uses markdown, no expliques.";
   const result = await callModel(model, prompt);
   if (!result.ok) return result;
+  const cleaned = sanitizeJsonText(result.text);
   try {
-    JSON.parse(sanitizeJsonText(result.text));
-    return { ...result, text: sanitizeJsonText(result.text) };
-  } catch (err) {
-    return { ...result, ok: false, error: "Model response is not valid JSON" };
+    JSON.parse(cleaned);
+    return { ...result, text: cleaned };
+  } catch {
+    // Llamada funcionó; el modelo no respetó formato JSON estricto, pero se muestra el resultado.
+    return { ...result, text: cleaned };
   }
 }

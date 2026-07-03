@@ -20,10 +20,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
       data: {
         name: body.name ?? existing.name,
         provider: body.provider ?? existing.provider,
+        scope: body.scope !== undefined ? (body.scope || "local") : existing.scope,
         baseUrl: body.baseUrl !== undefined ? (body.baseUrl || null) : existing.baseUrl,
         apiKey: body.apiKey !== undefined ? (body.apiKey || null) : existing.apiKey,
         modelPath: body.modelPath ?? existing.modelPath,
-        country: body.country !== undefined ? (body.country || null) : existing.country,
         active: body.active !== undefined ? !!body.active : existing.active,
         config: body.config ? (typeof body.config === "string" ? body.config : JSON.stringify(body.config)) : existing.config,
       },

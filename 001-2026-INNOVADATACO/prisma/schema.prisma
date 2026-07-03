@@ -41,10 +41,10 @@ model AiModel {
   id          String   @id @default(cuid())
   name        String
   provider    String   // ollama | openai | mock
+  scope       String   @default("local") // local | cloud
   baseUrl     String?
   apiKey      String?
   modelPath   String
-  country     String?
   active      Boolean  @default(false)
   config      String   @default("{}") // JSON: temperature, top_p, max_tokens, systemPrompt
   createdAt   DateTime @default(now())
@@ -53,6 +53,7 @@ model AiModel {
 
   @@index([provider])
   @@index([active])
+  @@index([scope])
 }
 
 model AuditLog {

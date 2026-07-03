@@ -10,10 +10,10 @@ interface AiModel {
   id: string;
   name: string;
   provider: "ollama" | "openai" | "mock";
+  scope: "local" | "cloud";
   baseUrl: string | null;
   apiKey: string | null;
   modelPath: string;
-  country: string | null;
   active: boolean;
   config: string;
   createdAt: string;
@@ -36,21 +36,63 @@ interface Toast {
   message: string;
 }
 
+interface TestResult {
+  modelId: string;
+  requestedAt: string;
+  completedAt: string;
+  ok: boolean;
+  latencyMs: number;
+  text: string;
+  error?: string;
+}
+
+interface DiscoveredModel {
+  name: string;
+  model: string;
+  parameter_size?: string;
+}
+
 const PROVIDERS = [
-  { value: "ollama", label: "Ollama (local)" },
+  { value: "ollama", label: "Ollama" },
   { value: "openai", label: "OpenAI" },
   { value: "mock", label: "Mock (pruebas)" },
 ];
 
-const DEFAULT_CONFIG = { temperature: 0.2, top_p: 0.9, max_tokens: 1024, systemPrompt: "Eres un asistente experto en documentos legales colombianos. Responde \u00daNICAMENTE con JSON v\u00e1lido." };
+const SCOPES = [
+  { value: "local", label: "Local" },
+  { value: "cloud", label: "Cloud" },
+];
+
+const OPENAI_MODELS = [
+  { value: "gpt-4o", label: "GPT-4o" },
+  { value: "gpt-4o-mini", label: "GPT-4o mini" },
+  { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo" },
+];
+
+const DEFAULT_CONFIG = {
+  temperature: 0.2,
+  top_p: 0.9,
+  max_tokens: 1024,
+  systemPrompt: "Eres un asistente experto en documentos legales colombianos. Responde ÚNICAMENTE con JSON válido.",
+};
 
 const emptyForm = (): Partial<AiModel> => ({
   provider: "ollama",
+  scope: "local",
   baseUrl: "http://localhost:11434",
-  modelPath: "qwen2.5",
+  modelPath: "",
   active: true,
   config: JSON.stringify(DEFAULT_CONFIG, null, 2),
 });
+
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <label className={`flex flex-col gap-1 ${className}`}>
+      <span className="text-[9px] uppercase tracking-widest text-[#666] font-bold">{label}</span>
+      {children}
+    </label>
+  );
+}
 
 export default function ConfiguracionPage() {
   const [tab, setTab] = useState<"models" | "apis" | "params" | "audit">("models");
@@ -61,8 +103,9 @@ export default function ConfiguracionPage() {
   const [form, setForm] = useState<Partial<AiModel>>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [discovered, setDiscovered] = useState<{ name: string; model: string; parameter_size?: string }[]>([]);
+  const [discovered, setDiscovered] = useState<DiscoveredModel[]>([]);
   const [discovering, setDiscovering] = useState(false);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
 
   const toast = (type: Toast["type"], message: string) => {
     const id = Math.random().toString(36).slice(2);
@@ -87,6 +130,10 @@ export default function ConfiguracionPage() {
 
   const saveModel = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.modelPath) {
+      toast("error", "Selecciona un modelo");
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
@@ -102,6 +149,8 @@ export default function ConfiguracionPage() {
       }
       setEditingId(null);
       setForm(emptyForm());
+      setDiscovered([]);
+      setTestResult(null);
       await loadModels();
       await loadAudit();
       toast("success", editingId ? "Modelo actualizado" : "Modelo creado");
@@ -113,7 +162,9 @@ export default function ConfiguracionPage() {
   };
 
   const testModel = async (id: string) => {
+    const requestedAt = new Date().toISOString();
     setTestingId(id);
+    setTestResult(null);
     try {
       const res = await fetch("/api/config/models/test", {
         method: "POST",
@@ -121,10 +172,13 @@ export default function ConfiguracionPage() {
         body: JSON.stringify({ id }),
       });
       const data = await res.json();
-      if (data.ok) toast("success", `Test OK ${data.latencyMs}ms`);
-      else toast("error", `Test fallido: ${data.error}`);
+      const completedAt = new Date().toISOString();
+      setTestResult({ modelId: id, requestedAt, completedAt, ...data });
+      if (data.ok) toast("success", `Conexión OK ${data.latencyMs}ms`);
+      else toast("error", `Fallo: ${data.error}`);
       await loadAudit();
     } catch (err: any) {
+      setTestResult({ modelId: id, requestedAt, completedAt: new Date().toISOString(), ok: false, latencyMs: 0, text: "", error: err.message });
       toast("error", err.message);
     } finally {
       setTestingId(null);
@@ -136,6 +190,7 @@ export default function ConfiguracionPage() {
     try {
       const res = await fetch(`/api/config/models/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Error eliminando");
+      if (testResult?.modelId === id) setTestResult(null);
       await loadModels();
       await loadAudit();
       toast("success", "Modelo eliminado");
@@ -147,6 +202,8 @@ export default function ConfiguracionPage() {
   const editModel = (m: AiModel) => {
     setEditingId(m.id);
     setForm({ ...m, config: typeof m.config === "string" ? m.config : JSON.stringify(m.config, null, 2) });
+    setDiscovered([]);
+    setTestResult(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -154,6 +211,7 @@ export default function ConfiguracionPage() {
     setEditingId(null);
     setForm(emptyForm());
     setDiscovered([]);
+    setTestResult(null);
   };
 
   const discoverModels = async () => {
@@ -188,6 +246,43 @@ export default function ConfiguracionPage() {
     </button>
   );
 
+  const modelSelector = () => {
+    if (form.provider === "mock") {
+      return (
+        <Field label="Modelo de prueba" className="md:col-span-2">
+          <select value={form.modelPath || "mock"} onChange={(e) => setForm({ ...form, modelPath: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs">
+            <option value="mock">mock</option>
+          </select>
+        </Field>
+      );
+    }
+    if (form.provider === "openai") {
+      return (
+        <Field label="Modelo OpenAI" className="md:col-span-2">
+          <select value={form.modelPath || ""} onChange={(e) => setForm({ ...form, modelPath: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs">
+            <option value="">Seleccionar modelo</option>
+            {OPENAI_MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </Field>
+      );
+    }
+    return (
+      <Field label="Modelo local" className="md:col-span-2">
+        <div className="flex gap-2">
+          <select value={form.modelPath || ""} onChange={(e) => setForm({ ...form, modelPath: e.target.value })} className="flex-1 bg-white/5 border border-white/10 p-2 text-xs">
+            <option value="">{discovered.length ? "Seleccionar modelo local" : "Descubre modelos primero"}</option>
+            {discovered.map((m) => (
+              <option key={m.name} value={m.model}>{m.name} {m.parameter_size && `(${m.parameter_size})`}</option>
+            ))}
+          </select>
+          <button type="button" onClick={discoverModels} disabled={discovering} className="px-3 py-2 border border-neonCyan/30 text-neonCyan text-[9px] font-black uppercase tracking-widest hover:bg-neonCyan/10 disabled:opacity-30">
+            {discovering ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Cpu className="w-3 h-3" />} Descubrir
+          </button>
+        </div>
+      </Field>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="fixed top-4 right-4 z-50 space-y-2">
@@ -221,49 +316,46 @@ export default function ConfiguracionPage() {
               {editingId ? <RefreshCw className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
               {editingId ? "Editar modelo" : "Nuevo modelo"}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <input required placeholder="Nombre" value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
-              <select value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value as any })} className="bg-white/5 border border-white/10 p-2 text-xs">
-                {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-              </select>
-              <input placeholder="País" value={form.country || ""} onChange={(e) => setForm({ ...form, country: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
-              <input placeholder="Base URL" value={form.baseUrl || ""} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-3" />
-              <div className="flex gap-2 md:col-span-3">
-                <input required placeholder="Model path (ej: qwen2.5)" value={form.modelPath || ""} onChange={(e) => setForm({ ...form, modelPath: e.target.value })} className="flex-1 bg-white/5 border border-white/10 p-2 text-xs" />
-                {form.provider === "ollama" && (
-                  <button type="button" onClick={discoverModels} disabled={discovering} className="px-3 py-2 border border-neonCyan/30 text-neonCyan text-[9px] font-black uppercase tracking-widest hover:bg-neonCyan/10 disabled:opacity-30">
-                    {discovering ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Cpu className="w-3 h-3" />} Descubrir
-                  </button>
-                )}
-              </div>
-              {discovered.length > 0 && (
-                <select
-                  value={form.modelPath || ""}
-                  onChange={(e) => setForm({ ...form, modelPath: e.target.value })}
-                  className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-3"
-                >
-                  <option value="">Seleccionar modelo local</option>
-                  {discovered.map((m) => (
-                    <option key={m.name} value={m.model}>{m.name} {m.parameter_size && `(${m.parameter_size})`}</option>
-                  ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Field label="Nombre del modelo" className="md:col-span-2">
+                <input required placeholder="Ej: Qwen Coder Local" value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
+              </Field>
+
+              <Field label="Proveedor">
+                <select value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value as any, modelPath: "" })} className="bg-white/5 border border-white/10 p-2 text-xs">
+                  {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
-              )}
-              {form.provider === "openai" && (
-                <input type="password" required placeholder="API Key de OpenAI" value={form.apiKey || ""} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-2" />
-              )}
-              {form.provider !== "openai" && (
-                <input type="password" placeholder="API Key (opcional)" value={form.apiKey || ""} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-2" />
-              )}
-              <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#666]">
+              </Field>
+
+              <Field label="Ámbito de despliegue">
+                <select value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value as any })} className="bg-white/5 border border-white/10 p-2 text-xs">
+                  {SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </Field>
+
+              <Field label="URL del servicio" className="md:col-span-2">
+                <input placeholder="Ej: http://localhost:11434 para Ollama" value={form.baseUrl || ""} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
+              </Field>
+
+              {modelSelector()}
+
+              <Field label={form.provider === "openai" ? "API Key (requerida)" : "API Key (opcional)"} className="md:col-span-2">
+                <input type="password" required={form.provider === "openai"} placeholder={form.provider === "openai" ? "sk-..." : "Dejar vacío si no aplica"} value={form.apiKey || ""} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
+              </Field>
+
+              <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#666] md:col-span-2">
                 <input type="checkbox" checked={!!form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} /> Activo por defecto
               </label>
+
+              <Field label="Configuración JSON (temperature, top_p, max_tokens, systemPrompt)" className="md:col-span-2">
+                <textarea
+                  value={form.config || "{}"}
+                  onChange={(e) => setForm({ ...form, config: e.target.value })}
+                  rows={6}
+                  className="w-full bg-white/5 border border-white/10 p-3 text-xs font-geist-mono"
+                />
+              </Field>
             </div>
-            <textarea
-              value={form.config || "{}"}
-              onChange={(e) => setForm({ ...form, config: e.target.value })}
-              rows={6}
-              className="w-full bg-white/5 border border-white/10 p-3 text-xs font-geist-mono"
-            />
             <div className="flex gap-2">
               <button type="submit" disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-neonCyan text-black font-bold text-[10px] uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-30">
                 <Save className="w-3 h-3" /> {editingId ? "Actualizar" : "Guardar"}
@@ -276,6 +368,28 @@ export default function ConfiguracionPage() {
             </div>
           </form>
 
+          {testResult && (
+            <div className={`glass-panel p-4 space-y-2 border-l-2 ${testResult.ok ? "border-l-green-500" : "border-l-red-500"}`}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase flex items-center gap-2">
+                  {testResult.ok ? <CheckCircle className="w-3 h-3 text-green-400" /> : <XCircle className="w-3 h-3 text-red-400" />}
+                  Resultado del test de conexión
+                </h3>
+                <button onClick={() => setTestResult(null)} className="text-white/30 hover:text-white"><X className="w-3 h-3" /></button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[10px]">
+                <div className="text-[#666]">Solicitud: <span className="text-white/70">{new Date(testResult.requestedAt).toLocaleString()}</span></div>
+                <div className="text-[#666]">Resultado: <span className="text-white/70">{new Date(testResult.completedAt).toLocaleString()}</span></div>
+                <div className="text-[#666]">Latencia: <span className="text-white/70">{testResult.latencyMs}ms</span></div>
+              </div>
+              {testResult.error ? (
+                <div className="text-[10px] text-red-400 bg-red-400/5 p-2 rounded">{testResult.error}</div>
+              ) : (
+                <pre className="text-[10px] text-[#888] bg-black/30 p-2 rounded overflow-auto max-h-40 font-geist-mono">{testResult.text || "(sin texto)"}</pre>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             {models.map((m) => (
               <div key={m.id} className="glass-panel p-4 flex items-center justify-between hover:bg-white/[0.02]">
@@ -285,10 +399,11 @@ export default function ConfiguracionPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold uppercase">{m.name}</span>
                       <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{m.provider}</span>
+                      <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{m.scope}</span>
                       {m.active && <span className="text-[9px] text-neonCyan uppercase">Activo</span>}
                     </div>
                     <div className="text-[9px] text-[#666] uppercase tracking-wider mt-0.5">
-                      {m.modelPath} · {m.baseUrl || "default"} {m.country && ` · ${m.country}`}
+                      {m.modelPath} · {m.baseUrl || "default"}
                     </div>
                   </div>
                 </div>

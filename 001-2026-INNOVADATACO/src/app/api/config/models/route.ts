@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, provider, baseUrl, apiKey, modelPath, country, active, config } = body;
+    const { name, provider, scope, baseUrl, apiKey, modelPath, active, config } = body;
     if (!name || !provider || !modelPath) {
       return NextResponse.json({ error: "Campos requeridos: name, provider, modelPath" }, { status: 400 });
     }
@@ -28,10 +28,10 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         provider,
+        scope: scope || "local",
         baseUrl: baseUrl || null,
         apiKey: apiKey || null,
         modelPath,
-        country: country || null,
         active: !!active,
         config: typeof config === "string" ? config : JSON.stringify(config ?? {}),
       },
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       entityId: model.id,
       status: "success",
       message: `Modelo ${model.name} creado`,
-      metadata: { provider, modelPath, active },
+      metadata: { provider, scope: model.scope, modelPath, active },
       aiModelId: model.id,
     });
 
