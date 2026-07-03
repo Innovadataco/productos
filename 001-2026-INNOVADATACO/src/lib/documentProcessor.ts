@@ -1,10 +1,12 @@
 const PDFParser = require("pdf2json");
 import { ENTIDADES_COLOMBIA } from "./entidadesColombia";
+import { SECTORES_COLOMBIA } from "./sectoresColombia";
 
 export interface DocumentAnalysis {
   titulo: string;
   numero: string;
   entidad: string;
+  sector: string;
   fecha: string;
   resumen: string;
   proposito: string;
@@ -34,16 +36,16 @@ function extractTitulo(text: string): string {
   const lines = text.split(/\n+/).map((l) => l.trim()).filter((l) => l.length > 3);
   const officialLine = lines.find((l) => /^(resoluci[o\u00f3]n|decreto|ley|circular|acuerdo)\s+/i.test(l));
   if (officialLine) return officialLine.slice(0, 200);
-  const inline = text.match(/(resoluci[o\u00f3]n|decreto|ley|circular|acuerdo)\s+(no\.?\s*)?\d+[^.]{0,80}/i);
+  const inline = text.match(/(resoluci[o\u00f3]n|decreto|ley|circular|acuerdo)\s+(?:n[\u00b0\u00bao]|n[u\u00fa]mero|num\.?|no\.?)?\.?\s*\d+\s+de\s+\d{4}/i);
   if (inline) return inline[0].slice(0, 200);
-  const first = lines.slice(0, 3).filter((l) => l.length < 120);
-  return first.join(" - ").slice(0, 200) || "Sin título";
+  const first = lines.slice(0, 3).filter((l) => l.length < 120 && !/p\u00e1gina|p\u00e1g|p\u00e1gs?\.?\s*\d+/i.test(l));
+  return first.join(" - ").slice(0, 200) || "Sin t\u00edtulo";
 }
 
 function extractNumero(text: string): string {
   const patterns = [
-    /(?:n[°º]|n[úu]mero|numero|no\.?)\s*[:\-]?\s*(\d+[\-\/\.\d]*)/i,
-    /(?:resoluci[oó]n|decreto|ley|circular)\s*(?:n[°º]\s*)?(\d+[\-\/\.\d]*)/i,
+    /(?:n[\u00b0\u00bao]|n[\u00fau]mero|numero|no\.?)\s*[:\-]?\s*(\d+[\-\/\.\d]*)/i,
+    /(?:resoluci[o\u00f3]n|decreto|ley|circular)\s*(?:n[\u00b0\u00bao]?\s*)?(\d+[\-\/\.\d]*)/i,
   ];
   for (const p of patterns) {
     const m = text.match(p);
@@ -53,7 +55,7 @@ function extractNumero(text: string): string {
 }
 
 function normalize(str: string): string {
-  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, " ");
 }
 
 function extractEntidad(text: string): string {
@@ -67,17 +69,37 @@ function extractEntidad(text: string): string {
   return "";
 }
 
+function extractSector(text: string): string {
+  const normText = normalize(text);
+  for (const sector of SECTORES_COLOMBIA) {
+    const normSector = normalize(sector);
+    if (normText.includes(normSector.slice(0, 20))) return sector;
+  }
+  return "";
+}
+
 function extractFecha(text: string): string {
+  // evitar pies de p\u00e1gina con c\u00f3digos tipo 14305 31/12/2024
+  const clean = text.replace(/\b\d{5,}\s+(\d{1,2}\/\d{1,2}\/\d{4})/g, "");
+  const meses: Record<string, string> = {
+    enero: "01", febrero: "02", marzo: "03", abril: "04", mayo: "05", junio: "06",
+    julio: "07", agosto: "08", septiembre: "09", octubre: "10", noviembre: "11", diciembre: "12",
+  };
   const patterns = [
     /(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s+de\s+(\d{4})/i,
     /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
     /(\d{4})-(\d{2})-(\d{2})/,
   ];
   for (const p of patterns) {
-    const m = text.match(p);
+    const m = clean.match(p);
     if (m) {
       if (m[0].toLowerCase().includes("de")) {
-        return `${m[1]} ${m[2]} ${m[3]}`;
+        const [d, mo, y] = [m[1], m[2], m[3]];
+        return `${y}-${meses[mo.toLowerCase()]}-${d.padStart(2, "0")}`;
+      }
+      if (m[0].includes("/")) {
+        const [d, mo, y] = [m[1], m[2], m[3]];
+        return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
       }
       return m[0];
     }
@@ -102,12 +124,13 @@ export function analyzeDocument(text: string): DocumentAnalysis {
     titulo: extractTitulo(text),
     numero: extractNumero(firstChunk),
     entidad: extractEntidad(firstChunk),
+    sector: extractSector(firstChunk),
     fecha: extractFecha(firstChunk),
     resumen: extractParagraphs(text, 3).slice(0, 1000),
-    proposito: findSection(firstChunk, ["OBJETO", "PROPÓSITO", "Objeto", "propósito", "finalidad", "FINALIDAD"]) || firstSentence(clean),
+    proposito: findSection(firstChunk, ["OBJETO", "PROP\u00d3SITO", "Objeto", "prop\u00f3sito", "finalidad", "FINALIDAD"]) || firstSentence(clean),
     actores: findSection(firstChunk, ["PARTES", "ACTORES", "INVOLUCRADOS", "autoridad", "ministro", "ente"]) || "No identificado",
-    motivacion: findSection(firstChunk, ["CONSIDERANDO", "MOTIVACIÓN", "Por medio", "visto", "considerando"]) || firstSentence(clean),
-    resuelve: findSection(clean, ["RESUELVE", "RESOLVIÓ", "ACUERDA", "dispone", "RESOLUCIÓN"]) || firstSentence(clean),
+    motivacion: findSection(firstChunk, ["CONSIDERANDO", "MOTIVACI\u00d3N", "Por medio", "visto", "considerando"]) || firstSentence(clean),
+    resuelve: findSection(clean, ["RESUELVE", "RESOLVI\u00d3", "ACUERDA", "dispone", "RESOLUCI\u00d3N"]) || firstSentence(clean),
   };
 }
 

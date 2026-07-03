@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     const form = await req.formData();
     const file = form.get("file") as File | null;
     const tipo = (form.get("tipo") as string) || "otro";
+    const sector = (form.get("sector") as string) || "";
     const entidad = (form.get("entidad") as string) || "";
     const fechaExpedicion = (form.get("fechaExpedicion") as string) || null;
     const numero = (form.get("numero") as string) || "";
@@ -39,12 +40,19 @@ export async function POST(req: NextRequest) {
     const filePath = join(uploadDir, fileName);
     await writeFile(filePath, buffer);
 
+    const parseDate = (value?: string | null): Date | null => {
+      if (!value) return null;
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
     const doc = await prisma.documentoOficial.create({
       data: {
         titulo: titulo || analisis.titulo || "Sin t\u00edtulo",
         tipo,
+        sector: sector || analisis.sector || "Otro",
         entidad: entidad || analisis.entidad || "Otra",
-        fechaExpedicion: fechaExpedicion ? new Date(fechaExpedicion) : (analisis.fecha ? new Date(analisis.fecha) : null),
+        fechaExpedicion: parseDate(fechaExpedicion) || parseDate(analisis.fecha),
         numero: numero || analisis.numero,
         archivoUrl: `/uploads/${fileName}`,
         contenidoTexto: texto,

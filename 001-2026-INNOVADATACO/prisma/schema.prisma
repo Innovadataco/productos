@@ -11,6 +11,7 @@ model DocumentoOficial {
   id                String   @id @default(cuid())
   titulo            String
   tipo              String
+  sector            String?
   entidad           String
   fechaExpedicion   DateTime?
   numero            String?
