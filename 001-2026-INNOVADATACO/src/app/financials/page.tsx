@@ -1,5 +1,7 @@
 import { TrendingUp, DollarSign, AlertCircle, PieChart, ArrowUpRight, Database } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 async function getFinancials() {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pm2_financials?select=*,proyectos(nombre,codigo)`, { 
