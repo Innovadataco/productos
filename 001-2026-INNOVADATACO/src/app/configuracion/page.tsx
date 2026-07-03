@@ -43,6 +43,7 @@ interface TestResult {
   ok: boolean;
   latencyMs: number;
   text: string;
+  rawText?: string;
   error?: string;
 }
 
@@ -385,7 +386,12 @@ export default function ConfiguracionPage() {
               {testResult.error ? (
                 <div className="text-[10px] text-red-400 bg-red-400/5 p-2 rounded">{testResult.error}</div>
               ) : (
-                <pre className="text-[10px] text-[#888] bg-black/30 p-2 rounded overflow-auto max-h-40 font-geist-mono">{testResult.text || "(sin texto)"}</pre>
+                <div className="space-y-2">
+                  <div className="text-[9px] uppercase tracking-widest text-[#666]">Respuesta cruda del modelo</div>
+                  <pre className="text-[10px] text-[#888] bg-black/30 p-2 rounded overflow-auto max-h-40 font-geist-mono">{testResult.rawText || testResult.text || "(sin texto)"}</pre>
+                  <div className="text-[9px] uppercase tracking-widest text-[#666]">Respuesta procesada</div>
+                  <pre className="text-[10px] text-[#888] bg-black/30 p-2 rounded overflow-auto max-h-40 font-geist-mono">{testResult.text || "(sin texto)"}</pre>
+                </div>
               )}
             </div>
           )}

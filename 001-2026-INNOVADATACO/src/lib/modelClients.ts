@@ -11,6 +11,7 @@ export interface ModelConfig {
 export interface ModelResult {
   ok: boolean;
   text: string;
+  rawText?: string;
   latencyMs: number;
   error?: string;
   usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
@@ -138,12 +139,7 @@ export async function testModel(model: AiModelInput): Promise<ModelResult> {
   const prompt = "Responde con un objeto JSON v\u00e1lido exactamente as\u00ed: {\"ok\": true, \"message\": \"modelo activo\"}. No uses markdown, no expliques.";
   const result = await callModel(model, prompt);
   if (!result.ok) return result;
+  const rawText = result.text;
   const cleaned = sanitizeJsonText(result.text);
-  try {
-    JSON.parse(cleaned);
-    return { ...result, text: cleaned };
-  } catch {
-    // Llamada funcionó; el modelo no respetó formato JSON estricto, pero se muestra el resultado.
-    return { ...result, text: cleaned };
-  }
+  return { ...result, rawText, text: cleaned };
 }
