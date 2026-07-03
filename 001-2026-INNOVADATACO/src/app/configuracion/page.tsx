@@ -19,6 +19,23 @@ interface AiModel {
   createdAt: string;
 }
 
+interface AgentApi {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  module: string;
+  submodule: string;
+  category: "internal" | "external";
+  method: string;
+  path: string;
+  authType: string;
+  active: boolean;
+  config: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface AuditLog {
   id: string;
   action: string;
@@ -98,6 +115,7 @@ function Field({ label, children, className = "" }: { label: string; children: R
 export default function ConfiguracionPage() {
   const [tab, setTab] = useState<"models" | "apis" | "params" | "audit">("models");
   const [models, setModels] = useState<AiModel[]>([]);
+  const [apis, setApis] = useState<AgentApi[]>([]);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
@@ -119,6 +137,11 @@ export default function ConfiguracionPage() {
     setModels(await res.json());
   };
 
+  const loadApis = async () => {
+    const res = await fetch("/api/config/apis");
+    setApis(await res.json());
+  };
+
   const loadAudit = async () => {
     const res = await fetch("/api/config/audit?limit=100");
     setLogs(await res.json());
@@ -126,6 +149,7 @@ export default function ConfiguracionPage() {
 
   useEffect(() => {
     loadModels();
+    loadApis();
     loadAudit();
   }, []);
 
@@ -183,6 +207,21 @@ export default function ConfiguracionPage() {
       toast("error", err.message);
     } finally {
       setTestingId(null);
+    }
+  };
+
+  const toggleApi = async (id: string, active: boolean) => {
+    try {
+      const res = await fetch(`/api/config/apis/${id}/toggle`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active }),
+      });
+      if (!res.ok) throw new Error("Error toggling API");
+      await loadApis();
+      toast("success", active ? "API activada" : "API inhabilitada");
+    } catch (err: any) {
+      toast("error", err.message);
     }
   };
 
@@ -432,8 +471,58 @@ export default function ConfiguracionPage() {
       )}
 
       {tab === "apis" && (
-        <div className="glass-panel p-12 text-center text-[#444] font-geist-mono text-xs uppercase tracking-widest">
-          Módulo APIs en construcción.
+        <div className="space-y-8">
+          <div className="glass-panel p-6 space-y-2">
+            <h3 className="text-xs font-bold uppercase flex items-center gap-2"><Globe className="w-3 h-3" /> Catálogo de APIs del agente</h3>
+            <p className="text-[10px] text-[#666] uppercase tracking-widest">Activa o inhabilita las APIs que el bot de Telegram podrá consumir.</p>
+          </div>
+          {Object.entries(
+            apis.reduce((acc, api) => {
+              if (!acc[api.module]) acc[api.module] = {};
+              if (!acc[api.module][api.submodule]) acc[api.module][api.submodule] = [];
+              acc[api.module][api.submodule].push(api);
+              return acc;
+            }, {} as Record<string, Record<string, AgentApi[]>>)
+          ).map(([module, submodules]) => (
+            <div key={module} className="space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-neonCyan">{module.replace(/_/g, " ")}</h4>
+              {Object.entries(submodules).map(([submodule, items]) => (
+                <div key={submodule} className="space-y-2">
+                  <h5 className="text-[9px] font-bold uppercase tracking-widest text-[#666]">{submodule.replace(/_/g, " ")}</h5>
+                  {items.map((api) => (
+                    <div key={api.id} className="glass-panel p-4 flex items-center justify-between hover:bg-white/[0.02]">
+                      <div className="flex items-start gap-4">
+                        <div className={`h-2 w-2 rounded-full mt-1.5 ${api.active ? "bg-neonCyan shadow-[0_0_8px_#00F0FF]" : "bg-white/10"}`} />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase">{api.name}</span>
+                            <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{api.method}</span>
+                            <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{api.category}</span>
+                            {api.authType !== "none" && <span className="text-[9px] px-2 py-0.5 bg-white/5 border border-white/10 uppercase">{api.authType}</span>}
+                          </div>
+                          <p className="text-[10px] text-[#666] mt-0.5">{api.description}</p>
+                          <code className="text-[9px] text-[#444] font-geist-mono">{api.path}</code>
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <span className="text-[9px] uppercase tracking-widest text-[#666]">{api.active ? "Activo" : "Inactivo"}</span>
+                        <input
+                          type="checkbox"
+                          checked={api.active}
+                          onChange={(e) => toggleApi(api.id, e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-8 h-4 bg-white/10 rounded-full peer-checked:bg-neonCyan relative transition-colors">
+                          <div className="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4" />
+                        </div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))}
+          {apis.length === 0 && <p className="text-[10px] text-[#444] uppercase tracking-widest text-center py-8">Sin APIs registradas</p>}
         </div>
       )}
 

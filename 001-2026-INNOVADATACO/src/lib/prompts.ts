@@ -30,6 +30,27 @@ SCHEMA DE SALIDA:
 }`;
 }
 
+export function buildResearchPrompt(text: string): string {
+  return `Eres un analista experto en documentos legales y operativos colombianos. Realiza un análisis estratégico del siguiente documento y responde ÚNICAMENTE con JSON válido.
+
+REGLAS:
+- Sin markdown, sin explicaciones fuera del JSON.
+- Si no hay información para un campo, usa string vacío "".
+
+DOCUMENTO:
+---
+${text.slice(0, 12000)}
+---
+
+SCHEMA DE SALIDA:
+{
+  "summary": "string max 400 chars",
+  "milestones": ["string"],
+  "risks": ["string"],
+  "recommendations": ["string"]
+}`;
+}
+
 export function sanitizeJsonText(text: string): string {
   const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
   const first = cleaned.indexOf("{");

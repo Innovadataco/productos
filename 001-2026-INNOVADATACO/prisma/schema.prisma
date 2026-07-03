@@ -83,3 +83,25 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model AgentApi {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String
+  module      String
+  submodule   String
+  category    String   // internal | external
+  method      String
+  path        String
+  authType    String   @default("none") // none | apiKey | token
+  active      Boolean  @default(true)
+  config      String   @default("{}") // JSON: headers, timeout, baseUrl
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([module])
+  @@index([submodule])
+  @@index([active])
+  @@index([category])
+}
