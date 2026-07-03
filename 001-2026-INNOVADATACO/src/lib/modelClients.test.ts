@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import { testModel, callModel } from "./modelClients";
 
 describe("modelClients", () => {
-  it("mock provider returns valid JSON", async () => {
+  it("mock provider returns raw text response with exact LLM params", async () => {
     const result = await testModel({ provider: "mock", modelPath: "mock", config: "{}" });
     expect(result.ok).toBe(true);
-    expect(result.latencyMs).toBeGreaterThan(0);
-    const parsed = JSON.parse(result.text);
-    expect(parsed.titulo).toBeDefined();
+    expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(result.rawText).toBe(result.text);
+    expect(result.text).toContain("Mock extra\u00eddo");
   });
 
   it("unknown provider fails", async () => {

@@ -136,10 +136,20 @@ export function callModel(model: AiModelInput, prompt: string): Promise<ModelRes
 }
 
 export async function testModel(model: AiModelInput): Promise<ModelResult> {
-  const prompt = "Responde con un objeto JSON v\u00e1lido exactamente as\u00ed: {\"ok\": true, \"message\": \"modelo activo\"}. No uses markdown, no expliques.";
-  const result = await callModel(model, prompt);
+  const prompt = "Describe brevemente tus principales caracter\u00edsticas t\u00e9cnicas como modelo de lenguaje: arquitectura, tama\u00f1o aproximado, capacidades y limitaciones.";
+  const cfg = parseConfig(model.config);
+  const testModelInput: AiModelInput = {
+    ...model,
+    config: JSON.stringify({
+      ...cfg,
+      temperature: 0.2,
+      top_p: 0.9,
+      max_tokens: 1024,
+      systemPrompt: "Eres un asistente experto en documentos legales colombianos. Responde \u00daNICAMENTE con JSON v\u00e1lido.",
+    }),
+  };
+  const result = await callModel(testModelInput, prompt);
   if (!result.ok) return result;
   const rawText = result.text;
-  const cleaned = sanitizeJsonText(result.text);
-  return { ...result, rawText, text: cleaned };
+  return { ...result, rawText, text: rawText };
 }
