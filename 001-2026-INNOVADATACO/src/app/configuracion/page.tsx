@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Settings, Cpu, Globe, Activity, Save, Plus, Trash2, RefreshCw,
-  CheckCircle, XCircle, AlertCircle, Clock, Terminal
+  CheckCircle, XCircle, AlertCircle, Clock, Terminal, X
 } from "lucide-react";
 
 interface AiModel {
@@ -30,11 +30,27 @@ interface AuditLog {
   aiModel: { name: string; provider: string } | null;
 }
 
+interface Toast {
+  id: string;
+  type: "success" | "error" | "info";
+  message: string;
+}
+
 const PROVIDERS = [
   { value: "ollama", label: "Ollama (local)" },
   { value: "openai", label: "OpenAI" },
   { value: "mock", label: "Mock (pruebas)" },
 ];
+
+const DEFAULT_CONFIG = { temperature: 0.2, top_p: 0.9, max_tokens: 1024, systemPrompt: "Eres un asistente experto en documentos legales colombianos. Responde \u00daNICAMENTE con JSON v\u00e1lido." };
+
+const emptyForm = (): Partial<AiModel> => ({
+  provider: "ollama",
+  baseUrl: "http://localhost:11434",
+  modelPath: "qwen2.5",
+  active: true,
+  config: JSON.stringify(DEFAULT_CONFIG, null, 2),
+});
 
 export default function ConfiguracionPage() {
   const [tab, setTab] = useState<"models" | "apis" | "params" | "audit">("models");
@@ -42,14 +58,15 @@ export default function ConfiguracionPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<AiModel>>({
-    provider: "ollama",
-    baseUrl: "http://localhost:11434",
-    modelPath: "qwen2.5",
-    active: true,
-    config: JSON.stringify({ temperature: 0.2, top_p: 0.9, max_tokens: 1024 }, null, 2),
-  });
+  const [form, setForm] = useState<Partial<AiModel>>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const toast = (type: Toast["type"], message: string) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
+  };
 
   const loadModels = async () => {
     const res = await fetch("/api/config/models");
@@ -77,17 +94,17 @@ export default function ConfiguracionPage() {
       const url = editingId ? `/api/config/models/${editingId}` : "/api/config/models";
       const method = editingId ? "PUT" : "POST";
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (!res.ok) throw new Error("Error guardando");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Error" }));
+        throw new Error(err.error || "Error guardando");
+      }
       setEditingId(null);
-      setForm({
-        provider: "ollama",
-        baseUrl: "http://localhost:11434",
-        modelPath: "qwen2.5",
-        active: true,
-        config: JSON.stringify({ temperature: 0.2, top_p: 0.9, max_tokens: 1024 }, null, 2),
-      });
+      setForm(emptyForm());
       await loadModels();
       await loadAudit();
+      toast("success", editingId ? "Modelo actualizado" : "Modelo creado");
+    } catch (err: any) {
+      toast("error", err.message);
     } finally {
       setLoading(false);
     }
@@ -102,8 +119,11 @@ export default function ConfiguracionPage() {
         body: JSON.stringify({ id }),
       });
       const data = await res.json();
-      alert(data.ok ? `OK ${data.latencyMs}ms` : `Fallo: ${data.error}`);
+      if (data.ok) toast("success", `Test OK ${data.latencyMs}ms`);
+      else toast("error", `Test fallido: ${data.error}`);
       await loadAudit();
+    } catch (err: any) {
+      toast("error", err.message);
     } finally {
       setTestingId(null);
     }
@@ -111,15 +131,26 @@ export default function ConfiguracionPage() {
 
   const deleteModel = async (id: string) => {
     if (!confirm("Eliminar modelo?")) return;
-    await fetch(`/api/config/models/${id}`, { method: "DELETE" });
-    await loadModels();
-    await loadAudit();
+    try {
+      const res = await fetch(`/api/config/models/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Error eliminando");
+      await loadModels();
+      await loadAudit();
+      toast("success", "Modelo eliminado");
+    } catch (err: any) {
+      toast("error", err.message);
+    }
   };
 
   const editModel = (m: AiModel) => {
     setEditingId(m.id);
     setForm({ ...m, config: typeof m.config === "string" ? m.config : JSON.stringify(m.config, null, 2) });
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm(emptyForm());
   };
 
   const TabButton = ({ id, label, icon: Icon }: { id: typeof tab; label: string; icon: any }) => (
@@ -135,6 +166,16 @@ export default function ConfiguracionPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map((t) => (
+          <div key={t.id} className={`flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-wider border ${t.type === "success" ? "border-green-500/30 bg-green-500/10 text-green-400" : t.type === "error" ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-neonCyan/30 bg-neonCyan/10 text-neonCyan"}`}>
+            {t.type === "success" ? <CheckCircle className="w-3 h-3" /> : t.type === "error" ? <XCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+            {t.message}
+            <button onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}><X className="w-3 h-3" /></button>
+          </div>
+        ))}
+      </div>
+
       <header className="space-y-1">
         <div className="flex items-center gap-2 text-neonCyan text-[10px] font-bold uppercase tracking-[0.3em]">
           <Settings className="w-3 h-3" /> Sistema
@@ -161,7 +202,7 @@ export default function ConfiguracionPage() {
               <select value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value as any })} className="bg-white/5 border border-white/10 p-2 text-xs">
                 {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
-              <input placeholder="País" value={form.country || ""} onChange={(e) => setForm({ ...form, country: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
+              <input placeholder="Pa\u00eds" value={form.country || ""} onChange={(e) => setForm({ ...form, country: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
               <input placeholder="Base URL" value={form.baseUrl || ""} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-2" />
               <input required placeholder="Model path (ej: qwen2.5)" value={form.modelPath || ""} onChange={(e) => setForm({ ...form, modelPath: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
               <input type="password" placeholder="API Key (opcional)" value={form.apiKey || ""} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-2" />
@@ -172,7 +213,7 @@ export default function ConfiguracionPage() {
             <textarea
               value={form.config || "{}"}
               onChange={(e) => setForm({ ...form, config: e.target.value })}
-              rows={5}
+              rows={6}
               className="w-full bg-white/5 border border-white/10 p-3 text-xs font-geist-mono"
             />
             <div className="flex gap-2">
@@ -180,7 +221,7 @@ export default function ConfiguracionPage() {
                 <Save className="w-3 h-3" /> {editingId ? "Actualizar" : "Guardar"}
               </button>
               {editingId && (
-                <button type="button" onClick={() => { setEditingId(null); setForm({ provider: "ollama", baseUrl: "http://localhost:11434", modelPath: "qwen2.5", active: true, config: JSON.stringify({ temperature: 0.2, top_p: 0.9, max_tokens: 1024 }, null, 2) }); }} className="px-4 py-2 border border-white/10 text-[10px] font-black uppercase tracking-widest hover:border-neonCyan">
+                <button type="button" onClick={cancelEdit} className="px-4 py-2 border border-white/10 text-[10px] font-black uppercase tracking-widest hover:border-neonCyan">
                   Cancelar
                 </button>
               )}
@@ -199,7 +240,7 @@ export default function ConfiguracionPage() {
                       {m.active && <span className="text-[9px] text-neonCyan uppercase">Activo</span>}
                     </div>
                     <div className="text-[9px] text-[#666] uppercase tracking-wider mt-0.5">
-                      {m.modelPath} · {m.baseUrl || "default"} {m.country && `· ${m.country}`}
+                      {m.modelPath} · {m.baseUrl || "default"} {m.country && ` · ${m.country}`}
                     </div>
                   </div>
                 </div>
