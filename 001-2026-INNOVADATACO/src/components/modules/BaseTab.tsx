@@ -28,6 +28,8 @@ interface Documento {
   tipo: string;
   sector?: string;
   entidad: string;
+  status?: string;
+  processingError?: string | null;
   fechaExpedicion?: string;
   numero?: string;
   archivoUrl: string;
@@ -260,6 +262,7 @@ export default function BaseTab() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-[9px] font-black px-2 py-0.5 bg-white/5 border border-white/10 shrink-0">{TIPO_LABELS[doc.tipo] || doc.tipo}</span>
+                      {doc.status === "completed" ? <span className="text-[8px] text-green-400 uppercase shrink-0">OK</span> : doc.status === "needs_review" ? <span className="text-[8px] text-amber-400 uppercase shrink-0">Revisar</span> : doc.status === "processing" ? <span className="text-[8px] text-neonCyan uppercase shrink-0">Procesando</span> : <span className="text-[8px] text-[#444] uppercase shrink-0">{doc.status}</span>}
                       <span className="text-xs font-bold uppercase truncate">{doc.titulo}</span>
                     </div>
                     {doc.padre && <span className="text-[9px] text-[#444] shrink-0">hijo de {doc.padre.titulo}</span>}
@@ -320,7 +323,13 @@ export default function BaseTab() {
                     <span>{selected.entidad}</span>
                     {selected.numero && <span>No. {selected.numero}</span>}
                     {selected.fechaExpedicion && <span>{new Date(selected.fechaExpedicion).toLocaleDateString()}</span>}
+                    {selected.status === "needs_review" && <span className="text-amber-400">Revisión requerida</span>}
                   </div>
+                  {selected.processingError && (
+                    <div className="mt-2 text-[9px] text-amber-400 bg-amber-400/5 border border-amber-400/20 p-2 rounded">
+                      {selected.processingError}
+                    </div>
+                  )}
                 </div>
               </div>
               <button onClick={() => setSelected(null)} className="text-white/30 hover:text-white"><X size={20} /></button>

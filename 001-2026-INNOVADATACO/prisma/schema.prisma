@@ -24,6 +24,9 @@ model DocumentoOficial {
   resuelve          String   @default("")
   jerarquiaNivel    Int      @default(0)
   padreId           String?
+  status            String   @default("pending") // pending | processing | completed | failed | needs_review
+  aiModelId         String?
+  processingError   String?
   padre             DocumentoOficial?  @relation("JerarquiaDocumentos", fields: [padreId], references: [id])
   hijos             DocumentoOficial[] @relation("JerarquiaDocumentos")
   createdAt         DateTime @default(now())
@@ -31,4 +34,51 @@ model DocumentoOficial {
 
   @@index([tipo])
   @@index([jerarquiaNivel])
+  @@index([status])
+}
+
+model AiModel {
+  id          String   @id @default(cuid())
+  name        String
+  provider    String   // ollama | openai | mock
+  baseUrl     String?
+  apiKey      String?
+  modelPath   String
+  country     String?
+  active      Boolean  @default(false)
+  config      String   @default("{}") // JSON: temperature, top_p, max_tokens, systemPrompt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  audits      AuditLog[]
+
+  @@index([provider])
+  @@index([active])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // create_model, test_model, upload_pdf, process_start, process_end, error, api_test
+  entityType  String?  // AiModel, DocumentoOficial, ApiEndpoint
+  entityId    String?
+  userId      String?
+  status      String   // success | error | info
+  message     String
+  metadata    String   @default("{}") // JSON
+  latencyMs   Int?
+  createdAt   DateTime @default(now())
+  aiModel     AiModel? @relation(fields: [aiModelId], references: [id])
+  aiModelId   String?
+
+  @@index([action])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // hashed
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
