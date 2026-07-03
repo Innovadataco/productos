@@ -1,3 +1,5 @@
+import { sanitizeJsonText } from "./prompts";
+
 export interface ModelConfig {
   temperature?: number;
   top_p?: number;
@@ -133,12 +135,12 @@ export function callModel(model: AiModelInput, prompt: string): Promise<ModelRes
 }
 
 export async function testModel(model: AiModelInput): Promise<ModelResult> {
-  const prompt = "Responde con un JSON válido: {\"ok\": true, \"message\": \"modelo activo\"}";
+  const prompt = "Responde con un objeto JSON v\u00e1lido exactamente as\u00ed: {\"ok\": true, \"message\": \"modelo activo\"}. No uses markdown, no expliques.";
   const result = await callModel(model, prompt);
   if (!result.ok) return result;
   try {
-    JSON.parse(result.text);
-    return result;
+    JSON.parse(sanitizeJsonText(result.text));
+    return { ...result, text: sanitizeJsonText(result.text) };
   } catch (err) {
     return { ...result, ok: false, error: "Model response is not valid JSON" };
   }

@@ -61,6 +61,8 @@ export default function ConfiguracionPage() {
   const [form, setForm] = useState<Partial<AiModel>>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [discovered, setDiscovered] = useState<{ name: string; model: string; parameter_size?: string }[]>([]);
+  const [discovering, setDiscovering] = useState(false);
 
   const toast = (type: Toast["type"], message: string) => {
     const id = Math.random().toString(36).slice(2);
@@ -151,6 +153,28 @@ export default function ConfiguracionPage() {
   const cancelEdit = () => {
     setEditingId(null);
     setForm(emptyForm());
+    setDiscovered([]);
+  };
+
+  const discoverModels = async () => {
+    if (form.provider !== "ollama") return;
+    setDiscovering(true);
+    try {
+      const baseUrl = form.baseUrl || "http://localhost:11434";
+      const res = await fetch(`/api/config/models/discover?baseUrl=${encodeURIComponent(baseUrl)}`);
+      const data = await res.json();
+      if (data.models?.length) {
+        setDiscovered(data.models);
+        toast("success", `${data.models.length} modelos locales encontrados`);
+      } else {
+        setDiscovered([]);
+        toast("error", data.error || "No se encontraron modelos locales");
+      }
+    } catch (err: any) {
+      toast("error", err.message);
+    } finally {
+      setDiscovering(false);
+    }
   };
 
   const TabButton = ({ id, label, icon: Icon }: { id: typeof tab; label: string; icon: any }) => (
@@ -202,10 +226,34 @@ export default function ConfiguracionPage() {
               <select value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value as any })} className="bg-white/5 border border-white/10 p-2 text-xs">
                 {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
-              <input placeholder="Pa\u00eds" value={form.country || ""} onChange={(e) => setForm({ ...form, country: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
-              <input placeholder="Base URL" value={form.baseUrl || ""} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-2" />
-              <input required placeholder="Model path (ej: qwen2.5)" value={form.modelPath || ""} onChange={(e) => setForm({ ...form, modelPath: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
-              <input type="password" placeholder="API Key (opcional)" value={form.apiKey || ""} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-2" />
+              <input placeholder="País" value={form.country || ""} onChange={(e) => setForm({ ...form, country: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
+              <input placeholder="Base URL" value={form.baseUrl || ""} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-3" />
+              <div className="flex gap-2 md:col-span-3">
+                <input required placeholder="Model path (ej: qwen2.5)" value={form.modelPath || ""} onChange={(e) => setForm({ ...form, modelPath: e.target.value })} className="flex-1 bg-white/5 border border-white/10 p-2 text-xs" />
+                {form.provider === "ollama" && (
+                  <button type="button" onClick={discoverModels} disabled={discovering} className="px-3 py-2 border border-neonCyan/30 text-neonCyan text-[9px] font-black uppercase tracking-widest hover:bg-neonCyan/10 disabled:opacity-30">
+                    {discovering ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Cpu className="w-3 h-3" />} Descubrir
+                  </button>
+                )}
+              </div>
+              {discovered.length > 0 && (
+                <select
+                  value={form.modelPath || ""}
+                  onChange={(e) => setForm({ ...form, modelPath: e.target.value })}
+                  className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-3"
+                >
+                  <option value="">Seleccionar modelo local</option>
+                  {discovered.map((m) => (
+                    <option key={m.name} value={m.model}>{m.name} {m.parameter_size && `(${m.parameter_size})`}</option>
+                  ))}
+                </select>
+              )}
+              {form.provider === "openai" && (
+                <input type="password" required placeholder="API Key de OpenAI" value={form.apiKey || ""} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-2" />
+              )}
+              {form.provider !== "openai" && (
+                <input type="password" placeholder="API Key (opcional)" value={form.apiKey || ""} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-2" />
+              )}
               <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#666]">
                 <input type="checkbox" checked={!!form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} /> Activo por defecto
               </label>
