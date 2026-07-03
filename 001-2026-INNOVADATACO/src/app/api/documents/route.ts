@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const entidad = (form.get("entidad") as string) || "";
     const fechaExpedicion = (form.get("fechaExpedicion") as string) || null;
     const numero = (form.get("numero") as string) || "";
-    const titulo = (form.get("titulo") as string) || file?.name || "Sin título";
+    const titulo = (form.get("titulo") as string) || "";
     const padreId = (form.get("padreId") as string) || null;
 
     if (!file) {
@@ -41,11 +41,11 @@ export async function POST(req: NextRequest) {
 
     const doc = await prisma.documentoOficial.create({
       data: {
-        titulo,
+        titulo: titulo || analisis.titulo || "Sin t\u00edtulo",
         tipo,
-        entidad,
-        fechaExpedicion: fechaExpedicion ? new Date(fechaExpedicion) : null,
-        numero,
+        entidad: entidad || analisis.entidad || "Otra",
+        fechaExpedicion: fechaExpedicion ? new Date(fechaExpedicion) : (analisis.fecha ? new Date(analisis.fecha) : null),
+        numero: numero || analisis.numero,
         archivoUrl: `/uploads/${fileName}`,
         contenidoTexto: texto,
         resumen: analisis.resumen,

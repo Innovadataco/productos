@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Database, Search, FileText, Upload, X, ChevronRight, FolderTree, Scale } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { Database, Search, FileText, Upload, X, FolderTree, Scale, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { ENTIDADES_COLOMBIA } from "@/lib/entidadesColombia";
 
 interface Documento {
   id: string;
@@ -10,6 +11,8 @@ interface Documento {
   entidad: string;
   fechaExpedicion?: string;
   numero?: string;
+  archivoUrl: string;
+  contenidoTexto: string;
   resumen: string;
   proposito: string;
   actores: string;
@@ -34,12 +37,14 @@ export default function BaseTab() {
   const [docs, setDocs] = useState<Documento[]>([]);
   const [selected, setSelected] = useState<Documento | null>(null);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<{ type: "info" | "success" | "error"; msg: string } | null>(null);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Documento[]>([]);
+  const [docSearch, setDocSearch] = useState("");
   const [form, setForm] = useState({
     titulo: "",
     tipo: "resolucion",
-    entidad: "",
+    entidad: ENTIDADES_COLOMBIA[0],
     fechaExpedicion: "",
     numero: "",
     padreId: "",
@@ -60,23 +65,37 @@ export default function BaseTab() {
     e.preventDefault();
     if (!file) return;
     setLoading(true);
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("titulo", form.titulo || file.name.replace(/\.pdf$/i, ""));
-    fd.append("tipo", form.tipo);
-    fd.append("entidad", form.entidad);
-    fd.append("fechaExpedicion", form.fechaExpedicion);
-    fd.append("numero", form.numero);
-    fd.append("padreId", form.padreId);
-    await fetch("/api/documents", { method: "POST", body: fd });
-    setFile(null);
-    setForm({ titulo: "", tipo: "resolucion", entidad: "", fechaExpedicion: "", numero: "", padreId: "" });
-    await load();
-    setLoading(false);
+    setStatus({ type: "info", msg: "Extrayendo texto y metadatos del PDF..." });
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("titulo", form.titulo);
+      fd.append("tipo", form.tipo);
+      fd.append("entidad", form.entidad);
+      fd.append("fechaExpedicion", form.fechaExpedicion);
+      fd.append("numero", form.numero);
+      fd.append("padreId", form.padreId);
+      const res = await fetch("/api/documents", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      setFile(null);
+      setForm({ titulo: "", tipo: "resolucion", entidad: ENTIDADES_COLOMBIA[0], fechaExpedicion: "", numero: "", padreId: "" });
+      await load();
+      setStatus({ type: "success", msg: `Documento procesado: ${data.titulo} (${data.entidad}, ${data.numero || "sin número"})` });
+      setTimeout(() => setStatus(null), 4000);
+    } catch (err: any) {
+      setStatus({ type: "error", msg: err.message || "Error al procesar" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!search.trim()) {
+      setResults([]);
+      return;
+    }
     const res = await fetch("/api/documents/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -85,7 +104,14 @@ export default function BaseTab() {
     setResults(await res.json());
   };
 
-  const jerarquia = [...docs].sort((a, b) => a.jerarquiaNivel - b.jerarquiaNivel);
+  const jerarquia = useMemo(() => [...docs].sort((a, b) => a.jerarquiaNivel - b.jerarquiaNivel), [docs]);
+
+  const highlightedText = useMemo(() => {
+    if (!selected || !docSearch.trim()) return selected?.contenidoTexto || "";
+    const text = selected.contenidoTexto;
+    const term = docSearch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return text.replace(new RegExp(`(${term})`, "gi"), "**$1**");
+  }, [selected, docSearch]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -115,14 +141,16 @@ export default function BaseTab() {
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             className="md:col-span-4 text-[10px] file:bg-white/5 file:border file:border-white/10 file:text-white file:px-3 file:py-2 file:mr-3"
           />
-          <input placeholder="Título" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
+          <input placeholder="Título (o se extrae del PDF)" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
           <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs">
             {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
-          <input placeholder="Entidad" value={form.entidad} onChange={(e) => setForm({ ...form, entidad: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
+          <select value={form.entidad} onChange={(e) => setForm({ ...form, entidad: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs md:col-span-2">
+            {ENTIDADES_COLOMBIA.map((e) => <option key={e} value={e}>{e}</option>)}
+          </select>
           <input type="date" value={form.fechaExpedicion} onChange={(e) => setForm({ ...form, fechaExpedicion: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
-          <input placeholder="Número" value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
-          <select value={form.padreId} onChange={(e) => setForm({ ...form, padreId: e.target.value })} className="md:col-span-3 bg-white/5 border border-white/10 p-2 text-xs">
+          <input placeholder="Número (o se extrae del PDF)" value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} className="bg-white/5 border border-white/10 p-2 text-xs" />
+          <select value={form.padreId} onChange={(e) => setForm({ ...form, padreId: e.target.value })} className="md:col-span-2 bg-white/5 border border-white/10 p-2 text-xs">
             <option value="">Sin documento padre (jerarquía)</option>
             {docs.map((d) => <option key={d.id} value={d.id}>{TIPO_LABELS[d.tipo] || d.tipo} - {d.titulo}</option>)}
           </select>
@@ -133,8 +161,17 @@ export default function BaseTab() {
           disabled={!file || loading}
           className="flex items-center gap-2 px-4 py-2 bg-neonCyan text-black font-bold text-[10px] uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-30"
         >
-          {loading ? "Procesando..." : <><Upload className="w-3 h-3" /> Procesar PDF</>}
+          {loading ? <><Loader2 className="w-3 h-3 animate-spin" /> Procesando...</> : <><Upload className="w-3 h-3" /> Procesar PDF</>}
         </button>
+
+        {status && (
+          <div className={`flex items-center gap-2 text-[10px] uppercase tracking-widest ${
+            status.type === "success" ? "text-green-400" : status.type === "error" ? "text-red-400" : "text-neonCyan"
+          }`}>
+            {status.type === "success" ? <CheckCircle className="w-3 h-3" /> : status.type === "error" ? <AlertCircle className="w-3 h-3" /> : <Loader2 className="w-3 h-3 animate-spin" />}
+            {status.msg}
+          </div>
+        )}
       </form>
 
       {/* RAG SEARCH */}
@@ -171,7 +208,7 @@ export default function BaseTab() {
         <div className="lg:col-span-2 space-y-2">
           <h4 className="text-[10px] font-black uppercase tracking-widest text-neonCyan flex items-center gap-2"><FileText className="w-3 h-3" /> Documentos</h4>
           {docs.map((doc) => (
-            <div key={doc.id} onClick={() => setSelected(doc)} className={`glass-panel p-4 cursor-pointer transition-colors ${selected?.id === doc.id ? "border-neonCyan/30 bg-neonCyan/5" : "hover:bg-white/[0.02]"}`}>
+            <div key={doc.id} onClick={() => { setSelected(doc); setDocSearch(""); }} className={`glass-panel p-4 cursor-pointer transition-colors ${selected?.id === doc.id ? "border-neonCyan/30 bg-neonCyan/5" : "hover:bg-white/[0.02]"}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-[9px] font-black px-2 py-0.5 bg-white/5 border border-white/10">{TIPO_LABELS[doc.tipo] || doc.tipo}</span>
@@ -179,7 +216,11 @@ export default function BaseTab() {
                 </div>
                 {doc.padre && <span className="text-[9px] text-[#444]">hijo de {doc.padre.titulo}</span>}
               </div>
-              <p className="text-[10px] text-[#666] line-clamp-1 mt-1">{doc.resumen}</p>
+              <div className="flex items-center gap-4 text-[9px] text-[#666] mt-1 uppercase tracking-wider">
+                <span>{doc.entidad}</span>
+                {doc.numero && <span>No. {doc.numero}</span>}
+                {doc.fechaExpedicion && <span>{new Date(doc.fechaExpedicion).toLocaleDateString()}</span>}
+              </div>
             </div>
           ))}
         </div>
@@ -215,30 +256,60 @@ export default function BaseTab() {
 
       {/* DETALLE */}
       {selected && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
-          <div className="bg-[#050505] border border-white/10 w-full max-w-2xl max-h-[80vh] overflow-y-auto p-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold uppercase">{selected.titulo}</h2>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#050505] border border-white/10 w-full max-w-5xl h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div>
+                <h2 className="text-xl font-bold uppercase">{selected.titulo}</h2>
+                <div className="flex items-center gap-4 text-[10px] uppercase text-[#666] mt-1">
+                  <span>{TIPO_LABELS[selected.tipo] || selected.tipo}</span>
+                  <span>{selected.entidad}</span>
+                  {selected.numero && <span>No. {selected.numero}</span>}
+                  {selected.fechaExpedicion && <span>{new Date(selected.fechaExpedicion).toLocaleDateString()}</span>}
+                </div>
+              </div>
               <button onClick={() => setSelected(null)} className="text-white/30 hover:text-white"><X size={20} /></button>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-[10px] uppercase">
-              <div><span className="text-[#444]">Tipo:</span> {TIPO_LABELS[selected.tipo] || selected.tipo}</div>
-              <div><span className="text-[#444]">Entidad:</span> {selected.entidad || "N/A"}</div>
-              <div><span className="text-[#444]">Fecha:</span> {selected.fechaExpedicion ? new Date(selected.fechaExpedicion).toLocaleDateString() : "N/A"}</div>
-              <div><span className="text-[#444]">Número:</span> {selected.numero || "N/A"}</div>
-            </div>
-            {[
-              { label: "Propósito", value: selected.proposito },
-              { label: "Actores involucrados", value: selected.actores },
-              { label: "Motivación", value: selected.motivacion },
-              { label: "Resuelve", value: selected.resuelve },
-              { label: "Resumen", value: selected.resumen },
-            ].map((item) => (
-              <div key={item.label} className="space-y-1">
-                <h5 className="text-[10px] font-black uppercase text-neonCyan">{item.label}</h5>
-                <p className="text-[11px] text-[#aaa] leading-relaxed whitespace-pre-line">{item.value || "No identificado"}</p>
+
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+              {/* METADATA */}
+              <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-white/10 p-6 space-y-6 overflow-y-auto">
+                {[
+                  { label: "Propósito", value: selected.proposito },
+                  { label: "Actores involucrados", value: selected.actores },
+                  { label: "Motivación", value: selected.motivacion },
+                  { label: "Resuelve", value: selected.resuelve },
+                  { label: "Resumen", value: selected.resumen },
+                ].map((item) => (
+                  <div key={item.label} className="space-y-1">
+                    <h5 className="text-[10px] font-black uppercase text-neonCyan">{item.label}</h5>
+                    <p className="text-[11px] text-[#aaa] leading-relaxed whitespace-pre-line">{item.value || "No identificado"}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+
+              {/* FULL TEXT */}
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="p-4 border-b border-white/10 flex items-center gap-3">
+                  <Search className="w-4 h-4 text-[#444]" />
+                  <input
+                    value={docSearch}
+                    onChange={(e) => setDocSearch(e.target.value)}
+                    placeholder="Buscar dentro del documento..."
+                    className="flex-1 bg-white/5 border border-white/10 p-2 text-xs focus:outline-none focus:border-neonCyan"
+                  />
+                </div>
+                <div className="flex-1 overflow-y-auto p-6 font-geist-mono text-[11px] leading-relaxed whitespace-pre-wrap text-[#bbb]">
+                  {highlightedText.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+                    part.startsWith("**") && part.endsWith("**") ? (
+                      <mark key={i} className="bg-neonCyan/30 text-white px-0.5">{part.slice(2, -2)}</mark>
+                    ) : (
+                      <span key={i}>{part}</span>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
