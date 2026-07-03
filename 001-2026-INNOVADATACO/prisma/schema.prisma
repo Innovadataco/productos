@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model DocumentoOficial {
+  id                String   @id @default(cuid())
+  titulo            String
+  tipo              String
+  entidad           String
+  fechaExpedicion   DateTime?
+  numero            String?
+  archivoUrl        String
+  contenidoTexto    String   @default("")
+  resumen           String   @default("")
+  proposito         String   @default("")
+  actores           String   @default("")
+  motivacion        String   @default("")
+  resuelve          String   @default("")
+  jerarquiaNivel    Int      @default(0)
+  padreId           String?
+  padre             DocumentoOficial?  @relation("JerarquiaDocumentos", fields: [padreId], references: [id])
+  hijos             DocumentoOficial[] @relation("JerarquiaDocumentos")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tipo])
+  @@index([jerarquiaNivel])
+}

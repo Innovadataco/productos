@@ -1,20 +1,31 @@
 "use client";
 import { useState } from "react";
 import { Menu, X, Terminal, LayoutGrid, Database, Settings, Zap, User, Bell } from "lucide-react";
-import { useTheme } from "@/context/ThemeContext";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useWorkspace, type ModuleId } from "@/context/WorkspaceContext";
+import InvestigacionTab from "@/components/modules/InvestigacionTab";
+import ProyectosTab from "@/components/modules/ProyectosTab";
+import BaseTab from "@/components/modules/BaseTab";
+import ConfiguracionTab from "@/components/modules/ConfiguracionTab";
+
+const MODULES: { id: ModuleId; icon: React.ReactNode; label: string }[] = [
+  { id: "investigacion", icon: <Terminal size={20} />, label: "Investigación" },
+  { id: "proyectos", icon: <LayoutGrid size={20} />, label: "Proyectos" },
+  { id: "base", icon: <Database size={20} />, label: "Base Oficial" },
+  { id: "configuracion", icon: <Settings size={20} />, label: "Configuración" },
+];
+
+const TAB_COMPONENTS: Record<ModuleId, React.ComponentType> = {
+  investigacion: InvestigacionTab,
+  proyectos: ProyectosTab,
+  base: BaseTab,
+  configuracion: ConfiguracionTab,
+};
 
 export default function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const [expanded, setExpanded] = useState(true);
-  const pathname = usePathname();
+  const { tabs, activeTabId, openTab, closeTab, activateTab } = useWorkspace();
 
-  const menuItems = [
-    { icon: <Terminal size={20} />, label: "Investigación", href: "/research" },
-    { icon: <LayoutGrid size={20} />, label: "Proyectos", href: "/projects" },
-    { icon: <Database size={20} />, label: "Base Oficial", href: "/base" },
-    { icon: <Settings size={20} />, label: "Configuración", href: "/configuracion" },
-  ];
+  const ActiveComponent = activeTabId ? TAB_COMPONENTS[tabs.find((t) => t.id === activeTabId)?.moduleId || "investigacion"] : null;
 
   return (
     <div className="flex min-h-screen bg-[#020203] text-white selection:bg-cyan-500/30">
@@ -27,11 +38,19 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
           </button>
         </div>
         <nav className="p-4 space-y-2 mt-4">
-          {menuItems.map((item, i) => (
-            <Link key={i} href={item.href} className={`flex items-center gap-4 p-4 rounded-xl transition-all ${pathname === item.href ? "bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20" : "text-white/30 hover:bg-white/5 hover:text-white"}`}>
+          {MODULES.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => openTab(item.id)}
+              className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all text-left ${
+                tabs.some((t) => t.moduleId === item.id)
+                  ? "bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20"
+                  : "text-white/30 hover:bg-white/5 hover:text-white"
+              }`}
+            >
               <div className="shrink-0">{item.icon}</div>
               {expanded && <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>}
-            </Link>
+            </button>
           ))}
         </nav>
         <div className="absolute bottom-8 left-0 w-full px-6 opacity-20">
@@ -54,7 +73,40 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
               <div className="h-8 w-8 rounded-full border border-white/10 flex items-center justify-center"><User size={16} /></div>
            </div>
         </header>
-        <main className="p-12 max-w-7xl mx-auto">{children}</main>
+
+        {/* TABS */}
+        {tabs.length > 0 && (
+          <div className="flex items-end gap-1 px-6 pt-4 border-b border-white/5">
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                onClick={() => activateTab(tab.id)}
+                className={`group flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest cursor-pointer border-t border-l border-r border-white/5 rounded-t-lg transition-all ${
+                  activeTabId === tab.id
+                    ? "bg-white/5 text-[#00F0FF] border-[#00F0FF]/30"
+                    : "text-white/30 hover:text-white hover:bg-white/[0.02]"
+                }`}
+              >
+                <span>{tab.title}</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
+                  className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-opacity"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <main className="p-12 max-w-7xl mx-auto">
+          {ActiveComponent ? <ActiveComponent /> : (
+            <div className="flex flex-col items-center justify-center h-96 text-white/20 gap-4">
+              <LayoutGrid size={48} />
+              <p className="text-[10px] font-black uppercase tracking-[0.3em]">Selecciona un módulo del sidebar</p>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
