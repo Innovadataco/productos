@@ -113,8 +113,12 @@ function Field({ label, children, className = "" }: { label: string; children: R
   );
 }
 
-export default function ConfiguracionPage() {
-  const [tab, setTab] = useState<"models" | "apis" | "params" | "audit">("models");
+export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule?: string }) {
+  const [tab, setTab] = useState<"models" | "apis" | "params" | "audit">(
+    (activeSubmodule === "apis" || activeSubmodule === "modelos" || activeSubmodule === "auditoria" || activeSubmodule === "parametrizacion")
+      ? (activeSubmodule === "modelos" ? "models" : activeSubmodule === "auditoria" ? "audit" : activeSubmodule === "parametrizacion" ? "params" : "apis")
+      : "models"
+  );
   const [models, setModels] = useState<AiModel[]>([]);
   const [apis, setApis] = useState<AgentApi[]>([]);
   const [logs, setLogs] = useState<AuditLog[]>([]);

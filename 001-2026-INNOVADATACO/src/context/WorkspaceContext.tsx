@@ -2,23 +2,22 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
 export type ModuleId = "investigacion" | "proyectos" | "base" | "configuracion";
+export type SubmoduleId = string;
 
-export interface Tab {
-  id: string;
-  moduleId: ModuleId;
+export interface SubmoduleDef {
+  id: SubmoduleId;
   title: string;
 }
 
 interface WorkspaceContextValue {
-  tabs: Tab[];
-  activeTabId: string | null;
-  openTab: (moduleId: ModuleId) => void;
-  closeTab: (id: string) => void;
-  activateTab: (id: string) => void;
+  activeModuleId: ModuleId | null;
+  activeSubmoduleId: string | null;
+  openModule: (moduleId: ModuleId) => void;
+  openSubmodule: (moduleId: ModuleId, submoduleId: SubmoduleId) => void;
+  closeModule: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
-
 const MODULE_TITLES: Record<ModuleId, string> = {
   investigacion: "Investigación",
   proyectos: "Proyectos",
@@ -26,29 +25,40 @@ const MODULE_TITLES: Record<ModuleId, string> = {
   configuracion: "Configuración",
 };
 
+export const SUBMODULES: Record<ModuleId, SubmoduleDef[]> = {
+  investigacion: [{ id: "analisis", title: "Análisis" }],
+  proyectos: [{ id: "listado", title: "Listado" }],
+  base: [{ id: "documentos", title: "Documentos" }],
+  configuracion: [
+    { id: "modelos", title: "Modelos IA" },
+    { id: "apis", title: "APIs" },
+    { id: "auditoria", title: "Auditoría" },
+    { id: "parametrizacion", title: "Parametrización" },
+  ],
+};
+
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [activeModuleId, setActiveModuleId] = useState<ModuleId | null>(null);
+  const [activeSubmoduleId, setActiveSubmoduleId] = useState<string | null>(null);
 
-  const openTab = (moduleId: ModuleId) => {
-    const id = `${moduleId}-${Date.now()}`;
-    const newTab = { id, moduleId, title: MODULE_TITLES[moduleId] };
-    setTabs([newTab]);
-    setActiveTabId(id);
+  const openModule = (moduleId: ModuleId) => {
+    const first = SUBMODULES[moduleId][0]?.id || null;
+    setActiveModuleId(moduleId);
+    setActiveSubmoduleId(first);
   };
 
-  const closeTab = (id: string) => {
-    setTabs([]);
-    setActiveTabId(null);
+  const openSubmodule = (moduleId: ModuleId, submoduleId: SubmoduleId) => {
+    setActiveModuleId(moduleId);
+    setActiveSubmoduleId(submoduleId);
   };
 
-  const activateTab = (id: string) => {
-    if (tabs[0]?.id === id) return;
-    setActiveTabId(id);
+  const closeModule = () => {
+    setActiveModuleId(null);
+    setActiveSubmoduleId(null);
   };
 
   return (
-    <WorkspaceContext.Provider value={{ tabs, activeTabId, openTab, closeTab, activateTab }}>
+    <WorkspaceContext.Provider value={{ activeModuleId, activeSubmoduleId, openModule, openSubmodule, closeModule }}>
       {children}
     </WorkspaceContext.Provider>
   );

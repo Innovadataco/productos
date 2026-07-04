@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Menu, X, Terminal, LayoutGrid, Database, Settings, Zap, User, Bell } from "lucide-react";
-import { useWorkspace, type ModuleId } from "@/context/WorkspaceContext";
+import { useWorkspace, SUBMODULES, type ModuleId } from "@/context/WorkspaceContext";
 import InvestigacionTab from "@/components/modules/InvestigacionTab";
 import ProyectosTab from "@/components/modules/ProyectosTab";
 import BaseTab from "@/components/modules/BaseTab";
@@ -14,7 +14,7 @@ const MODULES: { id: ModuleId; icon: React.ReactNode; label: string }[] = [
   { id: "configuracion", icon: <Settings size={20} />, label: "Configuración" },
 ];
 
-const TAB_COMPONENTS: Record<ModuleId, React.ComponentType> = {
+const TAB_COMPONENTS: Record<ModuleId, React.ComponentType<{ submoduleId: string }>> = {
   investigacion: InvestigacionTab,
   proyectos: ProyectosTab,
   base: BaseTab,
@@ -23,13 +23,12 @@ const TAB_COMPONENTS: Record<ModuleId, React.ComponentType> = {
 
 export default function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const [expanded, setExpanded] = useState(true);
-  const { tabs, activeTabId, openTab, closeTab, activateTab } = useWorkspace();
+  const { activeModuleId, activeSubmoduleId, openModule, openSubmodule, closeModule } = useWorkspace();
 
-  const ActiveComponent = activeTabId && tabs[0] ? TAB_COMPONENTS[tabs[0].moduleId] : null;
+  const ActiveComponent = activeModuleId && activeSubmoduleId ? TAB_COMPONENTS[activeModuleId] : null;
 
   return (
     <div className="flex min-h-screen bg-[#020203] text-white selection:bg-cyan-500/30">
-      {/* SIDEBAR FIJO IZQUIERDA */}
       <aside className={`fixed top-0 left-0 h-full z-50 bg-[#050505] border-r border-white/5 transition-all duration-500 ${expanded ? "w-64" : "w-20"}`}>
         <div className="p-6 flex items-center justify-between border-b border-white/5 h-20">
           {expanded && <span className="font-black text-xs tracking-[0.3em] text-[#00F0FF] animate-in fade-in italic">INNOVADATACO</span>}
@@ -39,11 +38,11 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
         </div>
         <nav className="p-4 space-y-2 mt-4">
           {MODULES.map((item) => {
-            const isActive = activeTabId && tabs[0]?.moduleId === item.id;
+            const isActive = activeModuleId === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => openTab(item.id)}
+                onClick={() => openModule(item.id)}
                 className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all text-left ${
                   isActive
                     ? "bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20"
@@ -64,7 +63,6 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
         </div>
       </aside>
 
-      {/* CONTENIDO DERECHA */}
       <div className={`flex-1 transition-all duration-500 ${expanded ? "ml-64" : "ml-20"}`}>
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-[#020203]/80 backdrop-blur-xl sticky top-0 z-40">
            <div className="flex items-center gap-4">
@@ -77,28 +75,32 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
            </div>
         </header>
 
-        {/* TABS */}
-        {tabs.length > 0 && (
+        {activeModuleId && SUBMODULES[activeModuleId].length > 0 && (
           <div className="flex items-end gap-1 px-6 pt-4 border-b border-white/5">
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                className="group flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest cursor-pointer border-t border-l border-r border-white/5 rounded-t-lg bg-white/5 text-[#00F0FF] border-[#00F0FF]/30"
+            {SUBMODULES[activeModuleId].map((sub) => (
+              <button
+                key={sub.id}
+                onClick={() => openSubmodule(activeModuleId, sub.id)}
+                className={`group flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest border-t border-l border-r border-white/5 rounded-t-lg transition-all ${
+                  activeSubmoduleId === sub.id
+                    ? "bg-white/5 text-[#00F0FF] border-[#00F0FF]/30"
+                    : "text-white/30 hover:text-white hover:bg-white/[0.02]"
+                }`}
               >
-                <span>{tab.title}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
-                  className="text-white/30 hover:text-red-400 transition-opacity"
-                >
-                  <X size={12} />
-                </button>
-              </div>
+                <span>{sub.title}</span>
+              </button>
             ))}
+            <button
+              onClick={closeModule}
+              className="ml-auto px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors"
+            >
+              <X size={12} className="inline mr-1" /> Cerrar
+            </button>
           </div>
         )}
 
         <main className="p-12 max-w-7xl mx-auto">
-          {ActiveComponent ? <ActiveComponent /> : (
+          {ActiveComponent ? <ActiveComponent submoduleId={activeSubmoduleId!} /> : (
             <div className="flex flex-col items-center justify-center h-96 text-white/20 gap-4">
               <LayoutGrid size={48} />
               <p className="text-[10px] font-black uppercase tracking-[0.3em]">Selecciona un módulo del sidebar</p>
