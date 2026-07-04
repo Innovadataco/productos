@@ -76,23 +76,25 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
         </header>
 
         {activeModuleId && SUBMODULES[activeModuleId].length > 0 && (
-          <div className="flex items-end gap-1 px-6 pt-4 border-b border-white/5">
-            {SUBMODULES[activeModuleId].map((sub) => (
-              <button
-                key={sub.id}
-                onClick={() => openSubmodule(activeModuleId, sub.id)}
-                className={`group flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest border-t border-l border-r border-white/5 rounded-t-lg transition-all ${
-                  activeSubmoduleId === sub.id
-                    ? "bg-white/5 text-[#00F0FF] border-[#00F0FF]/30"
-                    : "text-white/30 hover:text-white hover:bg-white/[0.02]"
-                }`}
-              >
-                <span>{sub.title}</span>
-              </button>
-            ))}
+          <div className="flex items-center justify-between px-6 pt-4 border-b border-white/5">
+            <div className="flex items-end gap-1">
+              {SUBMODULES[activeModuleId].map((sub) => (
+                <button
+                  key={sub.id}
+                  onClick={() => openSubmodule(activeModuleId, sub.id)}
+                  className={`group flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest border-t border-l border-r border-white/5 rounded-t-lg transition-all ${
+                    activeSubmoduleId === sub.id
+                      ? "bg-white/5 text-[#00F0FF] border-[#00F0FF]/30"
+                      : "text-white/30 hover:text-white hover:bg-white/[0.02]"
+                  }`}
+                >
+                  <span>{sub.title}</span>
+                </button>
+              ))}
+            </div>
             <button
               onClick={closeModule}
-              className="ml-auto px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors"
+              className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors"
             >
               <X size={12} className="inline mr-1" /> Cerrar
             </button>

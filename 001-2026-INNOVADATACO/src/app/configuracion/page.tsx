@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-  Settings, Cpu, Globe, Activity, Save, Plus, Trash2, RefreshCw,
-  CheckCircle, XCircle, AlertCircle, Clock, Terminal, X, ArrowLeft
+  Settings, Cpu, Globe, Terminal, Save, Plus, Trash2, RefreshCw,
+  CheckCircle, XCircle, AlertCircle, Clock, X, ArrowLeft
 } from "lucide-react";
 
 interface AiModel {
@@ -114,11 +114,10 @@ function Field({ label, children, className = "" }: { label: string; children: R
 }
 
 export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule?: string }) {
-  const [tab, setTab] = useState<"models" | "apis" | "params" | "audit">(
-    (activeSubmodule === "apis" || activeSubmodule === "modelos" || activeSubmodule === "auditoria" || activeSubmodule === "parametrizacion")
-      ? (activeSubmodule === "modelos" ? "models" : activeSubmodule === "auditoria" ? "audit" : activeSubmodule === "parametrizacion" ? "params" : "apis")
-      : "models"
-  );
+  const tab: "models" | "apis" | "params" | "audit" =
+    activeSubmodule === "apis" ? "apis" :
+    activeSubmodule === "auditoria" ? "audit" :
+    activeSubmodule === "parametrizacion" ? "params" : "models";
   const [models, setModels] = useState<AiModel[]>([]);
   const [apis, setApis] = useState<AgentApi[]>([]);
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -303,17 +302,6 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
     }
   };
 
-  const TabButton = ({ id, label, icon: Icon }: { id: typeof tab; label: string; icon: any }) => (
-    <button
-      onClick={() => setTab(id)}
-      className={`flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest border-b-2 transition-colors ${
-        tab === id ? "border-neonCyan text-neonCyan" : "border-transparent text-white/30 hover:text-white"
-      }`}
-    >
-      <Icon className="w-3 h-3" /> {label}
-    </button>
-  );
-
   const modelSelector = () => {
     if (form.provider === "mock") {
       return (
@@ -369,13 +357,6 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
         </div>
         <h1 className="text-3xl font-bold tracking-tight uppercase">Configuración</h1>
       </header>
-
-      <div className="flex items-center gap-2 border-b border-white/5">
-        <TabButton id="models" label="Modelos IA" icon={Cpu} />
-        <TabButton id="apis" label="APIs" icon={Globe} />
-        <TabButton id="params" label="Parametrización" icon={Activity} />
-        <TabButton id="audit" label="Auditoría" icon={Terminal} />
-      </div>
 
       {tab === "models" && (
         <div className="space-y-6">
