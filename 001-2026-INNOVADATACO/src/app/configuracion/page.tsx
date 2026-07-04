@@ -351,13 +351,6 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
         ))}
       </div>
 
-      <header className="space-y-1">
-        <div className="flex items-center gap-2 text-neonCyan text-[10px] font-bold uppercase tracking-[0.3em]">
-          <Settings className="w-3 h-3" /> Sistema
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight uppercase">Configuración</h1>
-      </header>
-
       {tab === "models" && (
         <div className="space-y-6">
           <form onSubmit={saveModel} className="glass-panel p-6 space-y-4">
