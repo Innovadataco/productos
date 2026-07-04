@@ -67,7 +67,14 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-[#020203]/80 backdrop-blur-xl sticky top-0 z-40">
            <div className="flex items-center gap-4">
              <div className="h-2 w-2 rounded-full bg-[#00F0FF] shadow-[0_0_10px_#00F0FF]" />
-             <h2 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 italic">Plataforma Operativa</h2>
+             {activeModuleId && activeSubmoduleId ? (
+               <div className="flex flex-col">
+                 <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 italic">{MODULES.find(m => m.id === activeModuleId)?.label}</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-[#00F0FF]">{SUBMODULES[activeModuleId].find(s => s.id === activeSubmoduleId)?.title}</span>
+               </div>
+             ) : (
+               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 italic">Plataforma Operativa</h2>
+             )}
            </div>
            <div className="flex items-center gap-6 opacity-40 hover:opacity-100 transition-opacity">
               <Bell size={18} />
