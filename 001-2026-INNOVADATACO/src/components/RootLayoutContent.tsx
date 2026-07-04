@@ -25,7 +25,7 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
   const [expanded, setExpanded] = useState(true);
   const { tabs, activeTabId, openTab, closeTab, activateTab } = useWorkspace();
 
-  const ActiveComponent = activeTabId ? TAB_COMPONENTS[tabs.find((t) => t.id === activeTabId)?.moduleId || "investigacion"] : null;
+  const ActiveComponent = activeTabId && tabs[0] ? TAB_COMPONENTS[tabs[0].moduleId] : null;
 
   return (
     <div className="flex min-h-screen bg-[#020203] text-white selection:bg-cyan-500/30">
@@ -38,20 +38,23 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
           </button>
         </div>
         <nav className="p-4 space-y-2 mt-4">
-          {MODULES.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => openTab(item.id)}
-              className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all text-left ${
-                tabs.some((t) => t.moduleId === item.id)
-                  ? "bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20"
-                  : "text-white/30 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <div className="shrink-0">{item.icon}</div>
-              {expanded && <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>}
-            </button>
-          ))}
+          {MODULES.map((item) => {
+            const isActive = activeTabId && tabs[0]?.moduleId === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => openTab(item.id)}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all text-left ${
+                  isActive
+                    ? "bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20"
+                    : "text-white/30 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <div className="shrink-0">{item.icon}</div>
+                {expanded && <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>}
+              </button>
+            );
+          })}
         </nav>
         <div className="absolute bottom-8 left-0 w-full px-6 opacity-20">
            <div className="flex items-center gap-2">
@@ -80,17 +83,12 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
             {tabs.map((tab) => (
               <div
                 key={tab.id}
-                onClick={() => activateTab(tab.id)}
-                className={`group flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest cursor-pointer border-t border-l border-r border-white/5 rounded-t-lg transition-all ${
-                  activeTabId === tab.id
-                    ? "bg-white/5 text-[#00F0FF] border-[#00F0FF]/30"
-                    : "text-white/30 hover:text-white hover:bg-white/[0.02]"
-                }`}
+                className="group flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest cursor-pointer border-t border-l border-r border-white/5 rounded-t-lg bg-white/5 text-[#00F0FF] border-[#00F0FF]/30"
               >
                 <span>{tab.title}</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-opacity"
+                  className="text-white/30 hover:text-red-400 transition-opacity"
                 >
                   <X size={12} />
                 </button>

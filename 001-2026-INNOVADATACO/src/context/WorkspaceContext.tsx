@@ -31,30 +31,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
   const openTab = (moduleId: ModuleId) => {
-    const existing = tabs.find((t) => t.moduleId === moduleId);
-    if (existing) {
-      setActiveTabId(existing.id);
-      return;
-    }
     const id = `${moduleId}-${Date.now()}`;
     const newTab = { id, moduleId, title: MODULE_TITLES[moduleId] };
-    setTabs((prev) => [...prev, newTab]);
+    setTabs([newTab]);
     setActiveTabId(id);
   };
 
   const closeTab = (id: string) => {
-    setTabs((prev) => {
-      const idx = prev.findIndex((t) => t.id === id);
-      const next = prev.filter((t) => t.id !== id);
-      if (activeTabId === id) {
-        const newActive = next[idx - 1] || next[0] || null;
-        setActiveTabId(newActive?.id || null);
-      }
-      return next;
-    });
+    setTabs([]);
+    setActiveTabId(null);
   };
 
-  const activateTab = (id: string) => setActiveTabId(id);
+  const activateTab = (id: string) => {
+    if (tabs[0]?.id === id) return;
+    setActiveTabId(id);
+  };
 
   return (
     <WorkspaceContext.Provider value={{ tabs, activeTabId, openTab, closeTab, activateTab }}>
