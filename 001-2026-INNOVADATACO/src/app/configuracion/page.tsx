@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Settings, Cpu, Globe, Activity, Save, Plus, Trash2, RefreshCw,
-  CheckCircle, XCircle, AlertCircle, Clock, Terminal, X
+  CheckCircle, XCircle, AlertCircle, Clock, Terminal, X, ArrowLeft
 } from "lucide-react";
 
 interface AiModel {
@@ -129,6 +129,8 @@ export default function ConfiguracionPage() {
   const [testingApiId, setTestingApiId] = useState<string | null>(null);
   const [apiTestResult, setApiTestResult] = useState<{ id: string; result: any } | null>(null);
   const [expandedApiId, setExpandedApiId] = useState<string | null>(null);
+  const [selectedApiModule, setSelectedApiModule] = useState<string | null>(null);
+  const [selectedApiSubmodule, setSelectedApiSubmodule] = useState<string | null>(null);
 
   const toast = (type: Toast["type"], message: string) => {
     const id = Math.random().toString(36).slice(2);
@@ -493,25 +495,73 @@ export default function ConfiguracionPage() {
       )}
 
       {tab === "apis" && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           <div className="glass-panel p-6 space-y-2">
             <h3 className="text-xs font-bold uppercase flex items-center gap-2"><Globe className="w-3 h-3" /> Catálogo de APIs del agente</h3>
-            <p className="text-[10px] text-[#666] uppercase tracking-widest">Documentación, activación y test por módulo/submódulo.</p>
+            <p className="text-[10px] text-[#666] uppercase tracking-widest">
+              {!selectedApiModule ? "Selecciona un módulo" : !selectedApiSubmodule ? `Módulo: ${selectedApiModule.replace(/_/g, " ")} — selecciona un submódulo` : `Submódulo: ${selectedApiSubmodule.replace(/_/g, " ")}`}
+            </p>
           </div>
-          {Object.entries(
-            apis.reduce((acc, api) => {
-              if (!acc[api.module]) acc[api.module] = {};
-              if (!acc[api.module][api.submodule]) acc[api.module][api.submodule] = [];
-              acc[api.module][api.submodule].push(api);
-              return acc;
-            }, {} as Record<string, Record<string, AgentApi[]>>)
-          ).map(([module, submodules]) => (
-            <div key={module} className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-neonCyan">{module.replace(/_/g, " ")}</h4>
-              {Object.entries(submodules).map(([submodule, items]) => (
-                <div key={submodule} className="space-y-2">
-                  <h5 className="text-[9px] font-bold uppercase tracking-widest text-[#666]">{submodule.replace(/_/g, " ")}</h5>
-                  {items.map((api) => {
+
+          {!selectedApiModule && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(
+                apis.reduce((acc, api) => {
+                  if (!acc[api.module]) acc[api.module] = new Set<string>();
+                  acc[api.module].add(api.submodule);
+                  return acc;
+                }, {} as Record<string, Set<string>>)
+              ).map(([module, submodules]) => (
+                <button
+                  key={module}
+                  onClick={() => setSelectedApiModule(module)}
+                  className="glass-panel p-6 text-left space-y-2 hover:border-neonCyan/50 transition-colors"
+                >
+                  <div className="text-xs font-black uppercase tracking-widest text-neonCyan">{module.replace(/_/g, " ")}</div>
+                  <div className="text-[10px] text-[#666]">{submodules.size} submódulo{submodules.size === 1 ? "" : "s"}</div>
+                  <div className="text-[9px] text-[#444] uppercase tracking-widest">{Array.from(submodules).slice(0, 3).map(s => s.replace(/_/g, " ")).join(" ·")}{submodules.size > 3 ? "..." : ""}</div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {selectedApiModule && !selectedApiSubmodule && (
+            <div className="space-y-4">
+              <button
+                onClick={() => setSelectedApiModule(null)}
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#666] hover:text-neonCyan"
+              >
+                <ArrowLeft className="w-3 h-3" /> Volver a módulos
+              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from(new Set(apis.filter((a) => a.module === selectedApiModule).map((a) => a.submodule))).map((submodule) => (
+                  <button
+                    key={submodule}
+                    onClick={() => setSelectedApiSubmodule(submodule)}
+                    className="glass-panel p-6 text-left space-y-2 hover:border-neonCyan/50 transition-colors"
+                  >
+                    <div className="text-xs font-black uppercase tracking-widest">{submodule.replace(/_/g, " ")}</div>
+                    <div className="text-[10px] text-[#666]">
+                      {apis.filter((a) => a.module === selectedApiModule && a.submodule === submodule).length} API{apis.filter((a) => a.module === selectedApiModule && a.submodule === submodule).length === 1 ? "" : "s"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedApiModule && selectedApiSubmodule && (
+            <div className="space-y-4">
+              <button
+                onClick={() => setSelectedApiSubmodule(null)}
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#666] hover:text-neonCyan"
+              >
+                <ArrowLeft className="w-3 h-3" /> Volver a submódulos
+              </button>
+              <div className="space-y-3">
+                {apis
+                  .filter((api) => api.module === selectedApiModule && api.submodule === selectedApiSubmodule)
+                  .map((api) => {
                     const docs = (() => {
                       try {
                         return JSON.parse(api.docs || "{}") as { params?: any[]; request?: any; response?: any };
@@ -603,11 +653,9 @@ export default function ConfiguracionPage() {
                       </div>
                     );
                   })}
-                </div>
-              ))}
+              </div>
             </div>
-          ))}
-          {apis.length === 0 && <p className="text-[10px] text-[#444] uppercase tracking-widest text-center py-8">Sin APIs registradas</p>}
+          )}
         </div>
       )}
 
