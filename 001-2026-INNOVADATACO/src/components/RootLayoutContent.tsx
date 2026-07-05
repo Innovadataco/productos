@@ -1,4 +1,5 @@
 "use client";
+// build-cache-invalidate: 2026-07-04T20:21:31.950091
 import { useState } from "react";
 import { Menu, X, Terminal, LayoutGrid, Database, Settings, Zap, User, Bell } from "lucide-react";
 import { useWorkspace, SUBMODULES, type ModuleId } from "@/context/WorkspaceContext";
@@ -112,7 +113,7 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
           {ActiveComponent ? <ActiveComponent submoduleId={activeSubmoduleId!} /> : (
             <div className="flex flex-col items-center justify-center h-96 text-white/20 gap-4">
               <LayoutGrid size={48} />
-              <p className="text-[10px] font-black uppercase tracking-[0.3em]">Selecciona un módulo del sidebar</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em]">Selecciona un módulo del sidebar v202147</p>
             </div>
           )}
         </main>
