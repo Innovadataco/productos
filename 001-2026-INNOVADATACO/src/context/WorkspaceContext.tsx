@@ -18,17 +18,15 @@ interface WorkspaceContextValue {
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
-const MODULE_TITLES: Record<ModuleId, string> = {
-  investigacion: "Investigación",
-  proyectos: "Proyectos",
-  base: "Base Oficial",
-  configuracion: "Configuración",
-};
 
 export const SUBMODULES: Record<ModuleId, SubmoduleDef[]> = {
   investigacion: [{ id: "analisis", title: "Análisis" }],
   proyectos: [{ id: "listado", title: "Listado" }],
-  base: [{ id: "documentos", title: "Documentos" }],
+  base: [
+    { id: "repositorio", title: "Repositorio" },
+    { id: "carga_documental", title: "Carga documental" },
+    { id: "busqueda_rag", title: "Búsqueda RAG" },
+  ],
   configuracion: [
     { id: "modelos", title: "Modelos IA" },
     { id: "apis", title: "APIs" },
