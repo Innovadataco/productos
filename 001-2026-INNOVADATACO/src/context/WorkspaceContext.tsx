@@ -23,9 +23,9 @@ export const SUBMODULES: Record<ModuleId, SubmoduleDef[]> = {
   investigacion: [{ id: "analisis", title: "Análisis" }],
   proyectos: [{ id: "listado", title: "Listado" }],
   base: [
-    { id: "repositorio", title: "Repositorio" },
     { id: "carga_documental", title: "Carga documental" },
     { id: "busqueda_rag", title: "Búsqueda RAG" },
+    { id: "repositorio", title: "Repositorio" },
   ],
   configuracion: [
     { id: "modelos", title: "Modelos IA" },

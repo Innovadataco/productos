@@ -124,9 +124,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const includeInactive = searchParams.get("includeInactive") === "true";
+    const where = includeInactive ? {} : { activo: true };
     const docs = await prisma.documentoOficial.findMany({
+      where,
       orderBy: [{ jerarquiaNivel: "asc" }, { fechaExpedicion: "desc" }],
       include: { padre: { select: { id: true, titulo: true, tipo: true } } },
     });
@@ -134,5 +138,18 @@ export async function GET() {
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Error listando documentos" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { id, ...data } = await req.json();
+    if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
+    const updated = await prisma.documentoOficial.update({ where: { id }, data });
+    await auditLog({ action: "update_document", entityType: "DocumentoOficial", entityId: id, status: "success", message: "Documento actualizado", metadata: data as Record<string, unknown> });
+    return NextResponse.json(updated);
+  } catch (err: any) {
+    console.error(err);
+    return NextResponse.json({ error: err.message || "Error actualizando documento" }, { status: 500 });
   }
 }

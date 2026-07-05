@@ -4,14 +4,25 @@ import type { DocumentoOficial } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
-    const { query } = await req.json();
+    const body = await req.json();
+    const { query, tipo, entidad, sector, fechaDesde, fechaHasta } = body;
     if (!query || typeof query !== "string") {
       return NextResponse.json({ error: "Consulta requerida" }, { status: 400 });
     }
 
-    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-    const docs = await prisma.documentoOficial.findMany();
+    const where: any = { activo: true };
+    if (tipo) where.tipo = tipo;
+    if (entidad) where.entidad = entidad;
+    if (sector) where.sector = sector;
+    if (fechaDesde || fechaHasta) {
+      where.fechaExpedicion = {};
+      if (fechaDesde) where.fechaExpedicion.gte = new Date(fechaDesde);
+      if (fechaHasta) where.fechaExpedicion.lte = new Date(fechaHasta);
+    }
 
+    const docs = await prisma.documentoOficial.findMany({ where });
+
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
     const scored = (docs as DocumentoOficial[])
       .map((doc: DocumentoOficial) => {
         const text = `${doc.titulo} ${doc.contenidoTexto} ${doc.resumen} ${doc.proposito}`.toLowerCase();
@@ -20,7 +31,7 @@ export async function POST(req: NextRequest) {
       })
       .filter((d: { score: number }) => d.score > 0)
       .sort((a: { score: number }, b: { score: number }) => b.score - a.score)
-      .slice(0, 5);
+      .slice(0, 20);
 
     return NextResponse.json(scored);
   } catch (err) {

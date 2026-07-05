@@ -12,6 +12,8 @@ export interface AuditInput {
   aiModelId?: string;
 }
 
+const SYSTEM_USER_ID = "system";
+
 export async function auditLog(input: AuditInput) {
   try {
     await prisma.auditLog.create({
@@ -19,7 +21,7 @@ export async function auditLog(input: AuditInput) {
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId,
-        userId: input.userId,
+        userId: input.userId ?? SYSTEM_USER_ID,
         status: input.status,
         message: input.message,
         metadata: JSON.stringify(input.metadata ?? {}),

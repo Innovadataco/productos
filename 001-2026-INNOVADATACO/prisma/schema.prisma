@@ -25,6 +25,7 @@ model DocumentoOficial {
   jerarquiaNivel    Int      @default(0)
   padreId           String?
   status            String   @default("pending") // pending | processing | completed | failed | needs_review
+  activo            Boolean  @default(true)
   aiModelId         String?
   processingError   String?
   padre             DocumentoOficial?  @relation("JerarquiaDocumentos", fields: [padreId], references: [id])
@@ -35,6 +36,7 @@ model DocumentoOficial {
   @@index([tipo])
   @@index([jerarquiaNivel])
   @@index([status])
+  @@index([activo])
 }
 
 model AiModel {
