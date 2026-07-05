@@ -38,7 +38,14 @@ export async function POST(req: NextRequest) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const texto = await extractPdfText(buffer);
+    let texto = "";
+    let extractionError: string | null = null;
+    try {
+      texto = await extractPdfText(buffer);
+    } catch (err: any) {
+      extractionError = err?.message || "No se pudo extraer texto del PDF";
+      console.warn("PDF extraction warning:", extractionError);
+    }
 
     const uploadDir = join(process.cwd(), "uploads");
     await mkdir(uploadDir, { recursive: true });
@@ -54,13 +61,20 @@ export async function POST(req: NextRequest) {
         sector: sector || "Otro",
         archivoUrl: `/uploads/${fileName}`,
         contenidoTexto: texto,
-        status: "processing",
+        status: extractionError ? "needs_review" : "processing",
+        processingError: extractionError,
         jerarquiaNivel: TIPO_JERARQUIA[tipo] ?? 9,
         padreId,
       },
     });
 
-    await auditLog({ action: "upload_pdf", entityType: "DocumentoOficial", entityId: doc.id, status: "info", message: "PDF subido, iniciando procesamiento" });
+    await auditLog({ action: "upload_pdf", entityType: "DocumentoOficial", entityId: doc.id, status: extractionError ? "error" : "info", message: extractionError || "PDF subido, iniciando procesamiento" });
+
+    if (extractionError) {
+      const fallback = { titulo: titulo || file.name, entidad: entidad || "Otra", sector: sector || "Otro", numero: numero || "" };
+      const updated = await prisma.documentoOficial.update({ where: { id: doc.id }, data: { ...fallback, status: "needs_review" } });
+      return NextResponse.json(updated, { status: 201 });
+    }
 
     const activeModel = await prisma.aiModel.findFirst({ where: { active: true } });
     let metadata: Record<string, any> | null = null;
@@ -119,7 +133,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(updated, { status: 201 });
   } catch (err: any) {
     console.error(err);
-    await auditLog({ action: "upload_pdf", entityType: "DocumentoOficial", status: "error", message: err.message });
+    await auditLog({ action: "upload_pdf", entityType: "DocumentoOficial", status: "error", message: err.message || "Error desconocido" });
     return NextResponse.json({ error: err.message || "Error procesando documento" }, { status: 500 });
   }
 }

@@ -221,11 +221,9 @@ function MetadataForm({
   );
 }
 
-function CargaDocumental() {
+function useQueue() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [processing, setProcessing] = useState(false);
-  const [editingResult, setEditingResult] = useState<Doc | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const processingRef = useRef(false);
 
   const addFiles = (files: FileList | null) => {
     if (!files) return;
@@ -235,28 +233,62 @@ function CargaDocumental() {
     setQueue((q) => [...q, ...newItems]);
   };
 
+  const updateItem = (id: string, patch: Partial<QueueItem>) => {
+    setQueue((q) => q.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  };
+
   const processQueue = async () => {
-    if (processing) return;
-    setProcessing(true);
-    const pending = queue.filter((i) => i.status === "pending");
-    for (const item of pending) {
-      setQueue((q) => q.map((i) => (i.id === item.id ? { ...i, status: "uploading" } : i)));
+    if (processingRef.current) return;
+    processingRef.current = true;
+
+    while (true) {
+      let currentId: string | null = null;
+      setQueue((q) => {
+        const next = q.find((i) => i.status === "pending");
+        if (!next) return q;
+        currentId = next.id;
+        return q.map((i) => (i.id === next.id ? { ...i, status: "uploading" } : i));
+      });
+      if (!currentId) break;
+
+      const item = queue.find((i) => i.id === currentId) || (await new Promise<QueueItem | undefined>((resolve) => {
+        setQueue((q) => {
+          const found = q.find((i) => i.id === currentId);
+          resolve(found);
+          return q;
+        });
+      }));
+
+      if (!item) {
+        processingRef.current = false;
+        break;
+      }
+
       const data = new FormData();
       data.append("file", item.file);
       try {
         const res = await fetch("/api/documents", { method: "POST", body: data });
         if (!res.ok) throw new Error("Error subiendo documento");
         const result: Doc = await res.json();
-        setQueue((q) => q.map((i) => (i.id === item.id ? { ...i, status: "done", result } : i)));
+        updateItem(item.id, { status: "done", result });
       } catch (err: any) {
-        setQueue((q) => q.map((i) => (i.id === item.id ? { ...i, status: "error", error: err.message } : i)));
+        updateItem(item.id, { status: "error", error: err.message });
       }
     }
-    setProcessing(false);
+
+    processingRef.current = false;
   };
 
   const removeItem = (id: string) => setQueue((q) => q.filter((i) => i.id !== id));
   const clearCompleted = () => setQueue((q) => q.filter((i) => i.status !== "done"));
+
+  return { queue, addFiles, processQueue, removeItem, clearCompleted, updateItem, setQueue };
+}
+
+function CargaDocumental() {
+  const { queue, addFiles, processQueue, removeItem, clearCompleted, setQueue } = useQueue();
+  const [editingResult, setEditingResult] = useState<Doc | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const saveEdited = async () => {
     if (!editingResult) return;
@@ -275,9 +307,14 @@ function CargaDocumental() {
     });
     if (!res.ok) throw new Error("Error guardando");
     const updated: Doc = await res.json();
-    setQueue((q) => q.map((i) => (i.result?.id === updated.id ? { ...i, result: updated } : i)));
-    setEditingResult(null);
+    // close editor; queue item keeps reference to original result, user can reopen to verify
+    setEditingResult(updated);
   };
+
+  useEffect(() => {
+    const pending = queue.some((i) => i.status === "pending");
+    if (pending) processQueue();
+  }, [queue.length]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -323,10 +360,10 @@ function CargaDocumental() {
             <div className="flex items-center gap-2">
               <button
                 onClick={processQueue}
-                disabled={processing || queue.every((i) => i.status !== "pending")}
+                disabled={queue.every((i) => i.status !== "pending")}
                 className="px-3 py-1.5 bg-neonCyan text-black font-black text-[9px] uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-30"
               >
-                {processing ? "Procesando..." : "Procesar cola"}
+                {queue.some((i) => i.status === "uploading") ? "Procesando..." : "Procesar cola"}
               </button>
               <button
                 onClick={clearCompleted}
@@ -354,9 +391,10 @@ function CargaDocumental() {
                   )}
                   <div className="min-w-0">
                     <p className="text-[11px] font-bold truncate">{item.file.name}</p>
-                    <p className="text-[9px] text-foreground/30 uppercase tracking-wider">
+                    <p className={`text-[9px] uppercase tracking-wider ${item.status === "error" ? "text-red-400" : "text-foreground/30"}`}>
                       {queueStatusLabels[item.status]}
                     </p>
+                    {item.error && <p className="text-[9px] text-red-400 truncate" title={item.error}>{item.error}</p>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

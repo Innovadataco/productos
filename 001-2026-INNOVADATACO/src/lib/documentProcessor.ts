@@ -137,17 +137,42 @@ export function analyzeDocument(text: string): DocumentAnalysis {
 export function extractPdfText(buffer: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
     const pdfParser = new PDFParser();
-    pdfParser.on("pdfParser_dataError", (err: any) => reject(err));
-    pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
-      const text = pdfData.Pages
-        .map((page: any) =>
-          page.Texts.map((t: any) =>
-            t.R.map((r: any) => decodeURIComponent(r.T)).join(" ")
-          ).join(" ")
-        )
-        .join("\n\n");
-      resolve(text);
+    let resolved = false;
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        reject(new Error("Timeout extrayendo texto del PDF"));
+      }
+    }, 15000);
+    pdfParser.on("pdfParser_dataError", (err: any) => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        reject(err?.parserError || err || new Error("Error parseando PDF"));
+      }
     });
-    pdfParser.parseBuffer(buffer);
+    pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        const text = pdfData.Pages
+          .map((page: any) =>
+            page.Texts.map((t: any) =>
+              t.R.map((r: any) => decodeURIComponent(r.T)).join(" ")
+            ).join(" ")
+          )
+          .join("\n\n");
+        resolve(text);
+      }
+    });
+    try {
+      pdfParser.parseBuffer(buffer);
+    } catch (err) {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        reject(err);
+      }
+    }
   });
 }
