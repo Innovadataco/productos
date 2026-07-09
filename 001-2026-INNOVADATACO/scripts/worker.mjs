@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client';
 import { config } from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { readFile } from 'fs/promises';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -13,33 +12,19 @@ config({ path: join(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
 
-// Importar funciones necesarias (usando dynamic import para los módulos TS)
-const { extractPdfText, analyzeDocument } = await import('../src/lib/documentProcessor.ts').catch(() => ({
-    extractPdfText: async () => '',
-    analyzeDocument: (text) => ({
-        titulo: 'Sin título',
-        entidad: 'Otra',
-        sector: 'Otro',
-        numero: '',
-        fecha: null,
-        resumen: text.slice(0, 500),
-        proposito: '',
-        actores: '',
-        motivacion: '',
-        resuelve: ''
-    })
-}));
+// Importar funciones de los módulos TypeScript
+// tsx permite importar archivos .ts directamente
+const { extractPdfText, analyzeDocument } = await import('../src/lib/documentProcessor.ts');
+const { callModel } = await import('../src/lib/modelClients.ts');
+const { buildDocumentAnalysisPrompt, sanitizeJsonText } = await import('../src/lib/prompts.ts');
 
-const { callModel } = await import('../src/lib/modelClients.ts').catch(() => ({
-    callModel: async () => ({ ok: false, error: 'Modelo no disponible' })
-}));
+function parseDate(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+}
 
-const { buildDocumentAnalysisPrompt, sanitizeJsonText } = await import('../src/lib/prompts.ts').catch(() => ({
-    buildDocumentAnalysisPrompt: (text) => `Analiza: ${text.slice(0, 1000)}`,
-    sanitizeJsonText: (text) => text
-}));
-
-// Función de audit log simplificada
+// Función de audit log
 async function auditLog(data) {
     try {
         await prisma.auditLog.create({
@@ -52,27 +37,12 @@ async function auditLog(data) {
                 metadata: JSON.stringify(data.metadata || {}),
                 latencyMs: data.latencyMs,
                 aiModelId: data.aiModelId,
-            }
+            },
         });
     } catch (e) {
-        console.error('Audit log error:', e);
+        console.error('[Worker] Audit log error:', e);
     }
 }
-
-function parseDate(value) {
-    if (!value) return null;
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? null : d;
-}
-
-const TIPO_JERARQUIA = {
-    constitucion: 1,
-    ley: 2,
-    decreto: 3,
-    resolucion: 4,
-    circular: 5,
-    otro: 9,
-};
 
 // Inicializar pg-boss
 const boss = new pgBoss({
@@ -83,7 +53,7 @@ const boss = new pgBoss({
 });
 
 boss.on('error', (error) => {
-    console.error('pg-boss error:', error);
+    console.error('[Worker] pg-boss error:', error);
 });
 
 async function processDocument(job) {
@@ -93,7 +63,7 @@ async function processDocument(job) {
     try {
         // Obtener el documento
         const doc = await prisma.documentoOficial.findUnique({
-            where: { id: documentId }
+            where: { id: documentId },
         });
 
         if (!doc) {
@@ -101,10 +71,13 @@ async function processDocument(job) {
             return;
         }
 
+        console.log(`[Worker] Documento encontrado: ${doc.titulo}`);
+        console.log(`[Worker] Texto extraído: ${doc.contenidoTexto?.slice(0, 100)}...`);
+
         // Actualizar estado a processing
         await prisma.documentoOficial.update({
             where: { id: documentId },
-            data: { status: 'processing' }
+            data: { status: 'processing' },
         });
 
         await auditLog({
@@ -112,7 +85,7 @@ async function processDocument(job) {
             entityType: 'DocumentoOficial',
             entityId: documentId,
             status: 'info',
-            message: 'Iniciando procesamiento en worker'
+            message: 'Iniciando procesamiento en worker',
         });
 
         const activeModel = await prisma.aiModel.findFirst({ where: { active: true } });
@@ -124,13 +97,18 @@ async function processDocument(job) {
             console.log(`[Worker] Usando modelo ${activeModel.name}`);
             const prompt = buildDocumentAnalysisPrompt(doc.contenidoTexto || '');
 
+            console.log(`[Worker] Llamando a callModel con prompt de ${prompt.length} caracteres`);
+
             const startTime = Date.now();
             const result = await callModel(activeModel, prompt);
             const latencyMs = Date.now() - startTime;
 
+            console.log(`[Worker] Resultado de callModel: ok=${result.ok}, latency=${latencyMs}ms`);
+
             if (result.ok) {
                 try {
                     metadata = JSON.parse(sanitizeJsonText(result.text));
+                    console.log(`[Worker] Metadata parseada:`, metadata);
                     await auditLog({
                         action: 'process_end',
                         entityType: 'DocumentoOficial',
@@ -143,17 +121,19 @@ async function processDocument(job) {
                     });
                 } catch (err) {
                     processingError = `JSON inválido: ${err.message}`;
+                    console.error(`[Worker] Error parseando JSON:`, err);
                     await auditLog({
                         action: 'process_end',
                         entityType: 'DocumentoOficial',
                         entityId: documentId,
                         status: 'error',
                         message: processingError,
-                        aiModelId
+                        aiModelId,
                     });
                 }
             } else {
                 processingError = result.error || 'Modelo no respondió';
+                console.error(`[Worker] Error del modelo:`, processingError);
                 await auditLog({
                     action: 'process_end',
                     entityType: 'DocumentoOficial',
@@ -161,22 +141,25 @@ async function processDocument(job) {
                     status: 'error',
                     message: processingError,
                     latencyMs,
-                    aiModelId
+                    aiModelId,
                 });
             }
         } else {
             processingError = 'Sin modelo IA activo. Usando extracción por reglas.';
+            console.warn(`[Worker] ${processingError}`);
             await auditLog({
                 action: 'process_end',
                 entityType: 'DocumentoOficial',
                 entityId: documentId,
                 status: 'error',
-                message: processingError
+                message: processingError,
             });
         }
 
         // Fallback analysis
+        console.log(`[Worker] Ejecutando analyzeDocument...`);
         const fallback = analyzeDocument(doc.contenidoTexto || '');
+        console.log(`[Worker] Fallback resultado:`, fallback);
 
         const final = {
             titulo: metadata?.titulo || fallback.titulo || doc.titulo || 'Sin título',
@@ -194,12 +177,14 @@ async function processDocument(job) {
             aiModelId,
         };
 
+        console.log(`[Worker] Actualizando documento con status: ${final.status}`);
+
         await prisma.documentoOficial.update({
             where: { id: documentId },
-            data: final
+            data: final,
         });
 
-        console.log(`[Worker] Documento ${documentId} procesado. Status: ${final.status}`);
+        console.log(`[Worker] Documento ${documentId} procesado exitosamente. Status: ${final.status}`);
 
     } catch (error) {
         console.error(`[Worker] Error procesando documento ${documentId}:`, error);
@@ -208,8 +193,8 @@ async function processDocument(job) {
             where: { id: documentId },
             data: {
                 status: 'needs_review',
-                processingError: error.message || 'Error desconocido en worker'
-            }
+                processingError: error.message || 'Error desconocido en worker',
+            },
         });
 
         await auditLog({
@@ -217,8 +202,11 @@ async function processDocument(job) {
             entityType: 'DocumentoOficial',
             entityId: documentId,
             status: 'error',
-            message: error.message || 'Error desconocido en worker'
+            message: error.message || 'Error desconocido en worker',
         });
+
+        // Re-lanzar el error para que pg-boss lo maneje
+        throw error;
     }
 }
 
@@ -239,7 +227,7 @@ async function start() {
     console.log('[Worker] Listo para procesar documentos!');
 }
 
-start().catch(err => {
+start().catch((err) => {
     console.error('[Worker] Error iniciando:', err);
     process.exit(1);
 });
