@@ -1,4 +1,4 @@
-import pgBoss from 'pg-boss';
+import { PgBoss } from 'pg-boss';
 import { PrismaClient } from '@prisma/client';
 import { config } from 'dotenv';
 import { join, dirname } from 'path';
@@ -45,7 +45,7 @@ async function auditLog(data) {
 }
 
 // Inicializar pg-boss
-const boss = new pgBoss({
+const boss = new PgBoss({
     connectionString: process.env.DATABASE_URL,
     retryLimit: 3,
     retryDelay: 60,
