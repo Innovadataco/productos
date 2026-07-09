@@ -11,13 +11,26 @@ Aplicación frontend de la Plataforma Operativa Innovadataco.
 - Prisma ORM
 - PostgreSQL
 
-## Scripts
+## Levantar el entorno de desarrollo (forma oficial)
+
+Una sola terminal supervisa ambos procesos (dev server + worker). Si alguno muere, PM2 lo reinicia automáticamente:
 
 ```bash
-npm install
-npm run dev      # Puerto 3000
-npm run build
-npm start        # Puerto 3000
+npm run start:all   # Levanta dev-server + worker con PM2
+npm run status      # Ver estado de los procesos
+npm run logs        # Ver logs en tiempo real
+npm run stop:all    # Detener todos los procesos
+```
+
+**Requiere PM2 instalado** (se instala como devDependency: `npm install -D pm2`).
+
+**Setup inicial de la base de datos** (solo una vez):
+
+```bash
+npx prisma migrate deploy
+npm run init-pgboss   # Crea tablas de pg-boss en PostgreSQL
+node scripts/seedApis.mjs
+node scripts/seedUser.mjs
 ```
 
 ## Variables de entorno
@@ -35,10 +48,11 @@ Tras cualquier migración o reset de la base de datos PostgreSQL, ejecutar:
 ```bash
 npm install
 npx prisma migrate deploy
+npm run init-pgboss      # Re-crear tablas de pg-boss
 node scripts/seedApis.mjs
 ```
 
-Esto asegura que el catálogo de APIs (`AgentApi`) esté poblado correctamente.
+Esto asegura que el catálogo de APIs (`AgentApi`) y la cola pg-boss estén poblados correctamente.
 
 ## Gobierno
 

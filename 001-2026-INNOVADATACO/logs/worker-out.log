@@ -1,0 +1,17 @@
+2026-07-09 17:44:15 -05:00: ◇ injected env (1) from .env.local // tip: ◈ secrets for agents [www.dotenvx.com]
+2026-07-09 17:44:15 -05:00: ◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+2026-07-09 17:44:15 -05:00: [Worker] Iniciando worker de documentos...
+2026-07-09 17:44:15 -05:00: [Worker] DATABASE_URL: Configurada
+2026-07-09 17:44:15 -05:00: [Worker] pg-boss iniciado
+2026-07-09 17:44:15 -05:00: [Worker] Cola process-document lista
+2026-07-09 17:44:15 -05:00: [Worker] Worker suscrito a process-document
+2026-07-09 17:44:15 -05:00: [Worker] Listo para procesar documentos!
+2026-07-09 17:46:35 -05:00: ◇ injected env (1) from .env.local // tip: ◈ encrypted .env [www.dotenvx.com]
+2026-07-09 17:46:35 -05:00: ◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+2026-07-09 17:46:35 -05:00: [Worker] Iniciando worker de documentos...
+2026-07-09 17:46:35 -05:00: [Worker] DATABASE_URL: Configurada
+2026-07-09 17:46:35 -05:00: [Worker] pg-boss iniciado
+2026-07-09 17:46:35 -05:00: [Worker] Cola process-document lista
+2026-07-09 17:46:35 -05:00: [Worker] Worker suscrito a process-document
+2026-07-09 17:46:35 -05:00: [Worker] Listo para procesar documentos!
+2026-07-09 17:47:50 -05:00: [Worker] SIGINT recibido, cerrando...

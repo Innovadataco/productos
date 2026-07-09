@@ -49,6 +49,7 @@ type Doc = {
   jerarquiaNivel: number;
   padreId?: string | null;
   padre?: { id: string; titulo: string; tipo: string } | null;
+  createdAt: string;
 };
 
 type QueueItem = {
@@ -638,27 +639,41 @@ function CargaDocumental() {
             </div>
           </div>
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {processingDocs.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Loader2 className="w-4 h-4 animate-spin text-neonCyan shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold truncate">{doc.titulo}</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-[9px] uppercase tracking-wider text-foreground/30">
-                        {doc.status === "queued" ? "En cola" : "Procesando con IA..."}
-                      </p>
-                      {activeModel?.isLarge && (
-                        <span className="text-[9px] text-amber-400">⏱️ Estimado: 2-5 min</span>
+            {processingDocs.map((doc) => {
+              const minutosEnCola = Math.floor((Date.now() - new Date(doc.createdAt).getTime()) / 60000);
+              const estaEstancado = doc.status === "queued" && minutosEnCola > 10;
+              return (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Loader2 className="w-4 h-4 animate-spin text-neonCyan shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold truncate">{doc.titulo}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[9px] uppercase tracking-wider text-foreground/30">
+                          {doc.status === "queued" ? "En cola" : "Procesando con IA..."}
+                        </p>
+                        {activeModel?.isLarge && !estaEstancado && (
+                          <span className="text-[9px] text-amber-400">⏱️ Estimado: 2-5 min</span>
+                        )}
+                      </div>
+                      {estaEstancado && (
+                        <div className="mt-1 p-1.5 bg-red-500/10 border border-red-500/20 rounded">
+                          <p className="text-[9px] text-red-400 font-bold">
+                            ⚠️ El procesamiento parece detenido — verifica que el worker esté corriendo
+                          </p>
+                          <p className="text-[9px] text-red-400/70">
+                            (npm run status)
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <p className="text-[9px] text-foreground/30 text-center">
             Actualizando automáticamente cada 4 segundos...
