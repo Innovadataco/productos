@@ -9,8 +9,7 @@ export default function ProjectForm({ onClose, onRefresh }: { onClose: () => voi
     codigo: "",
     nombre: "",
     cliente: "",
-    current_phase: "initiation",
-    budget: "0"
+    currentPhase: "initiation"
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,36 +17,27 @@ export default function ProjectForm({ onClose, onRefresh }: { onClose: () => voi
     setLoading(true);
     
     try {
-      // 1. Registro en tabla Proyectos
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/proyectos`, {
+      const res = await fetch("/api/projects", {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           codigo: formData.codigo,
           nombre: formData.nombre,
           cliente: formData.cliente,
-          current_phase: formData.current_phase
+          currentPhase: formData.currentPhase
         })
       });
 
-      if (!res.ok) throw new Error("Error registrando proyecto");
-      const project = await res.json();
-
-      // 2. Registro Inicial Financiero
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pm2_financials`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          proyecto_id: project[0].id,
-          budget: parseFloat(formData.budget)
-        })
-      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Error registrando proyecto");
+      }
 
       onRefresh();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Fallo en Innovadataco: No se pudo registrar el proyecto en BD real.");
+      alert("Fallo en Innovadataco: " + (err.message || "No se pudo registrar el proyecto"));
     } finally {
       setLoading(false);
     }
@@ -102,31 +92,17 @@ export default function ProjectForm({ onClose, onRefresh }: { onClose: () => voi
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-widest pl-1">Fase Inicial</label>
-              <select 
-                className="w-full bg-white/5 border border-white/10 p-3 text-xs focus:border-neonCyan outline-none appearance-none cursor-pointer"
-                value={formData.current_phase}
-                onChange={(e) => setFormData({...formData, current_phase: e.target.value})}
-              >
-                <option value="initiation">Inicio (Initiation)</option>
-                <option value="planning">Planificación</option>
-                <option value="execution">Ejecución</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-widest pl-1">Presupuesto (USD)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neonCyan text-[10px]">$</span>
-                <input 
-                  type="number"
-                  className="w-full bg-white/5 border border-white/10 p-3 pl-6 text-xs focus:border-neonCyan outline-none transition-all"
-                  value={formData.budget}
-                  onChange={(e) => setFormData({...formData, budget: e.target.value})}
-                />
-              </div>
-            </div>
+          <div className="space-y-1">
+            <label className="text-[10px] text-[#888] uppercase tracking-widest pl-1">Fase Inicial</label>
+            <select 
+              className="w-full bg-white/5 border border-white/10 p-3 text-xs focus:border-neonCyan outline-none appearance-none cursor-pointer"
+              value={formData.currentPhase}
+              onChange={(e) => setFormData({...formData, currentPhase: e.target.value})}
+            >
+              <option value="initiation">Inicio (Initiation)</option>
+              <option value="planning">Planificación</option>
+              <option value="execution">Ejecución</option>
+            </select>
           </div>
 
           <button 
