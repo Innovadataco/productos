@@ -32,6 +32,7 @@ model DocumentoOficial {
   updatedAt       DateTime           @updatedAt
   padre           DocumentoOficial?  @relation("JerarquiaDocumentos", fields: [padreId], references: [id])
   hijos           DocumentoOficial[] @relation("JerarquiaDocumentos")
+  chunks          DocumentoChunk[]
 
   @@index([tipo])
   @@index([jerarquiaNivel])
@@ -181,4 +182,18 @@ model Proyecto {
   @@index([estado])
   @@index([currentPhase])
   @@map("proyectos")
+}
+
+model DocumentoChunk {
+  id          String   @id @default(cuid())
+  documentoId String
+  contenido   String
+  orden       Int
+  embedding   Unsupported("vector(768)")
+  createdAt   DateTime @default(now())
+
+  documento DocumentoOficial @relation(fields: [documentoId], references: [id])
+
+  @@index([documentoId])
+  @@index([embedding])
 }

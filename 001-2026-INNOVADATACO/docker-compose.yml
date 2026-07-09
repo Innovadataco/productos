@@ -15,7 +15,7 @@ services:
       - ./uploads:/app/uploads
 
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: innova
       POSTGRES_PASSWORD: innova
