@@ -8,30 +8,30 @@ datasource db {
 }
 
 model DocumentoOficial {
-  id                String   @id @default(cuid())
-  titulo            String
-  tipo              String
-  sector            String?
-  entidad           String
-  fechaExpedicion   DateTime?
-  numero            String?
-  archivoUrl        String
-  contenidoTexto    String   @default("")
-  resumen           String   @default("")
-  proposito         String   @default("")
-  actores           String   @default("")
-  motivacion        String   @default("")
-  resuelve          String   @default("")
-  jerarquiaNivel    Int      @default(0)
-  padreId           String?
-  status            String   @default("pending") // pending | processing | completed | failed | needs_review
-  activo            Boolean  @default(true)
-  aiModelId         String?
-  processingError   String?
-  padre             DocumentoOficial?  @relation("JerarquiaDocumentos", fields: [padreId], references: [id])
-  hijos             DocumentoOficial[] @relation("JerarquiaDocumentos")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id              String             @id @default(cuid())
+  titulo          String
+  tipo            String
+  sector          String?
+  entidad         String
+  fechaExpedicion DateTime?
+  numero          String?
+  archivoUrl      String
+  contenidoTexto  String             @default("")
+  resumen         String             @default("")
+  proposito       String             @default("")
+  actores         String             @default("")
+  motivacion      String             @default("")
+  resuelve        String             @default("")
+  jerarquiaNivel  Int                @default(0)
+  padreId         String?
+  status          String             @default("pending")
+  activo          Boolean            @default(true)
+  aiModelId       String?
+  processingError String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  padre           DocumentoOficial?  @relation("JerarquiaDocumentos", fields: [padreId], references: [id])
+  hijos           DocumentoOficial[] @relation("JerarquiaDocumentos")
 
   @@index([tipo])
   @@index([jerarquiaNivel])
@@ -40,18 +40,18 @@ model DocumentoOficial {
 }
 
 model AiModel {
-  id          String   @id @default(cuid())
-  name        String
-  provider    String   // ollama | openai | mock
-  scope       String   @default("local") // local | cloud
-  baseUrl     String?
-  apiKey      String?
-  modelPath   String
-  active      Boolean  @default(false)
-  config      String   @default("{}") // JSON: temperature, top_p, max_tokens, systemPrompt
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  audits      AuditLog[]
+  id        String     @id @default(cuid())
+  name      String
+  provider  String
+  scope     String     @default("local")
+  baseUrl   String?
+  apiKey    String?
+  modelPath String
+  active    Boolean    @default(false)
+  config    String     @default("{}")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  audits    AuditLog[]
 
   @@index([provider])
   @@index([active])
@@ -59,18 +59,18 @@ model AiModel {
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  action      String   // create_model, test_model, upload_pdf, process_start, process_end, error, api_test
-  entityType  String?  // AiModel, DocumentoOficial, ApiEndpoint
-  entityId    String?
-  userId      String?
-  status      String   // success | error | info
-  message     String
-  metadata    String   @default("{}") // JSON
-  latencyMs   Int?
-  createdAt   DateTime @default(now())
-  aiModel     AiModel? @relation(fields: [aiModelId], references: [id])
-  aiModelId   String?
+  id         String   @id @default(cuid())
+  action     String
+  entityType String?
+  entityId   String?
+  userId     String?
+  status     String
+  message    String
+  metadata   String   @default("{}")
+  latencyMs  Int?
+  createdAt  DateTime @default(now())
+  aiModelId  String?
+  aiModel    AiModel? @relation(fields: [aiModelId], references: [id])
 
   @@index([action])
   @@index([status])
@@ -80,7 +80,7 @@ model AuditLog {
 model User {
   id        String   @id @default(cuid())
   username  String   @unique
-  password  String   // hashed
+  password  String
   role      String   @default("admin")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -93,13 +93,13 @@ model AgentApi {
   description String
   module      String
   submodule   String
-  category    String   // internal | external
+  category    String
   method      String
   path        String
-  authType    String   @default("none") // none | apiKey | token
+  authType    String   @default("none")
   active      Boolean  @default(true)
-  docs        String   @default("{}") // JSON: params, request, response
-  config      String   @default("{}") // JSON: headers, timeout, baseUrl
+  docs        String   @default("{}")
+  config      String   @default("{}")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -110,26 +110,22 @@ model AgentApi {
 }
 
 model Licitacion {
-  id                String   @id @default(cuid())
-  numero            String              // Número de licitación (ej: "L-06196")
-  titulo            String              // Título resumido de la licitación
-  estadoId          Int                 // ID de Estado Licitación — FK a LicitacionStatus.id
-  entidadId         Int?                // ID de EntidadLicitacion
-  areaIdSala        Int?                // ID de Área / Sala
+  id            String                @id @default(cuid())
+  numero        String
+  titulo        String
+  estadoId      Int
+  entidadId     Int?
+  areaIdSala    Int?
+  fechaApertura DateTime
+  descripcion   String                @default("")
+  documentoUrl  String?
+  contenido     String                @default("")
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  documentos    LicitacionDocumento[]
+  entidad       EntidadLicitacion?    @relation("EntidadesLicitaciones", fields: [entidadId], references: [id])
+  estado        LicitacionStatus      @relation(fields: [estadoId], references: [id])
 
-  fechaApertura     DateTime
-
-  descripcion       String    @default("")
-  documentoUrl      String?
-  contenido         String    @default("")   // Texto completo extraído
-
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-    
-  estado            LicitacionStatus @relation(fields: [estadoId], references: [id])
-  entidad           EntidadLicitacion?       @relation("EntidadesLicitaciones", fields: [entidadId], references: [id])
-  documentos        LicitacionDocumento[]
-  
   @@unique([numero, fechaApertura])
   @@index([estadoId])
   @@index([entidadId])
@@ -137,52 +133,37 @@ model Licitacion {
   @@map("licitaciones")
 }
 
-// Documentos de una licitación — uno a mucho con campos orden + tipo+nombre únicos por licitación
 model LicitacionDocumento {
-  id            String   @id @default(cuid())
-  nombre        String                           // Nombre legible del documento
-  tipo          String                           // Estatus | Plazo | Objeto | BaseLegal | Requisitos | Formato | DocumentaciónExigida
-  contenido     String    @default("")
-
-  fechaInicio   DateTime?
-  fechaFin      DateTime?
-  fechaCorte    DateTime?
-
-  createdAt     DateTime @default(now())
-
-  // FK al padre Licitacion.id
-  licitacionId  String
-  
-  // FK opcional a EntidadLicitacion
-  entidadId     Int?
-  
-  // Relaciones
-  licitacion    Licitacion      @relation(fields: [licitacionId], references: [id], onDelete: Cascade)
-  entidad       EntidadLicitacion?     @relation("EntidadesDocumentos", fields: [entidadId], references: [id])
+  id           String             @id @default(cuid())
+  nombre       String
+  tipo         String
+  contenido    String             @default("")
+  fechaInicio  DateTime?
+  fechaFin     DateTime?
+  fechaCorte   DateTime?
+  createdAt    DateTime           @default(now())
+  licitacionId String
+  entidadId    Int?
+  entidad      EntidadLicitacion? @relation("EntidadesDocumentos", fields: [entidadId], references: [id])
+  licitacion   Licitacion         @relation(fields: [licitacionId], references: [id], onDelete: Cascade)
 
   @@unique([tipo, nombre, licitacionId])
 }
- 
-// Modelo para entidades (OFICIALES — clanes de licitaciones)
-model EntidadLicitacion {
-  id               Int      @id @default(autoincrement())
-  key              String   // Clave oficial ("10" etc.)
-  nombreOficial    String
-    
-  createdAt        DateTime  @default(now())  
-  updatedAt        DateTime  @updatedAt
 
-  licitaciones    Licitacion[]            @relation("EntidadesLicitaciones")
-  documentos      LicitacionDocumento[]   @relation("EntidadesDocumentos")
+model EntidadLicitacion {
+  id            Int                   @id @default(autoincrement())
+  key           String
+  nombreOficial String
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  documentos    LicitacionDocumento[] @relation("EntidadesDocumentos")
+  licitaciones  Licitacion[]          @relation("EntidadesLicitaciones")
 }
- 
-// Tabla para estados (OFICIALES — clanes de licitaciones)
+
 model LicitacionStatus {
-  id               Int      @id @default(autoincrement())
-  key              String   // Clave oficial ("241795062-3300" etc.)
-  nombreOficial    String
-   
-  createdAt        DateTime  @default(now())
-  
-  licitaciones     Licitacion[]
+  id            Int          @id @default(autoincrement())
+  key           String
+  nombreOficial String
+  createdAt     DateTime     @default(now())
+  licitaciones  Licitacion[]
 }

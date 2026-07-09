@@ -1,5 +1,5 @@
 "use client";
-// build-cache-invalidate: 2026-07-04T20:21:31.950091
+// build-cache-invalidate: 2026-07-09T03:38:45
 import { useState } from "react";
 import { Menu, X, Terminal, LayoutGrid, Database, Settings, Zap, User, Bell, FileText } from "lucide-react";
 import { useWorkspace, SUBMODULES, type ModuleId } from "@/context/WorkspaceContext";
@@ -47,11 +47,10 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
               <button
                 key={item.id}
                 onClick={() => openModule(item.id)}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all text-left ${
-                  isActive
+                className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all text-left ${isActive
                     ? "bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20"
                     : "text-white/30 hover:bg-white/5 hover:text-white"
-                }`}
+                  }`}
               >
                 <div className="shrink-0">{item.icon}</div>
                 {expanded && <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>}
@@ -60,30 +59,30 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
           })}
         </nav>
         <div className="absolute bottom-8 left-0 w-full px-6 opacity-20">
-           <div className="flex items-center gap-2">
-             <Zap size={14} />
-             {expanded && <span className="text-[8px] font-bold tracking-tighter uppercase">Protocolo Dios v3.1</span>}
-           </div>
+          <div className="flex items-center gap-2">
+            <Zap size={14} />
+            {expanded && <span className="text-[8px] font-bold tracking-tighter uppercase">Protocolo Dios v3.1</span>}
+          </div>
         </div>
       </aside>
 
       <div className={`flex-1 transition-all duration-500 ${expanded ? "ml-64" : "ml-20"}`}>
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-[#020203]/80 backdrop-blur-xl sticky top-0 z-40">
-           <div className="flex items-center gap-4">
-             <div className="h-2 w-2 rounded-full bg-[#00F0FF] shadow-[0_0_10px_#00F0FF]" />
-             {activeModuleId && activeSubmoduleId ? (
-               <div className="flex flex-col">
-                 <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 italic">{MODULES.find(m => m.id === activeModuleId)?.label}</span>
-                 <span className="text-[10px] font-black uppercase tracking-widest text-[#00F0FF]">{SUBMODULES[activeModuleId].find(s => s.id === activeSubmoduleId)?.title}</span>
-               </div>
-             ) : (
-               <h2 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 italic">Plataforma Operativa</h2>
-             )}
-           </div>
-           <div className="flex items-center gap-6 opacity-40 hover:opacity-100 transition-opacity">
-              <Bell size={18} />
-              <div className="h-8 w-8 rounded-full border border-white/10 flex items-center justify-center"><User size={16} /></div>
-           </div>
+          <div className="flex items-center gap-4">
+            <div className="h-2 w-2 rounded-full bg-[#00F0FF] shadow-[0_0_10px_#00F0FF]" />
+            {activeModuleId && activeSubmoduleId ? (
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 italic">{MODULES.find(m => m.id === activeModuleId)?.label}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#00F0FF]">{SUBMODULES[activeModuleId].find(s => s.id === activeSubmoduleId)?.title}</span>
+              </div>
+            ) : (
+              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 italic">Plataforma Operativa</h2>
+            )}
+          </div>
+          <div className="flex items-center gap-6 opacity-40 hover:opacity-100 transition-opacity">
+            <Bell size={18} />
+            <div className="h-8 w-8 rounded-full border border-white/10 flex items-center justify-center"><User size={16} /></div>
+          </div>
         </header>
 
         {activeModuleId && SUBMODULES[activeModuleId].length > 0 && (
@@ -93,11 +92,10 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
                 <button
                   key={sub.id}
                   onClick={() => openSubmodule(activeModuleId, sub.id)}
-                  className={`group flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest border-t border-l border-r border-white/5 rounded-t-lg transition-all ${
-                    activeSubmoduleId === sub.id
+                  className={`group flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest border-t border-l border-r border-white/5 rounded-t-lg transition-all ${activeSubmoduleId === sub.id
                       ? "bg-white/5 text-[#00F0FF] border-[#00F0FF]/30"
                       : "text-white/30 hover:text-white hover:bg-white/[0.02]"
-                  }`}
+                    }`}
                 >
                   <span>{sub.title}</span>
                 </button>
@@ -113,10 +111,12 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
         )}
 
         <main className="p-12 max-w-7xl mx-auto">
-          {ActiveComponent ? <ActiveComponent submoduleId={activeSubmoduleId!} /> : (
+          {ActiveComponent ? <ActiveComponent submoduleId={activeSubmoduleId!} /> : children ? (
+            children
+          ) : (
             <div className="flex flex-col items-center justify-center h-96 text-white/20 gap-4">
               <LayoutGrid size={48} />
-              <p className="text-[10px] font-black uppercase tracking-[0.3em]">Selecciona un módulo del sidebar v202147</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em]">Selecciona un módulo del sidebar</p>
             </div>
           )}
         </main>
