@@ -32,6 +32,19 @@ export async function PUT(req: NextRequest, { params }: Params) {
         active: body.active !== undefined ? !!body.active : existing.active,
         config: body.config ? (typeof body.config === "string" ? body.config : JSON.stringify(body.config)) : existing.config,
       },
+      select: {
+        id: true,
+        name: true,
+        provider: true,
+        scope: true,
+        baseUrl: true,
+        modelPath: true,
+        active: true,
+        config: true,
+        createdAt: true,
+        updatedAt: true,
+        // apiKey INTENCIONALMENTE EXCLUIDO
+      },
     });
 
     await auditLog({

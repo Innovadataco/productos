@@ -55,6 +55,19 @@ export async function POST(req: NextRequest) {
         active: !!active,
         config: typeof config === "string" ? config : JSON.stringify(config ?? {}),
       },
+      select: {
+        id: true,
+        name: true,
+        provider: true,
+        scope: true,
+        baseUrl: true,
+        modelPath: true,
+        active: true,
+        config: true,
+        createdAt: true,
+        updatedAt: true,
+        // apiKey INTENCIONALMENTE EXCLUIDO
+      },
     });
 
     await auditLog({
