@@ -132,7 +132,14 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
         )}
 
         <main className="p-12 max-w-7xl mx-auto">
-          {ActiveComponent ? <ActiveComponent submoduleId={activeSubmoduleId!} /> : children ? (
+          {ActiveComponent ? (
+            <ActiveComponent submoduleId={activeSubmoduleId!} />
+          ) : pathname === "/" ? (
+            <div className="flex flex-col items-center justify-center h-96 text-white/20 gap-4">
+              <LayoutGrid size={48} />
+              <p className="text-[10px] font-black uppercase tracking-[0.3em]">Selecciona un módulo del sidebar</p>
+            </div>
+          ) : children ? (
             children
           ) : (
             <div className="flex flex-col items-center justify-center h-96 text-white/20 gap-4">
