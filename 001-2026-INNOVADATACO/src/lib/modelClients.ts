@@ -139,7 +139,7 @@ export function callModel(model: AiModelInput, prompt: string): Promise<ModelRes
 }
 
 export async function testModel(model: AiModelInput): Promise<ModelResult> {
-  const prompt = "Describe brevemente tus principales caracter\u00edsticas t\u00e9cnicas como modelo de lenguaje: arquitectura, tama\u00f1o aproximado, capacidades y limitaciones.";
+  const prompt = "Describe brevemente tus principales características técnicas como modelo de lenguaje: arquitectura, tamaño aproximado, capacidades y limitaciones.";
   const cfg = parseConfig(model.config);
   const testModelInput: AiModelInput = {
     ...model,
@@ -148,7 +148,7 @@ export async function testModel(model: AiModelInput): Promise<ModelResult> {
       temperature: 0.2,
       top_p: 0.9,
       max_tokens: 1024,
-      systemPrompt: "Eres un asistente experto en documentos legales colombianos. Responde \u00daNICAMENTE con JSON v\u00e1lido.",
+      systemPrompt: "Eres un asistente experto en documentos legales colombianos. Responde ÚNICAMENTE con JSON válido.",
     }),
   };
   const result = await callModel(testModelInput, prompt);

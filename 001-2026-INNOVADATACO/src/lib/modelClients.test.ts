@@ -7,7 +7,7 @@ describe("modelClients", () => {
     expect(result.ok).toBe(true);
     expect(result.latencyMs).toBeGreaterThanOrEqual(0);
     expect(result.rawText).toBe(result.text);
-    expect(result.text).toContain("Mock extra\u00eddo");
+    expect(result.text).toContain("Mock extraído");
   });
 
   it("unknown provider fails", async () => {

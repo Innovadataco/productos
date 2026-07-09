@@ -67,10 +67,10 @@ type ProcessingDoc = {
 };
 
 const TIPOS = [
-  { value: "constitucion", label: "Constituci\u00f3n", nivel: 1 },
+  { value: "constitucion", label: "Constitución", nivel: 1 },
   { value: "ley", label: "Ley", nivel: 2 },
   { value: "decreto", label: "Decreto", nivel: 3 },
-  { value: "resolucion", label: "Resoluci\u00f3n", nivel: 4 },
+  { value: "resolucion", label: "Resolución", nivel: 4 },
   { value: "circular", label: "Circular", nivel: 5 },
   { value: "otro", label: "Otro", nivel: 9 },
 ];
@@ -85,7 +85,7 @@ const statusStyles: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   completed: "Completado",
   processing: "Procesando",
-  needs_review: "Revisi\u00f3n",
+  needs_review: "Revisión",
   pending: "Pendiente",
 };
 
@@ -98,15 +98,15 @@ const queueStatusLabels: Record<string, string> = {
 };
 
 function formatDate(value?: string | null) {
-  if (!value) return "\u2014";
+  if (!value) return "—";
   const d = new Date(value);
-  return isNaN(d.getTime()) ? "\u2014" : d.toLocaleDateString("es-CO");
+  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("es-CO");
 }
 
 function formatDateTime(value?: string | null) {
-  if (!value) return "\u2014";
+  if (!value) return "—";
   const d = new Date(value);
-  return isNaN(d.getTime()) ? "\u2014" : d.toLocaleString("es-CO");
+  return isNaN(d.getTime()) ? "—" : d.toLocaleString("es-CO");
 }
 
 function Badge({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -400,6 +400,18 @@ function CargaDocumental() {
 
   const saveEdited = async () => {
     if (!editingResult) return;
+
+    // Sanitizar fecha antes de enviar
+    let fechaExpedicion: string | null = null;
+    if (editingResult.fechaExpedicion) {
+      try {
+        const d = new Date(editingResult.fechaExpedicion);
+        fechaExpedicion = isNaN(d.getTime()) ? null : d.toISOString();
+      } catch {
+        fechaExpedicion = null;
+      }
+    }
+
     const res = await fetch("/api/documents", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -410,10 +422,13 @@ function CargaDocumental() {
         entidad: editingResult.entidad,
         sector: editingResult.sector,
         numero: editingResult.numero,
-        fechaExpedicion: editingResult.fechaExpedicion,
+        fechaExpedicion,
       }),
     });
-    if (!res.ok) throw new Error("Error guardando");
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Error guardando: ${res.status} ${errText}`);
+    }
     const updated: Doc = await res.json();
     setEditingResult(updated);
   };
@@ -662,7 +677,7 @@ function CargaDocumental() {
             </button>
           </div>
           <p className="text-[10px] text-foreground/30 uppercase tracking-widest">
-            Revisa y corrige los datos extra\u00eddos antes de guardar.
+            Revisa y corrige los datos extraídos antes de guardar.
           </p>
           <MetadataForm
             value={editingResult}
@@ -766,7 +781,7 @@ function GraphView({ docs }: { docs: Doc[] }) {
         onMouseLeave={() => setDragging(null)}
       />
       <p className="text-[9px] text-foreground/30 uppercase tracking-wider">
-        Arrastra los nodos. L\u00edneas = relaciones jer\u00e1rquicas padre-hijo.
+        Arrastra los nodos. Líneas = relaciones jerárquicas padre-hijo.
       </p>
     </div>
   );
@@ -809,10 +824,10 @@ function HierarchyView({ docs }: { docs: Doc[] }) {
   return (
     <div className="glass-panel p-4 space-y-3">
       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-foreground/30">
-        <Scale className="w-3 h-3" /> Jerarqu\u00eda normativa
+        <Scale className="w-3 h-3" /> Jerarquía normativa
       </div>
       <div className="max-h-64 overflow-y-auto">
-        {roots.length === 0 && <p className="text-[10px] text-foreground/30">Sin ra\u00edces definidas</p>}
+        {roots.length === 0 && <p className="text-[10px] text-foreground/30">Sin raíces definidas</p>}
         {roots.map((doc) => (
           <TreeNode key={doc.id} doc={doc} />
         ))}
@@ -849,7 +864,7 @@ function BusquedaRag() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query, ...filters }),
       });
-      if (!res.ok) throw new Error("Error en b\u00fasqueda");
+      if (!res.ok) throw new Error("Error en búsqueda");
       setResults(await res.json());
     } catch (err: any) {
       alert(err.message);
@@ -866,7 +881,7 @@ function BusquedaRag() {
         <div className="flex items-center gap-2 text-neonCyan text-[10px] font-bold uppercase tracking-[0.3em]">
           <Search className="w-3 h-3" /> Base Oficial
         </div>
-        <h1 className="text-3xl font-bold tracking-tight uppercase">B\u00fasqueda RAG</h1>
+        <h1 className="text-3xl font-bold tracking-tight uppercase">Búsqueda RAG</h1>
       </header>
 
       <form onSubmit={handleSearch} className="glass-panel p-6 space-y-4">
@@ -926,7 +941,7 @@ function BusquedaRag() {
             className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border ${view === v ? "border-neonCyan text-neonCyan" : "border-white/10 text-foreground/30 hover:text-white"
               }`}
           >
-            {v === "list" ? "Lista" : v === "graph" ? "Grafo" : "Jerarqu\u00eda"}
+            {v === "list" ? "Lista" : v === "graph" ? "Grafo" : "Jerarquía"}
           </button>
         ))}
       </div>
@@ -958,11 +973,11 @@ function BusquedaRag() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] text-foreground/40">
                   <div className="flex items-center gap-1.5">
                     <Building2 className="w-3 h-3" />
-                    <span className="truncate">{doc.entidad || "\u2014"}</span>
+                    <span className="truncate">{doc.entidad || "—"}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Tag className="w-3 h-3" />
-                    <span className="truncate">{doc.sector || "\u2014"}</span>
+                    <span className="truncate">{doc.sector || "—"}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3 h-3" />
@@ -1140,7 +1155,7 @@ function Repositorio() {
           <option value="">Todos los estados</option>
           <option value="completed">Completado</option>
           <option value="processing">Procesando</option>
-          <option value="needs_review">Revisi\u00f3n</option>
+          <option value="needs_review">Revisión</option>
           <option value="pending">Pendiente</option>
         </select>
         <label className="flex items-center gap-2 text-[10px] uppercase tracking-wider cursor-pointer">
@@ -1225,11 +1240,11 @@ function Repositorio() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] text-foreground/40">
                 <div className="flex items-center gap-1.5">
                   <Building2 className="w-3 h-3" />
-                  <span className="truncate">{doc.entidad || "\u2014"}</span>
+                  <span className="truncate">{doc.entidad || "—"}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Tag className="w-3 h-3" />
-                  <span className="truncate">{doc.sector || "\u2014"}</span>
+                  <span className="truncate">{doc.sector || "—"}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-3 h-3" />
@@ -1269,18 +1284,18 @@ function Repositorio() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-[10px]">
               <Section label="Entidad">
-                <p className="text-foreground/70">{selected.entidad || "\u2014"}</p>
+                <p className="text-foreground/70">{selected.entidad || "—"}</p>
               </Section>
               <Section label="Sector">
-                <p className="text-foreground/70">{selected.sector || "\u2014"}</p>
+                <p className="text-foreground/70">{selected.sector || "—"}</p>
               </Section>
-              <Section label="Fecha expedici\u00f3n">
+              <Section label="Fecha expedición">
                 <p className="text-foreground/70">{formatDate(selected.fechaExpedicion)}</p>
               </Section>
-              <Section label="N\u00famero">
-                <p className="text-foreground/70">{selected.numero || "\u2014"}</p>
+              <Section label="Número">
+                <p className="text-foreground/70">{selected.numero || "—"}</p>
               </Section>
-              <Section label="Jerarqu\u00eda">
+              <Section label="Jerarquía">
                 <p className="text-foreground/70">Nivel {selected.jerarquiaNivel}</p>
               </Section>
               <Section label="Archivo">
@@ -1295,7 +1310,7 @@ function Repositorio() {
               </Section>
             )}
             {selected.proposito && (
-              <Section label="Prop\u00f3sito">
+              <Section label="Propósito">
                 <p className="text-[11px] text-foreground/60 leading-relaxed">{selected.proposito}</p>
               </Section>
             )}
@@ -1305,7 +1320,7 @@ function Repositorio() {
               </Section>
             )}
             {selected.motivacion && (
-              <Section label="Motivaci\u00f3n">
+              <Section label="Motivación">
                 <p className="text-[11px] text-foreground/60 leading-relaxed">{selected.motivacion}</p>
               </Section>
             )}

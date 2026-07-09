@@ -150,15 +150,56 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// Campos editables permitidos en PATCH
+const EDITABLE_FIELDS = [
+  "titulo",
+  "tipo",
+  "entidad",
+  "sector",
+  "numero",
+  "fechaExpedicion",
+  "resumen",
+  "proposito",
+  "actores",
+  "motivacion",
+  "resuelve",
+  "status",
+];
+
+function parseDateSafe(value: unknown): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  try {
+    const d = new Date(value as string);
+    return isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+}
+
 export async function PATCH(req: NextRequest) {
   try {
     const session = await verifyAuth();
     if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-    const { id, ...data } = await req.json();
+    const body = await req.json();
+    const { id } = body;
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
+
+    // Whitelist: solo permitir campos editables
+    const data: Record<string, unknown> = {};
+    for (const key of EDITABLE_FIELDS) {
+      if (key in body) {
+        if (key === "fechaExpedicion") {
+          data[key] = parseDateSafe(body[key]);
+        } else {
+          data[key] = body[key];
+        }
+      }
+    }
+
     const updated = await prisma.documentoOficial.update({ where: { id }, data });
-    await auditLog({ action: "update_document", entityType: "DocumentoOficial", entityId: id, status: "success", message: "Documento actualizado", metadata: data as Record<string, unknown> });
+    await auditLog({ action: "update_document", entityType: "DocumentoOficial", entityId: id, status: "success", message: "Documento actualizado", metadata: data });
     return NextResponse.json(updated);
   } catch (err) {
     console.error(err);
