@@ -6,6 +6,7 @@ import { extractPdfText, analyzeDocument } from "@/lib/documentProcessor";
 import { callModel } from "@/lib/modelClients";
 import { buildDocumentAnalysisPrompt, sanitizeJsonText } from "@/lib/prompts";
 import { auditLog } from "@/lib/audit";
+import { verifyAuth } from "@/lib/auth";
 
 const TIPO_JERARQUIA: Record<string, number> = {
   constitucion: 1,
@@ -24,6 +25,9 @@ function parseDate(value?: string | null): Date | null {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
     const form = await req.formData();
     const file = form.get("file") as File | null;
     const tipo = (form.get("tipo") as string) || "otro";
@@ -131,10 +135,10 @@ export async function POST(req: NextRequest) {
 
     const updated = await prisma.documentoOficial.update({ where: { id: doc.id }, data: final });
     return NextResponse.json(updated, { status: 201 });
-  } catch (err: any) {
+  } catch (err) {
     console.error(err);
-    await auditLog({ action: "upload_pdf", entityType: "DocumentoOficial", status: "error", message: err.message || "Error desconocido" });
-    return NextResponse.json({ error: err.message || "Error procesando documento" }, { status: 500 });
+    await auditLog({ action: "upload_pdf", entityType: "DocumentoOficial", status: "error", message: "Error procesando documento" });
+    return NextResponse.json({ error: "Error procesando documento" }, { status: 500 });
   }
 }
 
@@ -157,13 +161,16 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
     const { id, ...data } = await req.json();
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
     const updated = await prisma.documentoOficial.update({ where: { id }, data });
     await auditLog({ action: "update_document", entityType: "DocumentoOficial", entityId: id, status: "success", message: "Documento actualizado", metadata: data as Record<string, unknown> });
     return NextResponse.json(updated);
-  } catch (err: any) {
+  } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: err.message || "Error actualizando documento" }, { status: 500 });
+    return NextResponse.json({ error: "Error actualizando documento" }, { status: 500 });
   }
 }

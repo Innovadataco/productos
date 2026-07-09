@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { callModel } from "@/lib/modelClients";
 import { buildResearchPrompt, sanitizeJsonText } from "@/lib/prompts";
+import { verifyAuth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
     const { documentId, text } = await req.json();
 
     let content = "";
@@ -44,8 +48,8 @@ export async function POST(req: NextRequest) {
       latencyMs: result.latencyMs,
       usage: result.usage,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error(err);
-    return NextResponse.json({ ok: false, error: err.message || "Error en análisis" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Error en análisis" }, { status: 500 });
   }
 }

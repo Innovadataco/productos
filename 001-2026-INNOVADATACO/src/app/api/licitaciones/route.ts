@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verifyAuth } from "@/lib/auth";
 
 // GET /api/licitaciones - Listar todas las licitaciones
 export async function GET(req: NextRequest) {
@@ -10,15 +11,15 @@ export async function GET(req: NextRequest) {
     const busqueda = searchParams.get("q");
 
     const where: any = {};
-    
+
     if (estado) {
       where.estado = { key: estado };
     }
-    
+
     if (entidad) {
       where.entidadId = parseInt(entidad);
     }
-    
+
     if (busqueda) {
       where.OR = [
         { numero: { contains: busqueda, mode: "insensitive" } },
@@ -58,6 +59,9 @@ export async function GET(req: NextRequest) {
 // POST /api/licitaciones - Crear nueva licitación
 export async function POST(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
     const data = await req.json();
     const {
       numero,
@@ -96,18 +100,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(licitacion, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error al crear licitación:", error);
-    
-    if (error.code === "P2002") {
-      return NextResponse.json(
-        { error: "Ya existe una licitación con ese número y fecha de apertura" },
-        { status: 409 }
-      );
-    }
-    
     return NextResponse.json(
-      { error: "Error al crear licitación", details: error.message },
+      { error: "Error al crear licitación" },
       { status: 500 }
     );
   }
