@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auditLog } from "@/lib/audit";
+import { encrypt } from "@/lib/crypto";
+import { verifyAuth } from "@/lib/auth";
 
 interface Params { params: Promise<{ id: string }> }
 
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
+    const session = await verifyAuth();
+    if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
     const { id } = await params;
     const body = await req.json();
     const existing = await prisma.aiModel.findUnique({ where: { id } });
@@ -22,7 +27,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
         provider: body.provider ?? existing.provider,
         scope: body.scope !== undefined ? (body.scope || "local") : existing.scope,
         baseUrl: body.baseUrl !== undefined ? (body.baseUrl || null) : existing.baseUrl,
-        apiKey: body.apiKey !== undefined ? (body.apiKey || null) : existing.apiKey,
+        apiKey: body.apiKey !== undefined ? (body.apiKey ? encrypt(body.apiKey) : null) : existing.apiKey,
         modelPath: body.modelPath ?? existing.modelPath,
         active: body.active !== undefined ? !!body.active : existing.active,
         config: body.config ? (typeof body.config === "string" ? body.config : JSON.stringify(body.config)) : existing.config,
@@ -48,6 +53,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
+    const session = await verifyAuth();
+    if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
     const { id } = await params;
     await prisma.aiModel.delete({ where: { id } });
     await auditLog({ action: "delete_model", entityType: "AiModel", entityId: id, status: "success", message: "Modelo eliminado" });

@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auditLog } from "@/lib/audit";
+import { encrypt } from "@/lib/crypto";
+import { verifyAuth } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const models = await prisma.aiModel.findMany({ orderBy: { createdAt: "desc" } });
+    const models = await prisma.aiModel.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        provider: true,
+        scope: true,
+        baseUrl: true,
+        modelPath: true,
+        active: true,
+        config: true,
+        createdAt: true,
+        updatedAt: true,
+        // apiKey INTENCIONALMENTE EXCLUIDO
+      },
+    });
     return NextResponse.json(models);
   } catch (err) {
     console.error(err);
@@ -14,6 +31,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
     const body = await req.json();
     const { name, provider, scope, baseUrl, apiKey, modelPath, active, config } = body;
     if (!name || !provider || !modelPath) {
@@ -30,7 +50,7 @@ export async function POST(req: NextRequest) {
         provider,
         scope: scope || "local",
         baseUrl: baseUrl || null,
-        apiKey: apiKey || null,
+        apiKey: apiKey ? encrypt(apiKey) : null,
         modelPath,
         active: !!active,
         config: typeof config === "string" ? config : JSON.stringify(config ?? {}),

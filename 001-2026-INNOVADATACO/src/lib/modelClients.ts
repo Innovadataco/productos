@@ -1,4 +1,5 @@
 import { sanitizeJsonText } from "./prompts";
+import { decrypt } from "./crypto";
 
 export interface ModelConfig {
   temperature?: number;
@@ -73,11 +74,12 @@ async function ollamaCall(model: AiModelInput, prompt: string): Promise<ModelRes
 async function openaiCall(model: AiModelInput, prompt: string): Promise<ModelResult> {
   const start = Date.now();
   const cfg = parseConfig(model.config);
+  const apiKey = model.apiKey ? decrypt(model.apiKey) : (process.env.OPENAI_APIKEY || "");
   const res = await fetch(`${model.baseUrl || "https://api.openai.com/v1"}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${model.apiKey || process.env.OPENAI_APIKEY || ""}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: model.modelPath,
