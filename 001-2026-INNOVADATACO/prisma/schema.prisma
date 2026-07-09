@@ -167,3 +167,18 @@ model LicitacionStatus {
   createdAt     DateTime     @default(now())
   licitaciones  Licitacion[]
 }
+
+model Proyecto {
+  id           String   @id @default(cuid())
+  codigo       String   @unique
+  nombre       String
+  cliente      String
+  estado       String   @default("active")
+  currentPhase String   @default("initiation") @map("current_phase")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([estado])
+  @@index([currentPhase])
+  @@map("proyectos")
+}

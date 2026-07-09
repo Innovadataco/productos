@@ -11,7 +11,7 @@ export default function ProjectsPage() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/proyectos`);
+      const res = await fetch("/api/projects");
       const data = await res.json();
       setProjects(data);
     } catch (err) {
@@ -34,7 +34,7 @@ export default function ProjectsPage() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight uppercase">Dashboard de Proyectos</h1>
         </div>
-        <button 
+        <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-6 py-2 bg-white text-black font-bold text-xs uppercase tracking-widest hover:bg-neonCyan transition-all self-start"
         >
@@ -43,20 +43,20 @@ export default function ProjectsPage() {
       </header>
 
       {isModalOpen && (
-        <ProjectForm 
-          onClose={() => setIsModalOpen(false)} 
+        <ProjectForm
+          onClose={() => setIsModalOpen(false)}
           onRefresh={fetchProjects}
         />
       )}
 
       <div className="flex items-center gap-4 py-4 border-y border-white/5">
         <div className="relative flex-1">
-           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#444]" />
-           <input 
-              type="text" 
-              placeholder="Buscar en la Base de Datos Real..." 
-              className="w-full bg-white/5 border border-white/10 py-2 pl-10 pr-4 text-xs font-geist-mono focus:outline-none focus:border-neonCyan transition-colors"
-           />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#444]" />
+          <input
+            type="text"
+            placeholder="Buscar en la Base de Datos Real..."
+            className="w-full bg-white/5 border border-white/10 py-2 pl-10 pr-4 text-xs font-geist-mono focus:outline-none focus:border-neonCyan transition-colors"
+          />
         </div>
         <button className="p-2 border border-white/10 hover:border-neonCyan transition-colors">
           <Filter className="w-4 h-4" />
@@ -83,17 +83,17 @@ export default function ProjectsPage() {
                   <p className="text-[10px] text-[#444] uppercase tracking-widest font-bold">{p.cliente}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-12">
-                 <div className="hidden md:flex flex-col items-end gap-1">
-                    <span className="text-[8px] text-[#444] uppercase font-black">Fase PM²</span>
-                    <div className="px-2 py-0.5 rounded-full bg-neonCyan/10 text-neonCyan text-[9px] font-bold uppercase tracking-tighter">
-                      {p.current_phase}
-                    </div>
-                 </div>
-                 <div className="h-8 w-8 rounded-full border border-white/10 flex items-center justify-center hover:border-neonCyan transition-colors">
-                    <ArrowRight className="w-4 h-4 text-[#444] group-hover:text-neonCyan transition-colors" />
-                 </div>
+                <div className="hidden md:flex flex-col items-end gap-1">
+                  <span className="text-[8px] text-[#444] uppercase font-black">Fase PM²</span>
+                  <div className="px-2 py-0.5 rounded-full bg-neonCyan/10 text-neonCyan text-[9px] font-bold uppercase tracking-tighter">
+                    {p.currentPhase}
+                  </div>
+                </div>
+                <div className="h-8 w-8 rounded-full border border-white/10 flex items-center justify-center hover:border-neonCyan transition-colors">
+                  <ArrowRight className="w-4 h-4 text-[#444] group-hover:text-neonCyan transition-colors" />
+                </div>
               </div>
             </div>
           ))
