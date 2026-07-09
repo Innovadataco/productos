@@ -9,3 +9,4 @@ uploads/*.PDF
 *.sqlite-journal
 *.sqlite.backup*
 coverage
+logs/
