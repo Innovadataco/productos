@@ -327,14 +327,18 @@ function useProcessingDocs() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchProcessingDocs = async () => {
+    console.log("[useProcessingDocs] Fetching documentos en proceso...");
     try {
-      const res = await fetch("/api/documents?status=queued,processing");
+      const res = await fetch("/api/documents");
       if (res.ok) {
-        const docs = await res.json();
-        setProcessingDocs(docs);
+        const allDocs = await res.json();
+        // Filtrar solo los que están en queued o processing
+        const filtered = allDocs.filter((d: Doc) => d.status === "queued" || d.status === "processing");
+        console.log("[useProcessingDocs] Documentos en proceso:", filtered.length);
+        setProcessingDocs(filtered);
       }
     } catch (err) {
-      console.error("Error fetching processing docs:", err);
+      console.error("[useProcessingDocs] Error fetching:", err);
     }
   };
 
@@ -356,30 +360,30 @@ function useProcessingDocs() {
 
   const startPolling = () => {
     if (pollingRef.current) return;
-    fetchProcessingDocs();
+    console.log("[useProcessingDocs] Iniciando polling");
     pollingRef.current = setInterval(fetchProcessingDocs, 4000);
   };
 
   const stopPolling = () => {
     if (pollingRef.current) {
+      console.log("[useProcessingDocs] Deteniendo polling");
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
   };
 
   useEffect(() => {
+    console.log("[useProcessingDocs] Montando componente");
     fetchActiveModel();
     fetchProcessingDocs();
+    // Siempre iniciar polling para detectar nuevos documentos
+    startPolling();
     return () => stopPolling();
   }, []);
 
   useEffect(() => {
     const hasProcessing = processingDocs.some((d) => d.status === "queued" || d.status === "processing");
-    if (hasProcessing && !pollingRef.current) {
-      startPolling();
-    } else if (!hasProcessing && pollingRef.current) {
-      stopPolling();
-    }
+    console.log("[useProcessingDocs] hasProcessing:", hasProcessing, "polling activo:", !!pollingRef.current);
   }, [processingDocs]);
 
   return { processingDocs, activeModel, refresh: fetchProcessingDocs };
