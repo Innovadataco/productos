@@ -19,6 +19,17 @@ export default function Home() {
             <span>Ver Módulo</span><span>→</span>
           </div>
         </a>
+        
+        <a href="/licitaciones" className="group p-8 rounded-2xl bg-white/5 border border-white/5 h-56 flex flex-col justify-between hover:border-neonCyan/30 transition-all">
+          <div>
+            <span className="text-neonCyan/50 text-[9px] font-black tracking-widest uppercase">Contracting</span>
+            <h3 className="text-xl font-bold tracking-tight uppercase mt-2">Licitaciones</h3>
+          </div>
+          <div className="flex justify-between items-center pt-4 border-t border-white/5 text-[9px] font-bold uppercase tracking-widest text-white/40 group-hover:text-neonCyan transition-colors">
+            <span>Ver Módulo</span><span>→</span>
+          </div>
+        </a>
+        
         <div className="p-8 rounded-2xl bg-white/5 border border-white/5 h-56 flex flex-col justify-between opacity-30">
           <div>
             <span className="text-white/20 text-[9px] font-black tracking-widest uppercase">Operations</span>

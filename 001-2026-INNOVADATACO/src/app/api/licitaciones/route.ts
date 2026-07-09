@@ -1,0 +1,114 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+// GET /api/licitaciones - Listar todas las licitaciones
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const estado = searchParams.get("estado");
+    const entidad = searchParams.get("entidad");
+    const busqueda = searchParams.get("q");
+
+    const where: any = {};
+    
+    if (estado) {
+      where.estado = { key: estado };
+    }
+    
+    if (entidad) {
+      where.entidadId = parseInt(entidad);
+    }
+    
+    if (busqueda) {
+      where.OR = [
+        { numero: { contains: busqueda, mode: "insensitive" } },
+        { titulo: { contains: busqueda, mode: "insensitive" } },
+        { descripcion: { contains: busqueda, mode: "insensitive" } },
+      ];
+    }
+
+    const licitaciones = await prisma.licitacion.findMany({
+      where,
+      include: {
+        estado: true,
+        entidad: true,
+        documentos: {
+          select: {
+            id: true,
+            nombre: true,
+            tipo: true,
+            fechaInicio: true,
+            fechaFin: true,
+          },
+        },
+      },
+      orderBy: { fechaApertura: "desc" },
+    });
+
+    return NextResponse.json(licitaciones);
+  } catch (error: any) {
+    console.error("Error al obtener licitaciones:", error);
+    return NextResponse.json(
+      { error: "Error al obtener licitaciones", details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/licitaciones - Crear nueva licitación
+export async function POST(req: NextRequest) {
+  try {
+    const data = await req.json();
+    const {
+      numero,
+      titulo,
+      descripcion,
+      estadoId,
+      entidadId,
+      areaIdSala,
+      fechaApertura,
+      documentoUrl,
+    } = data;
+
+    // Validaciones
+    if (!numero || !titulo || !estadoId || !fechaApertura) {
+      return NextResponse.json(
+        { error: "Número, título, estado y fecha de apertura son requeridos" },
+        { status: 400 }
+      );
+    }
+
+    const licitacion = await prisma.licitacion.create({
+      data: {
+        numero,
+        titulo,
+        descripcion: descripcion || "",
+        estadoId: parseInt(estadoId),
+        entidadId: entidadId ? parseInt(entidadId) : null,
+        areaIdSala: areaIdSala ? parseInt(areaIdSala) : null,
+        fechaApertura: new Date(fechaApertura),
+        documentoUrl: documentoUrl || null,
+      },
+      include: {
+        estado: true,
+        entidad: true,
+      },
+    });
+
+    return NextResponse.json(licitacion, { status: 201 });
+  } catch (error: any) {
+    console.error("Error al crear licitación:", error);
+    
+    if (error.code === "P2002") {
+      return NextResponse.json(
+        { error: "Ya existe una licitación con ese número y fecha de apertura" },
+        { status: 409 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: "Error al crear licitación", details: error.message },
+      { status: 500 }
+    );
+  }
+}

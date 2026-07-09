@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useState, ReactNode } from "react";
 
-export type ModuleId = "investigacion" | "proyectos" | "base" | "configuracion";
+export type ModuleId = "investigacion" | "proyectos" | "base" | "configuracion" | "licitaciones";
 export type SubmoduleId = string;
 
 export interface SubmoduleDef {
@@ -32,6 +32,12 @@ export const SUBMODULES: Record<ModuleId, SubmoduleDef[]> = {
     { id: "apis", title: "APIs" },
     { id: "auditoria", title: "Auditoría" },
     { id: "parametrizacion", title: "Parametrización" },
+  ],
+  licitaciones: [
+    { id: "listado", title: "Listado" },
+    { id: "nueva", title: "Nueva Licitación" },
+    { id: "entidades", title: "Entidades" },
+    { id: "estados", title: "Estados" },
   ],
 };
 

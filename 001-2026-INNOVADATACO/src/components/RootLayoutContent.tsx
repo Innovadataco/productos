@@ -1,17 +1,19 @@
 "use client";
 // build-cache-invalidate: 2026-07-04T20:21:31.950091
 import { useState } from "react";
-import { Menu, X, Terminal, LayoutGrid, Database, Settings, Zap, User, Bell } from "lucide-react";
+import { Menu, X, Terminal, LayoutGrid, Database, Settings, Zap, User, Bell, FileText } from "lucide-react";
 import { useWorkspace, SUBMODULES, type ModuleId } from "@/context/WorkspaceContext";
 import InvestigacionTab from "@/components/modules/InvestigacionTab";
 import ProyectosTab from "@/components/modules/ProyectosTab";
 import BaseTab from "@/components/modules/BaseTab";
 import ConfiguracionTab from "@/components/modules/ConfiguracionTab";
+import LicitacionesTab from "@/components/modules/LicitacionesTab";
 
 const MODULES: { id: ModuleId; icon: React.ReactNode; label: string }[] = [
   { id: "investigacion", icon: <Terminal size={20} />, label: "Investigación" },
   { id: "proyectos", icon: <LayoutGrid size={20} />, label: "Proyectos" },
   { id: "base", icon: <Database size={20} />, label: "Base Oficial" },
+  { id: "licitaciones", icon: <FileText size={20} />, label: "Licitaciones" },
   { id: "configuracion", icon: <Settings size={20} />, label: "Configuración" },
 ];
 
@@ -20,6 +22,7 @@ const TAB_COMPONENTS: Record<ModuleId, React.ComponentType<{ submoduleId: string
   proyectos: ProyectosTab,
   base: BaseTab,
   configuracion: ConfiguracionTab,
+  licitaciones: LicitacionesTab,
 };
 
 export default function RootLayoutContent({ children }: { children: React.ReactNode }) {
