@@ -56,8 +56,15 @@ boss.on('error', (error) => {
     console.error('[Worker] pg-boss error:', error);
 });
 
-async function processDocument(job) {
-    const { documentId } = job.data;
+async function processDocument(jobs) {
+    // pg-boss v12 pasa jobs como array
+    const job = Array.isArray(jobs) ? jobs[0] : jobs;
+    const documentId = job.data?.documentId || job.documentId;
+
+    if (!documentId) {
+        console.error("[Worker] No se encontró documentId en el job:", job);
+        throw new Error("documentId no encontrado en el job");
+    }
     console.log(`[Worker] Procesando documento ${documentId}`);
 
     try {
