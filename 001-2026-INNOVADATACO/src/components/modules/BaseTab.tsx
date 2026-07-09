@@ -165,7 +165,7 @@ function MetadataForm({
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
-          label="T\u00edtulo"
+          label="Título"
           value={value.titulo || ""}
           onChange={(e) => onChange({ ...value, titulo: e.target.value })}
         />
@@ -205,12 +205,12 @@ function MetadataForm({
           ))}
         </Select>
         <Input
-          label="N\u00famero"
+          label="Número"
           value={value.numero || ""}
           onChange={(e) => onChange({ ...value, numero: e.target.value })}
         />
         <Input
-          label="Fecha expedici\u00f3n"
+          label="Fecha expedición"
           type="date"
           value={value.fechaExpedicion ? value.fechaExpedicion.slice(0, 10) : ""}
           onChange={(e) => onChange({ ...value, fechaExpedicion: e.target.value })}
