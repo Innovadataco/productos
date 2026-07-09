@@ -107,6 +107,7 @@ async function openaiCall(model: AiModelInput, prompt: string): Promise<ModelRes
 }
 
 async function mockCall(_model: AiModelInput, prompt: string): Promise<ModelResult> {
+  console.warn("⚠️  Usando MOCK provider - respuesta simulada, no conecta con IA real");
   const start = Date.now();
   await new Promise((r) => setTimeout(r, 200));
   return {
