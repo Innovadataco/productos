@@ -53,6 +53,7 @@ model AiModel {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   audits    AuditLog[]
+  moduleSettings ModuleSetting[]
 
   @@index([provider])
   @@index([active])
@@ -196,4 +197,18 @@ model DocumentoChunk {
 
   @@index([documentoId])
   @@index([embedding])
+}
+
+model ModuleSetting {
+  id        String   @id @default(cuid())
+  module    String
+  settingKey String
+  aiModelId String
+  updatedAt DateTime @updatedAt
+
+  aiModel AiModel @relation(fields: [aiModelId], references: [id])
+
+  @@unique([module, settingKey])
+  @@index([module])
+  @@index([settingKey])
 }
