@@ -59,6 +59,13 @@ type QueueItem = {
   error?: string;
 };
 
+type ProcessingDoc = {
+  id: string;
+  titulo: string;
+  status: string;
+  createdAt: string;
+};
+
 const TIPOS = [
   { value: "constitucion", label: "Constituci\u00f3n", nivel: 1 },
   { value: "ley", label: "Ley", nivel: 2 },
@@ -285,10 +292,78 @@ function useQueue() {
   return { queue, addFiles, processQueue, removeItem, clearCompleted, updateItem, setQueue };
 }
 
+function useProcessingDocs() {
+  const [processingDocs, setProcessingDocs] = useState<Doc[]>([]);
+  const [activeModel, setActiveModel] = useState<{ name: string; isLarge: boolean } | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchProcessingDocs = async () => {
+    try {
+      const res = await fetch("/api/documents?status=queued,processing");
+      if (res.ok) {
+        const docs = await res.json();
+        setProcessingDocs(docs);
+      }
+    } catch (err) {
+      console.error("Error fetching processing docs:", err);
+    }
+  };
+
+  const fetchActiveModel = async () => {
+    try {
+      const res = await fetch("/api/config/models");
+      if (res.ok) {
+        const models = await res.json();
+        const active = models.find((m: any) => m.active);
+        if (active) {
+          const isLarge = /32b|70b|8x7b|mixtral|codestral/i.test(active.name);
+          setActiveModel({ name: active.name, isLarge });
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching active model:", err);
+    }
+  };
+
+  const startPolling = () => {
+    if (pollingRef.current) return;
+    fetchProcessingDocs();
+    pollingRef.current = setInterval(fetchProcessingDocs, 4000);
+  };
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    fetchActiveModel();
+    fetchProcessingDocs();
+    return () => stopPolling();
+  }, []);
+
+  useEffect(() => {
+    const hasProcessing = processingDocs.some((d) => d.status === "queued" || d.status === "processing");
+    if (hasProcessing && !pollingRef.current) {
+      startPolling();
+    } else if (!hasProcessing && pollingRef.current) {
+      stopPolling();
+    }
+  }, [processingDocs]);
+
+  return { processingDocs, activeModel, refresh: fetchProcessingDocs };
+}
+
 function CargaDocumental() {
   const { queue, addFiles, processQueue, removeItem, clearCompleted, setQueue } = useQueue();
+  const { processingDocs, activeModel, refresh: refreshProcessing } = useProcessingDocs();
   const [editingResult, setEditingResult] = useState<Doc | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<{ show: boolean; count: number }>({ show: false, count: 0 });
+  const [showLargeModelWarning, setShowLargeModelWarning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const saveEdited = async () => {
     if (!editingResult) return;
@@ -307,7 +382,6 @@ function CargaDocumental() {
     });
     if (!res.ok) throw new Error("Error guardando");
     const updated: Doc = await res.json();
-    // close editor; queue item keeps reference to original result, user can reopen to verify
     setEditingResult(updated);
   };
 
@@ -315,6 +389,40 @@ function CargaDocumental() {
     const pending = queue.some((i) => i.status === "pending");
     if (pending) processQueue();
   }, [queue.length]);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+    };
+  }, []);
+
+  const handleAddFiles = (files: FileList | null) => {
+    if (!files) return;
+
+    // Verificar si hay modelo grande activo
+    if (activeModel?.isLarge) {
+      setShowLargeModelWarning(true);
+    }
+
+    addFiles(files);
+  };
+
+  const handleProcessQueue = async () => {
+    const initialQueueLength = queue.filter((i) => i.status === "pending").length;
+
+    await processQueue();
+
+    // Mostrar mensaje de éxito
+    if (initialQueueLength > 0) {
+      setUploadSuccess({ show: true, count: initialQueueLength });
+      refreshProcessing();
+
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = setTimeout(() => {
+        setUploadSuccess({ show: false, count: 0 });
+      }, 5000);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -325,12 +433,51 @@ function CargaDocumental() {
         <h1 className="text-3xl font-bold tracking-tight uppercase">Carga documental</h1>
       </header>
 
+      {/* Mensaje de éxito de subida */}
+      {uploadSuccess.show && (
+        <div className="glass-panel p-4 border border-green-500/30 bg-green-500/5 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-400" />
+            <div>
+              <p className="text-sm font-bold text-green-400">
+                {uploadSuccess.count} documento{uploadSuccess.count > 1 ? "s" : ""} en cola de procesamiento
+              </p>
+              <p className="text-[10px] text-foreground/50">
+                Puedes salir de esta página. El procesamiento continuará en segundo plano.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advertencia de modelo grande */}
+      {showLargeModelWarning && (
+        <div className="glass-panel p-4 border border-amber-500/30 bg-amber-500/5">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-amber-400">Procesamiento con modelo grande detectado</p>
+              <p className="text-[10px] text-foreground/50 mt-1">
+                Estás usando <strong>{activeModel?.name}</strong>. El procesamiento puede tardar varios minutos por documento.
+                Los documentos se procesarán en segundo plano.
+              </p>
+              <button
+                onClick={() => setShowLargeModelWarning(false)}
+                className="text-[9px] text-amber-400 hover:text-amber-300 mt-2 underline"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
-          addFiles(e.dataTransfer.files);
+          handleAddFiles(e.dataTransfer.files);
         }}
         className="border-2 border-dashed border-white/10 hover:border-neonCyan/30 rounded-xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer transition-colors"
       >
@@ -340,7 +487,7 @@ function CargaDocumental() {
           accept=".pdf"
           multiple
           className="hidden"
-          onChange={(e) => addFiles(e.target.files)}
+          onChange={(e) => handleAddFiles(e.target.files)}
         />
         <div className="p-4 rounded-full bg-white/5 text-foreground/30">
           <Upload className="w-6 h-6" />
@@ -351,19 +498,20 @@ function CargaDocumental() {
         </div>
       </div>
 
+      {/* Cola local de archivos por subir */}
       {queue.length > 0 && (
         <div className="glass-panel p-4 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-foreground/30">
-              <FileText className="w-3 h-3" /> Cola ({queue.length})
+              <FileText className="w-3 h-3" /> Por subir ({queue.length})
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={processQueue}
+                onClick={handleProcessQueue}
                 disabled={queue.every((i) => i.status !== "pending")}
                 className="px-3 py-1.5 bg-neonCyan text-black font-black text-[9px] uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-30"
               >
-                {queue.some((i) => i.status === "uploading") ? "Procesando..." : "Procesar cola"}
+                {queue.some((i) => i.status === "uploading") ? "Subiendo..." : "Subir documentos"}
               </button>
               <button
                 onClick={clearCompleted}
@@ -380,7 +528,7 @@ function CargaDocumental() {
                 className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  {item.status === "uploading" || item.status === "processing" ? (
+                  {item.status === "uploading" ? (
                     <Loader2 className="w-4 h-4 animate-spin text-neonCyan shrink-0" />
                   ) : item.status === "done" ? (
                     <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
@@ -416,6 +564,57 @@ function CargaDocumental() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Documentos en procesamiento (desde BD con polling) */}
+      {processingDocs.length > 0 && (
+        <div className="glass-panel p-4 space-y-4 border border-neonCyan/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neonCyan">
+              <Loader2 className="w-3 h-3 animate-spin" /> En procesamiento ({processingDocs.length})
+            </div>
+            <div className="flex items-center gap-2">
+              {activeModel?.isLarge && (
+                <span className="text-[9px] text-amber-400 bg-amber-500/10 px-2 py-1 rounded">
+                  Modelo grande: puede tardar varios minutos
+                </span>
+              )}
+              <button
+                onClick={refreshProcessing}
+                className="p-1.5 text-foreground/30 hover:text-neonCyan"
+                title="Actualizar ahora"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {processingDocs.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <Loader2 className="w-4 h-4 animate-spin text-neonCyan shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold truncate">{doc.titulo}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[9px] uppercase tracking-wider text-foreground/30">
+                        {doc.status === "queued" ? "En cola" : "Procesando con IA..."}
+                      </p>
+                      {activeModel?.isLarge && (
+                        <span className="text-[9px] text-amber-400">⏱️ Estimado: 2-5 min</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[9px] text-foreground/30 text-center">
+            Actualizando automáticamente cada 4 segundos...
+          </p>
         </div>
       )}
 
@@ -691,9 +890,8 @@ function BusquedaRag() {
           <button
             key={v}
             onClick={() => setView(v)}
-            className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border ${
-              view === v ? "border-neonCyan text-neonCyan" : "border-white/10 text-foreground/30 hover:text-white"
-            }`}
+            className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border ${view === v ? "border-neonCyan text-neonCyan" : "border-white/10 text-foreground/30 hover:text-white"
+              }`}
           >
             {v === "list" ? "Lista" : v === "graph" ? "Grafo" : "Jerarqu\u00eda"}
           </button>
@@ -781,8 +979,8 @@ function DocumentLogs({ docId }: { docId: string }) {
           <div key={log.id} className="flex items-start gap-3 p-3 bg-white/5 border border-white/5 text-[10px]">
             <div className="shrink-0">
               {log.status === "success" ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> :
-               log.status === "error" ? <AlertCircle className="w-3.5 h-3.5 text-red-400" /> :
-               <Loader2 className="w-3.5 h-3.5 text-amber-400" />}
+                log.status === "error" ? <AlertCircle className="w-3.5 h-3.5 text-red-400" /> :
+                  <Loader2 className="w-3.5 h-3.5 text-amber-400" />}
             </div>
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -957,9 +1155,8 @@ function Repositorio() {
         {filtered.map((doc) => (
           <div
             key={doc.id}
-            className={`text-left glass-panel p-4 space-y-3 transition-colors ${
-              doc.activo ? "hover:border-neonCyan/30" : "opacity-50 border-white/5"
-            }`}
+            className={`text-left glass-panel p-4 space-y-3 transition-colors ${doc.activo ? "hover:border-neonCyan/30" : "opacity-50 border-white/5"
+              }`}
           >
             <div className="flex items-start justify-between gap-4">
               <button onClick={() => setSelected(doc)} className="space-y-1 text-left flex-1 min-w-0">

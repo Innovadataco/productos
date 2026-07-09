@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { prisma } from "@/lib/prisma";
-import { extractPdfText, analyzeDocument } from "@/lib/documentProcessor";
-import { callModel } from "@/lib/modelClients";
-import { buildDocumentAnalysisPrompt, sanitizeJsonText } from "@/lib/prompts";
+import { extractPdfText } from "@/lib/documentProcessor";
 import { auditLog } from "@/lib/audit";
 import { verifyAuth } from "@/lib/auth";
 
@@ -21,6 +19,23 @@ function parseDate(value?: string | null): Date | null {
   if (!value) return null;
   const d = new Date(value);
   return isNaN(d.getTime()) ? null : d;
+}
+
+// Instancia singleton de pg-boss
+let boss: any = null;
+
+async function getBoss() {
+  if (!boss) {
+    // Dynamic import para evitar problemas con Turbopack
+    const pgBoss = await import("pg-boss");
+    // pg-boss exporta la clase directamente, no como default
+    const PgBossClass = (pgBoss as any).default || pgBoss;
+    boss = new PgBossClass({
+      connectionString: process.env.DATABASE_URL,
+    });
+    await boss.start();
+  }
+  return boss;
 }
 
 export async function POST(req: NextRequest) {
@@ -40,6 +55,7 @@ export async function POST(req: NextRequest) {
 
     if (!file) return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
 
+    // Extraer texto del PDF
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     let texto = "";
@@ -51,90 +67,59 @@ export async function POST(req: NextRequest) {
       console.warn("PDF extraction warning:", extractionError);
     }
 
+    // Guardar archivo
     const uploadDir = join(process.cwd(), "uploads");
     await mkdir(uploadDir, { recursive: true });
     const fileName = `${Date.now()}_${file.name}`;
     const filePath = join(uploadDir, fileName);
     await writeFile(filePath, buffer);
 
+    // Determinar estado inicial
+    const initialStatus = extractionError ? "needs_review" : "queued";
+
+    // Crear documento en BD con estado "queued"
     const doc = await prisma.documentoOficial.create({
       data: {
-        titulo: titulo || "Procesando...",
+        titulo: titulo || file.name.replace(/\.pdf$/i, ""),
         tipo,
         entidad: entidad || "Pendiente",
         sector: sector || "Otro",
         archivoUrl: `/uploads/${fileName}`,
         contenidoTexto: texto,
-        status: extractionError ? "needs_review" : "processing",
+        status: initialStatus,
         processingError: extractionError,
         jerarquiaNivel: TIPO_JERARQUIA[tipo] ?? 9,
         padreId,
+        aiModelId: null,
       },
     });
 
-    await auditLog({ action: "upload_pdf", entityType: "DocumentoOficial", entityId: doc.id, status: extractionError ? "error" : "info", message: extractionError || "PDF subido, iniciando procesamiento" });
+    await auditLog({
+      action: "upload_pdf",
+      entityType: "DocumentoOficial",
+      entityId: doc.id,
+      status: extractionError ? "error" : "info",
+      message: extractionError || "PDF subido, encolado para procesamiento",
+    });
 
-    if (extractionError) {
-      const fallback = { titulo: titulo || file.name, entidad: entidad || "Otra", sector: sector || "Otro", numero: numero || "" };
-      const updated = await prisma.documentoOficial.update({ where: { id: doc.id }, data: { ...fallback, status: "needs_review" } });
-      return NextResponse.json(updated, { status: 201 });
-    }
-
-    const activeModel = await prisma.aiModel.findFirst({ where: { active: true } });
-    let metadata: Record<string, any> | null = null;
-    let processingError: string | null = null;
-    let aiModelId: string | undefined = activeModel?.id || undefined;
-
-    if (activeModel) {
-      const prompt = buildDocumentAnalysisPrompt(texto);
-      await auditLog({ action: "process_start", entityType: "DocumentoOficial", entityId: doc.id, status: "info", message: `Procesando con ${activeModel.name}`, aiModelId });
-      const result = await callModel(activeModel, prompt);
-
-      if (result.ok) {
-        try {
-          metadata = JSON.parse(sanitizeJsonText(result.text));
-          await auditLog({
-            action: "process_end",
-            entityType: "DocumentoOficial",
-            entityId: doc.id,
-            status: "success",
-            message: "Procesamiento IA completado",
-            metadata: { usage: result.usage },
-            latencyMs: result.latencyMs,
-            aiModelId,
-          });
-        } catch (err: any) {
-          processingError = `JSON inválido: ${err.message}`;
-          await auditLog({ action: "process_end", entityType: "DocumentoOficial", entityId: doc.id, status: "error", message: processingError, aiModelId });
-        }
-      } else {
-        processingError = result.error || "Modelo no respondió";
-        await auditLog({ action: "process_end", entityType: "DocumentoOficial", entityId: doc.id, status: "error", message: processingError, latencyMs: result.latencyMs, aiModelId });
+    // Si hubo error de extracción, no encolar - ya está en needs_review
+    if (!extractionError) {
+      try {
+        const bossInstance = await getBoss();
+        await bossInstance.send("process-document", { documentId: doc.id });
+        console.log(`[API] Documento ${doc.id} encolado para procesamiento`);
+      } catch (queueError) {
+        console.error("[API] Error encolando documento:", queueError);
+        // Actualizar a needs_review si no se pudo encolar
+        await prisma.documentoOficial.update({
+          where: { id: doc.id },
+          data: { status: "needs_review", processingError: "Error encolando para procesamiento" },
+        });
       }
-    } else {
-      processingError = "Sin modelo IA activo. Usando extracción por reglas.";
-      await auditLog({ action: "process_end", entityType: "DocumentoOficial", entityId: doc.id, status: "error", message: processingError });
     }
 
-    const fallback = analyzeDocument(texto);
-    const final = {
-      titulo: titulo || metadata?.titulo || fallback.titulo || "Sin título",
-      sector: sector || metadata?.sector || fallback.sector || "Otro",
-      entidad: entidad || metadata?.entidad || fallback.entidad || "Otra",
-      numero: numero || metadata?.numero || fallback.numero,
-      fechaExpedicion: parseDate(fechaExpedicion) || parseDate(metadata?.fecha) || parseDate(fallback.fecha),
-      resumen: metadata?.resumen || fallback.resumen,
-      proposito: metadata?.proposito || fallback.proposito,
-      actores: metadata?.actores || fallback.actores,
-      motivacion: metadata?.motivacion || fallback.motivacion,
-      resuelve: metadata?.resuelve || fallback.resuelve,
-      status: processingError ? "needs_review" : "completed",
-      processingError,
-      aiModelId,
-    };
-
-    const updated = await prisma.documentoOficial.update({ where: { id: doc.id }, data: final });
-    return NextResponse.json(updated, { status: 201 });
+    // Responder INMEDIATAMENTE con el documento creado
+    return NextResponse.json(doc, { status: 201 });
   } catch (err) {
     console.error(err);
     await auditLog({ action: "upload_pdf", entityType: "DocumentoOficial", status: "error", message: "Error procesando documento" });
@@ -146,7 +131,13 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const includeInactive = searchParams.get("includeInactive") === "true";
-    const where = includeInactive ? {} : { activo: true };
+    const status = searchParams.get("status");
+
+    const where: any = includeInactive ? {} : { activo: true };
+    if (status) {
+      where.status = status;
+    }
+
     const docs = await prisma.documentoOficial.findMany({
       where,
       orderBy: [{ jerarquiaNivel: "asc" }, { fechaExpedicion: "desc" }],
