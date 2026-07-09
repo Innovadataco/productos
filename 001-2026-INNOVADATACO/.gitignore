@@ -7,4 +7,5 @@ uploads/*.pdf
 uploads/*.PDF
 *.sqlite
 *.sqlite-journal
+*.sqlite.backup*
 coverage
