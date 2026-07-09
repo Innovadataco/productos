@@ -21,19 +21,21 @@ function parseDate(value?: string | null): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// Instancia singleton de pg-boss
-let boss: any = null;
+// Singleton de pg-boss usando promesa para evitar condición de carrera
+let bossPromise: Promise<any> | null = null;
 
 async function getBoss() {
-  if (!boss) {
-    // Import pg-boss usando require equivalente
-    const { PgBoss } = await import("pg-boss");
-    boss = new PgBoss({
-      connectionString: process.env.DATABASE_URL,
-    });
-    await boss.start();
+  if (!bossPromise) {
+    bossPromise = (async () => {
+      const { PgBoss } = await import("pg-boss");
+      const instance = new PgBoss({
+        connectionString: process.env.DATABASE_URL,
+      });
+      await instance.start();
+      return instance;
+    })();
   }
-  return boss;
+  return bossPromise;
 }
 
 export async function POST(req: NextRequest) {
