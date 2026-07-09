@@ -26,11 +26,9 @@ let boss: any = null;
 
 async function getBoss() {
   if (!boss) {
-    // Dynamic import para evitar problemas con Turbopack
-    const pgBoss = await import("pg-boss");
-    // pg-boss exporta la clase directamente, no como default
-    const PgBossClass = (pgBoss as any).default || pgBoss;
-    boss = new PgBossClass({
+    // Import pg-boss usando require equivalente
+    const { PgBoss } = await import("pg-boss");
+    boss = new PgBoss({
       connectionString: process.env.DATABASE_URL,
     });
     await boss.start();
