@@ -39,6 +39,7 @@ async function ollamaCall(model: AiModelInput, prompt: string): Promise<ModelRes
   const start = Date.now();
   const cfg = parseConfig(model.config);
   const baseUrl = (model.baseUrl || "http://localhost:11434").replace(/\/$/, "");
+  console.log(`[Ollama] Iniciando llamada a ${model.modelPath} en ${baseUrl}...`);
   const res = await fetch(`${baseUrl}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -54,6 +55,8 @@ async function ollamaCall(model: AiModelInput, prompt: string): Promise<ModelRes
       },
     }),
   });
+  const fetchTime = Date.now() - start;
+  console.log(`[Ollama] Respuesta recibida en ${fetchTime}ms, ok: ${res.ok}`);
   if (!res.ok) {
     const text = await res.text();
     return { ok: false, text: "", latencyMs: Date.now() - start, error: `Ollama ${res.status}: ${text}` };
