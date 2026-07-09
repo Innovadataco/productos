@@ -231,6 +231,10 @@ function MetadataForm({
 function useQueue() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const processingRef = useRef(false);
+  const queueRef = useRef(queue);
+
+  // Sincronizar ref con estado
+  queueRef.current = queue;
 
   const addFiles = (files: FileList | null) => {
     console.log("[useQueue] addFiles llamado", files?.length, "archivos");
@@ -257,28 +261,22 @@ function useQueue() {
     console.log("[useQueue] Iniciando procesamiento de cola");
 
     while (true) {
-      // Obtener el estado actual de la cola de forma síncrona
-      let currentItem: QueueItem | null = null;
+      // Usar ref para leer estado actual sincrónicamente
+      const currentQueue = queueRef.current;
+      console.log("[useQueue] Buscando item pending en cola de", currentQueue.length, "items");
 
-      setQueue((q) => {
-        console.log("[useQueue] Buscando item pending en cola de", q.length, "items");
-        const next = q.find((i) => i.status === "pending");
-        if (!next) {
-          console.log("[useQueue] No hay items pending");
-          return q;
-        }
-        console.log("[useQueue] Item pending encontrado:", next.id, next.file.name);
-        currentItem = next;
-        // Actualizar estado a uploading
-        return q.map((i) => (i.id === next.id ? { ...i, status: "uploading" } : i));
-      });
-
-      if (!currentItem) {
-        console.log("[useQueue] No hay item para procesar, terminando loop");
+      const next = currentQueue.find((i) => i.status === "pending");
+      if (!next) {
+        console.log("[useQueue] No hay items pending, terminando");
         break;
       }
 
-      const itemToProcess = currentItem as QueueItem;
+      console.log("[useQueue] Item pending encontrado:", next.id, next.file.name);
+
+      // Actualizar estado a uploading
+      setQueue((q) => q.map((i) => (i.id === next.id ? { ...i, status: "uploading" } : i)));
+
+      const itemToProcess = next;
       console.log("[useQueue] Procesando item:", itemToProcess.id, itemToProcess.file.name, "tamaño:", itemToProcess.file.size);
 
       const data = new FormData();
