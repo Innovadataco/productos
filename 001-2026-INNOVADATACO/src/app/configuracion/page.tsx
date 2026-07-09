@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ParametrizacionTab from "@/components/configuracion/ParametrizacionTab";
 import {
   Settings, Cpu, Globe, Terminal, Save, Plus, Trash2, RefreshCw,
   CheckCircle, XCircle, AlertCircle, Clock, X, ArrowLeft
@@ -637,11 +638,7 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
         </div>
       )}
 
-      {tab === "params" && (
-        <div className="glass-panel p-12 text-center text-[#444] font-geist-mono text-xs uppercase tracking-widest">
-          Parametrización global en construcción.
-        </div>
-      )}
+      {tab === "params" && <ParametrizacionTab models={models} toast={toast} />}
 
       {tab === "audit" && (
         <div className="space-y-2">
