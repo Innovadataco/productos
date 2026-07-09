@@ -233,61 +233,92 @@ function useQueue() {
   const processingRef = useRef(false);
 
   const addFiles = (files: FileList | null) => {
+    console.log("[useQueue] addFiles llamado", files?.length, "archivos");
     if (!files) return;
     const newItems: QueueItem[] = Array.from(files)
       .filter((f) => f.type === "application/pdf")
       .map((file) => ({ id: Math.random().toString(36).slice(2), file, status: "pending" }));
+    console.log("[useQueue] Nuevos items creados:", newItems.map(i => ({ id: i.id, name: i.file.name, status: i.status })));
     setQueue((q) => [...q, ...newItems]);
   };
 
   const updateItem = (id: string, patch: Partial<QueueItem>) => {
+    console.log("[useQueue] updateItem:", id, patch);
     setQueue((q) => q.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   };
 
   const processQueue = async () => {
-    if (processingRef.current) return;
+    console.log("[useQueue] processQueue llamado, processingRef.current:", processingRef.current);
+    if (processingRef.current) {
+      console.log("[useQueue] Ya hay un procesamiento en curso, saliendo");
+      return;
+    }
     processingRef.current = true;
+    console.log("[useQueue] Iniciando procesamiento de cola");
 
     while (true) {
-      let currentId: string | null = null;
+      // Obtener el estado actual de la cola de forma síncrona
+      let currentItem: QueueItem | null = null;
+
       setQueue((q) => {
+        console.log("[useQueue] Buscando item pending en cola de", q.length, "items");
         const next = q.find((i) => i.status === "pending");
-        if (!next) return q;
-        currentId = next.id;
+        if (!next) {
+          console.log("[useQueue] No hay items pending");
+          return q;
+        }
+        console.log("[useQueue] Item pending encontrado:", next.id, next.file.name);
+        currentItem = next;
+        // Actualizar estado a uploading
         return q.map((i) => (i.id === next.id ? { ...i, status: "uploading" } : i));
       });
-      if (!currentId) break;
 
-      const item = queue.find((i) => i.id === currentId) || (await new Promise<QueueItem | undefined>((resolve) => {
-        setQueue((q) => {
-          const found = q.find((i) => i.id === currentId);
-          resolve(found);
-          return q;
-        });
-      }));
-
-      if (!item) {
-        processingRef.current = false;
+      if (!currentItem) {
+        console.log("[useQueue] No hay item para procesar, terminando loop");
         break;
       }
 
+      const itemToProcess = currentItem as QueueItem;
+      console.log("[useQueue] Procesando item:", itemToProcess.id, itemToProcess.file.name, "tamaño:", itemToProcess.file.size);
+
       const data = new FormData();
-      data.append("file", item.file);
+      data.append("file", itemToProcess.file);
+      console.log("[useQueue] FormData creado, llamando fetch a /api/documents");
+
       try {
         const res = await fetch("/api/documents", { method: "POST", body: data });
-        if (!res.ok) throw new Error("Error subiendo documento");
+        console.log("[useQueue] Respuesta recibida:", res.status, res.statusText);
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("[useQueue] Error en respuesta:", errorText);
+          throw new Error(`Error subiendo documento: ${res.status} ${res.statusText}`);
+        }
+
         const result: Doc = await res.json();
-        updateItem(item.id, { status: "done", result });
+        console.log("[useQueue] Documento procesado exitosamente:", result.id, result.status);
+        updateItem(itemToProcess.id, { status: "done", result });
       } catch (err: any) {
-        updateItem(item.id, { status: "error", error: err.message });
+        console.error("[useQueue] Error en fetch:", err.message, err);
+        updateItem(itemToProcess.id, { status: "error", error: err.message });
       }
+
+      console.log("[useQueue] Item procesado, continuando con siguiente...");
     }
 
+    console.log("[useQueue] Procesamiento de cola terminado");
     processingRef.current = false;
   };
 
-  const removeItem = (id: string) => setQueue((q) => q.filter((i) => i.id !== id));
-  const clearCompleted = () => setQueue((q) => q.filter((i) => i.status !== "done"));
+  const removeItem = (id: string) => {
+    console.log("[useQueue] removeItem:", id);
+    setQueue((q) => q.filter((i) => i.id !== id));
+  };
+
+  const clearCompleted = () => {
+    console.log("[useQueue] clearCompleted");
+    setQueue((q) => q.filter((i) => i.status !== "done"));
+  };
 
   return { queue, addFiles, processQueue, removeItem, clearCompleted, updateItem, setQueue };
 }
