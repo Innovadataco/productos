@@ -28,7 +28,7 @@ describe("POST /api/auth/login", () => {
     });
 
     it("debe retornar 401 con credenciales inválidas", async () => {
-        const req = new Request("http://localhost:3000/api/auth/login", {
+        const req = new Request("http://localhost:5000/api/auth/login", {
             method: "POST",
             body: JSON.stringify({ username: "invalid", password: "invalid" }),
             headers: { "Content-Type": "application/json" },
@@ -39,7 +39,7 @@ describe("POST /api/auth/login", () => {
     });
 
     it("debe retornar 200 con cookie token para credenciales válidas", async () => {
-        const req = new Request("http://localhost:3000/api/auth/login", {
+        const req = new Request("http://localhost:5000/api/auth/login", {
             method: "POST",
             body: JSON.stringify({ username: testUser.username, password: testUser.password }),
             headers: { "Content-Type": "application/json" },
