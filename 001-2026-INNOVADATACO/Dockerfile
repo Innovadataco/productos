@@ -28,6 +28,6 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
 USER nextjs
-EXPOSE 5000
-ENV PORT 5000
+EXPOSE 5001
+ENV PORT 5001
 CMD ["npm", "run", "start"]

@@ -169,7 +169,7 @@ datasource db {
 services:
   app:
     build: .
-    ports: ["5000:5000"]
+    ports: ["5001:5001"]
     environment:
       DATABASE_URL: postgresql://innova:innova@db:5432/innovadataco?schema=public
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
