@@ -40,8 +40,13 @@ export async function verifyToken(token: string) {
 }
 
 export async function verifyAuth(requiredRol?: RolUsuario) {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
+    let token: string | undefined;
+    try {
+        const cookieStore = await cookies();
+        token = cookieStore.get("token")?.value;
+    } catch {
+        token = undefined;
+    }
     if (!token) {
         throw new AppError("No autenticado", ERROR_CODES.AUTH_INVALID, 401);
     }

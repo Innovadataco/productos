@@ -1,0 +1,49 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { verifyAuth } from "@/lib/auth";
+import { RolUsuario } from "@prisma/client";
+import { AppError, ERROR_CODES } from "@/lib/errors";
+
+export async function GET(request: Request) {
+    try {
+        await verifyAuth(RolUsuario.ADMIN);
+
+        const { searchParams } = new URL(request.url);
+        const categoria = searchParams.get("categoria");
+        const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+        const pageSize = Math.min(
+            100,
+            Math.max(1, parseInt(searchParams.get("pageSize") || "25", 10))
+        );
+
+        const where = categoria ? { categoria: categoria as never } : {};
+
+        const [items, total] = await Promise.all([
+            prisma.parametroSistema.findMany({
+                where,
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                orderBy: { categoria: "asc" },
+            }),
+            prisma.parametroSistema.count({ where }),
+        ]);
+
+        return NextResponse.json({
+            items,
+            pagination: {
+                page,
+                pageSize,
+                total,
+                totalPages: Math.ceil(total / pageSize),
+            },
+        });
+    } catch (error) {
+        if (error instanceof AppError) {
+            return NextResponse.json(error.toJSON(), { status: error.statusCode });
+        }
+        return NextResponse.json(
+            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
+            { status: 500 }
+        );
+    }
+}
