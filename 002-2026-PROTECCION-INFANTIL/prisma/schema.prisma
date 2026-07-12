@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RolUsuario {
+  ADMIN
+  SCHOOL_ADMIN
+  PARENT
+}
+
+enum EstadoUsuario {
+  activo
+  inactivo
+  bloqueado
+}
+
+enum TipoParametro {
+  STRING
+  INTEGER
+  FLOAT
+  BOOLEAN
+  JSON
+  STRING_ARRAY
+}
+
+enum CategoriaParametro {
+  VISIBILITY
+  SECURITY
+  LEGAL
+  EMAIL
+  SYSTEM
+}
+
+enum AccionAudit {
+  LOGIN
+  LOGOUT
+  PARAM_UPDATE
+  USER_CREATE
+  USER_UPDATE
+  USER_DELETE
+  CODE_REQUEST
+  CODE_VERIFY
+  CODE_COMPLETE
+}
+
+model Usuario {
+  id               String        @id @default(cuid())
+  email            String        @unique
+  nombre           String?
+  passwordHash     String
+  rol              RolUsuario
+  estado           EstadoUsuario @default(activo)
+  intentosFallidos Int           @default(0)
+  bloqueadoHasta   DateTime?
+  ultimaSesion     DateTime?
+  tenantId         String?
+  creadoEn         DateTime      @default(now())
+  actualizadoEn    DateTime      @updatedAt
+
+  tenant         Tenant?          @relation(fields: [tenantId], references: [id])
+  parametros     ParametroSistema[]
+  auditLogs      AuditLog[]
+  codigos        CodigoVerificacion[]
+
+  @@index([email])
+  @@index([rol])
+  @@index([estado])
+  @@index([tenantId])
+}
+
+model CodigoVerificacion {
+  id               String   @id @default(cuid())
+  email            String
+  codigoHash       String
+  expiraEn         DateTime
+  intentosFallidos Int      @default(0)
+  usado            Boolean  @default(false)
+  creadoEn         DateTime @default(now())
+
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([email])
+  @@index([creadoEn])
+}
+
+model ParametroSistema {
+  id                 String            @id @default(cuid())
+  clave              String            @unique
+  valor              String
+  tipo               TipoParametro
+  categoria          CategoriaParametro
+  esPublico          Boolean           @default(false)
+  esSecreto          Boolean           @default(false)
+  descripcion        String?
+  reglasValidacion   String?
+  creadoEn           DateTime          @default(now())
+  actualizadoEn      DateTime          @updatedAt
+  actualizadoPorId   String?
+
+  actualizadoPor Usuario? @relation(fields: [actualizadoPorId], references: [id])
+  auditLogs      AuditLog[]
+
+  @@index([clave])
+  @@index([categoria])
+}
+
+model AuditLog {
+  id          String     @id @default(cuid())
+  accion      AccionAudit
+  tipoRecurso String
+  recursoId   String?
+  usuarioId   String?
+  parametroId String?
+  valorAnterior String?
+  valorNuevo  String?
+  ipAddress   String
+  userAgent   String
+  metadatos   Json?
+  creadoEn    DateTime   @default(now())
+
+  usuario   Usuario?          @relation(fields: [usuarioId], references: [id])
+  parametro ParametroSistema? @relation(fields: [parametroId], references: [id])
+
+  @@index([usuarioId])
+  @@index([parametroId])
+  @@index([accion])
+  @@index([creadoEn])
+}
+
+model Tenant {
+  id       String @id @default(cuid())
+  nombre   String
+  estado   String @default("activo")
+  creadoEn DateTime @default(now())
+
+  usuarios Usuario[]
+}
+
+model Plan {
+  id          String @id @default(cuid())
+  nombre      String
+  descripcion String?
+  precio      Float
+  creadoEn    DateTime @default(now())
+}
+
+model Subscription {
+  id        String @id @default(cuid())
+  tenantId  String
+  planId    String
+  estado    String @default("activo")
+  iniciaEn  DateTime
+  terminaEn DateTime?
+  creadoEn  DateTime @default(now())
+}
+
+model BillingCycle {
+  id             String @id @default(cuid())
+  subscriptionId String
+  monto          Float
+  estado         String @default("pendiente")
+  periodoInicio  DateTime
+  periodoFin     DateTime
+  creadoEn       DateTime @default(now())
+}
