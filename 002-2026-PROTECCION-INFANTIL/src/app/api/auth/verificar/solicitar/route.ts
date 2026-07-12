@@ -55,7 +55,15 @@ export async function POST(request: Request) {
             },
         });
 
-        await enviarCodigoVerificacion(email, code);
+        try {
+            await enviarCodigoVerificacion(email, code);
+        } catch (err) {
+            console.error("Failed to send verification email to:", email, "error:", err instanceof Error ? err.message : String(err));
+            return NextResponse.json(
+                { error: { message: "Error al enviar email de verificación", code: ERROR_CODES.INTERNAL_ERROR } },
+                { status: 500 }
+            );
+        }
 
         return NextResponse.json(
             { message: "Si el email es válido, recibirás un código de verificación." },
