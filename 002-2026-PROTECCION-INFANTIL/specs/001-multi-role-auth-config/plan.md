@@ -54,6 +54,12 @@ Implementar la fase fundacional del sistema de protección infantil: autenticaci
 
 **Re-check post-design**: All gates still pass. No violations.
 
+**Additional checks post-spec-update**:
+- ✅ §1.2 Solo texto: Códigos de verificación son texto (6 dígitos), no multimedia.
+- ✅ §2.1 JWT manual + bcryptjs: Flujo de código usa bcrypt para hash del código, JWT para token temporal.
+- ✅ §6.2 Validación manual: Cada endpoint del flujo de código valida explícitamente su input.
+- ✅ §6.3 Datos sensibles: Códigos hasheados con bcrypt, nunca almacenados en texto plano.
+
 ---
 
 ## Project Structure

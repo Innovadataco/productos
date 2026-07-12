@@ -25,18 +25,7 @@
 
 **Decision**: Los parámetros de configuración se cachean en un `Map` en memoria del proceso Node.js con invalidación por TTL.
 
-**Rationale**: La constitución no menciona Redis. El proyecto 001 no lo usa. Para la fase fundacional, con 10-20 parámetros de configuración, un caché en memoria es suficiente y elimina una dependencia operativa. Si en el futuro se escala horizontalmente, se migrará a Redis o se eliminará el caché.
-
-**Pattern**:
-```typescript
-// src/lib/config-cache.ts
-const cache = new Map<string, { value: unknown; expiresAt: number }>();
-const TTL_MS = 60_000; // 1 minuto
-
-export function getCached<T>(key: string): T | undefined { ... }
-export function setCached<T>(key: string, value: T): void { ... }
-export function invalidateCache(key?: string): void { ... }
-```
+**Rationale**: La constitución no menciona Redis. El proyecto 001 no lo usa. Para la fase fundacional, con 10-20 parámetros de configuración, un caché en memoria es suficiente y elimina una dependencia operativa.
 
 ### D3: Sin pg-boss en esta fase
 
@@ -54,13 +43,25 @@ export function invalidateCache(key?: string): void { ... }
 
 **Decision**: No implementar rate limiting en esta fase. Se documenta como deuda técnica con referencia a la constitución §6.4.
 
-**Rationale**: La constitución marca rate limiting como "futuro". En desarrollo local con Docker Compose no hay necesidad inmediata. Se implementará antes de cualquier exposición a internet.
+**Rationale**: La constitución marca rate limiting como "futuro". En desarrollo local con Docker Compose no hay necesidad inmediata.
 
 ### D6: Validación de inputs — Zod como meta, validación manual como transición
 
 **Decision**: Implementar validación manual explícita en las rutas API (constitución §6.2), con migración a Zod documentada como mejora futura.
 
-**Rationale**: La constitución dice "Meta: Migrar a Zod. Hasta entonces, validación manual explícita". En fase fundacional, la validación manual reduce dependencias y es suficiente para 5-7 endpoints.
+**Rationale**: La constitución dice "Meta: Migrar a Zod. Hasta entonces, validación manual explícita". En fase fundacional, la validación manual reduce dependencias y es suficiente para 7-9 endpoints.
+
+### D7: Proveedor de email — Resend
+
+**Decision**: Resend como proveedor de email transaccional.
+
+**Rationale**:
+- **Capa gratuita**: Resend ofrece 3,000 emails/mes gratis (suficiente para desarrollo y lanzamiento inicial). Brevo ofrece 300 emails/día (9,000/mes) pero con marca de agua y limitaciones de API.
+- **DX superior**: API de Resend es más simple (un solo endpoint `POST /emails`), mejor documentación, SDK de Node.js oficial.
+- **Deliverability**: Resend está optimizado para emails transaccionales (códigos de verificación, notificaciones) con buena reputación de IPs.
+- **Colombia**: Resend acepta dominios `.co` y no requiere verificación de empresa para la capa gratuita, a diferencia de SendGrid/AWS SES.
+
+**Variable de entorno**: `RESEND_API_KEY` (no hardcodeada, nunca en repo).
 
 ---
 
@@ -68,16 +69,19 @@ export function invalidateCache(key?: string): void { ... }
 
 | Alternative | Why Rejected |
 |-------------|-------------|
-| NextAuth.js / Auth.js | Prohibido por constitución §2.1: "sin NextAuth.js/Auth.js" |
-| tRPC | Prohibido por constitución §2.1: "no tRPC" |
-| GraphQL | Prohibido por constitución §2.1: "no GraphQL" |
-| PostgREST | Prohibido por constitución §2.1: "no PostgREST" |
-| Redis para sesiones | No en constitución; caché en memoria es suficiente para fase 1 |
-| OAuth2 en esta fase | Fuera de scope del spec; se asume email+password |
-| 2FA/TOTP en esta fase | Fuera de scope del spec; se documenta como futuro |
+| NextAuth.js / Auth.js | Prohibido por constitución §2.1 |
+| tRPC | Prohibido por constitución §2.1 |
+| GraphQL | Prohibido por constitución §2.1 |
+| PostgREST | Prohibido por constitución §2.1 |
+| Redis para sesiones | No en constitución; caché en memoria suficiente |
+| OAuth2 en esta fase | Fuera de scope del spec |
+| 2FA/TOTP en esta fase | Fuera de scope del spec |
+| Brevo (email) | Capa gratuita con marca de agua, API más verbosa |
+| SendGrid | Requiere verificación de dominio/empresa, más complejo para arranque |
+| AWS SES | Requiere cuenta AWS, fuera de stack (sin cloud) |
 
 ---
 
 ## Open Questions (0 remaining)
 
-All NEEDS CLARIFICATION resolved. Stack is fully determined by constitution.
+All NEEDS CLARIFICATION resolved. Stack is fully determined by constitution and product owner decisions.

@@ -28,20 +28,25 @@ Un administrador de la plataforma necesita ajustar el umbral mínimo de reportes
 
 ---
 
-### User Story 2 - Autenticación de usuarios con roles diferenciados (Priority: P1)
+### User Story 2 - Registro e inicio de sesión de usuarios (Priority: P1)
 
-Usuarios de tres tipos distintos (ADMIN, SCHOOL_ADMIN, PARENT) deben poder iniciar sesión en la plataforma. Cada rol tiene acceso a funcionalidades diferentes: ADMIN gestiona la plataforma completa, SCHOOL_ADMIN administra su colegio asignado, y PARENT crea reportes y consulta identificadores. Los usuarios anónimos pueden crear reportes y consultar sin autenticación.
+Un nuevo usuario (rol PARENT por defecto) se registra ingresando su correo electrónico. El sistema envía un código de verificación de 6 dígitos al email. El usuario ingresa el código dentro de los 15 minutos de validez y, una vez verificado, asigna su contraseña para completar la activación de la cuenta. Posteriormente puede iniciar sesión. ADMIN y SCHOOL_ADMIN crean usuarios directamente sin este flujo.
 
 **Why this priority**: La autenticación multi-rol es la puerta de entrada a toda la plataforma. Sin ella, no hay forma de controlar quién puede gestionar colegios, quién puede crear reportes autenticados, ni quién puede modificar parámetros críticos.
 
-**Independent Test**: Un usuario puede registrarse (o ser creado por un ADMIN), iniciar sesión con credenciales válidas, recibir una sesión activa, y acceder únicamente a las rutas correspondientes a su rol. Los intentos de acceso a rutas de otros roles deben ser bloqueados.
+**Independent Test**: Un usuario puede completar el flujo de registro (solicitar código → verificar código → asignar contraseña), iniciar sesión con credenciales válidas, recibir una sesión activa, y acceder únicamente a las rutas correspondientes a su rol.
 
 **Acceptance Scenarios**:
 
-1. **Given** un usuario registrado con rol PARENT y credenciales válidas, **When** inicia sesión, **Then** el sistema le otorga una sesión activa y permite acceder a funciones de reporte y consulta, pero no a funciones de administración.
-2. **Given** un usuario registrado con rol SCHOOL_ADMIN, **When** inicia sesión, **Then** el sistema le permite gestionar usuarios de su colegio asignado, pero no de otros colegios ni parámetros globales.
-3. **Given** un usuario con credenciales incorrectas, **When** intenta iniciar sesión, **Then** el sistema rechaza la autenticación, incrementa un contador de intentos fallidos, y bloquea temporalmente la cuenta tras superar el límite configurado.
-4. **Given** un usuario autenticado, **When** cierra sesión, **Then** el sistema invalida su sesión activa y requiere nueva autenticación para acceder a rutas protegidas.
+1. **Given** un usuario nuevo con email no registrado, **When** solicita un código de verificación, **Then** el sistema genera un código de 6 dígitos, lo envía por email y establece una validez de 15 minutos.
+2. **Given** un usuario que recibió un código de verificación válido, **When** ingresa el código correcto, **Then** el sistema verifica la coincidencia y permite continuar al paso de asignación de contraseña.
+3. **Given** un usuario que ingresa un código incorrecto, **When** intenta verificar, **Then** el sistema rechaza la verificación, incrementa el contador de intentos fallidos del código, y bloquea el código tras 5 intentos fallidos.
+4. **Given** un usuario con email verificado, **When** asigna una contraseña válida, **Then** el sistema crea la cuenta con rol PARENT y estado activo.
+5. **Given** un usuario registrado con rol PARENT y credenciales válidas, **When** inicia sesión, **Then** el sistema le otorga una sesión activa y permite acceder a funciones de reporte y consulta, pero no a funciones de administración.
+6. **Given** un usuario registrado con rol SCHOOL_ADMIN, **When** inicia sesión, **Then** el sistema le permite gestionar usuarios de su colegio asignado, pero no de otros colegios ni parámetros globales.
+7. **Given** un usuario con credenciales incorrectas, **When** intenta iniciar sesión, **Then** el sistema rechaza la autenticación, incrementa un contador de intentos fallidos, y bloquea temporalmente la cuenta tras superar el límite configurado.
+8. **Given** un usuario autenticado, **When** cierra sesión, **Then** el sistema invalida su sesión activa y requiere nueva autenticación para acceder a rutas protegidas.
+9. **Given** un usuario que solicita un código, **When** ya ha solicitado 3 códigos en la última hora, **Then** el sistema rechaza la solicitud con un error de límite excedido.
 
 ---
 
@@ -88,6 +93,11 @@ La estructura del proyecto debe permitir la adición de módulos futuros (report
 - **FR-012**: El sistema DEBE permitir al rol SCHOOL_ADMIN gestionar únicamente usuarios de su colegio asignado, sin acceso a usuarios de otros colegios.
 - **FR-013**: El sistema DEBE permitir al rol PARENT gestionar únicamente su propio perfil.
 - **FR-014**: El sistema DEBE implementar soft delete para usuarios, preservando la integridad de los registros de auditoría asociados.
+- **FR-015**: El sistema DEBE permitir a un usuario solicitar un código de verificación de 6 dígitos enviado a su correo electrónico para iniciar el registro.
+- **FR-016**: El sistema DEBE validar que el email no esté ya registrado antes de enviar un código de verificación.
+- **FR-017**: El sistema DEBE permitir un máximo de 3 solicitudes de código de verificación por email en un período de 1 hora.
+- **FR-018**: El sistema DEBE validar un código de verificación dentro de un período de validez de 15 minutos desde su generación, permitiendo un máximo de 5 intentos fallidos antes de invalidar el código.
+- **FR-019**: El sistema DEBE permitir a un usuario completar su registro asignando contraseña únicamente después de verificar exitosamente el código de verificación enviado a su email.
 
 ### Key Entities
 
@@ -95,6 +105,7 @@ La estructura del proyecto debe permitir la adición de módulos futuros (report
 - **Rol**: Define un conjunto de permisos. Entidades base: ADMIN, SCHOOL_ADMIN, PARENT. Puede extenderse a roles personalizados en el futuro. Atributos: nombre, descripción, lista de permisos asociados.
 - **Parámetro de Configuración**: Clave-valor tipado que controla el comportamiento del sistema. Atributos: clave única, valor serializado, tipo de dato, categoría, flag de público, flag de secreto, reglas de validación, descripción, metadatos de modificación.
 - **Registro de Auditoría**: Traza inmutable de acciones sobre el sistema. Atributos: identificador, acción realizada, tipo de recurso afectado, identificador del recurso, usuario que ejecutó la acción, dirección IP, agente de usuario, metadatos contextuales, fecha.
+- **CodigoVerificacion**: Entidad transitoria para el flujo de registro. Atributos: identificador único, email destinatario, hash del código (bcrypt), fecha de expiración, contador de intentos fallidos, flag de uso, fecha de creación.
 
 ---
 
@@ -114,10 +125,11 @@ La estructura del proyecto debe permitir la adición de módulos futuros (report
 ## Assumptions
 
 - Los usuarios tienen acceso a correo electrónico para la verificación de cuenta y recuperación de contraseña.
+- El envío de emails se realiza mediante un proveedor de capa gratuita (Resend o Brevo) configurado por variable de entorno.
 - El despliegue inicial es para un solo entorno (desarrollo local), con despliegue a producción en fases posteriores.
 - Los parámetros de configuración críticos (umbral de visibilidad, límites de intentos de login) tienen valores predeterminados conservadores que permiten operar la plataforma sin configuración manual previa.
-- La autenticación social (Google, Apple) queda fuera del alcance de esta fase; se implementará en una fase posterior si se determina necesaria.
+- La autenticación social (Google, Microsoft, Apple) está explícitamente fuera del alcance de esta fase.
 - Los colegios y el modelo multi-tenant se establecen en esta fase con la tabla base `Tenant` vacía, pero la lógica de aislamiento por colegio se activa en la fase de colegios.
 - Los textos de reporte no se procesan en esta fase; la encriptación de reportes y el worker de pg-boss se implementan junto con el módulo de reportes.
-- La validación de contraseñas exige un mínimo de 12 caracteres con al menos una mayúscula, una minúscula, un número y un símbolo.
+- La validación de contraseñas exige un mínimo de 8 caracteres con al menos una letra y un número. No se requieren símbolos obligatorios.
 - Los roles base (ADMIN, SCHOOL_ADMIN, PARENT) se crean automáticamente al inicializar la base de datos y no pueden eliminarse.

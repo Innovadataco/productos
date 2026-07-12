@@ -26,7 +26,7 @@
 
 **Validation Rules**:
 - Email: formato RFC 5322, único
-- Password (input, not stored): min 12 chars, 1 mayúscula, 1 minúscula, 1 número, 1 símbolo
+- Password (input, not stored): min 8 chars, at least 1 letter and 1 number. No symbols required.
 - No eliminar si tiene registros de auditoría (soft delete → estado = inactivo)
 
 **State Transitions**:
@@ -84,6 +84,32 @@ inactivo → activo (reactivación por admin)
 **Invariants**:
 - No se puede modificar ni eliminar (solo append)
 - Retención mínima: 5 años
+
+---
+
+### `CodigoVerificacion`
+
+| Field | Type | Constraints | Notes |
+|-------|------|-------------|-------|
+| `id` | String | `@id @default(cuid())` | |
+| `email` | String | max 255 | Email destinatario, no único (múltiples códigos por email) |
+| `codigoHash` | String | min 60 | bcrypt del código de 6 dígitos |
+| `expiraEn` | DateTime | | 15 minutos desde creación |
+| `intentosFallidos` | Int | `@default(0)` | Máximo 5 antes de invalidar |
+| `usado` | Boolean | `@default(false)` | true tras verificación exitosa |
+| `creadoEn` | DateTime | `@default(now())` | |
+
+**Validation Rules**:
+- `expiraEn` = `creadoEn + 15 minutos`
+- `intentosFallidos` ≤ 5
+- Un código usado (`usado = true`) no puede reutilizarse
+- Máximo 3 códigos activos (no usados, no expirados) por email en 1 hora
+
+**Lifecycle**:
+```
+activo → usado (verificación exitosa)
+activo → inválido (expirado o 5 intentos fallidos)
+```
 
 ---
 
