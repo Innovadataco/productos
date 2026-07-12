@@ -10,3 +10,4 @@ uploads/*.PDF
 *.sqlite.backup*
 coverage
 logs/
+.clinerules/
