@@ -6,7 +6,10 @@ import { AppError, ERROR_CODES } from "./errors";
 import { requireEnv } from "./env";
 import type { RolUsuario } from "@prisma/client";
 
-const SECRET = new TextEncoder().encode(requireEnv("JWT_SECRET", 32));
+function getSecret(): Uint8Array {
+    return new TextEncoder().encode(requireEnv("JWT_SECRET", 32));
+}
+
 const JWT_TTL = "24h";
 
 export async function hashPassword(password: string): Promise<string> {
@@ -25,12 +28,12 @@ export async function createToken(payload: Record<string, unknown>): Promise<str
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
         .setExpirationTime(JWT_TTL)
-        .sign(SECRET);
+        .sign(getSecret());
 }
 
 export async function verifyToken(token: string) {
     try {
-        const { payload } = await jwtVerify(token, SECRET, {
+        const { payload } = await jwtVerify(token, getSecret(), {
             clockTolerance: 60,
         });
         return payload;
