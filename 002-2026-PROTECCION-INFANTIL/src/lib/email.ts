@@ -1,16 +1,12 @@
 import { Resend } from "resend";
+import { requireEnv } from "./env";
 
-const resend = new Resend(process.env.RESEND_API_KEY || "");
+const resend = new Resend(requireEnv("RESEND_API_KEY", 10));
 
 export async function enviarCodigoVerificacion(
     email: string,
     codigo: string
 ): Promise<void> {
-    if (!process.env.RESEND_API_KEY) {
-        console.warn("RESEND_API_KEY no configurado, código:", codigo);
-        return;
-    }
-
     await resend.emails.send({
         from: "Protección Infantil <no-reply@proteccion.local>",
         to: email,

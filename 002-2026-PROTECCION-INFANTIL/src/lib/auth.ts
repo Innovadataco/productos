@@ -3,9 +3,10 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 import { AppError, ERROR_CODES } from "./errors";
+import { requireEnv } from "./env";
 import type { RolUsuario } from "@prisma/client";
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret");
+const SECRET = new TextEncoder().encode(requireEnv("JWT_SECRET", 32));
 const JWT_TTL = "24h";
 
 export async function hashPassword(password: string): Promise<string> {
