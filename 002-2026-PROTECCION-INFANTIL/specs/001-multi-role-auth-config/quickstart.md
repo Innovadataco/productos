@@ -30,7 +30,7 @@ npx prisma db seed   # Crea roles, admin por defecto, parámetros base
 npm run dev
 ```
 
-Servidor en `http://localhost:3000`.
+Servidor en `http://localhost:5005`.
 
 ---
 
@@ -40,18 +40,18 @@ Servidor en `http://localhost:3000`.
 
 ```bash
 # 1. Solicitar código
-curl -X POST http://localhost:3000/api/auth/verificar/solicitar \
+curl -X POST http://localhost:5005/api/auth/verificar/solicitar \
   -H "Content-Type: application/json" \
   -d '{"email":"nuevo@ejemplo.com"}'
 
 # 2. Verificar código (reemplazar CODIGO con el recibido por email)
-curl -X POST http://localhost:3000/api/auth/verificar/validar \
+curl -X POST http://localhost:5005/api/auth/verificar/validar \
   -H "Content-Type: application/json" \
   -d '{"email":"nuevo@ejemplo.com","codigo":"123456"}'
 # Esperado: 200 con { valido: true, token: "..." }
 
 # 3. Completar registro con contraseña
-curl -X POST http://localhost:3000/api/auth/verificar/completar \
+curl -X POST http://localhost:5005/api/auth/verificar/completar \
   -H "Content-Type: application/json" \
   -d '{"token":"TEMP_JWT_DEL_PASO_2","password":"segura123","nombre":"Juan Pérez"}'
 # Esperado: 201 con { user: { rol: "PARENT" } } y cookie token
@@ -64,7 +64,7 @@ curl -X POST http://localhost:3000/api/auth/verificar/completar \
 ### Escenario B: Login como ADMIN
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/login \
+curl -X POST http://localhost:5005/api/auth/login \
   -H "Content-Type: application/json" \
   -c cookies.txt \
   -d '{"email":"admin@proteccion.local","password":"Admin123!Secure"}'
@@ -77,7 +77,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 ### Escenario C: Leer parámetros públicos (sin auth)
 
 ```bash
-curl http://localhost:3000/api/config/parametros/publicos
+curl http://localhost:5005/api/config/parametros/publicos
 ```
 
 **Esperado**: `200` con `visibility.report_threshold` y `system.maintenance_mode`.
@@ -87,7 +87,7 @@ curl http://localhost:3000/api/config/parametros/publicos
 ### Escenario D: Modificar umbral como ADMIN
 
 ```bash
-curl -X PATCH http://localhost:3000/api/config/parametros/visibility.report_threshold \
+curl -X PATCH http://localhost:5005/api/config/parametros/visibility.report_threshold \
   -H "Content-Type: application/json" \
   -b cookies.txt \
   -d '{"valor":"5","motivo":"Prueba de ajuste"}'
@@ -101,13 +101,13 @@ curl -X PATCH http://localhost:3000/api/config/parametros/visibility.report_thre
 
 ```bash
 # 1. Login como parent
-curl -X POST http://localhost:3000/api/auth/login \
+curl -X POST http://localhost:5005/api/auth/login \
   -H "Content-Type: application/json" \
   -c parent.txt \
   -d '{"email":"parent@proteccion.local","password":"Parent123Test"}'
 
 # 2. Intentar modificar parámetro
-curl -X PATCH http://localhost:3000/api/config/parametros/visibility.report_threshold \
+curl -X PATCH http://localhost:5005/api/config/parametros/visibility.report_threshold \
   -H "Content-Type: application/json" \
   -b parent.txt \
   -d '{"valor":"10"}'
@@ -122,7 +122,7 @@ curl -X PATCH http://localhost:3000/api/config/parametros/visibility.report_thre
 ```bash
 # Solicitar 4 códigos en menos de 1 hora
 for i in 1 2 3 4; do
-  curl -X POST http://localhost:3000/api/auth/verificar/solicitar \
+  curl -X POST http://localhost:5005/api/auth/verificar/solicitar \
     -H "Content-Type: application/json" \
     -d '{"email":"limite@ejemplo.com"}'
 done
@@ -135,7 +135,7 @@ done
 ### Escenario G: Logout
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/logout -b cookies.txt
+curl -X POST http://localhost:5005/api/auth/logout -b cookies.txt
 ```
 
 **Esperado**: `200`, cookie `token` eliminada.

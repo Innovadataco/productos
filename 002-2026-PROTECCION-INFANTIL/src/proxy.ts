@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 const PUBLIC_ROUTES = ["/", "/login", "/registro", "/api/auth", "/api/config/parametros/publicos"];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get("token")?.value;
 
@@ -17,6 +17,3 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
 }
 
-export const config = {
-    matcher: ["/((?!_next|favicon.ico|.*\\.).*)"],
-};
