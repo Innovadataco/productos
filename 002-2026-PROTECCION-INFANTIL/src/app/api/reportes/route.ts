@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { crearReporteSchema } from "@/lib/validators";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { getUserFromToken } from "@/lib/auth";
+import { publishReporte } from "@/lib/queue";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -115,7 +116,14 @@ export async function POST(request: Request) {
             },
         });
 
-        // TODO: Publicar en cola pg-boss para procesamiento (Fase 4)
+        // Publicar en cola para procesamiento asíncrono
+        try {
+            await publishReporte(reporte.id);
+        } catch (queueErr) {
+            const msg = queueErr instanceof Error ? queueErr.message : "Error desconocido";
+            console.error("[REPORTES] Error publicando en cola:", msg);
+            // No fallamos la creación del reporte si la cola falla
+        }
 
         return NextResponse.json(
             {
