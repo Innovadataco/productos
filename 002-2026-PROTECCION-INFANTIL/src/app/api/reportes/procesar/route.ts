@@ -4,6 +4,7 @@ import { clasificarReporte } from "@/lib/ai/classifier";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { requireEnv } from "@/lib/env";
 import { ERROR_CODES } from "@/lib/errors";
+import type { EstadoReporte } from "@prisma/client";
 
 const ESTADOS_FINALES = new Set([
     "CLASIFICADO",
@@ -64,24 +65,39 @@ export async function POST(request: Request) {
         });
         const modeloClasificacion = paramModelo?.valor || "ornith:9b";
 
-        // Clasificar
-        const clasificacion = await clasificarReporte(modeloClasificacion, reporte.texto);
-
-        // Guardar clasificación
-        await prisma.clasificacionIA.create({
-            data: {
-                reporteId: reporte.id,
-                categoria: clasificacion.categoria,
-                confianza: clasificacion.confianza,
-                contienePii: clasificacion.contienePii,
-                piiDetectada: clasificacion.piiDetectada,
-                modeloUsado: clasificacion.metrics.modelo,
-                latenciaMs: clasificacion.metrics.latenciaMs,
-                promptTokens: clasificacion.metrics.promptTokens,
-                responseTokens: clasificacion.metrics.responseTokens,
-                rawResponse: clasificacion.rawResponse,
-            },
+        // Clasificar (solo si no existe clasificación previa — idempotencia parcial)
+        let clasificacion;
+        const clasifExistente = await prisma.clasificacionIA.findUnique({
+            where: { reporteId: reporte.id },
         });
+
+        if (clasifExistente) {
+            clasificacion = {
+                categoria: clasifExistente.categoria,
+                confianza: clasifExistente.confianza,
+                estado: (clasifExistente.contienePii ? "REQUIERE_ANONIMIZACION" : "CLASIFICADO") as EstadoReporte,
+                contienePii: clasifExistente.contienePii,
+                piiDetectada: clasifExistente.piiDetectada,
+                metrics: { modelo: clasifExistente.modeloUsado, latenciaMs: clasifExistente.latenciaMs },
+                rawResponse: clasifExistente.rawResponse,
+            };
+        } else {
+            clasificacion = await clasificarReporte(modeloClasificacion, reporte.texto);
+            await prisma.clasificacionIA.create({
+                data: {
+                    reporteId: reporte.id,
+                    categoria: clasificacion.categoria,
+                    confianza: clasificacion.confianza,
+                    contienePii: clasificacion.contienePii,
+                    piiDetectada: clasificacion.piiDetectada,
+                    modeloUsado: clasificacion.metrics.modelo,
+                    latenciaMs: clasificacion.metrics.latenciaMs,
+                    promptTokens: clasificacion.metrics.promptTokens,
+                    responseTokens: clasificacion.metrics.responseTokens,
+                    rawResponse: clasificacion.rawResponse,
+                },
+            });
+        }
 
         // Generar embedding (obligatorio — si falla, el job se reintenta)
         const paramEmbedding = await prisma.parametroSistema.findUnique({
