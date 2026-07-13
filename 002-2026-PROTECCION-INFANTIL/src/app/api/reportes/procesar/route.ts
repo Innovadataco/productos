@@ -5,6 +5,15 @@ import { generarEmbedding } from "@/lib/ai/embedder";
 import { requireEnv } from "@/lib/env";
 import { ERROR_CODES } from "@/lib/errors";
 
+const ESTADOS_FINALES = new Set([
+    "CLASIFICADO",
+    "CORREGIDO",
+    "DUPLICADO",
+    "POSIBLE_SPAM",
+    "REVISION_MANUAL",
+    "REQUIERE_ANONIMIZACION",
+]);
+
 export async function POST(request: Request) {
     try {
         const secret = request.headers.get("x-worker-secret");
@@ -27,23 +36,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // Idempotencia: si ya no está pendiente/procesando, o ya tiene clasificación
-        const clasifExistente = await prisma.clasificacionIA.findUnique({
-            where: { reporteId: reporte.id },
-        });
-        if (clasifExistente) {
-            return NextResponse.json({
-                reporteId,
-                estado: reporte.estado,
-                clasificacion: {
-                    categoria: clasifExistente.categoria,
-                    confianza: clasifExistente.confianza,
-                },
-                latenciaMs: 0,
-            });
-        }
-
-        if (reporte.estado !== "PENDIENTE" && reporte.estado !== "PROCESANDO") {
+        // Idempotencia: si ya está en estado final, no reprocesar
+        if (ESTADOS_FINALES.has(reporte.estado)) {
             const clasif = await prisma.clasificacionIA.findUnique({
                 where: { reporteId: reporte.id },
             });
@@ -89,24 +83,19 @@ export async function POST(request: Request) {
             },
         });
 
-        // Generar embedding (best-effort, no debe bloquear el flujo)
-        try {
-            const paramEmbedding = await prisma.parametroSistema.findUnique({
-                where: { clave: "reportes.embedding_model" },
-            });
-            const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
-            const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
+        // Generar embedding (obligatorio — si falla, el job se reintenta)
+        const paramEmbedding = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.embedding_model" },
+        });
+        const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+        const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
 
-            const vectorStr = "[" + vector.join(",") + "]";
-            await prisma.$executeRawUnsafe(
-                `INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn") VALUES ('${crypto.randomUUID()}', '${reporte.id}', '${vectorStr}'::vector, '${modeloEmbedding}', NOW())`
-            );
-        } catch (embedErr) {
-            const msg = embedErr instanceof Error ? embedErr.message : String(embedErr);
-            console.error("[PROCESAR] Embedding falló (no crítico):", msg);
-        }
+        const vectorStr = "[" + vector.join(",") + "]";
+        await prisma.$executeRawUnsafe(
+            `INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn") VALUES ('${crypto.randomUUID()}', '${reporte.id}', '${vectorStr}'::vector, '${modeloEmbedding}', NOW())`
+        );
 
-        // Actualizar estado del reporte (SIEMPRE, para evitar quedar atascado en PROCESANDO)
+        // Actualizar estado del reporte a resultado de la clasificación
         await prisma.reporte.update({
             where: { id: reporteId },
             data: { estado: clasificacion.estado },
@@ -128,9 +117,24 @@ export async function POST(request: Request) {
         });
     } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
+
+        // Guardar error de procesamiento en el reporte
+        try {
+            const { reporteId } = await request.clone().json();
+            await prisma.reporte.update({
+                where: { id: reporteId },
+                data: {
+                    estado: "REVISION_MANUAL",
+                    processingError: errMsg,
+                },
+            });
+        } catch {
+            // Si falla el update del error, solo loggear
+        }
+
         console.error("[PROCESAR] Error:", errMsg);
         return NextResponse.json(
-            { error: { message: "Error en procesamiento", code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
+            { error: { message: errMsg, code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
             { status: 500 }
         );
     }

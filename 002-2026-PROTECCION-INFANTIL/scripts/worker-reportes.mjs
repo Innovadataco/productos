@@ -2,6 +2,11 @@
 /**
  * Worker pg-boss para procesamiento de reportes
  * Supervisado por pm2: pm2 start scripts/worker-reportes.mjs --name "reportes-worker"
+ *
+ * Configuración de reintentos:
+ * - retryLimit: 3 (máximo 3 reintentos después del intento inicial)
+ * - retryDelay: 30 segundos base
+ * - retryBackoff: true (exponencial: 30s, 60s, 120s)
  */
 
 import { PgBoss } from "pg-boss";
@@ -45,6 +50,7 @@ async function start() {
         console.log("[WORKER] Cola ya existe");
     }
     console.log("[WORKER] Iniciado. Escuchando cola 'reporte-procesamiento'...");
+    console.log("[WORKER] Config: retryLimit=3, retryDelay=30s, backoff=exponencial");
 
     // Verificar Ollama al inicio
     const ollamaOk = await checkOllamaHealth();
@@ -59,8 +65,9 @@ async function start() {
         }
         const reporteId = job.data.reporteId;
         const startMs = Date.now();
+        const retryCount = job.retryCount || 0;
 
-        console.log(`[WORKER] Procesando reporte ${reporteId} (job ${job.id})`);
+        console.log(`[WORKER] Procesando reporte ${reporteId} (job ${job.id}, intento ${retryCount + 1}/4)`);
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/reportes/procesar`, {
@@ -76,7 +83,7 @@ async function start() {
 
             if (!res.ok) {
                 const err = await res.text();
-                console.error(`[WORKER] ERROR reporte=${reporteId} status=${res.status} latencia=${latencia}ms error=${err}`);
+                console.error(`[WORKER] ERROR reporte=${reporteId} status=${res.status} latencia=${latencia}ms intento=${retryCount + 1} error=${err}`);
                 throw new Error(`HTTP ${res.status}: ${err}`);
             }
 
@@ -86,7 +93,7 @@ async function start() {
         } catch (err) {
             const latencia = Date.now() - startMs;
             const msg = err instanceof Error ? err.message : "Error desconocido";
-            console.error(`[WORKER] ERROR reporte=${reporteId} latencia=${latencia}ms error=${msg}`);
+            console.error(`[WORKER] ERROR reporte=${reporteId} latencia=${latencia}ms intento=${retryCount + 1} error=${msg}`);
             throw err;
         }
     });

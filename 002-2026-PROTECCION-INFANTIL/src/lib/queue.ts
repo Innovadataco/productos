@@ -20,5 +20,9 @@ export async function publishReporte(reporteId: string) {
     } catch {
         // Cola ya existe, ignorar
     }
-    await boss.send("reporte-procesamiento", { reporteId });
+    await boss.send("reporte-procesamiento", { reporteId }, {
+        retryLimit: 3,
+        retryDelay: 30,
+        retryBackoff: true,
+    });
 }

@@ -228,6 +228,7 @@ model Reporte {
   reporteOrigenId  String?
   numeroSeguimiento String?      @unique
   tenantId         String?
+  processingError  String?       @db.Text
   creadoEn         DateTime      @default(now())
   actualizadoEn    DateTime      @updatedAt
 
