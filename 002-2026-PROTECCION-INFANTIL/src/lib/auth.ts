@@ -42,6 +42,25 @@ export async function verifyToken(token: string) {
     }
 }
 
+export async function getUserFromToken(request: Request) {
+    try {
+        const cookieHeader = request.headers.get("cookie");
+        if (!cookieHeader) return null;
+        const match = cookieHeader.match(/token=([^;]+)/);
+        if (!match) return null;
+        const token = match[1];
+        const payload = await verifyToken(token);
+        if (!payload || !payload.sub) return null;
+        const user = await prisma.usuario.findUnique({
+            where: { id: payload.sub as string },
+        });
+        if (!user || user.estado !== "activo") return null;
+        return user;
+    } catch {
+        return null;
+    }
+}
+
 export async function verifyAuth(requiredRol?: RolUsuario) {
     let token: string | undefined;
     try {
