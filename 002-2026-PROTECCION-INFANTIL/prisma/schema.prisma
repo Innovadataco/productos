@@ -48,6 +48,27 @@ enum AccionAudit {
   CODE_COMPLETE
 }
 
+enum CategoriaConducta {
+  CONTACTO_INSISTENTE
+  SOLICITUD_MATERIAL
+  OFRECIMIENTO_REGALOS
+  SUPLANTACION_IDENTIDAD
+  SOLICITUD_ENCUENTRO
+  COMPARTIMIENTO_SEXUAL
+  OTRO
+}
+
+enum EstadoReporte {
+  PENDIENTE
+  PROCESANDO
+  CLASIFICADO
+  REVISION_MANUAL
+  POSIBLE_SPAM
+  DUPLICADO
+  REQUIERE_ANONIMIZACION
+  CORREGIDO
+}
+
 model Usuario {
   id               String        @id @default(cuid())
   email            String        @unique
@@ -66,6 +87,8 @@ model Usuario {
   parametros     ParametroSistema[]
   auditLogs      AuditLog[]
   codigos        CodigoVerificacion[]
+  reportes       Reporte[]
+  correcciones   CorreccionAdmin[]
 
   @@index([email])
   @@index([rol])
@@ -140,6 +163,7 @@ model Tenant {
   creadoEn DateTime @default(now())
 
   usuarios Usuario[]
+  reportes Reporte[]
 }
 
 model Plan {
@@ -168,4 +192,136 @@ model BillingCycle {
   periodoInicio  DateTime
   periodoFin     DateTime
   creadoEn       DateTime @default(now())
+}
+
+// ============================================
+// MÓDULO DE REPORTES COMUNITARIOS (FASE 2)
+// ============================================
+
+model Plataforma {
+  id       String   @id @default(cuid())
+  clave    String   @unique
+  nombre   String
+  categoria String  @default("otro")
+  esActiva Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  reportes Reporte[]
+  identificadores IdentificadorReportado[]
+
+  @@index([clave])
+  @@index([esActiva])
+}
+
+model Reporte {
+  id               String        @id @default(cuid())
+  identificador    String
+  plataformaId     String
+  texto            String        @db.Text
+  textoOriginal    String?       @db.Text
+  fechaIncidente   DateTime
+  ciudad           String
+  pais             String
+  estado           EstadoReporte @default(PENDIENTE)
+  esAnonimo        Boolean       @default(true)
+  usuarioId        String?
+  reporteOrigenId  String?
+  numeroSeguimiento String?      @unique
+  tenantId         String?
+  creadoEn         DateTime      @default(now())
+  actualizadoEn    DateTime      @updatedAt
+
+  plataforma      Plataforma          @relation(fields: [plataformaId], references: [id])
+  usuario         Usuario?            @relation(fields: [usuarioId], references: [id])
+  reporteOrigen   Reporte?            @relation("ReporteDuplicado", fields: [reporteOrigenId], references: [id])
+  duplicados      Reporte[]           @relation("ReporteDuplicado")
+  clasificacion   ClasificacionIA?
+  embedding       EmbeddingReporte?
+  tenant          Tenant?             @relation(fields: [tenantId], references: [id])
+
+  @@index([identificador, plataformaId])
+  @@index([estado])
+  @@index([usuarioId, identificador])
+  @@index([creadoEn])
+  @@index([numeroSeguimiento])
+}
+
+model IdentificadorReportado {
+  id                  String   @id @default(cuid())
+  identificador       String
+  plataformaId        String
+  totalReportes       Int      @default(0)
+  reportesAutenticados Int     @default(0)
+  reportesAnonimos    Int      @default(0)
+  esVisiblePublicamente Boolean @default(false)
+  ultimoReporteEn     DateTime?
+  creadoEn            DateTime @default(now())
+  actualizadoEn       DateTime @updatedAt
+
+  plataforma Plataforma @relation(fields: [plataformaId], references: [id])
+
+  @@unique([identificador, plataformaId])
+  @@index([esVisiblePublicamente])
+  @@index([totalReportes])
+}
+
+model ClasificacionIA {
+  id              String            @id @default(cuid())
+  reporteId       String            @unique
+  categoria       CategoriaConducta
+  confianza       Float
+  contienePii     Boolean           @default(false)
+  piiDetectada    String[]
+  modeloUsado     String
+  latenciaMs      Int
+  promptTokens    Int?
+  responseTokens  Int?
+  rawResponse     String?           @db.Text
+  creadoEn        DateTime          @default(now())
+
+  reporte      Reporte         @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  correccion   CorreccionAdmin?
+
+  @@index([categoria])
+  @@index([confianza])
+}
+
+model CorreccionAdmin {
+  id                  String            @id @default(cuid())
+  clasificacionId     String            @unique
+  categoriaOriginal   CategoriaConducta
+  categoriaCorregida  CategoriaConducta
+  adminId             String
+  motivo              String?           @db.Text
+  creadoEn            DateTime          @default(now())
+
+  clasificacion     ClasificacionIA    @relation(fields: [clasificacionId], references: [id], onDelete: Cascade)
+  admin             Usuario            @relation(fields: [adminId], references: [id])
+  datasetRegistros  DatasetEntrenamiento[]
+}
+
+model DatasetEntrenamiento {
+  id                    String            @id @default(cuid())
+  texto                 String            @db.Text
+  clasificacionCorrecta CategoriaConducta
+  fuente                String
+  correccionId          String?
+  usadoParaEntrenamiento Boolean          @default(false)
+  creadoEn              DateTime          @default(now())
+
+  correccion CorreccionAdmin? @relation(fields: [correccionId], references: [id])
+
+  @@index([usadoParaEntrenamiento])
+}
+
+model EmbeddingReporte {
+  id          String   @id @default(cuid())
+  reporteId   String   @unique
+  vector      Unsupported("vector(768)")
+  modeloUsado String
+  creadoEn    DateTime @default(now())
+
+  reporte Reporte @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+
+  @@index([vector])
 }
