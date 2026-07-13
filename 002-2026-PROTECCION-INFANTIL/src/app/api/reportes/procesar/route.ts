@@ -27,6 +27,37 @@ export async function POST(request: Request) {
             );
         }
 
+        // Idempotencia: si ya no está pendiente/procesando, o ya tiene clasificación
+        const clasifExistente = await prisma.clasificacionIA.findUnique({
+            where: { reporteId: reporte.id },
+        });
+        if (clasifExistente) {
+            return NextResponse.json({
+                reporteId,
+                estado: reporte.estado,
+                clasificacion: {
+                    categoria: clasifExistente.categoria,
+                    confianza: clasifExistente.confianza,
+                },
+                latenciaMs: 0,
+            });
+        }
+
+        if (reporte.estado !== "PENDIENTE" && reporte.estado !== "PROCESANDO") {
+            const clasif = await prisma.clasificacionIA.findUnique({
+                where: { reporteId: reporte.id },
+            });
+            return NextResponse.json({
+                reporteId,
+                estado: reporte.estado,
+                clasificacion: clasif ? {
+                    categoria: clasif.categoria,
+                    confianza: clasif.confianza,
+                } : null,
+                latenciaMs: 0,
+            });
+        }
+
         // Actualizar estado a PROCESANDO
         await prisma.reporte.update({
             where: { id: reporteId },
@@ -58,21 +89,24 @@ export async function POST(request: Request) {
             },
         });
 
-        // Generar embedding
-        const paramEmbedding = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.embedding_model" },
-        });
-        const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
-        const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
+        // Generar embedding (best-effort, no debe bloquear el flujo)
+        try {
+            const paramEmbedding = await prisma.parametroSistema.findUnique({
+                where: { clave: "reportes.embedding_model" },
+            });
+            const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+            const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
 
-        // Insertar embedding con $executeRaw (Prisma no genera create para Unsupported types)
-        const vectorStr = "[" + vector.join(",") + "]";
-        await prisma.$executeRaw`
-            INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
-            VALUES (${crypto.randomUUID()}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-        `;
+            const vectorStr = "[" + vector.join(",") + "]";
+            await prisma.$executeRawUnsafe(
+                `INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn") VALUES ('${crypto.randomUUID()}', '${reporte.id}', '${vectorStr}'::vector, '${modeloEmbedding}', NOW())`
+            );
+        } catch (embedErr) {
+            const msg = embedErr instanceof Error ? embedErr.message : String(embedErr);
+            console.error("[PROCESAR] Embedding falló (no crítico):", msg);
+        }
 
-        // Actualizar estado del reporte
+        // Actualizar estado del reporte (SIEMPRE, para evitar quedar atascado en PROCESANDO)
         await prisma.reporte.update({
             where: { id: reporteId },
             data: { estado: clasificacion.estado },
@@ -93,7 +127,8 @@ export async function POST(request: Request) {
             latenciaMs: clasificacion.metrics.latenciaMs,
         });
     } catch (error) {
-        console.error("[PROCESAR] Error:", error);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.error("[PROCESAR] Error:", errMsg);
         return NextResponse.json(
             { error: { message: "Error en procesamiento", code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
             { status: 500 }

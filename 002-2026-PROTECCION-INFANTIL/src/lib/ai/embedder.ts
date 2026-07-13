@@ -1,29 +1,39 @@
-import { llamarOllama } from "./ollama-client";
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 
 export async function generarEmbedding(modelo: string, texto: string): Promise<number[]> {
-    const { response } = await llamarOllama(
-        modelo,
-        texto,
-        "You are a text embedding model. Generate a dense vector representation of the input text. Respond ONLY with a JSON array of 768 floating-point numbers."
-    );
-
     try {
-        const match = response.match(/\[[\s\S]*\]/);
-        const arr = JSON.parse(match ? match[0] : response);
-        if (Array.isArray(arr) && arr.length === 768) {
-            return arr as number[];
+        const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model: modelo, prompt: texto }),
+            signal: AbortSignal.timeout(8000),
+        });
+
+        if (!res.ok) {
+            const err = await res.text();
+            console.error(`[EMBED] Ollama error: ${err}`);
+            return fallbackVector(texto);
         }
-    } catch {
-        /* fall through */
+
+        const data = (await res.json()) as { embedding?: number[] };
+        if (Array.isArray(data.embedding) && data.embedding.length > 0) {
+            console.log(`[EMBED] OK modelo=${modelo} dims=${data.embedding.length}`);
+            return data.embedding;
+        }
+    } catch (e) {
+        console.error("[EMBED] Exception:", e instanceof Error ? e.message : String(e));
     }
 
-    // Fallback: generate deterministic pseudo-random vector of 768 dims
-    // This ensures the system works even if Ollama embedding fails
+    return fallbackVector(texto);
+}
+
+function fallbackVector(texto: string): number[] {
     const seed = hashString(texto);
     const vector: number[] = [];
     for (let i = 0; i < 768; i++) {
         vector.push(pseudoRandom(seed + i));
     }
+    console.log(`[EMBED] Fallback generado dims=${vector.length}`);
     return vector;
 }
 

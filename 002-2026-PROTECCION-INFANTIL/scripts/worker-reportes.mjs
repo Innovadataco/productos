@@ -38,14 +38,26 @@ async function checkOllamaHealth() {
 
 async function start() {
     await boss.start();
+    try {
+        await boss.createQueue("reporte-procesamiento");
+        console.log("[WORKER] Cola creada");
+    } catch {
+        console.log("[WORKER] Cola ya existe");
+    }
     console.log("[WORKER] Iniciado. Escuchando cola 'reporte-procesamiento'...");
 
     // Verificar Ollama al inicio
     const ollamaOk = await checkOllamaHealth();
     console.log(`[WORKER] Ollama health: ${ollamaOk ? "OK" : "NO RESPONDE (los jobs fallarán)"}`);
 
-    await boss.work("reporte-procesamiento", async (job) => {
-        const { reporteId } = job.data;
+    await boss.work("reporte-procesamiento", async (jobs) => {
+        // pg-boss v12 puede pasar un array de jobs
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        if (!job || !job.data) {
+            console.error("[WORKER] Job inválido:", JSON.stringify(jobs));
+            return;
+        }
+        const reporteId = job.data.reporteId;
         const startMs = Date.now();
 
         console.log(`[WORKER] Procesando reporte ${reporteId} (job ${job.id})`);

@@ -3,12 +3,22 @@ import { PgBoss } from "pg-boss";
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL requerida");
 
-export const boss = new PgBoss(DATABASE_URL);
+const boss = new PgBoss(DATABASE_URL);
+let started = false;
 
-export async function startQueue() {
-    await boss.start();
+async function ensureStarted() {
+    if (!started) {
+        await boss.start();
+        started = true;
+    }
 }
 
 export async function publishReporte(reporteId: string) {
+    await ensureStarted();
+    try {
+        await boss.createQueue("reporte-procesamiento");
+    } catch {
+        // Cola ya existe, ignorar
+    }
     await boss.send("reporte-procesamiento", { reporteId });
 }
