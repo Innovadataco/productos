@@ -71,8 +71,9 @@ El sistema detecta cuando el mismo reportante envía múltiples reportes sobre e
 **Acceptance Scenarios**:
 
 1. **Given** un usuario autenticado que ya reportó el número +573001234567, **When** intenta crear un segundo reporte sobre el mismo número en menos de 30 días, **Then** el sistema muestra una advertencia y vincula el nuevo reporte al existente en lugar de crear uno nuevo.
-2. **Given** un reporte con texto menor a 20 caracteres o sin contenido semántico coherente, **When** entra a procesamiento, **Then** el sistema lo marca como "posible spam" y lo envía a revisión del administrador.
-3. **Given** un reporte marcado como duplicado, **When** el administrador revisa, **Then** puede decidir mantenerlo como reporte adicional o descartarlo.
+2. **Given** dos reportes anónimos sobre el mismo identificador con texto casi idéntico, **When** el modelo de IA detecta alta similitud, **Then** ambos se marcan como "posible duplicado anónimo" para revisión del administrador.
+3. **Given** un reporte con texto menor a 20 caracteres o sin contenido semántico coherente, **When** entra a procesamiento, **Then** el sistema lo marca como "posible spam" y lo envía a revisión del administrador.
+4. **Given** un reporte marcado como duplicado, **When** el administrador revisa, **Then** puede decidir mantenerlo como reporte adicional o descartarlo.
 
 ---
 
@@ -88,13 +89,15 @@ Los identificadores reportados solo aparecen en consultas públicas cuando han a
 
 1. **Given** un número telefónico con 2 reportes independientes, **When** un usuario consulta en la página pública, **Then** el sistema indica que no hay información suficiente (sin mostrar el número).
 2. **Given** un número telefónico con 5 reportes independientes y umbral configurado en 3, **When** un usuario consulta, **Then** ve el número junto con la cantidad de reportes y distribución por fecha/ciudad.
-3. **Given** un administrador que cambia el umbral de 3 a 5, **When** guarda el cambio, **Then** los identificadores con 3-4 reportes dejan de ser visibles públicamente.
+3. **Given** un identificador con 4 reportes (todos anónimos) y umbral 3, **When** un usuario consulta, **Then** el sistema indica que no hay información suficiente porque menos del 50% de los reportes provienen de usuarios autenticados.
+4. **Given** un identificador con 2 reportes autenticados + 2 reportes anónimos (4 total) y umbral 3, **When** un usuario consulta, **Then** el identificador es visible públicamente porque supera el umbral y al menos el 50% proviene de usuarios autenticados.
+5. **Given** un administrador que cambia el umbral de 3 a 5, **When** guarda el cambio, **Then** los identificadores con 3-4 reportes dejan de ser visibles públicamente.
 
 ---
 
 ### Edge Cases
 
-- **What happens when** un usuario anónimo reporta un identificador que ya tiene reportes previos de usuarios autenticados? El reporte anónimo cuenta para el umbral agregado pero no se vincula a una cuenta.
+- **What happens when** un usuario anónimo reporta un identificador que ya tiene reportes previos de usuarios autenticados? El reporte anónimo cuenta para el umbral agregado pero no se vincula a una cuenta. La deduplicación anónima se basa en similitud de texto por IA, no en identidad del reportante.
 - **How does the system handle** un texto que contiene datos personales del menor (nombre, escuela, dirección)? El modelo de IA detecta PII en el texto y marca el reporte para anonimización manual por el administrador.
 - **What happens when** Resend (email) falla al enviar confirmación de reporte? El reporte se almacena igualmente; la confirmación de email es un nice-to-have, no bloqueante.
 - **How does the system handle** un reporte en idioma diferente al español? El modelo intenta clasificar; si no puede, marca para revisión manual.
@@ -110,12 +113,12 @@ Los identificadores reportados solo aparecen en consultas públicas cuando han a
 - **FR-003**: El sistema rechaza reportes que intenten adjuntar fotos, videos, audio o cualquier archivo multimedia.
 - **FR-004**: Toda pantalla de creación de reporte muestra, de forma visible e ineludible, los canales oficiales de denuncia: Línea 141 ICBF, CAI Virtual, Te Protejo.
 - **FR-005**: Los reportes nuevos entran automáticamente a una cola de procesamiento asíncrono.
-- **FR-006**: El modelo de IA local clasifica la conducta descrita en el texto en categorías predefinidas (contacto insistente, solicitud de material, ofrecimiento de regalos, suplantación de identidad, solicitud de encuentro, compartimiento de contenido sexual).
+- **FR-006**: El modelo de IA local clasifica la conducta descrita en el texto en categorías predefinidas (contacto insistente, solicitud de material, ofrecimiento de regalos, suplantación de identidad, solicitud de encuentro, compartimiento de contenido sexual, otro).
 - **FR-007**: El sistema detecta reportes duplicados del mismo reportante sobre el mismo identificador en un período de 30 días.
 - **FR-008**: El sistema marca reportes incoherentes, de texto muy corto (< 20 caracteres) o sin contenido semántico como "posible spam" para revisión del administrador.
 - **FR-009**: El administrador (rol ADMIN) puede revisar y corregir clasificaciones desde un panel dedicado.
 - **FR-010**: Cada corrección de clasificación se registra como par (texto original, clasificación correcta) en un dataset de entrenamiento para futuras mejoras del modelo.
-- **FR-011**: Un identificador solo aparece en resultados de consulta pública cuando ha acumulado un número de reportes independientes igual o mayor al umbral configurable en parámetros del sistema.
+- **FR-011**: Un identificador solo aparece en resultados de consulta pública cuando (a) ha acumulado un número de reportes independientes igual o mayor al umbral configurable en parámetros del sistema, Y (b) al menos el 50% de esos reportes provienen de usuarios autenticados. El porcentaje mínimo de reportes autenticados es un parámetro del sistema (`visibility.min_authenticated_ratio`, default 0.5) gestionable desde el módulo de parámetros de fase 1.
 - **FR-012**: En consultas públicas, el lenguaje es exclusivamente descriptivo y estadístico — nunca implica culpabilidad ni emite juicios de valor sobre personas.
 
 ### Key Entities
@@ -147,5 +150,5 @@ Los identificadores reportados solo aparecen en consultas públicas cuando han a
 - La cola de procesamiento asíncrono usa `pg-boss` sobre la misma base de datos PostgreSQL.
 - El umbral de visibilidad pública ya está configurado en el sistema (fase 1, módulo de parámetros).
 - Los usuarios anónimos proporcionan un email opcional para recibir confirmación, pero no es obligatorio.
-- La detección de duplicados se basa en email (si autenticado) o cookie/ fingerprint (si anónimo) más el identificador reportado.
+- La detección de duplicados para usuarios autenticados se basa en email más el identificador reportado. Para usuarios anónimos, la deduplicación se basa en identificador reportado más detección de similitud de texto por el modelo de IA (textos casi idénticos sobre el mismo identificador se marcan como posible duplicado para revisión del admin). Se acepta explícitamente que la deduplicación anónima es imperfecta.
 - El sistema de consulta pública se implementa en fase 3; este módulo solo crea y clasifica reportes.
