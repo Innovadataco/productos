@@ -48,6 +48,7 @@ Estados del ciclo de vida de un reporte.
 | `REVISION_MANUAL` | Baja confianza del modelo, requiere admin |
 | `POSIBLE_SPAM` | Texto incoherente o muy corto, requiere admin |
 | `DUPLICADO` | Detectado como duplicado, vinculado a existente |
+| `REQUIERE_ANONIMIZACION` | Contiene PII de menores, requiere anonimización por admin |
 | `CORREGIDO` | Clasificación corregida por administrador |
 
 ---
@@ -61,7 +62,8 @@ Denuncia individual sobre un identificador de riesgo.
 | `id` | `String` (CUID) | PK | Identificador único |
 | `identificador` | `String` | Not null, indexed | Número telefónico, nick o usuario reportado |
 | `plataformaId` | `String` | FK → Plataforma | Plataforma donde ocurrió el incidente |
-| `texto` | `String` (TEXT) | Not null, min 20 chars | Descripción libre de la situación |
+| `texto` | `String` (TEXT) | Not null, min 20 chars | Texto operativo (anonimizado si aplica) |
+| `textoOriginal` | `String` (TEXT) | Nullable | Texto original con PII (acceso restringido, solo admin) |
 | `fechaIncidente` | `DateTime` | Not null | Cuándo ocurrió el incidente |
 | `ciudad` | `String` | Not null | Ciudad del incidente |
 | `pais` | `String` | Not null | País del incidente |
@@ -144,6 +146,8 @@ Resultado del análisis automático de un reporte.
 | `reporteId` | `String` | FK → Reporte, unique | Reporte clasificado |
 | `categoria` | `CategoriaConducta` | Not null | Categoría detectada por IA |
 | `confianza` | `Float` | Not null, 0.0–1.0 | Nivel de confianza del modelo |
+| `contienePii` | `Boolean` | Not null, default false | Si el texto contiene datos personales de menores |
+| `piiDetectada` | `String[]` | Nullable | Fragmentos de texto identificados como PII |
 | `modeloUsado` | `String` | Not null | Nombre del modelo (ej: "ornith:9b") |
 | `latenciaMs` | `Int` | Not null | Tiempo de respuesta de Ollama en milisegundos |
 | `promptTokens` | `Int` | Nullable | Tokens de entrada (si Ollama los reporta) |
@@ -213,9 +217,13 @@ Vector de embeddings del texto del reporte, para detección de duplicados anóni
 PENDIENTE → PROCESANDO → CLASIFICADO
                         → REVISION_MANUAL (baja confianza)
                         → POSIBLE_SPAM (texto incoherente)
+                        → REQUIERE_ANONIMIZACION (PII detectada)
 PENDIENTE → DUPLICADO (detectado como duplicado)
+REQUIERE_ANONIMIZACION → CLASIFICADO (admin anonimiza)
 CLASIFICADO → CORREGIDO (admin corrige)
 ```
+
+**Regla dura**: Un reporte en estado `REQUIERE_ANONIMIZACION` **NUNCA** cuenta para el umbral de visibilidad pública ni aparece en ninguna consulta hasta ser anonimizado. El campo `textoOriginal` solo es accesible para administradores y nunca se expone en APIs públicas ni alimenta el dataset de entrenamiento.
 
 ---
 

@@ -132,6 +132,10 @@ src/
 - **D3: Logging de llamadas a Ollama**: Cada llamada a Ollama registra: modelo usado, prompt tokens, response tokens, latencia total, éxito/fracaso. Sin logging = fallo silencioso inaceptable (lección del 001).
 - **D4: Detección de cola estancada**: El worker monitorea la edad del job más antiguo. Si supera 5 minutos, alerta (console.error + métrica).
 - **D5: Parámetro `visibility.min_authenticated_ratio`**: Nuevo parámetro de sistema (fase 1) con default 0.5, gestionable desde el panel de configuración del admin.
+- **D6: Detección de PII integrada en clasificación**: El prompt a `ornith:9b` solicita además de categoría y confianza: `contiene_pii` (boolean) y `pii_detectada` (lista de fragmentos). Una sola llamada, sin latencia extra.
+- **D7: Campo `textoOriginal` restringido**: Solo accesible por admin. Nunca expuesto en APIs públicas ni alimenta el dataset de entrenamiento.
+
+**Regla dura**: Un reporte en estado `REQUIERE_ANONIMIZACION` **NUNCA** cuenta para el umbral de visibilidad pública ni aparece en ninguna consulta hasta ser anonimizado.
 
 ---
 
@@ -145,9 +149,9 @@ Ver `specs/02-reportes-comunitarios/data-model.md` para el modelo de datos compl
 
 | Entidad | Propósito | Clave |
 |---------|-----------|-------|
-| `Reporte` | Denuncia individual | `id`, `identificador`, `plataforma`, `texto`, `fechaIncidente`, `ciudad`, `pais`, `estado`, `usuarioId` (nullable) |
+| `Reporte` | Denuncia individual | `id`, `identificador`, `plataforma`, `texto`, `textoOriginal`, `fechaIncidente`, `ciudad`, `pais`, `estado`, `usuarioId` (nullable) |
 | `IdentificadorReportado` | Agregación por identificador | `id`, `identificador`, `plataforma`, `totalReportes`, `reportesAutenticados`, `esVisiblePublicamente` |
-| `ClasificacionIA` | Resultado del análisis automático | `id`, `reporteId`, `categoria`, `confianza`, `modeloUsado`, `latenciaMs` |
+| `ClasificacionIA` | Resultado del análisis automático | `id`, `reporteId`, `categoria`, `confianza`, `contienePii`, `piiDetectada`, `modeloUsado`, `latenciaMs` |
 | `CorreccionAdmin` | Corrección manual de clasificación | `id`, `clasificacionId`, `categoriaOriginal`, `categoriaCorregida`, `adminId`, `motivo` |
 | `DatasetEntrenamiento` | Par para reentrenamiento | `id`, `texto`, `clasificacionCorrecta`, `fuente` (corrección/manual) |
 | `EmbeddingReporte` | Vector del texto para similitud | `id`, `reporteId`, `vector` (pgvector), `modeloUsado` |
@@ -155,7 +159,7 @@ Ver `specs/02-reportes-comunitarios/data-model.md` para el modelo de datos compl
 **Nuevos enums**:
 
 - `CategoriaConducta`: CONTACTO_INSISTENTE, SOLICITUD_MATERIAL, OFRECIMIENTO_REGALOS, SUPLANTACION_IDENTIDAD, SOLICITUD_ENCUENTRO, COMPARTIMIENTO_SEXUAL, OTRO
-- `EstadoReporte`: PENDIENTE, PROCESANDO, CLASIFICADO, REVISION_MANUAL, POSIBLE_SPAM, DUPLICADO
+- `EstadoReporte`: PENDIENTE, PROCESANDO, CLASIFICADO, REVISION_MANUAL, POSIBLE_SPAM, DUPLICADO, REQUIERE_ANONIMIZACION
 
 ### contracts/
 
@@ -169,6 +173,7 @@ Ver `specs/02-reportes-comunitarios/contracts/` para los contratos de API.
 | GET | `/api/admin/reportes` | ADMIN | Listado paginado con filtros |
 | PATCH | `/api/admin/reportes/[id]/clasificacion` | ADMIN | Corregir clasificación |
 | POST | `/api/reportes/procesar` | Interno (worker) | Webhook para pg-boss |
+| PATCH | `/api/admin/reportes/[id]/anonimizar` | ADMIN | Eliminar PII, guardar texto original en auditoría |
 
 ### quickstart.md
 
@@ -180,4 +185,5 @@ Ver `specs/02-reportes-comunitarios/quickstart.md` para la guía de validación 
 2. Ejecutar worker → verificar clasificación automática
 3. Crear reporte duplicado (autenticado) → verificar detección
 4. Corregir clasificación como admin → verificar dataset de entrenamiento
-5. Consultar identificador con reportes mixtos → verificar visibilidad condicional
+5. Anonimizar reporte con PII → verificar estado REQUIERE_ANONIMIZACION → CLASIFICADO
+6. Consultar identificador con reportes mixtos → verificar visibilidad condicional

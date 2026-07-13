@@ -232,6 +232,69 @@ Webhook interno para el worker pg-boss. No expuesto públicamente.
 
 ---
 
+## PATCH /api/admin/reportes/[id]/anonimizar
+
+El administrador edita el texto de un reporte para eliminar PII de menores. El sistema guarda el texto original en un campo de auditoría de acceso restringido y el texto anonimizado como el texto operativo. Requiere rol ADMIN.
+
+### Request
+
+```json
+{
+  "textoAnonimizado": "Este número contactó a mi hija ofreciendo regalos si enviaba fotos."
+}
+```
+
+**Headers**:
+- `Content-Type: application/json`
+- Cookie `token` (requerido, rol ADMIN)
+
+**Validaciones**:
+- `textoAnonimizado`: mínimo 20 caracteres, máximo 5000
+- El reporte debe estar en estado `REQUIERE_ANONIMIZACION`
+- El admin no puede agregar nueva información personal al texto
+
+### Response 200
+
+```json
+{
+  "reporteId": "cmr...",
+  "estadoAnterior": "REQUIERE_ANONIMIZACION",
+  "estadoNuevo": "CLASIFICADO",
+  "textoAnonimizado": "Este número contactó a mi hija ofreciendo regalos si enviaba fotos.",
+  "piiEliminada": ["María", "colegio San José"]
+}
+```
+
+**Business rules**:
+- `textoOriginal` se preserva en el campo de auditoría (nunca expuesto en APIs públicas)
+- `texto` se actualiza con el valor anonimizado
+- El reporte pasa a estado `CLASIFICADO`
+- Solo el texto anonimizado alimenta `DatasetEntrenamiento` y las consultas
+
+### Response 400 — Invalid state
+
+```json
+{
+  "error": {
+    "message": "El reporte no requiere anonimización",
+    "code": "INVALID_STATE"
+  }
+}
+```
+
+### Response 404 — Not Found
+
+```json
+{
+  "error": {
+    "message": "Reporte no encontrado",
+    "code": "NOT_FOUND"
+  }
+}
+```
+
+---
+
 ## GET /api/reportes/seguimiento/[numero]
 
 Consultar estado de un reporte por número de seguimiento. Sin autenticación.

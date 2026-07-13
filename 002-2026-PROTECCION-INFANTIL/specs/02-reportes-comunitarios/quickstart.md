@@ -121,6 +121,35 @@ curl -X POST http://localhost:5005/api/reportes \
 
 ---
 
+### Escenario G: Anonimización de PII
+
+```bash
+# Crear reporte con PII en el texto
+curl -X POST http://localhost:5005/api/reportes \
+  -H "Content-Type: application/json" \
+  -d '{"identificador":"+57300PII01","plataforma":"whatsapp","texto":"Mi hija María del colegio San José recibió mensajes de este número ofreciéndole regalos.","fechaIncidente":"2026-07-10T10:00:00Z","ciudad":"Bogotá","pais":"Colombia"}'
+
+# Esperar procesamiento del worker
+# Verificar que el reporte quedó en estado REQUIERE_ANONIMIZACION
+curl http://localhost:5005/api/admin/reportes?estado=REQUIERE_ANONIMIZACION \
+  -b cookies.txt
+
+# Admin anonimiza el texto
+curl -X PATCH http://localhost:5005/api/admin/reportes/[id]/anonimizar \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{"textoAnonimizado":"Mi hija recibió mensajes de este número ofreciéndole regalos."}'
+```
+
+**Esperado**:
+- Worker detecta PII (`contienePii=true`, `piiDetectada:["María","colegio San José"]`)
+- Estado pasa a `REQUIERE_ANONIMIZACION`
+- El reporte **NO** cuenta para el umbral de visibilidad pública
+- Admin anonimiza → estado pasa a `CLASIFICADO`
+- `textoOriginal` preservado en auditoría; `texto` actualizado con versión anonimizada
+
+---
+
 ### Escenario F: Visibilidad condicional (umbral + ratio autenticados)
 
 ```bash

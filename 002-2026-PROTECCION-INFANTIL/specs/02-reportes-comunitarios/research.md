@@ -116,6 +116,20 @@ db:
 
 ---
 
+## R7: Detección de PII en menores
+
+**Decision**: La detección de PII se realiza en la **misma llamada** de clasificación a `ornith:9b`. Sin latencia extra.
+
+**Rationale**:
+- Una sola llamada al modelo es más eficiente que dos llamadas separadas
+- El prompt solicita además de la categoría y confianza: `contiene_pii` (boolean) y `pii_detectada` (lista de fragmentos sospechosos)
+- Si `contiene_pii=true`, el reporte pasa a estado `REQUIERE_ANONIMIZACION` y un administrador debe revisar y anonimizar el texto antes de que el reporte cuente para cualquier umbral o consulta
+- El texto original se guarda en un campo de auditoría de acceso restringido (`textoOriginal`); nunca se expone en APIs públicas ni alimenta el dataset de entrenamiento
+
+**Regla dura**: Un reporte en estado `REQUIERE_ANONIMIZACION` **NUNCA** cuenta para el umbral de visibilidad pública ni aparece en ninguna consulta hasta ser anonimizado.
+
+---
+
 ## Decisions Log Summary
 
 | ID | Decisión | Impacto |
@@ -125,3 +139,5 @@ db:
 | D3 | Logging explícito de Ollama | Transparencia operativa, debugging de latencias |
 | D4 | Detección de cola estancada | Alerta temprana de problemas de procesamiento |
 | D5 | Parámetro `visibility.min_authenticated_ratio` | Nueva fila en ParametroSistema, default 0.5 |
+| D6 | Detección de PII integrada en clasificación | Prompt unificado: categoría + confianza + PII |
+| D7 | Campo `textoOriginal` restringido | Solo accesible por admin; nunca en APIs públicas |
