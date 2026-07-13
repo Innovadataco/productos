@@ -4,6 +4,7 @@ import { crearReporteSchema } from "@/lib/validators";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { getUserFromToken } from "@/lib/auth";
 import { publishReporte } from "@/lib/queue";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -21,6 +22,22 @@ export async function POST(request: Request) {
         }
 
         const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais } = parsed.data;
+
+        // Rate limiting para usuarios anónimos
+        const esAnonimoPrevio = !await getUserFromToken(request);
+        if (esAnonimoPrevio) {
+            const ip = getClientIp(request);
+            const limit = checkRateLimit(ip);
+            if (!limit.allowed) {
+                return NextResponse.json(
+                    { error: { message: "Demasiados reportes. Espera una hora o crea una cuenta.", code: "RATE_LIMITED", retryAfter: Math.ceil((limit.resetAt - Date.now()) / 1000) } },
+                    { status: 429 }
+                );
+            }
+        }
+
+        // Detección básica de spam
+        const esSpam = detectarSpam(texto);
 
         // Verificar plataforma
         const plataforma = await prisma.plataforma.findUnique({
@@ -89,6 +106,7 @@ export async function POST(request: Request) {
                 usuarioId,
                 numeroSeguimiento,
                 tenantId: user?.tenantId ?? null,
+                estado: esSpam ? "POSIBLE_SPAM" : "PENDIENTE",
             },
         });
 
@@ -145,4 +163,32 @@ export async function POST(request: Request) {
             { status: 500 }
         );
     }
+}
+
+/**
+ * Detección básica de spam.
+ * Heurísticas: texto muy corto, repetición excesiva de caracteres,
+ * ausencia de palabras descriptivas relevantes.
+ */
+function detectarSpam(texto: string): boolean {
+    const normalizado = texto.toLowerCase().trim();
+
+    // Muy corto
+    if (normalizado.length < 30) return true;
+
+    // Repetición excesiva del mismo carácter (más de 4 veces seguidas)
+    if (/(.)\1{4,}/.test(normalizado)) return true;
+
+    // Patrones de spam comunes
+    const spamPatterns = [
+        /\b(click here|visit|www\.|http|bit\.ly|goo\.gl)\b/,
+        /\b(ganar dinero|dinero fácil|free money|casino)\b/,
+    ];
+    if (spamPatterns.some(p => p.test(normalizado))) return true;
+
+    // Palabras mínimas de contexto (debe mencionar algo sobre contacto, menor, etc.)
+    const contextWords = /(niñ[oa]|menor|hij[oa]|contact[óo]|mensaje|número|foto|imagen|video|plataforma|app|juego|red social)/i;
+    if (!contextWords.test(normalizado)) return true;
+
+    return false;
 }
