@@ -141,11 +141,11 @@
 |----------------|----------|
 | PENDIENTE | Recibido |
 | PROCESANDO | En procesamiento |
-| CLASIFICADO | Compartido con autoridades |
+| CLASIFICADO | Procesado |
 | REVISION_MANUAL | En revisión |
 | POSIBLE_SPAM | En revisión |
 | REQUIERE_ANONIMIZACION | En revisión de privacidad |
-| CORREGIDO | Revisado y corregido |
+| CORREGIDO | Procesado |
 | DUPLICADO | Vinculado a reporte existente |
 
 ## State Mapping (Frontend-only)
