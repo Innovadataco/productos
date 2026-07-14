@@ -157,6 +157,7 @@ describe("POST /api/reportes/procesar", () => {
             metrics: { modelo: "ornith:9b", latenciaMs: 1000 },
         });
         mockAnonimizar.mockRejectedValue(new Error("Ollama no disponible"));
+        mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
 
         const res = await POST(crearRequestProcesar(reporte.id));
         expect(res.status).toBe(500);
@@ -164,6 +165,61 @@ describe("POST /api/reportes/procesar", () => {
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("REVISION_MANUAL");
         expect(actualizado?.processingError).toContain("Ollama no disponible");
+    });
+
+    it("marca reporte anónimo duplicado cuando supera el umbral de similitud", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const origen = await prisma.reporte.create({
+            data: {
+                identificador: "+57300DUP001",
+                plataformaId: plataforma!.id,
+                texto: "Este número contactó a mi hija ofreciendo regalos.",
+                fechaIncidente: new Date("2026-07-10T14:30:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: "RPT-DUP-01",
+                estado: "PENDIENTE",
+            },
+        });
+
+        mockClasificar.mockResolvedValue({
+            categoria: "OFRECIMIENTO_REGALOS" as CategoriaConducta,
+            confianza: 0.92,
+            contienePii: false,
+            piiDetectada: [],
+            estado: "CLASIFICADO",
+            rawResponse: "{}",
+            metrics: { modelo: "ornith:9b", latenciaMs: 1200, promptTokens: 100, responseTokens: 20 },
+        });
+        mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
+
+        // Procesar origen para generar embedding y estado CLASIFICADO
+        const resOrigen = await POST(crearRequestProcesar(origen.id));
+        expect(resOrigen.status).toBe(200);
+
+        const duplicado = await prisma.reporte.create({
+            data: {
+                identificador: "+57300DUP001",
+                plataformaId: plataforma!.id,
+                texto: "Este número contactó a mi hija ofreciendo regalos otra vez.",
+                fechaIncidente: new Date("2026-07-10T15:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: "RPT-DUP-02",
+                estado: "PENDIENTE",
+            },
+        });
+
+        const resDuplicado = await POST(crearRequestProcesar(duplicado.id));
+        expect(resDuplicado.status).toBe(200);
+        const bodyDuplicado = await resDuplicado.json();
+        expect(bodyDuplicado.estado).toBe("DUPLICADO");
+
+        const actualizado = await prisma.reporte.findUnique({ where: { id: duplicado.id } });
+        expect(actualizado?.estado).toBe("DUPLICADO");
+        expect(actualizado?.reporteOrigenId).toBe(origen.id);
     });
 
     it("no reprocesa reporte ya en estado final", async () => {

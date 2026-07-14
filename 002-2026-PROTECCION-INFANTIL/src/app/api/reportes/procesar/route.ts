@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { clasificarReporte } from "@/lib/ai/classifier";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
+import { buscarReporteSimilar } from "@/lib/ai/similarity";
 import { requireEnv } from "@/lib/env";
 import { ERROR_CODES } from "@/lib/errors";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
@@ -69,7 +70,44 @@ export async function POST(request: Request) {
             data: { estado: "PROCESANDO" },
         });
 
-        // Obtener modelo de clasificación desde parámetros
+        // Generar embedding primero para poder detectar duplicados anónimos
+        const paramEmbedding = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.embedding_model" },
+        });
+        const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+        const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
+
+        // Guardar embedding (necesario para similitud y detección futura)
+        const vectorStr = "[" + vector.join(",") + "]";
+        const embeddingId = crypto.randomUUID();
+        await prisma.$executeRaw`
+            INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
+            VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+        `;
+
+        // Deduplicación anónima por similitud de embeddings
+        if (reporte.esAnonimo) {
+            const paramThreshold = await prisma.parametroSistema.findUnique({
+                where: { clave: "reportes.duplicate.similarity_threshold" },
+            });
+            const threshold = parseFloat(paramThreshold?.valor || "0.92");
+            const similar = await buscarReporteSimilar(reporte.id, reporte.identificador, reporte.plataformaId, vector, threshold);
+
+            if (similar) {
+                await prisma.reporte.update({
+                    where: { id: reporteId },
+                    data: { estado: "DUPLICADO", reporteOrigenId: similar.reporteId },
+                });
+                return NextResponse.json({
+                    reporteId,
+                    estado: "DUPLICADO",
+                    clasificacion: null,
+                    latenciaMs: 0,
+                });
+            }
+        }
+
+        // Modelo de clasificación configurable
         const paramModelo = await prisma.parametroSistema.findUnique({
             where: { clave: "reportes.classification_model" },
         });
@@ -110,7 +148,6 @@ export async function POST(request: Request) {
         }
 
         // Anonimización automática de PII: preservar original y reemplazar texto
-        let textoParaEmbedding = reporte.texto;
         let estadoFinal: EstadoReporte = clasificacion.estado;
 
         if (clasificacion.contienePii) {
@@ -131,23 +168,8 @@ export async function POST(request: Request) {
                 data: { piiDetectada: anonimizacion.piiDetectada },
             });
 
-            textoParaEmbedding = anonimizacion.textoAnonimizado;
             estadoFinal = "CLASIFICADO";
         }
-
-        // Generar embedding (obligatorio — si falla, el job se reintenta)
-        const paramEmbedding = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.embedding_model" },
-        });
-        const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
-        const vector = await generarEmbedding(modeloEmbedding, textoParaEmbedding);
-
-        const vectorStr = "[" + vector.join(",") + "]";
-        const embeddingId = crypto.randomUUID();
-        await prisma.$executeRaw`
-            INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
-            VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-        `;
 
         // Actualizar estado del reporte a resultado final
         await prisma.reporte.update({
@@ -187,7 +209,7 @@ export async function POST(request: Request) {
             }
         }
 
-        console.error("[PROCESAR] Error procesando reporte", { reporteId, errorType: error instanceof Error ? error.name : "Unknown" });
+        console.error("[PROCESAR] Error procesando reporte", { reporteId, errorType: error instanceof Error ? error.name : "Unknown", errMsg });
         return NextResponse.json(
             { error: { message: errMsg, code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
             { status: 500 }

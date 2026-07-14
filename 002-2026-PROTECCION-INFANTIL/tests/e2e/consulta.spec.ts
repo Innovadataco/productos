@@ -8,7 +8,7 @@ async function seedConsultaData(identificador: string) {
 
     const usuario = await prisma.usuario.create({
         data: {
-            email: `e2e-consulta-${Date.now()}@example.com`,
+            email: `e2e-consulta-${crypto.randomUUID()}@example.com`,
             nombre: "Usuario E2E Consulta",
             passwordHash: await hashPassword("TestPass123"),
             rol: "PARENT",
@@ -27,7 +27,7 @@ async function seedConsultaData(identificador: string) {
     };
 
     for (let i = 0; i < 3; i++) {
-        const numeroSeguimiento = `RPT-${Date.now()}${i}`;
+        const numeroSeguimiento = `RPT-${crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 12)}${i}`;
         const reporte = await prisma.reporte.create({
             data: {
                 ...base,
