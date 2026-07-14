@@ -25,6 +25,12 @@ export function NavHeader() {
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-primary-600" />
                     ) : user ? (
                         <div className="flex items-center gap-3">
+                            <Link
+                                href="/mis-reportes"
+                                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition hidden sm:inline"
+                            >
+                                Mis reportes
+                            </Link>
                             <span className="text-sm text-slate-700 hidden sm:inline">
                                 {user.nombre}
                             </span>
