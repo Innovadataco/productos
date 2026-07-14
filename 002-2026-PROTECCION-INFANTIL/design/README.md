@@ -1,0 +1,1 @@
+Prototipo visual de referencia (Claude Design, framework propio DCLogic). Contrato visual, NO código copiable — la implementación real va en src/ con Next.js + Tailwind conectado a las API routes. Usar para paleta, jerarquía, textos y principios (canales oficiales, presunción de inocencia, sin alarmismo)
