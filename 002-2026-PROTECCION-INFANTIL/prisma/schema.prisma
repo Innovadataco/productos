@@ -213,6 +213,35 @@ model Plataforma {
   @@index([esActiva])
 }
 
+model Pais {
+  id       String   @id @default(cuid())
+  codigo   String   @unique
+  nombre   String
+  esActivo Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  ciudades Ciudad[]
+  reportes Reporte[]
+
+  @@index([codigo])
+  @@index([esActivo])
+}
+
+model Ciudad {
+  id       String   @id @default(cuid())
+  nombre   String
+  paisId   String
+  esActivo Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  pais     Pais     @relation(fields: [paisId], references: [id])
+  reportes Reporte[]
+
+  @@unique([nombre, paisId])
+  @@index([paisId])
+  @@index([esActivo])
+}
+
 model Reporte {
   id               String        @id @default(cuid())
   identificador    String
@@ -222,6 +251,9 @@ model Reporte {
   fechaIncidente   DateTime
   ciudad           String
   pais             String
+  paisId           String?
+  ciudadId         String?
+  otraPlataforma   String?
   estado           EstadoReporte @default(PENDIENTE)
   esAnonimo        Boolean       @default(true)
   usuarioId        String?
@@ -239,12 +271,16 @@ model Reporte {
   clasificacion   ClasificacionIA?
   embedding       EmbeddingReporte?
   tenant          Tenant?             @relation(fields: [tenantId], references: [id])
+  paisRel         Pais?               @relation(fields: [paisId], references: [id])
+  ciudadRel       Ciudad?             @relation(fields: [ciudadId], references: [id])
 
   @@index([identificador, plataformaId])
   @@index([estado])
   @@index([usuarioId, identificador])
   @@index([creadoEn])
   @@index([numeroSeguimiento])
+  @@index([paisId])
+  @@index([ciudadId])
 }
 
 model IdentificadorReportado {

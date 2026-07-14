@@ -21,7 +21,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais } = parsed.data;
+        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma } = parsed.data;
 
         // Rate limiting para usuarios anónimos
         const esAnonimoPrevio = !await getUserFromToken(request);
@@ -102,6 +102,9 @@ export async function POST(request: Request) {
                 fechaIncidente: new Date(fechaIncidente),
                 ciudad,
                 pais,
+                paisId: ciudadId === "otra" ? null : (paisId || null),
+                ciudadId: ciudadId === "otra" ? null : (ciudadId || null),
+                otraPlataforma: plataformaClave === "otro" ? (otraPlataforma || null) : null,
                 esAnonimo,
                 usuarioId,
                 numeroSeguimiento,
