@@ -47,7 +47,9 @@ export function ReporteWizard() {
                     identificador: data.identificador,
                     plataforma: data.plataforma,
                     texto: data.texto,
-                    fechaIncidente: data.fechaIncidente || new Date().toISOString(),
+                    fechaIncidente: data.fechaIncidente
+                        ? new Date(data.fechaIncidente).toISOString()
+                        : new Date().toISOString(),
                     ciudad: data.ciudad,
                     pais: data.pais,
                 }),
@@ -111,7 +113,7 @@ export function ReporteWizard() {
             {step === 3 && (
                 <ReporteStepDescripcion
                     value={data.texto}
-                    onChange={(v) => update({ texto: v })}
+                    onChange={(v: string) => update({ texto: v })}
                 />
             )}
             {step === 4 && (

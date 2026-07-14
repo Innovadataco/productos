@@ -27,8 +27,8 @@ export function VerificacionForm({
         setIsLoading(true);
         try {
             await onCompletar({ email, codigo, password, nombre: nombre.trim() });
-        } catch {
-            setError("Código incorrecto o cuenta ya existe.");
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error al crear cuenta");
         } finally {
             setIsLoading(false);
         }

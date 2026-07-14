@@ -36,11 +36,29 @@ export default function RegistroPage() {
         password: string;
         nombre: string;
     }) => {
+        // Paso 1: validar código
+        const valRes = await fetch("/api/auth/verificar/validar", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: data.email, codigo: data.codigo }),
+        });
+        if (!valRes.ok) {
+            const json = await valRes.json().catch(() => null);
+            throw new Error(json?.error?.message || "Código inválido o expirado");
+        }
+        const valJson = await valRes.json();
+
+        // Paso 2: crear cuenta con token
         const res = await fetch("/api/auth/verificar/completar", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            body: JSON.stringify({
+                token: valJson.token,
+                password: data.password,
+                nombre: data.nombre,
+            }),
         });
         if (!res.ok) {
             const json = await res.json().catch(() => null);

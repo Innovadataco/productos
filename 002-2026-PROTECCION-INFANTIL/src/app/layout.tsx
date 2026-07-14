@@ -20,7 +20,7 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
     title: "Protección Infantil — Reportes Comunitarios",
     description:
-        "Plataforma de reportes comunitarios para la protección de menores. Consulta identificadores de riesgo y reporta conductas sospechosas.",
+        "Plataforma de reportes comunitarios para la protección de menores. Consulta identificadores de riesgo y reporta conductas de riesgo.",
 };
 
 export default function RootLayout({
@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="es" className={`${plusJakarta.variable} ${dmMono.variable}`}>
-            <body className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+            <body className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 pt-14">
                 <AuthProvider>
                     <NavHeader />
                     {children}
