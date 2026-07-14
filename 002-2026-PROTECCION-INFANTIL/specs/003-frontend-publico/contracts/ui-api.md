@@ -127,7 +127,7 @@
       "identificador": "+573001234567",
       "plataforma": "WhatsApp",
       "estado": "CLASIFICADO",
-      "estadoVisual": "Compartido con autoridades",
+      "estadoVisual": "Procesado",
       "creadoEn": "2026-07-10T14:30:00Z",
       "esAnonimo": false
     }
