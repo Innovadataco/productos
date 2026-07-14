@@ -131,7 +131,7 @@
 
 - [ ] T044 [US5] Implementar lógica de visibilidad en `src/lib/visibility.ts`: calcular `esVisiblePublicamente` (umbral + min_authenticated_ratio)
 - [ ] T045 [US5] Implementar actualización automática de `IdentificadorReportado.esVisiblePublicamente` tras cada reporte clasificado/anonimizado
-- [ ] T046 [US5] Crear `GET /api/consulta/route.ts`: endpoint público para consultar identificador (respuesta estadística, sin culpabilidad) — // DECISION-PENDIENTE-PO: texto exacto de respuesta cuando no hay datos
+- [x] T046 [US5] Crear `GET /api/consulta/route.ts`: endpoint público para consultar identificador (respuesta estadística, sin culpabilidad) — texto aprobado: "Sin reportes registrados para este identificador."
 - [ ] T047 [US5] Verificar regla dura: reportes en REQUIERE_ANONIMIZACION NUNCA cuentan para umbral ni aparecen en consultas
 
 **Checkpoint**: Escenario F pasa, build compila, tests pasan

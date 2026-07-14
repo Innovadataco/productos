@@ -7,7 +7,7 @@ export async function GET() {
     try {
         const user = await verifyAuth();
         const rol = String(user.rol);
-        if (rol !== "ADMIN" && rol !== "ADMIN_PLATAFORMA") {
+        if (rol !== "ADMIN") {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }

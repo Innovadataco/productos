@@ -28,8 +28,7 @@ const correccionSchema = z.object({
 });
 
 function requireAdmin(user: { rol: string }) {
-    const rol = String(user.rol);
-    if (rol !== "ADMIN" && rol !== "ADMIN_PLATAFORMA") {
+    if (String(user.rol) !== "ADMIN") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
 }

@@ -107,9 +107,11 @@ export async function POST(request: Request) {
         const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
 
         const vectorStr = "[" + vector.join(",") + "]";
-        await prisma.$executeRawUnsafe(
-            `INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn") VALUES ('${crypto.randomUUID()}', '${reporte.id}', '${vectorStr}'::vector, '${modeloEmbedding}', NOW())`
-        );
+        const embeddingId = crypto.randomUUID();
+        await prisma.$executeRaw`
+            INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
+            VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+        `;
 
         // Actualizar estado del reporte a resultado de la clasificación
         await prisma.reporte.update({
