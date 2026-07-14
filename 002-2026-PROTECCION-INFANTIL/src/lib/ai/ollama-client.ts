@@ -44,7 +44,7 @@ export async function llamarOllama(
 
     if (!response.ok) {
         const errorText = await response.text().catch(() => "unknown");
-        console.error(`[OLLAMA] ERROR modelo=${modelo} status=${response.status} latencia=${latenciaMs}ms error=${errorText}`);
+        console.error(`[OLLAMA] ERROR modelo=${modelo} status=${response.status} latencia=${latenciaMs}ms errorLen=${errorText.length}`);
         throw new Error(`Ollama HTTP ${response.status}: ${errorText}`);
     }
 

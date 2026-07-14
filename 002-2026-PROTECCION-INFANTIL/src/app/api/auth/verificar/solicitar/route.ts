@@ -58,7 +58,8 @@ export async function POST(request: Request) {
         try {
             await enviarCodigoVerificacion(email, code);
         } catch (err) {
-            console.error("Failed to send verification email to:", email, "error:", err instanceof Error ? err.message : String(err));
+            const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
+            console.error("Failed to send verification email to:", masked, "error:", err instanceof Error ? err.message : String(err));
             return NextResponse.json(
                 { error: { message: "Error al enviar email de verificación", code: ERROR_CODES.INTERNAL_ERROR } },
                 { status: 500 }

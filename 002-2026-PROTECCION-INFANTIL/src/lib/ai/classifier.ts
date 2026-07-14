@@ -77,7 +77,7 @@ export async function clasificarReporte(
         const jsonStr = jsonMatch ? jsonMatch[0] : response;
         parsed = JSON.parse(jsonStr);
     } catch {
-        console.error("[CLASSIFIER] No se pudo parsear JSON de Ollama:", response);
+        console.error("[CLASSIFIER] No se pudo parsear JSON de Ollama. responseLen=", response.length);
         return fallbackResult(response, metrics);
     }
 

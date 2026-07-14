@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { ERROR_CODES } from "@/lib/errors";
+import type { EstadoReporte } from "@prisma/client";
 
 const consultaSchema = z.object({
     identificador: z.string().min(3).max(100),
@@ -13,6 +14,8 @@ const consultaSchema = z.object({
  * Consulta pública: devuelve estadísticas agregadas de reportes
  * para un identificador. Nunca muestra etiquetas de culpabilidad.
  * Solo aparece si supera el umbral mínimo configurable.
+ * REQUIERE_ANONIMIZACION, PENDIENTE, PROCESANDO, POSIBLE_SPAM,
+ * REVISION_MANUAL, DUPLICADO NUNCA cuentan para el umbral.
  */
 export async function GET(request: Request) {
     try {
@@ -39,25 +42,6 @@ export async function GET(request: Request) {
             );
         }
 
-        // Buscar identificador reportado
-        const agregado = await prisma.identificadorReportado.findUnique({
-            where: {
-                identificador_plataformaId: {
-                    identificador: parsed.data.identificador,
-                    plataformaId: plataforma.id,
-                },
-            },
-        });
-
-        // Si no existe en la tabla de agregados, no hay reportes
-        if (!agregado) {
-            return NextResponse.json({
-                identificador: parsed.data.identificador,
-                tieneReportes: false,
-                mensaje: "Sin reportes registrados para este identificador.",
-            });
-        }
-
         // Obtener parámetros de visibilidad
         const paramUmbral = await prisma.parametroSistema.findUnique({
             where: { clave: "visibility.report_threshold" },
@@ -69,12 +53,34 @@ export async function GET(request: Request) {
         const umbral = parseInt(paramUmbral?.valor || "3", 10);
         const minRatio = parseFloat(paramRatio?.valor || "0.5");
 
+        // Contar en vivo: solo reportes en estado CLASIFICADO o CORREGIDO
+        const estadosVisibles = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
+
+        const totalReportes = await prisma.reporte.count({
+            where: {
+                identificador: parsed.data.identificador,
+                plataformaId: plataforma.id,
+                estado: { in: estadosVisibles },
+            },
+        });
+
+        const reportesAutenticados = await prisma.reporte.count({
+            where: {
+                identificador: parsed.data.identificador,
+                plataformaId: plataforma.id,
+                estado: { in: estadosVisibles },
+                esAnonimo: false,
+            },
+        });
+
+        const reportesAnonimos = totalReportes - reportesAutenticados;
+
         // Verificar si supera umbral
-        const ratioAutenticados = agregado.totalReportes > 0
-            ? agregado.reportesAutenticados / agregado.totalReportes
+        const ratioAutenticados = totalReportes > 0
+            ? reportesAutenticados / totalReportes
             : 0;
 
-        const esVisible = agregado.totalReportes >= umbral && ratioAutenticados >= minRatio;
+        const esVisible = totalReportes >= umbral && ratioAutenticados >= minRatio;
 
         if (!esVisible) {
             return NextResponse.json({
@@ -84,12 +90,12 @@ export async function GET(request: Request) {
             });
         }
 
-        // Obtener distribución agregada (solo reportes con estado CLASIFICADO o CORREGIDO)
+        // Obtener distribución agregada
         const reportesVisibles = await prisma.reporte.findMany({
             where: {
                 identificador: parsed.data.identificador,
                 plataformaId: plataforma.id,
-                estado: { in: ["CLASIFICADO", "CORREGIDO"] },
+                estado: { in: estadosVisibles },
             },
             select: {
                 ciudad: true,
@@ -117,10 +123,10 @@ export async function GET(request: Request) {
             identificador: parsed.data.identificador,
             plataforma: plataforma.nombre,
             tieneReportes: true,
-            totalReportes: agregado.totalReportes,
-            reportesAutenticados: agregado.reportesAutenticados,
-            reportesAnonimos: agregado.reportesAnonimos,
-            ultimoReporte: agregado.ultimoReporteEn,
+            totalReportes,
+            reportesAutenticados,
+            reportesAnonimos,
+            ultimoReporte: reportesVisibles[0]?.creadoEn ?? null,
             distribucion: {
                 porCiudad,
                 porPais,
