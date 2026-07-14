@@ -1,6 +1,6 @@
 # Reporte de Implementación — Módulo de Reportes Comunitarios
 
-**Fecha:** 2026-07-13
+**Fecha:** 2026-07-14
 **Branch:** `feature/001-scaffolding`
 **Commits:** 10+ commits incrementales
 
@@ -17,7 +17,8 @@
 | Fase 5 | US3 — Panel admin correcciones | ✅ | `src/app/api/admin/reportes-revision/route.ts`, `src/app/api/admin/correcciones/route.ts` |
 | Fase 6 | US4 — Duplicados y spam | ✅ | `src/lib/rate-limit.ts` (actualizado en `src/app/api/reportes/route.ts`) |
 | Fase 7 | US5 — Visibilidad condicional | ✅ | `src/app/api/consulta/route.ts` |
-| Fase 8 | Polish (UI, tests, anonimización, métricas) | ❌ NO EJECUTADA | Ver sección "Fase 8 (Polish)" |
+| Fase 8 | Ranking/Scoring de identificadores reportados | ✅ | `src/lib/ranking.ts`, `src/app/api/consulta/route.ts`, `src/components/modules/ConsultaResultado.tsx` |
+| Fase 9 | Polish (UI, tests, anonimización, métricas) | ❌ NO EJECUTADA | Ver sección "Fase 9 (Polish)" |
 
 ---
 
@@ -67,24 +68,48 @@
 - ✅ Detección heurística de spam (longitud, patrones, contexto)
 - ✅ Reportes spam marcados como `POSIBLE_SPAM` sin procesar IA
 
-### US5 — Visibilidad Condicional
+### US5 — Visibilidad Condicional y Consulta Pública
 - ✅ Umbral configurable de reportes (`visibility.report_threshold`, default: 3)
 - ✅ Ratio mínimo de autenticados (`visibility.min_authenticated_ratio`, default: 0.5)
 - ✅ Consulta pública con distribución agregada (ciudad, país, mes)
+- ✅ Ranking/scoring por identificador: score 0-100, nivel de riesgo (BAJO/MEDIO/ALTO), categorías agregadas y timeline
+- ✅ Diferenciación anónimo vs autenticado: score y detalles solo para sesión válida
 - ✅ **Nunca** expone etiquetas de culpabilidad ni textos individuales
 
 ---
 
-## Fase 8 (Polish)
+## Fase 8 — Ranking/Scoring de Identificadores Reportados
+
+**Estado: COMPLETADA.**
+
+Se entregó un servicio de scoring configurable que enriquece la consulta pública, diferenciando la información mostrada a usuarios anónimos y autenticados.
+
+### Items completados
+
+- [x] Servicio `src/lib/ranking.ts`: calcula score 0-100 por identificador a partir de cantidad, recencia, severidad de clasificaciones IA y ratio de reportes autenticados.
+- [x] Parámetros del sistema configurables por admin (`ranking.weight.*`, `ranking.recency_days`, `ranking.severity.*`, `ranking.threshold.*`) sembrados en `prisma/seed.ts`.
+- [x] Extensión de `GET /api/consulta`: usuarios anónimos ven resumen y distribución agregada; usuarios autenticados además reciben score, nivel de riesgo, categorías agregadas y timeline.
+- [x] UI de consulta pública actualizada en `src/components/modules/ConsultaResultado.tsx`: stat boxes, badge de riesgo, barras de categorías, timeline SVG nativo y tabla de ubicaciones.
+- [x] Tests de integración para `src/lib/ranking.ts` y `GET /api/consulta`; tests E2E para consulta anónima básica y consulta autenticada con score.
+
+### Archivos clave
+
+- `src/lib/ranking.ts` — cálculo de score y agregaciones.
+- `src/lib/ranking.test.ts` — tests unitarios del scoring.
+- `src/app/api/consulta/route.ts` — endpoint enriquecido.
+- `src/app/api/consulta/route.test.ts` — tests de integración del endpoint.
+- `src/components/modules/ConsultaResultado.tsx` — UI de resultados.
+- `tests/e2e/consulta.spec.ts` — cobertura E2E de la consulta pública.
+
+## Fase 9 — Polish & Cross-Cutting Concerns
 
 **Estado: NO EJECUTADA.**
 
-La Fase 8 (Polish) no se implementó en este ciclo. Los siguientes items quedan pendientes para iteraciones futuras:
+### Items pendientes para iteraciones futuras
 
-- [ ] UI de panel admin (tabla de reportes, filtros, acciones masivas)
-- [ ] Tests automatizados de integración (reportes, worker, embeddings)
-- [ ] Anonimización automática de PII en textos (reemplazo de nombres, colegios, etc.)
-- [ ] Métricas y dashboard (cola estancada, latencia promedio, tasa de éxito/fracaso)
+- [ ] UI de panel admin (tabla de reportes, filtros, acciones masivas) — parcialmente cubierto por feature `004-panel-admin`.
+- [ ] Anonimización automática de PII en textos (reemplazo de nombres, colegios, etc.).
+- [ ] Métricas y dashboard del worker (cola estancada, latencia promedio, tasa de éxito/fracaso).
 
 ---
 
@@ -108,13 +133,13 @@ Archivos modificados:
 
 ---
 
-## DECISION-PENDIENTE-PO
+## DECISION-RESUELTA-PO
 
 | ID | Tarea | Descripción | Estado |
 |----|-------|-------------|--------|
-| T046 | US5 | Texto exacto de respuesta cuando no hay datos suficientes en consulta pública | **PENDIENTE** |
+| T046 | US5 | Texto exacto de respuesta cuando no hay datos suficientes en consulta pública | **RESUELTO** |
 
-La implementación actual responde con `{"reportes":0,"esVisible":false}` cuando no hay datos. El PO debe definir si se requiere un mensaje descriptivo adicional (ej: "No hay información suficiente sobre este identificador") y en qué idiomas.
+Texto aprobado: "Sin reportes registrados para este identificador." Se devuelve tanto cuando no hay reportes como cuando el identificador no supera el umbral de visibilidad configurado.
 
 ---
 
@@ -130,39 +155,55 @@ La implementación actual responde con `{"reportes":0,"esVisible":false}` cuando
 - Environments: .env
 
   Creating an optimized production build ...
-✓ Compiled successfully in 764ms
-  Running TypeScript  ...  Finished TypeScript in 1061ms
-✓ Finished TypeScript in 1061ms
-  Collecting page data using 13 workers  ...  in 582ms
-✓ Collecting page data using 13 workers in 582ms
-  Generating static pages using 13 workers (0/22)  [    ]✓ Generating static pages using 13 workers (22/22) in 105ms
-  Finalizing page optimization  ...  in 8ms
-✓ Finalizing page optimization in 8ms
+✓ Compiled successfully in 1200ms
+  Running TypeScript ...
+  Finished TypeScript in 1551ms ...
+  Collecting page data using 13 workers ...
+  Generating static pages using 13 workers (0/36) ...
+✓ Generating static pages using 13 workers (36/36) in 111ms
+  Finalizing page optimization ...
 
 Route (app)
 ┌ ○ /
 ├ ○ /_not-found
+├ ƒ /api/admin/audit-logs
 ├ ƒ /api/admin/correcciones
+├ ƒ /api/admin/estadisticas
 ├ ƒ /api/admin/reportes-revision
+├ ƒ /api/admin/reportes-revision/[id]
+├ ƒ /api/admin/reportes/[id]/anonimizar
 ├ ƒ /api/auth/login
 ├ ƒ /api/auth/logout
+├ ƒ /api/auth/recuperar/restablecer
+├ ƒ /api/auth/recuperar/solicitar
+├ ƒ /api/auth/recuperar/validar
 ├ ƒ /api/auth/register
 ├ ƒ /api/auth/verificar/completar
 ├ ƒ /api/auth/verificar/solicitar
 ├ ƒ /api/auth/verificar/validar
+├ ƒ /api/ciudades
 ├ ƒ /api/config/parametros
 ├ ƒ /api/config/parametros/[clave]
 ├ ƒ /api/config/parametros/publicos
 ├ ƒ /api/consulta
 ├ ƒ /api/me
+├ ƒ /api/paises
+├ ƒ /api/plataformas
 ├ ƒ /api/reportes
+├ ƒ /api/reportes/mis-reportes
 ├ ƒ /api/reportes/procesar
 ├ ƒ /api/reportes/seguimiento/[numero]
 ├ ○ /dashboard
+├ ƒ /dashboard/admin
+├ ƒ /dashboard/admin/estadisticas
 ├ ○ /dashboard/configuracion
 ├ ○ /login
+├ ○ /mis-reportes
+├ ○ /recuperar
+├ ƒ /recuperar/[token]
 ├ ○ /registro
-└ ○ /reportar
+├ ○ /reportar
+└ ○ /seguimiento
 
 
 ƒ Proxy (Middleware)
@@ -177,45 +218,48 @@ Route (app)
 
 ```text
 > 002-2026-proteccion-infantil@0.1.0 test
-> vitest run
+> vitest run --run
 
 
  RUN  v3.2.7 /Users/idc/productos/INNOVADATACO/002-2026-PROTECCION-INFANTIL
 
- ❯ src/app/api/config/parametros/route.test.ts [queued]
-
- Test Files 0 passed (4)
-      Tests 0 passed (0)
-   Start at 10:58:53
-   Duration 404ms
+ ✓ src/lib/auth.test.ts (1 test) 582ms
+ ✓ src/app/api/reportes/route.test.ts (9 tests) 557ms
+ ✓ src/app/api/consulta/route.test.ts (4 tests) 298ms
+ ✓ src/app/api/reportes/procesar/route.test.ts (5 tests) 96ms
+ ✓ src/lib/ranking.test.ts (6 tests) 71ms
+ ✓ src/app/api/config/parametros/route.test.ts (2 tests) 28ms
  ✓ src/lib/errors.test.ts (3 tests) 1ms
  ✓ src/lib/config-cache.test.ts (4 tests) 1ms
 
- ❯ src/app/api/config/parametros/route.test.ts 1/2
- ❯ src/lib/auth.test.ts 0/1
-
- Test Files 2 passed (4)
-      Tests 8 passed (10)
-   Start at 10:58:53
-   Duration 504ms
- ✓ src/app/api/config/parametros/route.test.ts (2 tests) 37ms
-
- ❯ src/lib/auth.test.ts 0/1
-
- Test Files 3 passed (4)
-      Tests 9 passed (10)
-   Start at 10:58:53
-   Duration 910ms
- ✓ src/lib/auth.test.ts (1 test) 595ms
-   ✓ auth utils > hashes and verifies password  595ms
-
- Test Files  4 passed (4)
-      Tests  10 passed (10)
-   Start at  10:58:53
-   Duration  1.11s (transform 63ms, setup 35ms, collect 152ms, tests 635ms, environment 1.21s, prepare 138ms)
+ Test Files  8 passed (8)
+      Tests  34 passed (34)
+   Start at  15:27:01
+   Duration  3.47s (transform 65ms, setup 15ms, collect 270ms, tests 1.63s, environment 879ms, prepare 164ms)
 ```
 
-**Resultado:** ✅ 4/4 test files passed, 10/10 tests passed.
+**Resultado:** ✅ 8/8 test files passed, 34/34 tests passed.
+
+### `npm run test:e2e`
+
+```text
+> 002-2026-proteccion-infantil@0.1.0 test:e2e
+> playwright test --project=chromium --workers=1
+
+
+Running 7 tests using 1 worker
+
+[1/7] [chromium] › tests/e2e/auth.spec.ts:4:9 › Flujo de autenticación › un usuario puede registrarse y luego iniciar sesión
+[2/7] [chromium] › tests/e2e/auth.spec.ts:54:9 › Flujo de autenticación › un usuario no-admin no puede acceder al panel admin
+[3/7] [chromium] › tests/e2e/consulta.spec.ts:57:9 › Consulta pública de identificador › usuario anónimo ve información agregada básica
+[4/7] [chromium] › tests/e2e/consulta.spec.ts:74:9 › Consulta pública de identificador › usuario autenticado ve score y nivel de riesgo
+[5/7] [chromium] › tests/e2e/password-reset.spec.ts:26:9 › Restablecimiento de contraseña › un usuario puede recuperar su contraseña y luego iniciar sesión
+[6/7] [chromium] › tests/e2e/password-reset.spec.ts:74:9 › Restablecimiento de contraseña › un token inválido o expirado muestra mensaje de error
+[7/7] [chromium] › tests/e2e/password-reset.spec.ts:81:9 › Restablecimiento de contraseña › la respuesta de solicitud no revela si el email existe
+  7 passed (15.3s)
+```
+
+**Resultado:** ✅ 7/7 tests E2E passed (incluye consulta pública anónima y autenticada).
 
 ---
 
@@ -281,6 +325,11 @@ curl -X POST /api/reportes -d '{"identificador":"+573001234567","plataforma":"wh
 - Umbral = 1, ratio = 0 → identificador visible con distribución agregada
 - Umbral = 3, ratio = 0.5 → identificador con 2 reportes anónimos: "Sin reportes"
 
+### Escenario E: Ranking y scoring
+- Identificador con 3 reportes clasificados (2 autenticados, 1 anónimo) → score calculado 0-100, nivel de riesgo BAJO/MEDIO/ALTO
+- Usuario anónimo: ve total de reportes, resumen y ciudades/países
+- Usuario autenticado: además ve score, badge de riesgo, categorías agregadas y timeline
+
 ---
 
 ## Decisiones Técnicas
@@ -291,3 +340,17 @@ curl -X POST /api/reportes -d '{"identificador":"+573001234567","plataforma":"wh
 4. **Retry de jobs pg-boss:** `retryLimit: 3`, `retryDelay: 30s`, `retryBackoff: true` (exponencial: 30s, 60s, 120s). Configurado en `src/lib/queue.ts` al publicar el job.
 5. **Estado `CORREGIDO`:** Unificado para cualquier corrección del admin (simplifica el flujo).
 6. **Sin fallback silencioso de embeddings:** Si Ollama falla, se lanza error explícito. El job se reintenta. Si agota reintentos, el reporte queda en `REVISION_MANUAL` con `processingError` registrado.
+7. **Ranking configurable vía `ParametroSistema`:** Pesos (`weightCount`, `weightRecency`, `weightSeverity`, `weightAuthenticated`), severidad por categoría y umbrales de riesgo se leen de la base de datos; el admin puede ajustarlos sin cambiar código. El score se normaliza a 0-100 y se limita a un máximo de 100.
+## Cambio Transversal: Migración de `middleware.ts` a `proxy.ts`
+
+**Motivo:** Next.js 16 deprecó la exportación por defecto de `middleware.ts`. El archivo fue renombrado a `src/proxy.ts` y se exporta explícitamente la función `proxy(request)`; la configuración del matcher se mantiene en `config`.
+
+**Archivos modificados:**
+- `src/middleware.ts` → `src/proxy.ts`
+
+**Comportamiento preservado:**
+- Lista de rutas públicas (`/`, `/login`, `/registro`, `/recuperar`, `/reportar`, `/seguimiento`, `/api/auth/*`, etc.).
+- Protección de rutas `/dashboard/admin/*` y `/api/admin/*` para rol `ADMIN`.
+- Redirección a `/login` para páginas protegidas sin sesión; respuesta JSON 401 para APIs protegidas.
+
+**Validación:** build exitoso y tests E2E de autenticación pasan tras el cambio.

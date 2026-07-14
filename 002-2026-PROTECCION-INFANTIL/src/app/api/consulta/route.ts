@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { ERROR_CODES } from "@/lib/errors";
+import { getUserFromToken } from "@/lib/auth";
+import { calcularRanking } from "@/lib/ranking";
 import type { EstadoReporte } from "@prisma/client";
 
 const consultaSchema = z.object({
@@ -9,13 +11,16 @@ const consultaSchema = z.object({
     plataforma: z.string().min(1),
 });
 
+const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
+
 /**
  * GET /api/consulta?identificador=...&plataforma=...
- * Consulta pública: devuelve estadísticas agregadas de reportes
- * para un identificador. Nunca muestra etiquetas de culpabilidad.
- * Solo aparece si supera el umbral mínimo configurable.
- * REQUIERE_ANONIMIZACION, PENDIENTE, PROCESANDO, POSIBLE_SPAM,
- * REVISION_MANUAL, DUPLICADO NUNCA cuentan para el umbral.
+ * Consulta pública de un identificador reportado.
+ *
+ * - Usuarios anónimos: información agregada básica (total, distribución geográfica/fechas).
+ * - Usuarios autenticados: score de riesgo, nivel de riesgo, categorías agregadas y timeline.
+ *
+ * Nunca expone textos de reportes ni PII.
  */
 export async function GET(request: Request) {
     try {
@@ -31,7 +36,6 @@ export async function GET(request: Request) {
             );
         }
 
-        // Obtener plataforma
         const plataforma = await prisma.plataforma.findUnique({
             where: { clave: parsed.data.plataforma },
         });
@@ -42,7 +46,7 @@ export async function GET(request: Request) {
             );
         }
 
-        // Obtener parámetros de visibilidad
+        // Parámetros de visibilidad
         const paramUmbral = await prisma.parametroSistema.findUnique({
             where: { clave: "visibility.report_threshold" },
         });
@@ -53,14 +57,11 @@ export async function GET(request: Request) {
         const umbral = parseInt(paramUmbral?.valor || "3", 10);
         const minRatio = parseFloat(paramRatio?.valor || "0.5");
 
-        // Contar en vivo: solo reportes en estado CLASIFICADO o CORREGIDO
-        const estadosVisibles = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
-
         const totalReportes = await prisma.reporte.count({
             where: {
                 identificador: parsed.data.identificador,
                 plataformaId: plataforma.id,
-                estado: { in: estadosVisibles },
+                estado: { in: ESTADOS_VISIBLES },
             },
         });
 
@@ -68,19 +69,16 @@ export async function GET(request: Request) {
             where: {
                 identificador: parsed.data.identificador,
                 plataformaId: plataforma.id,
-                estado: { in: estadosVisibles },
+                estado: { in: ESTADOS_VISIBLES },
                 esAnonimo: false,
             },
         });
 
-        const reportesAnonimos = totalReportes - reportesAutenticados;
-
-        // Verificar si supera umbral
-        const ratioAutenticados = totalReportes > 0
-            ? reportesAutenticados / totalReportes
-            : 0;
-
+        const ratioAutenticados = totalReportes > 0 ? reportesAutenticados / totalReportes : 0;
         const esVisible = totalReportes >= umbral && ratioAutenticados >= minRatio;
+
+        const usuario = await getUserFromToken(request);
+        const estaAutenticado = !!usuario;
 
         if (!esVisible) {
             return NextResponse.json({
@@ -90,12 +88,12 @@ export async function GET(request: Request) {
             });
         }
 
-        // Obtener distribución agregada
+        // Distribución básica para todos (anónimo y autenticado)
         const reportesVisibles = await prisma.reporte.findMany({
             where: {
                 identificador: parsed.data.identificador,
                 plataformaId: plataforma.id,
-                estado: { in: estadosVisibles },
+                estado: { in: ESTADOS_VISIBLES },
             },
             select: {
                 ciudad: true,
@@ -107,33 +105,42 @@ export async function GET(request: Request) {
             take: 1000,
         });
 
-        // Agregar distribución por ciudad
-        const porCiudad: Record<string, number> = {};
-        const porPais: Record<string, number> = {};
-        const porMes: Record<string, number> = {};
+        const ubicaciones = reportesVisibles.map((r) => ({
+            pais: r.pais,
+            ciudad: r.ciudad,
+            fecha: r.creadoEn.toISOString().slice(0, 10),
+        }));
 
-        for (const r of reportesVisibles) {
-            porCiudad[r.ciudad] = (porCiudad[r.ciudad] || 0) + 1;
-            porPais[r.pais] = (porPais[r.pais] || 0) + 1;
-            const mes = r.creadoEn.toISOString().slice(0, 7); // YYYY-MM
-            porMes[mes] = (porMes[mes] || 0) + 1;
-        }
+        const mesesUnicos = [...new Set(reportesVisibles.map((r) => r.creadoEn.toISOString().slice(0, 7)))].sort();
+        const resumenMeses = mesesUnicos.length;
 
-        return NextResponse.json({
+        const baseResponse = {
             identificador: parsed.data.identificador,
             plataforma: plataforma.nombre,
             tieneReportes: true,
             totalReportes,
             reportesAutenticados,
-            reportesAnonimos,
+            reportesAnonimos: totalReportes - reportesAutenticados,
             ultimoReporte: reportesVisibles[0]?.creadoEn ?? null,
-            distribucion: {
-                porCiudad,
-                porPais,
-                porMes,
-            },
-            // Importante: nunca mostramos etiquetas de culpabilidad
-            // ni textos de reportes individuales
+            resumen: `En los últimos ${resumenMeses} mes(es) se han reportado ${totalReportes} vez(es) en ${new Set(ubicaciones.map((u) => u.ciudad)).size} ciudad(es) diferentes.`,
+            ubicaciones,
+        };
+
+        if (!estaAutenticado) {
+            return NextResponse.json(baseResponse);
+        }
+
+        // Usuario autenticado: incluir score, categorías y timeline
+        const ranking = await calcularRanking(parsed.data.identificador, plataforma.id);
+
+        return NextResponse.json({
+            ...baseResponse,
+            score: ranking.score,
+            nivelRiesgo: ranking.nivelRiesgo,
+            ratioAutenticados: ranking.ratioAutenticados,
+            categorias: ranking.categorias,
+            timeline: ranking.timeline,
+            distribucion: ranking.distribucion,
         });
     } catch {
         return NextResponse.json(

@@ -129,12 +129,42 @@
 
 ### Implementation for User Story 7
 
-- [ ] T044 [US5] Implementar lógica de visibilidad en `src/lib/visibility.ts`: calcular `esVisiblePublicamente` (umbral + min_authenticated_ratio)
-- [ ] T045 [US5] Implementar actualización automática de `IdentificadorReportado.esVisiblePublicamente` tras cada reporte clasificado/anonimizado
+- [x] T044 [US5] Implementar lógica de visibilidad en `src/lib/visibility.ts`: calcular `esVisiblePublicamente` (umbral + min_authenticated_ratio)
+- [x] T045 [US5] Implementar actualización automática de `IdentificadorReportado.esVisiblePublicamente` tras cada reporte clasificado/anonimizado
 - [x] T046 [US5] Crear `GET /api/consulta/route.ts`: endpoint público para consultar identificador (respuesta estadística, sin culpabilidad) — texto aprobado: "Sin reportes registrados para este identificador."
-- [ ] T047 [US5] Verificar regla dura: reportes en REQUIERE_ANONIMIZACION NUNCA cuentan para umbral ni aparecen en consultas
+- [x] T047 [US5] Verificar regla dura: reportes en REQUIERE_ANONIMIZACION NUNCA cuentan para umbral ni aparecen en consultas
 
 **Checkpoint**: Escenario F pasa, build compila, tests pasan
+
+---
+
+## Phase 8: Ranking y Scoring de Identificadores (Priority: P2)
+
+**Goal**: Calcular un score de riesgo por identificador basado en reportes acumulados, clasificaciones IA, recencia y ratio de autenticados; mostrar resultados diferenciados para usuarios anónimos y autenticados.
+
+**Independent Test**: Usuario consulta un identificador con reportes previos y recibe score, nivel de riesgo, distribución geográfica y timeline.
+
+### Backend
+
+- [x] T054 [P] Crear `src/lib/ranking.ts`: calcular score 0-100, nivel de riesgo, categorías agregadas, timeline y distribución por país/ciudad. Parámetros del sistema definen pesos y umbrales.
+- [x] T055 [P] Extender `prisma/seed.ts` con parámetros de ranking: `ranking.weight.count`, `ranking.weight.recency`, `ranking.weight.severity`, `ranking.weight.authenticated`, `ranking.recency_days`, `ranking.severity.*`, `ranking.threshold.low`, `ranking.threshold.medium`.
+- [x] T056 [P] Extender `GET /api/consulta/route.ts`:
+  - Anónimo: total de reportes, resumen textual, distribución país/ciudad/fecha.
+  - Autenticado: score, nivel de riesgo, categorías agregadas, timeline completo.
+  - Nunca exponer texto individual ni PII.
+
+### Frontend
+
+- [x] T057 [P] Actualizar `src/components/modules/ConsultaResultado.tsx`: mostrar score, nivel de riesgo, distribución geográfica, timeline y categorías agregadas.
+- [x] T058 [P] Crear componentes SVG nativos para ranking: ranking, timeline y categorías se renderizan directamente en `ConsultaResultado.tsx` sin componentes separados.
+- [x] T059 [P] Actualizar `src/app/page.tsx`: integrar nuevos componentes y mensajes diferenciados para usuarios anónimos vs autenticados.
+
+### Tests
+
+- [x] T060 [P] Tests de integración para `src/lib/ranking.ts`.
+- [x] T061 [P] Tests E2E: consulta anónima básica y consulta autenticada con score.
+
+**Checkpoint**: Endpoint devuelve score y datos agregados; UI muestra ranking sin exponer PII; tests pasan.
 
 ---
 
@@ -142,8 +172,8 @@
 
 **Purpose**: Validación final, documentación, robustez
 
-- [ ] T048 [P] Ejecutar `npm run build` — debe compilar sin errores
-- [ ] T049 [P] Ejecutar `npm run test` — todos los tests deben pasar al 100%
+- [x] T048 [P] Ejecutar `npm run build` — debe compilar sin errores
+- [x] T049 [P] Ejecutar `npm run test` — todos los tests deben pasar al 100%
 - [x] T050 Ejecutar quickstart completo (escenarios A-G) con curl real, registrar salidas literales
 - [x] T051 Actualizar `README.md` con instrucciones de Ollama, pm2 worker, y pgvector
 - [ ] T052 [P] Revisar que ningún log exponga textos de reportes, PII, o códigos de verificación
@@ -166,7 +196,7 @@
 | Phase 5 (US3) | Phase 2 + US2 | Nada (independiente) |
 | Phase 6 (US4) | Phase 2 + US1 + US2 | Nada (independiente) |
 | Phase 7 (US5) | Phase 2 + US1 + US2 | Nada (independiente) |
-| Phase 8 (Polish) | Todas las anteriores | Nada |
+| Phase 9 (Polish) | Todas las anteriores | Nada |
 
 ### Within Each Phase
 

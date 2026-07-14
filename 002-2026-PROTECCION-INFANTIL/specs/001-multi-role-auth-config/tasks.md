@@ -14,13 +14,13 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize Next.js 16.2.10 project with TypeScript strict in repository root
-- [ ] T002 [P] Install core dependencies: `prisma`, `@prisma/client`, `jose`, `bcryptjs`, `tailwindcss`, `resend`
-- [ ] T003 [P] Install dev dependencies: `vitest`, `jsdom`, `@testing-library/react`, `@types/bcryptjs`
-- [ ] T004 Configure `tsconfig.json` with `"strict": true` and path aliases (`@/*` → `./src/*`)
-- [ ] T005 Create `docker-compose.yml` with PostgreSQL 16 service (healthcheck, volume)
-- [ ] T006 Create `.env.example` with `DATABASE_URL`, `JWT_SECRET`, `RESEND_API_KEY`, `ENCRYPTION_KEY`
-- [ ] T007 Configure `vitest.config.ts` with jsdom environment, path aliases, and coverage reporter
+- [x] T001 Initialize Next.js 16.2.10 project with TypeScript strict in repository root
+- [x] T002 [P] Install core dependencies: `prisma`, `@prisma/client`, `jose`, `bcryptjs`, `tailwindcss`, `resend`
+- [x] T003 [P] Install dev dependencies: `vitest`, `jsdom`, `@testing-library/react`, `@types/bcryptjs`
+- [x] T004 Configure `tsconfig.json` with `"strict": true` and path aliases (`@/*` → `./src/*`)
+- [x] T005 Create `docker-compose.yml` with PostgreSQL 16 service (healthcheck, volume)
+- [x] T006 Create `.env.example` with `DATABASE_URL`, `JWT_SECRET`, `RESEND_API_KEY`, `ENCRYPTION_KEY`
+- [x] T007 Configure `vitest.config.ts` with jsdom environment, path aliases, and coverage reporter
 
 ---
 
@@ -30,15 +30,15 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T008 [P] Create `prisma/schema.prisma` with enums (`RolUsuario`, `EstadoUsuario`, `TipoParametro`, `CategoriaParametro`, `AccionAudit`) and all entities from data-model.md
-- [ ] T009 [P] Run initial Prisma migration: `npx prisma migrate dev --name init`
-- [ ] T010 [P] Create `prisma/seed.ts` with default roles, admin user, default parameters (`visibility.report_threshold=3`, `security.max_login_attempts=5`, etc.), and empty Tenant/Plan/Subscription/BillingCycle
-- [ ] T011 Create `src/lib/prisma.ts` singleton (globalThis pattern per constitution §4.1)
-- [ ] T012 Create `src/lib/errors.ts` with `AppError` class and error code constants (`AUTH_INVALID`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, etc.)
-- [ ] T013 Create `src/lib/auth.ts` with `hashPassword`, `verifyPassword`, `createToken`, `verifyToken`, `verifyAuth` (JWT in httpOnly cookie per constitution §6.1)
-- [ ] T014 Create `src/lib/config-cache.ts` with in-memory Map cache, TTL invalidation, and `invalidateCache` function
-- [ ] T015 Create `src/lib/email.ts` wrapper for Resend API (reads `RESEND_API_KEY` from env, sends verification codes)
-- [ ] T016 Create `src/lib/audit.ts` with `logAudit` function that writes immutable `AuditLog` records
+- [x] T008 [P] Create `prisma/schema.prisma` with enums (`RolUsuario`, `EstadoUsuario`, `TipoParametro`, `CategoriaParametro`, `AccionAudit`) and all entities from data-model.md
+- [x] T009 [P] Run initial Prisma migration: `npx prisma migrate dev --name init`
+- [x] T010 [P] Create `prisma/seed.ts` with default roles, admin user, default parameters (`visibility.report_threshold=3`, `security.max_login_attempts=5`, etc.), and empty Tenant/Plan/Subscription/BillingCycle
+- [x] T011 Create `src/lib/prisma.ts` singleton (globalThis pattern per constitution §4.1)
+- [x] T012 Create `src/lib/errors.ts` with `AppError` class and error code constants (`AUTH_INVALID`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, etc.)
+- [x] T013 Create `src/lib/auth.ts` with `hashPassword`, `verifyPassword`, `createToken`, `verifyToken`, `verifyAuth` (JWT in httpOnly cookie per constitution §6.1)
+- [x] T014 Create `src/lib/config-cache.ts` with in-memory Map cache, TTL invalidation, and `invalidateCache` function
+- [x] T015 Create `src/lib/email.ts` wrapper for Resend API (reads `RESEND_API_KEY` from env, sends verification codes)
+- [x] T016 Create `src/lib/audit.ts` with `logAudit` function that writes immutable `AuditLog` records
 
 **Checkpoint**: Foundation ready — `npm run build` passes, `npx prisma db seed` creates baseline data, auth utils tested manually
 
@@ -52,18 +52,18 @@
 
 ### Tests for User Story 1
 
-- [ ] T017 [P] [US1] Integration test: `src/app/api/config/parametros/route.test.ts` — GET list (ADMIN), GET public (no auth), PATCH (ADMIN), PATCH denied (PARENT)
-- [ ] T018 [P] [US1] Integration test: `src/app/api/config/parametros/[clave]/route.test.ts` — GET single, DELETE, concurrent modification
+- [x] T017 [P] [US1] Integration test: `src/app/api/config/parametros/route.test.ts` — GET list (ADMIN), GET public (no auth), PATCH (ADMIN), PATCH denied (PARENT)
+- [x] T018 [P] [US1] Integration test: `src/app/api/config/parametros/[clave]/route.test.ts` — GET single, DELETE, concurrent modification
 
 ### Implementation for User Story 1
 
-- [ ] T019 [P] [US1] Implement `GET /api/config/parametros/publicos` in `src/app/api/config/parametros/publicos/route.ts` (no auth required)
-- [ ] T020 [US1] Implement `GET /api/config/parametros/route.ts` — list all params with pagination (ADMIN only)
-- [ ] T021 [US1] Implement `GET /api/config/parametros/[clave]/route.ts` — get single param with audit history (ADMIN only)
-- [ ] T022 [US1] Implement `PATCH /api/config/parametros/[clave]/route.ts` — update param value with type validation, rules validation, and audit log (ADMIN only)
-- [ ] T023 [US1] Implement `DELETE /api/config/parametros/[clave]/route.ts` — delete param, block system-critical (ADMIN only)
-- [ ] T024 [US1] Create `src/components/modules/ConfigPanel.tsx` — ADMIN UI for listing, editing, deleting parameters
-- [ ] T025 [US1] Create `src/app/dashboard/configuracion/page.tsx` — configuration dashboard page (ADMIN only)
+- [x] T019 [P] [US1] Implement `GET /api/config/parametros/publicos` in `src/app/api/config/parametros/publicos/route.ts` (no auth required)
+- [x] T020 [US1] Implement `GET /api/config/parametros/route.ts` — list all params with pagination (ADMIN only)
+- [x] T021 [US1] Implement `GET /api/config/parametros/[clave]/route.ts` — get single param with audit history (ADMIN only)
+- [x] T022 [US1] Implement `PATCH /api/config/parametros/[clave]/route.ts` — update param value with type validation, rules validation, and audit log (ADMIN only)
+- [x] T023 [US1] Implement `DELETE /api/config/parametros/[clave]/route.ts` — delete param, block system-critical (ADMIN only)
+- [x] T024 [US1] Create `src/components/modules/ConfigPanel.tsx` — ADMIN UI for listing, editing, deleting parameters
+- [x] T025 [US1] Create `src/app/dashboard/configuracion/page.tsx` — configuration dashboard page (ADMIN only)
 
 **Checkpoint**: User Story 1 functional — public params readable without auth, ADMIN can modify with audit trail, UI renders
 
@@ -77,26 +77,26 @@
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Integration test: `src/app/api/auth/verificar/solicitar/route.test.ts` — code request, duplicate email blocked, rate limit (3/hr)
-- [ ] T027 [P] [US2] Integration test: `src/app/api/auth/verificar/validar/route.test.ts` — valid code, expired code, max attempts (5), used code
-- [ ] T028 [P] [US2] Integration test: `src/app/api/auth/verificar/completar/route.test.ts` — complete registration, weak password rejected
-- [ ] T029 [P] [US2] Integration test: `src/app/api/auth/login/route.test.ts` — valid login, invalid credentials, blocked account
-- [ ] T030 [P] [US2] Integration test: `src/app/api/auth/logout/route.test.ts` — session invalidation
-- [ ] T031 [P] [US2] Integration test: `src/app/api/me/route.test.ts` — profile for each role
+- [x] T026 [P] [US2] Integration test: `src/app/api/auth/verificar/solicitar/route.test.ts` — code request, duplicate email blocked, rate limit (3/hr)
+- [x] T027 [P] [US2] Integration test: `src/app/api/auth/verificar/validar/route.test.ts` — valid code, expired code, max attempts (5), used code
+- [x] T028 [P] [US2] Integration test: `src/app/api/auth/verificar/completar/route.test.ts` — complete registration, weak password rejected
+- [x] T029 [P] [US2] Integration test: `src/app/api/auth/login/route.test.ts` — valid login, invalid credentials, blocked account
+- [x] T030 [P] [US2] Integration test: `src/app/api/auth/logout/route.test.ts` — session invalidation
+- [x] T031 [P] [US2] Integration test: `src/app/api/me/route.test.ts` — profile for each role
 
 ### Implementation for User Story 2
 
-- [ ] T032 [P] [US2] Implement `POST /api/auth/verificar/solicitar/route.ts` — generate 6-digit code, hash with bcrypt, store in `CodigoVerificacion`, send via Resend
-- [ ] T033 [P] [US2] Implement `POST /api/auth/verificar/validar/route.ts` — verify bcrypt hash, check expiration, check max attempts, return temp JWT
-- [ ] T034 [US2] Implement `POST /api/auth/verificar/completar/route.ts` — validate temp JWT, create `Usuario` with rol=PARENT, set session cookie
-- [ ] T035 [US2] Implement `POST /api/auth/login/route.ts` — verify credentials, check account status/blocks, set session cookie
-- [ ] T036 [US2] Implement `POST /api/auth/logout/route.ts` — clear `token` cookie
-- [ ] T037 [US2] Implement `POST /api/auth/register/route.ts` — ADMIN/SCHOOL_ADMIN direct user creation (skip code flow)
-- [ ] T038 [US2] Implement `GET /api/me/route.ts` — return current user profile from cookie
-- [ ] T039 [US2] Create `src/components/modules/LoginForm.tsx` — email/password login form
-- [ ] T040 [US2] Create `src/components/modules/RegistroForm.tsx` — 3-step registration (email → code → password)
-- [ ] T041 [US2] Create `src/app/login/page.tsx` — login page
-- [ ] T042 [US2] Create `src/app/registro/page.tsx` — registration page
+- [x] T032 [P] [US2] Implement `POST /api/auth/verificar/solicitar/route.ts` — generate 6-digit code, hash with bcrypt, store in `CodigoVerificacion`, send via Resend
+- [x] T033 [P] [US2] Implement `POST /api/auth/verificar/validar/route.ts` — verify bcrypt hash, check expiration, check max attempts, return temp JWT
+- [x] T034 [P] [US2] Implement `POST /api/auth/verificar/completar/route.ts` — validate temp JWT, create `Usuario` with rol=PARENT, set session cookie
+- [x] T035 [P] [US2] Implement `POST /api/auth/login/route.ts` — verify credentials, check account status/blocks, set session cookie
+- [x] T036 [P] [US2] Implement `POST /api/auth/logout/route.ts` — clear `token` cookie
+- [x] T037 [US2] Implement `POST /api/auth/register/route.ts` — ADMIN/SCHOOL_ADMIN direct user creation (skip code flow)
+- [x] T038 [US2] Implement `GET /api/me/route.ts` — return current user profile from cookie
+- [x] T039 [US2] Create `src/components/modules/LoginForm.tsx` — email/password login form
+- [x] T040 [US2] Create `src/components/modules/RegistroForm.tsx` — 3-step registration (email → code → password)
+- [x] T041 [US2] Create `src/app/login/page.tsx` — login page
+- [x] T042 [US2] Create `src/app/registro/page.tsx` — registration page
 
 **Checkpoint**: User Story 2 functional — self-registration with code works, login/logout works, role-based access enforced
 
@@ -110,20 +110,20 @@
 
 ### Tests for User Story 3
 
-- [ ] T043 [P] [US3] Unit test: `src/lib/auth.test.ts` — hash/verify, token create/verify, role checks
-- [ ] T044 [P] [US3] Unit test: `src/lib/config-cache.test.ts` — get/set/invalidate/TTL behavior
-- [ ] T045 [P] [US3] Unit test: `src/lib/errors.test.ts` — error construction and serialization
+- [x] T043 [P] [US3] Unit test: `src/lib/auth.test.ts` — hash/verify, token create/verify, role checks
+- [x] T044 [P] [US3] Unit test: `src/lib/config-cache.test.ts` — get/set/invalidate/TTL behavior
+- [x] T045 [P] [US3] Unit test: `src/lib/errors.test.ts` — error construction and serialization
 
 ### Implementation for User Story 3
 
-- [ ] T046 [P] [US3] Create `src/app/dashboard/layout.tsx` — protected layout with role-based sidebar navigation
-- [ ] T047 [P] [US3] Create `src/app/dashboard/page.tsx` — role-aware dashboard landing (redirects by role)
-- [ ] T048 [P] [US3] Create `src/components/modules/RootLayoutContent.tsx` — theme provider, auth context
-- [ ] T049 [P] [US3] Create `src/app/layout.tsx` — root layout with providers
-- [ ] T050 [US3] Create `src/app/page.tsx` — public landing page with login/register links
-- [ ] T051 [US3] Create `src/middleware.ts` — route protection: redirect unauthenticated to login, block wrong roles
-- [ ] T052 [US3] Create placeholder `scripts/worker.mjs` — empty pg-boss worker (future use)
-- [ ] T053 [US3] Create `scripts/seed-dev.mjs` — development seed script (calls prisma seed)
+- [x] T046 [P] [US3] Create `src/app/dashboard/layout.tsx` — protected layout with role-based sidebar navigation
+- [x] T047 [P] [US3] Create `src/app/dashboard/page.tsx` — role-aware dashboard landing (redirects by role)
+- [x] T048 [P] [US3] Create `src/components/modules/RootLayoutContent.tsx` — theme provider, auth context
+- [x] T049 [P] [US3] Create `src/app/layout.tsx` — root layout with providers
+- [x] T050 [US3] Create `src/app/page.tsx` — public landing page with login/register links
+- [x] T051 [US3] Create `src/middleware.ts` — route protection: redirect unauthenticated to login, block wrong roles
+- [x] T052 [US3] Create placeholder `scripts/worker.mjs` — empty pg-boss worker (future use)
+- [x] T053 [US3] Create `scripts/seed-dev.mjs` — development seed script (calls prisma seed)
 
 **Checkpoint**: User Story 3 functional — dashboard renders per role, middleware protects routes, all tests pass, build succeeds
 
@@ -133,14 +133,14 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T054 [P] Run `quickstart.md` validation scenarios end-to-end with curl
-- [ ] T055 [P] Verify all contract endpoints return correct HTTP status codes per constitution §3.4
-- [ ] T056 Review and remove any `any` types; add `// TODO(any)` with justification if unavoidable (constitution §3.1)
-- [ ] T057 Verify no `console.log` debug statements remain; replace with `console.error`/`console.warn` where permanent (constitution §8.2)
-- [ ] T058 Verify `npm run lint` passes with 0 errors
-- [ ] T059 Verify `npm run test` passes with >15 tests (constitution §5.3 meta inmediata)
-- [ ] T060 Verify `npm run build` compiles successfully
-- [ ] T061 Update `README.md` with setup instructions, environment variables, and quickstart
+- [x] T054 [P] Run `quickstart.md` validation scenarios end-to-end with curl
+- [x] T055 [P] Verify all contract endpoints return correct HTTP status codes per constitution §3.4
+- [x] T056 Review and remove any `any` types; add `// TODO(any)` with justification if unavoidable (constitution §3.1)
+- [x] T057 Verify no `console.log` debug statements remain; replace with `console.error`/`console.warn` where permanent (constitution §8.2)
+- [x] T058 Verify `npm run lint` passes with 0 errors
+- [x] T059 Verify `npm run test` passes with >15 tests (constitution §5.3 meta inmediata)
+- [x] T060 Verify `npm run build` compiles successfully
+- [x] T061 Update `README.md` with setup instructions, environment variables, and quickstart
 
 ---
 
@@ -225,18 +225,6 @@ T039-T042: UI components and pages
 4. US3 → Test independently → Dashboard and structure complete
 5. Polish → All tests pass, build succeeds, docs updated
 
-### Parallel Team Strategy
-
-With multiple developers:
-
-1. Team completes Setup + Foundational together
-2. Once Foundational done:
-   - Developer A: US1 (Configuración)
-   - Developer B: US2 (Registro/Login)
-   - Developer C: US3 (Estructura base + tests)
-3. Stories complete and integrate independently
-4. Polish phase: team review together
-
 ---
 
 ## Notes
@@ -247,3 +235,4 @@ With multiple developers:
 - `AuditLog` is cross-cutting — used in US1 (param updates) and US2 (login/logout)
 - Rate limiting for code requests (3/hr) implemented in-memory (no Redis per research.md D2)
 - Email sending via Resend (research.md D7); mock in tests
+- **Migration 2026-07-14**: `src/middleware.ts` migrated to `src/proxy.ts` to comply with Next.js 16 deprecation warning.

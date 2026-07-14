@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { clasificarReporte } from "@/lib/ai/classifier";
 import { generarEmbedding } from "@/lib/ai/embedder";
+import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { requireEnv } from "@/lib/env";
 import { ERROR_CODES } from "@/lib/errors";
 import type { EstadoReporte } from "@prisma/client";
@@ -16,6 +17,7 @@ const ESTADOS_FINALES = new Set([
 ]);
 
 export async function POST(request: Request) {
+    let reporteId: string | undefined;
     try {
         const secret = request.headers.get("x-worker-secret");
         if (secret !== requireEnv("WORKER_SECRET", 8)) {
@@ -25,7 +27,14 @@ export async function POST(request: Request) {
             );
         }
 
-        const { reporteId } = await request.json();
+        const body = (await request.json()) as { reporteId?: string };
+        reporteId = body.reporteId;
+        if (!reporteId) {
+            return NextResponse.json(
+                { error: { message: "reporteId requerido", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
 
         const reporte = await prisma.reporte.findUnique({
             where: { id: reporteId },
@@ -137,17 +146,18 @@ export async function POST(request: Request) {
         const errMsg = error instanceof Error ? error.message : String(error);
 
         // Guardar error de procesamiento en el reporte
-        try {
-            const { reporteId } = await request.clone().json();
-            await prisma.reporte.update({
-                where: { id: reporteId },
-                data: {
-                    estado: "REVISION_MANUAL",
-                    processingError: errMsg,
-                },
-            });
-        } catch {
-            // Si falla el update del error, solo loggear
+        if (reporteId) {
+            try {
+                await prisma.reporte.update({
+                    where: { id: reporteId },
+                    data: {
+                        estado: "REVISION_MANUAL",
+                        processingError: errMsg,
+                    },
+                });
+            } catch {
+                // Si falla el update del error, solo loggear
+            }
         }
 
         console.error("[PROCESAR] Error:", errMsg);
