@@ -153,32 +153,32 @@
 
 ### Database & Backend
 
-- [ ] T042 [P] Ampliar `prisma/schema.prisma`: agregar modelos `Pais` y `Ciudad` (catálogos globales, sin `tenantId`); agregar a `Reporte` los campos `paisId`, `ciudadId`, `otraPlataforma`
-- [ ] T043 Ejecutar `npx prisma migrate dev --name add_pais_ciudad` (no `db push`)
-- [ ] T044 [P] Crear/actualizar `prisma/seed.ts`: seed de 18 países latinoamericanos + ~8-10 ciudades principales por país (capitales + grandes)
-- [ ] T045 Crear `src/app/api/plataformas/route.ts`: `GET` devuelve plataformas activas ordenadas por nombre, `"otro"` al final
-- [ ] T046 Crear `src/app/api/paises/route.ts`: `GET` devuelve países activos ordenados por nombre
-- [ ] T047 Crear `src/app/api/ciudades/route.ts`: `GET` filtra por `?paisId=`, devuelve ciudades activas ordenadas + opción virtual `"Otra ciudad o municipio"` (`id="otra"`)
-- [ ] T048 Actualizar `src/app/api/reportes/route.ts`: aceptar `paisId`, `ciudadId`, `otraPlataforma`; validar `fechaIncidente ≤ hoy` (Zod); mapear plataforma `"otro"` si aplica
+- [x] T042 [P] Ampliar `prisma/schema.prisma`: agregar modelos `Pais` y `Ciudad` (catálogos globales, sin `tenantId`); agregar a `Reporte` los campos `paisId`, `ciudadId`, `otraPlataforma`
+- [x] T043 Ejecutar `npx prisma migrate dev --name add_pais_ciudad` (no `db push`)
+- [x] T044 [P] Crear/actualizar `prisma/seed.ts`: seed de 18 países latinoamericanos + ~8-10 ciudades principales por país (capitales + grandes)
+- [x] T045 Crear `src/app/api/plataformas/route.ts`: `GET` devuelve plataformas activas ordenadas por nombre, `"otro"` al final
+- [x] T046 Crear `src/app/api/paises/route.ts`: `GET` devuelve países activos ordenados por nombre
+- [x] T047 Crear `src/app/api/ciudades/route.ts`: `GET` filtra por `?paisId=`, devuelve ciudades activas ordenadas + opción virtual `"Otra ciudad o municipio"` (`id="otra"`)
+- [x] T048 Actualizar `src/app/api/reportes/route.ts`: aceptar `paisId`, `ciudadId`, `otraPlataforma`; validar `fechaIncidente ≤ hoy` (Zod); mapear plataforma `"otro"` si aplica
 
 ### Frontend — Refactor Wizard
 
-- [ ] T049 Refactor `src/components/modules/ReporteStepUbicacion.tsx`: 
+- [x] T049 Refactor `src/components/modules/ReporteStepUbicacion.tsx`: 
   - fecha incidente con `max={new Date().toISOString().split('T')[0]}` (FR-022)
   - país desde `GET /api/paises` (Select)
   - ciudad en cascada desde `GET /api/ciudades?paisId=` (Select)
   - opción `"Otra ciudad o municipio"` habilita input libre (FR-024)
-- [ ] T050 Refactor `src/components/modules/ReporteStepPlataforma.tsx`:
+- [x] T050 Refactor `src/components/modules/ReporteStepPlataforma.tsx`:
   - plataformas desde `GET /api/plataformas` (FR-026)
   - opción `"Otra"` habilita input libre (FR-025)
-- [ ] T051 Actualizar `src/components/modules/ReporteWizard.tsx`: pasar `paisId`, `ciudadId`, `otraPlataforma` en el body de `POST /api/reportes`; manejar ciudad `"otra"` (sin FK) y plataforma `"otro"`
-- [ ] T052 Actualizar `src/components/modules/ReporteStepConfirmar.tsx`: mostrar país/ciudad/plataforma resueltos (incluyendo "Otra")
+- [x] T051 Actualizar `src/components/modules/ReporteWizard.tsx`: pasar `paisId`, `ciudadId`, `otraPlataforma` en el body de `POST /api/reportes`; manejar ciudad `"otra"` (sin FK) y plataforma `"otro"`
+- [x] T052 Actualizar `src/components/modules/ReporteStepConfirmar.tsx`: mostrar país/ciudad/plataforma resueltos (incluyendo "Otra")
 
 ### Validación
 
-- [ ] T053 `npm run build` pasa sin errores TypeScript
-- [ ] T054 Verificar end-to-end: crear reporte con "Otra" plataforma y "Otra ciudad" → confirma que `POST /api/reportes` guarda `otraPlataforma` y `ciudad` (string)
-- [ ] T055 Verificar que fecha futura es rechazada por el input (max) y por el backend (Zod)
+- [x] T053 `npm run build` pasa sin errores TypeScript
+- [x] T054 Verificar end-to-end: crear reporte con "Otra" plataforma y "Otra ciudad" → confirma que `POST /api/reportes` guarda `otraPlataforma` y `ciudad` (string)
+- [x] T055 Verificar que fecha futura es rechazada por el input (max) y por el backend (Zod)
 
 **Checkpoint**: Wizard de reporte usa datos dinámicos, fecha futura bloqueada, campos libres funcionan
 
@@ -237,7 +237,7 @@
 
 ## Notes
 
-- Total tasks: 55 (T001-T055 completas, T001-T041 implementadas, T042-T055 pendientes de Phase 9)
+- Total tasks: 55 (T001-T055 todas implementadas)
 - Tasks por fase: P1=4, P2=8, P3=4, P4=8, P5=7, P6=5, P7=3, P8=6, P9=14
 - Sin tareas de test explícitas (no fueron solicitadas en spec)
 - Reglas duras a verificar en cada fase:

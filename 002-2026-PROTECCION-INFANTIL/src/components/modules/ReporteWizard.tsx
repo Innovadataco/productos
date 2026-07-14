@@ -11,8 +11,11 @@ import { Button } from "@/components/ui/Button";
 type WizardData = {
     identificador: string;
     plataforma: string;
+    otraPlataforma: string;
     ciudad: string;
     pais: string;
+    paisId: string;
+    ciudadId: string;
     fechaIncidente: string;
     texto: string;
     esAnonimo: boolean;
@@ -23,8 +26,11 @@ export function ReporteWizard() {
     const [data, setData] = useState<WizardData>({
         identificador: "",
         plataforma: "",
+        otraPlataforma: "",
         ciudad: "",
         pais: "",
+        paisId: "",
+        ciudadId: "",
         fechaIncidente: "",
         texto: "",
         esAnonimo: true,
@@ -46,12 +52,15 @@ export function ReporteWizard() {
                 body: JSON.stringify({
                     identificador: data.identificador,
                     plataforma: data.plataforma,
+                    otraPlataforma: data.otraPlataforma,
                     texto: data.texto,
                     fechaIncidente: data.fechaIncidente
                         ? new Date(data.fechaIncidente).toISOString()
                         : new Date().toISOString(),
                     ciudad: data.ciudad,
                     pais: data.pais,
+                    paisId: data.paisId || null,
+                    ciudadId: data.ciudadId === "otra" ? null : (data.ciudadId || null),
                 }),
             });
             const json = await res.json().catch(() => null);
@@ -99,7 +108,8 @@ export function ReporteWizard() {
                 <ReporteStepPlataforma
                     identificador={data.identificador}
                     plataforma={data.plataforma}
-                    onChange={(v: { identificador: string; plataforma: string }) => update(v)}
+                    otraPlataforma={data.otraPlataforma}
+                    onChange={(v: { identificador: string; plataforma: string; otraPlataforma: string }) => update(v)}
                 />
             )}
             {step === 2 && (
@@ -107,7 +117,9 @@ export function ReporteWizard() {
                     ciudad={data.ciudad}
                     pais={data.pais}
                     fechaIncidente={data.fechaIncidente}
-                    onChange={(v: { ciudad: string; pais: string; fechaIncidente: string }) => update(v)}
+                    paisId={data.paisId}
+                    ciudadId={data.ciudadId}
+                    onChange={(v) => update(v)}
                 />
             )}
             {step === 3 && (
@@ -137,7 +149,7 @@ export function ReporteWizard() {
                         onClick={() => setStep((s) => s + 1)}
                         disabled={
                             (step === 1 && (!data.identificador.trim() || !data.plataforma)) ||
-                            (step === 2 && (!data.ciudad || !data.pais)) ||
+                            (step === 2 && (!data.paisId || !data.ciudadId || (data.ciudadId === "otra" && !data.ciudad))) ||
                             (step === 3 && data.texto.length < 20)
                         }
                     >

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 
 type WizardData = {
     plataforma: string;
+    otraPlataforma: string;
     ciudad: string;
     pais: string;
     fechaIncidente: string;
@@ -24,6 +25,11 @@ export function ReporteStepConfirmar({
 }) {
     const [checked, setChecked] = useState(false);
 
+    const plataformaDisplay =
+        data.plataforma === "otro" && data.otraPlataforma
+            ? `Otra: ${data.otraPlataforma}`
+            : data.plataforma;
+
     return (
         <div className="space-y-5">
             <h2 className="text-lg font-semibold text-slate-800">Revisa y confirma</h2>
@@ -31,7 +37,7 @@ export function ReporteStepConfirmar({
             <div className="glass rounded-xl p-4 space-y-3 text-sm">
                 <div className="flex justify-between">
                     <span className="text-slate-500">Plataforma</span>
-                    <span className="font-medium text-slate-800 capitalize">{data.plataforma}</span>
+                    <span className="font-medium text-slate-800 capitalize">{plataformaDisplay}</span>
                 </div>
                 <div className="flex justify-between">
                     <span className="text-slate-500">Ubicación</span>

@@ -1,30 +1,56 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
-const PLATAFORMAS = [
-    { value: "whatsapp", label: "WhatsApp" },
-    { value: "instagram", label: "Instagram" },
-    { value: "facebook", label: "Facebook" },
-    { value: "tiktok", label: "TikTok" },
-    { value: "twitter", label: "X (Twitter)" },
-    { value: "discord", label: "Discord" },
-    { value: "telegram", label: "Telegram" },
-    { value: "snapchat", label: "Snapchat" },
-    { value: "youtube", label: "YouTube" },
-    { value: "twitch", label: "Twitch" },
-];
+type PlataformaOption = { id: string; clave: string; nombre: string };
 
 export function ReporteStepPlataforma({
     identificador,
     plataforma,
+    otraPlataforma,
     onChange,
 }: {
     identificador: string;
     plataforma: string;
-    onChange: (v: { identificador: string; plataforma: string }) => void;
+    otraPlataforma: string;
+    onChange: (v: {
+        identificador: string;
+        plataforma: string;
+        otraPlataforma: string;
+    }) => void;
 }) {
+    const [plataformas, setPlataformas] = useState<PlataformaOption[]>([]);
+    const [otra, setOtra] = useState("");
+
+    useEffect(() => {
+        fetch("/api/plataformas", { credentials: "include" })
+            .then((r) => r.json())
+            .then((json) => setPlataformas(json.plataformas || []))
+            .catch(() => setPlataformas([]));
+    }, []);
+
+    const esOtra = plataforma === "otro";
+
+    const handlePlataformaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        if (val === "otro") {
+            onChange({ identificador, plataforma: "otro", otraPlataforma: otra || "" });
+        } else {
+            onChange({ identificador, plataforma: val, otraPlataforma: "" });
+            setOtra("");
+        }
+    };
+
+    const handleOtraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setOtra(val);
+        if (esOtra) {
+            onChange({ identificador, plataforma: "otro", otraPlataforma: val });
+        }
+    };
+
     return (
         <div className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-800">¿Qué identificador quieres reportar?</h2>
@@ -32,14 +58,25 @@ export function ReporteStepPlataforma({
                 label="Número, nick o usuario"
                 placeholder="Ej: +573001234567"
                 value={identificador}
-                onChange={(e) => onChange({ identificador: e.target.value, plataforma })}
+                onChange={(e) => onChange({ identificador: e.target.value, plataforma, otraPlataforma })}
             />
             <Select
                 label="Plataforma"
-                options={PLATAFORMAS}
+                options={[
+                    { value: "", label: "Selecciona una plataforma" },
+                    ...plataformas.map((p) => ({ value: p.clave, label: p.nombre })),
+                ]}
                 value={plataforma}
-                onChange={(e) => onChange({ identificador, plataforma: e.target.value })}
+                onChange={handlePlataformaChange}
             />
+            {esOtra && (
+                <Input
+                    label="Escribe la plataforma"
+                    placeholder="Ej: Signal"
+                    value={otra}
+                    onChange={handleOtraChange}
+                />
+            )}
         </div>
     );
 }
