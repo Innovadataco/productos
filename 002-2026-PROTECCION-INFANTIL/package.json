@@ -9,6 +9,8 @@
         "lint": "next lint",
         "test": "vitest run",
         "test:watch": "vitest",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
         "db:migrate": "prisma migrate dev",
         "db:seed": "tsx prisma/seed.ts",
         "db:generate": "prisma generate",
@@ -28,6 +30,7 @@
         "zod": "^4.4.3"
     },
     "devDependencies": {
+        "@playwright/test": "^1.61.1",
         "@testing-library/react": "^16.3.0",
         "@types/bcryptjs": "^2.4.6",
         "@types/node": "^22.15.17",

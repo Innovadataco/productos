@@ -55,21 +55,35 @@ export async function POST(request: Request) {
             },
         });
 
+        let emailSent = false;
         try {
             await enviarCodigoVerificacion(email, code);
+            emailSent = true;
         } catch (err) {
             const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
             console.error("Failed to send verification email to:", masked, "error:", err instanceof Error ? err.message : String(err));
-            return NextResponse.json(
-                { error: { message: "Error al enviar email de verificación", code: ERROR_CODES.INTERNAL_ERROR } },
-                { status: 500 }
-            );
+            // En desarrollo no fallamos para permitir pruebas sin Resend configurado
+            if (process.env.NODE_ENV === "production") {
+                return NextResponse.json(
+                    { error: { message: "Error al enviar email de verificación", code: ERROR_CODES.INTERNAL_ERROR } },
+                    { status: 500 }
+                );
+            }
         }
 
-        return NextResponse.json(
-            { message: "Si el email es válido, recibirás un código de verificación." },
-            { status: 202 }
-        );
+        const isDev = process.env.NODE_ENV !== "production";
+        const response: Record<string, unknown> = {
+            message: isDev
+                ? "Modo desarrollo: usa el código mostrado para continuar."
+                : "Si el email es válido, recibirás un código de verificación.",
+            emailSent,
+        };
+        if (isDev) {
+            response.devCode = code;
+            console.log(`[DEV] Código de verificación para ${email}: ${code}`);
+        }
+
+        return NextResponse.json(response, { status: 202 });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

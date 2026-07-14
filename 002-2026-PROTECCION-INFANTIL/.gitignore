@@ -9,6 +9,8 @@ build/
 .env.development
 .env.production
 coverage/
+playwright-report/
+test-results/
 .DS_Store
 Thumbs.db
 *.tmp
