@@ -122,9 +122,9 @@
 
 ### Implementation for User Story 5
 
-- [ ] T033 [US5] Crear `src/components/modules/SeguimientoForm.tsx`: input de número + botón consultar
-- [ ] T034 [US5] Implementar `src/app/seguimiento/page.tsx`: SeguimientoForm + resultado con estadoVisual
-- [ ] T035 [US5] Conectar a `GET /api/reportes/seguimiento/[numero]` vía useApi; manejar 404 amigable
+- [x] T033 [US5] Crear `src/components/modules/SeguimientoForm.tsx`: input de número + botón consultar
+- [x] T034 [US5] Implementar `src/app/seguimiento/page.tsx`: SeguimientoForm + resultado con estadoVisual
+- [x] T035 [US5] Conectar a `GET /api/reportes/seguimiento/[numero]` vía useApi; manejar 404 amigable
 
 **Checkpoint**: Escenario E parcial pasa (seguimiento con número válido e inválido)
 
@@ -134,12 +134,12 @@
 
 **Purpose**: Validación final, accesibilidad, build
 
-- [ ] T036 [P] Verificar accesibilidad: labels en todos los inputs, foco visible, contraste 4.5:1
-- [ ] T037 [P] Verificar que ninguna pantalla de reporte incluya input de archivo, imagen, audio, video
-- [ ] T038 [P] Revisar lenguaje en toda UI: "N reportes registrados", nunca "peligroso", "culpable", "depredador"
-- [ ] T039 Verificar que CanalesOficiales aparece en page.tsx, reportar/page.tsx, y seguimiento/page.tsx
-- [ ] T040 Ejecutar `npm run build` — debe compilar sin errores de TypeScript
-- [ ] T041 Ejecutar escenarios del quickstart.md (A-E) y registrar salidas
+- [x] T036 [P] Verificar accesibilidad: labels en todos los inputs, foco visible, contraste 4.5:1
+- [x] T037 [P] Verificar que ninguna pantalla de reporte incluya input de archivo, imagen, audio, video
+- [x] T038 [P] Revisar lenguaje en toda UI: "N reportes registrados", nunca "peligroso", "culpable", "depredador"
+- [x] T039 Verificar que CanalesOficiales aparece en page.tsx, reportar/page.tsx, y seguimiento/page.tsx
+- [x] T040 Ejecutar `npm run build` — debe compilar sin errores de TypeScript
+- [x] T041 Ejecutar escenarios del quickstart.md (A-E) y registrar salidas
 
 **Checkpoint**: Build OK, quickstart validado, reglas duras verificadas
 
