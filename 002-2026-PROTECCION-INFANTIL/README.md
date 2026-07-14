@@ -50,6 +50,32 @@ src/lib/           # Utilities (auth, prisma, errors, cache, email, audit)
 prisma/            # Schema and migrations
 ```
 
+## Módulo de Reportes Comunitarios (Fase 2)
+
+Requiere Ollama local con modelos:
+- `ornith:9b` — clasificación de conductas
+- `nomic-embed-text` — embeddings de similitud
+
+### Infraestructura
+
+```bash
+docker compose up -d db          # PostgreSQL 16 + pgvector en :5433
+npm install                      # incluye pg-boss
+npx prisma migrate dev
+npx prisma db seed               # plataformas, parámetros, admin
+```
+
+### Desarrollo
+
+```bash
+npm run dev                      # App en :5005
+pm2 start scripts/worker-reportes.mjs --name "reportes-worker"
+```
+
+### Validación end-to-end
+
+See `specs/02-reportes-comunitarios/quickstart.md` for escenarios A-G con curl.
+
 ## Quickstart Validation
 
 See `specs/001-multi-role-auth-config/quickstart.md` for curl-based end-to-end scenarios.

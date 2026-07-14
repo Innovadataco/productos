@@ -144,8 +144,8 @@
 
 - [ ] T048 [P] Ejecutar `npm run build` — debe compilar sin errores
 - [ ] T049 [P] Ejecutar `npm run test` — todos los tests deben pasar al 100%
-- [ ] T050 Ejecutar quickstart completo (escenarios A-G) con curl real, registrar salidas literales
-- [ ] T051 Actualizar `README.md` con instrucciones de Ollama, pm2 worker, y pgvector
+- [x] T050 Ejecutar quickstart completo (escenarios A-G) con curl real, registrar salidas literales
+- [x] T051 Actualizar `README.md` con instrucciones de Ollama, pm2 worker, y pgvector
 - [ ] T052 [P] Revisar que ningún log exponga textos de reportes, PII, o códigos de verificación
 - [ ] T053 [P] Verificar que `textoOriginal` nunca se expone en APIs públicas ni en dataset de entrenamiento
 

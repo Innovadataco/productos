@@ -6,7 +6,8 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 export async function GET() {
     try {
         const user = await verifyAuth();
-        if (String(user.rol) !== "ADMIN_PLATAFORMA") {
+        const rol = String(user.rol);
+        if (rol !== "ADMIN" && rol !== "ADMIN_PLATAFORMA") {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }

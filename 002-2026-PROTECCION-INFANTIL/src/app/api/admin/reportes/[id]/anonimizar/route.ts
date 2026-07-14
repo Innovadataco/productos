@@ -75,13 +75,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
             const vectorStr = "[" + vector.join(",") + "]";
             if (reporte.embedding) {
-                await prisma.$executeRawUnsafe(
-                    `UPDATE "EmbeddingReporte" SET vector = '${vectorStr}'::vector, "modeloUsado" = '${modeloEmbedding}' WHERE "reporteId" = '${reporteId}'`
-                );
+                await prisma.$executeRaw`
+                    UPDATE "EmbeddingReporte"
+                    SET vector = ${vectorStr}::vector, "modeloUsado" = ${modeloEmbedding}
+                    WHERE "reporteId" = ${reporteId}
+                `;
             } else {
-                await prisma.$executeRawUnsafe(
-                    `INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn") VALUES ('${crypto.randomUUID()}', '${reporteId}', '${vectorStr}'::vector, '${modeloEmbedding}', NOW())`
-                );
+                const embeddingId = crypto.randomUUID();
+                await prisma.$executeRaw`
+                    INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
+                    VALUES (${embeddingId}, ${reporteId}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+                `;
             }
         } catch (embedErr) {
             const msg = embedErr instanceof Error ? embedErr.message : String(embedErr);

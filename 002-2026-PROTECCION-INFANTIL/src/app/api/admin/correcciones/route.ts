@@ -28,7 +28,8 @@ const correccionSchema = z.object({
 });
 
 function requireAdmin(user: { rol: string }) {
-    if (String(user.rol) !== "ADMIN_PLATAFORMA") {
+    const rol = String(user.rol);
+    if (rol !== "ADMIN" && rol !== "ADMIN_PLATAFORMA") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
 }
@@ -62,10 +63,16 @@ export async function POST(request: Request) {
 
         const categoriaAnterior = reporte.clasificacion?.categoria || "OTRO";
 
-        // Guardar corrección (raw para evitar problemas de nombres)
-        await prisma.$executeRawUnsafe(
-            `INSERT INTO "CorreccionAdmin" (id, "reporteId", "categoriaAnterior", "categoriaCorregida", comentario, "administradorId", "creadoEn") VALUES ('${crypto.randomUUID()}', '${reporteId}', '${categoriaAnterior}', '${categoriaCorregida}', ${comentario ? `'${comentario.replace(/'/g, "''")}'` : "NULL"}, '${user.id}', NOW())`
-        );
+        // Guardar corrección usando Prisma ORM
+        const correccion = await prisma.correccionAdmin.create({
+            data: {
+                clasificacionId: reporte.clasificacion!.id,
+                categoriaOriginal: categoriaAnterior,
+                categoriaCorregida: categoriaCorregida,
+                adminId: user.id,
+                motivo: comentario || null,
+            },
+        });
 
         // Actualizar clasificación con la corrección
         if (reporte.clasificacion) {
@@ -84,11 +91,15 @@ export async function POST(request: Request) {
             data: { estado: "CORREGIDO" },
         });
 
-        // Guardar en dataset de entrenamiento (raw)
-        const modeloUsado = reporte.clasificacion?.modeloUsado || "unknown";
-        await prisma.$executeRawUnsafe(
-            `INSERT INTO "DatasetEntrenamiento" (id, texto, "categoriaEtiquetada", fuente, "modeloOrigen", validado, "creadoEn") VALUES ('${crypto.randomUUID()}', '${reporte.texto.replace(/'/g, "''")}', '${categoriaCorregida}', 'correccion_admin', '${modeloUsado}', true, NOW())`
-        );
+        // Guardar en dataset de entrenamiento
+        await prisma.datasetEntrenamiento.create({
+            data: {
+                texto: reporte.texto,
+                clasificacionCorrecta: categoriaCorregida,
+                fuente: "correccion_admin",
+                correccionId: correccion.id,
+            },
+        });
 
         return NextResponse.json({
             reporteId,
