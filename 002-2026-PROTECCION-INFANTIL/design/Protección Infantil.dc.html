@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    @keyframes drift1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-20px) scale(1.08); } }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-25px,25px) scale(1.05); } }
+    @keyframes drift3 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(15px,15px); } }
+    @keyframes floatUp { from { opacity:0; transform: translateY(10px);} to { opacity:1; transform: translateY(0);} }
+    body { margin:0; background: oklch(95% 0.012 90); font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    input, textarea, select, button { font-family: inherit; }
+    ::placeholder { color: oklch(58% 0.02 250); }
+  </style>
+  <template id="__bundler_thumbnail" data-bg-color="#1d4d63">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" fill="#1d4d63"/>
+      <path d="M50 15 L78 26 V50 C78 68 66 80 50 87 C34 80 22 68 22 50 V26 Z" fill="#ffffff" opacity="0.95"/>
+      <path d="M50 30 L62 37 V50 C62 60 56 67 50 71 C44 67 38 60 38 50 V37 Z" fill="#1d4d63"/>
+    </svg>
+  </template>
+</helmet>
+
+<div style="{{ styles.outer }}">
+
+  <div style="{{ styles.stage }}">
+
+    <sc-if value="{{ screen === 'home' }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="01 Inicio" style="{{ styles.heroWrap }}">
+        <div style="{{ styles.blob1 }}"></div>
+        <div style="{{ styles.blob2 }}"></div>
+        <div style="{{ styles.blob3 }}"></div>
+
+        <div style="{{ styles.heroTop }}">
+          <div style="{{ styles.brandRow }}">
+            <div style="{{ styles.shieldMark }}"></div>
+            <div style="{{ styles.brandName }}">Protección Infantil</div>
+          </div>
+          <div style="{{ styles.authRow }}">
+            <button style="{{ styles.linkGhostLight }}" onClick="{{ () => go('login') }}">Iniciar sesión</button>
+            <button style="{{ styles.btnLight }}" onClick="{{ () => go('register') }}">Crear cuenta</button>
+          </div>
+        </div>
+
+        <div style="{{ styles.heroCenter }}">
+          <div style="{{ styles.heroEyebrow }}">Cuidado comunitario en internet</div>
+          <h1 style="{{ styles.heroTitle }}">Consulta antes de conectar</h1>
+          <p style="{{ styles.heroSub }}">Busca un número, usuario o nick para ver si otras familias han dejado información sobre esa cuenta. Gratis, en segundos, sin necesidad de registrarte.</p>
+
+          <div style="{{ styles.searchCard }}">
+            <div style="{{ styles.searchLabel }}">Número, usuario o nick</div>
+            <div style="{{ styles.searchRow }}">
+              <input style="{{ styles.searchInput }}" placeholder="Ej. +57 300 123 4567 o @usuario" value="{{ searchQuery }}" onChange="{{ onSearchChange }}"/>
+              <button style="{{ styles.searchBtn }}" onClick="{{ doSearch }}" disabled="{{ searchDisabled }}">Buscar</button>
+            </div>
+            <div style="{{ styles.searchHint }}">Funciona con WhatsApp, Instagram, TikTok, Roblox, Discord y otras plataformas.</div>
+          </div>
+        </div>
+
+        <div style="{{ styles.heroBottomLinks }}">
+          <button style="{{ styles.linkGhostLight }}" onClick="{{ () => go('parent') }}">Panel de padre</button>
+          <span style="{{ styles.dotSep }}">·</span>
+          <button style="{{ styles.linkGhostLight }}" onClick="{{ () => go('school') }}">Panel de colegio</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ screen === 'result' }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="02 Resultado" style="{{ styles.page }}">
+        <div style="{{ styles.topBar }}">
+          <button style="{{ styles.backBtn }}" onClick="{{ () => go('home') }}">‹ Inicio</button>
+          <div style="{{ styles.topBarTitle }}">Resultado de consulta</div>
+          <div style="{{ styles.topBarSpacer }}"></div>
+        </div>
+
+        <div style="{{ styles.content }}">
+          <div style="{{ styles.resultHeadCard }}">
+            <div style="{{ styles.resultQuery }}">{{ resultData.phone }}</div>
+            <div style="{{ styles.resultCount }}">{{ resultData.totalReports }} reportes registrados por la comunidad</div>
+          </div>
+
+          <div style="{{ styles.noticeBanner }}">
+            Estos reportes son descripciones hechas por otras familias. No son una acusación ni una sentencia — te ayudan a decidir con más información. Si crees que un menor está en riesgo, comunícate con los canales oficiales más abajo.
+          </div>
+
+          <div style="{{ styles.glassCard }}">
+            <div style="{{ styles.sectionTitle }}">Reportes por ciudad</div>
+            <div style="{{ styles.barChartRow }}">
+              <sc-for list="{{ resultData.byCity }}" as="b" hint-placeholder-count="4">
+                <div style="{{ styles.barCol }}">
+                  <div style="{{ b.barStyle }}"></div>
+                  <div style="{{ styles.barValue }}">{{ b.count }}</div>
+                  <div style="{{ styles.barLabel }}">{{ b.city }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="{{ styles.glassCard }}">
+            <div style="{{ styles.sectionTitle }}">Frecuencia por mes</div>
+            <div style="{{ styles.barChartRowFlat }}">
+              <sc-for list="{{ resultData.byMonth }}" as="m" hint-placeholder-count="4">
+                <div style="{{ styles.barColSmall }}">
+                  <div style="{{ m.barStyle }}"></div>
+                  <div style="{{ styles.barLabelSmall }}">{{ m.month }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="{{ styles.sectionTitle }}">Detalle de los reportes</div>
+          <sc-for list="{{ resultData.reports }}" as="r" hint-placeholder-count="4">
+            <div style="{{ styles.reportCard }}">
+              <div style="{{ styles.reportCardTop }}">
+                <span style="{{ styles.chip }}">{{ r.platform }}</span>
+                <span style="{{ styles.reportDate }}">{{ r.date }}</span>
+              </div>
+              <div style="{{ styles.reportCity }}">{{ r.city }}, {{ r.country }}</div>
+              <div style="{{ styles.reportExcerpt }}">{{ r.excerpt }}</div>
+            </div>
+          </sc-for>
+
+          <button style="{{ styles.btnPrimaryWide }}" onClick="{{ () => go('authChoice') }}">Agregar información sobre este contacto</button>
+
+          <div style="{{ styles.officialBlock }}">
+            <div style="{{ styles.officialTitle }}">Esto no reemplaza una denuncia formal</div>
+            <div style="{{ styles.officialSub }}">Si un menor está en peligro, contacta directamente a las autoridades:</div>
+            <div style="{{ styles.officialItem }}">
+              <div style="{{ styles.officialName }}">Línea 141 · ICBF</div>
+              <div style="{{ styles.officialDesc }}">Gratuita, 24/7. Atención a niños, niñas y adolescentes en Colombia.</div>
+            </div>
+            <div style="{{ styles.officialItem }}">
+              <div style="{{ styles.officialName }}">CAI Virtual · Policía Nacional</div>
+              <div style="{{ styles.officialDesc }}">Denuncia virtual de delitos, disponible en línea las 24 horas.</div>
+            </div>
+            <div style="{{ styles.officialItem }}">
+              <div style="{{ styles.officialName }}">Te Protejo</div>
+              <div style="{{ styles.officialDesc }}">Línea nacional para reportar abuso sexual infantil en internet · teprotejo.org</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ screen === 'authChoice' }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="03 Elegir modo de reporte" style="{{ styles.page }}">
+        <div style="{{ styles.topBar }}">
+          <button style="{{ styles.backBtn }}" onClick="{{ back }}">‹ Atrás</button>
+          <div style="{{ styles.topBarTitle }}">Reportar información</div>
+          <div style="{{ styles.topBarSpacer }}"></div>
+        </div>
+        <div style="{{ styles.content }}">
+          <p style="{{ styles.plainP }}">¿Cómo quieres continuar?</p>
+          <button style="{{ styles.optionCard }}" onClick="{{ () => chooseAuth('anon') }}">
+            <div style="{{ styles.optionTitle }}">Reportar como invitado</div>
+            <div style="{{ styles.optionDesc }}">Rápido y sin registro. No pedimos tu nombre.</div>
+          </button>
+          <button style="{{ styles.optionCard }}" onClick="{{ () => go('login') }}">
+            <div style="{{ styles.optionTitle }}">Reportar con mi cuenta</div>
+            <div style="{{ styles.optionDesc }}">Guarda tus reportes y da seguimiento a su estado.</div>
+          </button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ screen === 'login' }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="04 Iniciar sesión" style="{{ styles.page }}">
+        <div style="{{ styles.topBar }}">
+          <button style="{{ styles.backBtn }}" onClick="{{ back }}">‹ Atrás</button>
+          <div style="{{ styles.topBarTitle }}">Iniciar sesión</div>
+          <div style="{{ styles.topBarSpacer }}"></div>
+        </div>
+        <div style="{{ styles.content }}">
+          <div style="{{ styles.formField }}">
+            <label style="{{ styles.label }}">Correo electrónico</label>
+            <input style="{{ styles.input }}" placeholder="tucorreo@ejemplo.com" value="{{ loginEmail }}" onChange="{{ onLoginEmailChange }}"/>
+          </div>
+          <div style="{{ styles.formField }}">
+            <label style="{{ styles.label }}">Contraseña</label>
+            <input type="password" style="{{ styles.input }}" placeholder="••••••••" value="{{ loginPass }}" onChange="{{ onLoginPassChange }}"/>
+          </div>
+          <button style="{{ styles.linkGhost }}" onClick="{{ () => {} }}">¿Olvidaste tu contraseña?</button>
+          <button style="{{ styles.btnPrimaryWide }}" onClick="{{ doLogin }}">Entrar</button>
+          <div style="{{ styles.switchRow }}">¿No tienes cuenta? <button style="{{ styles.linkInline }}" onClick="{{ () => go('register') }}">Crear una</button></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ screen === 'register' }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="05 Crear cuenta" style="{{ styles.page }}">
+        <div style="{{ styles.topBar }}">
+          <button style="{{ styles.backBtn }}" onClick="{{ back }}">‹ Atrás</button>
+          <div style="{{ styles.topBarTitle }}">Crear cuenta</div>
+          <div style="{{ styles.topBarSpacer }}"></div>
+        </div>
+        <div style="{{ styles.content }}">
+          <div style="{{ styles.formField }}">
+            <label style="{{ styles.label }}">Nombre completo</label>
+            <input style="{{ styles.input }}" placeholder="Ej. María Gómez" value="{{ regName }}" onChange="{{ onRegNameChange }}"/>
+          </div>
+          <div style="{{ styles.formField }}">
+            <label style="{{ styles.label }}">Correo electrónico</label>
+            <input style="{{ styles.input }}" placeholder="tucorreo@ejemplo.com" value="{{ regEmail }}" onChange="{{ onRegEmailChange }}"/>
+          </div>
+          <div style="{{ styles.formField }}">
+            <label style="{{ styles.label }}">Contraseña</label>
+            <input type="password" style="{{ styles.input }}" placeholder="Mínimo 8 caracteres" value="{{ regPass }}" onChange="{{ onRegPassChange }}"/>
+          </div>
+          <button style="{{ styles.btnPrimaryWide }}" onClick="{{ doRegister }}">Continuar</button>
+          <div style="{{ styles.switchRow }}">¿Ya tienes cuenta? <button style="{{ styles.linkInline }}" onClick="{{ () => go('login') }}">Iniciar sesión</button></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ screen === 'verify' }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="06 Verificación" style="{{ styles.page }}">
+        <div style="{{ styles.topBar }}">
+          <button style="{{ styles.backBtn }}" onClick="{{ back }}">‹ Atrás</button>
+          <div style="{{ styles.topBarTitle }}">Verifica tu correo</div>
+          <div style="{{ styles.topBarSpacer }}"></div>
+        </div>
+        <div style="{{ styles.content }}">
+          <p style="{{ styles.plainP }}">Enviamos un código de 6 dígitos a <strong>{{ regEmail }}</strong>. Ingrésalo para continuar.</p>
+          <div style="{{ styles.codeRow }}">
+            <sc-for list="{{ codeDigits }}" as="d" hint-placeholder-count="6">
+              <input style="{{ styles.codeInput }}" maxlength="1" inputmode="numeric" value="{{ d.val }}" onChange="{{ d.onChange }}"/>
+            </sc-for>
+          </div>
+          <sc-if value="{{ codeError }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ styles.errorText }}">Código incorrecto, inténtalo de nuevo.</div>
+          </sc-if>
+          <button style="{{ styles.btnPrimaryWide }}" onClick="{{ verifyCode }}" disabled="{{ !codeComplete }}">Verificar</button>
+          <div style="{{ styles.switchRow }}">¿No te llegó? <button style="{{ styles.linkInline }}" onClick="{{ resendCode }}">Reenviar código</button></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isReportScreen }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="07 Formulario de reporte" style="{{ styles.page }}">
+        <div style="{{ styles.topBar }}">
+          <button style="{{ styles.backBtn }}" onClick="{{ back }}">‹ Atrás</button>
+          <div style="{{ styles.topBarTitle }}">Nuevo reporte</div>
+          <div style="{{ styles.topBarSpacer }}"></div>
+        </div>
+        <div style="{{ styles.progressTrack }}"><div style="{{ styles.progressFill }}"></div></div>
+        <div style="{{ styles.content }}">
+
+          <sc-if value="{{ screen === 'report1' }}" hint-placeholder-val="{{ true }}">
+            <div style="{{ styles.stepLabel }}">Paso 1 de 4</div>
+            <h2 style="{{ styles.stepTitle }}">¿En qué plataforma ocurrió?</h2>
+            <div style="{{ styles.chipGrid }}">
+              <sc-for list="{{ platforms }}" as="p" hint-placeholder-count="6">
+                <button style="{{ p.chipStyle }}" onClick="{{ p.onSelect }}">{{ p.label }}</button>
+              </sc-for>
+            </div>
+            <div style="{{ styles.formField }}">
+              <label style="{{ styles.label }}">Número, usuario o nick</label>
+              <input style="{{ styles.input }}" placeholder="Ej. +57 300 123 4567" value="{{ reportContact }}" onChange="{{ onReportContactChange }}"/>
+            </div>
+            <button style="{{ styles.btnPrimaryWide }}" onClick="{{ () => go('report2') }}" disabled="{{ !reportContact }}">Continuar</button>
+          </sc-if>
+
+          <sc-if value="{{ screen === 'report2' }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ styles.stepLabel }}">Paso 2 de 4</div>
+            <h2 style="{{ styles.stepTitle }}">¿Dónde ocurrió?</h2>
+            <div style="{{ styles.formField }}">
+              <label style="{{ styles.label }}">Ciudad</label>
+              <input style="{{ styles.input }}" placeholder="Ej. Bogotá" value="{{ reportCity }}" onChange="{{ onReportCityChange }}"/>
+            </div>
+            <div style="{{ styles.formField }}">
+              <label style="{{ styles.label }}">País</label>
+              <input style="{{ styles.input }}" placeholder="Ej. Colombia" value="{{ reportCountry }}" onChange="{{ onReportCountryChange }}"/>
+            </div>
+            <div style="{{ styles.formField }}">
+              <label style="{{ styles.label }}">Fecha aproximada</label>
+              <input type="date" style="{{ styles.input }}" value="{{ reportDate }}" onChange="{{ onReportDateChange }}"/>
+            </div>
+            <button style="{{ styles.btnPrimaryWide }}" onClick="{{ () => go('report3') }}" disabled="{{ !reportCity || !reportCountry }}">Continuar</button>
+          </sc-if>
+
+          <sc-if value="{{ screen === 'report3' }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ styles.stepLabel }}">Paso 3 de 4</div>
+            <h2 style="{{ styles.stepTitle }}">Cuéntanos qué pasó</h2>
+            <div style="{{ styles.formField }}">
+              <label style="{{ styles.label }}">Descripción de la situación</label>
+              <textarea style="{{ styles.textarea }}" placeholder="Describe con tus palabras lo que observaste. Evita compartir datos que identifiquen al menor." value="{{ reportDesc }}" onChange="{{ onReportDescChange }}"></textarea>
+              <div style="{{ styles.charCount }}">{{ reportDescCount }} caracteres</div>
+            </div>
+            <button style="{{ styles.btnPrimaryWide }}" onClick="{{ () => go('report4') }}" disabled="{{ reportDescCount < 10 }}">Continuar</button>
+          </sc-if>
+
+          <sc-if value="{{ screen === 'report4' }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ styles.stepLabel }}">Paso 4 de 4</div>
+            <h2 style="{{ styles.stepTitle }}">Revisa y envía</h2>
+            <div style="{{ styles.reviewCard }}">
+              <div style="{{ styles.reviewRow }}"><span style="{{ styles.reviewKey }}">Plataforma</span><span style="{{ styles.reviewVal }}">{{ reportPlatformLabel }}</span></div>
+              <div style="{{ styles.reviewRow }}"><span style="{{ styles.reviewKey }}">Contacto</span><span style="{{ styles.reviewVal }}">{{ reportContact }}</span></div>
+              <div style="{{ styles.reviewRow }}"><span style="{{ styles.reviewKey }}">Ciudad</span><span style="{{ styles.reviewVal }}">{{ reportCity }}, {{ reportCountry }}</span></div>
+              <div style="{{ styles.reviewRow }}"><span style="{{ styles.reviewKey }}">Fecha</span><span style="{{ styles.reviewVal }}">{{ reportDate }}</span></div>
+              <div style="{{ styles.reviewDesc }}">{{ reportDesc }}</div>
+            </div>
+
+            <div style="{{ styles.officialBlock }}">
+              <div style="{{ styles.officialTitle }}">Esto no reemplaza una denuncia formal</div>
+              <div style="{{ styles.officialSub }}">Si un menor está en peligro, contacta directamente a las autoridades:</div>
+              <div style="{{ styles.officialItem }}">
+                <div style="{{ styles.officialName }}">Línea 141 · ICBF</div>
+                <div style="{{ styles.officialDesc }}">Gratuita, 24/7. Atención a niños, niñas y adolescentes en Colombia.</div>
+              </div>
+              <div style="{{ styles.officialItem }}">
+                <div style="{{ styles.officialName }}">CAI Virtual · Policía Nacional</div>
+                <div style="{{ styles.officialDesc }}">Denuncia virtual de delitos, disponible en línea las 24 horas.</div>
+              </div>
+              <div style="{{ styles.officialItem }}">
+                <div style="{{ styles.officialName }}">Te Protejo</div>
+                <div style="{{ styles.officialDesc }}">Línea nacional para reportar abuso sexual infantil en internet · teprotejo.org</div>
+              </div>
+            </div>
+
+            <label style="{{ styles.checkRow }}">
+              <input type="checkbox" style="{{ styles.checkbox }}" checked="{{ reportAck }}" onChange="{{ toggleReportAck }}"/>
+              <span>Entiendo que este reporte es informativo y no reemplaza una denuncia formal ante las autoridades.</span>
+            </label>
+            <button style="{{ styles.btnPrimaryWide }}" onClick="{{ submitReport }}" disabled="{{ !reportAck }}">Enviar reporte</button>
+          </sc-if>
+
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ screen === 'confirmation' }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="08 Confirmación" style="{{ styles.page }}">
+        <div style="{{ styles.content }}">
+          <div style="{{ styles.confirmWrap }}">
+            <div style="{{ styles.confirmMark }}"></div>
+            <h2 style="{{ styles.confirmTitle }}">Gracias, tu reporte fue registrado</h2>
+            <p style="{{ styles.confirmSub }}">Referencia <strong>{{ reportRef }}</strong>. Puedes revisar su estado cuando quieras.</p>
+            <button style="{{ styles.btnPrimaryWide }}" onClick="{{ () => go('parent') }}">Ver mis reportes</button>
+            <button style="{{ styles.linkGhost }}" onClick="{{ () => go('home') }}">Volver al inicio</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ screen === 'parent' }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="09 Panel del padre" style="{{ styles.page }}">
+        <div style="{{ styles.topBar }}">
+          <button style="{{ styles.backBtn }}" onClick="{{ () => go('home') }}">‹ Inicio</button>
+          <div style="{{ styles.topBarTitle }}">Mis reportes</div>
+          <button style="{{ styles.emptyToggleBtn }}" onClick="{{ toggleEmptyDemo }}">{{ emptyToggleLabel }}</button>
+        </div>
+        <div style="{{ styles.content }}">
+          <sc-if value="{{ showEmptyParent }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ styles.emptyState }}">
+              <div style="{{ styles.emptyMark }}"></div>
+              <div style="{{ styles.emptyTitle }}">Aún no has hecho reportes</div>
+              <div style="{{ styles.emptySub }}">Cuando reportes un número o usuario, aparecerá aquí para que sigas su estado.</div>
+              <button style="{{ styles.btnPrimaryWide }}" onClick="{{ () => go('authChoice') }}">Hacer mi primer reporte</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ !showEmptyParent }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ myReports }}" as="r" hint-placeholder-count="3">
+              <div style="{{ styles.myReportCard }}">
+                <div style="{{ styles.myReportTop }}">
+                  <span style="{{ styles.chip }}">{{ r.platform }}</span>
+                  <span style="{{ r.statusStyle }}">{{ r.status }}</span>
+                </div>
+                <div style="{{ styles.myReportContact }}">{{ r.contact }}</div>
+                <div style="{{ styles.myReportMeta }}">{{ r.city }} · {{ r.date }}</div>
+              </div>
+            </sc-for>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ screen === 'school' }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="10 Panel de colegio" style="{{ styles.schoolWrap }}">
+        <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+          <div style="{{ styles.sidebar }}">
+            <div style="{{ styles.sidebarBrand }}">Protección Infantil</div>
+            <div style="{{ styles.sidebarSchool }}">Colegio San Rafael</div>
+            <button style="{{ styles.sidebarItemActive }}">Validar lista</button>
+            <button style="{{ styles.sidebarItem }}">Usuarios del colegio</button>
+            <button style="{{ styles.sidebarItem }}" onClick="{{ () => go('home') }}">Salir</button>
+          </div>
+        </sc-if>
+        <div style="{{ styles.schoolMain }}">
+          <sc-if value="{{ !isDesktop }}" hint-placeholder-val="{{ true }}">
+            <div style="{{ styles.topBar }}">
+              <button style="{{ styles.backBtn }}" onClick="{{ () => go('home') }}">‹ Inicio</button>
+              <div style="{{ styles.topBarTitle }}">Panel de colegio</div>
+              <div style="{{ styles.topBarSpacer }}"></div>
+            </div>
+          </sc-if>
+          <div style="{{ styles.content }}">
+            <div style="{{ styles.sectionTitle }}">Validar lista de números</div>
+            <p style="{{ styles.plainPMuted }}">Pega una lista de números o usuarios (uno por línea) para revisar cuáles tienen reportes registrados.</p>
+            <textarea style="{{ styles.textarea }}" placeholder="+57 300 123 4567&#10;@usuario_ejemplo&#10;+57 315 555 0000" value="{{ schoolList }}" onChange="{{ onSchoolListChange }}"></textarea>
+            <button style="{{ styles.btnPrimaryWide }}" onClick="{{ validateSchoolList }}">Validar lista</button>
+
+            <sc-if value="{{ schoolResults }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ styles.sectionTitleSpaced }}">Resultado de la validación</div>
+              <sc-for list="{{ schoolResults }}" as="row" hint-placeholder-count="3">
+                <div style="{{ styles.schoolRow }}">
+                  <div style="{{ styles.schoolRowContact }}">{{ row.contact }}</div>
+                  <div style="{{ row.badgeStyle }}">{{ row.label }}</div>
+                </div>
+              </sc-for>
+            </sc-if>
+
+            <div style="{{ styles.sectionTitleSpaced }}">Usuarios del colegio</div>
+            <sc-for list="{{ schoolUsers }}" as="u" hint-placeholder-count="3">
+              <div style="{{ styles.userRow }}">
+                <div>
+                  <div style="{{ styles.userName }}">{{ u.name }}</div>
+                  <div style="{{ styles.userEmail }}">{{ u.email }}</div>
+                </div>
+                <div style="{{ styles.roleChip }}">{{ u.role }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+
+  <div style="{{ styles.devBar }}">
+    <select style="{{ styles.devSelect }}" value="{{ screen }}" onChange="{{ onJump }}">
+      <option value="home">01 Inicio</option>
+      <option value="result">02 Resultado</option>
+      <option value="authChoice">03 Elegir modo</option>
+      <option value="login">04 Login</option>
+      <option value="register">05 Registro</option>
+      <option value="verify">06 Verificación</option>
+      <option value="report1">07 Reporte</option>
+      <option value="confirmation">08 Confirmación</option>
+      <option value="parent">09 Panel padre</option>
+      <option value="school">10 Panel colegio</option>
+    </select>
+    <button style="{{ styles.devToggle }}" onClick="{{ toggleViewport }}">{{ viewportLabel }}</button>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const C = {
+  bg: 'oklch(96% 0.013 88)',
+  surface: '#ffffff',
+  ink: 'oklch(24% 0.03 250)',
+  inkSoft: 'oklch(46% 0.02 250)',
+  inkFaint: 'oklch(62% 0.015 250)',
+  primary: 'oklch(40% 0.09 235)',
+  primaryDark: 'oklch(27% 0.07 235)',
+  primarySoft: 'oklch(92% 0.03 235)',
+  accent: 'oklch(64% 0.1 165)',
+  accentSoft: 'oklch(93% 0.035 165)',
+  line: 'oklch(90% 0.012 90)',
+  danger: 'oklch(55% 0.14 30)'
+};
+
+class Component extends DCLogic {
+  state = {
+    screen: 'home',
+    history: ['home'],
+    viewport: 'mobile',
+    searchQuery: '',
+    loginEmail: '', loginPass: '',
+    regName: '', regEmail: '', regPass: '',
+    codeDigits: ['', '', '', '', '', ''],
+    codeError: false,
+    reportPlatform: 'WhatsApp',
+    reportContact: '',
+    reportCity: '', reportCountry: '', reportDate: '',
+    reportDesc: '',
+    reportAck: false,
+    reportRef: '',
+    showEmptyParent: false,
+    schoolList: '',
+    schoolResults: null,
+  };
+
+  go = (screen) => {
+    this.setState(s => ({ screen, history: [...s.history, screen] }));
+  };
+  back = () => {
+    this.setState(s => {
+      const h = s.history.slice(0, -1);
+      return { history: h.length ? h : ['home'], screen: h.length ? h[h.length - 1] : 'home' };
+    });
+  };
+  onJump = (e) => this.go(e.target.value);
+  toggleViewport = () => this.setState(s => ({ viewport: s.viewport === 'mobile' ? 'desktop' : 'mobile' }));
+
+  onSearchChange = (e) => this.setState({ searchQuery: e.target.value });
+  doSearch = () => { if (this.state.searchQuery.trim()) this.go('result'); };
+
+  chooseAuth = (mode) => { this.go('report1'); };
+
+  onLoginEmailChange = (e) => this.setState({ loginEmail: e.target.value });
+  onLoginPassChange = (e) => this.setState({ loginPass: e.target.value });
+  doLogin = () => this.go('parent');
+
+  onRegNameChange = (e) => this.setState({ regName: e.target.value });
+  onRegEmailChange = (e) => this.setState({ regEmail: e.target.value });
+  onRegPassChange = (e) => this.setState({ regPass: e.target.value });
+  doRegister = () => this.go('verify');
+
+  handleDigit = (i, e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(-1);
+    const digits = [...this.state.codeDigits];
+    digits[i] = val;
+    this.setState({ codeDigits: digits, codeError: false });
+    if (val && e.target.nextElementSibling) e.target.nextElementSibling.focus();
+  };
+  verifyCode = () => {
+    const code = this.state.codeDigits.join('');
+    if (code.length === 6) this.go('parent');
+  };
+  resendCode = () => this.setState({ codeDigits: ['', '', '', '', '', ''], codeError: false });
+
+  onReportContactChange = (e) => this.setState({ reportContact: e.target.value });
+  onReportCityChange = (e) => this.setState({ reportCity: e.target.value });
+  onReportCountryChange = (e) => this.setState({ reportCountry: e.target.value });
+  onReportDateChange = (e) => this.setState({ reportDate: e.target.value });
+  onReportDescChange = (e) => this.setState({ reportDesc: e.target.value });
+  toggleReportAck = () => this.setState(s => ({ reportAck: !s.reportAck }));
+  submitReport = () => {
+    const ref = 'PI-' + Math.floor(100000 + Math.random() * 900000);
+    this.setState({ reportRef: ref });
+    this.go('confirmation');
+  };
+
+  toggleEmptyDemo = () => this.setState(s => ({ showEmptyParent: !s.showEmptyParent }));
+
+  onSchoolListChange = (e) => this.setState({ schoolList: e.target.value });
+  validateSchoolList = () => {
+    const lines = this.state.schoolList.split('\n').map(l => l.trim()).filter(Boolean);
+    const source = lines.length ? lines : ['+57 300 123 4567', '@usuario_ejemplo', '+57 315 555 0000'];
+    const results = source.map((contact, i) => {
+      const count = i === 0 ? 4 : (i === 2 ? 1 : 0);
+      return { contact, count, label: count > 0 ? count + ' reportes registrados' : 'Sin coincidencias' };
+    });
+    this.setState({ schoolResults: results });
+  };
+
+  renderVals() {
+    const s = this.state;
+    const isDesktop = s.viewport === 'desktop';
+
+    const styles = {};
+
+    styles.outer = {
+      minHeight: '100vh', width: '100%', background: C.bg,
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: isDesktop ? '32px 16px 100px' : '16px 12px 100px',
+      fontFamily: "'Plus Jakarta Sans', sans-serif", color: C.ink,
+    };
+
+    styles.stage = {
+      width: '100%', maxWidth: isDesktop ? '1200px' : '420px',
+      background: C.surface, borderRadius: isDesktop ? '24px' : '28px',
+      overflow: 'hidden', boxShadow: '0 20px 60px -20px rgba(30,45,60,0.25), 0 2px 12px rgba(30,45,60,0.08)',
+      minHeight: isDesktop ? '760px' : '780px',
+      border: `1px solid ${C.line}`,
+      transition: 'max-width 0.35s ease',
+    };
+
+    // ---- Home hero ----
+    styles.heroWrap = {
+      position: 'relative', overflow: 'hidden', minHeight: isDesktop ? '760px' : '780px',
+      background: `linear-gradient(150deg, ${C.primaryDark} 0%, ${C.primary} 55%, oklch(58% 0.1 175) 100%)`,
+      display: 'flex', flexDirection: 'column', padding: isDesktop ? '28px 56px' : '20px 20px',
+    };
+    styles.blob1 = { position: 'absolute', width: '360px', height: '360px', borderRadius: '50%', top: '-120px', left: '-100px', background: 'radial-gradient(circle, rgba(255,255,255,0.16), transparent 70%)', animation: 'drift1 14s ease-in-out infinite', filter: 'blur(2px)' };
+    styles.blob2 = { position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', bottom: '-100px', right: '-80px', background: 'radial-gradient(circle, oklch(70% 0.11 165 / 0.35), transparent 70%)', animation: 'drift2 18s ease-in-out infinite', filter: 'blur(2px)' };
+    styles.blob3 = { position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', top: '40%', right: '10%', background: 'radial-gradient(circle, rgba(255,255,255,0.10), transparent 70%)', animation: 'drift3 11s ease-in-out infinite' };
+
+    styles.heroTop = { position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' };
+    styles.brandRow = { display: 'flex', alignItems: 'center', gap: '10px' };
+    styles.shieldMark = { width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(255,255,255,0.9)' };
+    styles.brandName = { fontWeight: 800, fontSize: '17px', color: '#fff', letterSpacing: '-0.01em' };
+    styles.authRow = { display: 'flex', alignItems: 'center', gap: '8px' };
+    styles.linkGhostLight = { background: 'none', border: 'none', color: 'rgba(255,255,255,0.85)', fontWeight: 600, fontSize: '14px', cursor: 'pointer', padding: '10px 6px' };
+    styles.btnLight = { background: 'rgba(255,255,255,0.95)', color: C.primaryDark, border: 'none', borderRadius: '999px', padding: '10px 18px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' };
+
+    styles.heroCenter = { position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '14px', padding: isDesktop ? '40px 0' : '32px 0', maxWidth: isDesktop ? '640px' : 'none' };
+    styles.heroEyebrow = { color: 'oklch(85% 0.05 165)', fontWeight: 700, fontSize: '13px', letterSpacing: '0.06em', textTransform: 'uppercase' };
+    styles.heroTitle = { color: '#fff', fontSize: isDesktop ? '44px' : '32px', fontWeight: 800, margin: '4px 0 2px', letterSpacing: '-0.02em', lineHeight: 1.08 };
+    styles.heroSub = { color: 'rgba(255,255,255,0.85)', fontSize: '16px', lineHeight: 1.55, margin: '0 0 12px', maxWidth: '480px' };
+
+    styles.searchCard = { background: 'rgba(255,255,255,0.16)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.35)', borderRadius: '20px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '520px' };
+    styles.searchLabel = { color: 'rgba(255,255,255,0.9)', fontSize: '13px', fontWeight: 600 };
+    styles.searchRow = { display: 'flex', gap: '8px' };
+    styles.searchInput = { flex: 1, minWidth: 0, height: '52px', borderRadius: '14px', border: 'none', padding: '0 16px', fontSize: '16px', background: 'rgba(255,255,255,0.95)', color: C.ink, outline: 'none' };
+    styles.searchBtn = { height: '52px', padding: '0 22px', borderRadius: '14px', border: 'none', background: C.accent, color: C.primaryDark, fontWeight: 700, fontSize: '15px', cursor: 'pointer', whiteSpace: 'nowrap' };
+    styles.searchHint = { color: 'rgba(255,255,255,0.7)', fontSize: '12.5px' };
+
+    styles.heroBottomLinks = { position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center', paddingTop: '8px' };
+    styles.dotSep = { color: 'rgba(255,255,255,0.4)' };
+
+    // ---- generic page ----
+    styles.page = { display: 'flex', flexDirection: 'column', minHeight: isDesktop ? '760px' : '780px' };
+    styles.topBar = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isDesktop ? '20px 40px' : '16px 16px', borderBottom: `1px solid ${C.line}` };
+    styles.backBtn = { background: 'none', border: 'none', color: C.primary, fontWeight: 700, fontSize: '15px', cursor: 'pointer', padding: '8px' };
+    styles.topBarTitle = { fontWeight: 800, fontSize: '16px', color: C.ink };
+    styles.topBarSpacer = { width: '56px' };
+    styles.content = { flex: 1, padding: isDesktop ? '32px 40px 40px' : '20px 18px 32px', display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: isDesktop ? '640px' : 'none', width: '100%', margin: '0 auto', animation: 'floatUp 0.4s ease' };
+
+    styles.sectionTitle = { fontWeight: 800, fontSize: '15px', color: C.ink, marginTop: '4px' };
+    styles.sectionTitleSpaced = { fontWeight: 800, fontSize: '15px', color: C.ink, marginTop: '20px' };
+    styles.plainP = { fontSize: '15px', color: C.inkSoft, lineHeight: 1.6, margin: 0 };
+    styles.plainPMuted = { fontSize: '14px', color: C.inkFaint, lineHeight: 1.6, margin: '-6px 0 4px' };
+
+    // result screen
+    styles.resultHeadCard = { background: C.primarySoft, borderRadius: '18px', padding: '20px' };
+    styles.resultQuery = { fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: 500, color: C.primaryDark };
+    styles.resultCount = { fontSize: '14px', color: C.inkSoft, marginTop: '4px' };
+    styles.noticeBanner = { background: C.accentSoft, borderRadius: '14px', padding: '14px 16px', fontSize: '13.5px', color: 'oklch(35% 0.05 165)', lineHeight: 1.55 };
+
+    styles.glassCard = { background: 'oklch(98% 0.008 90)', border: `1px solid ${C.line}`, borderRadius: '18px', padding: '18px' };
+    styles.barChartRow = { display: 'flex', gap: '18px', alignItems: 'flex-end', height: '110px', marginTop: '12px', justifyContent: 'space-around' };
+    styles.barChartRowFlat = { display: 'flex', gap: '14px', alignItems: 'flex-end', height: '70px', marginTop: '10px' };
+
+    const maxCity = 2;
+    const cityData = [
+      { city: 'Bogotá', count: 2 }, { city: 'Medellín', count: 1 }, { city: 'Cali', count: 1 }, { city: 'Barranquilla', count: 0 }
+    ].map(c => ({ ...c, barStyle: { width: '34px', height: (14 + (c.count / maxCity) * 70) + 'px', background: c.count ? C.primary : C.line, borderRadius: '8px 8px 4px 4px' } }));
+
+    const monthData = [
+      { month: 'Abr', count: 1 }, { month: 'May', count: 0 }, { month: 'Jun', count: 2 }, { month: 'Jul', count: 1 }
+    ].map(m => ({ ...m, barStyle: { flex: 1, height: (8 + m.count * 18) + 'px', background: C.accent, borderRadius: '6px', opacity: m.count ? 1 : 0.25 } }));
+
+    styles.barCol = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' };
+    styles.barValue = { fontSize: '12px', fontWeight: 700, color: C.inkSoft };
+    styles.barLabel = { fontSize: '11.5px', color: C.inkFaint };
+    styles.barColSmall = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flex: 1 };
+    styles.barLabelSmall = { fontSize: '11px', color: C.inkFaint };
+
+    styles.reportCard = { border: `1px solid ${C.line}`, borderRadius: '16px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '6px' };
+    styles.reportCardTop = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+    styles.chip = { background: C.primarySoft, color: C.primaryDark, fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px' };
+    styles.reportDate = { fontSize: '12.5px', color: C.inkFaint };
+    styles.reportCity = { fontSize: '13.5px', color: C.inkSoft, fontWeight: 600 };
+    styles.reportExcerpt = { fontSize: '14px', color: C.ink, lineHeight: 1.5 };
+
+    styles.btnPrimaryWide = { width: '100%', height: '54px', borderRadius: '16px', border: 'none', background: C.primary, color: '#fff', fontWeight: 700, fontSize: '16px', cursor: 'pointer', opacity: 1 };
+    styles.linkGhost = { background: 'none', border: 'none', color: C.primary, fontWeight: 600, fontSize: '14px', cursor: 'pointer', alignSelf: 'flex-start', padding: '4px 0' };
+    styles.linkInline = { background: 'none', border: 'none', color: C.primary, fontWeight: 700, fontSize: '14px', cursor: 'pointer', padding: 0, textDecoration: 'underline' };
+    styles.switchRow = { fontSize: '14px', color: C.inkSoft, textAlign: 'center' };
+
+    styles.officialBlock = { background: 'oklch(97% 0.01 90)', border: `1px solid ${C.line}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '10px' };
+    styles.officialTitle = { fontWeight: 800, fontSize: '14.5px', color: C.ink };
+    styles.officialSub = { fontSize: '13px', color: C.inkSoft, marginBottom: '4px' };
+    styles.officialItem = { borderTop: `1px solid ${C.line}`, paddingTop: '10px' };
+    styles.officialName = { fontWeight: 700, fontSize: '14px', color: C.primaryDark };
+    styles.officialDesc = { fontSize: '13px', color: C.inkSoft, marginTop: '2px', lineHeight: 1.5 };
+
+    // auth choice
+    styles.optionCard = { textAlign: 'left', background: '#fff', border: `1.5px solid ${C.line}`, borderRadius: '18px', padding: '18px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px' };
+    styles.optionTitle = { fontWeight: 800, fontSize: '15.5px', color: C.ink };
+    styles.optionDesc = { fontSize: '13.5px', color: C.inkSoft };
+
+    // forms
+    styles.formField = { display: 'flex', flexDirection: 'column', gap: '6px' };
+    styles.label = { fontSize: '13.5px', fontWeight: 700, color: C.inkSoft };
+    styles.input = { height: '52px', borderRadius: '14px', border: `1.5px solid ${C.line}`, padding: '0 16px', fontSize: '16px', color: C.ink, outline: 'none', background: '#fff' };
+    styles.textarea = { minHeight: '120px', borderRadius: '14px', border: `1.5px solid ${C.line}`, padding: '14px 16px', fontSize: '15px', color: C.ink, outline: 'none', resize: 'vertical', fontFamily: 'inherit', background: '#fff' };
+    styles.charCount = { fontSize: '12px', color: C.inkFaint, textAlign: 'right' };
+
+    // verify
+    styles.codeRow = { display: 'flex', gap: '10px', justifyContent: 'center' };
+    styles.codeInput = { width: '44px', height: '56px', textAlign: 'center', fontSize: '22px', fontWeight: 700, borderRadius: '12px', border: `1.5px solid ${C.line}`, color: C.ink, outline: 'none' };
+    styles.errorText = { color: C.danger, fontSize: '13px', textAlign: 'center' };
+
+    // report steps
+    styles.progressTrack = { height: '4px', background: C.line, margin: isDesktop ? '0 40px' : '0 16px' };
+    const stepNum = { report1: 1, report2: 2, report3: 3, report4: 4 }[s.screen] || 1;
+    styles.progressFill = { height: '100%', width: (stepNum * 25) + '%', background: C.accent, borderRadius: '4px', transition: 'width 0.3s ease' };
+    styles.stepLabel = { fontSize: '12.5px', fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.05em' };
+    styles.stepTitle = { fontSize: '22px', fontWeight: 800, color: C.ink, margin: '0 0 4px' };
+    styles.chipGrid = { display: 'flex', flexWrap: 'wrap', gap: '8px' };
+
+    const platformList = ['WhatsApp', 'Instagram', 'TikTok', 'Roblox', 'Discord', 'Otro'];
+    const platforms = platformList.map(label => ({
+      label,
+      onSelect: () => this.setState({ reportPlatform: label }),
+      chipStyle: {
+        padding: '10px 16px', borderRadius: '999px', border: `1.5px solid ${label === s.reportPlatform ? C.primary : C.line}`,
+        background: label === s.reportPlatform ? C.primarySoft : '#fff', color: label === s.reportPlatform ? C.primaryDark : C.inkSoft,
+        fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+      }
+    }));
+
+    styles.reviewCard = { border: `1px solid ${C.line}`, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' };
+    styles.reviewRow = { display: 'flex', justifyContent: 'space-between', fontSize: '14px' };
+    styles.reviewKey = { color: C.inkFaint };
+    styles.reviewVal = { color: C.ink, fontWeight: 700 };
+    styles.reviewDesc = { fontSize: '13.5px', color: C.inkSoft, lineHeight: 1.5, borderTop: `1px solid ${C.line}`, paddingTop: '10px' };
+    styles.checkRow = { display: 'flex', gap: '10px', fontSize: '13.5px', color: C.inkSoft, alignItems: 'flex-start', lineHeight: 1.5 };
+    styles.checkbox = { marginTop: '3px', width: '18px', height: '18px', flexShrink: 0 };
+
+    // confirmation
+    styles.confirmWrap = { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '10px', padding: '40px 0' };
+    styles.confirmMark = { width: '64px', height: '64px', borderRadius: '20px', background: C.accentSoft, border: `2px solid ${C.accent}`, marginBottom: '6px' };
+    styles.confirmTitle = { fontSize: '21px', fontWeight: 800, color: C.ink, margin: 0 };
+    styles.confirmSub = { fontSize: '14.5px', color: C.inkSoft, lineHeight: 1.6, margin: '0 0 12px' };
+
+    // parent panel
+    styles.emptyToggleBtn = { background: 'none', border: `1px solid ${C.line}`, borderRadius: '999px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, color: C.inkSoft, cursor: 'pointer' };
+    styles.myReportCard = { border: `1px solid ${C.line}`, borderRadius: '16px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '4px' };
+    styles.myReportTop = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+    styles.myReportContact = { fontFamily: "'DM Mono', monospace", fontSize: '14px', color: C.ink, fontWeight: 500 };
+    styles.myReportMeta = { fontSize: '12.5px', color: C.inkFaint };
+
+    styles.emptyState = { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '10px', padding: '48px 12px' };
+    styles.emptyMark = { width: '56px', height: '56px', borderRadius: '18px', background: C.primarySoft };
+    styles.emptyTitle = { fontSize: '17px', fontWeight: 800, color: C.ink };
+    styles.emptySub = { fontSize: '14px', color: C.inkSoft, lineHeight: 1.6, marginBottom: '8px' };
+
+    const statusMap = {
+      'Recibido': { bg: C.primarySoft, fg: C.primaryDark },
+      'En revisión': { bg: 'oklch(93% 0.03 85)', fg: 'oklch(45% 0.06 70)' },
+      'Compartido con autoridades': { bg: C.accentSoft, fg: 'oklch(38% 0.06 165)' },
+    };
+    const mkStatus = (status) => ({ padding: '4px 10px', borderRadius: '999px', fontSize: '11.5px', fontWeight: 700, background: statusMap[status].bg, color: statusMap[status].fg });
+    const myReports = [
+      { platform: 'WhatsApp', contact: '+57 300 123 4567', city: 'Bogotá', date: '02 jul 2026', status: 'En revisión' },
+      { platform: 'Instagram', contact: '@cuenta_ejemplo', city: 'Medellín', date: '28 jun 2026', status: 'Recibido' },
+      { platform: 'Roblox', contact: 'usuario_roblox22', city: 'Cali', date: '14 jun 2026', status: 'Compartido con autoridades' },
+    ].map(r => ({ ...r, statusStyle: mkStatus(r.status) }));
+
+    // school
+    styles.schoolWrap = { display: 'flex', minHeight: isDesktop ? '760px' : '780px' };
+    styles.sidebar = { width: '230px', background: C.primaryDark, color: '#fff', padding: '24px 18px', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 };
+    styles.sidebarBrand = { fontWeight: 800, fontSize: '15px', marginBottom: '2px' };
+    styles.sidebarSchool = { fontSize: '12.5px', color: 'rgba(255,255,255,0.65)', marginBottom: '16px' };
+    styles.sidebarItem = { background: 'none', border: 'none', color: 'rgba(255,255,255,0.75)', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' };
+    styles.sidebarItemActive = { background: 'rgba(255,255,255,0.14)', border: 'none', color: '#fff', textAlign: 'left', padding: '10px 12px', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' };
+    styles.schoolMain = { flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 };
+
+    styles.schoolRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: `1px solid ${C.line}`, borderRadius: '12px', padding: '12px 14px' };
+    styles.schoolRowContact = { fontFamily: "'DM Mono', monospace", fontSize: '14px', color: C.ink };
+
+    const schoolResults = s.schoolResults ? s.schoolResults.map(r => ({
+      ...r,
+      badgeStyle: { fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '999px', background: r.count > 0 ? C.primarySoft : C.accentSoft, color: r.count > 0 ? C.primaryDark : 'oklch(38% 0.06 165)' }
+    })) : null;
+
+    styles.userRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: `1px solid ${C.line}`, borderRadius: '12px', padding: '12px 14px' };
+    styles.userName = { fontSize: '14px', fontWeight: 700, color: C.ink };
+    styles.userEmail = { fontSize: '12.5px', color: C.inkFaint };
+    styles.roleChip = { fontSize: '12px', fontWeight: 700, color: C.inkSoft, background: C.line, padding: '4px 10px', borderRadius: '999px' };
+
+    const schoolUsers = [
+      { name: 'Laura Restrepo', email: 'laura.restrepo@sanrafael.edu.co', role: 'Administrador' },
+      { name: 'Carlos Peña', email: 'carlos.pena@sanrafael.edu.co', role: 'Consulta' },
+      { name: 'Ana Torres', email: 'ana.torres@sanrafael.edu.co', role: 'Consulta' },
+    ];
+
+    // dev bar
+    styles.devBar = { position: 'fixed', bottom: '18px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', background: 'rgba(20,24,30,0.9)', backdropFilter: 'blur(10px)', padding: '8px', borderRadius: '999px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' };
+    styles.devSelect = { background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '999px', padding: '8px 12px', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer' };
+    styles.devToggle = { background: C.accent, color: C.primaryDark, border: 'none', borderRadius: '999px', padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' };
+
+    const codeDigits = s.codeDigits.map((val, i) => ({ val, onChange: (e) => this.handleDigit(i, e) }));
+
+    return {
+      screen: s.screen, styles, isDesktop, isReportScreen: s.screen.startsWith('report'),
+      searchQuery: s.searchQuery, searchDisabled: !s.searchQuery.trim(),
+      onSearchChange: this.onSearchChange, doSearch: this.doSearch,
+      go: this.go, back: this.back, onJump: this.onJump, toggleViewport: this.toggleViewport,
+      viewportLabel: isDesktop ? '💻 Escritorio' : '📱 Móvil',
+      chooseAuth: this.chooseAuth,
+      loginEmail: s.loginEmail, loginPass: s.loginPass, onLoginEmailChange: this.onLoginEmailChange, onLoginPassChange: this.onLoginPassChange, doLogin: this.doLogin,
+      regName: s.regName, regEmail: s.regEmail || 'tucorreo@ejemplo.com', regPass: s.regPass, onRegNameChange: this.onRegNameChange, onRegEmailChange: this.onRegEmailChange, onRegPassChange: this.onRegPassChange, doRegister: this.doRegister,
+      codeDigits, codeComplete: s.codeDigits.join('').length === 6, codeError: s.codeError, verifyCode: this.verifyCode, resendCode: this.resendCode,
+      resultData: {
+        phone: s.searchQuery.trim() || '+57 300 123 4567',
+        totalReports: 4,
+        byCity: cityData,
+        byMonth: monthData,
+        reports: [
+          { platform: 'WhatsApp', date: '02 jul 2026', city: 'Bogotá', country: 'Colombia', excerpt: 'Contactó a mi hija por WhatsApp diciendo ser compañero de colegio; insistió en seguir hablando por privado.' },
+          { platform: 'WhatsApp', date: '19 jun 2026', city: 'Bogotá', country: 'Colombia', excerpt: 'Pidió fotos personales a un adolescente haciéndose pasar por reclutador de modelaje.' },
+          { platform: 'Instagram', date: '30 may 2026', city: 'Medellín', country: 'Colombia', excerpt: 'Envió mensajes repetidos a un menor ofreciendo regalos por videollamada.' },
+          { platform: 'Roblox', date: '11 abr 2026', city: 'Cali', country: 'Colombia', excerpt: 'Invitó a un menor a un chat externo fuera de la plataforma del juego.' },
+        ],
+      },
+      platforms,
+      reportContact: s.reportContact, onReportContactChange: this.onReportContactChange,
+      reportCity: s.reportCity, reportCountry: s.reportCountry, reportDate: s.reportDate,
+      onReportCityChange: this.onReportCityChange, onReportCountryChange: this.onReportCountryChange, onReportDateChange: this.onReportDateChange,
+      reportDesc: s.reportDesc, reportDescCount: s.reportDesc.length, onReportDescChange: this.onReportDescChange,
+      reportPlatformLabel: s.reportPlatform, reportAck: s.reportAck, toggleReportAck: this.toggleReportAck, submitReport: this.submitReport,
+      reportRef: s.reportRef || 'PI-482913',
+      showEmptyParent: s.showEmptyParent, toggleEmptyDemo: this.toggleEmptyDemo,
+      emptyToggleLabel: s.showEmptyParent ? 'Ver con reportes' : 'Ver vacío',
+      myReports,
+      schoolList: s.schoolList, onSchoolListChange: this.onSchoolListChange, validateSchoolList: this.validateSchoolList,
+      schoolResults, schoolUsers,
+    };
+  }
+}
+
+</script>
+</body>
+</html>
