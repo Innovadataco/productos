@@ -209,7 +209,7 @@ export async function POST(request: Request) {
             }
         }
 
-        console.error("[PROCESAR] Error procesando reporte", { reporteId, errorType: error instanceof Error ? error.name : "Unknown", errMsg });
+        console.error("[PROCESAR] Error procesando reporte", { reporteId, errorType: error instanceof Error ? error.name : "Unknown" });
         return NextResponse.json(
             { error: { message: errMsg, code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
             { status: 500 }
