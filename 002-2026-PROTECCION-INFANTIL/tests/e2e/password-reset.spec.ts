@@ -84,7 +84,7 @@ test.describe("Restablecimiento de contraseña", () => {
 
         await registrarUsuario(page, existente, "TestPass123", "Existente");
 
-        let respuestaExistente: Record<string, unknown> | null = null;
+        let respuestaExistente: { message?: string; emailSent?: boolean } | null = null;
         await page.route("**/api/auth/recuperar/solicitar", async (route) => {
             const response = await route.fetch();
             respuestaExistente = await response.json();
@@ -98,7 +98,7 @@ test.describe("Restablecimiento de contraseña", () => {
 
         await page.unroute("**/api/auth/recuperar/solicitar");
 
-        let respuestaNoExistente: Record<string, unknown> | null = null;
+        let respuestaNoExistente: { message?: string; emailSent?: boolean } | null = null;
         await page.route("**/api/auth/recuperar/solicitar", async (route) => {
             const response = await route.fetch();
             respuestaNoExistente = await response.json();
@@ -110,7 +110,9 @@ test.describe("Restablecimiento de contraseña", () => {
         await page.getByRole("button", { name: "Enviar enlace de recuperación" }).click();
         await expect(page.getByText("Si el email está registrado")).toBeVisible();
 
-        expect(respuestaExistente?.message).toBe(respuestaNoExistente?.message);
-        expect(respuestaExistente?.emailSent).not.toBe(respuestaNoExistente?.emailSent);
+        const a = respuestaExistente as { message?: string; emailSent?: boolean } | null;
+        const b = respuestaNoExistente as { message?: string; emailSent?: boolean } | null;
+        expect(a?.message).toBe(b?.message);
+        expect(a?.emailSent).not.toBe(b?.emailSent);
     });
 });

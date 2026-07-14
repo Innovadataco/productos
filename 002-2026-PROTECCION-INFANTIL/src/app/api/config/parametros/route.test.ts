@@ -32,7 +32,7 @@ describe("GET /api/config/parametros", () => {
     });
 
     it("requires authentication", async () => {
-        const res = await GET();
+        const res = await GET(new Request("http://localhost/api/config/parametros"));
         expect(res.status).toBe(401);
     });
 });

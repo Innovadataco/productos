@@ -404,3 +404,25 @@ Con el módulo `02-reportes-comunitarios` funcionalmente completo (Fases 1-8 + P
    - Consolidar nombres de fases en `tasks.md` (hay dos "Phase 8").
 
 **Recomendación de prioridad:** empezar por la cobertura E2E del panel administrador (`004-panel-admin`), ya que es el flujo de corrección/auditoría que complementa la anonimización automática recién integrada.
+
+## Deudas Técnicas Cerradas en este Ciclo
+
+### 1. TypeScript estricto limpio
+- `src/app/api/config/parametros/route.test.ts`: `GET()` ahora recibe un `Request` válido.
+- `tests/e2e/password-reset.spec.ts`: tipos explícitos para respuestas interceptadas.
+- `tests/e2e/reportes.spec.ts`: uso correcto de `APIRequestContext` en helpers.
+- Resultado: `npx tsc --noEmit` pasa sin errores.
+
+### 2. Sanitización de logs
+- `src/app/api/reportes/procesar/route.ts`: el log de error ya no incluye el mensaje completo de Ollama; solo reporta `reporteId` y `errorType`.
+- `scripts/worker-reportes.mjs`: logs de error del worker reemplazan el body/detalle por `<redactado>`, evitando filtrar PII o textos de reportes.
+
+### 3. Visibilidad pública tras anonimización admin
+- Se extrajo `actualizarVisibilidadPublica` a `src/lib/visibility.ts`.
+- `src/app/api/admin/reportes/[id]/anonimizar/route.ts` ahora llama a la función tras anonimizar, de modo que el identificador pueda volverse público si cumple umbral/ratio.
+- `src/app/api/reportes/procesar/route.ts` reutiliza la misma función.
+
+### 4. Código muerto eliminado
+- Eliminado `src/lib/dataset.ts` (la corrección admin escribe directamente en `DatasetEntrenamiento`).
+
+---

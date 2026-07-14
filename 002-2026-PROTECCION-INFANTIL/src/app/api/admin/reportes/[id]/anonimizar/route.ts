@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { auditAnonimizacion } from "@/lib/audit";
 import { generarEmbedding } from "@/lib/ai/embedder";
+import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
 
@@ -93,6 +94,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             console.error("[ANONIMIZAR] Embedding falló (no crítico):", msg);
             // No fallamos la anonimización; el embedding se puede regenerar después
         }
+
+        // Actualizar visibilidad pública del identificador tras clasificar
+        await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
 
         // Registrar auditoría (solo metadata, nunca texto)
         await auditAnonimizacion({

@@ -82,9 +82,8 @@ async function start() {
             const latencia = Date.now() - startMs;
 
             if (!res.ok) {
-                const err = await res.text();
-                console.error(`[WORKER] ERROR reporte=${reporteId} status=${res.status} latencia=${latencia}ms intento=${retryCount + 1} error=${err}`);
-                throw new Error(`HTTP ${res.status}: ${err}`);
+                console.error(`[WORKER] ERROR reporte=${reporteId} status=${res.status} latencia=${latencia}ms intento=${retryCount + 1} error=<redactado>`);
+                throw new Error(`HTTP ${res.status}: worker processing failed`);
             }
 
             const data = await res.json();
@@ -93,7 +92,7 @@ async function start() {
         } catch (err) {
             const latencia = Date.now() - startMs;
             const msg = err instanceof Error ? err.message : "Error desconocido";
-            console.error(`[WORKER] ERROR reporte=${reporteId} latencia=${latencia}ms intento=${retryCount + 1} error=${msg}`);
+            console.error(`[WORKER] ERROR reporte=${reporteId} latencia=${latencia}ms intento=${retryCount + 1} error=<redactado>`);
             throw err;
         }
     });

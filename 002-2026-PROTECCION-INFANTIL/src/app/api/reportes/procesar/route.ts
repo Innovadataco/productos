@@ -5,6 +5,7 @@ import { generarEmbedding } from "@/lib/ai/embedder";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { requireEnv } from "@/lib/env";
 import { ERROR_CODES } from "@/lib/errors";
+import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import type { EstadoReporte } from "@prisma/client";
 
 const ESTADOS_FINALES = new Set([
@@ -156,7 +157,7 @@ export async function POST(request: Request) {
 
         // Actualizar IdentificadorReportado (solo si está clasificado o corregido)
         if (estadoFinal === "CLASIFICADO" || estadoFinal === "CORREGIDO") {
-            await actualizarVisibilidad(reporte.identificador, reporte.plataformaId);
+            await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
         }
 
         return NextResponse.json({
@@ -186,7 +187,7 @@ export async function POST(request: Request) {
             }
         }
 
-        console.error("[PROCESAR] Error:", errMsg);
+        console.error("[PROCESAR] Error procesando reporte", { reporteId, errorType: error instanceof Error ? error.name : "Unknown" });
         return NextResponse.json(
             { error: { message: errMsg, code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
             { status: 500 }
@@ -194,31 +195,3 @@ export async function POST(request: Request) {
     }
 }
 
-async function actualizarVisibilidad(identificador: string, plataformaId: string) {
-    const paramUmbral = await prisma.parametroSistema.findUnique({
-        where: { clave: "visibility.report_threshold" },
-    });
-    const paramRatio = await prisma.parametroSistema.findUnique({
-        where: { clave: "visibility.min_authenticated_ratio" },
-    });
-
-    const umbral = parseInt(paramUmbral?.valor || "3", 10);
-    const minRatio = parseFloat(paramRatio?.valor || "0.5");
-
-    const agregado = await prisma.identificadorReportado.findUnique({
-        where: { identificador_plataformaId: { identificador, plataformaId } },
-    });
-
-    if (!agregado) return;
-
-    const ratioAutenticados = agregado.totalReportes > 0
-        ? agregado.reportesAutenticados / agregado.totalReportes
-        : 0;
-
-    const esVisible = agregado.totalReportes >= umbral && ratioAutenticados >= minRatio;
-
-    await prisma.identificadorReportado.update({
-        where: { id: agregado.id },
-        data: { esVisiblePublicamente: esVisible },
-    });
-}

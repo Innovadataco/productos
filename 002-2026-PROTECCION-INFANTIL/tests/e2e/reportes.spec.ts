@@ -1,7 +1,7 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 
 async function registrarUsuario(
-    request: ReturnType<typeof test.request.newContext>,
+    request: APIRequestContext,
     email: string,
     password: string,
     nombre: string
@@ -30,7 +30,7 @@ async function registrarUsuario(
     expect(login.status()).toBe(200);
 }
 
-async function obtenerColombiaBogota(request: ReturnType<typeof test.request.newContext>) {
+async function obtenerColombiaBogota(request: APIRequestContext) {
     const paisesRes = await request.get("/api/paises");
     const paisesBody = await paisesRes.json();
     const colombia = paisesBody.paises.find((p: { nombre: string }) => p.nombre === "Colombia");
