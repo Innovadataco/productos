@@ -112,6 +112,21 @@ src/
 
 **Structure Decision**: Single project (Next.js App Router). La estructura sigue las convenciones del proyecto existente: páginas en `app/`, componentes en `components/`, utilidades en `lib/`.
 
+## Constitution Check (Post-Design)
+
+| Gate | Status | Justification |
+|------|--------|---------------|
+| Sin multimedia (§1.2) | ✅ PASS | FR-021 intacto; no cambios en inputs |
+| Presunción de inocencia (§1.3) | ✅ PASS | Lenguaje estadístico; "Otra ciudad/plataforma" no implica culpabilidad |
+| Canales oficiales visibles (§1.1) | ✅ PASS | Sin cambios en CanalesOficiales |
+| Cookie httpOnly (§6.1) | ✅ PASS | Sin cambios en auth |
+| No NextAuth.js (§2.1) | ✅ PASS | Auth manual intacto |
+| Tailwind único (§7.3) | ✅ PASS | Sin nuevas dependencias UI |
+| Mobile-first (§7.3) | ✅ PASS | Cascada responsive con Select + input libre |
+| Catálogos globales sin tenantId (§4.5) | ✅ PASS | `Pais` y `Ciudad` son catálogos globales; no llevan `tenantId` |
+| Prisma migrate (no db push) (§2.1) | ✅ PASS | Migración `add_pais_ciudad` via `prisma migrate dev` |
+| Solo texto — sin multimedia (§1.2) | ✅ PASS | Los nuevos endpoints devuelven solo texto JSON |
+
 ## Complexity Tracking
 
 > No violations requiring justification. All decisions align with constitution.

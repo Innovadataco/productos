@@ -77,6 +77,38 @@
 - `next/font` optimiza automáticamente las fuentes (subset, preload, sin layout shift).
 - Constitución §7.3 permite Tailwind como única fuente de estilos; `next/font` es parte de Next.js.
 
+## Decision: Entidades Pais y Ciudad — catálogos globales con relación a Reporte
+
+**Decision**: Crear `Pais` y `Ciudad` como catálogos globales (sin `tenantId`). Reporte guarda **ambos**: FKs (`paisId`, `ciudadId`) para consultas agregadas consistentes, y strings (`pais`, `ciudad`) para preservar texto exacto del usuario y compatibilidad con reportes existentes.
+
+**Rationale**:
+- Los catálogos geográficos son globales por naturaleza; no varían por tenant (constitución §4.5).
+- FKs permiten joins eficientes para distribución por ciudad/país en consulta pública.
+- Strings preservan el valor exacto cuando el usuario elige "Otra ciudad" (FK null).
+- Reportes existentes quedan compatibles (FKs null, strings intactos).
+
+**Alternatives considered**:
+- Reemplazar strings por FKs obligatorios → RECHAZADO: rompe compatibilidad con reportes existentes y no soporta "Otra ciudad".
+- Solo strings sin FKs → RECHAZADO: imposible hacer joins agregados consistentes para distribución geográfica.
+
+## Decision: Plataforma "Otra" — mapeo a clave "otro" + campo libre
+
+**Decision**: Cuando el usuario selecciona "Otra" plataforma, `plataformaId` apunta a la fila con `clave = "otro"` y `otraPlataforma` (nuevo campo en Reporte) guarda el nombre escrito.
+
+**Rationale**:
+- Mantiene la integridad referencial (siempre hay un `plataformaId` válido).
+- El campo libre permite flexibilidad sin crear plataformas dinámicas en BD.
+- El backend puede procesar "otro" como categoría genérica en clasificación IA.
+
+## Decision: Seed de Latinoamérica — no exhaustivo
+
+**Decision**: ~18 países, ~8-10 ciudades principales por país (capitales + ciudades grandes). No es exhaustivo.
+
+**Rationale**:
+- El alcance del producto es Latinoamérica; seed debe cubrir el 80% de casos de uso.
+- "Otra ciudad" cubre el 20% restante sin necesidad de mantener un catálogo exhaustivo.
+- Menor tiempo de migración y seed.
+
 ## Unknowns Resolutions
 
 | Unknown | Resolution |
@@ -84,3 +116,5 @@
 | Prototipo usa framework DCLogic propietario | Adaptar visualmente a Tailwind; no copiar código |
 | Endpoint GET /api/reportes/mis-reportes no existe | Crear como parte del plan técnico (FR-020) |
 | Estado "REQUIERE_ANONIMIZACION" en UI de padre | Mapear a "En revisión de privacidad" en el frontend |
+| ¿Cómo almacenar "Otra" plataforma? | `plataformaId` → clave "otro", `otraPlataforma` → texto libre |
+| ¿FK o string para país/ciudad? | Ambos: FKs para joins, strings para compatibilidad y "Otra" |

@@ -148,6 +148,92 @@
 | CORREGIDO | Procesado |
 | DUPLICADO | Vinculado a reporte existente |
 
+### NEW: GET /api/plataformas
+
+**Query**: `?activas=true` (opcional, default true)
+
+**Response 200**:
+```json
+{
+  "plataformas": [
+    { "id": "cmr...", "clave": "whatsapp", "nombre": "WhatsApp", "categoria": "mensajeria" },
+    { "id": "cmr...", "clave": "roblox", "nombre": "Roblox", "categoria": "juego" },
+    { "id": "cmr...", "clave": "minecraft", "nombre": "Minecraft", "categoria": "juego" },
+    { "id": "cmr...", "clave": "otro", "nombre": "Otra", "categoria": "otro" }
+  ]
+}
+```
+
+**Reglas**:
+- Solo plataformas con `esActivo = true`
+- Ordenadas alfabéticamente por `nombre`
+- `"otro"` siempre incluido al final
+
+---
+
+### NEW: GET /api/paises
+
+**Response 200**:
+```json
+{
+  "paises": [
+    { "id": "cmr...", "codigo": "CO", "nombre": "Colombia" },
+    { "id": "cmr...", "codigo": "MX", "nombre": "México" }
+  ]
+}
+```
+
+**Reglas**:
+- Solo países con `esActivo = true`
+- Ordenados alfabéticamente por `nombre`
+
+---
+
+### NEW: GET /api/ciudades
+
+**Query**: `?paisId={paisId}` (requerido)
+
+**Response 200**:
+```json
+{
+  "ciudades": [
+    { "id": "cmr...", "nombre": "Bogotá", "paisId": "cmr..." },
+    { "id": "cmr...", "nombre": "Medellín", "paisId": "cmr..." }
+  ]
+}
+```
+
+**Response 400**: Falta `paisId`
+
+**Reglas**:
+- Solo ciudades del país solicitado con `esActivo = true`
+- Ordenadas alfabéticamente por `nombre`
+- Incluye una ciudad virtual `"Otra ciudad o municipio"` con `id = "otra"` al final
+
+---
+
+### POST /api/reportes (ampliado)
+
+**Request** (campos nuevos opcionales):
+```json
+{
+  "identificador": "+573001234567",
+  "plataforma": "whatsapp",
+  "otraPlataforma": "Signal",
+  "texto": "Descripción...",
+  "fechaIncidente": "2026-07-10T14:30:00Z",
+  "ciudad": "Bogotá",
+  "pais": "Colombia",
+  "ciudadId": "cmr...",
+  "paisId": "cmr..."
+}
+```
+
+**Reglas de mapeo**:
+- Si `plataforma === "otro"`, `otraPlataforma` es obligatorio y se guarda en `Reporte.otraPlataforma`
+- Si `ciudadId` es `"otra"` o no se envía, se usa el string `ciudad` (texto libre)
+- `fechaIncidente` debe ser ≤ hoy (validación Zod en backend)
+
 ## State Mapping (Frontend-only)
 
 No expone nuevas APIs al exterior; consume las existentes.

@@ -1,107 +1,147 @@
 # Data Model: Frontend Público y Flujo de Reporte
 
-**Date**: 2026-07-13
+**Date**: 2026-07-14
 **Feature**: specs/003-frontend-publico/spec.md
 
-## Frontend State Entities
+## Entities
 
-### ConsultaFormState
-Estado del formulario de consulta en la página de inicio.
+### Pais (Catálogo global)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| identificador | string | Número, nick o usuario a consultar |
-| plataforma | string | Clave de plataforma seleccionada |
-| isLoading | boolean | Indicador de carga |
-| error | string \| null | Mensaje de error |
-| resultado | ConsultaResultado \| null | Respuesta del backend |
+Catálogo de países. Es un catálogo global: no lleva `tenantId` (constitución §4.5).
 
-### ReporteWizardState
-Estado del wizard de 4 pasos para crear un reporte.
+| Field | Type | Constraints | Notes |
+|-------|------|-------------|-------|
+| id | String (CUID) | PK | |
+| codigo | String | Unique | ISO 3166-1 alpha-2, ej: `"CO"`, `"MX"` |
+| nombre | String | | Ej: `"Colombia"` |
+| esActivo | Boolean | Default: true | Soft-delete |
+| creadoEn | DateTime | Default: now() | |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| step | 1 \| 2 \| 3 \| 4 | Paso actual del wizard |
-| plataforma | string | Clave de plataforma seleccionada |
-| ciudad | string | Ciudad del incidente |
-| pais | string | País del incidente |
-| fechaIncidente | string (ISO date) | Fecha del incidente |
-| texto | string | Descripción de la conducta (20-5000 chars) |
-| esAnonimo | boolean | Modo de reporte |
-| confirmacionChecked | boolean | Checkbox de confirmación legal |
-| isSubmitting | boolean | Enviando al backend |
-| numeroSeguimiento | string \| null | Número asignado tras envío |
+**Indexes**: `@@index([codigo])`, `@@index([esActivo])`
 
-### AuthState
-Estado de autenticación del usuario.
+**Relations**:
+- `ciudades`: `Ciudad[]` (1:N)
+- `reportes`: `Reporte[]` (1:N, via `paisId`)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| user | { id, email, nombre, rol } \| null | Datos del usuario autenticado |
-| isLoading | boolean | Verificando sesión |
-| isAuthenticated | boolean | Sesión activa |
+---
 
-## Backend Entities Consumed (read-only from frontend)
+### Ciudad (Catálogo global)
 
-### ConsultaResultado
-Respuesta de `GET /api/consulta`.
+Catálogo de ciudades por país. Es un catálogo global: no lleva `tenantId`.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| identificador | string | Identificador consultado |
-| plataforma | string | Nombre de plataforma |
-| tieneReportes | boolean | Si supera umbral |
-| totalReportes | number | Conteo total |
-| reportesAutenticados | number | Conteo autenticados |
-| reportesAnonimos | number | Conteo anónimos |
-| ultimoReporte | string (ISO) \| null | Fecha del último reporte |
-| distribucion | { porCiudad, porPais, porMes } | Estadísticas agregadas |
+| Field | Type | Constraints | Notes |
+|-------|------|-------------|-------|
+| id | String (CUID) | PK | |
+| nombre | String | | Ej: `"Bogotá"` |
+| paisId | String | FK → Pais.id | |
+| esActivo | Boolean | Default: true | Soft-delete |
+| creadoEn | DateTime | Default: now() | |
 
-### MisReporteItem
-Elemento de la lista del panel "Mis reportes". **NO incluye textoOriginal ni PII**.
+**Indexes**: `@@index([paisId])`, `@@index([esActivo])`
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string | ID del reporte |
-| identificador | string | Número/nick reportado |
-| plataforma | string | Nombre de plataforma |
-| estado | EstadoReporte | Estado técnico |
-| estadoVisual | string | Texto amigable para UI |
-| creadoEn | string (ISO) | Fecha de creación |
-| esAnonimo | boolean | Si fue reporte anónimo |
+**Relations**:
+- `pais`: `Pais` (N:1)
+- `reportes`: `Reporte[]` (1:N, via `ciudadId`)
 
-### SeguimientoResultado
-Respuesta de `GET /api/reportes/seguimiento/[numero]`.
+---
 
-| Field | Type | Description |
-|-------|------|-------------|
-| numeroSeguimiento | string | Número consultado |
-| estado | EstadoReporte | Estado técnico |
-| mensaje | string | Descripción amigable del estado |
-| creadoEn | string (ISO) | Fecha de creación |
+### Reporte (Ampliación)
 
-## State Transitions
+**Decision**: Reporte guarda **ambos**: FKs (`paisId`, `ciudadId`) para consultas agregadas consistentes, y strings (`pais`, `ciudad`) para preservar el texto exacto del usuario. Los FKs son opcionales para compatibilidad con reportes existentes y para el caso "Otra ciudad" (FK null, string con el texto libre).
 
-### Reporte Wizard
+Nuevos campos:
+
+| Field | Type | Constraints | Notes |
+|-------|------|-------------|-------|
+| paisId | String? | FK → Pais.id | Null cuando el usuario escribió "Otro" o es reporte antiguo |
+| ciudadId | String? | FK → Ciudad.id | Null cuando el usuario escribió "Otra" o es reporte antiguo |
+| otraPlataforma | String? | | Nombre escrito cuando seleccionó "Otra" plataforma |
+
+**Relations**:
+- `pais`: `Pais?` @relation(fields: [paisId], references: [id])
+- `ciudad`: `Ciudad?` @relation(fields: [ciudadId], references: [id])
+
+**Plataforma "Otra"**: Cuando el usuario selecciona "Otra" en el frontend, `plataformaId` apunta a la fila de Plataforma con `clave = "otro"`, y `otraPlataforma` guarda el nombre escrito por el usuario.
+
+---
+
+### Plataforma (existente, ampliado)
+
+La entidad `Plataforma` ya existe en el schema. Se amplía con seed para incluir Roblox y Minecraft.
+
+Campos existentes:
+- `id`, `clave` (unique), `nombre`, `categoria`, `esActiva`, `creadoEn`
+
+**Seed mínimo**: whatsapp, instagram, facebook, tiktok, twitter, discord, telegram, snapchat, youtube, twitch, **roblox**, **minecraft**, **otro**
+
+---
+
+## Schema Prisma (fragmentos nuevos)
+
+```prisma
+model Pais {
+  id       String   @id @default(cuid())
+  codigo   String   @unique
+  nombre   String
+  esActivo Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  ciudades Ciudad[]
+  reportes Reporte[]
+
+  @@index([codigo])
+  @@index([esActivo])
+}
+
+model Ciudad {
+  id       String   @id @default(cuid())
+  nombre   String
+  paisId   String
+  esActivo Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  pais     Pais     @relation(fields: [paisId], references: [id])
+  reportes Reporte[]
+
+  @@index([paisId])
+  @@index([esActivo])
+}
 ```
-PASO 1 (plataforma) → PASO 2 (ubicación/fecha) → PASO 3 (descripción) → PASO 4 (revisar/confirmar) → ENVIADO → CONFIRMACIÓN
+
+Ampliación de `Reporte`:
+```prisma
+model Reporte {
+  // ... campos existentes ...
+  paisId         String?
+  ciudadId       String?
+  otraPlataforma String?
+  // ciudad y pais (String) ya existen
+
+  pais           Pais?       @relation(fields: [paisId], references: [id])
+  ciudad         Ciudad?     @relation(fields: [ciudadId], references: [id])
+  // plataforma ya existe
+}
 ```
 
-Validaciones por paso:
-- Paso 1: plataforma no vacía
-- Paso 2: ciudad, país, fechaIncidente válidos
-- Paso 3: texto entre 20-5000 caracteres
-- Paso 4: confirmacionChecked === true
+---
 
-### Auth
-```
-NO_AUTH → REGISTRO → VERIFICACIÓN → LOGIN → AUTENTICADO → LOGOUT → NO_AUTH
-```
+## Seed: Latinoamérica (alcance)
 
-## New Backend Endpoint Required
+**Principio**: No exhaustivo. Capitales + principales ciudades por país. ~8-10 ciudades por país máximo.
 
-### GET /api/reportes/mis-reportes
-Lista los reportes del usuario autenticado. No expone textoOriginal ni PII de terceros.
+**Países** (18):
+Colombia (CO), México (MX), Argentina (AR), Brasil (BR), Chile (CL), Perú (PE), Ecuador (EC), Venezuela (VE), Uruguay (UY), Paraguay (PY), Bolivia (BO), Costa Rica (CR), Panamá (PA), Guatemala (GT), República Dominicana (DO), Honduras (HN), El Salvador (SV), Nicaragua (NI).
 
-**Query params**: `page`, `pageSize` (paginación estándar)
-**Response**: `{ items: MisReporteItem[], pagination: PaginationMeta }`
+**Ejemplo — Colombia**:
+Bogotá (capital), Medellín, Cali, Barranquilla, Cartagena, Bucaramanga, Pereira, Manizales, Cúcuta, Ibagué.
+
+**Ejemplo — México**:
+Ciudad de México (capital), Guadalajara, Monterrey, Puebla, Tijuana, León, Cancún, Mérida.
+
+---
+
+## Migration Strategy
+
+1. `npx prisma migrate dev --name add_pais_ciudad` (no `db push` — constitución §2.1)
+2. Seed con `prisma/seed.ts` o script dedicado
+3. Reportes existentes: `paisId` y `ciudadId` quedan null; siguen funcionando con strings
