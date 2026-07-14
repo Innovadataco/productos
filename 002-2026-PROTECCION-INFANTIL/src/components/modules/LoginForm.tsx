@@ -1,49 +1,50 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
-export default function LoginForm() {
+export function LoginForm({ onLogin }: { onLogin: (email: string, password: string) => Promise<void> }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
-    const router = useRouter();
 
-    async function handleSubmit(e: React.FormEvent) {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError("");
-        const res = await fetch("/api/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-        });
-        if (res.ok) {
-            router.push("/dashboard");
-        } else {
-            const data = await res.json();
-            setError(data.error?.message || "Error de autenticación");
+        if (!email.trim() || !password) {
+            setError("Ingresa email y contraseña.");
+            return;
         }
-    }
+        setError("");
+        setIsLoading(true);
+        try {
+            await onLogin(email.trim(), password);
+        } catch {
+            setError("Credenciales incorrectas.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
-        <form onSubmit={handleSubmit}>
-            <h2>Iniciar Sesión</h2>
-            {error && <p style={{ color: "red" }}>{error}</p>}
-            <input
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+                label="Correo electrónico"
                 type="email"
-                placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
             />
-            <input
+            <Input
+                label="Contraseña"
                 type="password"
-                placeholder="Contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
             />
-            <button type="submit">Entrar</button>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <Button type="submit" isLoading={isLoading} className="w-full">
+                Iniciar sesión
+            </Button>
         </form>
     );
 }
