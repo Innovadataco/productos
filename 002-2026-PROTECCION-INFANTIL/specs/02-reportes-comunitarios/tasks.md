@@ -74,12 +74,12 @@
 - [ ] T025 [P] [US2] Crear `src/lib/ai/classifier.ts`: prompt unificado que solicita categoría, confianza, contiene_pii, pii_detectada
 - [ ] T026 [P] [US2] Crear `src/lib/ai/embedder.ts`: generar embeddings con nomic-embed-text via Ollama
 - [ ] T027 [US2] Crear `src/lib/queue.ts`: cliente pg-boss para publicar jobs en cola `reporte-procesamiento`
-- [ ] T028 [US2] Implementar `POST /api/reportes/procesar/route.ts`: endpoint interno para worker (clasificación + embedding + actualización de estado)
-- [ ] T029 [US2] Completar `scripts/worker-reportes.mjs`: consumir jobs de pg-boss, llamar a classifier + embedder, manejar errores con backoff
-- [ ] T030 [US2] Implementar lógica de estados en worker: PENDIENTE → PROCESANDO → CLASIFICADO / REVISION_MANUAL / POSIBLE_SPAM / REQUIERE_ANONIMIZACION
-- [ ] T031 [US2] Implementar detección de similitud para duplicados anónimos: embeddings + pgvector (cosine ≥ 0.92)
-- [ ] T032 [US2] Crear `src/lib/ai/similarity.ts`: búsqueda de reportes similares por embedding en PostgreSQL
-- [ ] T033 [US2] Implementar actualización de `IdentificadorReportado` tras clasificación: conteos, visibilidad condicional
+- [x] T028 [US2] Implementar `POST /api/reportes/procesar/route.ts`: endpoint interno para worker (clasificación + embedding + actualización de estado)
+- [x] T029 [US2] Completar `scripts/worker-reportes.mjs`: consumir jobs de pg-boss, llamar a classifier + embedder, manejar errores con backoff
+- [x] T030 [US2] Implementar lógica de estados en worker: PENDIENTE → PROCESANDO → CLASIFICADO / REVISION_MANUAL / POSIBLE_SPAM / REQUIERE_ANONIMIZACION
+- [x] T031 [US2] Implementar detección de similitud para duplicados anónimos: embeddings + pgvector (cosine ≥ 0.92)
+- [x] T032 [US2] Crear `src/lib/ai/similarity.ts`: búsqueda de reportes similares por embedding en PostgreSQL
+- [x] T033 [US2] Implementar actualización de `IdentificadorReportado` tras clasificación: conteos, visibilidad condicional
 
 **Checkpoint**: Escenario B pasa (worker clasifica reporte), build compila, tests pasan
 
@@ -113,7 +113,7 @@
 ### Implementation for User Story 4
 
 - [ ] T040 [US4] Completar deduplicación autenticada: verificar en T019 funciona con respuesta 429 correcta
-- [ ] T041 [US4] Completar deduplicación anónima: verificar en T031 detecta similitud ≥ 0.92 y marca como posible duplicado
+- [x] T041 [US4] Completar deduplicación anónima: verificar en T031 detecta similitud ≥ 0.92 y marca DUPLICADO con reporteOrigenId
 - [ ] T042 [US4] Implementar filtrado de spam en worker: texto < 20 chars o sin contenido semántico → POSIBLE_SPAM
 - [ ] T043 [US4] Crear `src/lib/duplicate-detector.ts`: consolidar lógica de deduplicación autenticada + anónima
 

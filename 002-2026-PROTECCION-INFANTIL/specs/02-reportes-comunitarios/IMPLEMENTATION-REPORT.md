@@ -15,7 +15,7 @@
 | Fase 3 | US1 — Crear reporte | ✅ | `src/app/api/reportes/route.ts`, `src/lib/validators.ts` |
 | Fase 4 | US2 — Clasificación IA | ✅ | `src/lib/ai/`, `src/app/api/reportes/procesar/route.ts`, `scripts/worker-reportes.mjs` |
 | Fase 5 | US3 — Panel admin correcciones | ✅ | `src/app/api/admin/reportes-revision/route.ts`, `src/app/api/admin/correcciones/route.ts` |
-| Fase 6 | US4 — Duplicados y spam | ✅ | `src/lib/rate-limit.ts` (actualizado en `src/app/api/reportes/route.ts`) |
+| Fase 6 | US4 — Duplicados y spam | ✅ | `src/lib/ai/similarity.ts`, `src/app/api/reportes/procesar/route.ts` |
 | Fase 7 | US5 — Visibilidad condicional | ✅ | `src/app/api/consulta/route.ts` |
 | Fase 8 | Ranking/Scoring de identificadores reportados | ✅ | `src/lib/ranking.ts`, `src/app/api/consulta/route.ts`, `src/components/modules/ConsultaResultado.tsx` |
 | Fase 9 | Polish (UI, tests, anonimización, métricas) | ⚠️ PARCIAL | Ver sección "Fase 9 (Polish)" |
@@ -47,6 +47,25 @@
 - ✅ Soporte anónimo y autenticado
 - ✅ Integración con cola pg-boss para procesamiento asíncrono
 - ✅ Página `/reportar` con formulario y canales oficiales de denuncia
+
+### Fase 3 — Deduplicación Anónima por Similitud de Embeddings
+
+**Estado: COMPLETADA.**
+
+Se agregó detección de reportes anónimos casi idénticos sobre el mismo identificador usando embeddings de `nomic-embed-text` almacenados en PostgreSQL con `pgvector`.
+
+#### Items completados
+- [x] Crear `src/lib/ai/similarity.ts`: búsqueda del reporte más similar por distancia coseno (`1 - cosine_distance`) para el mismo `identificador` + `plataformaId`.
+- [x] Excluir de la búsqueda reportes en estados `DUPLICADO` o `POSIBLE_SPAM` y el reporte actual.
+- [x] Reordenar `POST /api/reportes/procesar`: generar embedding primero, detectar duplicado, y solo si no hay duplicado continuar con clasificación/anonimización.
+- [x] Marcar reportes duplicados con estado `DUPLICADO` y poblar `Reporte.reporteOrigenId` apuntando al reporte original.
+- [x] Umbral configurable vía parámetro `reportes.duplicate.similarity_threshold` (default `0.92`).
+- [x] Tests unitarios/integración en `src/lib/ai/similarity.test.ts` y `src/app/api/reportes/procesar/route.test.ts`.
+
+#### Archivos clave
+- `src/lib/ai/similarity.ts` — búsqueda por similitud sobre `EmbeddingReporte`.
+- `src/lib/ai/similarity.test.ts` — tests de similitud y exclusión de estados/identificadores.
+- `src/app/api/reportes/procesar/route.ts` — flujo embedding → deduplicación → clasificación.
 
 ### US2 — Clasificación IA
 - ✅ Cliente Ollama con logging de métricas (latencia, tokens)
@@ -237,45 +256,47 @@ Route (app)
 
  RUN  v3.2.7 /Users/idc/productos/INNOVADATACO/002-2026-PROTECCION-INFANTIL
 
- ✓ src/lib/auth.test.ts (1 test) 582ms
- ✓ src/app/api/reportes/route.test.ts (9 tests) 557ms
- ✓ src/app/api/consulta/route.test.ts (4 tests) 298ms
- ✓ src/app/api/reportes/procesar/route.test.ts (6 tests) 98ms
- ✓ src/lib/ranking.test.ts (6 tests) 65ms
- ✓ src/app/api/config/parametros/route.test.ts (2 tests) 28ms
+ ✓ src/lib/ai/similarity.test.ts (3 tests) 77ms
+ ✓ src/lib/auth.test.ts (1 test) 583ms
+ ✓ src/app/api/reportes/route.test.ts (9 tests) 550ms
+ ✓ src/app/api/consulta/route.test.ts (4 tests) 289ms
+ ✓ src/app/api/reportes/seguimiento/[numero]/route.test.ts (2 tests) 260ms
+ ✓ src/app/api/reportes/procesar/route.test.ts (7 tests) 121ms
+ ✓ src/lib/ranking.test.ts (6 tests) 60ms
+ ✓ src/app/api/config/parametros/route.test.ts (2 tests) 31ms
  ✓ src/lib/errors.test.ts (3 tests) 1ms
  ✓ src/lib/config-cache.test.ts (4 tests) 1ms
 
- Test Files  9 passed (9)
-      Tests  37 passed (37)
-   Start at  16:05:41
-   Duration  3.52s (transform 68ms, setup 15ms, collect 278ms, tests 1.65s, environment 871ms, prepare 163ms)
+ Test Files  10 passed (10)
+      Tests  41 passed (41)
+   Start at  17:28:33
+   Duration  4.30s (transform 76ms, setup 17ms, collect 345ms, tests 1.98s, environment 1.10s, prepare 204ms)
 ```
 
-**Resultado:** ✅ 8/8 test files passed, 35/35 tests passed.
+**Resultado:** ✅ 10/10 test files passed, 41/41 tests passed.
 
 ### `npm run test:e2e`
 
 ```text
 > 002-2026-proteccion-infantil@0.1.0 test:e2e
-> playwright test --project=chromium --workers=1
+> playwright test
 
 
-Running 7 tests using 1 worker
+Running 9 tests using 7 workers
 
-[1/7] [chromium] › tests/e2e/auth.spec.ts:4:9 › Flujo de autenticación › un usuario puede registrarse y luego iniciar sesión
-[2/7] [chromium] › tests/e2e/auth.spec.ts:54:9 › Flujo de autenticación › un usuario no-admin no puede acceder al panel admin
-[3/7] [chromium] › tests/e2e/consulta.spec.ts:57:9 › Consulta pública de identificador › usuario anónimo ve información agregada básica
-[4/7] [chromium] › tests/e2e/consulta.spec.ts:74:9 › Consulta pública de identificador › usuario autenticado ve score y nivel de riesgo
-[5/7] [chromium] › tests/e2e/password-reset.spec.ts:26:9 › Restablecimiento de contraseña › un usuario puede recuperar su contraseña y luego iniciar sesión
-[6/7] [chromium] › tests/e2e/password-reset.spec.ts:74:9 › Restablecimiento de contraseña › un token inválido o expirado muestra mensaje de error
-[7/7] [chromium] › tests/e2e/password-reset.spec.ts:81:9 › Restablecimiento de contraseña › la respuesta de solicitud no revela si el email existe
+[1/9] [chromium] › tests/e2e/auth.spec.ts:4:9 › Flujo de autenticación › un usuario puede registrarse y luego iniciar sesión
+[2/9] [chromium] › tests/e2e/password-reset.spec.ts:26:9 › Restablecimiento de contraseña › un usuario puede recuperar su contraseña y luego iniciar sesión
+[3/9] [chromium] › tests/e2e/auth.spec.ts:54:9 › Flujo de autenticación › un usuario no-admin no puede acceder al panel admin
+[4/9] [chromium] › tests/e2e/password-reset.spec.ts:81:9 › Restablecimiento de contraseña › la respuesta de solicitud no revela si el email existe
+[5/9] [chromium] › tests/e2e/password-reset.spec.ts:74:9 › Restablecimiento de contraseña › un token inválido o expirado muestra mensaje de error
+[6/9] [chromium] › tests/e2e/consulta.spec.ts:57:9 › Consulta pública de identificador › usuario anónimo ve información agregada básica
+[7/9] [chromium] › tests/e2e/consulta.spec.ts:74:9 › Consulta pública de identificador › usuario autenticado ve score y nivel de riesgo
 [8/9] [chromium] › tests/e2e/reportes.spec.ts:48:9 › Flujo de reportes comunitarios › usuario anónimo crea un reporte desde el wizard y recibe número de seguimiento
-[9/9] [chromium] › tests/e2e/reportes.spec.ts:74:9 › Flujo de reportes comunitarios › usuario autenticado no puede reportar el mismo identificador dos veces en 30 días
-  9 passed (16.3s)
+[9/9] [chromium] › tests/e2e/reportes.spec.ts:81:9 › Flujo de reportes comunitarios › usuario autenticado no puede reportar el mismo identificador dos veces en 30 días
+  9 passed (9.7s)
 ```
 
-**Resultado:** ✅ 7/7 tests E2E passed (incluye consulta pública anónima y autenticada).
+**Resultado:** ✅ 9/9 tests E2E passed.
 
 ---
 
@@ -284,11 +305,11 @@ Running 7 tests using 1 worker
 ### 1. `git log --oneline -5`
 
 ```text
-f338b02 (HEAD -> feature/001-scaffolding, origin/feature/001-scaffolding) docs(002-02): Reporte de implementación completo — Fases 1-7
-385ef33 impl(002-02) Fase 7: US5 — visibilidad condicional, consulta pública con umbral
-96f9508 impl(002-02) Fase 6: US4 — rate limiting, detección spam, deduplicación
-23bcc0c impl(002-02) Fase 5: US3 — panel admin, correcciones, dataset entrenamiento
-b3181b2 impl(002-02) Fase 4: US2 — clasificación IA completa (Ollama, PII, embeddings, worker, cola)
+5bbd9c6 (HEAD -> feature/001-scaffolding, origin/feature/001-scaffolding) feat: Fase 3 deduplicación anónima por similitud de embeddings
+5cad517 impl(002-02) Fase 2: seguimiento enriquecido y mis-reportes con score
+b5a4ff7 impl(002-02) Fase 2: seguimiento enriquecido y mis-reportes
+7df0ca0 impl(002-02) Fase 1: cierre de deudas técnicas rojas
+048d8aa impl(002-02) anonimización automática de PII y dataset de entrenamiento
 ```
 
 ### 2. `git status`

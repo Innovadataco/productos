@@ -121,6 +121,26 @@ curl -X POST http://localhost:5005/api/reportes \
 
 ---
 
+### Escenario H: Deduplicación anónima por similitud de embeddings
+
+```bash
+# Primer reporte anónimo sobre el identificador
+curl -X POST http://localhost:5005/api/reportes \
+  -H "Content-Type: application/json" \
+  -d '{"identificador":"+57300ANONDUP","plataforma":"whatsapp","texto":"Este número contactó a mi hija ofreciendo regalos.","fechaIncidente":"2026-07-10T14:30:00Z","ciudad":"Bogotá","pais":"Colombia"}'
+
+# Esperar a que el worker procese el primer reporte
+
+# Segundo reporte anónimo casi idéntico sobre el mismo identificador
+curl -X POST http://localhost:5005/api/reportes \
+  -H "Content-Type: application/json" \
+  -d '{"identificador":"+57300ANONDUP","plataforma":"whatsapp","texto":"Este número contactó a mi hija ofreciendo regalos de nuevo.","fechaIncidente":"2026-07-10T15:00:00Z","ciudad":"Bogotá","pais":"Colombia"}'
+```
+
+**Esperado**: El segundo reporte es procesado por el worker y su estado pasa a `DUPLICADO`; `reporteOrigenId` apunta al primer reporte.
+
+---
+
 ### Escenario G: Anonimización automática de PII
 
 ```bash
