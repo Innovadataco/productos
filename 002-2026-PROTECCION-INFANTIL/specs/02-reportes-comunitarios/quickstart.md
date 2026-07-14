@@ -121,7 +121,7 @@ curl -X POST http://localhost:5005/api/reportes \
 
 ---
 
-### Escenario G: Anonimización de PII
+### Escenario G: Anonimización automática de PII
 
 ```bash
 # Crear reporte con PII en el texto
@@ -129,24 +129,18 @@ curl -X POST http://localhost:5005/api/reportes \
   -H "Content-Type: application/json" \
   -d '{"identificador":"+57300PII01","plataforma":"whatsapp","texto":"Mi hija María del colegio San José recibió mensajes de este número ofreciéndole regalos.","fechaIncidente":"2026-07-10T10:00:00Z","ciudad":"Bogotá","pais":"Colombia"}'
 
-# Esperar procesamiento del worker
-# Verificar que el reporte quedó en estado REQUIERE_ANONIMIZACION
-curl http://localhost:5005/api/admin/reportes?estado=REQUIERE_ANONIMIZACION \
-  -b cookies.txt
-
-# Admin anonimiza el texto
-curl -X PATCH http://localhost:5005/api/admin/reportes/[id]/anonimizar \
-  -H "Content-Type: application/json" \
-  -b cookies.txt \
-  -d '{"textoAnonimizado":"Mi hija recibió mensajes de este número ofreciéndole regalos."}'
+# El worker procesa el reporte automáticamente
+curl http://localhost:5005/api/reportes/seguimiento/RPT-PII01
 ```
 
 **Esperado**:
 - Worker detecta PII (`contienePii=true`, `piiDetectada:["María","colegio San José"]`)
-- Estado pasa a `REQUIERE_ANONIMIZACION`
-- El reporte **NO** cuenta para el umbral de visibilidad pública
-- Admin anonimiza → estado pasa a `CLASIFICADO`
-- `textoOriginal` preservado en auditoría; `texto` actualizado con versión anonimizada
+- Worker anonimiza el texto automáticamente (reemplaza nombres/colegios por etiquetas como `[NOMBRE]`, `[COLEGIO]`)
+- Estado final pasa a `CLASIFICADO`
+- `textoOriginal` se preserva en el campo `textoOriginal` del reporte
+- `texto` público queda con la versión anonimizada
+- El reporte **SÍ** cuenta para el umbral de visibilidad pública (está clasificado)
+- Si el servicio de anonimización falla, el reporte queda en `REVISION_MANUAL` con `processingError` registrado
 
 ---
 

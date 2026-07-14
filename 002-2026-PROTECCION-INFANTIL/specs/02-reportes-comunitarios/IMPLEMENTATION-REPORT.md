@@ -112,6 +112,8 @@ Se entregó un servicio de scoring configurable que enriquece la consulta públi
 - [x] Revisión de logs: se eliminaron `console.log` de códigos de verificación y tokens de recuperación; no se detectan logs que expongan textos de reportes, PII o códigos.
 - [x] Verificación de que `textoOriginal` solo se usa en endpoints admin (`/api/admin/reportes/[id]/anonimizar`) y nunca en APIs públicas ni en dataset de entrenamiento.
 - [x] Tests de integración para flujo con PII y fallo de anonimización.
+- [x] Tests E2E para creación de reporte anónimo y deduplicación autenticada (`tests/e2e/reportes.spec.ts`).
+- [x] Mejora de accesibilidad en `src/components/ui/Select.tsx`: label asociado al `<select>` vía `htmlFor`/`id`.
 
 ### Items pendientes para iteraciones futuras
 
@@ -263,7 +265,9 @@ Running 7 tests using 1 worker
 [5/7] [chromium] › tests/e2e/password-reset.spec.ts:26:9 › Restablecimiento de contraseña › un usuario puede recuperar su contraseña y luego iniciar sesión
 [6/7] [chromium] › tests/e2e/password-reset.spec.ts:74:9 › Restablecimiento de contraseña › un token inválido o expirado muestra mensaje de error
 [7/7] [chromium] › tests/e2e/password-reset.spec.ts:81:9 › Restablecimiento de contraseña › la respuesta de solicitud no revela si el email existe
-  7 passed (15.3s)
+[8/9] [chromium] › tests/e2e/reportes.spec.ts:48:9 › Flujo de reportes comunitarios › usuario anónimo crea un reporte desde el wizard y recibe número de seguimiento
+[9/9] [chromium] › tests/e2e/reportes.spec.ts:74:9 › Flujo de reportes comunitarios › usuario autenticado no puede reportar el mismo identificador dos veces en 30 días
+  9 passed (16.3s)
 ```
 
 **Resultado:** ✅ 7/7 tests E2E passed (incluye consulta pública anónima y autenticada).
@@ -313,7 +317,10 @@ no changes added to commit (use "git add" and/or "git commit -a")
 
 ## Pruebas Realizadas
 
-### Escenario A: Reporte válido
+### Escenario A: Crear reporte anónimo
+- Playwright: usuario anónimo completa el wizard en `/reportar` y recibe número de seguimiento (`RPT-XXXXXX`).
+
+### Escenario A (API): Reporte válido
 ```bash
 curl -X POST /api/reportes -d '{"identificador":"+573001234567","plataforma":"whatsapp","texto":"...","fechaIncidente":"2026-07-10T14:30:00Z","ciudad":"Bogotá","pais":"Colombia"}'
 # → HTTP 201, {reporte: {id, numeroSeguimiento, estado: "PENDIENTE"}}
@@ -327,6 +334,10 @@ curl -X POST /api/reportes -d '{"identificador":"+573001234567","plataforma":"wh
 
 ### Escenario C: Rate limiting
 - 6 reportes anónimos desde misma IP → HTTP 429 con `retryAfter`
+
+### Escenario E: Deduplicación autenticada
+- Playwright: usuario autenticado crea un reporte; segundo reporte del mismo identificador dentro de 30 días → HTTP 429 con `code: DUPLICATE_REPORT`.
+- Verificado que usuarios anónimos no se bloquean por deduplicación.
 
 ### Escenario D: Consulta pública
 - Umbral = 1, ratio = 0 → identificador visible con distribución agregada
@@ -372,11 +383,10 @@ curl -X POST /api/reportes -d '{"identificador":"+573001234567","plataforma":"wh
 
 Con el módulo `02-reportes-comunitarios` funcionalmente completo (Fases 1-8 + Polish parcial), las siguientes líneas son las más valiosas para cerrar la deuda técnica y la cobertura:
 
-1. **Cobertura E2E del flujo completo de reportes (`02-reportes-comunitarios`)**
-   - Escenario A: crear reporte anónimo desde `/reportar`.
-   - Escenario B: worker procesa el reporte y cambia estado a `CLASIFICADO` (usar bypass de worker en dev o llamar directamente a `/api/reportes/procesar`).
-   - Escenario E: deduplicación autenticada (segundo reporte igual → error de duplicado).
-   - Escenario G: reporte con PII → texto anonimizado y preservación de `textoOriginal`.
+1. **Cobertura E2E del worker con PII (`02-reportes-comunitarios`)**
+   - Escenario B: worker procesa el reporte y cambia estado a `CLASIFICADO`.
+   - Escenario G: reporte con PII se anonimiza automáticamente y queda `CLASIFICADO` con `textoOriginal` preservado.
+   - Estos flujos requieren un bypass de Ollama para E2E o confiar en que Ollama local esté corriendo; por eso están cubiertos por tests de integración con mocks en `src/app/api/reportes/procesar/route.test.ts`.
 
 2. **Cobertura E2E del panel administrador (`004-panel-admin`)**
    - Login como `ADMIN` → acceso a `/dashboard/admin`.
@@ -393,4 +403,4 @@ Con el módulo `02-reportes-comunitarios` funcionalmente completo (Fases 1-8 + P
    - Revisar warnings `MODULE_TYPELESS_PACKAGE_JSON` en build (opcional, no bloqueante).
    - Consolidar nombres de fases en `tasks.md` (hay dos "Phase 8").
 
-**Recomendación de prioridad:** empezar por la cobertura E2E del flujo de reportes (ítem 1), ya que valida el core del producto y aprovecha la anonimización recién integrada.
+**Recomendación de prioridad:** empezar por la cobertura E2E del panel administrador (`004-panel-admin`), ya que es el flujo de corrección/auditoría que complementa la anonimización automática recién integrada.

@@ -1,17 +1,23 @@
+import { useId } from "react";
+
 export function Select({
     label,
     error,
     options,
     ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string; error?: string; options: { value: string; label: string }[] }) {
+    const generatedId = useId();
+    const id = props.id || generatedId;
+
     return (
         <div className="w-full">
             {label && (
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label htmlFor={id} className="block text-sm font-medium text-slate-700 mb-1.5">
                     {label}
                 </label>
             )}
             <select
+                id={id}
                 className="w-full rounded-xl border border-slate-200 bg-white/60 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 appearance-none"
                 {...props}
             >
