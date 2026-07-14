@@ -107,7 +107,7 @@ Cualquier persona con un número de seguimiento puede consultar el estado de un 
 - **FR-004**: Los canales oficiales de denuncia (Línea 141 ICBF, CAI Virtual, Te Protejo) DEBEN ser visibles e ineludibles en toda pantalla de consulta y reporte.
 - **FR-005**: El sistema DEBE permitir elegir modo de reporte: anónimo o con cuenta autenticada.
 - **FR-006**: El flujo de nuevo reporte DEBE constar de 4 pasos guiados: plataforma → ubicación → descripción → revisar/enviar.
-- **FR-007**: El sistema DEBE validar que el texto del reporte tenga entre 20 y 2000 caracteres antes de permitir el envío.
+- **FR-007**: El sistema DEBE validar que el texto del reporte tenga entre 20 y 5000 caracteres antes de permitir el envío.
 - **FR-008**: El sistema DEBE exigir un checkbox de confirmación antes de enviar: "Entiendo que este reporte es informativo y no reemplaza una denuncia formal ante las autoridades."
 - **FR-009**: El sistema DEBE mostrar una pantalla de confirmación con el número de seguimiento (`RPT-XXXXXX`) tras enviar un reporte.
 - **FR-010**: El sistema DEBE permitir registro de nuevos padres con email, nombre y contraseña, seguido de verificación por código de 6 dígitos enviado por correo.
@@ -121,6 +121,7 @@ Cualquier persona con un número de seguimiento puede consultar el estado de un 
 - **FR-018**: Todos los formularios DEBEN cumplir accesibilidad básica: labels asociados, foco visible, contraste suficiente.
 - **FR-019**: La UI DEBE conectarse a las API routes reales existentes sin mocks: GET /api/consulta, POST /api/reportes, GET /api/reportes/seguimiento/[numero], endpoints de auth.
 - **FR-020**: El sistema DEBE implementar el endpoint GET /api/reportes/mis-reportes (o equivalente) para alimentar el panel del padre, respetando la regla de no exponer textoOriginal.
+- **FR-021**: La UI de reporte NO DEBE incluir ningún input de archivo, imagen, audio ni video. El reporte es exclusivamente texto. No existe carga ni referencia a multimedia en ninguna pantalla.
 
 ### Key Entities
 
