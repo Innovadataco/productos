@@ -14,9 +14,9 @@
 
 **Purpose**: Adaptar proyecto existente para soportar fuentes, glassmorphism, y componentes base
 
-- [ ] T001 Configurar `tailwind.config.ts`: añadir fuentes Plus Jakarta Sans + DM Mono, keyframes floatUp, paleta oklch del prototipo
-- [ ] T002 Actualizar `src/app/layout.tsx`: importar fuentes vía `next/font/google`, aplicar a body
-- [ ] T003 [P] Crear componentes base UI en `src/components/ui/`: `GlassCard.tsx`, `Input.tsx`, `Button.tsx`, `Select.tsx`
+- [x] T001 Configurar `tailwind.config.ts`: añadir fuentes Plus Jakarta Sans + DM Mono, keyframes floatUp, paleta oklch del prototipo
+- [x] T002 Actualizar `src/app/layout.tsx`: importar fuentes vía `next/font/google`, aplicar a body
+- [x] T003 [P] Crear componentes base UI en `src/components/ui/`: `GlassCard.tsx`, `Input.tsx`, `Button.tsx`, `Select.tsx`
 
 **Checkpoint**: `npm run build` pasa; fuentes cargadas sin layout shift
 
@@ -28,11 +28,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Crear `src/lib/hooks/useApi.ts`: fetch nativo con loading, error, retry; envía cookie automáticamente (`credentials: include`)
-- [ ] T005 Crear `src/lib/contexts/AuthContext.tsx`: estado de usuario autenticado, `login`, `logout`, `checkSession` (llama `GET /api/me`)
-- [ ] T006 Crear `src/components/modules/CanalesOficiales.tsx`: Línea 141, CAI Virtual, Te Protejo — visible en consulta y reporte
-- [ ] T007 [P] Crear `src/components/modules/ConsultaForm.tsx`: formulario de búsqueda con identificador + plataforma
-- [ ] T008 [P] Crear `src/components/modules/ConsultaResultado.tsx`: muestra estadísticas agregadas o mensaje neutro
+- [x] T004 Crear `src/lib/hooks/useApi.ts`: fetch nativo con loading, error, retry; envía cookie automáticamente (`credentials: include`)
+- [x] T005 Crear `src/lib/contexts/AuthContext.tsx`: estado de usuario autenticado, `login`, `logout`, `checkSession` (llama `GET /api/me`)
+- [x] T006 Crear `src/components/modules/CanalesOficiales.tsx`: Línea 141, CAI Virtual, Te Protejo — visible en consulta y reporte
+- [x] T007 [P] Crear `src/components/modules/ConsultaForm.tsx`: formulario de búsqueda con identificador + plataforma
+- [x] T008 [P] Crear `src/components/modules/ConsultaResultado.tsx`: muestra estadísticas agregadas o mensaje neutro
 
 **Checkpoint**: useApi funcional, AuthContext responde a /api/me, CanalesOficiales renderiza
 
@@ -46,10 +46,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Reemplazar `src/app/page.tsx` con página de inicio: hero + ConsultaForm + CanalesOficiales
-- [ ] T010 [US1] Integrar ConsultaResultado en `src/app/page.tsx`: conectar a `GET /api/consulta` vía useApi
-- [ ] T011 [US1] Implementar estado de carga y error en consulta (spinner, mensajes amigables)
-- [ ] T012 [US1] Responsive mobile-first: input grande, botón prominente, resultado apilado
+- [x] T009 [US1] Reemplazar `src/app/page.tsx` con página de inicio: hero + ConsultaForm + CanalesOficiales
+- [x] T010 [US1] Integrar ConsultaResultado en `src/app/page.tsx`: conectar a `GET /api/consulta` vía useApi
+- [x] T011 [US1] Implementar estado de carga y error en consulta (spinner, mensajes amigables)
+- [x] T012 [US1] Responsive mobile-first: input grande, botón prominente, resultado apilado
 
 **Checkpoint**: Escenario A pasa (consulta con/sin reportes)
 
@@ -63,14 +63,14 @@
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Crear `src/components/modules/ReporteWizard.tsx`: contenedor con state step 1-4, barra de progreso
-- [ ] T014 [P] [US2] Crear `src/components/modules/ReporteStepPlataforma.tsx`: selección de plataforma (Select con logos/nombres)
-- [ ] T015 [P] [US2] Crear `src/components/modules/ReporteStepUbicacion.tsx`: ciudad, país, fechaIncidente
-- [ ] T016 [P] [US2] Crear `src/components/modules/ReporteStepDescripcion.tsx`: textarea 20-5000 chars, contador, sin input de archivo
-- [ ] T017 [US2] Crear `src/components/modules/ReporteStepConfirmar.tsx`: resumen + checkbox obligatorio + botón enviar
-- [ ] T018 [US2] Conectar wizard a `POST /api/reportes` vía useApi; manejar 201 y 429 (duplicado)
-- [ ] T019 [US2] Crear `src/components/modules/ConfirmacionReporte.tsx`: mostrar número seguimiento, botón copiar, link a seguimiento
-- [ ] T020 [US2] Implementar `src/app/reportar/page.tsx`: renderiza ReporteWizard + CanalesOficiales
+- [x] T013 [US2] Crear `src/components/modules/ReporteWizard.tsx`: contenedor con state step 1-4, barra de progreso
+- [x] T014 [P] [US2] Crear `src/components/modules/ReporteStepPlataforma.tsx`: selección de plataforma (Select con logos/nombres)
+- [x] T015 [P] [US2] Crear `src/components/modules/ReporteStepUbicacion.tsx`: ciudad, país, fechaIncidente
+- [x] T016 [P] [US2] Crear `src/components/modules/ReporteStepDescripcion.tsx`: textarea 20-5000 chars, contador, sin input de archivo
+- [x] T017 [US2] Crear `src/components/modules/ReporteStepConfirmar.tsx`: resumen + checkbox obligatorio + botón enviar
+- [x] T018 [US2] Conectar wizard a `POST /api/reportes` vía useApi; manejar 201 y 429 (duplicado)
+- [x] T019 [US2] Crear `src/components/modules/ConfirmacionReporte.tsx`: mostrar número seguimiento, botón copiar, link a seguimiento
+- [x] T020 [US2] Implementar `src/app/reportar/page.tsx`: renderiza ReporteWizard + CanalesOficiales
 
 **Checkpoint**: Escenario B pasa (wizard completo, confirmación con RPT-XXXXXX)
 
