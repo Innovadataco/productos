@@ -18,7 +18,7 @@
 | Fase 6 | US4 — Duplicados y spam | ✅ | `src/lib/rate-limit.ts` (actualizado en `src/app/api/reportes/route.ts`) |
 | Fase 7 | US5 — Visibilidad condicional | ✅ | `src/app/api/consulta/route.ts` |
 | Fase 8 | Ranking/Scoring de identificadores reportados | ✅ | `src/lib/ranking.ts`, `src/app/api/consulta/route.ts`, `src/components/modules/ConsultaResultado.tsx` |
-| Fase 9 | Polish (UI, tests, anonimización, métricas) | ❌ NO EJECUTADA | Ver sección "Fase 9 (Polish)" |
+| Fase 9 | Polish (UI, tests, anonimización, métricas) | ⚠️ PARCIAL | Ver sección "Fase 9 (Polish)" |
 
 ---
 
@@ -103,12 +103,19 @@ Se entregó un servicio de scoring configurable que enriquece la consulta públi
 
 ## Fase 9 — Polish & Cross-Cutting Concerns
 
-**Estado: NO EJECUTADA.**
+**Estado: PARCIALMENTE EJECUTADA.**
+
+### Items completados
+
+- [x] Anonimización automática de PII integrada en el worker (`src/lib/ai/anonimizador.ts` → `src/app/api/reportes/procesar/route.ts`).
+- [x] Preservación de `textoOriginal` y reemplazo de `texto` por versión anonimizada.
+- [x] Revisión de logs: se eliminaron `console.log` de códigos de verificación y tokens de recuperación; no se detectan logs que expongan textos de reportes, PII o códigos.
+- [x] Verificación de que `textoOriginal` solo se usa en endpoints admin (`/api/admin/reportes/[id]/anonimizar`) y nunca en APIs públicas ni en dataset de entrenamiento.
+- [x] Tests de integración para flujo con PII y fallo de anonimización.
 
 ### Items pendientes para iteraciones futuras
 
 - [ ] UI de panel admin (tabla de reportes, filtros, acciones masivas) — parcialmente cubierto por feature `004-panel-admin`.
-- [ ] Anonimización automática de PII en textos (reemplazo de nombres, colegios, etc.).
 - [ ] Métricas y dashboard del worker (cola estancada, latencia promedio, tasa de éxito/fracaso).
 
 ---
@@ -226,19 +233,19 @@ Route (app)
  ✓ src/lib/auth.test.ts (1 test) 582ms
  ✓ src/app/api/reportes/route.test.ts (9 tests) 557ms
  ✓ src/app/api/consulta/route.test.ts (4 tests) 298ms
- ✓ src/app/api/reportes/procesar/route.test.ts (5 tests) 96ms
- ✓ src/lib/ranking.test.ts (6 tests) 71ms
+ ✓ src/app/api/reportes/procesar/route.test.ts (6 tests) 98ms
+ ✓ src/lib/ranking.test.ts (6 tests) 65ms
  ✓ src/app/api/config/parametros/route.test.ts (2 tests) 28ms
  ✓ src/lib/errors.test.ts (3 tests) 1ms
  ✓ src/lib/config-cache.test.ts (4 tests) 1ms
 
  Test Files  8 passed (8)
-      Tests  34 passed (34)
-   Start at  15:27:01
-   Duration  3.47s (transform 65ms, setup 15ms, collect 270ms, tests 1.63s, environment 879ms, prepare 164ms)
+      Tests  35 passed (35)
+   Start at  16:05:41
+   Duration  3.52s (transform 68ms, setup 15ms, collect 278ms, tests 1.65s, environment 871ms, prepare 163ms)
 ```
 
-**Resultado:** ✅ 8/8 test files passed, 34/34 tests passed.
+**Resultado:** ✅ 8/8 test files passed, 35/35 tests passed.
 
 ### `npm run test:e2e`
 
@@ -330,6 +337,11 @@ curl -X POST /api/reportes -d '{"identificador":"+573001234567","plataforma":"wh
 - Usuario anónimo: ve total de reportes, resumen y ciudades/países
 - Usuario autenticado: además ve score, badge de riesgo, categorías agregadas y timeline
 
+### Escenario F: Anonimización automática de PII
+- Texto con nombres y colegio → clasificador detecta PII → worker anonimiza → estado `CLASIFICADO`
+- `textoOriginal` se preserva en BD; `texto` público queda con etiquetas `[NOMBRE]`, `[COLEGIO]`
+- Si el servicio de anonimización falla, el reporte queda en `REVISION_MANUAL` con `processingError`
+
 ---
 
 ## Decisiones Técnicas
@@ -341,6 +353,7 @@ curl -X POST /api/reportes -d '{"identificador":"+573001234567","plataforma":"wh
 5. **Estado `CORREGIDO`:** Unificado para cualquier corrección del admin (simplifica el flujo).
 6. **Sin fallback silencioso de embeddings:** Si Ollama falla, se lanza error explícito. El job se reintenta. Si agota reintentos, el reporte queda en `REVISION_MANUAL` con `processingError` registrado.
 7. **Ranking configurable vía `ParametroSistema`:** Pesos (`weightCount`, `weightRecency`, `weightSeverity`, `weightAuthenticated`), severidad por categoría y umbrales de riesgo se leen de la base de datos; el admin puede ajustarlos sin cambiar código. El score se normaliza a 0-100 y se limita a un máximo de 100.
+8. **Anonimización automática en el worker:** Cuando el clasificador detecta PII, el worker llama a `anonimizarTexto`, guarda el texto original en `Reporte.textoOriginal` y reemplaza `Reporte.texto` por la versión anonimizada antes de generar el embedding. Si la anonimización falla, el job reintenta y eventualmente deja el reporte en `REVISION_MANUAL`. `textoOriginal` nunca se expone en APIs públicas.
 ## Cambio Transversal: Migración de `middleware.ts` a `proxy.ts`
 
 **Motivo:** Next.js 16 deprecó la exportación por defecto de `middleware.ts`. El archivo fue renombrado a `src/proxy.ts` y se exporta explícitamente la función `proxy(request)`; la configuración del matcher se mantiene en `config`.
@@ -354,3 +367,30 @@ curl -X POST /api/reportes -d '{"identificador":"+573001234567","plataforma":"wh
 - Redirección a `/login` para páginas protegidas sin sesión; respuesta JSON 401 para APIs protegidas.
 
 **Validación:** build exitoso y tests E2E de autenticación pasan tras el cambio.
+
+## Próximos Specs / Líneas de Trabajo Recomendadas
+
+Con el módulo `02-reportes-comunitarios` funcionalmente completo (Fases 1-8 + Polish parcial), las siguientes líneas son las más valiosas para cerrar la deuda técnica y la cobertura:
+
+1. **Cobertura E2E del flujo completo de reportes (`02-reportes-comunitarios`)**
+   - Escenario A: crear reporte anónimo desde `/reportar`.
+   - Escenario B: worker procesa el reporte y cambia estado a `CLASIFICADO` (usar bypass de worker en dev o llamar directamente a `/api/reportes/procesar`).
+   - Escenario E: deduplicación autenticada (segundo reporte igual → error de duplicado).
+   - Escenario G: reporte con PII → texto anonimizado y preservación de `textoOriginal`.
+
+2. **Cobertura E2E del panel administrador (`004-panel-admin`)**
+   - Login como `ADMIN` → acceso a `/dashboard/admin`.
+   - Listar reportes pendientes, aplicar filtros.
+   - Corregir clasificación de un reporte.
+   - Anonimizar un reporte desde el panel.
+   - Validar acceso denegado para usuarios no-admin.
+
+3. **Métricas y observabilidad del worker**
+   - Endpoint `/api/admin/estadisticas` ya existe, pero faltan métricas de la cola: jobs estancados, latencia promedio, tasa de éxito/fracaso.
+   - Requiere decisiones de diseño sobre almacenamiento de métricas (posiblemente en `ParametroSistema` o tabla dedicada).
+
+4. **Limpieza de deuda menor**
+   - Revisar warnings `MODULE_TYPELESS_PACKAGE_JSON` en build (opcional, no bloqueante).
+   - Consolidar nombres de fases en `tasks.md` (hay dos "Phase 8").
+
+**Recomendación de prioridad:** empezar por la cobertura E2E del flujo de reportes (ítem 1), ya que valida el core del producto y aprovecha la anonimización recién integrada.

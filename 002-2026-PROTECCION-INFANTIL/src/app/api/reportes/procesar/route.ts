@@ -108,12 +108,38 @@ export async function POST(request: Request) {
             });
         }
 
+        // Anonimización automática de PII: preservar original y reemplazar texto
+        let textoParaEmbedding = reporte.texto;
+        let estadoFinal: EstadoReporte = clasificacion.estado;
+
+        if (clasificacion.contienePii) {
+            const textoAAnonimizar = reporte.textoOriginal ?? reporte.texto;
+            const anonimizacion = await anonimizarTexto(modeloClasificacion, textoAAnonimizar);
+
+            await prisma.reporte.update({
+                where: { id: reporteId },
+                data: {
+                    textoOriginal: textoAAnonimizar,
+                    texto: anonimizacion.textoAnonimizado,
+                },
+            });
+
+            // Reflejar PII detectada por el anonimizador en la clasificación
+            await prisma.clasificacionIA.update({
+                where: { reporteId: reporte.id },
+                data: { piiDetectada: anonimizacion.piiDetectada },
+            });
+
+            textoParaEmbedding = anonimizacion.textoAnonimizado;
+            estadoFinal = "CLASIFICADO";
+        }
+
         // Generar embedding (obligatorio — si falla, el job se reintenta)
         const paramEmbedding = await prisma.parametroSistema.findUnique({
             where: { clave: "reportes.embedding_model" },
         });
         const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
-        const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
+        const vector = await generarEmbedding(modeloEmbedding, textoParaEmbedding);
 
         const vectorStr = "[" + vector.join(",") + "]";
         const embeddingId = crypto.randomUUID();
@@ -122,20 +148,20 @@ export async function POST(request: Request) {
             VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
         `;
 
-        // Actualizar estado del reporte a resultado de la clasificación
+        // Actualizar estado del reporte a resultado final
         await prisma.reporte.update({
             where: { id: reporteId },
-            data: { estado: clasificacion.estado },
+            data: { estado: estadoFinal },
         });
 
-        // Actualizar IdentificadorReportado (solo si está clasificado o requiere anonimización)
-        if (clasificacion.estado === "CLASIFICADO" || clasificacion.estado === "CORREGIDO") {
+        // Actualizar IdentificadorReportado (solo si está clasificado o corregido)
+        if (estadoFinal === "CLASIFICADO" || estadoFinal === "CORREGIDO") {
             await actualizarVisibilidad(reporte.identificador, reporte.plataformaId);
         }
 
         return NextResponse.json({
             reporteId,
-            estado: clasificacion.estado,
+            estado: estadoFinal,
             clasificacion: {
                 categoria: clasificacion.categoria,
                 confianza: clasificacion.confianza,

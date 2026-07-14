@@ -78,7 +78,6 @@ export async function POST(request: Request) {
             const response: Record<string, unknown> = { message: MENSAJE_EXITO, emailSent };
             if (isDev) {
                 response.devToken = token;
-                console.log(`[DEV] Token de recuperación para ${email}: ${token}`);
             }
             return NextResponse.json(response, { status: 200 });
         }

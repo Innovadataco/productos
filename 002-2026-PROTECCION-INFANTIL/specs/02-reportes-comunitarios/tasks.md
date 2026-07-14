@@ -176,8 +176,8 @@
 - [x] T049 [P] Ejecutar `npm run test` — todos los tests deben pasar al 100%
 - [x] T050 Ejecutar quickstart completo (escenarios A-G) con curl real, registrar salidas literales
 - [x] T051 Actualizar `README.md` con instrucciones de Ollama, pm2 worker, y pgvector
-- [ ] T052 [P] Revisar que ningún log exponga textos de reportes, PII, o códigos de verificación
-- [ ] T053 [P] Verificar que `textoOriginal` nunca se expone en APIs públicas ni en dataset de entrenamiento
+- [x] T052 [P] Revisar que ningún log exponga textos de reportes, PII, o códigos de verificación
+- [x] T053 [P] Verificar que `textoOriginal` nunca se expone en APIs públicas ni en dataset de entrenamiento
 
 **Checkpoint**: Build OK, tests 100%, quickstart validado, reglas duras verificadas
 

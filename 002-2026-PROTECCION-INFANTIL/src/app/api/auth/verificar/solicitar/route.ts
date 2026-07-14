@@ -80,7 +80,6 @@ export async function POST(request: Request) {
         };
         if (isDev) {
             response.devCode = code;
-            console.log(`[DEV] Código de verificación para ${email}: ${code}`);
         }
 
         return NextResponse.json(response, { status: 202 });

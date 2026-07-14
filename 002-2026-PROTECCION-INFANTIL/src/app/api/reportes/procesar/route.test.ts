@@ -7,6 +7,7 @@ import type { CategoriaConducta } from "@prisma/client";
 
 const mockClasificar = vi.fn();
 const mockEmbedding = vi.fn();
+const mockAnonimizar = vi.fn();
 
 vi.mock("@/lib/ai/classifier", () => ({
     clasificarReporte: (...args: unknown[]) => mockClasificar(...args),
@@ -14,6 +15,10 @@ vi.mock("@/lib/ai/classifier", () => ({
 
 vi.mock("@/lib/ai/embedder", () => ({
     generarEmbedding: (...args: unknown[]) => mockEmbedding(...args),
+}));
+
+vi.mock("@/lib/ai/anonimizador", () => ({
+    anonimizarTexto: (...args: unknown[]) => mockAnonimizar(...args),
 }));
 
 function crearRequestProcesar(reporteId: string) {
@@ -32,6 +37,7 @@ describe("POST /api/reportes/procesar", () => {
         await crearPaisCiudad();
         mockClasificar.mockReset();
         mockEmbedding.mockReset();
+        mockAnonimizar.mockReset();
         process.env.WORKER_SECRET = "worker-secret-test";
     });
 
@@ -82,7 +88,7 @@ describe("POST /api/reportes/procesar", () => {
         expect(clasif?.categoria).toBe("OFRECIMIENTO_REGALOS");
     });
 
-    it("marca reporte con PII como REQUIERE_ANONIMIZACION", async () => {
+    it("anonimiza reporte con PII y lo clasifica", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const reporte = await prisma.reporte.create({
             data: {
@@ -107,15 +113,57 @@ describe("POST /api/reportes/procesar", () => {
             rawResponse: "{}",
             metrics: { modelo: "ornith:9b", latenciaMs: 1000 },
         });
+        mockAnonimizar.mockResolvedValue({
+            textoAnonimizado: "Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.",
+            piiDetectada: ["María", "colegio San José"],
+            metrics: { modelo: "ornith:9b", latenciaMs: 800 },
+        });
         mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
 
         const res = await POST(crearRequestProcesar(reporte.id));
         expect(res.status).toBe(200);
         const body = await res.json();
-        expect(body.estado).toBe("REQUIERE_ANONIMIZACION");
+        expect(body.estado).toBe("CLASIFICADO");
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
-        expect(actualizado?.estado).toBe("REQUIERE_ANONIMIZACION");
+        expect(actualizado?.estado).toBe("CLASIFICADO");
+        expect(actualizado?.textoOriginal).toBe("Mi hija María del colegio San José recibió mensajes.");
+        expect(actualizado?.texto).toBe("Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.");
+    });
+
+    it("guarda processingError cuando la anonimización falla", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const reporte = await prisma.reporte.create({
+            data: {
+                identificador: "+57300PIIERR",
+                plataformaId: plataforma!.id,
+                texto: "Mi hija María recibió mensajes.",
+                fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: "RPT-PIIERR",
+                estado: "PENDIENTE",
+            },
+        });
+
+        mockClasificar.mockResolvedValue({
+            categoria: "OFRECIMIENTO_REGALOS" as CategoriaConducta,
+            confianza: 0.9,
+            contienePii: true,
+            piiDetectada: ["María"],
+            estado: "REQUIERE_ANONIMIZACION",
+            rawResponse: "{}",
+            metrics: { modelo: "ornith:9b", latenciaMs: 1000 },
+        });
+        mockAnonimizar.mockRejectedValue(new Error("Ollama no disponible"));
+
+        const res = await POST(crearRequestProcesar(reporte.id));
+        expect(res.status).toBe(500);
+
+        const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
+        expect(actualizado?.estado).toBe("REVISION_MANUAL");
+        expect(actualizado?.processingError).toContain("Ollama no disponible");
     });
 
     it("no reprocesa reporte ya en estado final", async () => {
