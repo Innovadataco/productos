@@ -87,6 +87,7 @@ model Usuario {
   parametros     ParametroSistema[]
   auditLogs      AuditLog[]
   codigos        CodigoVerificacion[]
+  tokensRecuperacion TokenRecuperacion[]
   reportes       Reporte[]
   correcciones   CorreccionAdmin[]
 
@@ -110,6 +111,23 @@ model CodigoVerificacion {
 
   @@index([email])
   @@index([creadoEn])
+}
+
+model TokenRecuperacion {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String
+  expiraEn  DateTime
+  usado     Boolean  @default(false)
+  creadoEn  DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([email])
+  @@index([tokenHash])
+  @@index([expiraEn])
 }
 
 model ParametroSistema {

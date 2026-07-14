@@ -6,6 +6,7 @@ const PUBLIC_ROUTES = [
     "/",
     "/login",
     "/registro",
+    "/recuperar",
     "/reportar",
     "/seguimiento",
     "/api/auth",
