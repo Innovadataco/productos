@@ -56,13 +56,25 @@ export function AdminDashboard() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <p className="text-slate-600">Cargando dashboard...</p>;
-    if (error) return <p className="text-red-600">{error}</p>;
+    if (loading) {
+        return (
+            <div className="space-y-6" aria-busy="true" aria-label="Cargando dashboard">
+                <div className="h-8 w-48 animate-pulse rounded-lg bg-slate-200" />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-200" />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (error) return <p className="text-red-600" role="alert">{error}</p>;
     if (!data) return null;
 
     return (
-        <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+        <section className="space-y-6" aria-labelledby="dashboard-title">
+            <h1 id="dashboard-title" className="text-2xl font-bold text-slate-900">Dashboard</h1>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <MetricCard label="Reportes registrados" value={data.totales.reportes} />
@@ -75,43 +87,58 @@ export function AdminDashboard() {
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <ChartCard title="Distribución por estado">
-                    <BarChart data={data.porEstado.map((e) => ({ label: formatEstado(e.estado), value: e.count }))} />
+                    <BarChart
+                        ariaLabel="Distribución de reportes por estado"
+                        data={data.porEstado.map((e) => ({ label: formatEstado(e.estado), value: e.count }))}
+                    />
                 </ChartCard>
 
                 <ChartCard title="Distribución por categoría de conducta">
-                    <DonutChart data={data.porCategoria.map((c) => ({ label: formatCategoria(c.categoria), value: c.count }))} />
+                    <DonutChart
+                        ariaLabel="Distribución de reportes por categoría de conducta"
+                        data={data.porCategoria.map((c) => ({ label: formatCategoria(c.categoria), value: c.count }))}
+                    />
                 </ChartCard>
 
                 <ChartCard title="Distribución por plataforma">
-                    <BarChart data={data.porPlataforma.map((p) => ({ label: p.plataforma, value: p.count }))} />
+                    <BarChart
+                        ariaLabel="Distribución de reportes por plataforma"
+                        data={data.porPlataforma.map((p) => ({ label: p.plataforma, value: p.count }))}
+                    />
                 </ChartCard>
 
                 <ChartCard title="Principales ciudades">
-                    <BarChart data={data.porCiudad.map((c) => ({ label: c.ciudad, value: c.count }))} />
+                    <BarChart
+                        ariaLabel="Principales ciudades con reportes"
+                        data={data.porCiudad.map((c) => ({ label: c.ciudad, value: c.count }))}
+                    />
                 </ChartCard>
             </div>
 
             <ChartCard title="Tendencia de reportes registrados (últimos 30 días)">
-                <Sparkline data={data.tendencia.map((t) => ({ label: t.fecha, value: t.count }))} />
+                <Sparkline
+                    ariaLabel="Tendencia de reportes registrados en los últimos 30 días"
+                    data={data.tendencia.map((t) => ({ label: t.fecha, value: t.count }))}
+                />
             </ChartCard>
-        </div>
+        </section>
     );
 }
 
 function MetricCard({ label, value }: { label: string; value: number }) {
     return (
-        <div className="rounded-2xl border border-white/20 bg-white/70 p-6 backdrop-blur-lg">
+        <article className="rounded-2xl border border-white/20 bg-white/70 p-6 backdrop-blur-lg transition hover:shadow-md motion-reduce:transition-none">
             <p className="text-sm font-medium text-slate-500">{label}</p>
             <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
-        </div>
+        </article>
     );
 }
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <div className="rounded-2xl border border-white/20 bg-white/70 p-6 backdrop-blur-lg">
+        <article className="rounded-2xl border border-white/20 bg-white/70 p-6 backdrop-blur-lg">
             <h2 className="mb-4 text-lg font-semibold text-slate-900">{title}</h2>
             {children}
-        </div>
+        </article>
     );
 }

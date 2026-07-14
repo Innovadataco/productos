@@ -1,42 +1,61 @@
 "use client";
 
-export function BarChart({ data }: { data: { label: string; value: number }[] }) {
+export function BarChart({
+    data,
+    ariaLabel = "Gráfico de barras",
+}: {
+    data: { label: string; value: number }[];
+    ariaLabel?: string;
+}) {
     if (data.length === 0) return <p className="text-sm text-slate-500">Sin datos</p>;
 
     const max = Math.max(...data.map((d) => d.value), 1);
+    const chartHeight = 220;
+    const chartWidth = 400;
+    const barHeight = 24;
+    const gap = 12;
+    const leftMargin = 120;
+    const rightMargin = 48;
+    const topMargin = 16;
 
     return (
-        <svg viewBox="0 0 400 240" className="w-full h-60">
+        <svg
+            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+            className="w-full h-64"
+            role="img"
+            aria-label={ariaLabel}
+        >
+            <title>{ariaLabel}</title>
             {data.map((d, i) => {
-                const barHeight = (d.value / max) * 160;
-                const y = 180 - barHeight;
-                const x = 20 + i * (360 / data.length);
-                const width = 360 / data.length - 10;
+                const y = topMargin + i * (barHeight + gap);
+                const barWidth = ((d.value / max) * (chartWidth - leftMargin - rightMargin));
                 return (
                     <g key={i}>
+                        <text
+                            x={leftMargin - 8}
+                            y={y + barHeight / 2 + 4}
+                            textAnchor="end"
+                            className="fill-slate-600 text-[10px]"
+                        >
+                            {d.label.length > 18 ? `${d.label.slice(0, 18)}...` : d.label}
+                        </text>
                         <rect
-                            x={x}
+                            x={leftMargin}
                             y={y}
-                            width={width}
+                            width={barWidth}
                             height={barHeight}
                             fill="#3b6bff"
                             rx={4}
-                        />
+                            className="transition-all duration-300 hover:fill-primary-700"
+                        >
+                            <title>{`${d.label}: ${d.value}`}</title>
+                        </rect>
                         <text
-                            x={x + width / 2}
-                            y={y - 8}
-                            textAnchor="middle"
-                            className="fill-slate-700 text-[10px]"
+                            x={leftMargin + barWidth + 6}
+                            y={y + barHeight / 2 + 4}
+                            className="fill-slate-700 text-[10px] font-medium"
                         >
                             {d.value}
-                        </text>
-                        <text
-                            x={x + width / 2}
-                            y={200}
-                            textAnchor="middle"
-                            className="fill-slate-500 text-[9px]"
-                        >
-                            {d.label.length > 12 ? `${d.label.slice(0, 12)}...` : d.label}
                         </text>
                     </g>
                 );

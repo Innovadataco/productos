@@ -2,51 +2,72 @@
 
 const COLORS = ["#3b6bff", "#16a34a", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#64748b"];
 
-export function DonutChart({ data }: { data: { label: string; value: number }[] }) {
+export function DonutChart({
+    data,
+    ariaLabel = "Gráfico de anillo",
+}: {
+    data: { label: string; value: number }[];
+    ariaLabel?: string;
+}) {
     if (data.length === 0) return <p className="text-sm text-slate-500">Sin datos</p>;
 
     const total = data.reduce((sum, d) => sum + d.value, 0) || 1;
-    const radius = 80;
+    const radius = 70;
     const circumference = 2 * Math.PI * radius;
     let accumulated = 0;
 
     return (
-        <div className="flex flex-col items-center">
-            <svg viewBox="0 0 200 200" className="h-48 w-48">
-                <circle cx="100" cy="100" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="24" />
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-center">
+            <svg
+                viewBox="0 0 180 180"
+                className="h-40 w-40 flex-shrink-0"
+                role="img"
+                aria-label={ariaLabel}
+            >
+                <title>{ariaLabel}</title>
+                <circle cx="90" cy="90" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="20" />
                 {data.map((d, i) => {
                     const segment = (d.value / total) * circumference;
                     const offset = circumference - accumulated;
                     accumulated += segment;
+                    const percentage = Math.round((d.value / total) * 100);
                     return (
                         <circle
                             key={i}
-                            cx="100"
-                            cy="100"
+                            cx="90"
+                            cy="90"
                             r={radius}
                             fill="none"
                             stroke={COLORS[i % COLORS.length]}
-                            strokeWidth="24"
+                            strokeWidth="20"
                             strokeDasharray={`${segment} ${circumference - segment}`}
                             strokeDashoffset={offset}
-                            transform="rotate(-90 100 100)"
-                        />
+                            transform="rotate(-90 90 90)"
+                            className="transition-all duration-300 hover:opacity-80"
+                        >
+                            <title>{`${d.label}: ${d.value} (${percentage}%)`}</title>
+                        </circle>
                     );
                 })}
-                <text x="100" y="105" textAnchor="middle" className="fill-slate-800 text-lg font-bold">
+                <text x="90" y="95" textAnchor="middle" className="fill-slate-800 text-base font-bold">
                     {total}
                 </text>
             </svg>
-            <ul className="mt-2 flex flex-wrap justify-center gap-3 text-xs">
-                {data.map((d, i) => (
-                    <li key={i} className="flex items-center gap-1">
-                        <span
-                            className="inline-block h-2 w-2 rounded-full"
-                            style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                        />
-                        {d.label}: {d.value}
-                    </li>
-                ))}
+            <ul className="flex flex-col gap-1.5 text-xs" aria-label="Leyenda del gráfico">
+                {data.map((d, i) => {
+                    const percentage = Math.round((d.value / total) * 100);
+                    return (
+                        <li key={i} className="flex items-center gap-2">
+                            <span
+                                className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                            />
+                            <span className="text-slate-700">
+                                {d.label}: <span className="font-medium">{d.value}</span> ({percentage}%)
+                            </span>
+                        </li>
+                    );
+                })}
             </ul>
         </div>
     );
