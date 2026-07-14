@@ -84,13 +84,13 @@
 
 ### Implementation for User Story 3
 
-- [ ] T021 [P] [US3] Crear `src/components/modules/RegistroForm.tsx`: email, nombre, password
-- [ ] T022 [P] [US3] Crear `src/components/modules/VerificacionForm.tsx`: código 6 dígitos + password + nombre
-- [ ] T023 [P] [US3] Crear `src/components/modules/LoginForm.tsx`: email + password
-- [ ] T024 [US3] Implementar `src/app/registro/page.tsx`: RegistroForm → solicitar código → VerificacionForm
-- [ ] T025 [US3] Implementar `src/app/login/page.tsx`: LoginForm + link a registro
-- [ ] T026 [US3] Integrar AuthContext en layout: verificar sesión al cargar, mostrar nombre/logout en nav
-- [ ] T027 [US3] Conectar `POST /api/auth/login`, `POST /api/auth/verificar/solicitar`, `POST /api/auth/verificar/completar`, `POST /api/auth/logout`
+- [x] T021 [P] [US3] Crear `src/components/modules/RegistroForm.tsx`: email, nombre, password
+- [x] T022 [P] [US3] Crear `src/components/modules/VerificacionForm.tsx`: código 6 dígitos + password + nombre
+- [x] T023 [P] [US3] Crear `src/components/modules/LoginForm.tsx`: email + password
+- [x] T024 [US3] Implementar `src/app/registro/page.tsx`: RegistroForm → solicitar código → VerificacionForm
+- [x] T025 [US3] Implementar `src/app/login/page.tsx`: LoginForm + link a registro
+- [x] T026 [US3] Integrar AuthContext en layout: verificar sesión al cargar, mostrar nombre/logout en nav
+- [x] T027 [US3] Conectar `POST /api/auth/login`, `POST /api/auth/verificar/solicitar`, `POST /api/auth/verificar/completar`, `POST /api/auth/logout`
 
 **Checkpoint**: Escenario C pasa (registro completo, login funcional, logout limpia cookie)
 
@@ -104,11 +104,11 @@
 
 ### Implementation for User Story 4
 
-- [ ] T028 [US4] Crear `GET /api/reportes/mis-reportes/route.ts`: lista reportes del usuario autenticado, paginado, sin textoOriginal
-- [ ] T029 [US4] Crear `src/components/modules/MisReportesList.tsx`: tabla/cards con identificador, plataforma, estadoVisual, fecha
-- [ ] T030 [US4] Implementar `src/app/mis-reportes/page.tsx`: MisReportesList + useApi a /api/reportes/mis-reportes
-- [ ] T031 [US4] Mapeo de estado técnico → estadoVisual: "Recibido", "En procesamiento", "Procesado", "En revisión", "En revisión de privacidad", "Vinculado a reporte existente"
-- [ ] T032 [US4] Proteger ruta: redirigir a /login si no autenticado
+- [x] T028 [US4] Crear `GET /api/reportes/mis-reportes/route.ts`: lista reportes del usuario autenticado, paginado, sin textoOriginal
+- [x] T029 [US4] Crear `src/components/modules/MisReportesList.tsx`: tabla/cards con identificador, plataforma, estadoVisual, fecha
+- [x] T030 [US4] Implementar `src/app/mis-reportes/page.tsx`: MisReportesList + useApi a /api/reportes/mis-reportes
+- [x] T031 [US4] Mapeo de estado técnico → estadoVisual: "Recibido", "En procesamiento", "Procesado", "En revisión", "En revisión de privacidad", "Vinculado a reporte existente"
+- [x] T032 [US4] Proteger ruta: redirigir a /login si no autenticado
 
 **Checkpoint**: Escenario D pasa (lista con estados amigables, sin PII)
 
