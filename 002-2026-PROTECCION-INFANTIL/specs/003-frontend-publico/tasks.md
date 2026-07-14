@@ -145,6 +145,20 @@
 
 ---
 
+## Phase 9: Refinamiento de Reporte (FR-022 a FR-026)
+
+**Purpose**: Mejorar usabilidad y consistencia del paso de reporte (US2)
+
+- [ ] T042 Crear entidades `Pais` y `Ciudad` en Prisma schema, migración, seed con países latinoamericanos y principales ciudades
+- [ ] T043 Crear endpoint `GET /api/plataformas` que devuelva plataformas activas de la BD (incluyendo Roblox y Minecraft)
+- [ ] T044 Refactor `ReporteStepUbicacion`: fecha incidente con `max={hoy}` (FR-022), país/ciudad en cascada desde API (FR-023), opción "Otra ciudad o municipio" con input libre (FR-024)
+- [ ] T045 Refactor `ReporteStepPlataforma`: plataformas desde `GET /api/plataformas` (FR-026), opción "Otra" con input libre (FR-025)
+- [ ] T046 Actualizar `POST /api/reportes` para aceptar `otraPlataforma` y `otraCiudad`; mapear "Otra" plataforma a clave `"otro"`
+
+**Checkpoint**: Wizard de reporte usa datos dinámicos, fecha futura bloqueada, campos libres funcionan
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -152,13 +166,14 @@
 | Phase | Depends on | Bloquea |
 |-------|-----------|---------|
 | Phase 1 (Setup) | Nada | Phase 2 |
-| Phase 2 (Foundational) | Phase 1 | Phase 3-7 |
+| Phase 2 (Foundational) | Phase 1 | Phase 3-7, 9 |
 | Phase 3 (US1) | Phase 2 | Nada |
-| Phase 4 (US2) | Phase 2 | Nada |
+| Phase 4 (US2) | Phase 2 | Phase 9 |
 | Phase 5 (US3) | Phase 2 | Phase 6 (US4 requiere auth) |
 | Phase 6 (US4) | Phase 2 + US3 | Nada |
 | Phase 7 (US5) | Phase 2 | Nada |
 | Phase 8 (Polish) | Todas las anteriores | Nada |
+| Phase 9 (Refinamiento) | Phase 4 (US2) | Nada |
 
 ### Within Each User Story
 
@@ -191,16 +206,19 @@
 8. Phase 6: US4 — Mis reportes
 9. Phase 7: US5 — Seguimiento
 10. Phase 8: Polish
+11. Phase 9: Refinamiento de Reporte (FR-022 a FR-026)
 
 ---
 
 ## Notes
 
-- Total tasks: 41
-- Tasks por fase: P1=4, P2=8, P3=7, P4=7, P5=3, P6=3, P7=6, P8=5
+- Total tasks: 46
+- Tasks por fase: P1=4, P2=8, P3=7, P4=7, P5=3, P6=3, P7=6, P8=5, P9=5
 - Sin tareas de test explícitas (no fueron solicitadas en spec)
 - Reglas duras a verificar en cada fase:
   - Sin inputs de archivo/multimedia (FR-021)
   - Presunción de inocencia en lenguaje (§1.3)
   - Canales oficiales visibles (§1.1)
   - Cookie httpOnly, no localStorage (§6.1)
+  - Fecha del incidente nunca futura (FR-022)
+  - Plataformas y ubicaciones desde BD, no hardcodeadas (FR-023, FR-026)

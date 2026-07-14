@@ -122,6 +122,11 @@ Cualquier persona con un número de seguimiento puede consultar el estado de un 
 - **FR-019**: La UI DEBE conectarse a las API routes reales existentes sin mocks: GET /api/consulta, POST /api/reportes, GET /api/reportes/seguimiento/[numero], endpoints de auth.
 - **FR-020**: El sistema DEBE implementar el endpoint GET /api/reportes/mis-reportes (o equivalente) para alimentar el panel del padre, respetando la regla de no exponer textoOriginal.
 - **FR-021**: La UI de reporte NO DEBE incluir ningún input de archivo, imagen, audio ni video. El reporte es exclusivamente texto. No existe carga ni referencia a multimedia en ninguna pantalla.
+- **FR-022**: El campo "Fecha del incidente" DEBE impedir fechas futuras — solo permite fechas menores o iguales a hoy.
+- **FR-023**: País y Ciudad funcionan en cascada y provienen de tablas en la base de datos (nuevas entidades `Pais` y `Ciudad`, ampliables). El usuario selecciona primero el País; la lista de Ciudades se filtra para mostrar solo ciudades del país seleccionado. Alcance inicial: países de Latinoamérica con sus principales ciudades sembradas (no exhaustivo).
+- **FR-024**: La lista de Ciudad DEBE incluir la opción "Otra ciudad o municipio" que, al seleccionarse, habilita un campo de texto libre para escribirla manualmente.
+- **FR-025**: El campo Plataforma DEBE incluir la opción "Otra" que habilita un campo de texto libre para una plataforma no listada. Se almacena mapeando a la plataforma con clave `"otro"` existente y guardando el nombre escrito en el campo libre.
+- **FR-026**: La lista de plataformas del frontend DEBE provenir de la base de datos vía endpoint `GET /api/plataformas`, no hardcodeada, para mantenerse sincronizada (incluyendo Roblox y Minecraft).
 
 ### Key Entities
 
