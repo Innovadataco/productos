@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { auditAnonimizacion } from "@/lib/audit";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
@@ -92,6 +93,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             console.error("[ANONIMIZAR] Embedding falló (no crítico):", msg);
             // No fallamos la anonimización; el embedding se puede regenerar después
         }
+
+        // Registrar auditoría (solo metadata, nunca texto)
+        await auditAnonimizacion({
+            request,
+            usuarioId: user.id,
+            reporteId,
+            estadoAnterior: "REQUIERE_ANONIMIZACION",
+            estadoNuevo: "CLASIFICADO",
+        });
 
         return NextResponse.json({
             reporteId,

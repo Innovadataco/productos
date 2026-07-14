@@ -62,7 +62,7 @@ export async function POST(request: Request) {
             data: { intentosFallidos: 0, estado: "activo", bloqueadoHasta: null, ultimaSesion: new Date() },
         });
 
-        const token = await createToken({ sub: user.id });
+        const token = await createToken({ sub: user.id, rol: user.rol });
         const cookieStore = await cookies();
         cookieStore.set("token", token, {
             httpOnly: true,

@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import type { AccionAudit } from "@prisma/client";
+import type { AccionAudit, CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 export async function logAudit(params: {
     accion: AccionAudit;
@@ -24,5 +24,67 @@ export async function logAudit(params: {
             userAgent: params.userAgent ?? "unknown",
             metadatos: params.metadatos ? (params.metadatos as never) : undefined,
         },
+    });
+}
+
+function extractClientInfo(request?: Request): { ipAddress: string; userAgent: string } {
+    return {
+        ipAddress: request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown",
+        userAgent: request?.headers.get("user-agent") || "unknown",
+    };
+}
+
+export async function auditCorreccion(params: {
+    request?: Request;
+    usuarioId: string;
+    reporteId: string;
+    categoriaOriginal: CategoriaConducta;
+    categoriaCorregida: CategoriaConducta;
+}): Promise<void> {
+    const { ipAddress, userAgent } = extractClientInfo(params.request);
+    await logAudit({
+        accion: "PARAM_UPDATE",
+        tipoRecurso: "ClasificacionIA",
+        recursoId: params.reporteId,
+        usuarioId: params.usuarioId,
+        valorAnterior: JSON.stringify({ categoria: params.categoriaOriginal }),
+        valorNuevo: JSON.stringify({ categoria: params.categoriaCorregida }),
+        ipAddress,
+        userAgent,
+    });
+}
+
+export async function auditAnonimizacion(params: {
+    request?: Request;
+    usuarioId: string;
+    reporteId: string;
+    estadoAnterior: EstadoReporte;
+    estadoNuevo: EstadoReporte;
+}): Promise<void> {
+    const { ipAddress, userAgent } = extractClientInfo(params.request);
+    await logAudit({
+        accion: "PARAM_UPDATE",
+        tipoRecurso: "Reporte",
+        recursoId: params.reporteId,
+        usuarioId: params.usuarioId,
+        valorAnterior: JSON.stringify({ estado: params.estadoAnterior }),
+        valorNuevo: JSON.stringify({ estado: params.estadoNuevo }),
+        ipAddress,
+        userAgent,
+    });
+}
+
+export async function auditAccesoAdmin(params: {
+    request?: Request;
+    usuarioId: string;
+    accion: "LOGIN" | "LOGOUT";
+}): Promise<void> {
+    const { ipAddress, userAgent } = extractClientInfo(params.request);
+    await logAudit({
+        accion: params.accion,
+        tipoRecurso: "AdminSession",
+        usuarioId: params.usuarioId,
+        ipAddress,
+        userAgent,
     });
 }

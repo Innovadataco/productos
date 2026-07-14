@@ -14,9 +14,9 @@
 
 **Purpose**: Migración AuditLog, protección de ruta admin, estructura base
 
-- [ ] T001 Verificar si `AuditLog` existe en BD; si no, crear migración `prisma/migrations/20260714120000_add_audit_log/migration.sql` + registrar en `_prisma_migrations` + `npx prisma generate`
-- [ ] T002 [P] Crear `src/app/dashboard/admin/layout.tsx` — server component, verifica rol ADMIN vía `verifyAuth`, redirige si no cumple
-- [ ] T003 [P] Crear `src/components/modules/AdminNav.tsx` — navegación lateral: Bandeja, Dashboard, Anonimización
+- [x] T001 Verificar si `AuditLog` existe en BD; si no, crear migración `prisma/migrations/20260714120000_add_audit_log/migration.sql` + registrar en `_prisma_migrations` + `npx prisma generate`
+- [x] T002 [P] Crear `src/app/dashboard/admin/layout.tsx` — server component, verifica rol ADMIN vía `verifyAuth`, redirige si no cumple
+- [x] T003 [P] Crear `src/components/modules/AdminNav.tsx` — navegación lateral: Bandeja, Dashboard, Anonimización
 
 **Checkpoint**: Migración aplicada, layout protege rol ADMIN, nav renderiza
 
@@ -26,9 +26,9 @@
 
 **Purpose**: Endpoints de agregación que bloquean el dashboard
 
-- [ ] T004 Crear `src/app/api/admin/estadisticas/route.ts` — GET, rol ADMIN, queries agregadas (totales, porEstado, porCategoria, porPlataforma, porCiudad, tendencia 30 días)
-- [ ] T005 Crear `src/app/api/admin/audit-logs/route.ts` — GET, rol ADMIN, paginado con filtros (accion, usuarioId, fechaDesde/Hasta); nunca incluye texto de reporte
-- [ ] T006 Actualizar `src/lib/audit.ts` — helper `auditLog(accion, tipoRecurso, recursoId, valorAnterior, valorNuevo)` que guarda solo metadata (estado/categoría/ID)
+- [x] T004 Crear `src/app/api/admin/estadisticas/route.ts` — GET, rol ADMIN, queries agregadas (totales, porEstado, porCategoria, porPlataforma, porCiudad, tendencia 30 días)
+- [x] T005 Crear `src/app/api/admin/audit-logs/route.ts` — GET, rol ADMIN, paginado con filtros (accion, usuarioId, fechaDesde/Hasta); nunca incluye texto de reporte
+- [x] T006 Actualizar `src/lib/audit.ts` — helper `auditLog(accion, tipoRecurso, recursoId, valorAnterior, valorNuevo)` que guarda solo metadata (estado/categoría/ID)
 
 **Checkpoint**: `curl /api/admin/estadisticas` retorna métricas; `curl /api/admin/audit-logs` retorna logs sin PII
 
@@ -40,10 +40,10 @@
 
 **Independent Test**: Escenario B del quickstart — filtrar por REQUIERE_ANONIMIZACION y ver detalle
 
-- [ ] T007 [P] [US1] Crear `src/components/modules/AdminReportesTable.tsx` — tabla HTML con paginación server-side, ordenación por columnas, filtros por estado/plataforma/categoría/fecha
-- [ ] T008 [P] [US1] Crear `src/components/modules/AdminReporteDetalle.tsx` — drawer/modal con textoOriginal (solo admin), clasificación IA, acciones (corregir, anonimizar)
-- [ ] T009 [US1] Implementar `src/app/dashboard/admin/page.tsx` — renderiza AdminReportesTable + integración con `GET /api/admin/reportes-revision`
-- [ ] T010 [US1] Integrar filtros en la URL (query params) para que el estado de filtros sea compartible
+- [x] T007 [P] [US1] Crear `src/components/modules/AdminReportesTable.tsx` — tabla HTML con paginación server-side, ordenación por columnas, filtros por estado/plataforma/categoría/fecha
+- [x] T008 [P] [US1] Crear `src/components/modules/AdminReporteDetalle.tsx` — drawer/modal con textoOriginal (solo admin), clasificación IA, acciones (corregir, anonimizar)
+- [x] T009 [US1] Implementar `src/app/dashboard/admin/page.tsx` — renderiza AdminReportesTable + integración con `GET /api/admin/reportes-revision`
+- [x] T010 [US1] Integrar filtros en la URL (query params) para que el estado de filtros sea compartible
 
 **Checkpoint**: Escenario B pasa — filtro por estado funciona, detalle muestra textoOriginal
 
@@ -55,9 +55,9 @@
 
 **Independent Test**: Escenario C del quickstart — corregir categoría y ver reflejado
 
-- [ ] T011 [US2] Integrar corrección en `AdminReporteDetalle.tsx` — dropdown de `CategoriaConducta` + input motivo + botón confirmar
-- [ ] T012 [US2] Conectar a `POST /api/admin/correcciones` vía fetch nativo; manejar 201 y errores
-- [ ] T013 [US2] Llamar `auditLog` desde el frontend tras corrección exitosa (o desde el backend)
+- [x] T011 [US2] Integrar corrección en `AdminReporteDetalle.tsx` — dropdown de `CategoriaConducta` + input motivo + botón confirmar
+- [x] T012 [US2] Conectar a `POST /api/admin/correcciones` vía fetch nativo; manejar 201 y errores
+- [x] T013 [US2] Llamar `auditLog` desde el frontend tras corrección exitosa (o desde el backend)
 
 **Checkpoint**: Escenario C pasa — corrección reflejada en detalle, audit log registrado
 
@@ -69,10 +69,10 @@
 
 **Independent Test**: Escenario D del quickstart — anonimizar y verificar estado CLASIFICADO
 
-- [ ] T014 [US3] Integrar anonimización en `AdminReporteDetalle.tsx` — textarea para textoAnonimizado (20-5000 chars, contador), botón confirmar
-- [ ] T015 [US3] Conectar a `PATCH /api/admin/reportes/[id]/anonimizar` vía fetch nativo
-- [ ] T016 [US3] Deshabilitar/hidear acción de anonimizar si estado != REQUIERE_ANONIMIZACION
-- [ ] T017 [US3] Llamar `auditLog` tras anonimización exitosa (solo metadata: estado anterior → nuevo)
+- [x] T014 [US3] Integrar anonimización en `AdminReporteDetalle.tsx` — textarea para textoAnonimizado (20-5000 chars, contador), botón confirmar
+- [x] T015 [US3] Conectar a `PATCH /api/admin/reportes/[id]/anonimizar` vía fetch nativo
+- [x] T016 [US3] Deshabilitar/hidear acción de anonimizar si estado != REQUIERE_ANONIMIZACION
+- [x] T017 [US3] Llamar `auditLog` tras anonimización exitosa (solo metadata: estado anterior → nuevo)
 
 **Checkpoint**: Escenario D pasa — textoOriginal preservado, texto = anonimizado, estado = CLASIFICADO
 
@@ -84,12 +84,12 @@
 
 **Independent Test**: Escenario F del quickstart — métricas reales y gráficos correctos
 
-- [ ] T018 [P] [US4] Crear `src/components/modules/AdminDashboard.tsx` — tarjetas de métricas (totales, pendientes)
-- [ ] T019 [P] [US4] Crear `src/components/modules/BarChart.tsx` — barras horizontales SVG nativo
-- [ ] T020 [P] [US4] Crear `src/components/modules/DonutChart.tsx` — donut SVG con `stroke-dasharray`
-- [ ] T021 [P] [US4] Crear `src/components/modules/Sparkline.tsx` — línea de tendencia SVG `<polyline>`
-- [ ] T022 [US4] Implementar `src/app/dashboard/admin/estadisticas/page.tsx` — renderiza dashboard con `GET /api/admin/estadisticas`
-- [ ] T023 [US4] Asegurar que el lenguaje del dashboard es descriptivo: "N reportes", nunca "peligroso"
+- [x] T018 [P] [US4] Crear `src/components/modules/AdminDashboard.tsx` — tarjetas de métricas (totales, pendientes)
+- [x] T019 [P] [US4] Crear `src/components/modules/BarChart.tsx` — barras horizontales SVG nativo
+- [x] T020 [P] [US4] Crear `src/components/modules/DonutChart.tsx` — donut SVG con `stroke-dasharray`
+- [x] T021 [P] [US4] Crear `src/components/modules/Sparkline.tsx` — línea de tendencia SVG `<polyline>`
+- [x] T022 [US4] Implementar `src/app/dashboard/admin/estadisticas/page.tsx` — renderiza dashboard con `GET /api/admin/estadisticas`
+- [x] T023 [US4] Asegurar que el lenguaje del dashboard es descriptivo: "N reportes", nunca "peligroso"
 
 **Checkpoint**: Escenario F pasa — tarjetas y gráficos muestran datos reales
 
@@ -101,9 +101,9 @@
 
 **Independent Test**: Escenario G del quickstart — no-admin redirigido/bloqueado
 
-- [ ] T024 [US5] Verificar que `layout.tsx` redirige usuarios no autenticados a `/login`
-- [ ] T025 [US5] Verificar que `layout.tsx` redirige usuarios PARENT/SCHOOL_ADMIN a `/`
-- [ ] T026 [US5] Verificar que todos los endpoints `/api/admin/**` retornan 403 para non-ADMIN
+- [x] T024 [US5] Verificar que `layout.tsx` redirige usuarios no autenticados a `/login`
+- [x] T025 [US5] Verificar que `layout.tsx` redirige usuarios PARENT/SCHOOL_ADMIN a `/`
+- [x] T026 [US5] Verificar que todos los endpoints `/api/admin/**` retornan 403 para non-ADMIN
 
 **Checkpoint**: Escenario G pasa — todas las combinaciones de rol prueban acceso denegado
 
@@ -113,11 +113,11 @@
 
 **Purpose**: Build, validación end-to-end, reglas duras
 
-- [ ] T027 `npm run build` pasa sin errores TypeScript
-- [ ] T028 Verificar que PII no filtra: `GET /api/admin/estadisticas` no incluye texto/textoOriginal/identificador
-- [ ] T029 Verificar audit logs: `valorAnterior`/`valorNuevo` nunca contienen texto de reporte (solo estado/categoría/ID)
-- [ ] T030 Ejecutar escenarios A-G del quickstart y registrar PASS/FAIL
-- [ ] T031 Commit final + push `origin/feature/001-scaffolding`
+- [x] T027 `npm run build` pasa sin errores TypeScript
+- [x] T028 Verificar que PII no filtra: `GET /api/admin/estadisticas` no incluye texto/textoOriginal/identificador
+- [x] T029 Verificar audit logs: `valorAnterior`/`valorNuevo` nunca contienen texto de reporte (solo estado/categoría/ID)
+- [x] T030 Ejecutar escenarios A-G del quickstart y registrar PASS/FAIL
+- [x] T031 Commit final + push `origin/feature/001-scaffolding`
 
 **Checkpoint**: Build OK, quickstart validado, reglas duras verificadas
 

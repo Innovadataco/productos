@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { auditCorreccion } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
 
@@ -88,6 +89,15 @@ export async function POST(request: Request) {
         await prisma.reporte.update({
             where: { id: reporteId },
             data: { estado: "CORREGIDO" },
+        });
+
+        // Registrar auditoría (solo metadata, nunca texto)
+        await auditCorreccion({
+            request,
+            usuarioId: user.id,
+            reporteId,
+            categoriaOriginal: categoriaAnterior as import("@prisma/client").CategoriaConducta,
+            categoriaCorregida: categoriaCorregida as import("@prisma/client").CategoriaConducta,
         });
 
         // Guardar en dataset de entrenamiento

@@ -53,7 +53,7 @@ export async function POST(request: Request) {
             },
         });
 
-        const sessionToken = await createToken({ sub: user.id });
+        const sessionToken = await createToken({ sub: user.id, rol: user.rol });
         const cookieStore = await cookies();
         cookieStore.set("token", sessionToken, {
             httpOnly: true,
