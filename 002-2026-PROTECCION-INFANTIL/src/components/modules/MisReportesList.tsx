@@ -1,5 +1,17 @@
 "use client";
 
+type ClasificacionItem = {
+    categoria: string;
+    categoriaLabel: string;
+    confianza: number;
+};
+
+type RankingItem = {
+    score: number;
+    nivelRiesgo: "BAJO" | "MEDIO" | "ALTO";
+    totalReportes: number;
+};
+
 type ReporteItem = {
     id: string;
     identificador: string;
@@ -10,6 +22,14 @@ type ReporteItem = {
     pais: string;
     esAnonimo: boolean;
     creadoEn: string;
+    clasificacion: ClasificacionItem | null;
+    ranking: RankingItem | null;
+};
+
+const NIVEL_STYLES = {
+    BAJO: "bg-green-100 text-green-800",
+    MEDIO: "bg-amber-100 text-amber-800",
+    ALTO: "bg-red-100 text-red-800",
 };
 
 export function MisReportesList({ items }: { items: ReporteItem[] }) {
@@ -26,10 +46,10 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
             {items.map((r) => (
                 <div
                     key={r.id}
-                    className="glass rounded-xl p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                    className="glass rounded-xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                     <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-slate-800 truncate">
                                 {r.identificador}
                             </h3>
@@ -47,17 +67,42 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                                 {r.numeroSeguimiento}
                             </p>
                         )}
+                        {r.clasificacion && (
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                <span className="rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-medium text-primary-700">
+                                    {r.clasificacion.categoriaLabel}
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                    Confianza {Math.round(r.clasificacion.confianza * 100)}%
+                                </span>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="flex items-center gap-3 mt-2 sm:mt-0">
-                        <span
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${estadoBadgeClass(r.estadoVisual)}`}
-                        >
-                            {r.estadoVisual}
-                        </span>
-                        <span className="text-xs text-slate-400 whitespace-nowrap">
-                            {new Date(r.creadoEn).toLocaleDateString("es-CO")}
-                        </span>
+                    <div className="flex flex-col items-start sm:items-end gap-2">
+                        <div className="flex items-center gap-2">
+                            <span
+                                className={`rounded-full px-3 py-1 text-xs font-medium ${estadoBadgeClass(r.estadoVisual)}`}
+                            >
+                                {r.estadoVisual}
+                            </span>
+                            <span className="text-xs text-slate-400 whitespace-nowrap">
+                                {new Date(r.creadoEn).toLocaleDateString("es-CO")}
+                            </span>
+                        </div>
+                        {r.ranking && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono font-bold text-primary-700">
+                                    {r.ranking.score}
+                                </span>
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${NIVEL_STYLES[r.ranking.nivelRiesgo]}`}>
+                                    {r.ranking.nivelRiesgo}
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                    {r.ranking.totalReportes} reportes
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </div>
             ))}

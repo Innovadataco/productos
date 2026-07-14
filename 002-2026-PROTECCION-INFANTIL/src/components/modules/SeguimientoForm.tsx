@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/Button";
 
 export function SeguimientoForm({
     onSearch,
+    initialValue = "",
 }: {
     onSearch: (numero: string) => void;
+    initialValue?: string;
 }) {
-    const [numero, setNumero] = useState("");
+    const [numero, setNumero] = useState(initialValue);
     const [error, setError] = useState("");
 
     const handleSubmit = (e: React.FormEvent) => {

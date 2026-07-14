@@ -7,11 +7,31 @@ import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 
+type ClasificacionData = {
+    categoria: string;
+    categoriaLabel: string;
+    confianza: number;
+    contienePii: boolean;
+    piiDetectada: string[];
+};
+
+type RankingData = {
+    score: number;
+    nivelRiesgo: "BAJO" | "MEDIO" | "ALTO";
+    totalReportes: number;
+    reportesAutenticados: number;
+    reportesAnonimos: number;
+};
+
 type SeguimientoData = {
     numeroSeguimiento: string;
     estado: string;
     creadoEn: string;
     mensaje: string;
+    identificador: string;
+    plataforma: string;
+    clasificacion: ClasificacionData | null;
+    ranking: RankingData | null;
 };
 
 const ESTADO_VISUAL: Record<string, string> = {
@@ -23,6 +43,12 @@ const ESTADO_VISUAL: Record<string, string> = {
     POSIBLE_SPAM: "En revisión",
     REQUIERE_ANONIMIZACION: "En revisión de privacidad",
     DUPLICADO: "Vinculado a reporte existente",
+};
+
+const NIVEL_STYLES = {
+    BAJO: "bg-green-100 text-green-800",
+    MEDIO: "bg-amber-100 text-amber-800",
+    ALTO: "bg-red-100 text-red-800",
 };
 
 export default function SeguimientoPage() {
@@ -38,6 +64,13 @@ export default function SeguimientoPage() {
             if (n) setNumeroInicial(n);
         }
     }, []);
+
+    useEffect(() => {
+        if (numeroInicial) {
+            handleSearch(numeroInicial);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [numeroInicial]);
 
     const handleSearch = async (numero: string) => {
         setIsLoading(true);
@@ -83,7 +116,7 @@ export default function SeguimientoPage() {
             </div>
 
             <GlassCard className="mb-6">
-                <SeguimientoForm onSearch={handleSearch} />
+                <SeguimientoForm onSearch={handleSearch} initialValue={numeroInicial} />
             </GlassCard>
 
             {isLoading && (
@@ -100,20 +133,63 @@ export default function SeguimientoPage() {
             )}
 
             {data && (
-                <div className="glass rounded-2xl p-6 animate-floatUp">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-slate-800">
-                            {data.numeroSeguimiento}
-                        </h2>
+                <div className="glass rounded-2xl p-6 animate-floatUp space-y-5">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-slate-500">{data.plataforma}</p>
+                            <h2 className="text-lg font-semibold text-slate-800">{data.identificador}</h2>
+                        </div>
                         <span className={`rounded-full px-3 py-1 text-xs font-medium ${badgeClass}`}>
                             {estadoVisual}
                         </span>
                     </div>
-                    <p className="text-sm text-slate-600 mb-2">{data.mensaje}</p>
-                    <p className="text-xs text-slate-400">
-                        Reportado el {new Date(data.creadoEn).toLocaleDateString("es-CO")}
-                    </p>
-                    <div className="mt-4 pt-4 border-t border-slate-200">
+
+                    <div className="rounded-xl bg-white/50 p-4">
+                        <p className="text-sm text-slate-700 font-medium">{data.mensaje}</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                            Reportado el {new Date(data.creadoEn).toLocaleDateString("es-CO")}
+                        </p>
+                    </div>
+
+                    {data.clasificacion && (
+                        <div className="rounded-xl bg-white/50 p-4">
+                            <h3 className="text-sm font-semibold text-slate-700 mb-2">Clasificación del reporte</h3>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <span className="rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">
+                                    {data.clasificacion.categoriaLabel}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                    Confianza: {Math.round(data.clasificacion.confianza * 100)}%
+                                </span>
+                            </div>
+                            {data.clasificacion.contienePii && (
+                                <p className="text-xs text-slate-500 mt-2">
+                                    El texto fue anonimizado para proteger datos personales.
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {data.ranking && (
+                        <div className="rounded-xl bg-white/50 p-4">
+                            <h3 className="text-sm font-semibold text-slate-700 mb-2">Riesgo del identificador</h3>
+                            <div className="flex items-center gap-4">
+                                <div className="text-center">
+                                    <p className="text-2xl font-bold text-primary-700 font-mono">{data.ranking.score}</p>
+                                    <p className="text-[10px] text-slate-500">Score 0-100</p>
+                                </div>
+                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${NIVEL_STYLES[data.ranking.nivelRiesgo]}`}>
+                                    Riesgo {data.ranking.nivelRiesgo}
+                                </span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-2">
+                                Basado en {data.ranking.totalReportes} reportes
+                                ({data.ranking.reportesAutenticados} autenticados, {data.ranking.reportesAnonimos} anónimos).
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="pt-4 border-t border-slate-200">
                         <Link href="/reportar">
                             <Button variant="outline" className="w-full">
                                 Realizar otro reporte

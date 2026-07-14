@@ -69,6 +69,13 @@ test.describe("Flujo de reportes comunitarios", () => {
 
         await expect(page.getByText("Reporte recibido")).toBeVisible();
         await expect(page.getByText(/RPT-[A-Z0-9]+/)).toBeVisible();
+
+        const numero = await page.locator("code").textContent();
+        expect(numero).toMatch(/RPT-[A-Z0-9]+/);
+
+        await page.goto(`/seguimiento?numero=${numero}`);
+        await expect(page.getByText("Recibido")).toBeVisible();
+        await expect(page.getByText(identificador)).toBeVisible();
     });
 
     test("usuario autenticado no puede reportar el mismo identificador dos veces en 30 días", async ({ request }) => {

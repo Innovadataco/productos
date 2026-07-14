@@ -114,6 +114,11 @@ Se entregó un servicio de scoring configurable que enriquece la consulta públi
 - [x] Tests de integración para flujo con PII y fallo de anonimización.
 - [x] Tests E2E para creación de reporte anónimo y deduplicación autenticada (`tests/e2e/reportes.spec.ts`).
 - [x] Mejora de accesibilidad en `src/components/ui/Select.tsx`: label asociado al `<select>` vía `htmlFor`/`id`.
+- [x] **Seguimiento enriquecido**: `GET /api/reportes/seguimiento/[numero]` ahora devuelve categoría IA, confianza, PII detectada y ranking/scoring del identificador si es públicamente visible.
+- [x] **"Mis reportes" enriquecido**: `GET /api/reportes/mis-reportes` ahora devuelve categoría IA y ranking por identificador visible.
+- [x] UI de `/seguimiento` y `/mis-reportes` actualizada para mostrar clasificación y score.
+- [x] Auto-búsqueda en `/seguimiento` cuando se recibe `?numero=RPT-XXXXXX`.
+- [x] Tests de integración para seguimiento enriquecido.
 
 ### Items pendientes para iteraciones futuras
 
@@ -241,8 +246,8 @@ Route (app)
  ✓ src/lib/errors.test.ts (3 tests) 1ms
  ✓ src/lib/config-cache.test.ts (4 tests) 1ms
 
- Test Files  8 passed (8)
-      Tests  35 passed (35)
+ Test Files  9 passed (9)
+      Tests  37 passed (37)
    Start at  16:05:41
    Duration  3.52s (transform 68ms, setup 15ms, collect 278ms, tests 1.65s, environment 871ms, prepare 163ms)
 ```
@@ -383,10 +388,10 @@ curl -X POST /api/reportes -d '{"identificador":"+573001234567","plataforma":"wh
 
 Con el módulo `02-reportes-comunitarios` funcionalmente completo (Fases 1-8 + Polish parcial), las siguientes líneas son las más valiosas para cerrar la deuda técnica y la cobertura:
 
-1. **Cobertura E2E del worker con PII (`02-reportes-comunitarios`)**
-   - Escenario B: worker procesa el reporte y cambia estado a `CLASIFICADO`.
-   - Escenario G: reporte con PII se anonimiza automáticamente y queda `CLASIFICADO` con `textoOriginal` preservado.
-   - Estos flujos requieren un bypass de Ollama para E2E o confiar en que Ollama local esté corriendo; por eso están cubiertos por tests de integración con mocks en `src/app/api/reportes/procesar/route.test.ts`.
+1. **Deduplicación anónima por similitud de embeddings (`02-reportes-comunitarios`)**
+   - Crear `src/lib/ai/similarity.ts` y `src/lib/duplicate-detector.ts`.
+   - Integrar en `src/app/api/reportes/procesar/route.ts` para detectar textos casi idénticos sobre el mismo identificador (`≥ 0.92`).
+   - Marcar reportes duplicados y poblar la relación `ReporteDuplicado`.
 
 2. **Cobertura E2E del panel administrador (`004-panel-admin`)**
    - Login como `ADMIN` → acceso a `/dashboard/admin`.
@@ -403,7 +408,7 @@ Con el módulo `02-reportes-comunitarios` funcionalmente completo (Fases 1-8 + P
    - Revisar warnings `MODULE_TYPELESS_PACKAGE_JSON` en build (opcional, no bloqueante).
    - Consolidar nombres de fases en `tasks.md` (hay dos "Phase 8").
 
-**Recomendación de prioridad:** empezar por la cobertura E2E del panel administrador (`004-panel-admin`), ya que es el flujo de corrección/auditoría que complementa la anonimización automática recién integrada.
+**Recomendación de prioridad:** empezar por la **deduplicación anónima por embeddings** (`02-reportes-comunitarios`), ya que es una regla dura del módulo que previene spam de reportes idénticos y mejora la calidad del scoring.
 
 ## Deudas Técnicas Cerradas en este Ciclo
 
