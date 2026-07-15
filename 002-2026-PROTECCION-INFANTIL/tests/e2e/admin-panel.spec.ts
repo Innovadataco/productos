@@ -6,6 +6,20 @@ import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 const ADMIN_EMAIL = "admin@proteccion.local";
 const ADMIN_PASSWORD = "Admin123!Secure";
 
+async function asegurarAdmin() {
+    await prisma.usuario.upsert({
+        where: { email: ADMIN_EMAIL },
+        update: {},
+        create: {
+            email: ADMIN_EMAIL,
+            nombre: "Administrador E2E",
+            passwordHash: await hashPassword(ADMIN_PASSWORD),
+            rol: "ADMIN",
+            estado: "activo",
+        },
+    });
+}
+
 async function obtenerPlataformaWhatsApp() {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
     if (!plataforma) throw new Error("Plataforma whatsapp no encontrada");
@@ -55,6 +69,9 @@ async function loginAdmin(page: import("@playwright/test").Page) {
 }
 
 test.describe("Panel de administración", () => {
+    test.beforeAll(async () => {
+        await asegurarAdmin();
+    });
     test("admin puede iniciar sesión y ver la bandeja de reportes", async ({ page }) => {
         await loginAdmin(page);
         await page.goto("/dashboard/admin");
@@ -74,7 +91,7 @@ test.describe("Panel de administración", () => {
         await page.getByLabel("Estado").selectOption("REVISION_MANUAL");
         await page.getByRole("button", { name: "Aplicar filtros" }).click();
 
-        await expect(page.getByText(reporte.numeroSeguimiento)).toBeVisible();
+        await expect(page.getByText(reporte.numeroSeguimiento!)).toBeVisible();
         await expect(page.getByText("POSIBLE_SPAM")).not.toBeVisible();
     });
 
@@ -87,7 +104,7 @@ test.describe("Panel de administración", () => {
         await page.getByLabel("Estado").selectOption("CLASIFICADO");
         await page.getByRole("button", { name: "Aplicar filtros" }).click();
 
-        const fila = page.locator("tr", { hasText: reporte.numeroSeguimiento });
+        const fila = page.locator("tr", { hasText: reporte.numeroSeguimiento! });
         await fila.getByRole("button", { name: "Ver detalle" }).click();
 
         const modal = page.locator("div").filter({ hasText: "Detalle del reporte" }).first();
@@ -113,7 +130,7 @@ test.describe("Panel de administración", () => {
         await page.getByLabel("Estado").selectOption("REQUIERE_ANONIMIZACION");
         await page.getByRole("button", { name: "Aplicar filtros" }).click();
 
-        const fila = page.locator("tr", { hasText: reporte.numeroSeguimiento });
+        const fila = page.locator("tr", { hasText: reporte.numeroSeguimiento! });
         await fila.getByRole("button", { name: "Ver detalle" }).click();
 
         await page.locator("textarea").filter({ hasText: reporte.texto }).fill(
@@ -125,6 +142,18 @@ test.describe("Panel de administración", () => {
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("CLASIFICADO");
+    });
+
+    test("admin ve métricas de la cola de procesamiento en el dashboard", async ({ page }) => {
+        await loginAdmin(page);
+        await page.goto("/dashboard/admin/estadisticas");
+
+        await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Cola de procesamiento" })).toBeVisible();
+        await expect(page.getByText("En cola")).toBeVisible();
+        await expect(page.getByText("Estancados")).toBeVisible();
+        await expect(page.getByText("Latencia promedio (ms)")).toBeVisible();
+        await expect(page.getByText("Tasa de éxito")).toBeVisible();
     });
 
     test("usuario no-admin no puede acceder al panel admin", async ({ page }) => {

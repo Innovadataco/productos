@@ -19,6 +19,17 @@ import { Sparkline } from "./Sparkline";
     porPlataforma: { plataforma: string; count: number }[];
     porCiudad: { ciudad: string; count: number }[];
     tendencia: { fecha: string; count: number }[];
+    worker: {
+        conteosPorEstado: Record<string, number>;
+        enCola: number;
+        activos: number;
+        estancados: number;
+        completados: number;
+        fallidos: number;
+        latenciaPromedioMs: number;
+        tasaExito: number;
+        totalJobs: number;
+    } | null;
 };
 
 const CATEGORIA_LABELS: Record<string, string> = {
@@ -121,6 +132,40 @@ export function AdminDashboard() {
                     data={data.tendencia.map((t) => ({ label: t.fecha, value: t.count }))}
                 />
             </ChartCard>
+
+            {data.worker && (
+                <section className="space-y-6" aria-labelledby="worker-title">
+                    <h2 id="worker-title" className="text-xl font-bold text-slate-900">Cola de procesamiento</h2>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <MetricCard label="En cola" value={data.worker.enCola} />
+                        <MetricCard label="Activos" value={data.worker.activos} />
+                        <MetricCard label="Estancados" value={data.worker.estancados} />
+                        <MetricCard label="Completados" value={data.worker.completados} />
+                        <MetricCard label="Fallidos" value={data.worker.fallidos} />
+                        <MetricCard label="Latencia promedio (ms)" value={data.worker.latenciaPromedioMs} />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <ChartCard title="Distribución de jobs por estado">
+                            <DonutChart
+                                ariaLabel="Distribución de jobs por estado"
+                                data={Object.entries(data.worker.conteosPorEstado).map(([estado, value]) => ({
+                                    label: formatEstado(estado),
+                                    value,
+                                }))}
+                            />
+                        </ChartCard>
+
+                        <ChartCard title="Tasa de éxito">
+                            <div className="flex flex-col items-center justify-center py-8">
+                                <p className="text-5xl font-bold text-primary-600">{data.worker.tasaExito}%</p>
+                                <p className="mt-2 text-sm text-slate-500">{data.worker.completados} éxitos / {data.worker.completados + data.worker.fallidos} terminados</p>
+                            </div>
+                        </ChartCard>
+                    </div>
+                </section>
+            )}
         </section>
     );
 }

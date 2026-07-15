@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { getWorkerMetrics } from "@/lib/queue-metrics";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 export async function GET() {
@@ -33,6 +34,7 @@ export async function GET() {
             porPlataforma,
             porCiudad,
             tendencia,
+            workerMetrics,
         ] = await Promise.all([
             prisma.reporte.count(),
             prisma.reporte.count({ where: { creadoEn: { gte: hoy, lt: hoySig } } }),
@@ -50,6 +52,7 @@ export async function GET() {
                 where: { creadoEn: { gte: treintaDiasAtras } },
                 orderBy: { creadoEn: "asc" },
             }),
+            getWorkerMetrics(),
         ]);
 
         const plataformaIds = porPlataforma
@@ -84,6 +87,7 @@ export async function GET() {
             porPlataforma: porPlataforma.map((p) => ({ plataforma: plataformaNombrePorId[p.plataformaId || ""] || "Desconocida", count: typeof p._count === "object" ? p._count.plataformaId : 0 })),
             porCiudad: porCiudad.map((c) => ({ ciudad: c.ciudad, count: typeof c._count === "object" ? c._count.ciudad : 0 })),
             tendencia: tendenciaArray,
+            worker: workerMetrics,
         });
     } catch (error) {
         if (error instanceof AppError) {

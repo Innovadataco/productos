@@ -178,8 +178,13 @@
 - [x] T051 Actualizar `README.md` con instrucciones de Ollama, pm2 worker, y pgvector
 - [x] T052 [P] Revisar que ningún log exponga textos de reportes, PII, o códigos de verificación
 - [x] T053 [P] Verificar que `textoOriginal` nunca se expone en APIs públicas ni en dataset de entrenamiento
+- [x] T062 [P] Exponer métricas de la cola pg-boss desde `/api/admin/estadisticas`: jobs en cola, activos, estancados, completados, fallidos.
+- [x] T063 [P] Calcular latencia promedio de jobs completados/fallidos desde `pgboss.job`.
+- [x] T064 [P] Calcular tasa de éxito del worker (% completados sobre terminados).
+- [x] T065 [P] Mostrar métricas de la cola en el dashboard admin (`/dashboard/admin/estadisticas`).
+- [x] T066 [P] Tests E2E para métricas de la cola de procesamiento.
 
-**Checkpoint**: Build OK, tests 100%, quickstart validado, reglas duras verificadas
+**Checkpoint**: Build OK, tests 100%, quickstart validado, reglas duras verificadas, métricas de worker visibles
 
 ---
 

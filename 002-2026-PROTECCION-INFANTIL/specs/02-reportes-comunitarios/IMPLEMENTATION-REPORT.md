@@ -97,6 +97,31 @@ Se agregó detección de reportes anónimos casi idénticos sobre el mismo ident
 
 ---
 
+## Fase 5 — Métricas y Observabilidad del Worker
+
+**Estado: COMPLETADA.**
+
+Se agregó observabilidad básica del worker pg-boss sin alterar el flujo de procesamiento, reutilizando la tabla `pgboss.job` y extendiendo el endpoint de estadísticas existente.
+
+### Items completados
+- [x] Crear `src/lib/queue-metrics.ts`: lectura de métricas de `pgboss.job` (conteos por estado, jobs estancados, latencia promedio, tasa de éxito).
+- [x] Extender `GET /api/admin/estadisticas` para incluir `worker` en la respuesta.
+- [x] Mostrar métricas de la cola en `src/components/modules/AdminDashboard.tsx`: tarjetas (En cola, Activos, Estancados, Completados, Fallidos, Latencia promedio), distribución por estado y tasa de éxito.
+- [x] Tests E2E: admin ve la sección "Cola de procesamiento" en `/dashboard/admin/estadisticas`.
+
+### Métricas expuestas
+- **En cola**: jobs en estados `created` o `retry` (no terminados).
+- **Activos**: jobs en estado `active`.
+- **Estancados**: jobs `active` cuyo `started_on + expire_seconds` ya pasó.
+- **Completados / Fallidos**: conteos por estado.
+- **Latencia promedio**: media de `completed_on - started_on` en ms para jobs `completed` y `failed`.
+- **Tasa de éxito**: `completados / (completados + fallidos) * 100`.
+
+### Archivos clave
+- `src/lib/queue-metrics.ts` — cálculo de métricas del worker.
+- `src/app/api/admin/estadisticas/route.ts` — integración en estadísticas admin.
+- `src/components/modules/AdminDashboard.tsx` — visualización de métricas de cola.
+
 ## Fase 4 — Cobertura E2E del Panel de Administración
 
 **Estado: COMPLETADA.**
@@ -160,7 +185,7 @@ Se entregó un servicio de scoring configurable que enriquece la consulta públi
 ### Items pendientes para iteraciones futuras
 
 - [ ] UI de panel admin (tabla de reportes, filtros, acciones masivas) — parcialmente cubierto por feature `004-panel-admin`.
-- [ ] Métricas y dashboard del worker (cola estancada, latencia promedio, tasa de éxito/fracaso).
+- [x] Métricas y dashboard del worker (cola estancada, latencia promedio, tasa de éxito/fracaso).
 
 ---
 
@@ -300,26 +325,27 @@ Route (app)
 > playwright test
 
 
-Running 14 tests using 7 workers
+Running 15 tests using 7 workers
 
-[1/14] [chromium] › tests/e2e/auth.spec.ts:4:9 › Flujo de autenticación › un usuario puede registrarse y luego iniciar sesión
-[2/14] [chromium] › tests/e2e/auth.spec.ts:54:9 › Flujo de autenticación › un usuario no-admin no puede acceder al panel admin
-[3/14] [chromium] › tests/e2e/admin-panel.spec.ts:81:9 › Panel de administración › admin puede corregir la clasificación de un reporte
-[4/14] [chromium] › tests/e2e/admin-panel.spec.ts:58:9 › Panel de administración › admin puede iniciar sesión y ver la bandeja de reportes
-[5/14] [chromium] › tests/e2e/admin-panel.spec.ts:130:9 › Panel de administración › usuario no-admin no puede acceder al panel admin
-[6/14] [chromium] › tests/e2e/admin-panel.spec.ts:107:9 › Panel de administración › admin puede anonimizar manualmente un reporte con PII
-[7/14] [chromium] › tests/e2e/admin-panel.spec.ts:67:9 › Panel de administración › admin puede filtrar reportes por estado
-[8/14] [chromium] › tests/e2e/consulta.spec.ts:57:9 › Consulta pública de identificador › usuario anónimo ve información agregada básica
-[9/14] [chromium] › tests/e2e/consulta.spec.ts:74:9 › Consulta pública de identificador › usuario autenticado ve score y nivel de riesgo
-[10/14] [chromium] › tests/e2e/password-reset.spec.ts:26:9 › Restablecimiento de contraseña › un usuario puede recuperar su contraseña y luego iniciar sesión
-[11/14] [chromium] › tests/e2e/password-reset.spec.ts:74:9 › Restablecimiento de contraseña › un token inválido o expirado muestra mensaje de error
-[12/14] [chromium] › tests/e2e/password-reset.spec.ts:81:9 › Restablecimiento de contraseña › la respuesta de solicitud no revela si el email existe
-[13/14] [chromium] › tests/e2e/reportes.spec.ts:48:9 › Flujo de reportes comunitarios › usuario anónimo crea un reporte desde el wizard y recibe número de seguimiento
-[14/14] [chromium] › tests/e2e/reportes.spec.ts:81:9 › Flujo de reportes comunitarios › usuario autenticado no puede reportar el mismo identificador dos veces en 30 días
-  14 passed (9.7s)
+[1/15] [chromium] › tests/e2e/auth.spec.ts:4:9 › Flujo de autenticación › un usuario puede registrarse y luego iniciar sesión
+[2/15] [chromium] › tests/e2e/auth.spec.ts:54:9 › Flujo de autenticación › un usuario no-admin no puede acceder al panel admin
+[3/15] [chromium] › tests/e2e/admin-panel.spec.ts:98:9 › Panel de administración › admin puede corregir la clasificación de un reporte
+[4/15] [chromium] › tests/e2e/admin-panel.spec.ts:75:9 › Panel de administración › admin puede iniciar sesión y ver la bandeja de reportes
+[5/15] [chromium] › tests/e2e/admin-panel.spec.ts:159:9 › Panel de administración › usuario no-admin no puede acceder al panel admin
+[6/15] [chromium] › tests/e2e/admin-panel.spec.ts:124:9 › Panel de administración › admin puede anonimizar manualmente un reporte con PII
+[7/15] [chromium] › tests/e2e/admin-panel.spec.ts:147:9 › Panel de administración › admin ve métricas de la cola de procesamiento en el dashboard
+[8/15] [chromium] › tests/e2e/admin-panel.spec.ts:84:9 › Panel de administración › admin puede filtrar reportes por estado
+[9/15] [chromium] › tests/e2e/consulta.spec.ts:57:9 › Consulta pública de identificador › usuario anónimo ve información agregada básica
+[10/15] [chromium] › tests/e2e/consulta.spec.ts:74:9 › Consulta pública de identificador › usuario autenticado ve score y nivel de riesgo
+[11/15] [chromium] › tests/e2e/password-reset.spec.ts:26:9 › Restablecimiento de contraseña › un usuario puede recuperar su contraseña y luego iniciar sesión
+[12/15] [chromium] › tests/e2e/password-reset.spec.ts:74:9 › Restablecimiento de contraseña › un token inválido o expirado muestra mensaje de error
+[13/15] [chromium] › tests/e2e/password-reset.spec.ts:81:9 › Restablecimiento de contraseña › la respuesta de solicitud no revela si el email existe
+[14/15] [chromium] › tests/e2e/reportes.spec.ts:48:9 › Flujo de reportes comunitarios › usuario anónimo crea un reporte desde el wizard y recibe número de seguimiento
+[15/15] [chromium] › tests/e2e/reportes.spec.ts:81:9 › Flujo de reportes comunitarios › usuario autenticado no puede reportar el mismo identificador dos veces en 30 días
+  15 passed (10.0s)
 ```
 
-**Resultado:** ✅ 14/14 tests E2E passed.
+**Resultado:** ✅ 15/15 tests E2E passed.
 
 ---
 
