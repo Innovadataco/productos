@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { isOnboardingComplete, markOnboardingComplete } from "@/lib/onboarding";
 
-const DISABLED = process.env.NEXT_PUBLIC_DISABLE_ONBOARDING === "true";
+export interface OnboardingTourProps {
+    disabled?: boolean;
+}
 
 const STEPS = [
     {
@@ -23,18 +25,18 @@ const STEPS = [
     },
 ];
 
-export function OnboardingTour() {
+export function OnboardingTour({ disabled }: OnboardingTourProps) {
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState(0);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
-        if (DISABLED) return;
+        if (disabled) return;
         if (!isOnboardingComplete()) {
             setOpen(true);
         }
-    }, []);
+    }, [disabled]);
 
     const close = () => {
         markOnboardingComplete();

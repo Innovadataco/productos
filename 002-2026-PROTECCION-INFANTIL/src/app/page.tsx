@@ -9,6 +9,7 @@ import { LandingFeatures } from "@/components/modules/LandingFeatures";
 import { LandingFooter } from "@/components/modules/LandingFooter";
 import { useApi } from "@/lib/hooks/useApi";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { OnboardingTourWrapper } from "@/components/onboarding/OnboardingTourWrapper";
 
 export default function HomePage() {
     const { data, isLoading, error, request } = useApi<Record<string, unknown>>();
@@ -20,7 +21,9 @@ export default function HomePage() {
     };
 
     return (
-        <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
+        <>
+            <OnboardingTourWrapper />
+            <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
             <LandingHero />
 
             <section id="consultar" className="mt-8 scroll-mt-24">
@@ -63,5 +66,6 @@ export default function HomePage() {
             <CanalesOficiales />
             <LandingFooter />
         </main>
+        </>
     );
 }
