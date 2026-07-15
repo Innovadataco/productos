@@ -14,7 +14,6 @@ export function DonutChart({
     const total = data.reduce((sum, d) => sum + d.value, 0) || 1;
     const radius = 70;
     const circumference = 2 * Math.PI * radius;
-    let accumulated = 0;
 
     return (
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-center">
@@ -27,9 +26,9 @@ export function DonutChart({
                 <title>{ariaLabel}</title>
                 <circle cx="90" cy="90" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="20" />
                 {data.map((d, i) => {
+                    const previous = data.slice(0, i).reduce((sum, item) => sum + item.value, 0);
                     const segment = (d.value / total) * circumference;
-                    const offset = circumference - accumulated;
-                    accumulated += segment;
+                    const offset = circumference - (previous / total) * circumference;
                     const percentage = Math.round((d.value / total) * 100);
                     return (
                         <circle

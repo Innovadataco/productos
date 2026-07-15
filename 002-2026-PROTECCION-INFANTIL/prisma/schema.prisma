@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 enum RolUsuario {
@@ -309,6 +311,8 @@ model IdentificadorReportado {
   reportesAutenticados Int     @default(0)
   reportesAnonimos    Int      @default(0)
   esVisiblePublicamente Boolean @default(false)
+  score               Int      @default(0)
+  nivelRiesgo         String?
   ultimoReporteEn     DateTime?
   creadoEn            DateTime @default(now())
   actualizadoEn       DateTime @updatedAt
@@ -318,6 +322,7 @@ model IdentificadorReportado {
   @@unique([identificador, plataformaId])
   @@index([esVisiblePublicamente])
   @@index([totalReportes])
+  @@index([score])
 }
 
 model ClasificacionIA {
@@ -379,4 +384,15 @@ model EmbeddingReporte {
   reporte Reporte @relation(fields: [reporteId], references: [id], onDelete: Cascade)
 
   @@index([vector])
+}
+model RateLimit {
+  key         String   @id
+  scope       String
+  identifier  String
+  windowStart DateTime
+  count       Int      @default(0)
+  createdAt   DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([scope, identifier, windowStart])
 }

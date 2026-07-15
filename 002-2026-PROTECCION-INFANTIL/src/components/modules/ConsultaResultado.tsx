@@ -1,5 +1,7 @@
 "use client";
 
+import { ScoreDisplay } from "./ScoreDisplay";
+
 type Ubicacion = { pais: string; ciudad: string; fecha: string };
 type CategoriaItem = { categoria: string; cantidad: number };
 type TimelineItem = { mes: string; cantidad: number };
@@ -16,18 +18,12 @@ type Resultado = {
     resumen?: string;
     ubicaciones?: Ubicacion[];
     score?: number;
-    nivelRiesgo?: "BAJO" | "MEDIO" | "ALTO";
+    nivelRiesgo?: "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
     ratioAutenticados?: number;
     categorias?: CategoriaItem[];
     timeline?: TimelineItem[];
     distribucion?: Distribucion;
     mensaje?: string;
-};
-
-const NIVEL_STYLES = {
-    BAJO: "bg-green-100 text-green-800",
-    MEDIO: "bg-amber-100 text-amber-800",
-    ALTO: "bg-red-100 text-red-800",
 };
 
 const CATEGORIA_LABELS: Record<string, string> = {
@@ -70,20 +66,11 @@ export function ConsultaResultado({ data }: { data: Resultado }) {
 
             {estaAutenticado && (
                 <>
-                    <div className="flex items-center gap-4 rounded-xl bg-white/50 p-4">
-                        <div className="text-center">
-                            <p className="text-3xl font-bold text-primary-700 font-mono">{data.score}</p>
-                            <p className="text-xs text-slate-500 mt-1">Score de riesgo</p>
-                        </div>
-                        <div className="flex-1">
-                            <span className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${NIVEL_STYLES[data.nivelRiesgo!]}`}>
-                                Riesgo {data.nivelRiesgo}
-                            </span>
-                            <p className="text-xs text-slate-500 mt-2">
-                                {Math.round((data.ratioAutenticados ?? 0) * 100)}% de reportes autenticados
-                            </p>
-                        </div>
-                    </div>
+                    <ScoreDisplay
+                        score={data.score ?? 0}
+                        nivelRiesgo={data.nivelRiesgo ?? "BAJO"}
+                        ratioAutenticados={data.ratioAutenticados}
+                    />
 
                     {data.categorias && data.categorias.length > 0 && (
                         <div>

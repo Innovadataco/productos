@@ -43,10 +43,7 @@ export function ReporteStepUbicacion({
 
     // Cargar ciudades cuando cambia país seleccionado
     useEffect(() => {
-        if (!paisId) {
-            setCiudades([]);
-            return;
-        }
+        if (!paisId) return;
         fetch(`/api/ciudades?paisId=${encodeURIComponent(paisId)}`, {
             credentials: "include",
         })
@@ -61,6 +58,9 @@ export function ReporteStepUbicacion({
         const selectedId = e.target.value;
         const selectedNombre =
             paises.find((p) => p.id === selectedId)?.nombre || "";
+        if (!selectedId) {
+            setCiudades([]);
+        }
         onChange({
             paisId: selectedId,
             pais: selectedNombre,

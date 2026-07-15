@@ -4,7 +4,7 @@ import { crearReporteSchema } from "@/lib/validators";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { getUserFromToken } from "@/lib/auth";
 import { publishReporte } from "@/lib/queue";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -23,18 +23,21 @@ export async function POST(request: Request) {
 
         const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma } = parsed.data;
 
-        // Rate limiting para usuarios anónimos
-        const esAnonimoPrevio = !await getUserFromToken(request);
-        if (esAnonimoPrevio) {
-            const ip = getClientIp(request);
-            const limit = checkRateLimit(ip);
-            if (!limit.allowed) {
-                return NextResponse.json(
-                    { error: { message: "Demasiados reportes. Espera una hora o crea una cuenta.", code: "RATE_LIMITED", retryAfter: Math.ceil((limit.resetAt - Date.now()) / 1000) } },
-                    { status: 429 }
-                );
-            }
+        // Obtener usuario autenticado (puede ser null)
+        const user = await getUserFromToken(request);
+        const esAnonimo = !user;
+
+        // Rate limiting por IP (anónimo) o por usuario autenticado
+        const identifier = user?.id ?? undefined;
+        const rate = await checkRateLimit(request, "report", { identifier });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiados reportes. Espera una hora o crea una cuenta.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rate.resetAt - Date.now()) / 1000) } },
+                { status: 429, headers: rate.headers }
+            );
         }
+
+        const usuarioId = user?.id ?? null;
 
         // Detección básica de spam
         const esSpam = detectarSpam(texto);
@@ -49,11 +52,6 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
-
-        // Obtener usuario autenticado (opcional)
-        const user = await getUserFromToken(request);
-        const usuarioId = user?.id ?? null;
-        const esAnonimo = !usuarioId;
 
         // Deduplicación autenticada: mismo usuario + identificador en 30 días
         if (usuarioId) {

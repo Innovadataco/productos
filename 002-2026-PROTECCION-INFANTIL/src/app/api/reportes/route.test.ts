@@ -28,7 +28,7 @@ const reporteValido = {
 describe("POST /api/reportes", () => {
     beforeEach(async () => {
         await resetDatabase();
-        resetRateLimitStore();
+        await resetRateLimitStore();
         await crearParametrosReportes();
         await crearPlataforma();
         await crearPaisCiudad();

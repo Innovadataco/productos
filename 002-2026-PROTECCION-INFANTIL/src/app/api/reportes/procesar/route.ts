@@ -7,6 +7,8 @@ import { buscarReporteSimilar } from "@/lib/ai/similarity";
 import { requireEnv } from "@/lib/env";
 import { ERROR_CODES } from "@/lib/errors";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
+import { recalcularYGuardarScore } from "@/lib/scoring";
+import { enviarAlertaRevision, enviarAlertaScoreCritico } from "@/lib/email";
 import type { EstadoReporte } from "@prisma/client";
 
 const ESTADOS_FINALES = new Set([
@@ -180,6 +182,27 @@ export async function POST(request: Request) {
         // Actualizar IdentificadorReportado (solo si está clasificado o corregido)
         if (estadoFinal === "CLASIFICADO" || estadoFinal === "CORREGIDO") {
             await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
+            const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+
+            if (scoreResult.nivelRiesgo === "CRITICO") {
+                enviarAlertaScoreCritico({
+                    id: reporte.id,
+                    identificador: reporte.identificador,
+                    plataformaId: reporte.plataformaId,
+                    score: scoreResult.score,
+                    nivelRiesgo: scoreResult.nivelRiesgo,
+                }).catch((err) => console.error("[ALERTA] Error enviando alerta de score crítico", err));
+            }
+        }
+
+        // Alertar a administradores cuando el reporte requiere intervención humana
+        if (estadoFinal === "REVISION_MANUAL" || estadoFinal === "REQUIERE_ANONIMIZACION") {
+            enviarAlertaRevision({
+                id: reporte.id,
+                numeroSeguimiento: reporte.numeroSeguimiento,
+                identificador: reporte.identificador,
+                estado: estadoFinal,
+            }).catch((err) => console.error("[ALERTA] Error enviando alerta de revisión", err));
         }
 
         return NextResponse.json({
@@ -195,18 +218,29 @@ export async function POST(request: Request) {
         const errMsg = error instanceof Error ? error.message : String(error);
 
         // Guardar error de procesamiento en el reporte
+        let reporteParaAlerta: { id: string; numeroSeguimiento: string | null; identificador: string } | null = null;
         if (reporteId) {
             try {
-                await prisma.reporte.update({
+                const reporteActualizado = await prisma.reporte.update({
                     where: { id: reporteId },
                     data: {
                         estado: "REVISION_MANUAL",
                         processingError: errMsg,
                     },
                 });
+                reporteParaAlerta = reporteActualizado;
             } catch {
                 // Si falla el update del error, solo loggear
             }
+        }
+
+        if (reporteParaAlerta) {
+            enviarAlertaRevision({
+                id: reporteParaAlerta.id,
+                numeroSeguimiento: reporteParaAlerta.numeroSeguimiento,
+                identificador: reporteParaAlerta.identificador,
+                estado: "REVISION_MANUAL",
+            }).catch((err) => console.error("[ALERTA] Error enviando alerta de revisión", err));
         }
 
         console.error("[PROCESAR] Error procesando reporte", { reporteId, errorType: error instanceof Error ? error.name : "Unknown" });

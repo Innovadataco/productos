@@ -94,7 +94,7 @@ describe("GET /api/consulta", () => {
         const body = await res.json();
         expect(body.tieneReportes).toBe(true);
         expect(body.score).toBeGreaterThanOrEqual(0);
-        expect(body.nivelRiesgo).toMatch(/^(BAJO|MEDIO|ALTO)$/);
+        expect(body.nivelRiesgo).toMatch(/^(BAJO|MEDIO|ALTO|CRITICO)$/);
         expect(body.categorias).toHaveLength(1);
         expect(body.timeline).toHaveLength(1);
     });

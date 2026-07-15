@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ERROR_CODES } from "@/lib/errors";
 import { getUserFromToken } from "@/lib/auth";
 import { calcularRanking } from "@/lib/ranking";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { EstadoReporte } from "@prisma/client";
 
 const consultaSchema = z.object({
@@ -24,6 +25,14 @@ const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
  */
 export async function GET(request: Request) {
     try {
+        const rate = await checkRateLimit(request, "consulta");
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas consultas. Intenta más tarde.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rate.resetAt - Date.now()) / 1000) } },
+                { status: 429, headers: rate.headers }
+            );
+        }
+
         const { searchParams } = new URL(request.url);
         const identificador = searchParams.get("identificador");
         const plataformaClave = searchParams.get("plataforma");

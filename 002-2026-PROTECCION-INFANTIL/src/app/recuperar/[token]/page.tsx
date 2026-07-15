@@ -11,13 +11,12 @@ export default function RecuperarTokenPage() {
     const params = useParams();
     const token = typeof params.token === "string" ? params.token : "";
 
-    const [status, setStatus] = useState<"loading" | "valid" | "invalid">("loading");
+    const [status, setStatus] = useState<"loading" | "valid" | "invalid">(
+        token ? "loading" : "invalid"
+    );
 
     useEffect(() => {
-        if (!token) {
-            setStatus("invalid");
-            return;
-        }
+        if (!token) return;
         fetch(`/api/auth/recuperar/validar?token=${encodeURIComponent(token)}`, { credentials: "include" })
             .then((res) => {
                 if (res.ok) {

@@ -118,7 +118,9 @@ test.describe("Panel de administración", () => {
         const modal = page.locator("div").filter({ hasText: "Detalle del reporte" }).first();
         await expect(modal).toBeVisible();
 
-        await page.locator("select", { hasText: "Seleccionar categoría" }).selectOption("SUPLANTACION_IDENTIDAD");
+        const selectCorreccion = page.getByTestId("select-correccion-categoria");
+        await selectCorreccion.selectOption("SUPLANTACION_IDENTIDAD");
+        await expect(selectCorreccion).toHaveValue("SUPLANTACION_IDENTIDAD");
         await page.getByRole("button", { name: "Corregir clasificación" }).click();
 
         await expect(page.getByText("Clasificación corregida correctamente")).toBeVisible();

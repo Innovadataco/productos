@@ -60,7 +60,7 @@ export function AdminReporteDetalle({
     onRefresh: () => void;
 }) {
     const [reporte, setReporte] = useState<DetalleReporte | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [textoAnonimizado, setTextoAnonimizado] = useState("");
     const [categoriaCorreccion, setCategoriaCorreccion] = useState("");
@@ -70,9 +70,10 @@ export function AdminReporteDetalle({
 
     useEffect(() => {
         if (!reporteId) return;
-        setLoading(true);
         setError("");
         setSuccess("");
+        setCategoriaCorreccion("");
+        setMotivoCorreccion("");
         fetch(`/api/admin/reportes-revision/${reporteId}`, { credentials: "include" })
             .then(async (r) => {
                 if (!r.ok) throw new Error("Error cargando detalle");
@@ -82,8 +83,6 @@ export function AdminReporteDetalle({
                 const data: DetalleReporte = json.reporte || json;
                 setReporte(data);
                 setTextoAnonimizado(data.texto || "");
-                setCategoriaCorreccion("");
-                setMotivoCorreccion("");
             })
             .catch(() => setError("Error cargando detalle"))
             .finally(() => setLoading(false));
@@ -275,6 +274,7 @@ export function AdminReporteDetalle({
                         <div className="rounded-lg border border-slate-200 p-4">
                             <h3 className="mb-2 font-medium text-slate-900">Corregir clasificación</h3>
                             <select
+                                data-testid="select-correccion-categoria"
                                 className="mb-2 w-full rounded-lg border border-slate-300 p-2"
                                 value={categoriaCorreccion}
                                 onChange={(e) => setCategoriaCorreccion(e.target.value)}

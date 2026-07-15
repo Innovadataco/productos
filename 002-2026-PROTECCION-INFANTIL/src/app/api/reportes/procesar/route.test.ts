@@ -8,6 +8,8 @@ import type { CategoriaConducta } from "@prisma/client";
 const mockClasificar = vi.fn();
 const mockEmbedding = vi.fn();
 const mockAnonimizar = vi.fn();
+const mockEnviarAlertaRevision = vi.fn();
+const mockEnviarAlertaScoreCritico = vi.fn();
 
 vi.mock("@/lib/ai/classifier", () => ({
     clasificarReporte: (...args: unknown[]) => mockClasificar(...args),
@@ -19,6 +21,11 @@ vi.mock("@/lib/ai/embedder", () => ({
 
 vi.mock("@/lib/ai/anonimizador", () => ({
     anonimizarTexto: (...args: unknown[]) => mockAnonimizar(...args),
+}));
+
+vi.mock("@/lib/email", () => ({
+    enviarAlertaRevision: (...args: unknown[]) => mockEnviarAlertaRevision(...args),
+    enviarAlertaScoreCritico: (...args: unknown[]) => mockEnviarAlertaScoreCritico(...args),
 }));
 
 function crearRequestProcesar(reporteId: string) {
@@ -38,6 +45,8 @@ describe("POST /api/reportes/procesar", () => {
         mockClasificar.mockReset();
         mockEmbedding.mockReset();
         mockAnonimizar.mockReset();
+        mockEnviarAlertaRevision.mockReset().mockResolvedValue(undefined);
+        mockEnviarAlertaScoreCritico.mockReset().mockResolvedValue(undefined);
         process.env.WORKER_SECRET = "worker-secret-test";
     });
 
@@ -276,5 +285,92 @@ describe("POST /api/reportes/procesar", () => {
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("REVISION_MANUAL");
         expect(actualizado?.processingError).toContain("Ollama no disponible");
+    });
+
+    it("envía alerta de revisión cuando el procesamiento falla", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const reporte = await prisma.reporte.create({
+            data: {
+                identificador: "+57300ALERT",
+                plataformaId: plataforma!.id,
+                texto: "Texto.",
+                fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: "RPT-ALERT",
+                estado: "PENDIENTE",
+            },
+        });
+
+        mockClasificar.mockResolvedValue({
+            categoria: "OFRECIMIENTO_REGALOS" as CategoriaConducta,
+            confianza: 0.9,
+            contienePii: true,
+            piiDetectada: ["María"],
+            estado: "REQUIERE_ANONIMIZACION",
+            rawResponse: "{}",
+            metrics: { modelo: "ornith:9b", latenciaMs: 1000 },
+        });
+        mockAnonimizar.mockRejectedValue(new Error("Ollama no disponible"));
+        mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
+
+        await POST(crearRequestProcesar(reporte.id));
+
+        await vi.waitFor(() =>
+            expect(mockEnviarAlertaRevision).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    numeroSeguimiento: "RPT-ALERT",
+                    identificador: "+57300ALERT",
+                    estado: "REVISION_MANUAL",
+                })
+            )
+        );
+    });
+
+    it("envía alerta de score crítico cuando el identificador alcanza riesgo crítico", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        mockClasificar.mockResolvedValue({
+            categoria: "COMPARTIMIENTO_SEXUAL" as CategoriaConducta,
+            confianza: 0.95,
+            contienePii: false,
+            piiDetectada: [],
+            estado: "CLASIFICADO",
+            rawResponse: "{}",
+            metrics: { modelo: "ornith:9b", latenciaMs: 1000 },
+        });
+        mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
+
+        const reportes = [];
+        for (let i = 0; i < 8; i++) {
+            const reporte = await prisma.reporte.create({
+                data: {
+                    identificador: "+57300CRITICO",
+                    plataformaId: plataforma!.id,
+                    texto: `Reporte ${i + 1} de solicitud de material íntimo.`,
+                    fechaIncidente: new Date(`2026-07-${10 + i}T10:00:00Z`),
+                    ciudad: "Bogotá",
+                    pais: "Colombia",
+                    esAnonimo: false,
+                    numeroSeguimiento: `RPT-CRIT-${String(i + 1).padStart(2, "0")}`,
+                    estado: "PENDIENTE",
+                },
+            });
+            reportes.push(reporte);
+        }
+
+        for (let i = 0; i < reportes.length; i++) {
+            const res = await POST(crearRequestProcesar(reportes[i].id));
+            expect(res.status).toBe(200);
+        }
+
+        await vi.waitFor(() =>
+            expect(mockEnviarAlertaScoreCritico).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    identificador: "+57300CRITICO",
+                    nivelRiesgo: "CRITICO",
+                })
+            )
+        );
     });
 });

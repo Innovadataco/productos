@@ -23,5 +23,9 @@ export default defineConfig({
         url: "http://localhost:5005",
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
+        env: {
+            DISABLE_RATE_LIMIT: "true",
+            NEXT_PUBLIC_DISABLE_ONBOARDING: "true",
+        },
     },
 });

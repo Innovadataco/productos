@@ -2,10 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { verifyAuth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 export async function POST(request: Request) {
     try {
+        const rate = await checkRateLimit(request, "register");
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiados intentos de registro. Intenta más tarde.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rate.resetAt - Date.now()) / 1000) } },
+                { status: 429, headers: rate.headers }
+            );
+        }
+
         const currentUser = await verifyAuth("ADMIN");
         const body = (await request.json()) as {
             email: string;

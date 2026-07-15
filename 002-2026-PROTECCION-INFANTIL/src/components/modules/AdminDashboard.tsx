@@ -52,11 +52,10 @@ function formatCategoria(categoria: string) {
 
 export function AdminDashboard() {
     const [data, setData] = useState<StatsData | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        setLoading(true);
         fetch("/api/admin/estadisticas", { credentials: "include" })
             .then(async (r) => {
                 if (!r.ok) throw new Error("Error cargando estadísticas");

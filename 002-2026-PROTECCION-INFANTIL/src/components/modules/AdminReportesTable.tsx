@@ -66,7 +66,7 @@ export function AdminReportesTable() {
 
     const [reportes, setReportes] = useState<ReporteListItem[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
     const [selectedReporteId, setSelectedReporteId] = useState<string | null>(null);
@@ -107,14 +107,13 @@ export function AdminReportesTable() {
     );
 
     const fetchReportes = useCallback(async () => {
-        setLoading(true);
-        setError("");
         try {
             const res = await fetch(`/api/admin/reportes-revision?${buildQueryString()}`, {
                 credentials: "include",
             });
             if (!res.ok) throw new Error("Error cargando reportes");
             const json = await res.json();
+            setError("");
             setReportes(json.reportes || []);
             setPagination(json.pagination);
         } catch {

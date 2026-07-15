@@ -43,13 +43,16 @@ async function crearReporteClasificado(
 
 describe("calcularNivelRiesgo", () => {
     it("retorna BAJO por debajo del umbral inferior", () => {
-        expect(calcularNivelRiesgo(20, { low: 30, medium: 70 })).toBe("BAJO");
+        expect(calcularNivelRiesgo(20, { low: 35, medium: 60, high: 80 })).toBe("BAJO");
     });
-    it("retorna MEDIO entre umbrales", () => {
-        expect(calcularNivelRiesgo(50, { low: 30, medium: 70 })).toBe("MEDIO");
+    it("retorna MEDIO entre los umbrales bajo y medio", () => {
+        expect(calcularNivelRiesgo(45, { low: 35, medium: 60, high: 80 })).toBe("MEDIO");
     });
-    it("retorna ALTO por encima del umbral medio", () => {
-        expect(calcularNivelRiesgo(80, { low: 30, medium: 70 })).toBe("ALTO");
+    it("retorna ALTO entre los umbrales medio y alto", () => {
+        expect(calcularNivelRiesgo(70, { low: 35, medium: 60, high: 80 })).toBe("ALTO");
+    });
+    it("retorna CRITICO por encima del umbral alto", () => {
+        expect(calcularNivelRiesgo(85, { low: 35, medium: 60, high: 80 })).toBe("CRITICO");
     });
 });
 

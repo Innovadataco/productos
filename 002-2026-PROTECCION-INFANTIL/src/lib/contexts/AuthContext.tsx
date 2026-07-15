@@ -36,7 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        checkSession();
+        void (async () => {
+            await checkSession();
+        })();
     }, [checkSession]);
 
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {

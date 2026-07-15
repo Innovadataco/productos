@@ -86,7 +86,7 @@ test.describe("Consulta pública de identificador", () => {
         await page.getByRole("button", { name: "Buscar" }).click();
 
         await expect(page.getByText("Score de riesgo")).toBeVisible();
-        await expect(page.getByText(/Riesgo (BAJO|MEDIO|ALTO)/)).toBeVisible();
+        await expect(page.getByText(/Riesgo (BAJO|MEDIO|ALTO|CRITICO)/i)).toBeVisible();
         await expect(page.getByText("Clasificaciones de la IA")).toBeVisible();
         await expect(page.getByText("Línea de tiempo")).toBeVisible();
     });
