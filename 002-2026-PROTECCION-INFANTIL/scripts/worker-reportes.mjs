@@ -3,13 +3,19 @@
  * Worker pg-boss para procesamiento de reportes
  * Supervisado por pm2: pm2 start scripts/worker-reportes.mjs --name "reportes-worker"
  *
- * Configuración de reintentos:
+ * Configuración de reintentos (pg-boss DLQ):
  * - retryLimit: 3 (máximo 3 reintentos después del intento inicial)
  * - retryDelay: 30 segundos base
  * - retryBackoff: true (exponencial: 30s, 60s, 120s)
+ * - Los jobs que agotan reintentos quedan en estado 'failed' en pgboss.job (DLQ nativa)
+ *
+ * Resiliencia adicional:
+ * - Healthcheck de Ollama antes de cada job.
+ * - Retry manual con backoff exponencial para errores transitorios (5xx/red).
  */
 
 import { PgBoss } from "pg-boss";
+import { fetchWithRetry } from "../src/lib/fetch-retry.ts";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -25,6 +31,8 @@ if (!WORKER_SECRET) {
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5005";
+const MAX_RETRY = 3;
+const BASE_DELAY_MS = 1000;
 
 const boss = new PgBoss(DATABASE_URL);
 
@@ -50,7 +58,7 @@ async function start() {
         console.log("[WORKER] Cola ya existe");
     }
     console.log("[WORKER] Iniciado. Escuchando cola 'reporte-procesamiento'...");
-    console.log("[WORKER] Config: retryLimit=3, retryDelay=30s, backoff=exponencial");
+    console.log(`[WORKER] Config: retryLimit=${MAX_RETRY}, retryDelay=30s, backoff=exponencial`);
 
     // Verificar Ollama al inicio
     const ollamaOk = await checkOllamaHealth();
@@ -67,16 +75,25 @@ async function start() {
         const startMs = Date.now();
         const retryCount = job.retryCount || 0;
 
-        console.log(`[WORKER] Procesando reporte ${reporteId} (job ${job.id}, intento ${retryCount + 1}/4)`);
+        console.log(`[WORKER] Procesando reporte ${reporteId} (job ${job.id}, intento ${retryCount + 1}/${MAX_RETRY + 1})`);
+
+        // Healthcheck Ollama antes de procesar
+        const ollamaHealthy = await checkOllamaHealth();
+        if (!ollamaHealthy) {
+            console.error(`[WORKER] ERROR reporte=${reporteId} Ollama no disponible, reintentando más tarde`);
+            throw new Error("Ollama no disponible");
+        }
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/reportes/procesar`, {
+            const res = await fetchWithRetry(`${API_BASE_URL}/api/reportes/procesar`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "X-Worker-Secret": WORKER_SECRET,
                 },
                 body: JSON.stringify({ reporteId }),
+                maxRetries: MAX_RETRY,
+                baseDelayMs: BASE_DELAY_MS,
             });
 
             const latencia = Date.now() - startMs;
@@ -92,7 +109,13 @@ async function start() {
         } catch (err) {
             const latencia = Date.now() - startMs;
             const msg = err instanceof Error ? err.message : "Error desconocido";
-            console.error(`[WORKER] ERROR reporte=${reporteId} latencia=${latencia}ms intento=${retryCount + 1} error=<redactado>`);
+            const esUltimoIntento = retryCount >= MAX_RETRY;
+            console.error(
+                `[WORKER] ERROR reporte=${reporteId} latencia=${latencia}ms intento=${retryCount + 1} ultimoIntento=${esUltimoIntento} error=<redactado>`
+            );
+            if (esUltimoIntento) {
+                console.error(`[WORKER] DLQ reporte=${reporteId} motivo=${msg}`);
+            }
             throw err;
         }
     });

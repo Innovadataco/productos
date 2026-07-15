@@ -16,6 +16,7 @@ const PUBLIC_ROUTES = [
     "/api/ciudades",
     "/api/consulta",
     "/api/reportes",
+    "/api/health",
 ];
 
 function getSecret(): Uint8Array {

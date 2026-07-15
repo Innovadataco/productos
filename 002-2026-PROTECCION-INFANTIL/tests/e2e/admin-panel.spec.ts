@@ -7,17 +7,25 @@ const ADMIN_EMAIL = "admin@proteccion.local";
 const ADMIN_PASSWORD = "Admin123!Secure";
 
 async function asegurarAdmin() {
-    await prisma.usuario.upsert({
-        where: { email: ADMIN_EMAIL },
-        update: {},
-        create: {
-            email: ADMIN_EMAIL,
-            nombre: "Administrador E2E",
-            passwordHash: await hashPassword(ADMIN_PASSWORD),
-            rol: "ADMIN",
-            estado: "activo",
-        },
-    });
+    try {
+        await prisma.usuario.upsert({
+            where: { email: ADMIN_EMAIL },
+            update: {},
+            create: {
+                email: ADMIN_EMAIL,
+                nombre: "Administrador E2E",
+                passwordHash: await hashPassword(ADMIN_PASSWORD),
+                rol: "ADMIN",
+                estado: "activo",
+            },
+        });
+    } catch (error) {
+        // Race condition tolerada: otro worker paralelo ya creó el admin
+        const msg = error instanceof Error ? error.message : String(error);
+        if (!msg.includes("Unique constraint")) {
+            throw error;
+        }
+    }
 }
 
 async function obtenerPlataformaWhatsApp() {
