@@ -3,20 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { ERROR_CODES } from "@/lib/errors";
 import { getUserFromToken } from "@/lib/auth";
-import { calcularRanking } from "@/lib/ranking";
+import { calcularScore } from "@/lib/scoring";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { EstadoReporte } from "@prisma/client";
 
 const consultaSchema = z.object({
     identificador: z.string().min(3).max(100),
-    plataforma: z.string().min(1),
 });
 
 const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
 
 /**
- * GET /api/consulta?identificador=...&plataforma=...
- * Consulta pública de un identificador reportado.
+ * GET /api/consulta?identificador=...
+ * Consulta pública de un identificador reportado (número, nick o usuario).
  *
  * - Usuarios anónimos: información agregada básica (total, distribución geográfica/fechas).
  * - Usuarios autenticados: score de riesgo, nivel de riesgo, categorías agregadas y timeline.
@@ -35,22 +34,11 @@ export async function GET(request: Request) {
 
         const { searchParams } = new URL(request.url);
         const identificador = searchParams.get("identificador");
-        const plataformaClave = searchParams.get("plataforma");
 
-        const parsed = consultaSchema.safeParse({ identificador, plataforma: plataformaClave });
+        const parsed = consultaSchema.safeParse({ identificador });
         if (!parsed.success) {
             return NextResponse.json(
-                { error: { message: "Parámetros inválidos", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            );
-        }
-
-        const plataforma = await prisma.plataforma.findUnique({
-            where: { clave: parsed.data.plataforma },
-        });
-        if (!plataforma) {
-            return NextResponse.json(
-                { error: { message: "Plataforma no válida", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: "Identificador inválido", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
@@ -66,30 +54,17 @@ export async function GET(request: Request) {
         const umbral = parseInt(paramUmbral?.valor || "3", 10);
         const minRatio = parseFloat(paramRatio?.valor || "0.5");
 
-        const totalReportes = await prisma.reporte.count({
+        // Reportes visibles del identificador agrupados por plataforma
+        const reportesPorPlataforma = await prisma.reporte.groupBy({
+            by: ["plataformaId"],
             where: {
                 identificador: parsed.data.identificador,
-                plataformaId: plataforma.id,
                 estado: { in: ESTADOS_VISIBLES },
             },
+            _count: { id: true },
         });
 
-        const reportesAutenticados = await prisma.reporte.count({
-            where: {
-                identificador: parsed.data.identificador,
-                plataformaId: plataforma.id,
-                estado: { in: ESTADOS_VISIBLES },
-                esAnonimo: false,
-            },
-        });
-
-        const ratioAutenticados = totalReportes > 0 ? reportesAutenticados / totalReportes : 0;
-        const esVisible = totalReportes >= umbral && ratioAutenticados >= minRatio;
-
-        const usuario = await getUserFromToken(request);
-        const estaAutenticado = !!usuario;
-
-        if (!esVisible) {
+        if (reportesPorPlataforma.length === 0) {
             return NextResponse.json({
                 identificador: parsed.data.identificador,
                 tieneReportes: false,
@@ -97,11 +72,58 @@ export async function GET(request: Request) {
             });
         }
 
-        // Distribución básica para todos (anónimo y autenticado)
+        const plataformaIdsVisibles: string[] = [];
+        const plataformaTotales: Record<string, { total: number; autenticados: number }> = {};
+
+        for (const grupo of reportesPorPlataforma) {
+            const total = await prisma.reporte.count({
+                where: {
+                    identificador: parsed.data.identificador,
+                    plataformaId: grupo.plataformaId,
+                    estado: { in: ESTADOS_VISIBLES },
+                },
+            });
+            const autenticados = await prisma.reporte.count({
+                where: {
+                    identificador: parsed.data.identificador,
+                    plataformaId: grupo.plataformaId,
+                    estado: { in: ESTADOS_VISIBLES },
+                    esAnonimo: false,
+                },
+            });
+            const ratio = total > 0 ? autenticados / total : 0;
+            if (total >= umbral && ratio >= minRatio) {
+                plataformaIdsVisibles.push(grupo.plataformaId);
+            }
+            plataformaTotales[grupo.plataformaId] = { total, autenticados };
+        }
+
+        if (plataformaIdsVisibles.length === 0) {
+            return NextResponse.json({
+                identificador: parsed.data.identificador,
+                tieneReportes: false,
+                mensaje: "Sin reportes registrados para este identificador.",
+            });
+        }
+
+        const plataformas = await prisma.plataforma.findMany({
+            where: { id: { in: plataformaIdsVisibles } },
+        });
+
+        const totalReportes = plataformaIdsVisibles.reduce(
+            (sum, id) => sum + plataformaTotales[id].total,
+            0
+        );
+        const reportesAutenticados = plataformaIdsVisibles.reduce(
+            (sum, id) => sum + plataformaTotales[id].autenticados,
+            0
+        );
+        const reportesAnonimos = totalReportes - reportesAutenticados;
+
         const reportesVisibles = await prisma.reporte.findMany({
             where: {
                 identificador: parsed.data.identificador,
-                plataformaId: plataforma.id,
+                plataformaId: { in: plataformaIdsVisibles },
                 estado: { in: ESTADOS_VISIBLES },
             },
             select: {
@@ -109,10 +131,13 @@ export async function GET(request: Request) {
                 pais: true,
                 creadoEn: true,
                 esAnonimo: true,
+                plataforma: { select: { nombre: true } },
             },
             orderBy: { creadoEn: "desc" },
             take: 1000,
         });
+
+        const ultimoReporte = reportesVisibles[0]?.creadoEn ?? null;
 
         const ubicaciones = reportesVisibles.map((r) => ({
             pais: r.pais,
@@ -122,25 +147,35 @@ export async function GET(request: Request) {
 
         const mesesUnicos = [...new Set(reportesVisibles.map((r) => r.creadoEn.toISOString().slice(0, 7)))].sort();
         const resumenMeses = mesesUnicos.length;
+        const ciudadesUnicas = new Set(ubicaciones.map((u) => u.ciudad)).size;
+
+        const plataformasResponse = plataformaIdsVisibles.map((id) => ({
+            id,
+            nombre: plataformas.find((p) => p.id === id)?.nombre ?? id,
+            totalReportes: plataformaTotales[id].total,
+        }));
 
         const baseResponse = {
             identificador: parsed.data.identificador,
-            plataforma: plataforma.nombre,
             tieneReportes: true,
             totalReportes,
             reportesAutenticados,
-            reportesAnonimos: totalReportes - reportesAutenticados,
-            ultimoReporte: reportesVisibles[0]?.creadoEn ?? null,
-            resumen: `En los últimos ${resumenMeses} mes(es) se han reportado ${totalReportes} vez(es) en ${new Set(ubicaciones.map((u) => u.ciudad)).size} ciudad(es) diferentes.`,
+            reportesAnonimos,
+            ultimoReporte: ultimoReporte?.toISOString() ?? null,
+            plataformas: plataformasResponse,
+            resumen: `En los últimos ${resumenMeses} mes(es) se han reportado ${totalReportes} vez(es) en ${ciudadesUnicas} ciudad(es) diferentes y ${plataformasResponse.length} plataforma(s).`,
             ubicaciones,
         };
+
+        const usuario = await getUserFromToken(request);
+        const estaAutenticado = !!usuario;
 
         if (!estaAutenticado) {
             return NextResponse.json(baseResponse);
         }
 
-        // Usuario autenticado: incluir score, categorías y timeline
-        const ranking = await calcularRanking(parsed.data.identificador, plataforma.id);
+        // Usuario autenticado: incluir score, categorías y timeline agregados por identificador
+        const ranking = await calcularScore(parsed.data.identificador);
 
         return NextResponse.json({
             ...baseResponse,

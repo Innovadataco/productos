@@ -4,7 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { NavHeader } from "@/components/modules/NavHeader";
 import { ServiceWorkerRegister } from "@/components/modules/ServiceWorkerRegister";
-import { OnboardingModal } from "@/components/modules/OnboardingModal";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 
 const plusJakarta = Plus_Jakarta_Sans({
     subsets: ["latin"],
@@ -51,7 +51,7 @@ export default function RootLayout({
                 <AuthProvider>
                     <ServiceWorkerRegister />
                     <NavHeader />
-                    <OnboardingModal />
+                    <OnboardingTour />
                     {children}
                 </AuthProvider>
             </body>

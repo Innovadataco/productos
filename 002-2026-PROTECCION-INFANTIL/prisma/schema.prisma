@@ -90,8 +90,9 @@ model Usuario {
   auditLogs      AuditLog[]
   codigos        CodigoVerificacion[]
   tokensRecuperacion TokenRecuperacion[]
-  reportes       Reporte[]
-  correcciones   CorreccionAdmin[]
+  reportes            Reporte[]
+  correcciones        CorreccionAdmin[]
+  alertasSuscripcion  AlertaSuscripcion[]
 
   @@index([email])
   @@index([rol])
@@ -228,6 +229,7 @@ model Plataforma {
 
   reportes Reporte[]
   identificadores IdentificadorReportado[]
+  alertasSuscripcion AlertaSuscripcion[]
 
   @@index([clave])
   @@index([esActiva])
@@ -323,6 +325,25 @@ model IdentificadorReportado {
   @@index([esVisiblePublicamente])
   @@index([totalReportes])
   @@index([score])
+}
+
+model AlertaSuscripcion {
+  id            String   @id @default(cuid())
+  usuarioId     String
+  identificador String
+  plataformaId  String
+  activa        Boolean  @default(true)
+  ultimoEmailEn DateTime?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  usuario    Usuario    @relation(fields: [usuarioId], references: [id])
+  plataforma Plataforma @relation(fields: [plataformaId], references: [id])
+
+  @@unique([usuarioId, identificador, plataformaId])
+  @@index([usuarioId])
+  @@index([identificador, plataformaId])
+  @@index([activa])
 }
 
 model ClasificacionIA {

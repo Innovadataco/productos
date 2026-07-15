@@ -14,9 +14,9 @@ export default function HomePage() {
     const { data, isLoading, error, request } = useApi<Record<string, unknown>>();
     const [buscado, setBuscado] = useState(false);
 
-    const handleSearch = async (identificador: string, plataforma: string) => {
+    const handleSearch = async (identificador: string) => {
         setBuscado(true);
-        await request(`/api/consulta?identificador=${encodeURIComponent(identificador)}&plataforma=${encodeURIComponent(plataforma)}`);
+        await request(`/api/consulta?identificador=${encodeURIComponent(identificador)}`);
     };
 
     return (
@@ -27,7 +27,7 @@ export default function HomePage() {
                 <div className="mb-6 text-center">
                     <h2 className="text-2xl font-bold text-slate-900">Consulta un identificador</h2>
                     <p className="mt-2 text-sm text-slate-600">
-                        Ingresa un número, nick o usuario y la plataforma para conocer reportes comunitarios.
+                        Ingresa un número, nick o usuario para conocer reportes comunitarios sin importar la plataforma.
                     </p>
                 </div>
 

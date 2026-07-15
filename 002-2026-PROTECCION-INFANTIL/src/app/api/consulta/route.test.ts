@@ -54,7 +54,7 @@ describe("GET /api/consulta", () => {
     });
 
     it("devuelve sin reportes cuando no supera umbral", async () => {
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300111111&plataforma=whatsapp");
+        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300111111");
         const res = await GET(req);
         expect(res.status).toBe(200);
         const body = await res.json();
@@ -67,7 +67,7 @@ describe("GET /api/consulta", () => {
             await crearReporteVisible("+57300ANON", plataforma!.id, "OFRECIMIENTO_REGALOS", i === 0);
         }
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300ANON&plataforma=whatsapp");
+        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300ANON");
         const res = await GET(req);
         expect(res.status).toBe(200);
         const body = await res.json();
@@ -76,6 +76,8 @@ describe("GET /api/consulta", () => {
         expect(body.score).toBeUndefined();
         expect(body.ubicaciones).toHaveLength(3);
         expect(body.resumen).toContain("3");
+        expect(body.plataformas).toHaveLength(1);
+        expect(body.plataformas[0].nombre).toBe("WhatsApp");
     });
 
     it("usuario autenticado ve score, nivel de riesgo y categorías", async () => {
@@ -86,7 +88,7 @@ describe("GET /api/consulta", () => {
             await crearReporteVisible("+57300AUTH", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
         }
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300AUTH&plataforma=whatsapp", {
+        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300AUTH", {
             headers: { cookie: `token=${token}` },
         });
         const res = await GET(req);
@@ -100,8 +102,25 @@ describe("GET /api/consulta", () => {
     });
 
     it("rechaza parámetros inválidos", async () => {
-        const req = new Request("http://localhost:5005/api/consulta?identificador=ab&plataforma=whatsapp");
+        const req = new Request("http://localhost:5005/api/consulta?identificador=ab");
         const res = await GET(req);
         expect(res.status).toBe(400);
+    });
+
+    it("agrupa reportes del mismo identificador en múltiples plataformas", async () => {
+        const whatsapp = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const instagram = await crearPlataforma("instagram", "Instagram", "red_social");
+        for (let i = 0; i < 3; i++) {
+            await crearReporteVisible("+57300MULTI", whatsapp!.id, "OFRECIMIENTO_REGALOS", false);
+            await crearReporteVisible("+57300MULTI", instagram.id, "CONTACTO_INSISTENTE", false);
+        }
+
+        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300MULTI");
+        const res = await GET(req);
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.tieneReportes).toBe(true);
+        expect(body.totalReportes).toBe(6);
+        expect(body.plataformas).toHaveLength(2);
     });
 });

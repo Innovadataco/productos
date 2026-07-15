@@ -9,7 +9,7 @@ type Distribucion = { porCiudad: Record<string, number>; porPais: Record<string,
 
 type Resultado = {
     identificador: string;
-    plataforma: string;
+    plataformas?: { id: string; nombre: string; totalReportes: number }[];
     tieneReportes: boolean;
     totalReportes?: number;
     reportesAutenticados?: number;
@@ -49,11 +49,19 @@ export function ConsultaResultado({ data }: { data: Resultado }) {
 
     return (
         <div className="glass rounded-2xl p-6 animate-floatUp space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold text-slate-800">{data.identificador}</h2>
-                <span className="rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">
-                    {data.plataforma}
-                </span>
+                <div className="flex flex-wrap gap-2">
+                    {data.plataformas?.map((p) => (
+                        <span
+                            key={p.id}
+                            className="rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700"
+                            title={`${p.totalReportes} reportes`}
+                        >
+                            {p.nombre}
+                        </span>
+                    ))}
+                </div>
             </div>
 
             <p className="text-sm text-slate-700">{data.resumen}</p>
@@ -70,6 +78,13 @@ export function ConsultaResultado({ data }: { data: Resultado }) {
                         score={data.score ?? 0}
                         nivelRiesgo={data.nivelRiesgo ?? "BAJO"}
                         ratioAutenticados={data.ratioAutenticados}
+                        totalReportes={data.totalReportes}
+                        ciudades={data.distribucion ? Object.keys(data.distribucion.porCiudad) : undefined}
+                        categoriaPrincipal={
+                            data.categorias && data.categorias.length > 0
+                                ? (CATEGORIA_LABELS[data.categorias[0].categoria] ?? data.categorias[0].categoria)
+                                : undefined
+                        }
                     />
 
                     {data.categorias && data.categorias.length > 0 && (

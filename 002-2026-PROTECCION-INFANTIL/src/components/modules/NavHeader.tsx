@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { resetOnboarding } from "@/lib/onboarding";
 
 export function NavHeader() {
     const { user, isLoading, logout } = useAuth();
@@ -34,6 +35,16 @@ export function NavHeader() {
                             <span className="text-sm text-slate-700 hidden sm:inline">
                                 {user.nombre}
                             </span>
+                            <button
+                                onClick={() => {
+                                    resetOnboarding();
+                                    window.location.reload();
+                                }}
+                                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition hidden sm:inline"
+                                title="Repetir tour de bienvenida"
+                            >
+                                Tour
+                            </button>
                             <button
                                 onClick={logout}
                                 className="text-sm font-medium text-slate-600 hover:text-slate-900 transition"

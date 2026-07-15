@@ -421,6 +421,14 @@ async function main() {
             esPublico: false,
             descripcion: "Enviar alerta cuando un identificador alcanza score crítico",
         },
+        {
+            clave: "alerts.subscriptions.enabled",
+            valor: "true",
+            tipo: TipoParametro.BOOLEAN,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "Enviar alertas por email a usuarios suscritos a identificadores",
+        },
     ];
 
     for (const p of reportesParams) {

@@ -1,33 +1,45 @@
 "use client";
 
+import { useState } from "react";
+
 type NivelRiesgo = "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
 
-interface ScoreDisplayProps {
+export interface ScoreDisplayProps {
     score: number;
     nivelRiesgo: NivelRiesgo;
     ratioAutenticados?: number;
+    totalReportes?: number;
+    ciudades?: string[];
+    categoriaPrincipal?: string;
 }
+
+const RECOMENDACIONES: Record<NivelRiesgo, string> = {
+    BAJO: "Sin riesgo significativo. Precaución habitual.",
+    MEDIO: "Mantené precaución y conversá sobre contactos desconocidos.",
+    ALTO: "Hablá con tu hijo/a y verificá conversaciones.",
+    CRITICO: "Bloqueá y hablá con tu hijo/a. Considerá denunciar.",
+};
 
 const NIVEL_STYLES: Record<NivelRiesgo, { badge: string; ring: string; label: string }> = {
     BAJO: {
-        badge: "bg-green-100 text-green-800",
-        ring: "text-green-500",
-        label: "Riesgo Bajo",
+        badge: "bg-green-100 text-green-900",
+        ring: "text-green-600",
+        label: "RIESGO BAJO",
     },
     MEDIO: {
-        badge: "bg-amber-100 text-amber-800",
+        badge: "bg-amber-100 text-amber-900",
         ring: "text-amber-500",
-        label: "Riesgo Medio",
+        label: "RIESGO MEDIO",
     },
     ALTO: {
-        badge: "bg-orange-100 text-orange-800",
-        ring: "text-orange-500",
-        label: "Riesgo Alto",
+        badge: "bg-orange-100 text-orange-900",
+        ring: "text-orange-600",
+        label: "RIESGO ALTO",
     },
     CRITICO: {
-        badge: "bg-red-100 text-red-800",
+        badge: "bg-red-100 text-red-900",
         ring: "text-red-600",
-        label: "Riesgo Crítico",
+        label: "RIESGO CRÍTICO",
     },
 };
 
@@ -35,64 +47,115 @@ function clamp(value: number, min: number, max: number) {
     return Math.min(Math.max(value, min), max);
 }
 
-export function ScoreDisplay({ score, nivelRiesgo, ratioAutenticados }: ScoreDisplayProps) {
+export function ScoreDisplay({
+    score,
+    nivelRiesgo,
+    ratioAutenticados,
+    totalReportes,
+    ciudades,
+    categoriaPrincipal,
+}: ScoreDisplayProps) {
     const styles = NIVEL_STYLES[nivelRiesgo];
     const radius = 36;
     const circumference = 2 * Math.PI * radius;
     const progress = clamp(score, 0, 100);
     const offset = circumference - (progress / 100) * circumference;
+    const [showDetails, setShowDetails] = useState(false);
 
     return (
-        <div className="flex items-center gap-5 rounded-2xl bg-white/60 p-5">
-            <div className="relative h-24 w-24 shrink-0">
-                <svg className="h-full w-full -rotate-90" viewBox="0 0 84 84" aria-hidden="true">
-                    <circle
-                        cx="42"
-                        cy="42"
-                        r={radius}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="8"
-                        className="text-slate-100"
-                    />
-                    <circle
-                        cx="42"
-                        cy="42"
-                        r={radius}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                        className={styles.ring}
-                        style={{
-                            strokeDasharray: circumference,
-                            strokeDashoffset: offset,
-                            transition: "stroke-dashoffset 500ms ease-out",
-                        }}
-                    />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-slate-800 font-mono">{score}</span>
-                    <span className="text-[10px] uppercase tracking-wide text-slate-500">/ 100</span>
+        <div className="rounded-2xl bg-white/70 p-5 shadow-sm">
+            <div className="flex flex-col items-center gap-5 sm:flex-row">
+                <div className="relative h-28 w-28 shrink-0">
+                    <svg className="h-full w-full -rotate-90" viewBox="0 0 84 84" aria-hidden="true">
+                        <circle
+                            cx="42"
+                            cy="42"
+                            r={radius}
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            className="text-slate-100"
+                        />
+                        <circle
+                            cx="42"
+                            cy="42"
+                            r={radius}
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            strokeLinecap="round"
+                            className={styles.ring}
+                            style={{
+                                strokeDasharray: circumference,
+                                strokeDashoffset: offset,
+                                transition: "stroke-dashoffset 500ms ease-out",
+                            }}
+                        />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-bold text-slate-900 font-mono">{score}</span>
+                        <span className="text-[10px] uppercase tracking-wide text-slate-600">/ 100</span>
+                    </div>
+                    <p className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-slate-600 whitespace-nowrap">
+                        Score de riesgo
+                    </p>
                 </div>
-                <p className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-slate-500 whitespace-nowrap">
-                    Score de riesgo
-                </p>
+
+                <div className="flex-1 text-center sm:text-left">
+                    <span
+                        className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${styles.badge}`}
+                        data-testid="score-nivel"
+                    >
+                        {styles.label}
+                    </span>
+                    <p className="mt-3 text-sm font-medium text-slate-800" data-testid="score-recomendacion">
+                        {RECOMENDACIONES[nivelRiesgo]}
+                    </p>
+                    {ratioAutenticados !== undefined && (
+                        <p className="mt-2 text-xs text-slate-600">
+                            {Math.round(ratioAutenticados * 100)}% de reportes autenticados
+                        </p>
+                    )}
+                    <p className="mt-2 text-xs text-slate-500">
+                        El score combina severidad de las conductas reportadas, recencia, autenticación y diversidad geográfica.
+                    </p>
+                </div>
             </div>
 
-            <div className="flex-1">
-                <span className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${styles.badge}`}>
-                    {styles.label}
-                </span>
-                {ratioAutenticados !== undefined && (
-                    <p className="mt-2 text-xs text-slate-500">
-                        {Math.round(ratioAutenticados * 100)}% de reportes autenticados
-                    </p>
-                )}
-                <p className="mt-2 text-xs text-slate-500">
-                    El score combina severidad de las conductas reportadas, recencia, autenticación y diversidad geográfica.
-                </p>
-            </div>
+            {(totalReportes !== undefined || ciudades?.length || categoriaPrincipal) && (
+                <div className="mt-5 border-t border-slate-200 pt-4">
+                    <button
+                        onClick={() => setShowDetails((v) => !v)}
+                        className="text-sm font-medium text-primary-700 hover:text-primary-800 underline-offset-2 hover:underline"
+                        aria-expanded={showDetails}
+                        data-testid="score-ver-detalles"
+                    >
+                        {showDetails ? "Ocultar detalles" : "Ver detalles"}
+                    </button>
+
+                    {showDetails && (
+                        <div className="mt-3 space-y-2 text-sm text-slate-700 animate-floatUp">
+                            {totalReportes !== undefined && (
+                                <p>
+                                    <span className="font-medium">Total de reportes:</span> {totalReportes}
+                                </p>
+                            )}
+                            {categoriaPrincipal && (
+                                <p>
+                                    <span className="font-medium">Categoría principal:</span> {categoriaPrincipal}
+                                </p>
+                            )}
+                            {ciudades && ciudades.length > 0 && (
+                                <p>
+                                    <span className="font-medium">Ciudades con reportes:</span>{" "}
+                                    {ciudades.slice(0, 10).join(", ")}
+                                    {ciudades.length > 10 && ` y ${ciudades.length - 10} más`}
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

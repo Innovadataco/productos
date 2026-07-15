@@ -10,6 +10,7 @@ const mockEmbedding = vi.fn();
 const mockAnonimizar = vi.fn();
 const mockEnviarAlertaRevision = vi.fn();
 const mockEnviarAlertaScoreCritico = vi.fn();
+const mockEnviarAlertasSuscriptores = vi.fn();
 
 vi.mock("@/lib/ai/classifier", () => ({
     clasificarReporte: (...args: unknown[]) => mockClasificar(...args),
@@ -26,6 +27,7 @@ vi.mock("@/lib/ai/anonimizador", () => ({
 vi.mock("@/lib/email", () => ({
     enviarAlertaRevision: (...args: unknown[]) => mockEnviarAlertaRevision(...args),
     enviarAlertaScoreCritico: (...args: unknown[]) => mockEnviarAlertaScoreCritico(...args),
+    enviarAlertasSuscriptores: (...args: unknown[]) => mockEnviarAlertasSuscriptores(...args),
 }));
 
 function crearRequestProcesar(reporteId: string) {
@@ -47,6 +49,7 @@ describe("POST /api/reportes/procesar", () => {
         mockAnonimizar.mockReset();
         mockEnviarAlertaRevision.mockReset().mockResolvedValue(undefined);
         mockEnviarAlertaScoreCritico.mockReset().mockResolvedValue(undefined);
+        mockEnviarAlertasSuscriptores.mockReset().mockResolvedValue(undefined);
         process.env.WORKER_SECRET = "worker-secret-test";
     });
 

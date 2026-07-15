@@ -60,7 +60,6 @@ test.describe("Consulta pública de identificador", () => {
 
         await page.goto("/");
         await page.getByPlaceholder("Ej: +573001234567").fill(identificador);
-        await page.getByRole("combobox").selectOption("whatsapp");
         await page.getByRole("button", { name: "Buscar" }).click();
 
         await expect(page.getByText(`En los últimos`)).toBeVisible();
@@ -82,7 +81,6 @@ test.describe("Consulta pública de identificador", () => {
 
         await page.goto("/");
         await page.getByPlaceholder("Ej: +573001234567").fill(identificador);
-        await page.getByRole("combobox").selectOption("whatsapp");
         await page.getByRole("button", { name: "Buscar" }).click();
 
         await expect(page.getByText("Score de riesgo")).toBeVisible();

@@ -94,15 +94,19 @@ export function determinarNivelRiesgo(score: number, thresholds: { low: number; 
     return "BAJO";
 }
 
-export async function calcularScore(identificador: string, plataformaId: string): Promise<ScoreResult> {
+export async function calcularScore(identificador: string, plataformaId?: string): Promise<ScoreResult> {
     const params = await getScoringParams();
 
+    const where: { identificador: string; plataformaId?: string; estado: { in: EstadoReporte[] } } = {
+        identificador,
+        estado: { in: ESTADOS_VISIBLES },
+    };
+    if (plataformaId) {
+        where.plataformaId = plataformaId;
+    }
+
     const reportes = await prisma.reporte.findMany({
-        where: {
-            identificador,
-            plataformaId,
-            estado: { in: ESTADOS_VISIBLES },
-        },
+        where,
         select: {
             id: true,
             esAnonimo: true,

@@ -106,3 +106,59 @@ export async function enviarAlertaScoreCritico(reporte: {
         console.error("Resend error:", result.error);
     }
 }
+
+const COOLDOWN_ALERTA_MS = 24 * 60 * 60 * 1000;
+
+export async function enviarAlertasSuscriptores(payload: {
+    identificador: string;
+    plataformaId: string;
+    totalReportes: number;
+}): Promise<void> {
+    if (!(await alertasHabilitadas("alerts.subscriptions.enabled"))) return;
+
+    const ahora = new Date();
+    const ventana = new Date(ahora.getTime() - COOLDOWN_ALERTA_MS);
+
+    const suscripciones = await prisma.alertaSuscripcion.findMany({
+        where: {
+            identificador: payload.identificador,
+            plataformaId: payload.plataformaId,
+            activa: true,
+            OR: [{ ultimoEmailEn: { lt: ventana } }, { ultimoEmailEn: null }],
+        },
+        include: { usuario: { select: { email: true } }, plataforma: { select: { nombre: true } } },
+    });
+
+    if (suscripciones.length === 0) return;
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const consultaUrl = `${baseUrl}/?consulta=${encodeURIComponent(payload.identificador)}`;
+
+    const enviadosIds: string[] = [];
+    for (const suscripcion of suscripciones) {
+        const email = suscripcion.usuario.email;
+        try {
+            const result = await resend.emails.send({
+                from: FROM,
+                to: email,
+                subject: `Nuevo reporte para ${payload.identificador}`,
+                text: `Hola,\n\nSe registró un nuevo reporte para el identificador "${payload.identificador}" en ${suscripcion.plataforma.nombre}.\n\nTotal de reportes: ${payload.totalReportes}\n\nConsultá el score y los detalles aquí:\n${consultaUrl}\n\nRecibirás como máximo un email cada 24 horas por este identificador.`,
+            });
+
+            if (result.error) {
+                console.error(`Resend error alerta ${suscripcion.id}:`, result.error);
+            } else {
+                enviadosIds.push(suscripcion.id);
+            }
+        } catch (err) {
+            console.error(`Error enviando alerta ${suscripcion.id}:`, err);
+        }
+    }
+
+    if (enviadosIds.length > 0) {
+        await prisma.alertaSuscripcion.updateMany({
+            where: { id: { in: enviadosIds } },
+            data: { ultimoEmailEn: ahora },
+        });
+    }
+}

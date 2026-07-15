@@ -8,7 +8,7 @@ import { requireEnv } from "@/lib/env";
 import { ERROR_CODES } from "@/lib/errors";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { recalcularYGuardarScore } from "@/lib/scoring";
-import { enviarAlertaRevision, enviarAlertaScoreCritico } from "@/lib/email";
+import { enviarAlertaRevision, enviarAlertaScoreCritico, enviarAlertasSuscriptores } from "@/lib/email";
 import type { EstadoReporte } from "@prisma/client";
 
 const ESTADOS_FINALES = new Set([
@@ -193,6 +193,13 @@ export async function POST(request: Request) {
                     nivelRiesgo: scoreResult.nivelRiesgo,
                 }).catch((err) => console.error("[ALERTA] Error enviando alerta de score crítico", err));
             }
+
+            // Notificar a usuarios suscritos a alertas para este identificador.
+            enviarAlertasSuscriptores({
+                identificador: reporte.identificador,
+                plataformaId: reporte.plataformaId,
+                totalReportes: scoreResult.totalReportes,
+            }).catch((err) => console.error("[ALERTA] Error enviando alertas a suscriptores", err));
         }
 
         // Alertar a administradores cuando el reporte requiere intervención humana
