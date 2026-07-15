@@ -13,9 +13,19 @@ export default function LoginPage() {
     const [error, setError] = useState("");
 
     const handleLogin = async (email: string, password: string) => {
-        const ok = await login(email, password);
+        const { ok, user } = await login(email, password);
         if (ok) {
-            router.push("/mis-reportes");
+            const redirectTo =
+                typeof window !== "undefined" && window.location.search
+                    ? new URLSearchParams(window.location.search).get("redirect")
+                    : null;
+            if (redirectTo) {
+                router.push(redirectTo);
+            } else if (user?.rol === "ADMIN") {
+                router.push("/dashboard/admin");
+            } else {
+                router.push("/mis-reportes");
+            }
         } else {
             setError("Credenciales incorrectas. Verifica tu email y contraseña.");
         }
