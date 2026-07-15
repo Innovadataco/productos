@@ -328,7 +328,7 @@ Running 14 tests using 7 workers
 ### 1. `git log --oneline -5`
 
 ```text
-<pending> (HEAD -> feature/001-scaffolding, origin/feature/001-scaffolding) test(e2e): cobertura panel admin
+94c9105 (HEAD -> feature/001-scaffolding, origin/feature/001-scaffolding) test(e2e): cobertura panel admin
 1c0f995 refactor(procesar): elimina errMsg del log de error para evitar filtrar datos
 650ad4c docs(002-02): actualiza Speckit tras Fase 3 deduplicación anónima
 5bbd9c6 feat: Fase 3 deduplicación anónima por similitud de embeddings
