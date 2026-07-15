@@ -97,6 +97,24 @@ Se agregó detección de reportes anónimos casi idénticos sobre el mismo ident
 
 ---
 
+## Fase 4 — Cobertura E2E del Panel de Administración
+
+**Estado: COMPLETADA.**
+
+Se agregó suite E2E end-to-end para validar el acceso, listado, filtros, corrección de clasificación y anonimización manual desde el panel admin.
+
+### Items completados
+- [x] `tests/e2e/admin-panel.spec.ts`: login como `ADMIN`, acceso a `/dashboard/admin`, visualización de tabla.
+- [x] Filtros por estado en la bandeja de reportes.
+- [x] Corrección de categoría desde el modal de detalle; verificación de estado `CORREGIDO` y registro de corrección.
+- [x] Anonimización manual de reportes en estado `REQUIERE_ANONIMIZACION`; verificación de estado `CLASIFICADO`.
+- [x] Validación de acceso denegado para usuarios no-admin.
+
+### Archivos clave
+- `tests/e2e/admin-panel.spec.ts` — suite E2E del panel admin.
+- `src/components/modules/AdminReportesTable.tsx` — tabla y filtros.
+- `src/components/modules/AdminReporteDetalle.tsx` — modal de detalle, corrección y anonimización.
+
 ## Fase 8 — Ranking/Scoring de Identificadores Reportados
 
 **Estado: COMPLETADA.**
@@ -282,21 +300,26 @@ Route (app)
 > playwright test
 
 
-Running 9 tests using 7 workers
+Running 14 tests using 7 workers
 
-[1/9] [chromium] › tests/e2e/auth.spec.ts:4:9 › Flujo de autenticación › un usuario puede registrarse y luego iniciar sesión
-[2/9] [chromium] › tests/e2e/password-reset.spec.ts:26:9 › Restablecimiento de contraseña › un usuario puede recuperar su contraseña y luego iniciar sesión
-[3/9] [chromium] › tests/e2e/auth.spec.ts:54:9 › Flujo de autenticación › un usuario no-admin no puede acceder al panel admin
-[4/9] [chromium] › tests/e2e/password-reset.spec.ts:81:9 › Restablecimiento de contraseña › la respuesta de solicitud no revela si el email existe
-[5/9] [chromium] › tests/e2e/password-reset.spec.ts:74:9 › Restablecimiento de contraseña › un token inválido o expirado muestra mensaje de error
-[6/9] [chromium] › tests/e2e/consulta.spec.ts:57:9 › Consulta pública de identificador › usuario anónimo ve información agregada básica
-[7/9] [chromium] › tests/e2e/consulta.spec.ts:74:9 › Consulta pública de identificador › usuario autenticado ve score y nivel de riesgo
-[8/9] [chromium] › tests/e2e/reportes.spec.ts:48:9 › Flujo de reportes comunitarios › usuario anónimo crea un reporte desde el wizard y recibe número de seguimiento
-[9/9] [chromium] › tests/e2e/reportes.spec.ts:81:9 › Flujo de reportes comunitarios › usuario autenticado no puede reportar el mismo identificador dos veces en 30 días
-  9 passed (9.7s)
+[1/14] [chromium] › tests/e2e/auth.spec.ts:4:9 › Flujo de autenticación › un usuario puede registrarse y luego iniciar sesión
+[2/14] [chromium] › tests/e2e/auth.spec.ts:54:9 › Flujo de autenticación › un usuario no-admin no puede acceder al panel admin
+[3/14] [chromium] › tests/e2e/admin-panel.spec.ts:81:9 › Panel de administración › admin puede corregir la clasificación de un reporte
+[4/14] [chromium] › tests/e2e/admin-panel.spec.ts:58:9 › Panel de administración › admin puede iniciar sesión y ver la bandeja de reportes
+[5/14] [chromium] › tests/e2e/admin-panel.spec.ts:130:9 › Panel de administración › usuario no-admin no puede acceder al panel admin
+[6/14] [chromium] › tests/e2e/admin-panel.spec.ts:107:9 › Panel de administración › admin puede anonimizar manualmente un reporte con PII
+[7/14] [chromium] › tests/e2e/admin-panel.spec.ts:67:9 › Panel de administración › admin puede filtrar reportes por estado
+[8/14] [chromium] › tests/e2e/consulta.spec.ts:57:9 › Consulta pública de identificador › usuario anónimo ve información agregada básica
+[9/14] [chromium] › tests/e2e/consulta.spec.ts:74:9 › Consulta pública de identificador › usuario autenticado ve score y nivel de riesgo
+[10/14] [chromium] › tests/e2e/password-reset.spec.ts:26:9 › Restablecimiento de contraseña › un usuario puede recuperar su contraseña y luego iniciar sesión
+[11/14] [chromium] › tests/e2e/password-reset.spec.ts:74:9 › Restablecimiento de contraseña › un token inválido o expirado muestra mensaje de error
+[12/14] [chromium] › tests/e2e/password-reset.spec.ts:81:9 › Restablecimiento de contraseña › la respuesta de solicitud no revela si el email existe
+[13/14] [chromium] › tests/e2e/reportes.spec.ts:48:9 › Flujo de reportes comunitarios › usuario anónimo crea un reporte desde el wizard y recibe número de seguimiento
+[14/14] [chromium] › tests/e2e/reportes.spec.ts:81:9 › Flujo de reportes comunitarios › usuario autenticado no puede reportar el mismo identificador dos veces en 30 días
+  14 passed (9.7s)
 ```
 
-**Resultado:** ✅ 9/9 tests E2E passed.
+**Resultado:** ✅ 14/14 tests E2E passed.
 
 ---
 
@@ -305,11 +328,11 @@ Running 9 tests using 7 workers
 ### 1. `git log --oneline -5`
 
 ```text
-5bbd9c6 (HEAD -> feature/001-scaffolding, origin/feature/001-scaffolding) feat: Fase 3 deduplicación anónima por similitud de embeddings
+<pending> (HEAD -> feature/001-scaffolding, origin/feature/001-scaffolding) test(e2e): cobertura panel admin
+1c0f995 refactor(procesar): elimina errMsg del log de error para evitar filtrar datos
+650ad4c docs(002-02): actualiza Speckit tras Fase 3 deduplicación anónima
+5bbd9c6 feat: Fase 3 deduplicación anónima por similitud de embeddings
 5cad517 impl(002-02) Fase 2: seguimiento enriquecido y mis-reportes con score
-b5a4ff7 impl(002-02) Fase 2: seguimiento enriquecido y mis-reportes
-7df0ca0 impl(002-02) Fase 1: cierre de deudas técnicas rojas
-048d8aa impl(002-02) anonimización automática de PII y dataset de entrenamiento
 ```
 
 ### 2. `git status`

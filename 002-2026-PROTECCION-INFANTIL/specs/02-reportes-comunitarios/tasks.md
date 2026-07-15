@@ -93,12 +93,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T034 [P] [US3] Implementar `GET /api/admin/reportes/route.ts`: listado paginado con filtros (estado, categoría, plataforma, orden)
-- [ ] T035 [P] [US3] Crear página `src/app/dashboard/reportes/page.tsx`: panel admin con tabla paginada y filtros
-- [ ] T036 [US3] Implementar `PATCH /api/admin/reportes/[id]/clasificacion/route.ts`: corrección de clasificación, guardar original+corregida
-- [ ] T037 [US3] Implementar `PATCH /api/admin/reportes/[id]/anonimizar/route.ts`: eliminar PII, guardar textoOriginal en auditoría, actualizar texto
-- [ ] T038 [US3] Crear `src/lib/dataset.ts`: generar registro en DatasetEntrenamiento tras corrección (solo texto anonimizado)
-- [ ] T039 [US3] Crear componente `src/components/modules/AdminReporteDetail.tsx`: vista de detalle con clasificación, confianza, y controles de corrección/anonimización
+- [x] T034 [P] [US3] Implementar `GET /api/admin/reportes-revision/route.ts`: listado paginado con filtros (estado, categoría, plataforma, orden)
+- [x] T035 [P] [US3] Crear página `src/app/dashboard/admin/page.tsx`: panel admin con tabla paginada y filtros
+- [x] T036 [US3] Implementar `POST /api/admin/correcciones/route.ts`: corrección de clasificación, guardar original+corregida
+- [x] T037 [US3] Implementar `PATCH /api/admin/reportes/[id]/anonimizar/route.ts`: eliminar PII, guardar textoOriginal en auditoría, actualizar texto
+- [x] T038 [US3] Escribir en `DatasetEntrenamiento` tras corrección (texto anonimizado si aplica)
+- [x] T039 [US3] Crear componente `src/components/modules/AdminReporteDetalle.tsx`: vista de detalle con clasificación, confianza, y controles de corrección/anonimización
 
 **Checkpoint**: Escenarios C y D pasan, Escenario G pasa (anonimización PII)
 
