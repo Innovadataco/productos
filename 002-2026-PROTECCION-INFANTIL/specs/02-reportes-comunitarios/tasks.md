@@ -168,6 +168,15 @@
 
 ---
 
+## Deudas técnicas cerradas
+
+- [x] D1 [P] Ollama estable — healthcheck + retry 3x + backoff + DLQ en `scripts/worker-reportes.mjs`.
+- [x] D2 [P] Supervisor worker — auto-restart si muere, max 5 intentos (`scripts/worker-supervisor.mjs`, `/api/health/worker`).
+- [x] D3 [P] Prisma seed en `package.json` (`npx prisma db seed` funciona sin `tsx` manual).
+- [x] D4 [P] Fix warning `MODULE_TYPELESS` renombrando `postcss.config.js` → `postcss.config.mjs`.
+
+---
+
 ## Phase 8: Polish & Cross-Cutting Concerns
 
 **Purpose**: Validación final, documentación, robustez

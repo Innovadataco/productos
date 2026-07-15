@@ -299,24 +299,25 @@ Route (app)
 
  RUN  v3.2.7 /Users/idc/productos/INNOVADATACO/002-2026-PROTECCION-INFANTIL
 
- ✓ src/lib/ai/similarity.test.ts (3 tests) 77ms
  ✓ src/lib/auth.test.ts (1 test) 583ms
- ✓ src/app/api/reportes/route.test.ts (9 tests) 550ms
- ✓ src/app/api/consulta/route.test.ts (4 tests) 289ms
- ✓ src/app/api/reportes/seguimiento/[numero]/route.test.ts (2 tests) 260ms
- ✓ src/app/api/reportes/procesar/route.test.ts (7 tests) 121ms
- ✓ src/lib/ranking.test.ts (6 tests) 60ms
- ✓ src/app/api/config/parametros/route.test.ts (2 tests) 31ms
+ ✓ src/app/api/reportes/route.test.ts (9 tests) 563ms
+ ✓ src/app/api/consulta/route.test.ts (4 tests) 291ms
+ ✓ src/app/api/reportes/seguimiento/[numero]/route.test.ts (2 tests) 266ms
+ ✓ src/app/api/reportes/procesar/route.test.ts (7 tests) 113ms
+ ✓ src/lib/ai/similarity.test.ts (3 tests) 70ms
+ ✓ src/lib/ranking.test.ts (6 tests) 70ms
+ ✓ src/app/api/config/parametros/route.test.ts (2 tests) 25ms
+ ✓ src/lib/fetch-retry.test.ts (4 tests) 8ms
  ✓ src/lib/errors.test.ts (3 tests) 1ms
  ✓ src/lib/config-cache.test.ts (4 tests) 1ms
 
- Test Files  10 passed (10)
-      Tests  41 passed (41)
-   Start at  17:28:33
-   Duration  4.30s (transform 76ms, setup 17ms, collect 345ms, tests 1.98s, environment 1.10s, prepare 204ms)
+ Test Files  11 passed (11)
+      Tests  45 passed (45)
+   Start at  20:24:04
+   Duration  4.50s (transform 79ms, setup 20ms, collect 351ms, tests 1.99s, environment 1.20s, prepare 227ms)
 ```
 
-**Resultado:** ✅ 10/10 test files passed, 41/41 tests passed.
+**Resultado:** ✅ 11/11 test files passed, 45/45 tests passed.
 
 ### `npm run test:e2e`
 
@@ -354,11 +355,11 @@ Running 15 tests using 7 workers
 ### 1. `git log --oneline -5`
 
 ```text
-94c9105 (HEAD -> feature/001-scaffolding, origin/feature/001-scaffolding) test(e2e): cobertura panel admin
-1c0f995 refactor(procesar): elimina errMsg del log de error para evitar filtrar datos
-650ad4c docs(002-02): actualiza Speckit tras Fase 3 deduplicación anónima
+4269dee (HEAD -> feature/001-scaffolding, origin/feature/001-scaffolding) chore(deuda): D1-D4 — worker estable, supervisor, seed prisma, fix warning
+07021f5 feat(worker): observabilidad de la cola pg-boss en dashboard admin
+94c9105 test(e2e): cobertura del panel administrador
+2bfee58 docs(002-02): corrige hash en git log del reporte
 5bbd9c6 feat: Fase 3 deduplicación anónima por similitud de embeddings
-5cad517 impl(002-02) Fase 2: seguimiento enriquecido y mis-reportes con score
 ```
 
 ### 2. `git status`
@@ -499,5 +500,11 @@ Con el módulo `02-reportes-comunitarios` funcionalmente completo (Fases 1-8 + P
 
 ### 4. Código muerto eliminado
 - Eliminado `src/lib/dataset.ts` (la corrección admin escribe directamente en `DatasetEntrenamiento`).
+
+### 5. Worker estable y supervisado (D1-D4)
+- **D1 — Ollama estable**: `scripts/worker-reportes.mjs` ahora hace healthcheck de Ollama antes de cada job, usa `fetchWithRetry` con backoff exponencial (3 reintentos) para errores 5xx/red, y loguea claramente cuando un job agota reintentos y pasa a DLQ nativa de pg-boss.
+- **D2 — Supervisor**: `scripts/worker-supervisor.mjs` lanza el worker, guarda su PID en `worker.pid`, y lo reinicia hasta 5 veces si muere. Endpoint público `/api/health/worker` responde 200/503 según estado del proceso y DB.
+- **D3 — Prisma seed**: `package.json` ahora incluye `"prisma.seed": "tsx prisma/seed.ts"`, por lo que `npx prisma db seed` funciona sin comando manual.
+- **D4 — Warning MODULE_TYPELESS**: renombrado `postcss.config.js` → `postcss.config.mjs`; el warning desapareció de build y tests.
 
 ---
