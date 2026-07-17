@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { getParametroSistema } from "./parametros";
 import type { Prisma } from "@prisma/client";
 
 export async function actualizarVisibilidadPublica(
@@ -7,12 +8,8 @@ export async function actualizarVisibilidadPublica(
     tx?: Prisma.TransactionClient
 ) {
     const db = tx ?? prisma;
-    const paramUmbral = await db.parametroSistema.findUnique({
-        where: { clave: "visibility.report_threshold" },
-    });
-    const paramRatio = await db.parametroSistema.findUnique({
-        where: { clave: "visibility.min_authenticated_ratio" },
-    });
+    const paramUmbral = await getParametroSistema("visibility.report_threshold", db);
+    const paramRatio = await getParametroSistema("visibility.min_authenticated_ratio", db);
 
     const umbral = parseInt(paramUmbral?.valor || "3", 10);
     const minRatio = parseFloat(paramRatio?.valor || "0.5");

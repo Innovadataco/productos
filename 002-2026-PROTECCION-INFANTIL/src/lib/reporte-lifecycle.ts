@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { getParametroSistema } from "./parametros";
 import { generarEmbedding } from "./ai/embedder";
 import { recalcularYGuardarScore } from "./scoring";
 import { actualizarVisibilidadPublica } from "./visibility";
@@ -8,7 +9,7 @@ import type { MotivoBajaReporte, Prisma } from "@prisma/client";
 const MOTIVOS_PURGAN_DATASET: MotivoBajaReporte[] = ["REPORTE_FALSO", "ORDEN_LEGAL"];
 
 async function getEmbeddingModel(): Promise<string> {
-    const param = await prisma.parametroSistema.findUnique({ where: { clave: "reportes.embedding_model" } });
+    const param = await getParametroSistema("reportes.embedding_model");
     return param?.valor || "nomic-embed-text";
 }
 
@@ -54,11 +55,12 @@ export async function darDeBajaReporte(params: {
     nota: string;
     adminId: string;
     request?: Request;
+    tx?: Prisma.TransactionClient;
 }): Promise<ReporteBajaResult> {
-    const { reporteId, motivo, nota, adminId, request } = params;
+    const { reporteId, motivo, nota, adminId, request, tx: externalTx } = params;
     const { ipAddress, userAgent } = extractClientInfo(request);
 
-    const result = await prisma.$transaction(async (tx) => {
+    const work = async (tx: Prisma.TransactionClient) => {
         const reporte = await findReporteConDatos(reporteId, tx);
         if (!reporte) {
             throw new Error("REPORTE_NO_ENCONTRADO");
@@ -123,7 +125,9 @@ export async function darDeBajaReporte(params: {
             datasetPurged: debePurgarDataset && datasetRegistros.length > 0,
             scoreResult,
         };
-    });
+    };
+
+    const result = externalTx ? await work(externalTx) : await prisma.$transaction(work);
 
     return {
         reporteId: result.reporteId,
