@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getParametroSistema } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "./dataset-retrieval";
 import { clasificarConVotos, type ClassificationResult, type VotoIndividual } from "./classifier";
@@ -108,15 +109,15 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
         ragTopK,
         ollamaNumParallel,
     ] = await Promise.all([
-        prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification_model" } }),
-        prisma.parametroSistema.findUnique({ where: { clave: "reportes.embedding_model" } }),
-        prisma.parametroSistema.findUnique({ where: { clave: "reportes.anonymization_model" } }),
-        prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification.umbral_revision" } }),
-        prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification.n_votos" } }),
-        prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification.temperatura_votos" } }),
-        prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification.min_score_categoria" } }),
-        prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification.rag_top_k" } }),
-        prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification.ollama_num_parallel" } }),
+        getParametroSistema("reportes.classification_model"),
+        getParametroSistema("reportes.embedding_model"),
+        getParametroSistema("reportes.anonymization_model"),
+        getParametroSistema("reportes.classification.umbral_revision"),
+        getParametroSistema("reportes.classification.n_votos"),
+        getParametroSistema("reportes.classification.temperatura_votos"),
+        getParametroSistema("reportes.classification.min_score_categoria"),
+        getParametroSistema("reportes.classification.rag_top_k"),
+        getParametroSistema("reportes.classification.ollama_num_parallel"),
     ]);
 
     return {

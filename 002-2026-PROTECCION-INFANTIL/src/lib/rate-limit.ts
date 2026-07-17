@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { getParametroSistema } from "./parametros";
 
 export interface RateLimitResult {
     allowed: boolean;
@@ -35,6 +36,8 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     seguimiento: { windowSeconds: 60, maxRequests: 10 },
     report_identificador: { windowSeconds: 3600, maxRequests: 10 },
     report_fingerprint: { windowSeconds: 3600, maxRequests: 5 },
+    apelacion: { windowSeconds: 86400, maxRequests: 3 },
+    apelacion_sms: { windowSeconds: 3600, maxRequests: 3 },
 };
 
 function getScopeDefaults(scope: string): ScopeDefaults {
@@ -44,8 +47,8 @@ function getScopeDefaults(scope: string): ScopeDefaults {
 async function getScopeConfig(scope: string): Promise<ScopeDefaults> {
     const defaults = getScopeDefaults(scope);
     const [windowParam, maxParam] = await Promise.all([
-        prisma.parametroSistema.findUnique({ where: { clave: `ratelimit.${scope}.window_seconds` } }),
-        prisma.parametroSistema.findUnique({ where: { clave: `ratelimit.${scope}.max_requests` } }),
+        getParametroSistema(`ratelimit.${scope}.window_seconds`),
+        getParametroSistema(`ratelimit.${scope}.max_requests`),
     ]);
 
     return {
@@ -55,9 +58,7 @@ async function getScopeConfig(scope: string): Promise<ScopeDefaults> {
 }
 
 async function getSpamThreshold(scope: string): Promise<number | undefined> {
-    const param = await prisma.parametroSistema.findUnique({
-        where: { clave: `ratelimit.${scope}.spam_threshold` },
-    });
+    const param = await getParametroSistema(`ratelimit.${scope}.spam_threshold`);
     if (!param) return undefined;
     const value = parseInt(param.valor, 10);
     return Number.isNaN(value) ? undefined : value;

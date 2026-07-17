@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { getParametroSistema } from "./parametros";
 import type { Prisma, CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 export type NivelRiesgo = "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
@@ -74,7 +75,7 @@ function getDefaultSeverity(): Record<CategoriaConducta, number> {
 async function getScoringParams(tx?: Prisma.TransactionClient): Promise<ScoringParams> {
     const db = tx ?? prisma;
     const get = async (clave: string, fallback: string) => {
-        const p = await db.parametroSistema.findUnique({ where: { clave } });
+        const p = await getParametroSistema(clave, db);
         return p?.valor ?? fallback;
     };
 
@@ -103,7 +104,7 @@ async function getScoringParams(tx?: Prisma.TransactionClient): Promise<ScoringP
 
 export async function isSourceWeightEnabled(tx?: Prisma.TransactionClient): Promise<boolean> {
     const db = tx ?? prisma;
-    const p = await db.parametroSistema.findUnique({ where: { clave: "scoring.source_weight.enabled" } });
+    const p = await getParametroSistema("scoring.source_weight.enabled", db);
     return p?.valor === "true";
 }
 

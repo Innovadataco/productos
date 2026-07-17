@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { getParametroSistema } from "@/lib/parametros";
 import type { Prisma, Reporte, Usuario } from "@prisma/client";
 
 const SALT = process.env.ANTI_ABUSO_SALT || "dev-salt-cambiar-en-produccion";
@@ -19,7 +20,7 @@ export interface FuentePesoParams {
 export async function getFuentePesoParams(tx?: Prisma.TransactionClient): Promise<FuentePesoParams> {
     const db = tx ?? prisma;
     const get = async (clave: string, fallback: string) => {
-        const p = await db.parametroSistema.findUnique({ where: { clave } });
+        const p = await getParametroSistema(clave, db);
         return p?.valor ?? fallback;
     };
 
@@ -246,7 +247,7 @@ export async function limpiarFuenteReporteAntiguas(
     tx?: Prisma.TransactionClient
 ): Promise<number> {
     const db = tx ?? prisma;
-    const param = await db.parametroSistema.findUnique({ where: { clave: "anti_abuso.retencion_fuente_dias" } });
+    const param = await getParametroSistema("anti_abuso.retencion_fuente_dias", db);
     const retencionDias = dias ?? parseInt(param?.valor ?? "90", 10);
     const limite = new Date(Date.now() - retencionDias * 24 * 60 * 60 * 1000);
 
