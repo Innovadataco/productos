@@ -4,6 +4,7 @@ import { verifyAuth } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { invalidateCache } from "@/lib/config-cache";
 import { isLocalOllamaUrl } from "@/lib/ai/ollama-config";
+import { encryptParameter } from "@/lib/param-encryption";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 type RouteContext = { params: Promise<{ clave: string }> };
@@ -31,6 +32,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
         return NextResponse.json({
             ...param,
+            valor: param.esSecreto ? null : param.valor,
             historial: param.auditLogs.map((a: { valorAnterior: string | null; valorNuevo: string | null; usuario: { email: string | null } | null; creadoEn: Date }) => ({
                 valorAnterior: a.valorAnterior,
                 valorNuevo: a.valorNuevo,
@@ -75,9 +77,11 @@ export async function PATCH(request: Request, context: RouteContext) {
             );
         }
 
+        const valorParaGuardar = param.esSecreto ? encryptParameter(body.valor) : body.valor;
+
         const updated = await prisma.parametroSistema.update({
             where: { clave },
-            data: { valor: body.valor, actualizadoPorId: user.id },
+            data: { valor: valorParaGuardar, actualizadoPorId: user.id },
         });
 
         await logAudit({
@@ -87,12 +91,15 @@ export async function PATCH(request: Request, context: RouteContext) {
             parametroId: param.id,
             usuarioId: user.id,
             valorAnterior: param.valor,
-            valorNuevo: body.valor,
-            metadatos: { motivo: body.motivo },
+            valorNuevo: valorParaGuardar,
+            metadatos: { motivo: body.motivo, esSecreto: param.esSecreto },
         });
 
         invalidateCache("public_params");
-        return NextResponse.json(updated);
+        return NextResponse.json({
+            ...updated,
+            valor: updated.esSecreto ? null : updated.valor,
+        });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

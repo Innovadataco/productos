@@ -35,7 +35,8 @@ function sectionForParam(param: Param) {
 }
 
 function validateValue(param: Param, value: string): string | null {
-    if (value === "" || value === undefined) return "El valor es requerido";
+    if ((value === "" || value === undefined) && !param.esSecreto) return "El valor es requerido";
+    if (param.esSecreto && value === "") return null;
     if (param.tipo === "INTEGER") {
         if (!/^-?\d+$/.test(value)) return "Debe ser un número entero";
     }
@@ -56,6 +57,7 @@ export default function ConfigPanel() {
     const [messages, setMessages] = useState<Record<string, { type: "success" | "error"; text: string } | null>>({});
     const [pendingConfig, setPendingConfig] = useState<Record<string, string> | null>(null);
     const [timeline, setTimeline] = useState<Array<Record<string, unknown>>>([]);
+    const [revealed, setRevealed] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         const pending = localStorage.getItem("experiment_pending_config");
@@ -76,7 +78,7 @@ export default function ConfigPanel() {
                 setParams(items);
                 const initial: Record<string, string> = {};
                 items.forEach((p: Param) => {
-                    initial[p.clave] = p.valor;
+                    initial[p.clave] = p.valor ?? "";
                 });
                 if (pending) {
                     try {
@@ -116,6 +118,8 @@ export default function ConfigPanel() {
         const param = params.find((p) => p.clave === clave);
         if (!param) return;
 
+        if (param.esSecreto && value === "") return;
+
         const error = validateValue(param, value);
         if (error) {
             setMessages((m) => ({ ...m, [clave]: { type: "error", text: error } }));
@@ -138,6 +142,9 @@ export default function ConfigPanel() {
                 throw new Error(data?.error?.message || "Error guardando");
             }
 
+            if (param.esSecreto) {
+                setEditValues((prev) => ({ ...prev, [clave]: "" }));
+            }
             setParams((prev) => prev.map((p) => (p.clave === clave ? { ...p, valor: value } : p)));
             setMessages((m) => ({ ...m, [clave]: { type: "success", text: "Guardado" } }));
         } catch (err) {
@@ -150,7 +157,11 @@ export default function ConfigPanel() {
 
     async function saveSection(sectionKey: string) {
         const sectionParams = grouped[sectionKey] || [];
-        const updates = sectionParams.filter((p) => editValues[p.clave] !== p.valor);
+        const updates = sectionParams.filter((p) => {
+            if (p.esSecreto) return false;
+            const current = p.valor ?? "";
+            return editValues[p.clave] !== current;
+        });
         if (updates.length === 0) {
             setMessages((m) => ({ ...m, [sectionKey]: { type: "error", text: "No hay cambios para guardar" } }));
             return;
@@ -196,6 +207,16 @@ export default function ConfigPanel() {
                 return p;
             })
         );
+        if (succeeded.length > 0) {
+            setEditValues((prev) => {
+                const next = { ...prev };
+                for (const clave of succeeded) {
+                    const param = params.find((p) => p.clave === clave);
+                    if (param?.esSecreto) next[clave] = "";
+                }
+                return next;
+            });
+        }
 
         if (failed.length === 0) {
             setMessages((m) => ({ ...m, [sectionKey]: { type: "success", text: `Guardados ${succeeded.length} parámetros` } }));
@@ -212,6 +233,30 @@ export default function ConfigPanel() {
     function updateValue(clave: string, value: string) {
         setEditValues((prev) => ({ ...prev, [clave]: value }));
         setMessages((m) => ({ ...m, [clave]: null }));
+    }
+
+    async function toggleReveal(clave: string) {
+        if (revealed[clave]) {
+            setRevealed((prev) => ({ ...prev, [clave]: false }));
+            setEditValues((prev) => ({ ...prev, [clave]: "" }));
+            return;
+        }
+        try {
+            const res = await fetch(`/api/config/parametros/${encodeURIComponent(clave)}/revelar`, {
+                method: "POST",
+                credentials: "include",
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data?.error?.message || "Error revelando");
+            }
+            const { valor } = (await res.json()) as { valor: string };
+            setEditValues((prev) => ({ ...prev, [clave]: valor }));
+            setRevealed((prev) => ({ ...prev, [clave]: true }));
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error";
+            setMessages((m) => ({ ...m, [clave]: { type: "error", text: msg } }));
+        }
     }
 
     if (loading) {
@@ -283,7 +328,7 @@ export default function ConfigPanel() {
                         <div className="divide-y divide-slate-100 dark:divide-slate-800">
                             {items.map((p) => (
                                 <div key={p.id} className="py-4 first:pt-0 last:pb-0">
-                                    <div className="grid gap-4 sm:grid-cols-[1fr,200px,120px]">
+                                    <div className="grid gap-4 sm:grid-cols-[1fr,280px,120px]">
                                         <div>
                                             <label className="block text-sm font-medium text-body">{p.clave}</label>
                                             <p className="mt-0.5 text-xs text-muted">{p.descripcion || "Sin descripción"}</p>
@@ -319,12 +364,26 @@ export default function ConfigPanel() {
                                                     className="w-full rounded-xl px-3 py-2 text-sm text-body outline-none transition glass-input ring-accent-input"
                                                 />
                                             ) : (
-                                                <input
-                                                    type="text"
-                                                    value={editValues[p.clave] ?? p.valor}
-                                                    onChange={(e) => updateValue(p.clave, e.target.value)}
-                                                    className="w-full rounded-xl px-3 py-2 text-sm text-body outline-none transition glass-input ring-accent-input"
-                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type={p.esSecreto && !revealed[p.clave] ? "password" : "text"}
+                                                        value={editValues[p.clave] ?? ""}
+                                                        placeholder={p.esSecreto ? "•••••••• (ingresar nuevo valor)" : ""}
+                                                        onChange={(e) => updateValue(p.clave, e.target.value)}
+                                                        className="w-full rounded-xl px-3 py-2 text-sm text-body outline-none transition glass-input ring-accent-input"
+                                                    />
+                                                    {p.esSecreto && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            className="shrink-0 px-2 py-2 text-xs"
+                                                            onClick={() => toggleReveal(p.clave)}
+                                                            title={revealed[p.clave] ? "Ocultar" : "Revelar"}
+                                                        >
+                                                            {revealed[p.clave] ? "Ocultar" : "Revelar"}
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
 
@@ -332,7 +391,10 @@ export default function ConfigPanel() {
                                             <Button
                                                 onClick={() => saveParam(p.clave)}
                                                 isLoading={saving[p.clave]}
-                                                disabled={saving[p.clave] || editValues[p.clave] === p.valor}
+                                                disabled={
+                                                    saving[p.clave] ||
+                                                    (p.esSecreto ? editValues[p.clave] === "" : editValues[p.clave] === p.valor)
+                                                }
                                                 variant="outline"
                                                 className="w-full py-2 px-3 text-xs"
                                             >

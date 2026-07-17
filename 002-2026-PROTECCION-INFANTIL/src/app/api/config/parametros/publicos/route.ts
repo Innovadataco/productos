@@ -7,7 +7,7 @@ export async function GET() {
     if (cached) return NextResponse.json(cached);
 
     const params = await prisma.parametroSistema.findMany({
-        where: { esPublico: true },
+        where: { esPublico: true, esSecreto: false },
     });
 
     const result: Record<string, unknown> = {};

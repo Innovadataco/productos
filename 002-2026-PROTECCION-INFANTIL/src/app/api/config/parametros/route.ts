@@ -28,8 +28,13 @@ export async function GET(request: Request) {
             prisma.parametroSistema.count({ where }),
         ]);
 
+        const sanitizedItems = items.map((p) => ({
+            ...p,
+            valor: p.esSecreto ? null : p.valor,
+        }));
+
         return NextResponse.json({
-            items,
+            items: sanitizedItems,
             pagination: {
                 page,
                 pageSize,
