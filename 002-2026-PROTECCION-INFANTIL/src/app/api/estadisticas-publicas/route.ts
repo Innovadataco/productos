@@ -71,20 +71,14 @@ export async function GET() {
         const plataformasMap =
             plataformaIds.length > 0
                 ? Object.fromEntries(
-                      (await prisma.plataforma.findMany({
-                          where: { id: { in: plataformaIds } },
-                          select: { id: true, nombre: true },
-                      })).map((p) => [p.id, p.nombre])
+                      (
+                          await prisma.plataforma.findMany({
+                              where: { id: { in: plataformaIds } },
+                              select: { id: true, nombre: true },
+                          })
+                      ).map((p) => [p.id, p.nombre])
                   )
                 : {};
-
-        // Ciudades con coordenadas para el mapa
-        const ciudadesNombres = porCiudad.map((c) => c.ciudad);
-        const ciudadesCoords = await prisma.ciudad.findMany({
-            where: { nombre: { in: ciudadesNombres } },
-            select: { nombre: true, lat: true, lng: true },
-        });
-        const coordsMap = Object.fromEntries(ciudadesCoords.map((c) => [c.nombre, { lat: c.lat, lng: c.lng }]));
 
         // Agregar categoria agregada
         const porCategoriaMap = new Map<string, number>();
@@ -112,8 +106,6 @@ export async function GET() {
                 ciudad: c.ciudad,
                 pais: c.pais,
                 count: c._count.id,
-                lat: coordsMap[c.ciudad]?.lat ?? null,
-                lng: coordsMap[c.ciudad]?.lng ?? null,
             })),
             porNivelRiesgo: porNivelRiesgo.map((n) => ({
                 nivel: n.nivelRiesgo || "SIN_CLASIFICAR",
