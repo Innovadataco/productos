@@ -27,7 +27,7 @@ async function seedConsultaData(identificador: string) {
     };
 
     for (let i = 0; i < 3; i++) {
-        const numeroSeguimiento = `RPT-${crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 12)}${i}`;
+        const numeroSeguimiento = `RPT-${crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 6)}`;
         const reporte = await prisma.reporte.create({
             data: {
                 ...base,

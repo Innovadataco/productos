@@ -9,9 +9,11 @@ const PUBLIC_ROUTES = [
     "/recuperar",
     "/reportar",
     "/seguimiento",
+    "/consulta",
     "/privacidad",
     "/terminos",
     "/offline",
+    "/dashboard-publico",
     "/api/auth",
     "/api/config/parametros/publicos",
     "/api/plataformas",
@@ -19,6 +21,7 @@ const PUBLIC_ROUTES = [
     "/api/ciudades",
     "/api/consulta",
     "/api/reportes",
+    "/api/estadisticas-publicas",
     "/api/health",
 ];
 

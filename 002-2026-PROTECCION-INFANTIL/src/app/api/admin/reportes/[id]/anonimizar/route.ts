@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { auditAnonimizacion } from "@/lib/audit";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
+import { idSchema } from "@/lib/validators";
 
 const anonimizarSchema = z.object({
     textoAnonimizado: z.string().min(20).max(5000),
@@ -22,7 +24,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const user = await verifyAuth();
         requireAdmin(user);
 
-        const { id: reporteId } = await params;
+        const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas anonimizaciones. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
+
+        const { id: rawId } = await params;
+        const parsedId = idSchema.safeParse(rawId);
+        if (!parsedId.success) {
+            return NextResponse.json(
+                { error: { message: "ID inválido", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+        const reporteId = parsedId.data;
 
         const body = await request.json();
         const parsed = anonimizarSchema.safeParse(body);
@@ -43,6 +61,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
+            );
+        }
+
+        if (reporte.eliminado) {
+            return NextResponse.json(
+                { error: { message: "No se puede anonimizar un reporte dado de baja", code: ERROR_CODES.CONFLICT } },
+                { status: 409 }
             );
         }
 

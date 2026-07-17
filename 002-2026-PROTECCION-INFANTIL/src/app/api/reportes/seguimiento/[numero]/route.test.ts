@@ -56,7 +56,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
     });
 
     it("devuelve 404 si el número no existe", async () => {
-        const res = await GET(new Request("http://localhost:5005/api/reportes/seguimiento/RPT-NOEXISTE"), { params: Promise.resolve({ numero: "RPT-NOEXISTE" }) });
+        const res = await GET(new Request("http://localhost:5005/api/reportes/seguimiento/RPT-NOEXIS"), { params: Promise.resolve({ numero: "RPT-NOEXIS" }) });
         expect(res.status).toBe(404);
     });
 

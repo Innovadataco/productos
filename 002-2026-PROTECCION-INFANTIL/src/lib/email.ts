@@ -60,17 +60,19 @@ export async function enviarAlertaRevision(reporte: {
     numeroSeguimiento: string | null;
     identificador: string;
     estado: string;
+    prioridadAlta?: boolean;
 }): Promise<void> {
     if (!(await alertasHabilitadas("alerts.admin.enabled"))) return;
 
     const admins = await getAdminEmails();
     if (admins.length === 0) return;
 
+    const prioridadTag = reporte.prioridadAlta ? " [PRIORIDAD ALTA]" : "";
     const result = await resend.emails.send({
         from: FROM,
         to: admins,
-        subject: `Reporte ${reporte.numeroSeguimiento} requiere revisión manual`,
-        text: `El reporte ${reporte.numeroSeguimiento} (${reporte.identificador}) requirió revisión manual con estado ${reporte.estado}.\n\nVer en el panel de administración: ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005"}/dashboard/admin`,
+        subject: `Reporte ${reporte.numeroSeguimiento}${prioridadTag} requiere revisión manual`,
+        text: `El reporte ${reporte.numeroSeguimiento} (${reporte.identificador}) requirió revisión manual con estado ${reporte.estado}.${prioridadTag ? "\n\nMarcado como prioridad alta." : ""}\n\nVer en el panel de administración: ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005"}/dashboard/admin`,
     });
 
     if (result.error) {

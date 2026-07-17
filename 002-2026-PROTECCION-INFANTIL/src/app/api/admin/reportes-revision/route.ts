@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { reportesRevisionQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import type { Prisma } from "@prisma/client";
 
@@ -16,18 +18,30 @@ export async function GET(req: Request) {
             );
         }
 
+        const rate = await checkRateLimit(req, "admin_read", { identifier: user.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
+
         const url = new URL(req.url);
-        const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
-        const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(url.searchParams.get("pageSize") || "25")));
+        const parsedQuery = reportesRevisionQuerySchema.safeParse(Object.fromEntries(url.searchParams.entries()));
+        if (!parsedQuery.success) {
+            return NextResponse.json(
+                { error: { message: "Parámetros de consulta inválidos", code: ERROR_CODES.VALIDATION_ERROR, details: parsedQuery.error.format() } },
+                { status: 400 }
+            );
+        }
+
+        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados } = parsedQuery.data;
         const skip = (page - 1) * pageSize;
 
-        const estado = url.searchParams.get("estado");
-        const plataformaId = url.searchParams.get("plataformaId");
-        const categoria = url.searchParams.get("categoria");
-        const fechaDesde = url.searchParams.get("fechaDesde");
-        const fechaHasta = url.searchParams.get("fechaHasta");
-
         const where: Prisma.ReporteWhereInput = {};
+        if (!incluirEliminados) {
+            where.eliminado = false;
+        }
 
         if (estado) {
             where.estado = estado as Prisma.EnumEstadoReporteFilter<"Reporte">;
@@ -40,14 +54,20 @@ export async function GET(req: Request) {
         }
         if (fechaDesde || fechaHasta) {
             where.creadoEn = {};
-            if (fechaDesde) (where.creadoEn as Prisma.DateTimeFilter<"Reporte">).gte = new Date(fechaDesde);
-            if (fechaHasta) (where.creadoEn as Prisma.DateTimeFilter<"Reporte">).lte = new Date(fechaHasta);
+            if (fechaDesde) {
+                const [year, month, day] = fechaDesde.split("-").map(Number);
+                (where.creadoEn as Prisma.DateTimeFilter<"Reporte">).gte = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+            }
+            if (fechaHasta) {
+                const [year, month, day] = fechaHasta.split("-").map(Number);
+                (where.creadoEn as Prisma.DateTimeFilter<"Reporte">).lte = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+            }
         }
 
         const [reportes, total] = await Promise.all([
             prisma.reporte.findMany({
                 where,
-                orderBy: { creadoEn: "desc" },
+                orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "desc" }],
                 skip,
                 take: pageSize,
                 select: {
@@ -56,6 +76,13 @@ export async function GET(req: Request) {
                     numeroSeguimiento: true,
                     estado: true,
                     esAnonimo: true,
+                    prioridadAlta: true,
+                    keywordsDetectadas: true,
+                    esRafaga: true,
+                    eliminado: true,
+                    motivoBaja: true,
+                    notaBaja: true,
+                    eliminadoEn: true,
                     creadoEn: true,
                     fechaIncidente: true,
                     ciudad: true,

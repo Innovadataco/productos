@@ -1,5 +1,22 @@
+import type { Metadata } from "next";
 import { ReporteWizard } from "@/components/modules/ReporteWizard";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
+
+export const metadata: Metadata = {
+    title: "Reportar",
+    description:
+        "Reporta de forma anónima o autenticada identificadores asociados a conductas de riesgo para menores en plataformas digitales.",
+    alternates: {
+        canonical: "/reportar",
+    },
+    openGraph: {
+        type: "article",
+        url: "/reportar",
+        title: "Reportar — Protección Infantil",
+        description:
+            "Reporta identificadores asociados a conductas de riesgo para menores en plataformas digitales.",
+    },
+};
 
 export default function ReportarPage() {
     return (

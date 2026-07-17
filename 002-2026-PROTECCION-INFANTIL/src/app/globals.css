@@ -3,13 +3,104 @@
 @tailwind utilities;
 
 @layer base {
+    :root {
+        color-scheme: light;
+    }
+
+    .dark {
+        color-scheme: dark;
+    }
+
     body {
-        @apply bg-slate-50 text-slate-900 font-sans antialiased;
+        @apply bg-page text-body antialiased;
     }
 }
 
 @layer utilities {
+    /* Page background with subtle mesh gradient */
+    .bg-page {
+        background:
+            radial-gradient(1200px 800px at 10% -10%, rgba(14, 165, 233, 0.12) 0%, transparent 50%),
+            radial-gradient(1000px 700px at 90% 10%, rgba(6, 182, 212, 0.10) 0%, transparent 45%),
+            radial-gradient(900px 600px at 50% 110%, rgba(14, 165, 233, 0.08) 0%, transparent 50%),
+            #f8fafc;
+    }
+
+    .dark .bg-page {
+        background:
+            radial-gradient(1200px 800px at 10% -10%, rgba(6, 182, 212, 0.18) 0%, transparent 50%),
+            radial-gradient(1000px 700px at 90% 10%, rgba(14, 165, 233, 0.12) 0%, transparent 45%),
+            radial-gradient(900px 600px at 50% 110%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+            #020617;
+    }
+
+    .text-body {
+        @apply text-slate-900 dark:text-slate-50;
+    }
+
+    .text-muted {
+        @apply text-slate-600 dark:text-slate-400;
+    }
+
+    .text-subtle {
+        @apply text-slate-500 dark:text-slate-500;
+    }
+
+    .text-accent {
+        @apply text-sky-600 dark:text-cyan-400;
+    }
+
+    /* Glass surfaces */
     .glass {
-        @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-lg;
+        @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-sm;
+    }
+
+    .glass-strong {
+        @apply bg-white/90 dark:bg-slate-900/85 backdrop-blur-2xl border border-white/50 dark:border-white/15 shadow-lg;
+    }
+
+    .glass-dark {
+        @apply bg-slate-900/40 dark:bg-black/40 backdrop-blur-xl border border-white/15 dark:border-white/10 shadow-xl;
+    }
+
+    .glass-input {
+        @apply bg-white/60 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200/70 dark:border-slate-700/70;
+    }
+
+    .text-gradient {
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-cyan-500 dark:from-sky-400 dark:to-cyan-300;
+    }
+
+    .accent-gradient {
+        @apply bg-gradient-to-r from-sky-500 to-cyan-500 dark:from-sky-400 dark:to-cyan-400;
+    }
+
+    .ring-accent {
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc] dark:focus-visible:ring-offset-[#020617];
+    }
+
+    /* Utility for focus within inputs/selects */
+    .ring-accent-input {
+        @apply focus:border-sky-400 dark:focus:border-cyan-400 focus:ring-2 focus:ring-sky-200/50 dark:focus:ring-cyan-400/30;
+    }
+}
+
+@layer components {
+    /* Scrollbar minimal */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        @apply rounded-full bg-slate-300/60 dark:bg-slate-700/60;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        @apply bg-slate-400/80 dark:bg-slate-600/80;
     }
 }

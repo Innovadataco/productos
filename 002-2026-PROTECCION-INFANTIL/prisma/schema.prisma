@@ -48,6 +48,31 @@ enum AccionAudit {
   CODE_REQUEST
   CODE_VERIFY
   CODE_COMPLETE
+  REPORT_DEACTIVATE
+  REPORT_REACTIVATE
+  EVAL_CASE_CREATE
+  EVAL_CASE_DISABLE
+  EVAL_RUN_CREATE
+  EXPERIMENT_START
+  EXPERIMENT_COMPLETE
+  APELACION_CREADA
+  APELACION_RESUELTA
+  APELACION_VENCIDA
+  APELACION_REHABILITADA
+}
+
+enum EstadoApelacion {
+  RECIBIDA
+  EN_REVISION
+  ACEPTADA
+  RECHAZADA
+  VENCIDA
+}
+
+enum MotivoBajaReporte {
+  RETIRO_LIMPIEZA
+  REPORTE_FALSO
+  ORDEN_LEGAL
 }
 
 enum CategoriaConducta {
@@ -58,6 +83,10 @@ enum CategoriaConducta {
   SOLICITUD_ENCUENTRO
   COMPARTIMIENTO_SEXUAL
   OTRO
+  EXTORSION
+  CONTENIDO_GENERADO_IA
+  DIFUSION_NO_CONSENTIDA
+  DOXING
 }
 
 enum EstadoReporte {
@@ -85,14 +114,18 @@ model Usuario {
   creadoEn         DateTime      @default(now())
   actualizadoEn    DateTime      @updatedAt
 
-  tenant         Tenant?          @relation(fields: [tenantId], references: [id])
-  parametros     ParametroSistema[]
-  auditLogs      AuditLog[]
-  codigos        CodigoVerificacion[]
-  tokensRecuperacion TokenRecuperacion[]
+  tenant              Tenant?                  @relation(fields: [tenantId], references: [id])
+  parametros          ParametroSistema[]
+  auditLogs           AuditLog[]
+  codigos             CodigoVerificacion[]
+  tokensRecuperacion  TokenRecuperacion[]
   reportes            Reporte[]
+  reportesDadosDeBaja Reporte[]                @relation("ReportesDadosDeBaja")
   correcciones        CorreccionAdmin[]
   alertasSuscripcion  AlertaSuscripcion[]
+  casosEval           CasoEval[]
+  evalRuns            EvalRun[]
+  apelaciones         ApelacionIdentificador[]
 
   @@index([email])
   @@index([rol])
@@ -117,12 +150,12 @@ model CodigoVerificacion {
 }
 
 model TokenRecuperacion {
-  id        String   @id @default(cuid())
-  email     String
-  tokenHash String
-  expiraEn  DateTime
-  usado     Boolean  @default(false)
-  creadoEn  DateTime @default(now())
+  id            String   @id @default(cuid())
+  email         String
+  tokenHash     String
+  expiraEn      DateTime
+  usado         Boolean  @default(false)
+  creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
   usuarioId String?
@@ -134,20 +167,20 @@ model TokenRecuperacion {
 }
 
 model ParametroSistema {
-  id                 String            @id @default(cuid())
-  clave              String            @unique
-  valor              String
-  tipo               TipoParametro
-  categoria          CategoriaParametro
-  esPublico          Boolean           @default(false)
-  esSecreto          Boolean           @default(false)
-  descripcion        String?
-  reglasValidacion   String?
-  creadoEn           DateTime          @default(now())
-  actualizadoEn      DateTime          @updatedAt
-  actualizadoPorId   String?
+  id               String             @id @default(cuid())
+  clave            String             @unique
+  valor            String
+  tipo             TipoParametro
+  categoria        CategoriaParametro
+  esPublico        Boolean            @default(false)
+  esSecreto        Boolean            @default(false)
+  descripcion      String?
+  reglasValidacion String?
+  creadoEn         DateTime           @default(now())
+  actualizadoEn    DateTime           @updatedAt
+  actualizadoPorId String?
 
-  actualizadoPor Usuario? @relation(fields: [actualizadoPorId], references: [id])
+  actualizadoPor Usuario?   @relation(fields: [actualizadoPorId], references: [id])
   auditLogs      AuditLog[]
 
   @@index([clave])
@@ -155,18 +188,18 @@ model ParametroSistema {
 }
 
 model AuditLog {
-  id          String     @id @default(cuid())
-  accion      AccionAudit
-  tipoRecurso String
-  recursoId   String?
-  usuarioId   String?
-  parametroId String?
+  id            String      @id @default(cuid())
+  accion        AccionAudit
+  tipoRecurso   String
+  recursoId     String?
+  usuarioId     String?
+  parametroId   String?
   valorAnterior String?
-  valorNuevo  String?
-  ipAddress   String
-  userAgent   String
-  metadatos   Json?
-  creadoEn    DateTime   @default(now())
+  valorNuevo    String?
+  ipAddress     String
+  userAgent     String
+  metadatos     Json?
+  creadoEn      DateTime    @default(now())
 
   usuario   Usuario?          @relation(fields: [usuarioId], references: [id])
   parametro ParametroSistema? @relation(fields: [parametroId], references: [id])
@@ -178,9 +211,9 @@ model AuditLog {
 }
 
 model Tenant {
-  id       String @id @default(cuid())
+  id       String   @id @default(cuid())
   nombre   String
-  estado   String @default("activo")
+  estado   String   @default("activo")
   creadoEn DateTime @default(now())
 
   usuarios Usuario[]
@@ -188,7 +221,7 @@ model Tenant {
 }
 
 model Plan {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   nombre      String
   descripcion String?
   precio      Float
@@ -196,20 +229,20 @@ model Plan {
 }
 
 model Subscription {
-  id        String @id @default(cuid())
+  id        String    @id @default(cuid())
   tenantId  String
   planId    String
-  estado    String @default("activo")
+  estado    String    @default("activo")
   iniciaEn  DateTime
   terminaEn DateTime?
-  creadoEn  DateTime @default(now())
+  creadoEn  DateTime  @default(now())
 }
 
 model BillingCycle {
-  id             String @id @default(cuid())
+  id             String   @id @default(cuid())
   subscriptionId String
   monto          Float
-  estado         String @default("pendiente")
+  estado         String   @default("pendiente")
   periodoInicio  DateTime
   periodoFin     DateTime
   creadoEn       DateTime @default(now())
@@ -220,16 +253,17 @@ model BillingCycle {
 // ============================================
 
 model Plataforma {
-  id       String   @id @default(cuid())
-  clave    String   @unique
-  nombre   String
-  categoria String  @default("otro")
-  esActiva Boolean  @default(true)
-  creadoEn DateTime @default(now())
+  id        String   @id @default(cuid())
+  clave     String   @unique
+  nombre    String
+  categoria String   @default("otro")
+  esActiva  Boolean  @default(true)
+  creadoEn  DateTime @default(now())
 
-  reportes Reporte[]
-  identificadores IdentificadorReportado[]
+  reportes           Reporte[]
+  identificadores    IdentificadorReportado[]
   alertasSuscripcion AlertaSuscripcion[]
+  apelaciones        ApelacionIdentificador[]
 
   @@index([clave])
   @@index([esActiva])
@@ -253,10 +287,12 @@ model Ciudad {
   id       String   @id @default(cuid())
   nombre   String
   paisId   String
+  lat      Float?
+  lng      Float?
   esActivo Boolean  @default(true)
   creadoEn DateTime @default(now())
 
-  pais     Pais     @relation(fields: [paisId], references: [id])
+  pais     Pais      @relation(fields: [paisId], references: [id])
   reportes Reporte[]
 
   @@unique([nombre, paisId])
@@ -265,36 +301,48 @@ model Ciudad {
 }
 
 model Reporte {
-  id               String        @id @default(cuid())
-  identificador    String
-  plataformaId     String
-  texto            String        @db.Text
-  textoOriginal    String?       @db.Text
-  fechaIncidente   DateTime
-  ciudad           String
-  pais             String
-  paisId           String?
-  ciudadId         String?
-  otraPlataforma   String?
-  estado           EstadoReporte @default(PENDIENTE)
-  esAnonimo        Boolean       @default(true)
-  usuarioId        String?
-  reporteOrigenId  String?
-  numeroSeguimiento String?      @unique
-  tenantId         String?
-  processingError  String?       @db.Text
-  creadoEn         DateTime      @default(now())
-  actualizadoEn    DateTime      @updatedAt
+  id                 String             @id @default(cuid())
+  identificador      String
+  plataformaId       String
+  texto              String             @db.Text
+  textoOriginal      String?            @db.Text
+  fechaIncidente     DateTime
+  ciudad             String
+  pais               String
+  paisId             String?
+  ciudadId           String?
+  otraPlataforma     String?
+  estado             EstadoReporte      @default(PENDIENTE)
+  esAnonimo          Boolean            @default(true)
+  edadVictima        Int?
+  usuarioId          String?
+  reporteOrigenId    String?
+  numeroSeguimiento  String?            @unique
+  tenantId           String?
+  processingError    String?            @db.Text
+  prioridadAlta      Boolean            @default(false)
+  keywordsDetectadas String[]
+  esRafaga           Boolean            @default(false)
+  fuenteConfianza    Float?
+  eliminado          Boolean            @default(false)
+  motivoBaja         MotivoBajaReporte?
+  notaBaja           String?            @db.Text
+  eliminadoEn        DateTime?
+  eliminadoPorId     String?
+  creadoEn           DateTime           @default(now())
+  actualizadoEn      DateTime           @updatedAt
 
-  plataforma      Plataforma          @relation(fields: [plataformaId], references: [id])
-  usuario         Usuario?            @relation(fields: [usuarioId], references: [id])
-  reporteOrigen   Reporte?            @relation("ReporteDuplicado", fields: [reporteOrigenId], references: [id])
-  duplicados      Reporte[]           @relation("ReporteDuplicado")
-  clasificacion   ClasificacionIA?
-  embedding       EmbeddingReporte?
-  tenant          Tenant?             @relation(fields: [tenantId], references: [id])
-  paisRel         Pais?               @relation(fields: [paisId], references: [id])
-  ciudadRel       Ciudad?             @relation(fields: [ciudadId], references: [id])
+  plataforma    Plataforma        @relation(fields: [plataformaId], references: [id])
+  usuario       Usuario?          @relation(fields: [usuarioId], references: [id])
+  eliminadoPor  Usuario?          @relation(fields: [eliminadoPorId], references: [id], name: "ReportesDadosDeBaja")
+  reporteOrigen Reporte?          @relation("ReporteDuplicado", fields: [reporteOrigenId], references: [id])
+  duplicados    Reporte[]         @relation("ReporteDuplicado")
+  clasificacion ClasificacionIA?
+  embedding     EmbeddingReporte?
+  fuente        FuenteReporte?
+  tenant        Tenant?           @relation(fields: [tenantId], references: [id])
+  paisRel       Pais?             @relation(fields: [paisId], references: [id])
+  ciudadRel     Ciudad?           @relation(fields: [ciudadId], references: [id])
 
   @@index([identificador, plataformaId])
   @@index([estado])
@@ -303,23 +351,48 @@ model Reporte {
   @@index([numeroSeguimiento])
   @@index([paisId])
   @@index([ciudadId])
+  @@index([eliminado])
+  @@index([eliminadoPorId])
+}
+
+model FuenteReporte {
+  id                   String   @id @default(cuid())
+  reporteId            String   @unique
+  ipHash               String?
+  fingerprintHash      String?
+  cuentaDiasAntiguedad Int?
+  reportesPrevios      Int      @default(0)
+  reportesConfirmados  Int      @default(0)
+  reportesDescartados  Int      @default(0)
+  pesoAplicado         Float
+  creadoEn             DateTime @default(now())
+
+  reporte Reporte @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+
+  @@index([ipHash])
+  @@index([fingerprintHash])
+  @@index([creadoEn])
 }
 
 model IdentificadorReportado {
-  id                  String   @id @default(cuid())
-  identificador       String
-  plataformaId        String
-  totalReportes       Int      @default(0)
-  reportesAutenticados Int     @default(0)
-  reportesAnonimos    Int      @default(0)
-  esVisiblePublicamente Boolean @default(false)
-  score               Int      @default(0)
-  nivelRiesgo         String?
-  ultimoReporteEn     DateTime?
-  creadoEn            DateTime @default(now())
-  actualizadoEn       DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  identificador         String
+  plataformaId          String
+  totalReportes         Int       @default(0)
+  reportesAutenticados  Int       @default(0)
+  reportesAnonimos      Int       @default(0)
+  esVisiblePublicamente Boolean   @default(false)
+  score                 Int       @default(0)
+  scoreAnonimo          Int       @default(0)
+  scoreAutenticado      Int       @default(0)
+  scoreAjustado         Int       @default(0)
+  nivelRiesgo           String?
+  ultimoReporteEn       DateTime?
+  creadoEn              DateTime  @default(now())
+  actualizadoEn         DateTime  @updatedAt
 
-  plataforma Plataforma @relation(fields: [plataformaId], references: [id])
+  plataforma  Plataforma               @relation(fields: [plataformaId], references: [id])
+  apelaciones ApelacionIdentificador[]
 
   @@unique([identificador, plataformaId])
   @@index([esVisiblePublicamente])
@@ -327,15 +400,46 @@ model IdentificadorReportado {
   @@index([score])
 }
 
+model ApelacionIdentificador {
+  id                    String          @id @default(cuid())
+  identificador         String
+  plataformaId          String
+  tokenAcceso           String          @unique
+  estado                EstadoApelacion @default(RECIBIDA)
+  motivoSolicitud       String
+  evidenciaUrl          String?
+  respuestaAdmin        String?
+  adminId               String?
+  tipoVerificacion      String // SMS | NICK
+  contacto              String?
+  smsCodigoHash         String?
+  smsVerificado         Boolean         @default(false)
+  smsIntentos           Int             @default(0)
+  pausaHasta            DateTime?
+  visibilidadRestaurada Boolean         @default(false)
+  derechoApelar         Boolean         @default(true)
+  notaRehabilitacion    String?
+  creadoEn              DateTime        @default(now())
+  actualizadoEn         DateTime        @updatedAt
+
+  plataforma             Plataforma             @relation(fields: [plataformaId], references: [id])
+  admin                  Usuario?               @relation(fields: [adminId], references: [id])
+  identificadorReportado IdentificadorReportado @relation(fields: [identificador, plataformaId], references: [identificador, plataformaId])
+
+  @@index([identificador, plataformaId])
+  @@index([estado])
+  @@index([tokenAcceso])
+}
+
 model AlertaSuscripcion {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   usuarioId     String
   identificador String
   plataformaId  String
-  activa        Boolean  @default(true)
+  activa        Boolean   @default(true)
   ultimoEmailEn DateTime?
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
 
   usuario    Usuario    @relation(fields: [usuarioId], references: [id])
   plataforma Plataforma @relation(fields: [plataformaId], references: [id])
@@ -347,73 +451,176 @@ model AlertaSuscripcion {
 }
 
 model ClasificacionIA {
-  id              String            @id @default(cuid())
-  reporteId       String            @unique
-  categoria       CategoriaConducta
-  confianza       Float
-  contienePii     Boolean           @default(false)
-  piiDetectada    String[]
-  modeloUsado     String
-  latenciaMs      Int
-  promptTokens    Int?
-  responseTokens  Int?
-  rawResponse     String?           @db.Text
-  creadoEn        DateTime          @default(now())
+  id                    String            @id @default(cuid())
+  reporteId             String            @unique
+  categoria             CategoriaConducta
+  confianza             Float
+  contienePii           Boolean           @default(false)
+  piiDetectada          String[]
+  modeloUsado           String
+  latenciaMs            Int
+  promptTokens          Int?
+  responseTokens        Int?
+  rawResponse           String?           @db.Text
+  categoriasSecundarias Json?
+  votos                 Json?
+  usoCascada            Boolean           @default(false)
+  modeloCascada         String?
+  posibleAgresorPar     Boolean           @default(false)
+  creadoEn              DateTime          @default(now())
 
-  reporte      Reporte         @relation(fields: [reporteId], references: [id], onDelete: Cascade)
-  correccion   CorreccionAdmin?
+  reporte    Reporte          @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  correccion CorreccionAdmin?
 
   @@index([categoria])
   @@index([confianza])
 }
 
 model CorreccionAdmin {
-  id                  String            @id @default(cuid())
-  clasificacionId     String            @unique
-  categoriaOriginal   CategoriaConducta
-  categoriaCorregida  CategoriaConducta
-  adminId             String
-  motivo              String?           @db.Text
-  creadoEn            DateTime          @default(now())
+  id                 String            @id @default(cuid())
+  clasificacionId    String            @unique
+  categoriaOriginal  CategoriaConducta
+  categoriaCorregida CategoriaConducta
+  adminId            String
+  motivo             String?           @db.Text
+  confirmada         Boolean           @default(false)
+  creadoEn           DateTime          @default(now())
 
-  clasificacion     ClasificacionIA    @relation(fields: [clasificacionId], references: [id], onDelete: Cascade)
-  admin             Usuario            @relation(fields: [adminId], references: [id])
-  datasetRegistros  DatasetEntrenamiento[]
+  clasificacion    ClasificacionIA        @relation(fields: [clasificacionId], references: [id], onDelete: Cascade)
+  admin            Usuario                @relation(fields: [adminId], references: [id])
+  datasetRegistros DatasetEntrenamiento[]
 }
 
 model DatasetEntrenamiento {
-  id                    String            @id @default(cuid())
-  texto                 String            @db.Text
-  clasificacionCorrecta CategoriaConducta
-  fuente                String
-  correccionId          String?
-  usadoParaEntrenamiento Boolean          @default(false)
-  creadoEn              DateTime          @default(now())
+  id                     String            @id @default(cuid())
+  texto                  String            @db.Text
+  clasificacionCorrecta  CategoriaConducta
+  fuente                 String
+  correccionId           String?
+  usadoParaEntrenamiento Boolean           @default(false)
+  textoAnonimizado       Boolean           @default(false)
+  creadoEn               DateTime          @default(now())
 
-  correccion CorreccionAdmin? @relation(fields: [correccionId], references: [id])
+  correccion CorreccionAdmin?  @relation(fields: [correccionId], references: [id])
+  embedding  EmbeddingDataset?
 
   @@index([usadoParaEntrenamiento])
 }
 
-model EmbeddingReporte {
-  id          String   @id @default(cuid())
-  reporteId   String   @unique
+model EmbeddingDataset {
+  id          String                     @id @default(cuid())
+  datasetId   String                     @unique
+  // Índice hnsw sobre vector creado por migración SQL manual (20260717002004_add_pgvector_hnsw_indexes).
+  // Prisma no lo gestiona; verificar que exista tras cada migrate deploy.
   vector      Unsupported("vector(768)")
   modeloUsado String
-  creadoEn    DateTime @default(now())
+  creadoEn    DateTime                   @default(now())
+
+  dataset DatasetEntrenamiento @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+}
+
+model EmbeddingReporte {
+  id          String                     @id @default(cuid())
+  reporteId   String                     @unique
+  // Índice hnsw sobre vector creado por migración SQL manual (20260717002004_add_pgvector_hnsw_indexes).
+  // Prisma no lo gestiona; verificar que exista tras cada migrate deploy.
+  vector      Unsupported("vector(768)")
+  modeloUsado String
+  creadoEn    DateTime                   @default(now())
 
   reporte Reporte @relation(fields: [reporteId], references: [id], onDelete: Cascade)
-
-  @@index([vector])
 }
+
 model RateLimit {
-  key         String   @id
-  scope       String
-  identifier  String
-  windowStart DateTime
-  count       Int      @default(0)
-  createdAt   DateTime @default(now())
+  key           String   @id
+  scope         String
+  identifier    String
+  windowStart   DateTime
+  count         Int      @default(0)
+  createdAt     DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
   @@index([scope, identifier, windowStart])
+}
+
+enum CasoEvalFuente {
+  SEMILLA
+  MANUAL_ADMIN
+  PRODUCCION_ANONIMIZADO
+}
+
+model CasoEval {
+  id                 String         @id @default(cuid())
+  texto              String         @db.Text
+  categoriaEsperada  String
+  secundariaEsperada String?
+  ruido              Boolean        @default(false)
+  fuente             CasoEvalFuente @default(SEMILLA)
+  activo             Boolean        @default(true)
+  fixtureVersion     Int            @default(1)
+  creadoPorId        String?
+  creadoEn           DateTime       @default(now())
+
+  creadoPor  Usuario?        @relation(fields: [creadoPorId], references: [id])
+  resultados EvalResultado[]
+
+  @@index([categoriaEsperada])
+  @@index([fuente])
+  @@index([activo])
+  @@index([fixtureVersion])
+}
+
+enum EvalRunEstado {
+  PENDIENTE
+  EN_PROGRESO
+  COMPLETADA
+  FALLIDA
+  CANCELADA
+}
+
+model EvalRun {
+  id             String        @id @default(cuid())
+  tipo           String        @default("f7")
+  fixtureVersion Int
+  estado         EvalRunEstado @default(PENDIENTE)
+  iniciadoEn     DateTime      @default(now())
+  finalizadoEn   DateTime?
+  resultadoJson  Json?
+  error          String?       @db.Text
+  creadoPorId    String?
+
+  // Spec 014 — Laboratorio de experimentos
+  nombre         String?
+  notas          String? @db.Text
+  configSnapshot Json?
+  progresoCasos  Int     @default(0)
+  progresoTotal  Int     @default(0)
+
+  creadoPor  Usuario?        @relation(fields: [creadoPorId], references: [id])
+  resultados EvalResultado[]
+
+  @@index([estado])
+  @@index([fixtureVersion])
+  @@index([creadoPorId])
+}
+
+model EvalResultado {
+  id            String   @id @default(cuid())
+  experimentoId String
+  casoEvalId    String
+  esperado      String
+  predicho      String
+  confianza     Float
+  estadoFinal   String
+  correcto      Boolean
+  latenciaMs    Int
+  creadoEn      DateTime @default(now())
+
+  experimento EvalRun  @relation(fields: [experimentoId], references: [id], onDelete: Cascade)
+  casoEval    CasoEval @relation(fields: [casoEvalId], references: [id], onDelete: Cascade)
+
+  @@index([experimentoId])
+  @@index([casoEvalId])
+  @@index([correcto])
+  @@index([esperado])
 }

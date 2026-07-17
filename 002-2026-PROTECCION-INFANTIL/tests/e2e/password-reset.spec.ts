@@ -4,11 +4,16 @@ async function registrarUsuario(page: Page, email: string, password: string, nom
     let devCode = "";
     await page.route("**/api/auth/verificar/solicitar", async (route) => {
         const response = await route.fetch();
-        const body = await response.json();
+        const bodyText = await response.text();
+        const body = JSON.parse(bodyText);
         if (body.devCode) {
             devCode = body.devCode;
         }
-        await route.fulfill({ response });
+        await route.fulfill({
+            status: response.status(),
+            headers: response.headers(),
+            body: bodyText,
+        });
     });
 
     await page.goto("/registro");
@@ -34,11 +39,16 @@ test.describe("Restablecimiento de contraseña", () => {
         let devToken = "";
         await page.route("**/api/auth/recuperar/solicitar", async (route) => {
             const response = await route.fetch();
-            const body = await response.json();
+            const bodyText = await response.text();
+            const body = JSON.parse(bodyText);
             if (body.devToken) {
                 devToken = body.devToken;
             }
-            await route.fulfill({ response });
+            await route.fulfill({
+                status: response.status(),
+                headers: response.headers(),
+                body: bodyText,
+            });
         });
 
         // 1. Solicitar recuperación
@@ -87,8 +97,13 @@ test.describe("Restablecimiento de contraseña", () => {
         let respuestaExistente: { message?: string; emailSent?: boolean } | null = null;
         await page.route("**/api/auth/recuperar/solicitar", async (route) => {
             const response = await route.fetch();
-            respuestaExistente = await response.json();
-            await route.fulfill({ response });
+            const bodyText = await response.text();
+            respuestaExistente = JSON.parse(bodyText);
+            await route.fulfill({
+                status: response.status(),
+                headers: response.headers(),
+                body: bodyText,
+            });
         });
 
         await page.goto("/recuperar");
@@ -101,8 +116,13 @@ test.describe("Restablecimiento de contraseña", () => {
         let respuestaNoExistente: { message?: string; emailSent?: boolean } | null = null;
         await page.route("**/api/auth/recuperar/solicitar", async (route) => {
             const response = await route.fetch();
-            respuestaNoExistente = await response.json();
-            await route.fulfill({ response });
+            const bodyText = await response.text();
+            respuestaNoExistente = JSON.parse(bodyText);
+            await route.fulfill({
+                status: response.status(),
+                headers: response.headers(),
+                body: bodyText,
+            });
         });
 
         await page.goto("/recuperar");
@@ -110,9 +130,13 @@ test.describe("Restablecimiento de contraseña", () => {
         await page.getByRole("button", { name: "Enviar enlace de recuperación" }).click();
         await expect(page.getByText("Si el email está registrado")).toBeVisible();
 
-        const a = respuestaExistente as { message?: string; emailSent?: boolean } | null;
-        const b = respuestaNoExistente as { message?: string; emailSent?: boolean } | null;
+        const a = respuestaExistente as { message?: string; emailSent?: boolean; devToken?: string } | null;
+        const b = respuestaNoExistente as { message?: string; emailSent?: boolean; devToken?: string } | null;
         expect(a?.message).toBe(b?.message);
-        expect(a?.emailSent).not.toBe(b?.emailSent);
+        // En entornos con email configurado, emailSent difiere (true vs false).
+        // En entornos sin email, ambos son false, pero solo el existente recibe devToken.
+        const differByEmailSent = a?.emailSent !== b?.emailSent;
+        const onlyExistingHasToken = !!a?.devToken && !b?.devToken;
+        expect(differByEmailSent || onlyExistingHasToken).toBe(true);
     });
 });

@@ -9,7 +9,7 @@ export function DonutChart({
     data: { label: string; value: number }[];
     ariaLabel?: string;
 }) {
-    if (data.length === 0) return <p className="text-sm text-slate-500">Sin datos</p>;
+    if (data.length === 0) return <p className="text-sm text-muted">Sin datos</p>;
 
     const total = data.reduce((sum, d) => sum + d.value, 0) || 1;
     const radius = 70;
@@ -24,7 +24,7 @@ export function DonutChart({
                 aria-label={ariaLabel}
             >
                 <title>{ariaLabel}</title>
-                <circle cx="90" cy="90" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="20" />
+                <circle cx="90" cy="90" r={radius} fill="none" stroke="currentColor" strokeWidth="20" className="text-slate-200 dark:text-slate-700" />
                 {data.map((d, i) => {
                     const previous = data.slice(0, i).reduce((sum, item) => sum + item.value, 0);
                     const segment = (d.value / total) * circumference;
@@ -48,7 +48,7 @@ export function DonutChart({
                         </circle>
                     );
                 })}
-                <text x="90" y="95" textAnchor="middle" className="fill-slate-800 text-base font-bold">
+                <text x="90" y="95" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-base font-bold">
                     {total}
                 </text>
             </svg>
@@ -61,7 +61,7 @@ export function DonutChart({
                                 className="inline-block h-3 w-3 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: COLORS[i % COLORS.length] }}
                             />
-                            <span className="text-slate-700">
+                            <span className="text-slate-700 dark:text-slate-300">
                                 {d.label}: <span className="font-medium">{d.value}</span> ({percentage}%)
                             </span>
                         </li>

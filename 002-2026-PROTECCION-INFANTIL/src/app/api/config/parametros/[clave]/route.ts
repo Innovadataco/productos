@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { invalidateCache } from "@/lib/config-cache";
+import { isLocalOllamaUrl } from "@/lib/ai/ollama-config";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 type RouteContext = { params: Promise<{ clave: string }> };
@@ -65,6 +66,15 @@ export async function PATCH(request: Request, context: RouteContext) {
             throw new AppError("Valor requerido", ERROR_CODES.VALIDATION_ERROR, 400);
         }
 
+        // Validación R2: URL de Ollama solo local/privada
+        if (clave === "system.ollama_base_url" && !isLocalOllamaUrl(body.valor)) {
+            throw new AppError(
+                "los textos de reportes solo pueden procesarse en entorno local/privado (R2)",
+                ERROR_CODES.VALIDATION_ERROR,
+                400
+            );
+        }
+
         const updated = await prisma.parametroSistema.update({
             where: { clave },
             data: { valor: body.valor, actualizadoPorId: user.id },
@@ -74,6 +84,7 @@ export async function PATCH(request: Request, context: RouteContext) {
             accion: "PARAM_UPDATE",
             tipoRecurso: "parametro",
             recursoId: param.id,
+            parametroId: param.id,
             usuarioId: user.id,
             valorAnterior: param.valor,
             valorNuevo: body.valor,

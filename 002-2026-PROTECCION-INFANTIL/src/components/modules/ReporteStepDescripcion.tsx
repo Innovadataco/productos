@@ -8,20 +8,20 @@ export function ReporteStepDescripcion({ value, onChange }: { value: string; onC
 
     return (
         <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800">Describe lo que ocurrió</h2>
+            <h2 className="text-lg font-semibold text-body">Describe lo que ocurrió</h2>
             <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label className="block text-sm font-medium text-muted mb-1.5">
                     Descripción de la conducta
                 </label>
                 <textarea
-                    className="w-full rounded-xl border border-slate-200 bg-white/60 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 min-h-[160px] resize-y"
+                    className="w-full rounded-xl px-4 py-3 text-sm text-body placeholder-subtle outline-none transition min-h-[160px] resize-y glass-input ring-accent-input"
                     placeholder="Describe la conducta observada con el mayor detalle posible..."
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     maxLength={max}
                 />
                 <div className="mt-1.5 flex justify-between text-xs">
-                    <span className={isValid ? "text-slate-500" : chars < min ? "text-red-600" : "text-red-600"}>
+                    <span className={isValid ? "text-subtle" : "text-red-600 dark:text-red-400"}>
                         {chars < min
                             ? `Mínimo ${min} caracteres (${chars}/${min})`
                             : chars > max
@@ -30,7 +30,7 @@ export function ReporteStepDescripcion({ value, onChange }: { value: string; onC
                     </span>
                 </div>
             </div>
-            <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+            <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300">
                 No incluyas fotos, videos ni archivos. Este reporte es exclusivamente de texto.
             </div>
         </div>

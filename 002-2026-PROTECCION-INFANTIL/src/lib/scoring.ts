@@ -1,11 +1,16 @@
 import { prisma } from "./prisma";
-import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
+import type { Prisma, CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 export type NivelRiesgo = "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
 
 export interface ScoreResult {
     score: number;
     nivelRiesgo: NivelRiesgo;
+    scoreAnonimo: number;
+    scoreAutenticado: number;
+    scoreAjustado: number;
+    pesoAnonimoPromedio: number;
+    pesoAutenticadoPromedio: number;
     totalReportes: number;
     reportesAutenticados: number;
     reportesAnonimos: number;
@@ -43,6 +48,10 @@ const CATEGORIAS_DEFAULT: CategoriaConducta[] = [
     "SUPLANTACION_IDENTIDAD",
     "SOLICITUD_ENCUENTRO",
     "COMPARTIMIENTO_SEXUAL",
+    "EXTORSION",
+    "CONTENIDO_GENERADO_IA",
+    "DIFUSION_NO_CONSENTIDA",
+    "DOXING",
     "OTRO",
 ];
 
@@ -54,13 +63,18 @@ function getDefaultSeverity(): Record<CategoriaConducta, number> {
         SUPLANTACION_IDENTIDAD: 70,
         SOLICITUD_ENCUENTRO: 90,
         COMPARTIMIENTO_SEXUAL: 95,
+        EXTORSION: 85,
+        CONTENIDO_GENERADO_IA: 75,
+        DIFUSION_NO_CONSENTIDA: 90,
+        DOXING: 85,
         OTRO: 20,
     };
 }
 
-async function getScoringParams(): Promise<ScoringParams> {
+async function getScoringParams(tx?: Prisma.TransactionClient): Promise<ScoringParams> {
+    const db = tx ?? prisma;
     const get = async (clave: string, fallback: string) => {
-        const p = await prisma.parametroSistema.findUnique({ where: { clave } });
+        const p = await db.parametroSistema.findUnique({ where: { clave } });
         return p?.valor ?? fallback;
     };
 
@@ -87,6 +101,12 @@ async function getScoringParams(): Promise<ScoringParams> {
     };
 }
 
+export async function isSourceWeightEnabled(tx?: Prisma.TransactionClient): Promise<boolean> {
+    const db = tx ?? prisma;
+    const p = await db.parametroSistema.findUnique({ where: { clave: "scoring.source_weight.enabled" } });
+    return p?.valor === "true";
+}
+
 export function determinarNivelRiesgo(score: number, thresholds: { low: number; medium: number; high: number }): NivelRiesgo {
     if (score >= thresholds.high) return "CRITICO";
     if (score >= thresholds.medium) return "ALTO";
@@ -94,36 +114,33 @@ export function determinarNivelRiesgo(score: number, thresholds: { low: number; 
     return "BAJO";
 }
 
-export async function calcularScore(identificador: string, plataformaId?: string): Promise<ScoreResult> {
-    const params = await getScoringParams();
+interface ReporteScoreInput {
+    id: string;
+    esAnonimo: boolean;
+    ciudad: string;
+    pais: string;
+    creadoEn: Date;
+    fuenteConfianza: number | null;
+    clasificacion: { categoria: CategoriaConducta } | null;
+}
 
-    const where: { identificador: string; plataformaId?: string; estado: { in: EstadoReporte[] } } = {
-        identificador,
-        estado: { in: ESTADOS_VISIBLES },
-    };
-    if (plataformaId) {
-        where.plataformaId = plataformaId;
-    }
+interface ComponentesScore {
+    scoreCantidad: number;
+    scoreRecencia: number;
+    scoreSeveridad: number;
+    scoreAutenticacion: number;
+    scoreDiversidad: number;
+    ciudadesUnicas: number;
+    paisesUnicos: number;
+    reportesRecientes: number;
+    categorias: { categoria: CategoriaConducta; cantidad: number }[];
+    timeline: { mes: string; cantidad: number }[];
+    distribucion: { porCiudad: Record<string, number>; porPais: Record<string, number> };
+}
 
-    const reportes = await prisma.reporte.findMany({
-        where,
-        select: {
-            id: true,
-            esAnonimo: true,
-            ciudad: true,
-            pais: true,
-            creadoEn: true,
-            clasificacion: {
-                select: { categoria: true },
-            },
-        },
-        orderBy: { creadoEn: "desc" },
-        take: 1000,
-    });
-
+function calcularComponentesScore(reportes: ReporteScoreInput[], params: ScoringParams): ComponentesScore {
     const totalReportes = reportes.length;
     const reportesAutenticados = reportes.filter((r) => !r.esAnonimo).length;
-    const reportesAnonimos = totalReportes - reportesAutenticados;
     const ratioAutenticados = totalReportes > 0 ? reportesAutenticados / totalReportes : 0;
 
     const porCiudad: Record<string, number> = {};
@@ -153,7 +170,6 @@ export async function calcularScore(identificador: string, plataformaId?: string
         }
     }
 
-    // Componentes del score (0-100)
     const scoreCantidad = Math.min(totalReportes * params.weightCount, params.weightCount * 10);
     const scoreRecencia = totalReportes > 0 ? (reportesRecientes / totalReportes) * params.weightRecency : 0;
     const scoreSeveridad = totalReportes > 0 ? (sumaSeveridad / totalReportes / 100) * params.weightSeverity : 0;
@@ -161,16 +177,6 @@ export async function calcularScore(identificador: string, plataformaId?: string
     const ciudadesUnicas = Object.keys(porCiudad).length;
     const paisesUnicos = Object.keys(porPais).length;
     const scoreDiversidad = Math.min(ciudadesUnicas / params.maxCiudadesDiversidad, 1) * params.weightDiversity;
-
-    const rawScore = scoreCantidad + scoreRecencia + scoreSeveridad + scoreAutenticacion + scoreDiversidad;
-    const maxScore =
-        params.weightCount * 10 +
-        params.weightRecency +
-        params.weightSeverity +
-        params.weightAuthenticated +
-        params.weightDiversity;
-
-    const score = maxScore > 0 ? Math.min(Math.round((rawScore / maxScore) * 100), 100) : 0;
 
     const categorias = Object.entries(porCategoria)
         .map(([categoria, cantidad]) => ({ categoria: categoria as CategoriaConducta, cantidad: cantidad as number }))
@@ -181,18 +187,119 @@ export async function calcularScore(identificador: string, plataformaId?: string
         .sort((a, b) => a.mes.localeCompare(b.mes));
 
     return {
+        scoreCantidad,
+        scoreRecencia,
+        scoreSeveridad,
+        scoreAutenticacion,
+        scoreDiversidad,
+        ciudadesUnicas,
+        paisesUnicos,
+        reportesRecientes,
+        categorias,
+        timeline,
+        distribucion: { porCiudad, porPais },
+    };
+}
+
+function scoreFromComponentes(componentes: ComponentesScore, params: ScoringParams): number {
+    const rawScore =
+        componentes.scoreCantidad +
+        componentes.scoreRecencia +
+        componentes.scoreSeveridad +
+        componentes.scoreAutenticacion +
+        componentes.scoreDiversidad;
+    const maxScore =
+        params.weightCount * 10 +
+        params.weightRecency +
+        params.weightSeverity +
+        params.weightAuthenticated +
+        params.weightDiversity;
+    return maxScore > 0 ? Math.min(Math.round((rawScore / maxScore) * 100), 100) : 0;
+}
+
+export async function calcularScore(
+    identificador: string,
+    plataformaId?: string,
+    tx?: Prisma.TransactionClient,
+    opts?: { forceSourceWeight?: boolean }
+): Promise<ScoreResult> {
+    const db = tx ?? prisma;
+    const params = await getScoringParams(tx);
+    const sourceWeightEnabled = opts?.forceSourceWeight || (await isSourceWeightEnabled(tx));
+
+    const where: { identificador: string; plataformaId?: string; estado: { in: EstadoReporte[] }; eliminado: boolean } = {
+        identificador,
+        estado: { in: ESTADOS_VISIBLES },
+        eliminado: false,
+    };
+    if (plataformaId) {
+        where.plataformaId = plataformaId;
+    }
+
+    const reportes = await db.reporte.findMany({
+        where,
+        select: {
+            id: true,
+            esAnonimo: true,
+            ciudad: true,
+            pais: true,
+            creadoEn: true,
+            fuenteConfianza: true,
+            clasificacion: {
+                select: { categoria: true },
+            },
+        },
+        orderBy: { creadoEn: "desc" },
+        take: 1000,
+    });
+
+    const totalReportes = reportes.length;
+    const reportesAutenticados = reportes.filter((r) => !r.esAnonimo).length;
+    const reportesAnonimos = totalReportes - reportesAutenticados;
+    const ratioAutenticados = totalReportes > 0 ? reportesAutenticados / totalReportes : 0;
+
+    const componentesTotal = calcularComponentesScore(reportes, params);
+    const score = scoreFromComponentes(componentesTotal, params);
+
+    const anonimos = reportes.filter((r) => r.esAnonimo);
+    const autenticados = reportes.filter((r) => !r.esAnonimo);
+
+    const componentesAnonimo = calcularComponentesScore(anonimos, params);
+    const componentesAutenticado = calcularComponentesScore(autenticados, params);
+
+    const scoreAnonimo = scoreFromComponentes(componentesAnonimo, params);
+    const scoreAutenticado = scoreFromComponentes(componentesAutenticado, params);
+
+    const pesoAnonimoPromedio =
+        sourceWeightEnabled && anonimos.length > 0
+            ? anonimos.reduce((acc, r) => acc + (r.fuenteConfianza ?? 1.0), 0) / anonimos.length
+            : 1.0;
+    const pesoAutenticadoPromedio =
+        sourceWeightEnabled && autenticados.length > 0
+            ? autenticados.reduce((acc, r) => acc + (r.fuenteConfianza ?? 1.0), 0) / autenticados.length
+            : 1.0;
+
+    const rawAjustado = scoreAnonimo * pesoAnonimoPromedio + scoreAutenticado * pesoAutenticadoPromedio;
+    const scoreAjustado = Math.min(Math.round(rawAjustado), 100);
+
+    return {
         score,
         nivelRiesgo: determinarNivelRiesgo(score, params.thresholds),
+        scoreAnonimo,
+        scoreAutenticado,
+        scoreAjustado,
+        pesoAnonimoPromedio,
+        pesoAutenticadoPromedio,
         totalReportes,
         reportesAutenticados,
         reportesAnonimos,
         ratioAutenticados,
-        reportesRecientes,
-        ciudadesUnicas,
-        paisesUnicos,
-        categorias,
-        timeline,
-        distribucion: { porCiudad, porPais },
+        reportesRecientes: componentesTotal.reportesRecientes,
+        ciudadesUnicas: componentesTotal.ciudadesUnicas,
+        paisesUnicos: componentesTotal.paisesUnicos,
+        categorias: componentesTotal.categorias,
+        timeline: componentesTotal.timeline,
+        distribucion: componentesTotal.distribucion,
         ultimoReporte: reportes[0]?.creadoEn ?? null,
     };
 }
@@ -201,13 +308,24 @@ export async function calcularScore(identificador: string, plataformaId?: string
  * Recalcula el score de un identificador y persiste el resultado en
  * `IdentificadorReportado` para lecturas rápidas en dashboard/admin.
  */
-export async function recalcularYGuardarScore(identificador: string, plataformaId: string): Promise<ScoreResult> {
-    const resultado = await calcularScore(identificador, plataformaId);
+export async function recalcularYGuardarScore(
+    identificador: string,
+    plataformaId: string,
+    tx?: Prisma.TransactionClient
+): Promise<ScoreResult> {
+    const db = tx ?? prisma;
+    const resultado = await calcularScore(identificador, plataformaId, tx);
 
-    await prisma.identificadorReportado.upsert({
+    await db.identificadorReportado.upsert({
         where: { identificador_plataformaId: { identificador, plataformaId } },
         update: {
+            totalReportes: resultado.totalReportes,
+            reportesAutenticados: resultado.reportesAutenticados,
+            reportesAnonimos: resultado.reportesAnonimos,
             score: resultado.score,
+            scoreAnonimo: resultado.scoreAnonimo,
+            scoreAutenticado: resultado.scoreAutenticado,
+            scoreAjustado: resultado.scoreAjustado,
             nivelRiesgo: resultado.nivelRiesgo,
             ultimoReporteEn: resultado.ultimoReporte ?? new Date(),
         },
@@ -218,6 +336,9 @@ export async function recalcularYGuardarScore(identificador: string, plataformaI
             reportesAutenticados: resultado.reportesAutenticados,
             reportesAnonimos: resultado.reportesAnonimos,
             score: resultado.score,
+            scoreAnonimo: resultado.scoreAnonimo,
+            scoreAutenticado: resultado.scoreAutenticado,
+            scoreAjustado: resultado.scoreAjustado,
             nivelRiesgo: resultado.nivelRiesgo,
             ultimoReporteEn: resultado.ultimoReporte ?? new Date(),
         },

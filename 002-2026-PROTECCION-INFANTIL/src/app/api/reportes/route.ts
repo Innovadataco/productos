@@ -6,6 +6,7 @@ import { getUserFromToken } from "@/lib/auth";
 import { publishReporte } from "@/lib/queue";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma } = parsed.data;
+        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima } = parsed.data;
 
         // Obtener usuario autenticado (puede ser null)
         const user = await getUserFromToken(request);
@@ -51,6 +52,28 @@ export async function POST(request: Request) {
                 { error: { message: "Plataforma no válida", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
+        }
+
+        // Rate limiting por fuente (Fase B)
+        const fingerprintHash = calcularFingerprintServerSide(request);
+
+        const rateFingerprint = await checkRateLimit(request, "report_fingerprint", { identifier: fingerprintHash });
+        if (!rateFingerprint.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiados reportes desde este dispositivo. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rateFingerprint.resetAt - Date.now()) / 1000) } },
+                { status: 429, headers: rateFingerprint.headers }
+            );
+        }
+
+        const rateIdentificador = await checkRateLimit(request, "report_identificador", {
+            identifier: `${identificador}:${plataforma.id}`,
+            soft: true,
+        });
+
+        // Determinar estado inicial del reporte
+        let estadoInicial: "PENDIENTE" | "POSIBLE_SPAM" | "REVISION_MANUAL" = esSpam ? "POSIBLE_SPAM" : "PENDIENTE";
+        if (rateIdentificador.softExceeded && estadoInicial === "PENDIENTE") {
+            estadoInicial = rateIdentificador.markAsSpam ? "POSIBLE_SPAM" : "REVISION_MANUAL";
         }
 
         // Deduplicación autenticada: mismo usuario + identificador en 30 días
@@ -103,13 +126,23 @@ export async function POST(request: Request) {
                 paisId: ciudadId === "otra" ? null : (paisId || null),
                 ciudadId: ciudadId === "otra" ? null : (ciudadId || null),
                 otraPlataforma: plataformaClave === "otro" ? (otraPlataforma || null) : null,
+                edadVictima: edadVictima ?? null,
                 esAnonimo,
                 usuarioId,
                 numeroSeguimiento,
                 tenantId: user?.tenantId ?? null,
-                estado: esSpam ? "POSIBLE_SPAM" : "PENDIENTE",
+                estado: estadoInicial,
             },
         });
+
+        // Registrar señal de fuente para anti-abuso (Fase A)
+        try {
+            await crearFuenteReporte(reporte.id, { request, usuario: user, identificador, plataformaId: plataforma.id });
+        } catch (fuenteErr) {
+            const msg = fuenteErr instanceof Error ? fuenteErr.message : "Error desconocido";
+            console.error("[REPORTES] Error registrando fuente:", msg);
+            // No fallamos la creación del reporte si falla el registro de fuente.
+        }
 
         // Actualizar o crear IdentificadorReportado
         await prisma.identificadorReportado.upsert({

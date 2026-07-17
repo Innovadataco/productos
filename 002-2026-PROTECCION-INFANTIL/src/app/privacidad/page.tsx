@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Política de privacidad — Protección Infantil",
+    title: "Política de privacidad",
     description: "Política de privacidad de la plataforma de reportes comunitarios de protección infantil.",
+    alternates: {
+        canonical: "/privacidad",
+    },
+    openGraph: {
+        type: "article",
+        url: "/privacidad",
+        title: "Política de privacidad — Protección Infantil",
+        description: "Política de privacidad de la plataforma de reportes comunitarios de protección infantil.",
+    },
 };
 
 export default function PrivacidadPage() {
@@ -42,7 +51,15 @@ export default function PrivacidadPage() {
                         anonimizada en las consultas públicas.
                     </p>
 
-                    <h2 className="text-lg font-semibold text-slate-900">5. Tus derechos</h2>
+                    <h2 className="text-lg font-semibold text-slate-900">5. Señales de fuente (anti-abuso)</h2>
+                    <p>
+                        Para reducir reportes falsos o maliciosos, el servidor calcula un hash irreversible (SHA-256 con salt)
+                        de señales técnicas como un rango reducido de la dirección IP, el navegador y el idioma preferido.
+                        Estos hashes no permiten identificar a una persona, no se exponen en la interfaz ni en las API, y se
+                        conservan durante un máximo de 90 días antes de eliminarse automáticamente.
+                    </p>
+
+                    <h2 className="text-lg font-semibold text-slate-900">6. Tus derechos</h2>
                     <p>
                         Puedes solicitar la eliminación de tu cuenta o de datos personales escribiendo al administrador de la
                         plataforma.

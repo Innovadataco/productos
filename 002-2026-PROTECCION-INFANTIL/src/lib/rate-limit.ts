@@ -6,6 +6,17 @@ export interface RateLimitResult {
     remaining: number;
     resetAt: number;
     headers: Record<string, string>;
+    /**
+     * Solo para scopes "suaves" (soft: true). Indica que se superó el límite
+     * configurado pero la operación sigue permitida; el llamador debe decidir
+     * cómo tratar el exceso (por ejemplo, marcar para revisión manual).
+     */
+    softExceeded?: boolean;
+    /**
+     * Solo para scopes suaves. Sugiere marcar el recurso como POSIBLE_SPAM
+     * porque el contador superó el umbral de spam configurado.
+     */
+    markAsSpam?: boolean;
 }
 
 interface ScopeDefaults {
@@ -18,6 +29,12 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     login: { windowSeconds: 300, maxRequests: 10 },
     consulta: { windowSeconds: 60, maxRequests: 30 },
     register: { windowSeconds: 3600, maxRequests: 10 },
+    ia_sandbox: { windowSeconds: 600, maxRequests: 10 },
+    admin_read: { windowSeconds: 60, maxRequests: 60 },
+    admin_write: { windowSeconds: 60, maxRequests: 30 },
+    seguimiento: { windowSeconds: 60, maxRequests: 10 },
+    report_identificador: { windowSeconds: 3600, maxRequests: 10 },
+    report_fingerprint: { windowSeconds: 3600, maxRequests: 5 },
 };
 
 function getScopeDefaults(scope: string): ScopeDefaults {
@@ -37,6 +54,15 @@ async function getScopeConfig(scope: string): Promise<ScopeDefaults> {
     };
 }
 
+async function getSpamThreshold(scope: string): Promise<number | undefined> {
+    const param = await prisma.parametroSistema.findUnique({
+        where: { clave: `ratelimit.${scope}.spam_threshold` },
+    });
+    if (!param) return undefined;
+    const value = parseInt(param.valor, 10);
+    return Number.isNaN(value) ? undefined : value;
+}
+
 export function getClientIp(request: Request): string {
     const forwarded = request.headers.get("x-forwarded-for");
     if (forwarded) {
@@ -54,7 +80,7 @@ export function getClientIp(request: Request): string {
 export async function checkRateLimit(
     request: Request,
     scope: string,
-    options?: { identifier?: string }
+    options?: { identifier?: string; soft?: boolean }
 ): Promise<RateLimitResult> {
     if (process.env.DISABLE_RATE_LIMIT === "true") {
         return {
@@ -63,6 +89,8 @@ export async function checkRateLimit(
             remaining: 0,
             resetAt: Date.now() + 60 * 1000,
             headers: {},
+            softExceeded: options?.soft ? false : undefined,
+            markAsSpam: options?.soft ? false : undefined,
         };
     }
 
@@ -86,14 +114,23 @@ export async function checkRateLimit(
         `;
 
         const count = rows[0]?.count ?? 1;
-        const allowed = count <= config.maxRequests;
-        const remaining = Math.max(config.maxRequests - count, 0);
 
         const headers: Record<string, string> = {
             "X-RateLimit-Limit": String(config.maxRequests),
-            "X-RateLimit-Remaining": String(remaining),
+            "X-RateLimit-Remaining": String(Math.max(config.maxRequests - count, 0)),
             "X-RateLimit-Reset": String(Math.ceil(resetAt / 1000)),
         };
+
+        // Scope suave: nunca rechaza, pero informa si se superó el límite.
+        if (options?.soft) {
+            const softExceeded = count > config.maxRequests;
+            const spamThreshold = await getSpamThreshold(scope);
+            const markAsSpam = softExceeded && spamThreshold !== undefined && count >= spamThreshold;
+            return { allowed: true, limit: config.maxRequests, remaining: Math.max(config.maxRequests - count, 0), resetAt, headers, softExceeded, markAsSpam };
+        }
+
+        const allowed = count <= config.maxRequests;
+        const remaining = Math.max(config.maxRequests - count, 0);
 
         if (!allowed) {
             headers["Retry-After"] = String(Math.ceil((resetAt - now) / 1000));

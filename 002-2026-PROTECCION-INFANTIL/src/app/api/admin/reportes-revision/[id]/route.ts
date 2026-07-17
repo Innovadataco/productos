@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -13,7 +15,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const { id } = await params;
+        const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
+
+        const { id: rawId } = await params;
+        const parsedId = idSchema.safeParse(rawId);
+        if (!parsedId.success) {
+            return NextResponse.json(
+                { error: { message: "ID inválido", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+        const id = parsedId.data;
+
         const reporte = await prisma.reporte.findUnique({
             where: { id },
             include: {
@@ -25,6 +44,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
                                 categoriaOriginal: true,
                                 categoriaCorregida: true,
                                 motivo: true,
+                                confirmada: true,
                                 creadoEn: true,
                             },
                         },

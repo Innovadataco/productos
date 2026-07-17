@@ -1,17 +1,23 @@
 import { prisma } from "./prisma";
+import type { Prisma } from "@prisma/client";
 
-export async function actualizarVisibilidadPublica(identificador: string, plataformaId: string) {
-    const paramUmbral = await prisma.parametroSistema.findUnique({
+export async function actualizarVisibilidadPublica(
+    identificador: string,
+    plataformaId: string,
+    tx?: Prisma.TransactionClient
+) {
+    const db = tx ?? prisma;
+    const paramUmbral = await db.parametroSistema.findUnique({
         where: { clave: "visibility.report_threshold" },
     });
-    const paramRatio = await prisma.parametroSistema.findUnique({
+    const paramRatio = await db.parametroSistema.findUnique({
         where: { clave: "visibility.min_authenticated_ratio" },
     });
 
     const umbral = parseInt(paramUmbral?.valor || "3", 10);
     const minRatio = parseFloat(paramRatio?.valor || "0.5");
 
-    const agregado = await prisma.identificadorReportado.findUnique({
+    const agregado = await db.identificadorReportado.findUnique({
         where: { identificador_plataformaId: { identificador, plataformaId } },
     });
 
@@ -23,7 +29,7 @@ export async function actualizarVisibilidadPublica(identificador: string, plataf
 
     const esVisible = agregado.totalReportes >= umbral && ratioAutenticados >= minRatio;
 
-    await prisma.identificadorReportado.update({
+    await db.identificadorReportado.update({
         where: { id: agregado.id },
         data: { esVisiblePublicamente: esVisible },
     });

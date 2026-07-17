@@ -1,0 +1,1013 @@
+{
+  "metadata": {
+    "fixture": "scripts/eval-pii-fixture.json",
+    "totalExamples": 24,
+    "timestamp": "2026-07-16T00:35:57.693Z"
+  },
+  "pii": {
+    "recallDeterministico": 0.7857,
+    "recallCombinado": 1,
+    "precisionDeterministico": 1,
+    "precisionCombinada": 1,
+    "f1Deterministico": 0.88,
+    "f1Combinado": 1,
+    "falsosPositivosDeterministico": 0,
+    "falsosPositivosCombinado": 0,
+    "fragmentRecallDeterministico": 0.7917,
+    "fragmentRecallCombinado": 0.8889,
+    "fragmentRecallLLM": 0.8472
+  },
+  "clasificacion": {
+    "accuracy": 0.7917,
+    "recallOTRO": 1
+  },
+  "details": [
+    {
+      "text": "Mi hijo Juan estudia en el colegio San José y vive en calle 123 # 45-67.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "Juan",
+        "colegio San José",
+        "calle 123 # 45-67"
+      ],
+      "expectedCategory": "OTRO",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "Juan",
+          "colegio San José",
+          "calle 123 # 45-67"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "Juan",
+          "colegio San José",
+          "calle 123 # 45-67"
+        ],
+        "piiDetectadaDeterministica": [
+          "Juan",
+          "colegio San José",
+          "calle 123 # 45-67"
+        ],
+        "piiDetectadaLLM": [
+          "Juan",
+          "colegio San José",
+          "calle 123 # 45-67"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2625,
+          "promptTokens": 625,
+          "responseTokens": 73
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"Mi hijo Juan estudia en el colegio San José y vive en calle 123 # 45-67.\",\n  \"pii_detectada\": [\"Juan\", \"colegio San José\", \"calle 123 # 45-67\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "CLASIFICADO",
+        "confidence": 0.9
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "Mi hija María del salón 5B me dijo que un usuario la contactó por Instagram.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "María",
+        "salón 5B"
+      ],
+      "expectedCategory": "CONTACTO_INSISTENTE",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "María",
+          "salón 5B"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "María",
+          "salón 5B"
+        ],
+        "piiDetectadaDeterministica": [
+          "María",
+          "salón 5B"
+        ],
+        "piiDetectadaLLM": [
+          "María",
+          "salón 5B"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2182,
+          "promptTokens": 618,
+          "responseTokens": 52
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"Mi hija María del salón 5B me dijo que un usuario la contactó por Instagram.\",\n  \"pii_detectada\": [\"María\", \"salón 5B\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.3
+      },
+      "correctPii": true,
+      "correctCategory": false
+    },
+    {
+      "text": "El menor vive en carrera 45 # 12-34 y su celular es 3001234567.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "carrera 45 # 12-34",
+        "3001234567"
+      ],
+      "expectedCategory": "OTRO",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "carrera 45 # 12-34"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "carrera 45 # 12-34",
+          "3001234567"
+        ],
+        "piiDetectadaDeterministica": [
+          "carrera 45 # 12-34"
+        ],
+        "piiDetectadaLLM": [
+          "carrera 45 # 12-34",
+          "3001234567"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2499,
+          "promptTokens": 630,
+          "responseTokens": 69
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"El menor vive en carrera 45 # 12-34 y su celular es ***.\",\n  \"pii_detectada\": [\"carrera 45 # 12-34\", \"3001234567\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "CLASIFICADO",
+        "confidence": 0.9
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "La profesora Marta le pidió a mi sobrina que le enviara fotos.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "Marta"
+      ],
+      "expectedCategory": "SOLICITUD_MATERIAL",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "Marta"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "Marta"
+        ],
+        "piiDetectadaDeterministica": [
+          "Marta"
+        ],
+        "piiDetectadaLLM": [
+          "Marta"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2025,
+          "promptTokens": 615,
+          "responseTokens": 43
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"La profesora Marta le pidió a mi sobrina que le enviara fotos.\",\n  \"pii_detectada\": [\"Marta\"]\n}"
+      },
+      "classification": {
+        "categoria": "SOLICITUD_MATERIAL",
+        "estado": "CLASIFICADO",
+        "confidence": 0.95
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "Mi nieto Pedro estudia en el instituto La Salle, Avenida 68 # 24-10.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "Pedro",
+        "instituto La Salle",
+        "Avenida 68 # 24-10"
+      ],
+      "expectedCategory": "OTRO",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "Pedro",
+          "Avenida 68 # 24-10"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "Pedro",
+          "Avenida 68 # 24-10",
+          "Juan",
+          "colegio San José"
+        ],
+        "piiDetectadaDeterministica": [
+          "Pedro",
+          "Avenida 68 # 24-10"
+        ],
+        "piiDetectadaLLM": [
+          "Juan",
+          "colegio San José"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2362,
+          "promptTokens": 623,
+          "responseTokens": 61
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"carrera 45 # 12-34 y su celular es 3001234567\",\n  \"pii_detectada\": [\"Juan\", \"colegio San José\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.3
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "El niño Andrés compartió su dirección: diagonal 23 # 4-56.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "Andrés",
+        "diagonal 23 # 4-56"
+      ],
+      "expectedCategory": "OTRO",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "Andrés",
+          "diagonal 23 # 4-56"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "Andrés",
+          "diagonal 23 # 4-56"
+        ],
+        "piiDetectadaDeterministica": [
+          "Andrés",
+          "diagonal 23 # 4-56"
+        ],
+        "piiDetectadaLLM": [
+          "Andrés",
+          "diagonal 23 # 4-56"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2289,
+          "promptTokens": 618,
+          "responseTokens": 59
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"\\\"El niño Andrés compartió su dirección: diagonal 23 # 4-56.\\\"\",\n  \"pii_detectada\": [\"Andrés\", \"diagonal 23 # 4-56\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "CLASIFICADO",
+        "confidence": 0.8
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "Mi prima Luisa recibe mensajes en su número 3009876543.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "Luisa",
+        "3009876543"
+      ],
+      "expectedCategory": "CONTACTO_INSISTENTE",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "Luisa"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "Luisa",
+          "3009876543"
+        ],
+        "piiDetectadaDeterministica": [
+          "Luisa"
+        ],
+        "piiDetectadaLLM": [
+          "Luisa",
+          "3009876543"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2323,
+          "promptTokens": 619,
+          "responseTokens": 59
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"Mi prima Luisa recibe mensajes en su número 3009876543.\",\n  \"pii_detectada\": [\"Luisa\", \"3009876543\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.2
+      },
+      "correctPii": true,
+      "correctCategory": false
+    },
+    {
+      "text": "La menor vive en transversal 78 # 9-10, cerca del colegio Santa Ana.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "transversal 78 # 9-10",
+        "colegio Santa Ana"
+      ],
+      "expectedCategory": "OTRO",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "colegio Santa Ana",
+          "transversal 78 # 9-10"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "colegio Santa Ana",
+          "transversal 78 # 9-10"
+        ],
+        "piiDetectadaDeterministica": [
+          "colegio Santa Ana",
+          "transversal 78 # 9-10"
+        ],
+        "piiDetectadaLLM": [
+          "transversal 78 # 9-10",
+          "colegio Santa Ana"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2591,
+          "promptTokens": 621,
+          "responseTokens": 74
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"La menor vive en transversal 78 # 9-10, cerca del colegio Santa Ana.\",\n  \"pii_detectada\": [\n    \"transversal 78 # 9-10\",\n    \"colegio Santa Ana\"\n  ]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.4
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "Mi hermano Carlos está en grado 10B del liceo Nacional.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "Carlos",
+        "grado 10B",
+        "liceo Nacional"
+      ],
+      "expectedCategory": "OTRO",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "Carlos",
+          "liceo Nacional",
+          "grado 10B"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "Carlos",
+          "liceo Nacional",
+          "grado 10B"
+        ],
+        "piiDetectadaDeterministica": [
+          "Carlos",
+          "liceo Nacional",
+          "grado 10B"
+        ],
+        "piiDetectadaLLM": [
+          "Carlos",
+          "liceo Nacional"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2055,
+          "promptTokens": 614,
+          "responseTokens": 46
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"Mi hermano Carlos está en grado 10B del liceo Nacional.\",\n  \"pii_detectada\": [\"Carlos\", \"liceo Nacional\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.3
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "El usuario @depredador_22 con número 3007654321 escribe todos los días a mi hija.",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "CONTACTO_INSISTENTE",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2210,
+          "promptTokens": 629,
+          "responseTokens": 54
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"El usuario @depredador_22 con número 3007654321 escribe todos los días a mi hija.\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.4
+      },
+      "correctPii": true,
+      "correctCategory": false
+    },
+    {
+      "text": "El señor Carlos Pérez me contactó por WhatsApp ofreciendo regalos.",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "OFRECIMIENTO_REGALOS",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 1817,
+          "promptTokens": 612,
+          "responseTokens": 36
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"El señor Carlos Pérez me contactó por WhatsApp ofreciendo regalos.\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "OFRECIMIENTO_REGALOS",
+        "estado": "CLASIFICADO",
+        "confidence": 0.95
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "Me escribió, su número es 3001112233, y me pidió fotos.",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "SOLICITUD_MATERIAL",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2049,
+          "promptTokens": 622,
+          "responseTokens": 46
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"Me escribió, su número es 3001112233, y me pidió fotos.\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "SOLICITUD_MATERIAL",
+        "estado": "CLASIFICADO",
+        "confidence": 0.95
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "El adulto José Martínez envió material sexual a mi sobrina.",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "COMPARTIMIENTO_SEXUAL",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 1827,
+          "promptTokens": 612,
+          "responseTokens": 36
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"El adulto José Martínez envió material sexual a mi sobrina.\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "COMPARTIMIENTO_SEXUAL",
+        "estado": "CLASIFICADO",
+        "confidence": 0.95
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "Me contacta un tipo desde el número 3004445566, quiere quedar en el parque.",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "SOLICITUD_ENCUENTRO",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2117,
+          "promptTokens": 625,
+          "responseTokens": 49
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"Me contacta un tipo desde el número 3004445566, quiere quedar en el parque.\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "SOLICITUD_ENCUENTRO",
+        "estado": "CLASIFICADO",
+        "confidence": 0.95
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "mi ija maria del cole sanhose vive en la clle 12 # 3-45",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "maria",
+        "cole sanhose",
+        "clle 12 # 3-45"
+      ],
+      "expectedCategory": "OTRO",
+      "ruido": true,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "María",
+          "colegio San José",
+          "calle 12 # 3-45"
+        ],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [
+          "María",
+          "colegio San José",
+          "calle 12 # 3-45"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2513,
+          "promptTokens": 622,
+          "responseTokens": 68
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"mi hija María del colegio San José vive en la calle 12 # 3-45\",\n  \"pii_detectada\": [\"María\", \"colegio San José\", \"calle 12 # 3-45\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "CLASIFICADO",
+        "confidence": 0.85
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "el niño juan estudia en el colegio san jose, direccion cra 7 # 45-67",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "juan",
+        "colegio san jose",
+        "cra 7 # 45-67"
+      ],
+      "expectedCategory": "OTRO",
+      "ruido": true,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "cra 7 # 45-67"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "cra 7 # 45-67",
+          "Juan",
+          "colegio San José"
+        ],
+        "piiDetectadaDeterministica": [
+          "cra 7 # 45-67"
+        ],
+        "piiDetectadaLLM": [
+          "Juan",
+          "colegio San José",
+          "cra 7 # 45-67"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2707,
+          "promptTokens": 623,
+          "responseTokens": 80
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"el niño juan estudia en el colegio san jose, direccion cra 7 # 45-67\",\n  \"pii_detectada\": [\n    \"Juan\",\n    \"colegio San José\",\n    \"cra 7 # 45-67\"\n  ]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.3
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "hablamos de sexo y me dijo cosas raras por chat",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "OTRO",
+      "ruido": true,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 1868,
+          "promptTokens": 613,
+          "responseTokens": 37
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"hablamos de sexo y me dijo cosas raras por chat\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.3
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "me mostró un video de otra persona, no sé quién es",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "OTRO",
+      "ruido": true,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 1815,
+          "promptTokens": 612,
+          "responseTokens": 36
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"me mostró un video de otra persona, no sé quién es\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.3
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "mi mamá lo vio y me avisó que un señor raro me esperaba",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "OTRO",
+      "ruido": true,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 1948,
+          "promptTokens": 614,
+          "responseTokens": 39
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"mi mamá lo vio y me avisó que un señor raro me esperaba\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.4
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "la profesora dijo que mi hija debe enviarle fotos por WhatsApp",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "SOLICITUD_MATERIAL",
+      "ruido": true,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 1903,
+          "promptTokens": 613,
+          "responseTokens": 38
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"la profesora dijo que mi hija debe enviarle fotos por WhatsApp\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "SOLICITUD_MATERIAL",
+        "estado": "CLASIFICADO",
+        "confidence": 0.95
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "Mi hijo tiene 12 años y su celular es 3005558877.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "3005558877"
+      ],
+      "expectedCategory": "OTRO",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "3005558877"
+        ],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [
+          "3005558877"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2378,
+          "promptTokens": 622,
+          "responseTokens": 61
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"\\\"Mi hijo tiene 12 años y su celular es 3005558877.\\\",\",\n  \"pii_detectada\": [\"3005558877\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "CLASIFICADO",
+        "confidence": 0.6
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "El número de mi hija es 3006669988, un tipo le escribe constantemente.",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "3006669988"
+      ],
+      "expectedCategory": "CONTACTO_INSISTENTE",
+      "ruido": false,
+      "deterministic": {
+        "contienePii": true,
+        "piiDetectada": [
+          "3006669988"
+        ]
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": true,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "3006669988"
+        ],
+        "piiDetectadaDeterministica": [
+          "3006669988"
+        ],
+        "piiDetectadaLLM": [
+          "3006669988"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2312,
+          "promptTokens": 623,
+          "responseTokens": 59
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"El número de mi hija es 3006669988, un tipo le escribe constantemente.\",\n  \"pii_detectada\": [\"3006669988\"]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.4
+      },
+      "correctPii": true,
+      "correctCategory": false
+    },
+    {
+      "text": "Vive en la calle principal cerca del colegio, no sé el nombre exacto.",
+      "expectedPii": false,
+      "expectedPiiFragments": [],
+      "expectedCategory": "OTRO",
+      "ruido": true,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": false,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": false,
+        "piiDetectada": [],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 1928,
+          "promptTokens": 616,
+          "responseTokens": 40
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"Vive en la calle principal cerca del colegio, no sé el nombre exacto.\",\n  \"pii_detectada\": []\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.3
+      },
+      "correctPii": true,
+      "correctCategory": true
+    },
+    {
+      "text": "mi hijo juan y su amigo del colegio san jose recibieron mensajes de un adulto",
+      "expectedPii": true,
+      "expectedPiiFragments": [
+        "juan",
+        "colegio san jose"
+      ],
+      "expectedCategory": "CONTACTO_INSISTENTE",
+      "ruido": true,
+      "deterministic": {
+        "contienePii": false,
+        "piiDetectada": []
+      },
+      "combined": {
+        "contienePii": true,
+        "contienePiiDeterministico": false,
+        "contienePiiLLM": true,
+        "piiDetectada": [
+          "niño",
+          "casa",
+          "escuela",
+          "amigos"
+        ],
+        "piiDetectadaDeterministica": [],
+        "piiDetectadaLLM": [
+          "niño",
+          "casa",
+          "escuela",
+          "amigos"
+        ],
+        "metrics": {
+          "modelo": "ornith:9b",
+          "latenciaMs": 2524,
+          "promptTokens": 616,
+          "responseTokens": 69
+        },
+        "rawResponse": "{\n  \"texto_anonimizado\": \"El niño vivía en una casa cerca de la escuela donde se reunían los amigos\",\n  \"pii_detectada\": [\n    \"niño\",\n    \"casa\",\n    \"escuela\",\n    \"amigos\"\n  ]\n}"
+      },
+      "classification": {
+        "categoria": "OTRO",
+        "estado": "REVISION_MANUAL",
+        "confidence": 0.3
+      },
+      "correctPii": true,
+      "correctCategory": false
+    }
+  ]
+}

@@ -1,22 +1,26 @@
 import { prisma } from "./prisma";
-import type { AccionAudit, CategoriaConducta, EstadoReporte } from "@prisma/client";
+import type { AccionAudit, CategoriaConducta, EstadoReporte, Prisma } from "@prisma/client";
 
 export async function logAudit(params: {
     accion: AccionAudit;
     tipoRecurso: string;
     recursoId?: string;
+    parametroId?: string;
     usuarioId?: string;
     valorAnterior?: string;
     valorNuevo?: string;
     ipAddress?: string;
     userAgent?: string;
     metadatos?: Record<string, unknown>;
+    tx?: Prisma.TransactionClient;
 }): Promise<void> {
-    await prisma.auditLog.create({
+    const db = params.tx ?? prisma;
+    await db.auditLog.create({
         data: {
             accion: params.accion,
             tipoRecurso: params.tipoRecurso,
             recursoId: params.recursoId ?? null,
+            parametroId: params.parametroId ?? null,
             usuarioId: params.usuarioId ?? null,
             valorAnterior: params.valorAnterior ?? null,
             valorNuevo: params.valorNuevo ?? null,
@@ -40,6 +44,7 @@ export async function auditCorreccion(params: {
     reporteId: string;
     categoriaOriginal: CategoriaConducta;
     categoriaCorregida: CategoriaConducta;
+    tx?: Prisma.TransactionClient;
 }): Promise<void> {
     const { ipAddress, userAgent } = extractClientInfo(params.request);
     await logAudit({
@@ -51,6 +56,7 @@ export async function auditCorreccion(params: {
         valorNuevo: JSON.stringify({ categoria: params.categoriaCorregida }),
         ipAddress,
         userAgent,
+        tx: params.tx,
     });
 }
 
@@ -60,6 +66,7 @@ export async function auditAnonimizacion(params: {
     reporteId: string;
     estadoAnterior: EstadoReporte;
     estadoNuevo: EstadoReporte;
+    tx?: Prisma.TransactionClient;
 }): Promise<void> {
     const { ipAddress, userAgent } = extractClientInfo(params.request);
     await logAudit({
@@ -71,6 +78,7 @@ export async function auditAnonimizacion(params: {
         valorNuevo: JSON.stringify({ estado: params.estadoNuevo }),
         ipAddress,
         userAgent,
+        tx: params.tx,
     });
 }
 

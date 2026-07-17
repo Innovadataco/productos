@@ -1,45 +1,45 @@
 const FEATURES = [
     {
         title: "Reportes anónimos",
-        description: "Puedes reportar sin revelar tu identidad. También puedes crear una cuenta para dar más contexto.",
+        description: "Reportá sin revelar tu identidad, o creá una cuenta para dar más contexto.",
         icon: ShieldIcon,
     },
     {
         title: "Clasificación con IA local",
-        description: "Cada reporte se clasifica automáticamente con modelos locales para proteger tu privacidad.",
+        description: "Cada reporte se clasifica automáticamente con modelos locales que resguardan tu privacidad.",
         icon: BrainIcon,
     },
     {
         title: "Consulta pública",
-        description: "Verifica si un número, nick o usuario ha sido reportado por la comunidad antes de interactuar.",
+        description: "Verificá si un número, nick o usuario fue reportado antes de interactuar.",
         icon: SearchIcon,
     },
     {
         title: "Canales oficiales",
-        description: "Te conectamos con las líneas de denuncia oficiales como Línea 141, CAI Virtual y Te Protejo.",
+        description: "Te conectamos con Línea 141, CAI Virtual y Te Protejo para denuncias formales.",
         icon: PhoneIcon,
     },
 ];
 
 export function LandingFeatures() {
     return (
-        <section className="py-12 sm:py-16">
-            <div className="mb-8 text-center">
-                <h2 className="text-2xl font-bold text-slate-900">¿Cómo funciona?</h2>
-                <p className="mt-2 text-slate-600">Una plataforma simple para prevenir riesgos en entornos digitales.</p>
+        <section className="py-14 sm:py-20">
+            <div className="mb-10 text-center">
+                <h2 className="text-2xl font-bold text-body">¿Cómo funciona?</h2>
+                <p className="mt-2 text-muted">Una plataforma simple para prevenir riesgos en entornos digitales.</p>
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 {FEATURES.map((feature) => (
                     <article
                         key={feature.title}
-                        className="glass rounded-2xl p-5 transition hover:shadow-md"
+                        className="glass rounded-2xl p-5 transition hover:-translate-y-0.5 hover:shadow-md"
                     >
-                        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-700">
+                        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 text-accent dark:bg-sky-950/40">
                             <feature.icon className="h-5 w-5" />
                         </div>
-                        <h3 className="text-sm font-semibold text-slate-900">{feature.title}</h3>
-                        <p className="mt-2 text-xs leading-relaxed text-slate-600">{feature.description}</p>
+                        <h3 className="text-sm font-semibold text-body">{feature.title}</h3>
+                        <p className="mt-2 text-xs leading-relaxed text-muted">{feature.description}</p>
                     </article>
                 ))}
             </div>

@@ -26,3 +26,31 @@ export async function publishReporte(reporteId: string) {
         retryBackoff: true,
     });
 }
+
+export async function publishDatasetAnonimizacionBackfill(datasetId: string) {
+    await ensureStarted();
+    try {
+        await boss.createQueue("dataset-anonimizacion-backfill");
+    } catch {
+        // Cola ya existe, ignorar
+    }
+    await boss.send("dataset-anonimizacion-backfill", { datasetId }, {
+        retryLimit: 5,
+        retryDelay: 60,
+        retryBackoff: true,
+    });
+}
+
+export async function publishDatasetEmbeddingBackfill(datasetId: string) {
+    await ensureStarted();
+    try {
+        await boss.createQueue("dataset-embedding-backfill");
+    } catch {
+        // Cola ya existe, ignorar
+    }
+    await boss.send("dataset-embedding-backfill", { datasetId }, {
+        retryLimit: 5,
+        retryDelay: 60,
+        retryBackoff: true,
+    });
+}

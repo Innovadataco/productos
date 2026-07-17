@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, createToken } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { verifyPassword, createToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
@@ -72,14 +71,7 @@ export async function POST(request: Request) {
         });
 
         const token = await createToken({ sub: user.id, rol: user.rol });
-        const cookieStore = await cookies();
-        cookieStore.set("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            maxAge: 60 * 60 * 24,
-            path: "/",
-        });
+        await setSessionCookie(request, token);
 
         return NextResponse.json({
             user: { id: user.id, email: user.email, nombre: user.nombre, rol: user.rol },

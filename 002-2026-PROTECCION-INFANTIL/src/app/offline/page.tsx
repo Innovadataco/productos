@@ -1,7 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
-export const metadata = {
-    title: "Sin conexión — Protección Infantil",
+export const metadata: Metadata = {
+    title: "Sin conexión",
+    description:
+        "Parece que no tienes acceso a internet. Algunas funciones no están disponibles sin conexión.",
+    robots: {
+        index: false,
+        follow: false,
+    },
 };
 
 export default function OfflinePage() {

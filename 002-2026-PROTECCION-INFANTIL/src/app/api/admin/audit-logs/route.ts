@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { auditLogsQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 export async function GET(req: Request) {
@@ -13,15 +15,25 @@ export async function GET(req: Request) {
             );
         }
 
-        const url = new URL(req.url);
-        const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
-        const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") || "25")));
-        const skip = (page - 1) * pageSize;
+        const rate = await checkRateLimit(req, "admin_read", { identifier: user.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
 
-        const accion = url.searchParams.get("accion");
-        const usuarioId = url.searchParams.get("usuarioId");
-        const fechaDesde = url.searchParams.get("fechaDesde");
-        const fechaHasta = url.searchParams.get("fechaHasta");
+        const url = new URL(req.url);
+        const parsedQuery = auditLogsQuerySchema.safeParse(Object.fromEntries(url.searchParams.entries()));
+        if (!parsedQuery.success) {
+            return NextResponse.json(
+                { error: { message: "Parámetros de consulta inválidos", code: ERROR_CODES.VALIDATION_ERROR, details: parsedQuery.error.format() } },
+                { status: 400 }
+            );
+        }
+
+        const { page, pageSize, accion, usuarioId, fechaDesde, fechaHasta } = parsedQuery.data;
+        const skip = (page - 1) * pageSize;
 
         const where: Record<string, unknown> = {};
         if (accion) where.accion = accion;
@@ -29,7 +41,7 @@ export async function GET(req: Request) {
         if (fechaDesde || fechaHasta) {
             where.creadoEn = {};
             if (fechaDesde) (where.creadoEn as Record<string, unknown>).gte = new Date(fechaDesde);
-            if (fechaHasta) (where.creadoEn as Record<string, unknown>).lte = new Date(fechaHasta);
+            if (fechaHasta) (where.creadoEn as Record<string, unknown>).lte = new Date(fechaHasta + "T23:59:59.999Z");
         }
 
         const [items, total] = await Promise.all([

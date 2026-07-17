@@ -1,0 +1,1347 @@
+{
+  "metadata": {
+    "model": "ornith:9b",
+    "fixture": "scripts/eval-fixture.json",
+    "totalExamples": 110,
+    "timestamp": "2026-07-15T23:00:38.004Z"
+  },
+  "summary": {
+    "accuracy": 0.6,
+    "precisionAutoClasificados": 0.679,
+    "errorSilencioso": 0.321,
+    "revisionManualRate": 0.1909,
+    "latencyP50Ms": 6390,
+    "latencyP95Ms": 17603
+  },
+  "byNoise": {
+    "clean": {
+      "count": 55,
+      "accuracy": 0.7091,
+      "precisionAutoClasificados": 0.75,
+      "errorSilencioso": 0.25,
+      "revisionManualRate": 0.0727
+    },
+    "noisy": {
+      "count": 55,
+      "accuracy": 0.4909,
+      "precisionAutoClasificados": 0.5758,
+      "errorSilencioso": 0.4242,
+      "revisionManualRate": 0.3091
+    }
+  },
+  "perCategory": {
+    "CONTACTO_INSISTENTE": {
+      "precision": 0.9,
+      "recall": 0.9,
+      "f1": 0.9,
+      "support": 10
+    },
+    "SOLICITUD_MATERIAL": {
+      "precision": 0.5,
+      "recall": 0.2,
+      "f1": 0.2857,
+      "support": 10
+    },
+    "OFRECIMIENTO_REGALOS": {
+      "precision": 1,
+      "recall": 0.4,
+      "f1": 0.5714,
+      "support": 10
+    },
+    "SUPLANTACION_IDENTIDAD": {
+      "precision": 1,
+      "recall": 0.5,
+      "f1": 0.6667,
+      "support": 10
+    },
+    "SOLICITUD_ENCUENTRO": {
+      "precision": 1,
+      "recall": 0.7,
+      "f1": 0.8235,
+      "support": 10
+    },
+    "COMPARTIMIENTO_SEXUAL": {
+      "precision": 0.3636,
+      "recall": 0.8,
+      "f1": 0.5,
+      "support": 10
+    },
+    "OTRO": {
+      "precision": 0.2609,
+      "recall": 0.6,
+      "f1": 0.3636,
+      "support": 10
+    },
+    "EXTORSION": {
+      "precision": 0.5714,
+      "recall": 0.8,
+      "f1": 0.6667,
+      "support": 10
+    },
+    "CONTENIDO_GENERADO_IA": {
+      "precision": 0.8571,
+      "recall": 0.6,
+      "f1": 0.7059,
+      "support": 10
+    },
+    "DIFUSION_NO_CONSENTIDA": {
+      "precision": 0.8571,
+      "recall": 0.6,
+      "f1": 0.7059,
+      "support": 10
+    },
+    "DOXING": {
+      "precision": 0.7143,
+      "recall": 0.5,
+      "f1": 0.5882,
+      "support": 10
+    }
+  },
+  "confusionMatrix": {
+    "CONTACTO_INSISTENTE": {
+      "CONTACTO_INSISTENTE": 9,
+      "SOLICITUD_MATERIAL": 0,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 0,
+      "OTRO": 1,
+      "EXTORSION": 0,
+      "CONTENIDO_GENERADO_IA": 0,
+      "DIFUSION_NO_CONSENTIDA": 0,
+      "DOXING": 0
+    },
+    "SOLICITUD_MATERIAL": {
+      "CONTACTO_INSISTENTE": 0,
+      "SOLICITUD_MATERIAL": 2,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 6,
+      "OTRO": 0,
+      "EXTORSION": 2,
+      "CONTENIDO_GENERADO_IA": 0,
+      "DIFUSION_NO_CONSENTIDA": 0,
+      "DOXING": 0
+    },
+    "OFRECIMIENTO_REGALOS": {
+      "CONTACTO_INSISTENTE": 0,
+      "SOLICITUD_MATERIAL": 0,
+      "OFRECIMIENTO_REGALOS": 4,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 0,
+      "OTRO": 3,
+      "EXTORSION": 3,
+      "CONTENIDO_GENERADO_IA": 0,
+      "DIFUSION_NO_CONSENTIDA": 0,
+      "DOXING": 0
+    },
+    "SUPLANTACION_IDENTIDAD": {
+      "CONTACTO_INSISTENTE": 0,
+      "SOLICITUD_MATERIAL": 2,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 5,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 1,
+      "OTRO": 2,
+      "EXTORSION": 0,
+      "CONTENIDO_GENERADO_IA": 0,
+      "DIFUSION_NO_CONSENTIDA": 0,
+      "DOXING": 0
+    },
+    "SOLICITUD_ENCUENTRO": {
+      "CONTACTO_INSISTENTE": 0,
+      "SOLICITUD_MATERIAL": 0,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 7,
+      "COMPARTIMIENTO_SEXUAL": 1,
+      "OTRO": 2,
+      "EXTORSION": 0,
+      "CONTENIDO_GENERADO_IA": 0,
+      "DIFUSION_NO_CONSENTIDA": 0,
+      "DOXING": 0
+    },
+    "COMPARTIMIENTO_SEXUAL": {
+      "CONTACTO_INSISTENTE": 0,
+      "SOLICITUD_MATERIAL": 0,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 8,
+      "OTRO": 1,
+      "EXTORSION": 0,
+      "CONTENIDO_GENERADO_IA": 0,
+      "DIFUSION_NO_CONSENTIDA": 1,
+      "DOXING": 0
+    },
+    "OTRO": {
+      "CONTACTO_INSISTENTE": 1,
+      "SOLICITUD_MATERIAL": 0,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 0,
+      "OTRO": 6,
+      "EXTORSION": 1,
+      "CONTENIDO_GENERADO_IA": 0,
+      "DIFUSION_NO_CONSENTIDA": 0,
+      "DOXING": 2
+    },
+    "EXTORSION": {
+      "CONTACTO_INSISTENTE": 0,
+      "SOLICITUD_MATERIAL": 0,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 0,
+      "OTRO": 1,
+      "EXTORSION": 8,
+      "CONTENIDO_GENERADO_IA": 1,
+      "DIFUSION_NO_CONSENTIDA": 0,
+      "DOXING": 0
+    },
+    "CONTENIDO_GENERADO_IA": {
+      "CONTACTO_INSISTENTE": 0,
+      "SOLICITUD_MATERIAL": 0,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 3,
+      "OTRO": 1,
+      "EXTORSION": 0,
+      "CONTENIDO_GENERADO_IA": 6,
+      "DIFUSION_NO_CONSENTIDA": 0,
+      "DOXING": 0
+    },
+    "DIFUSION_NO_CONSENTIDA": {
+      "CONTACTO_INSISTENTE": 0,
+      "SOLICITUD_MATERIAL": 0,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 3,
+      "OTRO": 1,
+      "EXTORSION": 0,
+      "CONTENIDO_GENERADO_IA": 0,
+      "DIFUSION_NO_CONSENTIDA": 6,
+      "DOXING": 0
+    },
+    "DOXING": {
+      "CONTACTO_INSISTENTE": 0,
+      "SOLICITUD_MATERIAL": 0,
+      "OFRECIMIENTO_REGALOS": 0,
+      "SUPLANTACION_IDENTIDAD": 0,
+      "SOLICITUD_ENCUENTRO": 0,
+      "COMPARTIMIENTO_SEXUAL": 0,
+      "OTRO": 5,
+      "EXTORSION": 0,
+      "CONTENIDO_GENERADO_IA": 0,
+      "DIFUSION_NO_CONSENTIDA": 0,
+      "DOXING": 5
+    }
+  },
+  "details": [
+    {
+      "text": "Me escribe todos los dias aunque le digo que no, quiere saber donde vivo y con quien salgo",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.92,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5580,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Desde hace dos semanas me manda mensajes cada hora diciendo que soy su mejor amiga",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4883,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Crea cuentas nuevas cada vez que lo bloqueo para seguirme escribiendo por privado",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6115,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me envia mensajes de voz a medianoche diciendo que no puedo ignorarlo",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.87,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4740,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me reclama si no le contesto rapido y me exige que le cuente todo lo que hago",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.6,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6962,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "me escrib tododia no deja en paz tiktok insta whatsapp qiere saver donde vivo",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6422,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "mensajes madrugada 3am dice q me espera en linea no para free fire",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.82,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7018,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "bloqueo y vuelve otra cuenta shadow_kid_99 roblox me encuentra",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.75,
+      "estado": "CLASIFICADO",
+      "latencyMs": 9691,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "me dice unica q lo entiende debo confiar en el insiste",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.6,
+      "estado": "REQUIERE_ANONIMIZACION",
+      "latencyMs": 7708,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "me espia lista todo lo q hago durante dia miedo",
+      "expected": "CONTACTO_INSISTENTE",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 7047,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "Me pide que le mande fotos en ropa interior diciendo que es solo para el",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5108,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "Quiere que le envie videos mios cambiandome y promete borrarlos despues",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6845,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "Me dice que si no le mando fotos intimas va a difundir rumores de mi",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 8924,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "Pide fotos de partes de mi cuerpo usando excusas de un reto entre amigos",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "SOLICITUD_MATERIAL",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6293,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me presiona para enviarle fotos desnuda porque desaparecen",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "EXTORSION",
+      "confidence": 0.78,
+      "estado": "CLASIFICADO",
+      "latencyMs": 9339,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "mandame foto sin ropa xfa nadie se entera snap desaparece",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 14212,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "video en ducha dice no pasa nada todos lo asen",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.65,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7240,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "pide pies luego mas fotos intimas whatsapp noche",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "SOLICITUD_MATERIAL",
+      "confidence": 0.88,
+      "estado": "CLASIFICADO",
+      "latencyMs": 10114,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "amenaza con contar secretos si no mando imagenes",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "EXTORSION",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6119,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "Pruebas # 100 acoso sexual fotos intimidad, niño noche me¿telfofnoe",
+      "expected": "SOLICITUD_MATERIAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.78,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7195,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "Me ofrece tarjetas de regalo si acepto quedar a solas con el",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "OFRECIMIENTO_REGALOS",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7780,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Promete comprarme un telefono nuevo si le doy mi direccion exacta",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "OFRECIMIENTO_REGALOS",
+      "confidence": 0.75,
+      "estado": "REQUIERE_ANONIMIZACION",
+      "latencyMs": 9296,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me dice que me va a dar dinero cada semana si soy su amiga especial",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "OFRECIMIENTO_REGALOS",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 3746,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me ofrece pases para un concierto a cambio de fotos privadas",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "OFRECIMIENTO_REGALOS",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4441,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me promete una consola de videojuegos si no le cuento a nadie de nuestra amistad",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "EXTORSION",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5346,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "te compro celular si das direccion regalo free fire",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "OTRO",
+      "confidence": 0.65,
+      "estado": "REQUIERE_ANONIMIZACION",
+      "latencyMs": 15816,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "dinero cada semana amiga especial nadie sabe",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "EXTORSION",
+      "confidence": 0.75,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4618,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "pases concierto cambio fotos privadas ofrece",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "EXTORSION",
+      "confidence": 0.88,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5234,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "consola xbox si no cuentas amistad secreto",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 4750,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "bitcoins encuentro privado me dice",
+      "expected": "OFRECIMIENTO_REGALOS",
+      "predicted": "OTRO",
+      "confidence": 0.2,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 6181,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "Se hace pasar por un companero nuevo de mi colegio y pide fotos de mis tareas",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "SUPLANTACION_IDENTIDAD",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 8117,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Dice ser prima mia y pide el numero de mis padres para una supuesta emergencia",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "SUPLANTACION_IDENTIDAD",
+      "confidence": 0.75,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6524,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Finge ser un profesor del colegio y me pide datos personales de mi familia",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "SUPLANTACION_IDENTIDAD",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7125,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Crea un perfil falso con fotos de otra persona para acercarse a mi",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "SUPLANTACION_IDENTIDAD",
+      "confidence": 0.92,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4762,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Dice ser director de casting para menores y me pide un video en traje de bano",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "SOLICITUD_MATERIAL",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7890,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "soy tu nuevo compañero clase 7A pasame fotos tareas",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "SOLICITUD_MATERIAL",
+      "confidence": 0.75,
+      "estado": "CLASIFICADO",
+      "latencyMs": 17603,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "prima emergencia numero papas mamas dice",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "OTRO",
+      "confidence": 0.2,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 6616,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "profesor nuevo pide datos familia colegio",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 6970,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "perfil falso fotos robadas instagram se hace pasar por otra",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "SUPLANTACION_IDENTIDAD",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6900,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "canal tv infantil casting pide video bikini",
+      "expected": "SUPLANTACION_IDENTIDAD",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.92,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4879,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "Me invita a encontrarnos en un parque despues de clases sin avisar a nadie",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "SOLICITUD_ENCUENTRO",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4561,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Quiere que vaya a su casa a jugar videojuegos mientras sus padres no estan",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "SOLICITUD_ENCUENTRO",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4573,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me pide quedar en un centro comercial lejos de mi barrio a escondidas",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "SOLICITUD_ENCUENTRO",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4519,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Dice que va a pasar por mi en su carro si le doy mi direccion",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "SOLICITUD_ENCUENTRO",
+      "confidence": 0.8,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7887,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me invita a un hotel para ver peliculas y dormir juntos",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "SOLICITUD_ENCUENTRO",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5378,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "quedar parke despues clase no digas a nadie",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "SOLICITUD_ENCUENTRO",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 18971,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "ven a casa jugar roblox papas no estan",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "SOLICITUD_ENCUENTRO",
+      "confidence": 0.65,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7264,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "centro comercial lejos escondidas pasa por mi",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 5072,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "carro recoge escuela direccion manda",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "OTRO",
+      "confidence": 0.15,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 5568,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "hotel pelis dormir juntos dice secreto",
+      "expected": "SOLICITUD_ENCUENTRO",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4745,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "Me envio un video sexual sin pedirlo y me dice que deberia hacer lo mismo",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4300,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me pasa imagenes de personas desnudas y me pregunta si me gustan",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.65,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6390,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Comparte contenido pornografico en un grupo donde hay menores",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.75,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6948,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me envia fotos intimas de otra persona diciendo que son mias",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.6,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7477,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me manda mensajes describiendo actos sexuales que quiere hacer conmigo",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4512,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "mando video xxx sin pedir dice devuelve",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.65,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5777,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "imagenes personas sin ropa le gustan",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.35,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 8167,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "grupo whatsapp pasa MASNNA menores",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 6128,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "fotos intimas otra persona dice soy yo",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "DIFUSION_NO_CONSENTIDA",
+      "confidence": 0.6,
+      "estado": "CLASIFICADO",
+      "latencyMs": 9517,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "describe actos sexuales chat noche",
+      "expected": "COMPARTIMIENTO_SEXUAL",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.6,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6996,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "Me amenaza con lastimar a mi mascota si no le hago caso",
+      "expected": "OTRO",
+      "predicted": "OTRO",
+      "confidence": 0.5,
+      "estado": "CLASIFICADO",
+      "latencyMs": 16151,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me dice que sabe donde vivo y que va a publicar mi direccion en internet",
+      "expected": "OTRO",
+      "predicted": "DOXING",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4479,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "Me acosa en los comentarios con mensajes de odio",
+      "expected": "OTRO",
+      "predicted": "CONTACTO_INSISTENTE",
+      "confidence": 0.6,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7172,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "Me obliga a bloquear a mis amigos para que solo le hable a el",
+      "expected": "OTRO",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 6721,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me envia fotos de armas diciendo que puede hacerle dano a mi familia",
+      "expected": "OTRO",
+      "predicted": "EXTORSION",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 9950,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "lastima mi perro si no caso amenaza",
+      "expected": "OTRO",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 4913,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "sabe donde vivo publicar direccion internet",
+      "expected": "OTRO",
+      "predicted": "DOXING",
+      "confidence": 0.75,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4553,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "comentarios odio todo tiempo instagram",
+      "expected": "OTRO",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 6850,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "bloquea amigos solo le hable a el controla",
+      "expected": "OTRO",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 5490,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "fotos armas dice dano familia",
+      "expected": "OTRO",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 4029,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "Me dice que tiene fotos intimas mias y que si no le mando dinero las difunde",
+      "expected": "EXTORSION",
+      "predicted": "EXTORSION",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5415,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Amenaza con subir un video falso mio desnuda a internet si no quedo con el",
+      "expected": "EXTORSION",
+      "predicted": "EXTORSION",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5305,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me chantajea con conversaciones privadas que tuve para que le pase mas fotos",
+      "expected": "EXTORSION",
+      "predicted": "EXTORSION",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4686,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Dice que creo fotos desnuda de ti con IA, paga o lo mando a todos",
+      "expected": "EXTORSION",
+      "predicted": "CONTENIDO_GENERADO_IA",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 20381,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "Si no le das tu contrasena de redes va a publicar tus fotos intimas",
+      "expected": "EXTORSION",
+      "predicted": "EXTORSION",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 10632,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "tengo fotos intimas tuyas manda plata o difundo",
+      "expected": "EXTORSION",
+      "predicted": "EXTORSION",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5301,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "video falso desnuda internet si no quedo con el",
+      "expected": "EXTORSION",
+      "predicted": "EXTORSION",
+      "confidence": 0.65,
+      "estado": "CLASIFICADO",
+      "latencyMs": 10605,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "chantaje conversaciones privadas mas fotos",
+      "expected": "EXTORSION",
+      "predicted": "EXTORSION",
+      "confidence": 0.65,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5851,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "fotos desnuda IA paga o mando a todos",
+      "expected": "EXTORSION",
+      "predicted": "EXTORSION",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 18808,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "contrasena redes o publico fotos intimas",
+      "expected": "EXTORSION",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 3893,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "Me mostro una foto desnuda que parece ser mia pero nunca me la tome, debe ser IA",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "CONTENIDO_GENERADO_IA",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4443,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Creo un video falso mio en situaciones sexuales usando inteligencia artificial",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "CONTENIDO_GENERADO_IA",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4986,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Usaron una app para quitarle la ropa a una foto mia y la pasan por WhatsApp",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "CONTENIDO_GENERADO_IA",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7096,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Me envio una imagen generada por computadora donde aparesco desnuda",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "CONTENIDO_GENERADO_IA",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5363,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Deepfake sexual de mi hijo circula en un grupo de Discord",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 14803,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "foto desnuda parece mia nunca me la tome IA",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 10062,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "video falso mio situaciones sexuales inteligencia artificial",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "CONTENIDO_GENERADO_IA",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5082,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "app quita ropa foto mia pasan whatsapp",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 7847,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "imagen generada computadora aparesco desnuda",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.45,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 5942,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "deepfake sexual hijo discord grupo",
+      "expected": "CONTENIDO_GENERADO_IA",
+      "predicted": "CONTENIDO_GENERADO_IA",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 18316,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "Publico fotos intimas mias en un grupo de Telegram sin mi permiso",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "DIFUSION_NO_CONSENTIDA",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5311,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Reenvio videos privados mios a varios contactos de WhatsApp",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 6162,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "Subio fotos desnuda mias a una pagina web para exponerme",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "DIFUSION_NO_CONSENTIDA",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6407,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Compartio mi video intimo con todos en el colegio",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "DIFUSION_NO_CONSENTIDA",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4508,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Mando mi foto privada a desconocidos por internet",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.95,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4705,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "publico fotos intimas grupo telegram sin permiso",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "DIFUSION_NO_CONSENTIDA",
+      "confidence": 0.9,
+      "estado": "CLASIFICADO",
+      "latencyMs": 4181,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "reenvio videos privados contactos whatsapp",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.65,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5658,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "subio fotos desnuda pagina web exponerme",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "DIFUSION_NO_CONSENTIDA",
+      "confidence": 0.65,
+      "estado": "CLASIFICADO",
+      "latencyMs": 10348,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "compartio video intimo colegio todos",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "COMPARTIMIENTO_SEXUAL",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5738,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "foto privada desconocidos internet mando",
+      "expected": "DIFUSION_NO_CONSENTIDA",
+      "predicted": "DIFUSION_NO_CONSENTIDA",
+      "confidence": 0.6,
+      "estado": "CLASIFICADO",
+      "latencyMs": 5957,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "Publico mi direccion exacta, el nombre de mi colegio y mi numero personal para que otros me acosen",
+      "expected": "DOXING",
+      "predicted": "OTRO",
+      "confidence": 0.92,
+      "estado": "REQUIERE_ANONIMIZACION",
+      "latencyMs": 61784,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "Difundio mi telefono y mi direccion en un grupo diciendo que vayan a buscarme",
+      "expected": "DOXING",
+      "predicted": "DOXING",
+      "confidence": 0.85,
+      "estado": "CLASIFICADO",
+      "latencyMs": 6233,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Compartio datos personales de mi hijo incluyendo colegio y barrio",
+      "expected": "DOXING",
+      "predicted": "DOXING",
+      "confidence": 0.95,
+      "estado": "REQUIERE_ANONIMIZACION",
+      "latencyMs": 3944,
+      "correct": true,
+      "ruido": false
+    },
+    {
+      "text": "Publico en redes donde vivo y a que hora sale del colegio",
+      "expected": "DOXING",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 8118,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "Mando mi informacion personal a extranos para que me encuentren",
+      "expected": "DOXING",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 8146,
+      "correct": false,
+      "ruido": false
+    },
+    {
+      "text": "direccion exacta colegio numero personal acosen",
+      "expected": "DOXING",
+      "predicted": "DOXING",
+      "confidence": 0.65,
+      "estado": "REQUIERE_ANONIMIZACION",
+      "latencyMs": 7441,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "telefono direccion grupo busquenme difundio",
+      "expected": "DOXING",
+      "predicted": "DOXING",
+      "confidence": 0.75,
+      "estado": "REQUIERE_ANONIMIZACION",
+      "latencyMs": 7237,
+      "correct": true,
+      "ruido": true
+    },
+    {
+      "text": "datos personales hijo colegio barrio compartio",
+      "expected": "DOXING",
+      "predicted": "OTRO",
+      "confidence": 0.3,
+      "estado": "REQUIERE_ANONIMIZACION",
+      "latencyMs": 5995,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "redes donde vivo hora sale colegio publico",
+      "expected": "DOXING",
+      "predicted": "OTRO",
+      "confidence": 0.2,
+      "estado": "REVISION_MANUAL",
+      "latencyMs": 5715,
+      "correct": false,
+      "ruido": true
+    },
+    {
+      "text": "informacion personal extranos encuentrenme mando",
+      "expected": "DOXING",
+      "predicted": "DOXING",
+      "confidence": 0.5,
+      "estado": "CLASIFICADO",
+      "latencyMs": 9057,
+      "correct": true,
+      "ruido": true
+    }
+  ]
+}

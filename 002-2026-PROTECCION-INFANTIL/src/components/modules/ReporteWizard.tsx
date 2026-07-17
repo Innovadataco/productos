@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { ReporteStepPlataforma } from "./ReporteStepPlataforma";
-import { ReporteStepUbicacion } from "./ReporteStepUbicacion";
-import { ReporteStepDescripcion } from "./ReporteStepDescripcion";
+import { ReporteStepDetalle } from "./ReporteStepDetalle";
 import { ReporteStepConfirmar } from "./ReporteStepConfirmar";
 import { ConfirmacionReporte } from "./ConfirmacionReporte";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +16,7 @@ type WizardData = {
     paisId: string;
     ciudadId: string;
     fechaIncidente: string;
+    edadVictima: string;
     texto: string;
     esAnonimo: boolean;
 };
@@ -32,6 +32,7 @@ export function ReporteWizard() {
         paisId: "",
         ciudadId: "",
         fechaIncidente: "",
+        edadVictima: "",
         texto: "",
         esAnonimo: true,
     });
@@ -61,6 +62,7 @@ export function ReporteWizard() {
                     pais: data.pais,
                     paisId: data.paisId || null,
                     ciudadId: data.ciudadId === "otra" ? null : (data.ciudadId || null),
+                    edadVictima: data.edadVictima ? Number(data.edadVictima) : undefined,
                 }),
             });
             const json = await res.json().catch(() => null);
@@ -84,7 +86,7 @@ export function ReporteWizard() {
     return (
         <div className="mx-auto max-w-xl">
             <div className="mb-6 flex items-center justify-between">
-                {[1, 2, 3, 4].map((s) => (
+                {[1, 2, 3].map((s) => (
                     <div key={s} className="flex flex-1 items-center">
                         <div
                             className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${s <= step
@@ -94,7 +96,7 @@ export function ReporteWizard() {
                         >
                             {s}
                         </div>
-                        {s < 4 && (
+                        {s < 3 && (
                             <div
                                 className={`mx-2 h-1 flex-1 rounded transition ${s < step ? "bg-primary-600" : "bg-slate-200"
                                     }`}
@@ -113,22 +115,18 @@ export function ReporteWizard() {
                 />
             )}
             {step === 2 && (
-                <ReporteStepUbicacion
+                <ReporteStepDetalle
                     ciudad={data.ciudad}
                     pais={data.pais}
                     fechaIncidente={data.fechaIncidente}
                     paisId={data.paisId}
                     ciudadId={data.ciudadId}
+                    edadVictima={data.edadVictima}
+                    texto={data.texto}
                     onChange={(v) => update(v)}
                 />
             )}
             {step === 3 && (
-                <ReporteStepDescripcion
-                    value={data.texto}
-                    onChange={(v: string) => update({ texto: v })}
-                />
-            )}
-            {step === 4 && (
                 <ReporteStepConfirmar
                     data={data}
                     onSubmit={handleSubmit}
@@ -143,14 +141,17 @@ export function ReporteWizard() {
                         Atrás
                     </Button>
                 )}
-                {step < 4 && (
+                {step < 3 && (
                     <Button
                         className="ml-auto"
                         onClick={() => setStep((s) => s + 1)}
                         disabled={
                             (step === 1 && (!data.identificador.trim() || !data.plataforma)) ||
-                            (step === 2 && (!data.paisId || !data.ciudadId || (data.ciudadId === "otra" && !data.ciudad))) ||
-                            (step === 3 && data.texto.length < 20)
+                            (step === 2 &&
+                                (!data.paisId ||
+                                    !data.ciudadId ||
+                                    (data.ciudadId === "otra" && !data.ciudad) ||
+                                    data.texto.length < 20))
                         }
                     >
                         Siguiente

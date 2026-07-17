@@ -1,6 +1,8 @@
-import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro } from "@prisma/client";
+import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, CasoEvalFuente } from "@prisma/client";
 // DECISION-PENDIENTE-PO: categorías de plataforma podrían requerir ajuste
 import bcrypt from "bcryptjs";
+import fs from "fs/promises";
+import path from "path";
 
 const prisma = new PrismaClient();
 
@@ -11,11 +13,21 @@ async function main() {
     });
 
     if (!adminExists) {
+        const isProduction = process.env.NODE_ENV === "production";
+        const adminPassword = process.env.ADMIN_PASSWORD;
+
+        if (isProduction && !adminPassword) {
+            throw new Error(
+                "ADMIN_PASSWORD debe estar definida en NODE_ENV=production para crear el usuario admin."
+            );
+        }
+
+        const password = adminPassword || "Admin123!Secure";
         await prisma.usuario.create({
             data: {
                 email: "admin@proteccion.local",
                 nombre: "Administrador",
-                passwordHash: await bcrypt.hash("Admin123!Secure", 12),
+                passwordHash: await bcrypt.hash(password, 12),
                 rol: RolUsuario.ADMIN,
             },
         });
@@ -72,6 +84,14 @@ async function main() {
             esPublico: true,
             descripcion: "Modo mantenimiento de la plataforma",
         },
+        {
+            clave: "system.ollama_base_url",
+            valor: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "URL base del servidor Ollama local (validado R2: solo localhost/IPs privadas)",
+        },
     ];
 
     for (const p of defaults) {
@@ -92,6 +112,78 @@ async function main() {
             categoria: CategoriaParametro.SECURITY,
             esPublico: false,
             descripcion: "Modelo Ollama para clasificación de conductas",
+        },
+        {
+            clave: "reportes.classification.umbral_revision",
+            valor: "1.0",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Umbral de confianza mínima para clasificar sin revisión manual",
+        },
+        {
+            clave: "reportes.classification.min_score_categoria",
+            valor: "0.3",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Score mínimo para que una categoría sea principal o secundaria",
+        },
+        {
+            clave: "reportes.classification.n_votos",
+            valor: "5",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Número de votos independientes del clasificador (F4)",
+        },
+        {
+            clave: "reportes.classification.modelo_desempate",
+            valor: "",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Modelo de desempate para casos no unánimes (F6). Vacío = deshabilitado.",
+        },
+        {
+            clave: "reportes.rafaga.n_reportes",
+            valor: "3",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Cantidad de reportes en X horas contra un identificador sin historial que dispara revisión por ráfaga (F7)",
+        },
+        {
+            clave: "reportes.rafaga.ventana_horas",
+            valor: "24",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Ventana en horas para detectar ráfagas de reportes contra un mismo identificador (F7)",
+        },
+        {
+            clave: "reportes.classification.temperatura_votos",
+            valor: "0.7",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Temperatura para las llamadas de votación del clasificador (F4); llamadas únicas usan 0",
+        },
+        {
+            clave: "reportes.classification.ollama_num_parallel",
+            valor: "2",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Máximo de llamadas Ollama en paralelo durante la votación (F4)",
+        },
+        {
+            clave: "reportes.classification.rag_top_k",
+            valor: "3",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Cantidad de ejemplos RAG recuperados para el prompt de clasificación (F5)",
         },
         {
             clave: "reportes.embedding_model",
@@ -334,6 +426,94 @@ async function main() {
             descripcion: "Umbral alto de score F1 (riesgo alto/crítico)",
         },
         {
+            clave: "scoring.source_weight.enabled",
+            valor: "false",
+            tipo: TipoParametro.BOOLEAN,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Activar ajuste de score por peso de fuente (anti-abuso Fase A)",
+        },
+        {
+            clave: "scoring.source_weight.anonymous",
+            valor: "0.65",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Peso base de reportes anónimos",
+        },
+        {
+            clave: "scoring.source_weight.authenticated",
+            valor: "1.0",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Peso base de reportes autenticados",
+        },
+        {
+            clave: "scoring.source_weight.new_account_factor",
+            valor: "0.7",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Factor multiplicador para cuentas recién creadas",
+        },
+        {
+            clave: "scoring.source_weight.new_account_days_threshold",
+            valor: "7",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Días de antigüedad para considerar una cuenta como nueva",
+        },
+        {
+            clave: "scoring.source_weight.burst_factor",
+            valor: "0.4",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Factor multiplicador para ráfagas de reportes",
+        },
+        {
+            clave: "scoring.source_weight.burst_window_hours",
+            valor: "24",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Ventana en horas para detectar ráfagas de reportes",
+        },
+        {
+            clave: "scoring.source_weight.burst_max_reports",
+            valor: "3",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Máximo de reportes en la ventana antes de considerar ráfaga",
+        },
+        {
+            clave: "scoring.source_weight.confirmed_factor",
+            valor: "1.2",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Factor multiplicador por cada reporte confirmado previo",
+        },
+        {
+            clave: "scoring.source_weight.discarded_factor",
+            valor: "0.3",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Factor multiplicador por cada reporte descartado previo",
+        },
+        {
+            clave: "anti_abuso.retencion_fuente_dias",
+            valor: "90",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Días de retención de hashes de fuente (IP/fingerprint) para anti-abuso",
+        },
+        {
             clave: "visibility.min_authenticated_ratio",
             valor: "0.5",
             tipo: TipoParametro.FLOAT,
@@ -429,6 +609,110 @@ async function main() {
             esPublico: false,
             descripcion: "Enviar alertas por email a usuarios suscritos a identificadores",
         },
+        {
+            clave: "ratelimit.admin_read.window_seconds",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Ventana de rate limiting para lecturas del panel admin (segundos)",
+        },
+        {
+            clave: "ratelimit.admin_read.max_requests",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Máximo de lecturas del panel admin por ventana",
+        },
+        {
+            clave: "ratelimit.admin_write.window_seconds",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Ventana de rate limiting para escrituras del panel admin (segundos)",
+        },
+        {
+            clave: "ratelimit.admin_write.max_requests",
+            valor: "30",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Máximo de escrituras del panel admin por ventana",
+        },
+        {
+            clave: "ratelimit.seguimiento.window_seconds",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Ventana de rate limiting para consulta de seguimiento pública (segundos)",
+        },
+        {
+            clave: "ratelimit.seguimiento.max_requests",
+            valor: "10",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Máximo de consultas de seguimiento por ventana",
+        },
+        {
+            clave: "ratelimit.report_identificador.window_seconds",
+            valor: "3600",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Ventana de rate limit por identificador/plataforma (anti-abuso Fase B)",
+        },
+        {
+            clave: "ratelimit.report_identificador.max_requests",
+            valor: "10",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Máximo de reportes por identificador/plataforma antes de marcar para revisión",
+        },
+        {
+            clave: "ratelimit.report_identificador.spam_threshold",
+            valor: "20",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Umbral de reportes por identificador/plataforma para marcar como POSIBLE_SPAM",
+        },
+        {
+            clave: "ratelimit.report_fingerprint.window_seconds",
+            valor: "3600",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Ventana de rate limit por fingerprint server-side (anti-abuso Fase B)",
+        },
+        {
+            clave: "ratelimit.report_fingerprint.max_requests",
+            valor: "5",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Máximo de reportes por fingerprint server-side por ventana",
+        },
+        {
+            clave: "ratelimit.ia_sandbox.window_seconds",
+            valor: "600",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Ventana de rate limiting para el sandbox de IA (segundos)",
+        },
+        {
+            clave: "ratelimit.ia_sandbox.max_requests",
+            valor: "10",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Máximo de ejecuciones del sandbox de IA por ventana (modo comparación cuenta doble)",
+        },
     ];
 
     for (const p of reportesParams) {
@@ -463,6 +747,49 @@ async function main() {
     }
     console.log("Plataformas creadas");
 
+    // Coordenadas aproximadas de ciudades principales para el mapa de consulta pública
+    const COORDENADAS_CIUDADES: Record<string, { lat: number; lng: number }> = {
+        "CO:Bogotá": { lat: 4.7110, lng: -74.0721 },
+        "CO:Medellín": { lat: 6.2476, lng: -75.5658 },
+        "CO:Cali": { lat: 3.4516, lng: -76.5320 },
+        "CO:Barranquilla": { lat: 10.9685, lng: -74.7813 },
+        "CO:Cartagena": { lat: 10.3910, lng: -75.4794 },
+        "CO:Bucaramanga": { lat: 7.1193, lng: -73.1227 },
+        "CO:Pereira": { lat: 4.8087, lng: -75.6906 },
+        "CO:Manizales": { lat: 5.0689, lng: -75.5174 },
+        "CO:Cúcuta": { lat: 7.8939, lng: -72.5078 },
+        "CO:Ibagué": { lat: 4.4447, lng: -75.2424 },
+        "MX:Ciudad de México": { lat: 19.4326, lng: -99.1332 },
+        "MX:Guadalajara": { lat: 20.6597, lng: -103.3496 },
+        "MX:Monterrey": { lat: 25.6866, lng: -100.3161 },
+        "MX:Puebla": { lat: 19.0414, lng: -98.2063 },
+        "MX:Tijuana": { lat: 32.5149, lng: -117.0382 },
+        "AR:Buenos Aires": { lat: -34.6037, lng: -58.3816 },
+        "AR:Córdoba": { lat: -31.4201, lng: -64.1888 },
+        "AR:Rosario": { lat: -32.9442, lng: -60.6505 },
+        "BR:São Paulo": { lat: -23.5505, lng: -46.6333 },
+        "BR:Río de Janeiro": { lat: -22.9068, lng: -43.1729 },
+        "BR:Brasilia": { lat: -15.7975, lng: -47.8919 },
+        "CL:Santiago": { lat: -33.4489, lng: -70.6693 },
+        "CL:Valparaíso": { lat: -33.0472, lng: -71.6127 },
+        "PE:Lima": { lat: -12.0464, lng: -77.0428 },
+        "PE:Arequipa": { lat: -16.3989, lng: -71.5350 },
+        "EC:Quito": { lat: -0.1807, lng: -78.4678 },
+        "EC:Guayaquil": { lat: -2.1894, lng: -79.8891 },
+        "VE:Caracas": { lat: 10.4806, lng: -66.9036 },
+        "UY:Montevideo": { lat: -34.9011, lng: -56.1645 },
+        "PY:Asunción": { lat: -25.2637, lng: -57.5759 },
+        "BO:La Paz": { lat: -16.5000, lng: -68.1500 },
+        "BO:Santa Cruz de la Sierra": { lat: -17.7833, lng: -63.1833 },
+        "CR:San José": { lat: 9.9281, lng: -84.0907 },
+        "PA:Ciudad de Panamá": { lat: 8.9824, lng: -79.5199 },
+        "GT:Ciudad de Guatemala": { lat: 14.6349, lng: -90.5069 },
+        "DO:Santo Domingo": { lat: 18.4861, lng: -69.9312 },
+        "HN:Tegucigalpa": { lat: 14.0723, lng: -87.2068 },
+        "SV:San Salvador": { lat: 13.6929, lng: -89.2182 },
+        "NI:Managua": { lat: 12.1150, lng: -86.2362 },
+    };
+
     // Seed de Países y Ciudades (Latinoamérica)
     const paisesData = [
         { codigo: "CO", nombre: "Colombia", ciudades: ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Bucaramanga", "Pereira", "Manizales", "Cúcuta", "Ibagué"] },
@@ -492,17 +819,61 @@ async function main() {
             create: { codigo: p.codigo, nombre: p.nombre },
         });
         for (const c of p.ciudades) {
+            const coords = COORDENADAS_CIUDADES[`${p.codigo}:${c}`];
             await prisma.ciudad.upsert({
                 where: { nombre_paisId: { nombre: c, paisId: pais.id } },
-                update: {},
-                create: { nombre: c, paisId: pais.id },
+                update: { lat: coords?.lat, lng: coords?.lng },
+                create: { nombre: c, paisId: pais.id, lat: coords?.lat, lng: coords?.lng },
             });
         }
     }
     console.log("Países y ciudades creados");
 
+    // Seed de casos de evaluación desde fixture (Spec 013)
+    await seedEvalFixture();
+
     // Empty SaaS tables - just verify they exist
     console.log("Tablas Tenant, Plan, Subscription, BillingCycle listas");
+}
+
+async function seedEvalFixture() {
+    const existing = await prisma.casoEval.count({ where: { fuente: CasoEvalFuente.SEMILLA } });
+    if (existing > 0) {
+        console.log(`Casos de evaluación SEMILLA ya existen (${existing}); omitiendo seed`);
+        return;
+    }
+
+    const fixturePath = path.join(process.cwd(), "scripts", "eval-fixture.json");
+    let raw: string;
+    try {
+        raw = await fs.readFile(fixturePath, "utf-8");
+    } catch {
+        console.warn("No se encontró scripts/eval-fixture.json; omitiendo seed de casos de evaluación");
+        return;
+    }
+
+    const fixture = JSON.parse(raw) as {
+        examples?: { text: string; expected: string; ruido?: boolean; secundariaEsperada?: string }[];
+    };
+    const examples = fixture.examples || [];
+    if (examples.length === 0) {
+        console.warn("eval-fixture.json no contiene ejemplos");
+        return;
+    }
+
+    const data = examples.map((ex) => ({
+        texto: ex.text,
+        categoriaEsperada: ex.expected,
+        secundariaEsperada: ex.secundariaEsperada || null,
+        ruido: ex.ruido ?? false,
+        fuente: CasoEvalFuente.SEMILLA,
+        activo: true,
+        fixtureVersion: 1,
+        creadoPorId: null,
+    }));
+
+    await prisma.casoEval.createMany({ data });
+    console.log(`Casos de evaluación SEMILLA creados: ${data.length}`);
 }
 
 main()

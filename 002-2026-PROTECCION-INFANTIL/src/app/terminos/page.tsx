@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Términos de uso — Protección Infantil",
+    title: "Términos de uso",
     description: "Términos y condiciones de uso de la plataforma de reportes comunitarios de protección infantil.",
+    alternates: {
+        canonical: "/terminos",
+    },
+    openGraph: {
+        type: "article",
+        url: "/terminos",
+        title: "Términos de uso — Protección Infantil",
+        description: "Términos y condiciones de uso de la plataforma de reportes comunitarios de protección infantil.",
+    },
 };
 
 export default function TerminosPage() {

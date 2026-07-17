@@ -36,8 +36,8 @@ export function VerificacionForm({
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-sm text-slate-600">
-                Ingresa el código de 6 dígitos enviado a <strong>{email}</strong>
+            <p className="text-sm text-muted">
+                Ingresa el código de 6 dígitos enviado a <strong className="text-body">{email}</strong>
             </p>
             <Input
                 label="Código de verificación"
@@ -59,7 +59,7 @@ export function VerificacionForm({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
             <Button type="submit" isLoading={isLoading} className="w-full">
                 Crear cuenta
             </Button>

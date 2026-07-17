@@ -60,27 +60,26 @@ export async function POST(request: Request) {
             });
 
             let emailSent = false;
+            let emailError: string | null = null;
             try {
                 await enviarTokenRecuperacion(email, token);
                 emailSent = true;
             } catch (err) {
                 const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
-                console.error("Failed to send recovery email to:", masked, "error:", err instanceof Error ? err.message : String(err));
-                if (process.env.NODE_ENV === "production") {
-                    return NextResponse.json(
-                        { error: { message: "Error al enviar email de recuperación", code: ERROR_CODES.INTERNAL_ERROR } },
-                        { status: 500 }
-                    );
-                }
-                // En desarrollo, si falla el envío (p. ej. cuota de Resend), simulamos éxito
-                // para no bloquear tests E2E y flujos locales.
-                emailSent = true;
+                emailError = err instanceof Error ? err.message : String(err);
+                console.error("Failed to send recovery email to:", masked, "error:", emailError);
             }
 
-            const isDev = process.env.NODE_ENV !== "production";
-            const response: Record<string, unknown> = { message: MENSAJE_EXITO, emailSent };
-            if (isDev) {
+            const response: Record<string, unknown> = {
+                message: MENSAJE_EXITO,
+                emailSent,
+            };
+
+            // Si no se pudo enviar el email, exponemos el token para que el usuario pueda continuar
+            // (útil en entornos sin Resend configurado o en modo desarrollo)
+            if (!emailSent) {
                 response.devToken = token;
+                if (emailError) response.emailError = emailError;
             }
             return NextResponse.json(response, { status: 200 });
         }

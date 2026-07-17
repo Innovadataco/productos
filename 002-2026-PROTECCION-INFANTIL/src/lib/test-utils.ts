@@ -2,6 +2,8 @@ import { prisma } from "./prisma";
 
 export async function resetDatabase() {
     // Respetar dependencias FK: hijos antes que padres.
+    await prisma.casoEval.deleteMany();
+    await prisma.evalRun.deleteMany();
     await prisma.datasetEntrenamiento.deleteMany();
     await prisma.correccionAdmin.deleteMany();
     await prisma.clasificacionIA.deleteMany();

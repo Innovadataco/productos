@@ -1,16 +1,53 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { getWorkerMetrics } from "@/lib/queue-metrics";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
-export async function GET() {
+function calcularPrecisionPorCategoria(
+    confirmaciones: { categoriaOriginal: string; _count: { categoriaOriginal: number } }[],
+    correcciones: { categoriaOriginal: string; _count: { categoriaOriginal: number } }[]
+) {
+    const confirmadasMap = new Map<string, number>();
+    for (const c of confirmaciones) {
+        confirmadasMap.set(c.categoriaOriginal, c._count.categoriaOriginal);
+    }
+    const corregidasMap = new Map<string, number>();
+    for (const c of correcciones) {
+        corregidasMap.set(c.categoriaOriginal, c._count.categoriaOriginal);
+    }
+
+    const categorias = new Set([...confirmadasMap.keys(), ...corregidasMap.keys()]);
+    return Array.from(categorias).map((categoria) => {
+        const confirmadas = confirmadasMap.get(categoria) || 0;
+        const corregidas = corregidasMap.get(categoria) || 0;
+        const totalRevisados = confirmadas + corregidas;
+        return {
+            categoria,
+            confirmadas,
+            corregidas,
+            totalRevisados,
+            precisionObservada: totalRevisados === 0 || totalRevisados < 5 ? null : confirmadas / totalRevisados,
+        };
+    });
+}
+
+export async function GET(req: Request) {
     try {
         const user = await verifyAuth();
         if (String(user.rol) !== "ADMIN") {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
+            );
+        }
+
+        const rate = await checkRateLimit(req, "admin_read", { identifier: user.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
             );
         }
 
@@ -35,24 +72,36 @@ export async function GET() {
             porCiudad,
             tendencia,
             workerMetrics,
+            confirmacionesPorCategoria,
+            correccionesPorCategoria,
         ] = await Promise.all([
-            prisma.reporte.count(),
-            prisma.reporte.count({ where: { creadoEn: { gte: hoy, lt: hoySig } } }),
-            prisma.reporte.count({ where: { estado: { in: ["REVISION_MANUAL", "PROCESANDO"] } } }),
-            prisma.reporte.count({ where: { estado: "REQUIERE_ANONIMIZACION" } }),
-            prisma.reporte.count({ where: { esAnonimo: true } }),
-            prisma.reporte.count({ where: { esAnonimo: false } }),
-            prisma.reporte.groupBy({ by: ["estado"], _count: { estado: true } }),
-            prisma.clasificacionIA.groupBy({ by: ["categoria"], _count: { categoria: true } }),
-            prisma.reporte.groupBy({ by: ["plataformaId"], _count: { plataformaId: true }, where: { plataformaId: { not: "" } } }),
-            prisma.reporte.groupBy({ by: ["ciudad"], _count: { ciudad: true }, where: { ciudad: { not: "" } }, take: 10, orderBy: { _count: { ciudad: "desc" } } }),
+            prisma.reporte.count({ where: { eliminado: false } }),
+            prisma.reporte.count({ where: { eliminado: false, creadoEn: { gte: hoy, lt: hoySig } } }),
+            prisma.reporte.count({ where: { eliminado: false, estado: { in: ["REVISION_MANUAL", "PROCESANDO"] } } }),
+            prisma.reporte.count({ where: { eliminado: false, estado: "REQUIERE_ANONIMIZACION" } }),
+            prisma.reporte.count({ where: { eliminado: false, esAnonimo: true } }),
+            prisma.reporte.count({ where: { eliminado: false, esAnonimo: false } }),
+            prisma.reporte.groupBy({ by: ["estado"], _count: { estado: true }, where: { eliminado: false } }),
+            prisma.clasificacionIA.groupBy({ by: ["categoria"], _count: { categoria: true }, where: { reporte: { eliminado: false } } }),
+            prisma.reporte.groupBy({ by: ["plataformaId"], _count: { plataformaId: true }, where: { eliminado: false, plataformaId: { not: "" } } }),
+            prisma.reporte.groupBy({ by: ["ciudad"], _count: { ciudad: true }, where: { eliminado: false, ciudad: { not: "" } }, take: 10, orderBy: { _count: { ciudad: "desc" } } }),
             prisma.reporte.groupBy({
                 by: ["creadoEn"],
                 _count: { creadoEn: true },
-                where: { creadoEn: { gte: treintaDiasAtras } },
+                where: { eliminado: false, creadoEn: { gte: treintaDiasAtras } },
                 orderBy: { creadoEn: "asc" },
             }),
             getWorkerMetrics(),
+            prisma.correccionAdmin.groupBy({
+                by: ["categoriaOriginal"],
+                _count: { categoriaOriginal: true },
+                where: { confirmada: true, clasificacion: { reporte: { eliminado: false } } },
+            }),
+            prisma.correccionAdmin.groupBy({
+                by: ["categoriaOriginal"],
+                _count: { categoriaOriginal: true },
+                where: { confirmada: false, clasificacion: { reporte: { eliminado: false } } },
+            }),
         ]);
 
         const plataformaIds = porPlataforma
@@ -88,6 +137,7 @@ export async function GET() {
             porCiudad: porCiudad.map((c) => ({ ciudad: c.ciudad, count: typeof c._count === "object" ? c._count.ciudad : 0 })),
             tendencia: tendenciaArray,
             worker: workerMetrics,
+            precisionPorCategoria: calcularPrecisionPorCategoria(confirmacionesPorCategoria, correccionesPorCategoria),
         });
     } catch (error) {
         if (error instanceof AppError) {

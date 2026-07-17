@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { numeroSeguimientoSchema } from "@/lib/validators";
 import { calcularRanking } from "@/lib/ranking";
 import { ERROR_CODES } from "@/lib/errors";
 
@@ -25,11 +27,27 @@ const ESTADO_MENSAJE: Record<string, string> = {
 };
 
 export async function GET(
-    _request: Request,
+    request: Request,
     { params }: { params: Promise<{ numero: string }> }
 ) {
     try {
-        const { numero } = await params;
+        const rate = await checkRateLimit(request, "seguimiento");
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas consultas. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
+
+        const { numero: rawNumero } = await params;
+        const parsedNumero = numeroSeguimientoSchema.safeParse(rawNumero);
+        if (!parsedNumero.success) {
+            return NextResponse.json(
+                { error: { message: "Número de seguimiento inválido", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+        const numero = parsedNumero.data;
 
         const reporte = await prisma.reporte.findUnique({
             where: { numeroSeguimiento: numero },

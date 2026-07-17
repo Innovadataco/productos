@@ -10,11 +10,16 @@ test.describe("Flujo de autenticación", () => {
         let devCode = "";
         await page.route("**/api/auth/verificar/solicitar", async (route) => {
             const response = await route.fetch();
-            const body = await response.json();
+            const bodyText = await response.text();
+            const body = JSON.parse(bodyText);
             if (body.devCode) {
                 devCode = body.devCode;
             }
-            await route.fulfill({ response });
+            await route.fulfill({
+                status: response.status(),
+                headers: response.headers(),
+                body: bodyText,
+            });
         });
 
         // 1. Ir a registro
@@ -58,11 +63,16 @@ test.describe("Flujo de autenticación", () => {
         let devCode = "";
         await page.route("**/api/auth/verificar/solicitar", async (route) => {
             const response = await route.fetch();
-            const body = await response.json();
+            const bodyText = await response.text();
+            const body = JSON.parse(bodyText);
             if (body.devCode) {
                 devCode = body.devCode;
             }
-            await route.fulfill({ response });
+            await route.fulfill({
+                status: response.status(),
+                headers: response.headers(),
+                body: bodyText,
+            });
         });
 
         await page.goto("/registro");

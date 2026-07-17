@@ -4,11 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 
 type WizardData = {
+    identificador: string;
     plataforma: string;
     otraPlataforma: string;
     ciudad: string;
     pais: string;
     fechaIncidente: string;
+    edadVictima: string;
     texto: string;
 };
 
@@ -32,24 +34,32 @@ export function ReporteStepConfirmar({
 
     return (
         <div className="space-y-5">
-            <h2 className="text-lg font-semibold text-slate-800">Revisa y confirma</h2>
+            <h2 className="text-lg font-semibold text-body">Revisa y confirma</h2>
 
             <div className="glass rounded-xl p-4 space-y-3 text-sm">
                 <div className="flex justify-between">
-                    <span className="text-slate-500">Plataforma</span>
-                    <span className="font-medium text-slate-800 capitalize">{plataformaDisplay}</span>
+                    <span className="text-subtle">Identificador</span>
+                    <span className="font-medium text-body">{data.identificador}</span>
                 </div>
                 <div className="flex justify-between">
-                    <span className="text-slate-500">Ubicación</span>
-                    <span className="font-medium text-slate-800">{data.ciudad}, {data.pais}</span>
+                    <span className="text-subtle">Plataforma</span>
+                    <span className="font-medium text-body capitalize">{plataformaDisplay}</span>
                 </div>
                 <div className="flex justify-between">
-                    <span className="text-slate-500">Fecha</span>
-                    <span className="font-medium text-slate-800">{data.fechaIncidente || "No especificada"}</span>
+                    <span className="text-subtle">Ubicación</span>
+                    <span className="font-medium text-body">{data.ciudad}, {data.pais}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-subtle">Fecha del incidente</span>
+                    <span className="font-medium text-body">{data.fechaIncidente || "No especificada"}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-subtle">Edad aproximada de la víctima</span>
+                    <span className="font-medium text-body">{data.edadVictima || "No especificada"}</span>
                 </div>
                 <div>
-                    <span className="text-slate-500 block mb-1">Descripción</span>
-                    <p className="text-slate-800 whitespace-pre-wrap">{data.texto}</p>
+                    <span className="text-subtle block mb-1">Descripción</span>
+                    <p className="text-body whitespace-pre-wrap">{data.texto}</p>
                 </div>
             </div>
 
@@ -60,13 +70,13 @@ export function ReporteStepConfirmar({
                     checked={checked}
                     onChange={(e) => setChecked(e.target.checked)}
                 />
-                <span className="text-sm text-slate-700 leading-relaxed">
+                <span className="text-sm text-muted leading-relaxed">
                     Entiendo que este reporte es <strong>informativo</strong> y{" "}
                     <strong>no reemplaza una denuncia formal</strong> ante las autoridades competentes.
                 </span>
             </label>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
             <Button
                 variant="primary"

@@ -1,5 +1,26 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { SeguimientoClient } from "@/components/modules/SeguimientoClient";
+
+export const metadata: Metadata = {
+    title: "Seguimiento",
+    description:
+        "Consulta el estado de un reporte comunitario con su número de seguimiento en Protección Infantil.",
+    alternates: {
+        canonical: "/seguimiento",
+    },
+    robots: {
+        index: false,
+        follow: true,
+    },
+    openGraph: {
+        type: "article",
+        url: "/seguimiento",
+        title: "Seguimiento de reporte — Protección Infantil",
+        description:
+            "Consulta el estado de un reporte comunitario con su número de seguimiento.",
+    },
+};
 
 export default function SeguimientoPage() {
     return (

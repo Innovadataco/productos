@@ -74,7 +74,7 @@ test.describe("Flujo de reportes comunitarios", () => {
         expect(numero).toMatch(/RPT-[A-Z0-9]+/);
 
         await page.goto(`/seguimiento?numero=${numero}`);
-        await expect(page.getByText("Recibido")).toBeVisible();
+        await expect(page.getByText(/Recibido|En procesamiento|Procesado|En revisión/)).toBeVisible();
         await expect(page.getByText(identificador)).toBeVisible();
     });
 

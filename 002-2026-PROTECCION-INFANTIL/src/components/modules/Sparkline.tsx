@@ -7,7 +7,7 @@ export function Sparkline({
     data: { label: string; value: number }[];
     ariaLabel?: string;
 }) {
-    if (data.length === 0) return <p className="text-sm text-slate-500">Sin datos</p>;
+    if (data.length === 0) return <p className="text-sm text-muted">Sin datos</p>;
 
     const width = 500;
     const height = 180;
@@ -43,7 +43,7 @@ export function Sparkline({
                         y1={y}
                         x2={width - padding.right}
                         y2={y}
-                        stroke="#e2e8f0"
+                        stroke="currentColor" className="text-slate-200 dark:text-slate-700"
                         strokeWidth="1"
                         strokeDasharray="4 4"
                     />
@@ -54,17 +54,17 @@ export function Sparkline({
                 const value = Math.round(min + ratio * range);
                 const y = padding.top + chartHeight - ratio * chartHeight;
                 return (
-                    <text key={i} x={padding.left - 8} y={y + 4} textAnchor="end" className="fill-slate-400 text-[10px]">
+                    <text key={i} x={padding.left - 8} y={y + 4} textAnchor="end" className="fill-slate-400 dark:fill-slate-500 text-[10px]">
                         {value}
                     </text>
                 );
             })}
             {/* Area under line */}
-            <polygon points={areaPoints} fill="#3b6bff" fillOpacity="0.1" />
+            <polygon points={areaPoints} fill="currentColor" className="text-sky-500 dark:text-cyan-400" fillOpacity="0.1" />
             {/* Line */}
             <polyline
                 fill="none"
-                stroke="#3b6bff"
+                stroke="currentColor" className="text-sky-500 dark:text-cyan-400"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -76,7 +76,7 @@ export function Sparkline({
                 const y = getY(d.value);
                 return (
                     <g key={i}>
-                        <circle cx={x} cy={y} r="4" fill="#3b6bff" stroke="white" strokeWidth="2" className="hover:r-5 transition-all">
+                        <circle cx={x} cy={y} r="4" fill="currentColor" stroke="currentColor" strokeWidth="2" className="text-sky-500 dark:text-cyan-400 stroke-white dark:stroke-slate-900 hover:r-5 transition-all">
                             <title>{`${d.label}: ${d.value}`}</title>
                         </circle>
                         <text x={x} y={height - 8} textAnchor="middle" className="fill-slate-500 text-[9px]">

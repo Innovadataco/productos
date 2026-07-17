@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, DM_Mono } from "next/font/google";
+import { Inter, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { NavHeader } from "@/components/modules/NavHeader";
 import { ServiceWorkerRegister } from "@/components/modules/ServiceWorkerRegister";
 
-
-const plusJakarta = Plus_Jakarta_Sans({
+const inter = Inter({
     subsets: ["latin"],
-    variable: "--font-plus-jakarta",
+    variable: "--font-inter",
     display: "swap",
 });
 
@@ -19,11 +19,35 @@ const dmMono = DM_Mono({
     display: "swap",
 });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+
 export const metadata: Metadata = {
-    title: "Protección Infantil — Reportes Comunitarios",
+    metadataBase: new URL(appUrl),
+    title: {
+        default: "Protección Infantil — Reportes Comunitarios",
+        template: "%s — Protección Infantil",
+    },
     description:
-        "Plataforma de reportes comunitarios para la protección de menores. Consulta identificadores de riesgo y reporta conductas de riesgo.",
+        "Plataforma de reportes comunitarios para la protección de menores. Consulta identificadores de riesgo y reporta conductas de riesgo en línea.",
     manifest: "/manifest.json",
+    alternates: {
+        canonical: "/",
+    },
+    openGraph: {
+        type: "website",
+        locale: "es_CO",
+        url: "/",
+        siteName: "Protección Infantil",
+        title: "Protección Infantil — Reportes Comunitarios",
+        description:
+            "Plataforma de reportes comunitarios para la protección de menores. Consulta identificadores de riesgo y reporta conductas de riesgo en línea.",
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "Protección Infantil — Reportes Comunitarios",
+        description:
+            "Plataforma de reportes comunitarios para la protección de menores.",
+    },
     appleWebApp: {
         capable: true,
         statusBarStyle: "default",
@@ -32,10 +56,14 @@ export const metadata: Metadata = {
     icons: {
         apple: "/icons/icon-192x192.png",
     },
+    robots: {
+        index: true,
+        follow: true,
+    },
 };
 
 export const viewport: Viewport = {
-    themeColor: "#2563eb",
+    themeColor: "#0ea5e9",
     width: "device-width",
     initialScale: 1,
 };
@@ -46,14 +74,15 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="es" className={`${plusJakarta.variable} ${dmMono.variable}`}>
-            <body className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 pt-14">
-                <AuthProvider>
-                    <ServiceWorkerRegister />
-                    <NavHeader />
-
-                    {children}
-                </AuthProvider>
+        <html lang="es" className={`${inter.variable} ${dmMono.variable}`} suppressHydrationWarning>
+            <body className="min-h-screen pt-14">
+                <ThemeProvider>
+                    <AuthProvider>
+                        <ServiceWorkerRegister />
+                        <NavHeader />
+                        {children}
+                    </AuthProvider>
+                </ThemeProvider>
             </body>
         </html>
     );

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { calcularScore, determinarNivelRiesgo, recalcularYGuardarScore } from "./scoring";
+import { calcularScore, determinarNivelRiesgo, recalcularYGuardarScore, isSourceWeightEnabled } from "./scoring";
 import { prisma } from "./prisma";
 import { resetDatabase } from "./test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "./reporte-test-utils";
@@ -94,6 +94,32 @@ describe("calcularScore", () => {
         expect(result.ciudadesUnicas).toBe(2);
         expect(result.paisesUnicos).toBe(1);
     });
+
+    it("devuelve scores desagregados y pesos unitarios cuando el flag está desactivado", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        await crearReporteClasificado("+57300MIX", plataforma!.id, "OTRO", true, new Date());
+        await crearReporteClasificado("+57300MIX", plataforma!.id, "OTRO", false, new Date());
+
+        expect(await isSourceWeightEnabled()).toBe(false);
+
+        const result = await calcularScore("+57300MIX", plataforma!.id);
+        expect(result.scoreAnonimo).toBeGreaterThan(0);
+        expect(result.scoreAutenticado).toBeGreaterThan(0);
+        expect(result.pesoAnonimoPromedio).toBe(1);
+        expect(result.pesoAutenticadoPromedio).toBe(1);
+        expect(result.scoreAjustado).toBe(result.scoreAnonimo + result.scoreAutenticado);
+        expect(result.scoreAjustado).toBeLessThanOrEqual(100);
+    });
+
+    it("aplica pesos de fuente cuando se fuerza el ajuste", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const r1 = await crearReporteClasificado("+57300FORCE", plataforma!.id, "SOLICITUD_ENCUENTRO", true, new Date());
+        await prisma.reporte.update({ where: { id: r1.id }, data: { fuenteConfianza: 0.5 } });
+
+        const result = await calcularScore("+57300FORCE", plataforma!.id, undefined, { forceSourceWeight: true });
+        expect(result.pesoAnonimoPromedio).toBe(0.5);
+        expect(result.scoreAjustado).toBe(Math.min(Math.round(result.scoreAnonimo * 0.5), 100));
+    });
 });
 
 describe("recalcularYGuardarScore", () => {
@@ -124,6 +150,9 @@ describe("recalcularYGuardarScore", () => {
 
         expect(agregado).not.toBeNull();
         expect(agregado!.score).toBe(result.score);
+        expect(agregado!.scoreAnonimo).toBe(result.scoreAnonimo);
+        expect(agregado!.scoreAutenticado).toBe(result.scoreAutenticado);
+        expect(agregado!.scoreAjustado).toBe(result.scoreAjustado);
         expect(agregado!.nivelRiesgo).toBe(result.nivelRiesgo);
     });
 });

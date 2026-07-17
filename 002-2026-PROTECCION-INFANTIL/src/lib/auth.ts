@@ -6,11 +6,36 @@ import { AppError, ERROR_CODES } from "./errors";
 import { requireEnv } from "./env";
 import type { RolUsuario } from "@prisma/client";
 
+const LEGACY_COOKIE_NAME = "token";
+const HOST_COOKIE_NAME = "__Host-token";
+
+export function getCookieName(secure: boolean): string {
+    return secure ? HOST_COOKIE_NAME : LEGACY_COOKIE_NAME;
+}
+
 function getSecret(): Uint8Array {
     return new TextEncoder().encode(requireEnv("JWT_SECRET", 32));
 }
 
 const JWT_TTL = "24h";
+
+export function isSecureRequest(request: Request): boolean {
+    // Permite forzar el comportamiento desde variables de entorno.
+    // En redes locales HTTP (ej: 192.168.x.x) usar COOKIE_SECURE=false
+    if (process.env.COOKIE_SECURE) {
+        return process.env.COOKIE_SECURE === "true";
+    }
+
+    const forwardedProto = request.headers.get("x-forwarded-proto");
+    if (forwardedProto) {
+        return forwardedProto === "https";
+    }
+    try {
+        return new URL(request.url).protocol === "https:";
+    } catch {
+        return false;
+    }
+}
 
 export async function hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 12);
@@ -46,7 +71,7 @@ export async function getUserFromToken(request: Request) {
     try {
         const cookieHeader = request.headers.get("cookie");
         if (!cookieHeader) return null;
-        const match = cookieHeader.match(/token=([^;]+)/);
+        const match = cookieHeader.match(/(?:__Host-)?token=([^;]+)/);
         if (!match) return null;
         const token = match[1];
         const payload = await verifyToken(token);
@@ -65,7 +90,7 @@ export async function verifyAuth(requiredRol?: RolUsuario) {
     let token: string | undefined;
     try {
         const cookieStore = await cookies();
-        token = cookieStore.get("token")?.value;
+        token = cookieStore.get(HOST_COOKIE_NAME)?.value ?? cookieStore.get(LEGACY_COOKIE_NAME)?.value;
     } catch {
         token = undefined;
     }
@@ -95,4 +120,16 @@ export async function verifyAuth(requiredRol?: RolUsuario) {
 
 export function requireRol(rol: RolUsuario) {
     return () => verifyAuth(rol);
+}
+
+export async function setSessionCookie(request: Request, token: string): Promise<void> {
+    const secure = isSecureRequest(request);
+    const cookieStore = await cookies();
+    cookieStore.set(getCookieName(secure), token, {
+        httpOnly: true,
+        secure,
+        sameSite: secure ? "strict" : "lax",
+        maxAge: 60 * 60 * 24,
+        path: "/",
+    });
 }

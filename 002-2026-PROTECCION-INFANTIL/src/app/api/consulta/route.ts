@@ -13,14 +13,21 @@ const consultaSchema = z.object({
 
 const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
 
+function formatFecha(date: Date | string) {
+    return new Date(date).toISOString().slice(0, 10);
+}
+
+function formatFechaHora(date: Date | string) {
+    return new Date(date).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+}
+
 /**
  * GET /api/consulta?identificador=...
  * Consulta pública de un identificador reportado (número, nick o usuario).
  *
- * - Usuarios anónimos: información agregada básica (total, distribución geográfica/fechas).
- * - Usuarios autenticados: score de riesgo, nivel de riesgo, categorías agregadas y timeline.
- *
- * Nunca expone textos de reportes ni PII.
+ * Devuelve un resumen agregado SIN exponer textos de reportes, nombres de
+ * personas ni datos personales. Incluye distribución geográfica con coordenadas
+ * para el mapa, fechas de reporte y del incidente, plataformas y categorías.
  */
 export async function GET(request: Request) {
     try {
@@ -43,128 +50,149 @@ export async function GET(request: Request) {
             );
         }
 
-        // Parámetros de visibilidad
+        // Parámetros de visibilidad (solo para indicar si aparece en el dashboard público)
         const paramUmbral = await prisma.parametroSistema.findUnique({
             where: { clave: "visibility.report_threshold" },
         });
         const paramRatio = await prisma.parametroSistema.findUnique({
             where: { clave: "visibility.min_authenticated_ratio" },
         });
-
         const umbral = parseInt(paramUmbral?.valor || "3", 10);
         const minRatio = parseFloat(paramRatio?.valor || "0.5");
 
-        // Reportes visibles del identificador agrupados por plataforma
-        const reportesPorPlataforma = await prisma.reporte.groupBy({
-            by: ["plataformaId"],
+        // Reportes visibles del identificador (CLASIFICADO / CORREGIDO)
+        const reportes = await prisma.reporte.findMany({
             where: {
                 identificador: parsed.data.identificador,
                 estado: { in: ESTADOS_VISIBLES },
-            },
-            _count: { id: true },
-        });
-
-        if (reportesPorPlataforma.length === 0) {
-            return NextResponse.json({
-                identificador: parsed.data.identificador,
-                tieneReportes: false,
-                mensaje: "Sin reportes registrados para este identificador.",
-            });
-        }
-
-        const plataformaIdsVisibles: string[] = [];
-        const plataformaTotales: Record<string, { total: number; autenticados: number }> = {};
-
-        for (const grupo of reportesPorPlataforma) {
-            const total = await prisma.reporte.count({
-                where: {
-                    identificador: parsed.data.identificador,
-                    plataformaId: grupo.plataformaId,
-                    estado: { in: ESTADOS_VISIBLES },
-                },
-            });
-            const autenticados = await prisma.reporte.count({
-                where: {
-                    identificador: parsed.data.identificador,
-                    plataformaId: grupo.plataformaId,
-                    estado: { in: ESTADOS_VISIBLES },
-                    esAnonimo: false,
-                },
-            });
-            const ratio = total > 0 ? autenticados / total : 0;
-            if (total >= umbral && ratio >= minRatio) {
-                plataformaIdsVisibles.push(grupo.plataformaId);
-            }
-            plataformaTotales[grupo.plataformaId] = { total, autenticados };
-        }
-
-        if (plataformaIdsVisibles.length === 0) {
-            return NextResponse.json({
-                identificador: parsed.data.identificador,
-                tieneReportes: false,
-                mensaje: "Sin reportes registrados para este identificador.",
-            });
-        }
-
-        const plataformas = await prisma.plataforma.findMany({
-            where: { id: { in: plataformaIdsVisibles } },
-        });
-
-        const totalReportes = plataformaIdsVisibles.reduce(
-            (sum, id) => sum + plataformaTotales[id].total,
-            0
-        );
-        const reportesAutenticados = plataformaIdsVisibles.reduce(
-            (sum, id) => sum + plataformaTotales[id].autenticados,
-            0
-        );
-        const reportesAnonimos = totalReportes - reportesAutenticados;
-
-        const reportesVisibles = await prisma.reporte.findMany({
-            where: {
-                identificador: parsed.data.identificador,
-                plataformaId: { in: plataformaIdsVisibles },
-                estado: { in: ESTADOS_VISIBLES },
+                eliminado: false,
             },
             select: {
+                id: true,
                 ciudad: true,
                 pais: true,
                 creadoEn: true,
+                fechaIncidente: true,
                 esAnonimo: true,
-                plataforma: { select: { nombre: true } },
+                plataforma: { select: { id: true, nombre: true, clave: true } },
+                clasificacion: { select: { categoria: true, confianza: true } },
+                ciudadRel: { select: { lat: true, lng: true } },
             },
             orderBy: { creadoEn: "desc" },
             take: 1000,
         });
 
-        const ultimoReporte = reportesVisibles[0]?.creadoEn ?? null;
+        if (reportes.length === 0) {
+            return NextResponse.json({
+                identificador: parsed.data.identificador,
+                tieneReportes: false,
+                mensaje: "Sin reportes registrados para este identificador.",
+            });
+        }
 
-        const ubicaciones = reportesVisibles.map((r) => ({
-            pais: r.pais,
-            ciudad: r.ciudad,
-            fecha: r.creadoEn.toISOString().slice(0, 10),
-        }));
+        const totalReportes = reportes.length;
+        const reportesAutenticados = reportes.filter((r) => !r.esAnonimo).length;
+        const reportesAnonimos = totalReportes - reportesAutenticados;
+        const ratioAutenticados = totalReportes > 0 ? reportesAutenticados / totalReportes : 0;
+        const visibleEnDashboard = totalReportes >= umbral && ratioAutenticados >= minRatio;
+        const ultimoReporte = reportes[0]?.creadoEn ?? null;
+        const primerReporte = reportes[reportes.length - 1]?.creadoEn ?? null;
 
-        const mesesUnicos = [...new Set(reportesVisibles.map((r) => r.creadoEn.toISOString().slice(0, 7)))].sort();
-        const resumenMeses = mesesUnicos.length;
-        const ciudadesUnicas = new Set(ubicaciones.map((u) => u.ciudad)).size;
+        // Plataformas
+        const porPlataforma = new Map<string, { id: string; nombre: string; clave: string; total: number }>();
+        for (const r of reportes) {
+            const p = r.plataforma;
+            const actual = porPlataforma.get(p.id) || { id: p.id, nombre: p.nombre, clave: p.clave, total: 0 };
+            actual.total += 1;
+            porPlataforma.set(p.id, actual);
+        }
+        const plataformas = Array.from(porPlataforma.values()).sort((a, b) => b.total - a.total);
 
-        const plataformasResponse = plataformaIdsVisibles.map((id) => ({
-            id,
-            nombre: plataformas.find((p) => p.id === id)?.nombre ?? id,
-            totalReportes: plataformaTotales[id].total,
-        }));
+        // Categorías
+        const porCategoria = new Map<string, { categoria: string; total: number; confianzas: number[] }>();
+        for (const r of reportes) {
+            const cat = r.clasificacion?.categoria;
+            if (!cat) continue;
+            const actual = porCategoria.get(cat) || { categoria: cat, total: 0, confianzas: [] };
+            actual.total += 1;
+            if (r.clasificacion?.confianza != null) {
+                actual.confianzas.push(r.clasificacion.confianza);
+            }
+            porCategoria.set(cat, actual);
+        }
+        const categorias = Array.from(porCategoria.values())
+            .map((c) => ({
+                categoria: c.categoria,
+                total: c.total,
+                confianzaPromedio: c.confianzas.length > 0
+                    ? Number((c.confianzas.reduce((a, b) => a + b, 0) / c.confianzas.length).toFixed(2))
+                    : null,
+            }))
+            .sort((a, b) => b.total - a.total);
+
+        // Ubicaciones con coordenadas para el mapa
+        const ubicacionKey = (r: typeof reportes[0]) => `${r.pais}|${r.ciudad}`;
+        const porUbicacion = new Map<string, {
+            pais: string;
+            ciudad: string;
+            lat: number | null;
+            lng: number | null;
+            total: number;
+            fechasReporte: string[];
+            fechasIncidente: string[];
+        }>();
+
+        for (const r of reportes) {
+            const key = ubicacionKey(r);
+            const actual = porUbicacion.get(key) || {
+                pais: r.pais,
+                ciudad: r.ciudad,
+                lat: r.ciudadRel?.lat ?? null,
+                lng: r.ciudadRel?.lng ?? null,
+                total: 0,
+                fechasReporte: [] as string[],
+                fechasIncidente: [] as string[],
+            };
+            actual.total += 1;
+            actual.fechasReporte.push(formatFecha(r.creadoEn));
+            actual.fechasIncidente.push(formatFecha(r.fechaIncidente));
+            porUbicacion.set(key, actual);
+        }
+        const ubicaciones = Array.from(porUbicacion.values())
+            .map((u) => ({
+                ...u,
+                fechasReporte: [...new Set(u.fechasReporte)].sort().reverse(),
+                fechasIncidente: [...new Set(u.fechasIncidente)].sort().reverse(),
+            }))
+            .sort((a, b) => b.total - a.total);
+
+        // Timeline mensual
+        const porMes = new Map<string, number>();
+        for (const r of reportes) {
+            const mes = formatFecha(r.creadoEn).slice(0, 7);
+            porMes.set(mes, (porMes.get(mes) || 0) + 1);
+        }
+        const timeline = Array.from(porMes.entries())
+            .map(([mes, total]) => ({ mes, total }))
+            .sort((a, b) => a.mes.localeCompare(b.mes));
+
+        const ciudadesUnicas = new Set(reportes.map((r) => r.ciudad)).size;
+        const paisesUnicos = new Set(reportes.map((r) => r.pais)).size;
 
         const baseResponse = {
             identificador: parsed.data.identificador,
             tieneReportes: true,
+            visibleEnDashboard,
             totalReportes,
             reportesAutenticados,
             reportesAnonimos,
+            primerReporte: primerReporte?.toISOString() ?? null,
             ultimoReporte: ultimoReporte?.toISOString() ?? null,
-            plataformas: plataformasResponse,
-            resumen: `En los últimos ${resumenMeses} mes(es) se han reportado ${totalReportes} vez(es) en ${ciudadesUnicas} ciudad(es) diferentes y ${plataformasResponse.length} plataforma(s).`,
+            plataformas,
+            categorias,
             ubicaciones,
+            timeline,
+            resumen: `Se han reportado ${totalReportes} vez(es) entre ${formatFecha(primerReporte || new Date())} y ${formatFecha(ultimoReporte || new Date())} en ${ciudadesUnicas} ciudad(es) de ${paisesUnicos} país(es) y ${plataformas.length} plataforma(s).`,
         };
 
         const usuario = await getUserFromToken(request);
@@ -174,7 +202,7 @@ export async function GET(request: Request) {
             return NextResponse.json(baseResponse);
         }
 
-        // Usuario autenticado: incluir score, categorías y timeline agregados por identificador
+        // Usuario autenticado: incluir score y nivel de riesgo
         const ranking = await calcularScore(parsed.data.identificador);
 
         return NextResponse.json({
@@ -182,9 +210,6 @@ export async function GET(request: Request) {
             score: ranking.score,
             nivelRiesgo: ranking.nivelRiesgo,
             ratioAutenticados: ranking.ratioAutenticados,
-            categorias: ranking.categorias,
-            timeline: ranking.timeline,
-            distribucion: ranking.distribucion,
         });
     } catch {
         return NextResponse.json(

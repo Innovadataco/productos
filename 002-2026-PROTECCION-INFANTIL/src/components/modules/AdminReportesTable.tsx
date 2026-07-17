@@ -26,6 +26,10 @@ const CATEGORIAS = [
     { value: "SUPLANTACION_IDENTIDAD", label: "Suplantación de identidad" },
     { value: "SOLICITUD_ENCUENTRO", label: "Solicitud de encuentro" },
     { value: "COMPARTIMIENTO_SEXUAL", label: "Compartimiento sexual" },
+    { value: "EXTORSION", label: "Extorsión" },
+    { value: "CONTENIDO_GENERADO_IA", label: "Contenido generado por IA" },
+    { value: "DIFUSION_NO_CONSENTIDA", label: "Difusión no consentida" },
+    { value: "DOXING", label: "Doxing" },
     { value: "OTRO", label: "Otro" },
 ];
 
@@ -37,6 +41,10 @@ type ReporteListItem = {
     numeroSeguimiento: string;
     estado: string;
     esAnonimo: boolean;
+    prioridadAlta: boolean;
+    keywordsDetectadas: string[];
+    esRafaga: boolean;
+    eliminado: boolean;
     creadoEn: string;
     fechaIncidente: string;
     ciudad: string;
@@ -76,6 +84,7 @@ export function AdminReportesTable() {
     const [categoria, setCategoria] = useState(searchParams.get("categoria") || "");
     const [fechaDesde, setFechaDesde] = useState(searchParams.get("fechaDesde") || "");
     const [fechaHasta, setFechaHasta] = useState(searchParams.get("fechaHasta") || "");
+    const [incluirEliminados, setIncluirEliminados] = useState(searchParams.get("incluirEliminados") === "true");
     const [pageSize, setPageSize] = useState(searchParams.get("pageSize") || "25");
 
     const page = Math.max(1, Number(searchParams.get("page") || "1"));
@@ -95,6 +104,7 @@ export function AdminReportesTable() {
             if (categoria) params.set("categoria", categoria);
             if (fechaDesde) params.set("fechaDesde", fechaDesde);
             if (fechaHasta) params.set("fechaHasta", fechaHasta);
+            if (incluirEliminados) params.set("incluirEliminados", "true");
             params.set("pageSize", pageSize);
             params.set("page", String(page));
             Object.entries(override).forEach(([k, v]) => {
@@ -103,7 +113,7 @@ export function AdminReportesTable() {
             });
             return params.toString();
         },
-        [estado, plataformaId, categoria, fechaDesde, fechaHasta, pageSize, page]
+        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page]
     );
 
     const fetchReportes = useCallback(async () => {
@@ -111,6 +121,10 @@ export function AdminReportesTable() {
             const res = await fetch(`/api/admin/reportes-revision?${buildQueryString()}`, {
                 credentials: "include",
             });
+            if (res.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
             if (!res.ok) throw new Error("Error cargando reportes");
             const json = await res.json();
             setError("");
@@ -142,99 +156,133 @@ export function AdminReportesTable() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-slate-900">Bandeja de reportes</h1>
+            <div>
+                <h1 className="text-2xl font-bold text-body">Bandeja de reportes</h1>
+                <p className="text-sm text-muted">Revisá, clasificá y gestioná los reportes de la comunidad.</p>
+            </div>
 
-            <div className="rounded-2xl border border-white/20 bg-white/70 p-4 backdrop-blur-lg">
+            <div className="glass rounded-2xl p-4 sm:p-5">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Select
-                        label="Estado"
-                        options={ESTADOS}
-                        value={estado}
-                        onChange={(e) => setEstado(e.target.value)}
-                    />
-                    <Select
-                        label="Plataforma"
-                        options={plataformaOptions}
-                        value={plataformaId}
-                        onChange={(e) => setPlataformaId(e.target.value)}
-                    />
-                    <Select
-                        label="Categoría"
-                        options={CATEGORIAS}
-                        value={categoria}
-                        onChange={(e) => setCategoria(e.target.value)}
-                    />
+                    <Select label="Estado" options={ESTADOS} value={estado} onChange={(e) => setEstado(e.target.value)} />
+                    <Select label="Plataforma" options={plataformaOptions} value={plataformaId} onChange={(e) => setPlataformaId(e.target.value)} />
+                    <Select label="Categoría" options={CATEGORIAS} value={categoria} onChange={(e) => setCategoria(e.target.value)} />
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Mostrar</label>
-                        <select
-                            className="w-full rounded-xl border border-slate-200 bg-white/60 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200 appearance-none"
-                            value={pageSize}
-                            onChange={(e) => {
-                                setPageSize(e.target.value);
-                                router.push(`${pathname}?${buildQueryString({ page: "1", pageSize: e.target.value })}`);
-                            }}
-                        >
-                            {PAGE_SIZE_OPTIONS.map((s) => (
-                                <option key={s} value={s}>{s} por página</option>
-                            ))}
-                        </select>
+                        <label className="block text-sm font-medium text-body mb-1.5">Mostrar</label>
+                        <div className="relative">
+                            <select
+                                className="w-full rounded-xl px-4 py-3 text-sm text-body outline-none transition glass-input ring-accent-input appearance-none pr-10"
+                                value={pageSize}
+                                onChange={(e) => {
+                                    setPageSize(e.target.value);
+                                    router.push(`${pathname}?${buildQueryString({ page: "1", pageSize: e.target.value })}`);
+                                }}
+                            >
+                                {PAGE_SIZE_OPTIONS.map((s) => (
+                                    <option key={s} value={s}>{s} por página</option>
+                                ))}
+                            </select>
+                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-subtle">
+                                <ChevronIcon className="h-4 w-4" />
+                            </span>
+                        </div>
                     </div>
-                    <Input
-                        label="Desde"
-                        type="date"
-                        value={fechaDesde}
-                        onChange={(e) => setFechaDesde(e.target.value)}
-                    />
-                    <Input
-                        label="Hasta"
-                        type="date"
-                        value={fechaHasta}
-                        onChange={(e) => setFechaHasta(e.target.value)}
-                    />
+                    <Input label="Desde" type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
+                    <Input label="Hasta" type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
+                    <div className="flex items-center gap-2 pt-6">
+                        <input
+                            id="incluirEliminados"
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                            checked={incluirEliminados}
+                            onChange={(e) => setIncluirEliminados(e.target.checked)}
+                        />
+                        <label htmlFor="incluirEliminados" className="text-sm text-body">Incluir dados de baja</label>
+                    </div>
                     <div className="flex items-end">
                         <Button onClick={applyFilters}>Aplicar filtros</Button>
                     </div>
                 </div>
             </div>
 
-            {error && <div className="rounded-lg bg-red-50 p-4 text-red-700">{error}</div>}
+            {error && (
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-700 dark:text-red-300">
+                    {error}
+                </div>
+            )}
 
-            <div className="rounded-2xl border border-white/20 bg-white/70 backdrop-blur-lg overflow-hidden">
+            <div className="glass rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-100/50 text-slate-600">
+                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
                             <tr>
                                 <th className="px-4 py-3 font-medium">Seguimiento</th>
                                 <th className="px-4 py-3 font-medium">Plataforma</th>
                                 <th className="px-4 py-3 font-medium">Estado</th>
+                                <th className="px-4 py-3 font-medium">Señales</th>
                                 <th className="px-4 py-3 font-medium">Categoría</th>
                                 <th className="px-4 py-3 font-medium">Fecha</th>
                                 <th className="px-4 py-3 font-medium">Origen</th>
                                 <th className="px-4 py-3 font-medium">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {loading ? (
-                                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">Cargando...</td></tr>
+                                <tr>
+                                    <td colSpan={8} className="px-4 py-8 text-center text-subtle">
+                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                                        <p className="mt-2 text-xs">Cargando...</p>
+                                    </td>
+                                </tr>
                             ) : reportes.length === 0 ? (
-                                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">No hay reportes que coincidan con los filtros.</td></tr>
+                                <tr>
+                                    <td colSpan={8} className="px-4 py-8 text-center text-subtle">
+                                        No hay reportes que coincidan con los filtros.
+                                    </td>
+                                </tr>
                             ) : (
                                 reportes.map((r) => (
-                                    <tr key={r.id} className="hover:bg-slate-50/60">
-                                        <td className="px-4 py-3 font-mono text-xs">{r.numeroSeguimiento}</td>
-                                        <td className="px-4 py-3">{r.plataforma.nombre}</td>
-                                        <td className="px-4 py-3">{formatEstado(r.estado)}</td>
+                                    <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                        <td className="px-4 py-3 font-mono text-xs text-body">{r.numeroSeguimiento}</td>
+                                        <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
                                         <td className="px-4 py-3">
+                                            <div className="flex flex-wrap gap-1">
+                                                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-body">
+                                                    {formatEstado(r.estado)}
+                                                </span>
+                                                {r.eliminado && (
+                                                    <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                                                        Eliminado
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-wrap gap-1">
+                                                {r.prioridadAlta && (
+                                                    <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                                                        Prioridad
+                                                    </span>
+                                                )}
+                                                {r.esRafaga && (
+                                                    <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                                        Ráfaga
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-body">
                                             {r.clasificacion?.correccion
                                                 ? `${formatCategoria(r.clasificacion.correccion.categoriaCorregida)} (corregido)`
                                                 : r.clasificacion
                                                     ? formatCategoria(r.clasificacion.categoria)
                                                     : "—"}
                                         </td>
-                                        <td className="px-4 py-3">{new Date(r.creadoEn).toLocaleDateString()}</td>
-                                        <td className="px-4 py-3">{r.esAnonimo ? "Anónimo" : "Autenticado"}</td>
+                                        <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString()}</td>
+                                        <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : "Autenticado"}</td>
                                         <td className="px-4 py-3">
-                                            <Button onClick={() => setSelectedReporteId(r.id)} variant="outline">Ver detalle</Button>
+                                            <Button onClick={() => setSelectedReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                                                Ver detalle
+                                            </Button>
                                         </td>
                                     </tr>
                                 ))
@@ -244,23 +292,15 @@ export function AdminReportesTable() {
                 </div>
 
                 {pagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
-                        <p className="text-sm text-slate-600">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">
+                        <p className="text-sm text-subtle">
                             Página {pagination.page} de {pagination.totalPages} · {pagination.total} reportes
                         </p>
                         <div className="flex gap-2">
-                            <Button
-                                onClick={() => goToPage(page - 1)}
-                                disabled={page <= 1}
-                                variant="outline"
-                            >
+                            <Button onClick={() => goToPage(page - 1)} disabled={page <= 1} variant="outline">
                                 Anterior
                             </Button>
-                            <Button
-                                onClick={() => goToPage(page + 1)}
-                                disabled={page >= pagination.totalPages}
-                                variant="outline"
-                            >
+                            <Button onClick={() => goToPage(page + 1)} disabled={page >= pagination.totalPages} variant="outline">
                                 Siguiente
                             </Button>
                         </div>
@@ -276,5 +316,13 @@ export function AdminReportesTable() {
                 />
             )}
         </div>
+    );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
     );
 }

@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { clasificarReporte } from "@/lib/ai/classifier";
+import { clasificarConVotos } from "@/lib/ai/classifier";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
+import { detectarPiiCombinado } from "@/lib/ai/pii-detector";
+import { detectarDoxing } from "@/lib/ai/pii-patterns";
+import { detectarKeywordsRiesgo } from "@/lib/ai/keywords-riesgo";
 import { buscarReporteSimilar } from "@/lib/ai/similarity";
+import { buscarEjemplosSimilares, type EjemploRecuperado } from "@/lib/ai/dataset-retrieval";
 import { requireEnv } from "@/lib/env";
 import { ERROR_CODES } from "@/lib/errors";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { enviarAlertaRevision, enviarAlertaScoreCritico, enviarAlertasSuscriptores } from "@/lib/email";
+import { Prisma } from "@prisma/client";
 import type { EstadoReporte } from "@prisma/client";
 
 const ESTADOS_FINALES = new Set([
@@ -58,10 +63,13 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 reporteId,
                 estado: reporte.estado,
-                clasificacion: clasif ? {
-                    categoria: clasif.categoria,
-                    confianza: clasif.confianza,
-                } : null,
+                clasificacion: clasif
+                    ? {
+                          categoria: clasif.categoria,
+                          confianza: clasif.confianza,
+                          posibleAgresorPar: clasif.posibleAgresorPar,
+                      }
+                    : null,
                 latenciaMs: 0,
             });
         }
@@ -86,6 +94,17 @@ export async function POST(request: Request) {
             INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
             VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
         `;
+
+        // Recuperar ejemplos corregidos similares para RAG (F5)
+        const paramRagTopK = await prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification.rag_top_k" } });
+        const ragTopK = parseInt(paramRagTopK?.valor || "3", 10);
+        const ejemplosRecuperados = await buscarEjemplosSimilares(vector, { topK: ragTopK });
+        const ejemplosRag: EjemploRecuperado[] = ejemplosRecuperados.map((e) => ({
+            datasetId: e.datasetId,
+            texto: e.texto,
+            categoria: e.categoria,
+            similitud: e.similitud,
+        }));
 
         // Deduplicación anónima por similitud de embeddings
         if (reporte.esAnonimo) {
@@ -115,33 +134,137 @@ export async function POST(request: Request) {
         });
         const modeloClasificacion = paramModelo?.valor || "ornith:9b";
 
-        // Clasificar (solo si no existe clasificación previa — idempotencia parcial)
+        // Parámetros de votación F4
+        const paramUmbral = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.classification.umbral_revision" },
+        });
+        const umbralRevision = parseFloat(paramUmbral?.valor || "1.0");
+
+        const paramNVotos = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.classification.n_votos" },
+        });
+        const nVotos = parseInt(paramNVotos?.valor || "5", 10);
+
+        const paramTemperatura = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.classification.temperatura_votos" },
+        });
+        const temperaturaVotos = parseFloat(paramTemperatura?.valor || "0.7");
+
+        const paramMinScore = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.classification.min_score_categoria" },
+        });
+        const minScoreCategoria = parseFloat(paramMinScore?.valor || "0.3");
+
+        const paramParallel = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.classification.ollama_num_parallel" },
+        });
+        const ollamaNumParallel = parseInt(paramParallel?.valor || process.env.OLLAMA_NUM_PARALLEL || "2", 10);
+
+        const paramModeloDesempate = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.classification.modelo_desempate" },
+        });
+        const modeloDesempate = paramModeloDesempate?.valor || undefined;
+
+        // F7: parámetros de detección de ráfagas
+        const paramRafagaN = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.rafaga.n_reportes" },
+        });
+        const rafagaN = parseInt(paramRafagaN?.valor || "3", 10);
+        const paramRafagaHoras = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.rafaga.ventana_horas" },
+        });
+        const rafagaHoras = parseInt(paramRafagaHoras?.valor || "24", 10);
+
+        // F7: detectar ráfaga de reportes contra identificador sin historial previo
+        let esRafaga = false;
+        const ahora = new Date();
+        const inicioVentana = new Date(ahora.getTime() - rafagaHoras * 60 * 60 * 1000);
+        const historialPrevio = await prisma.reporte.count({
+            where: {
+                identificador: reporte.identificador,
+                plataformaId: reporte.plataformaId,
+                eliminado: false,
+                creadoEn: { lt: inicioVentana },
+            },
+        });
+        if (historialPrevio === 0) {
+            const reportesEnVentana = await prisma.reporte.count({
+                where: {
+                    identificador: reporte.identificador,
+                    plataformaId: reporte.plataformaId,
+                    eliminado: false,
+                    creadoEn: { gte: inicioVentana, lte: ahora },
+                },
+            });
+            if (reportesEnVentana >= rafagaN) {
+                esRafaga = true;
+                await prisma.reporte.updateMany({
+                    where: {
+                        identificador: reporte.identificador,
+                        plataformaId: reporte.plataformaId,
+                        eliminado: false,
+                        creadoEn: { gte: inicioVentana, lte: ahora },
+                    },
+                    data: { esRafaga: true },
+                });
+            }
+        }
+
+        // Clasificar y detectar PII (F2: separación en paralelo)
         let clasificacion;
+        let piiResult: Awaited<ReturnType<typeof detectarPiiCombinado>> | undefined;
         const clasifExistente = await prisma.clasificacionIA.findUnique({
             where: { reporteId: reporte.id },
         });
+
+        const paramAnonModelo = await prisma.parametroSistema.findUnique({
+            where: { clave: "reportes.anonymization_model" },
+        });
+        const modeloAnonimizacion = paramAnonModelo?.valor || modeloClasificacion;
 
         if (clasifExistente) {
             clasificacion = {
                 categoria: clasifExistente.categoria,
                 confianza: clasifExistente.confianza,
+                categoriasSecundarias: Array.isArray(clasifExistente.categoriasSecundarias) ? clasifExistente.categoriasSecundarias : [],
+                posibleAgresorPar: clasifExistente.posibleAgresorPar,
                 estado: (clasifExistente.contienePii ? "REQUIERE_ANONIMIZACION" : "CLASIFICADO") as EstadoReporte,
-                contienePii: clasifExistente.contienePii,
-                piiDetectada: clasifExistente.piiDetectada,
                 metrics: { modelo: clasifExistente.modeloUsado, latenciaMs: clasifExistente.latenciaMs },
                 rawResponse: clasifExistente.rawResponse,
+                votos: Array.isArray(clasifExistente.votos) ? clasifExistente.votos : [],
             };
         } else {
-            clasificacion = await clasificarReporte(modeloClasificacion, reporte.texto);
+            const [clasifResult, piiResultParallel] = await Promise.all([
+                clasificarConVotos(modeloClasificacion, reporte.texto, {
+                    nVotos,
+                    temperatura: temperaturaVotos,
+                    minScoreCategoria,
+                    umbralRevision,
+                    ollamaNumParallel,
+                    ejemplos: ejemplosRag,
+                    modeloDesempate,
+                    keepAliveDesempate: 0,
+                }),
+                detectarPiiCombinado(modeloAnonimizacion, reporte.texto),
+            ]);
+
+            clasificacion = { ...clasifResult };
+            piiResult = piiResultParallel;
+
             await prisma.clasificacionIA.create({
                 data: {
                     reporteId: reporte.id,
                     categoria: clasificacion.categoria,
                     confianza: clasificacion.confianza,
-                    contienePii: clasificacion.contienePii,
-                    piiDetectada: clasificacion.piiDetectada,
+                    contienePii: piiResult.contienePii,
+                    piiDetectada: piiResult.piiDetectada,
+                    categoriasSecundarias: clasificacion.categoriasSecundarias as unknown as Prisma.InputJsonValue,
+                    votos: clasificacion.votos as unknown as Prisma.InputJsonValue,
+                    posibleAgresorPar: clasificacion.posibleAgresorPar,
+                    usoCascada: clasificacion.usoCascada,
+                    modeloCascada: clasificacion.modeloCascada,
                     modeloUsado: clasificacion.metrics.modelo,
-                    latenciaMs: clasificacion.metrics.latenciaMs,
+                    latenciaMs: clasificacion.metrics.latenciaMs + piiResult.metrics.latenciaMs,
                     promptTokens: clasificacion.metrics.promptTokens,
                     responseTokens: clasificacion.metrics.responseTokens,
                     rawResponse: clasificacion.rawResponse,
@@ -152,9 +275,9 @@ export async function POST(request: Request) {
         // Anonimización automática de PII: preservar original y reemplazar texto
         let estadoFinal: EstadoReporte = clasificacion.estado;
 
-        if (clasificacion.contienePii) {
+        if (piiResult?.contienePii) {
             const textoAAnonimizar = reporte.textoOriginal ?? reporte.texto;
-            const anonimizacion = await anonimizarTexto(modeloClasificacion, textoAAnonimizar);
+            const anonimizacion = await anonimizarTexto(modeloAnonimizacion, textoAAnonimizar, piiResult.piiDetectada);
 
             await prisma.reporte.update({
                 where: { id: reporteId },
@@ -173,10 +296,47 @@ export async function POST(request: Request) {
             estadoFinal = "CLASIFICADO";
         }
 
+        // Guarda de escalamiento DOXING (R3): la regla determinística nunca reclasifica,
+        // solo fuerza revisión manual cuando hay señal de doxing que el LLM no reflejó.
+        let prioridadAlta = false;
+        let keywordsDetectadas: string[] = [];
+        const doxing = detectarDoxing(reporte.texto);
+        if (doxing.esDoxing && clasificacion.categoria !== "DOXING") {
+            estadoFinal = "REVISION_MANUAL";
+            prioridadAlta = true;
+            keywordsDetectadas = doxing.fragmentos.length > 0 ? doxing.fragmentos : ["doxing"];
+        }
+
+        // F7: guarda de keywords críticas. Nunca reclasifica; fuerza revisión manual
+        // cuando el modelo clasificó como OTRO pero hay señales de riesgo graves.
+        const keywordsRiesgo = detectarKeywordsRiesgo(reporte.texto);
+        if (
+            keywordsRiesgo.tieneMatch &&
+            ((estadoFinal === "CLASIFICADO" && clasificacion.categoria === "OTRO") ||
+                estadoFinal === "REVISION_MANUAL")
+        ) {
+            prioridadAlta = true;
+            keywordsDetectadas = Array.from(new Set([...keywordsDetectadas, ...keywordsRiesgo.keywords]));
+            if (estadoFinal === "CLASIFICADO" && clasificacion.categoria === "OTRO") {
+                estadoFinal = "REVISION_MANUAL";
+            }
+        }
+
+        // F7: ráfaga fuerza revisión manual con prioridad alta
+        if (esRafaga) {
+            estadoFinal = "REVISION_MANUAL";
+            prioridadAlta = true;
+        }
+
         // Actualizar estado del reporte a resultado final
         await prisma.reporte.update({
             where: { id: reporteId },
-            data: { estado: estadoFinal },
+            data: {
+                estado: estadoFinal,
+                prioridadAlta,
+                keywordsDetectadas,
+                esRafaga,
+            },
         });
 
         // Actualizar IdentificadorReportado (solo si está clasificado o corregido)
@@ -209,6 +369,7 @@ export async function POST(request: Request) {
                 numeroSeguimiento: reporte.numeroSeguimiento,
                 identificador: reporte.identificador,
                 estado: estadoFinal,
+                prioridadAlta,
             }).catch((err) => console.error("[ALERTA] Error enviando alerta de revisión", err));
         }
 
@@ -218,6 +379,9 @@ export async function POST(request: Request) {
             clasificacion: {
                 categoria: clasificacion.categoria,
                 confianza: clasificacion.confianza,
+                categoriasSecundarias: clasificacion.categoriasSecundarias,
+                posibleAgresorPar: clasificacion.posibleAgresorPar,
+                votos: clasificacion.votos,
             },
             latenciaMs: clasificacion.metrics.latenciaMs,
         });
@@ -250,11 +414,10 @@ export async function POST(request: Request) {
             }).catch((err) => console.error("[ALERTA] Error enviando alerta de revisión", err));
         }
 
-        console.error("[PROCESAR] Error procesando reporte", { reporteId, errorType: error instanceof Error ? error.name : "Unknown" });
+        console.error("[PROCESAR] Error procesando reporte", { reporteId, errorType: error instanceof Error ? error.name : "Unknown", errorMessage: errMsg });
         return NextResponse.json(
-            { error: { message: errMsg, code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
+            { error: { message: "Error procesando el reporte", code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
             { status: 500 }
         );
     }
 }
-

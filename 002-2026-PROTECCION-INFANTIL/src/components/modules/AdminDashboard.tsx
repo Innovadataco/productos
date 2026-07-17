@@ -19,6 +19,13 @@ import { Sparkline } from "./Sparkline";
     porPlataforma: { plataforma: string; count: number }[];
     porCiudad: { ciudad: string; count: number }[];
     tendencia: { fecha: string; count: number }[];
+    precisionPorCategoria: {
+        categoria: string;
+        confirmadas: number;
+        corregidas: number;
+        totalRevisados: number;
+        precisionObservada: number | null;
+    }[];
     worker: {
         conteosPorEstado: Record<string, number>;
         enCola: number;
@@ -39,6 +46,10 @@ const CATEGORIA_LABELS: Record<string, string> = {
     SUPLANTACION_IDENTIDAD: "Suplantación de identidad",
     SOLICITUD_ENCUENTRO: "Solicitud de encuentro",
     COMPARTIMIENTO_SEXUAL: "Compartimiento sexual",
+    EXTORSION: "Extorsión",
+    CONTENIDO_GENERADO_IA: "Contenido generado por IA",
+    DIFUSION_NO_CONSENTIDA: "Difusión no consentida",
+    DOXING: "Doxing",
     OTRO: "Otro",
 };
 
@@ -84,7 +95,7 @@ export function AdminDashboard() {
 
     return (
         <section className="space-y-6" aria-labelledby="dashboard-title">
-            <h1 id="dashboard-title" className="text-2xl font-bold text-slate-900">Dashboard</h1>
+            <h1 id="dashboard-title" className="text-2xl font-bold text-body">Dashboard</h1>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <MetricCard label="Reportes registrados" value={data.totales.reportes} />
@@ -132,9 +143,11 @@ export function AdminDashboard() {
                 />
             </ChartCard>
 
+            <PrecisionTable precisionPorCategoria={data.precisionPorCategoria} />
+
             {data.worker && (
                 <section className="space-y-6" aria-labelledby="worker-title">
-                    <h2 id="worker-title" className="text-xl font-bold text-slate-900">Cola de procesamiento</h2>
+                    <h2 id="worker-title" className="text-xl font-bold text-body">Cola de procesamiento</h2>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <MetricCard label="En cola" value={data.worker.enCola} />
@@ -158,8 +171,8 @@ export function AdminDashboard() {
 
                         <ChartCard title="Tasa de éxito">
                             <div className="flex flex-col items-center justify-center py-8">
-                                <p className="text-5xl font-bold text-primary-600">{data.worker.tasaExito}%</p>
-                                <p className="mt-2 text-sm text-slate-500">{data.worker.completados} éxitos / {data.worker.completados + data.worker.fallidos} terminados</p>
+                                <p className="text-5xl font-bold text-accent">{data.worker.tasaExito}%</p>
+                                <p className="mt-2 text-sm text-muted">{data.worker.completados} éxitos / {data.worker.completados + data.worker.fallidos} terminados</p>
                             </div>
                         </ChartCard>
                     </div>
@@ -171,18 +184,83 @@ export function AdminDashboard() {
 
 function MetricCard({ label, value }: { label: string; value: number }) {
     return (
-        <article className="rounded-2xl border border-white/20 bg-white/70 p-6 backdrop-blur-lg transition hover:shadow-md motion-reduce:transition-none">
-            <p className="text-sm font-medium text-slate-500">{label}</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+        <article className="glass rounded-2xl p-6 transition hover:shadow-md motion-reduce:transition-none">
+            <p className="text-sm font-medium text-muted">{label}</p>
+            <p className="mt-2 text-3xl font-bold text-body">{value}</p>
         </article>
     );
 }
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <article className="rounded-2xl border border-white/20 bg-white/70 p-6 backdrop-blur-lg">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">{title}</h2>
+        <article className="glass rounded-2xl p-6">
+            <h2 className="mb-4 text-lg font-semibold text-body">{title}</h2>
             {children}
         </article>
+    );
+}
+
+function precisionColorClass(value: number): string {
+    if (value < 0.7) return "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300";
+    if (value < 0.9) return "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300";
+    return "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300";
+}
+
+function PrecisionTable({
+    precisionPorCategoria,
+}: {
+    precisionPorCategoria: StatsData["precisionPorCategoria"];
+}) {
+    return (
+        <ChartCard title="Precisión observada por categoría (solo casos revisados)">
+            <p className="mb-4 text-sm text-muted">
+                Esta métrica solo incluye reportes revisados por un admin (confirmados + corregidas).
+                No estima la precisión global del clasificador.
+            </p>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+                        <tr>
+                            <th className="px-4 py-3 font-medium">Categoría</th>
+                            <th className="px-4 py-3 font-medium">Confirmadas</th>
+                            <th className="px-4 py-3 font-medium">Corregidas</th>
+                            <th className="px-4 py-3 font-medium">Total revisados</th>
+                            <th className="px-4 py-3 font-medium">Precisión observada</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {precisionPorCategoria.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="px-4 py-6 text-center text-subtle">
+                                    Aún no hay correcciones ni confirmaciones registradas.
+                                </td>
+                            </tr>
+                        ) : (
+                            precisionPorCategoria.map((row) => (
+                                <tr key={row.categoria}>
+                                    <td className="px-4 py-3 text-body">{formatCategoria(row.categoria)}</td>
+                                    <td className="px-4 py-3 text-body">{row.confirmadas}</td>
+                                    <td className="px-4 py-3 text-body">{row.corregidas}</td>
+                                    <td className="px-4 py-3 text-body">{row.totalRevisados}</td>
+                                    <td className="px-4 py-3">
+                                        {row.precisionObservada === null ? (
+                                            <span className="text-subtle">Insuficientes datos (&lt; 5)</span>
+                                        ) : (
+                                            <span
+                                                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${precisionColorClass(
+                                                    row.precisionObservada
+                                                )}`}
+                                            >
+                                                {(row.precisionObservada * 100).toFixed(1)}%
+                                            </span>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </ChartCard>
     );
 }

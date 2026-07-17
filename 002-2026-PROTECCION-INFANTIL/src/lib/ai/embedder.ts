@@ -1,7 +1,8 @@
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+import { getOllamaBaseUrl } from "./ollama-config";
 
 export async function generarEmbedding(modelo: string, texto: string): Promise<number[]> {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
+    const ollamaBaseUrl = await getOllamaBaseUrl();
+    const res = await fetch(`${ollamaBaseUrl}/api/embeddings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: modelo, prompt: texto }),

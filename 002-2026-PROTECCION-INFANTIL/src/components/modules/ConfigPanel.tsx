@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { Button } from "@/components/ui/Button";
 
 type ParamType = "STRING" | "INTEGER" | "FLOAT" | "BOOLEAN" | "JSON" | "STRING_ARRAY";
 
@@ -16,54 +17,14 @@ type Param = {
 };
 
 const SECTIONS: { key: string; label: string; description: string; prefixes: string[] }[] = [
-    {
-        key: "scoring",
-        label: "Modelo de Score (F1)",
-        description: "Pesos y umbrales que calculan el score de riesgo 0-100. Los cambios se aplican inmediatamente en la próxima consulta.",
-        prefixes: ["scoring."],
-    },
-    {
-        key: "visibility",
-        label: "Visibilidad Pública",
-        description: "Reglas para que un identificador aparezca en la consulta pública: cantidad mínima de reportes y porcentaje autenticados.",
-        prefixes: ["visibility."],
-    },
-    {
-        key: "alerts",
-        label: "Alertas por Email",
-        description: "Activar/desactivar notificaciones a administradores y suscriptores.",
-        prefixes: ["alerts."],
-    },
-    {
-        key: "ratelimit",
-        label: "Rate Limiting",
-        description: "Límites de peticiones por ventana de tiempo para reportes, login, registro y consultas.",
-        prefixes: ["ratelimit."],
-    },
-    {
-        key: "reportes",
-        label: "Procesamiento de Reportes",
-        description: "Modelos de IA, umbrales de duplicados y parámetros del worker.",
-        prefixes: ["reportes."],
-    },
-    {
-        key: "security",
-        label: "Seguridad",
-        description: "Intentos de login, duración de bloqueo, longitud de contraseña y otros parámetros de seguridad.",
-        prefixes: ["security."],
-    },
-    {
-        key: "system",
-        label: "Sistema",
-        description: "Parámetros generales de la aplicación.",
-        prefixes: ["system."],
-    },
-    {
-        key: "other",
-        label: "Otros",
-        description: "Parámetros adicionales no agrupados.",
-        prefixes: [],
-    },
+    { key: "scoring", label: "Modelo de Score (F1)", description: "Pesos y umbrales que calculan el score de riesgo 0-100.", prefixes: ["scoring."] },
+    { key: "visibility", label: "Visibilidad Pública", description: "Reglas para que un identificador aparezca en la consulta pública.", prefixes: ["visibility."] },
+    { key: "alerts", label: "Alertas por Email", description: "Activar/desactivar notificaciones a administradores y suscriptores.", prefixes: ["alerts."] },
+    { key: "ratelimit", label: "Rate Limiting", description: "Límites de peticiones por ventana de tiempo.", prefixes: ["ratelimit."] },
+    { key: "reportes", label: "Procesamiento de Reportes", description: "Modelos de IA, umbrales de duplicados y parámetros del worker.", prefixes: ["reportes."] },
+    { key: "security", label: "Seguridad", description: "Intentos de login, duración de bloqueo, longitud de contraseña, etc.", prefixes: ["security."] },
+    { key: "system", label: "Sistema", description: "Parámetros generales de la aplicación.", prefixes: ["system."] },
+    { key: "other", label: "Otros", description: "Parámetros adicionales no agrupados.", prefixes: [] },
 ];
 
 function sectionForParam(param: Param) {
@@ -93,18 +54,40 @@ export default function ConfigPanel() {
     const [editValues, setEditValues] = useState<Record<string, string>>({});
     const [saving, setSaving] = useState<Record<string, boolean>>({});
     const [messages, setMessages] = useState<Record<string, { type: "success" | "error"; text: string } | null>>({});
+    const [pendingConfig, setPendingConfig] = useState<Record<string, string> | null>(null);
+    const [timeline, setTimeline] = useState<Array<Record<string, unknown>>>([]);
 
     useEffect(() => {
-        fetch("/api/config/parametros", { credentials: "include" })
-            .then((r) => r.json())
-            .then((data) => {
+        const pending = localStorage.getItem("experiment_pending_config");
+        if (pending) {
+            try {
+                setPendingConfig(JSON.parse(pending));
+            } catch {
+                localStorage.removeItem("experiment_pending_config");
+            }
+        }
+
+        Promise.all([
+            fetch("/api/config/parametros", { credentials: "include" }).then((r) => r.json()),
+            fetch("/api/admin/audit-logs?accion=PARAM_UPDATE&page=1&pageSize=50", { credentials: "include" }).then((r) => r.json()),
+        ])
+            .then(([data, auditData]) => {
                 const items: Param[] = data.items || [];
                 setParams(items);
                 const initial: Record<string, string> = {};
                 items.forEach((p: Param) => {
                     initial[p.clave] = p.valor;
                 });
+                if (pending) {
+                    try {
+                        const parsed = JSON.parse(pending) as Record<string, string>;
+                        Object.assign(initial, parsed);
+                    } catch {
+                        // ignore
+                    }
+                }
                 setEditValues(initial);
+                setTimeline(auditData.items || []);
                 setLoading(false);
             })
             .catch(() => {
@@ -112,6 +95,11 @@ export default function ConfigPanel() {
                 setLoading(false);
             });
     }, []);
+
+    function dismissPendingConfig() {
+        localStorage.removeItem("experiment_pending_config");
+        setPendingConfig(null);
+    }
 
     const grouped = useMemo(() => {
         const map: Record<string, Param[]> = {};
@@ -168,7 +156,6 @@ export default function ConfigPanel() {
             return;
         }
 
-        // Validar todos antes de enviar
         for (const p of updates) {
             const error = validateValue(p, editValues[p.clave]);
             if (error) {
@@ -230,8 +217,8 @@ export default function ConfigPanel() {
     if (loading) {
         return (
             <div className="flex items-center justify-center p-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
-                <span className="ml-3 text-slate-600">Cargando parámetros...</span>
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
+                <span className="ml-3 text-muted">Cargando parámetros...</span>
             </div>
         );
     }
@@ -241,10 +228,23 @@ export default function ConfigPanel() {
             {messages.global && (
                 <div
                     className={`rounded-xl p-4 text-sm ${
-                        messages.global.type === "error" ? "bg-red-50 text-red-800" : "bg-green-50 text-green-800"
+                        messages.global.type === "error"
+                            ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
+                            : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
                     }`}
                 >
                     {messages.global.text}
+                </div>
+            )}
+
+            {pendingConfig && (
+                <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
+                    <div className="flex items-center justify-between">
+                        <p>Configuración precargada desde un experimento. Revisá los valores y guardá para activarla.</p>
+                        <Button variant="ghost" className="text-xs" onClick={dismissPendingConfig}>
+                            Descartar
+                        </Button>
+                    </div>
                 </div>
             )}
 
@@ -253,88 +253,91 @@ export default function ConfigPanel() {
                 if (items.length === 0) return null;
 
                 return (
-                    <section key={section.key} className="rounded-2xl bg-white p-6 shadow-sm">
+                    <section key={section.key} className="glass rounded-2xl p-5 sm:p-6">
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">{section.label}</h2>
-                                <p className="text-sm text-slate-500">{section.description}</p>
+                                <h2 className="text-lg font-semibold text-body">{section.label}</h2>
+                                <p className="text-sm text-muted">{section.description}</p>
                             </div>
-                            <button
+                            <Button
                                 onClick={() => saveSection(section.key)}
+                                isLoading={saving[section.key]}
                                 disabled={saving[section.key]}
-                                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
                             >
-                                {saving[section.key] ? "Guardando..." : "Guardar cambios de esta sección"}
-                            </button>
+                                Guardar cambios
+                            </Button>
                         </div>
 
                         {messages[section.key] && (
                             <div
                                 className={`mb-4 rounded-lg px-4 py-2 text-sm ${
                                     messages[section.key]!.type === "error"
-                                        ? "bg-red-50 text-red-800"
-                                        : "bg-green-50 text-green-800"
+                                        ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
+                                        : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
                                 }`}
                             >
                                 {messages[section.key]!.text}
                             </div>
                         )}
 
-                        <div className="divide-y divide-slate-100">
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
                             {items.map((p) => (
                                 <div key={p.id} className="py-4 first:pt-0 last:pb-0">
                                     <div className="grid gap-4 sm:grid-cols-[1fr,200px,120px]">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-800">
-                                                {p.clave}
-                                            </label>
-                                            <p className="mt-0.5 text-xs text-slate-500">
-                                                {p.descripcion || "Sin descripción"}
-                                            </p>
-                                            <div className="mt-1 flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-slate-400">
+                                            <label className="block text-sm font-medium text-body">{p.clave}</label>
+                                            <p className="mt-0.5 text-xs text-muted">{p.descripcion || "Sin descripción"}</p>
+                                            <div className="mt-1 flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-subtle">
                                                 <span>{p.tipo}</span>
                                                 <span>•</span>
                                                 <span>{p.categoria}</span>
-                                                {p.esPublico && <span className="text-primary-600">Público</span>}
+                                                {p.esPublico && <span className="text-accent">Público</span>}
                                             </div>
                                         </div>
 
                                         <div>
                                             {p.tipo === "BOOLEAN" ? (
-                                                <select
-                                                    value={editValues[p.clave] ?? p.valor}
-                                                    onChange={(e) => updateValue(p.clave, e.target.value)}
-                                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                                                >
-                                                    <option value="true">true</option>
-                                                    <option value="false">false</option>
-                                                </select>
+                                                <div className="relative">
+                                                    <select
+                                                        value={editValues[p.clave] ?? p.valor}
+                                                        onChange={(e) => updateValue(p.clave, e.target.value)}
+                                                        className="w-full rounded-xl px-3 py-2 text-sm text-body outline-none transition glass-input ring-accent-input appearance-none pr-10"
+                                                    >
+                                                        <option value="true">true</option>
+                                                        <option value="false">false</option>
+                                                    </select>
+                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-subtle">
+                                                        <ChevronIcon className="h-4 w-4" />
+                                                    </span>
+                                                </div>
                                             ) : p.tipo === "INTEGER" || p.tipo === "FLOAT" ? (
                                                 <input
                                                     type="number"
                                                     step={p.tipo === "FLOAT" ? "0.01" : "1"}
                                                     value={editValues[p.clave] ?? p.valor}
                                                     onChange={(e) => updateValue(p.clave, e.target.value)}
-                                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                                    className="w-full rounded-xl px-3 py-2 text-sm text-body outline-none transition glass-input ring-accent-input"
                                                 />
                                             ) : (
                                                 <input
                                                     type="text"
                                                     value={editValues[p.clave] ?? p.valor}
                                                     onChange={(e) => updateValue(p.clave, e.target.value)}
-                                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                                    className="w-full rounded-xl px-3 py-2 text-sm text-body outline-none transition glass-input ring-accent-input"
                                                 />
                                             )}
                                         </div>
 
                                         <div className="flex items-start gap-2">
-                                            <button
+                                            <Button
                                                 onClick={() => saveParam(p.clave)}
+                                                isLoading={saving[p.clave]}
                                                 disabled={saving[p.clave] || editValues[p.clave] === p.valor}
-                                                className="w-full rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-40"
+                                                variant="outline"
+                                                className="w-full py-2 px-3 text-xs"
                                             >
-                                                {saving[p.clave] ? "..." : "Guardar"}
-                                            </button>
+                                                Guardar
+                                            </Button>
                                         </div>
                                     </div>
 
@@ -342,8 +345,8 @@ export default function ConfigPanel() {
                                         <div
                                             className={`mt-2 rounded-lg px-3 py-1.5 text-xs ${
                                                 messages[p.clave]!.type === "error"
-                                                    ? "bg-red-50 text-red-700"
-                                                    : "bg-green-50 text-green-700"
+                                                    ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300"
+                                                    : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
                                             }`}
                                         >
                                             {messages[p.clave]!.text}
@@ -355,6 +358,42 @@ export default function ConfigPanel() {
                     </section>
                 );
             })}
+
+            <section className="glass rounded-2xl p-5 sm:p-6">
+                <h2 className="text-lg font-semibold text-body">Timeline de cambios de producción</h2>
+                <p className="text-sm text-muted">Solo lectura. Registro de cambios en parámetros de configuración.</p>
+                {timeline.length === 0 ? (
+                    <p className="mt-4 text-sm text-muted">Sin cambios registrados.</p>
+                ) : (
+                    <div className="mt-4 space-y-3 max-h-96 overflow-auto">
+                        {timeline.map((log: Record<string, unknown>) => (
+                            <div key={String(log.id)} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-medium text-body">{String(log.accion)}</span>
+                                    <span className="text-xs text-muted">{new Date(String(log.creadoEn)).toLocaleString()}</span>
+                                </div>
+                                <p className="text-xs text-muted">
+                                    {((log.usuario as Record<string, string>)?.email) || "sistema"} · {String(log.tipoRecurso)}
+                                </p>
+                                {Boolean(log.valorAnterior) && Boolean(log.valorNuevo) && (
+                                    <div className="mt-2 grid gap-1 text-xs">
+                                        <p className="text-red-700 dark:text-red-300">- {String(log.valorAnterior).slice(0, 200)}</p>
+                                        <p className="text-green-700 dark:text-green-300">+ {String(log.valorNuevo).slice(0, 200)}</p>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
         </div>
+    );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
     );
 }

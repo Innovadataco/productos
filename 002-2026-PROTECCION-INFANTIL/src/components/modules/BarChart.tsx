@@ -7,7 +7,7 @@ export function BarChart({
     data: { label: string; value: number }[];
     ariaLabel?: string;
 }) {
-    if (data.length === 0) return <p className="text-sm text-slate-500">Sin datos</p>;
+    if (data.length === 0) return <p className="text-sm text-muted">Sin datos</p>;
 
     const max = Math.max(...data.map((d) => d.value), 1);
     const chartHeight = 220;
@@ -35,7 +35,7 @@ export function BarChart({
                             x={leftMargin - 8}
                             y={y + barHeight / 2 + 4}
                             textAnchor="end"
-                            className="fill-slate-600 text-[10px]"
+                            className="fill-slate-600 dark:fill-slate-300 text-[10px]"
                         >
                             {d.label.length > 18 ? `${d.label.slice(0, 18)}...` : d.label}
                         </text>
@@ -44,16 +44,16 @@ export function BarChart({
                             y={y}
                             width={barWidth}
                             height={barHeight}
-                            fill="#3b6bff"
+                            fill="currentColor"
                             rx={4}
-                            className="transition-all duration-300 hover:fill-primary-700"
+                            className="text-sky-500 dark:text-cyan-400 transition-all duration-300 hover:text-sky-600 dark:hover:text-cyan-300"
                         >
                             <title>{`${d.label}: ${d.value}`}</title>
                         </rect>
                         <text
                             x={leftMargin + barWidth + 6}
                             y={y + barHeight / 2 + 4}
-                            className="fill-slate-700 text-[10px] font-medium"
+                            className="fill-slate-700 dark:fill-slate-200 text-[10px] font-medium"
                         >
                             {d.value}
                         </text>

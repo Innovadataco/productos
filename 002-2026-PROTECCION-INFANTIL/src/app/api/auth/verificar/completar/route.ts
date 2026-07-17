@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, createToken } from "@/lib/auth";
-import { verifyToken } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { hashPassword, createToken, verifyToken, setSessionCookie } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 export async function POST(request: Request) {
@@ -54,14 +52,7 @@ export async function POST(request: Request) {
         });
 
         const sessionToken = await createToken({ sub: user.id, rol: user.rol });
-        const cookieStore = await cookies();
-        cookieStore.set("token", sessionToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 60 * 60 * 24,
-            path: "/",
-        });
+        await setSessionCookie(request, sessionToken);
 
         return NextResponse.json(
             {

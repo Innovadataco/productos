@@ -1,29 +1,38 @@
-import { useId } from "react";
+import { useId, forwardRef } from "react";
 
-export function Input({
-    label,
-    error,
-    id: externalId,
-    ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string }) {
-    const generatedId = useId();
-    const id = externalId || generatedId;
+type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+    label?: string;
+    error?: string;
+};
 
-    return (
-        <div className="w-full">
-            {label && (
-                <label htmlFor={id} className="block text-sm font-medium text-slate-700 mb-1.5">
-                    {label}
-                </label>
-            )}
-            <input
-                id={id}
-                className="w-full rounded-xl border border-slate-200 bg-white/60 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-200"
-                aria-invalid={error ? "true" : undefined}
-                aria-describedby={error ? `${id}-error` : undefined}
-                {...props}
-            />
-            {error && <p id={`${id}-error`} className="mt-1.5 text-sm text-red-600">{error}</p>}
-        </div>
-    );
-}
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+    ({ label, error, id: externalId, className = "", ...props }, ref) => {
+        const generatedId = useId();
+        const id = externalId || generatedId;
+
+        return (
+            <div className="w-full">
+                {label && (
+                    <label htmlFor={id} className="block text-sm font-medium text-body mb-1.5">
+                        {label}
+                    </label>
+                )}
+                <input
+                    ref={ref}
+                    id={id}
+                    className={`w-full rounded-xl px-4 py-3 text-sm text-body placeholder:text-subtle outline-none transition glass-input ring-accent-input ${className}`}
+                    aria-invalid={error ? "true" : undefined}
+                    aria-describedby={error ? `${id}-error` : undefined}
+                    {...props}
+                />
+                {error && (
+                    <p id={`${id}-error`} className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                        {error}
+                    </p>
+                )}
+            </div>
+        );
+    }
+);
+
+Input.displayName = "Input";

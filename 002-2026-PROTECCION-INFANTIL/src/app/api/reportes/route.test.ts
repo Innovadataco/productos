@@ -105,6 +105,21 @@ describe("POST /api/reportes", () => {
     });
 
     it("aplica rate limiting a reportes anónimos", async () => {
+        if (process.env.DISABLE_RATE_LIMIT === "true") {
+            // Con rate limiting deshabilitado, el sexto reporte también se acepta
+            const ipHeader = { "x-forwarded-for": "1.2.3.4" };
+            for (let i = 0; i < 6; i++) {
+                const req = new Request("http://localhost:5005/api/reportes", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...ipHeader },
+                    body: JSON.stringify({ ...reporteValido, identificador: `+57300${i}00000` }),
+                });
+                const res = await POST(req);
+                expect(res.status).toBe(201);
+            }
+            return;
+        }
+
         const ipHeader = { "x-forwarded-for": "1.2.3.4" };
         for (let i = 0; i < 5; i++) {
             const req = new Request("http://localhost:5005/api/reportes", {
@@ -146,5 +161,87 @@ describe("POST /api/reportes", () => {
         });
         expect(agregado?.totalReportes).toBe(1);
         expect(agregado?.reportesAnonimos).toBe(1);
+    });
+
+    it("marca REVISION_MANUAL al superar rate limit por identificador", async () => {
+        if (process.env.DISABLE_RATE_LIMIT === "true") return;
+
+        const identificador = "+57300IDENTIFICADOR";
+        for (let i = 0; i < 10; i++) {
+            const req = new Request("http://localhost:5005/api/reportes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-forwarded-for": `10.0.${i}.1` },
+                body: JSON.stringify({ ...reporteValido, identificador }),
+            });
+            const res = await POST(req);
+            expect(res.status).toBe(201);
+            const body = await res.json();
+            expect(body.reporte.estado).toBe("PENDIENTE");
+        }
+
+        const req11 = new Request("http://localhost:5005/api/reportes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-forwarded-for": "10.0.99.1" },
+            body: JSON.stringify({ ...reporteValido, identificador }),
+        });
+        const res11 = await POST(req11);
+        expect(res11.status).toBe(201);
+        const body11 = await res11.json();
+        expect(body11.reporte.estado).toBe("REVISION_MANUAL");
+    });
+
+    it("marca POSIBLE_SPAM al superar umbral de spam por identificador", async () => {
+        if (process.env.DISABLE_RATE_LIMIT === "true") return;
+
+        const identificador = "+57300SPAMTHRESH";
+        for (let i = 0; i < 21; i++) {
+            const req = new Request("http://localhost:5005/api/reportes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-forwarded-for": `10.1.${i}.1` },
+                body: JSON.stringify({ ...reporteValido, identificador }),
+            });
+            await POST(req);
+        }
+
+        const req22 = new Request("http://localhost:5005/api/reportes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-forwarded-for": "10.1.99.1" },
+            body: JSON.stringify({ ...reporteValido, identificador }),
+        });
+        const res22 = await POST(req22);
+        expect(res22.status).toBe(201);
+        const body22 = await res22.json();
+        expect(body22.reporte.estado).toBe("POSIBLE_SPAM");
+    });
+
+    it("rechaza reportes que superan rate limit por fingerprint", async () => {
+        if (process.env.DISABLE_RATE_LIMIT === "true") return;
+
+        // Mismo fingerprint = mismo user-agent, accept-language e IP truncada (/24).
+        const headers = {
+            "Content-Type": "application/json",
+            "x-forwarded-for": "10.2.0.1",
+            "user-agent": "TestAgent/1.0",
+            "accept-language": "es-CO",
+        };
+        for (let i = 0; i < 5; i++) {
+            const req = new Request("http://localhost:5005/api/reportes", {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ ...reporteValido, identificador: `+57300FP${i}` }),
+            });
+            const res = await POST(req);
+            expect(res.status).toBe(201);
+        }
+
+        const req6 = new Request("http://localhost:5005/api/reportes", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ ...reporteValido, identificador: "+57300FP5" }),
+        });
+        const res6 = await POST(req6);
+        expect(res6.status).toBe(429);
+        const body = await res6.json();
+        expect(body.error.code).toBe("RATE_LIMITED");
     });
 });

@@ -1,0 +1,173 @@
+{
+  "description": "Fixture de evaluación de PII de NNA. Cada caso indica si contiene PII de menor/tercero inocente y la categoría esperada para evaluar recall de OTRO.",
+  "examples": [
+    {
+      "text": "Mi hijo Juan estudia en el colegio San José y vive en calle 123 # 45-67.",
+      "contienePii": true,
+      "piiEsperada": ["Juan", "colegio San José", "calle 123 # 45-67"],
+      "categoriaEsperada": "OTRO",
+      "ruido": false
+    },
+    {
+      "text": "Mi hija María del salón 5B me dijo que un usuario la contactó por Instagram.",
+      "contienePii": true,
+      "piiEsperada": ["María", "salón 5B"],
+      "categoriaEsperada": "CONTACTO_INSISTENTE",
+      "ruido": false
+    },
+    {
+      "text": "El menor vive en carrera 45 # 12-34 y su celular es 3001234567.",
+      "contienePii": true,
+      "piiEsperada": ["carrera 45 # 12-34", "3001234567"],
+      "categoriaEsperada": "OTRO",
+      "ruido": false
+    },
+    {
+      "text": "La profesora Marta le pidió a mi sobrina que le enviara fotos.",
+      "contienePii": true,
+      "piiEsperada": ["Marta"],
+      "categoriaEsperada": "SOLICITUD_MATERIAL",
+      "ruido": false
+    },
+    {
+      "text": "Mi nieto Pedro estudia en el instituto La Salle, Avenida 68 # 24-10.",
+      "contienePii": true,
+      "piiEsperada": ["Pedro", "instituto La Salle", "Avenida 68 # 24-10"],
+      "categoriaEsperada": "OTRO",
+      "ruido": false
+    },
+    {
+      "text": "El niño Andrés compartió su dirección: diagonal 23 # 4-56.",
+      "contienePii": true,
+      "piiEsperada": ["Andrés", "diagonal 23 # 4-56"],
+      "categoriaEsperada": "OTRO",
+      "ruido": false
+    },
+    {
+      "text": "Mi prima Luisa recibe mensajes en su número 3009876543.",
+      "contienePii": true,
+      "piiEsperada": ["Luisa", "3009876543"],
+      "categoriaEsperada": "CONTACTO_INSISTENTE",
+      "ruido": false
+    },
+    {
+      "text": "La menor vive en transversal 78 # 9-10, cerca del colegio Santa Ana.",
+      "contienePii": true,
+      "piiEsperada": ["transversal 78 # 9-10", "colegio Santa Ana"],
+      "categoriaEsperada": "OTRO",
+      "ruido": false
+    },
+    {
+      "text": "Mi hermano Carlos está en grado 10B del liceo Nacional.",
+      "contienePii": true,
+      "piiEsperada": ["Carlos", "grado 10B", "liceo Nacional"],
+      "categoriaEsperada": "OTRO",
+      "ruido": false
+    },
+    {
+      "text": "El usuario @depredador_22 con número 3007654321 escribe todos los días a mi hija.",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "CONTACTO_INSISTENTE",
+      "ruido": false
+    },
+    {
+      "text": "El señor Carlos Pérez me contactó por WhatsApp ofreciendo regalos.",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "OFRECIMIENTO_REGALOS",
+      "ruido": false
+    },
+    {
+      "text": "Me escribió, su número es 3001112233, y me pidió fotos.",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "SOLICITUD_MATERIAL",
+      "ruido": false
+    },
+    {
+      "text": "El adulto José Martínez envió material sexual a mi sobrina.",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+      "ruido": false
+    },
+    {
+      "text": "Me contacta un tipo desde el número 3004445566, quiere quedar en el parque.",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "SOLICITUD_ENCUENTRO",
+      "ruido": false
+    },
+    {
+      "text": "mi ija maria del cole sanhose vive en la clle 12 # 3-45",
+      "contienePii": true,
+      "piiEsperada": ["maria", "cole sanhose", "clle 12 # 3-45"],
+      "categoriaEsperada": "OTRO",
+      "ruido": true
+    },
+    {
+      "text": "el niño juan estudia en el colegio san jose, direccion cra 7 # 45-67",
+      "contienePii": true,
+      "piiEsperada": ["juan", "colegio san jose", "cra 7 # 45-67"],
+      "categoriaEsperada": "OTRO",
+      "ruido": true
+    },
+    {
+      "text": "hablamos de sexo y me dijo cosas raras por chat",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "OTRO",
+      "ruido": true
+    },
+    {
+      "text": "me mostró un video de otra persona, no sé quién es",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "OTRO",
+      "ruido": true
+    },
+    {
+      "text": "mi mamá lo vio y me avisó que un señor raro me esperaba",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "OTRO",
+      "ruido": true
+    },
+    {
+      "text": "la profesora dijo que mi hija debe enviarle fotos por WhatsApp",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "SOLICITUD_MATERIAL",
+      "ruido": true
+    },
+    {
+      "text": "Mi hijo tiene 12 años y su celular es 3005558877.",
+      "contienePii": true,
+      "piiEsperada": ["3005558877"],
+      "categoriaEsperada": "OTRO",
+      "ruido": false
+    },
+    {
+      "text": "El número de mi hija es 3006669988, un tipo le escribe constantemente.",
+      "contienePii": true,
+      "piiEsperada": ["3006669988"],
+      "categoriaEsperada": "CONTACTO_INSISTENTE",
+      "ruido": false
+    },
+    {
+      "text": "Vive en la calle principal cerca del colegio, no sé el nombre exacto.",
+      "contienePii": false,
+      "piiEsperada": [],
+      "categoriaEsperada": "OTRO",
+      "ruido": true
+    },
+    {
+      "text": "mi hijo juan y su amigo del colegio san jose recibieron mensajes de un adulto",
+      "contienePii": true,
+      "piiEsperada": ["juan", "colegio san jose"],
+      "categoriaEsperada": "CONTACTO_INSISTENTE",
+      "ruido": true
+    }
+  ]
+}

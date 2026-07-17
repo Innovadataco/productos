@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { auditCorreccion } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { anonimizarTexto } from "@/lib/ai/anonimizador";
+import { generarEmbedding } from "@/lib/ai/embedder";
+import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
 import { z } from "zod";
 
 type CategoriaConducta =
@@ -12,6 +16,10 @@ type CategoriaConducta =
     | "SUPLANTACION_IDENTIDAD"
     | "SOLICITUD_ENCUENTRO"
     | "COMPARTIMIENTO_SEXUAL"
+    | "EXTORSION"
+    | "CONTENIDO_GENERADO_IA"
+    | "DIFUSION_NO_CONSENTIDA"
+    | "DOXING"
     | "OTRO";
 
 const correccionSchema = z.object({
@@ -23,6 +31,10 @@ const correccionSchema = z.object({
         "SUPLANTACION_IDENTIDAD",
         "SOLICITUD_ENCUENTRO",
         "COMPARTIMIENTO_SEXUAL",
+        "EXTORSION",
+        "CONTENIDO_GENERADO_IA",
+        "DIFUSION_NO_CONSENTIDA",
+        "DOXING",
         "OTRO",
     ]),
     comentario: z.string().max(2000).optional(),
@@ -38,6 +50,14 @@ export async function POST(request: Request) {
     try {
         const user = await verifyAuth();
         requireAdmin(user);
+
+        const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas correcciones. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
 
         const body = await request.json();
         const parsed = correccionSchema.safeParse(body);
@@ -100,15 +120,72 @@ export async function POST(request: Request) {
             categoriaCorregida: categoriaCorregida as import("@prisma/client").CategoriaConducta,
         });
 
+        // Preparar texto seguro para el dataset de entrenamiento.
+        // Si el reporte ya fue anonimizado previamente, su campo `texto` es seguro.
+        // Si no, y la clasificación indica PII, forzamos anonimización antes de guardar.
+        let textoDataset = reporte.texto;
+        let datasetAnonimizado = false;
+        let requiereBackfill = false;
+        try {
+            if (reporte.textoOriginal !== null) {
+                // El texto ya fue anonimizado en el flujo de procesamiento.
+                textoDataset = reporte.texto;
+                datasetAnonimizado = true;
+            } else if (reporte.clasificacion?.contienePii) {
+                const paramModelo = await prisma.parametroSistema.findUnique({
+                    where: { clave: "reportes.classification_model" },
+                });
+                const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || "ornith:9b";
+                const resultado = await anonimizarTexto(modelo, reporte.texto);
+                textoDataset = resultado.textoAnonimizado;
+                datasetAnonimizado = true;
+            }
+        } catch (err) {
+            console.error("[CORRECCION] Fallo anonimización para dataset, guardando texto sin anonimizar y encolando backfill:", err);
+            textoDataset = reporte.texto;
+            datasetAnonimizado = false;
+            requiereBackfill = true;
+        }
+
         // Guardar en dataset de entrenamiento
-        await prisma.datasetEntrenamiento.create({
+        const datasetRegistro = await prisma.datasetEntrenamiento.create({
             data: {
-                texto: reporte.texto,
+                texto: textoDataset,
                 clasificacionCorrecta: categoriaCorregida,
                 fuente: "correccion_admin",
                 correccionId: correccion.id,
+                textoAnonimizado: datasetAnonimizado,
             },
         });
+
+        if (requiereBackfill) {
+            try {
+                await publishDatasetAnonimizacionBackfill(datasetRegistro.id);
+            } catch (queueErr) {
+                console.error("[CORRECCION] No se pudo encolar backfill de anonimización:", queueErr);
+            }
+        }
+
+        // Generar embedding para RAG (F5). Si falla, no bloquear la corrección.
+        try {
+            const paramEmbedding = await prisma.parametroSistema.findUnique({
+                where: { clave: "reportes.embedding_model" },
+            });
+            const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+            const vector = await generarEmbedding(modeloEmbedding, datasetRegistro.texto);
+            const vectorStr = "[" + vector.join(",") + "]";
+            await prisma.$executeRaw`
+                INSERT INTO "EmbeddingDataset" (id, "datasetId", vector, "modeloUsado", "creadoEn")
+                VALUES (${crypto.randomUUID()}, ${datasetRegistro.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+            `;
+        } catch (embedErr) {
+            console.error("[CORRECCION] Fallo embedding para dataset, encolando backfill:", embedErr);
+            try {
+                await publishDatasetEmbeddingBackfill(datasetRegistro.id);
+            } catch (queueErr) {
+                console.error("[CORRECCION] No se pudo encolar backfill de embedding:", queueErr);
+            }
+        }
 
         return NextResponse.json({
             reporteId,
