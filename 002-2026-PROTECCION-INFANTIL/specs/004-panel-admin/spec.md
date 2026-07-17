@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: Draft
+**Status**: CERRADA
 
 **Input**: User description: "Panel de administración + dashboard con estadísticas. Área administrativa protegida (solo rol ADMIN), separada del público, para operar la plataforma. Bandeja de reportes con filtros, corrección de clasificación, anonimización de PII desde UI, dashboard de estadísticas agregadas. Fuera de alcance: módulo colegios, SaaS/pagos, gestión de usuarios/roles (salvo lo mínimo del admin). Reglas duras: solo ADMIN accede, texto con PII visible solo al admin, sin librerías de charts pesadas, reusar diseño glassmorphism, cookie httpOnly, lenguaje sin culpabilizar."
 
@@ -148,3 +148,33 @@ Solo los usuarios con rol ADMIN pueden acceder al área administrativa. Cualquie
 - El modelo de IA y el worker de procesamiento de reportes continúan operando de forma independiente
 - El diseño visual del admin reutiliza el sistema glassmorphism del frontend público, pero con densidad mayor (tablas en lugar de cards)
 - Las estadísticas del dashboard se calculan sobre datos ya anonimizados o agregados, nunca sobre textoOriginal
+
+---
+
+## Implementación (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Proporcionar al administrador de plataforma una zona protegida para revisar reportes, corregir clasificaciones, anonimizar PII y observar métricas operativas.
+
+### Decisiones de diseño derivadas del código
+- **Solo rol ADMIN**: rutas y APIs bajo `/dashboard/admin/*` y `/api/admin/*` verifican `verifyAuth(ADMIN)`.
+- **`textoOriginal` solo para admin**: las APIs públicas y el dataset de entrenamiento usan exclusivamente el texto anonimizado.
+- **Corrección unificada**: estado `CORREGIDO` para cualquier corrección manual; se genera registro en `CorreccionAdmin` y se alimenta `DatasetEntrenamiento`.
+- **Dashboard con gráficas nativas**: SVG/CSS propios, sin librerías de charts pesadas.
+
+### Endpoints y componentes afectados
+- Páginas: `/dashboard/admin`, `/dashboard/admin/estadisticas`, `/dashboard/admin/configuracion`.
+- Componentes: `AdminReportesTable`, `AdminReporteDetalle`, `AdminDashboard`, `AdminNav`, `ConfigPanel`.
+- Endpoints: `GET /api/admin/reportes-revision`, `GET /api/admin/reportes-revision/[id]`, `POST /api/admin/correcciones`, `PATCH /api/admin/reportes/[id]/anonimizar`, `POST /api/admin/reportes-revision/[id]/confirmar`, `GET /api/admin/estadisticas`, `GET /api/admin/audit-logs`.
+
+### Tests
+- `tests/e2e/admin-panel.spec.ts`
+- `src/app/api/admin/correcciones/route.test.ts`
+- `src/app/api/admin/estadisticas/route.test.ts`
+- `src/app/api/admin/reportes-revision/[id]/confirmar/route.test.ts`
+- `src/app/api/admin/reportes/[id]/baja/route.test.ts`
+- `src/app/api/admin/reportes/[id]/reactivar/route.test.ts`
+
+### Migraciones relevantes
+- `20260713061032_reportes_fase2`
+- `20260714120000_add_audit_log`

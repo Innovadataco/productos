@@ -4,7 +4,7 @@ Feature Specification: Frontend Público y Flujo de Reporte
 
 **Created**: 2026-07-13
 
-**Status**: Draft
+**Status**: CERRADA
 
 **Input**: User description: "Implementar la interfaz web del módulo de reportes comunitarios, conectada a las API routes reales ya existentes. Es la cara pública del producto + el flujo de reporte para padres/anónimos + el seguimiento del padre."
 
@@ -151,5 +151,39 @@ Cualquier persona con un número de seguimiento puede consultar el estado de un 
 - El prototipo visual en `design/` es referencia de dirección creativa pero no código copiable; se adapta a Next.js App Router + Tailwind.
 - Ollama y los modelos de IA están disponibles en el entorno de desarrollo para procesamiento de reportes.
 - El usuario objetivo principal es padre/tutor en Colombia con nivel medio de alfabetización digital.
-- El endpoint GET /api/reportes/mis-reportes no existe aún y debe crearse como parte del plan técnico de esta feature.
+- El endpoint GET /api/reportes/mis-reportes se creó como parte de esta feature y alimenta el panel “Mis reportes”.
+
+---
+
+## Implementación (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Entregar la interfaz pública del producto: landing, consulta de identificadores, wizard de reporte, seguimiento y panel de “mis reportes” para padres autenticados.
+
+### Decisiones de diseño derivadas del código
+- **Mobile-first y glassmorphism**: diseño responsive con Tailwind, tipografías Plus Jakarta Sans y DM Mono, paleta institucional sin usar rojo salvo errores reales de UI.
+- **Canales oficiales siempre visibles**: Línea 141, CAI Virtual y Te Protejo se muestran en consulta y reporte sin requerir scroll.
+- **Wizard de 4 pasos**: plataforma → ubicación → descripción → revisar/enviar, con validación Zod en cliente y servidor.
+- **País/Ciudad/Plataforma desde BD**: endpoints `GET /api/paises`, `/api/ciudades`, `/api/plataformas`; soporte de opción “Otra” con texto libre.
+- **Diferenciación anónimo vs autenticado**: la consulta pública muestra score/nivel de riesgo solo para sesiones válidas.
+
+### Endpoints y componentes afectados
+- Páginas: `/`, `/reportar`, `/seguimiento`, `/mis-reportes`, `/dashboard-publico`.
+- Componentes: `HomePageClient`, `ReporteWizard`, `ConsultaResultado`, `NavHeader`, `LandingFooter`, `PublicDashboard`, `ScoreDisplay`.
+- Endpoints: `GET /api/consulta`, `POST /api/reportes`, `GET /api/reportes/seguimiento/[numero]`, `GET /api/reportes/mis-reportes`, `GET /api/plataformas`, `GET /api/paises`, `GET /api/ciudades`.
+
+### Tests
+- `tests/e2e/reportes.spec.ts`
+- `tests/e2e/consulta.spec.ts`
+- `tests/e2e/auth.spec.ts`
+- `tests/e2e/dashboard-publico.spec.ts`
+- `src/app/api/reportes/route.test.ts`
+- `src/app/api/consulta/route.test.ts`
+- `src/app/api/reportes/seguimiento/[numero]/route.test.ts`
+
+### Migraciones relevantes
+- `20260713061032_reportes_fase2`
+- `20260714105800_add_audit_log`
+- `20260714111300_add_ciudad_unique`
+- `20260714120000_add_audit_log`
 - Mobile-first implica que el diseño se optimiza primero para viewport < 768px y luego escala hacia arriba.

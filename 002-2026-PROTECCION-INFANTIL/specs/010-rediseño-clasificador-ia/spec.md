@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-15
 
-**Status**: Draft
+**Status**: CERRADA
 
 **Input**: User description: "Rediseño del pipeline de clasificación IA para mejorar precisión, robustez del parseo, detección de PII, multi-label, self-consistency, RAG sobre correcciones de admin, cascada de desempate con modelo grande, keywords de alto riesgo con métricas, y adopción de la taxonomía de grooming LATAM 2024-2026."
 
@@ -259,3 +259,37 @@ Sin este protocolo, comparaciones como 26.7% vs 29.7% (o 25.6% vs 26.0%) pueden 
 - El hardware disponible permite eventualmente ejecutar un modelo de desempate de 27-32B cuantizado, si el administrador decide habilitarlo.
 - Los reportes de prueba para el eval harness son representativos de los textos reales que llegan a producción, incluyendo textos con errores de escritura y jerga de plataformas.
 - El pipeline de deduplicación existente por embeddings no será alterado por este rediseño.
+
+---
+
+## Cierre e implementación (documentado retroactivamente el 2026-07-18)
+
+### Estado final
+El rediseño del clasificador IA se cerró con la fase F7. La fase F6 (cascada de desempate con modelo grande) fue implementada y **deshabilitada por defecto** porque no cumplió el KPI de `error_silencioso`.
+
+### Decisiones de diseño derivadas del código y reportes
+- **Pipeline F7**: embedding → RAG sobre correcciones → votación (5 votos) → detección de PII determinística + LLM → anonimización → guardas de keywords y ráfaga → decisión final.
+- **Regla R3**: las capas determinísticas (PII, DOXING, keywords de alto riesgo) nunca reclasifican; solo escalan a `REVISION_MANUAL` o `prioridadAlta`.
+- **Taxonomía LATAM**: se adoptaron `EXTORSION`, `CONTENIDO_GENERADO_IA`, `DIFUSION_NO_CONSENTIDA` y `DOXING` junto a las categorías originales.
+- **Métricas finales F7**: accuracy 68.2%, `error_silencioso` 20.8%, `% REVISION_MANUAL` 34.5%, recall `OTRO` 30.0%.
+
+### Endpoints y componentes afectados
+- Worker: `POST /api/reportes/procesar`.
+- Librerías: `src/lib/ai/ollama-client.ts`, `src/lib/ai/embedder.ts`, `src/lib/ai/classifier.ts`, `src/lib/ai/pii-detector.ts`, `src/lib/ai/anonimizador.ts`, `src/lib/ai/keywords-riesgo.ts`, `src/lib/ai/rafaga.ts`, `src/lib/ai/dataset-retrieval.ts`.
+- Evaluación: `scripts/eval-classifier-f7.ts`.
+
+### Tests
+- `src/lib/ai/classifier.test.ts`
+- `src/lib/ai/anonimizador.test.ts`
+- `src/lib/ai/dataset-retrieval.test.ts`
+- `src/lib/ai/keywords-riesgo.test.ts`
+- `src/lib/ai/pii-patterns.test.ts`
+- `src/lib/ai/eval-runner.test.ts`
+- `src/app/api/reportes/procesar/route.test.ts`
+
+### Reportes de cierre
+- [`final-report.md`](final-report.md)
+- [`f7-report.md`](f7-report.md)
+- [`f6-report.md`](f6-report.md)
+- [`IMPLEMENTATION-REPORT.md`](../IMPLEMENTATION-REPORT.md) (secciones Fase 010)
+

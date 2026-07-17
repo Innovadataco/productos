@@ -1,9 +1,9 @@
 # Spec 011 — Centro de Control IA
 
-> El cierre y la documentación de implementación definitiva se consolidaron en [`spec.md`](spec.md). Este archivo se conserva como referencia histórica.
+> **Nota:** este `spec.md` se creó retroactivamente el 2026-07-18 a partir de `011-spec.md` y `report.md` para mantener la convención de nombre `spec.md` del Spec-Kit.
 
 ## Estado
-**COMPLETO**
+**CERRADA**
 
 ## Contexto
 El clasificador IA es una caja negra difícil de explicar y calibrar. Los administradores necesitan una zona segura donde entender el pipeline, probar textos con parámetros distintos y comparar el resultado contra la configuración actual, sin afectar reportes reales ni exponer PII.
@@ -60,9 +60,10 @@ Crear un Centro de Control IA en `/dashboard/admin/ia` con tres pestañas:
 - Eval F7: `error_silencioso` ≤ 21%, `% REVISION_MANUAL` ≤ 35%.
 - Tests unitarios ≥ 110.
 
----
-
 ## Decisiones de diseño
 - El sandbox ejecuta el mismo código de producción (`embedder`, `dataset-retrieval`, `classifier`, `pii-detector`, `anonimizador`, guardas) pero sin persistir.
 - `rag_top_k` se agregó como parámetro configurable para poder experimentar con RAG sin cambiar código.
 - Los overrides del playground se pasan por body; solo los valores numéricos iniciales pueden venir por query params al abrir desde Configuración.
+
+## Reporte de cierre
+- [`report.md`](report.md)

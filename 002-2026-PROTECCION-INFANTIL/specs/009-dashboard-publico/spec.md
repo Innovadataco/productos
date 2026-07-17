@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: Draft
+**Status**: CERRADA
 
 **Input**: User description: "Página pública de estadísticas agregadas sobre identificadores reportados: total de reportes, identificadores visibles, distribución por plataforma/categoría, últimos identificadores reportados y score promedio."
 
@@ -89,3 +89,28 @@ El dashboard lista los últimos identificadores que alcanzaron visibilidad públ
 
 - El modelo `IdentificadorReportado` ya existe con `score`, `nivelRiesgo` y `esVisiblePublicamente`.
 - El cálculo de visibilidad pública ya está implementado.
+
+---
+
+## Implementación (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Publicar estadísticas agregadas de la plataforma sin exponer datos personales ni textos de reportes.
+
+### Decisiones de diseño derivadas del código
+- **Ruta pública** `/dashboard-publico` con link en `NavHeader` (desktop y móvil).
+- **Endpoint público** `GET /api/estadisticas-publicas` agregado a `PUBLIC_ROUTES` del proxy.
+- **Reutilización de visualizaciones**: componente `DonutChart` para distribuciones.
+- **Solo identificadores visibles**: todas las métricas se calculan sobre `IdentificadorReportado.esVisiblePublicamente = true`.
+
+### Endpoints y componentes afectados
+- Página: `/dashboard-publico`.
+- Componentes: `PublicDashboard`, `DonutChart`, `NavHeader`.
+- Endpoint: `GET /api/estadisticas-publicas`.
+
+### Tests
+- `tests/e2e/dashboard-publico.spec.ts`
+
+### Migraciones relevantes
+- Ninguna específica (usa `IdentificadorReportado` existente).
+

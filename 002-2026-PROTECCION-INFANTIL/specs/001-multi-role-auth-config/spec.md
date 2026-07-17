@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-11
 
-**Status**: Draft
+**Status**: CERRADA
 
 **Input**: User description: "Sistema de reportes comunitarios de protección infantil. Usuarios anónimos y autenticados reportan números telefónicos, nicks o usuarios de redes sociales/juegos/mensajería que consideran de riesgo para menores. Cada reporte incluye: texto descriptivo de la situación, fecha, ciudad, país, plataforma. Los padres consultan si un número/nick tiene reportes registrados, viendo cantidad y distribución por ciudad/país/fecha — nunca etiquetas de culpabilidad. Un identificador solo aparece en consultas públicas al superar un umbral mínimo de reportes independientes, parametrizable por el administrador. Tres tipos de usuario: administrador de plataforma, administrador de colegio (crea perfiles internos con permisos granulares), y padres. Los colegios validan listas de números contra la base. Esta primera fase (fundación) cubre únicamente: autenticación multi-rol, estructura base del proyecto, y el sistema de parámetros de configuración. Reportes, consultas y colegios vienen en fases siguientes."
 
@@ -133,3 +133,33 @@ La estructura del proyecto debe permitir la adición de módulos futuros (report
 - Los textos de reporte no se procesan en esta fase; la encriptación de reportes y el worker de pg-boss se implementan junto con el módulo de reportes.
 - La validación de contraseñas exige un mínimo de 8 caracteres con al menos una letra y un número. No se requieren símbolos obligatorios.
 - Los roles base (ADMIN, SCHOOL_ADMIN, PARENT) se crean automáticamente al inicializar la base de datos y no pueden eliminarse.
+
+---
+
+## Implementación (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Entregar la base de autenticación, autorización por rol y configuración parametrizada que soporta todos los módulos posteriores.
+
+### Decisiones de diseño derivadas del código
+- **Sesión con cookie httpOnly**: se usa JWT firmado almacenado en cookie (`src/lib/auth.ts`), nunca en `localStorage`.
+- **Roles centralizados**: enum `Rol` con `ADMIN`, `SCHOOL_ADMIN`, `PARENT`; el middleware/proxy verifica el rol en cada ruta protegida.
+- **Parámetros en `ParametroSistema`**: clave-valor tipado, caché en `src/lib/config-cache.ts`, valores sensibles cifrados en reposo.
+- **Seed por defecto**: `prisma/seed.ts` crea los roles, un admin inicial y los parámetros mínimos de operación.
+
+### Endpoints y componentes afectados
+- `/api/auth/*` (login, logout, registro, verificación, recuperación).
+- `/api/config/parametros`, `/api/config/parametros/[clave]`, `/api/config/parametros/publicos`.
+- Páginas `/login`, `/registro`, `/recuperar`, `/dashboard/configuracion`.
+- Utilidades `src/lib/auth.ts`, `src/lib/config-cache.ts`, `src/lib/rate-limit.ts`.
+
+### Tests
+- `src/lib/auth.test.ts`
+- `src/app/api/config/parametros/route.test.ts`
+- `src/app/api/config/parametros/[clave]/route.test.ts`
+- `tests/e2e/auth.spec.ts`
+- `tests/e2e/password-reset.spec.ts`
+
+### Migraciones relevantes
+- `20260712162345_init`
+- `20260713061032_reportes_fase2`

@@ -73,3 +73,23 @@ El footer aparece en todas las páginas públicas y proporciona navegación lega
 
 - El layout base y el sistema de rutas de Next.js ya están configurados.
 - Los textos legales iniciales son genéricos y deben ser revisados por asesoría legal antes de producción.
+
+
+---
+
+## Implementación (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Publicar las páginas legales obligatorias y un footer global en las pantallas públicas.
+
+### Decisiones de diseño derivadas del código
+- Páginas estáticas bajo App Router para máxima cacheabilidad.
+- `LandingFooter` reutilizado en las páginas públicas principales.
+- Enlaces a canales oficiales de denuncia se abren en pestaña nueva.
+
+### Endpoints y componentes afectados
+- Páginas: `/terminos`, `/privacidad`.
+- Componentes: `LandingFooter`.
+
+### Tests
+- `tests/e2e/seo.spec.ts` (navegación desde el footer a `/terminos` y `/privacidad`).

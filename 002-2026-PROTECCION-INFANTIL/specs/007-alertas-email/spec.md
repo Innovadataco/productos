@@ -76,3 +76,29 @@ Los administradores reciben un email cuando un identificador acumula suficientes
 - La infraestructura Resend ya está configurada (`RESEND_API_KEY`, `EMAIL_FROM`).
 - El modelo `Usuario` ya tiene rol `ADMIN` y estado `activo`.
 - El score crítico se determina por el umbral configurado en `scoring.threshold.high`.
+
+
+---
+
+## Implementación (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Notificar a administradores y a usuarios suscritos sobre eventos relevantes del ciclo de vida de un reporte, sin exponer PII.
+
+### Decisiones de diseño derivadas del código
+- **Reutilización de Resend**: las mismas utilidades de `src/lib/email.ts` sirven para alertas y para el flujo de autenticación.
+- **Suscripción de usuarios**: modelo `AlertaSuscripcion` con límite de un email cada 24 horas por identificador/plataforma.
+- **No bloqueo del worker**: las alertas se invocan de forma asíncrona tras procesar un reporte.
+- **Privacidad**: los emails de prioridad alta no incluyen texto del reporte ni términos detectados.
+
+### Endpoints y componentes afectados
+- Utilidades: `src/lib/email.ts` (`enviarAlertasSuscriptores`, `enviarAlertaRevision`).
+- Endpoints: `GET /api/alertas`, `POST /api/alertas/suscribir`, `DELETE /api/alertas/:id`.
+- Invocación desde `POST /api/reportes/procesar`.
+
+### Tests
+- `src/lib/email.test.ts`
+
+### Migraciones relevantes
+- `20260715000000_alertas_suscripcion`
+- `20260715000001_alertas_suscripcion_unique`

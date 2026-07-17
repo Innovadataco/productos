@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: Draft
+**Status**: CERRADA
 
 **Input**: User description: "Mejorar el SEO de la aplicación pública: metadatos por página, OpenGraph, sitemap, robots.txt, canonical URLs y datos estructurados."
 
@@ -87,4 +87,28 @@ Cada página pública incluye URL canónica y, en la landing, datos estructurado
 ## Assumptions
 
 - El dominio público está disponible en `NEXT_PUBLIC_APP_URL`.
+
+---
+
+## Implementación (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Mejorar la indexación y el compartido social del sitio público mediante metadatos, sitemap, robots y datos estructurados.
+
+### Decisiones de diseño derivadas del código
+- **`metadata` y `viewport` separados** en `src/app/layout.tsx` siguiendo la API de Next.js 16.
+- **Metadatos por página** en `/`, `/reportar`, `/seguimiento`, `/terminos`, `/privacidad`, `/offline`.
+- **`robots.ts` y `sitemap.ts`** generan las rutas estáticas `/robots.txt` y `/sitemap.xml`.
+- **JSON-LD** en la landing con esquemas `WebSite` y `Organization`.
+
+### Endpoints y componentes afectados
+- `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/robots.ts`, `src/app/sitemap.ts`.
+- Páginas públicas listadas en la sección de Requisitos.
+
+### Tests
+- `tests/e2e/seo.spec.ts`
+
+### Migraciones relevantes
+- Ninguna (cambios puros de frontend).
+
 - Las páginas legales y la landing son las únicas que requieren indexación en v1.

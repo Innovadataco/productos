@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-12
 
-**Status**: Draft
+**Status**: CERRADA
 
 **Input**: User description: "Módulo de reportes de protección infantil (fase 2). Usuarios anónimos y autenticados crean reportes sobre números telefónicos, nicks o usuarios de plataformas (redes sociales, juegos, WhatsApp y otras mensajerías) que consideran de riesgo para menores. Cada reporte contiene: identificador reportado (número o nick + plataforma), texto libre describiendo la situación, fecha del incidente, ciudad y país. Sin fotos, videos ni audio — solo texto. Al crearse, el reporte entra a una cola de procesamiento donde el modelo de IA local clasifica la conducta descrita, detecta reportes duplicados del mismo reportante sobre el mismo identificador, y marca reportes incoherentes o spam para revisión del administrador. Las clasificaciones se guardan junto al texto original, y el administrador puede corregirlas desde su panel (esas correcciones se acumulan como dataset para mejorar el modelo a futuro). Un identificador se vuelve visible en consultas públicas solo al superar el umbral de reportes independientes configurado en los parámetros del sistema (fase 1). Toda pantalla de creación de reporte muestra los canales oficiales de denuncia (línea 141 ICBF, CAI Virtual, Te Protejo)."
 
@@ -152,3 +152,38 @@ Los identificadores reportados solo aparecen en consultas públicas cuando han a
 - Los usuarios anónimos proporcionan un email opcional para recibir confirmación, pero no es obligatorio.
 - La detección de duplicados para usuarios autenticados se basa en email más el identificador reportado. Para usuarios anónimos, la deduplicación se basa en identificador reportado más detección de similitud de texto por el modelo de IA (textos casi idénticos sobre el mismo identificador se marcan como posible duplicado para revisión del admin). Se acepta explícitamente que la deduplicación anónima es imperfecta.
 - El sistema de consulta pública se implementa en fase 3; este módulo solo crea y clasifica reportes.
+
+---
+
+## Implementación y cierre (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Entregar el pipeline completo de reportes comunitarios: creación, clasificación IA, deduplicación, anonimización de PII, visibilidad condicional y scoring de identificadores.
+
+### Decisiones de diseño derivadas del código
+- **Procesamiento asíncrono con pg-boss**: cada reporte se encola y se procesa por el worker `scripts/worker-reportes.mjs`.
+- **Modelo local Ollama**: clasificación con `ornith:9b` y embeddings con `nomic-embed-text`; los textos no salen del servidor.
+- **Deduplicación**: autenticados por `usuarioId + identificador + plataforma` en 30 días; anónimos por similitud coseno sobre embeddings (`≥ 0.92`).
+- **Anonimización automática**: el worker reemplaza PII de NNA por etiquetas (`[NOMBRE]`, `[COLEGIO]`, etc.) y preserva `textoOriginal` solo para admin.
+- **No fallback silencioso de embeddings**: si Ollama falla, se lanza error explícito; el job reintenta hasta 3 veces y, si agota, deja el reporte en `REVISION_MANUAL`.
+- **Ranking configurable**: `src/lib/ranking.ts` calcula score 0-100 a partir de cantidad, recencia, severidad y ratio de autenticados.
+
+### Endpoints y componentes afectados
+- Páginas: `/reportar`, `/seguimiento`, `/mis-reportes`, `/`.
+- Endpoints: `POST /api/reportes`, `GET /api/reportes/seguimiento/[numero]`, `GET /api/reportes/mis-reportes`, `POST /api/reportes/procesar`, `GET /api/consulta`.
+- Librerías: `src/lib/ai/*`, `src/lib/ranking.ts`, `src/lib/visibility.ts`, `src/lib/validators.ts`, `src/lib/queue.ts`.
+- Worker: `scripts/worker-reportes.mjs`, `scripts/worker-supervisor.mjs`.
+
+### Tests
+- `tests/e2e/reportes.spec.ts`
+- `tests/e2e/consulta.spec.ts`
+- `tests/e2e/admin-panel.spec.ts`
+- `src/app/api/reportes/route.test.ts`
+- `src/app/api/reportes/procesar/route.test.ts`
+- `src/app/api/reportes/seguimiento/[numero]/route.test.ts`
+- `src/app/api/consulta/route.test.ts`
+- `src/lib/ai/similarity.test.ts`
+- `src/lib/ranking.test.ts`
+
+### Reporte de cierre
+- [`IMPLEMENTATION-REPORT.md`](IMPLEMENTATION-REPORT.md)

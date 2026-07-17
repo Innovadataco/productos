@@ -4,7 +4,7 @@
 
 - Fase A: **Implementada** (ponderación de señal de fuente en el score).
 - Fase B: **Implementada** (rate limiting por fuente).
-- Fase C: **Pendiente** (descargo/apelación del identificador reportado).
+- Fase C: **Implementada** (descargo/apelación del identificador reportado).
 
 ## Objetivo
 
@@ -116,8 +116,56 @@ Todos los valores deben ser configurables:
 
 ## Fase C — Descargo/apelación del identificador reportado
 
-- Diseño a presentar aparte.
-- Prever titularidad difícil (nicks) y vector de abuso de pausas.
+### Objetivo
+
+Permitir que el titular de un identificador reportado presente un descargo, pausando temporalmente la visibilidad pública del identificador mientras un admin revisa la solicitud.
+
+### Decisiones aprobadas
+
+- **Una sola apelación activa** por `(identificador, plataforma)`.
+- **Titularidad**: teléfono verificado por OTP SMS; nicks sin verificación ("titularidad no verificada").
+- **Pausa de visibilidad**: solo en la primera apelación, hasta `anti_abuso.apelacion_pausa_dias` (default 7).
+- **Rechazo bloquea re-apelación** hasta que un admin rehabilite el derecho.
+- **Vencimiento automático**: apelaciones sin resolver antes de `pausaHasta` pasan a `VENCIDA` y restauran visibilidad.
+- **Privacidad R2**: la UI pública solo muestra mensaje genérico; nunca textos, cantidades, fechas ni categorías de reportes.
+
+### Schema
+
+- `ApelacionIdentificador` con estados `RECIBIDA | EN_REVISION | ACEPTADA | RECHAZADA | VENCIDA`.
+- Relaciones con `Plataforma`, `Usuario` (admin) e `IdentificadorReportado`.
+
+### APIs
+
+- Públicas:
+  - `POST /api/apeaciones/solicitar`
+  - `POST /api/apeaciones/verificar`
+  - `GET /api/apeaciones/[token]`
+- Admin:
+  - `GET /api/admin/apeaciones`
+  - `GET /api/admin/apeaciones/[id]`
+  - `POST /api/admin/apeaciones/[id]/resolver`
+  - `POST /api/admin/apeaciones/[id]/rehabilitar`
+  - `POST /api/admin/apeaciones/vencer` (worker secret)
+
+### UI
+
+- Pública: `/apelar` con formulario, OTP y seguimiento por token.
+- Admin: `/dashboard/admin/apeaciones` con listado, detalle y resolución.
+
+### Jobs
+
+- `scripts/job-apelaciones-vencimiento.ts` (ejecutar vía cron diario).
+
+### Tests
+
+- `src/app/api/apeaciones/solicitar/route.test.ts`
+- `src/app/api/apeaciones/verificar/route.test.ts`
+- `src/app/api/admin/apeaciones/route.test.ts`
+- `src/app/api/admin/apeaciones/[id]/resolver/route.test.ts`
+
+### Migración
+
+- `20260718110000_add_apelaciones_fase_c`
 
 ## Riesgos y mitigaciones
 
@@ -132,3 +180,24 @@ Todos los valores deben ser configurables:
 
 - Variables de entorno: `ANTI_ABUSO_SALT` requerida en producción.
 - Política de privacidad actualizada en `src/app/privacidad/page.tsx`.
+
+
+---
+
+## Documentación retroactiva (2026-07-18)
+
+### Estado de implementación al cierre de esta tarea
+- **Fase A — Ponderación de señal de fuente:** implementada y bajo feature flag `scoring.source_weight.enabled` (default `false`).
+- **Fase B — Rate limiting por fuente:** implementada; scopes `report_identificador` y `report_fingerprint` agregados.
+- **Fase C — Descargo/apelación:** implementada, con tests y UI.
+
+### Tests verificados
+- `src/lib/anti-abuso/fuente-reporte.test.ts`
+- `src/lib/rate-limit.test.ts`
+- `src/app/api/reportes/route.test.ts`
+
+### Migraciones relevantes
+- `20260718020000_add_fuente_reporte`
+
+### Nota
+Este documento ya contenía las decisiones de arquitectura aprobadas; se actualizó con el cierre de la Fase C como parte del lote nocturno.

@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: Draft
+**Status**: CERRADA
 
 **Input**: User description: "Permitir a usuarios autenticados y no autenticados restablecer su contraseña cuando la olviden. Flujo seguro por email con token de un solo uso, expiración controlada, y sin revelar si el email existe en el sistema."
 
@@ -97,3 +97,27 @@ El sistema protege contra enumeración de usuarios y asegura que los tokens no s
 - El sistema de autenticación con cookie httpOnly ya existe.
 - El servicio de email (Resend) ya está configurado; en dev se usa bypass.
 - El modelo `Usuario` ya existe con `passwordHash`.
+
+---
+
+## Implementación (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Permitir a usuarios registrados recuperar el acceso mediante un flujo seguro de token único por email.
+
+### Decisiones de diseño derivadas del código
+- **Token criptográfico**: se genera con `crypto.randomUUID()`, se almacena su hash y se expone solo en desarrollo para facilitar tests sin Resend.
+- **Un solo uso y expiración**: el token se invalida tras el restablecimiento exitoso y expira a los 60 minutos.
+- **Respuesta uniforme**: la API devuelve el mismo mensaje para emails registrados y no registrados, evitando enumeración de cuentas.
+
+### Endpoints y componentes afectados
+- Páginas: `/recuperar`, `/recuperar/[token]`.
+- Endpoints: `POST /api/auth/recuperar/solicitar`, `GET /api/auth/recuperar/validar`, `POST /api/auth/recuperar/restablecer`.
+- Utilidades: `src/lib/auth.ts`, `src/lib/email.ts`.
+
+### Tests
+- `tests/e2e/password-reset.spec.ts`
+- `src/lib/auth.test.ts`
+
+### Migraciones relevantes
+- `20260714150000_add_token_recuperacion`
