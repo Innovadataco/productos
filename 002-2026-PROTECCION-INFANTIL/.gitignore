@@ -22,3 +22,11 @@ Thumbs.db
 
 # Worker runtime
 worker.pid
+
+# Backups de migraciones de secretos (contienen texto plano)
+backups/
+
+# Archivos generados durante ensayos de despliegue
+.env.ensayo
+cookies.txt
+

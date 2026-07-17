@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getParametroSistema } from "@/lib/parametros";
 
 const DEFAULT_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 
@@ -9,9 +10,7 @@ const DEFAULT_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost
  */
 export async function getOllamaBaseUrl(): Promise<string> {
     try {
-        const param = await prisma.parametroSistema.findUnique({
-            where: { clave: "system.ollama_base_url" },
-        });
+        const param = await getParametroSistema("system.ollama_base_url");
         if (param?.valor) return param.valor.trim();
     } catch {
         // Fallback silencioso si la tabla no está disponible (muy temprano en startup)

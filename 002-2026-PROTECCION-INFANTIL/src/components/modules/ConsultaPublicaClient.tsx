@@ -1,41 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { BarChart } from "./BarChart";
 import { DonutChart } from "./DonutChart";
-
-const MapaPuntos = dynamic(
-    () => import("./MapaPuntos").then((mod) => ({ default: mod.MapaPuntos })),
-    { ssr: false }
-);
-
-const CATEGORIAS_LABELS: Record<string, string> = {
-    CONTACTO_INSISTENTE: "Contacto insistente",
-    SOLICITUD_MATERIAL: "Solicitud de material",
-    OFRECIMIENTO_REGALOS: "Ofrecimiento de regalos",
-    SUPLANTACION_IDENTIDAD: "Suplantación de identidad",
-    SOLICITUD_ENCUENTRO: "Solicitud de encuentro",
-    COMPARTIMIENTO_SEXUAL: "Compartimiento sexual",
-    EXTORSION: "Extorsión",
-    CONTENIDO_GENERADO_IA: "Contenido generado por IA",
-    DIFUSION_NO_CONSENTIDA: "Difusión no consentida",
-    DOXING: "Doxing",
-    OTRO: "Otro",
-};
-
-const RIESGO_COLORS: Record<string, string> = {
-    BAJO: "bg-emerald-500",
-    MEDIO: "bg-amber-500",
-    ALTO: "bg-orange-500",
-    CRITICO: "bg-red-500",
-};
-
-function formatCategoria(categoria: string) {
-    return CATEGORIAS_LABELS[categoria] || categoria;
-}
+import { MetricCard } from "./MetricCard";
+import { ChartCard } from "./ChartCard";
+import { MiniList } from "./MiniList";
+import { RiskBadge } from "./RiskBadge";
+import { formatCategoria, formatNivel } from "@/lib/labels";
 
 function formatFecha(iso: string) {
     if (!iso) return "—";
@@ -45,8 +19,6 @@ function formatFecha(iso: string) {
 type Ubicacion = {
     pais: string;
     ciudad: string;
-    lat: number | null;
-    lng: number | null;
     total: number;
     fechasReporte: string[];
     fechasIncidente: string[];
@@ -104,27 +76,21 @@ export function ConsultaPublicaClient() {
         }
     };
 
-    const puntosMapa = data?.ubicaciones
-        .filter((u) => u.lat != null && u.lng != null)
-        .map((u) => ({
-            lat: u.lat as number,
-            lng: u.lng as number,
-            label: u.ciudad,
-            sub: u.pais,
-            count: u.total,
-            extra: `${u.fechasReporte.length} fecha(s) de reporte`,
-        })) || [];
-
     const plataformasChart = data?.plataformas.map((p) => ({ label: p.nombre, value: p.total })) || [];
     const categoriasChart = data?.categorias.map((c) => ({ label: formatCategoria(c.categoria), value: c.total })) || [];
     const timelineChart = data?.timeline.map((t) => ({ label: t.mes, value: t.total })) || [];
+    const ubicacionesList =
+        data?.ubicaciones.map((u) => ({
+            label: `${u.ciudad}, ${u.pais}`,
+            count: u.total,
+        })) || [];
 
     return (
         <main className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
             <div className="mb-8 text-center">
                 <h1 className="text-3xl font-bold text-body">Consulta pública</h1>
                 <p className="mt-2 text-muted">
-                    Ingresa un número telefónico, nick o usuario para conocer el historial agregado de reportes.
+                    Ingresa un número, nick o usuario para conocer el historial agregado de reportes.
                 </p>
                 <p className="text-xs text-subtle">
                     No se muestra el contenido de los reportes ni datos de las personas.
@@ -148,7 +114,7 @@ export function ConsultaPublicaClient() {
             </form>
 
             {error && (
-                <div className="mx-auto mt-6 max-w-xl rounded-xl bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-700 dark:text-red-300">
+                <div className="mx-auto mt-6 max-w-xl rounded-xl bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
                     {error}
                 </div>
             )}
@@ -167,60 +133,82 @@ export function ConsultaPublicaClient() {
                         <MetricCard label="Autenticados" value={data.reportesAutenticados} />
                         <MetricCard label="Anónimos" value={data.reportesAnonimos} />
                         {data.score != null ? (
-                            <MetricCard label="Score" value={data.score} suffix="/100" sub={data.nivelRiesgo} />
+                            <MetricCard
+                                label="Score"
+                                value={data.score}
+                                suffix="/100"
+                                sub={data.nivelRiesgo ? formatNivel(data.nivelRiesgo) : undefined}
+                            />
                         ) : (
-                            <MetricCard label="Ratio autenticados" value={Math.round((data.ratioAutenticados || 0) * 100)} suffix="%" />
+                            <MetricCard
+                                label="Ratio autenticados"
+                                value={Math.round((data.ratioAutenticados || 0) * 100)}
+                                suffix="%"
+                            />
                         )}
                     </div>
 
                     {/* Resumen */}
-                    <div className="glass rounded-2xl p-5">
-                        <h2 className="text-lg font-semibold text-body">Resumen</h2>
-                        <p className="mt-1 text-sm text-muted">{data.resumen}</p>
+                    <ChartCard title="Resumen" subtitle={`${data.identificador} — información agregada`}>
+                        <p className="text-sm text-muted">{data.resumen}</p>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                            <p><span className="text-subtle">Primer reporte:</span> <span className="text-body">{formatFecha(data.primerReporte)}</span></p>
-                            <p><span className="text-subtle">Último reporte:</span> <span className="text-body">{formatFecha(data.ultimoReporte)}</span></p>
+                            <p>
+                                <span className="text-subtle">Primer reporte:</span>{" "}
+                                <span className="text-body">{formatFecha(data.primerReporte)}</span>
+                            </p>
+                            <p>
+                                <span className="text-subtle">Último reporte:</span>{" "}
+                                <span className="text-body">{formatFecha(data.ultimoReporte)}</span>
+                            </p>
                         </div>
-                    </div>
-
-                    {/* Mapa */}
-                    <MapaPuntos
-                        puntos={puntosMapa}
-                        title="Mapa de reportes por ciudad"
-                        subtitle="Cantidad de reportes por ciudad. Sin direcciones exactas ni datos personales."
-                    />
+                        {data.nivelRiesgo && (
+                            <div className="mt-3 flex items-center gap-2">
+                                <span className="text-sm text-subtle">Nivel de riesgo:</span>
+                                <RiskBadge nivel={data.nivelRiesgo} />
+                            </div>
+                        )}
+                    </ChartCard>
 
                     {/* Gráficos */}
                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                         {plataformasChart.length > 0 && (
-                            <div className="glass rounded-2xl p-5">
-                                <h3 className="mb-3 text-base font-semibold text-body">Plataformas</h3>
-                                <DonutChart data={plataformasChart} />
-                            </div>
+                            <ChartCard title="Plataformas" subtitle="Distribución por plataforma">
+                                <DonutChart data={plataformasChart} ariaLabel="Distribución por plataforma" />
+                            </ChartCard>
                         )}
                         {categoriasChart.length > 0 && (
-                            <div className="glass rounded-2xl p-5">
-                                <h3 className="mb-3 text-base font-semibold text-body">Categorías</h3>
-                                <DonutChart data={categoriasChart} />
-                            </div>
+                            <ChartCard title="Categorías" subtitle="Tipo de conducta más frecuente">
+                                <DonutChart data={categoriasChart} ariaLabel="Distribución por categoría" />
+                            </ChartCard>
                         )}
                     </div>
 
                     {timelineChart.length > 0 && (
-                        <div className="glass rounded-2xl p-5">
-                            <h3 className="mb-3 text-base font-semibold text-body">Reportes por mes</h3>
-                            <BarChart data={timelineChart} />
-                        </div>
+                        <ChartCard title="Reportes por mes" subtitle="Evolución temporal agregada">
+                            <BarChart data={timelineChart} ariaLabel="Reportes por mes" />
+                        </ChartCard>
                     )}
+
+                    {/* Ubicaciones agregadas (sin mapa) */}
+                    <ChartCard
+                        title="Ubicaciones reportadas"
+                        subtitle="Ciudades con reportes. Sin direcciones exactas ni datos personales."
+                    >
+                        {ubicacionesList.length > 0 ? (
+                            <MiniList items={ubicacionesList} empty="Sin ubicaciones" />
+                        ) : (
+                            <p className="text-sm text-muted">Sin ubicaciones reportadas</p>
+                        )}
+                    </ChartCard>
 
                     {/* Tabla de ubicaciones */}
                     <div className="glass rounded-2xl overflow-hidden">
                         <div className="p-5">
-                            <h3 className="text-base font-semibold text-body">Ubicaciones reportadas</h3>
+                            <h3 className="text-base font-semibold text-body">Detalle de ubicaciones</h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+                                <thead className="bg-slate-100/70 text-subtle dark:bg-slate-800/60">
                                     <tr>
                                         <th className="px-4 py-3 font-medium">País</th>
                                         <th className="px-4 py-3 font-medium">Ciudad</th>
@@ -231,7 +219,10 @@ export function ConsultaPublicaClient() {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {data.ubicaciones.map((u, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                        <tr
+                                            key={idx}
+                                            className="transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
+                                        >
                                             <td className="px-4 py-3 text-body">{u.pais}</td>
                                             <td className="px-4 py-3 text-body">{u.ciudad}</td>
                                             <td className="px-4 py-3 text-body">{u.total}</td>
@@ -251,7 +242,7 @@ export function ConsultaPublicaClient() {
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+                                <thead className="bg-slate-100/70 text-subtle dark:bg-slate-800/60">
                                     <tr>
                                         <th className="px-4 py-3 font-medium">Categoría</th>
                                         <th className="px-4 py-3 font-medium">Reportes</th>
@@ -260,7 +251,10 @@ export function ConsultaPublicaClient() {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {data.categorias.map((c, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                        <tr
+                                            key={idx}
+                                            className="transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
+                                        >
                                             <td className="px-4 py-3 text-body">{formatCategoria(c.categoria)}</td>
                                             <td className="px-4 py-3 text-body">{c.total}</td>
                                             <td className="px-4 py-3 text-subtle">
@@ -272,21 +266,15 @@ export function ConsultaPublicaClient() {
                             </table>
                         </div>
                     </div>
+
+                    {!data.score && (
+                        <div className="rounded-xl bg-sky-50 p-4 text-sm text-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
+                            <strong>¿Quieres ver más detalles?</strong> Inicia sesión para conocer el score de riesgo,
+                            clasificaciones de la IA y el timeline completo.
+                        </div>
+                    )}
                 </div>
             )}
         </main>
-    );
-}
-
-function MetricCard({ label, value, suffix = "", sub }: { label: string; value: string | number; suffix?: string; sub?: string }) {
-    return (
-        <div className="glass rounded-2xl p-5 text-center transition hover:scale-[1.02]">
-            <p className="text-3xl font-bold text-body">
-                {value}
-                {suffix && <span className="text-lg">{suffix}</span>}
-            </p>
-            {sub && <p className={`text-xs font-semibold ${RIESGO_COLORS[sub] ? "text-body" : "text-accent"}`}>{sub}</p>}
-            <p className="mt-1 text-xs text-subtle">{label}</p>
-        </div>
     );
 }

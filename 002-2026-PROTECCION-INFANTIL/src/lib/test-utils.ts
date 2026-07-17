@@ -2,12 +2,14 @@ import { prisma } from "./prisma";
 
 export async function resetDatabase() {
     // Respetar dependencias FK: hijos antes que padres.
+    await prisma.rateLimit.deleteMany();
     await prisma.casoEval.deleteMany();
     await prisma.evalRun.deleteMany();
     await prisma.datasetEntrenamiento.deleteMany();
     await prisma.correccionAdmin.deleteMany();
     await prisma.clasificacionIA.deleteMany();
     await prisma.embeddingReporte.deleteMany();
+    await prisma.apelacionIdentificador.deleteMany();
     await prisma.identificadorReportado.deleteMany();
     await prisma.reporte.deleteMany();
     await prisma.codigoVerificacion.deleteMany();

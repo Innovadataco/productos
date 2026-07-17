@@ -391,8 +391,14 @@ curl -s http://localhost:11434/api/tags | jq '.models[].name'
 # Reportes recientes
 psql $DATABASE_URL -c "SELECT id, identificador, estado, \"creadoEn\" FROM \"Reporte\" ORDER BY \"creadoEn\" DESC LIMIT 10;"
 
-# Smoke test E2E
-npx tsx scripts/smoke-e2e.ts
+# Experimentos recientes
+psql $DATABASE_URL -c "SELECT id, nombre, estado, \"iniciadoEn\", \"progresoCasos\", \"progresoTotal\" FROM \"EvalRun\" ORDER BY \"iniciadoEn\" DESC LIMIT 10;"
+
+# Colas pg-boss
+psql $DATABASE_URL -c "SELECT name, state, count(*) FROM pgboss.job GROUP BY name, state;"
+
+# Smoke test E2E (requiere app + worker + Ollama)
+node --env-file=.env --import tsx scripts/smoke-e2e.ts
 
 # Reprocesar un reporte
 REPORTE_ID="..."; WORKER_SECRET="..."
@@ -400,12 +406,249 @@ curl -X POST http://localhost:5005/api/reportes/procesar \
   -H "Content-Type: application/json" \
   -H "X-Worker-Secret: $WORKER_SECRET" \
   -d "{\"reporteId\":\"$REPORTE_ID\"}"
+
+# Re-encolar un experimento huérfano (ver sección 9)
+RUN_ID="..."
+node --env-file=.env --import tsx -e "
+const { PgBoss } = require('pg-boss');
+const boss = new PgBoss(process.env.DATABASE_URL);
+boss.start().then(async () => {
+  await boss.send('eval-classifier-run', { runId: '$RUN_ID' });
+  await boss.stop();
+  console.log('Experimento $RUN_ID re-encolado');
+}).catch((e) => { console.error(e); process.exit(1); });
+"
+
+# Limpieza manual de hashes de fuente antiguas (hasta tener job programado)
+node --env-file=.env --import tsx -e "
+import { limpiarFuenteReporteAntiguas } from './src/lib/anti-abuso/fuente-reporte.ts';
+limpiarFuenteReporteAntiguas().then((n) => console.log('Eliminadas:', n));
+"
+
+# Flags críticas de v2
+psql $DATABASE_URL -c "SELECT clave, valor FROM \"ParametroSistema\" WHERE clave IN ('scoring.source_weight.enabled','reportes.classification.modelo_desempate','anti_abuso.retencion_fuente_dias');"
 ```
 
 ---
 
-## 9. Contacto y escalamiento
+## 9. Laboratorio — Experimento huérfano tras caída del worker
+
+> Aplica a la cola `eval-classifier-run` introducida en Spec 014.
+
+### Síntomas
+
+- Un experimento queda en estado `PENDIENTE` o `EN_PROGRESO` mucho más tiempo del estimado.
+- `api/health/worker` indica `workerAlive: false` o el worker se reinició.
+- En `pgboss.job` hay un job de `eval-classifier-run` en estado `active` sin avanzar.
+
+### Verificación
+
+```bash
+# Estado de corridas recientes
+psql $DATABASE_URL -c "SELECT id, nombre, estado, \"iniciadoEn\", \"finalizadoEn\", \"progresoCasos\", \"progresoTotal\" FROM \"EvalRun\" ORDER BY \"iniciadoEn\" DESC LIMIT 10;"
+
+# Jobs de eval en pg-boss
+psql $DATABASE_URL -c "SELECT id, name, state, retrycount, \"creadoEn\" FROM pgboss.job WHERE name = 'eval-classifier-run' ORDER BY \"creadoEn\" DESC;"
+```
+
+### Re-encolar
+
+1. **Si el worker murió y el job está atascado en `active`:**
+   ```bash
+   psql $DATABASE_URL -c "UPDATE pgboss.job SET state = 'created', retrycount = 0 WHERE name = 'eval-classifier-run' AND state = 'active';"
+   ```
+   Luego reiniciar el worker (`npm run worker`). pg-boss retomará el job.
+
+2. **Si el job desapareció pero `EvalRun` sigue `PENDIENTE`:**
+   ```bash
+   RUN_ID="..."
+   node --env-file=.env --import tsx -e "
+   const { PgBoss } = require('pg-boss');
+   const boss = new PgBoss(process.env.DATABASE_URL);
+   boss.start().then(async () => {
+     await boss.send('eval-classifier-run', { runId: '$RUN_ID' });
+     await boss.stop();
+     console.log('Re-encolado', '$RUN_ID');
+   }).catch((e) => { console.error(e); process.exit(1); });
+   "
+   ```
+
+3. **Si el experimento debe cancelarse:**
+   ```bash
+   psql $DATABASE_URL -c "UPDATE \"EvalRun\" SET estado = 'CANCELADA', \"finalizadoEn\" = NOW() WHERE id = 'RUN_ID';"
+   ```
+
+> **Importante:** antes de re-encolar, verificar en `worker.log` por qué falló. Si Ollama no responde, reintentar sin resolver la causa subyacente solo reprocesará el fallo.
+
+---
+
+## 10. Nuevas colas y jobs de mantenimiento
+
+### 10.1 Colas nuevas en v2
+
+Además de `reporte-procesamiento`, el worker escucha:
+
+| Cola | Propósito | Verificación |
+|------|-----------|--------------|
+| `dataset-anonimizacion-backfill` | Anonimiza texto de registros del dataset RAG. | `SELECT name, state, count(*) FROM pgboss.job WHERE name = 'dataset-anonimizacion-backfill' GROUP BY name, state;` |
+| `dataset-embedding-backfill` | Genera embeddings para registros del dataset. | Igual que arriba con `dataset-embedding-backfill`. |
+| `eval-classifier-run` | Ejecuta evaluaciones/experimentos IA. | Ver sección 9. |
+
+### 10.2 Retención de hashes de fuente (anti-abuso)
+
+La función `limpiarFuenteReporteAntiguas(dias?)` en `src/lib/anti-abuso/fuente-reporte.ts` respeta `anti_abuso.retencion_fuente_dias` (default 90 días). **No hay job programado aún**, por lo que la limpieza es manual o debe agregarse a un cron.
+
+```bash
+# Previsualizar filas a eliminar
+psql $DATABASE_URL -c "SELECT count(*) FROM \"FuenteReporte\" WHERE \"creadoEn\" < NOW() - INTERVAL '90 days';"
+
+# Ejecutar limpieza
+node --env-file=.env --import tsx -e "
+import { limpiarFuenteReporteAntiguas } from './src/lib/anti-abuso/fuente-reporte.ts';
+limpiarFuenteReporteAntiguas().then((n) => console.log('Eliminadas:', n));
+"
+```
+
+### 10.3 Vencimiento de apelaciones (Fase C)
+
+| Job | Frecuencia sugerida | Comando (plantilla) |
+|-----|---------------------|---------------------|
+| `apelaciones-vencimiento` | Diaria (cron) | `node --env-file=.env --import tsx scripts/job-apelaciones-vencimiento.ts` |
+| `apelaciones-vencimiento` (manual vía endpoint) | Bajo demanda | `curl -H "x-worker-secret: $WORKER_SECRET" -X POST $API_BASE_URL/api/admin/apeaciones/vencer` |
+
+Verificación manual:
+
+```bash
+psql $DATABASE_URL -c "SELECT id, identificador, estado, \"pausaHasta\", \"visibilidadRestaurada\" FROM \"ApelacionIdentificador\" WHERE estado IN ('RECIBIDA','EN_REVISION') AND \"pausaHasta\" < NOW();"
+```
+
+---
+
+## 11. Cambio de modelo vía panel: Laboratorio → eval → activar
+
+> **Lección aprendida del incidente `ornith:35b`:** nunca cambiar el modelo de clasificación en Configuración "para probar". El flujo correcto es siempre **experimento → evaluar → activar**.
+
+### Flujo correcto
+
+1. Ir a **Centro de Control IA → Laboratorio** (`/dashboard/admin/ia`).
+2. Crear un **Nuevo experimento** con la configuración deseada (modelo, umbral, votos, temperatura, `rag_top_k`).
+3. Lanzar el experimento. El worker lo ejecuta en background (`eval-classifier-run`).
+4. Esperar a que pase a `COMPLETADA`.
+5. Comparar contra el baseline (misma `fixtureVersion`).
+6. Si los métricas mejoran sin violar umbrales de producto (`error_silencioso`, `% REVISION_MANUAL`):
+   - En el dashboard del experimento, presionar **"Usar esta configuración"**.
+   - Ir a la pestaña **Configuración** y guardar explícitamente los valores precargados.
+   - El guardado genera un `AuditLog` `PARAM_UPDATE`.
+
+### Qué NO hacer
+
+- No editar `reportes.classification_model` directamente en Configuración sin un experimento previo.
+- No activar un modelo solo porque está disponible en Ollama (ej. `ornith:35b` mostró 30.4% de error silencioso vs. 20.8% del baseline).
+- No olvidar revertir la configuración de prueba si se hizo en desarrollo.
+
+### Verificación
+
+```bash
+# Últimos cambios de configuración de producción
+psql $DATABASE_URL -c "SELECT accion, \"tipoRecurso\", \"valorAnterior\", \"valorNuevo\", \"creadoEn\" FROM \"AuditLog\" WHERE accion = 'PARAM_UPDATE' ORDER BY \"creadoEn\" DESC LIMIT 5;"
+```
+
+---
+
+## 12. Cifrado de parámetros secretos (T7)
+
+La capa de cifrado está en `src/lib/param-encryption.ts` y utiliza **AES-256-GCM**. Solo afecta a filas de `ParametroSistema` con `esSecreto = true`.
+
+### Activación
+
+1. **Backup completo.**
+   ```bash
+   pg_dump "$DATABASE_URL" > proteccion_infantil_pre_cifrado_$(date +%Y%m%d_%H%M%S).sql
+   cp .env .env.pre-cifrado
+   ```
+
+2. **Configurar `PARAM_ENCRYPTION_KEY`.**
+   - Debe tener exactamente 32 bytes.
+   - Se acepta cadena UTF-8 de 32 caracteres o base64 de 44 caracteres.
+   - Ejemplo (cambiar): `PARAM_ENCRYPTION_KEY="change-me-32-bytes-param-key!!"`
+
+3. **Ejecutar migración.**
+   ```bash
+   node --env-file=.env --import tsx scripts/migrate-param-secretos.ts
+   ```
+   El script:
+   - Valida la clave con una prueba de ida/vuelta.
+   - Crea un dump JSON con timestamp en `backups/param-secretos-<timestamp>.json` **con los valores en texto plano**.
+   - Cifra cada valor plano de parámetro con `esSecreto = true`.
+   - Verifica que **todos** los valores cifrados se descifren idénticos al respaldo.
+   - Si la verificación falla, hace rollback automático a los valores planos.
+   - Si la verificación OK y se pasó `--clean-backup`, elimina el respaldo local.
+
+### Comportamiento de la app
+
+- Los endpoints `/api/config/parametros` y `/api/config/parametros/:clave` nunca devuelven el valor real de un parámetro secreto (`valor: null`).
+- `POST /api/config/parametros/:clave/revelar` permite a un admin ver el valor descifrado bajo rate-limit `admin_read`.
+- Al editar un parámetro secreto en el panel, el valor se cifra antes de guardarse.
+- `/api/config/parametros/publicos` excluye explícitamente `esSecreto = true`.
+- Todos los lectores internos de parámetros (`getParametroSistema`) descifran automáticamente si es necesario.
+- Los valores en texto plano siguen funcionando si `PARAM_ENCRYPTION_KEY` no está configurada (modo degradado no recomendado en producción).
+
+### Rollback (si algo falla)
+
+1. **Detener app y worker.**
+   ```bash
+   pkill -f "next start"
+   pkill -f worker-supervisor
+   ```
+
+2. **Rollback automático.** Si la verificación del script falló, el propio script restauró los valores planos. Revisar el log.
+
+3. **Rollback manual desde el backup JSON.** Si la app quedó con valores cifrados incorrectos y hay un backup `backups/param-secretos-<timestamp>.json`:
+   ```bash
+   # Ejemplo con psql (adaptar según el path del backup)
+   psql "$DATABASE_URL" <<'SQL'
+   -- Restaurar cada fila desde el JSON de respaldo
+   SQL
+   ```
+   O bien restaurar el `pg_dump` completo tomado antes de la migración:
+   ```bash
+   psql "$DATABASE_URL" < proteccion_infantil_pre_cifrado_YYYYmmdd_HHMMSS.sql
+   ```
+
+4. **Eliminar o comentar `PARAM_ENCRYPTION_KEY` en `.env`.**
+
+5. **Reiniciar app y worker** y verificar que los parámetros secretos se lean correctamente.
+
+### Verificación post-rollback
+
+```bash
+psql $DATABASE_URL -c "SELECT clave, \"esSecreto\", substring(valor from 1 for 30) AS valor_preview FROM \"ParametroSistema\" WHERE \"esSecreto\" = true;"
+```
+
+Los valores deben ser legibles (no comenzar con `enc:`). Si no lo son, revisar backup.
+
+---
+
+## 13. Contacto y escalamiento
 
 - Si reiniciar Ollama/worker/app no resuelve el problema: revisar `app.log` y `worker.log`.
 - Si hay errores de base de datos: verificar conexión, espacio en disco y que `pgvector` esté habilitado.
 - Para decisiones sobre ajustes de parámetros de IA: consultar con el equipo de producto antes de cambiar valores en producción.
+- Para activar `scoring.source_weight.enabled` o cambiar de modelo: requerir simulación/evaluación previa documentada.
+
+---
+
+## 10. Control de versiones
+
+Al cierre de cada tarea, spec o lote de trabajo:
+
+1. Commitear en **commits separados por bloque lógico** con mensajes descriptivos estilo [Conventional Commits](https://www.conventionalcommits.org/):
+   - `feat(scope): ...` para funcionalidad.
+   - `fix(scope): ...` para correcciones.
+   - `docs(scope): ...` para documentación.
+   - `test(scope): ...` para tests.
+   - `chore(scope): ...` para tareas de mantenimiento.
+2. Hacer `git push origin <rama>` inmediatamente después de cerrar.
+3. Verificar con `git status` que el working tree queda limpio.
+
+> **Regla permanente:** trabajo sin pushear es trabajo en riesgo. El remoto es el respaldo y la fuente de la auditoría externa.

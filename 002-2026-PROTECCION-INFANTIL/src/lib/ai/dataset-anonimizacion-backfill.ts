@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getParametroSistema } from "@/lib/parametros";
 import { anonimizarTexto } from "./anonimizador";
 
 /**
@@ -24,9 +25,7 @@ export async function procesarBackfillAnonimizacion(datasetId: string): Promise<
         return;
     }
 
-    const paramModelo = await prisma.parametroSistema.findUnique({
-        where: { clave: "reportes.classification_model" },
-    });
+    const paramModelo = await getParametroSistema("reportes.classification_model");
     const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || "ornith:9b";
 
     const resultado = await anonimizarTexto(modelo, registro.texto);

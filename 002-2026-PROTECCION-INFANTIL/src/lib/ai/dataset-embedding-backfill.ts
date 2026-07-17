@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { getParametroSistema } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
 
 async function getEmbeddingModel(): Promise<string> {
-    const param = await prisma.parametroSistema.findUnique({ where: { clave: "reportes.embedding_model" } });
+    const param = await getParametroSistema("reportes.embedding_model");
     return param?.valor || process.env.IA_MODEL_EMBEDDING || "nomic-embed-text";
 }
 

@@ -17,24 +17,26 @@ function formatFecha(date: Date | string) {
     return new Date(date).toISOString().slice(0, 10);
 }
 
-function formatFechaHora(date: Date | string) {
-    return new Date(date).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
-}
-
 /**
  * GET /api/consulta?identificador=...
  * Consulta pública de un identificador reportado (número, nick o usuario).
  *
  * Devuelve un resumen agregado SIN exponer textos de reportes, nombres de
- * personas ni datos personales. Incluye distribución geográfica con coordenadas
- * para el mapa, fechas de reporte y del incidente, plataformas y categorías.
+ * personas ni datos personales. Incluye distribución geográfica agregada por
+ * ciudad/país, fechas de reporte y del incidente, plataformas y categorías.
  */
 export async function GET(request: Request) {
     try {
         const rate = await checkRateLimit(request, "consulta");
         if (!rate.allowed) {
             return NextResponse.json(
-                { error: { message: "Demasiadas consultas. Intenta más tarde.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rate.resetAt - Date.now()) / 1000) } },
+                {
+                    error: {
+                        message: "Demasiadas consultas. Intenta más tarde.",
+                        code: ERROR_CODES.RATE_LIMITED,
+                        retryAfter: Math.ceil((rate.resetAt - Date.now()) / 1000),
+                    },
+                },
                 { status: 429, headers: rate.headers }
             );
         }
@@ -76,7 +78,6 @@ export async function GET(request: Request) {
                 esAnonimo: true,
                 plataforma: { select: { id: true, nombre: true, clave: true } },
                 clasificacion: { select: { categoria: true, confianza: true } },
-                ciudadRel: { select: { lat: true, lng: true } },
             },
             orderBy: { creadoEn: "desc" },
             take: 1000,
@@ -124,31 +125,31 @@ export async function GET(request: Request) {
             .map((c) => ({
                 categoria: c.categoria,
                 total: c.total,
-                confianzaPromedio: c.confianzas.length > 0
-                    ? Number((c.confianzas.reduce((a, b) => a + b, 0) / c.confianzas.length).toFixed(2))
-                    : null,
+                confianzaPromedio:
+                    c.confianzas.length > 0
+                        ? Number((c.confianzas.reduce((a, b) => a + b, 0) / c.confianzas.length).toFixed(2))
+                        : null,
             }))
             .sort((a, b) => b.total - a.total);
 
-        // Ubicaciones con coordenadas para el mapa
-        const ubicacionKey = (r: typeof reportes[0]) => `${r.pais}|${r.ciudad}`;
-        const porUbicacion = new Map<string, {
-            pais: string;
-            ciudad: string;
-            lat: number | null;
-            lng: number | null;
-            total: number;
-            fechasReporte: string[];
-            fechasIncidente: string[];
-        }>();
+        // Ubicaciones agregadas por ciudad/país (sin coordenadas)
+        const ubicacionKey = (r: (typeof reportes)[0]) => `${r.pais}|${r.ciudad}`;
+        const porUbicacion = new Map<
+            string,
+            {
+                pais: string;
+                ciudad: string;
+                total: number;
+                fechasReporte: string[];
+                fechasIncidente: string[];
+            }
+        >();
 
         for (const r of reportes) {
             const key = ubicacionKey(r);
             const actual = porUbicacion.get(key) || {
                 pais: r.pais,
                 ciudad: r.ciudad,
-                lat: r.ciudadRel?.lat ?? null,
-                lng: r.ciudadRel?.lng ?? null,
                 total: 0,
                 fechasReporte: [] as string[],
                 fechasIncidente: [] as string[],

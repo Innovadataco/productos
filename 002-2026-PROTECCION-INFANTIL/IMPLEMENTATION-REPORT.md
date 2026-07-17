@@ -277,3 +277,123 @@ F7 concluye el rediseño del clasificador IA. El KPI de producto (`error_silenci
 
 ### Próximo paso recomendado
 - Recolectar feedback de administradores sobre el playground y la documentación.
+
+
+## TAREA 3 — Mejoras visuales Dashboard público y consulta
+
+**Fecha:** 2026-07-16
+
+### Cambios realizados
+
+- `src/components/modules/PublicDashboard.tsx`
+  - Reemplazó el mapa con pins por una **sección geográfica agregada**: ranking de ciudades con `MiniList` + gráfico de barras de las top ciudades.
+  - Extrajo componentes reutilizables (`MetricCard`, `ChartCard`, `MiniList`, `RiskBadge`) para consistencia visual.
+  - Agregó tabla de **últimos identificadores reportados** (antes el endpoint ya los devolvía pero no se mostraban).
+  - Unificó etiquetas y tarjetas con estilo glass/slate/sky y `rounded-2xl`.
+
+- `src/components/modules/ConsultaPublicaClient.tsx`
+  - Reemplazó el mapa con pins por un **ranking de ubicaciones agregado** (`MiniList`) y mantuvo la tabla de detalle.
+  - Aplicó `MetricCard`/`ChartCard` a todas las secciones de resultados.
+  - Agregó `RiskBadge` para el nivel de riesgo.
+  - Mejoró el resumen, fechas y llamado a iniciar sesión.
+
+- `src/app/api/estadisticas-publicas/route.ts`
+  - Eliminó la exposición de coordenadas `lat`/`lng` de ciudades en la respuesta pública para reforzar R2.
+
+- `src/app/api/consulta/route.ts`
+  - Eliminó la exposición de coordenadas `lat`/`lng` por ciudad en la respuesta pública.
+  - Simplificó la selección de ubicaciones; sigue siendo solo lectura y agregada.
+
+- Nuevos componentes reutilizables
+  - `src/components/modules/MetricCard.tsx`
+  - `src/components/modules/ChartCard.tsx`
+  - `src/components/modules/MiniList.tsx`
+  - `src/components/modules/RiskBadge.tsx`
+  - `src/lib/labels.ts` (centraliza labels/colors de riesgo y categorías).
+
+- Tests
+  - `src/app/api/estadisticas-publicas/route.test.ts` (nuevo): verifica agregados, campos esperados y ausencia de PII/coordenadas.
+  - `src/app/api/consulta/route.test.ts`: actualizado para validar que `lat`/`lng` ya no se devuelven.
+
+- Eliminado
+  - `src/components/modules/MapaPuntos.tsx` (ya no se usa; evita pins de ubicación en vistas públicas).
+
+### Validación final
+
+| Tipo | Resultado |
+|------|-----------|
+| Lint | ✅ OK (1 warning preexistente en `src/lib/sms.ts`) |
+| Tests (Vitest) | ✅ 170/170 pasaron |
+| Build | ❌ Falla por error de tipo preexistente en `scripts/generar-auditoria-fixture-v1.ts:78` (`RUN_ALIASES[r.nombre]` con índice posiblemente `null`). Este archivo no fue modificado en esta tarea. |
+
+### Notas
+- El fallo de build es ajeno a los cambios de dashboard/consulta; el type-checker de Next.js lo detecta en un script de evaluación de IA no relacionado con la tarea.
+- No se agregaron endpoints nuevos; las APIs ajustadas siguen siendo de solo lectura y datos agregados.
+
+---
+
+## Lote Nocturno — Cierre de T1/T7 y baseline v2
+
+**Fecha:** 2026-07-17
+
+### T1 — Fase C de apelaciones (anti-abuso)
+
+**Estado:** COMPLETO
+
+| Criterio | Estado |
+|----------|--------|
+| Migración Prisma | ✅ `20260718110000_add_apelaciones_fase_c` aplicada en dev/test |
+| Lógica de negocio | ✅ `src/lib/apealaciones.ts` (crear, verificar OTP, resolver, rehabilitar, vencer) |
+| APIs públicas | ✅ `/api/apeaciones/solicitar`, `/api/apeaciones/verificar`, `/api/apeaciones/[token]` |
+| APIs admin | ✅ Listado, detalle, resolver, rehabilitar, vencer |
+| UI pública | ✅ `/apelar` con formulario, OTP y seguimiento por token |
+| UI admin | ✅ `/dashboard/admin/apeaciones` con navegación en `AdminNav` |
+| Job de vencimiento | ✅ `scripts/job-apelaciones-vencimiento.ts` + endpoint `/api/admin/apeaciones/vencer` |
+| Rate limits | ✅ `apelacion` por identificador/plataforma; `apelacion_sms` por contacto/token |
+| Tests | ✅ 4 archivos de tests nuevos; 189 tests totales pasan |
+
+### T7 — Deuda técnica: cifrado de parámetros secretos
+
+**Estado:** COMPLETO
+
+| Criterio | Estado |
+|----------|--------|
+| Capa de cifrado | ✅ `src/lib/param-encryption.ts` (AES-256-GCM) |
+| Endpoints config | ✅ GET/PATCH no exponen valores secretos; PATCH cifra al guardar |
+| Públicos | ✅ `/api/config/parametros/publicos` excluye `esSecreto=true` |
+| UI admin | ✅ `ConfigPanel` usa input tipo password y no guarda vacíos para secretos |
+| Migración | ✅ `scripts/migrar-parametros-secretos.ts` con backup pg_dump y verificación ida/vuelta |
+| Variable de entorno | ✅ `PARAM_ENCRYPTION_KEY` agregada a `.env.example` |
+| Tests | ✅ `src/lib/param-encryption.test.ts` |
+
+### T2 — Baseline v2 sobre fixture curado
+
+- Fixture curado a `fixtureVersion=11` (5 cambios por evidencia fuerte aplicados).
+- Script `scripts/eval-classifier-baseline-v2.ts` creado para correr con configuración exacta de producción (`ornith:9b/1.0/5/0.7/3`) sobre los casos activos.
+- Resultado: ver archivo generado en `eval-results/baseline-v2-*.json` y log en `eval-results/baseline-v2-run.log`.
+
+### Validación final del lote
+
+| Tipo | Resultado |
+|------|-----------|
+| Lint | ✅ OK (1 warning preexistente en `src/lib/sms.ts`) |
+| Tests (Vitest) | ✅ 189/189 pasaron |
+| TypeScript (`next build`) | ✅ OK |
+| Build | ✅ OK |
+
+### Archivos clave del lote
+
+- `src/lib/apealaciones.ts`
+- `src/app/api/apeaciones/**`
+- `src/app/api/admin/apeaciones/**`
+- `src/app/apelar/page.tsx`
+- `src/app/dashboard/admin/apeaciones/page.tsx`
+- `src/components/modules/AdminApelaciones.tsx`
+- `src/components/modules/AdminNav.tsx`
+- `src/lib/param-encryption.ts`
+- `scripts/migrar-parametros-secretos.ts`
+- `scripts/eval-classifier-baseline-v2.ts`
+- `scripts/auditoria-fixture-v1.md`
+- `docs/runbook.md` (secciones 10.3 y 12)
+- `docs/despliegue-v2-checklist.md`
+- `specs/015-anti-abuso/spec.md`

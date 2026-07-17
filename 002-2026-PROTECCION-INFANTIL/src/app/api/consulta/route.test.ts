@@ -80,7 +80,8 @@ describe("GET /api/consulta", () => {
         expect(body.plataformas).toHaveLength(1);
         expect(body.categorias).toHaveLength(1);
         expect(body.ubicaciones).toHaveLength(1);
-        expect(body.ubicaciones[0].lat).toBe(4.711);
+        expect(body.ubicaciones[0].lat).toBeUndefined();
+        expect(body.ubicaciones[0].lng).toBeUndefined();
         expect(body.texto).toBeUndefined();
         expect(body.textoOriginal).toBeUndefined();
     });

@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { requireEnv } from "./env";
 import { prisma } from "./prisma";
+import { getParametroSistema } from "./parametros";
 
 const resend = new Resend(requireEnv("RESEND_API_KEY", 10));
 const FROM = requireEnv("EMAIL_FROM", 5);
@@ -51,7 +52,7 @@ async function getAdminEmails(): Promise<string[]> {
 }
 
 async function alertasHabilitadas(clave: string): Promise<boolean> {
-    const param = await prisma.parametroSistema.findUnique({ where: { clave } });
+    const param = await getParametroSistema(clave);
     return param ? param.valor === "true" : true;
 }
 
