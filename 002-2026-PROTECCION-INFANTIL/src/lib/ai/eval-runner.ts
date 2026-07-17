@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { descifrarValorParametro } from "@/lib/parametros";
 import type { Prisma } from "@prisma/client";
 import { clasificarConVotos } from "./classifier";
 import { generarEmbedding } from "./embedder";
@@ -203,7 +204,9 @@ export async function getCurrentProductionConfig(): Promise<ExperimentConfigSnap
         },
     });
 
-    const get = (clave: string, fallback: string) => params.find((p) => p.clave === clave)?.valor || fallback;
+    const decryptedParams = params.map(descifrarValorParametro);
+
+    const get = (clave: string, fallback: string) => decryptedParams.find((p) => p.clave === clave)?.valor || fallback;
     const getNum = (clave: string, fallback: number) => {
         const v = params.find((p) => p.clave === clave)?.valor;
         return v ? Number(v) : fallback;

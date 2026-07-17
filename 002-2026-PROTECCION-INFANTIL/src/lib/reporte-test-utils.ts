@@ -115,6 +115,11 @@ export async function crearParametrosReportes() {
         { clave: "ratelimit.report_identificador.spam_threshold", valor: "20", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.report_fingerprint.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.report_fingerprint.max_requests", valor: "5", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "anti_abuso.apelacion_pausa_dias", valor: "7", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "ratelimit.apelacion.window_seconds", valor: "86400", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "ratelimit.apelacion.max_requests", valor: "3", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "ratelimit.apelacion_sms.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "ratelimit.apelacion_sms.max_requests", valor: "3", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "alerts.admin.enabled", valor: "true", tipo: "BOOLEAN" as const, categoria: "EMAIL" as const, esPublico: false },
         { clave: "alerts.critical_score.enabled", valor: "true", tipo: "BOOLEAN" as const, categoria: "EMAIL" as const, esPublico: false },
     ];
