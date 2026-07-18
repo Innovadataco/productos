@@ -71,6 +71,9 @@ Se rediseñó por completo la landing page (`/`). El home ahora se centra exclus
 ## Commits
 
 ```text
+96237bd docs(specs): cierre 028 actualizado con rediseño completo
+51635de feat(ui): rediseño completo del home con buscador integrado en tarjeta
+81eea86 docs(specs): rediseño completo del home 028 con buscador integrado
 8bf0d30 docs(specs): actualizar cierre 028 con commits finales y evidencia del smoke
 6f1180d feat(ui): integrar buscador en tarjeta Consultar y eliminar bloque #consultar separado
 b626eb7 docs(specs): actualizar spec 028 con buscador integrado en tarjeta de consultar
@@ -78,8 +81,6 @@ b626eb7 docs(specs): actualizar spec 028 con buscador integrado en tarjeta de co
 16efae4 feat(ui): rediseño landing con acciones principales y accesos secundarios
 6d1c5b3 docs(specs): spec 028 redisenio del home con spec, plan y quickstart
 ```
-
-*(Los commits de esta iteración final se agregarán a la lista tras el push.)*
 
 ---
 
