@@ -110,6 +110,21 @@ export async function enviarAlertaScoreCritico(reporte: {
     }
 }
 
+export async function enviarAlertaCirculoConfianza(email: string): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "Novedades en tu Círculo de Confianza",
+        text: `Hay novedades en tu Círculo de Confianza. Ingresá para revisar:\n\n${baseUrl}/dashboard/circulo-confianza`,
+    });
+
+    if (result.error) {
+        console.error("Resend error alerta círculo:", result.error);
+        throw new Error("Error al enviar alerta de Círculo de Confianza");
+    }
+}
+
 const COOLDOWN_ALERTA_MS = 24 * 60 * 60 * 1000;
 
 export async function enviarAlertasSuscriptores(payload: {
