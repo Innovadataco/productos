@@ -59,6 +59,9 @@ enum AccionAudit {
   APELACION_RESUELTA
   APELACION_VENCIDA
   APELACION_REHABILITADA
+  CIRCULO_CONTACT_CREATE
+  CIRCULO_CONTACT_UPDATE
+  CIRCULO_CONTACT_DISABLE
 }
 
 enum EstadoApelacion {
@@ -119,13 +122,16 @@ model Usuario {
   auditLogs           AuditLog[]
   codigos             CodigoVerificacion[]
   tokensRecuperacion  TokenRecuperacion[]
-  reportes            Reporte[]
-  reportesDadosDeBaja Reporte[]                @relation("ReportesDadosDeBaja")
-  correcciones        CorreccionAdmin[]
-  alertasSuscripcion  AlertaSuscripcion[]
-  casosEval           CasoEval[]
-  evalRuns            EvalRun[]
-  apelaciones         ApelacionIdentificador[]
+  reportes              Reporte[]
+  reportesDadosDeBaja   Reporte[]                @relation("ReportesDadosDeBaja")
+  correcciones          CorreccionAdmin[]
+  alertasSuscripcion    AlertaSuscripcion[]
+  casosEval             CasoEval[]
+  evalRuns              EvalRun[]
+  apelaciones           ApelacionIdentificador[]
+  contactosConfianza            ContactoConfianza[]
+  notificacionesCirculo         Boolean                  @default(true)
+  ultimaNotificacionCirculoEn   DateTime?
 
   @@index([email])
   @@index([rol])
@@ -264,6 +270,7 @@ model Plataforma {
   identificadores    IdentificadorReportado[]
   alertasSuscripcion AlertaSuscripcion[]
   apelaciones        ApelacionIdentificador[]
+  contactosConfianza ContactoConfianza[]
 
   @@index([clave])
   @@index([esActiva])
@@ -429,6 +436,24 @@ model ApelacionIdentificador {
   @@index([identificador, plataformaId])
   @@index([estado])
   @@index([tokenAcceso])
+}
+
+model ContactoConfianza {
+  id            String   @id @default(cuid())
+  usuarioId     String
+  identificador String
+  plataformaId  String
+  etiqueta      String?  @db.VarChar(100)
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  usuario    Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  plataforma Plataforma @relation(fields: [plataformaId], references: [id])
+
+  @@unique([usuarioId, identificador, plataformaId])
+  @@index([usuarioId, activo])
+  @@index([identificador, plataformaId])
 }
 
 model AlertaSuscripcion {
