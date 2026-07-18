@@ -34,9 +34,46 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
         const id = parsedId.data;
 
+        const permisosReporte = await prisma.reporte.findUnique({
+            where: { id },
+            select: { operadorId: true, tenantId: true },
+        });
+
+        if (!permisosReporte) {
+            return NextResponse.json(
+                { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
+                { status: 404 }
+            );
+        }
+
+        if (!puedeGestionarReporte(user, permisosReporte)) {
+            return NextResponse.json(
+                { error: { message: "No tenés permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
+
         const reporte = await prisma.reporte.findUnique({
             where: { id },
-            include: {
+            select: {
+                id: true,
+                identificador: true,
+                numeroSeguimiento: true,
+                estado: true,
+                texto: true,
+                esAnonimo: true,
+                prioridadAlta: true,
+                keywordsDetectadas: true,
+                esRafaga: true,
+                eliminado: true,
+                motivoBaja: true,
+                notaBaja: true,
+                eliminadoEn: true,
+                creadoEn: true,
+                fechaIncidente: true,
+                ciudad: true,
+                pais: true,
+                edadVictima: true,
                 plataforma: { select: { id: true, nombre: true, clave: true } },
                 operador: { select: { id: true, email: true, nombre: true } },
                 reintentos: { orderBy: { intento: "asc" } },
@@ -63,14 +100,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        if (!puedeGestionarReporte(user, reporte)) {
-            return NextResponse.json(
-                { error: { message: "No tenés permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
-
-        return NextResponse.json({ reporte });
+        return NextResponse.json({
+            reporte,
+            puedeRevelarOriginal: user.rol === "ADMIN",
+        });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
