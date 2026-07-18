@@ -68,6 +68,8 @@ enum AccionAudit {
   OPERADOR_DESACTIVADO
   OPERADOR_ASIGNADO
   OPERADOR_REASIGNADO
+  OPERADOR_PASSWORD_REGENERADA
+  OPERADOR_EMAIL_REENVIADO
   CASO_CONFIRMADO
   CASO_CORREGIDO
   CASO_DADO_DE_BAJA
@@ -119,14 +121,15 @@ model Usuario {
   email            String        @unique
   nombre           String?
   passwordHash     String
-  rol              RolUsuario
-  estado           EstadoUsuario @default(activo)
-  intentosFallidos Int           @default(0)
-  bloqueadoHasta   DateTime?
-  ultimaSesion     DateTime?
-  tenantId         String?
-  creadoEn         DateTime      @default(now())
-  actualizadoEn    DateTime      @updatedAt
+  rol                  RolUsuario
+  estado               EstadoUsuario @default(activo)
+  debeCambiarPassword  Boolean       @default(false)
+  intentosFallidos     Int           @default(0)
+  bloqueadoHasta       DateTime?
+  ultimaSesion         DateTime?
+  tenantId             String?
+  creadoEn             DateTime      @default(now())
+  actualizadoEn        DateTime      @updatedAt
 
   tenant              Tenant?                  @relation(fields: [tenantId], references: [id])
   parametros          ParametroSistema[]
