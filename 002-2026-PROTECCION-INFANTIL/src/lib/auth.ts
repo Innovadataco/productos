@@ -133,6 +133,14 @@ export function requireOperadorOAdmin() {
     return () => verifyAuth(["ADMIN", "SCHOOL_ADMIN", "OPERADOR"]);
 }
 
+export function requireComiteOAdmin() {
+    return () => verifyAuth(["ADMIN", "SCHOOL_ADMIN", "COMITE_VALIDACION"]);
+}
+
+export function requireAdminOComiteOOperador() {
+    return () => verifyAuth(["ADMIN", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
+}
+
 export async function setSessionCookie(request: Request, token: string): Promise<void> {
     const secure = isSecureRequest(request);
     const cookieStore = await cookies();
