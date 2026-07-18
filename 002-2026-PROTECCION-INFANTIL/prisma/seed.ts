@@ -85,6 +85,14 @@ async function main() {
             descripcion: "Modo mantenimiento de la plataforma",
         },
         {
+            clave: "ui.sla_horas_procesamiento",
+            valor: "24",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: true,
+            descripcion: "Horas máximas que un reporte puede estar \"En proceso\" antes de mostrar advertencia al usuario",
+        },
+        {
             clave: "system.ollama_base_url",
             valor: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
             tipo: TipoParametro.STRING,

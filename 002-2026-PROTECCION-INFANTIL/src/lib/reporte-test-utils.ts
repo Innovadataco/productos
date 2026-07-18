@@ -128,6 +128,7 @@ export async function crearParametrosReportes() {
         { clave: "worker.retry_delay_segundos", valor: "30", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
         { clave: "worker.concurrencia", valor: "2", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
         { clave: "worker.max_pendientes", valor: "100", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
+        { clave: "ui.sla_horas_procesamiento", valor: "24", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: true },
     ];
 
     for (const p of params) {
