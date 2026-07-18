@@ -7,6 +7,7 @@ const links = [
     { href: "/dashboard/admin", label: "Bandeja de reportes", icon: InboxIcon },
     { href: "/dashboard/admin/estadisticas", label: "Dashboard", icon: ChartIcon },
     { href: "/dashboard/admin/ia", label: "Centro de Control IA", icon: BrainIcon },
+    { href: "/dashboard/admin/operadores", label: "Operadores", icon: UsersIcon },
     { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", icon: ShieldIcon },
     { href: "/dashboard/admin/apelaciones", label: "Apelaciones", icon: ScaleIcon },
     { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", icon: DatabaseIcon },
@@ -99,6 +100,14 @@ function ScaleIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18m-3-9h6m-9.75-6.75 1.5-1.5 1.5 1.5m10.5-1.5-1.5-1.5-1.5 1.5M3.75 9.75l1.5 7.5h13.5l1.5-7.5M3.75 9.75h16.5" />
+        </svg>
+    );
+}
+
+function UsersIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.295-2.158-.81-3.05M15 19.128h.003M12 14a4 4 0 1 0-8 0 4 4 0 0 0 8 0Zm0 0h.003M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
         </svg>
     );
 }
