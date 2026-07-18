@@ -45,10 +45,10 @@ function assert(condition: boolean, message: string): void {
     }
 }
 
-async function api(path: string, options: RequestInit = {}): Promise<Response> {
+async function api(path: string, options: RequestInit = {}, { auth = true }: { auth?: boolean } = {}): Promise<Response> {
     const url = `${APP_URL}${path}`;
     const headers = new Headers(options.headers || {});
-    if (jar.token) {
+    if (auth && jar.token) {
         headers.set("Cookie", `token=${jar.token}`);
     }
     headers.set("Content-Type", headers.get("Content-Type") || "application/json");
@@ -86,18 +86,22 @@ async function getPlataformaClave(): Promise<string> {
 async function crearReporte(plataformaClave: string): Promise<{ id: string; numeroSeguimiento: string }> {
     const unique = Date.now();
     const identificador = `smoke-test-${unique}`;
-    const res = await api("/api/reportes", {
-        method: "POST",
-        body: JSON.stringify({
-            identificador,
-            plataforma: plataformaClave,
-            texto: TEXTO_PRUEBA,
-            fechaIncidente: new Date().toISOString(),
-            pais: "CO",
-            ciudad: "Bogotá",
-            esAnonimo: true,
-        }),
-    });
+    const res = await api(
+        "/api/reportes",
+        {
+            method: "POST",
+            body: JSON.stringify({
+                identificador,
+                plataforma: plataformaClave,
+                texto: TEXTO_PRUEBA,
+                fechaIncidente: new Date().toISOString(),
+                pais: "CO",
+                ciudad: "Bogotá",
+                esAnonimo: true,
+            }),
+        },
+        { auth: false }
+    );
     if (!res.ok) throw new Error(`Crear reporte falló: ${res.status} ${await res.text()}`);
     const data = (await res.json()) as { reporte: { id: string; numeroSeguimiento: string } };
     return data.reporte;
