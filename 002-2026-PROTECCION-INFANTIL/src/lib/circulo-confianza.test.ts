@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "./prisma";
 import { resetDatabase } from "./test-utils";
 import {
@@ -19,7 +19,12 @@ import {
     crearPaisCiudad,
     crearParametrosReportes,
 } from "./reporte-test-utils";
+import { enviarAlertaCirculoConfianza } from "@/lib/email";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
+
+vi.mock("@/lib/email", () => ({
+    enviarAlertaCirculoConfianza: vi.fn().mockResolvedValue(undefined),
+}));
 
 async function crearCirculoParams() {
     await prisma.parametroSistema.createMany({
@@ -258,10 +263,71 @@ describe("circulo-confianza", () => {
     });
 
     describe("notificarCambioCirculoSiCorresponde", () => {
+        beforeEach(() => {
+            vi.mocked(enviarAlertaCirculoConfianza).mockClear();
+        });
+
         it("no falla si no hay contactos", async () => {
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
             const reporte = await crearReporte("+57300X", plataforma!.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
             await expect(notificarCambioCirculoSiCorresponde(reporte.id)).resolves.not.toThrow();
+            expect(enviarAlertaCirculoConfianza).not.toHaveBeenCalled();
+        });
+
+        it("envía email ciego y actualiza timestamp cuando un contacto activo tiene reportes visibles", async () => {
+            const usuario = await crearUsuario("PARENT");
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+            await agregarContacto(usuario.id, {
+                identificador: "+57300NOTIF",
+                plataformaId: plataforma!.id,
+                etiqueta: "contacto de prueba",
+            });
+            const reporte = await crearReporte("+57300NOTIF", plataforma!.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
+
+            await notificarCambioCirculoSiCorresponde(reporte.id);
+
+            expect(enviarAlertaCirculoConfianza).toHaveBeenCalledOnce();
+            const args = vi.mocked(enviarAlertaCirculoConfianza).mock.calls[0];
+            expect(args[0]).toBe(usuario.email);
+
+            const actualizado = await prisma.usuario.findUnique({
+                where: { id: usuario.id },
+                select: { ultimaNotificacionCirculoEn: true },
+            });
+            expect(actualizado?.ultimaNotificacionCirculoEn).not.toBeNull();
+        });
+
+        it("respeta el cooldown y no re-notifica dentro de la ventana", async () => {
+            const usuario = await crearUsuario("PARENT");
+            await prisma.usuario.update({
+                where: { id: usuario.id },
+                data: { ultimaNotificacionCirculoEn: new Date(Date.now() - 1000) },
+            });
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+            await agregarContacto(usuario.id, {
+                identificador: "+57300COOL",
+                plataformaId: plataforma!.id,
+            });
+            const reporte = await crearReporte("+57300COOL", plataforma!.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
+
+            await notificarCambioCirculoSiCorresponde(reporte.id);
+
+            expect(enviarAlertaCirculoConfianza).not.toHaveBeenCalled();
+        });
+
+        it("respeta la preferencia del usuario desactivada", async () => {
+            const usuario = await crearUsuario("PARENT");
+            await toggleNotificacionesCirculo(usuario.id, false);
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+            await agregarContacto(usuario.id, {
+                identificador: "+57300OFF",
+                plataformaId: plataforma!.id,
+            });
+            const reporte = await crearReporte("+57300OFF", plataforma!.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
+
+            await notificarCambioCirculoSiCorresponde(reporte.id);
+
+            expect(enviarAlertaCirculoConfianza).not.toHaveBeenCalled();
         });
     });
 });
