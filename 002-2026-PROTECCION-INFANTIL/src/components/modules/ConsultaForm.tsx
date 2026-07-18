@@ -4,7 +4,13 @@ import { useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
-export function ConsultaForm({ onSearch }: { onSearch: (identificador: string) => void }) {
+export function ConsultaForm({
+    onSearch,
+    compact = false,
+}: {
+    onSearch: (identificador: string) => void;
+    compact?: boolean;
+}) {
     const [identificador, setIdentificador] = useState("");
     const [error, setError] = useState("");
 
@@ -19,10 +25,10 @@ export function ConsultaForm({ onSearch }: { onSearch: (identificador: string) =
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-start">
             <div className="flex-1">
                 <Input
-                    label="Número, nick o usuario"
+                    label={compact ? undefined : "Número, nick o usuario"}
                     placeholder="Ej: +573001234567"
                     value={identificador}
                     onChange={(e) => setIdentificador(e.target.value)}

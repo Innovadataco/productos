@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ConsultaForm } from "./ConsultaForm";
 
 function ShieldIcon({ className }: { className?: string }) {
     return (
@@ -48,7 +49,7 @@ function ChartBarIcon({ className }: { className?: string }) {
     );
 }
 
-export function LandingHero() {
+export function LandingHero({ onSearch }: { onSearch: (identificador: string) => void }) {
     return (
         <section className="relative overflow-hidden rounded-[2rem] border border-white/30 dark:border-white/10 bg-gradient-to-br from-sky-500 to-cyan-600 dark:from-sky-600 dark:to-cyan-700 px-6 py-14 text-white shadow-2xl shadow-sky-500/15 dark:shadow-cyan-900/30 sm:py-20">
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -56,7 +57,7 @@ export function LandingHero() {
                 <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-cyan-300/20 blur-3xl animate-pulseSlow" style={{ animationDelay: "1.5s" }} />
             </div>
 
-            <div className="relative mx-auto max-w-4xl text-center">
+            <div className="relative mx-auto max-w-5xl text-center">
                 <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md">
                     <ShieldIcon className="h-8 w-8 text-white" />
                 </div>
@@ -69,7 +70,7 @@ export function LandingHero() {
                     De forma gratuita, con o sin cuenta.
                 </p>
 
-                <div className="mt-10 grid gap-4 sm:grid-cols-2">
+                <div className="mt-10 grid gap-4 sm:grid-cols-[1fr_1.25fr]">
                     <Link
                         href="/reportar"
                         className="group flex flex-col items-start rounded-3xl bg-white p-6 text-left shadow-xl shadow-sky-900/10 transition-all hover:scale-[1.02] hover:shadow-2xl sm:p-8"
@@ -81,16 +82,16 @@ export function LandingHero() {
                         <span className="mt-1 text-sm font-medium text-sky-600/90">De forma anónima o con tu cuenta</span>
                     </Link>
 
-                    <Link
-                        href="#consultar"
-                        className="group flex flex-col items-start rounded-3xl border border-white/30 bg-white/10 p-6 text-left backdrop-blur-md transition-all hover:bg-white/20 hover:scale-[1.02] sm:p-8"
-                    >
-                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-white transition group-hover:bg-white/30">
+                    <div className="flex flex-col items-start rounded-3xl border border-white/30 bg-white/10 p-6 text-left backdrop-blur-md sm:p-8">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-white">
                             <SearchIcon className="h-6 w-6" />
                         </div>
                         <span className="text-xl font-bold text-white sm:text-2xl">Consultar</span>
-                        <span className="mt-1 text-sm font-medium text-white/90">Buscar un identificador</span>
-                    </Link>
+                        <span className="mt-1 text-sm font-medium text-white/90">Busca un número, nick o usuario</span>
+                        <div className="mt-5 w-full">
+                            <ConsultaForm onSearch={onSearch} compact />
+                        </div>
+                    </div>
                 </div>
 
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
