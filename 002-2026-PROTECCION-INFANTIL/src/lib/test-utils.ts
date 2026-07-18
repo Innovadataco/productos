@@ -5,6 +5,7 @@ export async function resetDatabase() {
     await prisma.rateLimit.deleteMany();
     await prisma.casoEval.deleteMany();
     await prisma.evalRun.deleteMany();
+    await prisma.transicionReporte.deleteMany();
     await prisma.datasetEntrenamiento.deleteMany();
     await prisma.correccionAdmin.deleteMany();
     await prisma.clasificacionIA.deleteMany();

@@ -8,6 +8,7 @@ import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
 import { idSchema } from "@/lib/validators";
+import { registrarTransicion } from "@/lib/reporte-transiciones";
 
 const anonimizarSchema = z.object({
     textoAnonimizado: z.string().min(20).max(5000),
@@ -80,8 +81,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const piiEliminada = reporte.clasificacion?.piiDetectada || [];
 
-        // Transacción: preservar original, actualizar texto y estado
+        // Transacción: registrar transición, preservar original y actualizar texto y estado
         await prisma.$transaction(async (tx) => {
+            await registrarTransicion({
+                reporteId,
+                estadoAnterior: "REQUIERE_ANONIMIZACION",
+                estadoNuevo: "CLASIFICADO",
+                responsableTipo: "ADMIN",
+                responsableId: user.id,
+                motivo: "Texto anonimizado por admin",
+                tx,
+            });
             await tx.reporte.update({
                 where: { id: reporteId },
                 data: {

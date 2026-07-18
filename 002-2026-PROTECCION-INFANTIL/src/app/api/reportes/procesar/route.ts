@@ -14,6 +14,7 @@ import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { enviarAlertaRevision, enviarAlertaScoreCritico, enviarAlertasSuscriptores } from "@/lib/email";
 import { asignarOperadorAReporte } from "@/lib/operadores/asignador";
+import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { Prisma } from "@prisma/client";
 import type { EstadoReporte } from "@prisma/client";
 
@@ -75,10 +76,22 @@ export async function POST(request: Request) {
             });
         }
 
-        // Actualizar estado a PROCESANDO
-        await prisma.reporte.update({
-            where: { id: reporteId },
-            data: { estado: "PROCESANDO" },
+        const estadoAnteriorReporte = reporte.estado;
+
+        // Actualizar estado a PROCESANDO y registrar transición atómicamente
+        await prisma.$transaction(async (tx) => {
+            await registrarTransicion({
+                reporteId: reporteId!,
+                estadoAnterior: estadoAnteriorReporte,
+                estadoNuevo: "PROCESANDO",
+                responsableTipo: "WORKER",
+                motivo: "Inicio de procesamiento por worker",
+                tx,
+            });
+            await tx.reporte.update({
+                where: { id: reporteId! },
+                data: { estado: "PROCESANDO" },
+            });
         });
 
         // Generar embedding primero para poder detectar duplicados anónimos
@@ -116,12 +129,23 @@ export async function POST(request: Request) {
             const similar = await buscarReporteSimilar(reporte.id, reporte.identificador, reporte.plataformaId, vector, threshold);
 
             if (similar) {
-                await prisma.reporte.update({
-                    where: { id: reporteId },
-                    data: { estado: "DUPLICADO", reporteOrigenId: similar.reporteId },
+                await prisma.$transaction(async (tx) => {
+                    await registrarTransicion({
+                        reporteId: reporteId!,
+                        estadoAnterior: "PROCESANDO",
+                        estadoNuevo: "DUPLICADO",
+                        responsableTipo: "SISTEMA",
+                        motivo: "Reporte marcado como duplicado por similitud de embeddings",
+                        metadatos: { reporteOrigenId: similar.reporteId },
+                        tx,
+                    });
+                    await tx.reporte.update({
+                        where: { id: reporteId! },
+                        data: { estado: "DUPLICADO", reporteOrigenId: similar.reporteId },
+                    });
                 });
                 return NextResponse.json({
-                    reporteId,
+                    reporteId: reporteId,
                     estado: "DUPLICADO",
                     clasificacion: null,
                     latenciaMs: 0,
@@ -329,20 +353,38 @@ export async function POST(request: Request) {
             prioridadAlta = true;
         }
 
-        // Actualizar estado del reporte a resultado final
-        await prisma.reporte.update({
-            where: { id: reporteId },
-            data: {
-                estado: estadoFinal,
-                prioridadAlta,
-                keywordsDetectadas,
-                esRafaga,
-            },
+        // Actualizar estado del reporte a resultado final y registrar transición atómicamente
+        await prisma.$transaction(async (tx) => {
+            await registrarTransicion({
+                reporteId: reporteId!,
+                estadoAnterior: "PROCESANDO",
+                estadoNuevo: estadoFinal,
+                responsableTipo: "IA",
+                motivo: estadoFinal === "REVISION_MANUAL" ? "Requiere revisión humana" : "Clasificación automática completada",
+                metadatos: {
+                    modelo: clasificacion.metrics.modelo,
+                    latenciaMs: clasificacion.metrics.latenciaMs,
+                    categoria: clasificacion.categoria,
+                    confianza: clasificacion.confianza,
+                    esRafaga,
+                    prioridadAlta,
+                },
+                tx,
+            });
+            await tx.reporte.update({
+                where: { id: reporteId! },
+                data: {
+                    estado: estadoFinal,
+                    prioridadAlta,
+                    keywordsDetectadas,
+                    esRafaga,
+                },
+            });
         });
 
         // Fase 3: asignación automática de operador para revisión manual
         if (estadoFinal === "REVISION_MANUAL") {
-            asignarOperadorAReporte(reporteId).catch((err) =>
+            asignarOperadorAReporte(reporteId!).catch((err) =>
                 console.error("[OPERADORES] Error asignando operador a reporte", { reporteId, error: err })
             );
         }
@@ -400,18 +442,39 @@ export async function POST(request: Request) {
         let reporteParaAlerta: { id: string; numeroSeguimiento: string | null; identificador: string } | null = null;
         if (reporteId) {
             try {
-                const reporteActualizado = await prisma.reporte.update({
+                const reportePrevio = await prisma.reporte.findUnique({
                     where: { id: reporteId },
-                    data: {
-                        estado: "REVISION_MANUAL",
-                        processingError: errMsg,
-                    },
+                    select: { estado: true },
                 });
-                reporteParaAlerta = reporteActualizado;
+                const estadoPrevio = reportePrevio?.estado ?? "PENDIENTE";
+
+                const reporteActualizado = await prisma.$transaction(async (tx) => {
+                    await registrarTransicion({
+                        reporteId: reporteId!,
+                        estadoAnterior: estadoPrevio,
+                        estadoNuevo: "REVISION_MANUAL",
+                        responsableTipo: "SISTEMA",
+                        motivo: `Error de procesamiento: ${errMsg}`,
+                        metadatos: { error: errMsg },
+                        tx,
+                    });
+                    return tx.reporte.update({
+                        where: { id: reporteId! },
+                        data: {
+                            estado: "REVISION_MANUAL",
+                            processingError: errMsg,
+                        },
+                    });
+                });
+                reporteParaAlerta = {
+                    id: reporteActualizado.id,
+                    numeroSeguimiento: reporteActualizado.numeroSeguimiento,
+                    identificador: reporteActualizado.identificador,
+                };
 
                 // Fase 3: asignación automática ante error de procesamiento
-                asignarOperadorAReporte(reporteId).catch((err) =>
-                    console.error("[OPERADORES] Error asignando operador a reporte con error", { reporteId, error: err })
+                asignarOperadorAReporte(reporteId!).catch((err) =>
+                    console.error("[OPERADORES] Error asignando operador a reporte con error", { reporteId: reporteId, error: err })
                 );
             } catch {
                 // Si falla el update del error, solo loggear
@@ -427,7 +490,7 @@ export async function POST(request: Request) {
             }).catch((err) => console.error("[ALERTA] Error enviando alerta de revisión", err));
         }
 
-        console.error("[PROCESAR] Error procesando reporte", { reporteId, errorType: error instanceof Error ? error.name : "Unknown", errorMessage: errMsg });
+        console.error("[PROCESAR] Error procesando reporte", { reporteId: reporteId, errorType: error instanceof Error ? error.name : "Unknown", errorMessage: errMsg });
         return NextResponse.json(
             { error: { message: "Error procesando el reporte", code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
             { status: 500 }

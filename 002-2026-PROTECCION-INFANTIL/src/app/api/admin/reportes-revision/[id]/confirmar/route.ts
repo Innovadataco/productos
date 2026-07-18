@@ -7,6 +7,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { logAudit } from "@/lib/audit";
+import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 
 function requireOperadorOAdmin(user: { rol: string }) {
@@ -100,9 +101,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         });
 
         // Al confirmar, el reporte pasa a CLASIFICADO y se activan efectos públicos.
-        await prisma.reporte.update({
-            where: { id },
-            data: { estado: "CLASIFICADO" },
+        const estadoAnterior = reporte.estado;
+        const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
+        await prisma.$transaction(async (tx) => {
+            await registrarTransicion({
+                reporteId: id,
+                estadoAnterior,
+                estadoNuevo: "CLASIFICADO",
+                responsableTipo,
+                responsableId: user.id,
+                motivo: "Caso confirmado por operador/admin",
+                tx,
+            });
+            await tx.reporte.update({
+                where: { id },
+                data: { estado: "CLASIFICADO" },
+            });
         });
 
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);

@@ -117,6 +117,15 @@ enum EstadoReporte {
   CORREGIDO
 }
 
+enum ResponsableTransicion {
+  IA
+  WORKER
+  SISTEMA
+  OPERADOR
+  COMITE
+  ADMIN
+}
+
 model Usuario {
   id               String        @id @default(cuid())
   email            String        @unique
@@ -151,6 +160,7 @@ model Usuario {
   contactosConfianza            ContactoConfianza[]
   notificacionesCirculo         Boolean                  @default(true)
   ultimaNotificacionCirculoEn   DateTime?
+  transicionesReporte           TransicionReporte[]
 
   @@index([email])
   @@index([rol])
@@ -388,6 +398,7 @@ model Reporte {
   tenant        Tenant?           @relation(fields: [tenantId], references: [id])
   paisRel       Pais?             @relation(fields: [paisId], references: [id])
   ciudadRel     Ciudad?           @relation(fields: [ciudadId], references: [id])
+  transiciones  TransicionReporte[]
 
   @@index([identificador, plataformaId])
   @@index([estado])
@@ -399,6 +410,26 @@ model Reporte {
   @@index([eliminado])
   @@index([eliminadoPorId])
   @@index([operadorId])
+}
+
+model TransicionReporte {
+  id               String                @id @default(cuid())
+  reporteId        String
+  estadoAnterior   EstadoReporte
+  estadoNuevo      EstadoReporte
+  responsableTipo  ResponsableTransicion
+  responsableId    String?
+  motivo           String?               @db.Text
+  metadatos        Json?
+  creadoEn         DateTime              @default(now())
+
+  reporte            Reporte  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  responsableUsuario Usuario? @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+
+  @@index([reporteId])
+  @@index([responsableTipo])
+  @@index([responsableId])
+  @@index([creadoEn])
 }
 
 model FuenteReporte {

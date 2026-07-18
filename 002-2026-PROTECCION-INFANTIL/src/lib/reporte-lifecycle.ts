@@ -4,6 +4,7 @@ import { generarEmbedding } from "./ai/embedder";
 import { recalcularYGuardarScore } from "./scoring";
 import { actualizarVisibilidadPublica } from "./visibility";
 import { logAudit } from "./audit";
+import { registrarTransicion, responsableTipoFromRol } from "./reporte-transiciones";
 import type { MotivoBajaReporte, Prisma } from "@prisma/client";
 
 const MOTIVOS_PURGAN_DATASET: MotivoBajaReporte[] = ["REPORTE_FALSO", "ORDEN_LEGAL"];
@@ -85,6 +86,19 @@ export async function darDeBajaReporte(params: {
                 eliminadoEn: new Date(),
                 eliminadoPorId: adminId,
             },
+        });
+
+        // Registrar baja en expediente (no cambia de estado, se documenta el cambio de flag eliminado).
+        const admin = await tx.usuario.findUnique({ where: { id: adminId }, select: { rol: true } });
+        const responsableTipo = responsableTipoFromRol(admin?.rol ?? "") ?? "ADMIN";
+        await registrarTransicion({
+            reporteId,
+            estadoAnterior,
+            estadoNuevo: estadoAnterior,
+            responsableTipo,
+            responsableId: adminId,
+            motivo: `Reporte dado de baja: ${motivo}${nota ? ` - ${nota}` : ""}`,
+            tx,
         });
 
         // 2. Borrar EmbeddingReporte.

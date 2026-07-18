@@ -8,6 +8,7 @@ import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
+import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { z } from "zod";
 
 type CategoriaConducta =
@@ -120,10 +121,23 @@ export async function POST(request: Request) {
             });
         }
 
-        // Actualizar estado del reporte
-        await prisma.reporte.update({
-            where: { id: reporteId },
-            data: { estado: "CORREGIDO" },
+        // Actualizar estado del reporte y registrar transición atómicamente
+        const estadoAnterior = reporte.estado;
+        const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
+        await prisma.$transaction(async (tx) => {
+            await registrarTransicion({
+                reporteId,
+                estadoAnterior,
+                estadoNuevo: "CORREGIDO",
+                responsableTipo,
+                responsableId: user.id,
+                motivo: comentario || "Caso corregido por operador/admin",
+                tx,
+            });
+            await tx.reporte.update({
+                where: { id: reporteId },
+                data: { estado: "CORREGIDO" },
+            });
         });
 
         // Registrar auditoría (solo metadata, nunca texto)
