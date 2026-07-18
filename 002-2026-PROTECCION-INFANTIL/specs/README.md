@@ -26,6 +26,11 @@
 | `019` | Gestor de permisos de módulos | EN DISEÑO | — | [`spec.md`](019-permisos-modulos/spec.md) | [`diseno.md`](019-permisos-modulos/diseno.md) | — |
 | `020` | Reorganización de módulos + Tablero de monitoreo | CERRADA | 2026-07-18 | [`spec.md`](020-reorganizacion-monitoreo/spec.md) | [`plan.md`](020-reorganizacion-monitoreo/plan.md) | [`reporte-cierre.md`](020-reorganizacion-monitoreo/reporte-cierre.md) |
 | `021` | Reporte anónimo con sesión interna abierta | CERRADA | 2026-07-18 | [`spec.md`](021-reporte-anonimo-interno/spec.md) | [`plan.md`](021-reporte-anonimo-interno/plan.md) | [`reporte-cierre.md`](021-reporte-anonimo-interno/reporte-cierre.md) |
+| `022` | Expediente interno de transiciones | EN DISEÑO | — | [`spec.md`](022-expediente-transiciones/spec.md) | [`plan.md`](022-expediente-transiciones/plan.md) | — |
+| `023` | Estados de cara al usuario + SLA visible | EN DISEÑO | — | [`spec.md`](023-estados-usuario-sla/spec.md) | [`plan.md`](023-estados-usuario-sla/plan.md) | — |
+| `024` | Rol Comité de Validación + escalamiento | EN DISEÑO | — | [`spec.md`](024-comite-validacion/spec.md) | [`plan.md`](024-comite-validacion/plan.md) | — |
+| `025` | Anonimización reforzada + encriptación del original | EN DISEÑO | — | [`spec.md`](025-anonimizacion-reforzada/spec.md) | [`plan.md`](025-anonimizacion-reforzada/plan.md) | — |
+| `026` | Pipeline de spam + prioridad + reintentos | EN DISEÑO | — | [`spec.md`](026-pipeline-spam-prioridad/spec.md) | [`plan.md`](026-pipeline-spam-prioridad/plan.md) | — |
 | `02` | Módulo de reportes comunitarios | CERRADA | 2026-07-14 | [`spec.md`](02-reportes-comunitarios/spec.md) | [`plan.md`](02-reportes-comunitarios/plan.md) | [`IMPLEMENTATION-REPORT.md`](02-reportes-comunitarios/IMPLEMENTATION-REPORT.md) |
 | `borrador-anti-abuso` | Defensas anti-abuso (borrador de decisión) | BORRADOR | — | [`borrador-anti-abuso.md`](borrador-anti-abuso.md) | — | — |
 | `050` | Registro de pendientes de afinamiento | ACTIVO | — | [`registro.md`](050-pendientes-afinamiento/registro.md) | — | — |
