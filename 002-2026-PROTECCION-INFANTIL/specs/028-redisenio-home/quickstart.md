@@ -1,4 +1,4 @@
-# Quickstart: Rediseño del Home con buscador integrado
+# Quickstart: Rediseño completo del Home
 
 **Prerequisites**: Servidor de desarrollo en `http://localhost:5005` o build de producción corriendo.
 
@@ -18,15 +18,23 @@ Servidor en `http://localhost:5005`.
 
 ## 2. Validar escenarios de la landing
 
-### Escenario A: Home muestra acciones principales y buscador integrado
+### Escenario A: Barra superior simplificada
 
 ```bash
-curl -s http://localhost:5005/ | grep -E "Protege a quienes más importan|Crear un reporte|Consultar|Crear una cuenta|Ver estadísticas|Buscar|Busca un número, nick o usuario"
+curl -s http://localhost:5005/ | grep -oE 'Dashboard|Iniciar sesión|Consultar|Reportar' | sort | uniq -c
 ```
 
-**Esperado**: Todos los textos aprobados están presentes en el HTML renderizado.
+**Esperado**: `Dashboard` e `Iniciar sesión` presentes; `Consultar` y `Reportar` ausentes del HTML renderizado.
 
-### Escenario B: Navegación a reportar
+### Escenario B: Hero muestra tarjetas y buscador integrado
+
+```bash
+curl -s http://localhost:5005/ | grep -E "Protege a quienes más importan|Crear un reporte|Consultar|Busca un número, nick o usuario|Buscar|Canales oficiales de denuncia"
+```
+
+**Esperado**: Todos los textos aprobados están presentes.
+
+### Escenario C: Navegación a reportar desde la tarjeta
 
 ```bash
 curl -s http://localhost:5005/ | grep -o 'href="/reportar"'
@@ -34,40 +42,49 @@ curl -s http://localhost:5005/ | grep -o 'href="/reportar"'
 
 **Esperado**: Al menos un enlace a `/reportar`.
 
-### Escenario C: Navegación a registro y dashboard público
+### Escenario D: Sin secciones eliminadas
 
 ```bash
-curl -s http://localhost:5005/ | grep -oE 'href="/registro"|href="/dashboard/publico"'
+curl -s http://localhost:5005/ | grep -oE '¿Cómo funciona\?|Crear una cuenta|Ver estadísticas|Reportar</a>'
 ```
 
-**Esperado**:Enlaces a `/registro` y `/dashboard/publico`.
+**Esperado**: Ninguna de estas cadenas aparece en el HTML.
+
+### Escenario E: Footer con copyright correcto
+
+```bash
+curl -s http://localhost:5005/ | grep -o '© 2026 Innovadataco'
+```
+
+**Esperado**: El copyright aparece exactamente.
 
 ---
 
 ## 3. Validar consulta desde el buscador integrado
 
-### Escenario D: Consulta con reportes
+### Escenario F: Consulta sin reportes
 
-```bash
-# Desde el browser, ingresar un identificador en el input de la tarjeta "Consultar" y presionar "Buscar".
-# O directamente por API:
-curl -X GET "http://localhost:5005/api/consulta?identificador=30009000002" -H "Accept: application/json"
-```
+Ingresar un identificador inexistente en el buscador de la tarjeta "Consultar" y presionar "Buscar".
 
-**Esperado**: Respuesta JSON con datos del identificador (si existe y tiene visibilidad). El home debe mostrar el resultado debajo de las tarjetas.
+**Esperado**: Mensaje de "Sin reportes registrados" dentro de la tarjeta.
 
-### Escenario E: Consulta sin reportes o inexistente
+### Escenario G: Consulta con pocos reportes (1-2)
 
-```bash
-# Ingresar en el buscador integrado un identificador inexistente.
-curl -X GET "http://localhost:5005/api/consulta?identificador=NOEXISTE123" -H "Accept: application/json"
-```
+Ingresar un identificador con 1 o 2 reportes visibles.
 
-**Esperado**: Respuesta controlada sin crash (mensaje de "no encontrado" o similar). El home debe mostrar el mensaje debajo de las tarjetas.
+**Esperado**: Resumen compacto inline dentro de la tarjeta (plataformas, ubicaciones, última fecha).
 
-### Escenario F: Campo vacío
+### Escenario H: Consulta con muchos reportes (>2)
 
-**Esperado**: Al presionar "Buscar" con el campo vacío, el formulario muestra el error "Ingresa un número, nick o usuario." y no dispara la consulta.
+Ingresar un identificador con más de 2 reportes visibles.
+
+**Esperado**: Resumen agregado con total, autenticados, anónimos y enlace a la vista completa `/consulta`.
+
+### Escenario I: Campo vacío
+
+Presionar "Buscar" con el input vacío.
+
+**Esperado**: El formulario muestra "Ingresa un número, nick o usuario." dentro de la tarjeta y no ejecuta la consulta.
 
 ---
 
@@ -77,7 +94,7 @@ curl -X GET "http://localhost:5005/api/consulta?identificador=NOEXISTE123" -H "A
 npm run test
 ```
 
-**Meta**: Todos los tests de UI pasan, especialmente los de landing/consulta.
+**Meta**: Todos los tests de UI pasan.
 
 ---
 
@@ -95,7 +112,7 @@ npm run build
 
 1. Abrir `http://localhost:5005/` en modo móvil (ancho < 640 px).
 2. Confirmar que las dos tarjetas se apilan verticalmente.
-3. Confirmar que el buscador integrado es usable (input y botón apilados o en línea según el ancho).
+3. Confirmar que el buscador integrado y el resultado se ven bien dentro de la tarjeta.
 4. Confirmar que los textos son legibles y los botones tocables.
 
 ---
