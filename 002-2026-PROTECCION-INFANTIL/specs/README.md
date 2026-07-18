@@ -24,6 +24,7 @@
 | `017` | Módulo de documentación | EN DISEÑO | — | [`spec.md`](017-documentacion/spec.md) | [`plan.md`](017-documentacion/plan.md) | — |
 | `018` | Operadores de casos (revisión humana) | CERRADA | 2026-07-18 | [`spec.md`](018-operadores-casos/spec.md) | [`tasks.md`](018-operadores-casos/tasks.md) | [`reporte-cierre.md`](018-operadores-casos/reporte-cierre.md) |
 | `019` | Gestor de permisos de módulos | EN DISEÑO | — | [`spec.md`](019-permisos-modulos/spec.md) | [`diseno.md`](019-permisos-modulos/diseno.md) | — |
+| `020` | Reorganización de módulos + Tablero de monitoreo | CERRADA | 2026-07-18 | [`spec.md`](020-reorganizacion-monitoreo/spec.md) | [`plan.md`](020-reorganizacion-monitoreo/plan.md) | [`reporte-cierre.md`](020-reorganizacion-monitoreo/reporte-cierre.md) |
 | `02` | Módulo de reportes comunitarios | CERRADA | 2026-07-14 | [`spec.md`](02-reportes-comunitarios/spec.md) | [`plan.md`](02-reportes-comunitarios/plan.md) | [`IMPLEMENTATION-REPORT.md`](02-reportes-comunitarios/IMPLEMENTATION-REPORT.md) |
 | `borrador-anti-abuso` | Defensas anti-abuso (borrador de decisión) | BORRADOR | — | [`borrador-anti-abuso.md`](borrador-anti-abuso.md) | — | — |
 | `050` | Registro de pendientes de afinamiento | ACTIVO | — | [`registro.md`](050-pendientes-afinamiento/registro.md) | — | — |
