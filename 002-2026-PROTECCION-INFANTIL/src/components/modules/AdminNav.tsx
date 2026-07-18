@@ -8,7 +8,7 @@ const links = [
     { href: "/dashboard/admin/estadisticas", label: "Dashboard", icon: ChartIcon },
     { href: "/dashboard/admin/ia", label: "Centro de Control IA", icon: BrainIcon },
     { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", icon: ShieldIcon },
-    { href: "/dashboard/admin/apeaciones", label: "Apelaciones", icon: ScaleIcon },
+    { href: "/dashboard/admin/apelaciones", label: "Apelaciones", icon: ScaleIcon },
     { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", icon: DatabaseIcon },
     { href: "/dashboard/admin/configuracion", label: "Configuración", icon: CogIcon },
 ];
