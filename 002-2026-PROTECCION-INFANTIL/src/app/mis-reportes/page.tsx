@@ -11,6 +11,9 @@ type MisReporteItem = {
     identificador: string;
     plataforma: string;
     estadoVisual: string;
+    badge: "warning" | "success" | "muted";
+    mensaje: string;
+    slaHoras: number;
     numeroSeguimiento: string | null;
     ciudad: string;
     pais: string;

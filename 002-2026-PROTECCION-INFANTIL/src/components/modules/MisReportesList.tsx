@@ -1,5 +1,7 @@
 "use client";
 
+type BadgeVisual = "warning" | "success" | "muted";
+
 type ClasificacionItem = {
     categoria: string;
     categoriaLabel: string;
@@ -17,6 +19,9 @@ type ReporteItem = {
     identificador: string;
     plataforma: string;
     estadoVisual: string;
+    badge: BadgeVisual;
+    mensaje: string;
+    slaHoras: number;
     numeroSeguimiento: string | null;
     ciudad: string;
     pais: string;
@@ -77,13 +82,14 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
 
                     <div className="flex flex-col items-start sm:items-end gap-2">
                         <div className="flex items-center gap-2">
-                            <span className={`rounded-full px-3 py-1 text-xs font-medium ${estadoBadgeClass(r.estadoVisual)}`}>
+                            <span className={`rounded-full px-3 py-1 text-xs font-medium ${estadoBadgeClass(r.badge)}`}>
                                 {r.estadoVisual}
                             </span>
                             <span className="text-xs text-subtle whitespace-nowrap">
                                 {new Date(r.creadoEn).toLocaleDateString("es-CO")}
                             </span>
                         </div>
+                        <p className="text-xs text-muted max-w-xs text-right">{r.mensaje}</p>
                         {r.ranking && (
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-mono font-bold text-accent">{r.ranking.score}</span>
@@ -100,21 +106,15 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
     );
 }
 
-function estadoBadgeClass(estadoVisual: string): string {
+function estadoBadgeClass(badge: BadgeVisual): string {
     const base = "rounded-full px-3 py-1 text-xs font-medium ";
-    switch (estadoVisual) {
-        case "Recibido":
-            return base + "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
-        case "En procesamiento":
-            return base + "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300";
-        case "Procesado":
-            return base + "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300";
-        case "En revisión":
-        case "En revisión de privacidad":
+    switch (badge) {
+        case "warning":
             return base + "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300";
-        case "Vinculado a reporte existente":
-            return base + "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+        case "success":
+            return base + "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300";
+        case "muted":
         default:
-            return base + "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+            return base + "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
     }
 }

@@ -20,9 +20,14 @@ function mockFetch(response: unknown, ok = true) {
 
 const baseData = {
     numeroSeguimiento: "RPT-ABC123",
-    estado: "CLASIFICADO",
+    estadoVisual: "Procesado",
+    estadoInterno: "CLASIFICADO",
+    badge: "success",
+    enProceso: false,
     creadoEn: "2026-07-18T10:00:00Z",
+    actualizadoEn: "2026-07-18T10:05:00Z",
     mensaje: "Tu reporte ha sido procesado y clasificado.",
+    slaHoras: 24,
     identificador: "30009000002",
     plataforma: "WhatsApp",
     clasificacion: {
@@ -50,7 +55,7 @@ describe("SeguimientoClient", () => {
         vi.restoreAllMocks();
     });
 
-    it("muestra el estado, la clasificación y el riesgo con buen contraste", async () => {
+    it("muestra el estado simplificado, la clasificación y el riesgo con buen contraste", async () => {
         mockFetch(baseData);
         render(<SeguimientoClient />);
 
@@ -72,8 +77,15 @@ describe("SeguimientoClient", () => {
         });
     });
 
-    it("muestra 'En revisión' cuando el reporte no está clasificado", async () => {
-        mockFetch({ ...baseData, estado: "REVISION_MANUAL", mensaje: "El reporte está siendo revisado por el equipo." });
+    it("muestra 'En proceso' cuando el reporte aún no está clasificado", async () => {
+        mockFetch({
+            ...baseData,
+            estadoVisual: "En proceso",
+            estadoInterno: "REVISION_MANUAL",
+            badge: "warning",
+            enProceso: true,
+            mensaje: "Tu reporte está en proceso — puede tardar hasta 24 horas",
+        });
         render(<SeguimientoClient />);
 
         fireEvent.change(screen.getByPlaceholderText("RPT-XXXXXX"), {
@@ -83,8 +95,8 @@ describe("SeguimientoClient", () => {
 
         await waitFor(() => {
             const body = document.body.textContent || "";
-            expect(body).toContain("En revisión");
-            expect(body).toContain("El reporte está siendo revisado");
+            expect(body).toContain("En proceso");
+            expect(body).toContain("puede tardar hasta 24 horas");
         });
     });
 

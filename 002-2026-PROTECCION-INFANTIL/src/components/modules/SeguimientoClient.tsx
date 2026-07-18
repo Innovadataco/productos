@@ -8,6 +8,7 @@ import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import type { BadgeVariant } from "@/components/ui/Badge";
 
 type ClasificacionData = {
     categoria: string;
@@ -27,37 +28,27 @@ type RankingData = {
 
 type SeguimientoData = {
     numeroSeguimiento: string;
-    estado: string;
-    creadoEn: string;
+    estadoVisual: "En proceso" | "Procesado";
+    estadoInterno: string;
+    badge: "warning" | "success" | "muted";
+    enProceso: boolean;
     mensaje: string;
+    slaHoras: number;
+    creadoEn: string;
+    actualizadoEn: string;
     identificador: string;
     plataforma: string;
     clasificacion: ClasificacionData | null;
     ranking: RankingData | null;
 };
 
-const ESTADO_VISUAL: Record<string, string> = {
-    PENDIENTE: "Recibido",
-    PROCESANDO: "En procesamiento",
-    CLASIFICADO: "Procesado",
-    CORREGIDO: "Procesado",
-    REVISION_MANUAL: "En revisión",
-    POSIBLE_SPAM: "En revisión",
-    REQUIERE_ANONIMIZACION: "En revisión de privacidad",
-    DUPLICADO: "Vinculado a reporte existente",
-};
-
-function badgeVariant(estadoVisual: string | null) {
-    switch (estadoVisual) {
-        case "Recibido":
-            return "neutral";
-        case "En procesamiento":
-            return "info";
-        case "Procesado":
-            return "success";
-        case "En revisión":
-        case "En revisión de privacidad":
+function badgeVariant(badge: SeguimientoData["badge"]): BadgeVariant {
+    switch (badge) {
+        case "warning":
             return "warning";
+        case "success":
+            return "success";
+        case "muted":
         default:
             return "neutral";
     }
@@ -114,8 +105,6 @@ export function SeguimientoClient() {
         }
     }, [numeroInicial, handleSearch]);
 
-    const estadoVisual = data ? (ESTADO_VISUAL[data.estado] || data.estado) : null;
-
     return (
         <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
             <div className="mb-6 text-center">
@@ -149,7 +138,7 @@ export function SeguimientoClient() {
                             <p className="text-xs text-subtle">{data.plataforma}</p>
                             <h2 className="text-lg font-semibold text-body">{data.identificador}</h2>
                         </div>
-                        {estadoVisual && <Badge variant={badgeVariant(estadoVisual)}>{estadoVisual}</Badge>}
+                        <Badge variant={badgeVariant(data.badge)}>{data.estadoVisual}</Badge>
                     </div>
 
                     <div className={infoBox}>
