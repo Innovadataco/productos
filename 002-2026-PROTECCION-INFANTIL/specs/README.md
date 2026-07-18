@@ -34,7 +34,7 @@
 | `027` | Motor de encolamiento | EN DISEÑO | — | [`spec.md`](027-motor-encolamiento/spec.md) | [`plan.md`](027-motor-encolamiento/plan.md) | — |
 | `02` | Módulo de reportes comunitarios | CERRADA | 2026-07-14 | [`spec.md`](02-reportes-comunitarios/spec.md) | [`plan.md`](02-reportes-comunitarios/plan.md) | [`IMPLEMENTATION-REPORT.md`](02-reportes-comunitarios/IMPLEMENTATION-REPORT.md) |
 | `borrador-anti-abuso` | Defensas anti-abuso (borrador de decisión) | BORRADOR | — | [`borrador-anti-abuso.md`](borrador-anti-abuso.md) | — | — |
-| `050` | Registro de pendientes de afinamiento | ACTIVO | — | [`registro.md`](050-pendientes-afinamiento/registro.md) | — | — |
+| `028` | Rediseño del home (landing) | CERRADA | 2026-07-18 | [`spec.md`](028-redisenio-home/spec.md) | [`plan.md`](028-redisenio-home/plan.md) | [`cierre.md`](028-redisenio-home/cierre.md) |
 
 ## Convención de archivos por spec
 

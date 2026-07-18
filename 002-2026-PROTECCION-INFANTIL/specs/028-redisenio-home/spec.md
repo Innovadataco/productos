@@ -4,9 +4,38 @@
 
 **Created**: 2026-07-18
 
-**Status**: EN DISEÑO
+**Status**: CERRADA
 
 **Input**: Reordenar la landing page para orientar de un vistazo los dos caminos principales del producto: reportar y consultar. Mantener el buscador funcional y el estilo glassmorphism existente.
+
+---
+
+## Implementación (documentado retroactivamente el 2026-07-18)
+
+### Objetivo alcanzado
+Rediseñar la landing page para que el usuario distinga inmediatamente las acciones principales: reportar (acción destacada) y consultar (acción secundaria), con accesos a registro y dashboard público.
+
+### Decisiones de diseño derivadas del código
+- **Dos acciones grandes**: grid responsive con tarjeta principal "Crear un reporte" (fondo blanco sobre gradiente azul) y tarjeta secundaria "Consultar" (glass).
+- **Iconos inline**: SVGs para escudo, bandera, lupa, usuario-plus y gráfico de barras; sin nuevas dependencias.
+- **Accesos secundarios**: botones glass debajo de las acciones principales para "Crear una cuenta" y "Ver estadísticas".
+- **Buscador conservado**: `HomePageClient.tsx` mantiene `ConsultaForm` en `#consultar` sin cambios.
+
+### Componentes afectados
+- `src/components/modules/LandingHero.tsx`: nuevo layout, textos e iconos.
+
+### Tests
+- Tests de componentes React relacionados con landing y consulta.
+- `scripts/smoke-e2e.ts`: smoke E2E de punta a punta del flujo crítico.
+
+### Verificaciones
+- Lint: 0 errores.
+- TypeScript: sin errores.
+- Tests: 343 pasados.
+- Build: exitosa.
+- Smoke E2E: pasó.
+- App y worker reiniciados en `:5005`.
+
 
 ---
 
