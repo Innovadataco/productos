@@ -125,6 +125,8 @@ npm run build
 
 ### Paso 5 — Arrancar app
 
+> **Nota crítica:** si ya había una instancia de `next-server` o del worker corriendo con una versión anterior, **detenerla y reiniciarla** antes de continuar. Next.js y el worker de pg-boss cargan el código en memoria al iniciar; un proceso viejo sigue sirviendo la build anterior aunque `npm run build` haya generado una nueva.
+
 **Comando (systemd/pm2 recomendado):**
 ```bash
 # Ejemplo directo:
@@ -145,6 +147,8 @@ curl -s http://localhost:5005/api/health/worker | python3 -m json.tool
 ---
 
 ### Paso 6 — Arrancar worker
+
+> **Nota crítica:** el worker debe reiniciarse tras cada deploy que modifique `src/lib/circulo-confianza.ts`, `src/lib/email.ts`, `scripts/worker-reportes.mjs` o cualquier dependencia del pipeline. Si el worker sigue corriendo con la versión anterior, las notificaciones del Círculo de Confianza (y cualquier otra lógica nueva) no se ejecutarán.
 
 **Comando:**
 ```bash
