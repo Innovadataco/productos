@@ -7,6 +7,7 @@ type RolNav = "ADMIN" | "SCHOOL_ADMIN" | "OPERADOR" | "COMITE_VALIDACION";
 
 const allLinks = [
     { href: "/dashboard/admin", label: "Bandeja de reportes", icon: InboxIcon, roles: ["ADMIN", "SCHOOL_ADMIN", "OPERADOR"] as RolNav[] },
+    { href: "/dashboard/admin/spam", label: "Revisión de spam", icon: ShieldExclamationIcon, roles: ["ADMIN", "SCHOOL_ADMIN", "OPERADOR"] as RolNav[] },
     { href: "/dashboard/admin/comite", label: "Comité", icon: ScaleIcon, roles: ["ADMIN", "SCHOOL_ADMIN", "COMITE_VALIDACION"] as RolNav[] },
     { href: "/dashboard/admin/estadisticas", label: "Dashboard", icon: ChartIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
     { href: "/dashboard/admin/ia", label: "Centro de Control IA", icon: BrainIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
@@ -97,6 +98,16 @@ function ShieldIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+        </svg>
+    );
+}
+
+function ShieldExclamationIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 16h.01" />
         </svg>
     );
 }

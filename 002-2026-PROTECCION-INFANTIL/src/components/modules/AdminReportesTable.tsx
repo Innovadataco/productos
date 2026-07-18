@@ -30,6 +30,7 @@ const CATEGORIAS = [
     { value: "CONTENIDO_GENERADO_IA", label: "Contenido generado por IA" },
     { value: "DIFUSION_NO_CONSENTIDA", label: "Difusión no consentida" },
     { value: "DOXING", label: "Doxing" },
+    { value: "SPAM", label: "Spam" },
     { value: "OTRO", label: "Otro" },
 ];
 
