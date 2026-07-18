@@ -86,7 +86,7 @@ describe("POST /api/auth/cambiar-password", () => {
         );
         const { POST: crearOperadorPost } = await import("../../admin/operadores/route");
         const crearRes = await crearOperadorPost(crearReq);
-        expect(crearRes.status).toBe(200);
+        expect(crearRes.status).toBe(201);
         const { operador, passwordTemporal } = await crearRes.json();
         expect(passwordTemporal).toBeDefined();
 
