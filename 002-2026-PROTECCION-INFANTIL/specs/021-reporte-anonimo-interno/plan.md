@@ -1,36 +1,20 @@
 # Plan — Spec 021: Reporte anónimo con sesión interna abierta
 
 > Fecha: 2026-07-18.
-> Estado: pendiente de decisión del owner.
+> Decisión del owner: **Opción B** — bloquear en el frontend manteniendo el 403 en backend.
 
-## Decisión pendiente
+## Implementación
 
-Jelkin debe elegir entre:
-- **Opción A**: tratar `/reportar` como anónimo para roles no-PARENT.
-- **Opción B**: bloquear en el frontend con mensaje claro.
-
-## Implementación según opción elegida
-
-### Si elige A
-
-1. Modificar `POST /api/reportes` (`src/app/api/reportes/route.ts`):
-   - No rechazar a usuarios internos.
-   - Para roles no-PARENT, tratar `user` como `null`: `esAnonimo = true`, `usuarioId = null`.
-   - Opcional: loggear en `AuditLog` que la petición vino de sesión interna pero se procesó como anónima (sin vincular al reporte).
-2. Verificar que `ReporteWizard` no requiera cambios.
-3. Tests:
-   - Reporte anónimo puro (sin sesión) sigue funcionando.
-   - ADMIN/OPERADOR logueado puede reportar y el reporte queda `esAnonimo=true`, `usuarioId=null`.
-
-### Si elige B
-
-1. Modificar `ReporteWizard` (`src/components/modules/ReporteWizard.tsx`):
-   - Detectar si hay sesión interna (ej. llamar a `/api/me`).
-   - Mostrar mensaje explicativo + botón para cerrar sesión.
-2. Mantener el 403 en `POST /api/reportes` para roles no-PARENT.
-3. Tests:
-   - UI muestra el bloqueo para sesión interna.
-   - Anónimo puro sigue funcionando.
+1. **Frontend** (`src/components/modules/ReporteWizard.tsx`):
+   - Al montar, llamar `GET /api/me` para detectar sesión.
+   - Si el rol es `ADMIN`, `OPERADOR` o `SCHOOL_ADMIN`, mostrar mensaje de bloqueo + botón para cerrar sesión.
+   - El botón llama `POST /api/auth/logout` y recarga con `window.location.reload()`.
+2. **Backend** (`src/app/api/reportes/route.ts`): no se modifica; mantiene el rechazo a roles no-PARENT como salvaguarda.
+3. **Tests**:
+   - Verificar que anónimo puro (sin sesión) sigue creando reportes.
+   - Verificar que PARENT sigue creando reportes.
+   - Verificar que ADMIN/OPERADOR reciben 403 por API (backend intacto).
+   - Test unitario del bloqueo UI en `ReporteWizard`.
 
 ## Cierre
 

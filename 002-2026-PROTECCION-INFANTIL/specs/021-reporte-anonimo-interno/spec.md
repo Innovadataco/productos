@@ -1,39 +1,32 @@
 # Spec 021 — Reporte anónimo con sesión interna abierta
 
-> Estado: **EN DISEÑO**.
+> Estado: **CERRADA**.
 > Plan: [`plan.md`](plan.md).
+> Tareas: [`tasks.md`](tasks.md).
+> Reporte de cierre: [`reporte-cierre.md`](reporte-cierre.md).
 
 ## Problema
 
 Un usuario interno (ADMIN/OPERADOR/SCHOOL_ADMIN) logueado no puede enviar un reporte desde `/reportar`. El backend devuelve 403 con el mensaje "Esta función no está disponible para usuarios internos".
 
-## Causa raíz
+## Causa raíz confirmada
 
 - `POST /api/reportes` obtiene la cookie de sesión y rechaza cualquier usuario cuyo rol no sea `PARENT`.
 - `ReporteWizard` envía siempre `credentials: "include"`, por lo que la cookie interna llega al backend.
 - El reporte anónimo puro (sin sesión) funciona correctamente.
 
-## Opciones de solución
+## Decisión del owner
 
-### Opción A — Tratar `/reportar` como anónimo para roles no-PARENT
+**Opción B**: bloquear explícitamente en el frontend con un mensaje claro antes del formulario, manteniendo el 403 en el backend como salvaguarda. Motivo: evitar conflicto de intereses en una plataforma de protección infantil; un ADMIN/OPERADOR no debe poder crear reportes anónimos y luego gestionarlos/clasificarlos.
 
-Ignorar la cookie interna en `POST /api/reportes` cuando el endpoint se usa desde el wizard público. El reporte se crea con `esAnonimo=true` y `usuarioId=null`, igual que si no hubiera sesión.
+## Implementación
 
-- ✅ Mantiene el flujo de prueba sin fricción para el dueño/equipo.
-- ✅ No rompe el anónimo puro.
-- ⚠️ Riesgo menor de conflicto de intereses si un operador gestiona después un caso que reportó; mitigable con auditoría.
-
-### Opción B — Bloquear en el frontend con mensaje claro
-
-Mantener el 403 en el backend pero detectar la sesión interna en `ReporteWizard` y mostrar un mensaje explicativo con opción de cerrar sesión.
-
-- ✅ Más explícito para producción.
-- ⚠️ Fricción para pruebas: obliga a cerrar sesión.
-- ⚠️ El 403 sigue siendo posible por API directa.
-
-## Recomendación
-
-**Opción A**, porque `/reportar` es por diseño un flujo anónimo público; la cookie interna no debería cambiar la naturaleza del reporte. Se puede registrar en `AuditLog` o en logs que la petición vino de una sesión interna pero se trató como anónima, preservando trazabilidad sin bloquear.
+- Backend (`src/app/api/reportes/route.ts`): se mantiene intacto el rechazo a roles no-PARENT.
+- Frontend (`src/components/modules/ReporteWizard.tsx`):
+  - Detecta sesión interna llamando a `/api/me`.
+  - Si el rol es ADMIN/OPERADOR/SCHOOL_ADMIN, muestra un mensaje explicativo + botón "Cerrar sesión y reportar".
+  - El botón llama a `POST /api/auth/logout` y recarga la página.
+- Flujo anónimo puro (sin sesión) y flujo PARENT permanecen exactamente igual.
 
 ## Restricciones
 
