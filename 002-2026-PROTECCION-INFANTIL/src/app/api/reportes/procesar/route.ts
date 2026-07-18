@@ -13,6 +13,7 @@ import { ERROR_CODES } from "@/lib/errors";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { enviarAlertaRevision, enviarAlertaScoreCritico, enviarAlertasSuscriptores } from "@/lib/email";
+import { asignarOperadorAReporte } from "@/lib/operadores/asignador";
 import { Prisma } from "@prisma/client";
 import type { EstadoReporte } from "@prisma/client";
 
@@ -339,6 +340,13 @@ export async function POST(request: Request) {
             },
         });
 
+        // Fase 3: asignación automática de operador para revisión manual
+        if (estadoFinal === "REVISION_MANUAL") {
+            asignarOperadorAReporte(reporteId).catch((err) =>
+                console.error("[OPERADORES] Error asignando operador a reporte", { reporteId, error: err })
+            );
+        }
+
         // Actualizar IdentificadorReportado (solo si está clasificado o corregido)
         if (estadoFinal === "CLASIFICADO" || estadoFinal === "CORREGIDO") {
             await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
@@ -400,6 +408,11 @@ export async function POST(request: Request) {
                     },
                 });
                 reporteParaAlerta = reporteActualizado;
+
+                // Fase 3: asignación automática ante error de procesamiento
+                asignarOperadorAReporte(reporteId).catch((err) =>
+                    console.error("[OPERADORES] Error asignando operador a reporte con error", { reporteId, error: err })
+                );
             } catch {
                 // Si falla el update del error, solo loggear
             }
