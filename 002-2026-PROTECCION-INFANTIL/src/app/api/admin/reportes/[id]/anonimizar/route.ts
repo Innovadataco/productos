@@ -8,7 +8,8 @@ import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
 import { idSchema } from "@/lib/validators";
-import { registrarTransicion } from "@/lib/reporte-transiciones";
+import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
+import { encryptParameter, decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
 
 const anonimizarSchema = z.object({
     textoAnonimizado: z.string().min(20).max(5000),
@@ -18,6 +19,13 @@ function requireAdmin(user: { rol: string }) {
     if (String(user.rol) !== "ADMIN") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
+}
+
+function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoActual: string): string {
+    if (textoOriginalCifrado && isEncryptedValue(textoOriginalCifrado)) {
+        return decryptParameter(textoOriginalCifrado);
+    }
+    return textoOriginalCifrado ?? textoActual;
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -81,13 +89,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const piiEliminada = reporte.clasificacion?.piiDetectada || [];
 
-        // Transacción: registrar transición, preservar original y actualizar texto y estado
+        const originalPlano = obtenerTextoOriginalPlano(reporte.textoOriginal, reporte.texto);
+        let textoOriginalCifrado: string;
+        try {
+            textoOriginalCifrado = encryptParameter(originalPlano);
+        } catch (err) {
+            console.error("[ANONIMIZAR] Error cifrando texto original:", err);
+            return NextResponse.json(
+                { error: { message: "Error de seguridad almacenando el original", code: ERROR_CODES.INTERNAL_ERROR } },
+                { status: 500 }
+            );
+        }
+
+        const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
+
+        // Transacción: registrar transición, preservar original cifrado y actualizar texto y estado
         await prisma.$transaction(async (tx) => {
             await registrarTransicion({
                 reporteId,
                 estadoAnterior: "REQUIERE_ANONIMIZACION",
                 estadoNuevo: "CLASIFICADO",
-                responsableTipo: "ADMIN",
+                responsableTipo,
                 responsableId: user.id,
                 motivo: "Texto anonimizado por admin",
                 tx,
@@ -95,7 +117,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             await tx.reporte.update({
                 where: { id: reporteId },
                 data: {
-                    textoOriginal: reporte.texto,
+                    textoOriginal: textoOriginalCifrado,
                     texto: textoAnonimizado,
                     estado: "CLASIFICADO",
                 },

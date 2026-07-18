@@ -17,6 +17,7 @@ import { asignarOperadorAReporte } from "@/lib/operadores/asignador";
 import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { Prisma } from "@prisma/client";
 import type { EstadoReporte } from "@prisma/client";
+import { encryptParameter, decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
 
 function esErrorTransitorio(error: unknown): boolean {
     if (error && typeof error === "object" && "retryable" in error && error.retryable === false) {
@@ -327,17 +328,32 @@ export async function POST(request: Request) {
             });
         }
 
-        // Anonimización automática de PII: preservar original y reemplazar texto
+function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoActual: string): string {
+    if (textoOriginalCifrado && isEncryptedValue(textoOriginalCifrado)) {
+        return decryptParameter(textoOriginalCifrado);
+    }
+    return textoOriginalCifrado ?? textoActual;
+}
+
+        // Anonimización automática de PII: preservar original cifrado y reemplazar texto
         let estadoFinal: EstadoReporte = clasificacion.estado;
 
         if (piiResult?.contienePii) {
-            const textoAAnonimizar = reporte.textoOriginal ?? reporte.texto;
-            const anonimizacion = await anonimizarTexto(modeloAnonimizacion, textoAAnonimizar, piiResult.piiDetectada);
+            const originalPlano = obtenerTextoOriginalPlano(reporte.textoOriginal, reporte.texto);
+            const anonimizacion = await anonimizarTexto(modeloAnonimizacion, originalPlano, piiResult.piiDetectada);
+
+            let textoOriginalCifrado: string;
+            try {
+                textoOriginalCifrado = encryptParameter(originalPlano);
+            } catch (err) {
+                console.error("[PROCESAR] Error cifrando texto original tras anonimización:", err);
+                throw new Error("Error de seguridad persistiendo el original anonimizado");
+            }
 
             await prisma.reporte.update({
                 where: { id: reporteId },
                 data: {
-                    textoOriginal: textoAAnonimizar,
+                    textoOriginal: textoOriginalCifrado,
                     texto: anonimizacion.textoAnonimizado,
                 },
             });

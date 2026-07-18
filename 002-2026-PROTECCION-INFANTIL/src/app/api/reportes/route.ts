@@ -8,6 +8,7 @@ import { detectarKeywordsRiesgo } from "@/lib/ai/keywords-riesgo";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
+import { encryptParameter } from "@/lib/param-encryption";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -126,12 +127,25 @@ export async function POST(request: Request) {
             );
         }
 
-        // Crear reporte
+        // Crear reporte. El texto original se cifra inmediatamente; la copia
+        // anonimizada se genera en el worker de procesamiento asíncrono.
+        let textoOriginalCifrado: string;
+        try {
+            textoOriginalCifrado = encryptParameter(texto);
+        } catch (err) {
+            console.error("[REPORTES] Error cifrando texto original:", err);
+            return NextResponse.json(
+                { error: { message: "Error de seguridad almacenando el reporte", code: ERROR_CODES.INTERNAL_ERROR } },
+                { status: 500 }
+            );
+        }
+
         const reporte = await prisma.reporte.create({
             data: {
                 identificador,
                 plataformaId: plataforma.id,
                 texto,
+                textoOriginal: textoOriginalCifrado,
                 fechaIncidente: new Date(fechaIncidente),
                 ciudad,
                 pais,
