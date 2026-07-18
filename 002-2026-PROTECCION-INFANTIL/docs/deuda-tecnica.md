@@ -32,6 +32,8 @@
 
 ## NECESITA SPEC
 
+> Los ítems de afinamiento del modelo (curaduría de fixture, umbral de revisión, peso de fuente, modelo de desempate, reducción de error silencioso) se rastrean también en [`specs/050-pendientes-afinamiento/registro.md`](../specs/050-pendientes-afinamiento/registro.md).
+
 | # | Ítem | Contexto / riesgo | Disparador de revisión |
 |---|------|--------------------|------------------------|
 | N1 | **Proveedor SMS real** | Actualmente `SMS_PROVIDER=mock`. Para producción se requiere integrar Twilio/otro y verificar OTP real en staging. | Antes de activar Fase C en producción con teléfonos reales. |
