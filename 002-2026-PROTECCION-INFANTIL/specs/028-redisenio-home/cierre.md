@@ -1,4 +1,4 @@
-# Reporte de cierre: Rediseño completo del Home (Spec 028)
+# Reporte de cierre: Rediseño completo del Home (Spec 028) — ajuste botones de reporte y acceso anónimo
 
 **Spec**: [`spec.md`](./spec.md) | **Plan**: [`plan.md`](./plan.md) | **Quickstart**: [`quickstart.md`](./quickstart.md)
 
@@ -12,23 +12,20 @@
 
 ## Resumen
 
-Se rediseñó por completo la landing page (`/`). El home ahora se centra exclusivamente en dos acciones: crear un reporte y consultar un identificador. El buscador y su resultado se integraron dentro de la tarjeta "Consultar". Se simplificó la barra superior, se eliminaron las secciones redundantes ("¿Cómo funciona?", accesos secundarios) y se conservó la sección de canales oficiales de denuncia. Se actualizó el footer con el copyright de Innovadataco. No se tocó backend, auth ni endpoints.
+Se ajustó la landing page (`/`) para que la tarjeta "Crear un reporte" ofrezca dos botones claros: "Reportar anónimo" (directo al wizard) y "Reportar con mi cuenta" (login con redirect). Se corrigió el acceso anónimo a `/reportar` modificando `src/proxy.ts` para que usuarios sin sesión no sean redirigidos a login. Las cuentas internas (ADMIN/OPERADOR/SCHOOL_ADMIN) siguen bloqueadas por el wizard (bug 021). El resto del home se mantuvo: tarjeta "Consultar" con buscador y resultado dentro, canales oficiales y footer Innovadataco.
 
 ---
 
 ## Decisiones y reutilización
 
 - **Componentes modificados**:
-  - `src/components/modules/NavHeader.tsx`: se eliminaron "Consultar" y "Reportar" del menú superior y móvil; se conservaron "Dashboard" e "Iniciar sesión".
-  - `src/components/modules/LandingHero.tsx`: nuevo layout con dos tarjetas, buscador integrado en la tarjeta "Consultar" y resultado renderizado dentro de ella (0, 1-2 o >2 reportes).
-  - `src/components/modules/HomePageClient.tsx`: contenedor simplificado que pasa el estado de la consulta a `LandingHero`, conserva `CanalesOficiales` y `LandingFooter`, y elimina `LandingFeatures`.
-  - `src/components/modules/LandingFooter.tsx`: copyright actualizado a "© 2026 Innovadataco. Todos los derechos reservados." y eliminación del enlace "Reportar".
-  - `src/components/modules/ConsultaForm.tsx`: se reutilizó el modo `compact` para ocultar el label dentro de la tarjeta.
+  - `src/proxy.ts`: `/reportar` agregada a `PUBLIC_ROUTES` y quitada de `USER_FINAL_ROUTES`, permitiendo acceso anónimo sin redirigir a login; internos siguen sin poder usar `/reportar` como flujo de usuario final (bloqueados por el wizard).
+  - `src/components/modules/LandingHero.tsx`: tarjeta "Crear un reporte" ahora tiene dos botones con iconos (ojo tachado para anónimo, usuario para cuenta); botón destacado con `accent-gradient` y botón secundario con fondo claro y borde.
+  - `src/components/modules/NavHeader.tsx`, `HomePageClient.tsx`, `LandingFooter.tsx`: sin cambios en esta iteración (ya ajustados previamente).
 - **Sin componentes nuevos**: iconos SVG inline; sin nuevas dependencias.
-- **No se tocó**: `ConsultaResultado.tsx` (sigue usado en `/consulta`), endpoints de consulta, wizard de reporte, auth.
-- **Tono**: español neutral, sin voseo. Se eliminó `LandingFeatures` del home, que contenía imperativos con voseo.
-- **Responsive**: grid `sm:grid-cols-[1fr_1.25fr]` en escritorio; en móvil las tarjetas se apilan verticalmente.
-- **Accesibilidad**: iconos decorativos con `aria-hidden`, textos visibles, input con label asociado (oculto visualmente en modo compacto pero accesible para lectores de pantalla).
+- **Tono**: español neutral, sin voseo ("Elige", "Reporta").
+- **Responsive**: los botones se apilan dentro de la tarjeta; en móvil la tarjeta se apila bajo "Consultar".
+- **Accesibilidad**: iconos decorativos con `aria-hidden`, textos visibles en ambos botones.
 
 ---
 
@@ -41,7 +38,8 @@ Se rediseñó por completo la landing page (`/`). El home ahora se centra exclus
 | Tests unitarios | `npm run test` | ✅ 343 tests pasaron |
 | Build | `npm run build` | ✅ Compilación exitosa |
 | Smoke E2E | `npx tsx scripts/smoke-e2e.ts` | ✅ PASÓ (8/8 pasos) |
-| Home renderizado | `curl http://localhost:5005/` | ✅ Muestra título, tarjetas, buscador integrado y canales oficiales; sin Consultar/Reportar en el menú |
+| Acceso anónimo a `/reportar` | `curl -I http://localhost:5005/reportar` | ✅ HTTP 200, sin redirect a `/login` |
+| Home renderizado | `curl http://localhost:5005/` | ✅ Muestra título, tarjetas, botones de reporte y buscador integrado |
 
 ---
 
@@ -55,22 +53,19 @@ Se rediseñó por completo la landing page (`/`). El home ahora se centra exclus
 
 ## Archivos tocados/creados
 
-- `src/components/modules/NavHeader.tsx`
+- `src/proxy.ts`
 - `src/components/modules/LandingHero.tsx`
-- `src/components/modules/HomePageClient.tsx`
-- `src/components/modules/LandingFooter.tsx`
-- `src/components/modules/ConsultaForm.tsx` (modo `compact` preexistente, reutilizado)
 - `specs/028-redisenio-home/spec.md`
 - `specs/028-redisenio-home/plan.md`
 - `specs/028-redisenio-home/quickstart.md`
 - `specs/028-redisenio-home/cierre.md`
-- `specs/README.md` (sin cambios en esta iteración, ya actualizado previamente)
 
 ---
 
 ## Commits
 
 ```text
+791d267 docs(specs): cierre 028 con lista final de commits
 96237bd docs(specs): cierre 028 actualizado con rediseño completo
 51635de feat(ui): rediseño completo del home con buscador integrado en tarjeta
 81eea86 docs(specs): rediseño completo del home 028 con buscador integrado
@@ -82,6 +77,8 @@ b626eb7 docs(specs): actualizar spec 028 con buscador integrado en tarjeta de co
 6d1c5b3 docs(specs): spec 028 redisenio del home con spec, plan y quickstart
 ```
 
+*(Los commits de este ajuste final se agregarán a la lista tras el push.)*
+
 ---
 
 ## R7 (pipeline de clasificación)
@@ -92,6 +89,6 @@ No aplica. Este cambio no toca el pipeline de clasificación IA ni el procesamie
 
 ## Notas
 
-- El bug 021 (reporte anónimo para usuarios internos) no se resolvió en este cambio; el enlace a `/reportar` en el hero se mantiene.
-- El componente `LandingFeatures` se mantiene en el repo pero ya no se usa en el home; puede reutilizarse en una página de documentación futura.
-- El resultado de la consulta se muestra dentro de la tarjeta "Consultar"; para más de 2 reportes se ofrece un enlace a la vista completa `/consulta`.
+- La corrección de `src/proxy.ts` permite que anónimos lleguen a `/reportar`, pero no altera el wizard: usuarios internos aún ven el bloqueo de cuentas internas.
+- El botón "Reportar con mi cuenta" aprovecha el soporte de `?redirect=` que ya existía en la página de login.
+- El componente `LandingFeatures` se mantiene en el repo pero no se usa en el home.

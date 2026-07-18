@@ -23,8 +23,9 @@ Un padre que llega al sitio desde un celular debe ver de un vistazo las dos acci
 **Acceptance Scenarios**:
 
 1. **Given** un visitante anónimo en `/`, **When** carga la página, **Then** ve el título "Protege a quienes más importan", la bajada aprobada, la tarjeta "Crear un reporte" y la tarjeta "Consultar" con el buscador integrado.
-2. **Given** la tarjeta "Crear un reporte", **When** el usuario hace clic, **Then** navega a `/reportar`.
-3. **Given** el buscador dentro de "Consultar", **When** el usuario ingresa un identificador y presiona "Buscar", **Then** el resultado aparece dentro de la misma tarjeta, debajo del buscador.
+2. **Given** la tarjeta "Crear un reporte", **When** el usuario presiona "Reportar anónimo", **Then** navega a `/reportar` sin ser redirigido a login.
+3. **Given** la tarjeta "Crear un reporte", **When** el usuario presiona "Reportar con mi cuenta", **Then** navega a `/login?redirect=/reportar` para autenticarse y luego completar el reporte.
+4. **Given** el buscador dentro de "Consultar", **When** el usuario ingresa un identificador y presiona "Buscar", **Then** el resultado aparece dentro de la misma tarjeta, debajo del buscador.
 
 ---
 
@@ -75,7 +76,8 @@ Todos los textos visibles en la landing deben usar español neutro, sin voseo ni
 
 ## Edge Cases
 
-- ¿Qué pasa si el usuario está autenticado como ADMIN/OPERADOR? El enlace a `/reportar` en el hero sigue funcionando según la lógica del bug 021 (ruta `/reportar` ignora la cookie interna o muestra bloqueo, fuera del alcance de este rediseño).
+- ¿Qué pasa si el usuario está autenticado como ADMIN/OPERADOR/SCHOOL_ADMIN? La ruta `/reportar` es pública, pero el wizard muestra el bloqueo de cuentas internas (bug 021) con la opción de cerrar sesión y reportar anónimo.
+- ¿Qué pasa si el usuario anónimo va directamente a `/reportar`? Debe llegar al wizard sin redirigir a login, gracias al ajuste en `src/proxy.ts`.
 - ¿Qué pasa si el resultado de la consulta es muy grande? Para más de 2 reportes se muestra solo resumen + enlace a vista completa, evitando que la tarjeta crezca desproporcionadamente.
 - ¿Qué pasa si el dashboard público está deshabilitado? El enlace "Dashboard" en la barra superior sigue siendo una ruta válida; el control de disponibilidad es responsabilidad del dashboard.
 
@@ -87,28 +89,30 @@ Todos los textos visibles en la landing deben usar español neutro, sin voseo ni
 
 - **FR-001**: El home DEBE mostrar el título "Protege a quienes más importan" y la bajada aprobada.
 - **FR-002**: El home DEBE presentar dos tarjetas de acción lado a lado en escritorio: "Crear un reporte" (principal, azul/accent) y "Consultar" (secundaria, glass).
-- **FR-003**: La tarjeta "Crear un reporte" DEBE enlazar a `/reportar`, tener subtítulo "De forma anónima o con tu cuenta" e ícono de bandera.
-- **FR-004**: La tarjeta "Consultar" DEBE contener el buscador de identificador con placeholder "Ej: +573001234567" y botón "Buscar", además del subtítulo "Busca un número, nick o usuario".
-- **FR-005**: El resultado de la consulta DEBE mostrarse dentro de la tarjeta "Consultar", debajo del buscador, separado por una línea sutil.
-- **FR-006**: Para 0 reportes, la tarjeta DEBE mostrar un mensaje claro dentro de ella.
-- **FR-007**: Para 1-2 reportes, la tarjeta DEBE mostrar un resumen compacto inline.
-- **FR-008**: Para más de 2 reportes, la tarjeta DEBE mostrar un resumen agregado y un enlace a la vista completa en `/consulta`.
-- **FR-009**: La barra superior DEBE contener solo logo, toggle de tema, "Dashboard" e "Iniciar sesión"; no debe mostrar "Consultar" ni "Reportar".
-- **FR-010**: El home DEBE eliminar la sección "¿Cómo funciona?" (`LandingFeatures`) y los accesos secundarios "Crear una cuenta" / "Ver estadísticas".
-- **FR-011**: El home DEBE conservar la sección "Canales oficiales de denuncia".
-- **FR-012**: El footer DEBE mostrar el copyright "© 2026 Innovadataco. Todos los derechos reservados." y no debe contener el enlace "Reportar".
-- **FR-013**: Todos los textos visibles en la landing DEBEN estar en español neutro, sin voseo.
-- **FR-014**: El rediseño DEBE ser responsive y accesible.
+- **FR-003**: La tarjeta "Crear un reporte" DEBE tener título "Crear un reporte", texto "Elige cómo deseas reportar" y dos botones: "Reportar anónimo" (destacado, azul/accent, ícono de ojo tachado, → `/reportar`) y "Reportar con mi cuenta" (secundario, fondo claro con borde, ícono de usuario, → `/login?redirect=/reportar`).
+- **FR-004**: La ruta `/reportar` DEBE ser accesible para usuarios anónimos sin redirigir a login; las cuentas internas (ADMIN/OPERADOR/SCHOOL_ADMIN) siguen sin poder usarla como flujo de usuario final (según bug 021).
+- **FR-005**: La tarjeta "Consultar" DEBE contener el buscador de identificador con placeholder "Ej: +573001234567" y botón "Buscar", además del subtítulo "Busca un número, nick o usuario".
+- **FR-006**: El resultado de la consulta DEBE mostrarse dentro de la tarjeta "Consultar", debajo del buscador, separado por una línea sutil.
+- **FR-007**: Para 0 reportes, la tarjeta DEBE mostrar un mensaje claro dentro de ella.
+- **FR-008**: Para 1-2 reportes, la tarjeta DEBE mostrar un resumen compacto inline.
+- **FR-009**: Para más de 2 reportes, la tarjeta DEBE mostrar un resumen agregado y un enlace a la vista completa en `/consulta`.
+- **FR-010**: La barra superior DEBE contener solo logo, toggle de tema, "Dashboard" e "Iniciar sesión"; no debe mostrar "Consultar" ni "Reportar".
+- **FR-011**: El home DEBE eliminar la sección "¿Cómo funciona?" (`LandingFeatures`) y los accesos secundarios "Crear una cuenta" / "Ver estadísticas".
+- **FR-012**: El home DEBE conservar la sección "Canales oficiales de denuncia".
+- **FR-013**: El footer DEBE mostrar el copyright "© 2026 Innovadataco. Todos los derechos reservados." y no debe contener el enlace "Reportar".
+- **FR-014**: Todos los textos visibles en la landing DEBEN estar en español neutro, sin voseo.
+- **FR-015**: El rediseño DEBE ser responsive y accesible.
 
 ### Key Entities
 
 - **NavHeader**: Barra superior simplificada.
-- **LandingHero**: Hero con título, bajada, tarjetas de acción y buscador integrado; recibe el estado de la consulta para mostrar el resultado dentro de la tarjeta.
+- **LandingHero**: Hero con título, bajada, tarjetas de acción (con dos botones en "Crear un reporte") y buscador integrado; recibe el estado de la consulta para mostrar el resultado dentro de la tarjeta.
 - **HomePageClient**: Contenedor que maneja el estado de la consulta y pasa las props a `LandingHero`; conserva `CanalesOficiales` y `LandingFooter`.
 - **ConsultaForm**: Formulario reutilizado con modo `compact`.
 - **LandingFeatures**: Componente existente; se elimina del home (no se borra el archivo).
 - **LandingFooter**: Footer actualizado con copyright de Innovadataco.
 - **CanalesOficiales**: Componente existente; se conserva.
+- **proxy.ts**: Lógica de protección de rutas; se ajustó para permitir acceso anónimo a `/reportar`.
 
 ---
 
@@ -139,19 +143,21 @@ Rediseño completo de la landing page para centrarla exclusivamente en las accio
 
 ### Decisiones de diseño derivadas del código
 - **Hero**: grid responsive `sm:grid-cols-[1fr_1.25fr]` con tarjeta principal "Crear un reporte" y tarjeta "Consultar" más ancha para acomodar el buscador y su resultado.
+- **Tarjeta "Crear un reporte"**: dos botones claros — "Reportar anónimo" (destacado, azul/accent) y "Reportar con mi cuenta" (secundario, fondo claro con borde); el primero va directo a `/reportar`, el segundo a `/login?redirect=/reportar`.
 - **Resultado dentro de la tarjeta**: `LandingHero` recibe el estado de la consulta (`data`, `isLoading`, `error`, `buscado`) y renderiza el resultado dentro de la tarjeta. Se distingue entre 0, 1-2 y >2 reportes.
 - **Barra superior simplificada**: `NavHeader` elimina los enlaces "Consultar" y "Reportar" de escritorio y móvil.
 - **Eliminación de distracciones**: se removieron `LandingFeatures` del home y los accesos secundarios del hero.
 - **Canales oficiales**: se conservaron en el home.
 - **Footer**: copyright actualizado a "Innovadataco" y eliminación del enlace "Reportar".
+- **Acceso anónimo a `/reportar`**: se agregó `/reportar` a `PUBLIC_ROUTES` y se quitó de `USER_FINAL_ROUTES` en `src/proxy.ts`, permitiendo que usuarios sin sesión lleguen al wizard; internos siguen bloqueados por el wizard (bug 021).
 - **Textos**: revisión de español neutro; se eliminaron los imperativos con voseo de `LandingFeatures` (que fue removida del home).
 
 ### Componentes afectados
+- `src/proxy.ts`: se ajustaron `PUBLIC_ROUTES` y `USER_FINAL_ROUTES` para permitir acceso anónimo a `/reportar` sin redirigir a login.
 - `src/components/modules/NavHeader.tsx`: barra superior simplificada.
-- `src/components/modules/LandingHero.tsx`: hero con buscador integrado y resultado dentro de la tarjeta.
+- `src/components/modules/LandingHero.tsx`: hero con tarjeta "Crear un reporte" de dos botones, buscador integrado y resultado dentro de la tarjeta.
 - `src/components/modules/HomePageClient.tsx`: contenedor simplificado, pasa estado de consulta al hero, conserva canales y footer.
 - `src/components/modules/LandingFooter.tsx`: copyright Innovadataco.
-- `src/components/modules/ConsultaForm.tsx`: modo `compact` (preexistente de iteración anterior).
 
 ### Tests
 - Tests de componentes React relacionados con landing y consulta.

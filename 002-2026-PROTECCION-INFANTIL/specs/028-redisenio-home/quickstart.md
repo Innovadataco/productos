@@ -26,21 +26,21 @@ curl -s http://localhost:5005/ | grep -oE 'Dashboard|Iniciar sesión|Consultar|R
 
 **Esperado**: `Dashboard` e `Iniciar sesión` presentes; `Consultar` y `Reportar` ausentes del HTML renderizado.
 
-### Escenario B: Hero muestra tarjetas y buscador integrado
+### Escenario B: Hero muestra tarjetas, botones de reporte y buscador integrado
 
 ```bash
-curl -s http://localhost:5005/ | grep -E "Protege a quienes más importan|Crear un reporte|Consultar|Busca un número, nick o usuario|Buscar|Canales oficiales de denuncia"
+curl -s http://localhost:5005/ | grep -E "Protege a quienes más importan|Crear un reporte|Elige cómo deseas reportar|Reportar anónimo|Reportar con mi cuenta|Consultar|Busca un número, nick o usuario|Buscar|Canales oficiales de denuncia"
 ```
 
 **Esperado**: Todos los textos aprobados están presentes.
 
-### Escenario C: Navegación a reportar desde la tarjeta
+### Escenario C: Botones de reporte navegan correctamente
 
 ```bash
-curl -s http://localhost:5005/ | grep -o 'href="/reportar"'
+curl -s http://localhost:5005/ | grep -oE 'href="/reportar"|href="/login\?redirect=/reportar"'
 ```
 
-**Esperado**: Al menos un enlace a `/reportar`.
+**Esperado**: Ambos enlaces presentes.
 
 ### Escenario D: Sin secciones eliminadas
 
@@ -60,27 +60,51 @@ curl -s http://localhost:5005/ | grep -o '© 2026 Innovadataco'
 
 ---
 
-## 3. Validar consulta desde el buscador integrado
+## 3. Validar acceso anónimo a `/reportar`
 
-### Escenario F: Consulta sin reportes
+### Escenario F: Usuario anónimo llega al wizard
+
+```bash
+curl -I http://localhost:5005/reportar
+```
+
+**Esperado**: HTTP 200, sin `location: /login`.
+
+```bash
+curl -s http://localhost:5005/reportar | grep -oE 'Nuevo reporte|Completa los siguientes pasos|Verificando sesión'
+```
+
+**Esperado**: Al menos una de las cadenas del wizard aparece.
+
+### Escenario G: Usuario interno logueado en `/reportar` ve bloqueo (bug 021)
+
+Iniciar sesión como ADMIN/OPERADOR y navegar a `/reportar`.
+
+**Esperado**: El wizard muestra el mensaje de bloqueo de cuentas internas con opción de cerrar sesión.
+
+---
+
+## 4. Validar consulta desde el buscador integrado
+
+### Escenario H: Consulta sin reportes
 
 Ingresar un identificador inexistente en el buscador de la tarjeta "Consultar" y presionar "Buscar".
 
 **Esperado**: Mensaje de "Sin reportes registrados" dentro de la tarjeta.
 
-### Escenario G: Consulta con pocos reportes (1-2)
+### Escenario I: Consulta con pocos reportes (1-2)
 
 Ingresar un identificador con 1 o 2 reportes visibles.
 
-**Esperado**: Resumen compacto inline dentro de la tarjeta (plataformas, ubicaciones, última fecha).
+**Esperado**: Resumen compacto inline dentro de la tarjeta.
 
-### Escenario H: Consulta con muchos reportes (>2)
+### Escenario J: Consulta con muchos reportes (>2)
 
 Ingresar un identificador con más de 2 reportes visibles.
 
-**Esperado**: Resumen agregado con total, autenticados, anónimos y enlace a la vista completa `/consulta`.
+**Esperado**: Resumen agregado con enlace a la vista completa `/consulta`.
 
-### Escenario I: Campo vacío
+### Escenario K: Campo vacío
 
 Presionar "Buscar" con el input vacío.
 
@@ -88,7 +112,7 @@ Presionar "Buscar" con el input vacío.
 
 ---
 
-## 4. Ejecutar tests
+## 5. Ejecutar tests
 
 ```bash
 npm run test
@@ -98,7 +122,7 @@ npm run test
 
 ---
 
-## 5. Verificar build
+## 6. Verificar build
 
 ```bash
 npm run build
@@ -108,19 +132,29 @@ npm run build
 
 ---
 
-## 6. Responsive (manual)
+## 7. Responsive (manual)
 
 1. Abrir `http://localhost:5005/` en modo móvil (ancho < 640 px).
 2. Confirmar que las dos tarjetas se apilan verticalmente.
-3. Confirmar que el buscador integrado y el resultado se ven bien dentro de la tarjeta.
+3. Confirmar que los botones de reporte y el buscador se ven bien.
 4. Confirmar que los textos son legibles y los botones tocables.
 
 ---
 
-## 7. Smoke E2E
+## 8. Smoke E2E
 
 ```bash
 npx tsx scripts/smoke-e2e.ts
 ```
 
 **Esperado**: Smoke test pasa (8/8 pasos).
+
+---
+
+## 9. Prueba en incógnito (manual)
+
+1. Abrir navegador en incógnito en `http://localhost:5005/`.
+2. Hacer clic en "Reportar anónimo".
+3. **Esperado**: se llega al wizard de reporte (`/reportar`) sin redirigir a `/login`.
+4. Hacer clic en "Reportar con mi cuenta".
+5. **Esperado**: se llega a `/login?redirect=/reportar`; tras iniciar sesión como PARENT, se redirige a `/reportar`.
