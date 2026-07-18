@@ -18,6 +18,7 @@ type Operador = {
     email: string;
     nombre: string | null;
     estado: "activo" | "inactivo";
+    debeCambiarPassword: boolean;
     tenantId: string | null;
     perfil: Perfil | null;
     casosAbiertos: number;
@@ -40,6 +41,7 @@ export default function AdminOperadoresPage() {
     const [form, setForm] = useState(initialForm);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<Mensaje>(null);
+    const [passwordTemporal, setPasswordTemporal] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editValues, setEditValues] = useState<Partial<Operador & Perfil>>({});
 
@@ -93,6 +95,7 @@ export default function AdminOperadoresPage() {
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setForm(initialForm);
+                setPasswordTemporal(data.passwordTemporal || null);
                 setMessage({ type: "success", text: data.mensaje || "Operador creado" });
                 await cargar();
             } else {
@@ -102,6 +105,48 @@ export default function AdminOperadoresPage() {
             setMessage({ type: "error", text: "Error de red creando operador" });
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function regenerarPassword(id: string) {
+        setMessage(null);
+        setPasswordTemporal(null);
+        try {
+            const res = await fetch(`/api/admin/operadores/${id}/regenerar-password`, {
+                method: "POST",
+                credentials: "include",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setPasswordTemporal(data.passwordTemporal || null);
+                setMessage({ type: "success", text: data.mensaje || "Contraseña regenerada" });
+                await cargar();
+            } else {
+                setMessage({ type: "error", text: data?.error?.message || "Error regenerando contraseña" });
+            }
+        } catch {
+            setMessage({ type: "error", text: "Error de red regenerando contraseña" });
+        }
+    }
+
+    async function reenviarEmail(id: string) {
+        setMessage(null);
+        setPasswordTemporal(null);
+        try {
+            const res = await fetch(`/api/admin/operadores/${id}/reenviar-email`, {
+                method: "POST",
+                credentials: "include",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setPasswordTemporal(data.passwordTemporal || null);
+                setMessage({ type: "success", text: data.mensaje || "Email reenviado" });
+                await cargar();
+            } else {
+                setMessage({ type: "error", text: data?.error?.message || "Error reenviando email" });
+            }
+        } catch {
+            setMessage({ type: "error", text: "Error de red reenviando email" });
         }
     }
 
@@ -194,6 +239,24 @@ export default function AdminOperadoresPage() {
                     }`}
                 >
                     {message.text}
+                </div>
+            )}
+
+            {passwordTemporal && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                    <p className="font-semibold">Contraseña temporal (mostrála una vez)</p>
+                    <div className="mt-2 flex items-center gap-2">
+                        <code className="rounded-lg bg-white/60 px-3 py-1.5 font-mono text-base dark:bg-slate-900/60">{passwordTemporal}</code>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="px-3 py-1.5 text-xs"
+                            onClick={() => navigator.clipboard.writeText(passwordTemporal)}
+                        >
+                            Copiar
+                        </Button>
+                    </div>
+                    <p className="mt-2 text-xs opacity-80">El operador debe usar esta contraseña para iniciar sesión. No se volverá a mostrar.</p>
                 </div>
             )}
 
@@ -312,6 +375,8 @@ export default function AdminOperadoresPage() {
                                                 onToggle={() =>
                                                     op.estado === "activo" ? desactivar(op.id) : reactivar(op.id)
                                                 }
+                                                onRegenerarPassword={() => regenerarPassword(op.id)}
+                                                onReenviarEmail={() => reenviarEmail(op.id)}
                                             />
                                         )}
                                     </tr>
@@ -346,14 +411,27 @@ function ReadOnlyRow({
     op,
     onEdit,
     onToggle,
+    onRegenerarPassword,
+    onReenviarEmail,
 }: {
     op: Operador;
     onEdit: () => void;
     onToggle: () => void;
+    onRegenerarPassword: () => void;
+    onReenviarEmail: () => void;
 }) {
     return (
         <>
-            <td className="py-3 pr-3 text-body">{op.nombre || "—"}</td>
+            <td className="py-3 pr-3 text-body">
+                <div className="flex items-center gap-2">
+                    {op.nombre || "—"}
+                    {op.debeCambiarPassword && (
+                        <Badge variant="warning" className="text-[10px]">
+                            Debe cambiar contraseña
+                        </Badge>
+                    )}
+                </div>
+            </td>
             <td className="py-3 pr-3 text-muted">{op.email}</td>
             <td className="py-3 pr-3">
                 <Badge variant={op.estado === "activo" ? "success" : "neutral"}>
@@ -369,9 +447,15 @@ function ReadOnlyRow({
                 {op.perfil?.notasInternas || "—"}
             </td>
             <td className="py-3 text-right">
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                     <Button variant="outline" className="px-3 py-1.5 text-xs" onClick={onEdit}>
                         Editar
+                    </Button>
+                    <Button variant="outline" className="px-3 py-1.5 text-xs" onClick={onRegenerarPassword}>
+                        Regenerar pass
+                    </Button>
+                    <Button variant="outline" className="px-3 py-1.5 text-xs" onClick={onReenviarEmail}>
+                        Reenviar email
                     </Button>
                     <Button
                         variant={op.estado === "activo" ? "danger" : "secondary"}
