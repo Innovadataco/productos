@@ -21,6 +21,7 @@ const CATEGORIAS = [
     "CONTENIDO_GENERADO_IA",
     "DIFUSION_NO_CONSENTIDA",
     "DOXING",
+    "SPAM",
 ] as const;
 
 type Categoria = (typeof CATEGORIAS)[number];

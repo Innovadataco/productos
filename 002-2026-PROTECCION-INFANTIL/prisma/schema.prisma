@@ -110,6 +110,7 @@ enum CategoriaConducta {
   CONTENIDO_GENERADO_IA
   DIFUSION_NO_CONSENTIDA
   DOXING
+  SPAM
 }
 
 enum EstadoReporte {

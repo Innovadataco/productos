@@ -53,6 +53,7 @@ const CATEGORIAS_DEFAULT: CategoriaConducta[] = [
     "CONTENIDO_GENERADO_IA",
     "DIFUSION_NO_CONSENTIDA",
     "DOXING",
+    "SPAM",
     "OTRO",
 ];
 
@@ -68,6 +69,7 @@ function getDefaultSeverity(): Record<CategoriaConducta, number> {
         CONTENIDO_GENERADO_IA: 75,
         DIFUSION_NO_CONSENTIDA: 90,
         DOXING: 85,
+        SPAM: 0,
         OTRO: 20,
     };
 }

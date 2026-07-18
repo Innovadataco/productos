@@ -64,6 +64,7 @@ export async function crearParametrosReportes() {
         { clave: "visibility.min_authenticated_ratio", valor: "0.5", tipo: "FLOAT" as const, categoria: "VISIBILITY" as const, esPublico: true },
         { clave: "reportes.classification_model", valor: "ornith:9b", tipo: "STRING" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "reportes.classification.umbral_revision", valor: "0.5", tipo: "FLOAT" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "clasificacion.umbral_spam", valor: "0.7", tipo: "FLOAT" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "reportes.classification.min_score_categoria", valor: "0.3", tipo: "FLOAT" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "reportes.classification.n_votos", valor: "5", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "reportes.classification.temperatura_votos", valor: "0.7", tipo: "FLOAT" as const, categoria: "SECURITY" as const, esPublico: false },

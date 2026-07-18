@@ -1,4 +1,5 @@
-import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, CasoEvalFuente } from "@prisma/client";
+import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, CasoEvalFuente, CategoriaConducta } from "@prisma/client";
+import { generarEmbedding } from "@/lib/ai/embedder";
 // DECISION-PENDIENTE-PO: categorías de plataforma podrían requerir ajuste
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
@@ -160,6 +161,14 @@ async function main() {
             categoria: CategoriaParametro.SECURITY,
             esPublico: false,
             descripcion: "Umbral de confianza mínima para clasificar sin revisión manual",
+        },
+        {
+            clave: "clasificacion.umbral_spam",
+            valor: "0.7",
+            tipo: TipoParametro.FLOAT,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Confianza mínima para que la IA marque un reporte como POSIBLE_SPAM",
         },
         {
             clave: "reportes.classification.min_score_categoria",
@@ -960,6 +969,9 @@ async function main() {
     // Seed de casos de evaluación desde fixture (Spec 013)
     await seedEvalFixture();
 
+    // Seed de ejemplos de spam para el RAG (Spec 026)
+    await seedSpamExamples();
+
     // Empty SaaS tables - just verify they exist
     console.log("Tablas Tenant, Plan, Subscription, BillingCycle listas");
 }
@@ -1002,6 +1014,53 @@ async function seedEvalFixture() {
 
     await prisma.casoEval.createMany({ data });
     console.log(`Casos de evaluación SEMILLA creados: ${data.length}`);
+}
+
+async function seedSpamExamples() {
+    const existing = await prisma.datasetEntrenamiento.count({ where: { fuente: "spam_revisado" } });
+    if (existing > 0) {
+        console.log(`Ejemplos de spam ya existen (${existing}); omitiendo seed`);
+        return;
+    }
+
+    const paramEmbedding = await prisma.parametroSistema.findUnique({ where: { clave: "reportes.embedding_model" } });
+    const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+
+    const ejemplos = [
+        "Compra relojes baratos viagra cripto dinero fácil 100% gratis",
+        "Haz clic aquí para ganar dinero rápido en línea",
+        "Visita nuestra página web para obtener productos gratuitos",
+        "Promoción exclusiva: gana un teléfono nuevo solo por registrarte",
+        "Envía este mensaje a todos tus contactos y gana premios",
+        "Oferta limitada: compra ahora y recibe envío gratis",
+        "Hola, ¿te interesaría ganar dinero desde casa? Solo necesitas un celular",
+        "Descubre el secreto para hacer dinero fácil sin esfuerzo",
+    ];
+
+    for (const texto of ejemplos) {
+        const dataset = await prisma.datasetEntrenamiento.create({
+            data: {
+                texto,
+                clasificacionCorrecta: CategoriaConducta.SPAM,
+                fuente: "spam_revisado",
+                textoAnonimizado: true,
+            },
+        });
+
+        try {
+            const vector = await generarEmbedding(modeloEmbedding, texto);
+            const vectorStr = "[" + vector.join(",") + "]";
+            await prisma.$executeRaw`
+                INSERT INTO "EmbeddingDataset" (id, "datasetId", vector, "modeloUsado", "creadoEn")
+                VALUES (${crypto.randomUUID()}, ${dataset.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+            `;
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(`[SEED] No se pudo generar embedding para ejemplo spam: ${msg}`);
+        }
+    }
+
+    console.log(`Ejemplos de spam sembrados: ${ejemplos.length}`);
 }
 
 main()
