@@ -21,6 +21,7 @@ import { procesarBackfillEmbedding } from "../src/lib/ai/dataset-embedding-backf
 import { getOllamaBaseUrl } from "../src/lib/ai/ollama-config.ts";
 import { prisma } from "../src/lib/prisma.ts";
 import { logAudit } from "../src/lib/audit.ts";
+import { notificarCambioCirculoSiCorresponde } from "../src/lib/circulo-confianza.ts";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -118,6 +119,12 @@ async function start() {
 
             const data = await res.json();
             console.log(`[WORKER] OK reporte=${reporteId} estado=${data.estado} latencia=${latencia}ms`);
+
+            // Notificar a usuarios que tengan este identificador en su Círculo de Confianza
+            notificarCambioCirculoSiCorresponde(reporteId).catch((err) => {
+                console.error(`[WORKER] Error notificando círculo reporte=${reporteId}:`, err.message);
+            });
+
             return { success: true, estado: data.estado };
         } catch (err) {
             const latencia = Date.now() - startMs;
