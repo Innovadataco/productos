@@ -22,7 +22,7 @@
 | `015` | Defensas anti-abuso | CERRADA | 2026-07-17 | [`spec.md`](015-anti-abuso/spec.md) | [`plan.md`](015-anti-abuso/plan.md) | [`reporte-cierre.md`](015-anti-abuso/reporte-cierre.md) |
 | `016` | Círculo de Confianza | CERRADA | 2026-07-18 | [`spec.md`](016-circulo-confianza/spec.md) | [`plan.md`](016-circulo-confianza/plan.md) | [`reporte-cierre.md`](016-circulo-confianza/reporte-cierre.md) |
 | `017` | Módulo de documentación | EN DISEÑO | — | [`spec.md`](017-documentacion/spec.md) | [`plan.md`](017-documentacion/plan.md) | — |
-| `018` | Operadores de casos (revisión humana) | EN DISEÑO | — | — | — | [`diseno.md`](018-operadores-casos/diseno.md) |
+| `018` | Operadores de casos (revisión humana) | CERRADA | 2026-07-18 | [`spec.md`](018-operadores-casos/spec.md) | [`tasks.md`](018-operadores-casos/tasks.md) | [`reporte-cierre.md`](018-operadores-casos/reporte-cierre.md) |
 | `02` | Módulo de reportes comunitarios | CERRADA | 2026-07-14 | [`spec.md`](02-reportes-comunitarios/spec.md) | [`plan.md`](02-reportes-comunitarios/plan.md) | [`IMPLEMENTATION-REPORT.md`](02-reportes-comunitarios/IMPLEMENTATION-REPORT.md) |
 | `borrador-anti-abuso` | Defensas anti-abuso (borrador de decisión) | BORRADOR | — | [`borrador-anti-abuso.md`](borrador-anti-abuso.md) | — | — |
 
