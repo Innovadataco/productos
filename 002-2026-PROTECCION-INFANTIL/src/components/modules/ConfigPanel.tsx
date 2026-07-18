@@ -22,6 +22,7 @@ const SECTIONS: { key: string; label: string; description: string; prefixes: str
     { key: "alerts", label: "Alertas por Email", description: "Activar/desactivar notificaciones a administradores y suscriptores.", prefixes: ["alerts."] },
     { key: "ratelimit", label: "Rate Limiting", description: "Límites de peticiones por ventana de tiempo.", prefixes: ["ratelimit."] },
     { key: "reportes", label: "Procesamiento de Reportes", description: "Modelos de IA, umbrales de duplicados y parámetros del worker.", prefixes: ["reportes."] },
+    { key: "ui", label: "Interfaz de usuario", description: "Parámetros visibles para usuarios finales, como SLA de seguimiento.", prefixes: ["ui."] },
     { key: "security", label: "Seguridad", description: "Intentos de login, duración de bloqueo, longitud de contraseña, etc.", prefixes: ["security."] },
     { key: "system", label: "Sistema", description: "Parámetros generales de la aplicación.", prefixes: ["system."] },
     { key: "other", label: "Otros", description: "Parámetros adicionales no agrupados.", prefixes: [] },
