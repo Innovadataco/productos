@@ -7,7 +7,6 @@ const PUBLIC_ROUTES = [
     "/login",
     "/registro",
     "/recuperar",
-    "/reportar",
     "/seguimiento",
     "/consulta",
     "/privacidad",
@@ -27,11 +26,12 @@ const PUBLIC_ROUTES = [
     "/apelar",
 ];
 
-function getSecret(): Uint8Array {
+// Rutas de usuario final: solo PARENT (o anónimo) puede usarlas.
+const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes", "/reportar"];
+
+function getSecret(): Uint8Array | null {
     const secret = process.env.JWT_SECRET;
-    if (!secret || secret.length < 32) {
-        throw new Error("JWT_SECRET no configurado o muy corto");
-    }
+    if (!secret || secret.length < 32) return null;
     return new TextEncoder().encode(secret);
 }
 
@@ -39,9 +39,15 @@ function isPublic(pathname: string): boolean {
     return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
 }
 
+function isUserFinalRoute(pathname: string): boolean {
+    return USER_FINAL_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
+}
+
 async function verifyToken(token: string) {
     try {
-        const { payload } = await jwtVerify(token, getSecret(), { clockTolerance: 60 });
+        const secret = getSecret();
+        if (!secret) return null;
+        const { payload } = await jwtVerify(token, secret, { clockTolerance: 60 });
         return payload as { sub: string; rol: string };
     } catch {
         return null;
@@ -51,20 +57,28 @@ async function verifyToken(token: string) {
 function redirectToLogin(request: NextRequest) {
     const res = NextResponse.redirect(new URL("/login", request.url));
     res.cookies.delete("token");
+    res.cookies.delete("__Host-token");
     return res;
+}
+
+function esRolInterno(rol: string) {
+    return rol === "ADMIN" || rol === "SCHOOL_ADMIN" || rol === "OPERADOR";
 }
 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
-    const token = request.cookies.get("token")?.value;
+    const token = request.cookies.get("token")?.value ?? request.cookies.get("__Host-token")?.value;
 
-    // Public routes are always allowed
-    if (isPublic(pathname)) {
-        return NextResponse.next();
-    }
+    // Public routes are always allowed for anonymous users.
+    // Routes like /reportar are public for anonymous but not for internal users.
+    const isPublicRoute = isPublic(pathname);
 
-    // Every protected route requires a valid token
+    // Internal routes (admin/operador panel and APIs)
+    const isInternalRoute = pathname.startsWith("/dashboard/admin") || pathname.startsWith("/api/admin");
+
+    // If no token, behave as before: public -> next, protected -> redirect/401
     if (!token) {
+        if (isPublicRoute) return NextResponse.next();
         if (pathname.startsWith("/api/")) {
             return NextResponse.json({ error: { message: "No autenticado" } }, { status: 401 });
         }
@@ -73,27 +87,35 @@ export async function proxy(request: NextRequest) {
 
     const payload = await verifyToken(token);
     if (!payload) {
+        if (isPublicRoute) return NextResponse.next();
         if (pathname.startsWith("/api/")) {
             const res = NextResponse.json({ error: { message: "Token inválido o expirado" } }, { status: 401 });
             res.cookies.delete("token");
+            res.cookies.delete("__Host-token");
             return res;
         }
         return redirectToLogin(request);
     }
 
-    // Admin routes require ADMIN role
-    if (pathname.startsWith("/dashboard/admin") || pathname.startsWith("/api/admin")) {
-        if (payload.rol !== "ADMIN") {
+    // Internal routes: require internal role (ADMIN, SCHOOL_ADMIN or OPERADOR)
+    if (isInternalRoute) {
+        if (!esRolInterno(payload.rol)) {
             if (pathname.startsWith("/api/admin")) {
                 return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
             }
             return NextResponse.redirect(new URL("/", request.url));
         }
+        return NextResponse.next();
+    }
+
+    // User-final routes: internal users (operador/admin) must not access them.
+    if (isUserFinalRoute(pathname) && esRolInterno(payload.rol)) {
+        return NextResponse.redirect(new URL("/dashboard/admin", request.url));
     }
 
     return NextResponse.next();
 }
 
 export const config = {
-    matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+    matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)", "/reportar"],
 };

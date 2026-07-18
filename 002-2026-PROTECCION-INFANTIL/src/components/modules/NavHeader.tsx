@@ -34,8 +34,28 @@ export function NavHeader() {
         ? (user.nombre?.[0] || user.email[0]).toUpperCase()
         : "";
 
+    const esEmpleado = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN" || user?.rol === "OPERADOR";
+
+    const headerBorderClass = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
+        ? "border-b-amber-500/40 dark:border-b-amber-400/30"
+        : user?.rol === "OPERADOR"
+        ? "border-b-violet-500/40 dark:border-b-violet-400/30"
+        : "border-b-white/40 dark:border-b-white/10";
+
+    const avatarClass = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
+        ? "bg-amber-500"
+        : user?.rol === "OPERADOR"
+        ? "bg-violet-500"
+        : "accent-gradient";
+
+    const rolBadgeClass = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
+        ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+        : user?.rol === "OPERADOR"
+        ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
+        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+
     return (
-        <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/40 dark:border-white/10">
+        <header className={`fixed top-0 left-0 right-0 z-50 glass ${headerBorderClass}`}>
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
                 <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight text-body">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg accent-gradient text-white shadow-md">
@@ -62,12 +82,14 @@ export function NavHeader() {
                         Consultar
                     </Link>
 
-                    <Link
-                        href="/reportar"
-                        className="hidden sm:inline-flex rounded-xl accent-gradient px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20 transition hover:brightness-110"
-                    >
-                        Reportar
-                    </Link>
+                    {!esEmpleado && (
+                        <Link
+                            href="/reportar"
+                            className="hidden sm:inline-flex rounded-xl accent-gradient px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20 transition hover:brightness-110"
+                        >
+                            Reportar
+                        </Link>
+                    )}
 
                     {isLoading ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
@@ -79,7 +101,7 @@ export function NavHeader() {
                                 aria-expanded={open}
                                 aria-haspopup="true"
                             >
-                                <span className="flex h-7 w-7 items-center justify-center rounded-full accent-gradient text-xs font-bold text-white">
+                                <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white ${avatarClass}`}>
                                     {initials}
                                 </span>
                                 <span className="hidden sm:inline max-w-[10rem] truncate">{user.nombre || user.email}</span>
@@ -90,10 +112,14 @@ export function NavHeader() {
                                 <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 shadow-2xl">
                                     <div className="border-b border-slate-100 dark:border-slate-800 px-3 py-2">
                                         <p className="text-sm font-semibold text-body truncate">{user.nombre || user.email}</p>
-                                        <p className="text-xs text-subtle capitalize">{user.rol.toLowerCase()}</p>
+                                        <div className="mt-1 flex items-center gap-2">
+                                            <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${rolBadgeClass}`}>
+                                                {user.rol.toLowerCase()}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div className="py-1">
-                                        {user.rol === "ADMIN" && (
+                                        {(user.rol === "ADMIN" || user.rol === "SCHOOL_ADMIN") && (
                                             <>
                                                 <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
                                                     Panel de administración
@@ -103,12 +129,21 @@ export function NavHeader() {
                                                 </NavDropdownLink>
                                             </>
                                         )}
-                                        <NavDropdownLink href="/dashboard/circulo-confianza" onClick={() => setOpen(false)}>
-                                            Círculo de Confianza
-                                        </NavDropdownLink>
-                                        <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
-                                            Mis reportes
-                                        </NavDropdownLink>
+                                        {user.rol === "OPERADOR" && (
+                                            <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
+                                                Mis casos
+                                            </NavDropdownLink>
+                                        )}
+                                        {!esEmpleado && (
+                                            <>
+                                                <NavDropdownLink href="/dashboard/circulo-confianza" onClick={() => setOpen(false)}>
+                                                    Círculo de Confianza
+                                                </NavDropdownLink>
+                                                <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
+                                                    Mis reportes
+                                                </NavDropdownLink>
+                                            </>
+                                        )}
                                         <hr className="my-1 border-slate-100 dark:border-slate-800" />
                                         <button
                                             onClick={async () => {
@@ -149,16 +184,23 @@ export function NavHeader() {
                         <MobileLink href="/" onClick={() => setMobileOpen(false)}>Inicio</MobileLink>
                         <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Dashboard</MobileLink>
                         <MobileLink href="/consulta" onClick={() => setMobileOpen(false)}>Consultar</MobileLink>
-                        <MobileLink href="/reportar" onClick={() => setMobileOpen(false)}>Reportar</MobileLink>
+                        {!esEmpleado && <MobileLink href="/reportar" onClick={() => setMobileOpen(false)}>Reportar</MobileLink>}
                         {user ? (
                             <>
-                                <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>
-                                <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>
-                                {user.rol === "ADMIN" && (
+                                {!esEmpleado && (
+                                    <>
+                                        <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>
+                                        <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>
+                                    </>
+                                )}
+                                {(user.rol === "ADMIN" || user.rol === "SCHOOL_ADMIN") && (
                                     <>
                                         <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Panel admin</MobileLink>
                                         <MobileLink href="/dashboard/admin/configuracion" onClick={() => setMobileOpen(false)}>Configuración</MobileLink>
                                     </>
+                                )}
+                                {user.rol === "OPERADOR" && (
+                                    <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Mis casos</MobileLink>
                                 )}
                                 <button
                                     onClick={async () => {

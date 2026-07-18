@@ -3,24 +3,28 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const links = [
-    { href: "/dashboard/admin", label: "Bandeja de reportes", icon: InboxIcon },
-    { href: "/dashboard/admin/estadisticas", label: "Dashboard", icon: ChartIcon },
-    { href: "/dashboard/admin/ia", label: "Centro de Control IA", icon: BrainIcon },
-    { href: "/dashboard/admin/operadores", label: "Operadores", icon: UsersIcon },
-    { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", icon: ShieldIcon },
-    { href: "/dashboard/admin/apelaciones", label: "Apelaciones", icon: ScaleIcon },
-    { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", icon: DatabaseIcon },
-    { href: "/dashboard/admin/configuracion", label: "Configuración", icon: CogIcon },
+type RolNav = "ADMIN" | "SCHOOL_ADMIN" | "OPERADOR";
+
+const allLinks = [
+    { href: "/dashboard/admin", label: "Bandeja de reportes", icon: InboxIcon, roles: ["ADMIN", "SCHOOL_ADMIN", "OPERADOR"] as RolNav[] },
+    { href: "/dashboard/admin/estadisticas", label: "Dashboard", icon: ChartIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/ia", label: "Centro de Control IA", icon: BrainIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/operadores", label: "Operadores", icon: UsersIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", icon: ShieldIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/apelaciones", label: "Apelaciones", icon: ScaleIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", icon: DatabaseIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/configuracion", label: "Configuración", icon: CogIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
 ];
 
-export function AdminNav() {
+export function AdminNav({ rol }: { rol: RolNav }) {
     const pathname = usePathname();
+    const links = allLinks.filter((l) => l.roles.includes(rol));
+    const titulo = rol === "OPERADOR" ? "Operador" : "Administración";
 
     return (
         <nav className="hidden w-64 flex-shrink-0 flex-col border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl sm:flex">
             <div className="border-b border-slate-200 dark:border-slate-800 p-6">
-                <h1 className="text-lg font-bold text-body">Administración</h1>
+                <h1 className="text-lg font-bold text-body">{titulo}</h1>
                 <p className="mt-1 text-xs text-subtle">Protección Infantil</p>
             </div>
             <ul className="flex-1 p-3 space-y-1">
@@ -50,7 +54,7 @@ export function AdminNav() {
 function InboxIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5 0c0-4.142 3.358-7.5 7.5-7.5h6.75c4.142 0 7.5 3.358 7.5 7.5m-19.5 0v2.25a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25V13.5m-19.5 0h19.5" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5 0c0-4.142 3.358-7.5 7.5-7.5h6.75c4.142 0 7.5 3.358 7.5 7.5m-19.5 0v2.25a2.25 2.25 0 002.25 2.25h15a2.25-2.25V13.5m-19.5 0h19.5" />
         </svg>
     );
 }
