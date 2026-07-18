@@ -38,6 +38,7 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     report_fingerprint: { windowSeconds: 3600, maxRequests: 5 },
     apelacion: { windowSeconds: 86400, maxRequests: 3 },
     apelacion_sms: { windowSeconds: 3600, maxRequests: 3 },
+    circulo_contacto: { windowSeconds: 3600, maxRequests: 20 },
 };
 
 function getScopeDefaults(scope: string): ScopeDefaults {
