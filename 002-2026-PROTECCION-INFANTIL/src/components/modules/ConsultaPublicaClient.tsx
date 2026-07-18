@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { BarChart } from "./BarChart";
@@ -8,12 +9,20 @@ import { DonutChart } from "./DonutChart";
 import { MetricCard } from "./MetricCard";
 import { ChartCard } from "./ChartCard";
 import { MiniList } from "./MiniList";
-import { RiskBadge } from "./RiskBadge";
-import { formatCategoria, formatNivel } from "@/lib/labels";
+
+const MapaUbicaciones = dynamic(
+    () => import("./MapaUbicaciones").then((mod) => mod.MapaUbicaciones),
+    { ssr: false }
+);
 
 function formatFecha(iso: string | null | undefined) {
     if (!iso) return "—";
     return new Date(iso).toLocaleDateString("es-CO", { dateStyle: "medium" });
+}
+
+function formatMes(mes: string) {
+    const d = new Date(`${mes}-01T00:00:00Z`);
+    return d.toLocaleDateString("es-CO", { month: "short", year: "numeric" });
 }
 
 type Ubicacion = {
@@ -22,6 +31,8 @@ type Ubicacion = {
     total: number;
     fechasReporte: string[];
     fechasIncidente: string[];
+    lat?: number | null;
+    lng?: number | null;
 };
 
 type ConsultaResponse = {
@@ -32,13 +43,9 @@ type ConsultaResponse = {
     totalReportes?: number;
     reportesAutenticados?: number;
     reportesAnonimos?: number;
-    score?: number;
-    nivelRiesgo?: string;
-    ratioAutenticados?: number;
     primerReporte?: string | null;
     ultimoReporte?: string | null;
     plataformas?: { id: string; nombre: string; clave: string; total: number }[];
-    categorias?: { categoria: string; total: number; confianzaPromedio: number | null }[];
     ubicaciones?: Ubicacion[];
     timeline?: { mes: string; total: number }[];
     resumen?: string;
@@ -77,12 +84,19 @@ export function ConsultaPublicaClient() {
     };
 
     const plataformasChart = (data?.plataformas ?? []).map((p) => ({ label: p.nombre, value: p.total }));
-    const categoriasChart = (data?.categorias ?? []).map((c) => ({ label: formatCategoria(c.categoria), value: c.total }));
-    const timelineChart = (data?.timeline ?? []).map((t) => ({ label: t.mes, value: t.total }));
+    const timelineChart = (data?.timeline ?? []).map((t) => ({ label: formatMes(t.mes), value: t.total }));
     const ubicacionesList = (data?.ubicaciones ?? []).map((u) => ({
         label: `${u.ciudad}, ${u.pais}`,
         count: u.total,
     }));
+    const puntosMapa = (data?.ubicaciones ?? [])
+        .filter((u) => typeof u.lat === "number" && typeof u.lng === "number")
+        .map((u) => ({
+            lat: u.lat as number,
+            lng: u.lng as number,
+            label: `${u.ciudad}, ${u.pais}`,
+            total: u.total,
+        }));
 
     return (
         <main className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
@@ -131,20 +145,7 @@ export function ConsultaPublicaClient() {
                         <MetricCard label="Total reportes" value={data.totalReportes ?? 0} />
                         <MetricCard label="Autenticados" value={data.reportesAutenticados ?? 0} />
                         <MetricCard label="Anónimos" value={data.reportesAnonimos ?? 0} />
-                        {data.score != null ? (
-                            <MetricCard
-                                label="Score"
-                                value={data.score}
-                                suffix="/100"
-                                sub={data.nivelRiesgo ? formatNivel(data.nivelRiesgo) : undefined}
-                            />
-                        ) : (
-                            <MetricCard
-                                label="Ratio autenticados"
-                                value={Math.round((data.ratioAutenticados || 0) * 100)}
-                                suffix="%"
-                            />
-                        )}
+                        <MetricCard label="Estado" value="Con reportes" />
                     </div>
 
                     {/* Resumen */}
@@ -160,12 +161,6 @@ export function ConsultaPublicaClient() {
                                 <span className="text-body">{formatFecha(data.ultimoReporte)}</span>
                             </p>
                         </div>
-                        {data.nivelRiesgo && (
-                            <div className="mt-3 flex items-center gap-2">
-                                <span className="text-sm text-subtle">Nivel de riesgo:</span>
-                                <RiskBadge nivel={data.nivelRiesgo} />
-                            </div>
-                        )}
                     </ChartCard>
 
                     {/* Gráficos */}
@@ -175,32 +170,29 @@ export function ConsultaPublicaClient() {
                                 <DonutChart data={plataformasChart} ariaLabel="Distribución por plataforma" />
                             </ChartCard>
                         )}
-                        {categoriasChart.length > 0 && (
-                            <ChartCard title="Categorías" subtitle="Tipo de conducta más frecuente">
-                                <DonutChart data={categoriasChart} ariaLabel="Distribución por categoría" />
+                        {timelineChart.length > 0 && (
+                            <ChartCard title="Reportes por mes" subtitle="Evolución temporal agregada">
+                                <BarChart data={timelineChart} ariaLabel="Reportes por mes" />
                             </ChartCard>
                         )}
                     </div>
 
-                    {timelineChart.length > 0 && (
-                        <ChartCard title="Reportes por mes" subtitle="Evolución temporal agregada">
-                            <BarChart data={timelineChart} ariaLabel="Reportes por mes" />
-                        </ChartCard>
-                    )}
-
-                    {/* Ubicaciones agregadas (sin mapa) */}
+                    {/* Ubicaciones: mapa + lista */}
                     <ChartCard
                         title="Ubicaciones reportadas"
                         subtitle="Ciudades con reportes. Sin direcciones exactas ni datos personales."
                     >
-                        {ubicacionesList.length > 0 ? (
-                            <MiniList items={ubicacionesList} empty="Sin ubicaciones" />
-                        ) : (
-                            <p className="text-sm text-muted">Sin ubicaciones reportadas</p>
-                        )}
+                        <div className="space-y-4">
+                            {puntosMapa.length > 0 && <MapaUbicaciones puntos={puntosMapa} />}
+                            {ubicacionesList.length > 0 ? (
+                                <MiniList items={ubicacionesList} empty="Sin ubicaciones" />
+                            ) : (
+                                <p className="text-sm text-muted">Sin ubicaciones reportadas</p>
+                            )}
+                        </div>
                     </ChartCard>
 
-                    {/* Tabla de ubicaciones */}
+                    {/* Detalle de ubicaciones */}
                     <div className="glass rounded-2xl overflow-hidden">
                         <div className="p-5">
                             <h3 className="text-base font-semibold text-body">Detalle de ubicaciones</h3>
@@ -233,45 +225,6 @@ export function ConsultaPublicaClient() {
                             </table>
                         </div>
                     </div>
-
-                    {/* Categorías detalle */}
-                    <div className="glass rounded-2xl overflow-hidden">
-                        <div className="p-5">
-                            <h3 className="text-base font-semibold text-body">Categorías detectadas</h3>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-100/70 text-subtle dark:bg-slate-800/60">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">Categoría</th>
-                                        <th className="px-4 py-3 font-medium">Reportes</th>
-                                        <th className="px-4 py-3 font-medium">Confianza promedio</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {(data.categorias ?? []).map((c, idx) => (
-                                        <tr
-                                            key={idx}
-                                            className="transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
-                                        >
-                                            <td className="px-4 py-3 text-body">{formatCategoria(c.categoria)}</td>
-                                            <td className="px-4 py-3 text-body">{c.total}</td>
-                                            <td className="px-4 py-3 text-subtle">
-                                                {c.confianzaPromedio != null ? `${(c.confianzaPromedio * 100).toFixed(1)}%` : "—"}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {!data.score && (
-                        <div className="rounded-xl bg-sky-50 p-4 text-sm text-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
-                            <strong>¿Quieres ver más detalles?</strong> Inicia sesión para conocer el score de riesgo,
-                            clasificaciones de la IA y el timeline completo.
-                        </div>
-                    )}
                 </div>
             )}
         </main>
