@@ -76,6 +76,9 @@ enum AccionAudit {
   CASO_ESCALADO
   CASO_NOTA_AGREGADA
   CONFIGURACION_ASIGNACION_ACTUALIZADA
+  TEXTO_ORIGINAL_REVELADO
+  ANONIMIZACION_VALIDADA
+  ANONIMIZACION_RECHAZADA
 }
 
 enum EstadoApelacion {
@@ -155,6 +158,7 @@ model Usuario {
   apelaciones           ApelacionIdentificador[]
   casosAsignados        Reporte[]                @relation("CasosOperador")
   apelacionesAsignadas  ApelacionIdentificador[] @relation("ApelacionesOperador")
+  anonimizacionesValidadas Reporte[]             @relation("AnonimizacionesValidadas")
   perfilOperador        PerfilOperador?
   operadoresCreados     PerfilOperador[]         @relation("OperadoresCreados")
   contactosConfianza            ContactoConfianza[]
@@ -383,6 +387,8 @@ model Reporte {
   notaBaja           String?            @db.Text
   eliminadoEn        DateTime?
   eliminadoPorId     String?
+  anonimizacionValidadaPorId String?
+  anonimizacionValidadaEn    DateTime?
   creadoEn           DateTime           @default(now())
   actualizadoEn      DateTime           @updatedAt
 
@@ -390,6 +396,7 @@ model Reporte {
   usuario       Usuario?          @relation(fields: [usuarioId], references: [id])
   eliminadoPor  Usuario?          @relation(fields: [eliminadoPorId], references: [id], name: "ReportesDadosDeBaja")
   operador      Usuario?          @relation(fields: [operadorId], references: [id], name: "CasosOperador")
+  anonimizacionValidadaPor Usuario? @relation(fields: [anonimizacionValidadaPorId], references: [id], name: "AnonimizacionesValidadas")
   reporteOrigen Reporte?          @relation("ReporteDuplicado", fields: [reporteOrigenId], references: [id])
   duplicados    Reporte[]         @relation("ReporteDuplicado")
   clasificacion ClasificacionIA?
@@ -411,6 +418,7 @@ model Reporte {
   @@index([eliminado])
   @@index([eliminadoPorId])
   @@index([operadorId])
+  @@index([anonimizacionValidadaPorId])
 }
 
 model TransicionReporte {
