@@ -3,18 +3,19 @@
  * Worker pg-boss para procesamiento de reportes
  * Supervisado por pm2: pm2 start scripts/worker-reportes.mjs --name "reportes-worker"
  *
- * Configuración de reintentos (pg-boss DLQ):
- * - retryLimit: 3 (máximo 3 reintentos después del intento inicial)
- * - retryDelay: 30 segundos base
- * - retryBackoff: true (exponencial: 30s, 60s, 120s)
- * - Los jobs que agotan reintentos quedan en estado 'failed' en pgboss.job (DLQ nativa)
+ * Configuración dinámica desde ParametroSistema:
+ * - worker.max_reintentos
+ * - worker.retry_delay_segundos
+ * - worker.concurrencia
+ * - worker.max_pendientes
  *
- * Resiliencia adicional:
+ * Resiliencia:
  * - Healthcheck de Ollama antes de cada job.
- * - Retry manual con backoff exponencial para errores transitorios (5xx/red).
+ * - Reintentos manejados por pg-boss con backoff exponencial.
+ * - Historial de intentos en ReintentoReporte.
+ * - Fallback a REVISION_MANUAL cuando se agotan reintentos.
  */
 
-import { PgBoss } from "pg-boss";
 import { fetchWithRetry } from "../src/lib/fetch-retry.ts";
 import { procesarBackfillAnonimizacion } from "../src/lib/ai/dataset-anonimizacion-backfill.ts";
 import { procesarBackfillEmbedding } from "../src/lib/ai/dataset-embedding-backfill.ts";
@@ -22,6 +23,8 @@ import { getOllamaBaseUrl } from "../src/lib/ai/ollama-config.ts";
 import { prisma } from "../src/lib/prisma.ts";
 import { logAudit } from "../src/lib/audit.ts";
 import { notificarCambioCirculoSiCorresponde } from "../src/lib/circulo-confianza.ts";
+import { boss, getWorkerParams, drainPending, ensureStarted } from "../src/lib/queue.ts";
+import { guardarReintento } from "../src/lib/reporte-reintentos.ts";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -36,10 +39,8 @@ if (!WORKER_SECRET) {
 }
 
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5005";
-const MAX_RETRY = 3;
+const MAX_FETCH_RETRY = 3;
 const BASE_DELAY_MS = 1000;
-
-const boss = new PgBoss(DATABASE_URL);
 
 boss.on("error", (error) => {
     console.error("[WORKER] pg-boss error:", error.message);
@@ -64,81 +65,128 @@ async function ensureQueue(name) {
     }
 }
 
+async function llamarFallback(reporteId, error) {
+    const res = await fetchWithRetry(`${API_BASE_URL}/api/reportes/fallback`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Worker-Secret": WORKER_SECRET,
+        },
+        body: JSON.stringify({ reporteId, error }),
+        maxRetries: MAX_FETCH_RETRY,
+        baseDelayMs: BASE_DELAY_MS,
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Fallback HTTP ${res.status}: ${text}`);
+    }
+    return res.json();
+}
+
 async function start() {
-    await boss.start();
+    await ensureStarted();
     await ensureQueue("reporte-procesamiento");
     await ensureQueue("dataset-anonimizacion-backfill");
     await ensureQueue("dataset-embedding-backfill");
     await ensureQueue("eval-classifier-run");
 
-    console.log("[WORKER] Iniciado. Escuchando colas 'reporte-procesamiento', 'dataset-anonimizacion-backfill', 'dataset-embedding-backfill' y 'eval-classifier-run'...");
-    console.log(`[WORKER] Config: retryLimit=${MAX_RETRY}, retryDelay=30s, backoff=exponencial`);
+    const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
-    // Verificar Ollama al inicio
+    console.log("[WORKER] Iniciado. Escuchando colas 'reporte-procesamiento', 'dataset-anonimizacion-backfill', 'dataset-embedding-backfill' y 'eval-classifier-run'...");
+    console.log(`[WORKER] Config: max_reintentos=${maxReintentos}, retry_delay=${retryDelaySegundos}s, concurrencia=${concurrencia}, backoff=exponencial`);
+
     const ollamaOk = await checkOllamaHealth();
     console.log(`[WORKER] Ollama health: ${ollamaOk ? "OK" : "NO RESPONDE (los jobs fallarán)"}`);
 
-    await boss.work("reporte-procesamiento", async (jobs) => {
-        // pg-boss v12 puede pasar un array de jobs
-        const job = Array.isArray(jobs) ? jobs[0] : jobs;
-        if (!job || !job.data) {
-            console.error("[WORKER] Job inválido:", JSON.stringify(jobs));
-            return;
-        }
-        const reporteId = job.data.reporteId;
-        const startMs = Date.now();
-        const retryCount = job.retryCount || 0;
+    await boss.work(
+        "reporte-procesamiento",
+        { teamSize: concurrencia, teamConcurrency: concurrencia, batchSize: 1 },
+        async (jobs) => {
+            const job = Array.isArray(jobs) ? jobs[0] : jobs;
+            if (!job || !job.data) {
+                console.error("[WORKER] Job inválido:", JSON.stringify(jobs));
+                return;
+            }
+            const reporteId = job.data.reporteId;
+            const startMs = Date.now();
+            const retryCount = job.retryCount || 0;
+            const retryLimit = typeof job.retryLimit === "number" ? job.retryLimit : maxReintentos;
+            const intento = retryCount + 1;
+            const esUltimoIntento = retryCount >= retryLimit;
 
-        console.log(`[WORKER] Procesando reporte ${reporteId} (job ${job.id}, intento ${retryCount + 1}/${MAX_RETRY + 1})`);
+            console.log(`[WORKER] Procesando reporte ${reporteId} (job ${job.id}, intento ${intento}/${retryLimit + 1})`);
 
-        // Healthcheck Ollama antes de procesar
-        const ollamaHealthy = await checkOllamaHealth();
-        if (!ollamaHealthy) {
-            console.error(`[WORKER] ERROR reporte=${reporteId} Ollama no disponible, reintentando más tarde`);
-            throw new Error("Ollama no disponible");
-        }
+            await guardarReintento({ reporteId, intento, exitoso: false, error: undefined });
 
-        try {
-            const res = await fetchWithRetry(`${API_BASE_URL}/api/reportes/procesar`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Worker-Secret": WORKER_SECRET,
-                },
-                body: JSON.stringify({ reporteId }),
-                maxRetries: MAX_RETRY,
-                baseDelayMs: BASE_DELAY_MS,
-            });
-
-            const latencia = Date.now() - startMs;
-
-            if (!res.ok) {
-                console.error(`[WORKER] ERROR reporte=${reporteId} status=${res.status} latencia=${latencia}ms intento=${retryCount + 1} error=<redactado>`);
-                throw new Error(`HTTP ${res.status}: worker processing failed`);
+            const ollamaHealthy = await checkOllamaHealth();
+            if (!ollamaHealthy) {
+                const msg = "Ollama no disponible";
+                console.error(`[WORKER] ERROR reporte=${reporteId} ${msg}`);
+                await guardarReintento({ reporteId, intento, exitoso: false, error: msg });
+                if (esUltimoIntento) {
+                    await llamarFallback(reporteId, msg);
+                }
+                throw new Error(msg);
             }
 
-            const data = await res.json();
-            console.log(`[WORKER] OK reporte=${reporteId} estado=${data.estado} latencia=${latencia}ms`);
+            try {
+                const res = await fetchWithRetry(`${API_BASE_URL}/api/reportes/procesar`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Worker-Secret": WORKER_SECRET,
+                    },
+                    body: JSON.stringify({ reporteId }),
+                    maxRetries: MAX_FETCH_RETRY,
+                    baseDelayMs: BASE_DELAY_MS,
+                });
 
-            // Notificar a usuarios que tengan este identificador en su Círculo de Confianza
-            notificarCambioCirculoSiCorresponde(reporteId).catch((err) => {
-                console.error(`[WORKER] Error notificando círculo reporte=${reporteId}:`, err.message);
-            });
+                const latencia = Date.now() - startMs;
 
-            return { success: true, estado: data.estado };
-        } catch (err) {
-            const latencia = Date.now() - startMs;
-            const msg = err instanceof Error ? err.message : "Error desconocido";
-            const esUltimoIntento = retryCount >= MAX_RETRY;
-            console.error(
-                `[WORKER] ERROR reporte=${reporteId} latencia=${latencia}ms intento=${retryCount + 1} ultimoIntento=${esUltimoIntento} error=<redactado>`
-            );
-            if (esUltimoIntento) {
-                console.error(`[WORKER] DLQ reporte=${reporteId} motivo=${msg}`);
+                if (!res.ok) {
+                    const body = await res.text();
+                    const msg = `HTTP ${res.status}: worker processing failed`;
+                    console.error(`[WORKER] ERROR reporte=${reporteId} status=${res.status} latencia=${latencia}ms intento=${intento} error=${body}`);
+                    await guardarReintento({ reporteId, intento, exitoso: false, error: msg });
+                    if (esUltimoIntento) {
+                        await llamarFallback(reporteId, msg);
+                    }
+                    throw new Error(msg);
+                }
+
+                const data = await res.json();
+                console.log(`[WORKER] OK reporte=${reporteId} estado=${data.estado} latencia=${latencia}ms`);
+
+                await guardarReintento({ reporteId, intento, exitoso: true, error: undefined });
+
+                notificarCambioCirculoSiCorresponde(reporteId).catch((err) => {
+                    console.error(`[WORKER] Error notificando círculo reporte=${reporteId}:`, err.message);
+                });
+
+                // Drenar reportes pendientes cuando baja la carga
+                drainPending().catch((err) => {
+                    console.error(`[WORKER] Error drenando pendientes:`, err.message);
+                });
+
+                return { success: true, estado: data.estado };
+            } catch (err) {
+                const latencia = Date.now() - startMs;
+                const msg = err instanceof Error ? err.message : "Error desconocido";
+                console.error(
+                    `[WORKER] ERROR reporte=${reporteId} latencia=${latencia}ms intento=${intento} ultimoIntento=${esUltimoIntento} error=${msg}`
+                );
+                await guardarReintento({ reporteId, intento, exitoso: false, error: msg });
+                if (esUltimoIntento) {
+                    try {
+                        await llamarFallback(reporteId, msg);
+                    } catch (fallbackErr) {
+                        console.error(`[WORKER] ERROR fallback reporte=${reporteId}:`, fallbackErr instanceof Error ? fallbackErr.message : fallbackErr);
+                    }
+                }
+                throw err;
             }
-            throw err;
         }
-    });
+    );
 
     await boss.work("dataset-anonimizacion-backfill", async (jobs) => {
         const job = Array.isArray(jobs) ? jobs[0] : jobs;
@@ -223,7 +271,6 @@ async function start() {
                 throw new Error("Ollama no disponible");
             }
 
-            // Validar que el modelo del snapshot siga instalado.
             const snapshot = run.configSnapshot || {};
             const modeloClasificacion = snapshot.modeloClasificacion || "ornith:9b";
             const ollamaBaseUrl = await getOllamaBaseUrl();

@@ -18,6 +18,32 @@ import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { Prisma } from "@prisma/client";
 import type { EstadoReporte } from "@prisma/client";
 
+function esErrorTransitorio(error: unknown): boolean {
+    if (error && typeof error === "object" && "retryable" in error && error.retryable === false) {
+        return false;
+    }
+    if (error && typeof error === "object" && "retryable" in error && error.retryable === true) {
+        return true;
+    }
+    const msg = error instanceof Error ? error.message : String(error);
+    const patrones = [
+        /ollama/i,
+        /embedding/i,
+        /clasificaci[oó]n/i,
+        /anonimiz/i,
+        /pii/i,
+        /timeout/i,
+        /fetch/i,
+        /network/i,
+        /econnrefused/i,
+        /socket/i,
+        /abort/i,
+        /temporalmente/i,
+        /no disponible/i,
+    ];
+    return patrones.some((p) => p.test(msg));
+}
+
 const ESTADOS_FINALES = new Set([
     "CLASIFICADO",
     "CORREGIDO",
@@ -78,21 +104,25 @@ export async function POST(request: Request) {
 
         const estadoAnteriorReporte = reporte.estado;
 
-        // Actualizar estado a PROCESANDO y registrar transición atómicamente
-        await prisma.$transaction(async (tx) => {
-            await registrarTransicion({
-                reporteId: reporteId!,
-                estadoAnterior: estadoAnteriorReporte,
-                estadoNuevo: "PROCESANDO",
-                responsableTipo: "WORKER",
-                motivo: "Inicio de procesamiento por worker",
-                tx,
+        // Actualizar estado a PROCESANDO y registrar transición atómicamente.
+        // En reintentos de pg-boss el estado ya puede ser PROCESANDO; evitamos
+        // duplicar la transición.
+        if (estadoAnteriorReporte !== "PROCESANDO") {
+            await prisma.$transaction(async (tx) => {
+                await registrarTransicion({
+                    reporteId: reporteId!,
+                    estadoAnterior: estadoAnteriorReporte,
+                    estadoNuevo: "PROCESANDO",
+                    responsableTipo: "WORKER",
+                    motivo: "Inicio de procesamiento por worker",
+                    tx,
+                });
+                await tx.reporte.update({
+                    where: { id: reporteId! },
+                    data: { estado: "PROCESANDO" },
+                });
             });
-            await tx.reporte.update({
-                where: { id: reporteId! },
-                data: { estado: "PROCESANDO" },
-            });
-        });
+        }
 
         // Generar embedding primero para poder detectar duplicados anónimos
         const paramEmbedding = await prisma.parametroSistema.findUnique({
@@ -437,8 +467,23 @@ export async function POST(request: Request) {
         });
     } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
+        const transitorio = esErrorTransitorio(error);
 
-        // Guardar error de procesamiento en el reporte
+        console.error("[PROCESAR] Error procesando reporte", {
+            reporteId: reporteId,
+            errorType: error instanceof Error ? error.name : "Unknown",
+            errorMessage: errMsg,
+            transitorio,
+        });
+
+        if (transitorio) {
+            return NextResponse.json(
+                { error: { message: "Error transitorio procesando el reporte", code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
+                { status: 500 }
+            );
+        }
+
+        // Errores no transitorios: fallback directo a REVISION_MANUAL
         let reporteParaAlerta: { id: string; numeroSeguimiento: string | null; identificador: string } | null = null;
         if (reporteId) {
             try {
@@ -472,7 +517,6 @@ export async function POST(request: Request) {
                     identificador: reporteActualizado.identificador,
                 };
 
-                // Fase 3: asignación automática ante error de procesamiento
                 asignarOperadorAReporte(reporteId!).catch((err) =>
                     console.error("[OPERADORES] Error asignando operador a reporte con error", { reporteId: reporteId, error: err })
                 );
@@ -490,9 +534,8 @@ export async function POST(request: Request) {
             }).catch((err) => console.error("[ALERTA] Error enviando alerta de revisión", err));
         }
 
-        console.error("[PROCESAR] Error procesando reporte", { reporteId: reporteId, errorType: error instanceof Error ? error.name : "Unknown", errorMessage: errMsg });
         return NextResponse.json(
-            { error: { message: "Error procesando el reporte", code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
+            { error: { message: "Error procesando el reporte", code: ERROR_CODES.INTERNAL_ERROR, retryable: false } },
             { status: 500 }
         );
     }

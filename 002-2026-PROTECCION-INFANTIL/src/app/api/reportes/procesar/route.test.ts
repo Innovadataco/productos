@@ -172,7 +172,7 @@ describe("POST /api/reportes/procesar", () => {
         expect(actualizado?.texto).toBe("Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.");
     });
 
-    it("guarda processingError cuando la anonimización falla", async () => {
+    it("no muta estado en errores transitorios de anonimización (reintentable)", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const reporte = await prisma.reporte.create({
             data: {
@@ -214,10 +214,12 @@ describe("POST /api/reportes/procesar", () => {
 
         const res = await POST(crearRequestProcesar(reporte.id));
         expect(res.status).toBe(500);
+        const body = await res.json();
+        expect(body.error.retryable).toBe(true);
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
-        expect(actualizado?.estado).toBe("REVISION_MANUAL");
-        expect(actualizado?.processingError).toContain("Ollama no disponible");
+        expect(actualizado?.estado).toBe("PROCESANDO");
+        expect(actualizado?.processingError).toBeNull();
     });
 
     it("marca reporte anónimo duplicado cuando supera el umbral de similitud", async () => {
@@ -297,7 +299,7 @@ describe("POST /api/reportes/procesar", () => {
         expect(mockClasificar).not.toHaveBeenCalled();
     });
 
-    it("guarda processingError cuando el embedding falla", async () => {
+    it("no muta estado en errores transitorios del embedding (reintentable)", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const reporte = await prisma.reporte.create({
             data: {
@@ -328,13 +330,15 @@ describe("POST /api/reportes/procesar", () => {
 
         const res = await POST(crearRequestProcesar(reporte.id));
         expect(res.status).toBe(500);
+        const body = await res.json();
+        expect(body.error.retryable).toBe(true);
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
-        expect(actualizado?.estado).toBe("REVISION_MANUAL");
-        expect(actualizado?.processingError).toContain("Ollama no disponible");
+        expect(actualizado?.estado).toBe("PROCESANDO");
+        expect(actualizado?.processingError).toBeNull();
     });
 
-    it("envía alerta de revisión cuando el procesamiento falla", async () => {
+    it("envía alerta de revisión cuando el procesamiento falla con error no transitorio", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const reporte = await prisma.reporte.create({
             data: {
@@ -370,7 +374,8 @@ describe("POST /api/reportes/procesar", () => {
             metrics: { modelo: "ornith:9b", latenciaMs: 0, promptTokens: null, responseTokens: null },
             rawResponse: "{}",
         });
-        mockAnonimizar.mockRejectedValue(new Error("Ollama no disponible"));
+        const noTransitorio = Object.assign(new Error("Fallo determinístico del pipeline"), { retryable: false });
+        mockAnonimizar.mockRejectedValue(noTransitorio);
         mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
 
         await POST(crearRequestProcesar(reporte.id));
