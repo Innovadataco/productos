@@ -213,6 +213,62 @@ function detectarDatosEscolaresFamiliares(texto: string): string[] {
 }
 
 /**
+ * Detecta auto-identificación del denunciante (nombre, teléfono o email propio).
+ * No detecta el identificador del agresor ni teléfonos atribuidos a terceros.
+ */
+function detectarAutoIdentificacionDenunciante(texto: string): string[] {
+    const encontrados: string[] = [];
+
+    // Patrones de auto-identificación de nombres propios.
+    const introduccionesNombres = [
+        "yo soy",
+        "soy",
+        "me llamo",
+        "mi nombre es",
+        "llamo",
+        "me dicen",
+        "me conocen como",
+    ].join("|");
+    const regexNombres = new RegExp(
+        `(?:${introduccionesNombres})\\s+(${NOMBRE_PROPIO}(?:\\s+(?:de\\s+la|del|de)\\s+${NOMBRE_PROPIO})?)`,
+        "gui"
+    );
+    let match;
+    while ((match = regexNombres.exec(texto)) !== null) {
+        const nombres = extraerNombresPropios(match[1].trim(), true);
+        if (nombres.length > 0) {
+            encontrados.push(nombres.join(" "));
+        }
+    }
+
+    // Patrones de auto-identificación de teléfono propio del denunciante.
+    const contextosTelefono = [
+        /mi\s+(?:tel[ée]fono|celular|n[úu]mero)\s+(?:de\s+contacto\s+)?es/gui,
+        /puedes\s+(?:llamarme|escribirme|contactarme)\s+al/gui,
+        /(?:llámame|escríbeme|contactame)\s+al/gui,
+        /mi\s+(?:tel[ée]fono|celular|n[úu]mero)\s+de\s+contacto\s+es/gui,
+    ];
+    for (const regex of contextosTelefono) {
+        while ((match = regex.exec(texto)) !== null) {
+            const inicio = match.index;
+            const ventana = texto.slice(inicio, inicio + 80);
+            const telMatch = ventana.match(TELEFONO_REGEX);
+            if (telMatch) {
+                encontrados.push(telMatch[0]);
+            }
+        }
+    }
+
+    // Auto-identificación de email propio.
+    const regexEmail = /(?:mi\s+(?:email|correo)\s+(?:electrónico\s+)?(?:es|de\s+contacto\s+es)|escribirme\s+a)\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gui;
+    while ((match = regexEmail.exec(texto)) !== null) {
+        encontrados.push(match[1]);
+    }
+
+    return encontrados;
+}
+
+/**
  * Detección determinística de PII de NNA.
  */
 export function detectarPiiDeterministico(texto: string): PiiDetectionResult {
@@ -222,6 +278,7 @@ export function detectarPiiDeterministico(texto: string): PiiDetectionResult {
         ...detectarDirecciones(texto),
         ...detectarTelefonosNNA(texto),
         ...detectarDatosEscolaresFamiliares(texto),
+        ...detectarAutoIdentificacionDenunciante(texto),
     ];
 
     const piiDetectada = deduplicarFragmentos(fragmentos);

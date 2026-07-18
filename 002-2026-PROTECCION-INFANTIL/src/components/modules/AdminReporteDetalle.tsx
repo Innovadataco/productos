@@ -8,7 +8,6 @@ type DetalleReporte = {
     identificador: string;
     plataforma: { nombre: string; clave: string };
     texto: string;
-    textoOriginal: string | null;
     estado: string;
     ciudad: string;
     pais: string;
@@ -93,6 +92,11 @@ export function AdminReporteDetalle({
     const [notaBaja, setNotaBaja] = useState("");
     const [mostrarReactivar, setMostrarReactivar] = useState(false);
     const [notaReactivar, setNotaReactivar] = useState("");
+    const [puedeRevelarOriginal, setPuedeRevelarOriginal] = useState(false);
+    const [textoOriginalRevelado, setTextoOriginalRevelado] = useState<string | null>(null);
+    const [loadingRevelar, setLoadingRevelar] = useState(false);
+    const [observacionesValidacion, setObservacionesValidacion] = useState("");
+    const [validando, setValidando] = useState(false);
 
     useEffect(() => {
         if (!reporteId) return;
@@ -100,6 +104,9 @@ export function AdminReporteDetalle({
         setSuccess("");
         setCategoriaCorreccion("");
         setMotivoCorreccion("");
+        setTextoOriginalRevelado(null);
+        setPuedeRevelarOriginal(false);
+        setObservacionesValidacion("");
         fetch(`/api/admin/reportes-revision/${reporteId}`, { credentials: "include" })
             .then(async (r) => {
                 if (!r.ok) throw new Error("Error cargando detalle");
@@ -108,6 +115,7 @@ export function AdminReporteDetalle({
             .then((json) => {
                 const data: DetalleReporte = json.reporte || json;
                 setReporte(data);
+                setPuedeRevelarOriginal(json.puedeRevelarOriginal === true);
                 setTextoAnonimizado(data.texto || "");
             })
             .catch(() => setError("Error cargando detalle"))
@@ -305,6 +313,60 @@ export function AdminReporteDetalle({
         }
     };
 
+    const handleRevelarOriginal = async () => {
+        setLoadingRevelar(true);
+        setError("");
+        setSuccess("");
+        try {
+            const res = await fetch(`/api/admin/reportes/${reporteId}/revelar-original`, {
+                method: "POST",
+                credentials: "include",
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                setError(json.error?.message || "Error al revelar original");
+                return;
+            }
+            setTextoOriginalRevelado(json.textoOriginal || null);
+        } catch {
+            setError("Error al revelar original");
+        } finally {
+            setLoadingRevelar(false);
+        }
+    };
+
+    const handleValidarAnonimizacion = async (valida: boolean) => {
+        if (!reporte) return;
+        setValidando(true);
+        setError("");
+        setSuccess("");
+        try {
+            const res = await fetch(`/api/admin/reportes/${reporteId}/validar-anonimizacion`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ valida, observaciones: observacionesValidacion }),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                setError(json.error?.message || "Error al validar anonimización");
+                return;
+            }
+            setSuccess(valida ? "Anonimización validada. El caso pasó a clasificado." : "Anonimización rechazada. Se registró para ajuste.");
+            onRefresh();
+            const updated = await fetch(`/api/admin/reportes-revision/${reporteId}`, { credentials: "include" });
+            if (updated.ok) {
+                const data = await updated.json();
+                setReporte(data.reporte || data);
+                setPuedeRevelarOriginal(data.puedeRevelarOriginal === true);
+            }
+        } catch {
+            setError("Error al validar anonimización");
+        } finally {
+            setValidando(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="p-6">
@@ -474,10 +536,21 @@ export function AdminReporteDetalle({
                         <p className="whitespace-pre-wrap rounded-lg glass-input p-3">{reporte.texto}</p>
                     </div>
 
-                    {reporte.textoOriginal && (
-                        <div>
-                            <h3 className="mb-1 font-medium text-red-700 dark:text-red-400">Texto original (con PII — solo admin)</h3>
-                            <p className="whitespace-pre-wrap rounded-lg bg-red-50 dark:bg-red-950/30 p-3">{reporte.textoOriginal}</p>
+                    {puedeRevelarOriginal && (
+                        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-4">
+                            <h3 className="mb-2 font-medium text-red-800 dark:text-red-300">Texto original</h3>
+                            <p className="mb-3 text-sm text-subtle">
+                                Solo los administradores pueden revelar el texto original. El acceso queda auditado.
+                            </p>
+                            {textoOriginalRevelado !== null ? (
+                                <p className="whitespace-pre-wrap rounded-lg bg-red-100 dark:bg-red-900/30 p-3 text-red-900 dark:text-red-200">
+                                    {textoOriginalRevelado}
+                                </p>
+                            ) : (
+                                <Button onClick={handleRevelarOriginal} disabled={loadingRevelar} variant="secondary">
+                                    {loadingRevelar ? "Revelando..." : "Revelar original"}
+                                </Button>
+                            )}
                         </div>
                     )}
 
@@ -517,6 +590,30 @@ export function AdminReporteDetalle({
                             <Button onClick={handleCorregir} disabled={actionLoading}>
                                 {actionLoading ? "Guardando..." : "Corregir clasificación"}
                             </Button>
+                        </div>
+                    )}
+
+                    {puedeAnonimizar && (
+                        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                            <h3 className="mb-2 font-medium text-body">Validar anonimización</h3>
+                            <p className="mb-2 text-sm text-subtle">
+                                Revisá el texto anonimizado. Si aún contiene datos personales, rechazalo y dejá una observación.
+                            </p>
+                            <textarea
+                                className="mb-2 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
+                                rows={2}
+                                placeholder="Observaciones (opcional)"
+                                value={observacionesValidacion}
+                                onChange={(e) => setObservacionesValidacion(e.target.value)}
+                            />
+                            <div className="flex gap-2">
+                                <Button onClick={() => handleValidarAnonimizacion(true)} disabled={validando}>
+                                    {validando ? "Validando..." : "Validar"}
+                                </Button>
+                                <Button onClick={() => handleValidarAnonimizacion(false)} disabled={validando} variant="secondary">
+                                    {validando ? "Validando..." : "Rechazar"}
+                                </Button>
+                            </div>
                         </div>
                     )}
 
