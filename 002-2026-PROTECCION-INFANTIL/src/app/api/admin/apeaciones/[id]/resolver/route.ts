@@ -3,7 +3,8 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolverApelacion } from "@/lib/apealaciones";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { RolUsuario } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { esAdminRol, puedeGestionarApelacion } from "@/lib/operadores/permisos";
 import { z } from "zod";
 
 const schema = z.object({
@@ -14,7 +15,34 @@ const schema = z.object({
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const user = await verifyAuth(RolUsuario.ADMIN);
+        const user = await verifyAuth();
+        if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
+            return NextResponse.json(
+                { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
+
+        const { id } = await params;
+        const apelacion = await prisma.apelacionIdentificador.findUnique({
+            where: { id },
+            select: { id: true, operadorId: true, estado: true },
+        });
+        if (!apelacion) {
+            return NextResponse.json({ error: { message: "Apelación no encontrada", code: ERROR_CODES.NOT_FOUND } }, { status: 404 });
+        }
+        if (!puedeGestionarApelacion(user, apelacion)) {
+            return NextResponse.json(
+                { error: { message: "No tenés permiso para resolver esta apelación", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
+        if (apelacion.estado !== "RECIBIDA" && apelacion.estado !== "EN_REVISION") {
+            return NextResponse.json(
+                { error: { message: "La apelación ya fue resuelta", code: ERROR_CODES.CONFLICT } },
+                { status: 409 }
+            );
+        }
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
@@ -24,7 +52,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const { id } = await params;
         const body = await request.json();
         const parsed = schema.safeParse(body);
         if (!parsed.success) {

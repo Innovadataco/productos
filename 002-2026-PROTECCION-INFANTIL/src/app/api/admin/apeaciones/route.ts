@@ -3,14 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { RolUsuario, EstadoApelacion } from "@prisma/client";
+import { EstadoApelacion } from "@prisma/client";
+import { esAdminRol } from "@/lib/operadores/permisos";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(request: Request) {
     try {
-        const user = await verifyAuth(RolUsuario.ADMIN);
+        const user = await verifyAuth();
+        if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
+            return NextResponse.json(
+                { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });
         if (!rate.allowed) {
@@ -26,10 +33,21 @@ export async function GET(request: Request) {
             ? (rawEstado as EstadoApelacion)
             : undefined;
 
+        const where: Record<string, unknown> = {};
+        if (estado) {
+            where.estado = estado;
+        }
+        if (user.rol === "OPERADOR") {
+            where.operadorId = user.id;
+        }
+        if (user.rol === "SCHOOL_ADMIN") {
+            where.tenantId = user.tenantId ?? null;
+        }
+
         const items = await prisma.apelacionIdentificador.findMany({
-            where: estado ? { estado } : {},
+            where,
             orderBy: { creadoEn: "desc" },
-            include: { plataforma: true },
+            include: { plataforma: true, operador: { select: { id: true, email: true, nombre: true } } },
             take: 100,
         });
 
