@@ -35,6 +35,20 @@ describe("POST /api/reportes", () => {
         await crearPaisCiudad();
     });
 
+    it("cifra textoOriginal al crear reporte", async () => {
+        if (!process.env.PARAM_ENCRYPTION_KEY) {
+            process.env.PARAM_ENCRYPTION_KEY = "a".repeat(32);
+        }
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido);
+        const res = await POST(req);
+        expect(res.status).toBe(201);
+
+        const body = await res.json();
+        const reporte = await prisma.reporte.findUnique({ where: { id: body.reporte.id } });
+        expect(reporte?.textoOriginal).toMatch(/^enc:/);
+        expect(reporte?.texto).toBe(reporteValido.texto);
+    });
+
     it("crea un reporte anónimo y retorna 201 con número de seguimiento", async () => {
         const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido);
         const res = await POST(req);

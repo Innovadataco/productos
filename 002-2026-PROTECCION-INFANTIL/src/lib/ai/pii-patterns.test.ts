@@ -40,6 +40,29 @@ describe("detectarPiiDeterministico", () => {
         const r = detectarPiiDeterministico("Su usuario es @depredador123");
         expect(r.contienePii).toBe(false);
     });
+
+    it("detecta auto-identificación del denunciante por nombre", () => {
+        const r = detectarPiiDeterministico("Yo soy María Gómez y denuncio este número.");
+        expect(r.contienePii).toBe(true);
+        expect(r.piiDetectada.some((f) => f.toLowerCase().includes("maría") || f.toLowerCase().includes("gómez"))).toBe(true);
+    });
+
+    it("detecta auto-identificación del denunciante por teléfono propio", () => {
+        const r = detectarPiiDeterministico("Mi celular es 3001234567, me escribieron por WhatsApp.");
+        expect(r.contienePii).toBe(true);
+        expect(r.piiDetectada.some((f) => /\d{10}/.test(f))).toBe(true);
+    });
+
+    it("detecta auto-identificación del denunciante por email propio", () => {
+        const r = detectarPiiDeterministico("Mi correo es maria@ejemplo.com, por favor contactenme.");
+        expect(r.contienePii).toBe(true);
+        expect(r.piiDetectada.some((f) => f.toLowerCase().includes("maria@ejemplo.com"))).toBe(true);
+    });
+
+    it("NO detecta teléfono del agresor como auto-identificación", () => {
+        const r = detectarPiiDeterministico("El número que me contactó es 3009998888.");
+        expect(r.contienePii).toBe(false);
+    });
 });
 
 describe("detectarDoxing", () => {

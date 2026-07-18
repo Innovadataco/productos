@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
 import type { CategoriaConducta } from "@prisma/client";
+import { decryptParameter } from "@/lib/param-encryption";
 
 const mockClasificar = vi.fn();
 const mockPii = vi.fn();
@@ -168,7 +169,8 @@ describe("POST /api/reportes/procesar", () => {
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("CLASIFICADO");
-        expect(actualizado?.textoOriginal).toBe("Mi hija María del colegio San José recibió mensajes.");
+        expect(actualizado?.textoOriginal).toMatch(/^enc:/);
+        expect(decryptParameter(actualizado!.textoOriginal!)).toBe("Mi hija María del colegio San José recibió mensajes.");
         expect(actualizado?.texto).toBe("Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.");
     });
 
