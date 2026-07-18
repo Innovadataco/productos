@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type RolNav = "ADMIN" | "SCHOOL_ADMIN" | "OPERADOR";
+type RolNav = "ADMIN" | "SCHOOL_ADMIN" | "OPERADOR" | "COMITE_VALIDACION";
 
 const allLinks = [
     { href: "/dashboard/admin", label: "Bandeja de reportes", icon: InboxIcon, roles: ["ADMIN", "SCHOOL_ADMIN", "OPERADOR"] as RolNav[] },
+    { href: "/dashboard/admin/comite", label: "Comité", icon: ScaleIcon, roles: ["ADMIN", "SCHOOL_ADMIN", "COMITE_VALIDACION"] as RolNav[] },
     { href: "/dashboard/admin/estadisticas", label: "Dashboard", icon: ChartIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
     { href: "/dashboard/admin/ia", label: "Centro de Control IA", icon: BrainIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
     { href: "/dashboard/admin/operadores", label: "Operadores", icon: UsersIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },

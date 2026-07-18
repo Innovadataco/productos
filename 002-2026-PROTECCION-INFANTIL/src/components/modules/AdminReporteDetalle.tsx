@@ -97,6 +97,9 @@ export function AdminReporteDetalle({
     const [loadingRevelar, setLoadingRevelar] = useState(false);
     const [observacionesValidacion, setObservacionesValidacion] = useState("");
     const [validando, setValidando] = useState(false);
+    const [puedeEscalar, setPuedeEscalar] = useState(false);
+    const [mostrarEscalar, setMostrarEscalar] = useState(false);
+    const [motivoEscalar, setMotivoEscalar] = useState("");
 
     useEffect(() => {
         if (!reporteId) return;
@@ -116,6 +119,7 @@ export function AdminReporteDetalle({
                 const data: DetalleReporte = json.reporte || json;
                 setReporte(data);
                 setPuedeRevelarOriginal(json.puedeRevelarOriginal === true);
+                setPuedeEscalar(json.puedeEscalar === true);
                 setTextoAnonimizado(data.texto || "");
             })
             .catch(() => setError("Error cargando detalle"))
@@ -364,6 +368,43 @@ export function AdminReporteDetalle({
             setError("Error al validar anonimización");
         } finally {
             setValidando(false);
+        }
+    };
+
+    const handleEscalar = async () => {
+        if (!motivoEscalar || motivoEscalar.length < 5 || motivoEscalar.length > 4000) {
+            setError("El motivo debe tener entre 5 y 4000 caracteres.");
+            return;
+        }
+        setActionLoading(true);
+        setError("");
+        setSuccess("");
+        try {
+            const res = await fetch(`/api/admin/reportes/${reporteId}/escalar`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ motivo: motivoEscalar }),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                setError(json.error?.message || "Error al escalar");
+                return;
+            }
+            setSuccess(`Caso escalado al comité. Solicitud ${json.numero}.`);
+            setMostrarEscalar(false);
+            setMotivoEscalar("");
+            onRefresh();
+            const updated = await fetch(`/api/admin/reportes-revision/${reporteId}`, { credentials: "include" });
+            if (updated.ok) {
+                const data = await updated.json();
+                setReporte(data.reporte || data);
+                setPuedeEscalar(data.puedeEscalar === true);
+            }
+        } catch {
+            setError("Error al escalar");
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -632,6 +673,44 @@ export function AdminReporteDetalle({
                             <Button onClick={handleAnonimizar} disabled={actionLoading}>
                                 {actionLoading ? "Anonimizando..." : "Confirmar anonimización"}
                             </Button>
+                        </div>
+                    )}
+
+                    {puedeEscalar && (
+                        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4">
+                            {!mostrarEscalar ? (
+                                <>
+                                    <h3 className="mb-2 font-medium text-body">Escalar a comité</h3>
+                                    <p className="mb-3 text-sm text-subtle">
+                                        Solicitá una segunda opinión especializada del comité de validación.
+                                    </p>
+                                    <Button onClick={() => setMostrarEscalar(true)} variant="secondary" disabled={actionLoading}>
+                                        Escalar a comité
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="mb-2 font-medium text-body">Confirmar escalamiento</h3>
+                                    <textarea
+                                        className="mb-2 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
+                                        rows={4}
+                                        placeholder="Motivo del escalamiento (mín. 5 caracteres)"
+                                        value={motivoEscalar}
+                                        onChange={(e) => setMotivoEscalar(e.target.value)}
+                                    />
+                                    <p className="mb-2 text-xs text-subtle">
+                                        {motivoEscalar.length} / 4000 caracteres
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <Button onClick={handleEscalar} disabled={actionLoading}>
+                                            {actionLoading ? "Escalando..." : "Confirmar escalamiento"}
+                                        </Button>
+                                        <Button onClick={() => { setMostrarEscalar(false); setMotivoEscalar(""); }} variant="secondary" disabled={actionLoading}>
+                                            Cancelar
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
 
