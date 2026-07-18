@@ -92,6 +92,38 @@ async function main() {
             esPublico: false,
             descripcion: "URL base del servidor Ollama local (validado R2: solo localhost/IPs privadas)",
         },
+        {
+            clave: "worker.max_reintentos",
+            valor: "3",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Máximo de reintentos ante fallo de procesamiento",
+        },
+        {
+            clave: "worker.retry_delay_segundos",
+            valor: "30",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Delay base entre reintentos de procesamiento",
+        },
+        {
+            clave: "worker.concurrencia",
+            valor: "2",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Jobs en paralelo según capacidad de GPU",
+        },
+        {
+            clave: "worker.max_pendientes",
+            valor: "100",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Límite de jobs pendientes para backpressure",
+        },
     ];
 
     for (const p of defaults) {

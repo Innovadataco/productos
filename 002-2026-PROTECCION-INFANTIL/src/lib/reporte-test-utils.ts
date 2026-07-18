@@ -124,6 +124,10 @@ export async function crearParametrosReportes() {
         { clave: "ratelimit.apelacion_sms.max_requests", valor: "3", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "alerts.admin.enabled", valor: "true", tipo: "BOOLEAN" as const, categoria: "EMAIL" as const, esPublico: false },
         { clave: "alerts.critical_score.enabled", valor: "true", tipo: "BOOLEAN" as const, categoria: "EMAIL" as const, esPublico: false },
+        { clave: "worker.max_reintentos", valor: "3", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
+        { clave: "worker.retry_delay_segundos", valor: "30", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
+        { clave: "worker.concurrencia", valor: "2", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
+        { clave: "worker.max_pendientes", valor: "100", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
     ];
 
     for (const p of params) {
