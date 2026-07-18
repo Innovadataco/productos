@@ -43,6 +43,24 @@ export async function enviarTokenRecuperacion(
     }
 }
 
+export async function enviarEmailBienvenidaOperador(
+    email: string,
+    tempPassword: string
+): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "Tu cuenta de operador está lista",
+        text: `Hola,\n\nSe creó tu cuenta de operador en Protección Infantil.\n\nUsuario: ${email}\nContraseña temporal: ${tempPassword}\n\nIngresá en ${baseUrl}/login y cambiá tu contraseña lo antes posible desde tu perfil o usando "Olvidé mi contraseña".\n\nEsta contraseña temporal no se volverá a mostrar.`,
+    });
+
+    if (result.error) {
+        console.error("Resend error:", result.error);
+        throw new Error("Error al enviar email de bienvenida");
+    }
+}
+
 async function getAdminEmails(): Promise<string[]> {
     const admins = await prisma.usuario.findMany({
         where: { rol: "ADMIN", estado: "activo" },
