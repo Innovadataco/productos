@@ -43,13 +43,18 @@ Todas las migraciones se aplicaron con `prisma migrate dev` o `prisma migrate de
 | `npx tsc --noEmit` | ✅ sin errores |
 | `npm run build` | ✅ build exitosa |
 | `npm run test` | ✅ **343 tests / 68 archivos** |
-| `npm run smoke-e2e` | ⚠️ no existe en `package.json` |
+| `smoke-e2e.ts` | ✅ pasó (construcción + procesamiento worker + cola admin) |
+| `smoke-apelaciones.ts` | ✅ pasó (Fase C completa) |
+| `npm run smoke-e2e` | ⚠️ no existe en `package.json`; se ejecutó el script `scripts/smoke-e2e.ts` directamente |
 
 ---
 
 ## Commits del lote (más recientes primero)
 
 ```text
+bf55ecc fix(smoke): apelaciones crea reporte anónimo sin cookie de admin
+935e885 fix(027): procesamiento de reportes idempotente ante reintentos y concurrencia
+e5d376e docs(lote-nocturno-022-027): reporte consolidado de implementación de specs 022-027
 afa9edf SPEC-026: cierre.md con resumen y hash de commit
 75df38d SPEC-026: endpoints y UI de revisión de spam
 38ea88e SPEC-026: quitar heurística de contenido y ajustar clasificador para SPAM
@@ -165,13 +170,34 @@ cfba151 spec-025: endpoints revelar-original (admin) y validar-anonimización (o
 
 ---
 
+## Correcciones post-implementación (validación en vivo)
+
+Durante el despliegue y la ejecución de los smoke tests se detectó y corrigió una condición de carrera en el procesamiento de reportes (Spec 027):
+
+- **Problema**: `POST /api/reportes/procesar` fallaba con `Unique constraint failed on (reporteId)` en `EmbeddingReporte`/`ClasificacionIA` cuando el worker y el smoke test procesaban el mismo reporte concurrentemente, o cuando pg-boss reintentaba un job. Esto dejaba el reporte en `REVISION_MANUAL` y rompía el smoke test.
+- **Causa**: el endpoint insertaba embedding y clasificación sin verificar si ya existían, y asumía que el estado anterior siempre era `PROCESANDO` en la transición final.
+- **Fix** (commit `935e885`):
+  - Verificar existencia de `EmbeddingReporte` antes de insertar.
+  - Envolver `ClasificacionIA.create` en try/catch `P2002` y reutilizar la clasificación existente.
+  - Leer el estado actual del reporte dentro de la transición final; si ya está en estado final, devolverlo sin duplicar transición.
+- **Fix de smoke test** (commit `bf55ecc`): `scripts/smoke-apelaciones.ts` crea el primer reporte sin enviar la cookie de admin, para que el endpoint lo trate como anónimo tras el bloqueo de usuarios internos de la Spec 021.
+
+Resultado: ambos smoke tests (`smoke-e2e.ts` y `smoke-apelaciones.ts`) pasan contra la app desplegada en `:5005`.
+
+---
+
 ## Despliegue
 
-- Build de producción generada exitosamente.
-- A la espera de reiniciar la app y el worker en el puerto `:5005` para validación en vivo.
+- Build de producción generada exitosamente (`npm run build`).
+- App reiniciada en `http://localhost:5005` (PID 64752).
+- Worker reiniciado vía `npm run worker` (supervisor + worker de pg-boss). Ollama health: OK.
+- Validación en vivo:
+  - `GET /api/health/worker` → `{"status":"ok","workerAlive":true,"dbOk":true}`.
+  - `scripts/smoke-e2e.ts` → ✅ pasó.
+  - `scripts/smoke-apelaciones.ts` → ✅ pasó.
 
 ---
 
 ## Veredicto
 
-El lote 022-027 está implementado de punta a punta, con suite verde y todos los artefactos de cierre publicados. La deuda técnica residual es baja/media y está documentada para la fase de afinamiento (SPEC-050) o monitoreo.
+El lote 022-027 está implementado, testeado, desplegado y validado en vivo. Suite verde (343 tests), smoke tests verdes, todos los artefactos de cierre publicados y la deuda técnica residual documentada.
