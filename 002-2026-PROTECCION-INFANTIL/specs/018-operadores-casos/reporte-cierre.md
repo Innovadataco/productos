@@ -36,6 +36,15 @@ Se implementó el rol `OPERADOR` y todo el flujo de revisión humana de casos:
 - `src/app/dashboard/admin/operadores/page.tsx`.
 - `src/components/modules/AdminNav.tsx`: link "Operadores".
 
+### Mejora post-cierre — Plan B de contraseñas (2026-07-18)
+- `prisma/migrations/20260718140000_operador_debe_cambiar_password/migration.sql`: agrega `Usuario.debeCambiarPassword` y acciones `OPERADOR_PASSWORD_REGENERADA`, `OPERADOR_EMAIL_REENVIADO`.
+- `src/app/api/admin/operadores/route.ts`: ahora retorna `passwordTemporal` y `emailEnviado`; mensaje honesto si el email falla.
+- `src/app/api/admin/operadores/[id]/regenerar-password/route.ts`: genera nueva contraseña temporal, la muestra una sola vez y marca `debeCambiarPassword=true`.
+- `src/app/api/admin/operadores/[id]/reenviar-email/route.ts`: genera nueva contraseña, reenvía email de bienvenida y registra audit sin exponer la contraseña.
+- `src/app/dashboard/admin/operadores/page.tsx`: muestra contraseña temporal con botón copiar, badge "Debe cambiar contraseña", botones "Regenerar contraseña" y "Reenviar email".
+- `src/app/api/admin/operadores/[id]/regenerar-password/route.test.ts`.
+- `src/app/api/admin/operadores/[id]/reenviar-email/route.test.ts`.
+
 ### Fase 3 — Motor de asignación
 - `src/lib/operadores/asignador.ts`: `asignarOperadorAReporte` con ponderación inversa.
 - `src/app/api/reportes/procesar/route.ts`: hook de asignación en `REVISION_MANUAL` y en error.
@@ -68,8 +77,18 @@ Se implementó el rol `OPERADOR` y todo el flujo de revisión humana de casos:
 | `npm run lint` | ✅ (1 warning preexistente en `src/lib/sms.ts`) |
 | `npx tsc --noEmit` | ✅ |
 | `npm run build` | ✅ |
-| `npm test -- --run` | ✅ 235 tests |
+| `npm test -- --run` | ✅ 239 tests |
 | `npx tsx scripts/smoke-e2e.ts` | ✅ |
+
+## Nota de seguridad / causa raíz del email de bienvenida
+
+**Diagnóstico:** el email de bienvenida se generaba de forma sincrónica en `POST /api/admin/operadores` y se enviaba directamente vía Resend (sin pasar por el worker). En entorno de desarrollo Resend rechaza destinatarios de dominios de prueba (`example.com`) con `422 validation_error`; en producción con dominio/destinatario verificado funcionaría. El bug de UX era que el endpoint siempre respondía "Se envió la contraseña temporal por email" aunque el envío fallara.
+
+**Mitigación implementada:**
+- El endpoint de alta devuelve la contraseña temporal en la respuesta HTTP (única vez que se expone) junto a `emailEnviado: boolean` y un mensaje que refleja el resultado real.
+- El admin puede regenerar la contraseña o reenviar el email desde la ficha del operador.
+- La contraseña temporal nunca se almacena en claro ni se loguea; solo persiste su hash con bcrypt.
+- AuditLog registra quién regeneró/reenvió, sin incluir la contraseña.
 
 ## R7
 
