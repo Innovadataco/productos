@@ -67,12 +67,12 @@ Se rediseñó la landing page (`/`) para orientar al usuario desde el primer vis
 ## Commits
 
 ```text
-6d1c5b3 docs(specs): spec 028 redisenio del home con spec, plan y quickstart
-16efae4 feat(ui): rediseño landing con acciones principales y accesos secundarios
+6f1180d feat(ui): integrar buscador en tarjeta Consultar y eliminar bloque #consultar separado
+b626eb7 docs(specs): actualizar spec 028 con buscador integrado en tarjeta de consultar
 300ae9b docs(specs): reporte de cierre 028 y actualización del índice maestro
+16efae4 feat(ui): rediseño landing con acciones principales y accesos secundarios
+6d1c5b3 docs(specs): spec 028 redisenio del home con spec, plan y quickstart
 ```
-
-*(Nota: los commits finales de esta iteración incluirán los ajustes del buscador integrado.)*
 
 ---
 
