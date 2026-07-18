@@ -65,6 +65,9 @@ Se ajustó la landing page (`/`) para que la tarjeta "Crear un reporte" ofrezca 
 ## Commits
 
 ```text
+e912af8 feat(ui): tarjeta Crear un reporte con botones anónimo y con cuenta
+c545a15 fix(proxy): permitir acceso anónimo a /reportar sin redirigir a login
+e395537 docs(specs): ajustes 028 botones de reporte y acceso anónimo
 791d267 docs(specs): cierre 028 con lista final de commits
 96237bd docs(specs): cierre 028 actualizado con rediseño completo
 51635de feat(ui): rediseño completo del home con buscador integrado en tarjeta
@@ -76,8 +79,6 @@ b626eb7 docs(specs): actualizar spec 028 con buscador integrado en tarjeta de co
 16efae4 feat(ui): rediseño landing con acciones principales y accesos secundarios
 6d1c5b3 docs(specs): spec 028 redisenio del home con spec, plan y quickstart
 ```
-
-*(Los commits de este ajuste final se agregarán a la lista tras el push.)*
 
 ---
 
