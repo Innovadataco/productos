@@ -50,6 +50,28 @@ async function crearReporteVisible(
     return reporte;
 }
 
+async function crearReporteEnRevision(identificador: string, plataformaId: string) {
+    const numeroSeguimiento = `RPT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const ciudad = await prisma.ciudad.findUnique({
+        where: { nombre_paisId: { nombre: "Bogotá", paisId: (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!.id } },
+    });
+    return prisma.reporte.create({
+        data: {
+            identificador,
+            plataformaId,
+            texto: "Texto en revisión para consulta pública.",
+            fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+            ciudad: "Bogotá",
+            pais: "Colombia",
+            paisId: ciudad?.paisId,
+            ciudadId: ciudad?.id,
+            esAnonimo: false,
+            numeroSeguimiento,
+            estado: "REVISION_MANUAL",
+        },
+    });
+}
+
 describe("GET /api/consulta", () => {
     beforeEach(async () => {
         await resetDatabase();
@@ -145,5 +167,32 @@ describe("GET /api/consulta", () => {
         expect(body.totalReportes).toBe(6);
         expect(body.plataformas).toHaveLength(2);
         expect(body.categorias).toBeUndefined();
+    });
+
+    it("no muestra reportes que aún están en revisión manual", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        await crearReporteEnRevision("+57300REVISION", plataforma!.id);
+
+        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300REVISION");
+        const res = await GET(req);
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.tieneReportes).toBe(false);
+        expect(body.score).toBeUndefined();
+        expect(body.categorias).toBeUndefined();
+    });
+
+    it("muestra solo los reportes clasificados cuando hay mezcla de estados", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        await crearReporteVisible("+57300MIX", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
+        await crearReporteEnRevision("+57300MIX", plataforma!.id);
+
+        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300MIX");
+        const res = await GET(req);
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.tieneReportes).toBe(true);
+        expect(body.totalReportes).toBe(1);
+        expect(body.plataformas).toHaveLength(1);
     });
 });
