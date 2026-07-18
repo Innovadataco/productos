@@ -3,24 +3,35 @@ import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
+import type { EstadoReporte } from "@prisma/client";
 
-async function crearReporteVisible(numeroSeguimiento: string, identificador: string) {
+async function crearReporteBase(
+    numeroSeguimiento: string,
+    identificador: string,
+    estado: EstadoReporte = "PENDIENTE",
+    eliminado = false
+) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
     const usuario = await crearUsuario("PARENT");
-    const reporte = await prisma.reporte.create({
+    return prisma.reporte.create({
         data: {
             identificador,
             plataformaId: plataforma!.id,
-            texto: "Texto de prueba para seguimiento enriquecido.",
+            texto: "Texto de prueba para seguimiento.",
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
             ciudad: "Bogotá",
             pais: "Colombia",
             esAnonimo: false,
             usuarioId: usuario.id,
             numeroSeguimiento,
-            estado: "CLASIFICADO",
+            estado,
+            eliminado,
         },
     });
+}
+
+async function crearReporteClasificadoVisible(numeroSeguimiento: string, identificador: string) {
+    const reporte = await crearReporteBase(numeroSeguimiento, identificador, "CLASIFICADO");
     await prisma.clasificacionIA.create({
         data: {
             reporteId: reporte.id,
@@ -33,11 +44,11 @@ async function crearReporteVisible(numeroSeguimiento: string, identificador: str
         },
     });
     await prisma.identificadorReportado.upsert({
-        where: { identificador_plataformaId: { identificador, plataformaId: plataforma!.id } },
+        where: { identificador_plataformaId: { identificador, plataformaId: reporte.plataformaId } },
         update: { totalReportes: 1, reportesAutenticados: 1, reportesAnonimos: 0, esVisiblePublicamente: true },
         create: {
             identificador,
-            plataformaId: plataforma!.id,
+            plataformaId: reporte.plataformaId,
             totalReportes: 1,
             reportesAutenticados: 1,
             reportesAnonimos: 0,
@@ -56,29 +67,98 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
     });
 
     it("devuelve 404 si el número no existe", async () => {
-        const res = await GET(new Request("http://localhost:5005/api/reportes/seguimiento/RPT-NOEXIS"), { params: Promise.resolve({ numero: "RPT-NOEXIS" }) });
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-NOEXIS"),
+            { params: Promise.resolve({ numero: "RPT-NOEXIS" }) }
+        );
         expect(res.status).toBe(404);
+        const body = await res.json();
+        expect(body.error.message).toBe("Número de seguimiento no encontrado");
     });
 
-    it("devuelve clasificación y ranking cuando el identificador es visible", async () => {
-        await prisma.parametroSistema.updateMany({ where: { clave: "visibility.report_threshold" }, data: { valor: "1" } });
-        await prisma.parametroSistema.updateMany({ where: { clave: "visibility.min_authenticated_ratio" }, data: { valor: "0" } });
+    it("mapea PENDIENTE a 'En proceso' con mensaje de SLA", async () => {
+        await crearReporteBase("RPT-PEND01", "+57300PEND", "PENDIENTE");
 
-        const numero = "RPT-ENRICH";
-        const identificador = "+57300ENRICH";
-        await crearReporteVisible(numero, identificador);
-
-        const res = await GET(new Request("http://localhost:5005/api/reportes/seguimiento/RPT-ENRICH"), { params: Promise.resolve({ numero }) });
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-PEND01"),
+            { params: Promise.resolve({ numero: "RPT-PEND01" }) }
+        );
         expect(res.status).toBe(200);
         const body = await res.json();
 
-        expect(body.numeroSeguimiento).toBe(numero);
-        expect(body.clasificacion.categoria).toBe("OFRECIMIENTO_REGALOS");
-        expect(body.clasificacion.categoriaLabel).toBe("Ofrecimiento de regalos");
-        expect(body.clasificacion.contienePii).toBe(true);
+        expect(body.estadoVisual).toBe("En proceso");
+        expect(body.estadoInterno).toBe("PENDIENTE");
+        expect(body.enProceso).toBe(true);
+        expect(body.badge).toBe("warning");
+        expect(body.mensaje).toBe("Tu reporte está en proceso — puede tardar hasta 24 horas");
+        expect(body.slaHoras).toBe(24);
+    });
+
+    it("mapea CLASIFICADO a 'Procesado' sin SLA", async () => {
+        await prisma.parametroSistema.updateMany({ where: { clave: "visibility.report_threshold" }, data: { valor: "1" } });
+        await prisma.parametroSistema.updateMany({ where: { clave: "visibility.min_authenticated_ratio" }, data: { valor: "0" } });
+
+        await crearReporteClasificadoVisible("RPT-CLASIF", "+57300CLASIF");
+
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-CLASIF"),
+            { params: Promise.resolve({ numero: "RPT-CLASIF" }) }
+        );
+        expect(res.status).toBe(200);
+        const body = await res.json();
+
+        expect(body.estadoVisual).toBe("Procesado");
+        expect(body.estadoInterno).toBe("CLASIFICADO");
+        expect(body.enProceso).toBe(false);
+        expect(body.badge).toBe("success");
+        expect(body.mensaje).toBe("Tu reporte ha sido procesado y clasificado.");
+        expect(body.slaHoras).toBe(24);
+        expect(body.clasificacion).not.toBeNull();
         expect(body.ranking).not.toBeNull();
-        expect(body.ranking.score).toBeGreaterThanOrEqual(0);
-        expect(body.ranking.score).toBeLessThanOrEqual(100);
-        expect(["BAJO", "MEDIO", "ALTO"]).toContain(body.ranking.nivelRiesgo);
+    });
+
+    it("mapea DUPLICADO a 'Procesado' con badge muted", async () => {
+        await crearReporteBase("RPT-DUPLIC", "+57300DUP", "DUPLICADO");
+
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-DUPLIC"),
+            { params: Promise.resolve({ numero: "RPT-DUPLIC" }) }
+        );
+        expect(res.status).toBe(200);
+        const body = await res.json();
+
+        expect(body.estadoVisual).toBe("Procesado");
+        expect(body.estadoInterno).toBe("DUPLICADO");
+        expect(body.badge).toBe("muted");
+        expect(body.mensaje).toBe("Tu reporte fue vinculado a uno existente.");
+    });
+
+    it("devuelve 404 para reporte eliminado", async () => {
+        await crearReporteBase("RPT-BAJA12", "+57300BAJA", "PENDIENTE", true);
+
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-BAJA12"),
+            { params: Promise.resolve({ numero: "RPT-BAJA12" }) }
+        );
+        expect(res.status).toBe(404);
+        const body = await res.json();
+        expect(body.error.message).toBe("Número de seguimiento no encontrado");
+    });
+
+    it("refleja cambios en ui.sla_horas_procesamiento", async () => {
+        await prisma.parametroSistema.updateMany({
+            where: { clave: "ui.sla_horas_procesamiento" },
+            data: { valor: "48" },
+        });
+        await crearReporteBase("RPT-SLA480", "+57300SLA48", "PENDIENTE");
+
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-SLA480"),
+            { params: Promise.resolve({ numero: "RPT-SLA480" }) }
+        );
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.slaHoras).toBe(48);
+        expect(body.mensaje).toBe("Tu reporte está en proceso — puede tardar hasta 48 horas");
     });
 });

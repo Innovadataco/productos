@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { numeroSeguimientoSchema } from "@/lib/validators";
 import { calcularRanking } from "@/lib/ranking";
+import { getParametroSistemaValor } from "@/lib/parametros";
+import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras } from "@/lib/reporte-estados-usuario";
 import { ERROR_CODES } from "@/lib/errors";
 
 const CATEGORIA_LABELS: Record<string, string> = {
@@ -13,17 +15,6 @@ const CATEGORIA_LABELS: Record<string, string> = {
     SOLICITUD_ENCUENTRO: "Solicitud de encuentro",
     COMPARTIMIENTO_SEXUAL: "Compartimiento sexual",
     OTRO: "Otro",
-};
-
-const ESTADO_MENSAJE: Record<string, string> = {
-    PENDIENTE: "Tu reporte está pendiente de procesamiento.",
-    PROCESANDO: "Tu reporte está siendo procesado.",
-    CLASIFICADO: "Tu reporte ha sido procesado y clasificado.",
-    REVISION_MANUAL: "Tu reporte requiere revisión manual.",
-    POSIBLE_SPAM: "Tu reporte está siendo revisado.",
-    DUPLICADO: "Tu reporte fue vinculado a uno existente.",
-    REQUIERE_ANONIMIZACION: "Tu reporte está en revisión de privacidad.",
-    CORREGIDO: "Tu reporte ha sido revisado y corregido.",
 };
 
 export async function GET(
@@ -57,7 +48,7 @@ export async function GET(
             },
         });
 
-        if (!reporte) {
+        if (!reporte || reporte.eliminado) {
             return NextResponse.json(
                 { error: { message: "Número de seguimiento no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
@@ -78,11 +69,21 @@ export async function GET(
             ranking = await calcularRanking(reporte.identificador, reporte.plataformaId);
         }
 
+        const slaRaw = await getParametroSistemaValor("ui.sla_horas_procesamiento");
+        const slaHoras = parseSlaHoras(slaRaw);
+        const estadoUsuario = mapEstadoUsuario(reporte.estado);
+        const mensaje = getMensajeUsuario(reporte.estado, slaHoras);
+
         return NextResponse.json({
             numeroSeguimiento: reporte.numeroSeguimiento,
-            estado: reporte.estado,
+            estadoVisual: estadoUsuario.estadoVisual,
+            estadoInterno: reporte.estado,
+            badge: estadoUsuario.badge,
+            enProceso: estadoUsuario.enProceso,
+            mensaje,
+            slaHoras,
             creadoEn: reporte.creadoEn,
-            mensaje: ESTADO_MENSAJE[reporte.estado] || "Estado desconocido",
+            actualizadoEn: reporte.actualizadoEn,
             identificador: reporte.identificador,
             plataforma: reporte.plataforma.nombre,
             clasificacion: reporte.clasificacion

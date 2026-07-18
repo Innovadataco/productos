@@ -2,22 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { calcularRanking } from "@/lib/ranking";
+import { getParametroSistemaValor } from "@/lib/parametros";
+import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras } from "@/lib/reporte-estados-usuario";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
-
-const ESTADO_VISUAL: Record<string, string> = {
-    PENDIENTE: "Recibido",
-    PROCESANDO: "En procesamiento",
-    CLASIFICADO: "Procesado",
-    CORREGIDO: "Procesado",
-    REVISION_MANUAL: "En revisión",
-    POSIBLE_SPAM: "En revisión",
-    REQUIERE_ANONIMIZACION: "En revisión de privacidad",
-    DUPLICADO: "Vinculado a reporte existente",
-};
 
 const CATEGORIA_LABELS: Record<string, string> = {
     CONTACTO_INSISTENTE: "Contacto insistente",
@@ -41,9 +31,11 @@ export async function GET(request: Request) {
         );
         const skip = (page - 1) * pageSize;
 
+        const baseWhere = { usuarioId: user.id, eliminado: false };
+
         const [items, total] = await Promise.all([
             prisma.reporte.findMany({
-                where: { usuarioId: user.id },
+                where: baseWhere,
                 orderBy: { creadoEn: "desc" },
                 skip,
                 take: pageSize,
@@ -52,7 +44,7 @@ export async function GET(request: Request) {
                     plataforma: { select: { nombre: true } },
                 },
             }),
-            prisma.reporte.count({ where: { usuarioId: user.id } }),
+            prisma.reporte.count({ where: baseWhere }),
         ]);
 
         const identificadoresVisibles = new Set(
@@ -71,6 +63,9 @@ export async function GET(request: Request) {
         const rankingCache = new Map<string, Awaited<ReturnType<typeof calcularRanking>>>();
         const rankingKey = (identificador: string, plataformaId: string) => `${identificador}::${plataformaId}`;
 
+        const slaRaw = await getParametroSistemaValor("ui.sla_horas_procesamiento");
+        const slaHoras = parseSlaHoras(slaRaw);
+
         const mapped = await Promise.all(
             items.map(async (r) => {
                 const key = rankingKey(r.identificador, r.plataformaId);
@@ -87,12 +82,18 @@ export async function GET(request: Request) {
                     };
                 }
 
+                const estadoUsuario = mapEstadoUsuario(r.estado);
+
                 return {
                     id: r.id,
                     identificador: r.identificador,
                     plataforma: r.plataforma.nombre,
-                    estado: r.estado,
-                    estadoVisual: ESTADO_VISUAL[r.estado] || r.estado,
+                    estadoInterno: r.estado,
+                    estadoVisual: estadoUsuario.estadoVisual,
+                    badge: estadoUsuario.badge,
+                    enProceso: estadoUsuario.enProceso,
+                    mensaje: getMensajeUsuario(r.estado, slaHoras),
+                    slaHoras,
                     numeroSeguimiento: r.numeroSeguimiento,
                     ciudad: r.ciudad,
                     pais: r.pais,
