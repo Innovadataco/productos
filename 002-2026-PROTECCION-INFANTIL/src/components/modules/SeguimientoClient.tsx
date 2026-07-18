@@ -7,6 +7,7 @@ import { SeguimientoForm } from "@/components/modules/SeguimientoForm";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 
 type ClasificacionData = {
     categoria: string;
@@ -46,11 +47,36 @@ const ESTADO_VISUAL: Record<string, string> = {
     DUPLICADO: "Vinculado a reporte existente",
 };
 
-const NIVEL_STYLES = {
-    BAJO: "bg-green-100 text-green-800",
-    MEDIO: "bg-amber-100 text-amber-800",
-    ALTO: "bg-red-100 text-red-800",
-};
+function badgeVariant(estadoVisual: string | null) {
+    switch (estadoVisual) {
+        case "Recibido":
+            return "neutral";
+        case "En procesamiento":
+            return "info";
+        case "Procesado":
+            return "success";
+        case "En revisión":
+        case "En revisión de privacidad":
+            return "warning";
+        default:
+            return "neutral";
+    }
+}
+
+function riesgoVariant(nivel: string) {
+    switch (nivel) {
+        case "BAJO":
+            return "success";
+        case "MEDIO":
+            return "warning";
+        case "ALTO":
+            return "danger";
+        default:
+            return "neutral";
+    }
+}
+
+const infoBox = "rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 p-4";
 
 export function SeguimientoClient() {
     const searchParams = useSearchParams();
@@ -90,22 +116,11 @@ export function SeguimientoClient() {
 
     const estadoVisual = data ? (ESTADO_VISUAL[data.estado] || data.estado) : null;
 
-    const badgeClass =
-        estadoVisual === "Recibido"
-            ? "bg-slate-100 text-slate-700"
-            : estadoVisual === "En procesamiento"
-                ? "bg-blue-50 text-blue-700"
-                : estadoVisual === "Procesado"
-                    ? "bg-accent-50 text-accent-700"
-                    : estadoVisual === "En revisión" || estadoVisual === "En revisión de privacidad"
-                        ? "bg-amber-50 text-amber-700"
-                        : "bg-slate-100 text-slate-600";
-
     return (
         <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
             <div className="mb-6 text-center">
-                <h1 className="text-2xl font-bold text-slate-900">Seguimiento de reporte</h1>
-                <p className="mt-1 text-sm text-slate-600">
+                <h1 className="text-2xl font-bold text-body">Seguimiento de reporte</h1>
+                <p className="mt-1 text-sm text-muted">
                     Consulta el estado de un reporte con su número de seguimiento
                 </p>
             </div>
@@ -116,14 +131,14 @@ export function SeguimientoClient() {
 
             {isLoading && (
                 <div className="glass rounded-2xl p-8 text-center">
-                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
-                    <p className="mt-3 text-sm text-slate-500">Consultando...</p>
+                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-600 dark:border-sky-800 dark:border-t-sky-400" />
+                    <p className="mt-3 text-sm text-muted">Consultando...</p>
                 </div>
             )}
 
             {error && (
                 <div className="glass rounded-2xl p-6 text-center">
-                    <p className="text-red-600 text-sm">{error}</p>
+                    <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
                 </div>
             )}
 
@@ -131,34 +146,30 @@ export function SeguimientoClient() {
                 <div className="glass rounded-2xl p-6 animate-floatUp space-y-5">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-xs text-slate-500">{data.plataforma}</p>
-                            <h2 className="text-lg font-semibold text-slate-800">{data.identificador}</h2>
+                            <p className="text-xs text-subtle">{data.plataforma}</p>
+                            <h2 className="text-lg font-semibold text-body">{data.identificador}</h2>
                         </div>
-                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${badgeClass}`}>
-                            {estadoVisual}
-                        </span>
+                        {estadoVisual && <Badge variant={badgeVariant(estadoVisual)}>{estadoVisual}</Badge>}
                     </div>
 
-                    <div className="rounded-xl bg-white/50 p-4">
-                        <p className="text-sm text-slate-700 font-medium">{data.mensaje}</p>
-                        <p className="text-xs text-slate-400 mt-1">
+                    <div className={infoBox}>
+                        <p className="text-sm font-medium text-body">{data.mensaje}</p>
+                        <p className="mt-1 text-xs text-subtle">
                             Reportado el {new Date(data.creadoEn).toLocaleDateString("es-CO")}
                         </p>
                     </div>
 
                     {data.clasificacion && (
-                        <div className="rounded-xl bg-white/50 p-4">
-                            <h3 className="text-sm font-semibold text-slate-700 mb-2">Clasificación del reporte</h3>
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <span className="rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">
-                                    {data.clasificacion.categoriaLabel}
-                                </span>
-                                <span className="text-xs text-slate-500">
+                        <div className={infoBox}>
+                            <h3 className="mb-2 text-sm font-semibold text-body">Clasificación del reporte</h3>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <Badge variant="info">{data.clasificacion.categoriaLabel}</Badge>
+                                <span className="text-xs text-muted">
                                     Confianza: {Math.round(data.clasificacion.confianza * 100)}%
                                 </span>
                             </div>
                             {data.clasificacion.contienePii && (
-                                <p className="text-xs text-slate-500 mt-2">
+                                <p className="mt-2 text-xs text-muted">
                                     El texto fue anonimizado para proteger datos personales.
                                 </p>
                             )}
@@ -166,25 +177,25 @@ export function SeguimientoClient() {
                     )}
 
                     {data.ranking && (
-                        <div className="rounded-xl bg-white/50 p-4">
-                            <h3 className="text-sm font-semibold text-slate-700 mb-2">Riesgo del identificador</h3>
+                        <div className={infoBox}>
+                            <h3 className="mb-2 text-sm font-semibold text-body">Riesgo del identificador</h3>
                             <div className="flex items-center gap-4">
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-primary-700 font-mono">{data.ranking.score}</p>
-                                    <p className="text-[10px] text-slate-500">Score 0-100</p>
+                                    <p className="font-mono text-2xl font-bold text-body">{data.ranking.score}</p>
+                                    <p className="text-[10px] text-subtle">Score 0-100</p>
                                 </div>
-                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${NIVEL_STYLES[data.ranking.nivelRiesgo]}`}>
+                                <Badge variant={riesgoVariant(data.ranking.nivelRiesgo)}>
                                     Riesgo {data.ranking.nivelRiesgo}
-                                </span>
+                                </Badge>
                             </div>
-                            <p className="text-xs text-slate-500 mt-2">
+                            <p className="mt-2 text-xs text-muted">
                                 Basado en {data.ranking.totalReportes} reportes
                                 ({data.ranking.reportesAutenticados} autenticados, {data.ranking.reportesAnonimos} anónimos).
                             </p>
                         </div>
                     )}
 
-                    <div className="pt-4 border-t border-slate-200">
+                    <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
                         <Link href="/reportar">
                             <Button variant="outline" className="w-full">
                                 Realizar otro reporte
