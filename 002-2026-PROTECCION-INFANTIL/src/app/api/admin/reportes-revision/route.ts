@@ -4,7 +4,7 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { reportesRevisionQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { esAdminRol } from "@/lib/operadores/permisos";
+import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
 import type { Prisma } from "@prisma/client";
 
 const MAX_PAGE_SIZE = 100;
@@ -12,7 +12,7 @@ const MAX_PAGE_SIZE = 100;
 export async function GET(req: Request) {
     try {
         const user = await verifyAuth();
-        if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
+        if (!esAdminRol(user.rol) && user.rol !== "OPERADOR" && !esComiteRol(user.rol)) {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
@@ -65,9 +65,11 @@ export async function GET(req: Request) {
             }
         }
 
-        // Un operador solo ve sus casos asignados. Un admin puede filtrar por operador.
+        // Un operador solo ve sus casos asignados. Un comité ve sus casos asignados. Un admin puede filtrar por operador.
         if (user.rol === "OPERADOR") {
             where.operadorId = user.id;
+        } else if (user.rol === "COMITE_VALIDACION") {
+            where.comiteId = user.id;
         } else if (operadorId) {
             where.operadorId = operadorId;
         }
@@ -101,7 +103,9 @@ export async function GET(req: Request) {
                     ciudad: true,
                     pais: true,
                     operadorId: true,
+                    comiteId: true,
                     operador: { select: { id: true, email: true, nombre: true } },
+                    comite: { select: { id: true, email: true, nombre: true } },
                     plataforma: { select: { id: true, nombre: true, clave: true } },
                     clasificacion: {
                         include: {

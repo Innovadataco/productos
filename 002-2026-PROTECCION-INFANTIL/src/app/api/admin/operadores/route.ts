@@ -5,13 +5,16 @@ import { verifyAuth, hashPassword } from "@/lib/auth";
 import { ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { enviarEmailBienvenidaOperador } from "@/lib/email";
+import { validarExclusividadRolComite, normalizarEsComiteParaRol } from "@/lib/operadores/permisos";
 import { randomBytes } from "crypto";
 
 const operadorSchema = z.object({
     email: z.string().email(),
     nombre: z.string().min(2).max(100),
+    rol: z.enum(["OPERADOR", "COMITE_VALIDACION"]).default("OPERADOR"),
     cupoMaximo: z.coerce.number().int().min(1).max(200).optional(),
     esRevisorDeApelaciones: z.boolean().optional(),
+    esComite: z.boolean().optional(),
     notasInternas: z.string().max(500).optional(),
 });
 
@@ -35,23 +38,32 @@ export async function GET(request: Request) {
     try {
         const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
         const operadores = await prisma.usuario.findMany({
-            where: { rol: "OPERADOR", ...filtroTenant(admin) },
+            where: { rol: { in: ["OPERADOR", "COMITE_VALIDACION"] }, ...filtroTenant(admin) },
             include: { perfilOperador: true },
             orderBy: { creadoEn: "desc" },
         });
 
         const conConteo = await Promise.all(
             operadores.map(async (op) => {
-                const casosAbiertos = await prisma.reporte.count({
-                    where: { operadorId: op.id, estado: "REVISION_MANUAL", eliminado: false },
-                });
-                const casosTotales = await prisma.reporte.count({
-                    where: { operadorId: op.id, eliminado: false },
-                });
+                const casosAbiertos = op.rol === "OPERADOR"
+                    ? await prisma.reporte.count({
+                          where: { operadorId: op.id, estado: "REVISION_MANUAL", eliminado: false },
+                      })
+                    : await prisma.solicitudComite.count({
+                          where: { comiteId: op.id, estado: { in: ["PENDIENTE", "ASIGNADA"] } },
+                      });
+                const casosTotales = op.rol === "OPERADOR"
+                    ? await prisma.reporte.count({
+                          where: { operadorId: op.id, eliminado: false },
+                      })
+                    : await prisma.solicitudComite.count({
+                          where: { comiteId: op.id },
+                      });
                 return {
                     id: op.id,
                     email: op.email,
                     nombre: op.nombre,
+                    rol: op.rol,
                     estado: op.estado,
                     debeCambiarPassword: op.debeCambiarPassword,
                     tenantId: op.tenantId,
@@ -59,6 +71,7 @@ export async function GET(request: Request) {
                         ? {
                               cupoMaximo: op.perfilOperador.cupoMaximo,
                               esRevisorDeApelaciones: op.perfilOperador.esRevisorDeApelaciones,
+                              esComite: op.perfilOperador.esComite,
                               notasInternas: op.perfilOperador.notasInternas,
                               creadoPorId: op.perfilOperador.creadoPorId,
                           }
@@ -93,7 +106,19 @@ export async function POST(request: Request) {
             );
         }
 
-        const existe = await prisma.usuario.findUnique({ where: { email: parsed.data.email } });
+        const { rol, esRevisorDeApelaciones, notasInternas, cupoMaximo, email, nombre, esComite: esComiteInput } = parsed.data;
+        const esComite = esComiteInput ?? normalizarEsComiteParaRol(rol);
+
+        try {
+            validarExclusividadRolComite({ rol, esComite });
+        } catch (err) {
+            if (err instanceof Error && "code" in err && typeof err.code === "string") {
+                return NextResponse.json({ error: { message: err.message, code: err.code } }, { status: 400 });
+            }
+            throw err;
+        }
+
+        const existe = await prisma.usuario.findUnique({ where: { email } });
         if (existe) {
             return NextResponse.json(
                 { error: { message: "Ya existe un usuario con ese email", code: ERROR_CODES.VALIDATION_ERROR } },
@@ -107,18 +132,19 @@ export async function POST(request: Request) {
 
         const operador = await prisma.usuario.create({
             data: {
-                email: parsed.data.email,
-                nombre: parsed.data.nombre,
+                email,
+                nombre,
                 passwordHash,
-                rol: "OPERADOR",
+                rol,
                 estado: "activo",
                 debeCambiarPassword: true,
                 tenantId: admin.tenantId,
                 perfilOperador: {
                     create: {
-                        cupoMaximo: parsed.data.cupoMaximo ?? 10,
-                        esRevisorDeApelaciones: parsed.data.esRevisorDeApelaciones ?? false,
-                        notasInternas: parsed.data.notasInternas,
+                        cupoMaximo: cupoMaximo ?? 10,
+                        esRevisorDeApelaciones: esRevisorDeApelaciones ?? false,
+                        esComite,
+                        notasInternas,
                         creadoPorId: admin.id,
                     },
                 },
@@ -127,11 +153,11 @@ export async function POST(request: Request) {
         });
 
         await logAudit({
-            accion: "OPERADOR_CREADO",
+            accion: rol === "COMITE_VALIDACION" ? "OPERADOR_CREADO" : "OPERADOR_CREADO",
             tipoRecurso: "Usuario",
             recursoId: operador.id,
             usuarioId: admin.id,
-            valorNuevo: JSON.stringify({ email: operador.email, nombre: operador.nombre, rol: operador.rol }),
+            valorNuevo: JSON.stringify({ email: operador.email, nombre: operador.nombre, rol: operador.rol, esComite }),
             ipAddress,
             userAgent,
         });
@@ -149,6 +175,7 @@ export async function POST(request: Request) {
                 id: operador.id,
                 email: operador.email,
                 nombre: operador.nombre,
+                rol: operador.rol,
                 estado: operador.estado,
                 debeCambiarPassword: operador.debeCambiarPassword,
                 perfil: operador.perfilOperador,
@@ -158,7 +185,7 @@ export async function POST(request: Request) {
             mensaje: emailEnviado
                 ? "Operador creado. Se envió la contraseña temporal por email."
                 : "Operador creado. No se pudo enviar el email; copiá la contraseña temporal que se muestra arriba.",
-        });
+        }, { status: 201 });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {
             return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: 403 });

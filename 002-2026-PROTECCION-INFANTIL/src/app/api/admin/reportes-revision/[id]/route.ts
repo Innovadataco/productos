@@ -4,12 +4,12 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
+import { esAdminRol, esComiteRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
+        if (!esAdminRol(user.rol) && user.rol !== "OPERADOR" && !esComiteRol(user.rol)) {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
@@ -36,7 +36,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
         const permisosReporte = await prisma.reporte.findUnique({
             where: { id },
-            select: { operadorId: true, tenantId: true },
+            select: { operadorId: true, comiteId: true, tenantId: true },
         });
 
         if (!permisosReporte) {
@@ -46,7 +46,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        if (!puedeGestionarReporte(user, permisosReporte)) {
+        if (user.rol === "COMITE_VALIDACION" && permisosReporte.comiteId !== user.id) {
+            return NextResponse.json(
+                { error: { message: "No tenés permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
+
+        if (user.rol !== "COMITE_VALIDACION" && !puedeGestionarReporte(user, permisosReporte)) {
             return NextResponse.json(
                 { error: { message: "No tenés permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
@@ -76,6 +83,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
                 edadVictima: true,
                 plataforma: { select: { id: true, nombre: true, clave: true } },
                 operador: { select: { id: true, email: true, nombre: true } },
+                comite: { select: { id: true, email: true, nombre: true } },
                 reintentos: { orderBy: { intento: "asc" } },
                 clasificacion: {
                     include: {
@@ -103,6 +111,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         return NextResponse.json({
             reporte,
             puedeRevelarOriginal: user.rol === "ADMIN",
+            puedeEscalar: (user.rol === "OPERADOR" && reporte?.operador?.id === user.id && reporte.estado === "REVISION_MANUAL") || esAdminRol(user.rol),
         });
     } catch (error) {
         if (error instanceof AppError) {

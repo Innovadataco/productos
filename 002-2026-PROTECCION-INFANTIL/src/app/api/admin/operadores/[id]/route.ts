@@ -21,7 +21,7 @@ function getClientInfo(request: Request) {
 }
 
 async function getOperador(id: string, admin: { id: string; rol: string; tenantId: string | null }) {
-    const where: Record<string, unknown> = { id, rol: "OPERADOR" };
+    const where: Record<string, unknown> = { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } };
     if (admin.rol === "SCHOOL_ADMIN") {
         where.tenantId = admin.tenantId ?? null;
     }
