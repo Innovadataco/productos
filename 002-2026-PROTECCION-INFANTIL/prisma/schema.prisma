@@ -75,6 +75,7 @@ enum AccionAudit {
   CASO_DADO_DE_BAJA
   CASO_ESCALADO
   CASO_NOTA_AGREGADA
+  CONFIGURACION_ASIGNACION_ACTUALIZADA
 }
 
 enum EstadoApelacion {
@@ -160,7 +161,7 @@ model Usuario {
 model PerfilOperador {
   id                       String   @id @default(cuid())
   usuarioId                String   @unique
-  cupoMaximo               Int      @default(10)
+  cupoMaximo               Int?
   esRevisorDeApelaciones Boolean  @default(false)
   notasInternas            String?
   creadoPorId              String

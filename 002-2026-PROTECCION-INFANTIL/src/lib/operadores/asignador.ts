@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { getParametroSistemaValor } from "@/lib/parametros";
 import type { Prisma } from "@prisma/client";
 
 type OperadorCandidato = {
@@ -14,6 +15,25 @@ export type ResultadoAsignacion =
     | { asignado: true; operadorId: string; operador: OperadorCandidato }
     | { asignado: false; razon: string };
 
+export type EstrategiaAsignacion = "ponderado_carga_inversa" | "aleatorio_puro";
+
+type ConfigAsignacion = {
+    cupoDefault: number;
+    estrategia: EstrategiaAsignacion;
+};
+
+export async function obtenerConfigAsignacion(client?: Prisma.TransactionClient): Promise<ConfigAsignacion> {
+    const db = client ?? prisma;
+    const cupoRaw = await getParametroSistemaValor("operadores.cupo_maximo_default", db);
+    const estrategiaRaw = await getParametroSistemaValor("operadores.estrategia_asignacion", db);
+
+    const cupoDefault = cupoRaw ? parseInt(cupoRaw, 10) || 10 : 10;
+    const estrategia: EstrategiaAsignacion =
+        estrategiaRaw === "aleatorio_puro" ? "aleatorio_puro" : "ponderado_carga_inversa";
+
+    return { cupoDefault, estrategia };
+}
+
 function weightedRandom(candidatos: Array<{ operador: OperadorCandidato; peso: number }>): OperadorCandidato {
     const total = candidatos.reduce((acc, c) => acc + c.peso, 0);
     let random = Math.random() * total;
@@ -24,16 +44,61 @@ function weightedRandom(candidatos: Array<{ operador: OperadorCandidato; peso: n
     return candidatos[candidatos.length - 1].operador;
 }
 
+function randomChoice<T>(arr: T[]): T {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+async function construirCandidatos(
+    db: Prisma.TransactionClient | typeof prisma,
+    operadores: Array<{ id: string; email: string; nombre: string | null; perfilOperador: { cupoMaximo: number | null } | null }>,
+    contarCasos: (operadorId: string) => Promise<number>,
+    config: ConfigAsignacion
+) {
+    const candidatos: OperadorCandidato[] = [];
+    for (const op of operadores) {
+        if (!op.perfilOperador) continue;
+        const casosAbiertos = await contarCasos(op.id);
+        candidatos.push({
+            id: op.id,
+            email: op.email,
+            nombre: op.nombre,
+            cupoMaximo: op.perfilOperador.cupoMaximo ?? config.cupoDefault,
+            casosAbiertos,
+        });
+    }
+    return candidatos;
+}
+
+function seleccionarOperador(
+    disponibles: OperadorCandidato[],
+    estrategia: EstrategiaAsignacion
+): OperadorCandidato {
+    if (estrategia === "aleatorio_puro") {
+        return randomChoice(disponibles);
+    }
+
+    // Ponderación inversa por carga: más cupo libre = más probabilidad.
+    const ponderados = disponibles.map((op) => ({
+        operador: op,
+        peso: (op.cupoMaximo - op.casosAbiertos) / op.cupoMaximo,
+    }));
+
+    return weightedRandom(ponderados);
+}
+
 export async function asignarOperadorAReporte(
     reporteId: string,
     tx?: Prisma.TransactionClient
 ): Promise<ResultadoAsignacion> {
     const db = tx ?? prisma;
 
-    const reporte = await db.reporte.findUnique({
-        where: { id: reporteId },
-        select: { id: true, estado: true, tenantId: true, operadorId: true },
-    });
+    const [reporte, config] = await Promise.all([
+        db.reporte.findUnique({
+            where: { id: reporteId },
+            select: { id: true, estado: true, tenantId: true, operadorId: true },
+        }),
+        obtenerConfigAsignacion(db),
+    ]);
 
     if (!reporte) {
         return { asignado: false, razon: "Reporte no encontrado" };
@@ -65,24 +130,15 @@ export async function asignarOperadorAReporte(
         return { asignado: false, razon: "No hay operadores activos disponibles" };
     }
 
-    const candidatos: OperadorCandidato[] = [];
-    for (const op of operadores) {
-        if (!op.perfilOperador) continue;
-        const casosAbiertos = await db.reporte.count({
-            where: {
-                operadorId: op.id,
-                estado: "REVISION_MANUAL",
-                eliminado: false,
-            },
-        });
-        candidatos.push({
-            id: op.id,
-            email: op.email,
-            nombre: op.nombre,
-            cupoMaximo: op.perfilOperador.cupoMaximo,
-            casosAbiertos,
-        });
-    }
+    const candidatos = await construirCandidatos(
+        db,
+        operadores,
+        (operadorId) =>
+            db.reporte.count({
+                where: { operadorId, estado: "REVISION_MANUAL", eliminado: false },
+            }),
+        config
+    );
 
     const disponibles = candidatos.filter((c) => c.casosAbiertos < c.cupoMaximo);
 
@@ -90,13 +146,7 @@ export async function asignarOperadorAReporte(
         return { asignado: false, razon: "Todos los operadores activos están al cupo máximo" };
     }
 
-    // Ponderación inversa por carga: más cupo libre = más probabilidad.
-    const ponderados = disponibles.map((op) => ({
-        operador: op,
-        peso: (op.cupoMaximo - op.casosAbiertos) / op.cupoMaximo,
-    }));
-
-    const elegido = weightedRandom(ponderados);
+    const elegido = seleccionarOperador(disponibles, config.estrategia);
 
     await db.reporte.update({
         where: { id: reporteId },
@@ -121,10 +171,13 @@ export async function asignarOperadorAApelacion(
 ): Promise<ResultadoAsignacion> {
     const db = tx ?? prisma;
 
-    const apelacion = await db.apelacionIdentificador.findUnique({
-        where: { id: apelacionId },
-        select: { id: true, estado: true, plataformaId: true, operadorId: true },
-    });
+    const [apelacion, config] = await Promise.all([
+        db.apelacionIdentificador.findUnique({
+            where: { id: apelacionId },
+            select: { id: true, estado: true, plataformaId: true, operadorId: true },
+        }),
+        obtenerConfigAsignacion(db),
+    ]);
 
     if (!apelacion) {
         return { asignado: false, razon: "Apelación no encontrada" };
@@ -149,34 +202,22 @@ export async function asignarOperadorAApelacion(
         return { asignado: false, razon: "No hay revisores de apelaciones activos" };
     }
 
-    const candidatos: OperadorCandidato[] = [];
-    for (const op of revisores) {
-        if (!op.perfilOperador) continue;
-        const casosAbiertos = await db.apelacionIdentificador.count({
-            where: {
-                operadorId: op.id,
-                estado: { in: ["RECIBIDA", "EN_REVISION"] },
-            },
-        });
-        candidatos.push({
-            id: op.id,
-            email: op.email,
-            nombre: op.nombre,
-            cupoMaximo: op.perfilOperador.cupoMaximo,
-            casosAbiertos,
-        });
-    }
+    const candidatos = await construirCandidatos(
+        db,
+        revisores,
+        (operadorId) =>
+            db.apelacionIdentificador.count({
+                where: { operadorId, estado: { in: ["RECIBIDA", "EN_REVISION"] } },
+            }),
+        config
+    );
 
     const disponibles = candidatos.filter((c) => c.casosAbiertos < c.cupoMaximo);
     if (disponibles.length === 0) {
         return { asignado: false, razon: "Todos los revisores de apelaciones están al cupo" };
     }
 
-    const ponderados = disponibles.map((op) => ({
-        operador: op,
-        peso: (op.cupoMaximo - op.casosAbiertos) / op.cupoMaximo,
-    }));
-    const elegido = weightedRandom(ponderados);
+    const elegido = seleccionarOperador(disponibles, config.estrategia);
 
     await db.apelacionIdentificador.update({
         where: { id: apelacionId },

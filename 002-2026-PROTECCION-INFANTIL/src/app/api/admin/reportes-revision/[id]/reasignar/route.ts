@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
+import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
 
 const reasignarSchema = z.object({
     operadorId: z.string().min(1),
@@ -68,10 +69,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const casosAbiertos = await prisma.reporte.count({
-            where: { operadorId: operador.id, estado: "REVISION_MANUAL", eliminado: false },
-        });
-        if (casosAbiertos >= operador.perfilOperador.cupoMaximo) {
+        const [casosAbiertos, config] = await Promise.all([
+            prisma.reporte.count({
+                where: { operadorId: operador.id, estado: "REVISION_MANUAL", eliminado: false },
+            }),
+            obtenerConfigAsignacion(),
+        ]);
+        const cupoMaximo = operador.perfilOperador.cupoMaximo ?? config.cupoDefault;
+        if (casosAbiertos >= cupoMaximo) {
             return NextResponse.json(
                 { error: { message: "El operador seleccionado está al cupo máximo", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 409 }

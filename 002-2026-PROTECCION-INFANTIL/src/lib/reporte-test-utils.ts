@@ -100,6 +100,8 @@ export async function crearParametrosReportes() {
         { clave: "scoring.source_weight.confirmed_factor", valor: "1.2", tipo: "FLOAT" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "scoring.source_weight.discarded_factor", valor: "0.3", tipo: "FLOAT" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "anti_abuso.retencion_fuente_dias", valor: "90", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "operadores.cupo_maximo_default", valor: "10", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "operadores.estrategia_asignacion", valor: "ponderado_carga_inversa", tipo: "STRING" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.report.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.report.max_requests", valor: "5", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.login.window_seconds", valor: "300", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
