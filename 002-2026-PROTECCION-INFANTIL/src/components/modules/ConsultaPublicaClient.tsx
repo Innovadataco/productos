@@ -11,7 +11,7 @@ import { MiniList } from "./MiniList";
 import { RiskBadge } from "./RiskBadge";
 import { formatCategoria, formatNivel } from "@/lib/labels";
 
-function formatFecha(iso: string) {
+function formatFecha(iso: string | null | undefined) {
     if (!iso) return "—";
     return new Date(iso).toLocaleDateString("es-CO", { dateStyle: "medium" });
 }
@@ -29,19 +29,19 @@ type ConsultaResponse = {
     tieneReportes: boolean;
     visibleEnDashboard?: boolean;
     mensaje?: string;
-    totalReportes: number;
-    reportesAutenticados: number;
-    reportesAnonimos: number;
+    totalReportes?: number;
+    reportesAutenticados?: number;
+    reportesAnonimos?: number;
     score?: number;
     nivelRiesgo?: string;
     ratioAutenticados?: number;
-    primerReporte: string;
-    ultimoReporte: string;
-    plataformas: { id: string; nombre: string; clave: string; total: number }[];
-    categorias: { categoria: string; total: number; confianzaPromedio: number | null }[];
-    ubicaciones: Ubicacion[];
-    timeline: { mes: string; total: number }[];
-    resumen: string;
+    primerReporte?: string | null;
+    ultimoReporte?: string | null;
+    plataformas?: { id: string; nombre: string; clave: string; total: number }[];
+    categorias?: { categoria: string; total: number; confianzaPromedio: number | null }[];
+    ubicaciones?: Ubicacion[];
+    timeline?: { mes: string; total: number }[];
+    resumen?: string;
 };
 
 export function ConsultaPublicaClient() {
@@ -76,14 +76,13 @@ export function ConsultaPublicaClient() {
         }
     };
 
-    const plataformasChart = data?.plataformas.map((p) => ({ label: p.nombre, value: p.total })) || [];
-    const categoriasChart = data?.categorias.map((c) => ({ label: formatCategoria(c.categoria), value: c.total })) || [];
-    const timelineChart = data?.timeline.map((t) => ({ label: t.mes, value: t.total })) || [];
-    const ubicacionesList =
-        data?.ubicaciones.map((u) => ({
-            label: `${u.ciudad}, ${u.pais}`,
-            count: u.total,
-        })) || [];
+    const plataformasChart = (data?.plataformas ?? []).map((p) => ({ label: p.nombre, value: p.total }));
+    const categoriasChart = (data?.categorias ?? []).map((c) => ({ label: formatCategoria(c.categoria), value: c.total }));
+    const timelineChart = (data?.timeline ?? []).map((t) => ({ label: t.mes, value: t.total }));
+    const ubicacionesList = (data?.ubicaciones ?? []).map((u) => ({
+        label: `${u.ciudad}, ${u.pais}`,
+        count: u.total,
+    }));
 
     return (
         <main className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
@@ -129,9 +128,9 @@ export function ConsultaPublicaClient() {
                 <div className="mt-8 space-y-5">
                     {/* Métricas principales */}
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                        <MetricCard label="Total reportes" value={data.totalReportes} />
-                        <MetricCard label="Autenticados" value={data.reportesAutenticados} />
-                        <MetricCard label="Anónimos" value={data.reportesAnonimos} />
+                        <MetricCard label="Total reportes" value={data.totalReportes ?? 0} />
+                        <MetricCard label="Autenticados" value={data.reportesAutenticados ?? 0} />
+                        <MetricCard label="Anónimos" value={data.reportesAnonimos ?? 0} />
                         {data.score != null ? (
                             <MetricCard
                                 label="Score"
@@ -150,7 +149,7 @@ export function ConsultaPublicaClient() {
 
                     {/* Resumen */}
                     <ChartCard title="Resumen" subtitle={`${data.identificador} — información agregada`}>
-                        <p className="text-sm text-muted">{data.resumen}</p>
+                        <p className="text-sm text-muted">{data.resumen || "No hay resumen disponible."}</p>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                             <p>
                                 <span className="text-subtle">Primer reporte:</span>{" "}
@@ -218,7 +217,7 @@ export function ConsultaPublicaClient() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {data.ubicaciones.map((u, idx) => (
+                                    {(data.ubicaciones ?? []).map((u, idx) => (
                                         <tr
                                             key={idx}
                                             className="transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
@@ -250,7 +249,7 @@ export function ConsultaPublicaClient() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {data.categorias.map((c, idx) => (
+                                    {(data.categorias ?? []).map((c, idx) => (
                                         <tr
                                             key={idx}
                                             className="transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
