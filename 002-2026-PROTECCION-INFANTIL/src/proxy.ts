@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = [
     "/recuperar",
     "/seguimiento",
     "/consulta",
+    "/reportar",
     "/privacidad",
     "/terminos",
     "/offline",
@@ -26,8 +27,8 @@ const PUBLIC_ROUTES = [
     "/apelar",
 ];
 
-// Rutas de usuario final: solo PARENT (o anónimo) puede usarlas.
-const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes", "/reportar"];
+// Rutas de usuario final: solo PARENT (o anónimo con token) puede usarlas; internos no.
+const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes"];
 
 function getSecret(): Uint8Array | null {
     const secret = process.env.JWT_SECRET;
