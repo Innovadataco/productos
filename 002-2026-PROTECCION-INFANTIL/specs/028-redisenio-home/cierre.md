@@ -1,4 +1,4 @@
-# Reporte de cierre: Rediseño del Home (Spec 028) — buscador integrado
+# Reporte de cierre: Rediseño completo del Home (Spec 028)
 
 **Spec**: [`spec.md`](./spec.md) | **Plan**: [`plan.md`](./plan.md) | **Quickstart**: [`quickstart.md`](./quickstart.md)
 
@@ -12,21 +12,23 @@
 
 ## Resumen
 
-Se rediseñó la landing page (`/`) para orientar al usuario desde el primer vistazo: dos tarjetas de acción grandes (reportar y consultar), con el buscador de identificador integrado dentro de la tarjeta "Consultar". Se eliminó el bloque separado "Consulta un identificador" debajo del hero. Se conservaron los accesos secundarios a registro y dashboard público, y el estilo glassmorphism. No se tocó backend, auth ni endpoints.
+Se rediseñó por completo la landing page (`/`). El home ahora se centra exclusivamente en dos acciones: crear un reporte y consultar un identificador. El buscador y su resultado se integraron dentro de la tarjeta "Consultar". Se simplificó la barra superior, se eliminaron las secciones redundantes ("¿Cómo funciona?", accesos secundarios) y se conservó la sección de canales oficiales de denuncia. Se actualizó el footer con el copyright de Innovadataco. No se tocó backend, auth ni endpoints.
 
 ---
 
 ## Decisiones y reutilización
 
 - **Componentes modificados**:
-  - `src/components/modules/LandingHero.tsx`: nuevo layout, textos, iconos y buscador integrado en la tarjeta de consultar.
-  - `src/components/modules/HomePageClient.tsx`: pasa `onSearch` a `LandingHero`, muestra resultados/estados debajo del hero y elimina el bloque `#consultar` separado.
-  - `src/components/modules/ConsultaForm.tsx`: prop `compact` opcional para ocultar el label cuando se usa dentro de la tarjeta.
-- **Sin componentes nuevos**: todos los iconos son SVG inline; no se agregaron dependencias.
-- **No se tocó**: `ConsultaResultado.tsx`, endpoints de consulta, wizard de reporte, auth.
-- **Textos**: español neutral, textos aprobados por el owner, sin voseo.
-- **Responsive**: grid de 1 columna en móvil, `sm:grid-cols-[1fr_1.25fr]` en escritorio (consultar más ancha).
-- **Accesibilidad**: iconos decorativos con `aria-hidden`, textos visibles en todos los enlaces, formulario con label asociado al input.
+  - `src/components/modules/NavHeader.tsx`: se eliminaron "Consultar" y "Reportar" del menú superior y móvil; se conservaron "Dashboard" e "Iniciar sesión".
+  - `src/components/modules/LandingHero.tsx`: nuevo layout con dos tarjetas, buscador integrado en la tarjeta "Consultar" y resultado renderizado dentro de ella (0, 1-2 o >2 reportes).
+  - `src/components/modules/HomePageClient.tsx`: contenedor simplificado que pasa el estado de la consulta a `LandingHero`, conserva `CanalesOficiales` y `LandingFooter`, y elimina `LandingFeatures`.
+  - `src/components/modules/LandingFooter.tsx`: copyright actualizado a "© 2026 Innovadataco. Todos los derechos reservados." y eliminación del enlace "Reportar".
+  - `src/components/modules/ConsultaForm.tsx`: se reutilizó el modo `compact` para ocultar el label dentro de la tarjeta.
+- **Sin componentes nuevos**: iconos SVG inline; sin nuevas dependencias.
+- **No se tocó**: `ConsultaResultado.tsx` (sigue usado en `/consulta`), endpoints de consulta, wizard de reporte, auth.
+- **Tono**: español neutral, sin voseo. Se eliminó `LandingFeatures` del home, que contenía imperativos con voseo.
+- **Responsive**: grid `sm:grid-cols-[1fr_1.25fr]` en escritorio; en móvil las tarjetas se apilan verticalmente.
+- **Accesibilidad**: iconos decorativos con `aria-hidden`, textos visibles, input con label asociado (oculto visualmente en modo compacto pero accesible para lectores de pantalla).
 
 ---
 
@@ -39,7 +41,7 @@ Se rediseñó la landing page (`/`) para orientar al usuario desde el primer vis
 | Tests unitarios | `npm run test` | ✅ 343 tests pasaron |
 | Build | `npm run build` | ✅ Compilación exitosa |
 | Smoke E2E | `npx tsx scripts/smoke-e2e.ts` | ✅ PASÓ (8/8 pasos) |
-| Home renderizado | `curl http://localhost:5005/` | ✅ Muestra título, tarjetas, buscador integrado y accesos secundarios |
+| Home renderizado | `curl http://localhost:5005/` | ✅ Muestra título, tarjetas, buscador integrado y canales oficiales; sin Consultar/Reportar en el menú |
 
 ---
 
@@ -53,26 +55,31 @@ Se rediseñó la landing page (`/`) para orientar al usuario desde el primer vis
 
 ## Archivos tocados/creados
 
-- `src/components/modules/LandingHero.tsx` — rediseño completo del hero con buscador integrado.
-- `src/components/modules/HomePageClient.tsx` — pasa `onSearch` a `LandingHero`, muestra resultados y elimina el bloque de consulta separado.
-- `src/components/modules/ConsultaForm.tsx` — modo `compact` opcional.
-- `specs/028-redisenio-home/spec.md` — especificación actualizada (modificada).
-- `specs/028-redisenio-home/plan.md` — plan actualizado (modificado).
-- `specs/028-redisenio-home/quickstart.md` — escenarios de validación actualizados (modificado).
-- `specs/028-redisenio-home/cierre.md` — este reporte (modificado).
-- `specs/README.md` — índice maestro actualizado con la spec 028.
+- `src/components/modules/NavHeader.tsx`
+- `src/components/modules/LandingHero.tsx`
+- `src/components/modules/HomePageClient.tsx`
+- `src/components/modules/LandingFooter.tsx`
+- `src/components/modules/ConsultaForm.tsx` (modo `compact` preexistente, reutilizado)
+- `specs/028-redisenio-home/spec.md`
+- `specs/028-redisenio-home/plan.md`
+- `specs/028-redisenio-home/quickstart.md`
+- `specs/028-redisenio-home/cierre.md`
+- `specs/README.md` (sin cambios en esta iteración, ya actualizado previamente)
 
 ---
 
 ## Commits
 
 ```text
+8bf0d30 docs(specs): actualizar cierre 028 con commits finales y evidencia del smoke
 6f1180d feat(ui): integrar buscador en tarjeta Consultar y eliminar bloque #consultar separado
 b626eb7 docs(specs): actualizar spec 028 con buscador integrado en tarjeta de consultar
 300ae9b docs(specs): reporte de cierre 028 y actualización del índice maestro
 16efae4 feat(ui): rediseño landing con acciones principales y accesos secundarios
 6d1c5b3 docs(specs): spec 028 redisenio del home con spec, plan y quickstart
 ```
+
+*(Los commits de esta iteración final se agregarán a la lista tras el push.)*
 
 ---
 
@@ -84,6 +91,6 @@ No aplica. Este cambio no toca el pipeline de clasificación IA ni el procesamie
 
 ## Notas
 
-- El acceso "Crear una cuenta" siempre visible, incluso para usuarios autenticados, para mantener la simplicidad visual del layout.
-- El bug 021 (reporte anónimo para usuarios internos) no se resolvió en este cambio; el enlace a `/reportar` se mantiene.
-- El bloque de consulta separado (`#consultar`) fue eliminado; el resultado de la consulta se muestra ahora debajo del hero.
+- El bug 021 (reporte anónimo para usuarios internos) no se resolvió en este cambio; el enlace a `/reportar` en el hero se mantiene.
+- El componente `LandingFeatures` se mantiene en el repo pero ya no se usa en el home; puede reutilizarse en una página de documentación futura.
+- El resultado de la consulta se muestra dentro de la tarjeta "Consultar"; para más de 2 reportes se ofrece un enlace a la vista completa `/consulta`.
