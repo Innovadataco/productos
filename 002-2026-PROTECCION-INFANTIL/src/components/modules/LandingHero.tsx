@@ -54,6 +54,22 @@ function formatearFecha(fecha?: string | null): string {
     }
 }
 
+function EyeSlashIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 0 1-4.006 4.853M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L12 12" />
+        </svg>
+    );
+}
+
+function UserIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+    );
+}
+
 export function LandingHero({
     onSearch,
     data,
@@ -90,16 +106,29 @@ export function LandingHero({
                 </p>
 
                 <div className="mt-10 grid gap-4 sm:grid-cols-[1fr_1.25fr]">
-                    <Link
-                        href="/reportar"
-                        className="group flex flex-col items-start rounded-3xl bg-white p-6 text-left shadow-xl shadow-sky-900/10 transition-all hover:scale-[1.02] hover:shadow-2xl sm:p-8"
-                    >
-                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-600 transition group-hover:bg-sky-600 group-hover:text-white">
+                    <div className="flex flex-col items-start rounded-3xl bg-white p-6 text-left shadow-xl shadow-sky-900/10 sm:p-8">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
                             <FlagIcon className="h-6 w-6" />
                         </div>
                         <span className="text-xl font-bold text-sky-700 sm:text-2xl">Crear un reporte</span>
-                        <span className="mt-1 text-sm font-medium text-sky-600/90">De forma anónima o con tu cuenta</span>
-                    </Link>
+                        <span className="mt-1 text-sm font-medium text-sky-600/90">Elige cómo deseas reportar</span>
+                        <div className="mt-5 flex w-full flex-col gap-3">
+                            <Link
+                                href="/reportar"
+                                className="group inline-flex items-center justify-center gap-2 rounded-2xl accent-gradient px-5 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/25 transition hover:brightness-110"
+                            >
+                                <EyeSlashIcon className="h-5 w-5" aria-hidden="true" />
+                                Reportar anónimo
+                            </Link>
+                            <Link
+                                href="/login?redirect=/reportar"
+                                className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-3 text-sm font-bold text-sky-700 transition hover:bg-sky-100"
+                            >
+                                <UserIcon className="h-5 w-5" aria-hidden="true" />
+                                Reportar con mi cuenta
+                            </Link>
+                        </div>
+                    </div>
 
                     <div className="flex flex-col items-start rounded-3xl border border-white/30 bg-white/10 p-6 text-left backdrop-blur-md sm:p-8">
                         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-white">
