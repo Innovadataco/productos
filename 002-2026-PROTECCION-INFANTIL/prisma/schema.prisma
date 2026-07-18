@@ -14,6 +14,7 @@ enum RolUsuario {
   SCHOOL_ADMIN
   PARENT
   OPERADOR
+  COMITE_VALIDACION
 }
 
 enum EstadoUsuario {
@@ -74,6 +75,8 @@ enum AccionAudit {
   CASO_CORREGIDO
   CASO_DADO_DE_BAJA
   CASO_ESCALADO
+  CASO_RESUELTO_POR_COMITE
+  CASO_REASIGNADO
   CASO_NOTA_AGREGADA
   CONFIGURACION_ASIGNACION_ACTUALIZADA
   TEXTO_ORIGINAL_REVELADO
@@ -157,6 +160,7 @@ model Usuario {
   evalRuns              EvalRun[]
   apelaciones           ApelacionIdentificador[]
   casosAsignados        Reporte[]                @relation("CasosOperador")
+  casosComiteAsignados  Reporte[]                @relation("CasosComite")
   apelacionesAsignadas  ApelacionIdentificador[] @relation("ApelacionesOperador")
   anonimizacionesValidadas Reporte[]             @relation("AnonimizacionesValidadas")
   perfilOperador        PerfilOperador?
@@ -165,6 +169,8 @@ model Usuario {
   notificacionesCirculo         Boolean                  @default(true)
   ultimaNotificacionCirculoEn   DateTime?
   transicionesReporte           TransicionReporte[]
+  solicitudesComite             SolicitudComite[]        @relation("SolicitudesComite")
+  solicitudesEscaladas          SolicitudComite[]        @relation("SolicitudesEscaladas")
 
   @@index([email])
   @@index([rol])
@@ -177,6 +183,7 @@ model PerfilOperador {
   usuarioId                String   @unique
   cupoMaximo               Int?
   esRevisorDeApelaciones Boolean  @default(false)
+  esComite                 Boolean  @default(false)
   notasInternas            String?
   creadoPorId              String
   creadoEn                 DateTime @default(now())
@@ -187,6 +194,7 @@ model PerfilOperador {
 
   @@index([usuarioId])
   @@index([creadoPorId])
+  @@index([esComite])
 }
 
 model CodigoVerificacion {
@@ -374,6 +382,7 @@ model Reporte {
   edadVictima        Int?
   usuarioId          String?
   operadorId         String?
+  comiteId           String?
   reporteOrigenId    String?
   numeroSeguimiento  String?            @unique
   tenantId           String?
@@ -396,6 +405,7 @@ model Reporte {
   usuario       Usuario?          @relation(fields: [usuarioId], references: [id])
   eliminadoPor  Usuario?          @relation(fields: [eliminadoPorId], references: [id], name: "ReportesDadosDeBaja")
   operador      Usuario?          @relation(fields: [operadorId], references: [id], name: "CasosOperador")
+  comite        Usuario?          @relation(fields: [comiteId], references: [id], name: "CasosComite")
   anonimizacionValidadaPor Usuario? @relation(fields: [anonimizacionValidadaPorId], references: [id], name: "AnonimizacionesValidadas")
   reporteOrigen Reporte?          @relation("ReporteDuplicado", fields: [reporteOrigenId], references: [id])
   duplicados    Reporte[]         @relation("ReporteDuplicado")
@@ -407,6 +417,7 @@ model Reporte {
   ciudadRel     Ciudad?           @relation(fields: [ciudadId], references: [id])
   transiciones  TransicionReporte[]
   reintentos    ReintentoReporte[]
+  solicitudComite SolicitudComite?
 
   @@index([identificador, plataformaId])
   @@index([estado])
@@ -418,7 +429,30 @@ model Reporte {
   @@index([eliminado])
   @@index([eliminadoPorId])
   @@index([operadorId])
+  @@index([comiteId])
   @@index([anonimizacionValidadaPorId])
+}
+
+model SolicitudComite {
+  id         String    @id @default(cuid())
+  reporteId  String    @unique
+  numero     String    @unique
+  estado     String    @default("PENDIENTE")
+  comiteId   String?
+  operadorId String?
+  motivo     String    @db.Text
+  resolucion String?   @db.Text
+  creadoEn   DateTime  @default(now())
+  resueltoEn DateTime?
+
+  reporte  Reporte  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  comite   Usuario? @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
+  operador Usuario? @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
+
+  @@index([estado])
+  @@index([comiteId])
+  @@index([operadorId])
+  @@index([creadoEn])
 }
 
 model TransicionReporte {
@@ -610,6 +644,8 @@ model CorreccionAdmin {
   clasificacion    ClasificacionIA        @relation(fields: [clasificacionId], references: [id], onDelete: Cascade)
   admin            Usuario                @relation(fields: [adminId], references: [id])
   datasetRegistros DatasetEntrenamiento[]
+
+  @@index([adminId])
 }
 
 model DatasetEntrenamiento {
