@@ -13,6 +13,7 @@ enum RolUsuario {
   ADMIN
   SCHOOL_ADMIN
   PARENT
+  OPERADOR
 }
 
 enum EstadoUsuario {
@@ -62,6 +63,16 @@ enum AccionAudit {
   CIRCULO_CONTACT_CREATE
   CIRCULO_CONTACT_UPDATE
   CIRCULO_CONTACT_DISABLE
+  OPERADOR_CREADO
+  OPERADOR_ACTIVADO
+  OPERADOR_DESACTIVADO
+  OPERADOR_ASIGNADO
+  OPERADOR_REASIGNADO
+  CASO_CONFIRMADO
+  CASO_CORREGIDO
+  CASO_DADO_DE_BAJA
+  CASO_ESCALADO
+  CASO_NOTA_AGREGADA
 }
 
 enum EstadoApelacion {
@@ -129,6 +140,10 @@ model Usuario {
   casosEval             CasoEval[]
   evalRuns              EvalRun[]
   apelaciones           ApelacionIdentificador[]
+  casosAsignados        Reporte[]                @relation("CasosOperador")
+  apelacionesAsignadas  ApelacionIdentificador[] @relation("ApelacionesOperador")
+  perfilOperador        PerfilOperador?
+  operadoresCreados     PerfilOperador[]         @relation("OperadoresCreados")
   contactosConfianza            ContactoConfianza[]
   notificacionesCirculo         Boolean                  @default(true)
   ultimaNotificacionCirculoEn   DateTime?
@@ -137,6 +152,23 @@ model Usuario {
   @@index([rol])
   @@index([estado])
   @@index([tenantId])
+}
+
+model PerfilOperador {
+  id                       String   @id @default(cuid())
+  usuarioId                String   @unique
+  cupoMaximo               Int      @default(10)
+  esRevisorDeApelaciones Boolean  @default(false)
+  notasInternas            String?
+  creadoPorId              String
+  creadoEn                 DateTime @default(now())
+  actualizadoEn            DateTime @updatedAt
+
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  creadoPor Usuario @relation(fields: [creadoPorId], references: [id], name: "OperadoresCreados")
+
+  @@index([usuarioId])
+  @@index([creadoPorId])
 }
 
 model CodigoVerificacion {
@@ -323,6 +355,7 @@ model Reporte {
   esAnonimo          Boolean            @default(true)
   edadVictima        Int?
   usuarioId          String?
+  operadorId         String?
   reporteOrigenId    String?
   numeroSeguimiento  String?            @unique
   tenantId           String?
@@ -342,6 +375,7 @@ model Reporte {
   plataforma    Plataforma        @relation(fields: [plataformaId], references: [id])
   usuario       Usuario?          @relation(fields: [usuarioId], references: [id])
   eliminadoPor  Usuario?          @relation(fields: [eliminadoPorId], references: [id], name: "ReportesDadosDeBaja")
+  operador      Usuario?          @relation(fields: [operadorId], references: [id], name: "CasosOperador")
   reporteOrigen Reporte?          @relation("ReporteDuplicado", fields: [reporteOrigenId], references: [id])
   duplicados    Reporte[]         @relation("ReporteDuplicado")
   clasificacion ClasificacionIA?
@@ -360,6 +394,7 @@ model Reporte {
   @@index([ciudadId])
   @@index([eliminado])
   @@index([eliminadoPorId])
+  @@index([operadorId])
 }
 
 model FuenteReporte {
@@ -417,6 +452,7 @@ model ApelacionIdentificador {
   evidenciaUrl          String?
   respuestaAdmin        String?
   adminId               String?
+  operadorId            String?
   tipoVerificacion      String // SMS | NICK
   contacto              String?
   smsCodigoHash         String?
@@ -431,11 +467,13 @@ model ApelacionIdentificador {
 
   plataforma             Plataforma             @relation(fields: [plataformaId], references: [id])
   admin                  Usuario?               @relation(fields: [adminId], references: [id])
+  operador               Usuario?               @relation(fields: [operadorId], references: [id], name: "ApelacionesOperador")
   identificadorReportado IdentificadorReportado @relation(fields: [identificador, plataformaId], references: [identificador, plataformaId])
 
   @@index([identificador, plataformaId])
   @@index([estado])
   @@index([tokenAcceso])
+  @@index([operadorId])
 }
 
 model ContactoConfianza {

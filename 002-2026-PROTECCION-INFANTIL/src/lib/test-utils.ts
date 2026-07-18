@@ -15,5 +15,6 @@ export async function resetDatabase() {
     await prisma.codigoVerificacion.deleteMany();
     await prisma.auditLog.deleteMany();
     await prisma.parametroSistema.deleteMany();
+    await prisma.perfilOperador.deleteMany();
     await prisma.usuario.deleteMany();
 }

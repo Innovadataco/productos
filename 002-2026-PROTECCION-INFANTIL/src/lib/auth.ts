@@ -86,7 +86,7 @@ export async function getUserFromToken(request: Request) {
     }
 }
 
-export async function verifyAuth(requiredRol?: RolUsuario) {
+export async function verifyAuth(requiredRol?: RolUsuario | RolUsuario[]) {
     let token: string | undefined;
     try {
         const cookieStore = await cookies();
@@ -111,15 +111,26 @@ export async function verifyAuth(requiredRol?: RolUsuario) {
         throw new AppError("Usuario no activo", ERROR_CODES.AUTH_INVALID, 401);
     }
 
-    if (requiredRol && user.rol !== requiredRol) {
-        throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
+    if (requiredRol) {
+        const roles = Array.isArray(requiredRol) ? requiredRol : [requiredRol];
+        if (!roles.includes(user.rol)) {
+            throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
+        }
     }
 
     return user;
 }
 
-export function requireRol(rol: RolUsuario) {
+export function requireRol(rol: RolUsuario | RolUsuario[]) {
     return () => verifyAuth(rol);
+}
+
+export function requireAdmin() {
+    return () => verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+}
+
+export function requireOperadorOAdmin() {
+    return () => verifyAuth(["ADMIN", "SCHOOL_ADMIN", "OPERADOR"]);
 }
 
 export async function setSessionCookie(request: Request, token: string): Promise<void> {
