@@ -20,6 +20,7 @@
 | `013` | Administración del motor IA desde el panel | CERRADA | 2026-07-17 | [`spec.md`](013-admin-motor-ia/spec.md) | [`plan.md`](013-admin-motor-ia/plan.md) | [`reporte-cierre.md`](013-admin-motor-ia/reporte-cierre.md) |
 | `014` | Laboratorio de experimentos IA | CERRADA | 2026-07-17 | [`spec.md`](014-laboratorio-ia/spec.md) | [`plan.md`](014-laboratorio-ia/plan.md) | [`reporte-cierre.md`](014-laboratorio-ia/reporte-cierre.md) |
 | `015` | Defensas anti-abuso | CERRADA | 2026-07-17 | [`spec.md`](015-anti-abuso/spec.md) | [`plan.md`](015-anti-abuso/plan.md) | [`reporte-cierre.md`](015-anti-abuso/reporte-cierre.md) |
+| `016` | Círculo de Confianza | EN DISEÑO | — | [`spec.md`](016-circulo-confianza/spec.md) | [`plan.md`](016-circulo-confianza/plan.md) | [`diseno.md`](016-circulo-confianza/diseno.md) (pendiente de aprobación) |
 | `02` | Módulo de reportes comunitarios | CERRADA | 2026-07-14 | [`spec.md`](02-reportes-comunitarios/spec.md) | [`plan.md`](02-reportes-comunitarios/plan.md) | [`IMPLEMENTATION-REPORT.md`](02-reportes-comunitarios/IMPLEMENTATION-REPORT.md) |
 | `borrador-anti-abuso` | Defensas anti-abuso (borrador de decisión) | BORRADOR | — | [`borrador-anti-abuso.md`](borrador-anti-abuso.md) | — | — |
 
