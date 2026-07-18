@@ -123,6 +123,8 @@ export async function enviarAlertaCirculoConfianza(email: string): Promise<void>
         console.error("Resend error alerta círculo:", result.error);
         throw new Error("Error al enviar alerta de Círculo de Confianza");
     }
+
+    console.log(`[EMAIL] Alerta Círculo de Confianza enviada a ${email} (resendId=${result.data?.id ?? "n/a"})`);
 }
 
 const COOLDOWN_ALERTA_MS = 24 * 60 * 60 * 1000;

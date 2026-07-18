@@ -429,8 +429,14 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
                 eliminado: true,
             },
         });
-        if (!reporte || reporte.eliminado) return;
-        if (!ESTADOS_VISIBLES.includes(reporte.estado as EstadoReporte)) return;
+        if (!reporte || reporte.eliminado) {
+            console.log(`[CIRCULO] Notificación omitida: reporte ${reporteId} no existe o está eliminado`);
+            return;
+        }
+        if (!ESTADOS_VISIBLES.includes(reporte.estado as EstadoReporte)) {
+            console.log(`[CIRCULO] Notificación omitida: estado ${reporte.estado} no visible`);
+            return;
+        }
 
         const contactos = await prisma.contactoConfianza.findMany({
             where: {
@@ -441,10 +447,16 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             include: { usuario: { select: { id: true, email: true, notificacionesCirculo: true, ultimaNotificacionCirculoEn: true } } },
         });
 
-        if (contactos.length === 0) return;
+        if (contactos.length === 0) {
+            console.log(`[CIRCULO] Notificación omitida: sin contactos activos para ${reporte.identificador}`);
+            return;
+        }
 
         const globalEnabled = await getParametroSistemaValor("circulo.notificaciones.enabled");
-        if (globalEnabled === "false") return;
+        if (globalEnabled === "false") {
+            console.log("[CIRCULO] Notificación omitida: circulo.notificaciones.enabled=false");
+            return;
+        }
 
         const cooldownHoras = parseInt((await getParametroSistemaValor("circulo.notificaciones.cooldown_horas")) || "24", 10);
         const cooldownMs = (Number.isNaN(cooldownHoras) ? 24 : cooldownHoras) * 60 * 60 * 1000;
@@ -452,11 +464,16 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
 
         for (const contacto of contactos) {
             const usuario = contacto.usuario;
-            if (!usuario.notificacionesCirculo) continue;
+            if (!usuario.notificacionesCirculo) {
+                console.log(`[CIRCULO] Notificación omitida: usuario ${usuario.id} desactivó notificaciones`);
+                continue;
+            }
             if (usuario.ultimaNotificacionCirculoEn && ahora.getTime() - usuario.ultimaNotificacionCirculoEn.getTime() < cooldownMs) {
+                console.log(`[CIRCULO] Notificación omitida: usuario ${usuario.id} en cooldown`);
                 continue;
             }
 
+            console.log(`[CIRCULO] Enviando alerta ciega a ${usuario.email}`);
             await enviarAlertaCirculoConfianza(usuario.email);
             await prisma.usuario.update({
                 where: { id: usuario.id },
