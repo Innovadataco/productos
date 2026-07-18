@@ -1,4 +1,4 @@
-# Reporte de cierre: Rediseño del Home (Spec 028)
+# Reporte de cierre: Rediseño del Home (Spec 028) — buscador integrado
 
 **Spec**: [`spec.md`](./spec.md) | **Plan**: [`plan.md`](./plan.md) | **Quickstart**: [`quickstart.md`](./quickstart.md)
 
@@ -12,18 +12,21 @@
 
 ## Resumen
 
-Se rediseñó la landing page (`/`) para orientar al usuario desde el primer vistazo: dos acciones grandes (reportar y consultar), más accesos secundarios a registro y dashboard público. Se conservó el buscador existente y el estilo glassmorphism. No se tocó backend, auth ni endpoints.
+Se rediseñó la landing page (`/`) para orientar al usuario desde el primer vistazo: dos tarjetas de acción grandes (reportar y consultar), con el buscador de identificador integrado dentro de la tarjeta "Consultar". Se eliminó el bloque separado "Consulta un identificador" debajo del hero. Se conservaron los accesos secundarios a registro y dashboard público, y el estilo glassmorphism. No se tocó backend, auth ni endpoints.
 
 ---
 
 ## Decisiones y reutilización
 
-- **Componente modificado**: `src/components/modules/LandingHero.tsx`.
-- **Sin componentes nuevos**: todos los iconos son SVG inline para no agregar dependencias.
-- **No se tocó**: `HomePageClient.tsx`, `ConsultaForm.tsx`, `ConsultaResultado.tsx`, ni ningún endpoint.
+- **Componentes modificados**:
+  - `src/components/modules/LandingHero.tsx`: nuevo layout, textos, iconos y buscador integrado en la tarjeta de consultar.
+  - `src/components/modules/HomePageClient.tsx`: pasa `onSearch` a `LandingHero`, muestra resultados/estados debajo del hero y elimina el bloque `#consultar` separado.
+  - `src/components/modules/ConsultaForm.tsx`: prop `compact` opcional para ocultar el label cuando se usa dentro de la tarjeta.
+- **Sin componentes nuevos**: todos los iconos son SVG inline; no se agregaron dependencias.
+- **No se tocó**: `ConsultaResultado.tsx`, endpoints de consulta, wizard de reporte, auth.
 - **Textos**: español neutral, textos aprobados por el owner, sin voseo.
-- **Responsive**: grid de 1 columna en móvil, 2 columnas en `sm`.
-- **Accesibilidad**: iconos decorativos con `aria-hidden`, textos visibles en todos los enlaces.
+- **Responsive**: grid de 1 columna en móvil, `sm:grid-cols-[1fr_1.25fr]` en escritorio (consultar más ancha).
+- **Accesibilidad**: iconos decorativos con `aria-hidden`, textos visibles en todos los enlaces, formulario con label asociado al input.
 
 ---
 
@@ -36,7 +39,7 @@ Se rediseñó la landing page (`/`) para orientar al usuario desde el primer vis
 | Tests unitarios | `npm run test` | ✅ 343 tests pasaron |
 | Build | `npm run build` | ✅ Compilación exitosa |
 | Smoke E2E | `npx tsx scripts/smoke-e2e.ts` | ✅ PASÓ (8/8 pasos) |
-| Home renderizado | `curl http://localhost:5005/` | ✅ Muestra título, acciones y accesos secundarios |
+| Home renderizado | `curl http://localhost:5005/` | ✅ Muestra título, tarjetas, buscador integrado y accesos secundarios |
 
 ---
 
@@ -50,11 +53,13 @@ Se rediseñó la landing page (`/`) para orientar al usuario desde el primer vis
 
 ## Archivos tocados/creados
 
-- `src/components/modules/LandingHero.tsx` — rediseño completo del hero.
-- `specs/028-redisenio-home/spec.md` — especificación (creado).
-- `specs/028-redisenio-home/plan.md` — plan de implementación (creado).
-- `specs/028-redisenio-home/quickstart.md` — escenarios de validación (creado).
-- `specs/028-redisenio-home/cierre.md` — este reporte (creado).
+- `src/components/modules/LandingHero.tsx` — rediseño completo del hero con buscador integrado.
+- `src/components/modules/HomePageClient.tsx` — pasa `onSearch` a `LandingHero`, muestra resultados y elimina el bloque de consulta separado.
+- `src/components/modules/ConsultaForm.tsx` — modo `compact` opcional.
+- `specs/028-redisenio-home/spec.md` — especificación actualizada (modificada).
+- `specs/028-redisenio-home/plan.md` — plan actualizado (modificado).
+- `specs/028-redisenio-home/quickstart.md` — escenarios de validación actualizados (modificado).
+- `specs/028-redisenio-home/cierre.md` — este reporte (modificado).
 - `specs/README.md` — índice maestro actualizado con la spec 028.
 
 ---
@@ -62,9 +67,12 @@ Se rediseñó la landing page (`/`) para orientar al usuario desde el primer vis
 ## Commits
 
 ```text
-6d1c5b3 docs(specs): spec 028 rediseño del home con spec, plan y quickstart
+6d1c5b3 docs(specs): spec 028 redisenio del home con spec, plan y quickstart
 16efae4 feat(ui): rediseño landing con acciones principales y accesos secundarios
+300ae9b docs(specs): reporte de cierre 028 y actualización del índice maestro
 ```
+
+*(Nota: los commits finales de esta iteración incluirán los ajustes del buscador integrado.)*
 
 ---
 
@@ -78,3 +86,4 @@ No aplica. Este cambio no toca el pipeline de clasificación IA ni el procesamie
 
 - El acceso "Crear una cuenta" siempre visible, incluso para usuarios autenticados, para mantener la simplicidad visual del layout.
 - El bug 021 (reporte anónimo para usuarios internos) no se resolvió en este cambio; el enlace a `/reportar` se mantiene.
+- El bloque de consulta separado (`#consultar`) fue eliminado; el resultado de la consulta se muestra ahora debajo del hero.
