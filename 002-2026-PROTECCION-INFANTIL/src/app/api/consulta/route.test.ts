@@ -78,10 +78,9 @@ describe("GET /api/consulta", () => {
         expect(body.visibleEnDashboard).toBe(false);
         expect(body.totalReportes).toBe(1);
         expect(body.plataformas).toHaveLength(1);
-        expect(body.categorias).toHaveLength(1);
         expect(body.ubicaciones).toHaveLength(1);
-        expect(body.ubicaciones[0].lat).toBeUndefined();
-        expect(body.ubicaciones[0].lng).toBeUndefined();
+        expect(body.ubicaciones[0].lat).toBe(4.711);
+        expect(body.ubicaciones[0].lng).toBe(-74.0721);
         expect(body.texto).toBeUndefined();
         expect(body.textoOriginal).toBeUndefined();
     });
@@ -100,30 +99,27 @@ describe("GET /api/consulta", () => {
         expect(body.visibleEnDashboard).toBe(true);
         expect(body.totalReportes).toBe(3);
         expect(body.score).toBeUndefined();
+        expect(body.categorias).toBeUndefined();
         expect(body.ubicaciones).toHaveLength(1);
         expect(body.resumen).toContain("3");
         expect(body.plataformas).toHaveLength(1);
         expect(body.plataformas[0].nombre).toBe("WhatsApp");
     });
 
-    it("usuario autenticado ve score, nivel de riesgo y categorías", async () => {
-        const user = await crearUsuario("PARENT");
-        const token = await crearTokenUsuario(user.id, "PARENT");
+    it("no expone score, nivel de riesgo ni categorías", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         for (let i = 0; i < 3; i++) {
             await crearReporteVisible("+57300AUTH", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
         }
 
-        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300AUTH", {
-            headers: { cookie: `token=${token}` },
-        });
+        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300AUTH");
         const res = await GET(req);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.tieneReportes).toBe(true);
-        expect(body.score).toBeGreaterThanOrEqual(0);
-        expect(body.nivelRiesgo).toMatch(/^(BAJO|MEDIO|ALTO|CRITICO)$/);
-        expect(body.categorias).toHaveLength(1);
+        expect(body.score).toBeUndefined();
+        expect(body.nivelRiesgo).toBeUndefined();
+        expect(body.categorias).toBeUndefined();
         expect(body.timeline).toHaveLength(1);
     });
 
@@ -148,6 +144,6 @@ describe("GET /api/consulta", () => {
         expect(body.tieneReportes).toBe(true);
         expect(body.totalReportes).toBe(6);
         expect(body.plataformas).toHaveLength(2);
-        expect(body.categorias).toHaveLength(2);
+        expect(body.categorias).toBeUndefined();
     });
 });

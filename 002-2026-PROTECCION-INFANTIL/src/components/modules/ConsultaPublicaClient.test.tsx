@@ -19,12 +19,13 @@ const baseConReportes = {
     primerReporte: "2026-07-16T15:55:26.045Z",
     ultimoReporte: "2026-07-16T15:55:26.045Z",
     plataformas: [{ id: "p1", nombre: "Facebook", clave: "facebook", total: 1 }],
-    categorias: [{ categoria: "COMPARTIMIENTO_SEXUAL", total: 1, confianzaPromedio: 0.8 }],
     ubicaciones: [
         {
             pais: "Bolivia",
             ciudad: "Cochabamba",
             total: 1,
+            lat: -17.7833,
+            lng: -63.1821,
             fechasReporte: ["2026-07-16"],
             fechasIncidente: ["2026-07-16"],
         },
@@ -86,8 +87,52 @@ describe("ConsultaPublicaClient", () => {
 
         await waitFor(() => {
             expect(document.body.textContent).toContain("Facebook");
-            expect(document.body.textContent).toContain("Compartimiento sexual");
             expect(document.body.textContent).toContain("Total reportes");
+            expect(document.body.textContent).toContain("Con reportes");
+            expect(document.body.textContent).toContain("Cochabamba, Bolivia");
+        });
+    });
+
+    it("no muestra score ni categorías", async () => {
+        mockFetch(baseConReportes);
+        render(<ConsultaPublicaClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
+            target: { value: "3001111111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            expect(document.body.textContent).not.toContain("Score");
+            expect(document.body.textContent).not.toContain("Compartimiento sexual");
+            expect(document.body.textContent).not.toContain("Categorías detectadas");
+        });
+    });
+
+    it("no crashea cuando las ubicaciones no tienen coordenadas", async () => {
+        mockFetch({
+            ...baseConReportes,
+            ubicaciones: [
+                {
+                    pais: "Bolivia",
+                    ciudad: "Cochabamba",
+                    total: 1,
+                    lat: null,
+                    lng: null,
+                    fechasReporte: ["2026-07-16"],
+                    fechasIncidente: ["2026-07-16"],
+                },
+            ],
+        });
+        render(<ConsultaPublicaClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
+            target: { value: "3001111111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            expect(document.body.textContent).toContain("Cochabamba, Bolivia");
         });
     });
 
