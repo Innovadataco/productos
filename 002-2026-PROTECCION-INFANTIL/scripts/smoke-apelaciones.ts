@@ -66,8 +66,9 @@ async function getPlataformaClave(): Promise<string> {
 }
 
 async function crearReporteApi(identificador: string, plataformaClave: string): Promise<string> {
-    const res = await api("/api/reportes", {
+    const res = await fetch(`${APP_URL}/api/reportes`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             identificador,
             plataforma: plataformaClave,
