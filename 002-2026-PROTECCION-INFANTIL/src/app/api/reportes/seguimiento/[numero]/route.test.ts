@@ -145,6 +145,39 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(body.error.message).toBe("Número de seguimiento no encontrado");
     });
 
+    it("muestra el nombre personalizado cuando la plataforma es 'otro'", async () => {
+        const plataformaOtro = await prisma.plataforma.upsert({
+            where: { clave: "otro" },
+            update: {},
+            create: { clave: "otro", nombre: "Otra plataforma", categoria: "otro" },
+        });
+        const usuario = await crearUsuario("PARENT");
+        await prisma.reporte.create({
+            data: {
+                identificador: "+57300OTRO",
+                plataformaId: plataformaOtro.id,
+                otraPlataforma: "Discord",
+                texto: "Texto de prueba.",
+                fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: false,
+                usuarioId: usuario.id,
+                numeroSeguimiento: "RPT-OTRO01",
+                estado: "PENDIENTE",
+            },
+        });
+
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-OTRO01"),
+            { params: Promise.resolve({ numero: "RPT-OTRO01" }) }
+        );
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.plataforma).toBe("Discord");
+        expect(body.plataforma).not.toContain("undefined");
+    });
+
     it("refleja cambios en ui.sla_horas_procesamiento", async () => {
         await prisma.parametroSistema.updateMany({
             where: { clave: "ui.sla_horas_procesamiento" },

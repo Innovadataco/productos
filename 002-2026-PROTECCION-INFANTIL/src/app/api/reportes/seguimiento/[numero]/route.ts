@@ -6,6 +6,7 @@ import { calcularRanking } from "@/lib/ranking";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras } from "@/lib/reporte-estados-usuario";
 import { ERROR_CODES } from "@/lib/errors";
+import { formatPlataforma } from "@/lib/plataforma";
 
 const CATEGORIA_LABELS: Record<string, string> = {
     CONTACTO_INSISTENTE: "Contacto insistente",
@@ -42,9 +43,18 @@ export async function GET(
 
         const reporte = await prisma.reporte.findUnique({
             where: { numeroSeguimiento: numero },
-            include: {
-                clasificacion: true,
+            select: {
+                id: true,
+                identificador: true,
+                plataformaId: true,
                 plataforma: { select: { clave: true, nombre: true } },
+                otraPlataforma: true,
+                estado: true,
+                eliminado: true,
+                creadoEn: true,
+                actualizadoEn: true,
+                numeroSeguimiento: true,
+                clasificacion: true,
             },
         });
 
@@ -85,7 +95,7 @@ export async function GET(
             creadoEn: reporte.creadoEn,
             actualizadoEn: reporte.actualizadoEn,
             identificador: reporte.identificador,
-            plataforma: reporte.plataforma.nombre,
+            plataforma: formatPlataforma(reporte.plataforma.nombre, reporte.otraPlataforma, reporte.plataforma.clave),
             clasificacion: reporte.clasificacion
                 ? {
                     categoria: reporte.clasificacion.categoria,

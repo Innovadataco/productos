@@ -5,6 +5,7 @@ import { calcularRanking } from "@/lib/ranking";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras } from "@/lib/reporte-estados-usuario";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { formatPlataforma } from "@/lib/plataforma";
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
                 take: pageSize,
                 include: {
                     clasificacion: true,
-                    plataforma: { select: { nombre: true } },
+                    plataforma: { select: { nombre: true, clave: true } },
                 },
             }),
             prisma.reporte.count({ where: baseWhere }),
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
                 return {
                     id: r.id,
                     identificador: r.identificador,
-                    plataforma: r.plataforma.nombre,
+                    plataforma: formatPlataforma(r.plataforma.nombre, r.otraPlataforma, r.plataforma.clave),
                     estadoInterno: r.estado,
                     estadoVisual: estadoUsuario.estadoVisual,
                     badge: estadoUsuario.badge,

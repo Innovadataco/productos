@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { EstadoReporte } from "@prisma/client";
+import { formatPlataforma } from "@/lib/plataforma";
 
 const consultaSchema = z.object({
     identificador: z.string().min(3).max(100),
@@ -77,6 +78,7 @@ export async function GET(request: Request) {
                 plataforma: { select: { id: true, nombre: true, clave: true } },
                 clasificacion: { select: { categoria: true, confianza: true } },
                 ciudadRel: { select: { lat: true, lng: true } },
+                otraPlataforma: true,
             },
             orderBy: { creadoEn: "desc" },
             take: 1000,
@@ -98,13 +100,23 @@ export async function GET(request: Request) {
         const ultimoReporte = reportes[0]?.creadoEn ?? null;
         const primerReporte = reportes[reportes.length - 1]?.creadoEn ?? null;
 
-        // Plataformas
-        const porPlataforma = new Map<string, { id: string; nombre: string; clave: string; total: number }>();
+        // Plataformas (agrupadas respetando el nombre personalizado en "otro")
+        const porPlataforma = new Map<
+            string,
+            { id: string; nombre: string; clave: string; total: number; otraPlataforma: string | null }
+        >();
         for (const r of reportes) {
             const p = r.plataforma;
-            const actual = porPlataforma.get(p.id) || { id: p.id, nombre: p.nombre, clave: p.clave, total: 0 };
+            const key = p.clave === "otro" && r.otraPlataforma ? `otro:${r.otraPlataforma}` : p.id;
+            const actual = porPlataforma.get(key) || {
+                id: p.id,
+                nombre: formatPlataforma(p.nombre, r.otraPlataforma, p.clave),
+                clave: p.clave,
+                total: 0,
+                otraPlataforma: p.clave === "otro" ? r.otraPlataforma : null,
+            };
             actual.total += 1;
-            porPlataforma.set(p.id, actual);
+            porPlataforma.set(key, actual);
         }
         const plataformas = Array.from(porPlataforma.values()).sort((a, b) => b.total - a.total);
 

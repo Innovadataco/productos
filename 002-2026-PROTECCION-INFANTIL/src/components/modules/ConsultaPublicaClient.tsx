@@ -9,6 +9,7 @@ import { DonutChart } from "./DonutChart";
 import { MetricCard } from "./MetricCard";
 import { ChartCard } from "./ChartCard";
 import { MiniList } from "./MiniList";
+import { formatPlataforma, formatPlataformasResumen } from "@/lib/plataforma";
 
 const MapaUbicaciones = dynamic(
     () => import("./MapaUbicaciones").then((mod) => mod.MapaUbicaciones),
@@ -45,7 +46,7 @@ type ConsultaResponse = {
     reportesAnonimos?: number;
     primerReporte?: string | null;
     ultimoReporte?: string | null;
-    plataformas?: { id: string; nombre: string; clave: string; total: number }[];
+    plataformas?: { id: string; nombre: string; clave: string; total: number; otraPlataforma?: string | null }[];
     ubicaciones?: Ubicacion[];
     timeline?: { mes: string; total: number }[];
     resumen?: string;
@@ -83,7 +84,10 @@ export function ConsultaPublicaClient() {
         }
     };
 
-    const plataformasChart = (data?.plataformas ?? []).map((p) => ({ label: p.nombre, value: p.total }));
+    const plataformasChart = (data?.plataformas ?? []).map((p) => ({
+        label: formatPlataforma(p.nombre, p.otraPlataforma, p.clave),
+        value: p.total,
+    }));
     const timelineChart = (data?.timeline ?? []).map((t) => ({ label: formatMes(t.mes), value: t.total }));
     const ubicacionesList = (data?.ubicaciones ?? []).map((u) => ({
         label: `${u.ciudad}, ${u.pais}`,
@@ -150,7 +154,10 @@ export function ConsultaPublicaClient() {
 
                     {/* Resumen */}
                     <ChartCard title="Resumen" subtitle={`${data.identificador} — información agregada`}>
-                        <p className="text-sm text-muted">{data.resumen || "No hay resumen disponible."}</p>
+                        <p className="text-base font-medium text-body">
+                            {formatPlataformasResumen(data.plataformas ?? [], data.totalReportes)}
+                        </p>
+                        <p className="mt-2 text-sm text-muted">{data.resumen || "No hay resumen disponible."}</p>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                             <p>
                                 <span className="text-subtle">Primer reporte:</span>{" "}

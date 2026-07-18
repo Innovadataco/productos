@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { formatPlataforma } from "@/lib/plataforma";
 
 type WizardData = {
     identificador: string;
@@ -27,10 +28,7 @@ export function ReporteStepConfirmar({
 }) {
     const [checked, setChecked] = useState(false);
 
-    const plataformaDisplay =
-        data.plataforma === "otro" && data.otraPlataforma
-            ? `Otra: ${data.otraPlataforma}`
-            : data.plataforma;
+    const plataformaDisplay = formatPlataforma(data.plataforma, data.otraPlataforma, data.plataforma);
 
     return (
         <div className="space-y-5">

@@ -1,6 +1,7 @@
 "use client";
 
 import { ScoreDisplay } from "./ScoreDisplay";
+import { formatPlataforma } from "@/lib/plataforma";
 
 type Ubicacion = { pais: string; ciudad: string; fecha: string };
 type CategoriaItem = { categoria: string; cantidad: number };
@@ -9,7 +10,7 @@ type Distribucion = { porCiudad: Record<string, number>; porPais: Record<string,
 
 type Resultado = {
     identificador: string;
-    plataformas?: { id: string; nombre: string; totalReportes: number }[];
+    plataformas?: { id: string; nombre: string; clave?: string; otraPlataforma?: string | null; totalReportes: number }[];
     tieneReportes: boolean;
     totalReportes?: number;
     reportesAutenticados?: number;
@@ -58,7 +59,7 @@ export function ConsultaResultado({ data }: { data: Resultado }) {
                             className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-accent dark:bg-sky-950/40"
                             title={`${p.totalReportes} reportes`}
                         >
-                            {p.nombre}
+                            {formatPlataforma(p.nombre, p.otraPlataforma, p.clave)}
                         </span>
                     ))}
                 </div>

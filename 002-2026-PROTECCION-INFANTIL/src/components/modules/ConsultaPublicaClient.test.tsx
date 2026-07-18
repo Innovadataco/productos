@@ -18,7 +18,7 @@ const baseConReportes = {
     reportesAnonimos: 1,
     primerReporte: "2026-07-16T15:55:26.045Z",
     ultimoReporte: "2026-07-16T15:55:26.045Z",
-    plataformas: [{ id: "p1", nombre: "Facebook", clave: "facebook", total: 1 }],
+    plataformas: [{ id: "p1", nombre: "Facebook", clave: "facebook", total: 1, otraPlataforma: null }],
     ubicaciones: [
         {
             pais: "Bolivia",
@@ -136,8 +136,16 @@ describe("ConsultaPublicaClient", () => {
         });
     });
 
-    it("muestra error cuando la API falla", async () => {
-        mockFetch({ error: { message: "Error del servidor" } }, false);
+    it("muestra resumen multi-plataforma cuando hay varias plataformas", async () => {
+        mockFetch({
+            ...baseConReportes,
+            totalReportes: 5,
+            plataformas: [
+                { id: "p1", nombre: "Roblox", clave: "roblox", total: 3, otraPlataforma: null },
+                { id: "p2", nombre: "Snapchat", clave: "snapchat", total: 1, otraPlataforma: null },
+                { id: "p3", nombre: "Discord", clave: "discord", total: 1, otraPlataforma: null },
+            ],
+        });
         render(<ConsultaPublicaClient />);
 
         fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
@@ -146,7 +154,48 @@ describe("ConsultaPublicaClient", () => {
         fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
 
         await waitFor(() => {
-            expect(document.body.textContent).toContain("Error del servidor");
+            expect(document.body.textContent).toContain("5 reportes en Roblox, Snapchat y Discord");
+        });
+    });
+
+    it("muestra el nombre personalizado cuando la plataforma es 'otro'", async () => {
+        mockFetch({
+            ...baseConReportes,
+            plataformas: [
+                { id: "p-otro", nombre: "Otra plataforma", clave: "otro", total: 1, otraPlataforma: "Telegram" },
+            ],
+        });
+        render(<ConsultaPublicaClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
+            target: { value: "3001111111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            expect(document.body.textContent).toContain("Telegram");
+            expect(document.body.textContent).not.toContain("undefined");
+            expect(document.body.textContent).not.toContain("Otra plataforma");
+        });
+    });
+
+    it("no muestra 'undefined' cuando otraPlataforma está vacía", async () => {
+        mockFetch({
+            ...baseConReportes,
+            plataformas: [
+                { id: "p-otro", nombre: "Otra plataforma", clave: "otro", total: 1, otraPlataforma: null },
+            ],
+        });
+        render(<ConsultaPublicaClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
+            target: { value: "3001111111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            expect(document.body.textContent).not.toContain("undefined");
+            expect(document.body.textContent).toContain("Otra plataforma");
         });
     });
 });
