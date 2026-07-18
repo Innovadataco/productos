@@ -118,6 +118,45 @@ describe("POST /api/reportes/procesar", () => {
         expect(clasif?.categoria).toBe("OFRECIMIENTO_REGALOS");
     });
 
+    it("marca reporte como POSIBLE_SPAM cuando la IA clasifica SPAM con alta confianza", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const reporte = await prisma.reporte.create({
+            data: {
+                identificador: "+57300SPAM",
+                plataformaId: plataforma!.id,
+                texto: "Compra relojes baratos viagra cripto dinero fácil 100% gratis",
+                fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: "RPT-SPAM01",
+                estado: "PENDIENTE",
+            },
+        });
+
+        mockClasificar.mockResolvedValue({
+            categoria: "SPAM" as CategoriaConducta,
+            confianza: 0.92,
+            categoriasSecundarias: [],
+            posibleAgresorPar: false,
+            estado: "CLASIFICADO",
+            rawResponse: "{}",
+            metrics: { modelo: "ornith:9b", latenciaMs: 1000, promptTokens: 100, responseTokens: 20 },
+            fallback: false,
+            votos: [{ categoria: "SPAM" as CategoriaConducta, confianza: 0.92, posibleAgresorPar: false }],
+        });
+        mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
+
+        const res = await POST(crearRequestProcesar(reporte.id));
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.estado).toBe("POSIBLE_SPAM");
+        expect(body.clasificacion.categoria).toBe("SPAM");
+
+        const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
+        expect(actualizado?.estado).toBe("POSIBLE_SPAM");
+    });
+
     it("anonimiza reporte con PII y lo clasifica", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const reporte = await prisma.reporte.create({

@@ -12,6 +12,7 @@ export type CategoriaConducta =
     | "CONTENIDO_GENERADO_IA"
     | "DIFUSION_NO_CONSENTIDA"
     | "DOXING"
+    | "SPAM"
     | "OTRO";
 
 type EstadoReporte =
@@ -35,6 +36,7 @@ export const CATEGORIAS_VALIDAS: CategoriaConducta[] = [
     "CONTENIDO_GENERADO_IA",
     "DIFUSION_NO_CONSENTIDA",
     "DOXING",
+    "SPAM",
     "OTRO",
 ];
 
@@ -108,6 +110,7 @@ Categorías:
 - CONTENIDO_GENERADO_IA: uso de IA para generar material sexual o manipular imágenes
 - DIFUSION_NO_CONSENTIDA: compartir imágenes o información íntima sin permiso
 - DOXING: publicar información personal para identificar, localizar o dañar
+- SPAM: contenido promocional, comercial o irrelevante sin relación con protección infantil
 - OTRO: conducta real que no encaja en las anteriores
 
 Fronteras excluyentes y ejemplos contrastivos:

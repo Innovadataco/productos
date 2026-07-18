@@ -157,15 +157,26 @@ describe("POST /api/reportes", () => {
         expect(body.error.code).toBe("RATE_LIMITED");
     });
 
-    it("marca como POSIBLE_SPAM textos sin contexto relevante", async () => {
+    it("reporte real no es marcado como spam por contenido", async () => {
         const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
             ...reporteValido,
-            texto: "asdf asdf asdf asdf asdf asdf asdf",
+            texto: "Este número contactó a mi hija ofreciendo regalos si enviaba fotos.",
         });
         const res = await POST(req);
         expect(res.status).toBe(201);
         const body = await res.json();
-        expect(body.reporte.estado).toBe("POSIBLE_SPAM");
+        expect(body.reporte.estado).toBe("PENDIENTE");
+    });
+
+    it("heurística no rechaza reporte por no mencionar ciertas palabras", async () => {
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            texto: "Un adulto me escribió insistiendo en quedar a solas. Me sentí muy incómodo.",
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(201);
+        const body = await res.json();
+        expect(body.reporte.estado).toBe("PENDIENTE");
     });
 
     it("actualiza el contador en IdentificadorReportado", async () => {

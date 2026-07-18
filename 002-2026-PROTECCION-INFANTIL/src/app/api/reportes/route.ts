@@ -48,9 +48,6 @@ export async function POST(request: Request) {
 
         const usuarioId = user?.id ?? null;
 
-        // Detección básica de spam
-        const esSpam = detectarSpam(texto);
-
         // Verificar plataforma
         const plataforma = await prisma.plataforma.findUnique({
             where: { clave: plataformaClave },
@@ -78,9 +75,9 @@ export async function POST(request: Request) {
             soft: true,
         });
 
-        // Determinar estado inicial del reporte
-        let estadoInicial: "PENDIENTE" | "POSIBLE_SPAM" | "REVISION_MANUAL" = esSpam ? "POSIBLE_SPAM" : "PENDIENTE";
-        if (rateIdentificador.softExceeded && estadoInicial === "PENDIENTE") {
+        // Determinar estado inicial del reporte (solo volumen, nunca contenido)
+        let estadoInicial: "PENDIENTE" | "POSIBLE_SPAM" | "REVISION_MANUAL" = "PENDIENTE";
+        if (rateIdentificador.softExceeded) {
             estadoInicial = rateIdentificador.markAsSpam ? "POSIBLE_SPAM" : "REVISION_MANUAL";
         }
 
@@ -227,32 +224,4 @@ export async function POST(request: Request) {
             { status: 500 }
         );
     }
-}
-
-/**
- * Detección básica de spam.
- * Heurísticas: texto muy corto, repetición excesiva de caracteres,
- * ausencia de palabras descriptivas relevantes.
- */
-function detectarSpam(texto: string): boolean {
-    const normalizado = texto.toLowerCase().trim();
-
-    // Muy corto
-    if (normalizado.length < 30) return true;
-
-    // Repetición excesiva del mismo carácter (más de 4 veces seguidas)
-    if (/(.)\1{4,}/.test(normalizado)) return true;
-
-    // Patrones de spam comunes
-    const spamPatterns = [
-        /\b(click here|visit|www\.|http|bit\.ly|goo\.gl)\b/,
-        /\b(ganar dinero|dinero fácil|free money|casino)\b/,
-    ];
-    if (spamPatterns.some(p => p.test(normalizado))) return true;
-
-    // Palabras mínimas de contexto (debe mencionar algo sobre contacto, menor, etc.)
-    const contextWords = /(niñ[oa]|menor|hij[oa]|contact[óo]|mensaje|número|foto|imagen|video|plataforma|app|juego|red social)/i;
-    if (!contextWords.test(normalizado)) return true;
-
-    return false;
 }

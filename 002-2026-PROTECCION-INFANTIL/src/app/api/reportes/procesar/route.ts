@@ -221,6 +221,12 @@ export async function POST(request: Request) {
         });
         const modeloDesempate = paramModeloDesempate?.valor || undefined;
 
+        // Spec 026: umbral para marcar SPAM como POSIBLE_SPAM
+        const paramUmbralSpam = await prisma.parametroSistema.findUnique({
+            where: { clave: "clasificacion.umbral_spam" },
+        });
+        const umbralSpam = parseFloat(paramUmbralSpam?.valor || "0.7");
+
         // F7: parámetros de detección de ráfagas
         const paramRafagaN = await prisma.parametroSistema.findUnique({
             where: { clave: "reportes.rafaga.n_reportes" },
@@ -338,7 +344,12 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
         // Anonimización automática de PII: preservar original cifrado y reemplazar texto
         let estadoFinal: EstadoReporte = clasificacion.estado;
 
-        if (piiResult?.contienePii) {
+        // Spec 026: SPAM con confianza suficiente pasa a revisión humana, no se autodestruye
+        if (clasificacion.categoria === "SPAM" && clasificacion.confianza >= umbralSpam) {
+            estadoFinal = "POSIBLE_SPAM";
+        }
+
+        if (piiResult?.contienePii && estadoFinal !== "POSIBLE_SPAM") {
             const originalPlano = obtenerTextoOriginalPlano(reporte.textoOriginal, reporte.texto);
             const anonimizacion = await anonimizarTexto(modeloAnonimizacion, originalPlano, piiResult.piiDetectada);
 
@@ -372,7 +383,7 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
         let prioridadAlta = false;
         let keywordsDetectadas: string[] = [];
         const doxing = detectarDoxing(reporte.texto);
-        if (doxing.esDoxing && clasificacion.categoria !== "DOXING") {
+        if (estadoFinal !== "POSIBLE_SPAM" && doxing.esDoxing && clasificacion.categoria !== "DOXING") {
             estadoFinal = "REVISION_MANUAL";
             prioridadAlta = true;
             keywordsDetectadas = doxing.fragmentos.length > 0 ? doxing.fragmentos : ["doxing"];
@@ -382,6 +393,7 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
         // cuando el modelo clasificó como OTRO pero hay señales de riesgo graves.
         const keywordsRiesgo = detectarKeywordsRiesgo(reporte.texto);
         if (
+            estadoFinal !== "POSIBLE_SPAM" &&
             keywordsRiesgo.tieneMatch &&
             ((estadoFinal === "CLASIFICADO" && clasificacion.categoria === "OTRO") ||
                 estadoFinal === "REVISION_MANUAL")
@@ -394,7 +406,7 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
         }
 
         // F7: ráfaga fuerza revisión manual con prioridad alta
-        if (esRafaga) {
+        if (estadoFinal !== "POSIBLE_SPAM" && esRafaga) {
             estadoFinal = "REVISION_MANUAL";
             prioridadAlta = true;
         }
@@ -428,8 +440,8 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
             });
         });
 
-        // Fase 3: asignación automática de operador para revisión manual
-        if (estadoFinal === "REVISION_MANUAL") {
+        // Fase 3: asignación automática de operador para revisión manual o posible spam
+        if (estadoFinal === "REVISION_MANUAL" || estadoFinal === "POSIBLE_SPAM") {
             asignarOperadorAReporte(reporteId!).catch((err) =>
                 console.error("[OPERADORES] Error asignando operador a reporte", { reporteId, error: err })
             );
@@ -459,7 +471,7 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
         }
 
         // Alertar a administradores cuando el reporte requiere intervención humana
-        if (estadoFinal === "REVISION_MANUAL" || estadoFinal === "REQUIERE_ANONIMIZACION") {
+        if (estadoFinal === "REVISION_MANUAL" || estadoFinal === "REQUIERE_ANONIMIZACION" || estadoFinal === "POSIBLE_SPAM") {
             enviarAlertaRevision({
                 id: reporte.id,
                 numeroSeguimiento: reporte.numeroSeguimiento,
