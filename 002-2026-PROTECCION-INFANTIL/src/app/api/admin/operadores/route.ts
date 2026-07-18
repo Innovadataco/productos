@@ -53,6 +53,7 @@ export async function GET(request: Request) {
                     email: op.email,
                     nombre: op.nombre,
                     estado: op.estado,
+                    debeCambiarPassword: op.debeCambiarPassword,
                     tenantId: op.tenantId,
                     perfil: op.perfilOperador
                         ? {
@@ -111,6 +112,7 @@ export async function POST(request: Request) {
                 passwordHash,
                 rol: "OPERADOR",
                 estado: "activo",
+                debeCambiarPassword: true,
                 tenantId: admin.tenantId,
                 perfilOperador: {
                     create: {
@@ -134,8 +136,10 @@ export async function POST(request: Request) {
             userAgent,
         });
 
+        let emailEnviado = false;
         try {
             await enviarEmailBienvenidaOperador(operador.email, password);
+            emailEnviado = true;
         } catch (err) {
             console.error("[OPERADORES] Error enviando email de bienvenida", err);
         }
@@ -146,9 +150,14 @@ export async function POST(request: Request) {
                 email: operador.email,
                 nombre: operador.nombre,
                 estado: operador.estado,
+                debeCambiarPassword: operador.debeCambiarPassword,
                 perfil: operador.perfilOperador,
             },
-            mensaje: "Operador creado. Se envió la contraseña temporal por email.",
+            passwordTemporal: password,
+            emailEnviado,
+            mensaje: emailEnviado
+                ? "Operador creado. Se envió la contraseña temporal por email."
+                : "Operador creado. No se pudo enviar el email; copiá la contraseña temporal que se muestra arriba.",
         });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {
