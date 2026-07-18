@@ -10,11 +10,12 @@ Agregar el rol `COMITE_VALIDACION` al sistema, con flujo de escalamiento desde O
 ## Decisiones
 
 - Extender `RolUsuario` con `COMITE_VALIDACION`.
-- Reutilizar el patrón de `PerfilOperador` para crear `PerfilComite` (o extender `PerfilOperador` con flag `esComite`). Se evaluará en el plan cuál opción es menos invasiva.
+- Reutilizar `PerfilOperador` con flag `esComite`; `OPERADOR` y `COMITE_VALIDACION` son **excluyentes**.
 - El operador escala al comité con un número de solicitud interno distinto al `RPT-` del usuario.
 - El comité resuelve: clasifica o corrige, y el reporte pasa a `CLASIFICADO`/`CORREGIDO`.
 - El comité está sujeto a las mismas reglas de privacidad que el operador (Spec 025): no ve quién reportó.
 - Hoy `CASO_ESCALADO` va al admin; se redirige al pool del comité.
+- Se garantiza la exclusividad a nivel de datos y asignación para evitar que alguien escale un caso a sí mismo.
 
 ## Requisitos
 

@@ -5,19 +5,32 @@
 **Nuevo modelo:**
 
 ```prisma
-model TransicionReporte {
-  id            String       @id @default(cuid())
-  reporteId     String
-  estadoAnterior EstadoReporte
-  estadoNuevo   EstadoReporte
-  responsable   String       // ej: "IA", "WORKER", "OPERADOR:cmr...", "COMITE:cmr...", "ADMIN:cmr...", "SISTEMA"
-  motivo        String?      @db.Text
-  metadatos     Json?
-  creadoEn      DateTime     @default(now())
+enum ResponsableTransicion {
+  IA
+  WORKER
+  SISTEMA
+  OPERADOR
+  COMITE
+  ADMIN
+}
 
-  reporte Reporte @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+model TransicionReporte {
+  id               String                @id @default(cuid())
+  reporteId        String
+  estadoAnterior   EstadoReporte
+  estadoNuevo      EstadoReporte
+  responsableTipo  ResponsableTransicion
+  responsableId    String?               // id de Usuario cuando tipo es OPERADOR, COMITE o ADMIN
+  motivo           String?               @db.Text
+  metadatos        Json?
+  creadoEn         DateTime              @default(now())
+
+  reporte        Reporte @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  responsableUsuario Usuario? @relation(fields: [responsableId], references: [id])
 
   @@index([reporteId])
+  @@index([responsableTipo])
+  @@index([responsableId])
   @@index([creadoEn])
 }
 ```

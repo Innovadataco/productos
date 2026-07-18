@@ -2,7 +2,7 @@
 
 ## Modelos y campos de BD (schema.prisma)
 
-**Opción recomendada: extender `RolUsuario` + reutilizar `PerfilOperador` con flag.**
+**Decisión cerrada: OPERADOR y COMITE_VALIDACION son EXCLUYENTES.** Un empleado es uno u otro, nunca ambos.
 
 ```prisma
 enum RolUsuario {
@@ -18,7 +18,7 @@ model PerfilOperador {
   usuarioId                String   @unique
   cupoMaximo               Int?
   esRevisorDeApelaciones Boolean  @default(false)
-  esComite                 Boolean  @default(false)  // NUEVO
+  esComite                 Boolean  @default(false)  // NUEVO; true solo si rol = COMITE_VALIDACION
   notasInternas            String?
   creadoPorId              String
   creadoEn                 DateTime @default(now())
@@ -29,12 +29,15 @@ model PerfilOperador {
 }
 ```
 
+**Garantía de exclusividad:**
+- A nivel de datos: validación en el helper de creación/edición (`src/lib/operadores/crud.ts`) que impida `rol=OPERADOR` con `esComite=true` o `rol=COMITE_VALIDACION` con `esComite=false`.
+- A nivel de asignación: el motor de asignación (Spec 020) filtra `rol=OPERADOR` y `esComite=false` para casos operador; la bandeja del comité filtra `rol=COMITE_VALIDACION` y `esComite=true`.
+- Un operador no puede escalar un caso a sí mismo porque nunca será COMITE.
+
 **Modelos existentes modificados:**
 - `RolUsuario`: agregar `COMITE_VALIDACION`.
 - `PerfilOperador`: agregar `esComite`.
-- `Reporte`: ya tiene `operadorId`; se reutiliza para asignación al comité o se agrega `comiteId`.
-
-**Decisión pendiente:** si un usuario solo puede ser OPERADOR o COMITE, el flag `esComite` es suficiente. Si pueden coexistir, se necesita un campo separado. Se propone flag por simplicidad.
+- `Reporte`: ya tiene `operadorId`; se agrega `comiteId` para asignación al comité (más explícito que reusar `operadorId`).
 
 **Nuevo modelo:**
 
@@ -60,10 +63,10 @@ model SolicitudComite {
 }
 ```
 
-**Modelo existente modificado:** `Usuario` agrega relaciones `solicitudesComite` y `solicitudesEscaladas`.
+**Modelo existente modificado:** `Usuario` agrega relaciones `solicitudesComite` y `solicitudesEscaladas`; `Reporte` agrega `comiteId` y relación `comite`.
 
 **Migraciones:**
-1. `2026xxxxxx_add_rol_comite_validacion` (alter enum + flag).
+1. `2026xxxxxx_add_rol_comite_validacion` (alter enum + flag + comiteId en Reporte).
 2. `2026xxxxxx_add_solicitud_comite`.
 
 ## Herramientas

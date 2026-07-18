@@ -11,7 +11,7 @@ Crear una tabla dedicada `TransicionReporte` que registre todas las transiciones
 
 - **NO extender `AuditLog`**: `AuditLog` es transversal a muchos recursos y no está optimizada para reconstruir la historia completa de un reporte. `TransicionReporte` es especializada.
 - Cada fila representa una transición: `estadoAnterior` → `estadoNuevo`.
-- El campo `responsable` indica el actor: `IA`, `WORKER`, `OPERADOR:<id>`, `COMITE:<id>`, `ADMIN:<id>`, `SISTEMA`.
+- El actor se separa en `responsableTipo` (enum `ResponsableTransicion`: `IA`, `WORKER`, `SISTEMA`, `OPERADOR`, `COMITE`, `ADMIN`) y `responsableId` (id de `Usuario` cuando aplica). Esto permite filtrar por tipo de responsable.
 - Se registra `motivo` opcional (por ejemplo, "fallo en clasificación", "escalamiento", "decisión del operador").
 - Se registra fecha/hora automáticamente.
 
