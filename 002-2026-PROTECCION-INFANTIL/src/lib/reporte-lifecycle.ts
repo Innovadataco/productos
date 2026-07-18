@@ -56,8 +56,9 @@ export async function darDeBajaReporte(params: {
     adminId: string;
     request?: Request;
     tx?: Prisma.TransactionClient;
+    accionAudit?: "REPORT_DEACTIVATE" | "CASO_DADO_DE_BAJA";
 }): Promise<ReporteBajaResult> {
-    const { reporteId, motivo, nota, adminId, request, tx: externalTx } = params;
+    const { reporteId, motivo, nota, adminId, request, tx: externalTx, accionAudit = "REPORT_DEACTIVATE" } = params;
     const { ipAddress, userAgent } = extractClientInfo(request);
 
     const work = async (tx: Prisma.TransactionClient) => {
@@ -107,7 +108,7 @@ export async function darDeBajaReporte(params: {
 
         // 5. AuditLog atómico.
         await logAudit({
-            accion: "REPORT_DEACTIVATE",
+            accion: accionAudit,
             tipoRecurso: "Reporte",
             recursoId: reporteId,
             usuarioId: adminId,

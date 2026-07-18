@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { auditCorreccion } from "@/lib/audit";
+import { auditCorreccion, logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
@@ -40,16 +41,23 @@ const correccionSchema = z.object({
     comentario: z.string().max(2000).optional(),
 });
 
-function requireAdmin(user: { rol: string }) {
-    if (String(user.rol) !== "ADMIN") {
+function requireOperadorOAdmin(user: { rol: string }) {
+    if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
+}
+
+function getClientInfo(request: Request) {
+    return {
+        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
+    };
 }
 
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth();
-        requireAdmin(user);
+        requireOperadorOAdmin(user);
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
@@ -78,6 +86,13 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
+            );
+        }
+
+        if (!puedeGestionarReporte(user, reporte)) {
+            return NextResponse.json(
+                { error: { message: "No tenés permiso para gestionar este caso", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
             );
         }
 
@@ -118,6 +133,18 @@ export async function POST(request: Request) {
             reporteId,
             categoriaOriginal: categoriaAnterior as import("@prisma/client").CategoriaConducta,
             categoriaCorregida: categoriaCorregida as import("@prisma/client").CategoriaConducta,
+        });
+
+        const { ipAddress, userAgent } = getClientInfo(request);
+        await logAudit({
+            accion: "CASO_CORREGIDO",
+            tipoRecurso: "Reporte",
+            recursoId: reporteId,
+            usuarioId: user.id,
+            valorAnterior: JSON.stringify({ estado: reporte.estado, categoria: categoriaAnterior }),
+            valorNuevo: JSON.stringify({ estado: "CORREGIDO", categoria: categoriaCorregida }),
+            ipAddress,
+            userAgent,
         });
 
         // Preparar texto seguro para el dataset de entrenamiento.

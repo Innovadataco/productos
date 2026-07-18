@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { darDeBajaReporte } from "@/lib/reporte-lifecycle";
+import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { MotivoBajaReporte } from "@prisma/client";
 import { idSchema, darDeBajaReporteSchema } from "@/lib/validators";
+import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 
-function requireAdmin(user: { rol: string }) {
-    if (String(user.rol) !== "ADMIN") {
+function requireOperadorOAdmin(user: { rol: string }) {
+    if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
 }
@@ -15,7 +17,7 @@ function requireAdmin(user: { rol: string }) {
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        requireAdmin(user);
+        requireOperadorOAdmin(user);
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
@@ -35,6 +37,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
         const reporteId = parsedId.data;
 
+        const reporte = await prisma.reporte.findUnique({
+            where: { id: reporteId },
+            select: { id: true, estado: true, operadorId: true, tenantId: true, eliminado: true },
+        });
+        if (!reporte) {
+            return NextResponse.json(
+                { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
+                { status: 404 }
+            );
+        }
+        if (!puedeGestionarReporte(user, reporte)) {
+            return NextResponse.json(
+                { error: { message: "No tenés permiso para gestionar este caso", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
+
         const body = await request.json();
         const parsed = darDeBajaReporteSchema.safeParse(body);
         if (!parsed.success) {
@@ -52,6 +71,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             nota,
             adminId: user.id,
             request,
+            accionAudit: user.rol === "OPERADOR" ? "CASO_DADO_DE_BAJA" : "REPORT_DEACTIVATE",
         });
 
         return NextResponse.json({

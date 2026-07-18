@@ -6,17 +6,26 @@ import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { recalcularYGuardarScore } from "@/lib/scoring";
+import { logAudit } from "@/lib/audit";
+import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 
-function requireAdmin(user: { rol: string }) {
-    if (String(user.rol) !== "ADMIN") {
+function requireOperadorOAdmin(user: { rol: string }) {
+    if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
+}
+
+function getClientInfo(request: Request) {
+    return {
+        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
+    };
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        requireAdmin(user);
+        requireOperadorOAdmin(user);
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
@@ -44,6 +53,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
+            );
+        }
+
+        if (!puedeGestionarReporte(user, reporte)) {
+            return NextResponse.json(
+                { error: { message: "No tenés permiso para gestionar este caso", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
             );
         }
 
@@ -91,6 +107,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
         const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+
+        const { ipAddress, userAgent } = getClientInfo(request);
+        await logAudit({
+            accion: "CASO_CONFIRMADO",
+            tipoRecurso: "Reporte",
+            recursoId: id,
+            usuarioId: user.id,
+            valorAnterior: JSON.stringify({ estado: reporte.estado, categoria }),
+            valorNuevo: JSON.stringify({ estado: "CLASIFICADO", categoria }),
+            ipAddress,
+            userAgent,
+        });
 
         return NextResponse.json({
             reporteId: id,
