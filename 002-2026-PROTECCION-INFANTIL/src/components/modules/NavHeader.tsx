@@ -103,6 +103,9 @@ export function NavHeader() {
                                                 </NavDropdownLink>
                                             </>
                                         )}
+                                        <NavDropdownLink href="/dashboard/circulo-confianza" onClick={() => setOpen(false)}>
+                                            Círculo de Confianza
+                                        </NavDropdownLink>
                                         <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
                                             Mis reportes
                                         </NavDropdownLink>
@@ -149,6 +152,7 @@ export function NavHeader() {
                         <MobileLink href="/reportar" onClick={() => setMobileOpen(false)}>Reportar</MobileLink>
                         {user ? (
                             <>
+                                <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>
                                 <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>
                                 {user.rol === "ADMIN" && (
                                     <>
