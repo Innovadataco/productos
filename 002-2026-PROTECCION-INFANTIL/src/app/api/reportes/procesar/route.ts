@@ -132,13 +132,19 @@ export async function POST(request: Request) {
         const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
         const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
 
-        // Guardar embedding (necesario para similitud y detección futura)
+        // Guardar embedding (necesario para similitud y detección futura).
+        // Idempotente: si ya existe (reintento/concurrencia), se conserva.
         const vectorStr = "[" + vector.join(",") + "]";
-        const embeddingId = crypto.randomUUID();
-        await prisma.$executeRaw`
-            INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
-            VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-        `;
+        const embeddingExistente = await prisma.embeddingReporte.findUnique({
+            where: { reporteId: reporte.id },
+        });
+        if (!embeddingExistente) {
+            const embeddingId = crypto.randomUUID();
+            await prisma.$executeRaw`
+                INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
+                VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+            `;
+        }
 
         // Recuperar ejemplos corregidos similares para RAG (F5)
         const paramRagTopK = await prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification.rag_top_k" } });
@@ -313,25 +319,50 @@ export async function POST(request: Request) {
             clasificacion = { ...clasifResult };
             piiResult = piiResultParallel;
 
-            await prisma.clasificacionIA.create({
-                data: {
-                    reporteId: reporte.id,
-                    categoria: clasificacion.categoria,
-                    confianza: clasificacion.confianza,
-                    contienePii: piiResult.contienePii,
-                    piiDetectada: piiResult.piiDetectada,
-                    categoriasSecundarias: clasificacion.categoriasSecundarias as unknown as Prisma.InputJsonValue,
-                    votos: clasificacion.votos as unknown as Prisma.InputJsonValue,
-                    posibleAgresorPar: clasificacion.posibleAgresorPar,
-                    usoCascada: clasificacion.usoCascada,
-                    modeloCascada: clasificacion.modeloCascada,
-                    modeloUsado: clasificacion.metrics.modelo,
-                    latenciaMs: clasificacion.metrics.latenciaMs + piiResult.metrics.latenciaMs,
-                    promptTokens: clasificacion.metrics.promptTokens,
-                    responseTokens: clasificacion.metrics.responseTokens,
-                    rawResponse: clasificacion.rawResponse,
-                },
-            });
+            try {
+                await prisma.clasificacionIA.create({
+                    data: {
+                        reporteId: reporte.id,
+                        categoria: clasificacion.categoria,
+                        confianza: clasificacion.confianza,
+                        contienePii: piiResult.contienePii,
+                        piiDetectada: piiResult.piiDetectada,
+                        categoriasSecundarias: clasificacion.categoriasSecundarias as unknown as Prisma.InputJsonValue,
+                        votos: clasificacion.votos as unknown as Prisma.InputJsonValue,
+                        posibleAgresorPar: clasificacion.posibleAgresorPar,
+                        usoCascada: clasificacion.usoCascada,
+                        modeloCascada: clasificacion.modeloCascada,
+                        modeloUsado: clasificacion.metrics.modelo,
+                        latenciaMs: clasificacion.metrics.latenciaMs + piiResult.metrics.latenciaMs,
+                        promptTokens: clasificacion.metrics.promptTokens,
+                        responseTokens: clasificacion.metrics.responseTokens,
+                        rawResponse: clasificacion.rawResponse,
+                    },
+                });
+            } catch (err) {
+                // Idempotencia ante concurrencia/reintento: si otro proceso creó la clasificación, reutilizarla.
+                if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+                    const clasifRecuperada = await prisma.clasificacionIA.findUnique({
+                        where: { reporteId: reporte.id },
+                    });
+                    if (clasifRecuperada) {
+                        clasificacion = {
+                            categoria: clasifRecuperada.categoria,
+                            confianza: clasifRecuperada.confianza,
+                            categoriasSecundarias: Array.isArray(clasifRecuperada.categoriasSecundarias) ? clasifRecuperada.categoriasSecundarias : [],
+                            posibleAgresorPar: clasifRecuperada.posibleAgresorPar,
+                            estado: (clasifRecuperada.contienePii ? "REQUIERE_ANONIMIZACION" : "CLASIFICADO") as EstadoReporte,
+                            metrics: { modelo: clasifRecuperada.modeloUsado, latenciaMs: clasifRecuperada.latenciaMs },
+                            rawResponse: clasifRecuperada.rawResponse,
+                            votos: Array.isArray(clasifRecuperada.votos) ? clasifRecuperada.votos : [],
+                        };
+                    } else {
+                        throw err;
+                    }
+                } else {
+                    throw err;
+                }
+            }
         }
 
 function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoActual: string): string {
@@ -411,11 +442,22 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
             prioridadAlta = true;
         }
 
-        // Actualizar estado del reporte a resultado final y registrar transición atómicamente
-        await prisma.$transaction(async (tx) => {
+        // Actualizar estado del reporte a resultado final y registrar transición atómica
+        const estadoFinalTx = await prisma.$transaction(async (tx) => {
+            const reporteActual = await tx.reporte.findUnique({
+                where: { id: reporteId! },
+                select: { estado: true },
+            });
+            if (!reporteActual) {
+                throw new Error("Reporte no encontrado durante transición final");
+            }
+            if (ESTADOS_FINALES.has(reporteActual.estado)) {
+                // Idempotencia: otro proceso ya finalizó el reporte.
+                return reporteActual.estado;
+            }
             await registrarTransicion({
                 reporteId: reporteId!,
-                estadoAnterior: "PROCESANDO",
+                estadoAnterior: reporteActual.estado,
                 estadoNuevo: estadoFinal,
                 responsableTipo: "IA",
                 motivo: estadoFinal === "REVISION_MANUAL" ? "Requiere revisión humana" : "Clasificación automática completada",
@@ -438,7 +480,9 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
                     esRafaga,
                 },
             });
+            return estadoFinal;
         });
+        estadoFinal = estadoFinalTx;
 
         // Fase 3: asignación automática de operador para revisión manual o posible spam
         if (estadoFinal === "REVISION_MANUAL" || estadoFinal === "POSIBLE_SPAM") {
