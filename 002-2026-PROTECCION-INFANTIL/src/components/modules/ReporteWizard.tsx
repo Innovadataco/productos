@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ReporteStepPlataforma } from "./ReporteStepPlataforma";
 import { ReporteStepDetalle } from "./ReporteStepDetalle";
 import { ReporteStepConfirmar } from "./ReporteStepConfirmar";
@@ -21,8 +21,19 @@ type WizardData = {
     esAnonimo: boolean;
 };
 
+type SessionUser = {
+    id: string;
+    email: string;
+    nombre: string | null;
+    rol: string;
+} | null;
+
+const ROLES_BLOQUEADOS = ["ADMIN", "OPERADOR", "SCHOOL_ADMIN"];
+
 export function ReporteWizard() {
     const [step, setStep] = useState(1);
+    const [user, setUser] = useState<SessionUser>(null);
+    const [checkingSession, setCheckingSession] = useState(true);
     const [data, setData] = useState<WizardData>({
         identificador: "",
         plataforma: "",
@@ -41,6 +52,27 @@ export function ReporteWizard() {
     const [error, setError] = useState("");
 
     const update = (partial: Partial<WizardData>) => setData((d) => ({ ...d, ...partial }));
+
+    useEffect(() => {
+        fetch("/api/me", { credentials: "include" })
+            .then(async (res) => {
+                if (res.ok) {
+                    const data = await res.json().catch(() => null);
+                    if (data && !data.error) {
+                        setUser({ id: data.id, email: data.email, nombre: data.nombre, rol: data.rol });
+                    }
+                }
+            })
+            .catch(() => {
+                // Sin sesión: flujo anónimo normal
+            })
+            .finally(() => setCheckingSession(false));
+    }, []);
+
+    async function handleLogout() {
+        await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+        window.location.reload();
+    }
 
     const handleSubmit = async () => {
         setIsSubmitting(true);
@@ -78,6 +110,31 @@ export function ReporteWizard() {
             setIsSubmitting(false);
         }
     };
+
+    if (checkingSession) {
+        return (
+            <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white/70 p-8 text-center backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/60">
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                <p className="mt-3 text-sm text-muted">Verificando sesión...</p>
+            </div>
+        );
+    }
+
+    if (user && ROLES_BLOQUEADOS.includes(user.rol)) {
+        return (
+            <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-8 dark:border-amber-800/60 dark:bg-amber-950/20">
+                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+                    Las cuentas internas no pueden crear reportes
+                </h2>
+                <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+                    Para reportar de forma anónima, cerrá sesión primero. Tu cuenta interna tiene acceso al panel de administración/operación; los reportes deben crearse desde una cuenta de usuario final o sin iniciar sesión.
+                </p>
+                <Button className="mt-6" onClick={handleLogout}>
+                    Cerrar sesión y reportar
+                </Button>
+            </div>
+        );
+    }
 
     if (resultado) {
         return <ConfirmacionReporte numeroSeguimiento={resultado.numeroSeguimiento} />;
