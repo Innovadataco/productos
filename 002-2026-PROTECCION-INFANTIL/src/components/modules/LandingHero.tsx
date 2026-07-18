@@ -3,6 +3,22 @@
 import Link from "next/link";
 import { ConsultaForm } from "./ConsultaForm";
 
+type Ubicacion = { pais: string; ciudad: string; fecha: string };
+type Plataforma = { id: string; nombre: string; totalReportes: number };
+
+export type ResultadoConsulta = {
+    identificador: string;
+    tieneReportes: boolean;
+    totalReportes?: number;
+    reportesAutenticados?: number;
+    reportesAnonimos?: number;
+    ultimoReporte?: string | null;
+    nivelRiesgo?: "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
+    plataformas?: Plataforma[];
+    ubicaciones?: Ubicacion[];
+    mensaje?: string;
+};
+
 function ShieldIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
@@ -29,27 +45,30 @@ function SearchIcon({ className }: { className?: string }) {
     );
 }
 
-function UserPlusIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="8.5" cy="7" r="4" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M20 8v6M23 11h-6" />
-        </svg>
-    );
+function formatearFecha(fecha?: string | null): string {
+    if (!fecha) return "";
+    try {
+        return new Date(fecha).toLocaleDateString("es-LA", { day: "2-digit", month: "2-digit", year: "numeric" });
+    } catch {
+        return fecha;
+    }
 }
 
-function ChartBarIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18" />
-            <rect x="7" y="10" width="4" height="8" rx="1" />
-            <rect x="15" y="6" width="4" height="12" rx="1" />
-        </svg>
-    );
-}
+export function LandingHero({
+    onSearch,
+    data,
+    isLoading,
+    error,
+    buscado,
+}: {
+    onSearch: (identificador: string) => void;
+    data: ResultadoConsulta | null;
+    isLoading: boolean;
+    error: string | null;
+    buscado: boolean;
+}) {
+    const resultado = data as ResultadoConsulta | null;
 
-export function LandingHero({ onSearch }: { onSearch: (identificador: string) => void }) {
     return (
         <section className="relative overflow-hidden rounded-[2rem] border border-white/30 dark:border-white/10 bg-gradient-to-br from-sky-500 to-cyan-600 dark:from-sky-600 dark:to-cyan-700 px-6 py-14 text-white shadow-2xl shadow-sky-500/15 dark:shadow-cyan-900/30 sm:py-20">
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -91,24 +110,81 @@ export function LandingHero({ onSearch }: { onSearch: (identificador: string) =>
                         <div className="mt-5 w-full">
                             <ConsultaForm onSearch={onSearch} compact />
                         </div>
-                    </div>
-                </div>
 
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
-                    <Link
-                        href="/registro"
-                        className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/20"
-                    >
-                        <UserPlusIcon className="h-4 w-4" aria-hidden="true" />
-                        Crear una cuenta
-                    </Link>
-                    <Link
-                        href="/dashboard/publico"
-                        className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/20"
-                    >
-                        <ChartBarIcon className="h-4 w-4" aria-hidden="true" />
-                        Ver estadísticas
-                    </Link>
+                        {(isLoading || error || buscado) && (
+                            <div className="mt-5 w-full border-t border-white/20 pt-5">
+                                {isLoading && (
+                                    <div className="flex flex-col items-center py-4">
+                                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                        <p className="mt-2 text-sm text-white/90">Consultando...</p>
+                                    </div>
+                                )}
+
+                                {error && (
+                                    <p className="rounded-xl bg-red-500/20 px-4 py-3 text-sm text-white">{error}</p>
+                                )}
+
+                                {!isLoading && buscado && !error && !resultado?.tieneReportes && (
+                                    <p className="text-sm text-white/90">
+                                        {resultado?.mensaje || "Sin reportes registrados para este identificador."}
+                                    </p>
+                                )}
+
+                                {!isLoading && resultado?.tieneReportes && (
+                                    <div className="space-y-3">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-sm font-semibold text-white">{resultado.identificador}</span>
+                                            {(resultado.totalReportes ?? 0) > 2 && (
+                                                <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white">
+                                                    {resultado.totalReportes} reportes
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {(resultado.totalReportes ?? 0) <= 2 ? (
+                                            <div className="space-y-2 text-sm text-white/90">
+                                                {!!resultado.plataformas?.length && (
+                                                    <p>
+                                                        Plataforma{resultado.plataformas.length > 1 ? "s" : ""}:{" "}
+                                                        {resultado.plataformas.map((p) => `${p.nombre} (${p.totalReportes})`).join(", ")}
+                                                    </p>
+                                                )}
+                                                {!!resultado.ubicaciones?.length && (
+                                                    <p>
+                                                        Ubicación{resultado.ubicaciones.length > 1 ? "es" : ""}:{" "}
+                                                        {resultado.ubicaciones
+                                                            .map((u) => `${u.ciudad ? `${u.ciudad}, ` : ""}${u.pais}`)
+                                                            .join("; ")}
+                                                    </p>
+                                                )}
+                                                {resultado.ultimoReporte && (
+                                                    <p>Último reporte: {formatearFecha(resultado.ultimoReporte)}</p>
+                                                )}
+                                                <p className="text-xs text-white/80">
+                                                    Reportes autenticados: {resultado.reportesAutenticados ?? 0} · Anónimos: {resultado.reportesAnonimos ?? 0}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2 text-sm text-white/90">
+                                                <p>
+                                                    Total: {resultado.totalReportes} · Autenticados: {resultado.reportesAutenticados ?? 0} · Anónimos: {resultado.reportesAnonimos ?? 0}
+                                                </p>
+                                                {resultado.nivelRiesgo && (
+                                                    <p>Nivel de riesgo: {resultado.nivelRiesgo}</p>
+                                                )}
+                                                <Link
+                                                    href={`/consulta?identificador=${encodeURIComponent(resultado.identificador)}`}
+                                                    className="inline-flex text-sm font-semibold text-white underline underline-offset-2 hover:text-sky-100"
+                                                >
+                                                    Ver vista completa
+                                                </Link>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </section>

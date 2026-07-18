@@ -75,22 +75,6 @@ export function NavHeader() {
                         Dashboard
                     </Link>
 
-                    <Link
-                        href="/consulta"
-                        className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
-                    >
-                        Consultar
-                    </Link>
-
-                    {!esEmpleado && (
-                        <Link
-                            href="/reportar"
-                            className="hidden sm:inline-flex rounded-xl accent-gradient px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20 transition hover:brightness-110"
-                        >
-                            Reportar
-                        </Link>
-                    )}
-
                     {isLoading ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
                     ) : user ? (
@@ -183,8 +167,6 @@ export function NavHeader() {
                     <div className="flex flex-col gap-2">
                         <MobileLink href="/" onClick={() => setMobileOpen(false)}>Inicio</MobileLink>
                         <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Dashboard</MobileLink>
-                        <MobileLink href="/consulta" onClick={() => setMobileOpen(false)}>Consultar</MobileLink>
-                        {!esEmpleado && <MobileLink href="/reportar" onClick={() => setMobileOpen(false)}>Reportar</MobileLink>}
                         {user ? (
                             <>
                                 {!esEmpleado && (
