@@ -61,4 +61,5 @@ export const reportesRevisionQuerySchema = z.object({
     fechaDesde: z.string().date().optional(),
     fechaHasta: z.string().date().optional(),
     incluirEliminados: z.coerce.boolean().default(false),
+    operadorId: idSchema.optional(),
 });

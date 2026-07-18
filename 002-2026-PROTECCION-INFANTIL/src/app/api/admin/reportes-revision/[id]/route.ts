@@ -4,11 +4,12 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        if (String(user.rol) !== "ADMIN") {
+        if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
@@ -37,6 +38,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             where: { id },
             include: {
                 plataforma: { select: { id: true, nombre: true, clave: true } },
+                operador: { select: { id: true, email: true, nombre: true } },
                 clasificacion: {
                     include: {
                         correccion: {
@@ -57,6 +59,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
+            );
+        }
+
+        if (!puedeGestionarReporte(user, reporte)) {
+            return NextResponse.json(
+                { error: { message: "No tenés permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
             );
         }
 

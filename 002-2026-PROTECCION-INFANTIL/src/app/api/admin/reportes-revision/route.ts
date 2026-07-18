@@ -4,6 +4,7 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { reportesRevisionQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { esAdminRol } from "@/lib/operadores/permisos";
 import type { Prisma } from "@prisma/client";
 
 const MAX_PAGE_SIZE = 100;
@@ -11,7 +12,7 @@ const MAX_PAGE_SIZE = 100;
 export async function GET(req: Request) {
     try {
         const user = await verifyAuth();
-        if (String(user.rol) !== "ADMIN") {
+        if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
             );
         }
 
-        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados } = parsedQuery.data;
+        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId } = parsedQuery.data;
         const skip = (page - 1) * pageSize;
 
         const where: Prisma.ReporteWhereInput = {};
@@ -64,6 +65,18 @@ export async function GET(req: Request) {
             }
         }
 
+        // Un operador solo ve sus casos asignados. Un admin puede filtrar por operador.
+        if (user.rol === "OPERADOR") {
+            where.operadorId = user.id;
+        } else if (operadorId) {
+            where.operadorId = operadorId;
+        }
+
+        // SCHOOL_ADMIN solo ve recursos de su tenant.
+        if (user.rol === "SCHOOL_ADMIN") {
+            where.tenantId = user.tenantId ?? null;
+        }
+
         const [reportes, total] = await Promise.all([
             prisma.reporte.findMany({
                 where,
@@ -87,6 +100,8 @@ export async function GET(req: Request) {
                     fechaIncidente: true,
                     ciudad: true,
                     pais: true,
+                    operadorId: true,
+                    operador: { select: { id: true, email: true, nombre: true } },
                     plataforma: { select: { id: true, nombre: true, clave: true } },
                     clasificacion: {
                         include: {
