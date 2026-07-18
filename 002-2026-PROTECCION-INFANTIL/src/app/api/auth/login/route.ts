@@ -74,7 +74,13 @@ export async function POST(request: Request) {
         await setSessionCookie(request, token);
 
         return NextResponse.json({
-            user: { id: user.id, email: user.email, nombre: user.nombre, rol: user.rol },
+            user: {
+                id: user.id,
+                email: user.email,
+                nombre: user.nombre,
+                rol: user.rol,
+                debeCambiarPassword: user.debeCambiarPassword,
+            },
         });
     } catch (error) {
         if (error instanceof AppError) {

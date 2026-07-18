@@ -11,6 +11,7 @@ export async function GET() {
             nombre: user.nombre,
             rol: user.rol,
             tenantId: user.tenantId,
+            debeCambiarPassword: user.debeCambiarPassword,
         });
     } catch (error) {
         if (error instanceof AppError) {

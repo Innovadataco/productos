@@ -22,7 +22,12 @@ export default function LoginPage() {
                 ? new URLSearchParams(window.location.search).get("redirect")
                 : null;
 
-        const target = redirectTo || (user?.rol === "ADMIN" ? "/dashboard/admin" : "/mis-reportes");
+        if (user?.debeCambiarPassword) {
+            window.location.href = "/cambiar-password";
+            return;
+        }
+
+        const target = redirectTo || (user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN" || user?.rol === "OPERADOR" ? "/dashboard/admin" : "/mis-reportes");
         // Navegación completa para evitar quedarse pegado en login por problemas de router cliente
         window.location.href = target;
     };

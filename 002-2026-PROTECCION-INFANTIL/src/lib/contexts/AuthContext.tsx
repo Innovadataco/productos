@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
-type User = { id: string; email: string; nombre: string; rol: string };
+type User = { id: string; email: string; nombre: string; rol: string; debeCambiarPassword?: boolean };
 
 type AuthCtx = {
     user: User | null;
