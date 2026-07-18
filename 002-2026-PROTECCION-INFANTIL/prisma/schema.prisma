@@ -399,6 +399,7 @@ model Reporte {
   paisRel       Pais?             @relation(fields: [paisId], references: [id])
   ciudadRel     Ciudad?           @relation(fields: [ciudadId], references: [id])
   transiciones  TransicionReporte[]
+  reintentos    ReintentoReporte[]
 
   @@index([identificador, plataformaId])
   @@index([estado])
@@ -429,6 +430,20 @@ model TransicionReporte {
   @@index([reporteId])
   @@index([responsableTipo])
   @@index([responsableId])
+  @@index([creadoEn])
+}
+
+model ReintentoReporte {
+  id        String   @id @default(cuid())
+  reporteId String
+  intento   Int
+  exitoso   Boolean  @default(false)
+  error     String?  @db.Text
+  creadoEn  DateTime @default(now())
+
+  reporte Reporte @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+
+  @@index([reporteId])
   @@index([creadoEn])
 }
 
