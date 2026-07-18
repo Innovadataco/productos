@@ -11,9 +11,10 @@ import {
     crearPaisCiudad,
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
+import { sendReporte } from "@/lib/queue";
 
 vi.mock("@/lib/queue", () => ({
-    publishReporte: vi.fn().mockResolvedValue(undefined),
+    sendReporte: vi.fn().mockResolvedValue({ encolado: true }),
 }));
 
 const reporteValido = {
@@ -243,5 +244,48 @@ describe("POST /api/reportes", () => {
         expect(res6.status).toBe(429);
         const body = await res6.json();
         expect(body.error.code).toBe("RATE_LIMITED");
+    });
+
+    it("asigna prioridad alta a reportes autenticados y encola con prioridad 10", async () => {
+        const user = await crearUsuario("PARENT");
+        const token = await crearTokenUsuario(user.id, "PARENT");
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const res = await POST(req);
+        expect(res.status).toBe(201);
+
+        const body = await res.json();
+        const reporte = await prisma.reporte.findUnique({ where: { id: body.reporte.id } });
+        expect(reporte?.prioridadAlta).toBe(true);
+        expect(reporte?.esAnonimo).toBe(false);
+        expect(sendReporte).toHaveBeenCalledWith(body.reporte.id, { prioridadAlta: true });
+    });
+
+    it("asigna prioridad baja a reportes anónimos sin keyword de alto riesgo", async () => {
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            texto: "Este número contactó a mi hija ofreciendo regalos si enviaba fotos.",
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(201);
+
+        const body = await res.json();
+        const reporte = await prisma.reporte.findUnique({ where: { id: body.reporte.id } });
+        expect(reporte?.prioridadAlta).toBe(false);
+        expect(sendReporte).toHaveBeenCalledWith(body.reporte.id, { prioridadAlta: false });
+    });
+
+    it("eleva a prioridad alta reportes anónimos con keyword de alto riesgo", async () => {
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            texto: "Este número publicó fotos mías y amenazó con doxearme si no le enviaba más material.",
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(201);
+
+        const body = await res.json();
+        const reporte = await prisma.reporte.findUnique({ where: { id: body.reporte.id } });
+        expect(reporte?.prioridadAlta).toBe(true);
+        expect(reporte?.keywordsDetectadas).toContain("doxear");
+        expect(sendReporte).toHaveBeenCalledWith(body.reporte.id, { prioridadAlta: true });
     });
 });

@@ -39,6 +39,13 @@ type DetalleReporte = {
             creadoEn: string;
         } | null;
     } | null;
+    reintentos?: {
+        id: string;
+        intento: number;
+        exitoso: boolean;
+        error: string | null;
+        creadoEn: string;
+    }[];
 };
 
 const CATEGORIAS = [
@@ -424,6 +431,32 @@ export function AdminReporteDetalle({
                             {reporte.keywordsDetectadas && reporte.keywordsDetectadas.length > 0 && (
                                 <p><span className="text-subtle">Términos detectados:</span> {reporte.keywordsDetectadas.join(", ")}</p>
                             )}
+                        </div>
+                    )}
+
+                    {reporte.reintentos && reporte.reintentos.length > 0 && (
+                        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                            <h3 className="mb-2 font-medium text-body">Historial de intentos de procesamiento</h3>
+                            <ul className="space-y-2 text-sm">
+                                {reporte.reintentos.map((r) => (
+                                    <li key={r.id} className="flex flex-col gap-1 rounded-md bg-slate-50 dark:bg-slate-900/40 p-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-subtle">Intento #{r.intento}</span>
+                                            {r.exitoso ? (
+                                                <span className="rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
+                                                    Éxito
+                                                </span>
+                                            ) : (
+                                                <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                                                    Fallo
+                                                </span>
+                                            )}
+                                        </div>
+                                        {r.error && <p className="text-red-600 dark:text-red-400 text-xs">{r.error}</p>}
+                                        <p className="text-xs text-subtle">{new Date(r.creadoEn).toLocaleString()}</p>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     )}
 

@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { crearReporteSchema } from "@/lib/validators";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { getUserFromToken } from "@/lib/auth";
-import { publishReporte } from "@/lib/queue";
+import { sendReporte } from "@/lib/queue";
+import { detectarKeywordsRiesgo } from "@/lib/ai/keywords-riesgo";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
@@ -82,6 +83,11 @@ export async function POST(request: Request) {
             estadoInicial = rateIdentificador.markAsSpam ? "POSIBLE_SPAM" : "REVISION_MANUAL";
         }
 
+        // Determinar prioridad de encolamiento (Spec 027)
+        const keywordsRiesgo = detectarKeywordsRiesgo(texto);
+        const prioridadAlta = !esAnonimo || (esAnonimo && keywordsRiesgo.tieneMatch);
+        const keywordsDetectadas = keywordsRiesgo.tieneMatch ? keywordsRiesgo.keywords : [];
+
         // Deduplicación autenticada: mismo usuario + identificador en 30 días
         if (usuarioId) {
             const desde = new Date(Date.now() - THIRTY_DAYS_MS);
@@ -138,6 +144,8 @@ export async function POST(request: Request) {
                 numeroSeguimiento,
                 tenantId: user?.tenantId ?? null,
                 estado: estadoInicial,
+                prioridadAlta,
+                keywordsDetectadas,
             },
         });
 
@@ -174,13 +182,15 @@ export async function POST(request: Request) {
             },
         });
 
-        // Publicar en cola para procesamiento asíncrono
-        try {
-            await publishReporte(reporte.id);
-        } catch (queueErr) {
-            const msg = queueErr instanceof Error ? queueErr.message : "Error desconocido";
-            console.error("[REPORTES] Error publicando en cola:", msg);
-            // No fallamos la creación del reporte si la cola falla
+        // Publicar en cola para procesamiento asíncrono (solo si queda en PENDIENTE)
+        if (estadoInicial === "PENDIENTE") {
+            try {
+                await sendReporte(reporte.id, { prioridadAlta });
+            } catch (queueErr) {
+                const msg = queueErr instanceof Error ? queueErr.message : "Error desconocido";
+                console.error("[REPORTES] Error publicando en cola:", msg);
+                // No fallamos la creación del reporte si la cola falla
+            }
         }
 
         return NextResponse.json(

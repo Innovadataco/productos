@@ -39,6 +39,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             include: {
                 plataforma: { select: { id: true, nombre: true, clave: true } },
                 operador: { select: { id: true, email: true, nombre: true } },
+                reintentos: { orderBy: { intento: "asc" } },
                 clasificacion: {
                     include: {
                         correccion: {
