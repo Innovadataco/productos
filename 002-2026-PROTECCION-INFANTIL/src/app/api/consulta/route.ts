@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { ERROR_CODES } from "@/lib/errors";
-import { getUserFromToken } from "@/lib/auth";
-import { calcularScore } from "@/lib/scoring";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { EstadoReporte } from "@prisma/client";
 
@@ -78,6 +76,7 @@ export async function GET(request: Request) {
                 esAnonimo: true,
                 plataforma: { select: { id: true, nombre: true, clave: true } },
                 clasificacion: { select: { categoria: true, confianza: true } },
+                ciudadRel: { select: { lat: true, lng: true } },
             },
             orderBy: { creadoEn: "desc" },
             take: 1000,
@@ -109,30 +108,7 @@ export async function GET(request: Request) {
         }
         const plataformas = Array.from(porPlataforma.values()).sort((a, b) => b.total - a.total);
 
-        // Categorías
-        const porCategoria = new Map<string, { categoria: string; total: number; confianzas: number[] }>();
-        for (const r of reportes) {
-            const cat = r.clasificacion?.categoria;
-            if (!cat) continue;
-            const actual = porCategoria.get(cat) || { categoria: cat, total: 0, confianzas: [] };
-            actual.total += 1;
-            if (r.clasificacion?.confianza != null) {
-                actual.confianzas.push(r.clasificacion.confianza);
-            }
-            porCategoria.set(cat, actual);
-        }
-        const categorias = Array.from(porCategoria.values())
-            .map((c) => ({
-                categoria: c.categoria,
-                total: c.total,
-                confianzaPromedio:
-                    c.confianzas.length > 0
-                        ? Number((c.confianzas.reduce((a, b) => a + b, 0) / c.confianzas.length).toFixed(2))
-                        : null,
-            }))
-            .sort((a, b) => b.total - a.total);
-
-        // Ubicaciones agregadas por ciudad/país (sin coordenadas)
+        // Ubicaciones agregadas por ciudad/país
         const ubicacionKey = (r: (typeof reportes)[0]) => `${r.pais}|${r.ciudad}`;
         const porUbicacion = new Map<
             string,
@@ -142,6 +118,8 @@ export async function GET(request: Request) {
                 total: number;
                 fechasReporte: string[];
                 fechasIncidente: string[];
+                lat: number | null;
+                lng: number | null;
             }
         >();
 
@@ -153,6 +131,8 @@ export async function GET(request: Request) {
                 total: 0,
                 fechasReporte: [] as string[],
                 fechasIncidente: [] as string[],
+                lat: r.ciudadRel?.lat ?? null,
+                lng: r.ciudadRel?.lng ?? null,
             };
             actual.total += 1;
             actual.fechasReporte.push(formatFecha(r.creadoEn));
@@ -180,7 +160,7 @@ export async function GET(request: Request) {
         const ciudadesUnicas = new Set(reportes.map((r) => r.ciudad)).size;
         const paisesUnicos = new Set(reportes.map((r) => r.pais)).size;
 
-        const baseResponse = {
+        return NextResponse.json({
             identificador: parsed.data.identificador,
             tieneReportes: true,
             visibleEnDashboard,
@@ -190,27 +170,9 @@ export async function GET(request: Request) {
             primerReporte: primerReporte?.toISOString() ?? null,
             ultimoReporte: ultimoReporte?.toISOString() ?? null,
             plataformas,
-            categorias,
             ubicaciones,
             timeline,
             resumen: `Se han reportado ${totalReportes} vez(es) entre ${formatFecha(primerReporte || new Date())} y ${formatFecha(ultimoReporte || new Date())} en ${ciudadesUnicas} ciudad(es) de ${paisesUnicos} país(es) y ${plataformas.length} plataforma(s).`,
-        };
-
-        const usuario = await getUserFromToken(request);
-        const estaAutenticado = !!usuario;
-
-        if (!estaAutenticado) {
-            return NextResponse.json(baseResponse);
-        }
-
-        // Usuario autenticado: incluir score y nivel de riesgo
-        const ranking = await calcularScore(parsed.data.identificador);
-
-        return NextResponse.json({
-            ...baseResponse,
-            score: ranking.score,
-            nivelRiesgo: ranking.nivelRiesgo,
-            ratioAutenticados: ranking.ratioAutenticados,
         });
     } catch {
         return NextResponse.json(
