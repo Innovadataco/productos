@@ -26,6 +26,12 @@ export async function POST(request: Request) {
 
         // Obtener usuario autenticado (puede ser null)
         const user = await getUserFromToken(request);
+        if (user && user.rol !== "PARENT") {
+            return NextResponse.json(
+                { error: { message: "Esta función no está disponible para usuarios internos", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
         const esAnonimo = !user;
 
         // Rate limiting por IP (anónimo) o por usuario autenticado

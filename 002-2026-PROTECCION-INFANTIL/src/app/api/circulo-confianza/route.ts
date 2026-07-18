@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getUserFromToken } from "@/lib/auth";
+import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import {
     listarContactos,
     agregarContacto,
@@ -18,16 +18,13 @@ const createSchema = z.object({
 
 export async function GET(request: Request) {
     try {
-        const usuario = await getUserFromToken(request);
-        if (!usuario) {
-            return NextResponse.json(
-                { error: { message: "No autenticado", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 401 }
-            );
-        }
+        const usuario = await verifyAuth("PARENT");
         const resultado = await listarContactos(usuario.id);
         return NextResponse.json(resultado);
     } catch (error) {
+        if (error instanceof AppError) {
+            return NextResponse.json(error.toJSON(), { status: error.statusCode });
+        }
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }
@@ -37,13 +34,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const usuario = await getUserFromToken(request);
-        if (!usuario) {
-            return NextResponse.json(
-                { error: { message: "No autenticado", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 401 }
-            );
-        }
+        const usuario = await verifyAuth("PARENT");
 
         const rate = await checkRateLimit(request, "circulo_contacto");
         if (!rate.allowed) {
@@ -85,11 +76,8 @@ export async function POST(request: Request) {
         const contacto = await agregarContacto(usuario.id, parsed.data, request);
         return NextResponse.json(contacto, { status: 201 });
     } catch (error) {
-        if (error instanceof Error && error.message === "No autenticado") {
-            return NextResponse.json(
-                { error: { message: "No autenticado", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 401 }
-            );
+        if (error instanceof AppError) {
+            return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
         const message = error instanceof Error ? error.message : "Error interno";
         const status = message.includes("ya existe") ? 409 : message.includes("no encontrada") ? 400 : 500;

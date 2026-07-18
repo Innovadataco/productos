@@ -4,6 +4,7 @@ import { verifyAuth } from "@/lib/auth";
 import { calcularRanking } from "@/lib/ranking";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
+
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 
@@ -30,7 +31,7 @@ const CATEGORIA_LABELS: Record<string, string> = {
 
 export async function GET(request: Request) {
     try {
-        const user = await verifyAuth();
+        const user = await verifyAuth("PARENT");
 
         const { searchParams } = new URL(request.url);
         const page = Math.max(1, Number(searchParams.get("page") || "1"));

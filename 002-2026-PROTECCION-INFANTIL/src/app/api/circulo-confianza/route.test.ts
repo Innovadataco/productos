@@ -1,12 +1,22 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { GET, POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario, crearPlataforma, crearPaisCiudad, crearParametrosReportes } from "@/lib/reporte-test-utils";
 
+let mockToken: string | undefined;
+
+vi.mock("next/headers", () => ({
+    cookies: async () => ({
+        get: (name: string) =>
+            name === "token" && mockToken ? { name: "token", value: mockToken } : undefined,
+    }),
+}));
+
 describe("/api/circulo-confianza", () => {
     beforeEach(async () => {
         await resetDatabase();
+        mockToken = undefined;
         await crearParametrosReportes();
         await crearPlataforma();
         await crearPaisCiudad();
@@ -28,7 +38,7 @@ describe("/api/circulo-confianza", () => {
 
     it("GET devuelve contactos del usuario autenticado", async () => {
         const user = await crearUsuario("PARENT");
-        const token = await crearTokenUsuario(user.id, "PARENT");
+        mockToken = await crearTokenUsuario(user.id, "PARENT");
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         await prisma.contactoConfianza.create({
             data: {
@@ -39,9 +49,7 @@ describe("/api/circulo-confianza", () => {
             },
         });
 
-        const req = new Request("http://localhost:5005/api/circulo-confianza", {
-            headers: { cookie: `token=${token}` },
-        });
+        const req = new Request("http://localhost:5005/api/circulo-confianza");
         const res = await GET(req);
         const json = await res.json();
         expect(res.status).toBe(200);
@@ -51,12 +59,12 @@ describe("/api/circulo-confianza", () => {
 
     it("POST crea contacto con cookie", async () => {
         const user = await crearUsuario("PARENT");
-        const token = await crearTokenUsuario(user.id, "PARENT");
+        mockToken = await crearTokenUsuario(user.id, "PARENT");
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
 
         const req = new Request("http://localhost:5005/api/circulo-confianza", {
             method: "POST",
-            headers: { "Content-Type": "application/json", cookie: `token=${token}` },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ identificador: "+57300222222", plataformaId: plataforma!.id, etiqueta: "primo" }),
         });
 
