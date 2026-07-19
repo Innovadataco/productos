@@ -87,6 +87,7 @@ export function AdminReportesTable() {
     const [fechaHasta, setFechaHasta] = useState(searchParams.get("fechaHasta") || "");
     const [incluirEliminados, setIncluirEliminados] = useState(searchParams.get("incluirEliminados") === "true");
     const [pageSize, setPageSize] = useState(searchParams.get("pageSize") || "25");
+    const [q, setQ] = useState(searchParams.get("q") || "");
 
     const page = Math.max(1, Number(searchParams.get("page") || "1"));
 
@@ -106,6 +107,7 @@ export function AdminReportesTable() {
             if (fechaDesde) params.set("fechaDesde", fechaDesde);
             if (fechaHasta) params.set("fechaHasta", fechaHasta);
             if (incluirEliminados) params.set("incluirEliminados", "true");
+            if (q.trim()) params.set("q", q.trim());
             params.set("pageSize", pageSize);
             params.set("page", String(page));
             Object.entries(override).forEach(([k, v]) => {
@@ -114,7 +116,7 @@ export function AdminReportesTable() {
             });
             return params.toString();
         },
-        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page]
+        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page, q]
     );
 
     const fetchReportes = useCallback(async () => {
@@ -164,6 +166,20 @@ export function AdminReportesTable() {
 
             <div className="glass rounded-2xl p-4 sm:p-5">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="lg:col-span-4">
+                        <Input
+                            label="Buscar"
+                            type="text"
+                            placeholder="RPT-XXXX o identificador/nick"
+                            value={q}
+                            onChange={(e) => setQ(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    applyFilters();
+                                }
+                            }}
+                        />
+                    </div>
                     <Select label="Estado" options={ESTADOS} value={estado} onChange={(e) => setEstado(e.target.value)} />
                     <Select label="Plataforma" options={plataformaOptions} value={plataformaId} onChange={(e) => setPlataformaId(e.target.value)} />
                     <Select label="Categoría" options={CATEGORIAS} value={categoria} onChange={(e) => setCategoria(e.target.value)} />

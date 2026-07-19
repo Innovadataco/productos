@@ -36,12 +36,19 @@ export async function GET(req: Request) {
             );
         }
 
-        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId } = parsedQuery.data;
+        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, q } = parsedQuery.data;
         const skip = (page - 1) * pageSize;
 
         const where: Prisma.ReporteWhereInput = {};
         if (!incluirEliminados) {
             where.eliminado = false;
+        }
+
+        if (q) {
+            where.OR = [
+                { numeroSeguimiento: { contains: q, mode: "insensitive" } },
+                { identificador: { contains: q, mode: "insensitive" } },
+            ];
         }
 
         if (estado) {
