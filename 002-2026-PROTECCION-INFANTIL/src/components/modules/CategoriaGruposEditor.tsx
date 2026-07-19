@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import type { CategoriaGrupo } from "@/lib/categoria-grupos";
+import { GRUPOS_CATEGORIA_FALLBACK, type CategoriaGrupo } from "@/lib/categoria-grupos";
 
 const CATEGORIAS_INTERNAS = [
     "CONTACTO_INSISTENTE",
@@ -60,10 +60,10 @@ export function CategoriaGruposEditor() {
                     if (Array.isArray(parsed.grupos) && parsed.grupos.length > 0) {
                         setGrupos(parsed.grupos);
                     } else {
-                        setGrupos([]);
+                        setGrupos(structuredClone(GRUPOS_CATEGORIA_FALLBACK));
                     }
                 } catch {
-                    setGrupos([]);
+                    setGrupos(structuredClone(GRUPOS_CATEGORIA_FALLBACK));
                 }
                 setLoading(false);
             })
@@ -251,7 +251,17 @@ export function CategoriaGruposEditor() {
 
             {disponibles.length > 0 && (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
-                    <p className="text-xs font-medium text-amber-800 dark:text-amber-200">Categorías sin agrupar</p>
+                    <div className="flex items-start gap-2">
+                        <span className="text-amber-600 dark:text-amber-300" aria-hidden="true">⚠</span>
+                        <div>
+                            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                                Categorías sin agrupar
+                            </p>
+                            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300/90">
+                                Estas categorías se ocultan en las vistas de usuario hasta que se asignen a un grupo.
+                            </p>
+                        </div>
+                    </div>
                     <div className="mt-2 flex flex-wrap gap-1">
                         {disponibles.map((cat) => (
                             <span
