@@ -16,6 +16,7 @@ const CATEGORIAS_VALIDAS = [
     "CONTENIDO_GENERADO_IA",
     "DIFUSION_NO_CONSENTIDA",
     "DOXING",
+    "SPAM",
     "OTRO",
 ] as const;
 
