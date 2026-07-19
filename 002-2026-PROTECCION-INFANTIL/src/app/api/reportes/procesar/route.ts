@@ -140,10 +140,19 @@ export async function POST(request: Request) {
         });
         if (!embeddingExistente) {
             const embeddingId = crypto.randomUUID();
-            await prisma.$executeRaw`
-                INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
-                VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-            `;
+            try {
+                await prisma.$executeRaw`
+                    INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
+                    VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+                `;
+            } catch (err) {
+                // Idempotencia ante concurrencia/reintento: si otro proceso creó el embedding, se conserva.
+                if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+                    console.warn(`[PROCESAR] Embedding ya existía para reporte ${reporte.id}, se conserva.`);
+                } else {
+                    throw err;
+                }
+            }
         }
 
         // Recuperar ejemplos corregidos similares para RAG (F5)
