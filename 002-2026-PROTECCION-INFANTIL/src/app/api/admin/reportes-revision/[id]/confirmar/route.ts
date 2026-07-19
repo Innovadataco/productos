@@ -59,7 +59,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         if (!puedeGestionarReporte(user, reporte)) {
             return NextResponse.json(
-                { error: { message: "No tenés permiso para gestionar este caso", code: ERROR_CODES.FORBIDDEN } },
+                { error: { message: "No tienes permiso para gestionar este caso", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
             );
         }

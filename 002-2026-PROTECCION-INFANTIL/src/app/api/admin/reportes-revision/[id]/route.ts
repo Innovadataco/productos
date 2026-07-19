@@ -48,14 +48,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
         if (user.rol === "COMITE_VALIDACION" && permisosReporte.comiteId !== user.id) {
             return NextResponse.json(
-                { error: { message: "No tenés permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
+                { error: { message: "No tienes permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
             );
         }
 
         if (user.rol !== "COMITE_VALIDACION" && !puedeGestionarReporte(user, permisosReporte)) {
             return NextResponse.json(
-                { error: { message: "No tenés permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
+                { error: { message: "No tienes permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
             );
         }

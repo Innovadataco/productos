@@ -127,7 +127,7 @@ export function ReporteWizard() {
                     Las cuentas internas no pueden crear reportes
                 </h2>
                 <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
-                    Para reportar de forma anónima, cerrá sesión primero. Tu cuenta interna tiene acceso al panel de administración/operación; los reportes deben crearse desde una cuenta de usuario final o sin iniciar sesión.
+                    Para reportar de forma anónima, cierra sesión primero. Tu cuenta interna tiene acceso al panel de administración/operación; los reportes deben crearse desde una cuenta de usuario final o sin iniciar sesión.
                 </p>
                 <Button className="mt-6" onClick={handleLogout}>
                     Cerrar sesión y reportar

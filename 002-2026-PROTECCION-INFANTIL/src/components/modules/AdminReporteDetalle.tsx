@@ -639,7 +639,7 @@ export function AdminReporteDetalle({
                         <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
                             <h3 className="mb-2 font-medium text-body">Validar anonimización</h3>
                             <p className="mb-2 text-sm text-subtle">
-                                Revisá el texto anonimizado. Si aún contiene datos personales, rechazalo y dejá una observación.
+                                Revisa el texto anonimizado. Si aún contiene datos personales, recházalo y deja una observación.
                             </p>
                             <textarea
                                 className="mb-2 w-full rounded-lg glass-input ring-accent-input p-2 text-body"

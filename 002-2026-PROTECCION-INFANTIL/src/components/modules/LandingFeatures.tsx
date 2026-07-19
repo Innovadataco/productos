@@ -1,7 +1,7 @@
 const FEATURES = [
     {
         title: "Reportes anónimos",
-        description: "Reportá sin revelar tu identidad, o creá una cuenta para dar más contexto.",
+        description: "Reporta sin revelar tu identidad, o crea una cuenta para dar más contexto.",
         icon: ShieldIcon,
     },
     {
@@ -11,7 +11,7 @@ const FEATURES = [
     },
     {
         title: "Consulta pública",
-        description: "Verificá si un número, nick o usuario fue reportado antes de interactuar.",
+        description: "Verifica si un número, nick o usuario fue reportado antes de interactuar.",
         icon: SearchIcon,
     },
     {

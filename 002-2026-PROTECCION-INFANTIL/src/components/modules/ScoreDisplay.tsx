@@ -15,9 +15,9 @@ export interface ScoreDisplayProps {
 
 const RECOMENDACIONES: Record<NivelRiesgo, string> = {
     BAJO: "Sin riesgo significativo. Precaución habitual.",
-    MEDIO: "Mantené precaución y conversá sobre contactos desconocidos.",
-    ALTO: "Hablá con tu hijo/a y verificá conversaciones.",
-    CRITICO: "Bloqueá y hablá con tu hijo/a. Considerá denunciar.",
+    MEDIO: "Mantén precaución y conversa sobre contactos desconocidos.",
+    ALTO: "Habla con tu hijo/a y verifica conversaciones.",
+    CRITICO: "Bloquea y habla con tu hijo/a. Considera denunciar.",
 };
 
 const NIVEL_STYLES: Record<NivelRiesgo, { badge: string; ring: string; label: string }> = {

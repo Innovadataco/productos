@@ -83,7 +83,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         if (user.rol === "SCHOOL_ADMIN" && reporte.tenantId && reporte.tenantId !== user.tenantId) {
             return NextResponse.json(
-                { error: { message: "No tenés permiso para escalar este caso", code: ERROR_CODES.FORBIDDEN } },
+                { error: { message: "No tienes permiso para escalar este caso", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
             );
         }

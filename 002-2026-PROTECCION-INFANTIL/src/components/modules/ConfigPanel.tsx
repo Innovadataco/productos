@@ -286,7 +286,7 @@ export default function ConfigPanel() {
             {pendingConfig && (
                 <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
                     <div className="flex items-center justify-between">
-                        <p>Configuración precargada desde un experimento. Revisá los valores y guardá para activarla.</p>
+                        <p>Configuración precargada desde un experimento. Revisa los valores y guarda para activarla.</p>
                         <Button variant="ghost" className="text-xs" onClick={dismissPendingConfig}>
                             Descartar
                         </Button>

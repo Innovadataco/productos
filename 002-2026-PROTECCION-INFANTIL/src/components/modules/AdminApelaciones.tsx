@@ -143,7 +143,7 @@ export function AdminApelaciones() {
 
                     {detail.apelacion.estado === "RECIBIDA" || detail.apelacion.estado === "EN_REVISION" ? (
                         <>
-                            <h3 className="mt-6 text-sm font-semibold text-body">Reportes del identificador (seleccioná los que sean falsos)</h3>
+                            <h3 className="mt-6 text-sm font-semibold text-body">Reportes del identificador (selecciona los que sean falsos)</h3>
                             <div className="mt-2 space-y-2">
                                 {detail.reportes.map((r) => (
                                     <label key={r.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">

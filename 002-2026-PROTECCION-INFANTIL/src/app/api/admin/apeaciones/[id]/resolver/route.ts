@@ -33,7 +33,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         if (!puedeGestionarApelacion(user, apelacion)) {
             return NextResponse.json(
-                { error: { message: "No tenés permiso para resolver esta apelación", code: ERROR_CODES.FORBIDDEN } },
+                { error: { message: "No tienes permiso para resolver esta apelación", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
             );
         }
