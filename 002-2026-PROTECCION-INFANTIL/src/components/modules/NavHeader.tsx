@@ -34,24 +34,30 @@ export function NavHeader() {
         ? (user.nombre?.[0] || user.email[0]).toUpperCase()
         : "";
 
-    const esEmpleado = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN" || user?.rol === "OPERADOR";
+    const esEmpleado = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN" || user?.rol === "OPERADOR" || user?.rol === "COMITE_VALIDACION";
 
     const headerBorderClass = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
         ? "border-b-amber-500/40 dark:border-b-amber-400/30"
         : user?.rol === "OPERADOR"
         ? "border-b-violet-500/40 dark:border-b-violet-400/30"
+        : user?.rol === "COMITE_VALIDACION"
+        ? "border-b-emerald-500/40 dark:border-b-emerald-400/30"
         : "border-b-white/40 dark:border-b-white/10";
 
     const avatarClass = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
         ? "bg-amber-500"
         : user?.rol === "OPERADOR"
         ? "bg-violet-500"
+        : user?.rol === "COMITE_VALIDACION"
+        ? "bg-emerald-500"
         : "accent-gradient";
 
     const rolBadgeClass = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
         ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
         : user?.rol === "OPERADOR"
         ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
+        : user?.rol === "COMITE_VALIDACION"
+        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
         : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
 
     return (
@@ -116,6 +122,11 @@ export function NavHeader() {
                                         {user.rol === "OPERADOR" && (
                                             <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
                                                 Mis casos
+                                            </NavDropdownLink>
+                                        )}
+                                        {user.rol === "COMITE_VALIDACION" && (
+                                            <NavDropdownLink href="/dashboard/admin/comite" onClick={() => setOpen(false)}>
+                                                Mi bandeja
                                             </NavDropdownLink>
                                         )}
                                         {!esEmpleado && (
@@ -183,6 +194,9 @@ export function NavHeader() {
                                 )}
                                 {user.rol === "OPERADOR" && (
                                     <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Mis casos</MobileLink>
+                                )}
+                                {user.rol === "COMITE_VALIDACION" && (
+                                    <MobileLink href="/dashboard/admin/comite" onClick={() => setMobileOpen(false)}>Mi bandeja</MobileLink>
                                 )}
                                 <button
                                     onClick={async () => {
