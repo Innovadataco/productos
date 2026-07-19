@@ -156,4 +156,36 @@ La carpeta `eval-results/` contiene salidas generadas por evaluaciones locales. 
 
 ## Implementación
 
-*(Se documentará tras completar el trabajo, siguiendo el formato de cierre del Spec-Kit.)*
+### Resumen de cambios
+
+Se implementaron las 5 User Stories del spec 036 sin alterar el modelo de datos ni los artefactos dejados por el spec 035.
+
+- **US1 — Renombrar apeaciones → apelaciones**: Se renombraron las carpetas `src/app/api/apeaciones` a `src/app/api/apelaciones` y `src/app/api/admin/apeaciones` a `src/app/api/admin/apelaciones`; el módulo `src/lib/apealaciones.ts` pasó a `src/lib/apelaciones.ts`; se actualizaron todos los imports, URLs de fetch, `src/lib/proxy.ts` y los scripts `job-apelaciones-vencimiento.ts` y `smoke-apelaciones.ts` en un commit atómico. Los tests de rutas de apelaciones siguen pasando.
+- **US2 — Barrido final de voseo**: Se reemplazaron los imperativos en voseo de la UI y los mensajes de API por tono neutro (infinitivo o usted), incluyendo textos como "Revisá, clasificá y gestioná", "Guardá", "Mostrála", "Copiá", "Esperá", "Intentá", "Seleccioná", "Verificá", "Escribí", "Solicitá", "Recházalo", "Actualizá", "Creá", "Agregá" y "Consultá".
+- **US3 — Logger mínimo con niveles**: Se creó `src/lib/logger.ts` con niveles `debug`, `info`, `warn`, `error`, `LOG_LEVEL` configurable y default `warn` en producción / `info` en desarrollo. Se reemplazaron todos los `console.log`/`warn`/`error` de `src/lib` y sus tests por llamadas al logger. Se actualizó `.env.example` con `LOG_LEVEL=info`.
+- **US4 — Buscador en bandeja admin**: Se agregó un campo de búsqueda en `AdminReportesTable` (placeholder "RPT-XXXX o identificador/nick"), se sincronizó con el parámetro URL `q`, se extendió `reportesRevisionQuerySchema` con `q` (mínimo 3 caracteres) y el endpoint `/api/admin/reportes-revision` filtra por `numeroSeguimiento` e `identificador` de forma parcial e insensible a mayúsculas. Se agregó test del endpoint con 3 casos.
+- **US5 — eval-results en .gitignore**: Se agregó `eval-results/` a `.gitignore` y se eliminaron del índice de Git los archivos previamente trackeados; los archivos permanecen en disco para referencia local pero no se commitearán más.
+
+### Commits
+
+- `chore: renombrar apeaciones -> apelaciones`
+- `style: reemplazar voseo por tono neutro en UI y mensajes de API`
+- `refactor: reemplazar console.log de libs por logger con niveles`
+- `feat: buscador por numero seguimiento e identificador en bandeja admin`
+- `chore: agregar eval-results a .gitignore y limpiar archivos trackeados`
+- `docs: cierre spec 036` *(a continuación)*
+
+### Validación
+
+- `npx tsc --noEmit`: sin errores.
+- `npm run test`: 78 archivos, 412 tests pasando.
+- `npm run build`: exitoso (verificado durante `./scripts/dev-restart.sh`).
+- `./scripts/dev-restart.sh`: levanta la app con un solo worker y healthcheck OK.
+- `quickstart.md` ejecutado: sin voseo restante, buscador funcional, logger operativo.
+
+### Deuda técnica
+
+- El buscador admin usa búsqueda parcial case-insensitive sobre `numeroSeguimiento` e `identificador`. Si la bandeja crece a decenas de miles de registros, convendrá agregar un índice GIN trigram o un índice de texto completo en lugar del `contains` de Prisma; por ahora el volumen esperado lo tolera.
+- El logger es una utilidad local sin sink externo (Sentry, etc.). Se decidió dejar la integración para una fase posterior.
+- Algunos textos de email (`Ingresa`, `Recibirás`, `Tienes`) y páginas legales/públicas mantienen tuteo informal. El spec 036 se limitó al voseo; normalizar todo a usted queda registrado como mejora de UX futura.
+
