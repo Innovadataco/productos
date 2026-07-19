@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { getParametroSistema } from "./parametros";
+import { logger } from "@/lib/logger";
 
 export interface RateLimitResult {
     allowed: boolean;
@@ -148,7 +149,7 @@ export async function checkRateLimit(
         return { allowed, limit: config.maxRequests, remaining, resetAt, headers };
     } catch (error) {
         // Fallo del limitador no debe bloquear la aplicación
-        console.error("[RATE-LIMIT] Error consultando límite:", error);
+        logger.error("[RATE-LIMIT] Error consultando límite:", error);
         return {
             allowed: true,
             limit: config.maxRequests,

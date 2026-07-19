@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { anonimizarTexto } from "./anonimizador";
+import { logger } from "@/lib/logger";
 
 /**
  * Procesa un registro del dataset de entrenamiento cuya anonimización
@@ -16,12 +17,12 @@ export async function procesarBackfillAnonimizacion(datasetId: string): Promise<
     });
 
     if (!registro) {
-        console.warn(`[BACKFILL_ANONIMIZACION] Registro ${datasetId} no encontrado`);
+        logger.warn(`[BACKFILL_ANONIMIZACION] Registro ${datasetId} no encontrado`);
         return;
     }
 
     if (registro.textoAnonimizado) {
-        console.log(`[BACKFILL_ANONIMIZACION] Registro ${datasetId} ya está anonimizado`);
+        logger.info(`[BACKFILL_ANONIMIZACION] Registro ${datasetId} ya está anonimizado`);
         return;
     }
 
@@ -38,5 +39,5 @@ export async function procesarBackfillAnonimizacion(datasetId: string): Promise<
         },
     });
 
-    console.log(`[BACKFILL_ANONIMIZACION] Registro ${datasetId} anonimizado correctamente`);
+    logger.info(`[BACKFILL_ANONIMIZACION] Registro ${datasetId} anonimizado correctamente`);
 }

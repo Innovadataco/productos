@@ -1,6 +1,7 @@
 import { PgBoss } from "pg-boss";
 import { prisma } from "./prisma";
 import { getParametroSistemaValor } from "./parametros";
+import { logger } from "@/lib/logger";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL requerida");
@@ -73,7 +74,7 @@ export async function sendReporte(
 
     const stats = await getQueueStats();
     if (stats.pendientes >= maxPendientes) {
-        console.warn(`[QUEUE] Backpressure activo: ${stats.pendientes} jobs pendientes >= ${maxPendientes}. Reporte ${reporteId} no encolado.`);
+        logger.warn(`[QUEUE] Backpressure activo: ${stats.pendientes} jobs pendientes >= ${maxPendientes}. Reporte ${reporteId} no encolado.`);
         return { encolado: false };
     }
 
@@ -90,7 +91,7 @@ export async function sendReporte(
         }
     );
 
-    console.log(`[QUEUE] Reporte ${reporteId} encolado con prioridad ${priority} (reintentos=${maxReintentos}, delay=${retryDelaySegundos}s)`);
+    logger.info(`[QUEUE] Reporte ${reporteId} encolado con prioridad ${priority} (reintentos=${maxReintentos}, delay=${retryDelaySegundos}s)`);
     return { encolado: true, jobId: jobId ?? undefined };
 }
 
@@ -118,7 +119,7 @@ export async function drainPending(): Promise<{ encolados: number }> {
     }
 
     if (encolados > 0) {
-        console.log(`[QUEUE] Drenaje: ${encolados} reportes pendientes encolados`);
+        logger.info(`[QUEUE] Drenaje: ${encolados} reportes pendientes encolados`);
     }
     return { encolados };
 }

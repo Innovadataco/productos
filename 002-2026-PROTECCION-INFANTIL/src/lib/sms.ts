@@ -1,4 +1,5 @@
 import { createHash, randomInt } from "crypto";
+import { logger } from "@/lib/logger";
 
 export interface SmsProvider {
     sendSms(to: string, message: string): Promise<void>;
@@ -6,8 +7,7 @@ export interface SmsProvider {
 
 class MockSmsProvider implements SmsProvider {
     async sendSms(to: string, message: string): Promise<void> {
-        // eslint-disable-next-line no-console
-        console.log(`[SMS MOCK] to=${to} message="${message}"`);
+                logger.info(`[SMS MOCK] to=${to} message="${message}"`);
     }
 }
 

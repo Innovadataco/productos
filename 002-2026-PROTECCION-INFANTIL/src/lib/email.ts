@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { requireEnv } from "./env";
 import { prisma } from "./prisma";
 import { getParametroSistema } from "./parametros";
+import { logger } from "@/lib/logger";
 
 const resend = new Resend(requireEnv("RESEND_API_KEY", 10));
 const FROM = requireEnv("EMAIL_FROM", 5);
@@ -18,7 +19,7 @@ export async function enviarCodigoVerificacion(
     });
 
     if (result.error) {
-        console.error("Resend error:", result.error);
+        logger.error("Resend error:", result.error);
         throw new Error("Error al enviar email de verificación");
     }
 }
@@ -38,7 +39,7 @@ export async function enviarTokenRecuperacion(
     });
 
     if (result.error) {
-        console.error("Resend error:", result.error);
+        logger.error("Resend error:", result.error);
         throw new Error("Error al enviar email de recuperación");
     }
 }
@@ -56,7 +57,7 @@ export async function enviarEmailBienvenidaOperador(
     });
 
     if (result.error) {
-        console.error("Resend error:", result.error);
+        logger.error("Resend error:", result.error);
         throw new Error("Error al enviar email de bienvenida");
     }
 }
@@ -74,7 +75,7 @@ export async function enviarEmailBienvenidaComite(
     });
 
     if (result.error) {
-        console.error("Resend error:", result.error);
+        logger.error("Resend error:", result.error);
         throw new Error("Error al enviar email de bienvenida");
     }
 }
@@ -89,11 +90,11 @@ export async function enviarAlertaComitePendientes(email: string, cantidad: numb
     });
 
     if (result.error) {
-        console.error("Resend error alerta comité:", result.error);
+        logger.error("Resend error alerta comité:", result.error);
         throw new Error("Error al enviar alerta de comité");
     }
 
-    console.log(`[EMAIL] Alerta de comité enviada a ${email} (${cantidad} casos, resendId=${result.data?.id ?? "n/a"})`);
+    logger.info(`[EMAIL] Alerta de comité enviada a ${email} (${cantidad} casos, resendId=${result.data?.id ?? "n/a"})`);
 }
 
 async function getAdminEmails(): Promise<string[]> {
@@ -130,7 +131,7 @@ export async function enviarAlertaRevision(reporte: {
     });
 
     if (result.error) {
-        console.error("Resend error:", result.error);
+        logger.error("Resend error:", result.error);
     }
 }
 
@@ -159,7 +160,7 @@ export async function enviarAlertaScoreCritico(reporte: {
     });
 
     if (result.error) {
-        console.error("Resend error:", result.error);
+        logger.error("Resend error:", result.error);
     }
 }
 
@@ -174,11 +175,11 @@ export async function enviarAlertaCirculoConfianza(email: string, cantidad: numb
     });
 
     if (result.error) {
-        console.error("Resend error alerta círculo:", result.error);
+        logger.error("Resend error alerta círculo:", result.error);
         throw new Error("Error al enviar alerta de Círculo de Confianza");
     }
 
-    console.log(`[EMAIL] Alerta Círculo de Confianza enviada a ${email} (${novedadTexto}, resendId=${result.data?.id ?? "n/a"})`);
+    logger.info(`[EMAIL] Alerta Círculo de Confianza enviada a ${email} (${novedadTexto}, resendId=${result.data?.id ?? "n/a"})`);
 }
 
 const COOLDOWN_ALERTA_MS = 24 * 60 * 60 * 1000;
@@ -220,12 +221,12 @@ export async function enviarAlertasSuscriptores(payload: {
             });
 
             if (result.error) {
-                console.error(`Resend error alerta ${suscripcion.id}:`, result.error);
+                logger.error(`Resend error alerta ${suscripcion.id}:`, result.error);
             } else {
                 enviadosIds.push(suscripcion.id);
             }
         } catch (err) {
-            console.error(`Error enviando alerta ${suscripcion.id}:`, err);
+            logger.error(`Error enviando alerta ${suscripcion.id}:`, err);
         }
     }
 

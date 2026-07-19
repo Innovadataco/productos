@@ -1,4 +1,5 @@
 import { getOllamaBaseUrl } from "./ollama-config";
+import { logger } from "@/lib/logger";
 
 export async function generarEmbedding(modelo: string, texto: string): Promise<number[]> {
     const ollamaBaseUrl = await getOllamaBaseUrl();
@@ -19,6 +20,6 @@ export async function generarEmbedding(modelo: string, texto: string): Promise<n
         throw new Error(`[EMBED] Respuesta inválida de Ollama: embedding vacío o mal formado`);
     }
 
-    console.log(`[EMBED] OK modelo=${modelo} dims=${data.embedding.length}`);
+    logger.info(`[EMBED] OK modelo=${modelo} dims=${data.embedding.length}`);
     return data.embedding;
 }

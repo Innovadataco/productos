@@ -8,6 +8,7 @@ import { detectarDoxing } from "./pii-patterns";
 import { detectarKeywordsRiesgo } from "./keywords-riesgo";
 import fs from "fs/promises";
 import path from "path";
+import { logger } from "@/lib/logger";
 
 export const CATEGORIAS_EVAL = [
     "CONTACTO_INSISTENTE",
@@ -335,7 +336,7 @@ export async function runF7Eval(
                 .filter(Boolean)
                 .map((t) => `[${t}]`)
                 .join(" ");
-            console.log(`${correct ? "OK" : "FAIL"}${tags ? ` ${tags}` : ""} | ${ex.expected} -> ${predicted} (${estado}) ${latencyMs}ms | ej=${ejemplos.length}`);
+            logger.info(`${correct ? "OK" : "FAIL"}${tags ? ` ${tags}` : ""} | ${ex.expected} -> ${predicted} (${estado}) ${latencyMs}ms | ej=${ejemplos.length}`);
         } catch (err) {
             const latencyMs = Date.now() - start;
             results.push({
@@ -356,7 +357,7 @@ export async function runF7Eval(
                 keywordsDetectadas: [],
                 prioridadAlta: false,
             });
-            console.log(`ERROR | ${ex.expected} -> ${err instanceof Error ? err.message : String(err)}`);
+            logger.info(`ERROR | ${ex.expected} -> ${err instanceof Error ? err.message : String(err)}`);
         }
         await sleep(500);
     }

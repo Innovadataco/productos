@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { logger } from "@/lib/logger";
 
 const QUEUE_NAME = "reporte-procesamiento";
 
@@ -89,7 +90,7 @@ export async function getWorkerMetrics(): Promise<WorkerMetrics | null> {
         };
     } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        console.error("[QUEUE-METRICS] Error obteniendo métricas del worker:", msg);
+        logger.error("[QUEUE-METRICS] Error obteniendo métricas del worker:", msg);
         return null;
     }
 }

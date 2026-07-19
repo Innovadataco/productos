@@ -1,5 +1,6 @@
 import { llamarOllamaStructured, type OllamaMetrics } from "./ollama-client";
 import { classificationResponseSchema, type ClassificationResponse } from "./schemas";
+import { logger } from "@/lib/logger";
 
 export type CategoriaConducta =
     | "CONTACTO_INSISTENTE"
@@ -189,7 +190,7 @@ export async function clasificarReporte(
             votos: [{ categoria, confianza, posibleAgresorPar }],
         };
     } catch (err) {
-        console.error("[CLASSIFIER] Structured output falló, usando fallback:", err instanceof Error ? err.message : err);
+        logger.error("[CLASSIFIER] Structured output falló, usando fallback:", err instanceof Error ? err.message : err);
         return fallbackResult(modelo, texto);
     }
 }
@@ -221,7 +222,7 @@ async function desempatarConModeloGrande(
         );
         return { categoria: parseCategoria(data.categoria), rawResponse, metrics, modeloCascada: modeloDesempate };
     } catch (err) {
-        console.error("[CLASSIFIER] Desempate falló:", err instanceof Error ? err.message : err);
+        logger.error("[CLASSIFIER] Desempate falló:", err instanceof Error ? err.message : err);
         return null;
     }
 }

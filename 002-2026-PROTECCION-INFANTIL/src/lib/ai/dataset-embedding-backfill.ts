@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
+import { logger } from "@/lib/logger";
 
 async function getEmbeddingModel(): Promise<string> {
     const param = await getParametroSistema("reportes.embedding_model");
@@ -22,12 +23,12 @@ export async function procesarBackfillEmbedding(datasetId: string): Promise<void
     });
 
     if (!registro) {
-        console.warn(`[BACKFILL_EMBEDDING] Registro ${datasetId} no encontrado`);
+        logger.warn(`[BACKFILL_EMBEDDING] Registro ${datasetId} no encontrado`);
         return;
     }
 
     if (registro.embedding) {
-        console.log(`[BACKFILL_EMBEDDING] Registro ${datasetId} ya tiene embedding`);
+        logger.info(`[BACKFILL_EMBEDDING] Registro ${datasetId} ya tiene embedding`);
         return;
     }
 
@@ -40,5 +41,5 @@ export async function procesarBackfillEmbedding(datasetId: string): Promise<void
         VALUES (${crypto.randomUUID()}, ${datasetId}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
     `;
 
-    console.log(`[BACKFILL_EMBEDDING] Registro ${datasetId} embedding generado correctamente`);
+    logger.info(`[BACKFILL_EMBEDDING] Registro ${datasetId} embedding generado correctamente`);
 }

@@ -4,6 +4,7 @@
  */
 
 import { getOllamaBaseUrl } from "./ollama-config";
+import { logger } from "@/lib/logger";
 
 // Ollama devuelve duraciones en nanosegundos; normalizamos a milisegundos
 // para mantener consistencia con latenciaMs.
@@ -70,7 +71,7 @@ export async function llamarOllama(
 
     if (!response.ok) {
         const errorText = await response.text().catch(() => "unknown");
-        console.error(`[OLLAMA] ERROR modelo=${modelo} status=${response.status} latencia=${latenciaMs}ms errorLen=${errorText.length}`);
+        logger.error(`[OLLAMA] ERROR modelo=${modelo} status=${response.status} latencia=${latenciaMs}ms errorLen=${errorText.length}`);
         throw new Error(`Ollama HTTP ${response.status}: ${errorText}`);
     }
 
@@ -85,7 +86,7 @@ export async function llamarOllama(
         loadDuration: nsToMs(data.load_duration),
     };
 
-    console.log(`[OLLAMA] OK modelo=${modelo} latencia=${latenciaMs}ms promptTokens=${metrics.promptTokens} responseTokens=${metrics.responseTokens}`);
+    logger.info(`[OLLAMA] OK modelo=${modelo} latencia=${latenciaMs}ms promptTokens=${metrics.promptTokens} responseTokens=${metrics.responseTokens}`);
 
     return { response: data.response, metrics };
 }
@@ -133,7 +134,7 @@ export async function llamarOllamaStructured<T>(
 
     if (!response.ok) {
         const errorText = await response.text().catch(() => "unknown");
-        console.error(`[OLLAMA_STRUCTURED] ERROR modelo=${modelo} status=${response.status} latencia=${latenciaMs}ms errorLen=${errorText.length}`);
+        logger.error(`[OLLAMA_STRUCTURED] ERROR modelo=${modelo} status=${response.status} latencia=${latenciaMs}ms errorLen=${errorText.length}`);
         throw new Error(`Ollama HTTP ${response.status}: ${errorText}`);
     }
 
@@ -154,11 +155,11 @@ export async function llamarOllamaStructured<T>(
     try {
         parsed = JSON.parse(rawResponse) as T;
     } catch {
-        console.error(`[OLLAMA_STRUCTURED] JSON inválido modelo=${modelo} latencia=${latenciaMs}ms responseLen=${rawResponse.length}`);
+        logger.error(`[OLLAMA_STRUCTURED] JSON inválido modelo=${modelo} latencia=${latenciaMs}ms responseLen=${rawResponse.length}`);
         throw new Error("Ollama devolvió JSON inválido a pesar del schema");
     }
 
-    console.log(`[OLLAMA_STRUCTURED] OK modelo=${modelo} latencia=${latenciaMs}ms promptTokens=${metrics.promptTokens} responseTokens=${metrics.responseTokens}`);
+    logger.info(`[OLLAMA_STRUCTURED] OK modelo=${modelo} latencia=${latenciaMs}ms promptTokens=${metrics.promptTokens} responseTokens=${metrics.responseTokens}`);
 
     return { data: parsed, rawResponse, metrics };
 }

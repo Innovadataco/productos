@@ -7,6 +7,7 @@ import { logAudit } from "./audit";
 import { asignarOperadorAApelacion } from "./operadores/asignador";
 import { MotivoBajaReporte, EstadoApelacion } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 const DEFAULT_PAUSA_DIAS = 7;
 
@@ -125,7 +126,7 @@ export async function crearApelacion(input: CrearApelacionInput, tx?: Prisma.Tra
     // Fase 4: asignar automáticamente a un revisor de apelaciones del pool.
     // Se ejecuta fuera del flujo crítico para no fallar la creación de la apelación.
     asignarOperadorAApelacion(apelacion.id, tx).catch((err) =>
-        console.error("[OPERADORES] Error asignando revisor a apelación", { apelacionId: apelacion.id, error: err })
+        logger.error("[OPERADORES] Error asignando revisor a apelación", { apelacionId: apelacion.id, error: err })
     );
 
     return { apelacion, token, smsEnviado };

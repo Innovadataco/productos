@@ -4,6 +4,7 @@ import { logAudit } from "./audit";
 import { enviarAlertaCirculoConfianza } from "./email";
 import { obtenerGruposCategoria, agruparCategorias } from "./categoria-grupos";
 import type { AccionAudit, EstadoReporte, Prisma } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 export type EstadoContacto = "sinReportes" | "enRevision" | "clasificado";
 
@@ -673,17 +674,17 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             },
         });
         if (!reporte || reporte.eliminado) {
-            console.log(`[CIRCULO] Notificación omitida: reporte ${reporteId} no existe o está eliminado`);
+            logger.info(`[CIRCULO] Notificación omitida: reporte ${reporteId} no existe o está eliminado`);
             return;
         }
         if (!ESTADOS_VISIBLES.includes(reporte.estado as EstadoReporte)) {
-            console.log(`[CIRCULO] Notificación omitida: estado ${reporte.estado} no visible`);
+            logger.info(`[CIRCULO] Notificación omitida: estado ${reporte.estado} no visible`);
             return;
         }
 
         const globalEnabled = await getParametroSistemaValor("circulo.notificaciones.enabled");
         if (globalEnabled === "false") {
-            console.log("[CIRCULO] Notificación omitida: circulo.notificaciones.enabled=false");
+            logger.info("[CIRCULO] Notificación omitida: circulo.notificaciones.enabled=false");
             return;
         }
 
@@ -721,7 +722,7 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
         });
 
         if (contactos.length === 0) {
-            console.log(`[CIRCULO] Notificación omitida: sin contactos activos para ${reporte.identificador}`);
+            logger.info(`[CIRCULO] Notificación omitida: sin contactos activos para ${reporte.identificador}`);
             return;
         }
 
@@ -748,7 +749,7 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
 
         for (const [usuarioId, datos] of contactosPorUsuario.entries()) {
             if (!datos.notificacionesCirculo) {
-                console.log(`[CIRCULO] Notificación omitida: usuario ${usuarioId} desactivó notificaciones`);
+                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuarioId} desactivó notificaciones`);
                 continue;
             }
 
@@ -770,7 +771,7 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
 
             const novedades = reportesNuevos.length;
             if (novedades === 0) {
-                console.log(`[CIRCULO] Notificación omitida: usuario ${usuarioId} sin novedades en la ventana`);
+                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuarioId} sin novedades en la ventana`);
                 continue;
             }
 
@@ -778,11 +779,11 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
                 datos.ultimaNotificacionCirculoEn &&
                 ahora.getTime() - datos.ultimaNotificacionCirculoEn.getTime() < cooldownMs
             ) {
-                console.log(`[CIRCULO] Notificación omitida: usuario ${usuarioId} en cooldown`);
+                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuarioId} en cooldown`);
                 continue;
             }
 
-            console.log(`[CIRCULO] Enviando alerta ciega a ${datos.email} (${novedades} novedades)`);
+            logger.info(`[CIRCULO] Enviando alerta ciega a ${datos.email} (${novedades} novedades)`);
             await enviarAlertaCirculoConfianza(datos.email, novedades);
             await prisma.usuario.update({
                 where: { id: usuarioId },
@@ -790,6 +791,6 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             });
         }
     } catch (error) {
-        console.error("[CIRCULO] Error enviando notificación:", error);
+        logger.error("[CIRCULO] Error enviando notificación:", error);
     }
 }
