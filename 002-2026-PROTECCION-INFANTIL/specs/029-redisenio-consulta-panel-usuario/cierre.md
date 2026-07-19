@@ -25,6 +25,11 @@
 - `src/app/api/consulta/route.ts`: extendido para incluir `nivelRiesgo`, `confianzaPromedio` y `resumenPlataformas`.
 - `src/app/api/consulta/detalle/route.ts`: nuevo endpoint para usuarios autenticados (`PARENT`).
 
+### Bugs corregidos (Tarea 1)
+- `ConsultaPublicaClient.tsx`: detecta sesión activa vía `useAuth`. Si el usuario es `PARENT`, oculta el CTA "Crear una cuenta" y muestra "Ver detalle completo" con acceso directo al dashboard.
+- `MisReportesList.tsx`: las tarjetas de reporte ahora son clickeables (role="button", cursor-pointer, foco visible) y abren la ruta de seguimiento `/seguimiento?numero=...`.
+- `ConsultaEnriquecidaClient.tsx`: verificado de punta a punta; el mapa muestra ubicaciones aproximadas a nivel ciudad (coordenadas de ciudad, no direcciones exactas) con zoom adecuado.
+
 ## Archivos tocados/creados
 
 ### Spec-Kit
@@ -48,6 +53,8 @@
 - `src/components/modules/ConsultaPublicaClient.tsx`
 - `src/components/modules/ConsultaPublicaClient.test.tsx`
 - `src/components/modules/ConsultaEnriquecidaClient.tsx` (nuevo)
+- `src/components/modules/ConsultaEnriquecidaClient.test.tsx` (nuevo)
+- `src/components/modules/MisReportesList.tsx`
 - `src/components/modules/DashboardUsuarioClient.tsx` (nuevo)
 - `src/app/dashboard/page.tsx`
 
@@ -57,18 +64,21 @@
 - `npm run lint`: ✅ verde (1 warning preexistente en `src/lib/sms.ts`).
 - `npx tsc --noEmit`: ✅ verde.
 - `npm run build`: ✅ verde.
-- `npm test`: ✅ 364 tests en 71 archivos, todos verdes.
+- `npm test`: ✅ 367 tests en 72 archivos, todos verdes.
 - `npx tsx scripts/smoke-e2e.ts`: ✅ verde.
 
-### Validación en vivo (desplegado en `:5005`)
-- App y worker reiniciados con la nueva build.
+### Validación en vivo (desplegado en `:5005` con rebuild limpio)
+- App y worker reiniciados con build nueva (`rm -rf .next && npm run build`).
 - Consulta pública `/api/consulta?identificador=...` responde 200 con nivel de riesgo, confianza y resumen de plataformas sin `undefined`.
 - Consulta enriquecida `/api/consulta/detalle?identificador=...` con cookie de usuario `PARENT` responde 200 con ubicaciones aproximadas y reportes agregados.
+- Endpoints autenticados (`/api/consulta`, `/api/consulta/detalle`, `/api/reportes/mis-reportes`) responden 200 con sesión `PARENT`.
 - Páginas `/consulta` (200) y `/dashboard` (307 para anónimo) responden correctamente.
 
 ## Git
 
 ```
+4b24ad3 fix(029): corrige bugs de consulta pública y panel autenticado
+2eb59eb docs(029): cierre de spec con resultado de tests, despliegue y validación en vivo
 bff6c0a feat(029): rediseño consulta pública + panel usuario con riesgo, confianza y consulta enriquecida
 ```
 
