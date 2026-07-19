@@ -2,28 +2,28 @@
 
 ## User Story 1 — Middleware perimetral real
 
-- [ ] Creado `src/middleware.ts` con export `middleware` y `config.matcher`.
-- [ ] `src/middleware.ts` reutiliza lógica edge-safe de `src/lib/proxy.ts`.
-- [ ] `COMITE_VALIDACION` incluido en roles internos.
-- [ ] Rutas admin protegidas: sin sesión → redirect a `/login` (pages) o 401 (API).
-- [ ] Roles internos en rutas PARENT redirigidos a su área correspondiente.
-- [ ] Rutas públicas permiten tráfico anónimo.
-- [ ] `src/proxy.ts` eliminado tras validar los 5 roles.
-- [ ] `src/lib/proxy.ts` conservado como helper compartido.
-- [ ] `verifyAuth` sigue usándose en layouts y endpoints.
-- [ ] Prueba de los 5 roles realizada sin lockout.
-- [ ] Middleware verificable como ejecutado (header temporal o log) antes de quitar.
+- [x] Confirmado `src/proxy.ts` como entrypoint válido en Next.js 16.2.10 (export `proxy` + `config.matcher`). `src/middleware.ts` no se usa porque el build lo rechaza.
+- [x] `src/proxy.ts` reutiliza lógica edge-safe de `src/lib/proxy.ts`.
+- [x] `COMITE_VALIDACION` incluido en roles internos.
+- [x] Rutas admin protegidas: sin sesión → redirect a `/login` (pages) o 401 (API).
+- [x] Roles internos en rutas PARENT redirigidos a su área correspondiente.
+- [x] Rutas públicas permiten tráfico anónimo.
+- [x] `src/lib/proxy.ts` conservado como helper compartido.
+- [x] `src/proxy.ts` conservado como entrypoint de convención Next.js 16.
+- [x] `verifyAuth` sigue usándose en layouts y endpoints.
+- [x] Prueba de los 5 roles realizada sin lockout.
+- [x] Proxy verificado como ejecutado (respuesta 401/307 de `/api/admin/*` y `/dashboard/admin` sin sesión).
 
 ## General
 
-- [ ] Todos los artefactos Spec-Kit están creados.
-- [ ] `npm run lint` pasa sin errores.
-- [ ] `npx tsc --noEmit` pasa sin errores.
-- [ ] `npm run test` pasa.
-- [ ] `npm run build` compila exitosamente.
-- [ ] `./scripts/dev-restart.sh` levanta la app con un solo worker.
-- [ ] Se completó el `quickstart.md` manualmente.
-- [ ] Se generó `cierre.md` y se actualizó la sección Implementación en `spec.md`.
-- [ ] Se registró deuda técnica si aplica.
-- [ ] Se hicieron commits: uno por User Story + uno de docs.
-- [ ] Se hizo push a `feature/001-scaffolding`.
+- [x] Todos los artefactos Spec-Kit están creados.
+- [x] `npm run lint` pasa sin errores.
+- [x] `npx tsc --noEmit` pasa sin errores.
+- [x] `npm run test` pasa.
+- [x] `npm run build` compila exitosamente.
+- [x] `./scripts/dev-restart.sh` levanta la app con un solo worker.
+- [x] Se completó el `quickstart.md` manualmente.
+- [x] Se generó `cierre.md` y se actualizó la sección Implementación en `spec.md`.
+- [x] Se registró deuda técnica (ninguna nueva).
+- [x] Se hicieron commits: uno por User Story + uno de docs.
+- [x] Se hizo push a `feature/001-scaffolding`.

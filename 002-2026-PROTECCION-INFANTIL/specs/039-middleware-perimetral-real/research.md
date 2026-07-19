@@ -4,30 +4,34 @@
 
 ### Causa raíz verificada: el guard perimetral nunca corrió como middleware de Next.js
 
-- **No existe `src/middleware.ts`**. Next.js App Router solo ejecuta automáticamente un archivo llamado `middleware.ts` (o `src/middleware.ts`) que exporte una función `middleware` (o export default). Ver documentación oficial de Next.js: Middleware file convention.
-- **La lógica vive en `src/lib/proxy.ts`**, que exporta una función llamada `proxy` (`export async function proxy(...)`). Ese nombre de export no es reconocido por Next.js como middleware.
-- **Hay un shim `src/proxy.ts`** que importa y re-exporta `proxy` desde `src/lib/proxy.ts`, junto con `config`. El archivo está correctamente ubicado, pero el export es `{ proxy }` en lugar de `middleware`, por lo que Next.js no lo ejecuta.
-- **Prueba de no-ejecución**: al acceder sin sesión a `/dashboard/admin`, la redirección a `/login` proviene del layout `src/app/dashboard/admin/layout.tsx` (render del servidor), no del middleware. Esto se puede verificar porque una petición directa a una ruta que no tenga layout (por ejemplo, una ruta protegida sin layout admin) no sería interceptada.
-- **No es una limitación de Next.js 16**: el runtime edge soporta `src/middleware.ts` con export `middleware` o `default`. El código actual es edge-safe (usa `jose` y solo `Headers`/`Cookies`/`NextResponse`), así que no hay impedimento técnico.
+- **El archivo `src/middleware.ts` no es la convención correcta en este proyecto**. Next.js 16.2.10 (versión instalada en el repo) deprecó el archivo `middleware.ts` y la función `middleware`. El build lo confirmó con el error:
+  - `middleware file convention deprecated; please use proxy instead`
+  - `Next.js can't recognize the exported 'config' field`
+- **La convención válida en Next.js 16 es `src/proxy.ts`** que exporte una función llamada `proxy` junto con un objeto `config` (matcher). El build solo reconoce el middleware cuando se usa `src/proxy.ts` con `export { proxy }` y `export const config`.
+- **La lógica vive en `src/lib/proxy.ts`**, que exporta `proxy(request: NextRequest)`. Contiene `PUBLIC_ROUTES`, `USER_FINAL_ROUTES`, `verifyToken`, `redirectToLogin`, `esRolInterno`, `homeForRole` e incluye `COMITE_VALIDACION` en `INTERNAL_ROLES`. El código es edge-safe (usa `jose` y solo APIs de runtime edge).
+- **`src/proxy.ts` actúa como entrypoint**. Importa `proxy` de `src/lib/proxy.ts` y exporta `{ proxy }` más `config` con el matcher. Con esta convención, Next.js 16 ejecuta el guard perimetral y se observa `"ƒ Proxy (Middleware)"` en el arranque.
+- **No hay duplicación funcional**: `src/lib/proxy.ts` es la fuente de verdad de la lógica; `src/proxy.ts` es el adaptador de convención requerido por Next.js 16.
+- **Prueba de ejecución**: una petición sin sesión a `/api/admin/nonexistent-route` devuelve `401 { "error": { "message": "No autenticado" } }`, respuesta que solo puede provenir del proxy. Una petición sin sesión a `/dashboard/admin` devuelve `307` a `/login`. Los 5 roles acceden a sus rutas permitidas y son redirigidos en las rutas prohibidas.
 
-### Inventario de archivos duplicados/divergentes
+### Inventario de archivos
 
 1. **`src/lib/proxy.ts`** (lógica principal)
    - Exporta `proxy(request: NextRequest)`.
    - Contiene `PUBLIC_ROUTES`, `USER_FINAL_ROUTES`, `verifyToken`, `redirectToLogin`, `esRolInterno`, `homeForRole`.
    - Incluye `COMITE_VALIDACION` como rol interno.
-   - Define `proxyConfig` (no usado por Next.js).
+   - Define `proxyConfig` (respaldo, no requerido si `src/proxy.ts` exporta su propio `config`).
    - Ruta pública de apelaciones: `/api/apelaciones` (después del rename del spec 036).
 
-2. **`src/proxy.ts`** (shim/intento de entrypoint)
+2. **`src/proxy.ts`** (entrypoint de convención Next.js 16)
    - Re-exporta `proxy` desde `src/lib/proxy.ts`.
    - Exporta `config` con matcher correcto.
-   - Problema: exporta `{ proxy }` en lugar de `middleware` o `default`.
+   - El export debe ser `{ proxy }` para que Next.js 16 lo reconozca como middleware perimetral.
 
 ### Estado de las protecciones actuales
 
-- **Protección real hoy**: los layouts de admin (`src/app/dashboard/admin/layout.tsx`) y los `verifyAuth` en endpoints hacen la validación, pero solo después de que la petición llega al handler/layout. No hay interceptor perimetral.
-- **Riesgo**: una ruta protegida sin layout o un asset dinámico no sería interceptado. Además, el comportamiento depende de que cada página/layout tenga su propia guardia.
+- **Protección perimetral real**: `src/proxy.ts` intercepta peticiones antes de que lleguen a handlers o layouts, verifica la sesión por cookie y redirige/responde según la ruta y el rol.
+- **Defensa en profundidad**: los layouts de admin (`src/app/dashboard/admin/layout.tsx`) y los `verifyAuth` en endpoints siguen validando, pero ahora cuentan con un interceptor previo.
+- **Riesgo residual**: un matcher demasiado amplio podría bloquear rutas públicas o estáticas. El matcher actual excluye `/_next/static`, `/_next/image`, `favicon.ico` y archivos con extensión.
 
 ## Referencias
 
@@ -35,4 +39,4 @@
 - `src/lib/proxy.ts`
 - `src/app/dashboard/admin/layout.tsx`
 - `src/lib/auth.ts`
-- Documentación de Next.js: Middleware file convention (`src/middleware.ts` o `middleware.ts` con export `middleware`).
+- Next.js 16 output de build: `middleware file convention deprecated; please use proxy instead`
