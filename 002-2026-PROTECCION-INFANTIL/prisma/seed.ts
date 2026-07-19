@@ -94,6 +94,47 @@ async function main() {
             descripcion: "Horas máximas que un reporte puede estar \"En proceso\" antes de mostrar advertencia al usuario",
         },
         {
+            clave: "ui.grupos_categoria",
+            valor: JSON.stringify({
+                grupos: [
+                    {
+                        clave: "contacto_sexual",
+                        nombre: "Contacto sexual",
+                        orden: 1,
+                        categorias: ["SOLICITUD_MATERIAL", "COMPARTIMIENTO_SEXUAL", "SOLICITUD_ENCUENTRO"],
+                    },
+                    {
+                        clave: "manipulacion_engano",
+                        nombre: "Manipulación o engaño",
+                        orden: 2,
+                        categorias: ["OFRECIMIENTO_REGALOS", "CONTACTO_INSISTENTE", "SUPLANTACION_IDENTIDAD"],
+                    },
+                    {
+                        clave: "amenazas_extorsion",
+                        nombre: "Amenazas o extorsión",
+                        orden: 3,
+                        categorias: ["EXTORSION", "DIFUSION_NO_CONSENTIDA", "DOXING"],
+                    },
+                    {
+                        clave: "contenido_falso_ia",
+                        nombre: "Contenido falso (IA)",
+                        orden: 4,
+                        categorias: ["CONTENIDO_GENERADO_IA"],
+                    },
+                    {
+                        clave: "otro",
+                        nombre: "Otro",
+                        orden: 5,
+                        categorias: ["OTRO"],
+                    },
+                ],
+            }),
+            tipo: TipoParametro.JSON,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: true,
+            descripcion: "Grupos de presentación de categorías de conducta para el usuario final",
+        },
+        {
             clave: "system.ollama_base_url",
             valor: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
             tipo: TipoParametro.STRING,
