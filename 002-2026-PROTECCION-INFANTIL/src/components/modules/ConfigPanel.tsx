@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
+import { CategoriaGruposEditor } from "./CategoriaGruposEditor";
 
 type ParamType = "STRING" | "INTEGER" | "FLOAT" | "BOOLEAN" | "JSON" | "STRING_ARRAY";
 
@@ -327,7 +328,9 @@ export default function ConfigPanel() {
                         )}
 
                         <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {items.map((p) => (
+                            {items
+                                .filter((p) => p.clave !== "ui.grupos_categoria")
+                                .map((p) => (
                                 <div key={p.id} className="py-4 first:pt-0 last:pb-0">
                                     <div className="grid gap-4 sm:grid-cols-[1fr,280px,120px]">
                                         <div>
@@ -421,6 +424,16 @@ export default function ConfigPanel() {
                     </section>
                 );
             })}
+
+            <section className="glass rounded-2xl p-5 sm:p-6">
+                <div className="mb-4">
+                    <h2 className="text-lg font-semibold text-body">Grupos de categoría</h2>
+                    <p className="text-sm text-muted">
+                        Agrupa las 12 categorías internas en los nombres que ven los usuarios (padres) en consultas, seguimiento y dashboards.
+                    </p>
+                </div>
+                <CategoriaGruposEditor />
+            </section>
 
             <section className="glass rounded-2xl p-5 sm:p-6">
                 <h2 className="text-lg font-semibold text-body">Timeline de cambios de producción</h2>
