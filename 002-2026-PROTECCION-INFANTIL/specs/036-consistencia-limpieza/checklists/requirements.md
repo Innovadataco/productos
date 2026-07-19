@@ -4,11 +4,15 @@
 - [ ] Renombrada carpeta `src/app/api/apeaciones` a `src/app/api/apelaciones`.
 - [ ] Renombrada carpeta `src/app/api/admin/apeaciones` a `src/app/api/admin/apelaciones`.
 - [ ] Renombrado `src/lib/apealaciones.ts` a `src/lib/apelaciones.ts`.
-- [ ] Actualizados todos los imports en consumidores.
-- [ ] Actualizadas todas las URLs en llamadas fetch.
-- [ ] Actualizados todos los tests.
+- [ ] Actualizados todos los imports de `@/lib/apealaciones` a `@/lib/apelaciones`.
+- [ ] Actualizadas todas las URLs de `/api/apeaciones/*` a `/api/apelaciones/*`.
+- [ ] Actualizadas todas las URLs de `/api/admin/apeaciones/*` a `/api/admin/apelaciones/*`.
+- [ ] Actualizado `src/proxy.ts` para exponer `/api/apelaciones` como pública.
+- [ ] Actualizados `scripts/job-apelaciones-vencimiento.ts` y `scripts/smoke-apelaciones.ts`.
+- [ ] Actualizados todos los tests de rutas API.
 - [ ] El commit es atómico (un solo commit con todos los cambios).
 - [ ] Los tests de apelaciones pasan.
+- [ ] `grep -R "apeaciones\|apealaciones" src/ scripts/ --include="*.ts" --include="*.tsx"` no devuelve coincidencias.
 
 ## User Story 2 — Barrido final de voseo
 - [ ] Eliminado "Revisá, clasificá y gestioná" de `AdminReportesTable`.

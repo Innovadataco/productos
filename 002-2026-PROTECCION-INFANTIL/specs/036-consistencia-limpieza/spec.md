@@ -14,7 +14,7 @@
 
 ### User Story 1 - Renombrar apeaciones → apelaciones (Priority: P1)
 
-La ruta de la API y el componente admin están escritos como "apeaciones" en lugar de "apelaciones". Esto afecta la consistencia, la corrección ortográfica y la claridad del código. Se requiere un renombramiento atómico en un solo commit.
+La ruta de la API, el módulo de negocio y varios consumidores están escritos con tres variantes: `apeaciones` (rutas API), `apealaciones` (módulo `src/lib/apealaciones.ts`) y `apelaciones` (forma correcta ya parcialmente en uso). Se requiere un renombramiento atómico en un solo commit que unifique todo a `apelaciones`.
 
 **Why this priority**: Aunque no cambia funcionalidad, el error ortográfico se propaga en rutas, imports y tests. Corregirlo en un commit atómico evita fragmentación y deuda de nomenclatura.
 
@@ -22,12 +22,13 @@ La ruta de la API y el componente admin están escritos como "apeaciones" en lug
 
 **Acceptance Scenarios**:
 
-1. **Given** el endpoint `GET /api/apeaciones/solicitar`, **When** se renombra, **Then** pasa a `GET /api/apelaciones/solicitar`.
+1. **Given** el endpoint `POST /api/apeaciones/solicitar`, **When** se renombra, **Then** pasa a `POST /api/apelaciones/solicitar`.
 2. **Given** el endpoint `GET /api/admin/apeaciones`, **When** se renombra, **Then** pasa a `GET /api/admin/apelaciones`.
-3. **Given** el componente `src/components/modules/AdminApelaciones.tsx`, **When** se renombra, **Then** se ajustan los imports y la funcionalidad se mantiene.
-4. **Given** todos los consumidores de la ruta (7 aproximadamente), **When** se renombra, **Then** se actualizan en el mismo commit.
-5. **Given** los tests de apelaciones, **When** se renombra, **Then** se actualizan y pasan.
-6. **Given** el archivo `src/lib/apealaciones.ts` (con doble error ortográfico), **When** se renombra, **Then** pasa a `src/lib/apelaciones.ts` y se actualizan sus imports.
+3. **Given** el módulo `src/lib/apealaciones.ts` (doble error), **When** se renombra, **Then** pasa a `src/lib/apelaciones.ts` y se actualizan todos sus imports.
+4. **Given** todas las URLs de fetch que usan `/api/apeaciones/*` o `/api/admin/apeaciones/*`, **When** se renombra, **Then** se actualizan en el mismo commit.
+5. **Given** todos los imports de `@/lib/apealaciones`, **When** se renombra, **Then** se actualizan a `@/lib/apelaciones` en el mismo commit.
+6. **Given** los tests de apelaciones, **When** se renombra, **Then** se actualizan y pasan.
+7. **Given** el commit atómico aplicado, **When** se ejecuta `grep -R "apeaciones\|apealaciones" src/ --include="*.ts" --include="*.tsx"`, **Then** no devuelve coincidencias.
 
 ### User Story 2 - Barrido final de voseo (Priority: P1)
 

@@ -15,18 +15,33 @@
 - [P] T006 Revisar scripts del worker para advisory lock.
   - Archivos: `scripts/worker-supervisor.mjs`, `scripts/worker-reportes.mjs`.
 
-## Phase 2 — US1: Bandeja del comité
+## Phase 2 — US4: Middleware perimetral (prerequisito de US1)
 
-- [P] T011 Incluir `COMITE_VALIDACION` en roles internos de `src/proxy.ts`.
+- T041 Crear `src/middleware.ts` que exporte `middleware` con matcher adecuado.
+  - Archivo: `src/middleware.ts` (nuevo).
+- T042 Refactorizar `src/proxy.ts` como helper importable por `src/middleware.ts` (o mover lógica).
   - Archivo: `src/proxy.ts`.
-- [P] T012 Verificar que `src/app/dashboard/admin/layout.tsx` reconoce a `COMITE_VALIDACION`.
-  - Archivo: `src/app/dashboard/admin/layout.tsx`.
-- [P] T013 Asegurar que el link "Mi bandeja" en `NavHeader` apunte correctamente y mantenga al usuario en el área admin.
-  - Archivo: `src/components/modules/NavHeader.tsx`.
-- T014 Escribir test de middleware/redirección para `COMITE_VALIDACION`.
-  - Archivo: `src/middleware.test.ts` (nuevo) o tests E2E.
+- T043 Incluir `COMITE_VALIDACION` en el conjunto de roles internos del middleware.
+  - Archivo: `src/middleware.ts`.
+- T044 Definir la matriz de roles de forma que `COMITE_VALIDACION` tenga acceso explícito a `/dashboard/admin/*` y los roles internos sean redirigidos fuera de rutas PARENT.
+  - Archivo: `src/middleware.ts`.
+- T045 Escribir tests de redirección para los 5 roles: ADMIN, SCHOOL_ADMIN, OPERADOR, PARENT, COMITE_VALIDACION.
+  - Archivos: `src/middleware.test.ts` (nuevo) o tests E2E.
 
-## Phase 3 — US2: Persistencia del editor de grupos
+## Phase 3 — US1: Bandeja del comité
+
+- T011 Confirmar que `src/proxy.ts`/`src/middleware.ts` incluye `COMITE_VALIDACION` como rol interno (resuelto en Phase 2).
+  - Archivo: `src/middleware.ts`.
+- T012 Verificar que `src/app/dashboard/admin/layout.tsx` y `src/app/login/page.tsx` ya reconocen `COMITE_VALIDACION`; no modificarlos.
+  - Archivos: `src/app/dashboard/admin/layout.tsx`, `src/app/login/page.tsx`.
+- T013 Verificar que el link "Mi bandeja" en `NavHeader` apunta correctamente; no modificarlo.
+  - Archivo: `src/components/modules/NavHeader.tsx`.
+- T014 Ejecutar `rm -rf .next && npm run build` para regenerar el build con el código fuente actual.
+  - Comando: `rm -rf .next && npm run build`.
+- T015 Probar flujo real con usuario `COMITE_VALIDACION`: login, "Mi bandeja", acceso directo a `/dashboard/admin/comite`, redirección desde `/mis-reportes` y `/dashboard/circulo-confianza`.
+  - Archivo: `quickstart.md`.
+
+## Phase 4 — US2: Persistencia del editor de grupos
 
 - T021 Corregir lectura en `CategoriaGruposEditor.tsx` para usar `data.valor`.
   - Archivo: `src/components/modules/CategoriaGruposEditor.tsx`.
@@ -37,7 +52,7 @@
 - T024 Agregar test de persistencia para el editor.
   - Archivo: `src/components/modules/CategoriaGruposEditor.test.tsx` (nuevo) o tests de API.
 
-## Phase 4 — US3: Índices vectoriales hnsw
+## Phase 5 — US3: Índices vectoriales hnsw
 
 - T031 Crear migración SQL aditiva para recrear índices hnsw.
   - Archivo: `prisma/migrations/20260719095000_recrear_indices_hnsw_embeddings/migration.sql` (nuevo).
@@ -48,24 +63,13 @@
 - T034 Agregar test o verificación manual de uso del índice.
   - Archivo: `scripts/verify-hnsw-indexes.ts`.
 
-## Phase 5 — US4: Middleware perimetral
-
-- T041 Crear `src/middleware.ts` que exporte `middleware` con matcher.
-  - Archivo: `src/middleware.ts` (nuevo).
-- T042 Refactorizar `src/proxy.ts` como helper importable por `src/middleware.ts` (o mover lógica).
-  - Archivo: `src/proxy.ts`.
-- T043 Asegurar que `COMITE_VALIDACION` sea rol interno en el middleware.
-  - Archivo: `src/middleware.ts`.
-- T044 Probar redirecciones: sin sesión, roles internos en rutas PARENT, PARENT en rutas admin.
-  - Archivos: tests E2E o `src/middleware.test.ts`.
-
 ## Phase 6 — US5: Datos idempotentes
 
 - T051 Convertir `usuario.create` del admin en `upsert` y exigir `ADMIN_PASSWORD` si no existe.
   - Archivo: `prisma/seed.ts`.
-- T052 Hacer idempotentes los casos de evaluación SEMILLA.
+- T052 Hacer idempotentes las inserciones de casos de evaluación SEMILLA. Como `prisma.casoEval.createMany` no soporta `upsert` y `CasoEval` no tiene índice único sobre la clave natural, usar un loop de `findFirst` + `create`/`update` por (`texto`, `fuente`, `fixtureVersion`).
   - Archivo: `prisma/seed.ts`.
-- T053 Hacer idempotentes los ejemplos de spam del dataset.
+- T053 Hacer idempotentes los ejemplos de spam del dataset. Como `DatasetEntrenamiento` no tiene índice único sobre la clave natural, usar un loop de `findFirst` + `create`/`update` por (`texto`, `fuente`).
   - Archivo: `prisma/seed.ts`.
 - T054 Actualizar documentación de despliegue para usar `prisma migrate deploy`.
   - Archivos: `docs/despliegue.md`, `scripts/dev-restart.sh`.
@@ -88,7 +92,7 @@
 - [P] T071 Ejecutar `npm run lint`, `npx tsc --noEmit`, `npm run test`.
 - [P] T072 Ejecutar `npx prisma migrate deploy` y `scripts/verify-hnsw-indexes.ts`.
 - [P] T073 Ejecutar `npx prisma db seed` dos veces y verificar idempotencia.
-- [P] T074 Probar flujo manual con `quickstart.md`.
+- [P] T074 Probar flujo manual con `quickstart.md` (incluye los 5 roles para middleware).
 - T075 Hacer deploy limpio con `./scripts/dev-restart.sh`.
 - T076 Actualizar `spec.md` con sección Implementación.
 - T077 Crear `docs/cierre-035.md`.

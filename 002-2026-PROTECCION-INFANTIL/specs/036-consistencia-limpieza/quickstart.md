@@ -8,8 +8,8 @@
 
 ## User Story 1 — Renombrar apeaciones → apelaciones
 
-1. Ejecutar `grep -R "apeaciones\|apealaciones" src/ --include="*.ts" --include="*.tsx"`.
-2. Verificar que no queden ocurrencias.
+1. Ejecutar `grep -R "apeaciones\|apealaciones" src/ scripts/ --include="*.ts" --include="*.tsx"`.
+2. Verificar que no queden ocurrencias en código ejecutable (documentación histórica no cuenta).
 3. Ejecutar `npm run test` y verificar que los tests de apelaciones pasan.
 4. Probar manualmente la creación de una apelación pública y su gestión en el admin.
 

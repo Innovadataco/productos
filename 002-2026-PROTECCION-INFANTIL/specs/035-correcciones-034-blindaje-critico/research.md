@@ -4,11 +4,18 @@
 
 ### US1 — Bandeja del comité
 
-- `src/app/dashboard/admin/layout.tsx` incluye `COMITE_VALIDACION` en `ADMIN_ROLES` (línea 6), por lo que el layout admin teóricamente permite el acceso.
-- `src/proxy.ts` define `esRolInterno` solo para `ADMIN`, `SCHOOL_ADMIN` y `OPERADOR` (línea 65), excluyendo a `COMITE_VALIDACION`. Si `src/proxy.ts` se activa como middleware, el comité quedaría fuera.
+- `src/app/dashboard/admin/layout.tsx` incluye `COMITE_VALIDACION` en `ADMIN_ROLES` (línea 6), por lo que el **código fuente** del layout admin ya permite el acceso.
+- `src/app/login/page.tsx` redirige a `COMITE_VALIDACION` hacia `/dashboard/admin/comite` (línea 33).
 - `src/components/modules/NavHeader.tsx` tiene el link "Mi bandeja" apuntando a `/dashboard/admin/comite` para el rol `COMITE_VALIDACION` (líneas 127-130 y 198-199).
-- No existe `src/middleware.ts`, por lo que la lógica de `src/proxy.ts` no se ejecuta.
-- Hipótesis del comportamiento observado: el usuario aterriza en el home público porque alguna guardia adicional o la falta de middleware redirige incorrectamente. Al activar el middleware se debe incluir `COMITE_VALIDACION` como interno.
+- `src/proxy.ts` define `esRolInterno` solo para `ADMIN`, `SCHOOL_ADMIN` y `OPERADOR` (línea 65), excluyendo a `COMITE_VALIDACION`. Si `src/proxy.ts` se activa como middleware sin corregir, el comité quedaría fuera.
+- **Reproducción verificada**: se creó un usuario `COMITE_VALIDACION` real, se inició sesión y se comprobó con `curl` que:
+  - `GET /dashboard/admin/comite` devuelve `307 Temporary Redirect` a `/` para el comité.
+  - `GET /dashboard/admin` también devuelve `307` a `/` para el comité.
+  - `GET /dashboard/admin/comite` devuelve `200 OK` para un usuario `ADMIN` con la misma sesión.
+  - `GET /api/admin/comite/pendientes` devuelve `403 Forbidden` para el comité, aunque el endpoint verifica `user.rol !== "COMITE_VALIDACION"`.
+- **Causa raíz**: la build actual `.next` está desactualizada. Inspección de `.next/server/chunks/ssr/_09ak6tp._.js` muestra que el set de roles internos del layout admin solo incluye `ADMIN` y `SCHOOL_ADMIN`; `COMITE_VALIDACION` no aparece en el set de roles permitidos. El código fuente del layout sí lo incluye, pero el build no refleja esa versión. Esto explica que `ADMIN` acceda y `COMITE_VALIDACION` sea redirigido a `/`.
+- **Fix real**: ejecutar `rm -rf .next && npm run build` (deploy limpio) para que el build refleje el código fuente actual. Como defensa en profundidad, US4 debe activar `src/middleware.ts` incluyendo `COMITE_VALIDACION` en roles internos, de modo que el comportamiento no dependa únicamente del layout.
+- **Cuidado**: no se deben modificar `src/app/dashboard/admin/layout.tsx` ni `src/app/login/page.tsx` porque ya están correctos.
 
 ### US2 — Persistencia del editor de grupos
 
@@ -36,9 +43,10 @@
 ### US5 — Datos idempotentes
 
 - `prisma/seed.ts` línea 27: `await prisma.usuario.create(...)` con password default `"Admin123!Secure"` si no está en producción.
-- El usuario admin se busca por email (`adminExists`), pero se usa `create` en lugar de `upsert`.
-- `seedEvalFixture` y `seedSpamExamples` verifican por conteo; si se agregan casos manualmente, podrían omitirse futuras semillas. El enfoque idempotente es upsert por clave natural (texto + categoría) o por un campo de fixtureVersion.
-- `ADMIN_PASSWORD` debe ser obligatorio si el admin no existe; no debe haber default.
+- El usuario admin se busca por email (`adminExists`), pero se usa `create` en lugar de `upsert`. Debe convertirse a `upsert` por email.
+- `seedEvalFixture` usa `prisma.casoEval.createMany` (línea 1072). `createMany` no soporta `upsert`. Como `CasoEval` no tiene un índice único sobre la clave natural (`texto + fuente + fixtureVersion`), `skipDuplicates: true` no sería efectivo. La opción segura es convertir el `createMany` en un loop de `findFirst` + `create`/`update` por registro.
+- `seedSpamExamples` usa `prisma.datasetEntrenamiento.create` dentro de un loop (línea 1098). Debe convertirse a `findFirst` por `texto + fuente` y luego `create` o `update`, o bien usar `upsert` si se agrega un índice único. Dado que no hay índice único actual, se recomienda el loop manual.
+- `ADMIN_PASSWORD` debe ser obligatorio si el admin no existe; no debe haber default en ningún entorno.
 - Ningún script actual invoca `migrate dev` o `migrate reset`, pero se debe documentar formalmente.
 
 ### US6 — Worker de instancia única

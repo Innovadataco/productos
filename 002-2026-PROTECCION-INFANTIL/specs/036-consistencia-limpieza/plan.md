@@ -10,7 +10,7 @@
 
 ## Fase 2: Implementación por User Story
 
-- P2.1 **US1**: Renombrar `apeaciones` → `apelaciones` en rutas, módulos, librerías, tests y consumidores en un commit atómico.
+- P2.1 **US1**: Renombrar las tres variantes (`apeaciones`, `apealaciones`, `apelaciones`) a `apelaciones` en rutas, módulos, librerías, tests, URLs de fetch y consumidores en un commit atómico.
 - P2.2 **US2**: Reemplazar textos en voseo por neutros.
 - P2.3 **US3**: Crear `src/lib/logger.ts` y reemplazar `console.log` de `src/lib`.
 - P2.4 **US4**: Agregar campo de búsqueda en `AdminReportesTable` y parámetro `q` en `/api/admin/reportes-revision`.

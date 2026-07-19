@@ -1,12 +1,14 @@
 # Requirements Checklist — Spec 035
 
 ## User Story 1 — Bandeja del comité
-- [ ] `COMITE_VALIDACION` es reconocido como rol interno en `src/app/dashboard/admin/layout.tsx`.
-- [ ] `src/proxy.ts` incluye `COMITE_VALIDACION` en roles internos.
+- [ ] Se verificó que `src/app/dashboard/admin/layout.tsx` ya reconoce `COMITE_VALIDACION` (sin modificar).
+- [ ] Se verificó que `src/app/login/page.tsx` ya redirige a `/dashboard/admin/comite` para `COMITE_VALIDACION` (sin modificar).
+- [ ] `src/proxy.ts`/`src/middleware.ts` incluye `COMITE_VALIDACION` en roles internos.
 - [ ] Tras login, `COMITE_VALIDACION` va a `/dashboard/admin/comite`.
 - [ ] "Mi bandeja" en `NavHeader` mantiene al comité en `/dashboard/admin/comite`.
 - [ ] `COMITE_VALIDACION` no aterriza en `/`, `/mis-reportes` ni `/dashboard/circulo-confianza`.
 - [ ] Middleware permite el acceso de `COMITE_VALIDACION` a `/dashboard/admin/comite`.
+- [ ] Se ejecutó `rm -rf .next && npm run build` y el build refleja el código fuente actual.
 
 ## User Story 2 — Persistencia del editor de grupos
 - [ ] `CategoriaGruposEditor.tsx` lee `data.valor` (no `data.parametro?.valor`).
@@ -32,11 +34,11 @@
 - [ ] `verifyAuth` sigue usándose en endpoints.
 
 ## User Story 5 — Datos idempotentes
-- [ ] `prisma/seed.ts` usa `upsert` para el admin.
+- [ ] `prisma/seed.ts` usa `upsert` para el admin por email.
 - [ ] El seed falla si `ADMIN_PASSWORD` falta y el admin no existe.
 - [ ] No hay default hardcodeado de password en ningún entorno.
-- [ ] Casos de evaluación SEMILLA son idempotentes.
-- [ ] Ejemplos de spam son idempotentes.
+- [ ] Casos de evaluación SEMILLA son idempotentes (loop `findFirst` + `create`/`update` por clave natural).
+- [ ] Ejemplos de spam son idempotentes (loop `findFirst` + `create`/`update` por clave natural).
 - [ ] Ningún script invoca `migrate dev`, `migrate reset` ni `db push`.
 - [ ] Documentación de despliegue indica `prisma migrate deploy` como único método.
 

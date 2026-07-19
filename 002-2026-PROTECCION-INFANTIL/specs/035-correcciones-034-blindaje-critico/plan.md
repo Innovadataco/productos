@@ -11,11 +11,11 @@
 
 ## Fase 2: Implementación por User Story
 
-- P2.1 **US1**: Ajustar `src/app/dashboard/admin/layout.tsx`, `src/proxy.ts` y `src/middleware.ts` para incluir `COMITE_VALIDACION` como rol interno; verificar el link "Mi bandeja" en `NavHeader`.
+- P2.1 **US1**: Verificar que `src/app/dashboard/admin/layout.tsx` y `src/app/login/page.tsx` ya incluyen `COMITE_VALIDACION` (no modificarlos). Ejecutar `rm -rf .next && npm run build` y probar flujo de comité real. Asegurar que US4 active el middleware con `COMITE_VALIDACION` como interno antes o junto con esta US.
 - P2.2 **US2**: Corregir `CategoriaGruposEditor.tsx` y otros consumidores que lean `data.valor`; invalidar caché si aplica.
 - P2.3 **US3**: Crear migración SQL aditiva para recrear índices hnsw; crear script de verificación.
 - P2.4 **US4**: Crear `src/middleware.ts` con matcher adecuado; mantener `src/proxy.ts` como helper o refactorizar.
-- P2.5 **US5**: Hacer idempotente el seed (admin upsert, casos/dataset upsert); exigir `ADMIN_PASSWORD`.
+- P2.5 **US5**: Hacer idempotente el seed: admin `upsert` por email y exigir `ADMIN_PASSWORD` si no existe; convertir `casoEval.createMany` y `datasetEntrenamiento.create` a loops de `findFirst` + `create`/`update` por clave natural; documentar `prisma migrate deploy` como único método.
 - P2.6 **US6**: Agregar advisory lock en el worker; asegurar graceful release.
 
 ## Fase 3: Tests y validación

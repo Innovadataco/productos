@@ -2,8 +2,8 @@
 
 ## Phase 1 — Análisis y preparación
 
-- [P] T001 Identificar todas las rutas, archivos e imports con "apeaciones" o "apealaciones".
-  - Comandos: `grep -R "apeaciones\|apealaciones" src/ --include="*.ts" --include="*.tsx"`.
+- [P] T001 Identificar las tres variantes (`apeaciones`, `apealaciones`, `apelaciones`) en rutas, imports, URLs y scripts.
+  - Comandos: `grep -R "apeactions\|apealaciones\|apelaciones" src/ scripts/ --include="*.ts" --include="*.tsx"`.
 - [P] T002 Hacer grep completo de voseo en strings de UI.
   - Comandos: `grep -R "revisá\|clasificá\|gestioná\|mostrá\|copiá\|mostrála\|verificá\|buscá\|enviá\|guardá" src/ --include="*.tsx" --include="*.ts"`.
 - [P] T003 Catalogar `console.log` en `src/lib`.
@@ -17,16 +17,18 @@
 
 - [P] T011 Renombrar directorios `src/app/api/apeaciones` → `src/app/api/apelaciones` y `src/app/api/admin/apeaciones` → `src/app/api/admin/apelaciones`.
 - [P] T012 Renombrar `src/lib/apealaciones.ts` → `src/lib/apelaciones.ts`.
-- [P] T013 Actualizar imports en consumidores:
-  - `src/components/modules/AdminApelaciones.tsx`
-  - `src/app/dashboard/admin/operadores/gestion/page.tsx`
-  - `src/proxy.ts`
-  - `src/components/modules/AdminNav.tsx`
+- [P] T013 Actualizar imports de `@/lib/apealaciones` a `@/lib/apelaciones` en todos los consumidores:
+  - Rutas API en `src/app/api/apeaciones/**` y `src/app/api/admin/apeaciones/**` (tras renombrar carpetas)
+  - `scripts/job-apelaciones-vencimiento.ts`
+  - `scripts/smoke-apelaciones.ts`
   - `src/lib/operadores/asignador.ts`
   - `src/lib/operadores/integracion.test.ts`
+- [P] T014 Actualizar URLs en llamadas fetch de `/api/apeaciones/*` → `/api/apelaciones/*` y `/api/admin/apeaciones/*` → `/api/admin/apelaciones/*`:
   - `src/app/apelar/page.tsx`
-- [P] T014 Actualizar URLs en llamadas fetch a `/api/apeaciones/*` → `/api/apelaciones/*`.
-- [P] T015 Actualizar tests de rutas y componentes.
+  - `src/components/modules/AdminApelaciones.tsx`
+  - `src/proxy.ts` (ruta pública)
+  - `scripts/smoke-apelaciones.ts`
+- [P] T015 Actualizar tests de rutas y componentes para que usen las nuevas URLs y el módulo renombrado. Verificar que `grep -R "apeaciones\|apealaciones" src/ scripts/ --include="*.ts" --include="*.tsx"` no devuelva coincidencias.
 - T016 Commit atómico: `chore: renombrar apeaciones -> apelaciones`.
 
 ## Phase 3 — US2: Barrido final de voseo

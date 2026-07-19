@@ -9,13 +9,14 @@
 
 ## User Story 1 — Bandeja del comité
 
-1. Crear o usar un usuario `COMITE_VALIDACION`.
-2. Iniciar sesión con ese usuario.
-3. Verificar que el navegador redirige a `/dashboard/admin/comite` (no a `/` ni `/mis-reportes`).
-4. Hacer clic en "Mi bandeja" del menú desplegable.
-5. Verificar que la URL permanece en `/dashboard/admin/comite`.
-6. Acceder manualmente a `/mis-reportes` y `/dashboard/circulo-confianza`; verificar redirección a `/dashboard/admin/comite`.
-7. Repetir con `OPERADOR` (redirige a `/dashboard/admin`) y `PARENT` (acceso normal).
+1. Ejecutar deploy limpio antes de probar: `rm -rf .next && npm run build`.
+2. Crear o usar un usuario `COMITE_VALIDACION`.
+3. Iniciar sesión con ese usuario.
+4. Verificar que el navegador redirige a `/dashboard/admin/comite` (no a `/` ni `/mis-reportes`).
+5. Hacer clic en "Mi bandeja" del menú desplegable.
+6. Verificar que la URL permanece en `/dashboard/admin/comite`.
+7. Acceder manualmente a `/mis-reportes` y `/dashboard/circulo-confianza`; verificar redirección a `/dashboard/admin/comite`.
+8. Repetir con `OPERADOR` (redirige a `/dashboard/admin`) y `PARENT` (acceso normal).
 
 ## User Story 2 — Persistencia del editor de grupos
 
@@ -46,9 +47,12 @@
 3. Verificar redirección a `/login`.
 4. Sin iniciar sesión, llamar `GET /api/admin/reportes-revision`.
 5. Verificar respuesta 401.
-6. Iniciar sesión como `COMITE_VALIDACION` y acceder a `/dashboard/admin/comite`; verificar que carga.
-7. Iniciar sesión como `OPERADOR` y acceder a `/mis-reportes`; verificar redirección a `/dashboard/admin`.
-8. Iniciar sesión como `PARENT` y acceder a `/dashboard/admin`; verificar redirección a `/mis-reportes`.
+6. Probar los 5 roles con sesión iniciada:
+   - `ADMIN` y `SCHOOL_ADMIN`: acceden a `/dashboard/admin` sin redirección.
+   - `OPERADOR`: accede a `/dashboard/admin` y es redirigido a `/dashboard/admin` si intenta `/mis-reportes`.
+   - `COMITE_VALIDACION`: accede a `/dashboard/admin/comite` y es redirigido allí si intenta `/mis-reportes`.
+   - `PARENT`: accede a `/mis-reportes`; si intenta `/dashboard/admin`, es redirigido a `/mis-reportes` o `/`.
+7. Verificar que rutas públicas como `/consulta` permiten tráfico anónimo.
 
 ## User Story 5 — Datos idempotentes
 

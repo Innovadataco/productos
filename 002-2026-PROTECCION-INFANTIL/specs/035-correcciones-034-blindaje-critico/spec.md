@@ -14,7 +14,7 @@
 
 ### User Story 1 - Bandeja del comité (Priority: P1)
 
-Un usuario con rol `COMITE_VALIDACION`, tras iniciar sesión o al hacer clic en "Mi bandeja", debe permanecer dentro del área de administración (`/dashboard/admin/comite`). Hoy termina en el home público o en rutas de usuario final.
+Un usuario con rol `COMITE_VALIDACION`, tras iniciar sesión o al hacer clic en "Mi bandeja", debe permanecer dentro del área de administración (`/dashboard/admin/comite`). Hoy termina en el home público porque el build `.next` desplegado no refleja el código fuente del layout admin, que ya incluye a `COMITE_VALIDACION` como rol interno.
 
 **Why this priority**: El comité es un rol interno con responsabilidades de validación; si aterriza en vistas públicas o PARENT pierde el contexto de trabajo y puede exponer funciones incorrectas.
 
@@ -24,9 +24,9 @@ Un usuario con rol `COMITE_VALIDACION`, tras iniciar sesión o al hacer clic en 
 
 1. **Given** un usuario `COMITE_VALIDACION` que inicia sesión, **When** el login es exitoso, **Then** el sistema lo redirige a `/dashboard/admin/comite`.
 2. **Given** un usuario `COMITE_VALIDACION` logueado, **When** hace clic en "Mi bandeja" del menú, **Then** navega a `/dashboard/admin/comite` y no es redirigido fuera del área admin.
-3. **Given** un usuario `COMITE_VALIDACION`, **When** accede directamente a `/dashboard/admin/comite`, **Then** el layout admin le permite ver la bandeja.
+3. **Given** un usuario `COMITE_VALIDACION`, **When** accede directamente a `/dashboard/admin/comite` tras un deploy limpio (`rm -rf .next && npm run build`), **Then** el layout admin le permite ver la bandeja.
 4. **Given** un usuario `COMITE_VALIDACION`, **When** intenta acceder a `/mis-reportes` o `/dashboard/circulo-confianza`, **Then** es redirigido a `/dashboard/admin/comite`.
-5. **Given** un usuario `COMITE_VALIDACION`, **When** el middleware perimetral está activo, **Then** puede acceder a `/dashboard/admin/comite` y es rechazado en rutas de usuario final.
+5. **Given** un usuario `COMITE_VALIDACION`, **When** el middleware perimetral está activo (US4) y `COMITE_VALIDACION` figura como rol interno, **Then** puede acceder a `/dashboard/admin/comite` y es rechazado en rutas de usuario final.
 
 ### User Story 2 - Persistencia del editor de grupos (Priority: P1)
 
@@ -76,6 +76,7 @@ El archivo `src/proxy.ts` contiene la lógica de protección de rutas pero no ex
 4. **Given** un usuario `OPERADOR` con sesión, **When** accede a `/mis-reportes`, **Then** el middleware lo redirige a `/dashboard/admin`.
 5. **Given** un usuario `PARENT` con sesión, **When** accede a `/dashboard/admin`, **Then** el middleware lo redirige a `/mis-reportes` o `/`.
 6. **Given** el middleware activo, **When** se accede a una ruta pública como `/consulta`, **Then** permite el tráfico anónimo.
+7. **Given** los cinco roles (`ADMIN`, `SCHOOL_ADMIN`, `OPERADOR`, `COMITE_VALIDACION`, `PARENT`), **When** se prueba cada uno en sus rutas permitidas y prohibidas, **Then** el comportamiento es consistente y no hay lockout.
 
 ### User Story 5 - Datos idempotentes (Priority: P1)
 
@@ -126,19 +127,19 @@ El supervisor del worker puede lanzar un segundo worker si se invoca manualmente
 
 ### Functional Requirements
 
-- **FR-001**: `src/app/dashboard/admin/layout.tsx` debe reconocer `COMITE_VALIDACION` como rol interno y permitir el acceso a `/dashboard/admin/comite`.
-- **FR-002**: `src/proxy.ts` (o `src/middleware.ts`) debe incluir `COMITE_VALIDACION` en el conjunto de roles internos.
-- **FR-003**: La navegación "Mi bandeja" para `COMITE_VALIDACION` debe apuntar a `/dashboard/admin/comite` y mantener al usuario en el área admin.
+- **FR-001**: Tras un deploy limpio (`rm -rf .next && npm run build`), el build debe reflejar el código fuente actual de `src/app/dashboard/admin/layout.tsx`, que ya reconoce `COMITE_VALIDACION` como rol interno.
+- **FR-002**: `src/middleware.ts` (derivado de `src/proxy.ts`) debe incluir `COMITE_VALIDACION` en el conjunto de roles internos, para que no redirija al comité fuera del área admin.
+- **FR-003**: `src/app/login/page.tsx` ya redirige a `COMITE_VALIDACION` a `/dashboard/admin/comite`; no requiere cambios, solo verificación tras deploy limpio.
 - **FR-004**: `CategoriaGruposEditor.tsx` debe leer el valor del parámetro desde `data.valor` (nivel superior de la respuesta), no desde `data.parametro?.valor`.
 - **FR-005**: Tras guardar `ui.grupos_categoria`, debe invalidarse cualquier caché que consuma ese parámetro (p. ej. `getParametroSistema` si cachea).
 - **FR-006**: Otros consumidores de `GET /api/config/parametros/[clave]` deben usar `data.valor` si también usaban el patrón incorrecto.
 - **FR-007**: Debe crearse una migración aditiva que recree los índices `EmbeddingReporte_vector_idx` y `EmbeddingDataset_vector_idx` usando `USING hnsw`.
 - **FR-008**: Debe existir un script de verificación post-migración que falle si los índices hnsw no existen.
-- **FR-009**: Debe existir `src/middleware.ts` que exporte la función `middleware` y use el matcher adecuado.
-- **FR-010**: `src/middleware.ts` debe reutilizar la lógica de `src/proxy.ts` (o importar/refactorizar) para redirigir sin sesión y roles internos en rutas incorrectas.
+- **FR-009**: Debe existir `src/middleware.ts` que exporte la función `middleware` y use un matcher que cubra `/dashboard/admin/:path*`, `/api/admin/:path*`, `/mis-reportes` y `/dashboard/:path*`, excluyendo estáticos (`/_next/static`, `/_next/image`, `favicon.ico`, archivos estáticos).
+- **FR-010**: `src/middleware.ts` debe reutilizar la lógica de `src/proxy.ts` y definir explícitamente: (a) rutas públicas; (b) roles internos `ADMIN`, `SCHOOL_ADMIN`, `OPERADOR`, `COMITE_VALIDACION`; (c) redirección de roles internos fuera de rutas PARENT; (d) redirección de PARENT y anónimos fuera de rutas admin.
 - **FR-011**: `verifyAuth` debe seguirse usando en endpoints como defensa en profundidad.
-- **FR-012**: `prisma/seed.ts` debe usar `upsert` para el usuario admin y fallar si `ADMIN_PASSWORD` no está definido cuando el admin no existe.
-- **FR-013**: `prisma/seed.ts` debe hacer idempotentes las inserciones de casos de evaluación y dataset de spam (upsert por clave natural o hash).
+- **FR-012**: `prisma/seed.ts` debe usar `upsert` para el usuario admin por email y fallar si `ADMIN_PASSWORD` no está definido cuando el admin no existe. No debe haber password default en ningún entorno.
+- **FR-013**: `prisma/seed.ts` debe hacer idempotentes las inserciones de casos de evaluación SEMILLA y ejemplos de spam. Para `casoEval.createMany` (que no soporta `upsert`) se debe convertir a un loop de `findFirst` + `create`/`update` por clave natural (`texto + fuente + fixtureVersion`). Para los ejemplos de spam se debe usar el mismo patrón (`texto + fuente`).
 - **FR-014**: Ningún script de deploy debe invocar `prisma migrate dev`, `prisma migrate reset` ni `prisma db push`.
 - **FR-015**: El worker debe obtener un advisory lock de Postgres al inicio; si no lo obtiene, debe salir inmediatamente.
 - **FR-016**: El worker debe liberar el advisory lock al recibir señal de terminación.
