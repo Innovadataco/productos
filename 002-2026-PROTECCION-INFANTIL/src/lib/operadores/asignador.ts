@@ -108,7 +108,7 @@ export async function asignarOperadorAReporte(
         return { asignado: false, razon: "El reporte ya tiene operador asignado" };
     }
 
-    if (reporte.estado !== "REVISION_MANUAL") {
+    if (reporte.estado !== "REVISION_MANUAL" && reporte.estado !== "POSIBLE_SPAM") {
         return { asignado: false, razon: `Estado ${reporte.estado} no admite asignación` };
     }
 
@@ -135,7 +135,7 @@ export async function asignarOperadorAReporte(
         operadores,
         (operadorId) =>
             db.reporte.count({
-                where: { operadorId, estado: "REVISION_MANUAL", eliminado: false },
+                where: { operadorId, estado: { in: ["REVISION_MANUAL", "POSIBLE_SPAM"] }, eliminado: false },
             }),
         config
     );
