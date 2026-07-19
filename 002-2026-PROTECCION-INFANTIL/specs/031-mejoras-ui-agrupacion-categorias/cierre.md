@@ -86,18 +86,69 @@ Se entregaron las 6 mejoras de UI acordadas en la spec:
 | `npx tsc --noEmit` | ✅ sin errores |
 | `npm test` | ✅ 388 tests pasaron (73 archivos) |
 | `npm run build` | ✅ build exitoso |
-| `npx tsx scripts/smoke-e2e.ts` (contra app local en puerto 5006) | ✅ smoke E2E pasó (login, crear reporte, procesar, persistencia, cola admin, limpieza) |
+| `npx tsx scripts/smoke-e2e.ts` (contra app local en puerto 5005) | ✅ smoke E2E pasó (login, crear reporte, procesar, persistencia, cola admin, limpieza) |
 | Prueba manual `/api/estadisticas-publicas` | ✅ devuelve `porGrupoCategoria` y `porCiudad` con `lat`/`lng` |
+| Prueba manual home (reportar anónimo) | ✅ llega al wizard sin redirigir a login |
+| Prueba manual círculo de confianza | ✅ crea contacto con múltiples identificadores, se ven estados y mapa |
+| Prueba manual logout | ✅ redirige a `/` |
+
+## Correcciones posteriores a la implementación inicial
+
+Durante la verificación final se detectaron y corrigieron los siguientes problemas:
+
+1. **Build viejo servido en `:5005`**: el endpoint `/api/estadisticas-publicas` no devolvía `porGrupoCategoria` porque el proceso de `next start` en `:5005` era de una build anterior. Se mató el proceso huérfano, se hizo `rm -rf .next && npm run build` y se reinició app + worker. El endpoint ahora devuelve el campo correctamente.
+
+2. **Race condition al guardar embedding**: bajo concurrencia del worker, el `INSERT` en `EmbeddingReporte` podía fallar con `P2002` (reporteId ya existe). Se envolvió en `try/catch` para tratar `P2002` como idempotente, conservando el embedding existente (`src/app/api/reportes/procesar/route.ts`).
+
+3. **Voseo residual en UI y endpoints**: además de los emails, se encontraron imperativos en voseo en varios componentes y mensajes de error. Se pasaron a español neutro en:
+   - `src/components/modules/ReporteWizard.tsx`
+   - `src/components/modules/ConfigPanel.tsx`
+   - `src/components/modules/ScoreDisplay.tsx`
+   - `src/components/modules/AdminApelaciones.tsx`
+   - `src/components/modules/AdminReporteDetalle.tsx`
+   - `src/components/modules/LandingFeatures.tsx`
+   - `src/app/dashboard/admin/operadores/gestion/page.tsx`
+   - Todos los endpoints bajo `src/app/api/admin/**` que devolvían `"No tenés permiso..."` → `"No tienes permiso..."`
+
+## Archivos adicionales modificados en la verificación final
+
+- `src/app/api/reportes/procesar/route.ts`
+- `src/components/modules/ReporteWizard.tsx`
+- `src/components/modules/ConfigPanel.tsx`
+- `src/components/modules/ScoreDisplay.tsx`
+- `src/components/modules/AdminApelaciones.tsx`
+- `src/components/modules/AdminReporteDetalle.tsx`
+- `src/components/modules/LandingFeatures.tsx`
+- `src/app/dashboard/admin/operadores/gestion/page.tsx`
+- `src/app/api/admin/apeaciones/[id]/resolver/route.ts`
+- `src/app/api/admin/comite/[id]/asignar/route.ts`
+- `src/app/api/admin/comite/[id]/reasignar/route.ts`
+- `src/app/api/admin/comite/[id]/resolver/route.ts`
+- `src/app/api/admin/correcciones/route.ts`
+- `src/app/api/admin/reportes-revision/[id]/confirmar/route.ts`
+- `src/app/api/admin/reportes-revision/[id]/route.ts`
+- `src/app/api/admin/reportes/[id]/baja/route.ts`
+- `src/app/api/admin/reportes/[id]/escalar/route.ts`
+- `src/app/api/admin/reportes/[id]/transiciones/route.ts`
+- `src/app/api/admin/reportes/[id]/validar-anonimizacion/route.ts`
+- `src/app/api/admin/spam/[id]/resolver/route.ts`
+- `specs/031-mejoras-ui-agrupacion-categorias/cierre.md`
+
+## Commits adicionales (verificación final)
+
+1. `fix(ui): corrige voseo residual en UI y mensajes de error`
+2. `fix(procesar): maneja race condition en INSERT de EmbeddingReporte`
+3. `docs(031): actualiza cierre.md con verificación final, build viejo y fixes`
 
 ## Deploy
 
 - Rama: `feature/001-scaffolding`
-- Push a `origin feature/001-scaffolding` completado: `6bfbab0..b3953e9`
-- El build ya está generado en `.next` y listo para desplegar en el entorno correspondiente.
+- App y worker reiniciados en `http://localhost:5005` con build limpia.
+- Validación final: `npm test` ✅ 388 tests, `npx tsx scripts/smoke-e2e.ts` ✅.
 
 ## Notas y seguimiento
 
 - El parámetro `ui.grupos_categoria` queda editable desde `/dashboard/admin/configuracion`. Si se cambia, todas las vistas que usan `obtenerGruposCategoria()` reflejan el cambio sin reinicio.
 - El smoke E2E requiere Ollama y el modelo de embedding. Si se despliega en un entorno sin IA local, los endpoints de lectura y UI funcionan igual con datos existentes; el procesamiento de nuevos reportes seguirá dependiendo del worker.
 - No se generaron migraciones de Prisma; la agrupación y coords se resolvieron con datos existentes (`ParametroSistema`, `Ciudad`).
-- Pendiente fuera de esta spec: actualizar imágenes/guías de usuario si se documentan screenshots del dashboard.
+- La race condition de embedding es una mejora de robustez del worker; no cambia el comportamiento funcional.
