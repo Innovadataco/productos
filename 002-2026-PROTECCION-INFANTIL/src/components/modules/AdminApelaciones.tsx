@@ -28,7 +28,7 @@ export function AdminApelaciones() {
     async function load() {
         setLoading(true);
         try {
-            const res = await fetch("/api/admin/apeaciones", { credentials: "include", cache: "no-store" });
+            const res = await fetch("/api/admin/apelaciones", { credentials: "include", cache: "no-store" });
             const data = await res.json();
             if (res.ok) setItems(data.items || []);
         } catch {
@@ -44,7 +44,7 @@ export function AdminApelaciones() {
 
     async function openDetail(apelacion: Apelacion) {
         setSelected(apelacion);
-        const res = await fetch(`/api/admin/apeaciones/${apelacion.id}`, { credentials: "include", cache: "no-store" });
+        const res = await fetch(`/api/admin/apelaciones/${apelacion.id}`, { credentials: "include", cache: "no-store" });
         const data = await res.json();
         if (res.ok) {
             setDetail(data);
@@ -54,7 +54,7 @@ export function AdminApelaciones() {
 
     async function resolver(accion: "ACEPTAR" | "RECHAZAR") {
         if (!selected || !respuesta.trim()) return;
-        const res = await fetch(`/api/admin/apeaciones/${selected.id}/resolver`, {
+        const res = await fetch(`/api/admin/apelaciones/${selected.id}/resolver`, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
@@ -77,7 +77,7 @@ export function AdminApelaciones() {
 
     async function rehabilitar() {
         if (!selected || !notaRehab.trim()) return;
-        const res = await fetch(`/api/admin/apeaciones/${selected.id}/rehabilitar`, {
+        const res = await fetch(`/api/admin/apelaciones/${selected.id}/rehabilitar`, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },

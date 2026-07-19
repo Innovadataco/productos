@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { resolverApelacion } from "@/lib/apealaciones";
+import { resolverApelacion } from "@/lib/apelaciones";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { esAdminRol, puedeGestionarApelacion } from "@/lib/operadores/permisos";

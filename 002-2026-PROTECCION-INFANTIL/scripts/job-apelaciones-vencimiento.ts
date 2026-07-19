@@ -1,4 +1,4 @@
-import { vencerApelacionesPendientes } from "@/lib/apealaciones";
+import { vencerApelacionesPendientes } from "@/lib/apelaciones";
 
 async function main() {
     const result = await vencerApelacionesPendientes();

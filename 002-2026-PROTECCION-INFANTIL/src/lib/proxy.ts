@@ -23,7 +23,7 @@ const PUBLIC_ROUTES = [
     "/api/reportes",
     "/api/estadisticas-publicas",
     "/api/health",
-    "/api/apeaciones",
+    "/api/apelaciones",
     "/apelar",
 ];
 

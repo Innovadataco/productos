@@ -3,7 +3,7 @@ import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma } from "@/lib/reporte-test-utils";
-import { crearApelacion } from "@/lib/apealaciones";
+import { crearApelacion } from "@/lib/apelaciones";
 
 const CODIGO_FIJO = "123456";
 
@@ -16,7 +16,7 @@ vi.mock("@/lib/sms", async (importOriginal) => {
 });
 
 function crearRequest(body: unknown): Request {
-    return new Request("http://localhost:5005/api/apeaciones/verificar", {
+    return new Request("http://localhost:5005/api/apelaciones/verificar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -47,7 +47,7 @@ async function crearApelacionSms(identificador: string) {
     return token;
 }
 
-describe("POST /api/apeaciones/verificar", () => {
+describe("POST /api/apelaciones/verificar", () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();

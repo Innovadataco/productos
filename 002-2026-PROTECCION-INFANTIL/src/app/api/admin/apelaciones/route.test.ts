@@ -3,7 +3,7 @@ import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
-import { crearApelacion } from "@/lib/apealaciones";
+import { crearApelacion } from "@/lib/apelaciones";
 
 let mockToken: string | undefined;
 
@@ -36,7 +36,7 @@ async function crearApelacionDePrueba(identificador: string) {
     });
 }
 
-describe("GET /api/admin/apeaciones", () => {
+describe("GET /api/admin/apelaciones", () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();
@@ -49,7 +49,7 @@ describe("GET /api/admin/apeaciones", () => {
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
         await crearApelacionDePrueba("+57300LIST01");
 
-        const req = new Request("http://localhost:5005/api/admin/apeaciones", {
+        const req = new Request("http://localhost:5005/api/admin/apelaciones", {
             headers: { cookie: `token=${mockToken}` },
         });
         const res = await GET(req);
@@ -61,7 +61,7 @@ describe("GET /api/admin/apeaciones", () => {
     });
 
     it("rechaza a usuarios no autenticados", async () => {
-        const req = new Request("http://localhost:5005/api/admin/apeaciones");
+        const req = new Request("http://localhost:5005/api/admin/apelaciones");
         const res = await GET(req);
         expect(res.status).toBe(401);
     });
@@ -70,7 +70,7 @@ describe("GET /api/admin/apeaciones", () => {
         const user = await crearUsuario("PARENT");
         mockToken = await crearTokenUsuario(user.id, "PARENT");
 
-        const req = new Request("http://localhost:5005/api/admin/apeaciones", {
+        const req = new Request("http://localhost:5005/api/admin/apelaciones", {
             headers: { cookie: `token=${mockToken}` },
         });
         const res = await GET(req);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getApelacionByToken } from "@/lib/apealaciones";
+import { getApelacionByToken } from "@/lib/apelaciones";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {

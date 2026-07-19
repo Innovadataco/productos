@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { crearApelacion } from "@/lib/apealaciones";
+import { crearApelacion } from "@/lib/apelaciones";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
 

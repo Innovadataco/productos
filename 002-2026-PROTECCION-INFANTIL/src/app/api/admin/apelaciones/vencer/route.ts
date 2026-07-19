@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { vencerApelacionesPendientes } from "@/lib/apealaciones";
+import { vencerApelacionesPendientes } from "@/lib/apelaciones";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";

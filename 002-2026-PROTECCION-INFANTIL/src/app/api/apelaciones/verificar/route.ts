@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verificarOtpApelacion } from "@/lib/apealaciones";
+import { verificarOtpApelacion } from "@/lib/apelaciones";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";

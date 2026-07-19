@@ -134,7 +134,7 @@ async function crearApelacion(
     tipoVerificacion: "NICK" | "SMS",
     contacto?: string
 ): Promise<{ token: string; id: string }> {
-    const res = await api("/api/apeaciones/solicitar", {
+    const res = await api("/api/apelaciones/solicitar", {
         method: "POST",
         body: JSON.stringify({
             identificador,
@@ -163,7 +163,7 @@ async function consultarEstado(token: string): Promise<{
     pausaHasta: string | null;
     visibilidadRestaurada: boolean;
 }> {
-    const res = await api(`/api/apeaciones/${token}`);
+    const res = await api(`/api/apelaciones/${token}`);
     assert(res.ok, `Consultar estado falló: ${res.status}`);
     return (await res.json()) as {
         estado: string;
@@ -182,7 +182,7 @@ async function obtenerOtpDesdeHash(hash: string): Promise<string> {
 }
 
 async function verificarOtp(token: string, codigo: string): Promise<void> {
-    const res = await api("/api/apeaciones/verificar", {
+    const res = await api("/api/apelaciones/verificar", {
         method: "POST",
         body: JSON.stringify({ token, codigo }),
     });
@@ -192,7 +192,7 @@ async function verificarOtp(token: string, codigo: string): Promise<void> {
 }
 
 async function resolverApelacionAdmin(apelacionId: string, accion: "ACEPTAR" | "RECHAZAR", reportesSeleccionados?: string[]): Promise<void> {
-    const res = await api(`/api/admin/apeaciones/${apelacionId}/resolver`, {
+    const res = await api(`/api/admin/apelaciones/${apelacionId}/resolver`, {
         method: "POST",
         body: JSON.stringify({
             accion,
@@ -206,7 +206,7 @@ async function resolverApelacionAdmin(apelacionId: string, accion: "ACEPTAR" | "
 }
 
 async function ejecutarVencimientoJob(): Promise<void> {
-    const { vencerApelacionesPendientes } = await import("@/lib/apealaciones");
+    const { vencerApelacionesPendientes } = await import("@/lib/apelaciones");
     const result = await vencerApelacionesPendientes();
     console.log(`   [JOB VENCIMIENTO] vencidas=${result.vencidas}`);
 }
@@ -260,7 +260,7 @@ async function main(): Promise<void> {
         console.log("   ✅ Apelación NICK creada y visibilidad pausada");
 
         printStep(4, "Ver apelación en bandeja admin");
-        const resList = await api("/api/admin/apeaciones");
+        const resList = await api("/api/admin/apelaciones");
         assert(resList.ok, `Listar apelaciones falló: ${resList.status}`);
         const listData = (await resList.json()) as { items: { id: string; estado: string; identificador: string }[] };
         const enBandeja = listData.items.some((a) => a.id === idNick);

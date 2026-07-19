@@ -5,7 +5,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma } from "@/lib/reporte-test-utils";
 
 function crearRequest(body: unknown): Request {
-    return new Request("http://localhost:5005/api/apeaciones/solicitar", {
+    return new Request("http://localhost:5005/api/apelaciones/solicitar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -27,7 +27,7 @@ async function crearIdentificadorVisible(identificador: string, plataformaId: st
     });
 }
 
-describe("POST /api/apeaciones/solicitar", () => {
+describe("POST /api/apelaciones/solicitar", () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();

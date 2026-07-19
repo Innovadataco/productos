@@ -3,7 +3,7 @@ import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearUsuario, crearTokenUsuario, crearPaisCiudad } from "@/lib/reporte-test-utils";
-import { crearApelacion } from "@/lib/apealaciones";
+import { crearApelacion } from "@/lib/apelaciones";
 
 let mockToken: string | undefined;
 
@@ -76,7 +76,7 @@ async function crearApelacionPendiente(identificador: string) {
     return { apelacion, token };
 }
 
-describe("POST /api/admin/apeaciones/[id]/resolver", () => {
+describe("POST /api/admin/apelaciones/[id]/resolver", () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();
@@ -93,7 +93,7 @@ describe("POST /api/admin/apeaciones/[id]/resolver", () => {
         const reporte = await crearReporteVisible(identificador);
         const { apelacion } = await crearApelacionPendiente(identificador);
 
-        const req = new Request(`http://localhost:5005/api/admin/apeaciones/${apelacion.id}/resolver`, {
+        const req = new Request(`http://localhost:5005/api/admin/apelaciones/${apelacion.id}/resolver`, {
             method: "POST",
             headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
             body: JSON.stringify({
@@ -125,7 +125,7 @@ describe("POST /api/admin/apeaciones/[id]/resolver", () => {
         await crearReporteVisible(identificador);
         const { apelacion } = await crearApelacionPendiente(identificador);
 
-        const req = new Request(`http://localhost:5005/api/admin/apeaciones/${apelacion.id}/resolver`, {
+        const req = new Request(`http://localhost:5005/api/admin/apelaciones/${apelacion.id}/resolver`, {
             method: "POST",
             headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
             body: JSON.stringify({
@@ -149,7 +149,7 @@ describe("POST /api/admin/apeaciones/[id]/resolver", () => {
         await crearReporteVisible(identificador);
         const { apelacion } = await crearApelacionPendiente(identificador);
 
-        const req = new Request(`http://localhost:5005/api/admin/apeaciones/${apelacion.id}/resolver`, {
+        const req = new Request(`http://localhost:5005/api/admin/apelaciones/${apelacion.id}/resolver`, {
             method: "POST",
             headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
             body: JSON.stringify({ accion: "RECHAZAR", respuestaAdmin: "x".repeat(20) }),

@@ -54,7 +54,7 @@ function ApelarContent() {
         setLoading(true);
         setError("");
         try {
-            const res = await fetch(`/api/apeaciones/${t}`, { cache: "no-store" });
+            const res = await fetch(`/api/apelaciones/${t}`, { cache: "no-store" });
             const data = await res.json();
             if (!res.ok) throw new Error(data?.error?.message || "Error");
             setEstado(data);
@@ -76,7 +76,7 @@ function ApelarContent() {
         setLoading(true);
         setError("");
         try {
-            const res = await fetch("/api/apeaciones/solicitar", {
+            const res = await fetch("/api/apelaciones/solicitar", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(form),
@@ -100,7 +100,7 @@ function ApelarContent() {
         setLoading(true);
         setError("");
         try {
-            const res = await fetch("/api/apeaciones/verificar", {
+            const res = await fetch("/api/apelaciones/verificar", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ token, codigo }),
