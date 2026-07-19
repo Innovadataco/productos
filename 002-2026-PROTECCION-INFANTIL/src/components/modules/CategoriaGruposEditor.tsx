@@ -67,7 +67,7 @@ export function CategoriaGruposEditor() {
             .then((r) => r.json())
             .then((data) => {
                 try {
-                    const parsed = JSON.parse(data.parametro?.valor || "{}");
+                    const parsed = JSON.parse(data.valor || "{}");
                     if (Array.isArray(parsed.grupos) && parsed.grupos.length > 0) {
                         setGrupos(parsed.grupos);
                     } else {
