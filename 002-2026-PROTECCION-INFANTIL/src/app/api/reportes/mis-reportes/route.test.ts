@@ -64,9 +64,9 @@ describe("GET /api/reportes/mis-reportes", () => {
         expect(pendiente.mensaje).toBe("Tu reporte está en proceso — puede tardar hasta 24 horas");
         expect(pendiente.slaHoras).toBe(24);
 
-        expect(procesado.estadoVisual).toBe("Procesado");
+        expect(procesado.estadoVisual).toBe("Verificado");
         expect(procesado.badge).toBe("success");
-        expect(procesado.mensaje).toBe("Tu reporte ha sido procesado y clasificado.");
+        expect(procesado.mensaje).toBe("Tu reporte ha sido verificado y clasificado.");
 
         const eliminado = body.items.find((r: { identificador: string }) => r.identificador === "+57300BAJA");
         expect(eliminado).toBeUndefined();
@@ -94,8 +94,8 @@ describe("GET /api/reportes/mis-reportes", () => {
         expect(res.status).toBe(200);
         const body = await res.json();
 
-        expect(body.items[0].estadoVisual).toBe("Procesado");
-        expect(body.items[0].badge).toBe("muted");
-        expect(body.items[0].mensaje).toBe("Tu reporte fue vinculado a uno existente.");
+        expect(body.items[0].estadoVisual).toBe("En proceso");
+        expect(body.items[0].badge).toBe("warning");
+        expect(body.items[0].mensaje).toBe("Tu reporte está en proceso — puede tardar hasta 24 horas");
     });
 });

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-
-const ULTIMOS_IDENTIFICADORES = 10;
+import { obtenerGruposCategoria, agruparCategorias } from "@/lib/categoria-grupos";
 
 export async function GET() {
     try {
@@ -14,9 +13,8 @@ export async function GET() {
             scorePromedio,
             porPlataforma,
             porPais,
-            porCiudad,
+            porCiudadConIds,
             porNivelRiesgo,
-            ultimosIdentificadores,
             categoriasRaw,
         ] = await Promise.all([
             prisma.reporte.count({ where: { eliminado: false } }),
@@ -38,9 +36,9 @@ export async function GET() {
                 orderBy: { _count: { id: "desc" } },
             }),
             prisma.reporte.groupBy({
-                by: ["pais", "ciudad"],
+                by: ["ciudadId"],
                 _count: { id: true },
-                where: { eliminado: false },
+                where: { eliminado: false, ciudadId: { not: null } },
                 orderBy: { _count: { id: "desc" } },
                 take: 50,
             }),
@@ -49,21 +47,9 @@ export async function GET() {
                 where: { nivelRiesgo: { not: null } },
                 _count: { identificador: true },
             }),
-            prisma.identificadorReportado.findMany({
-                orderBy: { actualizadoEn: "desc" },
-                take: ULTIMOS_IDENTIFICADORES,
-                select: {
-                    identificador: true,
-                    plataforma: { select: { nombre: true, clave: true } },
-                    score: true,
-                    nivelRiesgo: true,
-                    totalReportes: true,
-                    actualizadoEn: true,
-                },
-            }),
             prisma.clasificacionIA.findMany({
                 where: { reporte: { eliminado: false } },
-                select: { categoria: true, reporte: { select: { esAnonimo: true } } },
+                select: { categoria: true },
             }),
         ]);
 
@@ -80,7 +66,30 @@ export async function GET() {
                   )
                 : {};
 
-        // Agregar categoria agregada
+        const ciudadIds = porCiudadConIds.map((c) => c.ciudadId).filter((id): id is string => !!id);
+        const ciudadesConCoords =
+            ciudadIds.length > 0
+                ? await prisma.ciudad.findMany({
+                      where: { id: { in: ciudadIds } },
+                      select: { id: true, nombre: true, pais: { select: { nombre: true } }, lat: true, lng: true },
+                  })
+                : [];
+
+        const ciudadesMap = Object.fromEntries(ciudadesConCoords.map((c) => [c.id, c]));
+
+        const porCiudad = porCiudadConIds.map((c) => {
+            const ciudad = ciudadesMap[c.ciudadId || ""];
+            return {
+                ciudad: ciudad?.nombre || "Desconocida",
+                pais: ciudad?.pais.nombre || "Desconocido",
+                count: c._count.id,
+                lat: ciudad?.lat ?? null,
+                lng: ciudad?.lng ?? null,
+            };
+        });
+
+        const gruposCategoria = await obtenerGruposCategoria();
+
         const porCategoriaMap = new Map<string, number>();
         for (const c of categoriasRaw) {
             porCategoriaMap.set(c.categoria, (porCategoriaMap.get(c.categoria) || 0) + 1);
@@ -88,6 +97,11 @@ export async function GET() {
         const porCategoria = Array.from(porCategoriaMap.entries())
             .map(([categoria, count]) => ({ categoria, count }))
             .sort((a, b) => b.count - a.count);
+
+        const porGrupoCategoria = agruparCategorias(
+            gruposCategoria,
+            porCategoria.map((c) => ({ categoria: c.categoria, total: c.count }))
+        );
 
         return NextResponse.json({
             totales: {
@@ -102,24 +116,13 @@ export async function GET() {
                 count: p._count.id,
             })),
             porPais: porPais.map((p) => ({ pais: p.pais, count: p._count.id })),
-            porCiudad: porCiudad.map((c) => ({
-                ciudad: c.ciudad,
-                pais: c.pais,
-                count: c._count.id,
-            })),
+            porCiudad,
             porNivelRiesgo: porNivelRiesgo.map((n) => ({
                 nivel: n.nivelRiesgo || "SIN_CLASIFICAR",
                 count: n._count.identificador,
             })),
             porCategoria,
-            ultimosIdentificadores: ultimosIdentificadores.map((i) => ({
-                identificador: i.identificador,
-                plataforma: i.plataforma.nombre,
-                score: i.score,
-                nivelRiesgo: i.nivelRiesgo || "SIN_CLASIFICAR",
-                totalReportes: i.totalReportes,
-                actualizadoEn: i.actualizadoEn.toISOString(),
-            })),
+            porGrupoCategoria,
         });
     } catch (error) {
         if (error instanceof AppError) {

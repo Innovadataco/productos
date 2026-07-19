@@ -5,6 +5,7 @@ import { numeroSeguimientoSchema } from "@/lib/validators";
 import { calcularRanking } from "@/lib/ranking";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras } from "@/lib/reporte-estados-usuario";
+import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categoria-grupos";
 import { ERROR_CODES } from "@/lib/errors";
 import { formatPlataforma } from "@/lib/plataforma";
 
@@ -83,6 +84,7 @@ export async function GET(
         const slaHoras = parseSlaHoras(slaRaw);
         const estadoUsuario = mapEstadoUsuario(reporte.estado);
         const mensaje = getMensajeUsuario(reporte.estado, slaHoras);
+        const gruposCategoria = await obtenerGruposCategoria();
 
         return NextResponse.json({
             numeroSeguimiento: reporte.numeroSeguimiento,
@@ -100,6 +102,7 @@ export async function GET(
                 ? {
                     categoria: reporte.clasificacion.categoria,
                     categoriaLabel: CATEGORIA_LABELS[reporte.clasificacion.categoria] || reporte.clasificacion.categoria,
+                    categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, reporte.clasificacion.categoria),
                     confianza: reporte.clasificacion.confianza,
                     contienePii: reporte.clasificacion.contienePii,
                     piiDetectada: reporte.clasificacion.piiDetectada,

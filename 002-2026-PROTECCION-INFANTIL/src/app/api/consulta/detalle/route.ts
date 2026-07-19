@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { formatPlataforma, formatPlataformasResumen } from "@/lib/plataforma";
 import { getRiesgoConsultaParams, calcularRiesgoConsulta } from "@/lib/riesgo-consulta";
+import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categoria-grupos";
 import type { EstadoReporte } from "@prisma/client";
 
 const consultaSchema = z.object({
@@ -101,6 +102,7 @@ export async function GET(request: Request) {
 
         const riesgoParams = await getRiesgoConsultaParams();
         const riesgoGlobal = calcularRiesgoConsulta(reportes, riesgoParams);
+        const gruposCategoria = await obtenerGruposCategoria();
 
         const totalReportes = reportes.length;
         const reportesAutenticados = reportes.filter((r) => !r.esAnonimo).length;
@@ -146,13 +148,15 @@ export async function GET(request: Request) {
 
         const itemsReportes = reportes.map((r) => {
             const riesgoIndividual = calcularRiesgoConsulta([r], riesgoParams);
+            const categoria = r.clasificacion?.categoria ?? "OTRO";
             return {
                 id: r.id,
                 plataforma: formatPlataforma(r.plataforma.nombre, r.otraPlataforma, r.plataforma.clave),
                 esAnonimo: r.esAnonimo,
                 fecha: formatFecha(r.creadoEn),
-                categoria: r.clasificacion?.categoria ?? "OTRO",
-                categoriaLabel: CATEGORIA_LABELS[r.clasificacion?.categoria ?? "OTRO"] || "Otro",
+                categoria,
+                categoriaLabel: CATEGORIA_LABELS[categoria] || "Otro",
+                categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, categoria),
                 confianza: r.clasificacion?.confianza ?? 0,
                 nivelRiesgo: riesgoIndividual.nivelRiesgo,
             };

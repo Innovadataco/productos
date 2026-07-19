@@ -4,6 +4,7 @@ import { verifyAuth } from "@/lib/auth";
 import { calcularRanking } from "@/lib/ranking";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras } from "@/lib/reporte-estados-usuario";
+import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categoria-grupos";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { formatPlataforma } from "@/lib/plataforma";
 
@@ -66,6 +67,7 @@ export async function GET(request: Request) {
 
         const slaRaw = await getParametroSistemaValor("ui.sla_horas_procesamiento");
         const slaHoras = parseSlaHoras(slaRaw);
+        const gruposCategoria = await obtenerGruposCategoria();
 
         const mapped = await Promise.all(
             items.map(async (r) => {
@@ -104,6 +106,7 @@ export async function GET(request: Request) {
                         ? {
                             categoria: r.clasificacion.categoria,
                             categoriaLabel: CATEGORIA_LABELS[r.clasificacion.categoria] || r.clasificacion.categoria,
+                            categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, r.clasificacion.categoria),
                             confianza: r.clasificacion.confianza,
                         }
                         : null,

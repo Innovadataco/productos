@@ -107,11 +107,11 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(res.status).toBe(200);
         const body = await res.json();
 
-        expect(body.estadoVisual).toBe("Procesado");
+        expect(body.estadoVisual).toBe("Verificado");
         expect(body.estadoInterno).toBe("CLASIFICADO");
         expect(body.enProceso).toBe(false);
         expect(body.badge).toBe("success");
-        expect(body.mensaje).toBe("Tu reporte ha sido procesado y clasificado.");
+        expect(body.mensaje).toBe("Tu reporte ha sido verificado y clasificado.");
         expect(body.slaHoras).toBe(24);
         expect(body.clasificacion).not.toBeNull();
         expect(body.ranking).not.toBeNull();
@@ -127,10 +127,10 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(res.status).toBe(200);
         const body = await res.json();
 
-        expect(body.estadoVisual).toBe("Procesado");
+        expect(body.estadoVisual).toBe("En proceso");
         expect(body.estadoInterno).toBe("DUPLICADO");
-        expect(body.badge).toBe("muted");
-        expect(body.mensaje).toBe("Tu reporte fue vinculado a uno existente.");
+        expect(body.badge).toBe("warning");
+        expect(body.mensaje).toBe("Tu reporte está en proceso — puede tardar hasta 24 horas");
     });
 
     it("devuelve 404 para reporte eliminado", async () => {

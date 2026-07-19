@@ -14,6 +14,9 @@ async function crearReporteAgregado(
     esAnonimo: boolean
 ) {
     const numeroSeguimiento = `RPT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const ciudadRecord = await prisma.ciudad.findUnique({
+        where: { nombre_paisId: { nombre: ciudad, paisId: (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!.id } },
+    });
     const reporte = await prisma.reporte.create({
         data: {
             identificador,
@@ -22,6 +25,8 @@ async function crearReporteAgregado(
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
             ciudad,
             pais,
+            ciudadId: ciudadRecord?.id,
+            paisId: ciudadRecord?.paisId,
             esAnonimo,
             numeroSeguimiento,
             estado: "CLASIFICADO",
@@ -101,16 +106,24 @@ describe("GET /api/estadisticas-publicas", () => {
         expect(body.porCiudad).toHaveLength(2);
         const bogota = body.porCiudad.find((c: { ciudad: string }) => c.ciudad === "Bogotá");
         expect(bogota.count).toBe(4);
-        expect(bogota.lat).toBeUndefined();
-        expect(bogota.lng).toBeUndefined();
+        expect(bogota.lat).toBe(4.711);
+        expect(bogota.lng).toBe(-74.0721);
 
         expect(body.porNivelRiesgo).toHaveLength(2);
         expect(body.porCategoria).toHaveLength(3);
 
-        expect(body.ultimosIdentificadores).toHaveLength(2);
-        expect(body.ultimosIdentificadores[0].score).toBeDefined();
-        expect(body.ultimosIdentificadores[0].nivelRiesgo).toMatch(/^(BAJO|MEDIO|ALTO|CRITICO|SIN_CLASIFICAR)$/);
+        expect(body.porGrupoCategoria).toBeDefined();
+        expect(body.porGrupoCategoria.length).toBeGreaterThanOrEqual(2);
+        const manipulacion = body.porGrupoCategoria.find(
+            (g: { clave: string }) => g.clave === "manipulacion_engano"
+        );
+        expect(manipulacion.total).toBe(4);
+        const amenazas = body.porGrupoCategoria.find(
+            (g: { clave: string }) => g.clave === "amenazas_extorsion"
+        );
+        expect(amenazas.total).toBe(1);
 
+        expect(body.ultimosIdentificadores).toBeUndefined();
         expect(body.texto).toBeUndefined();
         expect(body.email).toBeUndefined();
     });
@@ -123,6 +136,7 @@ describe("GET /api/estadisticas-publicas", () => {
         expect(body.totales.reportes).toBe(0);
         expect(body.porPlataforma).toEqual([]);
         expect(body.porCiudad).toEqual([]);
-        expect(body.ultimosIdentificadores).toEqual([]);
+        expect(body.porGrupoCategoria).toEqual([]);
+        expect(body.ultimosIdentificadores).toBeUndefined();
     });
 });
