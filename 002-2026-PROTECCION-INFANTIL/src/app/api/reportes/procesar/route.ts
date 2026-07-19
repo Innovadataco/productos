@@ -548,6 +548,10 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
         });
     } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
+        const errorCode =
+            error && typeof error === "object" && "code" in error && typeof error.code === "string"
+                ? error.code
+                : ERROR_CODES.INTERNAL_ERROR;
         const transitorio = esErrorTransitorio(error);
 
         console.error("[PROCESAR] Error procesando reporte", {
@@ -580,8 +584,8 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
                         estadoAnterior: estadoPrevio,
                         estadoNuevo: "REVISION_MANUAL",
                         responsableTipo: "SISTEMA",
-                        motivo: `Error de procesamiento: ${errMsg}`,
-                        metadatos: { error: errMsg },
+                        motivo: "Error durante el procesamiento del reporte",
+                        metadatos: { errorCode },
                         tx,
                     });
                     return tx.reporte.update({
