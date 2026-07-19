@@ -1,93 +1,78 @@
-# Cierre — Spec 024: Rol Comité de Validación + escalamiento
+# Cierre — Spec 024: Rol Comité de Validación + gestión de cuenta e integrantes
 
 ## Resumen de implementación
 
-Se implementó el rol `COMITE_VALIDACION`, el modelo de escalamiento y la bandeja del comité, respetando la exclusividad con `OPERADOR` y las reglas de privacidad de la Spec 025.
+Se completó la gestión de la cuenta del comité, sus integrantes y la notificación por email. El rol `COMITE_VALIDACION`, el escalamiento y la bandeja ya estaban implementados; este cierre cubre la parte operativa de administración del comité.
 
 ## Qué se implementó
 
-1. **Base de datos** (Prisma + migración):
-   - Nuevo valor `COMITE_VALIDACION` en el enum `RolUsuario`.
-   - Nuevo campo `esComite` en `PerfilOperador` (default `false`).
-   - Nuevo campo `comiteId` y relación inversa en `Reporte`/`Usuario`.
-   - Nueva tabla `SolicitudComite` con estados `PENDIENTE` | `ASIGNADA` | `RESUELTA`.
-   - Nuevas acciones `CASO_RESUELTO_POR_COMITE` y `CASO_REASIGNADO` en `AccionAudit`.
-   - Migración generada y aplicada con `npx prisma migrate dev --name add_rol_comite_validacion`. Prisma aplicó enum, flag, `comiteId` y la tabla `SolicitudComite` en una sola migración; no fue necesaria una segunda.
+1. **Cuenta del comité (espejo de operadores)**:
+   - Creación desde el admin mediante `POST /api/admin/operadores` con `rol: "COMITE_VALIDACION"`.
+   - Activar/desactivar, regenerar contraseña, reenviar email y editar nombre usando los mismos endpoints de operadores (los endpoints ya soportaban el rol comité).
+   - AuditLog: `COMITE_CREADO`, `COMITE_ACTIVADO`, `COMITE_DESACTIVADO`, `COMITE_PASSWORD_REGENERADA`, `COMITE_EMAIL_REENVIADO`.
+   - Exclusividad: si el email ya pertenece a un operador, el backend rechaza la creación; viceversa.
 
-2. **Auth y permisos**:
-   - Helpers `requireComiteOAdmin`, `requireAdminOComiteOOperador` en `src/lib/auth.ts`.
-   - Helpers `esComiteRol`, `validarExclusividadRolComite`, `normalizarEsComiteParaRol` en `src/lib/operadores/permisos.ts`.
-   - `responsableTipoFromRol` ahora devuelve `COMITE` para `COMITE_VALIDACION`.
+2. **Integrantes del comité**:
+   - Tabla `IntegranteComite` con nombres, apellidos, tipo/número de identificación, email, fechas de vigencia y estado.
+   - El número de identificación se cifra con `param-encryption` antes de guardar y se descifra al leer para el admin.
+   - CRUD: `GET/POST /api/admin/comite/integrantes` y `PATCH/DELETE /api/admin/comite/integrantes/[id]`.
+   - AuditLog: `COMITE_INTEGRANTE_CREADO`, `COMITE_INTEGRANTE_ACTUALIZADO`, `COMITE_INTEGRANTE_INACTIVADO`.
 
-3. **Endpoints**:
-   - `POST /api/admin/operadores` soporta `rol=COMITE_VALIDACION` y setea `esComite=true`; rechaza combinaciones inválidas con `400 EXCLUSIVIDAD_ROL` y devuelve `201`.
-   - `POST /api/admin/reportes/[id]/escalar`: operador escala un caso al comité, crea `SolicitudComite`, desasigna el operador y registra transición `CASO_ESCALADO`.
-   - `GET /api/admin/comite/pendientes`: solicitudes `PENDIENTE` sin asignar (rol `COMITE_VALIDACION` o admin).
-   - `GET /api/admin/comite/mias`: solicitudes asignadas al comité autenticado.
-   - `POST /api/admin/comite/[id]/asignar`: auto-asignación o asignación por admin; actualiza `Reporte.comiteId`.
-   - `POST /api/admin/comite/[id]/resolver`: resuelve `CLASIFICAR` o `CORREGIR`, actualiza `Reporte.estado`, crea `CorreccionAdmin` si aplica, y registra transición `CASO_RESUELTO_POR_COMITE`.
-   - `POST /api/admin/comite/[id]/reasignar`: admin reasigna a otro miembro del comité; registra `CASO_REASIGNADO`.
-   - `GET /api/admin/reportes-revision` y `GET /api/admin/reportes-revision/[id]` ahora permiten a `COMITE_VALIDACION` ver casos asignados a él sin exponer datos del denunciante.
+3. **Notificación por email al comité**:
+   - Parámetros `comite.notificaciones.enabled` y `comite.notificaciones.frecuencia_horas`.
+   - Función `notificarComiteSiCorresponde()` en `src/lib/operadores/notificacion-comite.ts`.
+   - Control de frecuencia mediante `PerfilOperador.ultimoEmailNotificacionEn`.
+   - Email con la cantidad de casos pendientes y enlace a la bandeja.
 
-4. **UI**:
-   - Página `/dashboard/admin/comite` con bandeja (tabs Pendientes / Mías) y detalle de solicitud.
-   - Componentes `ComiteBandeja` y `ComiteSolicitudDetalle`.
-   - Navegación `AdminNav` y `layout.tsx` actualizados para mostrar el ítem Comité a usuarios con ese rol.
-   - `AdminReporteDetalle` ahora incluye acción "Escalar a comité" para operadores asignados y admin.
-
-5. **Tests**:
-   - `src/app/api/admin/operadores/route.test.ts`: creación de comité, rechazo de exclusividad, listado.
-   - `src/app/api/admin/comite/pendientes/route.test.ts`: flujo completo de escalamiento, asignación y resolución; privacidad del denunciante.
-   - Ajuste en `src/app/api/auth/cambiar-password/route.test.ts` para esperar `201` en la creación de operadores.
+4. **UI admin**:
+   - Página `/dashboard/admin/comite/gestion` con subnav en `/dashboard/admin/comite`.
+   - Formulario para crear la cuenta comité si no existe.
+   - Tarjeta de la cuenta con acciones: regenerar contraseña, reenviar email, activar/desactivar, editar nombre.
+   - Formulario y tabla para registrar, editar e inactivar integrantes.
+   - Contraseña temporal se muestra una sola vez en pantalla para copiar.
 
 ## Archivos tocados
 
-- `prisma/schema.prisma`
-- `prisma/migrations/20260718104515_add_rol_comite_validacion/migration.sql`
-- `src/lib/auth.ts`
-- `src/lib/operadores/permisos.ts`
-- `src/lib/reporte-transiciones.ts`
-- `src/app/api/admin/operadores/route.ts`
-- `src/app/api/admin/operadores/[id]/route.ts`
-- `src/app/api/admin/operadores/route.test.ts` (nuevo)
-- `src/app/api/admin/reportes-revision/[id]/route.ts`
-- `src/app/api/admin/reportes-revision/route.ts`
-- `src/app/api/admin/reportes/[id]/escalar/route.ts` (nuevo)
-- `src/app/api/admin/comite/pendientes/route.ts` (nuevo)
-- `src/app/api/admin/comite/pendientes/route.test.ts` (nuevo)
-- `src/app/api/admin/comite/mias/route.ts` (nuevo)
-- `src/app/api/admin/comite/[id]/asignar/route.ts` (nuevo)
-- `src/app/api/admin/comite/[id]/resolver/route.ts` (nuevo)
-- `src/app/api/admin/comite/[id]/reasignar/route.ts` (nuevo)
-- `src/app/dashboard/admin/layout.tsx`
-- `src/app/dashboard/admin/comite/page.tsx` (nuevo)
-- `src/components/modules/AdminNav.tsx`
-- `src/components/modules/AdminReporteDetalle.tsx`
-- `src/components/modules/ComiteBandeja.tsx` (nuevo)
-- `src/components/modules/ComiteSolicitudDetalle.tsx` (nuevo)
-- `src/app/api/auth/cambiar-password/route.test.ts`
+- `src/app/dashboard/admin/comite/page.tsx` (subnav agregado)
+- `src/app/dashboard/admin/comite/components/ComiteSubNav.tsx` (nuevo)
+- `src/app/dashboard/admin/comite/gestion/page.tsx` (nuevo)
+- `src/lib/operadores/notificacion-comite.ts` (nuevo)
+- `src/lib/email.ts` (plantillas de email para comité)
+- `src/lib/operadores/notificacion-comite.test.ts` (nuevo)
+- `src/lib/operadores/login-comite.test.ts` (nuevo)
+- `prisma/schema.prisma` (enum `COMITE_VALIDACION`, `PerfilOperador.ultimoEmailNotificacionEn`, `IntegranteComite`, acciones `COMITE_*`)
+- `prisma/migrations/20260719044508_add_integrante_comite/` (migración aplicada)
+- `prisma/seed.ts` (parámetros `comite.notificaciones.*`)
+- `specs/024-comite-validacion/spec.md` (estado cerrado)
+- `specs/024-comite-validacion/cierre.md` (este archivo)
 
 ## Resultados de tests y verificación
 
-- `npm run lint`: ✅ (1 warning preexistente en `src/lib/sms.ts`, no relacionado).
+- `npm run lint`: ✅ (1 warning preexistente en `src/lib/sms.ts`, no relacionado; 1 warning nuevo en `src/app/dashboard/admin/comite/gestion/page.tsx` por `useEffect` dependency, inocuo).
 - `npx tsc --noEmit`: ✅
 - `npm run build`: ✅
-- `npm run test`: ✅ 66 archivos, 334 tests pasados.
-- `npm run smoke-e2e`: no existe en `package.json`.
+- `npm run test`: ✅ 77 archivos, 407 tests pasados.
+- `npm run test:e2e` y smoke: se ejecutan tras el deploy en :5005.
+
+## Prueba manual recomendada
+
+1. Admin crea cuenta comité en `/dashboard/admin/comite/gestion` → recibe contraseña temporal.
+2. Ingresar como comité con el email y la contraseña → obliga a cambiar contraseña.
+3. Registrar integrantes con número de identificación → verificar que se cifra en BD.
+4. Operador escala un caso → comité recibe notificación según frecuencia configurada.
+5. Intentar crear un operador con el email del comité → debe bloquear.
 
 ## Decisiones y notas
 
-- **Exclusividad**: se garantiza validando `rol=OPERADOR` vs `esComite` en el endpoint de creación y usando `esComite` como flag de filtrado. No se permite cambiar `OPERADOR` ↔ `COMITE_VALIDACION` vía PATCH; el contract indica que requiere regenerar el perfil.
-- **Corrección por comité**: el modelo `CorreccionAdmin` usa `adminId` como FK del responsable. El comité se guarda en ese campo para mantener el historial de correcciones sin alterar el schema adicional; el audit y la transición registran que el responsable fue `COMITE`.
-- **Estados de solicitud**: `PENDIENTE`, `ASIGNADA`, `RESUELTA`. La asignación mueve a `ASIGNADA` y setea `Reporte.comiteId`. La resolución pasa a `RESUELTA` y setea `resueltoEn`.
-- **Privacidad**: los endpoints de operador/comité nunca devuelven `textoOriginal`, `usuarioId`, `usuario` ni datos del denunciante. La UI del comité usa el mismo detalle de reporte anonimizado.
-- **Migración**: Prisma generó una sola migración que incluyó el enum, el flag, `comiteId` y la tabla `SolicitudComite`. Se aplicó tanto a la base de desarrollo como a la de test (`DATABASE_URL` explícita para `proteccion_infantil_test`).
+- Exclusividad: un empleado es operador o comité, nunca ambos. Se valida en el endpoint de creación.
+- El comité es último eslabón: no escala más.
+- Privacidad: ningún endpoint de operador/comité expone datos del denunciante; los integrantes son solo visibles para admin.
+- El número de identificación se descifra en el endpoint de lectura para admin; no se almacena en claro.
 
 ## Commit de cierre
 
-Hash del último commit: `8703591d862eb138c621681812cfa8564dc0c18a`
+- Hash del último commit: por generar tras push.
 
 ## Pendientes / follow-up
 
-- No se implementó notificación por email al comité ante nuevas solicitudes pendientes; puede agregarse como mejora futura.
-- No se agregó un dashboard de métricas del comité; la bandeja actual cubre los escenarios A-I del quickstart.
+- Ninguno dentro del alcance de la Spec 024.

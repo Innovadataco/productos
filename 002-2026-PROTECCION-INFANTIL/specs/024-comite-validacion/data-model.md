@@ -1,4 +1,4 @@
-> # Data Model — Rol Comité de Validación + escalamiento
+> # Data Model — Rol Comité de Validación + escalamiento + gestión de cuenta e integrantes
 
 **Date**: 2026-07-18
 **Feature**: specs/024-comite-validacion/spec.md
@@ -21,32 +21,30 @@ enum RolUsuario {
 
 ## Modelo existente modificado: `PerfilOperador`
 
-Nuevo flag `esComite` para distinguir perfiles de comité. `OPERADOR` y `COMITE_VALIDACION` son **excluyentes**.
+Nuevo flag `esComite` para distinguir perfiles de comité. `OPERADOR` y `COMITE_VALIDACION` son **excluyentes**. Nuevo campo `ultimoEmailNotificacionEn` para controlar la frecuencia de alertas de casos pendientes al comité.
 
 ```prisma
 model PerfilOperador {
-  id                       String   @id @default(cuid())
-  usuarioId                String   @unique
+  id                       String    @id @default(cuid())
+  usuarioId                String    @unique
   cupoMaximo               Int?
-  esRevisorDeApelaciones Boolean  @default(false)
-  esComite                 Boolean  @default(false)  // true solo si rol = COMITE_VALIDACION
+  esRevisorDeApelaciones Boolean   @default(false)
+  esComite                 Boolean   @default(false)  // true solo si rol = COMITE_VALIDACION
   notasInternas            String?
+  ultimoEmailNotificacionEn DateTime?
   creadoPorId              String
-  creadoEn                 DateTime @default(now())
-  actualizadoEn            DateTime @updatedAt
+  creadoEn                 DateTime  @default(now())
+  actualizadoEn            DateTime  @updatedAt
 
   usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   creadoPor Usuario @relation(fields: [creadoPorId], references: [id], name: "OperadoresCreados")
-
-  @@index([usuarioId])
-  @@index([creadoPorId])
-  @@index([esComite])
 }
 ```
 
 **Garantía de exclusividad**:
 - En CRUD: `rol=OPERADOR` ⇒ `esComite=false`; `rol=COMITE_VALIDACION` ⇒ `esComite=true`.
 - En asignación: operadores se filtran `rol=OPERADOR AND esComite=false`; comité `rol=COMITE_VALIDACION AND esComite=true`.
+- En creación por email: si existe un usuario con el mismo email y rol distinto en el par `OPERADOR`/`COMITE_VALIDACION`, se rechaza.
 
 ---
 
@@ -73,6 +71,102 @@ model Usuario {
   casosComiteAsignados Reporte[] @relation("CasosComite")
 }
 ```
+
+---
+
+## Nuevo enum: `TipoIdentificacionIntegrante`
+
+```prisma
+enum TipoIdentificacionIntegrante {
+  CEDULA_CIUDADANIA
+  CEDULA_EXTRANJERIA
+  PASAPORTE
+  OTRO
+}
+```
+
+## Nuevo enum: `EstadoIntegranteComite`
+
+```prisma
+enum EstadoIntegranteComite {
+  ACTIVO
+  INACTIVO
+}
+```
+
+## Nueva tabla: `IntegranteComite`
+
+Representa a una persona real que integra el comité de validación. La cuenta del comité (`Usuario` con rol `COMITE_VALIDACION`) es única; sus integrantes se administran aquí.
+
+| Campo | Tipo | Constraints | Notas |
+|-------|------|-------------|-------|
+| `id` | String | `@id @default(cuid())` | Identificador único |
+| `comiteId` | String | FK → `Usuario.id` | Cuenta del comité a la que pertenece |
+| `nombres` | String | | Nombres del integrante |
+| `apellidos` | String | | Apellidos del integrante |
+| `tipoIdentificacion` | `TipoIdentificacionIntegrante` | | Tipo de documento |
+| `numeroIdentificacion` | String | | Número de documento, **cifrado** con param-encryption |
+| `email` | String | | Email de contacto del integrante |
+| `fechaInicio` | DateTime | `@default(now())` | Fecha de inicio de vigencia |
+| `fechaFin` | DateTime? | | Fecha de finalización de vigencia; se setea al inactivar |
+| `estado` | `EstadoIntegranteComite` | `@default(ACTIVO)` | `ACTIVO` o `INACTIVO` |
+| `creadoPorId` | String | FK → `Usuario.id` | Admin que creó el integrante |
+| `modificadoPorId` | String? | FK → `Usuario.id` | Último admin que modificó el integrante |
+| `creadoEn` | DateTime | `@default(now())` | Timestamp de creación |
+| `actualizadoEn` | DateTime | `@updatedAt` | Timestamp de actualización |
+
+```prisma
+model IntegranteComite {
+  id                    String                        @id @default(cuid())
+  comiteId              String
+  nombres               String
+  apellidos             String
+  tipoIdentificacion    TipoIdentificacionIntegrante
+  numeroIdentificacion  String
+  email                 String
+  fechaInicio           DateTime                      @default(now())
+  fechaFin              DateTime?
+  estado                EstadoIntegranteComite        @default(ACTIVO)
+  creadoPorId           String
+  modificadoPorId       String?
+  creadoEn              DateTime                      @default(now())
+  actualizadoEn         DateTime                      @updatedAt
+
+  comite        Usuario  @relation(fields: [comiteId], references: [id], onDelete: Cascade)
+  creadoPor     Usuario  @relation(fields: [creadoPorId], references: [id], name: "IntegrantesComiteCreados")
+  modificadoPor Usuario? @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
+
+  @@index([comiteId])
+  @@index([estado])
+  @@index([tipoIdentificacion])
+}
+```
+
+**Relaciones inversas en `Usuario`**:
+```prisma
+model Usuario {
+  // ... campos existentes ...
+  integrantesComite            IntegranteComite[] @relation("IntegrantesComite")
+  integrantesComiteCreados     IntegranteComite[] @relation("IntegrantesComiteCreados")
+  integrantesComiteModificados IntegranteComite[] @relation("IntegrantesComiteModificados")
+}
+```
+
+**Cifrado**: `numeroIdentificacion` se cifra con `encryptParameter()` antes de guardar y se descifra con `decryptParameter()` al leer. Para el resto de los campos no se aplica cifrado.
+
+---
+
+## Enum `AccionAudit` modificado
+
+Agregar:
+- `COMITE_CREADO`
+- `COMITE_ACTIVADO`
+- `COMITE_DESACTIVADO`
+- `COMITE_PASSWORD_REGENERADA`
+- `COMITE_EMAIL_REENVIADO`
+- `COMITE_INTEGRANTE_CREADO`
+- `COMITE_INTEGRANTE_ACTUALIZADO`
+- `COMITE_INTEGRANTE_INACTIVADO`
 
 ---
 
@@ -138,6 +232,28 @@ model Usuario {
 
 ---
 
+## Parámetros de notificación
+
+```prisma
+model ParametroSistema {
+  clave: "comite.notificaciones.enabled"
+  valor: "true"
+  tipo: BOOLEAN
+  categoria: EMAIL
+}
+
+model ParametroSistema {
+  clave: "comite.notificaciones.frecuencia_horas"
+  valor: "24"
+  tipo: INTEGER
+  categoria: EMAIL
+}
+```
+
+El campo `PerfilOperador.ultimoEmailNotificacionEn` guarda el último envío para respetar la frecuencia configurada por cuenta del comité.
+
+---
+
 ## Migraciones
 
 1. `20260718xx_add_rol_comite_validacion`
@@ -147,6 +263,12 @@ model Usuario {
 2. `20260718xx_add_solicitud_comite`
    - CREATE TABLE `SolicitudComite`.
    - Índices y FKs.
+3. `20260718xx_add_integrante_comite`
+   - CREATE TYPE `TipoIdentificacionIntegrante`.
+   - CREATE TYPE `EstadoIntegranteComite`.
+   - ALTER TYPE `AccionAudit` ADD VALUE ... (8 nuevos valores).
+   - ALTER TABLE `PerfilOperador` ADD COLUMN `ultimoEmailNotificacionEn` TIMESTAMP.
+   - CREATE TABLE `IntegranteComite` con índices y FKs.
 
 ---
 
@@ -156,3 +278,6 @@ model Usuario {
 - Un operador no puede escalar un caso a sí mismo (imposible por exclusividad).
 - El comité es último eslabón: no existe escalamiento desde comité a admin.
 - El comité no ve quién reportó (igual que operador, gobernado por Spec 025).
+- El número de identificación de un integrante del comité siempre se almacena cifrado.
+- Solo un admin puede gestionar integrantes del comité.
+- Solo existe una cuenta de comité activa por tenant (opcionalmente, validado por lógica de negocio).
