@@ -9,6 +9,9 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { formatPlataformasResumen } from "@/lib/plataforma";
 import type { NivelRiesgoConsulta } from "@/lib/riesgo-consulta";
 
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+
 function formatFecha(iso: string | null | undefined) {
     if (!iso) return "—";
     return new Date(iso).toLocaleDateString("es-CO", { dateStyle: "medium" });
@@ -41,10 +44,14 @@ type ConsultaResponse = {
 };
 
 export function ConsultaPublicaClient() {
+    const { user, isLoading: authLoading } = useAuth();
+    const router = useRouter();
     const [identificador, setIdentificador] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [data, setData] = useState<ConsultaResponse | null>(null);
+
+    const isAutenticado = !authLoading && !!user && user.rol === "PARENT";
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -136,17 +143,37 @@ export function ConsultaPublicaClient() {
                     </div>
 
                     <div className="glass rounded-2xl p-6 text-center">
-                        <p className="text-body font-medium">¿Deseas ver el detalle completo?</p>
-                        <p className="mt-1 text-sm text-muted">
-                            Crea una cuenta para acceder al historial detallado, mapa aproximado y seguimiento de tus reportes.
-                        </p>
-                        <div className="mt-4">
-                            <Link href="/registro">
-                                <Button variant="primary" className="w-full sm:w-auto">
-                                    Crear una cuenta
-                                </Button>
-                            </Link>
-                        </div>
+                        {isAutenticado ? (
+                            <>
+                                <p className="text-body font-medium">¿Deseas ver el detalle completo?</p>
+                                <p className="mt-1 text-sm text-muted">
+                                    Accede a tu panel para ver el historial detallado, mapa aproximado y seguimiento de tus reportes.
+                                </p>
+                                <div className="mt-4">
+                                    <Button
+                                        variant="primary"
+                                        className="w-full sm:w-auto"
+                                        onClick={() => router.push("/dashboard")}
+                                    >
+                                        Ver detalle completo
+                                    </Button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-body font-medium">¿Deseas ver el detalle completo?</p>
+                                <p className="mt-1 text-sm text-muted">
+                                    Crea una cuenta para acceder al historial detallado, mapa aproximado y seguimiento de tus reportes.
+                                </p>
+                                <div className="mt-4">
+                                    <Link href="/registro">
+                                        <Button variant="primary" className="w-full sm:w-auto">
+                                            Crear una cuenta
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

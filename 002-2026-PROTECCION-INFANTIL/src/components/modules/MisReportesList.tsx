@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 type BadgeVisual = "warning" | "success" | "muted";
 
 type ClasificacionItem = {
@@ -38,6 +40,8 @@ const NIVEL_STYLES = {
 };
 
 export function MisReportesList({ items }: { items: ReporteItem[] }) {
+    const router = useRouter();
+
     if (items.length === 0) {
         return (
             <div className="glass rounded-2xl p-8 text-center">
@@ -51,7 +55,23 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
             {items.map((r) => (
                 <div
                     key={r.id}
-                    className="glass rounded-2xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition hover:-translate-y-0.5 hover:shadow-md"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Ver seguimiento del reporte ${r.numeroSeguimiento || r.identificador}`}
+                    onClick={() =>
+                        r.numeroSeguimiento
+                            ? router.push(`/seguimiento?numero=${encodeURIComponent(r.numeroSeguimiento)}`)
+                            : router.push(`/consulta?identificador=${encodeURIComponent(r.identificador)}`)
+                    }
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            r.numeroSeguimiento
+                                ? router.push(`/seguimiento?numero=${encodeURIComponent(r.numeroSeguimiento)}`)
+                                : router.push(`/consulta?identificador=${encodeURIComponent(r.identificador)}`);
+                        }
+                    }}
+                    className="glass rounded-2xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                     <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">

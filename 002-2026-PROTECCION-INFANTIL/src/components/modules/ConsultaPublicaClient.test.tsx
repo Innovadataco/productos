@@ -2,6 +2,31 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ConsultaPublicaClient } from "./ConsultaPublicaClient";
 
+const pushMock = vi.fn();
+
+vi.mock("next/navigation", () => ({
+    useRouter: () => ({ push: pushMock }),
+}));
+
+const mockAuth = {
+    user: null as { id: string; email: string; nombre: string; rol: string } | null,
+    isLoading: false,
+    isAuthenticated: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    checkSession: vi.fn(),
+};
+
+vi.mock("@/lib/contexts/AuthContext", () => ({
+    useAuth: () => mockAuth,
+    AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+function setMockUser(user: typeof mockAuth.user) {
+    mockAuth.user = user;
+    mockAuth.isAuthenticated = !!user;
+}
+
 function mockFetch(response: unknown, ok = true) {
     return vi.spyOn(global, "fetch").mockResolvedValue({
         ok,
@@ -25,6 +50,7 @@ const baseConReportes = {
 describe("ConsultaPublicaClient", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        setMockUser(null);
     });
 
     afterEach(() => {
@@ -98,7 +124,8 @@ describe("ConsultaPublicaClient", () => {
         });
     });
 
-    it("muestra CTA para crear cuenta", async () => {
+    it("muestra CTA para crear cuenta cuando el usuario es anónimo", async () => {
+        setMockUser(null);
         mockFetch(baseConReportes);
         render(<ConsultaPublicaClient />);
 
@@ -111,6 +138,25 @@ describe("ConsultaPublicaClient", () => {
             expect(document.body.textContent).toContain("Crear una cuenta");
             expect(document.body.textContent).toContain("detalle completo");
         });
+    });
+
+    it("muestra acceso al panel cuando el usuario ya está autenticado como PARENT", async () => {
+        setMockUser({ id: "u1", email: "parent@example.com", nombre: "Padre", rol: "PARENT" });
+        mockFetch(baseConReportes);
+        render(<ConsultaPublicaClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
+            target: { value: "3001111111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            expect(document.body.textContent).toContain("Ver detalle completo");
+            expect(document.body.textContent).not.toContain("Crear una cuenta");
+        });
+
+        fireEvent.click(screen.getByRole("button", { name: /Ver detalle completo/i }));
+        expect(pushMock).toHaveBeenCalledWith("/dashboard");
     });
 
     it("muestra resumen multi-plataforma cuando hay varias plataformas", async () => {
