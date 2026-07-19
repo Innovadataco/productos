@@ -135,10 +135,13 @@ export function PublicDashboard() {
                 title="Reportes por ciudad / departamento"
                 subtitle="Mapa de calor aproximado por ciudad. No incluye direcciones exactas ni datos personales."
             >
-                {puntosMapa.length === 0 ? (
+                {puntosMapa.length === 0 && data.porPais.length === 0 ? (
                     <p className="text-sm text-muted">Sin datos geográficos</p>
                 ) : (
-                    <MapaUbicaciones puntos={puntosMapa} />
+                    <MapaUbicaciones
+                        puntos={puntosMapa}
+                        paises={data.porPais.map((p) => ({ pais: p.pais, total: p.count }))}
+                    />
                 )}
             </ChartCard>
 
