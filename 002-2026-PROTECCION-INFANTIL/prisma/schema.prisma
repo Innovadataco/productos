@@ -329,7 +329,7 @@ model Plataforma {
   identificadores    IdentificadorReportado[]
   alertasSuscripcion AlertaSuscripcion[]
   apelaciones        ApelacionIdentificador[]
-  contactosConfianza ContactoConfianza[]
+  identificadoresContacto IdentificadorContacto[]
 
   @@index([clave])
   @@index([esActiva])
@@ -572,19 +572,36 @@ model ApelacionIdentificador {
 model ContactoConfianza {
   id            String   @id @default(cuid())
   usuarioId     String
-  identificador String
-  plataformaId  String
   etiqueta      String?  @db.VarChar(100)
+  nota          String?  @db.Text
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
-  usuario    Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  plataforma Plataforma @relation(fields: [plataformaId], references: [id])
+  usuario       Usuario                @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  identificadores IdentificadorContacto[]
 
-  @@unique([usuarioId, identificador, plataformaId])
   @@index([usuarioId, activo])
-  @@index([identificador, plataformaId])
+  @@index([usuarioId, creadoEn])
+}
+
+model IdentificadorContacto {
+  id            String   @id @default(cuid())
+  contactoId    String
+  valor         String
+  tipo          String?
+  plataformaId  String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  contacto   ContactoConfianza @relation(fields: [contactoId], references: [id], onDelete: Cascade)
+  plataforma Plataforma?      @relation(fields: [plataformaId], references: [id])
+
+  @@unique([contactoId, valor, plataformaId])
+  @@index([valor])
+  @@index([contactoId, activo])
+  @@index([plataformaId])
 }
 
 model AlertaSuscripcion {
