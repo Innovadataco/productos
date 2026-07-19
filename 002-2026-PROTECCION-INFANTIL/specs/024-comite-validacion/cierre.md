@@ -71,8 +71,12 @@ Se completó la gestión de la cuenta del comité, sus integrantes y la notifica
 
 ## Commit de cierre
 
-- Hash del último commit: por generar tras push.
+- Hash del último commit: `b3dcdc6`.
 
-## Pendientes / follow-up
+## Verificación final
 
-- Ninguno dentro del alcance de la Spec 024.
+- `npx tsc --noEmit`: ✅
+- `npm run build` (rebuild limpio `rm -rf .next`): ✅
+- `npm run test`: ✅ 407 tests en 77 archivos.
+- Smoke E2E en http://localhost:5005: ✅
+- App y worker reiniciados en :5005.
