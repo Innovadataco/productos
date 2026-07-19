@@ -27,7 +27,15 @@ export default function LoginPage() {
             return;
         }
 
-        const target = redirectTo || (user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN" || user?.rol === "OPERADOR" ? "/dashboard/admin" : "/mis-reportes");
+        const getRoleHome = (rol: string | undefined) => {
+            if (rol === "ADMIN" || rol === "SCHOOL_ADMIN") return "/dashboard/admin";
+            if (rol === "OPERADOR") return "/dashboard/admin/operadores";
+            if (rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
+            return "/mis-reportes";
+        };
+
+        const target = redirectTo || getRoleHome(user?.rol);
+
         // Navegación completa para evitar quedarse pegado en login por problemas de router cliente
         window.location.href = target;
     };

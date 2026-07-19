@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { MetricCard } from "@/components/modules/MetricCard";
@@ -15,6 +16,7 @@ import { Select } from "@/components/ui/Select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { formatEstadoCirculo } from "@/lib/reporte-estados-usuario";
 import { formatPlataforma } from "@/lib/plataforma";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import type { PuntoMapa } from "@/components/modules/MapaUbicaciones";
 
 const MapaUbicaciones = dynamic(
@@ -109,6 +111,8 @@ const estadoBadgeVariant: Record<Estado, import("@/components/ui/Badge").BadgeVa
 };
 
 export default function CirculoConfianzaPage() {
+    const { user, isLoading: authLoading } = useAuth();
+    const router = useRouter();
     const [contactos, setContactos] = useState<Contacto[]>([]);
     const [resumen, setResumen] = useState({
         sinReportes: 0,
@@ -167,8 +171,23 @@ export default function CirculoConfianzaPage() {
     }
 
     useEffect(() => {
+        if (authLoading) return;
+        if (!user) {
+            router.push("/login");
+            return;
+        }
+        if (["ADMIN", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION"].includes(user.rol)) {
+            const target =
+                user.rol === "COMITE_VALIDACION"
+                    ? "/dashboard/admin/comite"
+                    : user.rol === "OPERADOR"
+                      ? "/dashboard/admin/operadores"
+                      : "/dashboard/admin";
+            router.push(target);
+            return;
+        }
         cargarDatos();
-    }, []);
+    }, [authLoading, user, router]);
 
     async function agregarContacto(e: React.FormEvent) {
         e.preventDefault();
@@ -283,7 +302,7 @@ export default function CirculoConfianzaPage() {
         }
     }
 
-    if (loading) {
+    if (authLoading || loading) {
         return (
             <main className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
                 <div className="space-y-4">
