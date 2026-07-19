@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { MetricCard } from "@/components/modules/MetricCard";
 import { MiniList } from "@/components/modules/MiniList";
 import { ChartCard } from "@/components/modules/ChartCard";
@@ -12,8 +13,14 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { formatCategoria } from "@/lib/labels";
+import { formatEstadoCirculo } from "@/lib/reporte-estados-usuario";
 import { formatPlataforma } from "@/lib/plataforma";
+import type { PuntoMapa } from "@/components/modules/MapaUbicaciones";
+
+const MapaUbicaciones = dynamic(
+    () => import("@/components/modules/MapaUbicaciones").then((mod) => mod.MapaUbicaciones),
+    { ssr: false }
+);
 
 type Plataforma = { id: string; nombre: string; clave: string };
 
@@ -42,6 +49,21 @@ type IdentificadorDetalle = Identificador & {
     totalReportes: number;
 };
 
+type GrupoCategoria = {
+    clave: string;
+    nombre: string;
+    orden: number;
+    total: number;
+};
+
+type UbicacionAgregada = {
+    pais: string;
+    ciudad: string;
+    lat: number | null;
+    lng: number | null;
+    total: number;
+};
+
 type Agregado = {
     totalReportes: number;
     reportesAutenticados: number;
@@ -50,7 +72,8 @@ type Agregado = {
     ultimoReporte: string | null;
     plataformas: { id: string; nombre: string; clave: string; total: number }[];
     categorias: { categoria: string; total: number }[];
-    ubicaciones: { pais: string; ciudad: string; total: number }[];
+    porGrupoCategoria: GrupoCategoria[];
+    ubicaciones: UbicacionAgregada[];
     timeline: { mes: string; total: number }[];
 };
 
@@ -73,16 +96,11 @@ type VistaAgregada =
           totalReportes: number;
           contactosConReportes: number;
           porPais: { pais: string; total: number }[];
-          porCiudad: { ciudad: string; pais: string; total: number }[];
+          porCiudad: UbicacionAgregada[];
           porCategoria: { categoria: string; total: number }[];
+          porGrupoCategoria: GrupoCategoria[];
           timeline: { mes: string; total: number }[];
       };
-
-const estadoLabels: Record<Estado, string> = {
-    sinReportes: "Sin reportes",
-    enRevision: "En revisión",
-    clasificado: "Clasificado",
-};
 
 const estadoBadgeVariant: Record<Estado, import("@/components/ui/Badge").BadgeVariant> = {
     sinReportes: "success",
@@ -165,7 +183,7 @@ export default function CirculoConfianzaPage() {
                 }));
 
             if (identificadores.length === 0) {
-                throw new Error("Agregá al menos un identificador");
+                throw new Error("Agrega al menos un identificador");
             }
 
             const res = await fetch("/api/circulo-confianza", {
@@ -286,7 +304,7 @@ export default function CirculoConfianzaPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-body">Círculo de Confianza</h1>
                     <p className="mt-1 text-sm text-muted">
-                        Vigilá los identificadores cercanos a tu hijo. Solo vos ves tus contactos.
+                        Vigila los identificadores cercanos a tu hijo. Solo tú ves tus contactos.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -310,8 +328,8 @@ export default function CirculoConfianzaPage() {
 
             <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <MetricCard label="Sin reportes" value={resumen.sinReportes} sub={resumen.activos > 0 ? "activos" : undefined} />
-                <MetricCard label="En revisión" value={resumen.enRevision} />
-                <MetricCard label="Clasificados" value={resumen.clasificado} />
+                <MetricCard label="En proceso" value={resumen.enRevision} />
+                <MetricCard label="Verificado" value={resumen.clasificado} />
                 <MetricCard label="Contactos activos" value={resumen.activos} />
             </div>
 
@@ -400,7 +418,7 @@ export default function CirculoConfianzaPage() {
                         </form>
 
                         <div className="space-y-2">
-                            {contactos.length === 0 && <p className="text-sm text-muted">No tenés contactos registrados.</p>}
+                            {contactos.length === 0 && <p className="text-sm text-muted">No tienes contactos registrados.</p>}
                             {contactos.map((c) => (
                                 <div
                                     key={c.id}
@@ -409,7 +427,7 @@ export default function CirculoConfianzaPage() {
                                     <div className="flex items-start justify-between gap-2">
                                         <button onClick={() => verDetalle(c)} className="flex-1 text-left">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <Badge variant={estadoBadgeVariant[c.estado]}>{estadoLabels[c.estado]}</Badge>
+                                                <Badge variant={estadoBadgeVariant[c.estado]}>{formatEstadoCirculo(c.estado)}</Badge>
                                                 <span className="font-medium text-body">{c.etiqueta || "Sin etiqueta"}</span>
                                             </div>
                                             <p className="text-xs text-muted">
@@ -481,7 +499,7 @@ export default function CirculoConfianzaPage() {
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2 text-xs text-muted">
-                                            <Badge variant={estadoBadgeVariant[i.estado]}>{estadoLabels[i.estado]}</Badge>
+                                            <Badge variant={estadoBadgeVariant[i.estado]}>{formatEstadoCirculo(i.estado)}</Badge>
                                             {i.totalReportes > 0 && (
                                                 <span>{i.totalReportes} reporte(s)</span>
                                             )}
@@ -496,29 +514,37 @@ export default function CirculoConfianzaPage() {
                                         <MetricCard label="Total reportes" value={detalle.agregado.totalReportes} />
                                         <MetricCard label="Autenticados" value={detalle.agregado.reportesAutenticados} />
                                         <MetricCard label="Anónimos" value={detalle.agregado.reportesAnonimos} />
-                                        <MetricCard label="Estado" value={estadoLabels[detalle.estado]} />
+                                        <MetricCard label="Estado" value={formatEstadoCirculo(detalle.estado)} />
                                     </div>
-                                    {detalle.agregado.categorias.length > 0 && (
+                                    {detalle.agregado.porGrupoCategoria.length > 0 && (
                                         <div>
                                             <h3 className="mb-2 text-sm font-semibold text-body">Categorías</h3>
-                                            <MiniList
-                                                items={detalle.agregado.categorias.map((c) => ({
-                                                    label: formatCategoria(c.categoria),
-                                                    count: c.total,
+                                            <DonutChart
+                                                data={detalle.agregado.porGrupoCategoria.map((g) => ({
+                                                    label: g.nombre,
+                                                    value: g.total,
                                                 }))}
-                                                empty="Sin categorías"
+                                                ariaLabel="Distribución por categoría"
                                             />
                                         </div>
                                     )}
                                     {detalle.agregado.ubicaciones.length > 0 && (
                                         <div>
-                                            <h3 className="mb-2 text-sm font-semibold text-body">Ubicaciones agregadas</h3>
-                                            <MiniList
-                                                items={detalle.agregado.ubicaciones.map((u) => ({
-                                                    label: `${u.ciudad}, ${u.pais}`,
-                                                    count: u.total,
-                                                }))}
-                                                empty="Sin ubicaciones"
+                                            <h3 className="mb-2 text-sm font-semibold text-body">Ubicaciones aproximadas</h3>
+                                            <p className="mb-3 text-xs text-subtle">
+                                                Ciudades con reportes. Sin direcciones exactas ni datos personales.
+                                            </p>
+                                            <MapaUbicaciones
+                                                puntos={detalle.agregado.ubicaciones
+                                                    .filter((u): u is UbicacionAgregada & { lat: number; lng: number } =>
+                                                        typeof u.lat === "number" && typeof u.lng === "number"
+                                                    )
+                                                    .map((u) => ({
+                                                        lat: u.lat,
+                                                        lng: u.lng,
+                                                        label: `${u.ciudad}, ${u.pais}`,
+                                                        total: u.total,
+                                                    }))}
                                             />
                                         </div>
                                     )}
@@ -559,9 +585,9 @@ export default function CirculoConfianzaPage() {
                                         </ChartCard>
                                         <ChartCard title="Por categoría" subtitle="Reportes de mis contactos">
                                             <DonutChart
-                                                data={agregado.porCategoria.map((c) => ({
-                                                    label: formatCategoria(c.categoria),
-                                                    value: c.total,
+                                                data={agregado.porGrupoCategoria.map((g) => ({
+                                                    label: g.nombre,
+                                                    value: g.total,
                                                 }))}
                                                 ariaLabel="Distribución por categoría"
                                             />
@@ -571,22 +597,18 @@ export default function CirculoConfianzaPage() {
                                         {agregado.porCiudad.length === 0 ? (
                                             <p className="text-sm text-muted">Sin datos geográficos</p>
                                         ) : (
-                                            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                                                <MiniList
-                                                    items={agregado.porCiudad.map((c) => ({
-                                                        label: `${c.ciudad}, ${c.pais}`,
-                                                        count: c.total,
+                                            <MapaUbicaciones
+                                                puntos={agregado.porCiudad
+                                                    .filter((u): u is UbicacionAgregada & { lat: number; lng: number } =>
+                                                        typeof u.lat === "number" && typeof u.lng === "number"
+                                                    )
+                                                    .map((u) => ({
+                                                        lat: u.lat,
+                                                        lng: u.lng,
+                                                        label: `${u.ciudad}, ${u.pais}`,
+                                                        total: u.total,
                                                     }))}
-                                                    empty="Sin datos"
-                                                />
-                                                <BarChart
-                                                    data={agregado.porCiudad.slice(0, 5).map((c) => ({
-                                                        label: c.ciudad,
-                                                        value: c.total,
-                                                    }))}
-                                                    ariaLabel="Top ciudades"
-                                                />
-                                            </div>
+                                            />
                                         )}
                                     </ChartCard>
                                     {agregado.timeline.length > 0 && (

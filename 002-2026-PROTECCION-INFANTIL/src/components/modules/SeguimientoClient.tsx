@@ -13,6 +13,7 @@ import type { BadgeVariant } from "@/components/ui/Badge";
 type ClasificacionData = {
     categoria: string;
     categoriaLabel: string;
+    categoriaGrupo: string;
     confianza: number;
     contienePii: boolean;
     piiDetectada: string[];
@@ -152,7 +153,7 @@ export function SeguimientoClient() {
                         <div className={infoBox}>
                             <h3 className="mb-2 text-sm font-semibold text-body">Clasificación del reporte</h3>
                             <div className="flex flex-wrap items-center gap-3">
-                                <Badge variant="info">{data.clasificacion.categoriaLabel}</Badge>
+                                <Badge variant="info">{data.clasificacion.categoriaGrupo}</Badge>
                                 <span className="text-xs text-muted">
                                     Confianza: {Math.round(data.clasificacion.confianza * 100)}%
                                 </span>

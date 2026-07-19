@@ -38,6 +38,7 @@ const detalleConReportes = {
             fecha: "2026-07-16",
             categoria: "SOLICITUD_MATERIAL",
             categoriaLabel: "Solicitud de material",
+            categoriaGrupo: "Contacto sexual",
             confianza: 0.9,
             nivelRiesgo: "ALTO",
         },
@@ -48,6 +49,7 @@ const detalleConReportes = {
             fecha: "2026-07-15",
             categoria: "CONTACTO_INSISTENTE",
             categoriaLabel: "Contacto insistente",
+            categoriaGrupo: "Manipulación o engaño",
             confianza: 0.8,
             nivelRiesgo: "MEDIO",
         },
@@ -78,8 +80,8 @@ describe("ConsultaEnriquecidaClient", () => {
         await waitFor(() => {
             expect(document.body.textContent).toContain("Riesgo alto");
             expect(document.body.textContent).toContain("91%");
-            expect(document.body.textContent).toContain("Solicitud de material");
-            expect(document.body.textContent).toContain("Contacto insistente");
+            expect(document.body.textContent).toContain("Contacto sexual");
+            expect(document.body.textContent).toContain("Manipulación o engaño");
             expect(document.body.textContent).toContain("2 reportes en WhatsApp");
             expect(document.body.textContent).toContain("Bogotá");
             expect(document.body.textContent).toContain("Colombia");

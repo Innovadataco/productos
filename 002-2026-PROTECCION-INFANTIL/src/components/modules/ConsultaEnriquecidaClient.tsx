@@ -38,6 +38,7 @@ type ReporteDetalle = {
     fecha: string;
     categoria: string;
     categoriaLabel: string;
+    categoriaGrupo: string;
     confianza: number;
     nivelRiesgo: NivelRiesgoConsulta;
 };
@@ -189,7 +190,7 @@ export function ConsultaEnriquecidaClient() {
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-body">{formatFecha(r.fecha)}</td>
-                                            <td className="px-4 py-3 text-body">{r.categoriaLabel}</td>
+                                            <td className="px-4 py-3 text-body">{r.categoriaGrupo}</td>
                                             <td className="px-4 py-3 text-body">{Math.round(r.confianza * 100)}%</td>
                                         </tr>
                                     ))}

@@ -20,7 +20,7 @@ function mockFetch(response: unknown, ok = true) {
 
 const baseData = {
     numeroSeguimiento: "RPT-ABC123",
-    estadoVisual: "Procesado",
+    estadoVisual: "Verificado",
     estadoInterno: "CLASIFICADO",
     badge: "success",
     enProceso: false,
@@ -33,6 +33,7 @@ const baseData = {
     clasificacion: {
         categoria: "SOLICITUD_MATERIAL",
         categoriaLabel: "Solicitud de material",
+        categoriaGrupo: "Contacto sexual",
         confianza: 0.91,
         contienePii: true,
         piiDetectada: ["nombre", "telefono"],
@@ -66,10 +67,10 @@ describe("SeguimientoClient", () => {
 
         await waitFor(() => {
             const body = document.body.textContent || "";
-            expect(body).toContain("Procesado");
+            expect(body).toContain("Verificado");
             expect(body).toContain("Tu reporte ha sido procesado y clasificado.");
             expect(body).toContain("Clasificación del reporte");
-            expect(body).toContain("Solicitud de material");
+            expect(body).toContain("Contacto sexual");
             expect(body).toContain("Riesgo del identificador");
             expect(body).toContain("72");
             expect(body).toContain("Riesgo ALTO");

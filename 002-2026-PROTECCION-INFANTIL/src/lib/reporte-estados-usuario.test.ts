@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras } from "./reporte-estados-usuario";
+import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras, formatEstadoUsuario, formatEstadoCirculo } from "./reporte-estados-usuario";
 import { EstadoReporte } from "@prisma/client";
 
 describe("mapEstadoUsuario", () => {
@@ -9,14 +9,39 @@ describe("mapEstadoUsuario", () => {
         [EstadoReporte.REVISION_MANUAL, "En proceso", "warning", true],
         [EstadoReporte.POSIBLE_SPAM, "En proceso", "warning", true],
         [EstadoReporte.REQUIERE_ANONIMIZACION, "En proceso", "warning", true],
-        [EstadoReporte.CLASIFICADO, "Procesado", "success", false],
-        [EstadoReporte.CORREGIDO, "Procesado", "success", false],
-        [EstadoReporte.DUPLICADO, "Procesado", "muted", false],
+        [EstadoReporte.DUPLICADO, "En proceso", "warning", true],
+        [EstadoReporte.CLASIFICADO, "Verificado", "success", false],
+        [EstadoReporte.CORREGIDO, "Verificado", "success", false],
     ])("mapea %s a %s con badge %s", (estado, estadoVisual, badge, enProceso) => {
         const result = mapEstadoUsuario(estado);
         expect(result.estadoVisual).toBe(estadoVisual);
         expect(result.badge).toBe(badge);
         expect(result.enProceso).toBe(enProceso);
+    });
+});
+
+describe("formatEstadoUsuario", () => {
+    it("devuelve 'Verificado' para CLASIFICADO", () => {
+        expect(formatEstadoUsuario(EstadoReporte.CLASIFICADO)).toBe("Verificado");
+    });
+
+    it("devuelve 'En proceso' para estados no verificados", () => {
+        expect(formatEstadoUsuario(EstadoReporte.PENDIENTE)).toBe("En proceso");
+        expect(formatEstadoUsuario(EstadoReporte.DUPLICADO)).toBe("En proceso");
+    });
+});
+
+describe("formatEstadoCirculo", () => {
+    it("devuelve 'Verificado' para clasificado", () => {
+        expect(formatEstadoCirculo("clasificado")).toBe("Verificado");
+    });
+
+    it("devuelve 'En proceso' para enRevision", () => {
+        expect(formatEstadoCirculo("enRevision")).toBe("En proceso");
+    });
+
+    it("devuelve 'Sin reportes' para sinReportes", () => {
+        expect(formatEstadoCirculo("sinReportes")).toBe("Sin reportes");
     });
 });
 
@@ -28,15 +53,17 @@ describe("getMensajeUsuario", () => {
     });
 
     it("usa mensaje específico para CLASIFICADO", () => {
-        expect(getMensajeUsuario(EstadoReporte.CLASIFICADO, 24)).toBe("Tu reporte ha sido procesado y clasificado.");
+        expect(getMensajeUsuario(EstadoReporte.CLASIFICADO, 24)).toBe("Tu reporte ha sido verificado y clasificado.");
     });
 
     it("usa mensaje específico para CORREGIDO", () => {
-        expect(getMensajeUsuario(EstadoReporte.CORREGIDO, 24)).toBe("Tu reporte ha sido revisado y corregido.");
+        expect(getMensajeUsuario(EstadoReporte.CORREGIDO, 24)).toBe("Tu reporte ha sido verificado y corregido.");
     });
 
-    it("usa mensaje específico para DUPLICADO", () => {
-        expect(getMensajeUsuario(EstadoReporte.DUPLICADO, 24)).toBe("Tu reporte fue vinculado a uno existente.");
+    it("usa mensaje de en proceso para DUPLICADO", () => {
+        expect(getMensajeUsuario(EstadoReporte.DUPLICADO, 12)).toBe(
+            "Tu reporte está en proceso — puede tardar hasta 12 horas"
+        );
     });
 });
 

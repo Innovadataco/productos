@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { BarChart } from "./BarChart";
 import { DonutChart } from "./DonutChart";
 import { MetricCard } from "./MetricCard";
 import { ChartCard } from "./ChartCard";
 import { MiniList } from "./MiniList";
-import { RiskBadge } from "./RiskBadge";
-import { formatNivel, formatCategoria, RIESGO_COLORS } from "@/lib/labels";
+import { formatNivel, RIESGO_COLORS } from "@/lib/labels";
+import type { PuntoMapa } from "./MapaUbicaciones";
+
+const MapaUbicaciones = dynamic(
+    () => import("./MapaUbicaciones").then((mod) => mod.MapaUbicaciones),
+    { ssr: false }
+);
 
 type StatsData = {
     totales: {
@@ -19,17 +25,10 @@ type StatsData = {
     };
     porPlataforma: { plataforma: string; count: number }[];
     porPais: { pais: string; count: number }[];
-    porCiudad: { ciudad: string; pais: string; count: number }[];
+    porCiudad: { ciudad: string; pais: string; count: number; lat: number | null; lng: number | null }[];
     porNivelRiesgo: { nivel: string; count: number }[];
     porCategoria: { categoria: string; count: number }[];
-    ultimosIdentificadores: {
-        identificador: string;
-        plataforma: string;
-        score: number;
-        nivelRiesgo: string;
-        totalReportes: number;
-        actualizadoEn: string;
-    }[];
+    porGrupoCategoria: { clave: string; nombre: string; orden: number; total: number }[];
 };
 
 export function PublicDashboard() {
@@ -66,14 +65,15 @@ export function PublicDashboard() {
     if (!data) return null;
 
     const totalOrigen = data.totales.reportesAutenticados + data.totales.reportesAnonimos || 1;
-    const topCiudades = data.porCiudad.slice(0, 8).map((c) => ({
-        label: `${c.ciudad}, ${c.pais}`,
-        count: c.count,
-    }));
-    const topCiudadesBars = data.porCiudad.slice(0, 5).map((c) => ({
-        label: c.ciudad,
-        value: c.count,
-    }));
+
+    const puntosMapa: PuntoMapa[] = data.porCiudad
+        .filter((c) => typeof c.lat === "number" && typeof c.lng === "number")
+        .map((c) => ({
+            lat: c.lat as number,
+            lng: c.lng as number,
+            label: `${c.ciudad}, ${c.pais}`,
+            total: c.count,
+        }));
 
     return (
         <section className="space-y-6" aria-labelledby="public-dashboard-title">
@@ -130,21 +130,15 @@ export function PublicDashboard() {
                 </ChartCard>
             </div>
 
-            {/* Distribución geográfica agregada (sin mapa) */}
+            {/* Mapa de calor por ciudad */}
             <ChartCard
                 title="Reportes por ciudad / departamento"
-                subtitle="Datos agregados por ciudad. No incluye direcciones exactas ni datos personales."
+                subtitle="Mapa de calor aproximado por ciudad. No incluye direcciones exactas ni datos personales."
             >
-                {data.porCiudad.length === 0 ? (
+                {puntosMapa.length === 0 ? (
                     <p className="text-sm text-muted">Sin datos geográficos</p>
                 ) : (
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <MiniList items={topCiudades} empty="Sin datos por ciudad" />
-                        <BarChart
-                            ariaLabel="Top ciudades por cantidad de reportes"
-                            data={topCiudadesBars}
-                        />
-                    </div>
+                    <MapaUbicaciones puntos={puntosMapa} />
                 )}
             </ChartCard>
 
@@ -162,75 +156,16 @@ export function PublicDashboard() {
                 </ChartCard>
 
                 <ChartCard title="Categorías de conducta" subtitle="Tipo de riesgo más frecuente">
-                    {data.porCategoria.length === 0 ? (
+                    {data.porGrupoCategoria.length === 0 ? (
                         <p className="text-sm text-muted">Sin datos</p>
                     ) : (
                         <DonutChart
                             ariaLabel="Distribución de reportes por categoría"
-                            data={data.porCategoria.map((c) => ({ label: formatCategoria(c.categoria), value: c.count }))}
+                            data={data.porGrupoCategoria.map((g) => ({ label: g.nombre, value: g.total }))}
                         />
                     )}
                 </ChartCard>
             </div>
-
-            {/* Últimos identificadores */}
-            <ChartCard title="Últimos identificadores reportados" subtitle="Identificadores recientemente visibles públicamente">
-                {data.ultimosIdentificadores.length === 0 ? (
-                    <p className="text-sm text-muted">Sin identificadores visibles recientemente</p>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-100/70 text-subtle dark:bg-slate-800/60">
-                                <tr>
-                                    <th className="px-4 py-3 font-medium">Identificador</th>
-                                    <th className="px-4 py-3 font-medium">Plataforma</th>
-                                    <th className="px-4 py-3 font-medium">Score</th>
-                                    <th className="px-4 py-3 font-medium">Riesgo</th>
-                                    <th className="px-4 py-3 font-medium text-right">Reportes</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                {data.ultimosIdentificadores.map((item, idx) => (
-                                    <tr
-                                        key={idx}
-                                        className="transition hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
-                                    >
-                                        <td className="px-4 py-3 font-mono text-body">{item.identificador}</td>
-                                        <td className="px-4 py-3 text-body">{item.plataforma}</td>
-                                        <td className="px-4 py-3 text-body">{item.score}/100</td>
-                                        <td className="px-4 py-3">
-                                            <RiskBadge nivel={item.nivelRiesgo} />
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-body">{item.totalReportes}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </ChartCard>
-
-            {/* Resumen agregado */}
-            <ChartCard title="Resumen de actividad" subtitle="Datos agregados de la plataforma">
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <div className="glass rounded-xl p-4 text-center">
-                        <p className="text-2xl font-bold text-body">{data.totales.reportes}</p>
-                        <p className="text-xs text-subtle">Reportes totales</p>
-                    </div>
-                    <div className="glass rounded-xl p-4 text-center">
-                        <p className="text-2xl font-bold text-body">{data.totales.identificadoresUnicos}</p>
-                        <p className="text-xs text-subtle">Identificadores distintos</p>
-                    </div>
-                    <div className="glass rounded-xl p-4 text-center">
-                        <p className="text-2xl font-bold text-body">{data.porPais.length}</p>
-                        <p className="text-xs text-subtle">Países</p>
-                    </div>
-                    <div className="glass rounded-xl p-4 text-center">
-                        <p className="text-2xl font-bold text-body">{data.porCiudad.length}</p>
-                        <p className="text-xs text-subtle">Ciudades</p>
-                    </div>
-                </div>
-            </ChartCard>
         </section>
     );
 }
