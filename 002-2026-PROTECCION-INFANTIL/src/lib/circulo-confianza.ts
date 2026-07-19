@@ -1,10 +1,17 @@
 import { prisma } from "./prisma";
-import { getParametroSistema, getParametroSistemaValor } from "./parametros";
+import { getParametroSistemaValor } from "./parametros";
 import { logAudit } from "./audit";
 import { enviarAlertaCirculoConfianza } from "./email";
 import type { AccionAudit, EstadoReporte, Prisma } from "@prisma/client";
 
 export type EstadoContacto = "sinReportes" | "enRevision" | "clasificado";
+
+export type IdentificadorInput = {
+    id?: string;
+    valor: string;
+    tipo?: string;
+    plataformaId?: string;
+};
 
 const ESTADOS_CLASIFICADOS: EstadoReporte[] = ["CLASIFICADO", "CORREGIDO"];
 const ESTADOS_REVISION: EstadoReporte[] = ["REVISION_MANUAL", "POSIBLE_SPAM", "REQUIERE_ANONIMIZACION"];
@@ -28,8 +35,22 @@ function formatFecha(date: Date | string | null) {
     return new Date(date).toISOString().slice(0, 10);
 }
 
-export async function contarContactosActivos(usuarioId: string): Promise<number> {
-    return prisma.contactoConfianza.count({
+function getClient(client?: Prisma.TransactionClient): Prisma.TransactionClient | typeof prisma {
+    return client || prisma;
+}
+
+function calcularEstado(reportes: DatosReporte[]): EstadoContacto {
+    if (reportes.length === 0) return "sinReportes";
+    const tieneRevision = reportes.some((r) => ESTADOS_REVISION.includes(r.estado as EstadoReporte));
+    if (tieneRevision) return "enRevision";
+    return "clasificado";
+}
+
+export async function contarContactosActivos(
+    usuarioId: string,
+    client?: Prisma.TransactionClient
+): Promise<number> {
+    return getClient(client).contactoConfianza.count({
         where: { usuarioId, activo: true },
     });
 }
@@ -57,14 +78,25 @@ export async function obtenerUmbralAgregacion(client?: Prisma.TransactionClient)
 }
 
 export async function determinarEstadoContacto(
-    identificador: string,
-    plataformaId: string,
-    client: Prisma.TransactionClient = prisma
+    contactoId: string,
+    client?: Prisma.TransactionClient
 ): Promise<{ estado: EstadoContacto; totalReportes: number; reportes: DatosReporte[] }> {
-    const reportes = await client.reporte.findMany({
+    const c = getClient(client);
+
+    const identificadores = await c.identificadorContacto.findMany({
+        where: { contactoId, activo: true },
+        select: { valor: true },
+    });
+
+    const valores = identificadores.map((i) => i.valor);
+
+    if (valores.length === 0) {
+        return { estado: "sinReportes", totalReportes: 0, reportes: [] };
+    }
+
+    const reportes = (await c.reporte.findMany({
         where: {
-            identificador,
-            plataformaId,
+            identificador: { in: valores },
             eliminado: false,
             estado: { in: ESTADOS_VISIBLES },
         },
@@ -81,39 +113,30 @@ export async function determinarEstadoContacto(
             clasificacion: { select: { categoria: true, confianza: true } },
         },
         orderBy: { creadoEn: "desc" },
-    }) as DatosReporte[];
+    })) as DatosReporte[];
 
-    if (reportes.length === 0) {
-        return { estado: "sinReportes", totalReportes: 0, reportes: [] };
-    }
-
-    const tieneRevision = reportes.some((r) => ESTADOS_REVISION.includes(r.estado as EstadoReporte));
-    const tieneClasificado = reportes.some((r) => ESTADOS_CLASIFICADOS.includes(r.estado as EstadoReporte));
-
-    if (tieneRevision && !tieneClasificado) {
-        return { estado: "enRevision", totalReportes: reportes.length, reportes };
-    }
-    return { estado: "clasificado", totalReportes: reportes.length, reportes };
+    return { estado: calcularEstado(reportes), totalReportes: reportes.length, reportes };
 }
 
-export async function listarContactos(usuarioId: string) {
-    const contactos = await prisma.contactoConfianza.findMany({
+export async function listarContactos(usuarioId: string, client?: Prisma.TransactionClient) {
+    const c = getClient(client);
+
+    const contactos = await c.contactoConfianza.findMany({
         where: { usuarioId },
-        include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
+        include: {
+            identificadores: {
+                where: { activo: true },
+                include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
+                orderBy: { creadoEn: "asc" },
+            },
+        },
         orderBy: [{ activo: "desc" }, { creadoEn: "desc" }],
     });
 
     const conEstado = await Promise.all(
-        contactos.map(async (c) => {
-            const { estado, totalReportes } = await determinarEstadoContacto(
-                c.identificador,
-                c.plataformaId
-            );
-            return {
-                ...c,
-                estado,
-                totalReportes,
-            };
+        contactos.map(async (contacto) => {
+            const { estado, totalReportes } = await determinarEstadoContacto(contacto.id, c);
+            return { ...contacto, estado, totalReportes };
         })
     );
 
@@ -128,144 +151,304 @@ export async function listarContactos(usuarioId: string) {
     return { contactos: conEstado, resumen };
 }
 
+async function validarPlataformas(
+    identificadores: IdentificadorInput[],
+    client: Prisma.TransactionClient | typeof prisma
+) {
+    const plataformaIds = Array.from(
+        new Set(identificadores.map((i) => i.plataformaId).filter(Boolean) as string[])
+    );
+
+    if (plataformaIds.length === 0) return;
+
+    const existentes = await client.plataforma.findMany({
+        where: { id: { in: plataformaIds } },
+        select: { id: true },
+    });
+
+    const idsEncontrados = new Set(existentes.map((p) => p.id));
+    const faltante = plataformaIds.find((id) => !idsEncontrados.has(id));
+    if (faltante) {
+        throw new Error("Plataforma no encontrada");
+    }
+}
+
+function normalizarIdentificadores(identificadores: IdentificadorInput[]) {
+    const vistos = new Set<string>();
+    const normalizados: IdentificadorInput[] = [];
+
+    for (const i of identificadores) {
+        const valor = i.valor.trim();
+        if (!valor) continue;
+        const key = `${valor.toLowerCase()}|${i.plataformaId ?? ""}`;
+        if (vistos.has(key)) {
+            throw new Error("Identificador duplicado dentro del contacto");
+        }
+        vistos.add(key);
+        normalizados.push({ ...i, valor });
+    }
+
+    return normalizados;
+}
+
 export async function agregarContacto(
     usuarioId: string,
-    data: { identificador: string; plataformaId: string; etiqueta?: string },
+    data: {
+        etiqueta?: string;
+        nota?: string;
+        identificadores: IdentificadorInput[];
+    },
     request?: Request
 ) {
+    if (!data.identificadores || data.identificadores.length === 0) {
+        throw new Error("El contacto debe tener al menos un identificador");
+    }
+
+    const identificadores = normalizarIdentificadores(data.identificadores);
+
     const activos = await contarContactosActivos(usuarioId);
     const tope = await obtenerTopeContactos();
     if (activos >= tope) {
         throw new Error("Límite de contactos activos alcanzado");
     }
 
-    const plataforma = await prisma.plataforma.findUnique({
-        where: { id: data.plataformaId },
-    });
-    if (!plataforma) {
-        throw new Error("Plataforma no encontrada");
-    }
+    return prisma.$transaction(async (tx) => {
+        await validarPlataformas(identificadores, tx);
 
-    const existente = await prisma.contactoConfianza.findUnique({
-        where: {
-            usuarioId_identificador_plataformaId: {
+        const contacto = await tx.contactoConfianza.create({
+            data: {
                 usuarioId,
-                identificador: data.identificador,
-                plataformaId: data.plataformaId,
+                etiqueta: data.etiqueta?.slice(0, 100),
+                nota: data.nota?.slice(0, 1000),
+                activo: true,
+                identificadores: {
+                    create: identificadores.map((i) => ({
+                        valor: i.valor,
+                        tipo: i.tipo?.slice(0, 50),
+                        plataformaId: i.plataformaId || null,
+                        activo: true,
+                    })),
+                },
             },
-        },
-    });
+            include: {
+                identificadores: {
+                    include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
+                },
+            },
+        });
 
-    if (existente) {
-        throw new Error("El contacto ya existe");
-    }
-
-    const contacto = await prisma.contactoConfianza.create({
-        data: {
+        await logAudit({
+            accion: "CIRCULO_CONTACT_CREATE" as AccionAudit,
+            tipoRecurso: "ContactoConfianza",
+            recursoId: contacto.id,
             usuarioId,
-            identificador: data.identificador,
-            plataformaId: data.plataformaId,
-            etiqueta: data.etiqueta?.slice(0, 100),
-            activo: true,
-        },
-        include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
-    });
+            valorNuevo: JSON.stringify({
+                etiqueta: data.etiqueta,
+                nota: data.nota,
+                identificadores: identificadores.map((i) => ({
+                    valor: i.valor,
+                    tipo: i.tipo,
+                    plataformaId: i.plataformaId,
+                })),
+            }),
+            ipAddress: request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown",
+            userAgent: request?.headers.get("user-agent") || "unknown",
+        });
 
-    await logAudit({
-        accion: "CIRCULO_CONTACT_CREATE" as AccionAudit,
-        tipoRecurso: "ContactoConfianza",
-        recursoId: contacto.id,
-        usuarioId,
-        valorNuevo: JSON.stringify({
-            identificador: data.identificador,
-            plataformaId: data.plataformaId,
-            etiqueta: data.etiqueta,
-        }),
-        ipAddress: request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown",
-        userAgent: request?.headers.get("user-agent") || "unknown",
+        return contacto;
     });
-
-    return contacto;
 }
 
 export async function actualizarContacto(
     id: string,
     usuarioId: string,
-    data: { etiqueta?: string; activo?: boolean },
+    data: {
+        etiqueta?: string;
+        nota?: string;
+        activo?: boolean;
+        identificadores?: IdentificadorInput[];
+    },
     request?: Request
 ) {
     const contacto = await prisma.contactoConfianza.findFirst({
         where: { id, usuarioId },
+        include: { identificadores: { where: { activo: true } } },
     });
     if (!contacto) {
         throw new Error("Contacto no encontrado");
     }
 
-    const valorAnterior = JSON.stringify({ etiqueta: contacto.etiqueta, activo: contacto.activo });
+    const valorAnterior = JSON.stringify({
+        etiqueta: contacto.etiqueta,
+        nota: contacto.nota,
+        activo: contacto.activo,
+    });
 
-    const actualizado = await prisma.contactoConfianza.update({
-        where: { id },
-        data: {
-            etiqueta: data.etiqueta !== undefined ? data.etiqueta?.slice(0, 100) : contacto.etiqueta,
-            activo: data.activo !== undefined ? data.activo : contacto.activo,
+    return prisma.$transaction(async (tx) => {
+        const nuevoActivo = data.activo !== undefined ? data.activo : contacto.activo;
+
+        const actualizado = await tx.contactoConfianza.update({
+            where: { id },
+            data: {
+                etiqueta: data.etiqueta !== undefined ? data.etiqueta?.slice(0, 100) : contacto.etiqueta,
+                nota: data.nota !== undefined ? data.nota?.slice(0, 1000) : contacto.nota,
+                activo: nuevoActivo,
+            },
+            include: { identificadores: { include: { plataforma: { select: { id: true, nombre: true, clave: true } } } } },
+        });
+
+        if (data.activo !== undefined && !data.identificadores) {
+            await tx.identificadorContacto.updateMany({
+                where: { contactoId: id },
+                data: { activo: nuevoActivo },
+            });
+        }
+
+        if (data.identificadores) {
+            if (data.identificadores.length === 0) {
+                throw new Error("El contacto debe tener al menos un identificador");
+            }
+
+            const proveidos = normalizarIdentificadores(data.identificadores);
+            await validarPlataformas(proveidos, tx);
+
+            const idsProveidos = new Set(proveidos.map((i) => i.id).filter(Boolean) as string[]);
+            const idsExistentes = new Set(contacto.identificadores.map((i) => i.id));
+
+            // Desactivar identificadores activos que no estén en la lista enviada
+            const idsADesactivar = Array.from(idsExistentes).filter((id) => !idsProveidos.has(id));
+            if (idsADesactivar.length > 0) {
+                await tx.identificadorContacto.updateMany({
+                    where: { id: { in: idsADesactivar } },
+                    data: { activo: false },
+                });
+            }
+
+            // Crear o actualizar identificadores enviados
+            for (const i of proveidos) {
+                if (i.id && idsExistentes.has(i.id)) {
+                    await tx.identificadorContacto.update({
+                        where: { id: i.id },
+                        data: {
+                            valor: i.valor,
+                            tipo: i.tipo?.slice(0, 50),
+                            plataformaId: i.plataformaId || null,
+                            activo: nuevoActivo,
+                        },
+                    });
+                } else {
+                    await tx.identificadorContacto.create({
+                        data: {
+                            contactoId: id,
+                            valor: i.valor,
+                            tipo: i.tipo?.slice(0, 50),
+                            plataformaId: i.plataformaId || null,
+                            activo: nuevoActivo,
+                        },
+                    });
+                }
+            }
+        }
+
+        const accion: AccionAudit =
+            nuevoActivo === false ? "CIRCULO_CONTACT_DISABLE" : "CIRCULO_CONTACT_UPDATE";
+
+        await logAudit({
+            accion,
+            tipoRecurso: "ContactoConfianza",
+            recursoId: id,
+            usuarioId,
+            valorAnterior,
+            valorNuevo: JSON.stringify({
+                etiqueta: actualizado.etiqueta,
+                nota: actualizado.nota,
+                activo: actualizado.activo,
+            }),
+            ipAddress: request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown",
+            userAgent: request?.headers.get("user-agent") || "unknown",
+        });
+
+        return tx.contactoConfianza.findUnique({
+            where: { id },
+            include: {
+                identificadores: {
+                    where: { activo: true },
+                    include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
+                    orderBy: { creadoEn: "asc" },
+                },
+            },
+        });
+    });
+}
+
+export async function obtenerDetalleContacto(id: string, usuarioId: string, client?: Prisma.TransactionClient) {
+    const c = getClient(client);
+
+    const contacto = await c.contactoConfianza.findFirst({
+        where: { id, usuarioId },
+        include: {
+            identificadores: {
+                where: { activo: true },
+                include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
+                orderBy: { creadoEn: "asc" },
+            },
         },
     });
-
-    const accion: AccionAudit =
-        data.activo === false
-            ? "CIRCULO_CONTACT_DISABLE"
-            : data.activo === true
-              ? "CIRCULO_CONTACT_UPDATE"
-              : "CIRCULO_CONTACT_UPDATE";
-
-    await logAudit({
-        accion,
-        tipoRecurso: "ContactoConfianza",
-        recursoId: id,
-        usuarioId,
-        valorAnterior,
-        valorNuevo: JSON.stringify({ etiqueta: actualizado.etiqueta, activo: actualizado.activo }),
-        ipAddress: request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown",
-        userAgent: request?.headers.get("user-agent") || "unknown",
-    });
-
-    return actualizado;
-}
-
-export async function obtenerDetalleContacto(id: string, usuarioId: string) {
-    const contacto = await prisma.contactoConfianza.findFirst({
-        where: { id, usuarioId },
-        include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
-    });
     if (!contacto) {
         throw new Error("Contacto no encontrado");
     }
 
-    const { estado, totalReportes, reportes } = await determinarEstadoContacto(
-        contacto.identificador,
-        contacto.plataformaId
+    const { estado, totalReportes, reportes } = await determinarEstadoContacto(id, c);
+
+    const identificadoresConEstado = await Promise.all(
+        contacto.identificadores.map(async (i) => {
+            const r = (await c.reporte.findMany({
+                where: {
+                    identificador: i.valor,
+                    eliminado: false,
+                    estado: { in: ESTADOS_VISIBLES },
+                },
+                select: {
+                    id: true,
+                    identificador: true,
+                    ciudad: true,
+                    pais: true,
+                    creadoEn: true,
+                    fechaIncidente: true,
+                    esAnonimo: true,
+                    estado: true,
+                    plataforma: { select: { id: true, nombre: true, clave: true } },
+                    clasificacion: { select: { categoria: true, confianza: true } },
+                },
+                orderBy: { creadoEn: "desc" },
+            })) as DatosReporte[];
+
+            return {
+                ...i,
+                estado: calcularEstado(r),
+                totalReportes: r.length,
+                reportes: r,
+            };
+        })
     );
 
-    return construirDetalle(contacto.identificador, contacto.plataforma, estado, totalReportes, reportes);
+    const agregado = totalReportes > 0 ? construirAgregado(reportes) : null;
+
+    return {
+        id: contacto.id,
+        etiqueta: contacto.etiqueta,
+        nota: contacto.nota,
+        activo: contacto.activo,
+        estado,
+        totalReportes,
+        identificadores: identificadoresConEstado,
+        agregado,
+        mensaje: totalReportes === 0 ? "Sin reportes registrados para este contacto." : undefined,
+    };
 }
 
-function construirDetalle(
-    identificador: string,
-    plataforma: { id: string; nombre: string; clave: string },
-    estado: EstadoContacto,
-    totalReportes: number,
-    reportes: DatosReporte[]
-) {
-    if (totalReportes === 0) {
-        return {
-            identificador,
-            plataforma,
-            estado,
-            tieneReportes: false,
-            mensaje: "Sin reportes registrados para este identificador.",
-        };
-    }
-
+function construirAgregado(reportes: DatosReporte[]) {
+    const totalReportes = reportes.length;
     const reportesAutenticados = reportes.filter((r) => !r.esAnonimo).length;
     const reportesAnonimos = totalReportes - reportesAutenticados;
     const primerReporte = reportes[reportes.length - 1]?.creadoEn ?? null;
@@ -303,10 +486,6 @@ function construirDetalle(
     }
 
     return {
-        identificador,
-        plataforma,
-        estado,
-        tieneReportes: true,
         totalReportes,
         reportesAutenticados,
         reportesAnonimos,
@@ -321,33 +500,65 @@ function construirDetalle(
     };
 }
 
-export async function obtenerVistaAgregada(usuarioId: string) {
-    const contactosActivos = await prisma.contactoConfianza.findMany({
+export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.TransactionClient) {
+    const c = getClient(client);
+
+    const contactosActivos = await c.contactoConfianza.findMany({
         where: { usuarioId, activo: true },
-        select: { identificador: true, plataformaId: true },
+        include: {
+            identificadores: {
+                where: { activo: true },
+                select: { valor: true },
+            },
+        },
     });
 
     if (contactosActivos.length === 0) {
         return { insuficiente: true, motivo: "No tenés contactos en tu círculo" };
     }
 
-    const reportes: DatosReporte[] = [];
-    for (const c of contactosActivos) {
-        const { reportes: r } = await determinarEstadoContacto(c.identificador, c.plataformaId);
-        reportes.push(...r);
+    const valores = new Set<string>();
+    for (const contacto of contactosActivos) {
+        for (const i of contacto.identificadores) {
+            valores.add(i.valor);
+        }
     }
 
-    const umbral = await obtenerUmbralAgregacion();
-    const contactosConReportes = new Set(reportes.map((r) => `${r.plataforma.id}|${r.ciudad}`)).size; // aproximación
+    const valoresArray = Array.from(valores);
+
+    if (valoresArray.length === 0) {
+        return { insuficiente: true, motivo: "No tenés identificadores activos en tu círculo" };
+    }
+
+    const reportes = (await c.reporte.findMany({
+        where: {
+            identificador: { in: valoresArray },
+            eliminado: false,
+            estado: { in: ESTADOS_VISIBLES },
+        },
+        select: {
+            id: true,
+            identificador: true,
+            ciudad: true,
+            pais: true,
+            creadoEn: true,
+            fechaIncidente: true,
+            esAnonimo: true,
+            estado: true,
+            plataforma: { select: { id: true, nombre: true, clave: true } },
+            clasificacion: { select: { categoria: true, confianza: true } },
+        },
+        orderBy: { creadoEn: "desc" },
+    })) as DatosReporte[];
+
+    const umbral = await obtenerUmbralAgregacion(c);
     const totalReportes = reportes.length;
 
-    // Contamos contactos únicos que tienen al menos un reporte visible
     const contactosConReporteSet = new Set<string>();
-    for (const c of contactosActivos) {
-        const tiene = reportes.some(
-            (r) => r.plataforma.id === c.plataformaId && r.identificador === c.identificador
-        );
-        if (tiene) contactosConReporteSet.add(`${c.identificador}|${c.plataformaId}`);
+    for (const contacto of contactosActivos) {
+        const valoresContacto = new Set(contacto.identificadores.map((i) => i.valor));
+        const tiene = reportes.some((r) => valoresContacto.has(r.identificador));
+        if (tiene) contactosConReporteSet.add(contacto.id);
     }
     const contactosConReportesReales = contactosConReporteSet.size;
 
@@ -424,7 +635,6 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             where: { id: reporteId },
             select: {
                 identificador: true,
-                plataformaId: true,
                 estado: true,
                 eliminado: true,
             },
@@ -440,11 +650,24 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
 
         const contactos = await prisma.contactoConfianza.findMany({
             where: {
-                identificador: reporte.identificador,
-                plataformaId: reporte.plataformaId,
                 activo: true,
+                identificadores: {
+                    some: {
+                        valor: reporte.identificador,
+                        activo: true,
+                    },
+                },
             },
-            include: { usuario: { select: { id: true, email: true, notificacionesCirculo: true, ultimaNotificacionCirculoEn: true } } },
+            include: {
+                usuario: {
+                    select: {
+                        id: true,
+                        email: true,
+                        notificacionesCirculo: true,
+                        ultimaNotificacionCirculoEn: true,
+                    },
+                },
+            },
         });
 
         if (contactos.length === 0) {
@@ -458,9 +681,14 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             return;
         }
 
-        const cooldownHoras = parseInt((await getParametroSistemaValor("circulo.notificaciones.cooldown_horas")) || "24", 10);
+        const cooldownHoras = parseInt(
+            (await getParametroSistemaValor("circulo.notificaciones.cooldown_horas")) || "24",
+            10
+        );
         const cooldownMs = (Number.isNaN(cooldownHoras) ? 24 : cooldownHoras) * 60 * 60 * 1000;
         const ahora = new Date();
+
+        const usuariosNotificados = new Set<string>();
 
         for (const contacto of contactos) {
             const usuario = contacto.usuario;
@@ -468,10 +696,17 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
                 console.log(`[CIRCULO] Notificación omitida: usuario ${usuario.id} desactivó notificaciones`);
                 continue;
             }
-            if (usuario.ultimaNotificacionCirculoEn && ahora.getTime() - usuario.ultimaNotificacionCirculoEn.getTime() < cooldownMs) {
+            if (
+                usuario.ultimaNotificacionCirculoEn &&
+                ahora.getTime() - usuario.ultimaNotificacionCirculoEn.getTime() < cooldownMs
+            ) {
                 console.log(`[CIRCULO] Notificación omitida: usuario ${usuario.id} en cooldown`);
                 continue;
             }
+            if (usuariosNotificados.has(usuario.id)) {
+                continue;
+            }
+            usuariosNotificados.add(usuario.id);
 
             console.log(`[CIRCULO] Enviando alerta ciega a ${usuario.email}`);
             await enviarAlertaCirculoConfianza(usuario.email);
@@ -481,7 +716,6 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             });
         }
     } catch (error) {
-        // La notificación no debe fallar el procesamiento del reporte
         console.error("[CIRCULO] Error enviando notificación:", error);
     }
 }
