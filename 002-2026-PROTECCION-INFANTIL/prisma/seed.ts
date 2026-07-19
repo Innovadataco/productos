@@ -8,32 +8,28 @@ import path from "path";
 const prisma = new PrismaClient();
 
 async function main() {
-    // Admin default
-    const adminExists = await prisma.usuario.findUnique({
-        where: { email: "admin@proteccion.local" },
-    });
+    // Admin idempotente: upsert por email. Si no existe, ADMIN_PASSWORD es obligatorio.
+    const adminEmail = "admin@proteccion.local";
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminExists = await prisma.usuario.findUnique({ where: { email: adminEmail } });
 
-    if (!adminExists) {
-        const isProduction = process.env.NODE_ENV === "production";
-        const adminPassword = process.env.ADMIN_PASSWORD;
-
-        if (isProduction && !adminPassword) {
-            throw new Error(
-                "ADMIN_PASSWORD debe estar definida en NODE_ENV=production para crear el usuario admin."
-            );
-        }
-
-        const password = adminPassword || "Admin123!Secure";
-        await prisma.usuario.create({
-            data: {
-                email: "admin@proteccion.local",
-                nombre: "Administrador",
-                passwordHash: await bcrypt.hash(password, 12),
-                rol: RolUsuario.ADMIN,
-            },
-        });
-        console.log("Admin creado");
+    if (!adminExists && !adminPassword) {
+        throw new Error(
+            `ADMIN_PASSWORD debe estar definida para crear el usuario admin (${adminEmail}).`
+        );
     }
+
+    await prisma.usuario.upsert({
+        where: { email: adminEmail },
+        update: {},
+        create: {
+            email: adminEmail,
+            nombre: "Administrador",
+            passwordHash: await bcrypt.hash(adminPassword!, 12),
+            rol: RolUsuario.ADMIN,
+        },
+    });
+    console.log(adminExists ? "Admin ya existe (sin cambios)" : "Admin creado");
 
     // Default parameters
     const defaults = [
@@ -1034,12 +1030,6 @@ async function main() {
 }
 
 async function seedEvalFixture() {
-    const existing = await prisma.casoEval.count({ where: { fuente: CasoEvalFuente.SEMILLA } });
-    if (existing > 0) {
-        console.log(`Casos de evaluación SEMILLA ya existen (${existing}); omitiendo seed`);
-        return;
-    }
-
     const fixturePath = path.join(process.cwd(), "scripts", "eval-fixture.json");
     let raw: string;
     try {
@@ -1058,28 +1048,55 @@ async function seedEvalFixture() {
         return;
     }
 
-    const data = examples.map((ex) => ({
-        texto: ex.text,
-        categoriaEsperada: ex.expected,
-        secundariaEsperada: ex.secundariaEsperada || null,
-        ruido: ex.ruido ?? false,
-        fuente: CasoEvalFuente.SEMILLA,
-        activo: true,
-        fixtureVersion: 1,
-        creadoPorId: null,
-    }));
+    let created = 0;
+    let updated = 0;
+    for (const ex of examples) {
+        const existing = await prisma.casoEval.findFirst({
+            where: {
+                texto: ex.text,
+                fuente: CasoEvalFuente.SEMILLA,
+                fixtureVersion: 1,
+            },
+        });
 
-    await prisma.casoEval.createMany({ data });
-    console.log(`Casos de evaluación SEMILLA creados: ${data.length}`);
+        const data = {
+            categoriaEsperada: ex.expected,
+            secundariaEsperada: ex.secundariaEsperada || null,
+            ruido: ex.ruido ?? false,
+            activo: true,
+        };
+
+        if (existing) {
+            if (
+                existing.categoriaEsperada !== data.categoriaEsperada ||
+                existing.secundariaEsperada !== data.secundariaEsperada ||
+                existing.ruido !== data.ruido ||
+                existing.activo !== data.activo
+            ) {
+                await prisma.casoEval.update({
+                    where: { id: existing.id },
+                    data,
+                });
+                updated++;
+            }
+        } else {
+            await prisma.casoEval.create({
+                data: {
+                    texto: ex.text,
+                    ...data,
+                    fuente: CasoEvalFuente.SEMILLA,
+                    fixtureVersion: 1,
+                    creadoPorId: null,
+                },
+            });
+            created++;
+        }
+    }
+
+    console.log(`Casos de evaluación SEMILLA: ${created} creados, ${updated} actualizados`);
 }
 
 async function seedSpamExamples() {
-    const existing = await prisma.datasetEntrenamiento.count({ where: { fuente: "spam_revisado" } });
-    if (existing > 0) {
-        console.log(`Ejemplos de spam ya existen (${existing}); omitiendo seed`);
-        return;
-    }
-
     const paramEmbedding = await prisma.parametroSistema.findUnique({ where: { clave: "reportes.embedding_model" } });
     const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
 
@@ -1094,30 +1111,63 @@ async function seedSpamExamples() {
         "Descubre el secreto para hacer dinero fácil sin esfuerzo",
     ];
 
+    let created = 0;
+    let updated = 0;
     for (const texto of ejemplos) {
-        const dataset = await prisma.datasetEntrenamiento.create({
-            data: {
-                texto,
-                clasificacionCorrecta: CategoriaConducta.SPAM,
-                fuente: "spam_revisado",
-                textoAnonimizado: true,
-            },
+        const existing = await prisma.datasetEntrenamiento.findFirst({
+            where: { texto, fuente: "spam_revisado" },
         });
 
-        try {
-            const vector = await generarEmbedding(modeloEmbedding, texto);
-            const vectorStr = "[" + vector.join(",") + "]";
-            await prisma.$executeRaw`
-                INSERT INTO "EmbeddingDataset" (id, "datasetId", vector, "modeloUsado", "creadoEn")
-                VALUES (${crypto.randomUUID()}, ${dataset.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-            `;
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.warn(`[SEED] No se pudo generar embedding para ejemplo spam: ${msg}`);
+        const data = {
+            clasificacionCorrecta: CategoriaConducta.SPAM,
+            textoAnonimizado: true,
+        };
+
+        let dataset;
+        if (existing) {
+            if (
+                existing.clasificacionCorrecta !== data.clasificacionCorrecta ||
+                existing.textoAnonimizado !== data.textoAnonimizado
+            ) {
+                dataset = await prisma.datasetEntrenamiento.update({
+                    where: { id: existing.id },
+                    data,
+                });
+                updated++;
+            } else {
+                dataset = existing;
+            }
+        } else {
+            dataset = await prisma.datasetEntrenamiento.create({
+                data: {
+                    texto,
+                    ...data,
+                    fuente: "spam_revisado",
+                },
+            });
+            created++;
+        }
+
+        const existingEmbedding = await prisma.embeddingDataset.findUnique({
+            where: { datasetId: dataset.id },
+        });
+
+        if (!existingEmbedding) {
+            try {
+                const vector = await generarEmbedding(modeloEmbedding, texto);
+                const vectorStr = "[" + vector.join(",") + "]";
+                await prisma.$executeRaw`
+                    INSERT INTO "EmbeddingDataset" (id, "datasetId", vector, "modeloUsado", "creadoEn")
+                    VALUES (${crypto.randomUUID()}, ${dataset.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+                `;
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                console.warn(`[SEED] No se pudo generar embedding para ejemplo spam: ${msg}`);
+            }
         }
     }
 
-    console.log(`Ejemplos de spam sembrados: ${ejemplos.length}`);
+    console.log(`Ejemplos de spam: ${created} creados, ${updated} actualizados`);
 }
 
 main()

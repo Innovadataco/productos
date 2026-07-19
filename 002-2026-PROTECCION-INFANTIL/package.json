@@ -15,8 +15,9 @@
         "test:e2e": "node --env-file=.env.test ./node_modules/@playwright/test/cli.js test",
         "test:e2e:ui": "node --env-file=.env.test ./node_modules/@playwright/test/cli.js test --ui",
         "worker": "node scripts/worker-supervisor.mjs",
-        "db:migrate": "prisma migrate dev",
+        "db:migrate": "prisma migrate deploy",
         "db:seed": "tsx prisma/seed.ts",
+        "db:verify:hnsw": "tsx scripts/verify-hnsw-indexes.ts",
         "db:generate": "prisma generate",
         "db:studio": "prisma studio"
     },
