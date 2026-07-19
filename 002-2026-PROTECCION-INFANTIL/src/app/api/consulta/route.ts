@@ -181,7 +181,6 @@ export async function GET(request: Request) {
             tieneReportes: true,
             visibleEnDashboard,
             nivelRiesgo: riesgo.nivelRiesgo,
-            confianzaPromedio: riesgo.confianzaPromedio,
             totalReportes,
             reportesAutenticados,
             reportesAnonimos,

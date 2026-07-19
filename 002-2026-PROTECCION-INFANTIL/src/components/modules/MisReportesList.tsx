@@ -8,7 +8,6 @@ type ClasificacionItem = {
     categoria: string;
     categoriaLabel: string;
     categoriaGrupo: string;
-    confianza: number;
 };
 
 type RankingItem = {
@@ -93,9 +92,6 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                 <span className="rounded-full bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 text-[10px] font-medium text-accent">
                                     {r.clasificacion.categoriaGrupo}
-                                </span>
-                                <span className="text-[10px] text-subtle">
-                                    Confianza {Math.round(r.clasificacion.confianza * 100)}%
                                 </span>
                             </div>
                         )}

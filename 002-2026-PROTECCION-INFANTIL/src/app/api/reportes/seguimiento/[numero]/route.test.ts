@@ -92,6 +92,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(body.badge).toBe("warning");
         expect(body.mensaje).toBe("Tu reporte está en proceso — puede tardar hasta 24 horas");
         expect(body.slaHoras).toBe(24);
+        expect(body.clasificacion).toBeNull();
     });
 
     it("mapea CLASIFICADO a 'Procesado' sin SLA", async () => {
@@ -114,6 +115,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(body.mensaje).toBe("Tu reporte ha sido verificado y clasificado.");
         expect(body.slaHoras).toBe(24);
         expect(body.clasificacion).not.toBeNull();
+        expect(body.clasificacion.confianza).toBeUndefined();
         expect(body.ranking).not.toBeNull();
     });
 
@@ -131,6 +133,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(body.estadoInterno).toBe("DUPLICADO");
         expect(body.badge).toBe("warning");
         expect(body.mensaje).toBe("Tu reporte está en proceso — puede tardar hasta 24 horas");
+        expect(body.clasificacion).toBeNull();
     });
 
     it("devuelve 404 para reporte eliminado", async () => {

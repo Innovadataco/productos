@@ -98,16 +98,17 @@ export async function GET(
             actualizadoEn: reporte.actualizadoEn,
             identificador: reporte.identificador,
             plataforma: formatPlataforma(reporte.plataforma.nombre, reporte.otraPlataforma, reporte.plataforma.clave),
-            clasificacion: reporte.clasificacion
-                ? {
-                    categoria: reporte.clasificacion.categoria,
-                    categoriaLabel: CATEGORIA_LABELS[reporte.clasificacion.categoria] || reporte.clasificacion.categoria,
-                    categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, reporte.clasificacion.categoria),
-                    confianza: reporte.clasificacion.confianza,
-                    contienePii: reporte.clasificacion.contienePii,
-                    piiDetectada: reporte.clasificacion.piiDetectada,
-                }
-                : null,
+            clasificacion:
+                reporte.clasificacion && ["CLASIFICADO", "CORREGIDO"].includes(reporte.estado)
+                    ? {
+                          categoria: reporte.clasificacion.categoria,
+                          categoriaLabel:
+                              CATEGORIA_LABELS[reporte.clasificacion.categoria] || reporte.clasificacion.categoria,
+                          categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, reporte.clasificacion.categoria),
+                          contienePii: reporte.clasificacion.contienePii,
+                          piiDetectada: reporte.clasificacion.piiDetectada,
+                      }
+                    : null,
             ranking: ranking
                 ? {
                     score: ranking.score,

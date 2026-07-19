@@ -81,7 +81,6 @@ describe("GET /api/consulta/detalle", () => {
         expect(body.tieneReportes).toBe(true);
         expect(body.totalReportes).toBe(2);
         expect(body.nivelRiesgo).toBeDefined();
-        expect(body.confianzaPromedio).toBeGreaterThan(0);
         expect(body.reportes).toHaveLength(2);
 
         const texto = JSON.stringify(body);

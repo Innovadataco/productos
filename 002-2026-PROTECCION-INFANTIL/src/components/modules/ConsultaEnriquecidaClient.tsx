@@ -39,7 +39,6 @@ type ReporteDetalle = {
     categoria: string;
     categoriaLabel: string;
     categoriaGrupo: string;
-    confianza: number;
     nivelRiesgo: NivelRiesgoConsulta;
 };
 
@@ -64,7 +63,6 @@ type DetalleResponse = {
     tieneReportes: boolean;
     mensaje?: string;
     nivelRiesgo?: NivelRiesgoConsulta;
-    confianzaPromedio?: number;
     totalReportes?: number;
     reportesAutenticados?: number;
     reportesAnonimos?: number;
@@ -161,9 +159,9 @@ export function ConsultaEnriquecidaClient() {
                     </GlassCard>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <MetricCard label="Confianza promedio" value={`${Math.round((data.confianzaPromedio ?? 0) * 100)}%`} />
                         <MetricCard label="Total reportes" value={data.totalReportes ?? 0} />
                         <MetricCard label="Último reporte" value={formatFecha(data.ultimoReporte)} />
+                        <MetricCard label="Reportes autenticados" value={data.reportesAutenticados ?? 0} />
                     </div>
 
                     <GlassCard>
@@ -175,7 +173,6 @@ export function ConsultaEnriquecidaClient() {
                                         <th className="px-4 py-3 font-medium">Plataforma</th>
                                         <th className="px-4 py-3 font-medium">Fecha</th>
                                         <th className="px-4 py-3 font-medium">Clasificación</th>
-                                        <th className="px-4 py-3 font-medium">Confianza</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -191,7 +188,6 @@ export function ConsultaEnriquecidaClient() {
                                             </td>
                                             <td className="px-4 py-3 text-body">{formatFecha(r.fecha)}</td>
                                             <td className="px-4 py-3 text-body">{r.categoriaGrupo}</td>
-                                            <td className="px-4 py-3 text-body">{Math.round(r.confianza * 100)}%</td>
                                         </tr>
                                     ))}
                                 </tbody>

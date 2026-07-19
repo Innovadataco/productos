@@ -38,7 +38,6 @@ const baseConReportes = {
     identificador: "3001111111",
     tieneReportes: true,
     nivelRiesgo: "MEDIO" as const,
-    confianzaPromedio: 0.82,
     totalReportes: 1,
     reportesAutenticados: 0,
     reportesAnonimos: 1,
@@ -89,7 +88,7 @@ describe("ConsultaPublicaClient", () => {
         });
     });
 
-    it("renderiza nivel de riesgo, confianza, cantidad y fecha cuando hay reportes", async () => {
+    it("renderiza nivel de riesgo, cantidad y fecha cuando hay reportes", async () => {
         mockFetch(baseConReportes);
         render(<ConsultaPublicaClient />);
 
@@ -100,7 +99,6 @@ describe("ConsultaPublicaClient", () => {
 
         await waitFor(() => {
             expect(document.body.textContent).toContain("Riesgo medio");
-            expect(document.body.textContent).toContain("82%");
             expect(document.body.textContent).toContain("Total reportes");
             expect(document.body.textContent).toContain("Último reporte");
             expect(document.body.textContent).toContain("1 reporte en Facebook");

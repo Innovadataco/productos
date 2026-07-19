@@ -34,7 +34,6 @@ const baseData = {
         categoria: "SOLICITUD_MATERIAL",
         categoriaLabel: "Solicitud de material",
         categoriaGrupo: "Contacto sexual",
-        confianza: 0.91,
         contienePii: true,
         piiDetectada: ["nombre", "telefono"],
     },
@@ -86,6 +85,7 @@ describe("SeguimientoClient", () => {
             badge: "warning",
             enProceso: true,
             mensaje: "Tu reporte está en proceso — puede tardar hasta 24 horas",
+            clasificacion: null,
         });
         render(<SeguimientoClient />);
 
@@ -98,6 +98,8 @@ describe("SeguimientoClient", () => {
             const body = document.body.textContent || "";
             expect(body).toContain("En proceso");
             expect(body).toContain("puede tardar hasta 24 horas");
+            expect(body).not.toContain("Clasificación del reporte");
+            expect(body).not.toContain("Contacto sexual");
         });
     });
 

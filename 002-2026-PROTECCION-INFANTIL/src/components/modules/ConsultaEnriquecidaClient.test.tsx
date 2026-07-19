@@ -23,7 +23,6 @@ const detalleConReportes = {
     identificador: "3001111111",
     tieneReportes: true,
     nivelRiesgo: "ALTO",
-    confianzaPromedio: 0.91,
     totalReportes: 2,
     reportesAutenticados: 1,
     reportesAnonimos: 1,
@@ -39,7 +38,6 @@ const detalleConReportes = {
             categoria: "SOLICITUD_MATERIAL",
             categoriaLabel: "Solicitud de material",
             categoriaGrupo: "Contacto sexual",
-            confianza: 0.9,
             nivelRiesgo: "ALTO",
         },
         {
@@ -50,7 +48,6 @@ const detalleConReportes = {
             categoria: "CONTACTO_INSISTENTE",
             categoriaLabel: "Contacto insistente",
             categoriaGrupo: "Manipulación o engaño",
-            confianza: 0.8,
             nivelRiesgo: "MEDIO",
         },
     ],
@@ -79,7 +76,6 @@ describe("ConsultaEnriquecidaClient", () => {
 
         await waitFor(() => {
             expect(document.body.textContent).toContain("Riesgo alto");
-            expect(document.body.textContent).toContain("91%");
             expect(document.body.textContent).toContain("Contacto sexual");
             expect(document.body.textContent).toContain("Manipulación o engaño");
             expect(document.body.textContent).toContain("2 reportes en WhatsApp");

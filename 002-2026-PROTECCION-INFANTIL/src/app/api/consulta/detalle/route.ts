@@ -157,7 +157,6 @@ export async function GET(request: Request) {
                 categoria,
                 categoriaLabel: CATEGORIA_LABELS[categoria] || "Otro",
                 categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, categoria),
-                confianza: r.clasificacion?.confianza ?? 0,
                 nivelRiesgo: riesgoIndividual.nivelRiesgo,
             };
         });
@@ -166,7 +165,6 @@ export async function GET(request: Request) {
             identificador: parsed.data.identificador,
             tieneReportes: true,
             nivelRiesgo: riesgoGlobal.nivelRiesgo,
-            confianzaPromedio: riesgoGlobal.confianzaPromedio,
             totalReportes,
             reportesAutenticados,
             reportesAnonimos,

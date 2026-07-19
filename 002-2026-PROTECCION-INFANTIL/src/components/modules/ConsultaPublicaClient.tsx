@@ -34,7 +34,6 @@ type ConsultaResponse = {
     tieneReportes: boolean;
     mensaje?: string;
     nivelRiesgo?: NivelRiesgoConsulta;
-    confianzaPromedio?: number;
     totalReportes?: number;
     reportesAutenticados?: number;
     reportesAnonimos?: number;
@@ -133,11 +132,7 @@ export function ConsultaPublicaClient() {
                         </p>
                     </GlassCard>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <MetricCard
-                            label="Confianza promedio de la IA"
-                            value={`${Math.round((data.confianzaPromedio ?? 0) * 100)}%`}
-                        />
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <MetricCard label="Total reportes" value={data.totalReportes ?? 0} />
                         <MetricCard label="Último reporte" value={formatFecha(data.ultimoReporte)} />
                     </div>

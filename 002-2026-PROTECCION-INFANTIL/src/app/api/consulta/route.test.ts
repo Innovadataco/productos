@@ -107,7 +107,7 @@ describe("GET /api/consulta", () => {
         expect(body.textoOriginal).toBeUndefined();
     });
 
-    it("usuario anónimo ve nivel de riesgo, confianza y resumen agregado básico", async () => {
+    it("usuario anónimo ve nivel de riesgo y resumen agregado básico", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         for (let i = 0; i < 3; i++) {
             await crearReporteVisible("+57300ANON", plataforma!.id, "OFRECIMIENTO_REGALOS", i === 0);
@@ -121,7 +121,6 @@ describe("GET /api/consulta", () => {
         expect(body.visibleEnDashboard).toBe(true);
         expect(body.totalReportes).toBe(3);
         expect(body.nivelRiesgo).toBeDefined();
-        expect(body.confianzaPromedio).toBeGreaterThan(0);
         expect(body.resumenPlataformas).toBeDefined();
         expect(body.ubicaciones).toHaveLength(1);
         expect(body.resumen).toContain("3");

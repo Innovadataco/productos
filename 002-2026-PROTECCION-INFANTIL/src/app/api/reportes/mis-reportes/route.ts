@@ -5,11 +5,13 @@ import { calcularRanking } from "@/lib/ranking";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras } from "@/lib/reporte-estados-usuario";
 import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categoria-grupos";
+import type { EstadoReporte } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { formatPlataforma } from "@/lib/plataforma";
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
+const ESTADOS_CLASIFICACION_FINAL: EstadoReporte[] = ["CLASIFICADO", "CORREGIDO"];
 
 const CATEGORIA_LABELS: Record<string, string> = {
     CONTACTO_INSISTENTE: "Contacto insistente",
@@ -102,14 +104,15 @@ export async function GET(request: Request) {
                     pais: r.pais,
                     esAnonimo: r.esAnonimo,
                     creadoEn: r.creadoEn.toISOString(),
-                    clasificacion: r.clasificacion
-                        ? {
-                            categoria: r.clasificacion.categoria,
-                            categoriaLabel: CATEGORIA_LABELS[r.clasificacion.categoria] || r.clasificacion.categoria,
-                            categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, r.clasificacion.categoria),
-                            confianza: r.clasificacion.confianza,
-                        }
-                        : null,
+                    clasificacion:
+                        r.clasificacion && ESTADOS_CLASIFICACION_FINAL.includes(r.estado)
+                            ? {
+                                  categoria: r.clasificacion.categoria,
+                                  categoriaLabel:
+                                      CATEGORIA_LABELS[r.clasificacion.categoria] || r.clasificacion.categoria,
+                                  categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, r.clasificacion.categoria),
+                              }
+                            : null,
                     ranking,
                 };
             })
