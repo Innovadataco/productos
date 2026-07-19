@@ -6,7 +6,18 @@ import { actualizarContacto, obtenerDetalleContacto } from "@/lib/circulo-confia
 
 const updateSchema = z.object({
     etiqueta: z.string().max(100).optional(),
+    nota: z.string().max(1000).optional(),
     activo: z.boolean().optional(),
+    identificadores: z
+        .array(
+            z.object({
+                id: z.string().optional(),
+                valor: z.string().min(1).max(100),
+                tipo: z.string().max(50).optional(),
+                plataformaId: z.string().max(100).optional(),
+            })
+        )
+        .optional(),
 });
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -58,9 +69,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 { status: 404 }
             );
         }
+        const message = error instanceof Error ? error.message : "Error interno";
+        const status = message.includes("duplicado") ? 409 : 500;
         return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
+            { error: { message, code: ERROR_CODES.INTERNAL_ERROR } },
+            { status }
         );
     }
 }

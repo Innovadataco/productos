@@ -11,9 +11,17 @@ import {
 } from "@/lib/circulo-confianza";
 
 const createSchema = z.object({
-    identificador: z.string().min(3).max(100),
-    plataformaId: z.string().min(1),
     etiqueta: z.string().max(100).optional(),
+    nota: z.string().max(1000).optional(),
+    identificadores: z
+        .array(
+            z.object({
+                valor: z.string().min(1).max(100),
+                tipo: z.string().max(50).optional(),
+                plataformaId: z.string().max(100).optional(),
+            })
+        )
+        .min(1),
 });
 
 export async function GET(request: Request) {
@@ -80,7 +88,13 @@ export async function POST(request: Request) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
         const message = error instanceof Error ? error.message : "Error interno";
-        const status = message.includes("ya existe") ? 409 : message.includes("no encontrada") ? 400 : 500;
+        const status = message.includes("duplicado")
+            ? 409
+            : message.includes("no encontrada")
+              ? 400
+              : message.includes("Límite")
+                ? 409
+                : 500;
         return NextResponse.json(
             { error: { message, code: ERROR_CODES.INTERNAL_ERROR } },
             { status }
