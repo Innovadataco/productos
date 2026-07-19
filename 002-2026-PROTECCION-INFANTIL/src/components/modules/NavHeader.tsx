@@ -133,7 +133,7 @@ export function NavHeader() {
                                             onClick={async () => {
                                                 setOpen(false);
                                                 await logout();
-                                                window.location.href = "/login";
+                                                window.location.href = "/";
                                             }}
                                             className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
                                         >
@@ -188,7 +188,7 @@ export function NavHeader() {
                                     onClick={async () => {
                                         setMobileOpen(false);
                                         await logout();
-                                        window.location.href = "/login";
+                                        window.location.href = "/";
                                     }}
                                     className="text-left text-sm font-medium text-red-600 dark:text-red-400 px-3 py-2"
                                 >
