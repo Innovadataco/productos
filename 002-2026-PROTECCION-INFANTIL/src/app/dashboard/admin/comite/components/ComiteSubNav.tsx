@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const tabs = [
     { href: "/dashboard/admin/comite", label: "Bandeja" },
     { href: "/dashboard/admin/comite/gestion", label: "Gestión" },
+    { href: "/dashboard/admin/comite/auditoria", label: "Auditoría" },
 ];
 
 export function ComiteSubNav() {

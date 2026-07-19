@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma, AccionAudit } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -32,16 +33,29 @@ export async function GET(req: Request) {
             );
         }
 
-        const { page, pageSize, accion, usuarioId, fechaDesde, fechaHasta } = parsedQuery.data;
+        const { page, pageSize, accion, acciones, usuarioId, recursoId, q, fechaDesde, fechaHasta } = parsedQuery.data;
         const skip = (page - 1) * pageSize;
 
-        const where: Record<string, unknown> = {};
-        if (accion) where.accion = accion;
+        const where: Prisma.AuditLogWhereInput = {};
+        if (acciones && acciones.length > 0) {
+            where.accion = { in: acciones as AccionAudit[] };
+        } else if (accion) {
+            where.accion = accion as AccionAudit;
+        }
         if (usuarioId) where.usuarioId = usuarioId;
+        if (recursoId) where.recursoId = recursoId;
+        if (q) {
+            where.usuario = {
+                OR: [
+                    { nombre: { contains: q, mode: "insensitive" } },
+                    { email: { contains: q, mode: "insensitive" } },
+                ],
+            };
+        }
         if (fechaDesde || fechaHasta) {
             where.creadoEn = {};
-            if (fechaDesde) (where.creadoEn as Record<string, unknown>).gte = new Date(fechaDesde);
-            if (fechaHasta) (where.creadoEn as Record<string, unknown>).lte = new Date(fechaHasta + "T23:59:59.999Z");
+            if (fechaDesde) where.creadoEn.gte = new Date(fechaDesde);
+            if (fechaHasta) where.creadoEn.lte = new Date(`${fechaHasta}T23:59:59.999Z`);
         }
 
         const [items, total] = await Promise.all([

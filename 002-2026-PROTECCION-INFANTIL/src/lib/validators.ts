@@ -40,11 +40,18 @@ export const idSchema = z.string().refine(
 export const numeroSeguimientoSchema = z.string().regex(/^RPT-[A-Z0-9]{6}$/, "Número de seguimiento inválido");
 
 const accionesPermitidas = Object.values(AccionAudit) as [string, ...string[]];
+const accionesArraySchema = z.preprocess(
+    (val) => (typeof val === "string" && val.length > 0 ? val.split(",") : undefined),
+    z.array(z.enum(accionesPermitidas)).optional()
+);
 export const auditLogsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
     accion: z.enum(accionesPermitidas).optional(),
+    acciones: accionesArraySchema,
     usuarioId: idSchema.optional(),
+    recursoId: idSchema.optional(),
+    q: z.string().trim().min(2).max(120).optional(),
     fechaDesde: z.string().date().optional(),
     fechaHasta: z.string().date().optional(),
 });

@@ -7,6 +7,7 @@ const tabs = [
     { href: "/dashboard/admin/operadores/asignar", label: "Asignar" },
     { href: "/dashboard/admin/operadores/gestion", label: "Gestión" },
     { href: "/dashboard/admin/operadores/modelo", label: "Modelo de asignación" },
+    { href: "/dashboard/admin/operadores/auditoria", label: "Auditoría" },
 ];
 
 export function OperadoresSubNav() {
