@@ -105,6 +105,22 @@ export default function ConfigPanel() {
         setPendingConfig(null);
     }
 
+    useEffect(() => {
+        const hasUnsaved = params.some((p) => {
+            if (p.esSecreto) return false;
+            return editValues[p.clave] !== (p.valor ?? "");
+        });
+
+        const handler = (e: BeforeUnloadEvent) => {
+            if (hasUnsaved) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        };
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+    }, [params, editValues]);
+
     const grouped = useMemo(() => {
         const map: Record<string, Param[]> = {};
         SECTIONS.forEach((s) => (map[s.key] = []));
@@ -305,6 +321,9 @@ export default function ConfigPanel() {
                             <div>
                                 <h2 className="text-lg font-semibold text-body">{section.label}</h2>
                                 <p className="text-sm text-muted">{section.description}</p>
+                                {items.some((p) => !p.esSecreto && editValues[p.clave] !== (p.valor ?? "")) && (
+                                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-300">Cambios sin guardar</p>
+                                )}
                             </div>
                             <Button
                                 onClick={() => saveSection(section.key)}

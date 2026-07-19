@@ -5,9 +5,31 @@ import { logAudit } from "@/lib/audit";
 import { invalidateCache } from "@/lib/config-cache";
 import { isLocalOllamaUrl } from "@/lib/ai/ollama-config";
 import { encryptParameter } from "@/lib/param-encryption";
+import { GRUPOS_CATEGORIA_FALLBACK } from "@/lib/categoria-grupos";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 type RouteContext = { params: Promise<{ clave: string }> };
+
+const PARAM_CREATE_DEFAULTS: Record<
+    string,
+    {
+        valor: string;
+        tipo: "STRING" | "INTEGER" | "FLOAT" | "BOOLEAN" | "JSON" | "STRING_ARRAY";
+        categoria: "VISIBILITY" | "SECURITY" | "LEGAL" | "EMAIL" | "SYSTEM";
+        esPublico?: boolean;
+        esSecreto?: boolean;
+        descripcion?: string;
+    }
+> = {
+    "ui.grupos_categoria": {
+        valor: JSON.stringify({ grupos: GRUPOS_CATEGORIA_FALLBACK }),
+        tipo: "JSON",
+        categoria: "SYSTEM",
+        esPublico: true,
+        esSecreto: false,
+        descripcion: "Grupos de presentación de categorías de conducta para el usuario final",
+    },
+};
 
 export async function GET(_request: Request, context: RouteContext) {
     try {
@@ -56,14 +78,15 @@ export async function PATCH(request: Request, context: RouteContext) {
         const user = await verifyAuth("ADMIN" as never);
         const { clave } = await context.params;
 
-        const param = await prisma.parametroSistema.findUnique({
-            where: { clave },
-        });
-        if (!param) {
-            throw new AppError("Parámetro no encontrado", ERROR_CODES.NOT_FOUND, 404);
-        }
-
-        const body = (await request.json()) as { valor: string; motivo?: string };
+        const body = (await request.json()) as {
+            valor: string;
+            motivo?: string;
+            tipo?: "STRING" | "INTEGER" | "FLOAT" | "BOOLEAN" | "JSON" | "STRING_ARRAY";
+            categoria?: "VISIBILITY" | "SECURITY" | "LEGAL" | "EMAIL" | "SYSTEM";
+            esPublico?: boolean;
+            esSecreto?: boolean;
+            descripcion?: string;
+        };
         if (!body.valor) {
             throw new AppError("Valor requerido", ERROR_CODES.VALIDATION_ERROR, 400);
         }
@@ -77,12 +100,41 @@ export async function PATCH(request: Request, context: RouteContext) {
             );
         }
 
-        const valorParaGuardar = param.esSecreto ? encryptParameter(body.valor) : body.valor;
-
-        const updated = await prisma.parametroSistema.update({
+        const existing = await prisma.parametroSistema.findUnique({
             where: { clave },
-            data: { valor: valorParaGuardar, actualizadoPorId: user.id },
         });
+        const isNew = !existing;
+
+        const defaults = isNew ? PARAM_CREATE_DEFAULTS[clave] : undefined;
+        if (isNew && !defaults && !body.tipo) {
+            throw new AppError("Parámetro no encontrado", ERROR_CODES.NOT_FOUND, 404);
+        }
+
+        const esSecreto = existing?.esSecreto ?? body.esSecreto ?? defaults?.esSecreto ?? false;
+        const valorParaGuardar = esSecreto ? encryptParameter(body.valor) : body.valor;
+
+        let param;
+        if (isNew) {
+            const tipo = body.tipo ?? defaults!.tipo;
+            const categoria = body.categoria ?? defaults!.categoria;
+            param = await prisma.parametroSistema.create({
+                data: {
+                    clave,
+                    valor: valorParaGuardar,
+                    tipo,
+                    categoria,
+                    esPublico: body.esPublico ?? defaults?.esPublico ?? false,
+                    esSecreto,
+                    descripcion: body.descripcion ?? defaults?.descripcion ?? undefined,
+                    actualizadoPorId: user.id,
+                },
+            });
+        } else {
+            param = await prisma.parametroSistema.update({
+                where: { clave },
+                data: { valor: valorParaGuardar, actualizadoPorId: user.id },
+            });
+        }
 
         await logAudit({
             accion: "PARAM_UPDATE",
@@ -90,15 +142,15 @@ export async function PATCH(request: Request, context: RouteContext) {
             recursoId: param.id,
             parametroId: param.id,
             usuarioId: user.id,
-            valorAnterior: param.valor,
+            valorAnterior: isNew ? undefined : existing!.valor,
             valorNuevo: valorParaGuardar,
-            metadatos: { motivo: body.motivo, esSecreto: param.esSecreto },
+            metadatos: { motivo: body.motivo, esSecreto, nuevo: isNew },
         });
 
         invalidateCache("public_params");
         return NextResponse.json({
-            ...updated,
-            valor: updated.esSecreto ? null : updated.valor,
+            ...param,
+            valor: param.esSecreto ? null : param.valor,
         });
     } catch (error) {
         if (error instanceof AppError) {

@@ -50,7 +50,18 @@ export function CategoriaGruposEditor() {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
     const [nuevoGrupo, setNuevoGrupo] = useState("");
+    const [dirty, setDirty] = useState(false);
 
+    useEffect(() => {
+        const handler = (e: BeforeUnloadEvent) => {
+            if (dirty) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        };
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+    }, [dirty]);
     useEffect(() => {
         fetch("/api/config/parametros/ui.grupos_categoria", { credentials: "include" })
             .then((r) => r.json())
@@ -65,10 +76,12 @@ export function CategoriaGruposEditor() {
                 } catch {
                     setGrupos(structuredClone(GRUPOS_CATEGORIA_FALLBACK));
                 }
+                setDirty(false);
                 setLoading(false);
             })
             .catch(() => {
-                setMessage({ type: "error", text: "Error cargando grupos de categoría." });
+                setGrupos(structuredClone(GRUPOS_CATEGORIA_FALLBACK));
+                setDirty(false);
                 setLoading(false);
             });
     }, []);
@@ -79,7 +92,7 @@ export function CategoriaGruposEditor() {
         [asignadas]
     );
 
-    async function guardar(nuevosGrupos: CategoriaGrupo[]) {
+    async function guardar() {
         setSaving(true);
         setMessage(null);
         try {
@@ -87,12 +100,13 @@ export function CategoriaGruposEditor() {
                 method: "PATCH",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ valor: JSON.stringify({ grupos: nuevosGrupos }) }),
+                body: JSON.stringify({ valor: JSON.stringify({ grupos }) }),
             });
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
                 throw new Error(data?.error?.message || "Error guardando");
             }
+            setDirty(false);
             setMessage({ type: "success", text: "Grupos de categoría guardados." });
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error";
@@ -112,9 +126,9 @@ export function CategoriaGruposEditor() {
             const limpios = nuevos.map((g) =>
                 g.clave === grupoClave ? g : { ...g, categorias: g.categorias.filter((c) => c !== categoria) }
             );
-            guardar(limpios);
             return limpios;
         });
+        setDirty(true);
     }
 
     function quitarCategoria(grupoClave: string, categoria: string) {
@@ -122,17 +136,17 @@ export function CategoriaGruposEditor() {
             const nuevos = prev.map((g) =>
                 g.clave === grupoClave ? { ...g, categorias: g.categorias.filter((c) => c !== categoria) } : g
             );
-            guardar(nuevos);
             return nuevos;
         });
+        setDirty(true);
     }
 
     function renombrarGrupo(grupoClave: string, nombre: string) {
         setGrupos((prev) => {
             const nuevos = prev.map((g) => (g.clave === grupoClave ? { ...g, nombre } : g));
-            guardar(nuevos);
             return nuevos;
         });
+        setDirty(true);
     }
 
     function crearGrupo() {
@@ -145,18 +159,18 @@ export function CategoriaGruposEditor() {
         }
         setGrupos((prev) => {
             const nuevos = [...prev, { clave, nombre, orden: prev.length + 1, categorias: [] as string[] }];
-            guardar(nuevos);
             return nuevos;
         });
         setNuevoGrupo("");
+        setDirty(true);
     }
 
     function eliminarGrupo(grupoClave: string) {
         setGrupos((prev) => {
             const nuevos = prev.filter((g) => g.clave !== grupoClave).map((g, idx) => ({ ...g, orden: idx + 1 }));
-            guardar(nuevos);
             return nuevos;
         });
+        setDirty(true);
     }
 
     if (loading) {
@@ -181,6 +195,20 @@ export function CategoriaGruposEditor() {
                     {message.text}
                 </div>
             )}
+
+            <div className="flex items-start justify-between gap-3 sm:items-center">
+                <div>
+                    <h3 className="text-sm font-semibold text-body">Grupos de categoría</h3>
+                    {dirty ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-300">Tienes cambios sin guardar</p>
+                    ) : (
+                        <p className="text-xs text-muted">Los cambios están guardados.</p>
+                    )}
+                </div>
+                <Button onClick={guardar} isLoading={saving} disabled={!dirty || saving}>
+                    Guardar cambios
+                </Button>
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {grupos.map((grupo) => (
@@ -290,13 +318,13 @@ export function CategoriaGruposEditor() {
                         }}
                     />
                 </div>
-                <Button onClick={crearGrupo} disabled={!nuevoGrupo.trim() || saving} isLoading={saving}>
+                <Button onClick={crearGrupo} disabled={!nuevoGrupo.trim()}>
                     Agregar grupo
                 </Button>
             </div>
 
             <p className="text-xs text-muted">
-                Los cambios se guardan automáticamente. Las categorías sin grupo se ocultan en las vistas de usuario.
+                Guarda los cambios con el botón superior. Las categorías sin grupo se ocultan en las vistas de usuario.
             </p>
         </div>
     );

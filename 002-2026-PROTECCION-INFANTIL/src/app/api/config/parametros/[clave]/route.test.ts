@@ -36,6 +36,55 @@ describe("PATCH /api/config/parametros/:clave", () => {
         expect(body.error.message).toContain("local/privado (R2)");
     });
 
+    it("creates a parameter with metadata provided in the body", async () => {
+        const admin = await crearUsuario("ADMIN");
+        vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
+
+        const req = crearRequestAutenticado(
+            "PATCH",
+            "http://localhost/api/config/parametros/ui.nuevo_parametro",
+            {
+                valor: "test-value",
+                tipo: "STRING",
+                categoria: "SYSTEM",
+                esPublico: true,
+                descripcion: "Parámetro de prueba",
+            }
+        );
+
+        const res = await PATCH(req, { params: Promise.resolve({ clave: "ui.nuevo_parametro" }) });
+        expect(res.status).toBe(200);
+
+        const created = await prisma.parametroSistema.findUnique({ where: { clave: "ui.nuevo_parametro" } });
+        expect(created).not.toBeNull();
+        expect(created?.tipo).toBe("STRING");
+        expect(created?.categoria).toBe("SYSTEM");
+        expect(created?.esPublico).toBe(true);
+        expect(created?.descripcion).toBe("Parámetro de prueba");
+    });
+
+    it("creates a parameter when it does not exist (upsert)", async () => {
+        const admin = await crearUsuario("ADMIN");
+        vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
+
+        const req = crearRequestAutenticado(
+            "PATCH",
+            "http://localhost/api/config/parametros/ui.grupos_categoria",
+            { valor: JSON.stringify({ grupos: [{ clave: "test", nombre: "Test", orden: 1, categorias: [] }] }) }
+        );
+
+        const res = await PATCH(req, { params: Promise.resolve({ clave: "ui.grupos_categoria" }) });
+        expect(res.status).toBe(200);
+
+        const body = await res.json();
+        expect(body.clave).toBe("ui.grupos_categoria");
+        expect(body.tipo).toBe("JSON");
+
+        const created = await prisma.parametroSistema.findUnique({ where: { clave: "ui.grupos_categoria" } });
+        expect(created).not.toBeNull();
+        expect(created?.valor).toBe(JSON.stringify({ grupos: [{ clave: "test", nombre: "Test", orden: 1, categorias: [] }] }));
+    });
+
     it("updates a parameter and creates an AuditLog linked to the parameter", async () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
