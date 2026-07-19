@@ -891,6 +891,22 @@ async function main() {
             esPublico: false,
             descripcion: "Máximo de altas de contactos en Círculo de Confianza por ventana",
         },
+        {
+            clave: "comite.notificaciones.enabled",
+            valor: "true",
+            tipo: TipoParametro.BOOLEAN,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "Enviar alertas por email al comité de validación",
+        },
+        {
+            clave: "comite.notificaciones.frecuencia_horas",
+            valor: "24",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "Frecuencia mínima entre alertas al comité de validación (horas)",
+        },
     ];
 
     for (const p of reportesParams) {

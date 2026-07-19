@@ -8,6 +8,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { esAdminRol } from "@/lib/operadores/permisos";
+import { notificarComiteSiCorresponde } from "@/lib/operadores/notificacion-comite";
 import { randomBytes } from "crypto";
 
 const escalarSchema = z.object({
@@ -147,6 +148,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             valorNuevo: JSON.stringify({ solicitudId: solicitud.id, numero, motivo }),
             ipAddress,
             userAgent,
+        });
+
+        notificarComiteSiCorresponde().catch((err) => {
+            console.error("[ESCALAR] Error notificando al comité:", err);
         });
 
         return NextResponse.json({
