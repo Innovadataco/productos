@@ -83,7 +83,53 @@ async function llamarFallback(reporteId, error) {
     return res.json();
 }
 
+import pg from "pg";
+
+const { Client } = pg;
+const ADVISORY_LOCK_ID = 123456789;
+let lockClient = null;
+
+async function acquireAdvisoryLock() {
+    lockClient = new Client({ connectionString: DATABASE_URL });
+    await lockClient.connect();
+    const result = await lockClient.query("SELECT pg_try_advisory_lock($1) as locked", [ADVISORY_LOCK_ID]);
+    if (!result.rows[0].locked) {
+        console.error("[WORKER] Lock de instancia ya está en uso; otro worker está activo.");
+        await lockClient.end();
+        process.exit(2);
+    }
+    console.log("[WORKER] Advisory lock adquirido (instancia única).");
+}
+
+async function releaseAdvisoryLock() {
+    if (lockClient) {
+        try {
+            await lockClient.query("SELECT pg_advisory_unlock($1)", [ADVISORY_LOCK_ID]);
+            console.log("[WORKER] Advisory lock liberado.");
+        } catch (err) {
+            console.error("[WORKER] Error liberando advisory lock:", err.message);
+        } finally {
+            try {
+                await lockClient.end();
+            } catch {
+                // ignore
+            }
+            lockClient = null;
+        }
+    }
+}
+
+async function shutdown() {
+    console.log("[WORKER] Señal de terminación recibida; liberando lock...");
+    await releaseAdvisoryLock();
+    process.exit(0);
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+
 async function start() {
+    await acquireAdvisoryLock();
     await ensureStarted();
     await ensureQueue("reporte-procesamiento");
     await ensureQueue("dataset-anonimizacion-backfill");
