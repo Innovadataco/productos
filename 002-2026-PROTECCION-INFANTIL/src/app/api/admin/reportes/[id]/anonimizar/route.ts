@@ -36,7 +36,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
             return NextResponse.json(
-                { error: { message: "Demasiadas anonimizaciones. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { error: { message: "Demasiadas anonimizaciones. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
                 { status: 429, headers: rate.headers }
             );
         }

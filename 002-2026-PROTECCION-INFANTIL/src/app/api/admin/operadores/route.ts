@@ -200,7 +200,7 @@ export async function POST(request: Request) {
             emailEnviado,
             mensaje: emailEnviado
                 ? `${rolTexto.charAt(0).toUpperCase() + rolTexto.slice(1)} creado. Se envió la contraseña temporal por email.`
-                : `${rolTexto.charAt(0).toUpperCase() + rolTexto.slice(1)} creado. No se pudo enviar el email; copiá la contraseña temporal que se muestra arriba.`,
+                : `${rolTexto.charAt(0).toUpperCase() + rolTexto.slice(1)} creado. No se pudo enviar el email; copie la contraseña temporal que se muestra arriba.`,
         }, { status: 201 });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {

@@ -97,7 +97,7 @@ export async function POST(request: Request) {
         const rate1 = await checkRateLimit(request, "ia_sandbox", { identifier: user.id });
         if (!rate1.allowed) {
             return NextResponse.json(
-                { error: { message: "Demasiadas pruebas. Esperá antes de continuar.", code: ERROR_CODES.RATE_LIMITED } },
+                { error: { message: "Demasiadas pruebas. Espere antes de continuar.", code: ERROR_CODES.RATE_LIMITED } },
                 { status: 429, headers: rate1.headers }
             );
         }
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
             const rate2 = await checkRateLimit(request, "ia_sandbox", { identifier: user.id });
             if (!rate2.allowed) {
                 return NextResponse.json(
-                    { error: { message: "Demasiadas pruebas. Esperá antes de continuar.", code: ERROR_CODES.RATE_LIMITED } },
+                    { error: { message: "Demasiadas pruebas. Espere antes de continuar.", code: ERROR_CODES.RATE_LIMITED } },
                     { status: 429, headers: rate2.headers }
                 );
             }

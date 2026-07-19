@@ -44,7 +44,7 @@ export async function POST(request: Request, context: RouteContext) {
                 "reportes.classification.rag_top_k": String(snapshot.ragTopK),
                 "system.ollama_base_url": snapshot.ollamaBaseUrl,
             },
-            mensaje: "Configuración precargada. Guardá los cambios en la pestaña Configuración para activarlos.",
+            mensaje: "Configuración precargada. Guarde los cambios en la pestaña Configuración para activarlos.",
         });
     } catch (error) {
         if (error instanceof AppError) {

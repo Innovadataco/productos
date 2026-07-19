@@ -27,7 +27,7 @@ export async function GET(
         const rate = await checkRateLimit(request, "seguimiento");
         if (!rate.allowed) {
             return NextResponse.json(
-                { error: { message: "Demasiadas consultas. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { error: { message: "Demasiadas consultas. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
                 { status: 429, headers: rate.headers }
             );
         }

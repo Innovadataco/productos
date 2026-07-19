@@ -180,7 +180,7 @@ function ApelarContent() {
                 {step === "done" && (
                     <div className="mt-6 space-y-4">
                         <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                            Apelación recibida. Guardá este enlace para consultar el estado:
+                            Apelación recibida. Guarde este enlace para consultar el estado:
                             <code className="mt-2 block break-all rounded bg-white px-2 py-1 text-xs dark:bg-slate-800">
                                 {typeof window !== "undefined" ? `${window.location.origin}/apelar?token=${token}` : ""}
                             </code>

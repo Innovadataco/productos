@@ -74,7 +74,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             emailEnviado,
             mensaje: emailEnviado
                 ? `Email de bienvenida reenviado al ${esComite ? "comité de validación" : "operador"}.`
-                : "No se pudo reenviar el email. Copiá la contraseña temporal mostrada arriba.",
+                : "No se pudo reenviar el email. Copie la contraseña temporal mostrada arriba.",
         });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {

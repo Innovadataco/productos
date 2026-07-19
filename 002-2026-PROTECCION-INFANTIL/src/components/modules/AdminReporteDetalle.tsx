@@ -243,7 +243,7 @@ export function AdminReporteDetalle({
 
     const handleBaja = async () => {
         if (!motivoBaja) {
-            setError("Seleccioná un motivo de baja.");
+            setError("Seleccione un motivo de baja.");
             return;
         }
         if (!notaBaja || notaBaja.length < 1 || notaBaja.length > 2000) {
@@ -683,7 +683,7 @@ export function AdminReporteDetalle({
                                 <>
                                     <h3 className="mb-2 font-medium text-body">Escalar a comité</h3>
                                     <p className="mb-3 text-sm text-subtle">
-                                        Solicitá una segunda opinión especializada del comité de validación.
+                                        Solicite una segunda opinión especializada del comité de validación.
                                     </p>
                                     <Button onClick={() => setMostrarEscalar(true)} variant="secondary" disabled={actionLoading}>
                                         Escalar a comité

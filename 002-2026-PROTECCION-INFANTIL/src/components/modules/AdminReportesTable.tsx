@@ -159,7 +159,7 @@ export function AdminReportesTable() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold text-body">Bandeja de reportes</h1>
-                <p className="text-sm text-muted">Revisá, clasificá y gestioná los reportes de la comunidad.</p>
+                <p className="text-sm text-muted">Revisar, clasificar y gestionar los reportes de la comunidad.</p>
             </div>
 
             <div className="glass rounded-2xl p-4 sm:p-5">

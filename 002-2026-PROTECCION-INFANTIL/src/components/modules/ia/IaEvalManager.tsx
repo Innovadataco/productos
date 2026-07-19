@@ -207,7 +207,7 @@ function LaboratorioTab() {
                         <p className="text-sm text-muted">Cargando...</p>
                     ) : experiments.length === 0 ? (
                         <GlassCard className="p-6">
-                            <p className="text-sm text-muted">No hay experimentos completados. Creá uno para empezar.</p>
+                            <p className="text-sm text-muted">No hay experimentos completados. Cree uno para empezar.</p>
                         </GlassCard>
                     ) : (
                         <div className="grid gap-4 md:grid-cols-2">
@@ -739,7 +739,7 @@ function ComparadorExperimentos({ experiments, onBack }: { experiments: Experime
             </div>
 
             <GlassCard className="p-5">
-                <p className="text-sm text-muted mb-3">Seleccioná 2 a 5 experimentos completados de la misma fixtureVersion.</p>
+                <p className="text-sm text-muted mb-3">Seleccione 2 a 5 experimentos completados de la misma fixtureVersion.</p>
                 <div className="space-y-2">
                     {experiments.map((exp) => (
                         <label key={exp.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700 cursor-pointer">

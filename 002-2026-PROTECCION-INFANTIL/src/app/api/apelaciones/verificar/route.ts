@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         const rate = await checkRateLimit(request, "apelacion_sms", { identifier: parsed.data.token });
         if (!rate.allowed) {
             return NextResponse.json(
-                { error: { message: "Demasiados intentos de verificación. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { error: { message: "Demasiados intentos de verificación. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
                 { status: 429, headers: rate.headers }
             );
         }

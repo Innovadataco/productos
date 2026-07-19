@@ -49,7 +49,7 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 {
                     error: {
-                        message: "Demasiados contactos agregados. Intentá más tarde.",
+                        message: "Demasiados contactos agregados. Intente más tarde.",
                         code: ERROR_CODES.RATE_LIMITED,
                         retryAfter: Math.ceil((rate.resetAt - Date.now()) / 1000),
                     },

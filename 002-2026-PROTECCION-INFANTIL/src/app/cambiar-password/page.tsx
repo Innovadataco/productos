@@ -59,7 +59,7 @@ export default function CambiarPasswordPage() {
                 window.location.href = target;
             }, 1200);
         } catch {
-            setError("Error de red. Intentá de nuevo.");
+            setError("Error de red. Intente de nuevo.");
         } finally {
             setIsSubmitting(false);
         }
@@ -83,7 +83,7 @@ export default function CambiarPasswordPage() {
                     <p className="mt-2 text-sm text-muted">
                         {user.debeCambiarPassword
                             ? "Debés cambiar tu contraseña temporal antes de continuar."
-                            : "Actualizá tu contraseña de acceso."}
+                            : "Actualice su contraseña de acceso."}
                     </p>
                 </div>
 

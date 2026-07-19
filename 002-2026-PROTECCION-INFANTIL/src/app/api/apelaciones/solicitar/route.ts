@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         const rate = await checkRateLimit(request, "apelacion", { identifier: `${identificador}:${plataforma.id}` });
         if (!rate.allowed) {
             return NextResponse.json(
-                { error: { message: "Demasiadas apelaciones. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { error: { message: "Demasiadas apelaciones. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
                 { status: 429, headers: rate.headers }
             );
         }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
             const smsRate = await checkRateLimit(request, "apelacion_sms", { identifier: contacto });
             if (!smsRate.allowed) {
                 return NextResponse.json(
-                    { error: { message: "Demasiados envíos de SMS. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                    { error: { message: "Demasiados envíos de SMS. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
                     { status: 429, headers: smsRate.headers }
                 );
             }
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
             {
                 token,
-                mensaje: "Apelación recibida. Guardá el enlace de seguimiento.",
+                mensaje: "Apelación recibida. Guarde el enlace de seguimiento.",
                 requiereVerificacion: tipoVerificacion === "SMS",
             },
             { status: 201 }

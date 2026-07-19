@@ -111,7 +111,7 @@ export function ComiteSolicitudDetalle({
 
     const handleResolver = async () => {
         if (!categoria) {
-            setError("Seleccioná una categoría.");
+            setError("Seleccione una categoría.");
             return;
         }
         setActionLoading(true);

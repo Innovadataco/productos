@@ -198,7 +198,7 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
                         id="sandbox-texto"
                         value={texto}
                         onChange={(e) => setTexto(e.target.value)}
-                        placeholder="Escribí aquí el texto a analizar..."
+                        placeholder="Escriba aquí el texto a analizar..."
                         rows={6}
                         maxLength={4000}
                         className="w-full resize-y rounded-xl border border-slate-200 bg-white/80 p-3 text-sm text-body placeholder:text-subtle focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-900/80 dark:focus:border-cyan-500 dark:focus:ring-sky-900"

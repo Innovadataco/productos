@@ -75,7 +75,7 @@ export function SpamRevisionPanel() {
     const resolver = async (esSpam: boolean) => {
         if (!selectedId) return;
         if (!esSpam && !categoria) {
-            setError("Seleccioná una categoría para el reporte válido.");
+            setError("Seleccione una categoría para el reporte válido.");
             return;
         }
         setResolviendo(true);

@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         const rateFingerprint = await checkRateLimit(request, "report_fingerprint", { identifier: fingerprintHash });
         if (!rateFingerprint.allowed) {
             return NextResponse.json(
-                { error: { message: "Demasiados reportes desde este dispositivo. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rateFingerprint.resetAt - Date.now()) / 1000) } },
+                { error: { message: "Demasiados reportes desde este dispositivo. Espere un momento.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rateFingerprint.resetAt - Date.now()) / 1000) } },
                 { status: 429, headers: rateFingerprint.headers }
             );
         }

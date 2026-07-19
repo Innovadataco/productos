@@ -28,7 +28,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });
         if (!rate.allowed) {
             return NextResponse.json(
-                { error: { message: "Demasiadas solicitudes. Esperá un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { error: { message: "Demasiadas solicitudes. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
                 { status: 429, headers: rate.headers }
             );
         }

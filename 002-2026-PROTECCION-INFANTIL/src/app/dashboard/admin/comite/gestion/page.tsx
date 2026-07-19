@@ -373,7 +373,7 @@ export default function AdminComiteGestionPage() {
 
             {passwordTemporal && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
-                    <p className="font-semibold">Contraseña temporal (mostrála una vez)</p>
+                    <p className="font-semibold">Contraseña temporal (muéstrela una vez)</p>
                     <div className="mt-2 flex items-center gap-2">
                         <code className="rounded-lg bg-white/60 px-3 py-1.5 font-mono text-base dark:bg-slate-900/60">
                             {passwordTemporal}

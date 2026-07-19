@@ -587,7 +587,7 @@ export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.Tr
     ) {
         return {
             insuficiente: true,
-            motivo: "Agrega más contactos o espera a que haya más reportes para ver el mapa agregado.",
+            motivo: "Agregue más contactos o espere a que haya más reportes para ver el mapa agregado.",
             contactosConReportes: contactosConReportesReales,
             totalReportes,
         };

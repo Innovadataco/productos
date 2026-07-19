@@ -64,8 +64,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             },
             passwordTemporal: password,
             mensaje: esComite
-                ? "Contraseña temporal regenerada. Mostrála una vez al comité de validación."
-                : "Contraseña temporal regenerada. Mostrála una vez al operador.",
+                ? "Contraseña temporal regenerada. Muéstrela una vez al comité de validación."
+                : "Contraseña temporal regenerada. Muéstrela una vez al operador.",
         });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {

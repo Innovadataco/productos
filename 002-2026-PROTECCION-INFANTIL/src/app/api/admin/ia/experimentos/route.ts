@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         });
         if (enProgreso) {
             throw new AppError(
-                `Ya hay una corrida en curso (${enProgreso.id}). Esperá a que termine.`,
+                `Ya hay una corrida en curso (${enProgreso.id}). Espere a que termine.`,
                 ERROR_CODES.CONFLICT,
                 409
             );

@@ -171,14 +171,14 @@ export function IaModelSelector() {
             <GlassCard className="p-6 space-y-6">
                 <div>
                     <h3 className="text-lg font-semibold text-body">Modelo de clasificación</h3>
-                    <p className="text-sm text-muted">Seleccioná el modelo activo para el procesamiento de reportes.</p>
+                    <p className="text-sm text-muted">Seleccione el modelo activo para el procesamiento de reportes.</p>
                 </div>
 
                 {loadingModels ? (
                     <p className="text-sm text-muted">Cargando modelos...</p>
                 ) : classificationModels.length === 0 ? (
                     <p className="text-sm text-red-600 dark:text-red-400">
-                        No se encontraron modelos de clasificación instalados. Verificá que Ollama esté corriendo y que haya modelos descargados.
+                        No se encontraron modelos de clasificación instalados. Verifique que Ollama esté corriendo y que haya modelos descargados.
                     </p>
                 ) : (
                     <div className="space-y-4">
