@@ -141,6 +141,8 @@ export function PublicDashboard() {
                     <MapaUbicaciones
                         puntos={puntosMapa}
                         paises={data.porPais.map((p) => ({ pais: p.pais, total: p.count }))}
+                        center={[4.5, -74]}
+                        zoom={3}
                     />
                 )}
             </ChartCard>
