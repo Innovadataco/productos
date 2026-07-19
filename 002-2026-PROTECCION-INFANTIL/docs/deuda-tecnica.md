@@ -1,7 +1,7 @@
 # Deuda técnica — Protección Infantil
 
 > Inventario clasificado de deuda técnica del proyecto.
-> Última actualización: 2026-07-18.
+> Última actualización: 2026-07-19.
 
 ## Clasificación
 
@@ -63,6 +63,9 @@
 | A8 | **Reactivación regenera embedding pero no restaura dataset purgado** | Por diseño: si el motivo fue `REPORTE_FALSO`/`ORDEN_LEGAL`, el ejemplo no vuelve al dataset RAG. |
 | A9 | **Una corrida de eval a la vez** | Simplifica el scheduling y evita saturar Ollama; colas pg-boss serializan el trabajo. |
 | A10 | **Retención de hashes de fuente limitada a 90 días** | Default configurable `anti_abuso.retencion_fuente_dias=90`; balance entre investigación y privacidad. |
+| A11 | **Emparejamiento de nombres de país por normalización de texto** | El mapa usa comparación simple BD ↔ GeoJSON. Se acepta el riesgo de países no coloreados; se mitiga con la lista "Top países" y puntos de ciudad. |
+| A12 | **GeoJSON de países en lugar de TopoJSON** | Se priorizó no agregar dependencias (`topojson-client`) y reutilizar `react-leaflet`. El tamaño (~251 KB) es aceptable para el bundle actual. |
+| A13 | **Sin tests automatizados de componente para US1/US2/US3** | Los cambios se validaron con lint, types, tests existentes y pruebas manuales con curl. Se acepta agregar tests de componente en un lote de higiene posterior. |
 
 ---
 
