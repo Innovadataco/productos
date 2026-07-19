@@ -40,21 +40,25 @@ describe("/api/circulo-confianza", () => {
         const user = await crearUsuario("PARENT");
         mockToken = await crearTokenUsuario(user.id, "PARENT");
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        await prisma.contactoConfianza.create({
-            data: {
-                usuarioId: user.id,
-                identificador: "+57300111111",
-                plataformaId: plataforma!.id,
+
+        const postReq = new Request("http://localhost:5005/api/circulo-confianza", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
                 etiqueta: "tío",
-            },
+                identificadores: [{ valor: "+57300111111", tipo: "telefono", plataformaId: plataforma!.id }],
+            }),
         });
+        await POST(postReq);
 
         const req = new Request("http://localhost:5005/api/circulo-confianza");
         const res = await GET(req);
         const json = await res.json();
         expect(res.status).toBe(200);
         expect(json.contactos).toHaveLength(1);
-        expect(json.contactos[0].identificador).toBe("+57300111111");
+        expect(json.contactos[0].etiqueta).toBe("tío");
+        expect(json.contactos[0].identificadores).toHaveLength(1);
+        expect(json.contactos[0].identificadores[0].valor).toBe("+57300111111");
     });
 
     it("POST crea contacto con cookie", async () => {
@@ -65,12 +69,16 @@ describe("/api/circulo-confianza", () => {
         const req = new Request("http://localhost:5005/api/circulo-confianza", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ identificador: "+57300222222", plataformaId: plataforma!.id, etiqueta: "primo" }),
+            body: JSON.stringify({
+                etiqueta: "primo",
+                identificadores: [{ valor: "+57300222222", tipo: "telefono", plataformaId: plataforma!.id }],
+            }),
         });
 
         const res = await POST(req);
         expect(res.status).toBe(201);
         const json = await res.json();
-        expect(json.identificador).toBe("+57300222222");
+        expect(json.identificadores).toHaveLength(1);
+        expect(json.identificadores[0].valor).toBe("+57300222222");
     });
 });
