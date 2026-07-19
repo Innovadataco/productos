@@ -181,4 +181,40 @@ El supervisor del worker puede lanzar un segundo worker si se invoca manualmente
 
 ## Implementación
 
-*(Se documentará tras completar el trabajo, siguiendo el formato de cierre del Spec-Kit.)*
+### Resumen por User Story
+
+- **US1 — Bandeja del comité**: No se modificaron `src/app/login/page.tsx`, `src/app/dashboard/admin/layout.tsx` ni `src/components/modules/NavHeader.tsx` porque el código fuente ya reconocía `COMITE_VALIDACION`. Se ejecutó `rm -rf .next && npm run build` para regenerar el build desplegado. El flujo se validó con un usuario `COMITE_VALIDACION`: login redirige a `/dashboard/admin/comite`, acceso a `/mis-reportes` y `/dashboard/circulo-confianza` redirige a `/dashboard/admin/comite`.
+- **US2 — Persistencia del editor de grupos**: Se corrigió `src/components/modules/CategoriaGruposEditor.tsx` para leer `data.valor` en lugar de `data.parametro?.valor`. Se buscó el patrón `data.parametro?.valor` en consumidores de `GET /api/config/parametros/[clave]` y no se encontraron más casos. La invalidación de caché `public_params` ya estaba presente en el PATCH del endpoint.
+- **US3 — Índices HNSW**: Se creó la migración aditiva `prisma/migrations/20260719095000_recrear_indices_hnsw_embeddings/migration.sql` que recrea ambos índices con `CREATE INDEX IF NOT EXISTS ... USING hnsw`. Se creó `scripts/verify-hnsw-indexes.ts` para fallar si los índices no existen o no son HNSW. `npx prisma migrate deploy` los aplicó correctamente.
+- **US4 — Middleware perimetral**: Se extrajo la lógica de `src/proxy.ts` a `src/lib/proxy.ts` y se usó `src/proxy.ts` como entrypoint de middleware (convención requerida por Next.js 16.2.10, ya que `src/middleware.ts` estaba deprecado y no ejecutaba la lógica actualizada). Se incluyó `COMITE_VALIDACION` en los roles internos y se definieron redirecciones por rol. Se probaron los 5 roles (ADMIN, SCHOOL_ADMIN, OPERADOR, PARENT, COMITE_VALIDACION) sin lockout.
+- **US5 — Seed idempotente**: Se convirtió la creación del admin en `upsert` por email y se exige `ADMIN_PASSWORD` si el admin no existe; se eliminó cualquier password por default. Se reemplazaron `casoEval.createMany` y `datasetEntrenamiento.create` por loops de `findFirst` + `create`/`update` por clave natural. Se cambió `package.json` para que `db:migrate` use `prisma migrate deploy` y no `migrate dev`.
+- **US6 — Worker de instancia única**: Se agregó advisory lock de Postgres (`pg_try_advisory_lock`) al inicio de `scripts/worker-reportes.mjs` usando una conexión dedicada de `pg`. El lock se libera en shutdown (SIGTERM/SIGINT) y se libera automáticamente si el proceso muere. Un segundo worker obtiene el lock, imprime el mensaje y sale con código 2.
+
+### Validación final
+
+- `npx tsc --noEmit` — sin errores.
+- `npm run lint` — 0 errores (2 warnings preexistentes).
+- `npm run test` — 409 tests pasaron, 0 fallidos.
+- `npx prisma migrate deploy` — migración aditiva aplicada.
+- `scripts/verify-hnsw-indexes.ts` — índices HNSW presentes.
+- `npx prisma db seed` ejecutado 2 veces — idempotente, sin duplicados.
+- Prueba manual de middleware con curl — comportamiento correcto para los 5 roles.
+- Prueba manual de worker — segundo worker sale con código distinto de cero.
+- `./scripts/dev-restart.sh` — deploy limpio exitoso, healthcheck OK, un solo worker.
+
+### Decisiones y deuda técnica
+
+- Se usó `src/proxy.ts` como entrypoint de middleware en lugar de `src/middleware.ts` porque Next.js 16.2.10 marca `middleware.ts` como deprecado y con `src/middleware.ts` el build no ejecutaba la lógica actualizada (redirigía a `/` para `COMITE_VALIDACION`). La lógica de protección y la matriz de roles se mantienen en `src/lib/proxy.ts` y son funcionales.
+- No se añadieron tests automatizados del middleware; se cubrió con prueba manual de curl. Se recomienda agregarlos cuando la convención de Next.js se estabilice.
+
+---
+
+## Success Criteria *(post-implementación)*
+
+- **SC-001**: `COMITE_VALIDACION` accede a `/dashboard/admin/comite` y permanece ahí al navegar por "Mi bandeja`. ✅
+- **SC-002**: El editor de grupos de categoría lee `data.valor` y el valor guardado persiste tras recarga. ✅
+- **SC-003**: Índices HNSW existen tras `prisma migrate deploy` y el script de verificación pasa. ✅
+- **SC-004**: El middleware intercepta peticiones sin sesión y redirige/retorna 401. ✅
+- **SC-005**: Ejecutar el seed dos veces no genera duplicados ni errores. ✅
+- **SC-006**: Segundo worker obtiene lock, imprime mensaje y sale con código != 0. ✅
+- **SC-007**: `npm run test` continúa pasando. ✅
