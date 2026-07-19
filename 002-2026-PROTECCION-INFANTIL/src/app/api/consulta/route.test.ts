@@ -107,7 +107,7 @@ describe("GET /api/consulta", () => {
         expect(body.textoOriginal).toBeUndefined();
     });
 
-    it("usuario anónimo ve información agregada básica", async () => {
+    it("usuario anónimo ve nivel de riesgo, confianza y resumen agregado básico", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         for (let i = 0; i < 3; i++) {
             await crearReporteVisible("+57300ANON", plataforma!.id, "OFRECIMIENTO_REGALOS", i === 0);
@@ -120,15 +120,18 @@ describe("GET /api/consulta", () => {
         expect(body.tieneReportes).toBe(true);
         expect(body.visibleEnDashboard).toBe(true);
         expect(body.totalReportes).toBe(3);
-        expect(body.score).toBeUndefined();
-        expect(body.categorias).toBeUndefined();
+        expect(body.nivelRiesgo).toBeDefined();
+        expect(body.confianzaPromedio).toBeGreaterThan(0);
+        expect(body.resumenPlataformas).toBeDefined();
         expect(body.ubicaciones).toHaveLength(1);
         expect(body.resumen).toContain("3");
         expect(body.plataformas).toHaveLength(1);
         expect(body.plataformas[0].nombre).toBe("WhatsApp");
+        expect(body.texto).toBeUndefined();
+        expect(body.textoOriginal).toBeUndefined();
     });
 
-    it("no expone score, nivel de riesgo ni categorías", async () => {
+    it("no expone score, categorías ni datos del denunciante", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         for (let i = 0; i < 3; i++) {
             await crearReporteVisible("+57300AUTH", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
@@ -140,7 +143,6 @@ describe("GET /api/consulta", () => {
         const body = await res.json();
         expect(body.tieneReportes).toBe(true);
         expect(body.score).toBeUndefined();
-        expect(body.nivelRiesgo).toBeUndefined();
         expect(body.categorias).toBeUndefined();
         expect(body.timeline).toHaveLength(1);
     });

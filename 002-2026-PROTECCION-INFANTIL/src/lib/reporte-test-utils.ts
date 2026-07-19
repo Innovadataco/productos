@@ -130,6 +130,12 @@ export async function crearParametrosReportes() {
         { clave: "worker.concurrencia", valor: "2", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
         { clave: "worker.max_pendientes", valor: "100", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
         { clave: "ui.sla_horas_procesamiento", valor: "24", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: true },
+        { clave: "risk.umbral_medio", valor: "50", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: true },
+        { clave: "risk.umbral_alto", valor: "75", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: true },
+        { clave: "risk.min_reportes_alto", valor: "3", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: true },
+        { clave: "risk.peso_confianza", valor: "50", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: true },
+        { clave: "risk.peso_cantidad", valor: "30", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: true },
+        { clave: "risk.peso_gravedad", valor: "20", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: true },
     ];
 
     for (const p of params) {

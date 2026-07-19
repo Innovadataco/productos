@@ -12,27 +12,14 @@ function mockFetch(response: unknown, ok = true) {
 const baseConReportes = {
     identificador: "3001111111",
     tieneReportes: true,
-    visibleEnDashboard: false,
+    nivelRiesgo: "MEDIO" as const,
+    confianzaPromedio: 0.82,
     totalReportes: 1,
     reportesAutenticados: 0,
     reportesAnonimos: 1,
-    primerReporte: "2026-07-16T15:55:26.045Z",
     ultimoReporte: "2026-07-16T15:55:26.045Z",
     plataformas: [{ id: "p1", nombre: "Facebook", clave: "facebook", total: 1, otraPlataforma: null }],
-    ubicaciones: [
-        {
-            pais: "Bolivia",
-            ciudad: "Cochabamba",
-            total: 1,
-            lat: -17.7833,
-            lng: -63.1821,
-            fechasReporte: ["2026-07-16"],
-            fechasIncidente: ["2026-07-16"],
-        },
-    ],
-    timeline: [{ mes: "2026-07", total: 1 }],
-    resumen:
-        "Se han reportado 1 vez(es) entre 2026-07-16 y 2026-07-16 en 1 ciudad(es) de 1 país(es) y 1 plataforma(s).",
+    resumenPlataformas: "1 reporte en Facebook",
 };
 
 describe("ConsultaPublicaClient", () => {
@@ -76,7 +63,7 @@ describe("ConsultaPublicaClient", () => {
         });
     });
 
-    it("renderiza correctamente cuando el identificador tiene reportes", async () => {
+    it("renderiza nivel de riesgo, confianza, cantidad y fecha cuando hay reportes", async () => {
         mockFetch(baseConReportes);
         render(<ConsultaPublicaClient />);
 
@@ -86,14 +73,15 @@ describe("ConsultaPublicaClient", () => {
         fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
 
         await waitFor(() => {
-            expect(document.body.textContent).toContain("Facebook");
+            expect(document.body.textContent).toContain("Riesgo medio");
+            expect(document.body.textContent).toContain("82%");
             expect(document.body.textContent).toContain("Total reportes");
-            expect(document.body.textContent).toContain("Con reportes");
-            expect(document.body.textContent).toContain("Cochabamba, Bolivia");
+            expect(document.body.textContent).toContain("Último reporte");
+            expect(document.body.textContent).toContain("1 reporte en Facebook");
         });
     });
 
-    it("no muestra score ni categorías", async () => {
+    it("no muestra contenido de reportes, mapa ni ubicaciones al anónimo", async () => {
         mockFetch(baseConReportes);
         render(<ConsultaPublicaClient />);
 
@@ -103,27 +91,15 @@ describe("ConsultaPublicaClient", () => {
         fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
 
         await waitFor(() => {
-            expect(document.body.textContent).not.toContain("Score");
-            expect(document.body.textContent).not.toContain("Compartimiento sexual");
-            expect(document.body.textContent).not.toContain("Categorías detectadas");
+            expect(document.body.textContent).not.toContain("Ubicaciones");
+            expect(document.body.textContent).not.toContain("Reportes por mes");
+            expect(document.body.textContent).not.toContain("Plataformas");
+            expect(document.body.textContent).not.toContain("Cochabamba");
         });
     });
 
-    it("no crashea cuando las ubicaciones no tienen coordenadas", async () => {
-        mockFetch({
-            ...baseConReportes,
-            ubicaciones: [
-                {
-                    pais: "Bolivia",
-                    ciudad: "Cochabamba",
-                    total: 1,
-                    lat: null,
-                    lng: null,
-                    fechasReporte: ["2026-07-16"],
-                    fechasIncidente: ["2026-07-16"],
-                },
-            ],
-        });
+    it("muestra CTA para crear cuenta", async () => {
+        mockFetch(baseConReportes);
         render(<ConsultaPublicaClient />);
 
         fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
@@ -132,7 +108,8 @@ describe("ConsultaPublicaClient", () => {
         fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
 
         await waitFor(() => {
-            expect(document.body.textContent).toContain("Cochabamba, Bolivia");
+            expect(document.body.textContent).toContain("Crear una cuenta");
+            expect(document.body.textContent).toContain("detalle completo");
         });
     });
 
@@ -145,6 +122,7 @@ describe("ConsultaPublicaClient", () => {
                 { id: "p2", nombre: "Snapchat", clave: "snapchat", total: 1, otraPlataforma: null },
                 { id: "p3", nombre: "Discord", clave: "discord", total: 1, otraPlataforma: null },
             ],
+            resumenPlataformas: "5 reportes en Roblox, Snapchat y Discord",
         });
         render(<ConsultaPublicaClient />);
 
@@ -164,6 +142,7 @@ describe("ConsultaPublicaClient", () => {
             plataformas: [
                 { id: "p-otro", nombre: "Otra plataforma", clave: "otro", total: 1, otraPlataforma: "Telegram" },
             ],
+            resumenPlataformas: "1 reporte en Telegram",
         });
         render(<ConsultaPublicaClient />);
 
@@ -185,6 +164,7 @@ describe("ConsultaPublicaClient", () => {
             plataformas: [
                 { id: "p-otro", nombre: "Otra plataforma", clave: "otro", total: 1, otraPlataforma: null },
             ],
+            resumenPlataformas: "1 reporte en Otra plataforma",
         });
         render(<ConsultaPublicaClient />);
 

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { ERROR_CODES } from "@/lib/errors";
+import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import type { EstadoReporte } from "@prisma/client";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { formatPlataforma, formatPlataformasResumen } from "@/lib/plataforma";
 import { getRiesgoConsultaParams, calcularRiesgoConsulta } from "@/lib/riesgo-consulta";
+import type { EstadoReporte } from "@prisma/client";
 
 const consultaSchema = z.object({
     identificador: z.string().min(3).max(100),
@@ -13,21 +14,38 @@ const consultaSchema = z.object({
 
 const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
 
+const CATEGORIA_LABELS: Record<string, string> = {
+    CONTACTO_INSISTENTE: "Contacto insistente",
+    SOLICITUD_MATERIAL: "Solicitud de material",
+    OFRECIMIENTO_REGALOS: "Ofrecimiento de regalos",
+    SUPLANTACION_IDENTIDAD: "Suplantación de identidad",
+    SOLICITUD_ENCUENTRO: "Solicitud de encuentro",
+    COMPARTIMIENTO_SEXUAL: "Compartimiento sexual",
+    OTRO: "Otro",
+    EXTORSION: "Extorsión",
+    CONTENIDO_GENERADO_IA: "Contenido generado por IA",
+    DIFUSION_NO_CONSENTIDA: "Difusión no consentida",
+    DOXING: "Doxing",
+    SPAM: "Spam",
+};
+
 function formatFecha(date: Date | string) {
     return new Date(date).toISOString().slice(0, 10);
 }
 
-/**
- * GET /api/consulta?identificador=...
- * Consulta pública de un identificador reportado (número, nick o usuario).
- *
- * Devuelve un resumen agregado SIN exponer textos de reportes, nombres de
- * personas ni datos personales. Incluye distribución geográfica agregada por
- * ciudad/país, fechas de reporte y del incidente, plataformas y categorías.
- */
 export async function GET(request: Request) {
     try {
-        const rate = await checkRateLimit(request, "consulta");
+        let user: Awaited<ReturnType<typeof verifyAuth>>;
+        try {
+            user = await verifyAuth("PARENT");
+        } catch {
+            return NextResponse.json(
+                { error: { message: "No autenticado", code: ERROR_CODES.AUTH_INVALID } },
+                { status: 401 }
+            );
+        }
+
+        const rate = await checkRateLimit(request, "consulta_detalle");
         if (!rate.allowed) {
             return NextResponse.json(
                 {
@@ -52,17 +70,6 @@ export async function GET(request: Request) {
             );
         }
 
-        // Parámetros de visibilidad (solo para indicar si aparece en el dashboard público)
-        const paramUmbral = await prisma.parametroSistema.findUnique({
-            where: { clave: "visibility.report_threshold" },
-        });
-        const paramRatio = await prisma.parametroSistema.findUnique({
-            where: { clave: "visibility.min_authenticated_ratio" },
-        });
-        const umbral = parseInt(paramUmbral?.valor || "3", 10);
-        const minRatio = parseFloat(paramRatio?.valor || "0.5");
-
-        // Reportes visibles del identificador (CLASIFICADO / CORREGIDO)
         const reportes = await prisma.reporte.findMany({
             where: {
                 identificador: parsed.data.identificador,
@@ -71,15 +78,14 @@ export async function GET(request: Request) {
             },
             select: {
                 id: true,
+                esAnonimo: true,
+                creadoEn: true,
+                plataforma: { select: { id: true, nombre: true, clave: true } },
+                otraPlataforma: true,
                 ciudad: true,
                 pais: true,
-                creadoEn: true,
-                fechaIncidente: true,
-                esAnonimo: true,
-                plataforma: { select: { id: true, nombre: true, clave: true } },
-                clasificacion: { select: { categoria: true, confianza: true } },
                 ciudadRel: { select: { lat: true, lng: true } },
-                otraPlataforma: true,
+                clasificacion: { select: { categoria: true, confianza: true } },
             },
             orderBy: { creadoEn: "desc" },
             take: 1000,
@@ -93,15 +99,14 @@ export async function GET(request: Request) {
             });
         }
 
+        const riesgoParams = await getRiesgoConsultaParams();
+        const riesgoGlobal = calcularRiesgoConsulta(reportes, riesgoParams);
+
         const totalReportes = reportes.length;
         const reportesAutenticados = reportes.filter((r) => !r.esAnonimo).length;
         const reportesAnonimos = totalReportes - reportesAutenticados;
-        const ratioAutenticados = totalReportes > 0 ? reportesAutenticados / totalReportes : 0;
-        const visibleEnDashboard = totalReportes >= umbral && ratioAutenticados >= minRatio;
         const ultimoReporte = reportes[0]?.creadoEn ?? null;
-        const primerReporte = reportes[reportes.length - 1]?.creadoEn ?? null;
 
-        // Plataformas (agrupadas respetando el nombre personalizado en "otro")
         const porPlataforma = new Map<
             string,
             { id: string; nombre: string; clave: string; total: number; otraPlataforma: string | null }
@@ -121,79 +126,56 @@ export async function GET(request: Request) {
         }
         const plataformas = Array.from(porPlataforma.values()).sort((a, b) => b.total - a.total);
 
-        // Ubicaciones agregadas por ciudad/país
-        const ubicacionKey = (r: (typeof reportes)[0]) => `${r.pais}|${r.ciudad}`;
         const porUbicacion = new Map<
             string,
-            {
-                pais: string;
-                ciudad: string;
-                total: number;
-                fechasReporte: string[];
-                fechasIncidente: string[];
-                lat: number | null;
-                lng: number | null;
-            }
+            { pais: string; ciudad: string; total: number; lat: number | null; lng: number | null }
         >();
-
         for (const r of reportes) {
-            const key = ubicacionKey(r);
+            const key = `${r.pais}|${r.ciudad}`;
             const actual = porUbicacion.get(key) || {
                 pais: r.pais,
                 ciudad: r.ciudad,
                 total: 0,
-                fechasReporte: [] as string[],
-                fechasIncidente: [] as string[],
                 lat: r.ciudadRel?.lat ?? null,
                 lng: r.ciudadRel?.lng ?? null,
             };
             actual.total += 1;
-            actual.fechasReporte.push(formatFecha(r.creadoEn));
-            actual.fechasIncidente.push(formatFecha(r.fechaIncidente));
             porUbicacion.set(key, actual);
         }
-        const ubicaciones = Array.from(porUbicacion.values())
-            .map((u) => ({
-                ...u,
-                fechasReporte: [...new Set(u.fechasReporte)].sort().reverse(),
-                fechasIncidente: [...new Set(u.fechasIncidente)].sort().reverse(),
-            }))
-            .sort((a, b) => b.total - a.total);
+        const ubicaciones = Array.from(porUbicacion.values()).sort((a, b) => b.total - a.total);
 
-        // Timeline mensual
-        const porMes = new Map<string, number>();
-        for (const r of reportes) {
-            const mes = formatFecha(r.creadoEn).slice(0, 7);
-            porMes.set(mes, (porMes.get(mes) || 0) + 1);
-        }
-        const timeline = Array.from(porMes.entries())
-            .map(([mes, total]) => ({ mes, total }))
-            .sort((a, b) => a.mes.localeCompare(b.mes));
-
-        const ciudadesUnicas = new Set(reportes.map((r) => r.ciudad)).size;
-        const paisesUnicos = new Set(reportes.map((r) => r.pais)).size;
-
-        const riesgoParams = await getRiesgoConsultaParams();
-        const riesgo = calcularRiesgoConsulta(reportes, riesgoParams);
+        const itemsReportes = reportes.map((r) => {
+            const riesgoIndividual = calcularRiesgoConsulta([r], riesgoParams);
+            return {
+                id: r.id,
+                plataforma: formatPlataforma(r.plataforma.nombre, r.otraPlataforma, r.plataforma.clave),
+                esAnonimo: r.esAnonimo,
+                fecha: formatFecha(r.creadoEn),
+                categoria: r.clasificacion?.categoria ?? "OTRO",
+                categoriaLabel: CATEGORIA_LABELS[r.clasificacion?.categoria ?? "OTRO"] || "Otro",
+                confianza: r.clasificacion?.confianza ?? 0,
+                nivelRiesgo: riesgoIndividual.nivelRiesgo,
+            };
+        });
 
         return NextResponse.json({
             identificador: parsed.data.identificador,
             tieneReportes: true,
-            visibleEnDashboard,
-            nivelRiesgo: riesgo.nivelRiesgo,
-            confianzaPromedio: riesgo.confianzaPromedio,
+            nivelRiesgo: riesgoGlobal.nivelRiesgo,
+            confianzaPromedio: riesgoGlobal.confianzaPromedio,
             totalReportes,
             reportesAutenticados,
             reportesAnonimos,
-            primerReporte: primerReporte?.toISOString() ?? null,
             ultimoReporte: ultimoReporte?.toISOString() ?? null,
             plataformas,
             resumenPlataformas: formatPlataformasResumen(plataformas, totalReportes),
+            reportes: itemsReportes,
             ubicaciones,
-            timeline,
-            resumen: `Se han reportado ${totalReportes} vez(es) entre ${formatFecha(primerReporte || new Date())} y ${formatFecha(ultimoReporte || new Date())} en ${ciudadesUnicas} ciudad(es) de ${paisesUnicos} país(es) y ${plataformas.length} plataforma(s).`,
         });
-    } catch {
+    } catch (error) {
+        if (error instanceof AppError) {
+            return NextResponse.json(error.toJSON(), { status: error.statusCode });
+        }
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }
