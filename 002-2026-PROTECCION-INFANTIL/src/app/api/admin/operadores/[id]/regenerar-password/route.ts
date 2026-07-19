@@ -13,7 +13,7 @@ function getClientInfo(request: Request) {
 }
 
 async function getOperador(id: string, admin: { id: string; rol: string; tenantId: string | null }) {
-    const where: Record<string, unknown> = { id, rol: "OPERADOR" };
+    const where: Record<string, unknown> = { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } };
     if (admin.rol === "SCHOOL_ADMIN") {
         where.tenantId = admin.tenantId ?? null;
     }
@@ -41,8 +41,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);
+        const accionAudit = operador.rol === "COMITE_VALIDACION" ? "COMITE_PASSWORD_REGENERADA" : "OPERADOR_PASSWORD_REGENERADA";
         await logAudit({
-            accion: "OPERADOR_PASSWORD_REGENERADA",
+            accion: accionAudit,
             tipoRecurso: "Usuario",
             recursoId: id,
             usuarioId: admin.id,
@@ -52,6 +53,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             userAgent,
         });
 
+        const esComite = operador.rol === "COMITE_VALIDACION";
         return NextResponse.json({
             operador: {
                 id: operador.id,
@@ -61,7 +63,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 debeCambiarPassword: true,
             },
             passwordTemporal: password,
-            mensaje: "Contraseña temporal regenerada. Mostrála una vez al operador.",
+            mensaje: esComite
+                ? "Contraseña temporal regenerada. Mostrála una vez al comité de validación."
+                : "Contraseña temporal regenerada. Mostrála una vez al operador.",
         });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {

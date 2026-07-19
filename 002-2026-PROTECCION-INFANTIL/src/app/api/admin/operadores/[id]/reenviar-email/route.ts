@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
-import { enviarEmailBienvenidaOperador } from "@/lib/email";
+import { enviarEmailBienvenidaOperador, enviarEmailBienvenidaComite } from "@/lib/email";
 import { randomBytes } from "crypto";
 
 function getClientInfo(request: Request) {
@@ -14,7 +14,7 @@ function getClientInfo(request: Request) {
 }
 
 async function getOperador(id: string, admin: { id: string; rol: string; tenantId: string | null }) {
-    const where: Record<string, unknown> = { id, rol: "OPERADOR" };
+    const where: Record<string, unknown> = { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } };
     if (admin.rol === "SCHOOL_ADMIN") {
         where.tenantId = admin.tenantId ?? null;
     }
@@ -42,8 +42,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);
+        const esComite = operador.rol === "COMITE_VALIDACION";
+        const accionAudit = esComite ? "COMITE_EMAIL_REENVIADO" : "OPERADOR_EMAIL_REENVIADO";
         await logAudit({
-            accion: "OPERADOR_EMAIL_REENVIADO",
+            accion: accionAudit,
             tipoRecurso: "Usuario",
             recursoId: id,
             usuarioId: admin.id,
@@ -54,10 +56,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         let emailEnviado = false;
         try {
-            await enviarEmailBienvenidaOperador(operador.email, password);
+            await (esComite ? enviarEmailBienvenidaComite : enviarEmailBienvenidaOperador)(operador.email, password);
             emailEnviado = true;
         } catch (err) {
-            console.error("[OPERADORES] Error reenviando email de bienvenida", err);
+            console.error(`[OPERADORES] Error reenviando email de bienvenida a ${esComite ? "comité" : "operador"}`, err);
         }
 
         return NextResponse.json({
@@ -71,7 +73,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             passwordTemporal: emailEnviado ? undefined : password,
             emailEnviado,
             mensaje: emailEnviado
-                ? "Email de bienvenida reenviado."
+                ? `Email de bienvenida reenviado al ${esComite ? "comité de validación" : "operador"}.`
                 : "No se pudo reenviar el email. Copiá la contraseña temporal mostrada arriba.",
         });
     } catch (error) {

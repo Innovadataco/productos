@@ -61,6 +61,41 @@ export async function enviarEmailBienvenidaOperador(
     }
 }
 
+export async function enviarEmailBienvenidaComite(
+    email: string,
+    tempPassword: string
+): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "Tu cuenta de comité de validación está lista",
+        text: `Hola,\n\nSe creó tu cuenta de comité de validación en Protección Infantil.\n\nUsuario: ${email}\nContraseña temporal: ${tempPassword}\n\nIngresa en ${baseUrl}/login y cambia tu contraseña lo antes posible desde tu perfil o usando "Olvidé mi contraseña".\n\nEsta contraseña temporal no se volverá a mostrar.`,
+    });
+
+    if (result.error) {
+        console.error("Resend error:", result.error);
+        throw new Error("Error al enviar email de bienvenida");
+    }
+}
+
+export async function enviarAlertaComitePendientes(email: string, cantidad: number): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: `Tienes ${cantidad} casos pendientes de revisión`,
+        text: `Tienes ${cantidad} ${cantidad === 1 ? "caso" : "casos"} pendientes de revisión en el comité de validación. Ingresa para revisar:\n\n${baseUrl}/dashboard/admin/comite`,
+    });
+
+    if (result.error) {
+        console.error("Resend error alerta comité:", result.error);
+        throw new Error("Error al enviar alerta de comité");
+    }
+
+    console.log(`[EMAIL] Alerta de comité enviada a ${email} (${cantidad} casos, resendId=${result.data?.id ?? "n/a"})`);
+}
+
 async function getAdminEmails(): Promise<string[]> {
     const admins = await prisma.usuario.findMany({
         where: { rol: "ADMIN", estado: "activo" },

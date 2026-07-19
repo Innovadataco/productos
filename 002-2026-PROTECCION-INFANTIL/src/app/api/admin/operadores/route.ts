@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
-import { enviarEmailBienvenidaOperador } from "@/lib/email";
+import { enviarEmailBienvenidaOperador, enviarEmailBienvenidaComite } from "@/lib/email";
 import { validarExclusividadRolComite, normalizarEsComiteParaRol } from "@/lib/operadores/permisos";
 import { randomBytes } from "crypto";
 
@@ -74,6 +74,7 @@ export async function GET(request: Request) {
                               esComite: op.perfilOperador.esComite,
                               notasInternas: op.perfilOperador.notasInternas,
                               creadoPorId: op.perfilOperador.creadoPorId,
+                              ultimoEmailNotificacionEn: op.perfilOperador.ultimoEmailNotificacionEn,
                           }
                         : null,
                     casosAbiertos,
@@ -120,8 +121,18 @@ export async function POST(request: Request) {
 
         const existe = await prisma.usuario.findUnique({ where: { email } });
         if (existe) {
+            const mensajeBase = "Ya existe un usuario con ese email";
+            const esRolGestionado = existe.rol === "OPERADOR" || existe.rol === "COMITE_VALIDACION";
+            if (esRolGestionado && rol !== existe.rol) {
+                const rolExistenteTexto = existe.rol === "OPERADOR" ? "operador" : "comité de validación";
+                const rolNuevoTexto = rol === "OPERADOR" ? "operador" : "comité de validación";
+                return NextResponse.json(
+                    { error: { message: `No se puede crear un ${rolNuevoTexto} con el email de un ${rolExistenteTexto}.`, code: ERROR_CODES.VALIDATION_ERROR } },
+                    { status: 409 }
+                );
+            }
             return NextResponse.json(
-                { error: { message: "Ya existe un usuario con ese email", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: mensajeBase, code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 409 }
             );
         }
@@ -152,8 +163,9 @@ export async function POST(request: Request) {
             include: { perfilOperador: true },
         });
 
+        const accionAudit = rol === "COMITE_VALIDACION" ? "COMITE_CREADO" : "OPERADOR_CREADO";
         await logAudit({
-            accion: rol === "COMITE_VALIDACION" ? "OPERADOR_CREADO" : "OPERADOR_CREADO",
+            accion: accionAudit,
             tipoRecurso: "Usuario",
             recursoId: operador.id,
             usuarioId: admin.id,
@@ -162,12 +174,16 @@ export async function POST(request: Request) {
             userAgent,
         });
 
+        const esComiteRol = rol === "COMITE_VALIDACION";
+        const emailEnvio = esComiteRol ? enviarEmailBienvenidaComite : enviarEmailBienvenidaOperador;
+        const rolTexto = esComiteRol ? "comité de validación" : "operador";
+
         let emailEnviado = false;
         try {
-            await enviarEmailBienvenidaOperador(operador.email, password);
+            await emailEnvio(operador.email, password);
             emailEnviado = true;
         } catch (err) {
-            console.error("[OPERADORES] Error enviando email de bienvenida", err);
+            console.error(`[OPERADORES] Error enviando email de bienvenida a ${rolTexto}`, err);
         }
 
         return NextResponse.json({
@@ -183,8 +199,8 @@ export async function POST(request: Request) {
             passwordTemporal: password,
             emailEnviado,
             mensaje: emailEnviado
-                ? "Operador creado. Se envió la contraseña temporal por email."
-                : "Operador creado. No se pudo enviar el email; copiá la contraseña temporal que se muestra arriba.",
+                ? `${rolTexto.charAt(0).toUpperCase() + rolTexto.slice(1)} creado. Se envió la contraseña temporal por email.`
+                : `${rolTexto.charAt(0).toUpperCase() + rolTexto.slice(1)} creado. No se pudo enviar el email; copiá la contraseña temporal que se muestra arriba.`,
         }, { status: 201 });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {

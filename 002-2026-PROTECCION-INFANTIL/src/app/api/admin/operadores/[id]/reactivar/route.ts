@@ -12,7 +12,7 @@ function getClientInfo(request: Request) {
 }
 
 async function getOperador(id: string, admin: { id: string; rol: string; tenantId: string | null }) {
-    const where: Record<string, unknown> = { id, rol: "OPERADOR" };
+    const where: Record<string, unknown> = { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } };
     if (admin.rol === "SCHOOL_ADMIN") {
         where.tenantId = admin.tenantId ?? null;
     }
@@ -37,8 +37,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         await prisma.usuario.update({ where: { id }, data: { estado: "activo" } });
         const { ipAddress, userAgent } = getClientInfo(request);
+        const accionAudit = operador.rol === "COMITE_VALIDACION" ? "COMITE_ACTIVADO" : "OPERADOR_ACTIVADO";
         await logAudit({
-            accion: "OPERADOR_ACTIVADO",
+            accion: accionAudit,
             tipoRecurso: "Usuario",
             recursoId: id,
             usuarioId: admin.id,

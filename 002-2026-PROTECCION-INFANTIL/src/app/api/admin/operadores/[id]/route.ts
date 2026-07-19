@@ -51,8 +51,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         if (estado && estado !== operador.estado) {
             await prisma.usuario.update({ where: { id }, data: { estado } });
+            const accionAudit = operador.rol === "COMITE_VALIDACION"
+                ? (estado === "activo" ? "COMITE_ACTIVADO" : "COMITE_DESACTIVADO")
+                : (estado === "activo" ? "OPERADOR_ACTIVADO" : "OPERADOR_DESACTIVADO");
             await logAudit({
-                accion: estado === "activo" ? "OPERADOR_ACTIVADO" : "OPERADOR_DESACTIVADO",
+                accion: accionAudit,
                 tipoRecurso: "Usuario",
                 recursoId: id,
                 usuarioId: admin.id,
@@ -102,8 +105,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
         await prisma.usuario.update({ where: { id }, data: { estado: "inactivo" } });
         const { ipAddress, userAgent } = getClientInfo(request);
+        const accionAudit = operador.rol === "COMITE_VALIDACION" ? "COMITE_DESACTIVADO" : "OPERADOR_DESACTIVADO";
         await logAudit({
-            accion: "OPERADOR_DESACTIVADO",
+            accion: accionAudit,
             tipoRecurso: "Usuario",
             recursoId: id,
             usuarioId: admin.id,
