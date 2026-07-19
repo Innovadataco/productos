@@ -30,3 +30,6 @@ backups/
 .env.ensayo
 cookies.txt
 
+# Resultados de evaluaciones locales (no commitear; usar git add -f si es necesario)
+eval-results/
+
