@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { randomBytes } from "crypto";
@@ -23,6 +24,13 @@ async function getOperador(id: string, admin: { id: string; rol: string; tenantI
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
         const { id } = await params;
         const operador = await getOperador(id, admin);
         if (!operador) {

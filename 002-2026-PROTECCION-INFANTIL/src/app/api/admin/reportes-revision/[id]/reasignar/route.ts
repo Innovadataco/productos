@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
@@ -20,6 +21,13 @@ function getClientInfo(request: Request) {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
         const { id } = await params;
 
         const body = await request.json();

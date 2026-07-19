@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { encryptParameter, decryptParameter } from "@/lib/param-encryption";
@@ -74,6 +75,13 @@ function serializarIntegrante(integrante: {
 export async function GET(request: Request) {
     try {
         const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const rate = await checkRateLimit(request, "admin_read", { identifier: admin.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
         const url = new URL(request.url);
         const parsedQuery = querySchema.safeParse(Object.fromEntries(url.searchParams.entries()));
         if (!parsedQuery.success) {
@@ -119,6 +127,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers }
+            );
+        }
         const body = await request.json();
         const parsed = integranteSchema.safeParse(body);
         if (!parsed.success) {
