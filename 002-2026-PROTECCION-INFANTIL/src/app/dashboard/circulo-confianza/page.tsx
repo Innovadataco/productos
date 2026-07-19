@@ -7,32 +7,62 @@ import { MiniList } from "@/components/modules/MiniList";
 import { ChartCard } from "@/components/modules/ChartCard";
 import { BarChart } from "@/components/modules/BarChart";
 import { DonutChart } from "@/components/modules/DonutChart";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { formatCategoria } from "@/lib/labels";
+import { formatPlataforma } from "@/lib/plataforma";
+
+type Plataforma = { id: string; nombre: string; clave: string };
+
+type Identificador = {
+    id: string;
+    valor: string;
+    tipo: string | null;
+    plataforma: Plataforma | null;
+    activo: boolean;
+};
+
+type Estado = "sinReportes" | "enRevision" | "clasificado";
 
 type Contacto = {
     id: string;
-    identificador: string;
-    plataforma: { id: string; nombre: string; clave: string };
     etiqueta: string | null;
+    nota: string | null;
     activo: boolean;
-    estado: "sinReportes" | "enRevision" | "clasificado";
+    estado: Estado;
+    totalReportes: number;
+    identificadores: Identificador[];
+};
+
+type IdentificadorDetalle = Identificador & {
+    estado: Estado;
     totalReportes: number;
 };
 
+type Agregado = {
+    totalReportes: number;
+    reportesAutenticados: number;
+    reportesAnonimos: number;
+    primerReporte: string | null;
+    ultimoReporte: string | null;
+    plataformas: { id: string; nombre: string; clave: string; total: number }[];
+    categorias: { categoria: string; total: number }[];
+    ubicaciones: { pais: string; ciudad: string; total: number }[];
+    timeline: { mes: string; total: number }[];
+};
+
 type DetalleContacto = {
-    identificador: string;
-    plataforma: { id: string; nombre: string; clave: string };
-    estado: Contacto["estado"];
-    tieneReportes: boolean;
-    totalReportes?: number;
-    reportesAutenticados?: number;
-    reportesAnonimos?: number;
-    primerReporte?: string | null;
-    ultimoReporte?: string | null;
-    plataformas?: { id: string; nombre: string; clave: string; total: number }[];
-    categorias?: { categoria: string; total: number }[];
-    ubicaciones?: { pais: string; ciudad: string; total: number }[];
-    timeline?: { mes: string; total: number }[];
+    id: string;
+    etiqueta: string | null;
+    nota: string | null;
+    activo: boolean;
+    estado: Estado;
+    totalReportes: number;
+    identificadores: IdentificadorDetalle[];
+    agregado: Agregado | null;
     mensaje?: string;
 };
 
@@ -48,29 +78,48 @@ type VistaAgregada =
           timeline: { mes: string; total: number }[];
       };
 
-const estadoLabels: Record<Contacto["estado"], string> = {
+const estadoLabels: Record<Estado, string> = {
     sinReportes: "Sin reportes",
     enRevision: "En revisión",
     clasificado: "Clasificado",
 };
 
-const estadoColors: Record<Contacto["estado"], string> = {
-    sinReportes: "bg-emerald-500",
-    enRevision: "bg-amber-500",
-    clasificado: "bg-rose-500",
+const estadoBadgeVariant: Record<Estado, import("@/components/ui/Badge").BadgeVariant> = {
+    sinReportes: "success",
+    enRevision: "warning",
+    clasificado: "danger",
 };
 
 export default function CirculoConfianzaPage() {
     const [contactos, setContactos] = useState<Contacto[]>([]);
-    const [resumen, setResumen] = useState({ sinReportes: 0, enRevision: 0, clasificado: 0, activos: 0, inhabilitados: 0 });
+    const [resumen, setResumen] = useState({
+        sinReportes: 0,
+        enRevision: 0,
+        clasificado: 0,
+        activos: 0,
+        inhabilitados: 0,
+    });
     const [agregado, setAgregado] = useState<VistaAgregada | null>(null);
     const [detalle, setDetalle] = useState<DetalleContacto | null>(null);
     const [preferencias, setPreferencias] = useState({ notificacionesCirculo: true });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [form, setForm] = useState({ identificador: "", plataformaId: "", etiqueta: "" });
-    const [plataformas, setPlataformas] = useState<{ id: string; nombre: string }[]>([]);
+    const [form, setForm] = useState<{
+        etiqueta: string;
+        nota: string;
+        identificadores: { valor: string; tipo: string; plataformaId: string }[];
+    }>({
+        etiqueta: "",
+        nota: "",
+        identificadores: [{ valor: "", tipo: "", plataformaId: "" }],
+    });
+    const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [submitting, setSubmitting] = useState(false);
+
+    const opcionesPlataforma = [
+        { value: "", label: "Plataforma" },
+        ...plataformas.map((p) => ({ value: p.id, label: p.nombre })),
+    ];
 
     async function cargarDatos() {
         setLoading(true);
@@ -107,22 +156,61 @@ export default function CirculoConfianzaPage() {
         e.preventDefault();
         setSubmitting(true);
         try {
+            const identificadores = form.identificadores
+                .filter((i) => i.valor.trim() !== "")
+                .map((i) => ({
+                    valor: i.valor.trim(),
+                    tipo: i.tipo.trim() || undefined,
+                    plataformaId: i.plataformaId || undefined,
+                }));
+
+            if (identificadores.length === 0) {
+                throw new Error("Agregá al menos un identificador");
+            }
+
             const res = await fetch("/api/circulo-confianza", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form),
+                body: JSON.stringify({
+                    etiqueta: form.etiqueta.trim() || undefined,
+                    nota: form.nota.trim() || undefined,
+                    identificadores,
+                }),
             });
             if (!res.ok) {
                 const data = await res.json();
                 throw new Error(data.error?.message || "Error agregando contacto");
             }
-            setForm({ identificador: "", plataformaId: "", etiqueta: "" });
+            setForm({ etiqueta: "", nota: "", identificadores: [{ valor: "", tipo: "", plataformaId: "" }] });
             await cargarDatos();
         } catch (e) {
             setError(e instanceof Error ? e.message : "Error agregando contacto");
         } finally {
             setSubmitting(false);
         }
+    }
+
+    function agregarFilaIdentificador() {
+        setForm((prev) => ({
+            ...prev,
+            identificadores: [...prev.identificadores, { valor: "", tipo: "", plataformaId: "" }],
+        }));
+    }
+
+    function quitarFilaIdentificador(index: number) {
+        setForm((prev) => ({
+            ...prev,
+            identificadores: prev.identificadores.filter((_, i) => i !== index),
+        }));
+    }
+
+    function actualizarIdentificador(index: number, campo: keyof typeof form.identificadores[0], valor: string) {
+        setForm((prev) => ({
+            ...prev,
+            identificadores: prev.identificadores.map((i, idx) =>
+                idx === index ? { ...i, [campo]: valor } : i
+            ),
+        }));
     }
 
     async function toggleActivo(contacto: Contacto) {
@@ -202,12 +290,9 @@ export default function CirculoConfianzaPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={cargarDatos}
-                        className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
-                    >
+                    <Button variant="outline" onClick={cargarDatos}>
                         Actualizar
-                    </button>
+                    </Button>
                     <Link
                         href="/dashboard-publico"
                         className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
@@ -223,7 +308,6 @@ export default function CirculoConfianzaPage() {
                 </p>
             )}
 
-            {/* Resumen */}
             <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <MetricCard label="Sin reportes" value={resumen.sinReportes} sub={resumen.activos > 0 ? "activos" : undefined} />
                 <MetricCard label="En revisión" value={resumen.enRevision} />
@@ -231,8 +315,7 @@ export default function CirculoConfianzaPage() {
                 <MetricCard label="Contactos activos" value={resumen.activos} />
             </div>
 
-            {/* Preferencias */}
-            <section className="mb-6 rounded-2xl glass p-4">
+            <GlassCard className="mb-6">
                 <label className="flex cursor-pointer items-center gap-3">
                     <input
                         type="checkbox"
@@ -244,51 +327,76 @@ export default function CirculoConfianzaPage() {
                         Recibir emails ciegos cuando haya novedades en mi Círculo de Confianza
                     </span>
                 </label>
-            </section>
+            </GlassCard>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                {/* Lista de contactos */}
                 <section className="lg:col-span-1">
                     <ChartCard title="Mis contactos" subtitle={`${resumen.activos} activos · ${resumen.inhabilitados} inhabilitados`}>
                         <form onSubmit={agregarContacto} className="mb-4 space-y-3">
-                            <input
-                                type="text"
-                                placeholder="Identificador (número o nick)"
-                                value={form.identificador}
-                                onChange={(e) => setForm({ ...form, identificador: e.target.value })}
-                                className="w-full rounded-xl glass-input px-3 py-2 text-sm"
-                                required
-                                minLength={3}
-                                maxLength={100}
-                            />
-                            <select
-                                value={form.plataformaId}
-                                onChange={(e) => setForm({ ...form, plataformaId: e.target.value })}
-                                className="w-full rounded-xl glass-input px-3 py-2 text-sm"
-                                required
-                            >
-                                <option value="">Plataforma</option>
-                                {plataformas.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.nombre}
-                                    </option>
-                                ))}
-                            </select>
-                            <input
-                                type="text"
-                                placeholder="Etiqueta (ej: tío Carlos)"
+                            <Input
+                                label="Etiqueta (ej: tío Carlos)"
+                                placeholder="Nombre o etiqueta del contacto"
                                 value={form.etiqueta}
                                 onChange={(e) => setForm({ ...form, etiqueta: e.target.value })}
-                                className="w-full rounded-xl glass-input px-3 py-2 text-sm"
                                 maxLength={100}
                             />
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="w-full rounded-xl accent-gradient px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 transition hover:brightness-110 disabled:opacity-50"
-                            >
-                                {submitting ? "Agregando..." : "Agregar contacto"}
-                            </button>
+                            <Input
+                                label="Nota (opcional)"
+                                placeholder="Observación privada"
+                                value={form.nota}
+                                onChange={(e) => setForm({ ...form, nota: e.target.value })}
+                                maxLength={1000}
+                            />
+
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium text-body">Identificadores</p>
+                                {form.identificadores.map((i, idx) => (
+                                    <div key={idx} className="rounded-xl glass-input p-2 space-y-2">
+                                        <Input
+                                            placeholder="Valor (número o nick)"
+                                            value={i.valor}
+                                            onChange={(e) => actualizarIdentificador(idx, "valor", e.target.value)}
+                                            minLength={1}
+                                            maxLength={100}
+                                        />
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Input
+                                                placeholder="Tipo (opcional)"
+                                                value={i.tipo}
+                                                onChange={(e) => actualizarIdentificador(idx, "tipo", e.target.value)}
+                                                maxLength={50}
+                                            />
+                                            <Select
+                                                options={opcionesPlataforma}
+                                                value={i.plataformaId}
+                                                onChange={(e) => actualizarIdentificador(idx, "plataformaId", e.target.value)}
+                                            />
+                                        </div>
+                                        {form.identificadores.length > 1 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                className="w-full text-xs"
+                                                onClick={() => quitarFilaIdentificador(idx)}
+                                            >
+                                                Quitar identificador
+                                            </Button>
+                                        )}
+                                    </div>
+                                ))}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full text-sm"
+                                    onClick={agregarFilaIdentificador}
+                                >
+                                    Agregar otro identificador
+                                </Button>
+                            </div>
+
+                            <Button type="submit" isLoading={submitting} className="w-full">
+                                Agregar contacto
+                            </Button>
                         </form>
 
                         <div className="space-y-2">
@@ -299,19 +407,23 @@ export default function CirculoConfianzaPage() {
                                     className={`rounded-xl border p-3 transition ${c.activo ? "border-slate-200 dark:border-slate-800" : "border-slate-100 bg-slate-50/50 dark:border-slate-800/50 dark:bg-slate-900/30 opacity-70"}`}
                                 >
                                     <div className="flex items-start justify-between gap-2">
-                                        <button
-                                            onClick={() => verDetalle(c)}
-                                            className="flex-1 text-left"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <span className={`h-2.5 w-2.5 rounded-full ${estadoColors[c.estado]}`} />
-                                                <span className="font-medium text-body">{c.identificador}</span>
+                                        <button onClick={() => verDetalle(c)} className="flex-1 text-left">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <Badge variant={estadoBadgeVariant[c.estado]}>{estadoLabels[c.estado]}</Badge>
+                                                <span className="font-medium text-body">{c.etiqueta || "Sin etiqueta"}</span>
                                             </div>
                                             <p className="text-xs text-muted">
-                                                {c.plataforma.nombre}
-                                                {c.etiqueta ? ` · ${c.etiqueta}` : ""}
+                                                {c.identificadores.length} identificador(es)
                                                 {c.totalReportes > 0 ? ` · ${c.totalReportes} reporte(s)` : ""}
                                             </p>
+                                            <div className="mt-1 flex flex-wrap gap-1">
+                                                {c.identificadores.map((i) => (
+                                                    <span key={i.id} className="text-xs text-subtle">
+                                                        {i.valor}
+                                                        {i.plataforma ? ` (${formatPlataforma(i.plataforma.nombre, null, i.plataforma.clave)})` : ""}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </button>
                                         <button
                                             onClick={() => toggleActivo(c)}
@@ -322,8 +434,7 @@ export default function CirculoConfianzaPage() {
                                         </button>
                                     </div>
                                     {c.activo && (
-                                        <input
-                                            type="text"
+                                        <Input
                                             defaultValue={c.etiqueta || ""}
                                             onBlur={(e) => {
                                                 if (e.target.value !== (c.etiqueta || "")) {
@@ -331,7 +442,7 @@ export default function CirculoConfianzaPage() {
                                                 }
                                             }}
                                             placeholder="Etiqueta"
-                                            className="mt-2 w-full rounded-lg bg-transparent px-2 py-1 text-xs text-muted focus:bg-white/50 dark:focus:bg-slate-800/50"
+                                            className="mt-2 rounded-lg bg-transparent px-2 py-1 text-xs text-muted focus:bg-white/50 dark:focus:bg-slate-800/50"
                                         />
                                     )}
                                 </div>
@@ -340,32 +451,58 @@ export default function CirculoConfianzaPage() {
                     </ChartCard>
                 </section>
 
-                {/* Vista agregada y detalle */}
                 <section className="space-y-6 lg:col-span-2">
                     {detalle ? (
-                        <ChartCard title={`Detalle: ${detalle.identificador}`} subtitle={detalle.plataforma.nombre}>
+                        <ChartCard
+                            title={`Detalle: ${detalle.etiqueta || "Sin etiqueta"}`}
+                            subtitle={detalle.activo ? "Contacto activo" : "Contacto inhabilitado"}
+                        >
                             <button
                                 onClick={() => setDetalle(null)}
                                 className="mb-3 text-sm text-subtle hover:text-body"
                             >
                                 ← Volver a la vista agregada
                             </button>
-                            {detalle.tieneReportes ? (
+
+                            <div className="mb-4 space-y-2">
+                                <h3 className="text-sm font-semibold text-body">Identificadores</h3>
+                                {detalle.identificadores.map((i) => (
+                                    <div
+                                        key={i.id}
+                                        className="flex items-center justify-between rounded-xl glass-input px-3 py-2"
+                                    >
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-sm text-body font-medium">{i.valor}</span>
+                                            {i.tipo && <Badge variant="neutral">{i.tipo}</Badge>}
+                                            {i.plataforma && (
+                                                <Badge variant="info">
+                                                    {formatPlataforma(i.plataforma.nombre, null, i.plataforma.clave)}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-muted">
+                                            <Badge variant={estadoBadgeVariant[i.estado]}>{estadoLabels[i.estado]}</Badge>
+                                            {i.totalReportes > 0 && (
+                                                <span>{i.totalReportes} reporte(s)</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {detalle.agregado ? (
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                                        <MetricCard label="Total reportes" value={detalle.totalReportes || 0} />
-                                        <MetricCard label="Autenticados" value={detalle.reportesAutenticados || 0} />
-                                        <MetricCard label="Anónimos" value={detalle.reportesAnonimos || 0} />
-                                        <MetricCard
-                                            label="Estado"
-                                            value={estadoLabels[detalle.estado]}
-                                        />
+                                        <MetricCard label="Total reportes" value={detalle.agregado.totalReportes} />
+                                        <MetricCard label="Autenticados" value={detalle.agregado.reportesAutenticados} />
+                                        <MetricCard label="Anónimos" value={detalle.agregado.reportesAnonimos} />
+                                        <MetricCard label="Estado" value={estadoLabels[detalle.estado]} />
                                     </div>
-                                    {detalle.categorias && detalle.categorias.length > 0 && (
+                                    {detalle.agregado.categorias.length > 0 && (
                                         <div>
                                             <h3 className="mb-2 text-sm font-semibold text-body">Categorías</h3>
                                             <MiniList
-                                                items={detalle.categorias.map((c) => ({
+                                                items={detalle.agregado.categorias.map((c) => ({
                                                     label: formatCategoria(c.categoria),
                                                     count: c.total,
                                                 }))}
@@ -373,11 +510,11 @@ export default function CirculoConfianzaPage() {
                                             />
                                         </div>
                                     )}
-                                    {detalle.ubicaciones && detalle.ubicaciones.length > 0 && (
+                                    {detalle.agregado.ubicaciones.length > 0 && (
                                         <div>
                                             <h3 className="mb-2 text-sm font-semibold text-body">Ubicaciones agregadas</h3>
                                             <MiniList
-                                                items={detalle.ubicaciones.map((u) => ({
+                                                items={detalle.agregado.ubicaciones.map((u) => ({
                                                     label: `${u.ciudad}, ${u.pais}`,
                                                     count: u.total,
                                                 }))}
@@ -385,11 +522,11 @@ export default function CirculoConfianzaPage() {
                                             />
                                         </div>
                                     )}
-                                    {detalle.timeline && detalle.timeline.length > 0 && (
+                                    {detalle.agregado.timeline.length > 0 && (
                                         <div>
                                             <h3 className="mb-2 text-sm font-semibold text-body">Timeline mensual</h3>
                                             <BarChart
-                                                data={detalle.timeline.map((t) => ({ label: t.mes, value: t.total }))}
+                                                data={detalle.agregado.timeline.map((t) => ({ label: t.mes, value: t.total }))}
                                                 ariaLabel="Timeline de reportes por mes"
                                             />
                                         </div>
