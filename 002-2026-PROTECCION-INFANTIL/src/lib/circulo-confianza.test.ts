@@ -367,6 +367,7 @@ describe("circulo-confianza", () => {
             expect(enviarAlertaCirculoConfianza).toHaveBeenCalledOnce();
             const args = vi.mocked(enviarAlertaCirculoConfianza).mock.calls[0];
             expect(args[0]).toBe(usuario.email);
+            expect(args[1]).toBe(1);
 
             const actualizado = await prisma.usuario.findUnique({
                 where: { id: usuario.id },

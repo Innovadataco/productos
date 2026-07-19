@@ -52,7 +52,7 @@ export async function enviarEmailBienvenidaOperador(
         from: FROM,
         to: email,
         subject: "Tu cuenta de operador está lista",
-        text: `Hola,\n\nSe creó tu cuenta de operador en Protección Infantil.\n\nUsuario: ${email}\nContraseña temporal: ${tempPassword}\n\nIngresá en ${baseUrl}/login y cambiá tu contraseña lo antes posible desde tu perfil o usando "Olvidé mi contraseña".\n\nEsta contraseña temporal no se volverá a mostrar.`,
+        text: `Hola,\n\nSe creó tu cuenta de operador en Protección Infantil.\n\nUsuario: ${email}\nContraseña temporal: ${tempPassword}\n\nIngresa en ${baseUrl}/login y cambia tu contraseña lo antes posible desde tu perfil o usando "Olvidé mi contraseña".\n\nEsta contraseña temporal no se volverá a mostrar.`,
     });
 
     if (result.error) {
@@ -128,13 +128,14 @@ export async function enviarAlertaScoreCritico(reporte: {
     }
 }
 
-export async function enviarAlertaCirculoConfianza(email: string): Promise<void> {
+export async function enviarAlertaCirculoConfianza(email: string, cantidad: number): Promise<void> {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const novedadTexto = cantidad === 1 ? "1 novedad" : `${cantidad} novedades`;
     const result = await resend.emails.send({
         from: FROM,
         to: email,
-        subject: "Novedades en tu Círculo de Confianza",
-        text: `Hay novedades en tu Círculo de Confianza. Ingresá para revisar:\n\n${baseUrl}/dashboard/circulo-confianza`,
+        subject: `Tienes ${novedadTexto} en tu Círculo de Confianza`,
+        text: `Tienes ${novedadTexto} en tu Círculo de Confianza. Ingresa para revisar:\n\n${baseUrl}/dashboard/circulo-confianza`,
     });
 
     if (result.error) {
@@ -142,7 +143,7 @@ export async function enviarAlertaCirculoConfianza(email: string): Promise<void>
         throw new Error("Error al enviar alerta de Círculo de Confianza");
     }
 
-    console.log(`[EMAIL] Alerta Círculo de Confianza enviada a ${email} (resendId=${result.data?.id ?? "n/a"})`);
+    console.log(`[EMAIL] Alerta Círculo de Confianza enviada a ${email} (${novedadTexto}, resendId=${result.data?.id ?? "n/a"})`);
 }
 
 const COOLDOWN_ALERTA_MS = 24 * 60 * 60 * 1000;
@@ -180,7 +181,7 @@ export async function enviarAlertasSuscriptores(payload: {
                 from: FROM,
                 to: email,
                 subject: `Nuevo reporte para ${payload.identificador}`,
-                text: `Hola,\n\nSe registró un nuevo reporte para el identificador "${payload.identificador}" en ${suscripcion.plataforma.nombre}.\n\nTotal de reportes: ${payload.totalReportes}\n\nConsultá el score y los detalles aquí:\n${consultaUrl}\n\nRecibirás como máximo un email cada 24 horas por este identificador.`,
+                text: `Hola,\n\nSe registró un nuevo reporte para el identificador "${payload.identificador}" en ${suscripcion.plataforma.nombre}.\n\nTotal de reportes: ${payload.totalReportes}\n\nConsulta el score y los detalles aquí:\n${consultaUrl}\n\nRecibirás como máximo un email cada 24 horas por este identificador.`,
             });
 
             if (result.error) {

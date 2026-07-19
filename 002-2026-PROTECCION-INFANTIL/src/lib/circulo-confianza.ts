@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { getParametroSistemaValor } from "./parametros";
 import { logAudit } from "./audit";
 import { enviarAlertaCirculoConfianza } from "./email";
+import { obtenerGruposCategoria, agruparCategorias } from "./categoria-grupos";
 import type { AccionAudit, EstadoReporte, Prisma } from "@prisma/client";
 
 export type EstadoContacto = "sinReportes" | "enRevision" | "clasificado";
@@ -27,6 +28,7 @@ interface DatosReporte {
     esAnonimo: boolean;
     plataforma: { id: string; nombre: string; clave: string };
     clasificacion: { categoria: string; confianza: number | null } | null;
+    ciudadRel: { lat: number | null; lng: number | null } | null;
     estado: string;
 }
 
@@ -111,6 +113,7 @@ export async function determinarEstadoContacto(
             estado: true,
             plataforma: { select: { id: true, nombre: true, clave: true } },
             clasificacion: { select: { categoria: true, confianza: true } },
+            ciudadRel: { select: { lat: true, lng: true } },
         },
         orderBy: { creadoEn: "desc" },
     })) as DatosReporte[];
@@ -419,6 +422,7 @@ export async function obtenerDetalleContacto(id: string, usuarioId: string, clie
                     estado: true,
                     plataforma: { select: { id: true, nombre: true, clave: true } },
                     clasificacion: { select: { categoria: true, confianza: true } },
+                    ciudadRel: { select: { lat: true, lng: true } },
                 },
                 orderBy: { creadoEn: "desc" },
             })) as DatosReporte[];
@@ -432,7 +436,7 @@ export async function obtenerDetalleContacto(id: string, usuarioId: string, clie
         })
     );
 
-    const agregado = totalReportes > 0 ? construirAgregado(reportes) : null;
+    const agregado = totalReportes > 0 ? await construirAgregado(reportes, c) : null;
 
     return {
         id: contacto.id,
@@ -447,7 +451,9 @@ export async function obtenerDetalleContacto(id: string, usuarioId: string, clie
     };
 }
 
-function construirAgregado(reportes: DatosReporte[]) {
+async function construirAgregado(reportes: DatosReporte[], client?: Prisma.TransactionClient) {
+    const gruposCategoria = await obtenerGruposCategoria(client);
+
     const totalReportes = reportes.length;
     const reportesAutenticados = reportes.filter((r) => !r.esAnonimo).length;
     const reportesAnonimos = totalReportes - reportesAutenticados;
@@ -471,10 +477,21 @@ function construirAgregado(reportes: DatosReporte[]) {
         porCategoria.set(cat, actual);
     }
 
-    const porUbicacion = new Map<string, { pais: string; ciudad: string; total: number }>();
+    const porGrupoCategoria = agruparCategorias(
+        gruposCategoria,
+        Array.from(porCategoria.values()).map((c) => ({ categoria: c.categoria, total: c.total }))
+    );
+
+    const porUbicacion = new Map<string, { pais: string; ciudad: string; lat: number | null; lng: number | null; total: number }>();
     for (const r of reportes) {
         const key = `${r.pais}|${r.ciudad}`;
-        const actual = porUbicacion.get(key) || { pais: r.pais, ciudad: r.ciudad, total: 0 };
+        const actual = porUbicacion.get(key) || {
+            pais: r.pais,
+            ciudad: r.ciudad,
+            lat: r.ciudadRel?.lat ?? null,
+            lng: r.ciudadRel?.lng ?? null,
+            total: 0,
+        };
         actual.total += 1;
         porUbicacion.set(key, actual);
     }
@@ -493,6 +510,7 @@ function construirAgregado(reportes: DatosReporte[]) {
         ultimoReporte: ultimoReporte?.toISOString() ?? null,
         plataformas: Array.from(porPlataforma.values()).sort((a, b) => b.total - a.total),
         categorias: Array.from(porCategoria.values()).sort((a, b) => b.total - a.total),
+        porGrupoCategoria,
         ubicaciones: Array.from(porUbicacion.values()).sort((a, b) => b.total - a.total),
         timeline: Array.from(porMes.entries())
             .map(([mes, total]) => ({ mes, total }))
@@ -514,7 +532,7 @@ export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.Tr
     });
 
     if (contactosActivos.length === 0) {
-        return { insuficiente: true, motivo: "No tenés contactos en tu círculo" };
+        return { insuficiente: true, motivo: "No tienes contactos en tu círculo" };
     }
 
     const valores = new Set<string>();
@@ -527,7 +545,7 @@ export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.Tr
     const valoresArray = Array.from(valores);
 
     if (valoresArray.length === 0) {
-        return { insuficiente: true, motivo: "No tenés identificadores activos en tu círculo" };
+        return { insuficiente: true, motivo: "No tienes identificadores activos en tu círculo" };
     }
 
     const reportes = (await c.reporte.findMany({
@@ -547,6 +565,7 @@ export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.Tr
             estado: true,
             plataforma: { select: { id: true, nombre: true, clave: true } },
             clasificacion: { select: { categoria: true, confianza: true } },
+            ciudadRel: { select: { lat: true, lng: true } },
         },
         orderBy: { creadoEn: "desc" },
     })) as DatosReporte[];
@@ -568,26 +587,34 @@ export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.Tr
     ) {
         return {
             insuficiente: true,
-            motivo: "Agregá más contactos o esperá a que haya más reportes para ver el mapa agregado.",
+            motivo: "Agrega más contactos o espera a que haya más reportes para ver el mapa agregado.",
             contactosConReportes: contactosConReportesReales,
             totalReportes,
         };
     }
 
+    const gruposCategoria = await obtenerGruposCategoria(c);
+
     const porPais = new Map<string, { pais: string; total: number }>();
-    const porCiudad = new Map<string, { ciudad: string; pais: string; total: number }>();
+    const porCiudad = new Map<string, { ciudad: string; pais: string; lat: number | null; lng: number | null; total: number }>();
     const porCategoria = new Map<string, { categoria: string; total: number }>();
     const porMes = new Map<string, number>();
 
     for (const r of reportes) {
+        const ciudadKey = `${r.pais}|${r.ciudad}`;
+        const ciudadActual = porCiudad.get(ciudadKey) || {
+            ciudad: r.ciudad,
+            pais: r.pais,
+            lat: r.ciudadRel?.lat ?? null,
+            lng: r.ciudadRel?.lng ?? null,
+            total: 0,
+        };
+        ciudadActual.total += 1;
+        porCiudad.set(ciudadKey, ciudadActual);
+
         const paisActual = porPais.get(r.pais) || { pais: r.pais, total: 0 };
         paisActual.total += 1;
         porPais.set(r.pais, paisActual);
-
-        const ciudadKey = `${r.pais}|${r.ciudad}`;
-        const ciudadActual = porCiudad.get(ciudadKey) || { ciudad: r.ciudad, pais: r.pais, total: 0 };
-        ciudadActual.total += 1;
-        porCiudad.set(ciudadKey, ciudadActual);
 
         const cat = r.clasificacion?.categoria;
         if (cat) {
@@ -600,6 +627,11 @@ export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.Tr
         porMes.set(mes, (porMes.get(mes) || 0) + 1);
     }
 
+    const porGrupoCategoria = agruparCategorias(
+        gruposCategoria,
+        Array.from(porCategoria.values()).map((c) => ({ categoria: c.categoria, total: c.total }))
+    );
+
     return {
         insuficiente: false,
         totalReportes,
@@ -607,6 +639,7 @@ export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.Tr
         porPais: Array.from(porPais.values()).sort((a, b) => b.total - a.total),
         porCiudad: Array.from(porCiudad.values()).sort((a, b) => b.total - a.total),
         porCategoria: Array.from(porCategoria.values()).sort((a, b) => b.total - a.total),
+        porGrupoCategoria,
         timeline: Array.from(porMes.entries())
             .map(([mes, total]) => ({ mes, total }))
             .sort((a, b) => a.mes.localeCompare(b.mes)),
@@ -648,6 +681,19 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             return;
         }
 
+        const globalEnabled = await getParametroSistemaValor("circulo.notificaciones.enabled");
+        if (globalEnabled === "false") {
+            console.log("[CIRCULO] Notificación omitida: circulo.notificaciones.enabled=false");
+            return;
+        }
+
+        const cooldownHoras = parseInt(
+            (await getParametroSistemaValor("circulo.notificaciones.cooldown_horas")) || "24",
+            10
+        );
+        const cooldownMs = (Number.isNaN(cooldownHoras) ? 24 : cooldownHoras) * 60 * 60 * 1000;
+        const ahora = new Date();
+
         const contactos = await prisma.contactoConfianza.findMany({
             where: {
                 activo: true,
@@ -667,6 +713,10 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
                         ultimaNotificacionCirculoEn: true,
                     },
                 },
+                identificadores: {
+                    where: { activo: true },
+                    select: { valor: true },
+                },
             },
         });
 
@@ -675,43 +725,67 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             return;
         }
 
-        const globalEnabled = await getParametroSistemaValor("circulo.notificaciones.enabled");
-        if (globalEnabled === "false") {
-            console.log("[CIRCULO] Notificación omitida: circulo.notificaciones.enabled=false");
-            return;
-        }
-
-        const cooldownHoras = parseInt(
-            (await getParametroSistemaValor("circulo.notificaciones.cooldown_horas")) || "24",
-            10
-        );
-        const cooldownMs = (Number.isNaN(cooldownHoras) ? 24 : cooldownHoras) * 60 * 60 * 1000;
-        const ahora = new Date();
-
-        const usuariosNotificados = new Set<string>();
-
+        // Agrupar contactos por usuario
+        const contactosPorUsuario = new Map<
+            string,
+            { email: string; notificacionesCirculo: boolean; ultimaNotificacionCirculoEn: Date | null; valores: Set<string> }
+        >();
         for (const contacto of contactos) {
             const usuario = contacto.usuario;
-            if (!usuario.notificacionesCirculo) {
-                console.log(`[CIRCULO] Notificación omitida: usuario ${usuario.id} desactivó notificaciones`);
-                continue;
+            const existente = contactosPorUsuario.get(usuario.id);
+            const valores = new Set(contacto.identificadores.map((i) => i.valor));
+            if (existente) {
+                for (const v of valores) existente.valores.add(v);
+            } else {
+                contactosPorUsuario.set(usuario.id, {
+                    email: usuario.email,
+                    notificacionesCirculo: usuario.notificacionesCirculo,
+                    ultimaNotificacionCirculoEn: usuario.ultimaNotificacionCirculoEn,
+                    valores,
+                });
             }
-            if (
-                usuario.ultimaNotificacionCirculoEn &&
-                ahora.getTime() - usuario.ultimaNotificacionCirculoEn.getTime() < cooldownMs
-            ) {
-                console.log(`[CIRCULO] Notificación omitida: usuario ${usuario.id} en cooldown`);
-                continue;
-            }
-            if (usuariosNotificados.has(usuario.id)) {
-                continue;
-            }
-            usuariosNotificados.add(usuario.id);
+        }
 
-            console.log(`[CIRCULO] Enviando alerta ciega a ${usuario.email}`);
-            await enviarAlertaCirculoConfianza(usuario.email);
+        for (const [usuarioId, datos] of contactosPorUsuario.entries()) {
+            if (!datos.notificacionesCirculo) {
+                console.log(`[CIRCULO] Notificación omitida: usuario ${usuarioId} desactivó notificaciones`);
+                continue;
+            }
+
+            const ventanaInicio = datos.ultimaNotificacionCirculoEn
+                ? new Date(Math.max(datos.ultimaNotificacionCirculoEn.getTime(), ahora.getTime() - cooldownMs))
+                : new Date(ahora.getTime() - cooldownMs);
+
+            const valoresArray = Array.from(datos.valores);
+            const reportesNuevos = await prisma.reporte.findMany({
+                where: {
+                    identificador: { in: valoresArray },
+                    eliminado: false,
+                    estado: { in: ESTADOS_VISIBLES },
+                    creadoEn: { gte: ventanaInicio },
+                },
+                select: { identificador: true },
+                distinct: ["identificador"],
+            });
+
+            const novedades = reportesNuevos.length;
+            if (novedades === 0) {
+                console.log(`[CIRCULO] Notificación omitida: usuario ${usuarioId} sin novedades en la ventana`);
+                continue;
+            }
+
+            if (
+                datos.ultimaNotificacionCirculoEn &&
+                ahora.getTime() - datos.ultimaNotificacionCirculoEn.getTime() < cooldownMs
+            ) {
+                console.log(`[CIRCULO] Notificación omitida: usuario ${usuarioId} en cooldown`);
+                continue;
+            }
+
+            console.log(`[CIRCULO] Enviando alerta ciega a ${datos.email} (${novedades} novedades)`);
+            await enviarAlertaCirculoConfianza(datos.email, novedades);
             await prisma.usuario.update({
-                where: { id: usuario.id },
+                where: { id: usuarioId },
                 data: { ultimaNotificacionCirculoEn: ahora },
             });
         }
