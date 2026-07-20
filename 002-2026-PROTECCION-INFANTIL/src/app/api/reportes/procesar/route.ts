@@ -592,7 +592,7 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
                         where: { id: reporteId! },
                         data: {
                             estado: "REVISION_MANUAL",
-                            processingError: errMsg,
+                            processingError: `Error durante el procesamiento del reporte (código: ${errorCode})`,
                         },
                     });
                 });

@@ -15,9 +15,9 @@ export async function POST(request: Request) {
             );
         }
 
-        const body = (await request.json()) as { reporteId?: string; error?: string };
+        const body = (await request.json()) as { reporteId?: string; error?: string; errorCode?: string };
         const reporteId = body.reporteId;
-        const errorMsg = body.error ?? "Error desconocido tras agotar reintentos";
+        const errorCode = body.errorCode ?? ERROR_CODES.INTERNAL_ERROR;
 
         if (!reporteId) {
             return NextResponse.json(
@@ -42,21 +42,23 @@ export async function POST(request: Request) {
             return NextResponse.json({ reporteId, estado: "REVISION_MANUAL", message: "Ya estaba en revisión manual" });
         }
 
+        const mensajeGenerico = "Reintentos agotados procesando el reporte";
+
         await prisma.$transaction(async (tx) => {
             await registrarTransicion({
                 reporteId,
                 estadoAnterior: reporte.estado,
                 estadoNuevo: "REVISION_MANUAL",
                 responsableTipo: "WORKER",
-                motivo: `Reintentos agotados: ${errorMsg}`,
-                metadatos: { processingError: errorMsg },
+                motivo: mensajeGenerico,
+                metadatos: { errorCode },
                 tx,
             });
             await tx.reporte.update({
                 where: { id: reporteId },
                 data: {
                     estado: "REVISION_MANUAL",
-                    processingError: errorMsg,
+                    processingError: `${mensajeGenerico} (código: ${errorCode})`,
                 },
             });
         });

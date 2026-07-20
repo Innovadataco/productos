@@ -55,7 +55,8 @@ describe("POST /api/reportes/fallback", () => {
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("REVISION_MANUAL");
-        expect(actualizado?.processingError).toContain("Ollama no disponible");
+        expect(actualizado?.processingError).toContain("Reintentos agotados procesando el reporte");
+        expect(actualizado?.processingError).toContain("INTERNAL_ERROR");
 
         const transiciones = await prisma.transicionReporte.findMany({
             where: { reporteId: reporte.id },
