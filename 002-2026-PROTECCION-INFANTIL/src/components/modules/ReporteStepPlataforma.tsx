@@ -53,7 +53,7 @@ export function ReporteStepPlataforma({
 
     return (
         <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800">¿Qué identificador quieres reportar?</h2>
+            <h2 className="text-lg font-semibold text-slate-800">¿Qué identificador está asociado a la situación?</h2>
             <Input
                 label="Número, nick o usuario"
                 placeholder="Ej: +573001234567"

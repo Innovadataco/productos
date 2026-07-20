@@ -8,14 +8,14 @@ export function ReporteStepDescripcion({ value, onChange }: { value: string; onC
 
     return (
         <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-body">Describe lo que ocurrió</h2>
+            <h2 className="text-lg font-semibold text-body">Describe lo que ocurrió con tus palabras</h2>
             <div>
                 <label className="block text-sm font-medium text-muted mb-1.5">
-                    Descripción de la conducta
+                    Descripción de lo que observaste
                 </label>
                 <textarea
                     className="w-full rounded-xl px-4 py-3 text-sm text-body placeholder-subtle outline-none transition min-h-[160px] resize-y glass-input ring-accent-input"
-                    placeholder="Describe la conducta observada con el mayor detalle posible..."
+                    placeholder="Describe la conducta observada con el mayor detalle posible. Esto ayuda a entender la situación."
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     maxLength={max}
@@ -31,7 +31,7 @@ export function ReporteStepDescripcion({ value, onChange }: { value: string; onC
                 </div>
             </div>
             <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300">
-                No incluyas fotos, videos ni archivos. Este reporte es exclusivamente de texto.
+                Este reporte es solo de texto. No incluyas fotos, videos ni archivos adjuntos.
             </div>
         </div>
     );

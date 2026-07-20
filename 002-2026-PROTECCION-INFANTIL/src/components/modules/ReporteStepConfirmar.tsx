@@ -52,7 +52,7 @@ export function ReporteStepConfirmar({
                     <span className="font-medium text-body">{data.fechaIncidente || "No especificada"}</span>
                 </div>
                 <div className="flex justify-between">
-                    <span className="text-subtle">Edad aproximada de la víctima</span>
+                    <span className="text-subtle">Edad aproximada del menor</span>
                     <span className="font-medium text-body">{data.edadVictima || "No especificada"}</span>
                 </div>
                 <div>
@@ -69,8 +69,7 @@ export function ReporteStepConfirmar({
                     onChange={(e) => setChecked(e.target.checked)}
                 />
                 <span className="text-sm text-muted leading-relaxed">
-                    Entiendo que este reporte es <strong>informativo</strong> y{" "}
-                    <strong>no reemplaza una denuncia formal</strong> ante las autoridades competentes.
+                    Entiendo que este reporte es <strong>informativo y voluntario</strong>. No reemplaza una denuncia formal ante las autoridades competentes.
                 </span>
             </label>
 

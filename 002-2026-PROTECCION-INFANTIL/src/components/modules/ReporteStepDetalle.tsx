@@ -123,6 +123,10 @@ export function ReporteStepDetalle({
         <div className="space-y-4">
             <h2 className="text-lg font-semibold text-body">Detalles del incidente</h2>
 
+            <p className="text-sm text-muted">
+                Comparte la información que recuerdes. No hay datos obligatorios más allá de país, ciudad y descripción.
+            </p>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Select
                     label="País"
@@ -157,7 +161,7 @@ export function ReporteStepDetalle({
                 />
 
                 <Input
-                    label="Edad aproximada de la víctima (opcional)"
+                    label="Edad aproximada del menor (opcional)"
                     type="number"
                     min={1}
                     max={120}
@@ -201,7 +205,7 @@ export function ReporteStepDetalle({
             </div>
 
             <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300">
-                No incluyas fotos, videos ni archivos. Este reporte es exclusivamente de texto.
+                Este reporte es solo de texto. No incluyas fotos, videos ni archivos adjuntos.
             </div>
         </div>
     );

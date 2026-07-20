@@ -82,12 +82,12 @@ export function ConsultaPublicaClient() {
     return (
         <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
             <div className="mb-8 text-center">
-                <h1 className="text-3xl font-bold text-body">Consulta pública</h1>
+                <h1 className="text-3xl font-bold text-body">Consulta un identificador</h1>
                 <p className="mt-2 text-muted">
-                    Ingresa un número, nick o usuario para conocer el riesgo agregado reportado.
+                    Ingresa un número, nick o usuario para saber si tiene reportes registrados en la comunidad.
                 </p>
                 <p className="text-xs text-subtle">
-                    No se muestra el contenido de los reportes ni datos de las personas.
+                    No se muestra el contenido de los reportes ni datos de las personas. Los resultados son agregados.
                 </p>
             </div>
 
@@ -122,7 +122,9 @@ export function ConsultaPublicaClient() {
 
             {data && !data.tieneReportes && (
                 <div className="mx-auto mt-6 max-w-xl rounded-xl glass p-6 text-center">
-                    <p className="text-body">{data.mensaje || "Sin reportes registrados para este identificador."}</p>
+                    <p className="text-body">
+                        {data.mensaje || "No hay reportes suficientes para este identificador. La información se muestra solo cuando hay múltiples reportes independientes."}
+                    </p>
                 </div>
             )}
 
@@ -148,9 +150,9 @@ export function ConsultaPublicaClient() {
                     <div className="glass rounded-2xl p-6 text-center">
                         {isAutenticado ? (
                             <>
-                                <p className="text-body font-medium">¿Deseas ver el detalle completo?</p>
+                                <p className="text-body font-medium">¿Quieres ver más detalles?</p>
                                 <p className="mt-1 text-sm text-muted">
-                                    Accede a tu panel para ver el historial detallado, mapa aproximado y seguimiento de tus reportes.
+                                    Inicia sesión en tu panel para ver el historial agregado, mapa aproximado y seguimiento de tus reportes.
                                 </p>
                                 <div className="mt-4">
                                     <Button
@@ -158,15 +160,15 @@ export function ConsultaPublicaClient() {
                                         className="w-full sm:w-auto"
                                         onClick={() => router.push("/dashboard")}
                                     >
-                                        Ver detalle completo
+                                        Ir a mi panel
                                     </Button>
                                 </div>
                             </>
                         ) : (
                             <>
-                                <p className="text-body font-medium">¿Deseas ver el detalle completo?</p>
+                                <p className="text-body font-medium">¿Quieres ver más detalles?</p>
                                 <p className="mt-1 text-sm text-muted">
-                                    Crea una cuenta para acceder al historial detallado, mapa aproximado y seguimiento de tus reportes.
+                                    Crea una cuenta para acceder al historial agregado, mapa aproximado y seguimiento de tus reportes.
                                 </p>
                                 <div className="mt-4">
                                     <Link href="/registro">

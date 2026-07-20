@@ -27,9 +27,9 @@ export function ConfirmacionReporte({ numeroSeguimiento }: { numeroSeguimiento: 
                     </svg>
                 </div>
 
-                <h2 className="text-xl font-bold text-slate-900">Reporte recibido</h2>
+                <h2 className="text-xl font-bold text-slate-900">Hemos recibido tu reporte</h2>
                 <p className="text-sm text-slate-600">
-                    Tu número de seguimiento es:
+                    Guarda este número para consultar el estado en cualquier momento:
                 </p>
 
                 <div className="flex items-center justify-center gap-3">

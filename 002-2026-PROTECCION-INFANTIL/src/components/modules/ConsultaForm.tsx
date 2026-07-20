@@ -17,7 +17,7 @@ export function ConsultaForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!identificador.trim()) {
-            setError("Ingresa un número, nick o usuario.");
+            setError("Ingresa el número, nick o usuario que quieres consultar.");
             return;
         }
         setError("");

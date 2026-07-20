@@ -109,9 +109,9 @@ export function SeguimientoClient() {
     return (
         <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
             <div className="mb-6 text-center">
-                <h1 className="text-2xl font-bold text-body">Seguimiento de reporte</h1>
+                <h1 className="text-2xl font-bold text-body">Consulta el estado de tu reporte</h1>
                 <p className="mt-1 text-sm text-muted">
-                    Consulta el estado de un reporte con su número de seguimiento
+                    Ingresa el número de seguimiento para conocer el estado actual del reporte.
                 </p>
             </div>
 
@@ -158,7 +158,7 @@ export function SeguimientoClient() {
 
                     {data.clasificacion && (
                         <div className={infoBox}>
-                            <h3 className="mb-2 text-sm font-semibold text-body">Clasificación del reporte</h3>
+                            <h3 className="mb-2 text-sm font-semibold text-body">Categoría del reporte</h3>
                             <div className="flex flex-wrap items-center gap-3">
                                 <Badge variant="info">{data.clasificacion.categoriaGrupo}</Badge>
                             </div>
@@ -172,7 +172,7 @@ export function SeguimientoClient() {
 
                     {data.ranking && (
                         <div className={infoBox}>
-                            <h3 className="mb-2 text-sm font-semibold text-body">Riesgo del identificador</h3>
+                            <h3 className="mb-2 text-sm font-semibold text-body">Nivel de riesgo del identificador</h3>
                             <div className="flex items-center gap-4">
                                 <div className="text-center">
                                     <p className="font-mono text-2xl font-bold text-body">{data.ranking.score}</p>

@@ -18,7 +18,7 @@ export function SeguimientoForm({
         e.preventDefault();
         const clean = numero.trim().toUpperCase();
         if (!clean || !clean.startsWith("RPT-")) {
-            setError("Ingresa un número de seguimiento válido (ej: RPT-XXXXXX).");
+            setError("Ingresa un número de seguimiento válido, por ejemplo RPT-XXXXXX.");
             return;
         }
         setError("");
