@@ -1,88 +1,38 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { clasificarConVotos } from "@/lib/ai/classifier";
 import { generarEmbedding } from "@/lib/ai/embedder";
-import { anonimizarTexto } from "@/lib/ai/anonimizador";
-import { detectarPiiCombinado } from "@/lib/ai/pii-detector";
-import { detectarDoxing } from "@/lib/ai/pii-patterns";
-import { detectarKeywordsRiesgo } from "@/lib/ai/keywords-riesgo";
-import { buscarReporteSimilar } from "@/lib/ai/similarity";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "@/lib/ai/dataset-retrieval";
-import { requireEnv } from "@/lib/env";
-import { ERROR_CODES } from "@/lib/errors";
-import { actualizarVisibilidadPublica } from "@/lib/visibility";
-import { recalcularYGuardarScore } from "@/lib/scoring";
-import { enviarAlertaRevision, enviarAlertaScoreCritico, enviarAlertasSuscriptores } from "@/lib/email";
-import { asignarOperadorAReporte } from "@/lib/operadores/asignador";
 import { registrarTransicion } from "@/lib/reporte-transiciones";
-import { Prisma } from "@prisma/client";
-import type { EstadoReporte } from "@prisma/client";
-import { encryptParameter, decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
-
-function esErrorTransitorio(error: unknown): boolean {
-    if (error && typeof error === "object" && "retryable" in error && error.retryable === false) {
-        return false;
-    }
-    if (error && typeof error === "object" && "retryable" in error && error.retryable === true) {
-        return true;
-    }
-    const msg = error instanceof Error ? error.message : String(error);
-    const patrones = [
-        /ollama/i,
-        /embedding/i,
-        /clasificaci[oó]n/i,
-        /anonimiz/i,
-        /pii/i,
-        /timeout/i,
-        /fetch/i,
-        /network/i,
-        /econnrefused/i,
-        /socket/i,
-        /abort/i,
-        /temporalmente/i,
-        /no disponible/i,
-    ];
-    return patrones.some((p) => p.test(msg));
-}
-
-const ESTADOS_FINALES = new Set([
-    "CLASIFICADO",
-    "CORREGIDO",
-    "DUPLICADO",
-    "POSIBLE_SPAM",
-    "REVISION_MANUAL",
-    "REQUIERE_ANONIMIZACION",
-]);
+import { esErrorTransitorio, ESTADOS_FINALES, respuestaTransitoria, respuestaErrorProcesamiento } from "./helpers/errors";
+import { validarWorkerSecret, parsearBody, obtenerReporte } from "./helpers/seguridad";
+import { guardarEmbedding } from "./helpers/embedding";
+import { detectarDuplicado } from "./helpers/duplicados";
+import { cargarParametrosClasificacion } from "./helpers/parametros";
+import { detectarRafaga } from "./helpers/rafagas";
+import { clasificarReporte } from "./helpers/clasificacion";
+import { anonimizarReporte } from "./helpers/anonimizacion";
+import { aplicarGuardasSeguridad } from "./helpers/guardas";
+import {
+    finalizarReporte,
+    respuestaExito,
+    fallbackARevisionManual,
+    enviarAlertaRevisionManual,
+    obtenerErrorCode,
+} from "./helpers/finalizacion";
 
 export async function POST(request: Request) {
     let reporteId: string | undefined;
     try {
-        const secret = request.headers.get("x-worker-secret");
-        if (secret !== requireEnv("WORKER_SECRET", 8)) {
-            return NextResponse.json(
-                { error: { message: "Unauthorized", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
+        const secretResult = validarWorkerSecret(request);
+        if (!secretResult.ok) return secretResult.response;
 
-        const body = (await request.json()) as { reporteId?: string };
-        reporteId = body.reporteId;
-        if (!reporteId) {
-            return NextResponse.json(
-                { error: { message: "reporteId requerido", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            );
-        }
+        const bodyResult = await parsearBody(request);
+        if (!bodyResult.ok) return bodyResult.response;
+        reporteId = bodyResult.reporteId;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-        });
-        if (!reporte) {
-            return NextResponse.json(
-                { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
+        const reporteResult = await obtenerReporte(reporteId);
+        if (!reporteResult.ok) return reporteResult.response;
+        const reporte = reporteResult.reporte;
 
         // Idempotencia: si ya está en estado final, no reprocesar
         if (ESTADOS_FINALES.has(reporte.estado)) {
@@ -106,8 +56,6 @@ export async function POST(request: Request) {
         const estadoAnteriorReporte = reporte.estado;
 
         // Actualizar estado a PROCESANDO y registrar transición atómicamente.
-        // En reintentos de pg-boss el estado ya puede ser PROCESANDO; evitamos
-        // duplicar la transición.
         if (estadoAnteriorReporte !== "PROCESANDO") {
             await prisma.$transaction(async (tx) => {
                 await registrarTransicion({
@@ -125,39 +73,13 @@ export async function POST(request: Request) {
             });
         }
 
-        // Generar embedding primero para poder detectar duplicados anónimos
-        const paramEmbedding = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.embedding_model" },
-        });
-        const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
-        const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
+        // Generar embedding
+        const parametros = await cargarParametrosClasificacion();
+        const vector = await generarEmbedding(parametros.modeloEmbedding, reporte.texto);
+        await guardarEmbedding(reporte.id, parametros.modeloEmbedding, vector);
 
-        // Guardar embedding (necesario para similitud y detección futura).
-        // Idempotente: si ya existe (reintento/concurrencia), se conserva.
-        const vectorStr = "[" + vector.join(",") + "]";
-        const embeddingExistente = await prisma.embeddingReporte.findUnique({
-            where: { reporteId: reporte.id },
-        });
-        if (!embeddingExistente) {
-            const embeddingId = crypto.randomUUID();
-            try {
-                await prisma.$executeRaw`
-                    INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
-                    VALUES (${embeddingId}, ${reporte.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-                `;
-            } catch (err) {
-                // Idempotencia ante concurrencia/reintento: si otro proceso creó el embedding, se conserva.
-                if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-                    console.warn(`[PROCESAR] Embedding ya existía para reporte ${reporte.id}, se conserva.`);
-                } else {
-                    throw err;
-                }
-            }
-        }
-
-        // Recuperar ejemplos corregidos similares para RAG (F5)
-        const paramRagTopK = await prisma.parametroSistema.findUnique({ where: { clave: "reportes.classification.rag_top_k" } });
-        const ragTopK = parseInt(paramRagTopK?.valor || "3", 10);
+        // Recuperar ejemplos corregidos similares para RAG
+        const ragTopK = parametros.ragTopK ?? 3;
         const ejemplosRecuperados = await buscarEjemplosSimilares(vector, { topK: ragTopK });
         const ejemplosRag: EjemploRecuperado[] = ejemplosRecuperados.map((e) => ({
             datasetId: e.datasetId,
@@ -167,461 +89,89 @@ export async function POST(request: Request) {
         }));
 
         // Deduplicación anónima por similitud de embeddings
-        if (reporte.esAnonimo) {
-            const paramThreshold = await prisma.parametroSistema.findUnique({
-                where: { clave: "reportes.duplicate.similarity_threshold" },
-            });
-            const threshold = parseFloat(paramThreshold?.valor || "0.92");
-            const similar = await buscarReporteSimilar(reporte.id, reporte.identificador, reporte.plataformaId, vector, threshold);
-
-            if (similar) {
-                await prisma.$transaction(async (tx) => {
-                    await registrarTransicion({
-                        reporteId: reporteId!,
-                        estadoAnterior: "PROCESANDO",
-                        estadoNuevo: "DUPLICADO",
-                        responsableTipo: "SISTEMA",
-                        motivo: "Reporte marcado como duplicado por similitud de embeddings",
-                        metadatos: { reporteOrigenId: similar.reporteId },
-                        tx,
-                    });
-                    await tx.reporte.update({
-                        where: { id: reporteId! },
-                        data: { estado: "DUPLICADO", reporteOrigenId: similar.reporteId },
-                    });
-                });
-                return NextResponse.json({
-                    reporteId: reporteId,
-                    estado: "DUPLICADO",
-                    clasificacion: null,
-                    latenciaMs: 0,
-                });
-            }
-        }
-
-        // Modelo de clasificación configurable
-        const paramModelo = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.classification_model" },
+        const duplicado = await detectarDuplicado({
+            reporteId: reporte.id,
+            identificador: reporte.identificador,
+            plataformaId: reporte.plataformaId,
+            vector,
+            esAnonimo: reporte.esAnonimo,
         });
-        const modeloClasificacion = paramModelo?.valor || "ornith:9b";
+        if (duplicado.esDuplicado) return duplicado.response;
 
-        // Parámetros de votación F4
-        const paramUmbral = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.classification.umbral_revision" },
-        });
-        const umbralRevision = parseFloat(paramUmbral?.valor || "1.0");
-
-        const paramNVotos = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.classification.n_votos" },
-        });
-        const nVotos = parseInt(paramNVotos?.valor || "5", 10);
-
-        const paramTemperatura = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.classification.temperatura_votos" },
-        });
-        const temperaturaVotos = parseFloat(paramTemperatura?.valor || "0.7");
-
-        const paramMinScore = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.classification.min_score_categoria" },
-        });
-        const minScoreCategoria = parseFloat(paramMinScore?.valor || "0.3");
-
-        const paramParallel = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.classification.ollama_num_parallel" },
-        });
-        const ollamaNumParallel = parseInt(paramParallel?.valor || process.env.OLLAMA_NUM_PARALLEL || "2", 10);
-
-        const paramModeloDesempate = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.classification.modelo_desempate" },
-        });
-        const modeloDesempate = paramModeloDesempate?.valor || undefined;
-
-        // Spec 026: umbral para marcar SPAM como POSIBLE_SPAM
-        const paramUmbralSpam = await prisma.parametroSistema.findUnique({
-            where: { clave: "clasificacion.umbral_spam" },
-        });
-        const umbralSpam = parseFloat(paramUmbralSpam?.valor || "0.7");
-
-        // F7: parámetros de detección de ráfagas
-        const paramRafagaN = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.rafaga.n_reportes" },
-        });
-        const rafagaN = parseInt(paramRafagaN?.valor || "3", 10);
-        const paramRafagaHoras = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.rafaga.ventana_horas" },
-        });
-        const rafagaHoras = parseInt(paramRafagaHoras?.valor || "24", 10);
-
-        // F7: detectar ráfaga de reportes contra identificador sin historial previo
-        let esRafaga = false;
-        const ahora = new Date();
-        const inicioVentana = new Date(ahora.getTime() - rafagaHoras * 60 * 60 * 1000);
-        const historialPrevio = await prisma.reporte.count({
-            where: {
-                identificador: reporte.identificador,
-                plataformaId: reporte.plataformaId,
-                eliminado: false,
-                creadoEn: { lt: inicioVentana },
-            },
-        });
-        if (historialPrevio === 0) {
-            const reportesEnVentana = await prisma.reporte.count({
-                where: {
-                    identificador: reporte.identificador,
-                    plataformaId: reporte.plataformaId,
-                    eliminado: false,
-                    creadoEn: { gte: inicioVentana, lte: ahora },
-                },
-            });
-            if (reportesEnVentana >= rafagaN) {
-                esRafaga = true;
-                await prisma.reporte.updateMany({
-                    where: {
-                        identificador: reporte.identificador,
-                        plataformaId: reporte.plataformaId,
-                        eliminado: false,
-                        creadoEn: { gte: inicioVentana, lte: ahora },
-                    },
-                    data: { esRafaga: true },
-                });
-            }
-        }
-
-        // Clasificar y detectar PII (F2: separación en paralelo)
-        let clasificacion;
-        let piiResult: Awaited<ReturnType<typeof detectarPiiCombinado>> | undefined;
-        const clasifExistente = await prisma.clasificacionIA.findUnique({
-            where: { reporteId: reporte.id },
+        // Detectar ráfaga de reportes contra identificador sin historial previo
+        const esRafaga = await detectarRafaga({
+            identificador: reporte.identificador,
+            plataformaId: reporte.plataformaId,
+            rafagaN: parametros.rafagaN,
+            rafagaHoras: parametros.rafagaHoras,
         });
 
-        const paramAnonModelo = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.anonymization_model" },
+        // Clasificar y detectar PII
+        const { clasificacion, piiResult } = await clasificarReporte({
+            reporteId: reporte.id,
+            texto: reporte.texto,
+            parametros,
+            ejemplosRag,
         });
-        const modeloAnonimizacion = paramAnonModelo?.valor || modeloClasificacion;
 
-        if (clasifExistente) {
-            clasificacion = {
-                categoria: clasifExistente.categoria,
-                confianza: clasifExistente.confianza,
-                categoriasSecundarias: Array.isArray(clasifExistente.categoriasSecundarias) ? clasifExistente.categoriasSecundarias : [],
-                posibleAgresorPar: clasifExistente.posibleAgresorPar,
-                estado: (clasifExistente.contienePii ? "REQUIERE_ANONIMIZACION" : "CLASIFICADO") as EstadoReporte,
-                metrics: { modelo: clasifExistente.modeloUsado, latenciaMs: clasifExistente.latenciaMs },
-                rawResponse: clasifExistente.rawResponse,
-                votos: Array.isArray(clasifExistente.votos) ? clasifExistente.votos : [],
-            };
-        } else {
-            const [clasifResult, piiResultParallel] = await Promise.all([
-                clasificarConVotos(modeloClasificacion, reporte.texto, {
-                    nVotos,
-                    temperatura: temperaturaVotos,
-                    minScoreCategoria,
-                    umbralRevision,
-                    ollamaNumParallel,
-                    ejemplos: ejemplosRag,
-                    modeloDesempate,
-                    keepAliveDesempate: 0,
-                }),
-                detectarPiiCombinado(modeloAnonimizacion, reporte.texto),
-            ]);
+        let estadoFinal = clasificacion.estado;
 
-            clasificacion = { ...clasifResult };
-            piiResult = piiResultParallel;
-
-            try {
-                await prisma.clasificacionIA.create({
-                    data: {
-                        reporteId: reporte.id,
-                        categoria: clasificacion.categoria,
-                        confianza: clasificacion.confianza,
-                        contienePii: piiResult.contienePii,
-                        piiDetectada: piiResult.piiDetectada,
-                        categoriasSecundarias: clasificacion.categoriasSecundarias as unknown as Prisma.InputJsonValue,
-                        votos: clasificacion.votos as unknown as Prisma.InputJsonValue,
-                        posibleAgresorPar: clasificacion.posibleAgresorPar,
-                        usoCascada: clasificacion.usoCascada,
-                        modeloCascada: clasificacion.modeloCascada,
-                        modeloUsado: clasificacion.metrics.modelo,
-                        latenciaMs: clasificacion.metrics.latenciaMs + piiResult.metrics.latenciaMs,
-                        promptTokens: clasificacion.metrics.promptTokens,
-                        responseTokens: clasificacion.metrics.responseTokens,
-                        rawResponse: clasificacion.rawResponse,
-                    },
-                });
-            } catch (err) {
-                // Idempotencia ante concurrencia/reintento: si otro proceso creó la clasificación, reutilizarla.
-                if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-                    const clasifRecuperada = await prisma.clasificacionIA.findUnique({
-                        where: { reporteId: reporte.id },
-                    });
-                    if (clasifRecuperada) {
-                        clasificacion = {
-                            categoria: clasifRecuperada.categoria,
-                            confianza: clasifRecuperada.confianza,
-                            categoriasSecundarias: Array.isArray(clasifRecuperada.categoriasSecundarias) ? clasifRecuperada.categoriasSecundarias : [],
-                            posibleAgresorPar: clasifRecuperada.posibleAgresorPar,
-                            estado: (clasifRecuperada.contienePii ? "REQUIERE_ANONIMIZACION" : "CLASIFICADO") as EstadoReporte,
-                            metrics: { modelo: clasifRecuperada.modeloUsado, latenciaMs: clasifRecuperada.latenciaMs },
-                            rawResponse: clasifRecuperada.rawResponse,
-                            votos: Array.isArray(clasifRecuperada.votos) ? clasifRecuperada.votos : [],
-                        };
-                    } else {
-                        throw err;
-                    }
-                } else {
-                    throw err;
-                }
-            }
-        }
-
-function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoActual: string): string {
-    if (textoOriginalCifrado && isEncryptedValue(textoOriginalCifrado)) {
-        return decryptParameter(textoOriginalCifrado);
-    }
-    return textoOriginalCifrado ?? textoActual;
-}
-
-        // Anonimización automática de PII: preservar original cifrado y reemplazar texto
-        let estadoFinal: EstadoReporte = clasificacion.estado;
-
-        // Spec 026: SPAM con confianza suficiente pasa a revisión humana, no se autodestruye
-        if (clasificacion.categoria === "SPAM" && clasificacion.confianza >= umbralSpam) {
-            estadoFinal = "POSIBLE_SPAM";
-        }
-
+        // Anonimización automática de PII
         if (piiResult?.contienePii && estadoFinal !== "POSIBLE_SPAM") {
-            const originalPlano = obtenerTextoOriginalPlano(reporte.textoOriginal, reporte.texto);
-            const anonimizacion = await anonimizarTexto(modeloAnonimizacion, originalPlano, piiResult.piiDetectada);
-
-            let textoOriginalCifrado: string;
-            try {
-                textoOriginalCifrado = encryptParameter(originalPlano);
-            } catch (err) {
-                console.error("[PROCESAR] Error cifrando texto original tras anonimización:", err);
-                throw new Error("Error de seguridad persistiendo el original anonimizado");
-            }
-
-            await prisma.reporte.update({
-                where: { id: reporteId },
-                data: {
-                    textoOriginal: textoOriginalCifrado,
-                    texto: anonimizacion.textoAnonimizado,
-                },
+            const resultado = await anonimizarReporte({
+                reporteId: reporte.id,
+                textoActual: reporte.texto,
+                textoOriginalCifrado: reporte.textoOriginal,
+                piiDetectada: piiResult.piiDetectada,
+                modeloAnonimizacion: parametros.modeloAnonimizacion,
             });
-
-            // Reflejar PII detectada por el anonimizador en la clasificación
-            await prisma.clasificacionIA.update({
-                where: { reporteId: reporte.id },
-                data: { piiDetectada: anonimizacion.piiDetectada },
-            });
-
-            estadoFinal = "CLASIFICADO";
+            estadoFinal = resultado.estadoFinal;
         }
 
-        // Guarda de escalamiento DOXING (R3): la regla determinística nunca reclasifica,
-        // solo fuerza revisión manual cuando hay señal de doxing que el LLM no reflejó.
-        let prioridadAlta = false;
-        let keywordsDetectadas: string[] = [];
-        const doxing = detectarDoxing(reporte.texto);
-        if (estadoFinal !== "POSIBLE_SPAM" && doxing.esDoxing && clasificacion.categoria !== "DOXING") {
-            estadoFinal = "REVISION_MANUAL";
-            prioridadAlta = true;
-            keywordsDetectadas = doxing.fragmentos.length > 0 ? doxing.fragmentos : ["doxing"];
-        }
-
-        // F7: guarda de keywords críticas. Nunca reclasifica; fuerza revisión manual
-        // cuando el modelo clasificó como OTRO pero hay señales de riesgo graves.
-        const keywordsRiesgo = detectarKeywordsRiesgo(reporte.texto);
-        if (
-            estadoFinal !== "POSIBLE_SPAM" &&
-            keywordsRiesgo.tieneMatch &&
-            ((estadoFinal === "CLASIFICADO" && clasificacion.categoria === "OTRO") ||
-                estadoFinal === "REVISION_MANUAL")
-        ) {
-            prioridadAlta = true;
-            keywordsDetectadas = Array.from(new Set([...keywordsDetectadas, ...keywordsRiesgo.keywords]));
-            if (estadoFinal === "CLASIFICADO" && clasificacion.categoria === "OTRO") {
-                estadoFinal = "REVISION_MANUAL";
-            }
-        }
-
-        // F7: ráfaga fuerza revisión manual con prioridad alta
-        if (estadoFinal !== "POSIBLE_SPAM" && esRafaga) {
-            estadoFinal = "REVISION_MANUAL";
-            prioridadAlta = true;
-        }
-
-        // Actualizar estado del reporte a resultado final y registrar transición atómica
-        const estadoFinalTx = await prisma.$transaction(async (tx) => {
-            const reporteActual = await tx.reporte.findUnique({
-                where: { id: reporteId! },
-                select: { estado: true },
-            });
-            if (!reporteActual) {
-                throw new Error("Reporte no encontrado durante transición final");
-            }
-            if (ESTADOS_FINALES.has(reporteActual.estado)) {
-                // Idempotencia: otro proceso ya finalizó el reporte.
-                return reporteActual.estado;
-            }
-            await registrarTransicion({
-                reporteId: reporteId!,
-                estadoAnterior: reporteActual.estado,
-                estadoNuevo: estadoFinal,
-                responsableTipo: "IA",
-                motivo: estadoFinal === "REVISION_MANUAL" ? "Requiere revisión humana" : "Clasificación automática completada",
-                metadatos: {
-                    modelo: clasificacion.metrics.modelo,
-                    latenciaMs: clasificacion.metrics.latenciaMs,
-                    categoria: clasificacion.categoria,
-                    confianza: clasificacion.confianza,
-                    esRafaga,
-                    prioridadAlta,
-                },
-                tx,
-            });
-            await tx.reporte.update({
-                where: { id: reporteId! },
-                data: {
-                    estado: estadoFinal,
-                    prioridadAlta,
-                    keywordsDetectadas,
-                    esRafaga,
-                },
-            });
-            return estadoFinal;
+        // Aplicar guardas de seguridad
+        const guardas = aplicarGuardasSeguridad({
+            texto: reporte.texto,
+            clasificacion,
+            estadoInicial: estadoFinal,
+            esRafaga,
+            umbralSpam: parametros.umbralSpam,
         });
-        estadoFinal = estadoFinalTx;
+        estadoFinal = guardas.estadoFinal;
 
-        // Fase 3: asignación automática de operador para revisión manual o posible spam
-        if (estadoFinal === "REVISION_MANUAL" || estadoFinal === "POSIBLE_SPAM") {
-            asignarOperadorAReporte(reporteId!).catch((err) =>
-                console.error("[OPERADORES] Error asignando operador a reporte", { reporteId, error: err })
-            );
-        }
-
-        // Actualizar IdentificadorReportado (solo si está clasificado o corregido)
-        if (estadoFinal === "CLASIFICADO" || estadoFinal === "CORREGIDO") {
-            await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
-            const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
-
-            if (scoreResult.nivelRiesgo === "CRITICO") {
-                enviarAlertaScoreCritico({
-                    id: reporte.id,
-                    identificador: reporte.identificador,
-                    plataformaId: reporte.plataformaId,
-                    score: scoreResult.score,
-                    nivelRiesgo: scoreResult.nivelRiesgo,
-                }).catch((err) => console.error("[ALERTA] Error enviando alerta de score crítico", err));
-            }
-
-            // Notificar a usuarios suscritos a alertas para este identificador.
-            enviarAlertasSuscriptores({
-                identificador: reporte.identificador,
-                plataformaId: reporte.plataformaId,
-                totalReportes: scoreResult.totalReportes,
-            }).catch((err) => console.error("[ALERTA] Error enviando alertas a suscriptores", err));
-        }
-
-        // Alertar a administradores cuando el reporte requiere intervención humana
-        if (estadoFinal === "REVISION_MANUAL" || estadoFinal === "REQUIERE_ANONIMIZACION" || estadoFinal === "POSIBLE_SPAM") {
-            enviarAlertaRevision({
-                id: reporte.id,
-                numeroSeguimiento: reporte.numeroSeguimiento,
-                identificador: reporte.identificador,
-                estado: estadoFinal,
-                prioridadAlta,
-            }).catch((err) => console.error("[ALERTA] Error enviando alerta de revisión", err));
-        }
-
-        return NextResponse.json({
-            reporteId,
-            estado: estadoFinal,
-            clasificacion: {
-                categoria: clasificacion.categoria,
-                confianza: clasificacion.confianza,
-                categoriasSecundarias: clasificacion.categoriasSecundarias,
-                posibleAgresorPar: clasificacion.posibleAgresorPar,
-                votos: clasificacion.votos,
-            },
-            latenciaMs: clasificacion.metrics.latenciaMs,
+        // Finalizar reporte y alertas
+        estadoFinal = await finalizarReporte({
+            reporteId: reporte.id,
+            estadoFinal,
+            clasificacion,
+            esRafaga,
+            prioridadAlta: guardas.prioridadAlta,
+            keywordsDetectadas: guardas.keywordsDetectadas,
         });
+
+        return respuestaExito({ reporteId: reporte.id, estadoFinal, clasificacion });
     } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
-        const errorCode =
-            error && typeof error === "object" && "code" in error && typeof error.code === "string"
-                ? error.code
-                : ERROR_CODES.INTERNAL_ERROR;
+        const errorCode = obtenerErrorCode(error);
         const transitorio = esErrorTransitorio(error);
 
         console.error("[PROCESAR] Error procesando reporte", {
-            reporteId: reporteId,
+            reporteId,
             errorType: error instanceof Error ? error.name : "Unknown",
             errorMessage: errMsg,
             transitorio,
         });
 
         if (transitorio) {
-            return NextResponse.json(
-                { error: { message: "Error transitorio procesando el reporte", code: ERROR_CODES.INTERNAL_ERROR, retryable: true } },
-                { status: 500 }
-            );
+            return respuestaTransitoria();
         }
 
-        // Errores no transitorios: fallback directo a REVISION_MANUAL
-        let reporteParaAlerta: { id: string; numeroSeguimiento: string | null; identificador: string } | null = null;
         if (reporteId) {
-            try {
-                const reportePrevio = await prisma.reporte.findUnique({
-                    where: { id: reporteId },
-                    select: { estado: true },
-                });
-                const estadoPrevio = reportePrevio?.estado ?? "PENDIENTE";
-
-                const reporteActualizado = await prisma.$transaction(async (tx) => {
-                    await registrarTransicion({
-                        reporteId: reporteId!,
-                        estadoAnterior: estadoPrevio,
-                        estadoNuevo: "REVISION_MANUAL",
-                        responsableTipo: "SISTEMA",
-                        motivo: "Error durante el procesamiento del reporte",
-                        metadatos: { errorCode },
-                        tx,
-                    });
-                    return tx.reporte.update({
-                        where: { id: reporteId! },
-                        data: {
-                            estado: "REVISION_MANUAL",
-                            processingError: `Error durante el procesamiento del reporte (código: ${errorCode})`,
-                        },
-                    });
-                });
-                reporteParaAlerta = {
-                    id: reporteActualizado.id,
-                    numeroSeguimiento: reporteActualizado.numeroSeguimiento,
-                    identificador: reporteActualizado.identificador,
-                };
-
-                asignarOperadorAReporte(reporteId!).catch((err) =>
-                    console.error("[OPERADORES] Error asignando operador a reporte con error", { reporteId: reporteId, error: err })
-                );
-            } catch {
-                // Si falla el update del error, solo loggear
+            const reporteParaAlerta = await fallbackARevisionManual({ reporteId, errorCode });
+            if (reporteParaAlerta) {
+                await enviarAlertaRevisionManual({ reporteParaAlerta });
             }
         }
 
-        if (reporteParaAlerta) {
-            enviarAlertaRevision({
-                id: reporteParaAlerta.id,
-                numeroSeguimiento: reporteParaAlerta.numeroSeguimiento,
-                identificador: reporteParaAlerta.identificador,
-                estado: "REVISION_MANUAL",
-            }).catch((err) => console.error("[ALERTA] Error enviando alerta de revisión", err));
-        }
-
-        return NextResponse.json(
-            { error: { message: "Error procesando el reporte", code: ERROR_CODES.INTERNAL_ERROR, retryable: false } },
-            { status: 500 }
-        );
+        return respuestaErrorProcesamiento(errorCode);
     }
 }
