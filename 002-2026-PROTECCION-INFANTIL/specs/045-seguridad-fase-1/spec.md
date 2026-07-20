@@ -175,5 +175,5 @@ Ninguna. Los cambios son aditivos en código y no requieren migraciones de base 
 ### Deuda técnica y próximos pasos
 
 - Los endpoints `verificar/validar` y `verificar/completar` aún usan validación manual; estandarizar a Zod en una fase posterior de saneamiento.
-- El plan de borrado seguro requiere ser implementado en un spec dedicado (posible SPEC-052 o similar) con migraciones aditivas y flujo de aprobación.
+- El plan de borrado seguro es un ítem de pre-producción registrado en `docs/PRE-PRODUCCION.md`. Requiere ser implementado en un spec dedicado con migraciones aditivas y flujo de aprobación.
 - Considerar extracción de helper de respuesta uniforme para rate limit a `src/lib/rate-limit.ts` si más endpoints lo requieren.

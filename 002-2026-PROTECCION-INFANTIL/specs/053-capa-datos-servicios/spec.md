@@ -127,6 +127,7 @@ El equipo de desarrollo necesita una convención clara de repositorios, servicio
 - Las operaciones de IA y estadísticas que usan `pgvector` seguirán requiriendo raw queries, encapsuladas en repositorios específicos.
 - SPEC-050 y SPEC-060 permanecen congelados; este spec no interfiere en sus artefactos ni su implementación.
 - La aprobación humana del plan es requisito previo para iniciar la implementación (`/speckit.implement`).
+- Este spec es un ítem de pre-producción registrado en `docs/PRE-PRODUCCION.md`; se implementará de forma incremental y no bloquea el lanzamiento inicial.
 
 ---
 

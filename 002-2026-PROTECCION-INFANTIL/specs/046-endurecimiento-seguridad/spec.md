@@ -212,3 +212,8 @@ Refuerzo de la postura de seguridad del producto: inventario de PII, CSP endurec
 ### Migraciones relevantes
 
 - Ninguna migración destructiva. No se toca schema ni datos de SPEC-050/SPEC-060.
+
+### Deuda técnica
+
+- La rotación de `PARAM_ENCRYPTION_KEY` (US6) es un ítem de pre-producción registrado en `docs/PRE-PRODUCCION.md`. Se implementará en una fase posterior con versionado, script de re-cifrado y rollback.
+- 5 tests e2e de otros specs fallan por expectativas desactualizadas o contaminación de datos; no están dentro del alcance de Spec 046.

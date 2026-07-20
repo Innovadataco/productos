@@ -110,7 +110,7 @@ El comportamiento de rate limit fue verificado en la suite de tests forzando `DI
 ## Deuda técnica
 
 - Los endpoints `POST /api/auth/verificar/validar` y `POST /api/auth/verificar/completar` aún usan validación manual. Se deja para una fase posterior de estandarización generalizada a Zod.
-- El plan de borrado seguro requiere un spec dedicado (posible SPEC-052 o similar) con: migraciones aditivas, flujo de aprobación por ADMIN, anonimización vs. eliminación, generación de certificado y UI/UX.
+- El plan de borrado seguro es un ítem de pre-producción registrado en `docs/PRE-PRODUCCION.md`. Requiere un spec dedicado con migraciones aditivas, flujo de aprobación por ADMIN, anonimización vs. eliminación y generación de certificado.
 - Considerar extraer un helper de respuesta uniforme para rate limit si más endpoints lo adoptan.
 - El endpoint `POST /api/auth/register` usa `verifyAuth("ADMIN")` pero la lógica interna deja un `else` de `SCHOOL_ADMIN` muerto. Esto es un bug preexistente fuera del alcance de este spec.
 

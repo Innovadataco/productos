@@ -59,5 +59,5 @@ Se implementó el endurecimiento de seguridad previo a SPEC-050/SPEC-060: invent
 ## Deuda técnica / follow-up
 
 - 5 tests e2e de otros specs fallan por expectativas desactualizadas o contaminación de datos; no están dentro del alcance de Spec 046.
-- La rotación de `PARAM_ENCRYPTION_KEY` (US6) queda como plan de diseño; se implementará en una fase posterior.
+- La rotación de `PARAM_ENCRYPTION_KEY` (US6) es un ítem de pre-producción registrado en `docs/PRE-PRODUCCION.md`; se implementará en una fase posterior.
 - Corrección post-cierre: `upgrade-insecure-requests` y HSTS se gobiernan mediante `ENABLE_HTTPS_HEADERS` (default `false`) para evitar bloqueos en entornos sin TLS (Mac, Tailscale, LAN).
