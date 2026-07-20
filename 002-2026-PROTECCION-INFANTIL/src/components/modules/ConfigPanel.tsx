@@ -3,53 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
 import { CategoriaGruposEditor } from "./CategoriaGruposEditor";
-
-type ParamType = "STRING" | "INTEGER" | "FLOAT" | "BOOLEAN" | "JSON" | "STRING_ARRAY";
-
-type Param = {
-    id: string;
-    clave: string;
-    valor: string;
-    tipo: ParamType;
-    categoria: string;
-    esPublico: boolean;
-    esSecreto: boolean;
-    descripcion: string | null;
-};
-
-const SECTIONS: { key: string; label: string; description: string; prefixes: string[] }[] = [
-    { key: "scoring", label: "Modelo de Score (F1)", description: "Pesos y umbrales que calculan el score de riesgo 0-100.", prefixes: ["scoring."] },
-    { key: "visibility", label: "Visibilidad Pública", description: "Reglas para que un identificador aparezca en la consulta pública.", prefixes: ["visibility."] },
-    { key: "alerts", label: "Alertas por Email", description: "Activar/desactivar notificaciones a administradores y suscriptores.", prefixes: ["alerts."] },
-    { key: "ratelimit", label: "Rate Limiting", description: "Límites de peticiones por ventana de tiempo.", prefixes: ["ratelimit."] },
-    { key: "reportes", label: "Procesamiento de Reportes", description: "Modelos de IA, umbrales de duplicados y parámetros del worker.", prefixes: ["reportes."] },
-    { key: "ui", label: "Interfaz de usuario", description: "Parámetros visibles para usuarios finales, como SLA de seguimiento.", prefixes: ["ui."] },
-    { key: "security", label: "Seguridad", description: "Intentos de login, duración de bloqueo, longitud de contraseña, etc.", prefixes: ["security."] },
-    { key: "system", label: "Sistema", description: "Parámetros generales de la aplicación.", prefixes: ["system."] },
-    { key: "other", label: "Otros", description: "Parámetros adicionales no agrupados.", prefixes: [] },
-];
-
-function sectionForParam(param: Param) {
-    return (
-        SECTIONS.find((s) => s.prefixes.some((prefix) => param.clave.startsWith(prefix))) ||
-        SECTIONS.find((s) => s.key === "other")!
-    );
-}
-
-function validateValue(param: Param, value: string): string | null {
-    if ((value === "" || value === undefined) && !param.esSecreto) return "El valor es requerido";
-    if (param.esSecreto && value === "") return null;
-    if (param.tipo === "INTEGER") {
-        if (!/^-?\d+$/.test(value)) return "Debe ser un número entero";
-    }
-    if (param.tipo === "FLOAT") {
-        if (!/^-?\d+(\.\d+)?$/.test(value)) return "Debe ser un número decimal";
-    }
-    if (param.tipo === "BOOLEAN") {
-        if (!/^(true|false)$/.test(value)) return "Debe ser true o false";
-    }
-    return null;
-}
+import { ConfigSection } from "./config-panel/ConfigSection";
+import { TimelineSection } from "./config-panel/TimelineSection";
+import { validateValue, SECTIONS, sectionForParam, type Param } from "./config-panel/types";
 
 export default function ConfigPanel() {
     const [params, setParams] = useState<Param[]>([]);
@@ -311,138 +267,21 @@ export default function ConfigPanel() {
                 </div>
             )}
 
-            {SECTIONS.map((section) => {
-                const items = grouped[section.key] || [];
-                if (items.length === 0) return null;
-
-                return (
-                    <section key={section.key} className="glass rounded-2xl p-5 sm:p-6">
-                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                                <h2 className="text-lg font-semibold text-body">{section.label}</h2>
-                                <p className="text-sm text-muted">{section.description}</p>
-                                {items.some((p) => !p.esSecreto && editValues[p.clave] !== (p.valor ?? "")) && (
-                                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-300">Cambios sin guardar</p>
-                                )}
-                            </div>
-                            <Button
-                                onClick={() => saveSection(section.key)}
-                                isLoading={saving[section.key]}
-                                disabled={saving[section.key]}
-                            >
-                                Guardar cambios
-                            </Button>
-                        </div>
-
-                        {messages[section.key] && (
-                            <div
-                                className={`mb-4 rounded-lg px-4 py-2 text-sm ${
-                                    messages[section.key]!.type === "error"
-                                        ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                                        : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
-                                }`}
-                            >
-                                {messages[section.key]!.text}
-                            </div>
-                        )}
-
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {items
-                                .filter((p) => p.clave !== "ui.grupos_categoria")
-                                .map((p) => (
-                                <div key={p.id} className="py-4 first:pt-0 last:pb-0">
-                                    <div className="grid gap-4 sm:grid-cols-[1fr,280px,120px]">
-                                        <div>
-                                            <label className="block text-sm font-medium text-body">{p.clave}</label>
-                                            <p className="mt-0.5 text-xs text-muted">{p.descripcion || "Sin descripción"}</p>
-                                            <div className="mt-1 flex flex-wrap gap-2 text-[10px] uppercase tracking-wide text-subtle">
-                                                <span>{p.tipo}</span>
-                                                <span>•</span>
-                                                <span>{p.categoria}</span>
-                                                {p.esPublico && <span className="text-accent">Público</span>}
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            {p.tipo === "BOOLEAN" ? (
-                                                <div className="relative">
-                                                    <select
-                                                        value={editValues[p.clave] ?? p.valor}
-                                                        onChange={(e) => updateValue(p.clave, e.target.value)}
-                                                        className="w-full rounded-xl px-3 py-2 text-sm text-body outline-none transition glass-input ring-accent-input appearance-none pr-10"
-                                                    >
-                                                        <option value="true">true</option>
-                                                        <option value="false">false</option>
-                                                    </select>
-                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-subtle">
-                                                        <ChevronIcon className="h-4 w-4" />
-                                                    </span>
-                                                </div>
-                                            ) : p.tipo === "INTEGER" || p.tipo === "FLOAT" ? (
-                                                <input
-                                                    type="number"
-                                                    step={p.tipo === "FLOAT" ? "0.01" : "1"}
-                                                    value={editValues[p.clave] ?? p.valor}
-                                                    onChange={(e) => updateValue(p.clave, e.target.value)}
-                                                    className="w-full rounded-xl px-3 py-2 text-sm text-body outline-none transition glass-input ring-accent-input"
-                                                />
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type={p.esSecreto && !revealed[p.clave] ? "password" : "text"}
-                                                        value={editValues[p.clave] ?? ""}
-                                                        placeholder={p.esSecreto ? "•••••••• (ingresar nuevo valor)" : ""}
-                                                        onChange={(e) => updateValue(p.clave, e.target.value)}
-                                                        className="w-full rounded-xl px-3 py-2 text-sm text-body outline-none transition glass-input ring-accent-input"
-                                                    />
-                                                    {p.esSecreto && (
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            className="shrink-0 px-2 py-2 text-xs"
-                                                            onClick={() => toggleReveal(p.clave)}
-                                                            title={revealed[p.clave] ? "Ocultar" : "Revelar"}
-                                                        >
-                                                            {revealed[p.clave] ? "Ocultar" : "Revelar"}
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-start gap-2">
-                                            <Button
-                                                onClick={() => saveParam(p.clave)}
-                                                isLoading={saving[p.clave]}
-                                                disabled={
-                                                    saving[p.clave] ||
-                                                    (p.esSecreto ? editValues[p.clave] === "" : editValues[p.clave] === p.valor)
-                                                }
-                                                variant="outline"
-                                                className="w-full py-2 px-3 text-xs"
-                                            >
-                                                Guardar
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    {messages[p.clave] && (
-                                        <div
-                                            className={`mt-2 rounded-lg px-3 py-1.5 text-xs ${
-                                                messages[p.clave]!.type === "error"
-                                                    ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300"
-                                                    : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
-                                            }`}
-                                        >
-                                            {messages[p.clave]!.text}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                );
-            })}
+            {SECTIONS.map((section) => (
+                <ConfigSection
+                    key={section.key}
+                    section={section}
+                    items={grouped[section.key] || []}
+                    editValues={editValues}
+                    revealed={revealed}
+                    messages={messages}
+                    saving={saving}
+                    onUpdate={updateValue}
+                    onSave={saveParam}
+                    onReveal={toggleReveal}
+                    onSaveSection={saveSection}
+                />
+            ))}
 
             <section className="glass rounded-2xl p-5 sm:p-6">
                 <div className="mb-4">
@@ -454,41 +293,7 @@ export default function ConfigPanel() {
                 <CategoriaGruposEditor />
             </section>
 
-            <section className="glass rounded-2xl p-5 sm:p-6">
-                <h2 className="text-lg font-semibold text-body">Timeline de cambios de producción</h2>
-                <p className="text-sm text-muted">Solo lectura. Registro de cambios en parámetros de configuración.</p>
-                {timeline.length === 0 ? (
-                    <p className="mt-4 text-sm text-muted">Sin cambios registrados.</p>
-                ) : (
-                    <div className="mt-4 space-y-3 max-h-96 overflow-auto">
-                        {timeline.map((log: Record<string, unknown>) => (
-                            <div key={String(log.id)} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-medium text-body">{String(log.accion)}</span>
-                                    <span className="text-xs text-muted">{new Date(String(log.creadoEn)).toLocaleString()}</span>
-                                </div>
-                                <p className="text-xs text-muted">
-                                    {((log.usuario as Record<string, string>)?.email) || "sistema"} · {String(log.tipoRecurso)}
-                                </p>
-                                {Boolean(log.valorAnterior) && Boolean(log.valorNuevo) && (
-                                    <div className="mt-2 grid gap-1 text-xs">
-                                        <p className="text-red-700 dark:text-red-300">- {String(log.valorAnterior).slice(0, 200)}</p>
-                                        <p className="text-green-700 dark:text-green-300">+ {String(log.valorNuevo).slice(0, 200)}</p>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </section>
+            <TimelineSection timeline={timeline} />
         </div>
-    );
-}
-
-function ChevronIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
     );
 }
