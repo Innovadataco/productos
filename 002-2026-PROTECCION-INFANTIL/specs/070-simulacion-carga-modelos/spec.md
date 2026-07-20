@@ -247,6 +247,8 @@ El administrador puede exportar los resultados de una corrida a CSV o JSON para 
 
 ## Implementación
 
+**Nota de corrección (2026-07-20)**: se detectó que la simulación implementada no replica fielmente un reporte anónimo real. El parser y executor del 070 omiten `fechaIncidente`, `ciudad`, `pais` y `edadVictima`, y rellenan valores fijos. La corrección está documentada en `specs/071-correccion-fidelidad-simulacion-070/` y debe aprobarse antes de implementarse. No se modifica código hasta entonces.
+
 La implementación se completó siguiendo el plan aprobado. Resumen:
 
 - **Migración aditiva**: se crearon `SimulacionRun` y `SimulacionReporte` y se añadió la relación `Usuario.simulaciones`. Se agregó `casosJson` a `SimulacionRun` para permitir repetir una simulación con otro modelo. No se modificó el modelo `Reporte`.
