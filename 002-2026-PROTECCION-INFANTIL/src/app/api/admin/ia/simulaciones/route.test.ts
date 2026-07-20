@@ -31,8 +31,8 @@ describe("POST /api/admin/ia/simulaciones", () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
 
-        const csv = `texto,plataforma,identificador,categoriaEsperada
-"Este es un texto de prueba con más de 20 caracteres para la simulación",instagram,usuario123,ACOSO`;
+        const csv = `texto,plataforma,identificador,fechaIncidente,ciudad,pais,edadVictima,categoriaEsperada
+"Este es un texto de prueba con más de 20 caracteres para la simulación",instagram,usuario123,2026-01-15T10:00:00Z,Bogotá,Colombia,14,ACOSO`;
 
         const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
             modelo: "ornith:9b",
@@ -58,7 +58,7 @@ describe("POST /api/admin/ia/simulaciones", () => {
 
         const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
             modelo: "nomic-embed-text",
-            archivo: `texto,plataforma,identificador\n"texto de prueba suficientemente largo",instagram,usuario123`,
+            archivo: `texto,plataforma,identificador,fechaIncidente,ciudad,pais\n"texto de prueba suficientemente largo",instagram,usuario123,2026-01-15T10:00:00Z,Bogotá,Colombia`,
             formato: "csv",
         });
 
@@ -74,6 +74,9 @@ describe("POST /api/admin/ia/simulaciones", () => {
             texto: `texto de prueba suficientemente largo ${i}`,
             plataforma: "instagram",
             identificador: `usuario${i}`,
+            fechaIncidente: "2026-01-15T10:00:00Z",
+            ciudad: "Bogotá",
+            pais: "Colombia",
         }));
 
         const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
@@ -96,7 +99,14 @@ describe("POST /api/admin/ia/simulaciones", () => {
 
         const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
             modelo: "ornith:9b",
-            archivo: JSON.stringify([{ texto: "texto de prueba suficientemente largo", plataforma: "instagram", identificador: "usuario123" }]),
+            archivo: JSON.stringify([{
+                texto: "texto de prueba suficientemente largo",
+                plataforma: "instagram",
+                identificador: "usuario123",
+                fechaIncidente: "2026-01-15T10:00:00Z",
+                ciudad: "Bogotá",
+                pais: "Colombia",
+            }]),
             formato: "json",
         });
 
