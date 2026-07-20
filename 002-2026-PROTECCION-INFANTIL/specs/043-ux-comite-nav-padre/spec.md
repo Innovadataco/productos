@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: PLANEADO (espera aprobación)
+**Status**: IMPLEMENTADO
 
 **Input**: Cuatro problemas de UX verificados: (1) el padre autenticado no tiene acceso al panel `/dashboard` desde la navegación; (2) la bandeja del comité tiene pestañas Pendientes/Mías y un paso explícito de "Asignarme"; (3) el resolver del comité ofrece dos acciones confusas (Clasificar/Corregir); (4) el copy del Círculo de Confianza usa jerga técnica.
 
@@ -138,4 +138,45 @@ Cambiar el texto de la línea 364 de `src/app/dashboard/circulo-confianza/page.t
 
 ## Implementación
 
-*Sección por completar tras la aprobación del plan y la implementación.*
+### Objetivo alcanzado
+
+Se implementaron las 4 User Stories del spec 043: navegación del padre autenticado a `/dashboard`, bandeja unificada del comité con auto-asignación, resolver simplificado siempre en `CORREGIDO` y copy claro del Círculo de Confianza.
+
+### Decisiones de diseño
+
+- **Navegación del padre**: se optó por mantener un único botón "Dashboard" en el header cuyo `href` depende del rol (`PARENT` → `/dashboard`; cualquier otro/anónimo → `/dashboard-publico`), más un ítem "Mi panel" en el menú desplegable y móvil. Esto evita duplicar vistas y no afecta a usuarios anónimos.
+- **Bandeja unificada**: se eliminaron las pestañas y se creó un nuevo endpoint `GET /api/admin/comite/solicitudes` que devuelve todas las solicitudes visibles para el rol (admin/tenant o comité). Al abrir un caso `PENDIENTE`, el frontend lo auto-asigna vía `POST /api/admin/comite/[id]/asignar` antes de mostrar el detalle, siguiendo el patrón de la bandeja de operadores.
+- **Resolver simplificado**: se eliminó el enum `accion` del schema y de la UI. El endpoint siempre crea una `correccionAdmin`, actualiza `ClasificacionIA.categoria` y `confianza = 1.0`, y registra la transición con `estadoNuevo = CORREGIDO` y `responsableTipo = COMITE`.
+- **Copy**: se reemplazó "emails ciegos" por una frase explícita y cercana al usuario final.
+
+### Archivos y endpoints afectados
+
+- `src/components/modules/NavHeader.tsx` (US1)
+- `src/components/modules/NavHeader.test.tsx` (US1)
+- `src/app/api/admin/comite/solicitudes/route.ts` (US2)
+- `src/components/modules/ComiteBandeja.tsx` (US2)
+- `src/components/modules/ComiteBandeja.test.tsx` (US2)
+- `src/app/api/admin/comite/[id]/resolver/route.ts` (US3)
+- `src/app/api/admin/comite/[id]/resolver/route.test.ts` (US3)
+- `src/app/api/admin/comite/pendientes/route.test.ts` (US3 - ajustado a `CORREGIDO`)
+- `src/components/modules/ComiteSolicitudDetalle.tsx` (US3)
+- `src/components/modules/ComiteSolicitudDetalle.test.tsx` (US3)
+- `src/app/dashboard/circulo-confianza/page.tsx` (US4)
+- `specs/043-ux-comite-nav-padre/checklists/requirements.md`
+- `specs/043-ux-comite-nav-padre/quickstart.md` (checklist)
+- `docs/cierre-043.md`
+
+### Tests
+
+- Tests de componente: `NavHeader`, `ComiteBandeja`, `ComiteSolicitudDetalle`.
+- Tests de endpoint: `POST /api/admin/comite/[id]/resolver` (nuevo) y ajuste en `pendientes/route.test.ts`.
+- Full suite: 439 tests pasan, 0 fallos.
+
+### Migraciones
+
+Ninguna. No se modificó el modelo de datos de Prisma.
+
+### Deuda técnica
+
+- Los warnings de `act(...)` en los tests de `ComiteBandeja` y `ComiteSolicitudDetalle` son ruido de testing-library; no afectan el comportamiento ni el resultado, pero se pueden silenciar envolviendo los eventos en `act()` o usando `@testing-library/user-event` en una futura ronda de pulido de tests.
+- No se rediseñó la estructura visual del detalle; solo se simplificó el flujo.
