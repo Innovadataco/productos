@@ -65,8 +65,25 @@ function getSvgAttributes(node) {
     return attrs;
 }
 
+function isInteractiveElement(tagName) {
+    return ['button', 'a', 'input', 'select', 'textarea'].includes(tagName);
+}
+
+function hasInteractiveAttributes(attrs) {
+    let hasRole = false;
+    let hasTabIndex = false;
+    for (const a of attrs) {
+        if (a.type !== 'JSXAttribute') continue;
+        const n = a.name.name;
+        if (n === 'role' && a.value?.value) hasRole = true;
+        if (n === 'tabIndex' && (a.value?.value !== undefined || a.value?.value !== -1)) hasTabIndex = true;
+    }
+    return { hasRole, hasTabIndex };
+}
+
 const iconButtons = [];
 const standaloneIcons = [];
+const nonInteractiveClickables = [];
 
 function walk(node, file) {
     if (!node || typeof node !== 'object') return;
@@ -78,6 +95,25 @@ function walk(node, file) {
         if (tagName === 'svg' && !hasAccessibleName(node.openingElement)) {
             const attrs = getSvgAttributes(node);
             standaloneIcons.push({ file: path.relative(root, file), line: node.loc?.start?.line, attrs });
+        }
+        if (!isInteractiveElement(tagName) && tagName && tagName[0] === tagName[0].toLowerCase()) {
+            for (const a of node.openingElement.attributes) {
+                if (a.type === 'JSXAttribute' && a.name.name === 'onClick' && a.value?.expression) {
+                    const { hasRole, hasTabIndex } = hasInteractiveAttributes(node.openingElement.attributes);
+                    const fileRel = path.relative(root, file);
+                    if (fileRel.startsWith('components/ui')) continue;
+                    if (!hasRole || !hasTabIndex) {
+                        nonInteractiveClickables.push({
+                            file: fileRel,
+                            line: node.loc?.start?.line,
+                            tag: tagName,
+                            hasRole,
+                            hasTabIndex,
+                        });
+                    }
+                    break;
+                }
+            }
         }
     }
     for (const key of Object.keys(node)) {
@@ -106,7 +142,25 @@ function walkDir(dir) {
 
 walkDir(root);
 
+let exitCode = 0;
+
 console.log(`Icon-only buttons without accessible label: ${iconButtons.length}`);
 iconButtons.forEach(i => console.log(`  ${i.file}:${i.line} <${i.tag}>`));
+if (iconButtons.length > 0) exitCode = 1;
+
 console.log(`\nSVG elements without accessible name or aria-hidden: ${standaloneIcons.length}`);
 standaloneIcons.forEach(i => console.log(`  ${i.file}:${i.line} ${JSON.stringify(i.attrs)}`));
+if (standaloneIcons.length > 0) exitCode = 1;
+
+console.log(`\nNon-interactive elements with onClick missing role and/or tabIndex: ${nonInteractiveClickables.length}`);
+nonInteractiveClickables.forEach(i => {
+    const missing = [i.hasRole ? '' : 'role', i.hasTabIndex ? '' : 'tabIndex'].filter(Boolean).join('/');
+    console.log(`  ${i.file}:${i.line} <${i.tag}> missing ${missing}`);
+});
+if (nonInteractiveClickables.length > 0) exitCode = 1;
+
+if (exitCode === 0) {
+    console.log('\nNo accessibility issues found.');
+}
+
+process.exit(exitCode);

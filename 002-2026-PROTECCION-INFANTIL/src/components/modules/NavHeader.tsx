@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 export function NavHeader() {
     const { user, isLoading, logout } = useAuth();
@@ -167,13 +168,15 @@ export function NavHeader() {
                         </Link>
                     )}
 
-                    <button
-                        className="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl glass-input text-body"
-                        onClick={() => setMobileOpen((v) => !v)}
-                        aria-label="Menú"
-                    >
-                        {mobileOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
-                    </button>
+                    <Tooltip content="Menú">
+                        <button
+                            className="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl glass-input text-body"
+                            onClick={() => setMobileOpen((v) => !v)}
+                            aria-label="Menú"
+                        >
+                            {mobileOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
+                        </button>
+                    </Tooltip>
                 </nav>
             </div>
 

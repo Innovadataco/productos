@@ -1,23 +1,27 @@
 "use client";
 
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { Tooltip } from "./Tooltip";
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
     const { theme, toggleTheme, mounted } = useTheme();
+    const label = theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
     return (
-        <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-            className={`inline-flex h-11 w-11 items-center justify-center rounded-full surface hover:shadow-md transition ${className}`}
-        >
-            {mounted && theme === "dark" ? (
-                <SunIcon className="h-4 w-4 text-amber-400" />
-            ) : (
-                <MoonIcon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-            )}
-        </button>
+        <Tooltip content={label}>
+            <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={label}
+                className={`inline-flex h-11 w-11 items-center justify-center rounded-full surface hover:shadow-md transition ${className}`}
+            >
+                {mounted && theme === "dark" ? (
+                    <SunIcon className="h-4 w-4 text-amber-400" />
+                ) : (
+                    <MoonIcon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                )}
+            </button>
+        </Tooltip>
     );
 }
 

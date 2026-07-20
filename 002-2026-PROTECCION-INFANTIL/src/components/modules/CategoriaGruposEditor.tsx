@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { GRUPOS_CATEGORIA_FALLBACK, type CategoriaGrupo } from "@/lib/categoria-grupos";
 
 const CATEGORIAS_INTERNAS = [
@@ -245,14 +246,16 @@ export function CategoriaGruposEditor() {
                                             className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-[10px] font-medium text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
                                         >
                                             {CATEGORIA_LABELS[cat] || cat}
-                                            <button
-                                                type="button"
-                                                onClick={() => quitarCategoria(grupo.clave, cat)}
-                                                className="ml-1 leading-none hover:text-red-600"
-                                                aria-label={`Quitar ${CATEGORIA_LABELS[cat] || cat}`}
-                                            >
-                                                ×
-                                            </button>
+                                            <Tooltip content={`Quitar ${CATEGORIA_LABELS[cat] || cat}`}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => quitarCategoria(grupo.clave, cat)}
+                                                    className="ml-1 leading-none hover:text-red-600"
+                                                    aria-label={`Quitar ${CATEGORIA_LABELS[cat] || cat}`}
+                                                >
+                                                    ×
+                                                </button>
+                                            </Tooltip>
                                         </span>
                                     ))}
                                 </div>
