@@ -43,7 +43,7 @@ export function Sparkline({
                         y1={y}
                         x2={width - padding.right}
                         y2={y}
-                        stroke="currentColor" className="text-slate-200 dark:text-slate-700"
+                        stroke="currentColor" className="text-slate-700 dark:text-slate-400"
                         strokeWidth="1"
                         strokeDasharray="4 4"
                     />
@@ -54,13 +54,13 @@ export function Sparkline({
                 const value = Math.round(min + ratio * range);
                 const y = padding.top + chartHeight - ratio * chartHeight;
                 return (
-                    <text key={i} x={padding.left - 8} y={y + 4} textAnchor="end" className="fill-slate-400 dark:fill-slate-500 text-[10px]">
+                    <text key={i} x={padding.left - 8} y={y + 4} textAnchor="end" className="fill-slate-500 dark:fill-slate-300 text-[10px]">
                         {value}
                     </text>
                 );
             })}
             {/* Area under line */}
-            <polygon points={areaPoints} fill="currentColor" className="text-sky-500 dark:text-cyan-400" fillOpacity="0.1" />
+            <polygon points={areaPoints} fill="currentColor" className="text-sky-600 dark:text-cyan-300" fillOpacity="0.1" />
             {/* Line */}
             <polyline
                 fill="none"
@@ -79,7 +79,7 @@ export function Sparkline({
                         <circle cx={x} cy={y} r="4" fill="currentColor" stroke="currentColor" strokeWidth="2" className="text-sky-500 dark:text-cyan-400 stroke-white dark:stroke-slate-900 hover:r-5 transition-all">
                             <title>{`${d.label}: ${d.value}`}</title>
                         </circle>
-                        <text x={x} y={height - 8} textAnchor="middle" className="fill-slate-500 text-[9px]">
+                        <text x={x} y={height - 8} textAnchor="middle" className="fill-slate-500 dark:fill-slate-300 text-[9px]">
                             {d.label.slice(5)}
                         </text>
                     </g>

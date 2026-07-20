@@ -7,11 +7,11 @@ export const RIESGO_LABELS: Record<string, string> = {
 };
 
 export const RIESGO_COLORS: Record<string, string> = {
-    BAJO: "bg-emerald-500",
-    MEDIO: "bg-amber-500",
-    ALTO: "bg-orange-500",
-    CRITICO: "bg-red-500",
-    SIN_CLASIFICAR: "bg-slate-400",
+    BAJO: "bg-emerald-600 dark:bg-emerald-500",
+    MEDIO: "bg-amber-600 dark:bg-amber-500",
+    ALTO: "bg-orange-600 dark:bg-orange-500",
+    CRITICO: "bg-red-600 dark:bg-red-500",
+    SIN_CLASIFICAR: "bg-slate-500 dark:bg-slate-400",
 };
 
 export const RIESGO_TEXT_COLORS: Record<string, string> = {
