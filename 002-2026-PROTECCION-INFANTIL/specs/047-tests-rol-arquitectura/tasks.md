@@ -24,18 +24,18 @@
 
 ## Phase 2: User Story 1 — Tests de visibilidad por rol (Priority: P1) 🎯
 
-**Goal**: Crear `src/lib/role-visibility.test.ts` que certifique qué ve cada rol y qué no ve en navegación, proxy y permisos.
+**Goal**: Crear `src/lib/role-visibility.test.tsx` que certifique qué ve cada rol y qué no ve en navegación, proxy y permisos.
 
-**Independent Test**: `npm run test -- src/lib/role-visibility.test.ts` pasa.
+**Independent Test**: `npm run test -- src/lib/role-visibility.test.tsx` pasa.
 
 ### Tests for User Story 1
 
-- [ ] T004 [P] [US1] Test de `ComiteSubNav`: ADMIN/SCHOOL_ADMIN ven 3 tabs; COMITE_VALIDACION solo ve "Bandeja".
-- [ ] T005 [P] [US1] Test de `AdminNav`: ADMIN/SCHOOL_ADMIN ven todas las secciones; OPERADOR solo Bandeja/Spam; COMITE_VALIDACION solo Comité.
-- [ ] T006 [P] [US1] Test de `proxy`: PARENT redirigido desde `/dashboard/admin`; COMITE_VALIDACION redirigido desde `/dashboard/admin/comite/gestion` y `/auditoria`; ADMIN accede a admin-only.
-- [ ] T007 [P] [US1] Test de `puedeGestionarReporte`: ADMIN todo; SCHOOL_ADMIN solo su tenant; OPERADOR solo lo asignado; otros roles false.
+- [x] T004 [P] [US1] Test de `ComiteSubNav`: ADMIN/SCHOOL_ADMIN ven 3 tabs; COMITE_VALIDACION solo ve "Bandeja".
+- [x] T005 [P] [US1] Test de `AdminNav`: ADMIN/SCHOOL_ADMIN ven todas las secciones; OPERADOR solo Bandeja/Spam; COMITE_VALIDACION solo Comité.
+- [x] T006 [P] [US1] Test de `proxy`: PARENT redirigido desde `/dashboard/admin`; COMITE_VALIDACION redirigido desde `/dashboard/admin/comite/gestion` y `/auditoria`; ADMIN accede a admin-only.
+- [x] T007 [P] [US1] Test de `puedeGestionarReporte`: ADMIN todo; SCHOOL_ADMIN solo su tenant; OPERADOR solo lo asignado; otros roles false.
 
-**Checkpoint**: `role-visibility.test.ts` cubre los 9 escenarios de aceptación y pasa.
+**Checkpoint**: `role-visibility.test.tsx` cubre los 9 escenarios de aceptación y pasa.
 
 ---
 
@@ -47,8 +47,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T008 [P] [US2] Redactar `docs/ARCHITECTURE.md` con introducción, capas de la aplicación, flujo de datos, convenciones, seguridad y despliegue.
-- [ ] T009 [US2] Revisar coherencia con `AGENTS.md` y la constitución; ajustar si hay contradicciones.
+- [x] T008 [P] [US2] Redactar `docs/ARCHITECTURE.md` con introducción, capas de la aplicación, flujo de datos, convenciones, seguridad y despliegue.
+- [x] T009 [US2] Revisar coherencia con `AGENTS.md` y la constitución; ajustar si hay contradicciones.
 
 **Checkpoint**: `docs/ARCHITECTURE.md` existe, tiene las 4 secciones y no contradice `AGENTS.md`.
 
@@ -62,11 +62,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T010 [P] [US3] Añadir JSDoc a funciones principales de `src/lib/reporte-lifecycle.ts`.
-- [ ] T011 [P] [US3] Añadir JSDoc a funciones principales de `src/lib/circulo-confianza.ts`.
-- [ ] T012 [US3] Añadir JSDoc a `src/lib/proxy.ts`.
-- [ ] T013 [US3] Añadir JSDoc a funciones principales de `src/lib/ai/classifier.ts`.
-- [ ] T014 [US3] Añadir JSDoc a funciones principales de `src/lib/param-encryption.ts`.
+- [x] T010 [P] [US3] Añadir JSDoc a funciones principales de `src/lib/reporte-lifecycle.ts`.
+- [x] T011 [P] [US3] Añadir JSDoc a funciones principales de `src/lib/circulo-confianza.ts`.
+- [x] T012 [US3] Añadir JSDoc a `src/lib/proxy.ts`.
+- [x] T013 [US3] Añadir JSDoc a funciones principales de `src/lib/ai/classifier.ts`.
+- [x] T014 [US3] Añadir JSDoc a funciones principales de `src/lib/param-encryption.ts`.
 
 **Checkpoint**: Los 5 módulos tienen JSDoc en sus exportaciones principales y no hay errores de tipado/lint.
 
@@ -76,16 +76,16 @@
 
 **Purpose**: Garantizar calidad, commits ordenados y cierre del spec.
 
-- [ ] T015 [P] Ejecutar `npx tsc --noEmit` y corregir errores.
-- [ ] T016 [P] Ejecutar `npm run lint` y corregir errores (warnings heredados se documentan).
-- [ ] T017 [P] Ejecutar `npm run test` y asegurar que todos los tests pasan.
-- [ ] T018 Ejecutar `quickstart.md` paso a paso.
-- [ ] T019 Hacer deploy limpio con `./scripts/dev-restart.sh`.
-- [ ] T020 Crear commits: uno por US1, US2, US3 y uno de docs.
-- [ ] T021 Push a `feature/001-scaffolding`.
-- [ ] T022 Completar sección Implementación en `spec.md`.
-- [ ] T023 Crear `specs/047-tests-rol-arquitectura/cierre.md` con evidencia.
-- [ ] T024 Marcar `Status: CERRADA` en `spec.md`.
+- [x] T015 [P] Ejecutar `npx tsc --noEmit` y corregir errores.
+- [x] T016 [P] Ejecutar `npm run lint` y corregir errores (warnings heredados se documentan).
+- [x] T017 [P] Ejecutar `npm run test` y asegurar que todos los tests pasan.
+- [x] T018 Ejecutar `quickstart.md` paso a paso.
+- [x] T019 Hacer deploy limpio con `./scripts/dev-restart.sh`.
+- [x] T020 Crear commits: uno por US1, US2, US3 y uno de docs.
+- [x] T021 Push a `feature/001-scaffolding`.
+- [x] T022 Completar sección Implementación en `spec.md`.
+- [x] T023 Crear `specs/047-tests-rol-arquitectura/cierre.md` con evidencia.
+- [x] T024 Marcar `Status: CERRADA` en `spec.md`.
 
 **Checkpoint**: Spec cerrado, validado, deploy limpio y push realizado.
 
