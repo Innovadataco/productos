@@ -361,7 +361,7 @@ export default function CirculoConfianzaPage() {
                         className="h-5 w-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                     />
                     <span className="text-sm text-body">
-                        Recibir emails ciegos cuando haya novedades en mi Círculo de Confianza
+                        Recibir un aviso por email cuando alguno de los contactos de mi Círculo de Confianza aparezca en un reporte.
                     </span>
                 </label>
             </GlassCard>
