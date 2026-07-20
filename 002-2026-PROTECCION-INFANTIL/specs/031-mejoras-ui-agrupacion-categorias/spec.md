@@ -1,6 +1,6 @@
 # Spec 031 — Mejoras de UI: agrupación de categorías, terminología, círculo de confianza, dashboard público, notificaciones y logout
 
-> Estado: **CERRADA**.
+> **Status**: CERRADA.
 
 ## Objetivo
 

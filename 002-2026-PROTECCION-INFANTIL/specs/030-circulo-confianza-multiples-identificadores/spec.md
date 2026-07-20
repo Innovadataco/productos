@@ -1,6 +1,6 @@
 # Spec 030 — Rediseño del Círculo de Confianza: contacto = persona con múltiples identificadores
 
-> Estado: **CERRADA**.
+> **Status**: CERRADA.
 
 ## Objetivo
 

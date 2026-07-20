@@ -1,6 +1,6 @@
 # Spec 025 — Anonimización reforzada + encriptación del original
 
-> Estado: **CERRADA**.
+> **Status**: CERRADA.
 > Plan: [`plan.md`](plan.md).
 
 ## Alcance

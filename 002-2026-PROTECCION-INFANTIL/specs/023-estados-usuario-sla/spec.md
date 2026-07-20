@@ -1,6 +1,6 @@
 # Spec 023 — Estados de cara al usuario + SLA visible
 
-> Estado: **CERRADA**.
+> **Status**: CERRADA.
 > Plan: [`plan.md`](plan.md).
 
 ## Alcance

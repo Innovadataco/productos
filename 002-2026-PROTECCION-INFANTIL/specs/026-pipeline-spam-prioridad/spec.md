@@ -1,6 +1,6 @@
 # Spec 026 — Pipeline de spam
 
-> Estado: **CERRADA**.
+> **Status**: CERRADA.
 > Plan: [`plan.md`](plan.md).
 
 ## Alcance

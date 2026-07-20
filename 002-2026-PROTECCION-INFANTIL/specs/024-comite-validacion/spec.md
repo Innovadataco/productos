@@ -1,6 +1,6 @@
 # Spec 024 — Rol Comité de Validación + gestión de cuenta e integrantes
 
-> Estado: **CERRADA**.
+> **Status**: CERRADA.
 > Plan: [`plan.md`](plan.md).
 > Data model: [`data-model.md`](data-model.md).
 > Cierre: [`cierre.md`](cierre.md).
