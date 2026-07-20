@@ -75,7 +75,7 @@ export function NavHeader() {
                     <ThemeToggle />
 
                     <Link
-                        href="/dashboard-publico"
+                        href={user?.rol === "PARENT" ? "/dashboard" : "/dashboard-publico"}
                         className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
                     >
                         Dashboard
@@ -131,6 +131,9 @@ export function NavHeader() {
                                         )}
                                         {!esEmpleado && (
                                             <>
+                                                <NavDropdownLink href="/dashboard" onClick={() => setOpen(false)}>
+                                                    Mi panel
+                                                </NavDropdownLink>
                                                 <NavDropdownLink href="/dashboard/circulo-confianza" onClick={() => setOpen(false)}>
                                                     Círculo de Confianza
                                                 </NavDropdownLink>
@@ -182,6 +185,7 @@ export function NavHeader() {
                             <>
                                 {!esEmpleado && (
                                     <>
+                                        <MobileLink href="/dashboard" onClick={() => setMobileOpen(false)}>Mi panel</MobileLink>
                                         <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>
                                         <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>
                                     </>
