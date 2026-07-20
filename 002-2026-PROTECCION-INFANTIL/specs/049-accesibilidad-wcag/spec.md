@@ -122,4 +122,52 @@ Todos los usuarios, incluidos quienes navegan solo con teclado o con dispositivo
 
 ## Implementación (documentado al cierre)
 
-_Ver `cierre.md` y sección de Implementación al finalizar._
+A continuación el resumen de lo realizado para cerrar el Spec 049.
+
+### Status
+CERRADA
+
+### User Stories implementadas
+- US1: Nombres accesibles para controles de ícono y badges de riesgo no solo por color.
+- US2: Contraste de texto sobre fondo glassmorphism medido y ajustado.
+- US3: Foco visible, navegación por teclado y targets táctiles ≥ 44×44 px.
+
+### Decisiones técnicas
+- Se usaron atributos HTML nativos (`aria-label`, `aria-hidden`, `role`, `title`) y CSS nativo; no se agregaron librerías externas.
+- Para contraste se midieron textos sobre fondos del sistema de diseño y se ajustaron solo los que fallaban (texto accent/subtle y botones primarios). No se rediseñaron componentes masivamente.
+- Se priorizó `outline` y `outline-offset` para foco visible sin romper layouts de glassmorphism.
+- Se crearon scripts de auditoría (`scripts/a11y_audit.js`, `scripts/contrast_check.js`) para permitir verificación repetible en el futuro.
+
+### Archivos principales tocados
+- `src/components/NavHeader.tsx` — `aria-label` en botones de solo ícono.
+- `src/components/AuditLogViewer.tsx` — `aria-label` en controles de ícono.
+- `src/components/AdminNav.tsx`, `src/components/LandingHero.tsx`, `src/components/LandingFeatures.tsx`, `src/components/CanalesOficiales.tsx`, `src/components/ConfirmacionReporte.tsx`, `src/components/IaDocsPanel.tsx`, `src/components/offline.tsx`, `src/app/dataset/page.tsx`, `src/components/ui/Select.tsx`, `src/components/ThemeToggle.tsx`, `src/components/AdminReportesTable.tsx`, `src/components/ConfigPanel.tsx` — `aria-hidden` en íconos decorativos.
+- `src/components/RiskBadge.tsx` — punto de color con alternativa textual y rol `img` para no depender solo del color.
+- `src/app/globals.css` — ajustes de color de texto (accent/subtle), fallback de foco visible para botones y enlaces nativos.
+- `src/components/ui/Button.tsx` — fondos `sky-700`, `emerald-700`, `red-700` para contraste mínimo.
+- `src/lib/labels.ts` — colores de riesgo `700` (texto) y `400` (fondo) para contrastes superiores a 4.5:1.
+- `src/app/admin/anti-abuso/components/AdminAntiAbusoSimulacion.tsx` — colores de acento ajustados.
+- `src/components/ThemeToggle.tsx` — target táctil 44×44 px.
+- `src/components/NavHeader.tsx` — target táctil de botones de navegación ≥ 44×44 px.
+- `scripts/a11y_audit.js` — auditoría de icon-only buttons y SVGs sin nombre accesible.
+- `scripts/contrast_check.js` — verificación de contraste entre pares de color.
+- Artefactos del Spec-Kit en `specs/049-accesibilidad-wcag/`.
+
+### Tests y validación
+- `npx tsc --noEmit` — OK.
+- `npm run lint` — OK (1 warning preexistente en `GestionPageClient.tsx`, no relacionado con este spec).
+- `npm run test` — 531 passed.
+- `npm run build` — OK.
+- `./scripts/a11y_audit.js` — 0 icon-only buttons sin label, 0 SVGs sin accesible name.
+- `./scripts/contrast_check.js` — 0 fallos de contraste sobre los pares evaluados.
+- Deploy limpio con `./scripts/dev-restart.sh` — healthcheck OK, app en puerto 5005.
+- Smoke test: landing responde HTTP 200.
+
+### Migraciones y datos
+- No se realizaron migraciones ni cambios de esquema de base de datos.
+- No se modificaron datos de usuario.
+
+### Deuda técnica
+- La auditoría de contraste se mantiene con pares de color codificados; a futuro se puede extender para extraer tokens del tema automáticamente.
+- No se integró axe-core en el pipeline de CI; se recomienda como mejora posterior.
+- El warning preexistente de `useEffect` en `GestionPageClient.tsx` queda fuera del alcance de este spec.
