@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES } from "@/lib/errors";
+import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { enviarEmailBienvenidaOperador, enviarEmailBienvenidaComite } from "@/lib/email";
 import { randomBytes } from "crypto";
@@ -86,7 +86,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: 403 });
+            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
         }
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },

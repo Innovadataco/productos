@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { listOllamaModels } from "@/lib/ai/ollama-config";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { RolUsuario } from "@prisma/client";
 
 export async function GET(request: Request) {
@@ -23,9 +23,9 @@ export async function GET(request: Request) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        const message = error instanceof Error ? error.message : String(error);
+        console.error("[IA-MODELOS] Error listando modelos:", error);
         return NextResponse.json(
-            { error: { message, code: ERROR_CODES.INTERNAL_ERROR } },
+            { error: { message: "No se pudieron listar los modelos de Ollama", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }
         );
     }

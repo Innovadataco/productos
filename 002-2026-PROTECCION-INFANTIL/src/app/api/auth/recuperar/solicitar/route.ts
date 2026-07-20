@@ -104,10 +104,10 @@ export async function POST(request: Request) {
             };
 
             // Si no se pudo enviar el email, exponemos el token para que el usuario pueda continuar
-            // (útil en entornos sin Resend configurado o en modo desarrollo)
+            // (útil en entornos sin Resend configurado o en modo desarrollo).
+            // Nunca exponemos el mensaje de error del proveedor de email.
             if (!emailSent) {
                 response.devToken = token;
-                if (emailError) response.emailError = emailError;
             }
             return NextResponse.json(response, { status: 200 });
         }

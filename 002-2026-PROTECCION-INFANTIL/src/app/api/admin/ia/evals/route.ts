@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { RolUsuario, EvalRunEstado } from "@prisma/client";
 
 // pg-boss se importa dinámicamente para no cargarlo en el bundle edge/cliente.
@@ -73,9 +73,9 @@ export async function POST(request: Request) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        const message = error instanceof Error ? error.message : String(error);
+        console.error("[IA-EVALS] Error iniciando evaluación:", error);
         return NextResponse.json(
-            { error: { message, code: ERROR_CODES.INTERNAL_ERROR } },
+            { error: { message: "Error iniciando la evaluación", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }
         );
     }

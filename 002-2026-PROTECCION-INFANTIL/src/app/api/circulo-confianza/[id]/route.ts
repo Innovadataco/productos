@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { actualizarContacto, obtenerDetalleContacto } from "@/lib/circulo-confianza";
 
 const updateSchema = z.object({
@@ -69,11 +69,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 { status: 404 }
             );
         }
-        const message = error instanceof Error ? error.message : "Error interno";
-        const status = message.includes("duplicado") ? 409 : 500;
+        console.error("[CIRCULO-CONFIANZA] Error actualizando contacto:", error);
         return NextResponse.json(
-            { error: { message, code: ERROR_CODES.INTERNAL_ERROR } },
-            { status }
+            { error: { message: safeErrorMessage(error), code: ERROR_CODES.INTERNAL_ERROR } },
+            { status: 500 }
         );
     }
 }

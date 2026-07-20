@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES } from "@/lib/errors";
+import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { enviarEmailBienvenidaOperador, enviarEmailBienvenidaComite } from "@/lib/email";
 import { validarExclusividadRolComite, normalizarEsComiteParaRol } from "@/lib/operadores/permisos";
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ operadores: conConteo });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: 403 });
+            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
         }
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
             validarExclusividadRolComite({ rol, esComite });
         } catch (err) {
             if (err instanceof Error && "code" in err && typeof err.code === "string") {
-                return NextResponse.json({ error: { message: err.message, code: err.code } }, { status: 400 });
+                return NextResponse.json({ error: { message: safeErrorMessage(err), code: err.code } }, { status: 400 });
             }
             throw err;
         }
@@ -219,7 +219,7 @@ export async function POST(request: Request) {
         }, { status: 201 });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: 403 });
+            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
         }
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },

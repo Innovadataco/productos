@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES } from "@/lib/errors";
+import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { encryptParameter, decryptParameter } from "@/lib/param-encryption";
 
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ integrantes: integrantes.map(serializarIntegrante) });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: 403 });
+            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
         }
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
@@ -189,7 +189,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ integrante: serializarIntegrante(integrante) }, { status: 201 });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: 403 });
+            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
         }
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },

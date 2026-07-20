@@ -3,7 +3,7 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { RolUsuario, EvalRunEstado, type Prisma } from "@prisma/client";
 import { getCurrentProductionConfig, type ExperimentConfigSnapshot } from "@/lib/ai/eval-runner";
 import { listOllamaModels } from "@/lib/ai/ollama-config";
@@ -139,9 +139,9 @@ export async function POST(request: Request) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        const message = error instanceof Error ? error.message : String(error);
+        console.error("[IA-EXPERIMENTOS] Error creando experimento:", error);
         return NextResponse.json(
-            { error: { message, code: ERROR_CODES.INTERNAL_ERROR } },
+            { error: { message: "Error creando el experimento", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }
         );
     }

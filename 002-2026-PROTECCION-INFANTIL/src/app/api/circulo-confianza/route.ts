@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import {
     listarContactos,
     agregarContacto,
@@ -87,17 +87,10 @@ export async function POST(request: Request) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        const message = error instanceof Error ? error.message : "Error interno";
-        const status = message.includes("duplicado")
-            ? 409
-            : message.includes("no encontrada")
-              ? 400
-              : message.includes("Límite")
-                ? 409
-                : 500;
+        console.error("[CIRCULO-CONFIANZA] Error creando contacto:", error);
         return NextResponse.json(
-            { error: { message, code: ERROR_CODES.INTERNAL_ERROR } },
-            { status }
+            { error: { message: safeErrorMessage(error), code: ERROR_CODES.INTERNAL_ERROR } },
+            { status: 500 }
         );
     }
 }

@@ -33,3 +33,26 @@ export class AppError extends Error {
         };
     }
 }
+
+/**
+ * Devuelve un mensaje de error seguro para exponer al cliente.
+ * Nunca expone Error.message de excepciones no controladas (puede contener
+ * detalles internos, nombres de tablas, PII, etc.).
+ */
+export function safeErrorMessage(
+    error: unknown,
+    options: { fallback?: string; knownCodes?: Record<string, string> } = {}
+): string {
+    const { fallback = "Error interno", knownCodes = {} } = options;
+
+    if (error instanceof AppError) {
+        return error.message;
+    }
+
+    if (error && typeof error === "object" && "code" in error && typeof error.code === "string") {
+        const known = knownCodes[error.code];
+        if (known) return known;
+    }
+
+    return fallback;
+}

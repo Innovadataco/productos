@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { prisma } from "@/lib/prisma";
+import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 
 const PID_FILE = resolve(process.cwd(), "worker.pid");
 
@@ -46,9 +47,9 @@ export async function GET() {
             { status: healthy ? 200 : 503 }
         );
     } catch (error) {
-        const msg = error instanceof Error ? error.message : "Error interno";
+        console.error("[HEALTH-WORKER] Error:", error);
         return NextResponse.json(
-            { status: "error", message: msg, timestamp: new Date().toISOString() },
+            { status: "error", message: safeErrorMessage(error), code: ERROR_CODES.INTERNAL_ERROR, timestamp: new Date().toISOString() },
             { status: 503 }
         );
     }

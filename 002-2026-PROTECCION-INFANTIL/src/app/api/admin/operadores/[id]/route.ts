@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES } from "@/lib/errors";
+import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 
 const updateSchema = z.object({
@@ -89,7 +89,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         return NextResponse.json({ operador: actualizado });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: 403 });
+            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
         }
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
@@ -135,7 +135,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         return NextResponse.json({ operador: { ...operador, estado: "inactivo" } });
     } catch (error) {
         if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: error.message, code: error.code } }, { status: 403 });
+            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
         }
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
