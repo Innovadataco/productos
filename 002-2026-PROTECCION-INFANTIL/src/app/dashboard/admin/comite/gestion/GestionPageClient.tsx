@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Perfil = {
     cupoMaximo: number | null;
@@ -82,7 +83,26 @@ export default function GestionPageClient() {
 
     const hayCuenta = Boolean(cuenta);
 
-    async function cargarCuenta() {
+    const cargarIntegrantes = useCallback(async (comiteId: string) => {
+        setLoadingIntegrantes(true);
+        try {
+            const res = await fetch(`/api/admin/comite/integrantes?comiteId=${encodeURIComponent(comiteId)}`, {
+                credentials: "include",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setIntegrantes(data.integrantes || []);
+            } else {
+                setMessage({ type: "error", text: data?.error?.message || "Error cargando integrantes" });
+            }
+        } catch {
+            setMessage({ type: "error", text: "Error de red cargando integrantes" });
+        } finally {
+            setLoadingIntegrantes(false);
+        }
+    }, []);
+
+    const cargarCuenta = useCallback(async () => {
         setLoadingCuenta(true);
         try {
             const res = await fetch("/api/admin/operadores", { credentials: "include" });
@@ -101,30 +121,11 @@ export default function GestionPageClient() {
         } finally {
             setLoadingCuenta(false);
         }
-    }
-
-    async function cargarIntegrantes(comiteId: string) {
-        setLoadingIntegrantes(true);
-        try {
-            const res = await fetch(`/api/admin/comite/integrantes?comiteId=${encodeURIComponent(comiteId)}`, {
-                credentials: "include",
-            });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) {
-                setIntegrantes(data.integrantes || []);
-            } else {
-                setMessage({ type: "error", text: data?.error?.message || "Error cargando integrantes" });
-            }
-        } catch {
-            setMessage({ type: "error", text: "Error de red cargando integrantes" });
-        } finally {
-            setLoadingIntegrantes(false);
-        }
-    }
+    }, [cargarIntegrantes]);
 
     useEffect(() => {
         cargarCuenta();
-    }, []);
+    }, [cargarCuenta]);
 
     const resumen = useMemo(() => {
         const activos = integrantes.filter((i) => i.estado === "ACTIVO").length;
@@ -431,16 +432,20 @@ export default function GestionPageClient() {
                         onActualizarNombre={(nombre) => actualizarNombreCuenta(cuenta!.id, nombre)}
                     />
 
-                    <div className="grid gap-4 sm:grid-cols-3">
-                        <ResumenCard label="Total integrantes" value={resumen.total} />
-                        <ResumenCard label="Activos" value={resumen.activos} variant="success" />
-                        <ResumenCard label="Inactivos" value={resumen.inactivos} variant="neutral" />
-                    </div>
+                    <section className="space-y-4" aria-labelledby="comite-resumen-title">
+                        <h2 id="comite-resumen-title" className="text-lg font-semibold text-body">Resumen</h2>
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            <ResumenCard label="Total integrantes" value={resumen.total} />
+                            <ResumenCard label="Activos" value={resumen.activos} variant="success" />
+                            <ResumenCard label="Inactivos" value={resumen.inactivos} variant="neutral" />
+                        </div>
+                    </section>
 
-                    <GlassCard>
-                        <h2 className="text-lg font-semibold text-body">
-                            {editingIntegranteId ? "Editar integrante" : "Nuevo integrante"}
-                        </h2>
+                    <section className="space-y-4" aria-labelledby="comite-integrante-title">
+                        <GlassCard>
+                            <h2 id="comite-integrante-title" className="text-lg font-semibold text-body">
+                                {editingIntegranteId ? "Editar integrante" : "Nuevo integrante"}
+                            </h2>
                         <p className="text-sm text-muted">
                             Los datos del integrante son privados. El número de identificación se guarda cifrado.
                         </p>
@@ -505,17 +510,22 @@ export default function GestionPageClient() {
                             </div>
                         </form>
                     </GlassCard>
+                    </section>
 
-                    <GlassCard>
-                        <h2 className="text-lg font-semibold text-body">Integrantes del comité</h2>
-                        {loadingIntegrantes ? (
-                            <div className="flex items-center gap-3 py-8 text-muted">
-                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                                Cargando integrantes...
-                            </div>
-                        ) : integrantes.length === 0 ? (
-                            <p className="py-6 text-sm text-muted">No hay integrantes registrados.</p>
-                        ) : (
+                    <section className="space-y-4" aria-labelledby="comite-listado-title">
+                        <GlassCard>
+                            <h2 id="comite-listado-title" className="text-lg font-semibold text-body">Integrantes del comité</h2>
+                            {loadingIntegrantes ? (
+                                <div className="flex items-center gap-3 py-8 text-muted">
+                                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                                    Cargando integrantes...
+                                </div>
+                            ) : integrantes.length === 0 ? (
+                                <EmptyState
+                                    title="No hay integrantes registrados"
+                                    description="Registra los integrantes que formarán parte del comité de validación."
+                                />
+                            ) : (
                             <div className="mt-4 overflow-x-auto">
                                 <table className="w-full text-left text-sm">
                                     <thead className="border-b border-slate-200 dark:border-slate-800">
@@ -573,6 +583,7 @@ export default function GestionPageClient() {
                             </div>
                         )}
                     </GlassCard>
+                    </section>
                 </>
             )}
         </div>

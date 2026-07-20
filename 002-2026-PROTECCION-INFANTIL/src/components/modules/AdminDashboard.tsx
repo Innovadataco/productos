@@ -95,19 +95,27 @@ export function AdminDashboard() {
     if (!data) return null;
 
     return (
-        <section className="space-y-6" aria-labelledby="dashboard-title">
-            <h1 id="dashboard-title" className="text-2xl font-bold text-body">Dashboard</h1>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <MetricCard label="Reportes registrados" value={data.totales.reportes} />
-                <MetricCard label="Reportes registrados hoy" value={data.totales.reportesHoy} />
-                <MetricCard label="Pendientes de revisión" value={data.totales.pendientesRevision} />
-                <MetricCard label="Pendientes de anonimización" value={data.totales.pendientesAnonimizacion} />
-                <MetricCard label="Reportes anónimos" value={data.totales.reportesAnonimos} />
-                <MetricCard label="Reportes autenticados" value={data.totales.reportesAutenticados} />
+        <section className="space-y-8" aria-labelledby="dashboard-title">
+            <div>
+                <h1 id="dashboard-title" className="text-2xl font-bold text-body">Dashboard</h1>
+                <p className="mt-1 text-sm text-muted">Resumen de reportes, categorías y operación de la plataforma.</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <section className="space-y-4" aria-labelledby="metrics-title">
+                <h2 id="metrics-title" className="text-lg font-semibold text-body">Métricas principales</h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <MetricCard label="Reportes registrados" value={data.totales.reportes} />
+                    <MetricCard label="Reportes registrados hoy" value={data.totales.reportesHoy} />
+                    <MetricCard label="Pendientes de revisión" value={data.totales.pendientesRevision} />
+                    <MetricCard label="Pendientes de anonimización" value={data.totales.pendientesAnonimizacion} />
+                    <MetricCard label="Reportes anónimos" value={data.totales.reportesAnonimos} />
+                    <MetricCard label="Reportes autenticados" value={data.totales.reportesAutenticados} />
+                </div>
+            </section>
+
+            <section className="space-y-4" aria-labelledby="charts-title">
+                <h2 id="charts-title" className="text-lg font-semibold text-body">Distribución</h2>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <ChartCard title="Distribución por estado">
                     <BarChart
                         ariaLabel="Distribución de reportes por estado"
@@ -143,6 +151,7 @@ export function AdminDashboard() {
                     data={data.tendencia.map((t) => ({ label: t.fecha, value: t.count }))}
                 />
             </ChartCard>
+            </section>
 
             <PrecisionTable precisionPorCategoria={data.precisionPorCategoria} />
 

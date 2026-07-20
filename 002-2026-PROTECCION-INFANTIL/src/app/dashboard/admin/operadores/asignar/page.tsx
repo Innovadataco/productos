@@ -64,17 +64,6 @@ export default function AdminOperadoresAsignarPage() {
 
             <OperadoresSubNav />
 
-            <div className="flex items-center justify-between gap-4">
-                <div className="text-sm text-muted">
-                    Estrategia actual: <span className="font-medium text-body">{data?.estrategia ?? "—"}</span>
-                    {" · "}
-                    Cupo default: <span className="font-medium text-body">{data?.cupoDefault ?? "—"}</span>
-                </div>
-                <Button variant="outline" onClick={cargar} isLoading={loading}>
-                    Actualizar
-                </Button>
-            </div>
-
             {error && (
                 <ErrorState
                     title="No pudimos cargar el estado de asignación"
@@ -83,7 +72,19 @@ export default function AdminOperadoresAsignarPage() {
                 />
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <section className="space-y-4" aria-labelledby="asignacion-resumen-title">
+                <div className="flex items-center justify-between gap-4">
+                    <h2 id="asignacion-resumen-title" className="text-lg font-semibold text-body">Resumen de la cola</h2>
+                    <Button variant="outline" onClick={cargar} isLoading={loading}>
+                        Actualizar
+                    </Button>
+                </div>
+                <div className="text-sm text-muted">
+                    Estrategia actual: <span className="font-medium text-body">{data?.estrategia ?? "—"}</span>
+                    {" · "}
+                    Cupo default: <span className="font-medium text-body">{data?.cupoDefault ?? "—"}</span>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <GlassCard className="p-5">
                     <p className="text-xs text-muted">Casos sin asignar</p>
                     <p className="mt-1 text-3xl font-bold text-body">{data?.sinAsignar ?? 0}</p>
@@ -105,6 +106,7 @@ export default function AdminOperadoresAsignarPage() {
                     </p>
                 </GlassCard>
             </div>
+            </section>
 
             <GlassCard>
                 <h2 className="text-lg font-semibold text-body">Operadores activos</h2>

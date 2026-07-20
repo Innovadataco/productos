@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { OperadoresSubNav } from "../components/OperadoresSubNav";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Perfil = {
     cupoMaximo: number;
@@ -261,17 +262,21 @@ export default function AdminOperadoresGestionPage() {
                 </div>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                <ResumenCard label="Total" value={resumen.total} />
-                <ResumenCard label="Activos" value={resumen.activos} variant="success" />
-                <ResumenCard label="Inactivos" value={resumen.inactivos} variant="neutral" />
-                <ResumenCard label="Casos abiertos" value={resumen.casosAbiertos} variant="warning" />
-                <ResumenCard label="Revisores apelaciones" value={resumen.revisores} variant="info" />
-            </div>
+            <section className="space-y-4" aria-labelledby="operadores-resumen-title">
+                <h2 id="operadores-resumen-title" className="text-lg font-semibold text-body">Resumen</h2>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                    <ResumenCard label="Total" value={resumen.total} />
+                    <ResumenCard label="Activos" value={resumen.activos} variant="success" />
+                    <ResumenCard label="Inactivos" value={resumen.inactivos} variant="neutral" />
+                    <ResumenCard label="Casos abiertos" value={resumen.casosAbiertos} variant="warning" />
+                    <ResumenCard label="Revisores apelaciones" value={resumen.revisores} variant="info" />
+                </div>
+            </section>
 
-            <GlassCard>
-                <h2 className="text-lg font-semibold text-body">Nuevo operador</h2>
-                <p className="text-sm text-muted">Se genera una contraseña temporal y se envía por email.</p>
+            <section className="space-y-4" aria-labelledby="operadores-nuevo-title">
+                <GlassCard>
+                    <h2 id="operadores-nuevo-title" className="text-lg font-semibold text-body">Nuevo operador</h2>
+                    <p className="text-sm text-muted">Se genera una contraseña temporal y se envía por email.</p>
                 <form onSubmit={crear} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Input
                         label="Email"
@@ -320,17 +325,22 @@ export default function AdminOperadoresGestionPage() {
                     </div>
                 </form>
             </GlassCard>
+            </section>
 
-            <GlassCard>
-                <h2 className="text-lg font-semibold text-body">Listado</h2>
-                {loading ? (
-                    <div className="flex items-center gap-3 py-8 text-muted">
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                        Cargando operadores...
-                    </div>
-                ) : operadores.length === 0 ? (
-                    <p className="py-6 text-sm text-muted">No hay operadores registrados.</p>
-                ) : (
+            <section className="space-y-4" aria-labelledby="operadores-listado-title">
+                <GlassCard>
+                    <h2 id="operadores-listado-title" className="text-lg font-semibold text-body">Listado</h2>
+                    {loading ? (
+                        <div className="flex items-center gap-3 py-8 text-muted">
+                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                            Cargando operadores...
+                        </div>
+                    ) : operadores.length === 0 ? (
+                        <EmptyState
+                            title="No hay operadores registrados"
+                            description="Crea el primer operador para que pueda atender la cola de revisión manual."
+                        />
+                    ) : (
                     <div className="mt-4 overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="border-b border-slate-200 dark:border-slate-800">
@@ -387,6 +397,7 @@ export default function AdminOperadoresGestionPage() {
                     </div>
                 )}
             </GlassCard>
+            </section>
         </div>
     );
 }
