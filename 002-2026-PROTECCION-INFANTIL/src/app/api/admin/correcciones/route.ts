@@ -97,7 +97,24 @@ export async function POST(request: Request) {
             );
         }
 
+        if (reporte.eliminado) {
+            return NextResponse.json(
+                { error: { message: "No se puede corregir un reporte dado de baja", code: ERROR_CODES.CONFLICT } },
+                { status: 409 }
+            );
+        }
+
         const categoriaAnterior = reporte.clasificacion?.categoria || "OTRO";
+
+        const correccionExistente = await prisma.correccionAdmin.findUnique({
+            where: { clasificacionId: reporte.clasificacion!.id },
+        });
+        if (correccionExistente) {
+            return NextResponse.json(
+                { error: { message: "Este reporte ya fue confirmado o corregido", code: ERROR_CODES.CONFLICT } },
+                { status: 409 }
+            );
+        }
 
         // Guardar corrección usando Prisma ORM
         const correccion = await prisma.correccionAdmin.create({
