@@ -53,7 +53,7 @@ describe("ReporteWizard", () => {
         await waitFor(() => {
             expect(document.body.textContent).not.toContain("Las cuentas internas no pueden crear reportes");
         });
-        expect(document.body.textContent).toContain("¿Qué identificador quieres reportar?");
+        expect(document.body.textContent).toContain("¿Qué identificador está asociado a la situación?");
     });
 
     it("no muestra bloqueo cuando no hay sesión (anónimo puro)", async () => {
@@ -63,6 +63,6 @@ describe("ReporteWizard", () => {
         await waitFor(() => {
             expect(document.body.textContent).not.toContain("Las cuentas internas no pueden crear reportes");
         });
-        expect(document.body.textContent).toContain("¿Qué identificador quieres reportar?");
+        expect(document.body.textContent).toContain("¿Qué identificador está asociado a la situación?");
     });
 });

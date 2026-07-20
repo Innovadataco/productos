@@ -68,9 +68,9 @@ describe("SeguimientoClient", () => {
             const body = document.body.textContent || "";
             expect(body).toContain("Verificado");
             expect(body).toContain("Tu reporte ha sido procesado y clasificado.");
-            expect(body).toContain("Clasificación del reporte");
+            expect(body).toContain("Categoría del reporte");
             expect(body).toContain("Contacto sexual");
-            expect(body).toContain("Riesgo del identificador");
+            expect(body).toContain("Nivel de riesgo del identificador");
             expect(body).toContain("72");
             expect(body).toContain("Riesgo ALTO");
             expect(body).toContain("El texto fue anonimizado");

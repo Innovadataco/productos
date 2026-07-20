@@ -134,7 +134,7 @@ describe("ConsultaPublicaClient", () => {
 
         await waitFor(() => {
             expect(document.body.textContent).toContain("Crear una cuenta");
-            expect(document.body.textContent).toContain("detalle completo");
+            expect(document.body.textContent).toContain("más detalles");
         });
     });
 
@@ -149,11 +149,11 @@ describe("ConsultaPublicaClient", () => {
         fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
 
         await waitFor(() => {
-            expect(document.body.textContent).toContain("Ver detalle completo");
+            expect(document.body.textContent).toContain("Ir a mi panel");
             expect(document.body.textContent).not.toContain("Crear una cuenta");
         });
 
-        fireEvent.click(screen.getByRole("button", { name: /Ver detalle completo/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Ir a mi panel/i }));
         expect(pushMock).toHaveBeenCalledWith("/dashboard");
     });
 
