@@ -24,6 +24,7 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
         env: {
+            DATABASE_URL: process.env.DATABASE_URL || "",
             DISABLE_RATE_LIMIT: "true",
             NEXT_PUBLIC_DISABLE_ONBOARDING: "true",
         },
