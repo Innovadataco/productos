@@ -30,6 +30,14 @@ Se implementaron las 4 User Stories del spec 043:
 - `./scripts/dev-restart.sh`: app en `:5005`, healthcheck OK, un solo worker.
 - `quickstart.md`: ejecutado de punta a punta; todas las US verificadas.
 
+## Pruebas manuales (quickstart)
+
+- Se crearon usuarios de prueba `PARENT` y `COMITE_VALIDACION` en la BD de desarrollo.
+- US1: login como `PARENT` → `/dashboard` carga (HTTP 200); el botón "Dashboard" del header se muestra como `/dashboard` en el render cliente (verificado por test de componente).
+- US2/US3: login como `COMITE_VALIDACION` → `GET /api/admin/comite/solicitudes` devuelve caso `PENDIENTE`; `POST /api/admin/comite/[id]/asignar` devuelve `ASIGNADA`; `POST /api/admin/comite/[id]/resolver` devuelve `reporte.estado: CORREGIDO` y `estado: RESUELTA`.
+- US4: `/dashboard/circulo-confianza` carga con HTTP 200; el copy fue actualizado en el source (verificación visual pendiente a través de la UI).
+- Smoke: `/dashboard` redirige a `/login` sin sesión; `/dashboard-publico` carga sin sesión.
+
 ## Archivos tocados
 
 - `src/components/modules/NavHeader.tsx`
