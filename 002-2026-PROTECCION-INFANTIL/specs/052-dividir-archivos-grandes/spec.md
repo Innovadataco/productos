@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: DESARROLLO
+**Status**: CERRADA
 
 **Input**: PROGRAMA DE SANEAMIENTO — reducir complejidad de archivos fuente con más de 400 líneas extrayendo sub-componentes y helpers sin cambiar comportamiento.
 
@@ -137,6 +137,51 @@ Una vez divididos los tres archivos principales, se abordarán el resto de archi
 
 ---
 
-## Implementación
+## Implementación (documentado el 2026-07-20)
 
-*(Se completará al cierre en la sección Implementación.)*
+### Objetivo alcanzado
+Dividir los archivos fuente más grandes del proyecto mediante refactor puro, manteniendo el comportamiento exacto y tests verdes entre cada extracción.
+
+### Archivos refactorizados
+
+| Archivo original | Líneas antes | Líneas después | Sub-componentes/helpers extraídos |
+|------------------|--------------|----------------|-----------------------------------|
+| `src/components/modules/ia/IaEvalManager.tsx` | 1095 | 40 | `src/components/modules/ia/eval/{types,format,LaboratorioTab,CasosTab,HistorialTab,ExperimentCard,NuevoExperimentoForm,ExperimentoDashboard,MetricCard,ComparadorExperimentos}` |
+| `src/components/modules/AdminReporteDetalle.tsx` | 814 | 156 | `src/components/modules/reporte-detalle/{types,useReporteDetalle,ReporteDetalleHeader,ReporteDetalleInfo,TextoOriginalPanel,AccionesReporte}` |
+| `src/app/api/reportes/procesar/route.ts` | 627 | 177 | `src/app/api/reportes/procesar/helpers/{errors,seguridad,embedding,duplicados,parametros,rafagas,clasificacion,anonimizacion,guardas,finalizacion}` |
+| `src/components/modules/ConfigPanel.tsx` | 494 | 299 | `src/components/modules/config-panel/{types,ParamInput,ParamRow,ConfigSection,TimelineSection}` |
+| `src/components/modules/AuditLogViewer.tsx` | 452 | 122 | `src/components/modules/audit-log/{types,AuditFilters,AuditTable}` |
+
+### Tests ejecutados
+- `npx tsc --noEmit`: ✅ sin errores
+- `npm run lint`: ✅ sin errores
+- `npm run test`: ✅ 94 test files, 540 tests passed
+- `npm run test -- src/app/api/reportes/procesar/route.test.ts`: ✅ 16 tests passed
+- `npm run build`: ✅ compiló sin errores
+- `./scripts/dev-restart.sh`: ✅ healthcheck OK, un solo worker, db OK
+
+### Decisiones de diseño
+- Se mantuvieron los exports originales (`IaEvalManager`, `AdminReporteDetalle`, `POST`) para no romper imports existentes.
+- Los archivos extraídos se agruparon por dominio en subcarpetas temáticas.
+- No se modificó lógica de negocio, contratos de API ni schema de Prisma.
+- Cada extracción se validó con `tsc`, `lint` y `test` antes del commit siguiente.
+
+### Deuda técnica
+- Los siguientes archivos > 400 líneas quedan pendientes para un siguiente ciclo de saneamiento:
+  - `src/lib/circulo-confianza.ts` (862 líneas)
+  - `src/app/dashboard/admin/comite/gestion/GestionPageClient.tsx` (708 líneas)
+  - `src/app/dashboard/circulo-confianza/page.tsx` (649 líneas)
+  - `src/app/dashboard/admin/operadores/gestion/page.tsx` (564 líneas)
+  - `src/lib/ai/eval-runner.ts` (464 líneas)
+  - `src/lib/ai/classifier.ts` (444 líneas)
+- La deuda se documenta porque se priorizó la estabilidad y el comportamiento idéntico sobre la granularidad extrema.
+
+### Migraciones
+- Ninguna. El refactor es puramente de código fuente.
+
+### Commits
+- `0d4c5fa` SPEC-052 US1: dividir IaEvalManager.tsx en sub-componentes
+- `d7e6623` SPEC-052 US2: dividir AdminReporteDetalle.tsx en sub-componentes
+- `cd9d838` SPEC-052 US3: dividir procesar/route.ts en helpers
+- `4143db8` SPEC-052 US4: dividir ConfigPanel y AuditLogViewer
+
