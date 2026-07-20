@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: DESARROLLO
+**Status**: CERRADA
 
 **Input**: PROGRAMA DE SANEAMIENTO — Fase 3: estandarizar la validación de entradas en todas las rutas de mutación usando zod, eliminando validaciones manuales dispersas y reduciendo la superficie de error de tipo/validación. No se modifica lógica de negocio ni se tocan SPEC-050 ni SPEC-060.
 
@@ -88,6 +88,54 @@ El sistema tiene rutas de mutación admin que aún usan validación manual o no 
 
 ---
 
-## Implementación
+## Implementación (documentado el 2026-07-20)
 
-*Se completará en la fase de cierre del spec.*
+### Objetivo alcanzado
+
+Se entregó una capa única de validación zod para rutas de mutación admin, eliminando validaciones manuales dispersas y estandarizando respuestas `400` con `VALIDATION_ERROR`.
+
+### Decisiones de diseño derivadas del código
+
+- **Esquemas centralizados**: se creó `src/lib/schemas/index.ts` con esquemas reutilizables por dominio (IA, operadores, parámetros, identificadores). Esto reduce duplicación y facilita mantener reglas como `max 4000 caracteres`, `cuid` y enums de Prisma en un solo lugar.
+- **Helper `withValidation`**: se creó `src/lib/validation.ts` con `withValidation.body(schema)` y `withValidation.params(schema)`. Ambos lanzan `ValidationError` (extiende `AppError`) con código `VALIDATION_ERROR` y detalles estructurados de zod.
+- **Rutas afectadas**: se aplicó validación a las rutas admin de mutación sin esquema:
+  - `admin/ia/evals` (POST), `admin/ia/evals/casos/[id]/desactivar` (PATCH), `admin/ia/experimentos/[id]/preparar-activacion` (POST), `admin/ia/ollama/probar` (POST), `admin/ia/sandbox` (POST).
+  - `admin/operadores/[id]/reactivar`, `admin/operadores/[id]/reenviar-email`, `admin/operadores/[id]/regenerar-password` (POST).
+  - `config/parametros/[clave]` (PATCH y DELETE).
+  - `admin/apelaciones/vencer` (POST).
+- **Manejo de errores**: las rutas `operadores/[id]/{reactivar,reenviar-email,regenerar-password}` tenían un catch genérico que convertía cualquier error con `code` a `403`. Se actualizaron para usar `error instanceof AppError` y respetar `statusCode`, alineándose con el saneamiento de errores del Spec 046.
+- **Sin cambios de lógica**: la lógica de negocio de cada handler se conservó intacta; solo se sustituyó la validación de entrada manual por zod.
+
+### Endpoints y componentes afectados
+
+- `src/lib/schemas/index.ts` (nuevo) y `src/lib/schemas/index.test.ts`.
+- `src/lib/validation.ts` (nuevo) y `src/lib/validation.test.ts`.
+- Rutas admin modificadas:
+  - `src/app/api/admin/ia/evals/route.ts`
+  - `src/app/api/admin/ia/evals/casos/[id]/desactivar/route.ts`
+  - `src/app/api/admin/ia/experimentos/[id]/preparar-activacion/route.ts`
+  - `src/app/api/admin/ia/ollama/probar/route.ts`
+  - `src/app/api/admin/ia/sandbox/route.ts`
+  - `src/app/api/admin/operadores/[id]/reactivar/route.ts`
+  - `src/app/api/admin/operadores/[id]/reenviar-email/route.ts`
+  - `src/app/api/admin/operadores/[id]/regenerar-password/route.ts`
+  - `src/app/api/config/parametros/[clave]/route.ts`
+  - `src/app/api/admin/apelaciones/vencer/route.ts`
+
+### Tests
+
+- `src/lib/validation.test.ts`: 11 tests, todos pasan.
+- `src/lib/schemas/index.test.ts`: 24 tests, todos pasan.
+- Suite completa: 531 tests en 92 archivos, todos pasan.
+- `npx tsc --noEmit`: OK.
+- `npm run lint`: OK (1 warning preexistente en `GestionPageClient.tsx`).
+- Quickstart validado con curl: todas las rutas afectadas devuelven `400` ante entradas inválidas.
+
+### Migraciones
+
+Ninguna. No se modifica el modelo de datos.
+
+### Deuda técnica
+
+- Quedan rutas de mutación fuera del alcance de este spec (autenticación, reportes, alertas) que aún no usan zod. Se documentó el patrón en `src/lib/schemas` y `quickstart.md` para futuros specs de saneamiento.
+- `ValidationError` requiere `Object.setPrototypeOf(this, ValidationError.prototype)` porque `AppError` redefine el prototype. Si en el futuro se refactoriza `AppError` para no necesitarlo, este workaround puede eliminarse.
