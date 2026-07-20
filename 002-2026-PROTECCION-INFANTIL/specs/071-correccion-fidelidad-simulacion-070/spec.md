@@ -4,9 +4,9 @@
 
 **Created**: 2026-07-20
 
-**Status**: DESARROLLO
+**Status**: CERRADA
 
-**Input**: Corrección al Spec 070 (simulación de carga y comparación de modelos). El plan aprobado e implementado del 070 permite cargar y ejecutar casos de simulación, pero el set de entrada no replica fielmente un reporte anónimo real: omite campos obligatorios del formulario anónimo y el executor inventa valores fijos. Esta corrección hace que la simulación sea indistinguible del pipeline real de reportes anónimos. No se implementa código hasta aprobación humana.
+**Input**: Corrección al Spec 070 (simulación de carga y comparación de modelos). Implementación completada: el parser y executor ahora replican fielmente un reporte anónimo real, validando los mismos campos de entrada y ejecutando el pipeline completo sin inventar valores.
 
 ---
 
