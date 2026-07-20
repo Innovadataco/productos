@@ -175,7 +175,7 @@ Refuerzo de la postura de seguridad del producto: inventario de PII, CSP endurec
 
 ### Decisiones de diseño derivadas del código
 
-- **CSP endurecida en `next.config.ts`**: se mantiene la CSP en `next.config.ts` (no en middleware) para evitar incompatibilidades con Next.js 16/Turbopack. Se eliminó `unsafe-eval` en producción y se condiciona solo para desarrollo (`next dev`), donde Turbopack lo requiere para HMR. Se añadieron `upgrade-insecure-requests`, `manifest-src`, `worker-src` y `media-src`. `src/lib/proxy.ts` conserva solo la lógica de autenticación y autorización.
+- **CSP endurecida en `next.config.ts`**: se mantiene la CSP en `next.config.ts` (no en middleware) para evitar incompatibilidades con Next.js 16/Turbopack. Se eliminó `unsafe-eval` en producción y se condiciona solo para desarrollo (`next dev`), donde Turbopack lo requiere para HMR. Se añadieron `manifest-src`, `worker-src` y `media-src`. Los headers `upgrade-insecure-requests` (CSP) y `Strict-Transport-Security` (HSTS) se gobiernan mediante la variable de entorno `ENABLE_HTTPS_HEADERS` (default `false`); solo se emiten cuando la app corre realmente bajo HTTPS. Esto evita que el navegador bloquee estilos/scripts o grabe HSTS en entornos de acceso por HTTP (Mac, Tailscale, LAN). `src/lib/proxy.ts` conserva solo la lógica de autenticación y autorización.
 - **Sanitización de errores**: se creó `safeErrorMessage()` en `src/lib/errors.ts` para estandarizar el mensaje expuesto al cliente. Las rutas que filtraban mensajes crudos de excepciones ahora loguean internamente y devuelven "Error interno".
 - **pageSize centralizado**: se extrajo `MAX_PAGE_SIZE = 100` a `src/lib/pagination.ts` y se reutilizó en los tres endpoints para validación y respuesta.
 - **Test e2e de anonimización**: se creó `tests/e2e/anonimizacion.spec.ts` que inserta un reporte con PII simulada, lo marca como anonimizado y verifica que `/api/consulta` y `/api/admin/dataset-entrenamiento` no exponen el texto crudo. El test usa llamadas directas a la API para no depender de la UI client-side.
@@ -183,7 +183,9 @@ Refuerzo de la postura de seguridad del producto: inventario de PII, CSP endurec
 
 ### Endpoints y componentes afectados
 
-- `next.config.ts` (CSP endurecida, condicional sin `unsafe-eval` en producción).
+- `next.config.ts` (CSP endurecida; `upgrade-insecure-requests` y HSTS condicionados a `ENABLE_HTTPS_HEADERS`).
+- `.env.example` (documentación de `ENABLE_HTTPS_HEADERS`).
+- `docs/ARCHITECTURE.md` (sección 5.7 sobre headers HTTP/CSP/HSTS).
 - `src/lib/proxy.ts` (middleware de autenticación; CSP removida).
 - `src/lib/errors.ts` (`safeErrorMessage`).
 - `src/lib/pagination.ts` (constante `MAX_PAGE_SIZE`).

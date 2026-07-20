@@ -2,6 +2,29 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
     async headers() {
+        const enableHttpsHeaders = process.env.ENABLE_HTTPS_HEADERS === "true";
+
+        const cspDirectives = [
+            "default-src 'self'",
+            process.env.NODE_ENV === "production"
+                ? "script-src 'self' 'unsafe-inline'"
+                : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob:",
+            "font-src 'self'",
+            "connect-src 'self'",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "manifest-src 'self'",
+            "worker-src 'self'",
+            "media-src 'self'",
+        ];
+
+        if (enableHttpsHeaders) {
+            cspDirectives.push("upgrade-insecure-requests");
+        }
+
         const headers = [
             {
                 key: "X-Frame-Options",
@@ -21,30 +44,16 @@ const nextConfig: NextConfig = {
             },
             {
                 key: "Content-Security-Policy",
-                value: [
-                    "default-src 'self'",
-                    process.env.NODE_ENV === "production"
-                        ? "script-src 'self' 'unsafe-inline'"
-                        : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-                    "style-src 'self' 'unsafe-inline'",
-                    "img-src 'self' data: blob:",
-                    "font-src 'self'",
-                    "connect-src 'self'",
-                    "frame-ancestors 'none'",
-                    "base-uri 'self'",
-                    "form-action 'self'",
-                    "manifest-src 'self'",
-                    "worker-src 'self'",
-                    "media-src 'self'",
-                    "upgrade-insecure-requests",
-                ].join("; "),
-            },
-            // HSTS: solo tiene efecto bajo HTTPS. En HTTP los navegadores lo ignoran.
-            {
-                key: "Strict-Transport-Security",
-                value: "max-age=63072000; includeSubDomains; preload",
+                value: cspDirectives.join("; "),
             },
         ];
+
+        if (enableHttpsHeaders) {
+            headers.push({
+                key: "Strict-Transport-Security",
+                value: "max-age=63072000; includeSubDomains; preload",
+            });
+        }
 
         return [
             {

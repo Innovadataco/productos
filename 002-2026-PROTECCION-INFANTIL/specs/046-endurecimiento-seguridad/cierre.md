@@ -9,7 +9,7 @@
 
 ## Resumen
 
-Se implementó el endurecimiento de seguridad previo a SPEC-050/SPEC-060: inventario de PII, CSP endurecida, tope de `pageSize`, saneamiento de errores y un test e2e de anonimización. La rotación de `PARAM_ENCRYPTION_KEY` queda documentada como plan-only (US6).
+Se implementó el endurecimiento de seguridad previo a SPEC-050/SPEC-060: inventario de PII, CSP endurecida, tope de `pageSize`, saneamiento de errores y un test e2e de anonimización. Se corrigió posteriormente la CSP/HSTS para no romper el acceso por HTTP: los headers `upgrade-insecure-requests` y `Strict-Transport-Security` ahora se gobiernan con `ENABLE_HTTPS_HEADERS` (default `false`). La rotación de `PARAM_ENCRYPTION_KEY` queda documentada como plan-only (US6).
 
 ## Commits
 
@@ -34,7 +34,9 @@ Se implementó el endurecimiento de seguridad previo a SPEC-050/SPEC-060: invent
 - `src/app/api/reportes/mis-reportes/route.ts`
 - Rutas saneadas con `safeErrorMessage()`: `admin/comite/integrantes`, `admin/ia/*`, `admin/operadores`, `admin/reportes-revision`, `auth/recuperar/solicitar`, `auth/verificar/solicitar`, `circulo-confianza`, `health/worker`.
 - `tests/e2e/anonimizacion.spec.ts`
-- `specs/046-endurecimiento-seguridad/` (spec.md, plan.md, research.md, data-model.md, quickstart.md, tasks.md, checklists/requirements.md)
+- `specs/046-endurecimiento-seguridad/` (spec.md, plan.md, research.md, data-model.md, quickstart.md, tasks.md, checklists/requirements.md, cierre.md)
+- `docs/ARCHITECTURE.md`
+- `.env.example`
 
 ## Resultados de validación
 
@@ -58,4 +60,4 @@ Se implementó el endurecimiento de seguridad previo a SPEC-050/SPEC-060: invent
 
 - 5 tests e2e de otros specs fallan por expectativas desactualizadas o contaminación de datos; no están dentro del alcance de Spec 046.
 - La rotación de `PARAM_ENCRYPTION_KEY` (US6) queda como plan de diseño; se implementará en una fase posterior.
-- Evaluar en el futuro la posibilidad de usar nonces CSP con soporte nativo de Next.js cuando Turbopack los soporte de forma estable.
+- Corrección post-cierre: `upgrade-insecure-requests` y HSTS se gobiernan mediante `ENABLE_HTTPS_HEADERS` (default `false`) para evitar bloqueos en entornos sin TLS (Mac, Tailscale, LAN).

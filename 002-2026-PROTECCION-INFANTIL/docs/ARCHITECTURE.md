@@ -289,3 +289,12 @@ Antes de considerar un cambio listo, se ejecutan:
 - `./scripts/dev-restart.sh` (healthcheck y un solo worker)
 
 Estas verificaciones son obligatorias en la metodología Spec-Kit y se documentan en los cierres de cada spec.
+
+### 5.7 Headers HTTP, CSP y HSTS
+
+- `next.config.ts` emite headers de seguridad en todas las rutas: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` y `Content-Security-Policy`.
+- La CSP permite `script-src 'self' 'unsafe-inline'` en producción y añade `'unsafe-eval'` en desarrollo para HMR/Turbopack.
+- Los headers `upgrade-insecure-requests` (CSP) y `Strict-Transport-Security` (HSTS) se gobiernan mediante la variable de entorno `ENABLE_HTTPS_HEADERS`:
+  - `ENABLE_HTTPS_HEADERS=false` (default): no se emiten. Es el modo para acceso por HTTP en redes locales, Tailscale o cualquier entorno sin TLS.
+  - `ENABLE_HTTPS_HEADERS=true`: se emiten ambos headers. Solo habilitar cuando la app corra realmente detrás de HTTPS con un certificado válido.
+- Este mecanismo evita que el navegador bloquee estilos o scripts por política de HTTPS cuando el servidor se accede por HTTP, y evita grabar HSTS en clientes que no deberían usarlo.

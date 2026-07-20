@@ -91,7 +91,8 @@ form-action 'self'
 - Mantener la CSP en `next.config.ts` para evitar incompatibilidades con Next.js 16/Turbopack y la generación de scripts en tiempo de desarrollo.
 - Eliminar `unsafe-eval` en producción; condicionarlo solo para `next dev` (Turbopack/HMR lo requiere).
 - Mantener `unsafe-inline` en `script-src` documentando el riesgo residual: el producto no usa scripts inline arbitrarios en tiempo de ejecución, pero Next.js/Turbopack puede generar bloques inline durante el desarrollo. En producción, la política es `script-src 'self' 'unsafe-inline'` (sin nonce), que sigue siendo más restrictiva que el valor original que incluía `unsafe-eval`.
-- Añadir `upgrade-insecure-requests`, `manifest-src 'self'`, `worker-src 'self'`, `media-src 'self'`.
+- **Añadir `manifest-src 'self'`, `worker-src 'self'`, `media-src 'self'`**.
+- **No añadir `upgrade-insecure-requests` ni HSTS por entorno**: ambos headers se gobiernan mediante la variable de entorno `ENABLE_HTTPS_HEADERS` (default `false`). Solo se emiten cuando se configure explícitamente a `true` en despliegues reales con HTTPS. Esto evita bloqueos de estilos/scripts y grabación de HSTS en entornos de acceso por HTTP (Mac, Tailscale, LAN).
 - Conservar `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`.
 
 **Nota sobre nonces**: se evaluó la opción de mover la CSP a `src/lib/proxy.ts` con nonces por petición. Next.js 16 no inyecta automáticamente el nonce en los scripts generados por Turbopack, lo que rompe la carga de scripts en desarrollo y en los tests e2e. Por eso se descartó para esta fase y se optó por la CSP condicional en `next.config.ts`.
