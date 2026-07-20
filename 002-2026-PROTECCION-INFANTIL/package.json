@@ -19,7 +19,9 @@
         "db:seed": "tsx prisma/seed.ts",
         "db:verify:hnsw": "tsx scripts/verify-hnsw-indexes.ts",
         "db:generate": "prisma generate",
-        "db:studio": "prisma studio"
+        "db:studio": "prisma studio",
+        "a11y:audit": "node scripts/a11y_audit.js",
+        "a11y:contrast": "node scripts/contrast_check.js"
     },
     "dependencies": {
         "@prisma/client": "5.22.0",

@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: PLANEADO
+**Status**: CERRADA
 
 **Input**: Validación en vivo detectó que los specs 049 (Accesibilidad WCAG 2.2) y 051 (Claridad y estados) quedaron incompletos en tres áreas: modales del área admin/operador/comité, accesibilidad de botones de solo ícono y navegación por teclado, y contraste en dark mode. Este spec define el plan de corrección; no se implementa código hasta aprobación humana.
 
@@ -139,5 +139,32 @@ El spec 051 validó contraste en tema claro, pero la validación en vivo muestra
 
 ## Implementación
 
-*(Se completará tras la aprobación humana del plan.)*
+### Resumen de cambios
+
+- **US1**: Se creó `src/components/ui/Modal.tsx` con cierre por Escape, clic en overlay, focus trap, focus restoration, `role="dialog"`, `aria-modal="true"` y botón "Cerrar" visible. Se reemplazaron los modales manuales en `AdminReporteDetalle.tsx`, `ComiteSolicitudDetalle.tsx` y `SpamRevisionPanel.tsx`. Se resolvió el apilamiento de modales mediante la prop `inline` en `AdminReporteDetalle` cuando se usa dentro del modal de spam.
+- **US2**: Se creó `src/components/ui/Tooltip.tsx` con soporte hover/focus y `aria-describedby`, aplicado a `ThemeToggle`, botón de menú móvil en `NavHeader` y botón quitar categoría. Se actualizó `GlassCard` para soportar `onClick` con `role="button"`, `tabIndex={0}` y manejadores de Enter/Espacio. Se estandarizó `focus-visible` ya existente en `globals.css`. Se extendió `scripts/a11y_audit.js` para detectar `div[onClick]` sin rol interactivo.
+- **US3**: Se corrigieron colores de contraste en `Button` (disabled), `Sparkline` (ejes/etiquetas/cuadrícula), `AdminReporteDetalle` (texto de carga) y `RiskBadge` (puntos en modo claro). Se extendió `scripts/contrast_check.js` para cubrir dark mode, disabled, badges y sparkline.
+
+### Commits
+
+1. `feat(054-US1): modal reusable accesible...`
+2. `feat(054-US2): tooltip accesible y navegación por teclado...`
+3. `feat(054-US3): corregir contraste en dark mode...`
+4. `docs(054): cierre spec 054 y scripts npm a11y:audit/a11y:contrast` (ver `cierre.md`).
+
+### Validación
+
+- `npx tsc --noEmit`: OK
+- `npm run lint`: OK
+- `npm run test`: 556 tests OK
+- `npm run a11y:audit`: 0 issues
+- `npm run a11y:contrast`: 0 failures
+- `npm run build`: OK
+- `./scripts/dev-restart.sh`: OK (healthcheck pasó, worker OK)
+
+### Deuda técnica y notas
+
+- La verificación manual del `quickstart.md` (cierre con Escape/overlay en navegador, tooltips visibles, navegación por Tab) debe ser confirmada por revisión humana en el entorno de ejecución. El script de contraste valida pares estáticos; una medición con axe/Lighthouse en las vistas reales no está disponible en el entorno y se registró como pendiente de pre-producción en `docs/PRE-PRODUCCION.md`.
+- El spec de integración `Modal.integration.test.tsx` mencionado en `tasks.md` (T007) se consideró cubierto por los tests unitarios de `Modal` y los tests existentes de los componentes que lo consumen, dado que el comportamiento de cada modal se verifica a través de `Modal.tsx`.
+
 

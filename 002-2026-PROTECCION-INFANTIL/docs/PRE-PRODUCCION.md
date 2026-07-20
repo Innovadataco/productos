@@ -2,7 +2,7 @@
 
 **Propósito**: Este documento es la fuente de verdad de TODO lo que debe resolverse o verificarse ANTES de que el Producto 002 pase a producción. No se dispersa en los specs individuales; cualquier ítem de pre-producción se consolida aquí. Al final del desarrollo se ejecutará un spec dedicado (reservado ~SPEC-090) que tilda cada línea de este registro antes del despegue.
 
-**Versión**: `1.0.0`
+**Versión**: `1.0.1`
 
 **Última actualización**: 2026-07-20
 
@@ -34,7 +34,7 @@
 Antes del despegue se deben ejecutar y aprobar las siguientes verificaciones. Cada una deja evidencia en el spec de cierre ~SPEC-090.
 
 - **Auditoría de dependencias**: `npm audit` con 0 vulnerabilidades críticas/alta o plan de mitigación documentado.
-- **Contraste real**: medir con axe/Lighthouse (o herramienta equivalente) las vistas principales en modo claro y oscuro. Aprobar WCAG 2.2 AA (4.5:1 texto, 3:1 no textual). Ver Specs 049, 051, 054.
+- **Contraste real**: medir con axe/Lighthouse (o herramienta equivalente) las vistas principales en modo claro y oscuro. Aprobar WCAG 2.2 AA (4.5:1 texto, 3:1 no textual). Ver Specs 049, 051, 054. **Nota**: el script `scripts/contrast_check.js` del Spec 054 valida pares estáticos de los componentes corregidos; falta la validación final con axe/Lighthouse en las vistas reales del navegador (no disponible en el entorno de desarrollo).
 - **Pentest dinámico**: recomendado, especialmente para endpoints de autenticación, reportes, consulta pública y admin. Registrar hallazgos y remediación.
 - **Prueba de carga**: verificar comportamiento del worker y rate limiting bajo concurrencia esperada.
 - **Revisión de PII**: validar que ningún endpoint público expone datos personales (inventario en `docs/pii-inventory.md`).
@@ -54,4 +54,5 @@ Antes del despegue se deben ejecutar y aprobar las siguientes verificaciones. Ca
 
 ## Changelog
 
+- **v1.0.1** — 2026-07-20: Se agrega nota de validación de contraste con axe/Lighthouse pendiente del Spec 054.
 - **v1.0.0** — 2026-07-20: Creación del registro con planes sin implementar (Specs 045 US3, 046 US6, 053), interruptores de configuración y verificaciones finales.
