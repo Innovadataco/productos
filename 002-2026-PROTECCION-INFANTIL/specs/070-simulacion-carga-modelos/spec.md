@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: PLANEADO
+**Status**: CERRADA
 
 **Input**: PROGRAMA DE SANEAMIENTO — bloque 070-080 reservado para simulaciones. Submódulo "Simulación" dentro del Centro de Control IA (`/dashboard/admin/ia?tab=eval`) para validar el sistema bajo carga y comparar modelos IA locales. Solo accesible para `ADMIN`. Datos descartables. Plan a entregar; no se implementa código hasta aprobación humana.
 
@@ -247,5 +247,17 @@ El administrador puede exportar los resultados de una corrida a CSV o JSON para 
 
 ## Implementación
 
-*(Se completará tras la aprobación humana del plan.)*
+La implementación se completó siguiendo el plan aprobado. Resumen:
+
+- **Migración aditiva**: se crearon `SimulacionRun` y `SimulacionReporte` y se añadió la relación `Usuario.simulaciones`. Se agregó `casosJson` a `SimulacionRun` para permitir repetir una simulación con otro modelo. No se modificó el modelo `Reporte`.
+- **Override de modelo por job**: se extendió `sendReporte` para aceptar `modeloClasificacion`, el worker lo propaga en el body de `POST /api/reportes/procesar` y el helper `cargarParametrosClasificacion` lo aplica sin tocar `ParametroSistema`.
+- **Endpoints**: list, create, get, cancel, resultados, análisis, comparar y export, todos con tests de integración Vitest.
+- **UI**: 4ª pestaña "Simulación" en `IaEvalManager` replicando el patrón list/new/detail/compare del Laboratorio, con componentes reutilizados (`GlassCard`, `Badge`, `Button`, `Select`, `MetricCard`, etc.).
+- **Validación**: `tsc --noEmit`, `lint`, `test` (577 tests) y `build` pasaron. Deploy limpio con `./scripts/dev-restart.sh`.
+
+Ver `cierre.md` para evidencia completa.
+
+## Status
+
+CERRADA
 

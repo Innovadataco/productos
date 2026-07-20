@@ -86,7 +86,7 @@
 
 - **Riesgo**: Simulación satura Ollama/colapsa el worker. **Mitigación**: tope de casos, batches, backpressure, concurrencia limitada, cancelación.
 - **Riesgo**: Datos de simulación contaminan dashboards. **Mitigación**: prefijo `SIM-` y `origen: SIMULACION` en `FuenteReporte`; dashboards pueden filtrar si se decide.
-- **Riesgo**: Forzar el modelo afecta producción. **Mitigación**: override por job o parámetro temporal; no se cambia el modelo de producción.
+- **Riesgo**: Forzar el modelo afecta producción. **Mitigación**: override por job; no se cambia el modelo de producción.
 - **Riesgo**: Cancelación deja inconsistencias. **Mitigación**: estado `CANCELADA` y conteo de casos procesados; no se revierten reportes ya creados.
 - **Riesgo**: El polling es ineficiente. **Mitigación**: polling cada 3s es aceptable para este volumen; se puede evolucionar a SSE o WebSocket en fase futura.
 
