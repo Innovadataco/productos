@@ -23,7 +23,9 @@ const nextConfig: NextConfig = {
                 key: "Content-Security-Policy",
                 value: [
                     "default-src 'self'",
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+                    process.env.NODE_ENV === "production"
+                        ? "script-src 'self' 'unsafe-inline'"
+                        : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
                     "style-src 'self' 'unsafe-inline'",
                     "img-src 'self' data: blob:",
                     "font-src 'self'",
@@ -31,6 +33,10 @@ const nextConfig: NextConfig = {
                     "frame-ancestors 'none'",
                     "base-uri 'self'",
                     "form-action 'self'",
+                    "manifest-src 'self'",
+                    "worker-src 'self'",
+                    "media-src 'self'",
+                    "upgrade-insecure-requests",
                 ].join("; "),
             },
             // HSTS: solo tiene efecto bajo HTTPS. En HTTP los navegadores lo ignoran.

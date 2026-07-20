@@ -84,7 +84,7 @@ function homeForRole(rol: string) {
     return "/dashboard/admin";
 }
 
-export async function proxy(request: NextRequest) {
+async function proxyCore(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get("token")?.value ?? request.cookies.get("__Host-token")?.value;
 
@@ -139,6 +139,10 @@ export async function proxy(request: NextRequest) {
     }
 
     return NextResponse.next();
+}
+
+export async function proxy(request: NextRequest) {
+    return proxyCore(request);
 }
 
 export const proxyConfig = {
