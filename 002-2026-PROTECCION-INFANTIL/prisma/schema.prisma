@@ -179,6 +179,7 @@ model Usuario {
   alertasSuscripcion           AlertaSuscripcion[]
   casosEval                    CasoEval[]
   evalRuns                     EvalRun[]
+  simulaciones                 SimulacionRun[]
   apelaciones                  ApelacionIdentificador[]
   casosAsignados               Reporte[]                @relation("CasosOperador")
   casosComiteAsignados         Reporte[]                @relation("CasosComite")
@@ -847,4 +848,40 @@ model EvalResultado {
   @@index([casoEvalId])
   @@index([correcto])
   @@index([esperado])
+}
+
+model SimulacionRun {
+  id            String    @id @default(cuid())
+  modelo        String
+  totalCasos    Int       @default(0)
+  progreso      Int       @default(0)
+  estado        String    @default("PENDIENTE") // PENDIENTE | EN_PROGRESO | COMPLETADA | FALLIDA | CANCELADA
+  fechaInicio   DateTime  @default(now())
+  fechaFin      DateTime?
+  metricasJson  Json?
+  casosJson     Json?     // Set de casos cargado (persistido para reejecución / comparación)
+  creadoPorId   String
+  creadoPor     Usuario   @relation(fields: [creadoPorId], references: [id])
+  casos         SimulacionReporte[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([estado])
+  @@index([creadoPorId])
+  @@map("simulacion_runs")
+}
+
+model SimulacionReporte {
+  id                String        @id @default(cuid())
+  simulacionRunId   String
+  simulacionRun     SimulacionRun @relation(fields: [simulacionRunId], references: [id], onDelete: Cascade)
+  reporteId         String        @unique
+  indice            Int
+  categoriaEsperada String?
+  createdAt         DateTime      @default(now())
+
+  @@index([simulacionRunId])
+  @@index([indice])
+  @@index([reporteId])
+  @@map("simulacion_reportes")
 }

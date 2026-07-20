@@ -4,9 +4,10 @@ import { useState } from "react";
 import { LaboratorioTab } from "./eval/LaboratorioTab";
 import { CasosTab } from "./eval/CasosTab";
 import { HistorialTab } from "./eval/HistorialTab";
+import { SimulacionTab } from "./simulacion/SimulacionTab";
 
 export function IaEvalManager() {
-    const [activeTab, setActiveTab] = useState<"casos" | "laboratorio" | "historial">("laboratorio");
+    const [activeTab, setActiveTab] = useState<"casos" | "laboratorio" | "historial" | "simulacion">("laboratorio");
 
     return (
         <div className="space-y-6">
@@ -16,6 +17,7 @@ export function IaEvalManager() {
                         { key: "laboratorio", label: "Laboratorio" },
                         { key: "casos", label: "Casos del fixture" },
                         { key: "historial", label: "Historial" },
+                        { key: "simulacion", label: "Simulación" },
                     ].map((t) => (
                         <button
                             key={t.key}
@@ -35,6 +37,7 @@ export function IaEvalManager() {
             {activeTab === "laboratorio" && <LaboratorioTab />}
             {activeTab === "casos" && <CasosTab />}
             {activeTab === "historial" && <HistorialTab />}
+            {activeTab === "simulacion" && <SimulacionTab />}
         </div>
     );
 }
