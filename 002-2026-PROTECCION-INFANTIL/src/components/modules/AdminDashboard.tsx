@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { BarChart } from "./BarChart";
 import { DonutChart } from "./DonutChart";
 import { Sparkline } from "./Sparkline";
+import { ErrorState } from "@/components/ui/ErrorState";
 
  type StatsData = {
     totales: {
@@ -90,7 +91,7 @@ export function AdminDashboard() {
         );
     }
 
-    if (error) return <p className="text-red-600" role="alert">{error}</p>;
+    if (error) return <ErrorState title="No pudimos cargar las estadísticas" description="Ocurrió un problema al consultar el dashboard. Intenta recargar la página." onRetry={() => window.location.reload()} />;
     if (!data) return null;
 
     return (

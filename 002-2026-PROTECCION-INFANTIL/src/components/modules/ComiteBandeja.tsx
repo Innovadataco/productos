@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { ComiteSolicitudDetalle } from "./ComiteSolicitudDetalle";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Solicitud = {
     id: string;
@@ -113,9 +115,11 @@ export function ComiteBandeja() {
     return (
         <div className="space-y-6">
             {error && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-700 dark:text-red-300">
-                    {error}
-                </div>
+                <ErrorState
+                    title="No pudimos cargar las solicitudes"
+                    description="Ocurrió un problema al consultar la bandeja del comité. Intenta de nuevo."
+                    onRetry={fetchSolicitudes}
+                />
             )}
 
             <div className="glass rounded-2xl overflow-hidden">
@@ -140,8 +144,11 @@ export function ComiteBandeja() {
                                 </tr>
                             ) : solicitudes.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-subtle">
-                                        No hay casos pendientes de revisión.
+                                    <td colSpan={5} className="px-4 py-2">
+                                        <EmptyState
+                                            title="No hay casos pendientes"
+                                            description="Cuando lleguen solicitudes de revisión, aparecerán aquí."
+                                        />
                                     </td>
                                 </tr>
                             ) : (

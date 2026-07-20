@@ -5,6 +5,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { OperadoresSubNav } from "../components/OperadoresSubNav";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type OperadorAsignacion = {
     id: string;
@@ -74,9 +76,11 @@ export default function AdminOperadoresAsignarPage() {
             </div>
 
             {error && (
-                <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
-                    {error}
-                </div>
+                <ErrorState
+                    title="No pudimos cargar el estado de asignación"
+                    description="Ocurrió un problema al consultar la cola de operadores. Intenta de nuevo."
+                    onRetry={cargar}
+                />
             )}
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -110,7 +114,10 @@ export default function AdminOperadoresAsignarPage() {
                         Cargando...
                     </div>
                 ) : data?.operadores.length === 0 ? (
-                    <p className="py-6 text-sm text-muted">No hay operadores activos.</p>
+                    <EmptyState
+                        title="No hay operadores activos"
+                        description="Cuando haya operadores disponibles, podrás ver su carga de casos aquí."
+                    />
                 ) : (
                     <div className="mt-4 overflow-x-auto">
                         <table className="w-full text-left text-sm">

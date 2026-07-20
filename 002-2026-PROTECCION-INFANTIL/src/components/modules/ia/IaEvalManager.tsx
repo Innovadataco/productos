@@ -6,6 +6,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BarChart } from "@/components/modules/BarChart";
 
 const CATEGORIAS = [
@@ -206,9 +208,10 @@ function LaboratorioTab() {
                     {loading ? (
                         <p className="text-sm text-muted">Cargando...</p>
                     ) : experiments.length === 0 ? (
-                        <GlassCard className="p-6">
-                            <p className="text-sm text-muted">No hay experimentos completados. Cree uno para empezar.</p>
-                        </GlassCard>
+                        <EmptyState
+                            title="Aún no hay experimentos"
+                            description="Crea un experimento para comparar configuraciones del modelo de clasificación."
+                        />
                     ) : (
                         <div className="grid gap-4 md:grid-cols-2">
                             {experiments.map((exp) => (
@@ -506,7 +509,7 @@ function ExperimentoDashboard({ id, onBack, onRefresh }: { id: string; onBack: (
     }
 
     if (loading && !data) return <p className="text-sm text-muted">Cargando experimento...</p>;
-    if (!data) return <p className="text-sm text-muted">No se pudo cargar el experimento.</p>;
+    if (!data) return <ErrorState title="No se pudo cargar el experimento" description="Ocurrió un problema al cargar el detalle. Intenta de nuevo." onRetry={load} />;
 
     const exp = data.experimento;
     const metrics = data.metrics;

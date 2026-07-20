@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 type DetalleReporte = {
     id: string;
@@ -101,9 +102,11 @@ export function AdminReporteDetalle({
     const [puedeEscalar, setPuedeEscalar] = useState(false);
     const [mostrarEscalar, setMostrarEscalar] = useState(false);
     const [motivoEscalar, setMotivoEscalar] = useState("");
+    const [retry, setRetry] = useState(0);
 
     useEffect(() => {
         if (!reporteId) return;
+        setLoading(true);
         setError("");
         setSuccess("");
         setCategoriaCorreccion("");
@@ -123,9 +126,9 @@ export function AdminReporteDetalle({
                 setPuedeEscalar(json.puedeEscalar === true);
                 setTextoAnonimizado(data.texto || "");
             })
-            .catch(() => setError("Error cargando detalle"))
+            .catch(() => setError("No se pudo cargar el detalle del caso."))
             .finally(() => setLoading(false));
-    }, [reporteId]);
+    }, [reporteId, retry]);
 
     const handleAnonimizar = async () => {
         if (!textoAnonimizado || textoAnonimizado.length < 20 || textoAnonimizado.length > 5000) {
@@ -420,7 +423,11 @@ export function AdminReporteDetalle({
     if (!reporte) {
         return (
             <div className="p-6">
-                <p className="text-red-600">{error || "No se encontró el reporte."}</p>
+                <ErrorState
+                    title="No se encontró el reporte"
+                    description={error || "El reporte solicitado no existe o no se pudo cargar."}
+                    onRetry={() => setRetry((r) => r + 1)}
+                />
                 <div className="mt-4">
                     <Button onClick={onClose} variant="secondary">Cerrar</Button>
                 </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { BarChart } from "@/components/modules/BarChart";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const CATEGORIA_LABELS: Record<string, string> = {
     CONTACTO_INSISTENTE: "Contacto insistente",
@@ -196,7 +197,12 @@ function MetricBarsByCategory() {
 
     if (loading) return <div className="h-32 animate-pulse rounded-2xl bg-slate-200" />;
     if (!data || data.length === 0) {
-        return <p className="text-sm text-muted">Aún no hay correcciones ni confirmaciones para calcular precisión observada.</p>;
+        return (
+            <EmptyState
+                title="Aún no hay correcciones ni confirmaciones"
+                description="Cuando los administradores confirmen o corrijan categorías, se calculará la precisión observada."
+            />
+        );
     }
 
     const chartData = data.map((d) => ({

@@ -8,6 +8,7 @@ import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { ErrorState } from "@/components/ui/ErrorState";
 import type { BadgeVariant } from "@/components/ui/Badge";
 
 type ClasificacionData = {
@@ -126,8 +127,15 @@ export function SeguimientoClient() {
             )}
 
             {error && (
-                <div className="glass rounded-2xl p-6 text-center">
-                    <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                <div className="mx-auto max-w-xl">
+                    <ErrorState
+                        title="No encontramos información"
+                        description={error}
+                        onRetry={() => {
+                            setError("");
+                            if (numeroInicial) handleSearch(numeroInicial);
+                        }}
+                    />
                 </div>
             )}
 

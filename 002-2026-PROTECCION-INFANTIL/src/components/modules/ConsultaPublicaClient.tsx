@@ -11,6 +11,7 @@ import type { NivelRiesgoConsulta } from "@/lib/riesgo-consulta";
 
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 function formatFecha(iso: string | null | undefined) {
     if (!iso) return "—";
@@ -107,8 +108,15 @@ export function ConsultaPublicaClient() {
             </form>
 
             {error && (
-                <div className="mx-auto mt-6 max-w-xl rounded-xl bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
-                    {error}
+                <div className="mx-auto mt-6 max-w-xl">
+                    <ErrorState
+                        title="No pudimos completar la consulta"
+                        description={error}
+                        onRetry={() => {
+                            setError("");
+                            if (identificador.trim()) handleSubmit({ preventDefault: () => undefined } as React.FormEvent);
+                        }}
+                    />
                 </div>
             )}
 

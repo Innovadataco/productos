@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { MisReportesList } from "@/components/modules/MisReportesList";
 import { ConsultaEnriquecidaClient } from "@/components/modules/ConsultaEnriquecidaClient";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 type MisReporteItem = {
     id: string;
@@ -81,9 +82,11 @@ export function DashboardUsuarioClient() {
                             <p className="mt-3 text-sm text-subtle">Cargando reportes...</p>
                         </div>
                     ) : error ? (
-                        <GlassCard className="text-center">
-                            <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-                        </GlassCard>
+                        <ErrorState
+                            title="No pudimos cargar tus reportes"
+                            description="Ocurrió un problema al consultar la información. Intenta recargar la página."
+                            onRetry={() => window.location.reload()}
+                        />
                     ) : (
                         <MisReportesList items={items} />
                     )}

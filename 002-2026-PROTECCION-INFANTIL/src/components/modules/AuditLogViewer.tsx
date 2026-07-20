@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { AUDIT_ACTION_GROUPS, labelAccionAudit } from "@/lib/audit-actions";
 import type { AccionAudit } from "@prisma/client";
 
@@ -332,7 +333,10 @@ export function AuditLogViewer({
                         Cargando auditoría...
                     </div>
                 ) : !data || data.items.length === 0 ? (
-                    <p className="py-6 text-sm text-muted">No hay registros de auditoría para los filtros aplicados.</p>
+                    <EmptyState
+                        title="No hay registros de auditoría"
+                        description="Prueba ajustar los filtros de acción o fecha."
+                    />
                 ) : (
                     <div className="mt-4 overflow-x-auto">
                         <table className="w-full text-left text-sm">

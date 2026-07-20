@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { AdminReporteDetalle } from "./AdminReporteDetalle";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 const ESTADOS = [
     { value: "", label: "Todos los estados" },
@@ -222,9 +224,11 @@ export function AdminReportesTable() {
             </div>
 
             {error && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-700 dark:text-red-300">
-                    {error}
-                </div>
+                <ErrorState
+                    title="No pudimos cargar los reportes"
+                    description="Ocurrió un problema al consultar la bandeja. Intenta recargar la página."
+                    onRetry={() => window.location.reload()}
+                />
             )}
 
             <div className="glass rounded-2xl overflow-hidden">
@@ -252,8 +256,11 @@ export function AdminReportesTable() {
                                 </tr>
                             ) : reportes.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-4 py-8 text-center text-subtle">
-                                        No hay reportes que coincidan con los filtros.
+                                    <td colSpan={8} className="px-4 py-2">
+                                        <EmptyState
+                                            title="No hay reportes que coincidan"
+                                            description="Prueba ajustar los filtros o vuelve más tarde."
+                                        />
                                     </td>
                                 </tr>
                             ) : (

@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { AdminReporteDetalle } from "./AdminReporteDetalle";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const CATEGORIAS = [
     { value: "CONTACTO_INSISTENTE", label: "Contacto insistente" },
@@ -116,7 +118,13 @@ export function SpamRevisionPanel() {
                 <p className="text-sm text-muted">Reportes marcados como posible spam por la IA esperando validación humana.</p>
             </div>
 
-            {error && <div className="rounded-xl bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-700 dark:text-red-300">{error}</div>}
+            {error && (
+                <ErrorState
+                    title="No pudimos cargar los reportes en revisión"
+                    description="Ocurrió un problema al consultar la cola de spam. Intenta de nuevo."
+                    onRetry={fetchReportes}
+                />
+            )}
             {success && <div className="rounded-xl bg-green-50 dark:bg-green-950/30 p-4 text-sm text-green-700 dark:text-green-300">{success}</div>}
 
             <div className="glass rounded-2xl overflow-hidden">
@@ -142,8 +150,11 @@ export function SpamRevisionPanel() {
                                 </tr>
                             ) : reportes.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-subtle">
-                                        No hay reportes en revisión de spam.
+                                    <td colSpan={6} className="px-4 py-2">
+                                        <EmptyState
+                                            title="No hay reportes en revisión de spam"
+                                            description="Cuando la IA marque un reporte como posible spam, aparecerá aquí para validación humana."
+                                        />
                                     </td>
                                 </tr>
                             ) : (

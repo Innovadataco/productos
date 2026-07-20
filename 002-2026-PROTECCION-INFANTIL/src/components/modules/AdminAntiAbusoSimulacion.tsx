@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type NivelRiesgo = "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
 
@@ -74,7 +76,7 @@ export function AdminAntiAbusoSimulacion() {
         );
     }
 
-    if (error) return <p className="text-red-600 dark:text-red-400" role="alert">{error}</p>;
+    if (error) return <ErrorState title="No pudimos cargar la simulación" description="Ocurrió un problema al consultar los datos. Intenta recargar la página." onRetry={() => window.location.reload()} />;
     if (!data) return null;
 
     const { resumen, detalles } = data;
@@ -122,8 +124,11 @@ export function AdminAntiAbusoSimulacion() {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {detalles.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="px-4 py-6 text-center text-subtle">
-                                        No hay identificadores para simular.
+                                    <td colSpan={10} className="px-4 py-2">
+                                        <EmptyState
+                                            title="No hay identificadores para simular"
+                                            description="Cuando haya reportes suficientes, podrás comparar el score actual vs. ajustado."
+                                        />
                                     </td>
                                 </tr>
                             ) : (

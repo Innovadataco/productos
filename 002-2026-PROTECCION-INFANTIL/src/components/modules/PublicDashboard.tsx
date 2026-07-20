@@ -7,6 +7,7 @@ import { DonutChart } from "./DonutChart";
 import { MetricCard } from "./MetricCard";
 import { ChartCard } from "./ChartCard";
 import { MiniList } from "./MiniList";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { formatNivel, RIESGO_COLORS } from "@/lib/labels";
 import type { PuntoMapa } from "./MapaUbicaciones";
 
@@ -61,7 +62,7 @@ export function PublicDashboard() {
         );
     }
 
-    if (error) return <p className="text-red-600 dark:text-red-400" role="alert">{error}</p>;
+    if (error) return <ErrorState title="No pudimos cargar las estadísticas" description="Ocurrió un problema al consultar el dashboard público. Intenta recargar la página." onRetry={() => window.location.reload()} />;
     if (!data) return null;
 
     const totalOrigen = data.totales.reportesAutenticados + data.totales.reportesAnonimos || 1;

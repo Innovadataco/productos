@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 type Solicitud = {
     id: string;
@@ -69,12 +70,15 @@ export function ComiteSolicitudDetalle({
     const [reporte, setReporte] = useState<ReporteDetalle | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [retry, setRetry] = useState(0);
     const [success, setSuccess] = useState("");
     const [categoria, setCategoria] = useState("");
     const [resolucion, setResolucion] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
+        setLoading(true);
+        setError("");
         fetch(`/api/admin/reportes-revision/${solicitud.reporteId}`, { credentials: "include" })
             .then(async (r) => {
                 if (!r.ok) throw new Error("Error cargando reporte");
@@ -85,9 +89,9 @@ export function ComiteSolicitudDetalle({
                 setReporte(data);
                 setCategoria(data.clasificacion?.categoria || "");
             })
-            .catch(() => setError("Error cargando reporte"))
+            .catch(() => setError("No se pudo cargar el reporte."))
             .finally(() => setLoading(false));
-    }, [solicitud.reporteId]);
+    }, [solicitud.reporteId, retry]);
 
     const handleResolver = async () => {
         if (!categoria) {
@@ -135,7 +139,11 @@ export function ComiteSolicitudDetalle({
                 {loading ? (
                     <p className="text-subtle">Cargando reporte...</p>
                 ) : !reporte ? (
-                    <p className="text-red-600">No se pudo cargar el reporte.</p>
+                    <ErrorState
+                        title="No se pudo cargar el reporte"
+                        description="Ocurrió un problema al cargar el detalle del caso. Intenta de nuevo."
+                        onRetry={() => setRetry((r) => r + 1)}
+                    />
                 ) : (
                     <div className="space-y-4 text-sm text-body">
                         <div className="grid grid-cols-2 gap-4">
