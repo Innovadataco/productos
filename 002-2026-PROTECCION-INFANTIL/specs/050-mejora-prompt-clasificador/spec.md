@@ -4,9 +4,9 @@
 
 **Created**: 2026-07-20
 
-**Status**: PLANEADO
+**Status**: CERRADA
 
-**Input**: Mejora quirúrgica del prompt de clasificación en `src/lib/ai/classifier.ts` para corregir dos fallos sistemáticos detectados en simulación: confusión de `SOLICITUD_MATERIAL` con `OFRECIMIENTO_REGALOS`, y bajo recall de `CONTACTO_INSISTENTE` frente a señales tempranas de grooming. No se implementa código hasta aprobación humana del plan.
+**Input**: Mejora quirúrgica del prompt de clasificación en `src/lib/ai/classifier.ts` para corregir dos fallos sistemáticos detectados en simulación: confusión de `SOLICITUD_MATERIAL` con `OFRECIMIENTO_REGALOS`, y bajo recall de `CONTACTO_INSISTENTE` frente a señales tempranas de grooming.
 
 ---
 
@@ -99,11 +99,20 @@ El sistema debe clasificar correctamente dos conductas de riesgo que hoy fallan 
 
 ## Implementación
 
-*Pendiente. Se completará tras la aprobación del plan y la implementación de la User Story.*
+- Se reemplazó el `basePrompt` en `src/lib/ai/classifier.ts` (función `buildSystemPrompt`, líneas ~100-145) por el texto aprobado en este spec.
+- Se agregó regla de prioridad para `SOLICITUD_MATERIAL` sobre `OFRECIMIENTO_REGALOS` cuando hay solicitud de material íntimo + ofrecimiento.
+- Se corrigió el ejemplo `"te compro un celular si me mandas fotos" → SOLICITUD_MATERIAL`.
+- Se amplió la definición de `CONTACTO_INSISTENTE` con señales de grooming temprano y ejemplos contrastivos.
+- Se agregaron smoke tests en `src/lib/ai/classifier.test.ts` para verificar que el prompt contiene las reglas, ejemplos y fronteras correctas.
+- No se modificó lógica, modelos, schema de respuesta ni base de datos.
+
+## Deuda técnica
+
+- La validación formal de recall/precisión del nuevo prompt queda pendiente hasta contar con un set de casos corregidos por humanos reales (operador/comité o eval harness con casos validados). Los smoke tests sintéticos no son suficientes para medir mejora real. Registrado como ítem de pre-producción en `docs/PRE-PRODUCCION.md`.
 
 ## Status
 
-PLANEADO
+CERRADA
 
 ---
 
