@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { ComiteSolicitudDetalle } from "./ComiteSolicitudDetalle";
 
@@ -21,20 +22,34 @@ type Paginacion = {
     totalPages: number;
 };
 
+function estadoBadge(estado: Solicitud["estado"]) {
+    const base = "rounded-full px-2.5 py-0.5 text-xs font-medium";
+    switch (estado) {
+        case "PENDIENTE":
+            return `${base} bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300`;
+        case "ASIGNADA":
+            return `${base} bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300`;
+        case "RESUELTA":
+            return `${base} bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300`;
+        default:
+            return `${base} bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300`;
+    }
+}
+
 export function ComiteBandeja() {
-    const [tab, setTab] = useState<"pendientes" | "mias">("pendientes");
+    const { user } = useAuth();
     const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [pagination, setPagination] = useState<Paginacion>({ page: 1, limit: 20, total: 0, totalPages: 0 });
     const [selectedSolicitud, setSelectedSolicitud] = useState<Solicitud | null>(null);
+    const [assigningId, setAssigningId] = useState<string | null>(null);
 
     const fetchSolicitudes = useCallback(async () => {
         setLoading(true);
         setError("");
         try {
-            const endpoint = tab === "pendientes" ? "/api/admin/comite/pendientes" : "/api/admin/comite/mias";
-            const res = await fetch(`${endpoint}?page=${pagination.page}&limit=${pagination.limit}`, {
+            const res = await fetch(`/api/admin/comite/solicitudes?page=${pagination.page}&limit=${pagination.limit}`, {
                 credentials: "include",
             });
             if (res.status === 401) {
@@ -50,25 +65,45 @@ export function ComiteBandeja() {
         } finally {
             setLoading(false);
         }
-    }, [tab, pagination.page, pagination.limit]);
+    }, [pagination.page, pagination.limit]);
 
     useEffect(() => {
         fetchSolicitudes();
     }, [fetchSolicitudes]);
 
-    const handleAsignar = async (solicitud: Solicitud) => {
-        try {
-            const res = await fetch(`/api/admin/comite/${solicitud.id}/asignar`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({}),
-            });
-            if (!res.ok) throw new Error("Error asignando solicitud");
-            await fetchSolicitudes();
-        } catch {
-            setError("Error asignando solicitud");
+    const handleVer = async (solicitud: Solicitud) => {
+        if (solicitud.estado === "PENDIENTE") {
+            setAssigningId(solicitud.id);
+            try {
+                const res = await fetch(`/api/admin/comite/${solicitud.id}/asignar`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({}),
+                });
+                const json = await res.json();
+                if (!res.ok) {
+                    if (res.status === 409 || res.status === 403) {
+                        throw new Error(json.error?.message || "El caso ya fue asignado a otro miembro del comité");
+                    }
+                    throw new Error(json.error?.message || "Error asignando solicitud");
+                }
+                await fetchSolicitudes();
+                setSelectedSolicitud({ ...solicitud, estado: "ASIGNADA", comiteId: user?.id || null });
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : "Error asignando solicitud");
+            } finally {
+                setAssigningId(null);
+            }
+        } else {
+            setSelectedSolicitud(solicitud);
         }
+    };
+
+    const isReadOnly = (solicitud: Solicitud) => {
+        if (solicitud.estado === "RESUELTA") return true;
+        if (solicitud.estado === "ASIGNADA" && solicitud.comiteId && solicitud.comiteId !== user?.id) return true;
+        return false;
     };
 
     const goToPage = (newPage: number) => {
@@ -77,29 +112,6 @@ export function ComiteBandeja() {
 
     return (
         <div className="space-y-6">
-            <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-                <button
-                    onClick={() => setTab("pendientes")}
-                    className={`px-4 py-2 text-sm font-semibold ${
-                        tab === "pendientes"
-                            ? "text-accent border-b-2 border-accent"
-                            : "text-muted hover:text-body"
-                    }`}
-                >
-                    Pendientes
-                </button>
-                <button
-                    onClick={() => setTab("mias")}
-                    className={`px-4 py-2 text-sm font-semibold ${
-                        tab === "mias"
-                            ? "text-accent border-b-2 border-accent"
-                            : "text-muted hover:text-body"
-                    }`}
-                >
-                    Mías
-                </button>
-            </div>
-
             {error && (
                 <div className="rounded-xl bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-700 dark:text-red-300">
                     {error}
@@ -129,34 +141,41 @@ export function ComiteBandeja() {
                             ) : solicitudes.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-4 py-8 text-center text-subtle">
-                                        No hay solicitudes {tab === "pendientes" ? "pendientes" : "asignadas"}.
+                                        No hay casos pendientes de revisión.
                                     </td>
                                 </tr>
                             ) : (
-                                solicitudes.map((s) => (
-                                    <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                        <td className="px-4 py-3 font-mono text-xs text-body">{s.numero}</td>
-                                        <td className="px-4 py-3">
-                                            <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-body">
-                                                {s.estado}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-body max-w-xs truncate">{s.motivo}</td>
-                                        <td className="px-4 py-3 text-subtle">{new Date(s.creadoEn).toLocaleString()}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex gap-2">
-                                                {tab === "pendientes" && s.estado === "PENDIENTE" && (
-                                                    <Button onClick={() => handleAsignar(s)} variant="outline" className="py-2 px-3 text-xs">
-                                                        Asignarme
-                                                    </Button>
-                                                )}
-                                                <Button onClick={() => setSelectedSolicitud(s)} variant="outline" className="py-2 px-3 text-xs">
-                                                    Ver
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                solicitudes.map((s) => {
+                                    const readOnly = isReadOnly(s);
+                                    return (
+                                        <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                            <td className="px-4 py-3 font-mono text-xs text-body">{s.numero}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={estadoBadge(s.estado)}>{s.estado}</span>
+                                            </td>
+                                            <td className="px-4 py-3 text-body max-w-xs truncate">{s.motivo}</td>
+                                            <td className="px-4 py-3 text-subtle">{new Date(s.creadoEn).toLocaleString()}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    {readOnly ? (
+                                                        <span className="text-xs text-muted">
+                                                            {s.estado === "RESUELTA" ? "Resuelto" : "Asignado a otro"}
+                                                        </span>
+                                                    ) : (
+                                                        <Button
+                                                            onClick={() => handleVer(s)}
+                                                            disabled={assigningId === s.id}
+                                                            variant="outline"
+                                                            className="py-2 px-3 text-xs"
+                                                        >
+                                                            {assigningId === s.id ? "Asignando..." : "Ver"}
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
@@ -184,6 +203,7 @@ export function ComiteBandeja() {
                     solicitud={selectedSolicitud}
                     onClose={() => setSelectedSolicitud(null)}
                     onRefresh={fetchSolicitudes}
+                    readOnly={isReadOnly(selectedSolicitud)}
                 />
             )}
         </div>
