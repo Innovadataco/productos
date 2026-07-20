@@ -14,13 +14,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
         const styles: Record<ButtonVariant, string> = {
             primary:
-                "accent-gradient text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20 hover:brightness-110",
+                "bg-gradient-to-r from-sky-700 to-cyan-600 text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20 hover:brightness-110",
             secondary:
-                "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600",
+                "bg-emerald-700 text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-800",
             outline:
                 "glass-input text-body hover:bg-white/80 dark:hover:bg-slate-800/80 border",
             ghost: "text-muted hover:text-body hover:bg-slate-100 dark:hover:bg-slate-800/60",
-            danger: "bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-600",
+            danger: "bg-red-700 text-white shadow-lg shadow-red-500/20 hover:bg-red-800",
         };
 
         return (

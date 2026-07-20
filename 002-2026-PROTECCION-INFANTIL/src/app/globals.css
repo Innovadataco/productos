@@ -43,11 +43,11 @@
     }
 
     .text-subtle {
-        @apply text-slate-500 dark:text-slate-500;
+        @apply text-slate-500 dark:text-slate-400;
     }
 
     .text-accent {
-        @apply text-sky-600 dark:text-cyan-400;
+        @apply text-sky-700 dark:text-cyan-400;
     }
 
     /* Glass surfaces */
@@ -86,7 +86,6 @@
 }
 
 @layer components {
-    /* Scrollbar minimal */
     ::-webkit-scrollbar {
         width: 8px;
         height: 8px;

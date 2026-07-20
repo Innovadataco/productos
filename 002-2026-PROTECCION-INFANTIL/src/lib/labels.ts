@@ -15,10 +15,10 @@ export const RIESGO_COLORS: Record<string, string> = {
 };
 
 export const RIESGO_TEXT_COLORS: Record<string, string> = {
-    BAJO: "text-emerald-600 dark:text-emerald-400",
-    MEDIO: "text-amber-600 dark:text-amber-400",
-    ALTO: "text-orange-600 dark:text-orange-400",
-    CRITICO: "text-red-600 dark:text-red-400",
+    BAJO: "text-emerald-700 dark:text-emerald-400",
+    MEDIO: "text-amber-700 dark:text-amber-400",
+    ALTO: "text-orange-700 dark:text-orange-400",
+    CRITICO: "text-red-700 dark:text-red-400",
     SIN_CLASIFICAR: "text-slate-500 dark:text-slate-400",
 };
 

@@ -74,7 +74,7 @@ export function AdminAntiAbusoSimulacion() {
         );
     }
 
-    if (error) return <p className="text-red-600" role="alert">{error}</p>;
+    if (error) return <p className="text-red-600 dark:text-red-400" role="alert">{error}</p>;
     if (!data) return null;
 
     const { resumen, detalles } = data;
@@ -151,7 +151,7 @@ export function AdminAntiAbusoSimulacion() {
                                             {row.cambioNivel === 0 ? (
                                                 <span className="text-subtle">—</span>
                                             ) : (
-                                                <span className={`font-semibold ${row.cambioNivel > 0 ? "text-red-600" : "text-green-600"}`}>
+                                                <span className={`font-semibold ${row.cambioNivel > 0 ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>
                                                     {row.cambioNivel > 0 ? `▲ ${row.cambioNivel}` : `▼ ${Math.abs(row.cambioNivel)}`}
                                                 </span>
                                             )}
@@ -192,9 +192,9 @@ export function AdminAntiAbusoSimulacion() {
 function MetricCard({ label, value, tone }: { label: string; value: number; tone?: "up" | "down" }) {
     const toneClass =
         tone === "up"
-            ? "text-red-600"
+            ? "text-red-700 dark:text-red-400"
             : tone === "down"
-            ? "text-green-600"
+            ? "text-green-700 dark:text-green-400"
             : "text-body";
     return (
         <article className="glass rounded-2xl p-6 transition hover:shadow-md motion-reduce:transition-none">
