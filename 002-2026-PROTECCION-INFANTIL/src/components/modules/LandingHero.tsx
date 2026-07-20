@@ -132,7 +132,7 @@ export function LandingHero({
 
                     <div className="flex flex-col items-start rounded-3xl border border-white/30 bg-white/10 p-6 text-left backdrop-blur-md sm:p-8">
                         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-white">
-                            <SearchIcon className="h-6 w-6" />
+                            <SearchIcon className="h-6 w-6" aria-hidden="true" />
                         </div>
                         <span className="text-xl font-bold text-white sm:text-2xl">Consultar</span>
                         <span className="mt-1 text-sm font-medium text-white/90">Busca un número, nick o usuario</span>

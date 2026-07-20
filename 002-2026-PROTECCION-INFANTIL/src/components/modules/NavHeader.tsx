@@ -87,9 +87,10 @@ export function NavHeader() {
                         <div className="relative" ref={dropdownRef}>
                             <button
                                 onClick={() => setOpen((v) => !v)}
-                                className="flex items-center gap-2 rounded-xl glass-input px-2.5 py-2 text-sm font-medium text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
+                                className="flex min-h-[44px] items-center gap-2 rounded-xl glass-input px-2.5 py-2 text-sm font-medium text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
                                 aria-expanded={open}
                                 aria-haspopup="true"
+                                aria-label="Menú de usuario"
                             >
                                 <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white ${avatarClass}`}>
                                     {initials}
@@ -167,7 +168,7 @@ export function NavHeader() {
                     )}
 
                     <button
-                        className="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-xl glass-input text-body"
+                        className="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl glass-input text-body"
                         onClick={() => setMobileOpen((v) => !v)}
                         aria-label="Menú"
                     >
@@ -265,7 +266,7 @@ function MobileLink({
 
 function ShieldIcon({ className }: { className?: string }) {
     return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
         </svg>
     );
@@ -273,7 +274,7 @@ function ShieldIcon({ className }: { className?: string }) {
 
 function ChevronIcon({ className }: { className?: string }) {
     return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
     );
@@ -281,7 +282,7 @@ function ChevronIcon({ className }: { className?: string }) {
 
 function MenuIcon({ className }: { className?: string }) {
     return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
     );
@@ -289,7 +290,7 @@ function MenuIcon({ className }: { className?: string }) {
 
 function XIcon({ className }: { className?: string }) {
     return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
     );

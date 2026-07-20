@@ -22,7 +22,7 @@ export function ConfirmacionReporte({ numeroSeguimiento }: { numeroSeguimiento: 
         <div className="mx-auto max-w-md text-center animate-floatUp">
             <GlassCard className="space-y-5">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent-100 text-accent-700">
-                    <svg className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <svg className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                 </div>

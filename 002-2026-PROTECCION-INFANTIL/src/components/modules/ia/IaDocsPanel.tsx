@@ -139,7 +139,7 @@ function ConfidenceGauge({ confianza, umbral }: { confianza: number; umbral: num
     return (
         <GlassCard className="flex flex-col items-center p-6">
             <div className="relative h-40 w-48">
-                <svg viewBox="0 0 180 110" className="h-full w-full">
+                <svg viewBox="0 0 180 110" className="h-full w-full" aria-hidden="true">
                     <path
                         d="M 20 100 A 70 70 0 0 1 160 100"
                         fill="none"
