@@ -135,10 +135,11 @@ async function start() {
     await ensureQueue("dataset-anonimizacion-backfill");
     await ensureQueue("dataset-embedding-backfill");
     await ensureQueue("eval-classifier-run");
+    await ensureQueue("simulacion-run");
 
     const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
-    console.log("[WORKER] Iniciado. Escuchando colas 'reporte-procesamiento', 'dataset-anonimizacion-backfill', 'dataset-embedding-backfill' y 'eval-classifier-run'...");
+    console.log("[WORKER] Iniciado. Escuchando colas 'reporte-procesamiento', 'dataset-anonimizacion-backfill', 'dataset-embedding-backfill', 'eval-classifier-run' y 'simulacion-run'...");
     console.log(`[WORKER] Config: max_reintentos=${maxReintentos}, retry_delay=${retryDelaySegundos}s, concurrencia=${concurrencia}, backoff=exponencial`);
 
     const ollamaOk = await checkOllamaHealth();
@@ -182,7 +183,7 @@ async function start() {
                         "Content-Type": "application/json",
                         "X-Worker-Secret": WORKER_SECRET,
                     },
-                    body: JSON.stringify({ reporteId }),
+                    body: JSON.stringify({ reporteId, modeloClasificacion: job.data.modeloClasificacion }),
                     maxRetries: MAX_FETCH_RETRY,
                     baseDelayMs: BASE_DELAY_MS,
                 });
@@ -383,6 +384,34 @@ async function start() {
                 await markEvalRunFailed(runId, msg);
             } catch (markErr) {
                 console.error(`[WORKER] ERROR no se pudo marcar eval run=${runId} como fallido:`, markErr);
+            }
+            throw err;
+        }
+    });
+
+    await boss.work("simulacion-run", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        if (!job || !job.data) {
+            console.error("[WORKER] Job inválido:", JSON.stringify(jobs));
+            return;
+        }
+        const { runId, modeloClasificacion } = job.data;
+        console.log(`[WORKER] Iniciando simulación run ${runId} modelo ${modeloClasificacion} (job ${job.id})`);
+        try {
+            const { runSimulacionBatchCreator } = await import("../src/lib/simulacion/executor.ts");
+            await runSimulacionBatchCreator(runId, modeloClasificacion);
+            console.log(`[WORKER] OK simulacion-run=${runId}`);
+            return { success: true, runId };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR simulacion-run=${runId} error=${msg}`);
+            try {
+                await prisma.simulacionRun.update({
+                    where: { id: runId },
+                    data: { estado: "FALLIDA", fechaFin: new Date() },
+                });
+            } catch (markErr) {
+                console.error(`[WORKER] ERROR no se pudo marcar simulacion-run=${runId} como fallida:`, markErr);
             }
             throw err;
         }

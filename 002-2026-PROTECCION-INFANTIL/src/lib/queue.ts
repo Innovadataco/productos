@@ -65,7 +65,7 @@ export interface SendReporteResult {
 
 export async function sendReporte(
     reporteId: string,
-    opts?: { prioridadAlta?: boolean; intento?: number }
+    opts?: { prioridadAlta?: boolean; intento?: number; modeloClasificacion?: string }
 ): Promise<SendReporteResult> {
     await ensureQueue("reporte-procesamiento");
 
@@ -82,7 +82,7 @@ export async function sendReporte(
 
     const jobId = await boss.send(
         "reporte-procesamiento",
-        { reporteId, intento: opts?.intento ?? 0 },
+        { reporteId, intento: opts?.intento ?? 0, modeloClasificacion: opts?.modeloClasificacion },
         {
             priority,
             retryLimit: maxReintentos,
@@ -145,6 +145,15 @@ export async function publishDatasetEmbeddingBackfill(datasetId: string) {
     await boss.send("dataset-embedding-backfill", { datasetId }, {
         retryLimit: 5,
         retryDelay: 60,
+        retryBackoff: true,
+    });
+}
+
+export async function sendSimulacionRun(runId: string, modeloClasificacion: string) {
+    await ensureQueue("simulacion-run");
+    await boss.send("simulacion-run", { runId, modeloClasificacion }, {
+        retryLimit: 3,
+        retryDelay: 30,
         retryBackoff: true,
     });
 }

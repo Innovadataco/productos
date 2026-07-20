@@ -33,6 +33,7 @@ export async function POST(request: Request) {
         const reporteResult = await obtenerReporte(reporteId);
         if (!reporteResult.ok) return reporteResult.response;
         const reporte = reporteResult.reporte;
+        const modeloClasificacion = bodyResult.modeloClasificacion;
 
         // Idempotencia: si ya está en estado final, no reprocesar
         if (ESTADOS_FINALES.has(reporte.estado)) {
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
         }
 
         // Generar embedding
-        const parametros = await cargarParametrosClasificacion();
+        const parametros = await cargarParametrosClasificacion(modeloClasificacion ? { modeloClasificacion } : undefined);
         const vector = await generarEmbedding(parametros.modeloEmbedding, reporte.texto);
         await guardarEmbedding(reporte.id, parametros.modeloEmbedding, vector);
 

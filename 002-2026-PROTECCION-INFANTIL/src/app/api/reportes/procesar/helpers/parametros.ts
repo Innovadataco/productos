@@ -16,7 +16,7 @@ export interface ParametrosClasificacion {
     modeloAnonimizacion: string;
 }
 
-export async function cargarParametrosClasificacion(): Promise<ParametrosClasificacion> {
+export async function cargarParametrosClasificacion(override?: { modeloClasificacion?: string }): Promise<ParametrosClasificacion> {
     const paramEmbedding = await prisma.parametroSistema.findUnique({
         where: { clave: "reportes.embedding_model" },
     });
@@ -64,7 +64,7 @@ export async function cargarParametrosClasificacion(): Promise<ParametrosClasifi
 
     return {
         modeloEmbedding,
-        modeloClasificacion,
+        modeloClasificacion: override?.modeloClasificacion || modeloClasificacion,
         modeloAnonimizacion,
         umbralRevision,
         nVotos,

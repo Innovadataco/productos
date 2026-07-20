@@ -17,9 +17,9 @@ export function validarWorkerSecret(request: Request): { ok: true } | { ok: fals
     return { ok: true };
 }
 
-export async function parsearBody(request: Request): Promise<{ ok: true; reporteId: string } | { ok: false; response: NextResponse }> {
+export async function parsearBody(request: Request): Promise<{ ok: true; reporteId: string; modeloClasificacion?: string } | { ok: false; response: NextResponse }> {
     try {
-        const body = (await request.json()) as { reporteId?: string };
+        const body = (await request.json()) as { reporteId?: string; modeloClasificacion?: string };
         if (!body.reporteId) {
             return {
                 ok: false,
@@ -29,7 +29,7 @@ export async function parsearBody(request: Request): Promise<{ ok: true; reporte
                 ),
             };
         }
-        return { ok: true, reporteId: body.reporteId };
+        return { ok: true, reporteId: body.reporteId, modeloClasificacion: body.modeloClasificacion };
     } catch {
         return {
             ok: false,
