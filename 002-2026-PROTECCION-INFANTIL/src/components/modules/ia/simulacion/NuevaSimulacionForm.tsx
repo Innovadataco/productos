@@ -140,6 +140,11 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
             {step === 1 && (
                 <div className="space-y-4">
                     <p className="text-sm text-muted">Paso 1 de 2 — Cargar set de casos</p>
+                    <div className="rounded-lg bg-slate-50 p-3 text-xs text-muted dark:bg-slate-800/50 space-y-1">
+                        <p className="font-medium">Formato esperado:</p>
+                        <p>CSV: texto,plataforma,identificador,fechaIncidente,ciudad,pais,edadVictima,categoriaEsperada</p>
+                        <p>JSON: array con esos mismos campos (edadVictima y categoriaEsperada opcionales).</p>
+                    </div>
                     <Input
                         type="file"
                         label="Archivo CSV o JSON"
