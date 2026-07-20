@@ -13,7 +13,6 @@ import { recalcularYGuardarScore } from "@/lib/scoring";
 import type { CategoriaConducta } from "@prisma/client";
 
 const resolverSchema = z.object({
-    accion: z.enum(["CLASIFICAR", "CORREGIR"]),
     categoria: z.enum([
         "CONTACTO_INSISTENTE",
         "SOLICITUD_MATERIAL",
@@ -73,7 +72,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 { status: 400 }
             );
         }
-        const { accion, categoria, resolucion } = parsed.data;
+        const { categoria, resolucion } = parsed.data;
 
         const solicitud = await prisma.solicitudComite.findUnique({
             where: { id },
@@ -116,37 +115,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
 
         const estadoAnterior = reporte.estado;
-        const estadoNuevo = accion === "CLASIFICAR" ? "CLASIFICADO" : "CORREGIDO";
+        const estadoNuevo = "CORREGIDO";
         const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
 
         await prisma.$transaction(async (tx) => {
-            if (accion === "CORREGIR") {
-                const correccionExistente = await tx.correccionAdmin.findUnique({
-                    where: { clasificacionId: reporte.clasificacion!.id },
-                });
-                if (correccionExistente) {
-                    throw new AppError("Este reporte ya fue corregido", ERROR_CODES.CONFLICT, 409);
-                }
-                await tx.correccionAdmin.create({
-                    data: {
-                        clasificacionId: reporte.clasificacion!.id,
-                        categoriaOriginal: reporte.clasificacion!.categoria,
-                        categoriaCorregida: categoria as CategoriaConducta,
-                        adminId: user.id,
-                        motivo: resolucion || null,
-                        confirmada: true,
-                    },
-                });
-                await tx.clasificacionIA.update({
-                    where: { reporteId: reporte.id },
-                    data: { categoria: categoria as CategoriaConducta, confianza: 1.0 },
-                });
-            } else if (categoria !== reporte.clasificacion!.categoria) {
-                await tx.clasificacionIA.update({
-                    where: { reporteId: reporte.id },
-                    data: { categoria: categoria as CategoriaConducta, confianza: 1.0 },
-                });
+            const correccionExistente = await tx.correccionAdmin.findUnique({
+                where: { clasificacionId: reporte.clasificacion!.id },
+            });
+            if (correccionExistente) {
+                throw new AppError("Este reporte ya fue corregido", ERROR_CODES.CONFLICT, 409);
             }
+            await tx.correccionAdmin.create({
+                data: {
+                    clasificacionId: reporte.clasificacion!.id,
+                    categoriaOriginal: reporte.clasificacion!.categoria,
+                    categoriaCorregida: categoria as CategoriaConducta,
+                    adminId: user.id,
+                    motivo: resolucion || null,
+                    confirmada: true,
+                },
+            });
+            await tx.clasificacionIA.update({
+                where: { reporteId: reporte.id },
+                data: { categoria: categoria as CategoriaConducta, confianza: 1.0 },
+            });
 
             await registrarTransicion({
                 reporteId: reporte.id,
@@ -154,7 +146,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 estadoNuevo,
                 responsableTipo,
                 responsableId: user.id,
-                motivo: resolucion || `Caso resuelto por comité: ${accion}`,
+                motivo: resolucion || "Caso resuelto por comité",
                 metadatos: { accion: "CASO_RESUELTO_POR_COMITE", solicitudId: id, numero: solicitud.numero },
                 tx,
             });
@@ -177,7 +169,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             tipoRecurso: "SolicitudComite",
             recursoId: id,
             usuarioId: user.id,
-            valorNuevo: JSON.stringify({ accion, categoria, resolucion: resolucion || null, estadoNuevo }),
+            valorNuevo: JSON.stringify({ categoria, resolucion: resolucion || null, estadoNuevo }),
             ipAddress,
             userAgent,
         });

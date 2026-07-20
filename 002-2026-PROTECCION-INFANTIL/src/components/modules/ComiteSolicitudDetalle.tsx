@@ -59,16 +59,17 @@ export function ComiteSolicitudDetalle({
     solicitud,
     onClose,
     onRefresh,
+    readOnly = false,
 }: {
     solicitud: Solicitud;
     onClose: () => void;
     onRefresh: () => void;
+    readOnly?: boolean;
 }) {
     const [reporte, setReporte] = useState<ReporteDetalle | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-    const [accion, setAccion] = useState<"CLASIFICAR" | "CORREGIR">("CLASIFICAR");
     const [categoria, setCategoria] = useState("");
     const [resolucion, setResolucion] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
@@ -88,27 +89,6 @@ export function ComiteSolicitudDetalle({
             .finally(() => setLoading(false));
     }, [solicitud.reporteId]);
 
-    const handleAsignar = async () => {
-        setActionLoading(true);
-        setError("");
-        try {
-            const res = await fetch(`/api/admin/comite/${solicitud.id}/asignar`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({}),
-            });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error?.message || "Error");
-            setSuccess("Solicitud asignada correctamente.");
-            onRefresh();
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Error asignando");
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
     const handleResolver = async () => {
         if (!categoria) {
             setError("Seleccione una categoría.");
@@ -122,11 +102,11 @@ export function ComiteSolicitudDetalle({
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ accion, categoria, resolucion }),
+                body: JSON.stringify({ categoria, resolucion }),
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error?.message || "Error");
-            setSuccess(`Solicitud resuelta. El reporte pasó a ${json.reporte.estado}.`);
+            setSuccess(`Caso resuelto. El reporte quedó en ${json.reporte.estado}.`);
             onRefresh();
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Error resolviendo");
@@ -144,7 +124,7 @@ export function ComiteSolicitudDetalle({
                 </div>
 
                 {error && <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-red-700 dark:text-red-300">{error}</div>}
-                {success && <div className="mb-4 rounded-lg bg-green-50 dark:bg-green-950/30 p-3 text-green-700 dark:text-green-300">{success}</div>}
+                {success && <div className="mb-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-3 text-emerald-700 dark:text-emerald-300">{success}</div>}
 
                 <div className="mb-4 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
                     <p><span className="text-subtle">Estado:</span> {solicitud.estado}</p>
@@ -199,42 +179,17 @@ export function ComiteSolicitudDetalle({
                             <p className="whitespace-pre-wrap rounded-lg glass-input p-3">{reporte.texto}</p>
                         </div>
 
-                        {solicitud.estado === "PENDIENTE" && (
+                        {readOnly ? (
                             <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-                                <h3 className="mb-2 font-medium text-body">Asignar solicitud</h3>
-                                <Button onClick={handleAsignar} disabled={actionLoading}>
-                                    {actionLoading ? "Asignando..." : "Asignarme esta solicitud"}
-                                </Button>
+                                <p className="text-muted">Este caso está en modo solo lectura.</p>
                             </div>
-                        )}
-
-                        {solicitud.estado === "ASIGNADA" && (
+                        ) : (
                             <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-                                <h3 className="mb-2 font-medium text-body">Resolver solicitud</h3>
-                                <div className="mb-2 flex gap-4">
-                                    <label className="flex items-center gap-2">
-                                        <input
-                                            type="radio"
-                                            name="accion"
-                                            value="CLASIFICAR"
-                                            checked={accion === "CLASIFICAR"}
-                                            onChange={(e) => setAccion(e.target.value as "CLASIFICAR" | "CORREGIR")}
-                                        />
-                                        Clasificar
-                                    </label>
-                                    <label className="flex items-center gap-2">
-                                        <input
-                                            type="radio"
-                                            name="accion"
-                                            value="CORREGIR"
-                                            checked={accion === "CORREGIR"}
-                                            onChange={(e) => setAccion(e.target.value as "CLASIFICAR" | "CORREGIR")}
-                                        />
-                                        Corregir
-                                    </label>
-                                </div>
+                                <h3 className="mb-2 font-medium text-body">Resolver caso</h3>
+                                <label className="mb-1 block text-sm text-subtle" htmlFor="categoria-resolver">Categoría final</label>
                                 <select
-                                    className="mb-2 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
+                                    id="categoria-resolver"
+                                    className="mb-3 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
                                     value={categoria}
                                     onChange={(e) => setCategoria(e.target.value)}
                                 >
@@ -243,10 +198,12 @@ export function ComiteSolicitudDetalle({
                                         <option key={c.value} value={c.value}>{c.label}</option>
                                     ))}
                                 </select>
+                                <label className="mb-1 block text-sm text-subtle" htmlFor="resolucion-resolver">Motivo / resolución (opcional)</label>
                                 <textarea
-                                    className="mb-2 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
+                                    id="resolucion-resolver"
+                                    className="mb-3 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
                                     rows={3}
-                                    placeholder="Resolución / motivo (opcional)"
+                                    placeholder="Motivo de la decisión (opcional)"
                                     value={resolucion}
                                     onChange={(e) => setResolucion(e.target.value)}
                                 />

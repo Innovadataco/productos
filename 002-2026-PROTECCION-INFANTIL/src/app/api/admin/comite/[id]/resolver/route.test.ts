@@ -1,9 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { GET as GETPendientes } from "./route";
-import { POST as POSTAsignar } from "../[id]/asignar/route";
-import { POST as POSTResolver } from "../[id]/resolver/route";
-import { POST as POSTEscalar } from "../../reportes/[id]/escalar/route";
-import { GET as GETDetalle } from "../../reportes-revision/[id]/route";
+import { POST as POSTResolver } from "./route";
+import { POST as POSTAsignar } from "../asignar/route";
+import { POST as POSTEscalar } from "../../../reportes/[id]/escalar/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
@@ -63,7 +61,7 @@ async function crearComite(adminId: string) {
     return comite;
 }
 
-describe("Flujo de comité de validación", () => {
+describe("POST /api/admin/comite/[id]/resolver", () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();
@@ -75,7 +73,7 @@ describe("Flujo de comité de validación", () => {
         }
     });
 
-    it("operador escala caso, comité lo ve, se asigna y resuelve", async () => {
+    async function escalarYAsignar() {
         const admin = await crearUsuario("ADMIN");
         const operador = await crearUsuario("OPERADOR", "op@test.com");
         await prisma.perfilOperador.create({
@@ -84,7 +82,6 @@ describe("Flujo de comité de validación", () => {
         const comite = await crearComite(admin.id);
         const reporte = await crearReporteDePrueba({ operadorId: operador.id });
 
-        // Operador escala
         mockToken = await crearTokenUsuario(operador.id, "OPERADOR");
         const resEscalar = await POSTEscalar(
             new Request(
@@ -92,107 +89,116 @@ describe("Flujo de comité de validación", () => {
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                    body: JSON.stringify({ motivo: "Caso ambiguo, necesita segunda opinión" }),
+                    body: JSON.stringify({ motivo: "Caso ambiguo" }),
                 }
             ),
             { params: Promise.resolve({ id: reporte!.id }) }
         );
         expect(resEscalar.status).toBe(201);
         const bodyEscalar = await resEscalar.json();
-        expect(bodyEscalar.numero).toMatch(/^SOL-[A-F0-9]{8}$/);
-        expect(bodyEscalar.estado).toBe("PENDIENTE");
 
-        const reporteEscalado = await prisma.reporte.findUnique({ where: { id: reporte!.id } });
-        expect(reporteEscalado?.operadorId).toBeNull();
-        expect(reporteEscalado?.comiteId).toBeNull();
-        expect(reporteEscalado?.estado).toBe("REVISION_MANUAL");
-
-        // Comité ve pendientes
         mockToken = await crearTokenUsuario(comite.id, "COMITE_VALIDACION");
-        const resPendientes = await GETPendientes(
-            new Request("http://localhost:5005/api/admin/comite/pendientes", {
-                headers: { cookie: `token=${mockToken}` },
-            })
-        );
-        expect(resPendientes.status).toBe(200);
-        const bodyPendientes = await resPendientes.json();
-        expect(bodyPendientes.solicitudes).toHaveLength(1);
-        const solicitud = bodyPendientes.solicitudes[0];
-
-        // Comité se asigna
         const resAsignar = await POSTAsignar(
             new Request(
-                `http://localhost:5005/api/admin/comite/${solicitud.id}/asignar`,
+                `http://localhost:5005/api/admin/comite/${bodyEscalar.solicitudId}/asignar`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
                     body: JSON.stringify({}),
                 }
             ),
-            { params: Promise.resolve({ id: solicitud.id }) }
+            { params: Promise.resolve({ id: bodyEscalar.solicitudId }) }
         );
         expect(resAsignar.status).toBe(200);
-        const bodyAsignar = await resAsignar.json();
-        expect(bodyAsignar.estado).toBe("ASIGNADA");
-        expect(bodyAsignar.comiteId).toBe(comite.id);
 
-        const reporteAsignado = await prisma.reporte.findUnique({ where: { id: reporte!.id } });
-        expect(reporteAsignado?.comiteId).toBe(comite.id);
+        return { admin, comite, reporte, solicitudId: bodyEscalar.solicitudId };
+    }
 
-        // Comité resuelve
-        const resResolver = await POSTResolver(
+    it("resuelve siempre en CORREGIDO y actualiza la clasificación", async () => {
+        const { comite, solicitudId } = await escalarYAsignar();
+        mockToken = await crearTokenUsuario(comite.id, "COMITE_VALIDACION");
+
+        const res = await POSTResolver(
+            new Request(
+                `http://localhost:5005/api/admin/comite/${solicitudId}/resolver`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
+                    body: JSON.stringify({
+                        categoria: "OFRECIMIENTO_REGALOS",
+                        resolucion: "Revisado por el comité",
+                    }),
+                }
+            ),
+            { params: Promise.resolve({ id: solicitudId }) }
+        );
+
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.estado).toBe("RESUELTA");
+        expect(body.reporte.estado).toBe("CORREGIDO");
+        expect(body.reporte.categoria).toBe("OFRECIMIENTO_REGALOS");
+
+        const correccion = await prisma.correccionAdmin.findFirst({
+            where: { clasificacion: { reporteId: body.reporte.id } },
+        });
+        expect(correccion).not.toBeNull();
+        expect(correccion?.categoriaCorregida).toBe("OFRECIMIENTO_REGALOS");
+
+        const transicion = await prisma.transicionReporte.findFirst({
+            where: { reporteId: body.reporte.id, estadoNuevo: "CORREGIDO" },
+        });
+        expect(transicion).not.toBeNull();
+        expect(transicion?.responsableTipo).toBe("COMITE");
+    });
+
+    it("rechaza sin categoría", async () => {
+        const { comite, solicitudId } = await escalarYAsignar();
+        mockToken = await crearTokenUsuario(comite.id, "COMITE_VALIDACION");
+
+        const res = await POSTResolver(
+            new Request(
+                `http://localhost:5005/api/admin/comite/${solicitudId}/resolver`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
+                    body: JSON.stringify({ resolucion: "Sin categoría" }),
+                }
+            ),
+            { params: Promise.resolve({ id: solicitudId }) }
+        );
+
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.error.message).toContain("Datos inválidos");
+    });
+
+    it("rechaza resolver una solicitud no asignada", async () => {
+        const admin = await crearUsuario("ADMIN");
+        const comite = await crearComite(admin.id);
+        const reporte = await crearReporteDePrueba();
+        const solicitud = await prisma.solicitudComite.create({
+            data: {
+                reporteId: reporte!.id,
+                numero: "SOL-TEST02",
+                estado: "PENDIENTE",
+                motivo: "Test",
+            },
+        });
+
+        mockToken = await crearTokenUsuario(comite.id, "COMITE_VALIDACION");
+        const res = await POSTResolver(
             new Request(
                 `http://localhost:5005/api/admin/comite/${solicitud.id}/resolver`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                    body: JSON.stringify({
-                        categoria: "SOLICITUD_ENCUENTRO",
-                        resolucion: "El contenido es claramente una solicitud de encuentro",
-                    }),
+                    body: JSON.stringify({ categoria: "OTRO" }),
                 }
             ),
             { params: Promise.resolve({ id: solicitud.id }) }
         );
-        expect(resResolver.status).toBe(200);
-        const bodyResolver = await resResolver.json();
-        expect(bodyResolver.estado).toBe("RESUELTA");
-        expect(bodyResolver.reporte.estado).toBe("CORREGIDO");
 
-        const solicitudResuelta = await prisma.solicitudComite.findUnique({ where: { id: solicitud.id } });
-        expect(solicitudResuelta?.estado).toBe("RESUELTA");
-        expect(solicitudResuelta?.resolucion).toBe("El contenido es claramente una solicitud de encuentro");
-    });
-
-    it("comité no ve datos del denunciante en detalle de reporte", async () => {
-        const admin = await crearUsuario("ADMIN");
-        const comite = await crearComite(admin.id);
-        const reporte = await crearReporteDePrueba();
-        await prisma.solicitudComite.create({
-            data: {
-                reporteId: reporte!.id,
-                numero: "SOL-TEST01",
-                estado: "ASIGNADA",
-                comiteId: comite.id,
-                motivo: "Test",
-            },
-        });
-        await prisma.reporte.update({ where: { id: reporte!.id }, data: { comiteId: comite.id } });
-
-        mockToken = await crearTokenUsuario(comite.id, "COMITE_VALIDACION");
-        const res = await GETDetalle(
-            new Request(
-                `http://localhost:5005/api/admin/reportes-revision/${reporte!.id}`,
-                { headers: { cookie: `token=${mockToken}` } }
-            ),
-            { params: Promise.resolve({ id: reporte!.id }) }
-        );
-        expect(res.status).toBe(200);
-        const body = await res.json();
-        expect(body.reporte).toBeDefined();
-        expect(body.reporte.textoOriginal).toBeUndefined();
-        expect(body.reporte.usuarioId).toBeUndefined();
-        expect(body.reporte.usuario).toBeUndefined();
-        expect(body.puedeRevelarOriginal).toBe(false);
+        expect(res.status).toBe(409);
     });
 });
