@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { RolUsuario } from "@prisma/client";
 
 const tabs = [
     { href: "/dashboard/admin/comite", label: "Bandeja" },
@@ -9,11 +10,19 @@ const tabs = [
     { href: "/dashboard/admin/comite/auditoria", label: "Auditoría" },
 ];
 
-export function ComiteSubNav() {
+const ADMIN_COMITE_TABS = new Set(["/dashboard/admin/comite/gestion", "/dashboard/admin/comite/auditoria"]);
+
+function puedeVerTab(rol: RolUsuario, href: string) {
+    if (rol === "ADMIN" || rol === "SCHOOL_ADMIN") return true;
+    return !ADMIN_COMITE_TABS.has(href);
+}
+
+export function ComiteSubNav({ rol }: { rol: RolUsuario }) {
     const pathname = usePathname();
+    const visibleTabs = tabs.filter((tab) => puedeVerTab(rol, tab.href));
     return (
         <nav className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-3 dark:border-slate-800">
-            {tabs.map((tab) => {
+            {visibleTabs.map((tab) => {
                 const active = pathname === tab.href || pathname?.startsWith(tab.href + "/");
                 return (
                     <Link

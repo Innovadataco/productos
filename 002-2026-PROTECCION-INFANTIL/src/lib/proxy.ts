@@ -63,9 +63,20 @@ function redirectToLogin(request: NextRequest) {
 }
 
 const INTERNAL_ROLES = new Set(["ADMIN", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
+const ADMIN_ROLES = new Set(["ADMIN", "SCHOOL_ADMIN"]);
 
 function esRolInterno(rol: string) {
     return INTERNAL_ROLES.has(rol);
+}
+
+function esRolAdmin(rol: string) {
+    return ADMIN_ROLES.has(rol);
+}
+
+const ADMIN_ONLY_ROUTES = ["/dashboard/admin/comite/gestion", "/dashboard/admin/comite/auditoria"];
+
+function esRutaAdminOnly(pathname: string) {
+    return ADMIN_ONLY_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
 }
 
 function homeForRole(rol: string) {
@@ -103,6 +114,12 @@ export async function proxy(request: NextRequest) {
             return res;
         }
         return redirectToLogin(request);
+    }
+
+    // Admin-only routes inside the admin area: must be checked before the generic internal route check,
+    // so COMITE_VALIDACION (or OPERADOR) is redirected before being admitted as an internal user.
+    if (esRutaAdminOnly(pathname) && !esRolAdmin(payload.rol)) {
+        return NextResponse.redirect(new URL(homeForRole(payload.rol), request.url));
     }
 
     // Internal routes: require internal role (ADMIN, SCHOOL_ADMIN, OPERADOR or COMITE_VALIDACION)
