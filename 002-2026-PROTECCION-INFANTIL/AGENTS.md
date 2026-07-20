@@ -37,3 +37,37 @@ Cada spec vive en `specs/NNN-nombre/` con el MISMO set y formato que `specs/001-
 - Reporte final CONCISO, sin gastar tokens.
 - Tono NEUTRAL, sin voseo ("reporta/crea/verifica", no "reportá/creá/verificá").
 - No modificar nunca el texto original de un reporte (posible evidencia).
+
+## Convención de Status y flujo Spec-Kit
+
+### Flujo completo
+
+`specify → clarify → analyze → plan → tasks → implement → validate → close`
+
+- **clarify**: resolver dudas, ajustar alcance y aceptar cambios menores antes de planificar. Marcar ambigüedades con `[NEEDS CLARIFICATION]` en vez de asumir.
+- **analyze**: evaluar alternativas técnicas, riesgos y cumplimiento de la constitución antes de escribir tareas.
+- **plan**: plan.md con Constitution Check pasado y re-check post-design.
+- **tasks**: tasks.md con fases, TNNN, marcador `[P]` para paralelizables, ruta de archivo por tarea, orden por dependencias y tareas de test (TDD).
+- **implement**: ejecutar tareas; un commit por User Story + uno de docs.
+- **validate**: `tsc --noEmit`, `lint`, `test`, `build`, `quickstart.md`.
+- **close**: sección Implementación en `spec.md` + `cierre.md` + deuda técnica.
+
+### Valores canónicos de Status
+
+Todo spec DEBE usar uno de estos valores en su encabezado:
+
+1. `PLANEADO` — especificación aprobada, aún no en desarrollo.
+2. `DESARROLLO` — en implementación activa.
+3. `IMPLEMENTADO` — código implementado, pendiente de pruebas formales.
+4. `PENDIENTE DE PRUEBA` — en ejecución de pruebas.
+5. `FINALIZADO` — pruebas aprobadas, listo para cierre administrativo.
+6. `CERRADA` — cierre documentado, sin trabajo pendiente.
+
+### Cierre de un spec (antes de marcar `CERRADA`)
+
+- Todos los artefactos obligatorios del Spec-Kit: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, `checklists/requirements.md`, y `contracts/` si hay endpoints.
+- `cierre.md` (preferiblemente en `specs/NNN/cierre.md`; se acepta `docs/cierre-NNN.md` como histórico) con evidencia: git log, archivos tocados, resultados de pruebas/deploy.
+- Sección `Implementación` completada en `spec.md`.
+- Un commit por User Story + uno de documentación, con evidencia.
+- Deploy limpio con `./scripts/dev-restart.sh` cuando aplique cambios de código.
+- Validación con el `quickstart.md` cuando aplique cambios funcionales.
