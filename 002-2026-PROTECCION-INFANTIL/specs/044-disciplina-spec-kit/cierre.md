@@ -11,7 +11,7 @@ Se completó el saneamiento documental de la Fase 0:
 - **US1 (P1)**: se reconciliaron los encabezados de `Status` de los specs 022-043; todos ahora reflejan `CERRADA` como fuente de verdad.
 - **US2 (P1)**: se documentó el commit `a449bbe` como snapshot histórico del cierre del spec 031 y se generó el índice del estado real hasta 043.
 - **US3 (P2)**: se documentó la deuda de `tasks.md` y `checklists/requirements.md` faltantes en los specs 022-031, sin retrofitarlos.
-- **US4 (P2)**: se fijó en `AGENTS.md` la convención de cierre única, los valores canónicos de `Status` y el flujo Spec-Kit con `clarify` y `analyze`.
+- **US4 (P2)**: se fijó en `AGENTS.md` la convención de cierre única, los valores canónicos de `Status` y el flujo Spec-Kit (`specify → clarify → plan → tasks → analyze → implement → validate → close`).
 
 ## Commits
 

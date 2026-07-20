@@ -14,7 +14,7 @@
 
 ### User Story 1 - Reconciliar Status de los specs 022-043 (Priority: P1)
 
-El repositorio contiene specs 022-043 con encabezados desincronizados: algunos usan `> Estado: ...`, otros `**Status**: ...`, algunos no declaran estado, y aparecen valores ajenos al canon (por ejemplo, `EN PLANIFICACIÓN`). Es necesario que el encabezado de cada spec refleje fielmente su situación real, tomando el `Status` como fuente de verdad.
+El repositorio contiene specs 022-043 con encabezados desincronizados: algunos no declaran estado, otros usan valores ajenos al canon (por ejemplo, `EN PLANIFICACIÓN`), y hay diferentes etiquetas (`Status:` vs `Estado:`). Es necesario que el encabezado de cada spec refleje fielmente su situación real, tomando el `Status` como fuente de verdad, y que todos usen la etiqueta canónica `Status:`.
 
 **Why this priority**: Sin encabezados sincronizados, un operador no puede saber si una especificación está pendiente, implementada o cerrada. El riesgo de iniciar trabajo sobre specs obsoletos o de interpretar mal el plan de ruta es alto.
 
@@ -23,8 +23,9 @@ El repositorio contiene specs 022-043 con encabezados desincronizados: algunos u
 **Acceptance Scenarios**:
 
 1. **Given** el spec 030 no declara estado en su encabezado, **When** se reconcilia su estado contra el cierre existente, **Then** el encabezado pasa a indicar `Status: CERRADA`.
-2. **Given** los specs 035 y 036 usan el valor `EN PLANIFICACIÓN`, **When** se normaliza la nomenclatura, **Then** ambos encabezados usan `Status: PLANEADO`.
-3. **Given** un spec cuyo estado actual no coincide con el estado real de su trabajo, **When** se actualiza el encabezado, **Then** el estado refleja la evidencia (`cierre.md`, `tasks.md`, commits) sin alterar código fuente.
+2. **Given** los specs 035 y 036 usan el valor `EN PLANIFICACIÓN`, **When** se normaliza la nomenclatura, **Then** ambos encabezados usan `Status: CERRADA`.
+3. **Given** un spec cuyo `Status` actual no coincide con el estado real de su trabajo, **When** se actualiza el encabezado, **Then** el estado refleja la evidencia (`cierre.md`, `tasks.md`, commits) sin alterar código fuente.
+4. **Given** los specs 022-031 usaban la etiqueta `Estado:`, **When** se unifica la convención, **Then** todos usan `**Status**:`.
 4. **Given** la tabla de auditoría del spec 044, **When** se compara con el encabezado del spec auditado, **Then** ambos valores coinciden.
 
 ---
@@ -73,7 +74,7 @@ El proyecto debe contar con un único conjunto de valores de `Status` y una list
 
 1. **Given** la convención de cierre, **When** se revisa un spec cerrado, **Then** debe contener `tasks.md`, `checklists/requirements.md`, `cierre.md` y la sección `Implementación` en `spec.md`.
 2. **Given** un spec nuevo, **When** se asigna su estado, **Then** el valor pertenece a la lista canónica: `PLANEADO`, `DESARROLLO`, `IMPLEMENTADO`, `PENDIENTE DE PRUEBA`, `FINALIZADO`, `CERRADA`.
-3. **Given** el flujo Spec-Kit, **When** se describe el proceso, **Then** incluye los pasos `specify`, `clarify`, `analyze`, `plan`, `tasks`, `implement`, `validate` y `close`.
+3. **Given** el flujo Spec-Kit, **When** se describe el proceso, **Then** incluye los pasos `specify`, `clarify`, `plan`, `tasks`, `analyze`, `implement`, `validate` y `close`.
 4. **Given** la convención, **When** se validan los specs 033-043, **Then** se identifica que los cerrados sin `cierre.md` incumplen el cierre y se documenta la deuda.
 
 ---
@@ -147,10 +148,10 @@ Se reconciliaron los encabezados de Status de los specs 022-043, se registró el
 
 ### Decisiones de diseño
 
-- **Status fuente de verdad**: todos los specs 022-043 pasaron a `CERRADA`, que refleja su estado real (cierre.md existente, implementación completada, deploy y push realizados en su momento).
+- `Status` fuente de verdad: todos los specs 022-043 pasaron a `Status: CERRADA` con la etiqueta canónica `**Status**:`, que refleja su estado real (cierre.md existente, implementación completada, deploy y push realizados en su momento).
 - **No retrofitar specs cerrados**: los specs 022-031 no reciben `tasks.md` ni `checklists/requirements.md` retrospectivos; la deuda se documenta en `research.md` del spec 044.
 - **Ubicación de cierre.md**: la ubicación preferida es `specs/NNN/cierre.md`; los cierres de 033-043 ubicados en `docs/cierre-NNN.md` se aceptan como histórico.
-- **Flujo Spec-Kit formalizado**: se agregaron `clarify` y `analyze` como pasos explícitos entre `specify` y `plan`.
+- **Flujo Spec-Kit formalizado**: se agregaron `clarify` después de `specify` y `analyze` como chequeo de consistencia entre artefactos después de `tasks` y antes de `implement`.
 
 ### Archivos y specs afectados
 
