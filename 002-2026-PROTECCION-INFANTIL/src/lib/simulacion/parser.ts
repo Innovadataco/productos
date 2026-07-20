@@ -19,6 +19,30 @@ export interface ResultadoParseo {
     mensaje?: string;
 }
 
+const CAMPOS_REQUERIDOS_CSV = ["texto", "plataforma", "identificador", "fechaIncidente", "ciudad", "pais"];
+const CAMPOS_OPCIONALES_CSV = ["edadVictima", "categoriaEsperada"];
+const TODOS_LOS_CAMPOS_CSV = [...CAMPOS_REQUERIDOS_CSV, ...CAMPOS_OPCIONALES_CSV];
+
+function normalizarEdad(raw: unknown): unknown {
+    if (raw === "" || raw === undefined || raw === null) return undefined;
+    if (typeof raw === "number") return raw;
+    if (typeof raw === "string") {
+        const trimmed = raw.trim();
+        if (trimmed === "") return undefined;
+        const num = Number(trimmed);
+        return Number.isNaN(num) ? raw : num;
+    }
+    return raw;
+}
+
+function preprocesarCaso(raw: Record<string, unknown>): Record<string, unknown> {
+    const copia = { ...raw };
+    if ("edadVictima" in copia) {
+        copia.edadVictima = normalizarEdad(copia.edadVictima);
+    }
+    return copia;
+}
+
 function validarCaso(raw: unknown, indice: number): { caso?: CasoSimulacion; error?: ErrorValidacion } {
     const parsed = casoSimulacionSchema.safeParse(raw);
     if (!parsed.success) {
@@ -34,20 +58,41 @@ function validarCaso(raw: unknown, indice: number): { caso?: CasoSimulacion; err
     return { caso: parsed.data };
 }
 
+function trimQuotes(valor: string | undefined): string {
+    return (valor ?? "").trim().replace(/^["']|["']$/g, "");
+}
+
+function csvTieneCabeceraRequerida(cabecera: string[]): { ok: boolean; mensaje: string } {
+    const faltantes = CAMPOS_REQUERIDOS_CSV.filter((campo) => !cabecera.some((c) => c.toLowerCase() === campo.toLowerCase()));
+    if (faltantes.length > 0) {
+        return {
+            ok: false,
+            mensaje: `CSV debe tener columnas ${CAMPOS_REQUERIDOS_CSV.join(", ")} (y opcional ${CAMPOS_OPCIONALES_CSV.join(", ")}). Faltan: ${faltantes.join(", ")}`,
+        };
+    }
+    return { ok: true, mensaje: "" };
+}
+
+function indiceColumna(cabecera: string[], nombre: string): number {
+    return cabecera.findIndex((c) => c.toLowerCase() === nombre.toLowerCase());
+}
+
 export function parsearCSV(contenido: string): ResultadoParseo {
     const lineas = contenido.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lineas.length === 0) {
         return { ok: false, mensaje: "El archivo no contiene casos" };
     }
 
-    const cabecera = lineas[0].split(",").map((c) => c.trim().toLowerCase());
-    const idxTexto = cabecera.indexOf("texto");
-    const idxPlataforma = cabecera.indexOf("plataforma");
-    const idxIdentificador = cabecera.indexOf("identificador");
-    const idxCategoria = cabecera.indexOf("categoriaesperada");
+    const cabecera = lineas[0].split(",").map((c) => c.trim());
+    const cabeceraCheck = csvTieneCabeceraRequerida(cabecera);
+    if (!cabeceraCheck.ok) {
+        return { ok: false, mensaje: cabeceraCheck.mensaje };
+    }
 
-    if (idxTexto === -1 || idxPlataforma === -1 || idxIdentificador === -1) {
-        return { ok: false, mensaje: "CSV debe tener columnas texto, plataforma, identificador (y opcional categoriaEsperada)" };
+    const indices: Record<string, number> = {};
+    for (const campo of TODOS_LOS_CAMPOS_CSV) {
+        const idx = indiceColumna(cabecera, campo);
+        if (idx !== -1) indices[campo] = idx;
     }
 
     const casos: CasoValidado[] = [];
@@ -55,17 +100,13 @@ export function parsearCSV(contenido: string): ResultadoParseo {
 
     for (let i = 1; i < lineas.length; i++) {
         const celdas = lineas[i].split(",");
-        // Soportar texto entre comillas simples o dobles; simplificación: si el campo empieza y termina con comillas, quitarlas.
-        const raw: Record<string, string> = {};
-        raw.texto = celdas[idxTexto]?.trim().replace(/^["']|["']$/g, "") || "";
-        raw.plataforma = celdas[idxPlataforma]?.trim().replace(/^["']|["']$/g, "") || "";
-        raw.identificador = celdas[idxIdentificador]?.trim().replace(/^["']|["']$/g, "") || "";
-        if (idxCategoria !== -1) {
-            const cat = celdas[idxCategoria]?.trim().replace(/^["']|["']$/g, "");
-            if (cat) raw.categoriaEsperada = cat;
+        const raw: Record<string, unknown> = {};
+        for (const [campo, idx] of Object.entries(indices)) {
+            raw[campo] = trimQuotes(celdas[idx]);
         }
 
-        const { caso, error } = validarCaso(raw, i);
+        const preprocesado = preprocesarCaso(raw);
+        const { caso, error } = validarCaso(preprocesado, i);
         if (error) {
             errores.push(error);
         } else if (caso) {
@@ -100,7 +141,8 @@ export function parsearJSON(contenido: string): ResultadoParseo {
     const errores: ErrorValidacion[] = [];
 
     for (let i = 0; i < raw.length; i++) {
-        const { caso, error } = validarCaso(raw[i], i + 1);
+        const preprocesado = typeof raw[i] === "object" && raw[i] !== null ? preprocesarCaso(raw[i] as Record<string, unknown>) : raw[i];
+        const { caso, error } = validarCaso(preprocesado, i + 1);
         if (error) {
             errores.push(error);
         } else if (caso) {
