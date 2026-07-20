@@ -40,6 +40,8 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     apelacion: { windowSeconds: 86400, maxRequests: 3 },
     apelacion_sms: { windowSeconds: 3600, maxRequests: 3 },
     circulo_contacto: { windowSeconds: 3600, maxRequests: 20 },
+    recuperar_solicitar: { windowSeconds: 3600, maxRequests: 5 },
+    verificacion_solicitar: { windowSeconds: 3600, maxRequests: 5 },
 };
 
 function getScopeDefaults(scope: string): ScopeDefaults {

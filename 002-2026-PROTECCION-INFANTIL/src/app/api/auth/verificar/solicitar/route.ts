@@ -3,9 +3,23 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { enviarCodigoVerificacion } from "@/lib/email";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 function generateCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+const MENSAJE_EXITO = "Si el email es válido, recibirás un código de verificación.";
+
+function buildRateLimitResponse(retryAfter: number, headers: Record<string, string>) {
+    return NextResponse.json(
+        {
+            message: MENSAJE_EXITO,
+            emailSent: false,
+            error: { message: "Demasiadas solicitudes. Intenta más tarde.", code: ERROR_CODES.RATE_LIMITED, retryAfter },
+        },
+        { status: 429, headers }
+    );
 }
 
 export async function POST(request: Request) {
@@ -20,12 +34,23 @@ export async function POST(request: Request) {
             );
         }
 
+        // Rate limit por IP
+        const rateIp = await checkRateLimit(request, "verificacion_solicitar");
+        if (!rateIp.allowed) {
+            const retryAfter = Math.ceil((rateIp.resetAt - Date.now()) / 1000);
+            return buildRateLimitResponse(retryAfter, rateIp.headers);
+        }
+
+        // Rate limit por email (identificador)
+        const rateEmail = await checkRateLimit(request, "verificacion_solicitar", { identifier: email });
+        if (!rateEmail.allowed) {
+            const retryAfter = Math.ceil((rateEmail.resetAt - Date.now()) / 1000);
+            return buildRateLimitResponse(retryAfter, rateEmail.headers);
+        }
+
         const existingUser = await prisma.usuario.findUnique({ where: { email } });
         if (existingUser) {
-            return NextResponse.json(
-                { message: "Si el email es válido, recibirás un código de verificación." },
-                { status: 202 }
-            );
+            return NextResponse.json({ message: MENSAJE_EXITO }, { status: 202 });
         }
 
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -68,7 +93,7 @@ export async function POST(request: Request) {
 
         const response: Record<string, unknown> = {
             message: emailSent
-                ? "Si el email es válido, recibirás un código de verificación."
+                ? MENSAJE_EXITO
                 : "El servicio de email no está disponible; usa el código mostrado para continuar.",
             emailSent,
         };
