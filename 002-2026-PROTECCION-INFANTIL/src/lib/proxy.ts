@@ -141,10 +141,23 @@ async function proxyCore(request: NextRequest) {
     return NextResponse.next();
 }
 
+/**
+ * Middleware de autorización para rutas de Next.js.
+ * Verifica el token JWT de la petición, decide si la ruta es pública, de administración
+ * o de usuario final, y devuelve la respuesta apropiada (next, redirect o error 401/403).
+ * No modifica el cuerpo de la petición.
+ *
+ * @param request - Petición entrante de Next.js.
+ * @returns Respuesta de Next.js indicando si se permite el paso, redirige o rechaza.
+ */
 export async function proxy(request: NextRequest) {
     return proxyCore(request);
 }
 
+/**
+ * Configuración de matcher del middleware de Next.js.
+ * Indica las rutas que deben ejecutar el proxy de autorización.
+ */
 export const proxyConfig = {
     matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)", "/reportar"],
 };

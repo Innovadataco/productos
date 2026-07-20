@@ -22,6 +22,12 @@ function parseKey(raw: string | undefined): Buffer | null {
     return null;
 }
 
+/**
+ * Obtiene la clave de cifrado de parámetros desde la variable de entorno PARAM_ENCRYPTION_KEY.
+ * Acepta una clave en base64 de 32 bytes o una cadena UTF-8 de 32 caracteres.
+ *
+ * @returns Buffer de 32 bytes listo para usar con AES-256-GCM, o null si no está configurada o es inválida.
+ */
 export function getEncryptionKey(): Buffer | null {
     return parseKey(process.env.PARAM_ENCRYPTION_KEY);
 }
@@ -52,10 +58,26 @@ function decodeBlob(value: string): EncryptedBlob | null {
     }
 }
 
+/**
+ * Indica si una cadena tiene el formato de un valor cifrado por este módulo.
+ * No verifica la integridad criptográfica ni la clave.
+ *
+ * @param value - Cadena a evaluar.
+ * @returns true si comienza con el prefijo "enc:" y puede parsearse como blob cifrado.
+ */
 export function isEncryptedValue(value: string): boolean {
     return decodeBlob(value) !== null;
 }
 
+/**
+ * Cifra un texto plano usando AES-256-GCM con una clave de 32 bytes.
+ * Si no se proporciona clave, utiliza la configurada en la variable de entorno.
+ *
+ * @param plaintext - Texto plano a cifrar.
+ * @param key - Clave de 32 bytes (opcional).
+ * @returns Cadena con prefijo "enc:" que contiene el IV, tag y ciphertext en formato JSON.
+ * @throws Error si no hay clave configurada o es inválida.
+ */
 export function encryptParameter(plaintext: string, key?: Buffer): string {
     const k = key ?? getEncryptionKey();
     if (!k) {
@@ -73,6 +95,15 @@ export function encryptParameter(plaintext: string, key?: Buffer): string {
     });
 }
 
+/**
+ * Descifra un valor previamente cifrado por este módulo.
+ * Si el valor no tiene el prefijo "enc:", se devuelve tal cual para compatibilidad con migraciones.
+ *
+ * @param encrypted - Valor cifrado con prefijo "enc:" o texto plano.
+ * @param key - Clave de 32 bytes (opcional).
+ * @returns Texto plano descifrado, o el mismo valor si no estaba cifrado.
+ * @throws Error si no hay clave configurada, el formato es inválido o la autenticación GCM falla.
+ */
 export function decryptParameter(encrypted: string, key?: Buffer): string {
     const k = key ?? getEncryptionKey();
     if (!k) {
@@ -100,7 +131,10 @@ export function decryptParameter(encrypted: string, key?: Buffer): string {
 
 /**
  * Verifica que una clave pueda cifrar y descifrar un valor de prueba.
- * Útil antes de una migración masiva.
+ * Útil antes de una migración masiva para evitar pérdida de datos.
+ *
+ * @param key - Clave de 32 bytes a verificar (opcional; por defecto usa la clave del entorno).
+ * @returns true si la clave puede realizar una ronda de cifrado/descifrado exitosa; false en caso contrario.
  */
 export function verifyEncryptionKey(key?: Buffer): boolean {
     try {

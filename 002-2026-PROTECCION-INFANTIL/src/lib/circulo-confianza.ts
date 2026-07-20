@@ -122,6 +122,15 @@ export async function determinarEstadoContacto(
     return { estado: calcularEstado(reportes), totalReportes: reportes.length, reportes };
 }
 
+/**
+ * Lista todos los contactos de un usuario (activos e inhabilitados) enriquecidos con el
+ * estado derivado de los reportes públicos asociados a sus identificadores. Retorna un
+ * resumen conteo por estado.
+ *
+ * @param usuarioId - UUID del usuario propietario.
+ * @param client - Cliente de Prisma o transacción para reutilizar contexto (opcional).
+ * @returns Objeto con la lista de contactos con estado y el resumen de conteos.
+ */
 export async function listarContactos(usuarioId: string, client?: Prisma.TransactionClient) {
     const c = getClient(client);
 
@@ -195,6 +204,21 @@ function normalizarIdentificadores(identificadores: IdentificadorInput[]) {
     return normalizados;
 }
 
+/**
+ * Crea un nuevo contacto de confianza para un usuario junto con sus identificadores.
+ * Valida que el contacto tenga al menos un identificador, que no se supere el límite
+ * de contactos activos y que las plataformas referenciadas existan. Registra la acción
+ * en el audit log.
+ *
+ * @param usuarioId - UUID del usuario propietario del círculo de confianza.
+ * @param data - Datos del contacto: etiqueta, nota e identificadores.
+ * @param data.etiqueta - Nombre o etiqueta del contacto (opcional).
+ * @param data.nota - Nota libre asociada al contacto (opcional).
+ * @param data.identificadores - Lista de identificadores del contacto (valor, tipo y plataforma).
+ * @param request - Petición HTTP para extraer IP y user-agent del audit log (opcional).
+ * @returns El contacto creado con sus identificadores.
+ * @throws Error si no se proporcionan identificadores, se supera el límite de contactos o una plataforma no existe.
+ */
 export async function agregarContacto(
     usuarioId: string,
     data: {
@@ -263,6 +287,19 @@ export async function agregarContacto(
     });
 }
 
+/**
+ * Actualiza un contacto de confianza existente, incluyendo etiqueta, nota, estado activo
+ * e identificadores. Si se envía una lista de identificadores, desactiva los existentes
+ * que no estén en la lista y crea o actualiza los proveídos. Registra la acción en el audit log.
+ *
+ * @param id - UUID del contacto a actualizar.
+ * @param usuarioId - UUID del usuario propietario del contacto.
+ * @param data - Campos a actualizar del contacto.
+ * @param request - Petición HTTP para extraer IP y user-agent del audit log (opcional).
+ * @returns El contacto actualizado con sus identificadores activos.
+ * @throws Error "Contacto no encontrado" si el contacto no pertenece al usuario.
+ * @throws Error si el contacto quedaría sin identificadores.
+ */
 export async function actualizarContacto(
     id: string,
     usuarioId: string,
@@ -385,6 +422,17 @@ export async function actualizarContacto(
     });
 }
 
+/**
+ * Obtiene el detalle completo de un contacto, incluyendo sus identificadores activos,
+ * el estado general del contacto y el estado por identificador. Si el contacto tiene
+ * reportes visibles, construye y devuelve un agregado estadístico.
+ *
+ * @param id - UUID del contacto.
+ * @param usuarioId - UUID del usuario propietario.
+ * @param client - Cliente de Prisma o transacción (opcional).
+ * @returns Objeto con los datos del contacto, identificadores con reportes, estado y agregado.
+ * @throws Error "Contacto no encontrado" si el contacto no pertenece al usuario.
+ */
 export async function obtenerDetalleContacto(id: string, usuarioId: string, client?: Prisma.TransactionClient) {
     const c = getClient(client);
 
@@ -519,6 +567,15 @@ async function construirAgregado(reportes: DatosReporte[], client?: Prisma.Trans
     };
 }
 
+/**
+ * Construye una vista agregada de todos los reportes visibles asociados a los identificadores
+ * activos de los contactos de un usuario. Si no se alcanza el umbral mínimo de contactos con
+ * reportes o de reportes totales, devuelve un objeto indicando insuficiencia de datos.
+ *
+ * @param usuarioId - UUID del usuario propietario.
+ * @param client - Cliente de Prisma o transacción (opcional).
+ * @returns Vista agregada con métricas por país, ciudad, categoría y timeline, o un marcador de insuficiencia.
+ */
 export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.TransactionClient) {
     const c = getClient(client);
 
@@ -663,6 +720,15 @@ export async function obtenerPreferenciasCirculo(usuarioId: string) {
     return { notificacionesCirculo: usuario?.notificacionesCirculo ?? true };
 }
 
+/**
+ * Evalúa si un reporte debe notificar a los usuarios que tienen contactos de confianza
+ * asociados al mismo identificador. Respeta la preferencia de notificaciones del usuario,
+ * el flag global de notificaciones y un periodo de cooldown entre alertas. Envía un email
+ * de alerta ciega con el conteo de novedades y actualiza la marca temporal de la última notificación.
+ * Cualquier error se captura y se loguea sin interrumpir el flujo.
+ *
+ * @param reporteId - UUID del reporte que puede generar notificaciones.
+ */
 export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
     try {
         const reporte = await prisma.reporte.findUnique({

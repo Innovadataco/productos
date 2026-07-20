@@ -154,6 +154,19 @@ Si el texto es ambiguo, incompleto o no puedes clasificar con confianza, usa cat
     );
 }
 
+/**
+ * Clasifica un texto de reporte usando un modelo de IA con salida estructurada.
+ * Construye un prompt de sistema con ejemplos opcionales, llama al modelo y normaliza
+ * la categoría, confianza y flag de posible agresor par. Si la llamada estructurada falla,
+ * devuelve un resultado fallback con categoría OTRO y estado de revisión manual.
+ *
+ * @param modelo - Nombre del modelo de Ollama a utilizar.
+ * @param texto - Texto del reporte a clasificar.
+ * @param umbralRevision - Confianza mínima para considerar el reporte clasificado automáticamente.
+ * @param options - Opciones adicionales para el cliente de Ollama (temperatura, seed, etc.).
+ * @param ejemplos - Ejemplos corregidos para incluir en el prompt (opcional).
+ * @returns Resultado de clasificación con categoría, confianza, estado y métricas.
+ */
 export async function clasificarReporte(
     modelo: string,
     texto: string,
@@ -227,6 +240,18 @@ async function desempatarConModeloGrande(
     }
 }
 
+/**
+ * Clasifica un texto de reporte mediante votación de múltiples llamadas al modelo.
+ * Ejecuta nVotos en lotes paralelos, agrega los resultados por categoría y, en caso de
+ * no alcanzar unanimidad y estar configurado un modelo de desempate, consulta dicho modelo
+ * para confirmar o mantener la revisión manual. Retorna el resultado agregado, las métricas
+ * combinadas y los votos individuales.
+ *
+ * @param modelo - Nombre del modelo base de Ollama a utilizar.
+ * @param texto - Texto del reporte a clasificar.
+ * @param config - Configuración parcial de votación (número de votos, temperatura, seeds, etc.).
+ * @returns Resultado de clasificación con votación, agregación, posible desempate y métricas combinadas.
+ */
 export async function clasificarConVotos(
     modelo: string,
     texto: string,

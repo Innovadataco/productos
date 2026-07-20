@@ -50,6 +50,25 @@ async function findReporteConDatos(reporteId: string, tx: Prisma.TransactionClie
     });
 }
 
+/**
+ * Da de baja un reporte, marcándolo como eliminado y registrando el motivo.
+ * Opcionalmente purga los registros del dataset de entrenamiento si el motivo lo exige
+ * (p. ej. REPORTE_FALSO u ORDEN_LEGAL). También recalcula el score público y actualiza
+ * la visibilidad del identificador. La operación se ejecuta dentro de una transacción
+ * a menos que se proporcione una transacción externa.
+ *
+ * @param params - Objeto con los datos de la baja.
+ * @param params.reporteId - UUID del reporte a dar de baja.
+ * @param params.motivo - Motivo institucional de la baja.
+ * @param params.nota - Nota explicativa adjunta a la baja.
+ * @param params.adminId - UUID del administrador que ejecuta la acción.
+ * @param params.request - Petición HTTP para extraer IP y user-agent (opcional).
+ * @param params.tx - Cliente de transacción de Prisma para ejecutar la baja dentro de una transacción existente (opcional).
+ * @param params.accionAudit - Clave de acción para el audit log (opcional).
+ * @returns Resumen de la baja: id del reporte, estado anterior, flag de eliminado y si se purgó el dataset.
+ * @throws Error con código "REPORTE_NO_ENCONTRADO" si el reporte no existe.
+ * @throws Error con código "REPORTE_YA_ELIMINADO" si el reporte ya está eliminado.
+ */
 export async function darDeBajaReporte(params: {
     reporteId: string;
     motivo: MotivoBajaReporte;
@@ -152,6 +171,22 @@ export async function darDeBajaReporte(params: {
     };
 }
 
+/**
+ * Reactiva un reporte previamente dado de baja.
+ * Regenera el embedding del reporte, recalcula el score público y actualiza
+ * la visibilidad. Valida que el reporte esté eliminado y que no exista un embedding
+ * huérfano antes de la reactivación.
+ *
+ * @param params - Objeto con los datos de la reactivación.
+ * @param params.reporteId - UUID del reporte a reactivar.
+ * @param params.nota - Nota explicativa de la reactivación.
+ * @param params.adminId - UUID del administrador que ejecuta la acción.
+ * @param params.request - Petición HTTP para extraer IP y user-agent (opcional).
+ * @returns Resumen de la reactivación: id del reporte, flag de reactivado y flag de embedding regenerado.
+ * @throws Error con código "REPORTE_NO_ENCONTRADO" si el reporte no existe.
+ * @throws Error con código "REPORTE_NO_ELIMINADO" si el reporte no está dado de baja.
+ * @throws Error con código "EMBEDDING_INCONSISTENTE" si el reporte ya tiene un embedding.
+ */
 export async function reactivarReporte(params: {
     reporteId: string;
     nota: string;
