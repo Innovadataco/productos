@@ -5,7 +5,6 @@ import { encryptParameter } from "@/lib/param-encryption";
 import { logger } from "@/lib/logger";
 import type { CasoSimulacion } from "@/lib/schemas/simulacion";
 
-const ESTADOS_FINALES = new Set(["CLASIFICADO", "REVISION_MANUAL", "POSIBLE_SPAM", "DUPLICADO", "CORREGIDO"]);
 const BATCH_SIZE = 5;
 
 export function generarIdentificadorSimulacion(runIdShort: string, indice: number): string {
@@ -39,10 +38,11 @@ export async function crearReporteSimulacion(
                 plataformaId: plataforma.id,
                 texto: caso.texto,
                 textoOriginal: textoOriginalCifrado,
-                fechaIncidente: new Date(),
-                ciudad: "Simulación",
-                pais: "Simulación",
+                fechaIncidente: new Date(caso.fechaIncidente),
+                ciudad: caso.ciudad,
+                pais: caso.pais,
                 esAnonimo: true,
+                edadVictima: caso.edadVictima,
                 usuarioId: null,
                 numeroSeguimiento,
                 estado: "PENDIENTE",
@@ -89,6 +89,7 @@ export async function runSimulacionBatchCreator(runId: string, modeloClasificaci
     });
 
     let creados = 0;
+    let fallidos = 0;
     for (let i = 0; i < casos.length; i += BATCH_SIZE) {
         // Verificar cancelación entre batches
         const runActual = await prisma.simulacionRun.findUnique({ where: { id: runId }, select: { estado: true } });
@@ -107,18 +108,23 @@ export async function runSimulacionBatchCreator(runId: string, modeloClasificaci
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
                 logger.error(`[SIMULACION] Error creando reporte para run ${runId} índice ${indice}: ${msg}`);
-                await prisma.simulacionRun.update({
-                    where: { id: runId },
-                    data: { estado: "FALLIDA", fechaFin: new Date() },
-                });
-                return;
+                fallidos++;
             }
         }
         // Permitir que el worker procese otros jobs mientras crea reportes
         await new Promise((resolve) => setImmediate(resolve));
     }
 
-    logger.info(`[SIMULACION] Run ${runId}: ${creados}/${casos.length} reportes creados y encolados.`);
-}
+    const estadoFinal = creados > 0 ? "COMPLETADA" : "FALLIDA";
+    const metricasActuales = (run.metricasJson ?? {}) as Record<string, unknown>;
+    await prisma.simulacionRun.update({
+        where: { id: runId },
+        data: {
+            estado: estadoFinal,
+            fechaFin: new Date(),
+            metricasJson: { ...metricasActuales, casosFallidos: fallidos },
+        },
+    });
 
-export { ESTADOS_FINALES };
+    logger.info(`[SIMULACION] Run ${runId}: ${creados}/${casos.length} reportes creados y encolados; ${fallidos} fallidos.`);
+}
