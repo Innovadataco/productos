@@ -8,6 +8,7 @@ import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categori
 import type { EstadoReporte } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { formatPlataforma } from "@/lib/plataforma";
+import { clampPageSize, clampPage } from "@/lib/pagination";
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -28,11 +29,8 @@ export async function GET(request: Request) {
         const user = await verifyAuth("PARENT");
 
         const { searchParams } = new URL(request.url);
-        const page = Math.max(1, Number(searchParams.get("page") || "1"));
-        const pageSize = Math.min(
-            MAX_PAGE_SIZE,
-            Math.max(1, Number(searchParams.get("pageSize") || String(DEFAULT_PAGE_SIZE)))
-        );
+        const page = clampPage(searchParams.get("page"));
+        const pageSize = clampPageSize(searchParams.get("pageSize"), MAX_PAGE_SIZE);
         const skip = (page - 1) * pageSize;
 
         const baseWhere = { usuarioId: user.id, eliminado: false };

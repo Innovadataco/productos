@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { RolUsuario } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { clampPageSize, clampPage } from "@/lib/pagination";
 
 export async function GET(request: Request) {
     try {
@@ -10,11 +11,8 @@ export async function GET(request: Request) {
 
         const { searchParams } = new URL(request.url);
         const categoria = searchParams.get("categoria");
-        const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-        const pageSize = Math.min(
-            100,
-            Math.max(1, parseInt(searchParams.get("pageSize") || "25", 10))
-        );
+        const page = clampPage(searchParams.get("page"));
+        const pageSize = clampPageSize(searchParams.get("pageSize"));
 
         const where = categoria ? { categoria: categoria as never } : {};
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { clampPageSize, clampPage } from "@/lib/pagination";
 
 function requireAdmin(user: { rol: string }) {
     if (String(user.rol) !== "ADMIN") {
@@ -24,8 +25,8 @@ export async function GET(request: Request) {
         }
 
         const { searchParams } = new URL(request.url);
-        const page = Math.max(1, Number(searchParams.get("page") || "1"));
-        const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize") || "25")));
+        const page = clampPage(searchParams.get("page"));
+        const pageSize = clampPageSize(searchParams.get("pageSize"));
         const skip = (page - 1) * pageSize;
 
         // Regla dura: los consumidores del dataset solo pueden acceder a registros
