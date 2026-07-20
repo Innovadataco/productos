@@ -42,12 +42,12 @@ Cada spec vive en `specs/NNN-nombre/` con el MISMO set y formato que `specs/001-
 
 ### Flujo completo
 
-`specify → clarify → analyze → plan → tasks → implement → validate → close`
+`specify → clarify → plan → tasks → analyze → implement → validate → close`
 
 - **clarify**: resolver dudas, ajustar alcance y aceptar cambios menores antes de planificar. Marcar ambigüedades con `[NEEDS CLARIFICATION]` en vez de asumir.
-- **analyze**: evaluar alternativas técnicas, riesgos y cumplimiento de la constitución antes de escribir tareas.
 - **plan**: plan.md con Constitution Check pasado y re-check post-design.
 - **tasks**: tasks.md con fases, TNNN, marcador `[P]` para paralelizables, ruta de archivo por tarea, orden por dependencias y tareas de test (TDD).
+- **analyze**: chequeo de consistencia entre artefactos (`spec.md`, `plan.md`, `tasks.md`) después de generar tareas y antes de implementar. Verifica que cada User Story tenga tareas asociadas, que no haya tareas huérfanas y que las dependencias estén correctas.
 - **implement**: ejecutar tareas; un commit por User Story + uno de docs.
 - **validate**: `tsc --noEmit`, `lint`, `test`, `build`, `quickstart.md`.
 - **close**: sección Implementación en `spec.md` + `cierre.md` + deuda técnica.
