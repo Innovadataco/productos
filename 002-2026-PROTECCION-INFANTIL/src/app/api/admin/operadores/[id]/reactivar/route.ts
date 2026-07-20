@@ -4,6 +4,8 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
+import { withValidation } from "@/lib/validation";
+import { operadorIdParamsSchema } from "@/lib/schemas";
 
 function getClientInfo(request: Request) {
     return {
@@ -30,7 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 { status: 429, headers: rate.headers }
             );
         }
-        const { id } = await params;
+        const { id } = withValidation.params(operadorIdParamsSchema)(await params);
         const operador = await getOperador(id, admin);
         if (!operador) {
             return NextResponse.json(

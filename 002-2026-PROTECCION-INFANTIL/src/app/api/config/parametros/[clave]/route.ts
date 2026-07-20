@@ -6,6 +6,8 @@ import { invalidateCache } from "@/lib/config-cache";
 import { isLocalOllamaUrl } from "@/lib/ai/ollama-config";
 import { encryptParameter } from "@/lib/param-encryption";
 import { GRUPOS_CATEGORIA_FALLBACK } from "@/lib/categoria-grupos";
+import { withValidation } from "@/lib/validation";
+import { parametroClaveParamsSchema, parametroPatchBodySchema } from "@/lib/schemas";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 type RouteContext = { params: Promise<{ clave: string }> };
@@ -76,20 +78,8 @@ export async function GET(_request: Request, context: RouteContext) {
 export async function PATCH(request: Request, context: RouteContext) {
     try {
         const user = await verifyAuth("ADMIN" as never);
-        const { clave } = await context.params;
-
-        const body = (await request.json()) as {
-            valor: string;
-            motivo?: string;
-            tipo?: "STRING" | "INTEGER" | "FLOAT" | "BOOLEAN" | "JSON" | "STRING_ARRAY";
-            categoria?: "VISIBILITY" | "SECURITY" | "LEGAL" | "EMAIL" | "SYSTEM";
-            esPublico?: boolean;
-            esSecreto?: boolean;
-            descripcion?: string;
-        };
-        if (!body.valor) {
-            throw new AppError("Valor requerido", ERROR_CODES.VALIDATION_ERROR, 400);
-        }
+        const { clave } = withValidation.params(parametroClaveParamsSchema)(await context.params);
+        const body = await withValidation.body(parametroPatchBodySchema)(request);
 
         // Validación R2: URL de Ollama solo local/privada
         if (clave === "system.ollama_base_url" && !isLocalOllamaUrl(body.valor)) {
@@ -166,7 +156,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 export async function DELETE(_request: Request, context: RouteContext) {
     try {
         await verifyAuth("ADMIN" as never);
-        const { clave } = await context.params;
+        const { clave } = withValidation.params(parametroClaveParamsSchema)(await context.params);
 
         const param = await prisma.parametroSistema.findUnique({
             where: { clave },

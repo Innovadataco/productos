@@ -3,6 +3,8 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { listOllamaModels, isLocalOllamaUrl } from "@/lib/ai/ollama-config";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { withValidation } from "@/lib/validation";
+import { ollamaProbarBodySchema } from "@/lib/schemas";
 import { RolUsuario } from "@prisma/client";
 
 export async function POST(request: Request) {
@@ -17,11 +19,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const body = (await request.json().catch(() => ({}))) as { url?: string };
-        const url = body.url?.trim();
-        if (!url) {
-            throw new AppError("URL requerida", ERROR_CODES.VALIDATION_ERROR, 400);
-        }
+        const { url } = await withValidation.body(ollamaProbarBodySchema)(request);
         if (!isLocalOllamaUrl(url)) {
             throw new AppError(
                 "los textos de reportes solo pueden procesarse en entorno local/privado (R2)",

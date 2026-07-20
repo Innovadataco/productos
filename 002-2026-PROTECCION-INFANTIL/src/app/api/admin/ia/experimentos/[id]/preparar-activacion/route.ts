@@ -3,6 +3,8 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { withValidation } from "@/lib/validation";
+import { operadorIdParamsSchema } from "@/lib/schemas";
 import { RolUsuario } from "@prisma/client";
 import { type ExperimentConfigSnapshot } from "@/lib/ai/eval-runner";
 
@@ -11,7 +13,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function POST(request: Request, context: RouteContext) {
     try {
         const user = await verifyAuth(RolUsuario.ADMIN);
-        const { id } = await context.params;
+        const { id } = withValidation.params(operadorIdParamsSchema)(await context.params);
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });
         if (!rate.allowed) {

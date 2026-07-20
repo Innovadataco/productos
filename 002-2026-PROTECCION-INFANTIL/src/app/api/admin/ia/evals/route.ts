@@ -3,6 +3,8 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { withValidation } from "@/lib/validation";
+import { emptyBodySchema } from "@/lib/schemas";
 import { RolUsuario, EvalRunEstado } from "@prisma/client";
 
 // pg-boss se importa dinámicamente para no cargarlo en el bundle edge/cliente.
@@ -24,6 +26,8 @@ export async function POST(request: Request) {
                 { status: 429, headers: rate.headers }
             );
         }
+
+        await withValidation.body(emptyBodySchema)(request);
 
         const enProgreso = await prisma.evalRun.findFirst({
             where: { estado: { in: [EvalRunEstado.PENDIENTE, EvalRunEstado.EN_PROGRESO] } },

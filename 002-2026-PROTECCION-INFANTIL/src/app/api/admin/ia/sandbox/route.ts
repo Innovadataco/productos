@@ -2,14 +2,10 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { withValidation } from "@/lib/validation";
+import { sandboxBodySchema } from "@/lib/schemas";
 import { ejecutarSandbox, type SandboxOverrides, type SandboxTrace } from "@/lib/ai/sandbox";
 import { RolUsuario } from "@prisma/client";
-
-export interface SandboxRequestBody {
-    texto: string;
-    parametrosOverride?: SandboxOverrides;
-    comparar?: boolean;
-}
 
 export interface SandboxComparisonResponse {
     comparar: true;
@@ -52,46 +48,12 @@ function sanitizeOverrides(raw: unknown): SandboxOverrides {
     return overrides;
 }
 
-function validateBody(body: unknown): { ok: false; response: NextResponse } | { ok: true; data: SandboxRequestBody } {
-    if (!body || typeof body !== "object") {
-        return {
-            ok: false,
-            response: NextResponse.json(
-                { error: { message: "Body inválido", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            ),
-        };
-    }
-    const b = body as SandboxRequestBody;
-    if (typeof b.texto !== "string" || b.texto.trim().length === 0) {
-        return {
-            ok: false,
-            response: NextResponse.json(
-                { error: { message: "texto es requerido", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            ),
-        };
-    }
-    if (b.texto.length > 4000) {
-        return {
-            ok: false,
-            response: NextResponse.json(
-                { error: { message: "texto máximo 4000 caracteres", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            ),
-        };
-    }
-    return { ok: true, data: { texto: b.texto.trim(), parametrosOverride: sanitizeOverrides(b.parametrosOverride), comparar: !!b.comparar } };
-}
-
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth(RolUsuario.ADMIN);
 
-        const body = await request.json().catch(() => null);
-        const validation = validateBody(body);
-        if (!validation.ok) return validation.response;
-        const { texto, parametrosOverride, comparar } = validation.data;
+        const { texto, parametrosOverride, comparar } = await withValidation.body(sandboxBodySchema)(request);
+        const sanitizedOverrides = sanitizeOverrides(parametrosOverride);
 
         // Rate limit por admin. Modo comparación consume 2 ejecuciones.
         const rate1 = await checkRateLimit(request, "ia_sandbox", { identifier: user.id });
@@ -115,7 +77,7 @@ export async function POST(request: Request) {
         if (comparar) {
             const [baseline, override] = await Promise.all([
                 ejecutarSandbox(texto, {}),
-                ejecutarSandbox(texto, parametrosOverride),
+                ejecutarSandbox(texto, sanitizedOverrides),
             ]);
 
             const response: SandboxComparisonResponse = {
@@ -132,7 +94,7 @@ export async function POST(request: Request) {
             return NextResponse.json(response);
         }
 
-        const trace = await ejecutarSandbox(texto, parametrosOverride);
+        const trace = await ejecutarSandbox(texto, sanitizedOverrides);
         return NextResponse.json({ comparar: false, trace });
     } catch (error) {
         if (error instanceof AppError) {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { vencerApelacionesPendientes } from "@/lib/apelaciones";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { withValidation } from "@/lib/validation";
+import { emptyBodySchema } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,6 +16,8 @@ export async function POST(request: Request) {
                 { status: 403 }
             );
         }
+
+        await withValidation.body(emptyBodySchema)(request);
 
         const result = await vencerApelacionesPendientes();
         return NextResponse.json(result);

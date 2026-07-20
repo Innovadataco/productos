@@ -4,6 +4,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { withValidation } from "@/lib/validation";
+import { operadorIdParamsSchema } from "@/lib/schemas";
 import { RolUsuario } from "@prisma/client";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -18,7 +20,7 @@ function getClientInfo(request: Request) {
 export async function PATCH(request: Request, context: RouteContext) {
     try {
         const user = await verifyAuth(RolUsuario.ADMIN);
-        const { id } = await context.params;
+        const { id } = withValidation.params(operadorIdParamsSchema)(await context.params);
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
