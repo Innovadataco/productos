@@ -101,9 +101,9 @@ function buildSystemPrompt(ejemplos?: EjemploClasificacion[]): string {
     const basePrompt = `Eres un clasificador especializado en protección infantil. Analiza el texto del reporte y responde con el JSON estructurado solicitado.
 
 Categorías:
-- CONTACTO_INSISTENTE: contacto repetido e incómodo
-- SOLICITUD_MATERIAL: solicitud explícita de fotos, videos o material íntimo/desnudo
-- OFRECIMIENTO_REGALOS: ofrecimiento de dinero, regalos o beneficios a cambio de algo
+- CONTACTO_INSISTENTE: contacto repetido e incómodo, o primeros acercamientos inapropiados de un adulto a un menor con señales de grooming temprano (preguntar edad, curso, colegio o datos personales; pedir que la conversación se mantenga en secreto de los padres; insistir en pasar a chat privado; intentar aislar al menor de su entorno de confianza). El contexto de acercamiento inapropiado es clave: una pregunta casual sin contexto de riesgo no basta.
+- SOLICITUD_MATERIAL: solicitud explícita de fotos, videos, descripción del cuerpo o cualquier material íntimo/desnudo. Si la solicitud de material íntimo va acompañada de un ofrecimiento (dinero, regalos, créditos de juego, beneficios), prevalece SOLICITUD_MATERIAL porque el ofrecimiento es el método de coerción, no la conducta principal.
+- OFRECIMIENTO_REGALOS: ofrecimiento de dinero, regalos o beneficios sin solicitud de material íntimo
 - SUPLANTACION_IDENTIDAD: fingir ser menor, familiar, amigo o figura de autoridad
 - SOLICITUD_ENCUENTRO: solicitud de reunión física o encontrarse en persona
 - COMPARTIMIENTO_SEXUAL: envío, exhibición o compartición de material sexual
@@ -120,9 +120,15 @@ Fronteras excluyentes y ejemplos contrastivos:
   - "te mando mis fotos íntimas" → COMPARTIMIENTO_SEXUAL
   - "muéstrate por cámara" → SOLICITUD_MATERIAL
   - "mira lo que te envío" (contenido sexual) → COMPARTIMIENTO_SEXUAL
-- OFRECIMIENTO_REGALOS vs EXTORSION:
-  - "te compro un celular si me mandas fotos" → OFRECIMIENTO_REGALOS
+- SOLICITUD_MATERIAL vs OFRECIMIENTO_REGALOS (regla de prioridad):
+  - "te compro un celular si me mandas fotos" → SOLICITUD_MATERIAL (pide material íntimo; el regalo es el método)
+  - "te doy dinero si me describís tu cuerpo" → SOLICITUD_MATERIAL (pide material íntimo; el dinero es el método)
+  - "te regalo skins si me seguís y hablamos" → OFRECIMIENTO_REGALOS (no pide material íntimo; solo busca contacto/seguidores)
   - "si no me mandas fotos, le cuento a todos" → EXTORSION
+- CONTACTO_INSISTENTE vs OTRO:
+  - "Hola, ¿cuántos años tenés? ¿en qué curso estás? Hablame por privado, no le digas a tus papás" → CONTACTO_INSISTENTE (grooming temprano: aislamiento + secreto + privado)
+  - "¿qué edad tenés? yo tengo 13" → OTRO (pregunta casual en un chat público sin contexto de acercamiento inapropiado)
+  - "Sos lindo/a, ¿me agregás? Podemos ser amigos" → CONTACTO_INSISTENTE (acercamiento inapropiado de adulto a menor, aunque sea leve)
 - SUPLANTACION_IDENTIDAD requiere fingimiento de identidad; un adulto contactando a un menor no basta.
 - DOXING requiere intención de publicar, difundir o revelar datos personales para identificar, localizar o dañar. Mencionar una dirección o teléfono NO es DOXING si no hay intención de publicación.
   - "Voy a publicar su dirección: cra 7 # 45-67" → DOXING

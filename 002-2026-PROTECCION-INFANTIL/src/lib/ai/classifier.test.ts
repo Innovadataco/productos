@@ -66,4 +66,55 @@ describe("clasificarReporte", () => {
         expect(res.estado).toBe("REVISION_MANUAL");
         expect(res.posibleAgresorPar).toBe(false);
     });
+
+    describe("prompt de sistema (smoke tests)", () => {
+        function getSystemPromptFromCall(): string {
+            expect(mockLlamar).toHaveBeenCalled();
+            const call = mockLlamar.mock.calls[0];
+            return String(call[3]);
+        }
+
+        it("establece la regla de prioridad SOLICITUD_MATERIAL sobre OFRECIMIENTO_REGALOS", async () => {
+            mockLlamar.mockResolvedValue(mockResponse("SOLICITUD_MATERIAL", 0.9, false));
+            await clasificarReporte("ornith:9b", "te doy dinero si me mandas fotos", 0.5);
+            const systemPrompt = getSystemPromptFromCall();
+            expect(systemPrompt).toContain("prevalece SOLICITUD_MATERIAL");
+            expect(systemPrompt).toContain('"te compro un celular si me mandas fotos" → SOLICITUD_MATERIAL');
+            expect(systemPrompt).toContain('"te doy dinero si me describís tu cuerpo" → SOLICITUD_MATERIAL');
+        });
+
+        it("mantiene OFRECIMIENTO_REGALOS cuando no hay solicitud de material íntimo", async () => {
+            mockLlamar.mockResolvedValue(mockResponse("OFRECIMIENTO_REGALOS", 0.9, false));
+            await clasificarReporte("ornith:9b", "te regalo skins si me seguís", 0.5);
+            const systemPrompt = getSystemPromptFromCall();
+            expect(systemPrompt).toContain('"te regalo skins si me seguís y hablamos" → OFRECIMIENTO_REGALOS');
+        });
+
+        it("amplía CONTACTO_INSISTENTE con señales de grooming temprano", async () => {
+            mockLlamar.mockResolvedValue(mockResponse("CONTACTO_INSISTENTE", 0.9, false));
+            await clasificarReporte("ornith:9b", "hola cuántos años tenés, hablemos por privado", 0.5);
+            const systemPrompt = getSystemPromptFromCall();
+            expect(systemPrompt).toContain("grooming temprano");
+            expect(systemPrompt).toContain("pedir que la conversación se mantenga en secreto");
+            expect(systemPrompt).toContain("insistir en pasar a chat privado");
+            expect(systemPrompt).toContain('"Hola, ¿cuántos años tenés? ¿en qué curso estás? Hablame por privado, no le digas a tus papás" → CONTACTO_INSISTENTE');
+        });
+
+        it("distingue pregunta casual (OTRO) de grooming temprano (CONTACTO_INSISTENTE)", async () => {
+            mockLlamar.mockResolvedValue(mockResponse("OTRO", 0.9, false));
+            await clasificarReporte("ornith:9b", "¿qué edad tenés? yo tengo 13", 0.5);
+            const systemPrompt = getSystemPromptFromCall();
+            expect(systemPrompt).toContain("una pregunta casual sin contexto de riesgo no basta");
+            expect(systemPrompt).toContain('"¿qué edad tenés? yo tengo 13" → OTRO');
+        });
+
+        it("no altera las otras 10 categorías (ejemplo: extorsión y encuentro intactos)", async () => {
+            mockLlamar.mockResolvedValue(mockResponse("EXTORSION", 0.9, false));
+            await clasificarReporte("ornith:9b", "si no me mandas fotos, le cuento a todos", 0.5);
+            const systemPrompt = getSystemPromptFromCall();
+            expect(systemPrompt).toContain('"si no me mandas fotos, le cuento a todos" → EXTORSION');
+            expect(systemPrompt).toContain("SOLICITUD_ENCUENTRO: solicitud de reunión física");
+            expect(systemPrompt).toContain("SUPLANTACION_IDENTIDAD: fingir ser menor");
+        });
+    });
 });
