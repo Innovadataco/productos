@@ -117,15 +117,22 @@ No existe un concepto de "lote" en el schema actual. Para Simulación se añaden
 
 ## 4. Decisiones de diseño registradas
 
-### 4.1 ¿Cómo forzar el modelo sin afectar producción?
+### 4.1 ¿Cómo forzar el modelo sin afectar producción? (Decisión definitiva: Opción A por job)
 
-Opciones analizadas:
+**Opción A — Override por job de `pg-boss` (elegida)**:
+- `sendReporte` acepta `modeloClasificacion` opcional en `data` del job y lo envía junto a `reporteId` e `intento`.
+- El worker (`scripts/worker-reportes.mjs`) lee `job.data.modeloClasificacion` y lo incluye en el body de `POST /api/reportes/procesar`.
+- El endpoint `/api/reportes/procesar` recibe el override y lo pasa a `cargarParametrosClasificacion`.
+- `cargarParametrosClasificacion` acepta un objeto parcial `override` (`modeloClasificacion`, `modeloAnonimizacion`, `modeloEmbedding`) y usa el valor del job si existe; de lo contrario, lee de `ParametroSistema` como hace hoy.
+- De esta forma, cada job de simulación se procesa con su propio modelo sin alterar el modelo de producción ni afectar reportes reales que no lleven el override.
 
-1. **Override por job de `pg-boss`**: pasar `modeloClasificacion` en `data` del job y usarlo si existe en el worker. Es la opción más limpia pero requiere modificar el worker y `src/app/api/reportes/procesar/helpers/parametros.ts`.
-2. **Parámetro temporal de sistema**: escribir `simulacion.modelo_override` en `ParametroSistema`, procesar, y restaurar. Riesgo de dejar el sistema en estado inconsistente si falla.
-3. **Config snapshot por reporte**: añadir columna `modeloClasificacion` en `Reporte` (toca `Reporte`, prohibido).
+**Opción B — Parámetro de sistema temporal `simulacion.modelo_override` (DESCARTADA)**:
+- Riesgo de contaminar clasificaciones reales si falla a mitad de una corrida o si el worker comparte instancia con reportes reales.
+- No se toca `ParametroSistema` para simulaciones.
 
-**Decisión preliminar**: validar opción 1 en implementación; si no es viable sin tocar mucho el pipeline, usar opción 2 con rollback garantizado. Nunca opción 3.
+**Verificación técnica**: el worker ya accede a `job.data.reporteId` e `intento` (`scripts/worker-reportes.mjs:156`). Agregar `modeloClasificacion` en `job.data` y propagarlo al body de `/api/reportes/procesar` es un cambio mínimo y seguro. El helper `cargarParametrosClasificacion` actualmente no recibe parámetros; se le añadirá un argumento opcional `override`.
+
+**Impacto en el plan**: se modificarán `src/lib/queue.ts` (`sendReporte`), `scripts/worker-reportes.mjs` (body del POST), `src/app/api/reportes/procesar/route.ts` (recibir override), y `src/app/api/reportes/procesar/helpers/parametros.ts` (aplicar override). No se modifica el schema de `ParametroSistema`.
 
 ### 4.2 ¿Rechazo o encolamiento de segunda corrida?
 

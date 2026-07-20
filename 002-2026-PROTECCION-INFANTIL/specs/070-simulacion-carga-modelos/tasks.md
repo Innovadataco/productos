@@ -14,7 +14,10 @@
 
 | ID | Tarea | Archivo(s) | Dependencias |
 |---|---|---|---|
-| T006 | Diseñar e implementar batch creator de reportes anónimos (override de modelo, prefijo SIM-). | `src/lib/simulacion/executor.ts`, `src/lib/simulacion/executor.test.ts` | T004 |
+| T006 | Diseñar e implementar batch creator de reportes anónimos con override de modelo por job de `pg-boss`. | `src/lib/simulacion/executor.ts`, `src/lib/queue.ts` (extender `sendReporte`), `src/lib/simulacion/executor.test.ts` | T004 |
+| T006a | Extender `sendReporte` para aceptar `modeloClasificacion` opcional en `data` del job. | `src/lib/queue.ts`, `src/lib/queue.test.ts` | T006 |
+| T006b | Modificar `scripts/worker-reportes.mjs` para propagar `job.data.modeloClasificacion` en el body de `POST /api/reportes/procesar`. | `scripts/worker-reportes.mjs` | T006a |
+| T006c | Modificar `src/app/api/reportes/procesar/route.ts` y helpers para recibir y aplicar el override del modelo. | `src/app/api/reportes/procesar/route.ts`, `src/app/api/reportes/procesar/helpers/parametros.ts`, tests existentes | T006b |
 | T007 | Implementar lógica de un solo run en progreso (rechazo de segunda corrida). | `src/lib/simulacion/executor.ts` | T006 |
 | T008 | Implementar endpoint `POST /api/admin/ia/simulaciones/[id]/cancelar`. | `src/app/api/admin/ia/simulaciones/[id]/cancelar/route.ts`, `route.test.ts` | T006 |
 | T009 | Implementar endpoint `GET /api/admin/ia/simulaciones/[id]` con polling. | `src/app/api/admin/ia/simulaciones/[id]/route.ts`, `route.test.ts` | T001, T006 |

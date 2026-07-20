@@ -47,10 +47,11 @@
    - Solo una corrida en estado `PENDIENTE` o `EN_PROGRESO` a la vez; intentar lanzar otra devuelve error con sugerencia de cancelar o esperar.
    - La creación de reportes se hace en batches (ej. 5 a 5) para no saturar la cola; se respeta el backpressure de `pg-boss`.
 
-2. **Modelo forzado sin afectar producción**:
-   - Se crea un `configSnapshot` temporal con `modeloClasificacion` igual al elegido.
-   - El worker lee `modeloClasificacion` de `ParametroSistema` por defecto; para simulaciones, se propone pasar el modelo en el payload del job (`data.modeloClasificacion`) y usarlo si existe, sin persistir en `ParametroSistema`.
-   - Si el worker no soporta override por job, se usa un parámetro de sistema temporal `simulacion.modelo_override` con TTL o se restaura al finalizar. En el plan se deja abierto a validar en implementación.
+2. **Modelo forzado sin afectar producción (Opción A — override por job de `pg-boss`)**:
+   - `sendReporte` acepta `modeloClasificacion` opcional en `data` del job.
+   - El worker (`scripts/worker-reportes.mjs`) lee `job.data.modeloClasificacion` y lo propaga en el body de `POST /api/reportes/procesar`.
+   - `/api/reportes/procesar` recibe el override y lo aplica en `cargarParametrosClasificacion` sin modificar `ParametroSistema`.
+   - Descartada la Opción B de parámetro temporal `simulacion.modelo_override` porque un worker único compartido podría contaminar clasificaciones reales si falla a mitad.
 
 3. **Identificación de datos de simulación**:
    - Los identificadores de simulación usan prefijo `SIM-` + id de corrida + índice (ej. `SIM-abc123-042`).
