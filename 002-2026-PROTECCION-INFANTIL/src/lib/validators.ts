@@ -37,6 +37,40 @@ export const idSchema = z.string().refine(
     { message: "ID inválido" }
 );
 
+export const restablecerPasswordSchema = z.object({
+    token: z.string().min(1, "Token requerido"),
+    password: z
+        .string()
+        .min(8, "Contraseña: mínimo 8 caracteres")
+        .max(100, "Contraseña: máximo 100 caracteres")
+        .refine(
+            (val) => /[a-zA-Z]/.test(val) && /[0-9]/.test(val),
+            { message: "Contraseña: al menos 1 letra y 1 número" }
+        ),
+}).strict();
+export type RestablecerPasswordInput = z.infer<typeof restablecerPasswordSchema>;
+
+export const authRegisterSchema = z.object({
+    email: z.string().email("Email inválido").max(255, "Email: máximo 255 caracteres"),
+    password: z
+        .string()
+        .min(8, "Contraseña: mínimo 8 caracteres")
+        .max(100, "Contraseña: máximo 100 caracteres")
+        .refine(
+            (val) => /[a-zA-Z]/.test(val) && /[0-9]/.test(val),
+            { message: "Contraseña: al menos 1 letra y 1 número" }
+        ),
+    nombre: z.string().max(100, "Nombre: máximo 100 caracteres").optional(),
+    rol: z.enum(["ADMIN", "SCHOOL_ADMIN", "PARENT", "OPERADOR", "COMITE_VALIDACION"] as [string, ...string[]]),
+    tenantId: idSchema.optional(),
+}).strict();
+export type AuthRegisterInput = z.infer<typeof authRegisterSchema>;
+
+export const recuperarSolicitarSchema = z.object({
+    email: z.string().email("Email inválido").max(255, "Email: máximo 255 caracteres"),
+}).strict();
+export type RecuperarSolicitarInput = z.infer<typeof recuperarSolicitarSchema>;
+
 export const numeroSeguimientoSchema = z.string().regex(/^RPT-[A-Z0-9]{6}$/, "Número de seguimiento inválido");
 
 const accionesPermitidas = Object.values(AccionAudit) as [string, ...string[]];

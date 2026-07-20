@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/auth";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { authRegisterSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
     try {
@@ -16,29 +17,20 @@ export async function POST(request: Request) {
         }
 
         const currentUser = await verifyAuth("ADMIN");
-        const body = (await request.json()) as {
-            email: string;
-            password: string;
-            nombre?: string;
-            rol: string;
-            tenantId?: string;
-        };
-
-        if (!body.email || !body.password || !body.rol) {
+        const body = await request.json();
+        const parsed = authRegisterSchema.safeParse(body);
+        if (!parsed.success) {
+            const issue = parsed.error.issues[0];
             return NextResponse.json(
-                { error: { message: "Email, contraseña y rol requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: issue?.message || "Datos inválidos", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
 
-        if (body.password.length < 8 || !/[a-zA-Z]/.test(body.password) || !/[0-9]/.test(body.password)) {
-            return NextResponse.json(
-                { error: { message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            );
-        }
+        const data = parsed.data;
+        const email = data.email.toLowerCase();
 
-        const existing = await prisma.usuario.findUnique({ where: { email: body.email.toLowerCase() } });
+        const existing = await prisma.usuario.findUnique({ where: { email } });
         if (existing) {
             return NextResponse.json(
                 { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
@@ -50,7 +42,7 @@ export async function POST(request: Request) {
             ? ["ADMIN", "SCHOOL_ADMIN", "PARENT"]
             : ["PARENT"];
 
-        if (!allowedRoles.includes(body.rol)) {
+        if (!allowedRoles.includes(data.rol)) {
             return NextResponse.json(
                 { error: { message: "Rol no permitido", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
@@ -59,11 +51,11 @@ export async function POST(request: Request) {
 
         const user = await prisma.usuario.create({
             data: {
-                email: body.email.toLowerCase(),
-                nombre: body.nombre || null,
-                passwordHash: await hashPassword(body.password),
-                rol: body.rol as never,
-                tenantId: body.tenantId || null,
+                email,
+                nombre: data.nombre || null,
+                passwordHash: await hashPassword(data.password),
+                rol: data.rol as never,
+                tenantId: data.tenantId || null,
             },
         });
 

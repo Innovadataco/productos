@@ -3,29 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { hashPassword } from "@/lib/auth";
 import { verificarTokenHash } from "@/lib/token-recuperacion";
-
-function validarPassword(password: string): boolean {
-    return password.length >= 8 && /[a-zA-Z]/.test(password) && /[0-9]/.test(password);
-}
+import { restablecerPasswordSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
     try {
-        const body = (await request.json()) as { token?: string; password?: string };
-        const { token, password } = body;
-
-        if (!token || !password) {
+        const body = await request.json();
+        const parsed = restablecerPasswordSchema.safeParse(body);
+        if (!parsed.success) {
+            const issue = parsed.error.issues[0];
             return NextResponse.json(
-                { error: { message: "Token y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: issue?.message || "Token y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
 
-        if (!validarPassword(password)) {
-            return NextResponse.json(
-                { error: { message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            );
-        }
+        const { token, password } = parsed.data;
 
         const tokensActivos = await prisma.tokenRecuperacion.findMany({
             where: {
