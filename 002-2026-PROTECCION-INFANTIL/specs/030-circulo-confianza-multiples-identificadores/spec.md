@@ -1,5 +1,7 @@
 # Spec 030 — Rediseño del Círculo de Confianza: contacto = persona con múltiples identificadores
 
+> Estado: **CERRADA**.
+
 ## Objetivo
 
 Permitir que un usuario agrupe varios identificadores (teléfono, nick, usuario, email, etc.) bajo un mismo contacto del Círculo de Confianza, en lugar de tratar cada identificador como un contacto independiente.

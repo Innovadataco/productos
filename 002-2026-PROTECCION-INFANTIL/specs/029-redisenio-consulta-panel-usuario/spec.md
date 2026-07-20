@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-18
 
-**Status**: EN DISEÑO
+**Status**: CERRADA
 
 **Input**: Rediseñar la consulta pública y el panel de usuario autenticado para comunicar el riesgo de un vistazo, con tres niveles de visibilidad claros. Ningún nivel público muestra el texto/contenido del reporte ni la identidad del denunciante.
 

@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: PLANEADO (espera aprobación)
+**Status**: CERRADA
 
 **Input**: El operador necesita poder recategorizar la clasificación de la IA cuando no coincide con la realidad. El flujo debe quedar registrado en `TransicionReporte` con responsable `OPERADOR` y el reporte debe terminar en estado `CORREGIDO`. La investigación previa indica que el endpoint y la UI ya existen, pero faltan tests de flujo y documentación.
 

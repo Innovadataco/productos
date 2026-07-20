@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-19
 
-**Status**: EN PLANIFICACIÓN
+**Status**: CERRADA
 
 **Input**: Ajustes derivados del cierre del spec 034 y blindaje de infraestructura crítica: (1) COMITE_VALIDACION aterriza en vistas públicas/PARENT al entrar a "Mi bandeja"; (2) el editor de grupos de categoría lee mal el valor del parámetro y no persiste; (3) la migración de reintentos eliminó los índices HNSW de embeddings y no los recreó; (4) la lógica de middleware en `src/proxy.ts` no está activa como middleware real; (5) el seed no es 100% idempotente y el password de admin tiene default en no-producción; (6) no hay garantía de un solo worker.
 

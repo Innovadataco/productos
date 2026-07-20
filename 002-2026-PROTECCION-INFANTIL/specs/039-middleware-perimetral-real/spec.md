@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-19
 
-**Status**: IMPLEMENTADO
+**Status**: CERRADA
 
 **Input**: El guard perimetral del spec 035 US4 quedó implementado en archivos `src/proxy.ts` / `src/lib/proxy.ts`, pero la convención correcta en Next.js 16.10 es `src/proxy.ts` con export `proxy`, no `src/middleware.ts` con export `middleware`. El objetivo es asegurar que el middleware perimetral realmente corra como `Proxy (Middleware)` de Next.js, manteniendo la defensa en profundidad con `verifyAuth` en endpoints y layouts.
 

@@ -1,5 +1,7 @@
 # Spec 031 — Mejoras de UI: agrupación de categorías, terminología, círculo de confianza, dashboard público, notificaciones y logout
 
+> Estado: **CERRADA**.
+
 ## Objetivo
 
 Mejorar la experiencia de usuario final del producto Protección Infantil agrupando las 12 categorías internas de conducta en 5 grupos comprensibles, simplificando la terminología de estados, enriqueciendo la UI del Círculo de Confianza, saneando los textos de los emails, rediseñando el dashboard público y corrigiendo el logout.

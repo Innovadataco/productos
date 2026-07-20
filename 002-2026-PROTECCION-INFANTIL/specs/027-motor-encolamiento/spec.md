@@ -1,6 +1,6 @@
 > # Spec 027 — Motor de encolamiento
 
-> Estado: **EN DISEÑO**.
+> Estado: **CERRADA**.
 > Plan: [`plan.md`](plan.md).
 
 ## Alcance

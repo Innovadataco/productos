@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: IMPLEMENTADO
+**Status**: CERRADA
 
 **Input**: Cuatro problemas de UX verificados: (1) el padre autenticado no tiene acceso al panel `/dashboard` desde la navegación; (2) la bandeja del comité tiene pestañas Pendientes/Mías y un paso explícito de "Asignarme"; (3) el resolver del comité ofrece dos acciones confusas (Clasificar/Corregir); (4) el copy del Círculo de Confianza usa jerga técnica.
 

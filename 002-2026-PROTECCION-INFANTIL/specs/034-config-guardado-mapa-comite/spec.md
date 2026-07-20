@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-19
 
-**Status**: EN DESARROLLO
+**Status**: CERRADA
 
 **Input**: Correcciones y mejoras derivadas del cierre del spec 033: (1) `COMITE_VALIDACION` sigue cayendo en `/mis-reportes` tras login y muestra error al acceder a rutas de usuario final; (2) el editor de grupos de categoría usa autosave sobre un parámetro que no existe en BD, por lo que los cambios no persisten; (3) el mapa del dashboard público necesita rediseño visual (centro LATAM, leyenda, burbujas con etiquetas, mapeo de nombres de país y estilo pulido), manteniéndose offline.
 

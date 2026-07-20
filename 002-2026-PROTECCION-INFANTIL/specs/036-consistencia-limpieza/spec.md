@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-19
 
-**Status**: EN PLANIFICACIÓN
+**Status**: CERRADA
 
 **Input**: Tareas de consistencia y deuda técnica acumulada: (1) la ruta API se llama `apeaciones` en lugar de `apelaciones` (error ortográfico) y afecta endpoint, consumidores y tests; (2) quedan textos en voseo en la interfaz; (3) las librerías usan `console.log` directamente; (4) falta búsqueda por número de seguimiento e identificador en la bandeja admin; (5) los resultados de evaluación generan archivos que no deben commitearse.
 

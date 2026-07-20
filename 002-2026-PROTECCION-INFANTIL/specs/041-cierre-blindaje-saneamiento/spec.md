@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: IMPLEMENTADO
+**Status**: CERRADA
 
 **Input**: Tras las correcciones de seguridad del spec 037 y el blindaje del spec 035, quedan dos puntos de saneamiento pendientes: (1) confirmar que los índices vectoriales HNSW de `EmbeddingReporte` y `EmbeddingDataset` están presentes en la base de datos y documentar el método correcto de despliegue de migraciones; (2) evitar que mensajes de error crudos de servicios externos queden persistidos en `Reporte.processingError`, reemplazándolos por un mensaje genérico acompañado de un código de error.
 

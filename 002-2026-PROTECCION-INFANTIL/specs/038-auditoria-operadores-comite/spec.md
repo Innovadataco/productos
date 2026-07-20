@@ -6,7 +6,7 @@
 
 **Created**: 2026-07-19
 
-**Status**: EN DESARROLLO
+**Status**: CERRADA
 
 **Input**: Crear submódulo de auditoría con vista y filtros de búsqueda sobre `AuditLog` para acciones `OPERADOR_*` y `COMITE_*`, integrado en `/dashboard/admin/operadores` y `/dashboard/admin/comite`.
 

@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-19
 
-**Status**: IMPLEMENTADO
+**Status**: CERRADA
 
 **Input**: El rol `COMITE_VALIDACION` actualmente ve en el módulo Comité las 3 pestañas (Bandeja, Gestión, Auditoría) de `ComiteSubNav`, aunque Gestión y Auditoría son funciones exclusivas de `ADMIN`/`SCHOOL_ADMIN`. Además, `/dashboard/admin/comite/gestion` no tiene protección server-side y `/dashboard/admin/comite/auditoria` muestra la UI de auditoría aunque sus datos están restringidos. El objetivo es aislar al comité a su Bandeja, de modo que solo vea y pueda acceder a la pestaña y funciones de trabajo de casos escalados.
 

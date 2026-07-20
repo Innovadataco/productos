@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-19
 
-**Status**: EN DESARROLLO
+**Status**: CERRADA
 
 **Input**: Tres correcciones de prioridad P1/P2 detectadas en fase de desarrollo: (1) el rol `COMITE_VALIDACION` cae en el menú de usuario final y recibe errores 403; (2) el editor de grupos de categoría arranca vacío y no coincide con el fallback que usan los usuarios; (3) el mapa del dashboard público no muestra contornos geográficos reales y depende de tiles externos que no cargan en el servidor sin internet.
 

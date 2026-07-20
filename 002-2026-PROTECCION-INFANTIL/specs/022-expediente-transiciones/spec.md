@@ -1,6 +1,6 @@
 # Spec 022 — Expediente interno de transiciones
 
-> Estado: **EN DISEÑO**.
+> Estado: **CERRADA**.
 > Plan: [`plan.md`](plan.md).
 
 ## Alcance
