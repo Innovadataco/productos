@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { Modal } from "@/components/ui/Modal";
 import { AdminReporteDetalle } from "./AdminReporteDetalle";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -179,49 +180,41 @@ export function SpamRevisionPanel() {
             </div>
 
             {selectedId && selected && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl glass-strong p-6 shadow-xl">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h2 className="text-xl font-semibold text-body">Revisar posible spam</h2>
-                            <Button onClick={() => setSelectedId(null)} variant="secondary" disabled={resolviendo}>
-                                Cerrar
+                <Modal isOpen onClose={() => setSelectedId(null)} title="Revisar posible spam">
+                    <AdminReporteDetalle
+                        reporteId={selectedId}
+                        onClose={() => setSelectedId(null)}
+                        onRefresh={fetchReportes}
+                        inline
+                    />
+
+                    <div className="mt-6 space-y-4 rounded-2xl glass p-4">
+                        <h3 className="font-medium text-body">Resolución</h3>
+                        <div>
+                            <label className="block text-sm font-medium text-body mb-1.5">Categoría si es válido</label>
+                            <Select
+                                options={CATEGORIAS.map((c) => ({ value: c.value, label: c.label }))}
+                                value={categoria}
+                                onChange={(e) => setCategoria(e.target.value)}
+                            />
+                        </div>
+                        <textarea
+                            className="w-full rounded-lg glass-input ring-accent-input p-2 text-body"
+                            rows={3}
+                            placeholder="Motivo de la resolución (opcional)"
+                            value={motivo}
+                            onChange={(e) => setMotivo(e.target.value)}
+                        />
+                        <div className="flex flex-wrap gap-2">
+                            <Button onClick={() => resolver(false)} disabled={resolviendo} variant="secondary">
+                                {resolviendo ? "Resolviendo..." : "Marcar como válido"}
+                            </Button>
+                            <Button onClick={() => resolver(true)} disabled={resolviendo}>
+                                {resolviendo ? "Resolviendo..." : "Confirmar spam"}
                             </Button>
                         </div>
-
-                        <AdminReporteDetalle
-                            reporteId={selectedId}
-                            onClose={() => setSelectedId(null)}
-                            onRefresh={fetchReportes}
-                        />
-
-                        <div className="mt-6 space-y-4 rounded-2xl glass p-4">
-                            <h3 className="font-medium text-body">Resolución</h3>
-                            <div>
-                                <label className="block text-sm font-medium text-body mb-1.5">Categoría si es válido</label>
-                                <Select
-                                    options={CATEGORIAS.map((c) => ({ value: c.value, label: c.label }))}
-                                    value={categoria}
-                                    onChange={(e) => setCategoria(e.target.value)}
-                                />
-                            </div>
-                            <textarea
-                                className="w-full rounded-lg glass-input ring-accent-input p-2 text-body"
-                                rows={3}
-                                placeholder="Motivo de la resolución (opcional)"
-                                value={motivo}
-                                onChange={(e) => setMotivo(e.target.value)}
-                            />
-                            <div className="flex flex-wrap gap-2">
-                                <Button onClick={() => resolver(false)} disabled={resolviendo} variant="secondary">
-                                    {resolviendo ? "Resolviendo..." : "Marcar como válido"}
-                                </Button>
-                                <Button onClick={() => resolver(true)} disabled={resolviendo}>
-                                    {resolviendo ? "Resolviendo..." : "Confirmar spam"}
-                                </Button>
-                            </div>
-                        </div>
                     </div>
-                </div>
+                </Modal>
             )}
         </div>
     );

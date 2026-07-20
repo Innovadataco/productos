@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Modal } from "@/components/ui/Modal";
 
 type Solicitud = {
     id: string;
@@ -120,109 +121,102 @@ export function ComiteSolicitudDetalle({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl glass-strong p-6 shadow-xl">
-                <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-body">Solicitud {solicitud.numero}</h2>
-                    <Button onClick={onClose} variant="outline">Cerrar</Button>
-                </div>
+        <Modal isOpen onClose={onClose} title={`Solicitud ${solicitud.numero}`}>
+            {error && <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-red-700 dark:text-red-300">{error}</div>}
+            {success && <div className="mb-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-3 text-emerald-700 dark:text-emerald-300">{success}</div>}
 
-                {error && <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-red-700 dark:text-red-300">{error}</div>}
-                {success && <div className="mb-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-3 text-emerald-700 dark:text-emerald-300">{success}</div>}
-
-                <div className="mb-4 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-                    <p><span className="text-subtle">Estado:</span> {solicitud.estado}</p>
-                    <p><span className="text-subtle">Motivo del escalamiento:</span></p>
-                    <p className="whitespace-pre-wrap">{solicitud.motivo}</p>
-                </div>
-
-                {loading ? (
-                    <p className="text-subtle">Cargando reporte...</p>
-                ) : !reporte ? (
-                    <ErrorState
-                        title="No se pudo cargar el reporte"
-                        description="Ocurrió un problema al cargar el detalle del caso. Intenta de nuevo."
-                        onRetry={() => setRetry((r) => r + 1)}
-                    />
-                ) : (
-                    <div className="space-y-4 text-sm text-body">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <span className="font-medium text-subtle">Número de seguimiento</span>
-                                <p>{reporte.numeroSeguimiento}</p>
-                            </div>
-                            <div>
-                                <span className="font-medium text-subtle">Estado</span>
-                                <p>{reporte.estado}</p>
-                            </div>
-                            <div>
-                                <span className="font-medium text-subtle">Plataforma</span>
-                                <p>{reporte.plataforma.nombre}</p>
-                            </div>
-                            <div>
-                                <span className="font-medium text-subtle">Identificador</span>
-                                <p>{reporte.identificador}</p>
-                            </div>
-                            <div>
-                                <span className="font-medium text-subtle">Origen</span>
-                                <p>{reporte.esAnonimo ? "Anónimo" : "Autenticado"}</p>
-                            </div>
-                            <div>
-                                <span className="font-medium text-subtle">Recibido</span>
-                                <p>{new Date(reporte.creadoEn).toLocaleString()}</p>
-                            </div>
-                        </div>
-
-                        {reporte.clasificacion && (
-                            <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-                                <h3 className="mb-2 font-medium text-body">Clasificación IA</h3>
-                                <p><span className="text-subtle">Categoría:</span> {formatCategoria(reporte.clasificacion.categoria)}</p>
-                                <p><span className="text-subtle">Confianza:</span> {(reporte.clasificacion.confianza * 100).toFixed(1)}%</p>
-                                <p><span className="text-subtle">Modelo:</span> {reporte.clasificacion.modeloUsado}</p>
-                            </div>
-                        )}
-
-                        <div>
-                            <h3 className="mb-1 font-medium text-body">Texto</h3>
-                            <p className="whitespace-pre-wrap rounded-lg glass-input p-3">{reporte.texto}</p>
-                        </div>
-
-                        {readOnly ? (
-                            <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-                                <p className="text-muted">Este caso está en modo solo lectura.</p>
-                            </div>
-                        ) : (
-                            <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-                                <h3 className="mb-2 font-medium text-body">Resolver caso</h3>
-                                <label className="mb-1 block text-sm text-subtle" htmlFor="categoria-resolver">Categoría final</label>
-                                <select
-                                    id="categoria-resolver"
-                                    className="mb-3 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
-                                    value={categoria}
-                                    onChange={(e) => setCategoria(e.target.value)}
-                                >
-                                    <option value="">Seleccionar categoría</option>
-                                    {CATEGORIAS.map((c) => (
-                                        <option key={c.value} value={c.value}>{c.label}</option>
-                                    ))}
-                                </select>
-                                <label className="mb-1 block text-sm text-subtle" htmlFor="resolucion-resolver">Motivo / resolución (opcional)</label>
-                                <textarea
-                                    id="resolucion-resolver"
-                                    className="mb-3 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
-                                    rows={3}
-                                    placeholder="Motivo de la decisión (opcional)"
-                                    value={resolucion}
-                                    onChange={(e) => setResolucion(e.target.value)}
-                                />
-                                <Button onClick={handleResolver} disabled={actionLoading}>
-                                    {actionLoading ? "Resolviendo..." : "Resolver"}
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                )}
+            <div className="mb-4 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                <p><span className="text-subtle">Estado:</span> {solicitud.estado}</p>
+                <p><span className="text-subtle">Motivo del escalamiento:</span></p>
+                <p className="whitespace-pre-wrap">{solicitud.motivo}</p>
             </div>
-        </div>
+
+            {loading ? (
+                <p className="text-subtle">Cargando reporte...</p>
+            ) : !reporte ? (
+                <ErrorState
+                    title="No se pudo cargar el reporte"
+                    description="Ocurrió un problema al cargar el detalle del caso. Intenta de nuevo."
+                    onRetry={() => setRetry((r) => r + 1)}
+                />
+            ) : (
+                <div className="space-y-4 text-sm text-body">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <span className="font-medium text-subtle">Número de seguimiento</span>
+                            <p>{reporte.numeroSeguimiento}</p>
+                        </div>
+                        <div>
+                            <span className="font-medium text-subtle">Estado</span>
+                            <p>{reporte.estado}</p>
+                        </div>
+                        <div>
+                            <span className="font-medium text-subtle">Plataforma</span>
+                            <p>{reporte.plataforma.nombre}</p>
+                        </div>
+                        <div>
+                            <span className="font-medium text-subtle">Identificador</span>
+                            <p>{reporte.identificador}</p>
+                        </div>
+                        <div>
+                            <span className="font-medium text-subtle">Origen</span>
+                            <p>{reporte.esAnonimo ? "Anónimo" : "Autenticado"}</p>
+                        </div>
+                        <div>
+                            <span className="font-medium text-subtle">Recibido</span>
+                            <p>{new Date(reporte.creadoEn).toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    {reporte.clasificacion && (
+                        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                            <h3 className="mb-2 font-medium text-body">Clasificación IA</h3>
+                            <p><span className="text-subtle">Categoría:</span> {formatCategoria(reporte.clasificacion.categoria)}</p>
+                            <p><span className="text-subtle">Confianza:</span> {(reporte.clasificacion.confianza * 100).toFixed(1)}%</p>
+                            <p><span className="text-subtle">Modelo:</span> {reporte.clasificacion.modeloUsado}</p>
+                        </div>
+                    )}
+
+                    <div>
+                        <h3 className="mb-1 font-medium text-body">Texto</h3>
+                        <p className="whitespace-pre-wrap rounded-lg glass-input p-3">{reporte.texto}</p>
+                    </div>
+
+                    {readOnly ? (
+                        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                            <p className="text-muted">Este caso está en modo solo lectura.</p>
+                        </div>
+                    ) : (
+                        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                            <h3 className="mb-2 font-medium text-body">Resolver caso</h3>
+                            <label className="mb-1 block text-sm text-subtle" htmlFor="categoria-resolver">Categoría final</label>
+                            <select
+                                id="categoria-resolver"
+                                className="mb-3 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
+                                value={categoria}
+                                onChange={(e) => setCategoria(e.target.value)}
+                            >
+                                <option value="">Seleccionar categoría</option>
+                                {CATEGORIAS.map((c) => (
+                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                ))}
+                            </select>
+                            <label className="mb-1 block text-sm text-subtle" htmlFor="resolucion-resolver">Motivo / resolución (opcional)</label>
+                            <textarea
+                                id="resolucion-resolver"
+                                className="mb-3 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
+                                rows={3}
+                                placeholder="Motivo de la decisión (opcional)"
+                                value={resolucion}
+                                onChange={(e) => setResolucion(e.target.value)}
+                            />
+                            <Button onClick={handleResolver} disabled={actionLoading}>
+                                {actionLoading ? "Resolviendo..." : "Resolver"}
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </Modal>
     );
 }
