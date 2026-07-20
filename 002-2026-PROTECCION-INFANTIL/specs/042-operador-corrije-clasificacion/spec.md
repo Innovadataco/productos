@@ -111,4 +111,43 @@ Crear quickstart.md con pasos para reproducir: crear reporte, asignar a operador
 
 ## Implementación
 
-*Sección por completar tras la aprobación del plan y la implementación.*
+### Objetivo alcanzado
+
+Se completó la cobertura de tests del flujo de corrección de clasificación por parte del operador y se verificó la UI. Se corrigieron dos bugs menores descubiertos durante la ejecución de tests: corrección duplicada y reporte dado de baja.
+
+### Decisiones de diseño
+
+- No rediseñar el flujo existente (endpoint `/api/admin/correcciones` y componente `AdminReporteDetalle`).
+- Agregar tests de backend para los casos no cubiertos: estado final, transición, permisos y duplicados.
+- Agregar tests de componente para verificar el render condicional del botón de corrección.
+- Corregir el endpoint para devolver 409 en duplicados y reportes dados de baja (antes devolvía 500 y 200 respectivamente).
+- Mantener `verifyAuth` y `puedeGestionarReporte` sin cambios.
+
+### Componentes y archivos afectados
+
+- `src/app/api/admin/correcciones/route.ts` — verificación de `reporte.eliminado` y corrección existente; devuelve 409 en ambos casos.
+- `src/app/api/admin/correcciones/route.test.ts` — nuevos tests de flujo, permisos y duplicados.
+- `src/components/modules/AdminReporteDetalle.test.tsx` — nuevo test de componente.
+- `specs/042-operador-corrije-clasificacion/spec.md` — sección Implementación completada.
+- `specs/042-operador-corrije-clasificacion/checklists/requirements.md` — estados actualizados.
+- `docs/cierre-042.md` — creado.
+
+### Tests y validación
+
+- `src/app/api/admin/correcciones/route.test.ts`: 9 tests, todos pasan.
+- `src/components/modules/AdminReporteDetalle.test.tsx`: 3 tests, todos pasan.
+- `npm run test`: 80 archivos, 428 tests, todos pasan.
+- `npx tsc --noEmit`: OK.
+- `npm run lint`: OK (1 warning heredado de `GestionPageClient.tsx`).
+- `rm -rf .next && npm run build`: OK.
+- `./scripts/dev-restart.sh`: OK, healthcheck OK, un solo worker.
+
+### Migraciones
+
+No requirió migraciones de Prisma.
+
+### Deuda técnica
+
+- **Score público al corregir**: el endpoint `/api/admin/correcciones` no recalcula `actualizarVisibilidadPublica` ni `recalcularYGuardarScore` (a diferencia de `/api/admin/reportes-revision/[id]/confirmar`). Esto puede significar que un caso corregido no se refleja inmediatamente en el score público. Se documenta como deuda para revisión humana, ya que implica una decisión de diseño sobre si la corrección debe tener efectos públicos inmediatos.
+- No se rediseñó el flujo ni se tocó el clasificador/eval ni privacidad.
+
