@@ -144,8 +144,14 @@ El administrador necesita una forma documentada y reproducible de confirmar que 
 
 ## Implementación
 
-*Pendiente. Se completará tras la aprobación del plan y la implementación de las User Stories.*
+Implementación completada el 2026-07-20.
+
+- **US1 — Entrada idéntica a la de un anónimo**: se redefinió `casoSimulacionSchema` en `src/lib/schemas/simulacion.ts` como `crearReporteSchema` sin `paisId`, `ciudadId` ni `otraPlataforma`, extendido con `categoriaEsperada` opcional. Se actualizó `src/lib/simulacion/parser.ts` para leer y validar `fechaIncidente`, `ciudad`, `pais` y `edadVictima` (convertida a número desde CSV), reportando errores por línea. El formato legacy del 070 (solo `texto,plataforma,identificador`) se rechaza con mensaje claro.
+- **US2 — Executor con valores reales y pipeline completo**: se modificó `src/lib/simulacion/executor.ts` para crear `Reporte` con `fechaIncidente`, `ciudad`, `pais` y `edadVictima` exactamente como vienen del caso, eliminando los valores inventados. Se mantuvo `categoriaEsperada` únicamente en `SimulacionReporte`. Un caso fallido ya no detiene la corrida: se registra, se continúa con los demás, y al final se reporta `casosFallidos` en `metricasJson`.
+- **US3 — Verificación de fidelidad**: el `quickstart.md` incluye pasos para crear un reporte real y otro de simulación con datos idénticos, y comparar ambos en BD. Se añadió un ejemplo del formato esperado en `NuevaSimulacionForm.tsx`.
+- **Tests**: se actualizó `src/lib/simulacion/parser.test.ts` (15 tests) y se creó `src/lib/simulacion/executor.test.ts` (10 tests). Se corrigió `src/app/api/admin/ia/simulaciones/route.test.ts` para usar el nuevo formato de entrada. Total de tests: 595, todos en verde.
+- **Validación**: `npx tsc --noEmit`, `npm run lint`, `npm run test` y `npm run build` pasaron sin errores. No se modificó el modelo `Reporte` ni `ClasificacionIA`; no se requirió migración destructiva. El override de modelo sigue viajando por job de `pg-boss` sin tocar `ParametroSistema`.
 
 ## Status
 
-DESARROLLO
+CERRADA
