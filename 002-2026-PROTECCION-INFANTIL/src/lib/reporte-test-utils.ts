@@ -44,6 +44,91 @@ export async function crearPlataforma(clave = "whatsapp", nombre = "WhatsApp", c
     });
 }
 
+export async function crearColegioConAdmin() {
+    const { pais, ciudad } = await crearPaisCiudad();
+    const tenant = await prisma.tenant.create({
+        data: { nombre: "Colegio Test", estado: "activo" },
+    });
+    const hoy = new Date();
+    const inicio = new Date(hoy);
+    inicio.setDate(inicio.getDate() - 1);
+    const fin = new Date(hoy);
+    fin.setFullYear(fin.getFullYear() + 1);
+    const colegio = await prisma.colegio.create({
+        data: {
+            nombre: "Colegio Test",
+            paisId: pais.id,
+            ciudadId: ciudad.id,
+            representanteLegalNombre: "Representante Test",
+            representanteLegalIdentificacion: "123456789",
+            representanteLegalEmail: "rep@test.com",
+            inicioServicio: inicio,
+            finServicio: fin,
+            tipoPeriodo: "ANUAL",
+            estado: "activo",
+            tenantId: tenant.id,
+        },
+    });
+    const admin = await prisma.usuario.create({
+        data: {
+            email: `school-admin-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
+            nombre: "Admin Colegio",
+            passwordHash: await hashPassword("TestPass123"),
+            rol: "SCHOOL_ADMIN",
+            estado: "activo",
+            tenantId: tenant.id,
+            colegioId: colegio.id,
+        },
+    });
+    return { colegio, admin, pais, ciudad, tenant };
+}
+
+export async function crearCurso(
+    colegioId: string,
+    data: { nombre?: string; grado?: string; anioLectivo?: string; estado?: string } = {}
+) {
+    return prisma.curso.create({
+        data: {
+            colegioId,
+            nombre: data.nombre ?? `Curso ${Date.now()}`,
+            grado: data.grado ?? null,
+            anioLectivo: data.anioLectivo ?? null,
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
+export async function crearAlumno(
+    cursoId: string,
+    colegioId: string,
+    data: { nombre?: string; estado?: string } = {}
+) {
+    return prisma.alumno.create({
+        data: {
+            cursoId,
+            colegioId,
+            nombre: data.nombre ?? `Alumno ${Date.now()}`,
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
+export async function crearIdentificadorAlumno(
+    alumnoId: string,
+    data: { tipo?: string; valor?: string; plataformaId?: string | null; etiquetaRelacion?: string; estado?: string } = {}
+) {
+    return prisma.identificadorAlumno.create({
+        data: {
+            alumnoId,
+            tipo: data.tipo ?? "telefono",
+            valor: data.valor ?? `+57${Date.now()}`,
+            plataformaId: data.plataformaId ?? null,
+            etiquetaRelacion: (data.etiquetaRelacion as never) ?? "ALUMNO",
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
 export async function crearPaisCiudad() {
     const pais = await prisma.pais.upsert({
         where: { codigo: "CO" },

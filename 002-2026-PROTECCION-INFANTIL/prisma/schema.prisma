@@ -96,6 +96,15 @@ enum AccionAudit {
   COLEGIO_REACTIVADO
   COLEGIO_PASSWORD_REGENERADA
   COLEGIO_EMAIL_REENVIADO
+  COLEGIO_CURSO_CREADO
+  COLEGIO_CURSO_EDITADO
+  COLEGIO_CURSO_DESACTIVADO
+  COLEGIO_ALUMNO_CREADO
+  COLEGIO_ALUMNO_EDITADO
+  COLEGIO_ALUMNO_DESACTIVADO
+  COLEGIO_IDENTIFICADOR_CREADO
+  COLEGIO_IDENTIFICADOR_EDITADO
+  COLEGIO_IDENTIFICADOR_DESACTIVADO
 }
 
 enum TipoPeriodoServicio {
@@ -110,6 +119,15 @@ enum EstadoApelacion {
   ACEPTADA
   RECHAZADA
   VENCIDA
+}
+
+enum EtiquetaRelacionAlumno {
+  ALUMNO
+  MADRE
+  PADRE
+  PRIMO
+  TUTOR
+  OTRO
 }
 
 enum TipoIdentificacionIntegrante {
@@ -402,11 +420,65 @@ model Colegio {
   ciudad       Ciudad        @relation(fields: [ciudadId], references: [id])
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
   admin        Usuario?
+  cursos       Curso[]
+  alumnos      Alumno[]
 
   @@index([paisId])
   @@index([departamentoId])
   @@index([ciudadId])
   @@index([estado])
+}
+
+model Curso {
+  id          String   @id @default(cuid())
+  colegioId   String
+  nombre      String
+  grado       String?
+  anioLectivo String?
+  estado      String   @default("activo")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  colegio Colegio  @relation(fields: [colegioId], references: [id])
+  alumnos Alumno[]
+
+  @@index([colegioId, estado])
+  @@unique([colegioId, nombre, grado, anioLectivo])
+}
+
+model Alumno {
+  id        String   @id @default(cuid())
+  cursoId   String
+  colegioId String
+  nombre    String
+  estado    String   @default("activo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  curso           Curso               @relation(fields: [cursoId], references: [id])
+  colegio         Colegio             @relation(fields: [colegioId], references: [id])
+  identificadores IdentificadorAlumno[]
+
+  @@index([cursoId, estado])
+  @@index([colegioId, estado])
+}
+
+model IdentificadorAlumno {
+  id               String                  @id @default(cuid())
+  alumnoId         String
+  tipo             String
+  valor            String
+  plataformaId     String?
+  etiquetaRelacion EtiquetaRelacionAlumno @default(ALUMNO)
+  estado           String                  @default("activo")
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  alumno     Alumno      @relation(fields: [alumnoId], references: [id])
+  plataforma Plataforma? @relation(fields: [plataformaId], references: [id])
+
+  @@unique([alumnoId, valor, tipo, plataformaId])
+  @@index([alumnoId, estado])
 }
 
 // ============================================
@@ -426,6 +498,7 @@ model Plataforma {
   alertasSuscripcion      AlertaSuscripcion[]
   apelaciones             ApelacionIdentificador[]
   identificadoresContacto IdentificadorContacto[]
+  identificadoresAlumno IdentificadorAlumno[]
 
   @@index([clave])
   @@index([esActiva])

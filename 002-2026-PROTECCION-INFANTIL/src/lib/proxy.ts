@@ -31,7 +31,7 @@ const PUBLIC_ROUTES = [
 const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes"];
 
 // Rutas exclusivas del módulo Colegio.
-const COLEGIO_ROUTES = ["/dashboard/colegio", "/api/me/colegio"];
+const COLEGIO_ROUTES = ["/dashboard/colegio", "/api/me/colegio", "/api/colegio"];
 
 // Rutas públicas que los roles internos no pueden usar (la cuenta institucional no reporta).
 const REPORTAR_ROUTE = "/reportar";

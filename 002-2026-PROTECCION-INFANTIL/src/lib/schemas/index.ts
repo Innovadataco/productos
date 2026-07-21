@@ -107,3 +107,53 @@ export const colegioUpdateBodySchema = z.object({
     tipoPeriodo: tipoPeriodoServicioSchema.optional(),
     estado: z.enum(["activo", "inactivo"]).optional(),
 }).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+
+export const estadoActivoSchema = z.enum(["activo", "inactivo"]);
+
+export const cursoBodySchema = z.object({
+    nombre: z.string().min(2).max(150),
+    grado: z.string().max(100).optional(),
+    anioLectivo: z.string().max(20).optional(),
+});
+
+export const cursoUpdateBodySchema = z.object({
+    nombre: z.string().min(2).max(150).optional(),
+    grado: z.string().max(100).optional().nullable(),
+    anioLectivo: z.string().max(20).optional().nullable(),
+}).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+
+export const cursoIdParamsSchema = z.object({
+    id: cuidIdSchema,
+});
+
+export const alumnoBodySchema = z.object({
+    nombre: z.string().min(2).max(150),
+});
+
+export const alumnoUpdateBodySchema = z.object({
+    nombre: z.string().min(2).max(150).optional(),
+}).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+
+export const alumnoIdParamsSchema = z.object({
+    id: cuidIdSchema,
+});
+
+export const etiquetaRelacionAlumnoSchema = z.enum(["ALUMNO", "MADRE", "PADRE", "PRIMO", "TUTOR", "OTRO"]);
+
+export const identificadorAlumnoBodySchema = z.object({
+    tipo: z.string().min(1).max(50),
+    valor: z.string().min(1).max(255),
+    plataformaId: cuidIdSchema.optional(),
+    etiquetaRelacion: etiquetaRelacionAlumnoSchema.optional(),
+});
+
+export const identificadorAlumnoUpdateBodySchema = z.object({
+    tipo: z.string().min(1).max(50).optional(),
+    valor: z.string().min(1).max(255).optional(),
+    plataformaId: cuidIdSchema.optional().nullable(),
+    etiquetaRelacion: etiquetaRelacionAlumnoSchema.optional(),
+}).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+
+export const identificadorAlumnoIdParamsSchema = z.object({
+    id: cuidIdSchema,
+});
