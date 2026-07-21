@@ -1002,12 +1002,90 @@ async function main() {
         { codigo: "NI", nombre: "Nicaragua", ciudades: ["Managua", "León", "Masaya", "Matagalpa", "Chinandega", "Estelí"] },
     ];
 
+    // División político-administrativa de Colombia: 32 departamentos + Bogotá D.C.
+    const departamentosColombia = [
+        { nombre: "Amazonas", ciudades: ["Leticia"] },
+        { nombre: "Antioquia", ciudades: ["Medellín", "Bello", "Envigado", "Itagüí", "Rionegro"] },
+        { nombre: "Arauca", ciudades: ["Arauca"] },
+        { nombre: "Atlántico", ciudades: ["Barranquilla", "Soledad", "Malambo"] },
+        { nombre: "Bolívar", ciudades: ["Cartagena", "Magangué", "Turbaco"] },
+        { nombre: "Boyacá", ciudades: ["Tunja", "Duitama", "Sogamoso"] },
+        { nombre: "Caldas", ciudades: ["Manizales", "Villamaría", "Chinchiná"] },
+        { nombre: "Caquetá", ciudades: ["Florencia"] },
+        { nombre: "Casanare", ciudades: ["Yopal", "Aguazul"] },
+        { nombre: "Cauca", ciudades: ["Popayán", "Santander de Quilichao"] },
+        { nombre: "Cesar", ciudades: ["Valledupar", "Aguachica"] },
+        { nombre: "Chocó", ciudades: ["Quibdó", "Istmina"] },
+        { nombre: "Córdoba", ciudades: ["Montería", "Cereté", "Lorica"] },
+        { nombre: "Cundinamarca", ciudades: ["Girardot", "Fusagasugá", "Soacha"] },
+        { nombre: "Bogotá D.C.", ciudades: ["Bogotá"] },
+        { nombre: "Guainía", ciudades: ["Inírida"] },
+        { nombre: "Guaviare", ciudades: ["San José del Guaviare"] },
+        { nombre: "Huila", ciudades: ["Neiva", "Pitalito", "Garzón"] },
+        { nombre: "La Guajira", ciudades: ["Riohacha", "Maicao"] },
+        { nombre: "Magdalena", ciudades: ["Santa Marta", "Ciénaga"] },
+        { nombre: "Meta", ciudades: ["Villavicencio", "Acacías"] },
+        { nombre: "Nariño", ciudades: ["Pasto", "Ipiales", "Tumaco"] },
+        { nombre: "Norte de Santander", ciudades: ["Cúcuta", "Ocaña", "Pamplona"] },
+        { nombre: "Putumayo", ciudades: ["Mocoa", "Puerto Asís"] },
+        { nombre: "Quindío", ciudades: ["Armenia", "Calarcá"] },
+        { nombre: "Risaralda", ciudades: ["Pereira", "Dosquebradas", "Santa Rosa de Cabal"] },
+        { nombre: "San Andrés y Providencia", ciudades: ["San Andrés"] },
+        { nombre: "Santander", ciudades: ["Bucaramanga", "Floridablanca", "Girón"] },
+        { nombre: "Sucre", ciudades: ["Sincelejo", "Corozal"] },
+        { nombre: "Tolima", ciudades: ["Ibagué", "Espinal", "Melgar"] },
+        { nombre: "Valle del Cauca", ciudades: ["Cali", "Palmira", "Buenaventura"] },
+        { nombre: "Vaupés", ciudades: ["Mitú"] },
+        { nombre: "Vichada", ciudades: ["Puerto Carreño"] },
+    ];
+
     for (const p of paisesData) {
         const pais = await prisma.pais.upsert({
             where: { codigo: p.codigo },
             update: {},
             create: { codigo: p.codigo, nombre: p.nombre },
         });
+
+        // Carga de Colombia con departamentos y ciudades principales
+        if (p.codigo === "CO") {
+            const departamentoMap = new Map<string, string>();
+            for (const d of departamentosColombia) {
+                const departamento = await prisma.departamento.upsert({
+                    where: {
+                        nombre_paisId: { nombre: d.nombre, paisId: pais.id },
+                    },
+                    update: {},
+                    create: { nombre: d.nombre, paisId: pais.id },
+                });
+                departamentoMap.set(d.nombre, departamento.id);
+            }
+
+            for (const d of departamentosColombia) {
+                const departamentoId = departamentoMap.get(d.nombre);
+                for (const c of d.ciudades) {
+                    const coords = COORDENADAS_CIUDADES[`${p.codigo}:${c}`];
+                    await prisma.ciudad.upsert({
+                        where: { nombre_paisId: { nombre: c, paisId: pais.id } },
+                        update: {
+                            lat: coords?.lat,
+                            lng: coords?.lng,
+                            departamentoId,
+                        },
+                        create: {
+                            nombre: c,
+                            paisId: pais.id,
+                            lat: coords?.lat,
+                            lng: coords?.lng,
+                            departamentoId,
+                        },
+                    });
+                }
+            }
+
+            console.log(`Colombia: ${departamentosColombia.length} departamentos y ciudades principales creados`);
+            continue;
+        }
+
         for (const c of p.ciudades) {
             const coords = COORDENADAS_CIUDADES[`${p.codigo}:${c}`];
             await prisma.ciudad.upsert({
