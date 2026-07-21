@@ -15,6 +15,7 @@ export async function resetDatabase() {
     await prisma.embeddingReporte.deleteMany();
     await prisma.apelacionIdentificador.deleteMany();
     await prisma.identificadorReportado.deleteMany();
+    await prisma.alertaColegio.deleteMany();
     await prisma.reporte.deleteMany();
     await prisma.codigoVerificacion.deleteMany();
     await prisma.integranteComite.deleteMany();

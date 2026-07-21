@@ -106,6 +106,8 @@ enum AccionAudit {
   COLEGIO_IDENTIFICADOR_EDITADO
   COLEGIO_IDENTIFICADOR_DESACTIVADO
   COLEGIO_CARGA_MASIVA
+  COLEGIO_ALERTA_CREADA
+  COLEGIO_ALERTA_ESTADO
 }
 
 enum TipoPeriodoServicio {
@@ -222,7 +224,8 @@ model Usuario {
   operadoresCreados            PerfilOperador[]         @relation("OperadoresCreados")
   contactosConfianza           ContactoConfianza[]
   notificacionesCirculo        Boolean                  @default(true)
-  ultimaNotificacionCirculoEn  DateTime?
+  ultimaNotificacionCirculoEn    DateTime?
+  ultimaNotificacionColegioEn    DateTime?
   transicionesReporte          TransicionReporte[]
   solicitudesComite            SolicitudComite[]        @relation("SolicitudesComite")
   solicitudesEscaladas         SolicitudComite[]        @relation("SolicitudesEscaladas")
@@ -423,6 +426,7 @@ model Colegio {
   admin        Usuario?
   cursos       Curso[]
   alumnos      Alumno[]
+  alertas      AlertaColegio[]
 
   @@index([paisId])
   @@index([departamentoId])
@@ -477,9 +481,28 @@ model IdentificadorAlumno {
 
   alumno     Alumno      @relation(fields: [alumnoId], references: [id])
   plataforma Plataforma? @relation(fields: [plataformaId], references: [id])
+  alertas    AlertaColegio[]
 
   @@unique([alumnoId, valor, tipo, plataformaId])
   @@index([alumnoId, estado])
+}
+
+model AlertaColegio {
+  id                    String   @id @default(cuid())
+  colegioId             String
+  reporteId             String
+  identificadorAlumnoId String
+  estado                String   @default("nueva") // nueva | vista | gestionada
+  creadoEn              DateTime @default(now())
+  actualizadoEn         DateTime @updatedAt
+
+  colegio             Colegio            @relation(fields: [colegioId], references: [id])
+  reporte             Reporte            @relation(fields: [reporteId], references: [id])
+  identificadorAlumno IdentificadorAlumno @relation(fields: [identificadorAlumnoId], references: [id])
+
+  @@unique([colegioId, reporteId, identificadorAlumnoId])
+  @@index([colegioId, estado])
+  @@index([reporteId])
 }
 
 // ============================================
@@ -613,6 +636,7 @@ model Reporte {
   transiciones             TransicionReporte[]
   reintentos               ReintentoReporte[]
   solicitudComite          SolicitudComite?
+  alertasColegio           AlertaColegio[]
 
   @@index([identificador, plataformaId])
   @@index([estado])
