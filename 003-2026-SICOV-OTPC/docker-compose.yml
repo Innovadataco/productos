@@ -1,26 +1,26 @@
-# Infra de producción: PostgreSQL 16 + Redis (para BullMQ).
-# Desarrollo local no lo necesita (la API usa SQLite por defecto).
-version: "3.9"
-
+# Infraestructura AISLADA del proyecto 003 (constitución §1.1).
+# NO interfiere con 001 (:5432) ni 002 (:5433). Todo con prefijo 003- y puerto propio 5434.
+# Sin Redis: la cola usa pg-boss sobre este mismo PostgreSQL (research.md R2).
+# Levantar: docker compose up -d   ·   Apagar sin perder datos: docker compose stop
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
+    container_name: 003-2026-sicov-otpc-db-1
     environment:
-      POSTGRES_USER: appuser
-      POSTGRES_PASSWORD: cambia-esta-clave
-      POSTGRES_DB: appdb
+      POSTGRES_USER: ${DB_USER:-sicov}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sicov_dev}
+      POSTGRES_DB: ${DB_NAME:-sicov}
     ports:
-      - "5432:5432"
+      - "5434:5432"        # host 5434 -> contenedor 5432 (aislado de 001/002)
     volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redisdata:/data
+      - db_data:/var/lib/postgresql/data
+    mem_limit: 512m         # límite de RAM desde el día 1 (convivencia con 001/002)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sicov} -d ${DB_NAME:-sicov}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  pgdata:
-  redisdata:
+  db_data:
+    name: 003-2026-sicov-otpc_db_data

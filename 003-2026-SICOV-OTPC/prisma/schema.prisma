@@ -1,0 +1,239 @@
+// Esquema Prisma del 003-SICOV-OTPC — mapea 1:1 el esquema `sicov` real del legacy.
+// Alcance P1: 13 tablas del core (auth + autorización por módulos + doble token + cola).
+// Columnas verificadas contra legacy-sistema-original/back_gestion_despachos/database/migrations.
+// Migraciones ADITIVAS; nunca `migrate reset`.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["sicov"]
+}
+
+/// Catálogo de roles. Valores canónicos por seed: 1 admin, 2 cliente, 3 operador.
+model Rol {
+  id           Int      @id @default(autoincrement()) @map("rol_id")
+  nombre       String?  @map("rol_nombre") @db.VarChar(30)
+  estado       Boolean? @map("rol_estado")
+  root         Boolean? @default(false) @map("rol_root")
+  creado       DateTime? @default(now()) @map("rol_creado") @db.Timestamptz()
+  actualizado  DateTime? @default(now()) @map("rol_actualizado") @db.Timestamptz()
+
+  usuarios     Usuario[]
+  rolesModulos RolModulo[]
+  rmf          RolModuloFuncionalidad[]
+
+  @@map("tbl_roles")
+  @@schema("sicov")
+}
+
+/// Usuarios del sistema. Login único usuario/contraseña.
+/// `administradorId` (usn_administrador) guarda la IDENTIFICACIÓN del admin (join lógico a
+/// usn_identificacion), no un usn_id — por eso NO se declara relación Prisma self.
+model Usuario {
+  id              Int       @id @default(autoincrement()) @map("usn_id")
+  nombre          String    @map("usn_nombre") @db.VarChar(200)
+  identificacion  String?   @unique @map("usn_identificacion") @db.VarChar(255)
+  usuario         String?   @unique @map("usn_usuario") @db.VarChar(255)
+  clave           String?   @map("usn_clave") @db.VarChar(255)
+  claveTemporal   Boolean?  @default(true) @map("usn_clave_temporal")
+  telefono        String?   @map("usn_telefono") @db.VarChar(255)
+  correo          String?   @map("usn_correo") @db.VarChar(255)
+  tokenAutorizado String?   @map("usn_token_autorizado") @db.VarChar(255)
+  rolId           Int?      @map("usn_rol_id")
+  administradorId Int?      @map("usn_administrador")
+  estado          Boolean?  @default(true) @map("usn_estado")
+  creacion        DateTime? @map("usn_creacion") @db.Timestamptz()
+  actualizacion   DateTime? @map("usn_actualizacion") @db.Timestamptz()
+
+  rol             Rol?            @relation(fields: [rolId], references: [id])
+  usuariosModulos UsuarioModulo[]
+
+  @@index([rolId])
+  @@index([administradorId])
+  @@index([estado])
+  @@map("tbl_usuarios")
+  @@schema("sicov")
+}
+
+/// Módulos del menú lateral data-driven.
+model Modulo {
+  id            Int       @id @default(autoincrement()) @map("mod_id")
+  nombre        String?   @map("mod_nombre") @db.VarChar(30)
+  nombreMostrar String?   @map("mod_nombre_mostrar") @db.VarChar(30)
+  ruta          String?   @map("mod_ruta") @db.VarChar(100)
+  orden         Int?      @map("mod_orden")
+  icono         String?   @map("mod_icono") @db.VarChar(255)
+  estado        Boolean?  @map("mod_estado")
+  creado        DateTime? @default(now()) @map("mod_creado") @db.Timestamptz()
+  actualizado   DateTime? @default(now()) @map("mod_actualizado") @db.Timestamptz()
+
+  submodulos      Submodulo[]
+  rolesModulos    RolModulo[]
+  rmf             RolModuloFuncionalidad[]
+  usuariosModulos UsuarioModulo[]
+
+  @@map("tbl_modulos")
+  @@schema("sicov")
+}
+
+model Submodulo {
+  id            Int       @id @default(autoincrement()) @map("smod_id")
+  nombre        String?   @map("smod_nombre") @db.VarChar(30)
+  nombreMostrar String?   @map("smod_nombre_mostrar") @db.VarChar(30)
+  ruta          String?   @map("smod_ruta") @db.VarChar(100)
+  moduloId      Int?      @map("smod_modulo")
+  icono         String?   @map("smod_icono") @db.VarChar(255)
+  estado        Boolean?  @default(true) @map("smod_estado")
+  creado        DateTime? @default(now()) @map("smod_creado") @db.Timestamptz()
+  actualizado   DateTime? @default(now()) @map("smod_actualizado") @db.Timestamptz()
+
+  modulo Modulo? @relation(fields: [moduloId], references: [id])
+
+  @@map("tbl_submodulos")
+  @@schema("sicov")
+}
+
+model Funcionalidad {
+  id          Int       @id @default(autoincrement()) @map("fun_id")
+  nombre      String?   @map("fun_nombre") @db.VarChar(30)
+  estado      Boolean?  @map("fun_estado")
+  creado      DateTime? @default(now()) @map("fun_creado") @db.Timestamptz()
+  actualizado DateTime? @default(now()) @map("fun_actualizado") @db.Timestamptz()
+
+  rmf RolModuloFuncionalidad[]
+
+  @@map("tbl_funcionalidades")
+  @@schema("sicov")
+}
+
+model RolModulo {
+  id          Int       @id @default(autoincrement()) @map("rom_id")
+  rolId       Int?      @map("rom_rol_id")
+  moduloId    Int?      @map("rom_modulo_id")
+  creado      DateTime? @default(now()) @map("rom_creado") @db.Timestamptz()
+  actualizado DateTime? @default(now()) @map("rom_actualizado") @db.Timestamptz()
+
+  rol    Rol?    @relation(fields: [rolId], references: [id])
+  modulo Modulo? @relation(fields: [moduloId], references: [id])
+
+  @@map("tbl_roles_modulos")
+  @@schema("sicov")
+}
+
+model RolModuloFuncionalidad {
+  id             Int       @id @default(autoincrement()) @map("rmf_id")
+  rolId          Int?      @map("rmf_rol_id")
+  moduloId       Int?      @map("rmf_modulo_id")
+  funcionalidadId Int?     @map("rmf_funcionalidad_id")
+  creado         DateTime? @map("rmf_creado") @db.Timestamptz()
+  actualizado    DateTime? @map("rmf_actualizado") @db.Timestamptz()
+
+  rol           Rol?           @relation(fields: [rolId], references: [id])
+  modulo        Modulo?        @relation(fields: [moduloId], references: [id])
+  funcionalidad Funcionalidad? @relation(fields: [funcionalidadId], references: [id])
+
+  @@map("tbl_roles_modulos_funcionalidades")
+  @@schema("sicov")
+}
+
+model UsuarioModulo {
+  id          Int       @id @default(autoincrement()) @map("usm_id")
+  usuarioId   Int?      @map("usm_usuario_id")
+  moduloId    Int?      @map("usm_modulo_id")
+  estado      Boolean?  @default(true) @map("usm_estado")
+  creado      DateTime? @default(now()) @map("usm_creado") @db.Timestamptz()
+  actualizado DateTime? @default(now()) @map("usm_actualizado") @db.Timestamptz()
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  modulo  Modulo?  @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, moduloId])
+  @@map("tbl_usuarios_modulos")
+  @@schema("sicov")
+}
+
+/// Bloqueo por intentos fallidos de login (tabla real: tbl_bloqueo_usuarios).
+model BloqueoUsuario {
+  id               Int       @id @default(autoincrement()) @map("blu_id")
+  identificacion   String?   @unique @map("blu_identificacion") @db.VarChar(255)
+  intentosFallidos Int?      @default(0) @map("blu_intentos_fallidos")
+  bloqueado        Boolean?  @default(false) @map("blu_bloqueado")
+  ultimoIntento    DateTime? @map("blu_ultimo_intento") @db.Timestamptz()
+  actualizacion    DateTime? @default(now()) @map("blu_actualizacion") @db.Timestamptz()
+  creacion         DateTime? @default(now()) @map("blu_creacion") @db.Timestamptz()
+
+  @@map("tbl_bloqueo_usuarios")
+  @@schema("sicov")
+}
+
+/// Proveedores vigilados: empresa + vigencia contractual (validada antes de reportar).
+model ProveedorVigilado {
+  id             Int       @id @default(autoincrement()) @map("tpv_id")
+  empresa        String?   @map("tpv_empresa") @db.VarChar(255)
+  vigilado       String?   @map("tpv_vigilado") @db.VarChar(255)
+  token          String?   @map("tpv_token") @db.Uuid
+  estado         Boolean?  @default(true) @map("tpv_estado")
+  fechaInicial   DateTime? @map("tpv_fecha_inicial") @db.Date
+  fechaFinal     DateTime? @map("tpv_fecha_final") @db.Date
+  documento      String?   @map("tpv_documento") @db.VarChar(255)
+  ruta           String?   @map("tpv_ruta") @db.VarChar(255)
+  nombreOriginal String?   @map("tpv_nombre_original") @db.VarChar(255)
+  createdAt      DateTime? @default(now()) @map("tpv_created_at") @db.Timestamptz()
+  updatedAt      DateTime? @default(now()) @map("tpv_updated_at") @db.Timestamptz()
+
+  @@index([documento])
+  @@index([estado])
+  @@map("tbl_proveedores_vigilados")
+  @@schema("sicov")
+}
+
+/// Cola de despachos (worker table-driven). Estados: pendiente|procesando|procesado|fallido.
+model DespachoSolicitud {
+  id                Int       @id @default(autoincrement()) @map("des_sol_id")
+  payload           Json      @map("des_sol_payload") @db.Json
+  nitVigilado       String    @map("des_sol_nit_vigilado") @db.VarChar(20)
+  usuarioId         String    @map("des_sol_usuario_id") @db.VarChar(20)
+  fuente            String    @default("WEB") @map("des_sol_fuente") @db.VarChar(10)
+  procesado         Boolean   @default(false) @map("des_sol_procesado")
+  idDespachoExterno Int?      @map("des_sol_id_despacho_externo")
+  respuestaExterna  Json?     @map("des_sol_respuesta_externa") @db.Json
+  errorExterno      String?   @map("des_sol_error_externo") @db.Text
+  estado            String    @default("pendiente") @map("des_sol_estado") @db.VarChar(30)
+  reintentos        Int       @default(0) @map("des_sol_reintentos")
+  rolId             Int?      @map("des_sol_rol_id")
+  siguienteIntento  DateTime? @default(now()) @map("des_sol_siguiente_intento") @db.Timestamptz()
+  fechaCreacion     DateTime? @default(now()) @map("des_sol_fecha_creacion") @db.Timestamptz()
+  fechaActualizacion DateTime? @default(now()) @map("des_sol_fecha_actualizacion") @db.Timestamptz()
+
+  @@index([estado, siguienteIntento], map: "des_sol_estado_intento_idx")
+  @@index([nitVigilado])
+  @@map("tbl_despachos_solicitudes")
+  @@schema("sicov")
+}
+
+model Estado {
+  id     Int      @id @default(autoincrement()) @map("est_id")
+  nombre String?  @map("est_nombre") @db.VarChar(150)
+  estado Boolean? @default(true) @map("est_estado")
+
+  @@map("tbl_estados")
+  @@schema("sicov")
+}
+
+/// Registro de errores (tabla real: tbl_logs_errores).
+model LogError {
+  id         Int       @id @default(autoincrement()) @map("log_id")
+  mensaje    String    @map("log_mensaje") @db.VarChar(1024)
+  stackTrace String?   @map("log_stack_trace") @db.Text
+  usuario    String?   @map("log_usuario") @db.VarChar(255)
+  endpoint   String?   @map("log_endpoint") @db.VarChar(255)
+  creacion   DateTime? @default(now()) @map("log_creacion") @db.Timestamptz()
+
+  @@map("tbl_logs_errores")
+  @@schema("sicov")
+}

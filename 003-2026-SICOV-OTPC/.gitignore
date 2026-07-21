@@ -1,8 +1,26 @@
-.DS_Store
+# Dependencias
 node_modules/
+
+# Build / artefactos
 dist/
 .next/
+out/
+*.tsbuildinfo
+
+# Bases de datos locales (demo SQLite)
 *.db
 *.db-journal
+
+# Entorno (secretos) — solo se commitea .env.example
 .env
-*.tsbuildinfo
+.env.*
+!.env.example
+
+# Cobertura / tests
+coverage/
+
+# Worker
+worker.pid
+
+# SO
+.DS_Store

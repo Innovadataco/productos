@@ -1,0 +1,49 @@
+{
+  "name": "sicov-otpc-003",
+  "version": "0.1.0",
+  "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "scripts": {
+    "dev": "next dev -p 5010",
+    "build": "next build",
+    "start": "next start -p 5010",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run",
+    "test:watch": "node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs",
+    "worker": "node scripts/worker-supervisor.mjs",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "bcryptjs": "^3.0.2",
+    "jose": "^6.0.10",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.26.0",
+    "eslint-config-next": "16.2.10",
+    "jsdom": "^26.1.0",
+    "postcss": "^8.4.49",
+    "prisma": "5.22.0",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.3"
+  }
+}
