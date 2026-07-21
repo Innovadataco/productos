@@ -47,8 +47,8 @@ export async function verificarVigenciaColegio(usuarioId: string): Promise<Resul
         };
     }
 
-    const hoy = new Date();
-    if (colegio.inicioServicio > hoy) {
+    const hoy = hoyNormalizado();
+    if (normalizarFechaServicio(colegio.inicioServicio) > hoy) {
         return {
             vigente: false,
             estado: "no_iniciado",
@@ -56,7 +56,7 @@ export async function verificarVigenciaColegio(usuarioId: string): Promise<Resul
         };
     }
 
-    if (colegio.finServicio && colegio.finServicio < hoy) {
+    if (colegio.finServicio && normalizarFechaServicio(colegio.finServicio) < hoy) {
         return {
             vigente: false,
             estado: "vencido",
