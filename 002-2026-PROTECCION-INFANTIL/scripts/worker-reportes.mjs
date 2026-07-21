@@ -23,6 +23,7 @@ import { getOllamaBaseUrl } from "../src/lib/ai/ollama-config.ts";
 import { prisma } from "../src/lib/prisma.ts";
 import { logAudit } from "../src/lib/audit.ts";
 import { notificarCambioCirculoSiCorresponde } from "../src/lib/circulo-confianza.ts";
+import { notificarColegioSiCorresponde } from "../src/lib/colegio/alertas.ts";
 import { boss, getWorkerParams, drainPending, ensureStarted } from "../src/lib/queue.ts";
 import { guardarReintento } from "../src/lib/reporte-reintentos.ts";
 
@@ -208,6 +209,10 @@ async function start() {
 
                 notificarCambioCirculoSiCorresponde(reporteId).catch((err) => {
                     console.error(`[WORKER] Error notificando círculo reporte=${reporteId}:`, err.message);
+                });
+
+                notificarColegioSiCorresponde(reporteId).catch((err) => {
+                    console.error(`[WORKER] Error notificando colegio reporte=${reporteId}:`, err.message);
                 });
 
                 // Drenar reportes pendientes cuando baja la carga

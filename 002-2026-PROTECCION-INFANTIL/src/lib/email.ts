@@ -202,6 +202,24 @@ export async function enviarAlertaCirculoConfianza(email: string, cantidad: numb
 
 const COOLDOWN_ALERTA_MS = 24 * 60 * 60 * 1000;
 
+export async function enviarAlertaColegio(email: string, cantidad: number): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const novedadTexto = cantidad === 1 ? "1 novedad" : `${cantidad} novedades`;
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: `Tiene ${novedadTexto} para revisar en su panel de colegio`,
+        text: `Tiene ${novedadTexto} para revisar en su panel de colegio. Ingrese y valide.\n\n${baseUrl}/dashboard/colegio/alertas`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error alerta colegio:", result.error);
+        throw new Error("Error al enviar alerta de colegio");
+    }
+
+    logger.info(`[EMAIL] Alerta de colegio enviada a ${email} (${novedadTexto}, resendId=${result.data?.id ?? "n/a"})`);
+}
+
 export async function enviarAlertasSuscriptores(payload: {
     identificador: string;
     plataformaId: string;
