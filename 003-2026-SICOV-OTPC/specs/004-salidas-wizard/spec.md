@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-21
 
-**Status**: PLANEADO — MODO PLAN, gate humano antes de implementar
+**Status**: IMPLEMENTADO y probado en vivo (modo stub) — pendiente de verificación humana antes de APIs productivas — ver `cierre.md`
 
 **Input**: User description: "Flujo estrella del sistema: el wizard de salidas. cabecera → consulta integradora (reusa 003) → subformularios conductores/vehículo/rutas/autorizaciones → UN solo POST de despacho (reusa el doble token de US2). Deriva UI y payload del legacy (salidas-continuar-registro-modal, salidas-payload.util, RegistroDespachoIntegracion). Reusa lo existente: no dupliques cliente/worker/integradora; compón. Guardarraíl: INTEGRACIONES_MODO=stub, cero APIs reales."
 
