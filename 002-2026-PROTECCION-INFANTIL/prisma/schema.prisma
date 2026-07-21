@@ -90,6 +90,18 @@ enum AccionAudit {
   TEXTO_ORIGINAL_REVELADO
   ANONIMIZACION_VALIDADA
   ANONIMIZACION_RECHAZADA
+  COLEGIO_CREADO
+  COLEGIO_ACTUALIZADO
+  COLEGIO_DESACTIVADO
+  COLEGIO_REACTIVADO
+  COLEGIO_PASSWORD_REGENERADA
+  COLEGIO_EMAIL_REENVIADO
+}
+
+enum TipoPeriodoServicio {
+  MENSUAL
+  SEMESTRAL
+  ANUAL
 }
 
 enum EstadoApelacion {
@@ -165,10 +177,12 @@ model Usuario {
   bloqueadoHasta      DateTime?
   ultimaSesion        DateTime?
   tenantId            String?
+  colegioId           String?       @unique
   creadoEn            DateTime      @default(now())
   actualizadoEn       DateTime      @updatedAt
 
   tenant                       Tenant?                  @relation(fields: [tenantId], references: [id])
+  colegio                      Colegio?                 @relation(fields: [colegioId], references: [id])
   parametros                   ParametroSistema[]
   auditLogs                    AuditLog[]
   codigos                      CodigoVerificacion[]
@@ -333,6 +347,7 @@ model Tenant {
 
   usuarios Usuario[]
   reportes Reporte[]
+  colegio  Colegio?
 }
 
 model Plan {
@@ -363,6 +378,37 @@ model BillingCycle {
   creadoEn       DateTime @default(now())
 }
 
+model Colegio {
+  id                               String              @id @default(cuid())
+  nombre                           String
+  paisId                           String
+  departamentoId                   String?
+  ciudadId                         String
+  direccion                        String?
+  representanteLegalNombre         String
+  representanteLegalIdentificacion String
+  representanteLegalEmail          String
+  representanteLegalTelefono       String?
+  inicioServicio                   DateTime
+  finServicio                      DateTime?
+  tipoPeriodo                      TipoPeriodoServicio
+  estado                           String              @default("activo")
+  tenantId                         String              @unique
+  creadoEn                         DateTime            @default(now())
+  actualizadoEn                    DateTime            @updatedAt
+
+  pais         Pais          @relation(fields: [paisId], references: [id])
+  departamento Departamento? @relation(fields: [departamentoId], references: [id])
+  ciudad       Ciudad        @relation(fields: [ciudadId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  admin        Usuario?
+
+  @@index([paisId])
+  @@index([departamentoId])
+  @@index([ciudadId])
+  @@index([estado])
+}
+
 // ============================================
 // MÓDULO DE REPORTES COMUNITARIOS (FASE 2)
 // ============================================
@@ -386,14 +432,15 @@ model Plataforma {
 }
 
 model Pais {
-  id            String        @id @default(cuid())
-  codigo        String        @unique
-  nombre        String
-  esActivo      Boolean       @default(true)
-  creadoEn      DateTime      @default(now())
+  id       String   @id @default(cuid())
+  codigo   String   @unique
+  nombre   String
+  esActivo Boolean  @default(true)
+  creadoEn DateTime @default(now())
 
   ciudades      Ciudad[]
   departamentos Departamento[]
+  colegios      Colegio[]
   reportes      Reporte[]
 
   @@index([codigo])
@@ -409,8 +456,9 @@ model Departamento {
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
-  pais     Pais     @relation(fields: [paisId], references: [id])
+  pais     Pais      @relation(fields: [paisId], references: [id])
   ciudades Ciudad[]
+  colegios Colegio[]
 
   @@unique([nombre, paisId])
   @@index([paisId])
@@ -418,17 +466,18 @@ model Departamento {
 }
 
 model Ciudad {
-  id             String        @id @default(cuid())
+  id             String   @id @default(cuid())
   nombre         String
   paisId         String
   departamentoId String?
   lat            Float?
   lng            Float?
-  esActivo       Boolean       @default(true)
-  creadoEn       DateTime      @default(now())
+  esActivo       Boolean  @default(true)
+  creadoEn       DateTime @default(now())
 
   pais         Pais          @relation(fields: [paisId], references: [id])
   departamento Departamento? @relation(fields: [departamentoId], references: [id])
+  colegios     Colegio[]
   reportes     Reporte[]
 
   @@unique([nombre, paisId])
@@ -872,20 +921,20 @@ model EvalResultado {
 }
 
 model SimulacionRun {
-  id            String    @id @default(cuid())
-  modelo        String
-  totalCasos    Int       @default(0)
-  progreso      Int       @default(0)
-  estado        String    @default("PENDIENTE") // PENDIENTE | EN_PROGRESO | COMPLETADA | FALLIDA | CANCELADA
-  fechaInicio   DateTime  @default(now())
-  fechaFin      DateTime?
-  metricasJson  Json?
-  casosJson     Json?     // Set de casos cargado (persistido para reejecución / comparación)
-  creadoPorId   String
-  creadoPor     Usuario   @relation(fields: [creadoPorId], references: [id])
-  casos         SimulacionReporte[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String              @id @default(cuid())
+  modelo       String
+  totalCasos   Int                 @default(0)
+  progreso     Int                 @default(0)
+  estado       String              @default("PENDIENTE") // PENDIENTE | EN_PROGRESO | COMPLETADA | FALLIDA | CANCELADA
+  fechaInicio  DateTime            @default(now())
+  fechaFin     DateTime?
+  metricasJson Json?
+  casosJson    Json? // Set de casos cargado (persistido para reejecución / comparación)
+  creadoPorId  String
+  creadoPor    Usuario             @relation(fields: [creadoPorId], references: [id])
+  casos        SimulacionReporte[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   @@index([estado])
   @@index([creadoPorId])

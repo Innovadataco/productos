@@ -80,6 +80,24 @@ export async function enviarEmailBienvenidaComite(
     }
 }
 
+export async function enviarEmailBienvenidaColegio(
+    email: string,
+    tempPassword: string
+): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "Tu cuenta institucional está lista",
+        text: `Hola,\n\nSe creó la cuenta institucional de tu colegio en Protección Infantil.\n\nUsuario: ${email}\nContraseña temporal: ${tempPassword}\n\nIngresa en ${baseUrl}/login y cambia tu contraseña lo antes posible.\n\nEsta contraseña temporal no se volverá a mostrar.`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error:", result.error);
+        throw new Error("Error al enviar email de bienvenida institucional");
+    }
+}
+
 export async function enviarAlertaComitePendientes(email: string, cantidad: number): Promise<void> {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
     const result = await resend.emails.send({
