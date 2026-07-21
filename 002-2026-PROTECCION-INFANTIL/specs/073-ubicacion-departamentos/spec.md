@@ -4,9 +4,9 @@
 
 **Created**: 2026-07-21
 
-**Status**: PLANEADO
+**Status**: CERRADA
 
-**Input**: Fase 0 del módulo Colegios (SaaS institucional). Hoy el modelo solo tiene `Pais` y `Ciudad`, donde `Ciudad` cuelga directamente de `Pais`. Esta fase agrega el nivel `Departamento` y carga la data real de Colombia como base reutilizable para colegios, reportes y mapas. No se implementa código hasta aprobación humana del plan.
+**Input**: Fase 0 del módulo Colegios (SaaS institucional). Hoy el modelo solo tiene `Pais` y `Ciudad`, donde `Ciudad` cuelga directamente de `Pais`. Esta fase agrega el nivel `Departamento` y carga la data real de Colombia como base reutilizable para colegios, reportes y mapas. Plan aprobado e implementado.
 
 ---
 
@@ -138,8 +138,47 @@ Los componentes y endpoints que hoy usan país/ciudad deben seguir funcionando i
 
 ## Implementación
 
-*Pendiente. Se completará tras la aprobación del plan y la implementación de las User Stories.*
+Implementación completada el 2026-07-21.
+
+### User Story 1 — Modelo Departamento aditivo
+
+- Se creó el modelo `Departamento` en `prisma/schema.prisma` con: `id`, `codigo` (opcional, único), `nombre`, `paisId` (FK a `Pais`), `esActivo`, `creadoEn` y `actualizadoEn`.
+- Se agregó la relación `departamentos` al modelo `Pais`.
+- Se agregó `departamentoId String?` al modelo `Ciudad`, manteniendo `paisId` intacto para compatibilidad con el resto del sistema.
+- Se creó la migración aditiva `prisma/migrations/20260721001700_add_departamento/migration.sql` que:
+  - Crea la tabla `departamentos` con índices y unique `("nombre", "paisId")`.
+  - Agrega la columna `departamentoId` nullable a `ciudades`.
+  - Crea FK `Ciudad.departamentoId -> Departamento.id` y los índices necesarios.
+- Se aplicó la migración en la BD de desarrollo y en la BD de test con `npx prisma migrate deploy` (sin pérdida de datos).
+
+### User Story 2 — Carga real de Colombia
+
+- Se actualizó `prisma/seed.ts` con la carga idempotente de Colombia:
+  - 33 divisiones territoriales (32 departamentos + Bogotá D.C.).
+  - Ciudades principales de cada departamento, incluyendo sus capitales.
+  - Las 10 ciudades ya existentes (Bogotá, Medellín, Cali, Barranquilla, Cartagena, Bucaramanga, Pereira, Manizales, Cúcuta, Ibagué) se vincularon a su departamento real mediante upsert por `(nombre, paisId)`.
+- La carga es idempotente: correr el seed dos veces no duplica registros ni rompe relaciones.
+
+### User Story 3 — Sin regresión
+
+- No se modificó el modelo `Reporte`, los endpoints `/api/paises` ni `/api/ciudades`, los componentes de reporte ni los schemas de creación de reportes.
+- Se ejecutó el suite completo: `npm run test` arrojó **106 archivos, 605 tests pasados**.
+- `npx tsc --noEmit`, `npm run lint` y `npm run build` completaron sin errores.
+
+### Validación de datos
+
+Tras el seed en la BD de desarrollo:
+
+- 33 departamentos para Colombia.
+- 73 ciudades colombianas vinculadas a un departamento.
+- Las 10 ciudades preexistentes tienen `departamentoId` correcto.
+- El seed se ejecutó dos veces consecutivamente sin duplicados.
+
+### Deuda técnica
+
+- No se expone el selector de departamento en UI ni en endpoints en esta fase; queda para fases posteriores del módulo Colegios.
+- No se normaliza `Reporte.departamentoId` en este spec; se mantiene el string plano para no alterar el flujo de reportes existente.
 
 ## Status
 
-PLANEADO
+CERRADA
