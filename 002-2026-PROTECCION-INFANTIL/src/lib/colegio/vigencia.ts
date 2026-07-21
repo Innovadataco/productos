@@ -26,9 +26,13 @@ export async function verificarVigenciaColegio(usuarioId: string): Promise<Resul
         };
     }
 
+    return verificarVigenciaPorColegioId(usuario.colegioId);
+}
+
+export async function verificarVigenciaPorColegioId(colegioId: string): Promise<ResultadoVigencia> {
     const colegio = await prisma.colegio.findUnique({
-        where: { id: usuario.colegioId },
-        select: { estado: true, inicioServicio: true, finServicio: true },
+        where: { id: colegioId },
+        select: { id: true, estado: true, inicioServicio: true, finServicio: true },
     });
 
     if (!colegio) {

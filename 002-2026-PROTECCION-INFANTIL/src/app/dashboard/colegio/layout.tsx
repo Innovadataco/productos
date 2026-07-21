@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
+import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
 
 export default async function ColegioLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();
@@ -25,20 +27,9 @@ export default async function ColegioLayout({ children }: { children: React.Reac
         redirect("/login");
     }
 
-    const colegio = usuario.colegioId
-        ? await prisma.colegio.findUnique({ where: { id: usuario.colegioId } })
-        : null;
+    const vigencia = await verificarVigenciaColegio(usuario.id);
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-
-    const bloqueado =
-        !colegio ||
-        colegio.estado !== "activo" ||
-        colegio.inicioServicio > hoy ||
-        (colegio.finServicio && colegio.finServicio < hoy);
-
-    if (bloqueado) {
+    if (!vigencia.vigente) {
         return (
             <div className="theme-colegio min-h-screen bg-page">
                 <main className="flex min-h-screen flex-col items-center justify-center px-4">
@@ -48,14 +39,11 @@ export default async function ColegioLayout({ children }: { children: React.Reac
                         </div>
                         <h1 className="text-2xl font-bold text-body">Servicio no vigente</h1>
                         <p className="mt-4 text-muted">
-                            El acceso institucional no está disponible en este momento. Contacta al administrador de tu colegio para más información.
+                            {vigencia.mensaje || "El acceso institucional no está disponible en este momento. Contacta al administrador de tu colegio para más información."}
                         </p>
-                        <a
-                            href="/login"
+                        <ColegioLogoutButton
                             className="mt-6 inline-flex rounded-xl accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-lg hover:opacity-90 transition"
-                        >
-                            Volver al inicio
-                        </a>
+                        />
                     </div>
                 </main>
             </div>

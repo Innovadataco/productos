@@ -3,6 +3,7 @@ import { logAudit } from "@/lib/audit";
 import { enviarAlertaColegio } from "@/lib/email";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { logger } from "@/lib/logger";
+import { verificarVigenciaPorColegioId } from "./vigencia";
 import type { AccionAudit, EstadoReporte, Prisma } from "@prisma/client";
 
 const ESTADOS_VISIBLES: EstadoReporte[] = [
@@ -33,26 +34,8 @@ function getClient(client?: Prisma.TransactionClient): Prisma.TransactionClient 
  * Verifica que el colegio esté activo y dentro del rango de vigencia del servicio.
  */
 async function colegioEstaVigente(colegioId: string): Promise<boolean> {
-    const colegio = await prisma.colegio.findUnique({
-        where: { id: colegioId },
-        select: { estado: true, inicioServicio: true, finServicio: true },
-    });
-    if (!colegio || colegio.estado !== "activo") return false;
-
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-
-    const inicio = new Date(colegio.inicioServicio);
-    inicio.setHours(0, 0, 0, 0);
-    if (hoy < inicio) return false;
-
-    if (colegio.finServicio) {
-        const fin = new Date(colegio.finServicio);
-        fin.setHours(0, 0, 0, 0);
-        if (hoy > fin) return false;
-    }
-
-    return true;
+    const vigencia = await verificarVigenciaPorColegioId(colegioId);
+    return vigencia.vigente;
 }
 
 /**

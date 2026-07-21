@@ -21,6 +21,20 @@ describe("src/lib/colegio/vigencia", () => {
         expect(result.estado).toBe("vigente");
     });
 
+    it("colegio con inicio hoy a una hora posterior a medianoche sigue vigente", async () => {
+        const { admin } = await crearColegioConAdmin();
+        const hoyConHora = new Date();
+        hoyConHora.setHours(16, 44, 0, 0);
+        await prisma.colegio.update({
+            where: { id: admin.colegioId! },
+            data: { inicioServicio: hoyConHora },
+        });
+
+        const result = await verificarVigenciaColegio(admin.id);
+        expect(result.vigente).toBe(true);
+        expect(result.estado).toBe("vigente");
+    });
+
     it("colegio con inicio mañana está no_iniciado", async () => {
         const { admin } = await crearColegioConAdmin();
         const maniana = new Date();
