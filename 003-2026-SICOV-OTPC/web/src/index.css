@@ -1,0 +1,195 @@
+/* ============================================================
+   Gesmovil · Sistema de diseño propio
+   Identidad: "navy profundo + ámbar señalético"
+   Nada de plantillas — tokens y componentes hechos a mano.
+   ============================================================ */
+
+:root {
+  /* --- Paleta base (navy / ink) --- */
+  --ink-950: #070b16;
+  --ink-900: #0b1020;
+  --ink-850: #0f1526;
+  --ink-800: #141b30;
+  --ink-750: #1b2340;
+  --ink-700: #232d4f;
+  --ink-600: #35406b;
+  --ink-500: #4a568a;
+
+  /* --- Ámbar señalético (marca) --- */
+  --amber-400: #ffcf6b;
+  --amber-500: #f5b544;
+  --amber-600: #e09b2a;
+
+  /* --- Teal (acento secundario / éxito operativo) --- */
+  --teal-400: #43e0cb;
+  --teal-500: #2dd4bf;
+  --teal-600: #16a394;
+
+  /* --- Semánticos --- */
+  --ok: #34d399;
+  --ok-soft: rgba(52, 211, 153, 0.14);
+  --warn: #fbbf24;
+  --warn-soft: rgba(251, 191, 36, 0.14);
+  --danger: #fb6f6f;
+  --danger-soft: rgba(251, 111, 111, 0.14);
+  --info: #5fa8ff;
+  --info-soft: rgba(95, 168, 255, 0.14);
+
+  /* --- Texto --- */
+  --text-hi: #eef2fb;
+  --text: #c3ccdf;
+  --text-lo: #8b96b4;
+  --text-dim: #626e90;
+
+  /* --- Superficies --- */
+  --bg: var(--ink-900);
+  --surface: rgba(255, 255, 255, 0.025);
+  --surface-2: rgba(255, 255, 255, 0.045);
+  --surface-3: rgba(255, 255, 255, 0.07);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.14);
+
+  /* --- Formas y sombras --- */
+  --r-sm: 8px;
+  --r: 12px;
+  --r-lg: 18px;
+  --r-xl: 26px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 30px 60px -20px rgba(0, 0, 0, 0.7);
+  --glow-amber: 0 0 0 1px rgba(245, 181, 68, 0.35), 0 10px 30px -10px rgba(245, 181, 68, 0.35);
+
+  --font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  --sidebar-w: 264px;
+  --topbar-h: 64px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  background-image:
+    radial-gradient(1100px 600px at 82% -8%, rgba(245, 181, 68, 0.08), transparent 60%),
+    radial-gradient(900px 600px at -6% 12%, rgba(45, 212, 191, 0.07), transparent 55%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--ink-700); border-radius: 20px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-600); background-clip: padding-box; }
+
+/* ---------- Tipografía utilitaria ---------- */
+.h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-hi); margin: 0; }
+.h2 { font-size: 19px; font-weight: 650; letter-spacing: -0.01em; color: var(--text-hi); margin: 0; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); }
+.muted { color: var(--text-lo); }
+.dim { color: var(--text-dim); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+  height: 38px; padding: 0 16px; border-radius: var(--r-sm);
+  font-size: 13.5px; font-weight: 600; letter-spacing: 0.01em;
+  border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text-hi);
+  cursor: pointer; transition: all 0.16s ease; white-space: nowrap; user-select: none;
+}
+.btn:hover { background: var(--surface-3); border-color: var(--line-2); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn-primary {
+  background: linear-gradient(180deg, var(--amber-400), var(--amber-600));
+  color: #2a1c02; border-color: transparent; font-weight: 700;
+}
+.btn-primary:hover { box-shadow: var(--glow-amber); background: linear-gradient(180deg, var(--amber-400), var(--amber-500)); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--text-lo); }
+.btn-ghost:hover { background: var(--surface-2); color: var(--text-hi); }
+.btn-sm { height: 31px; padding: 0 11px; font-size: 12.5px; border-radius: 7px; }
+.btn-icon { width: 38px; padding: 0; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ---------- Inputs ---------- */
+.field { display: flex; flex-direction: column; gap: 7px; }
+.label { font-size: 12.5px; font-weight: 600; color: var(--text-lo); }
+.input, .select, textarea.input {
+  height: 40px; padding: 0 13px; width: 100%;
+  background: var(--ink-850); border: 1px solid var(--line); border-radius: var(--r-sm);
+  color: var(--text-hi); font-size: 14px; font-family: inherit; transition: all 0.15s ease;
+}
+textarea.input { height: auto; padding: 11px 13px; resize: vertical; }
+.input::placeholder { color: var(--text-dim); }
+.input:focus, .select:focus, textarea.input:focus {
+  outline: none; border-color: var(--amber-500);
+  box-shadow: 0 0 0 3px rgba(245, 181, 68, 0.14);
+}
+.input-group { position: relative; display: flex; align-items: center; }
+.input-group .input { padding-left: 40px; }
+.input-group .ig-icon { position: absolute; left: 13px; color: var(--text-dim); pointer-events: none; display: flex; }
+
+/* ---------- Cards / paneles ---------- */
+.card {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+.card-pad { padding: 20px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+
+/* ---------- Badges / chips ---------- */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px; height: 23px; padding: 0 9px;
+  border-radius: 999px; font-size: 11.5px; font-weight: 650; letter-spacing: 0.01em;
+  border: 1px solid transparent;
+}
+.badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.badge-ok { color: var(--ok); background: var(--ok-soft); }
+.badge-warn { color: var(--warn); background: var(--warn-soft); }
+.badge-danger { color: var(--danger); background: var(--danger-soft); }
+.badge-info { color: var(--info); background: var(--info-soft); }
+.badge-neutral { color: var(--text-lo); background: var(--surface-3); }
+
+/* ---------- Tablas ---------- */
+.table-wrap { overflow-x: auto; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl thead th {
+  text-align: left; padding: 11px 16px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim);
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.tbl tbody td { padding: 13px 16px; border-bottom: 1px solid var(--line); color: var(--text); vertical-align: middle; }
+.tbl tbody tr { transition: background 0.12s ease; }
+.tbl tbody tr:hover { background: var(--surface); }
+.tbl tbody tr:last-child td { border-bottom: none; }
+
+/* ---------- Layout general ---------- */
+.shell { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+.main { min-width: 0; display: flex; flex-direction: column; }
+.content { padding: 26px 30px 60px; max-width: 1360px; width: 100%; margin: 0 auto; }
+
+/* utilidades */
+.row { display: flex; align-items: center; }
+.gap-6 { gap: 6px; } .gap-8 { gap: 8px; } .gap-10 { gap: 10px; } .gap-12 { gap: 12px; } .gap-16 { gap: 16px; } .gap-20 { gap: 20px; }
+.col { display: flex; flex-direction: column; }
+.grow { flex: 1 1 auto; }
+.between { justify-content: space-between; }
+.center { justify-content: center; align-items: center; }
+.wrap { flex-wrap: wrap; }
+.grid { display: grid; }
+.mt-4 { margin-top: 4px; } .mt-8 { margin-top: 8px; } .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; }
+.hide-sm { }
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .content { padding: 18px 16px 50px; }
+}
