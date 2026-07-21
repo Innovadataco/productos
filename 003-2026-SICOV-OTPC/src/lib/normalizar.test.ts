@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   extraerIdDespachoExterno,
+  extraerIdLlegadaExterno,
   extraerLista,
   extraerObjeto,
   extraerMensajeError,
@@ -17,6 +18,19 @@ describe("normalizar: extraerIdDespachoExterno", () => {
     [{ nada: 1 }, null],
   ])("extrae id de %o => %s", (res, esperado) => {
     expect(extraerIdDespachoExterno(res)).toBe(esperado);
+  });
+});
+
+describe("normalizar: extraerIdLlegadaExterno", () => {
+  it.each([
+    [{ obj: { obj: { id: 11 } } }, 11],
+    [{ obj: { idLlegada: 22 } }, 22],
+    [{ data: { idLlegada: 33 } }, 33],
+    [{ idLlegada: 44 }, 44],
+    [{ id: 55 }, 55],
+    [{ nada: 1 }, null],
+  ])("extrae id de llegada de %o => %s", (res, esperado) => {
+    expect(extraerIdLlegadaExterno(res)).toBe(esperado);
   });
 });
 

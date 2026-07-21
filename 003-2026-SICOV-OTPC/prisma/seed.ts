@@ -129,6 +129,26 @@ async function main() {
     });
   }
 
+  // Llegadas demo (varios estados) si no hay ninguna.
+  const totalLleg = await prisma.llegadaSolicitud.count();
+  if (totalLleg === 0) {
+    const baseLleg = {
+      idTipollegada: "2",
+      nitEmpresaTransporte: NIT_VIGILADO,
+      terminalLlegada: "Terminal Medellín",
+      numeroPasajero: "0",
+      horaLlegada: "12:00",
+      fechaLlegada: "2026-07-21",
+      sede: "0",
+    };
+    await prisma.llegadaSolicitud.createMany({
+      data: [
+        { payload: { ...baseLleg, placa: "ABC123" }, nitVigilado: NIT_VIGILADO, usuarioId: NIT_VIGILADO, rolId: 2, tipoLlegada: 2, placa: "ABC123", estado: "pendiente", procesado: false },
+        { payload: { ...baseLleg, placa: "XYZ789" }, nitVigilado: NIT_VIGILADO, usuarioId: NIT_VIGILADO, rolId: 2, tipoLlegada: 2, placa: "XYZ789", estado: "procesado", procesado: true, idLlegadaExterno: 7001 },
+      ],
+    });
+  }
+
   console.log(`Seed OK — admin=${admin.id}, vigilado=${vigilado.id}`);
 }
 

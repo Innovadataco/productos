@@ -216,6 +216,35 @@ model DespachoSolicitud {
   @@schema("sicov")
 }
 
+/// Cola de llegadas. Columnas base verificadas vs legacy; las de cola (estado/reintentos/
+/// siguienteIntento/rolId) NO existen en el legacy → se añaden ADITIVAMENTE en el 003.
+model LlegadaSolicitud {
+  id                 Int       @id @default(autoincrement()) @map("lle_sol_id")
+  payload            Json      @map("lle_sol_payload") @db.Json
+  nitVigilado        String    @map("lle_sol_nit_vigilado") @db.VarChar(20)
+  usuarioId          String    @map("lle_sol_usuario_id") @db.VarChar(20)
+  fuente             String    @default("WEB") @map("lle_sol_fuente") @db.VarChar(10)
+  tipoLlegada        Int       @map("lle_sol_tipo_llegada")
+  idDespacho         Int?      @map("lle_sol_id_despacho")
+  placa              String    @map("lle_sol_placa") @db.VarChar(10)
+  procesado          Boolean   @default(false) @map("lle_sol_procesado")
+  idLlegadaExterno   Int?      @map("lle_sol_id_llegada_externo")
+  respuestaExterna   Json?     @map("lle_sol_respuesta_externa") @db.Json
+  errorExterno       String?   @map("lle_sol_error_externo") @db.Text
+  // --- columnas de cola añadidas aditivamente por el 003 ---
+  estado             String    @default("pendiente") @map("lle_sol_estado") @db.VarChar(30)
+  reintentos         Int       @default(0) @map("lle_sol_reintentos")
+  rolId              Int?      @map("lle_sol_rol_id")
+  siguienteIntento   DateTime? @default(now()) @map("lle_sol_siguiente_intento") @db.Timestamptz()
+  fechaCreacion      DateTime? @default(now()) @map("lle_sol_fecha_creacion") @db.Timestamptz()
+  fechaActualizacion DateTime? @default(now()) @map("lle_sol_fecha_actualizacion") @db.Timestamptz()
+
+  @@index([estado, siguienteIntento], map: "lle_sol_estado_intento_idx")
+  @@index([nitVigilado])
+  @@map("tbl_llegadas_solicitudes")
+  @@schema("sicov")
+}
+
 model Estado {
   id     Int      @id @default(autoincrement()) @map("est_id")
   nombre String?  @map("est_nombre") @db.VarChar(150)

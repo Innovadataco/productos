@@ -41,6 +41,29 @@ export function extraerIdDespachoExterno(res: unknown): number | null {
   return null;
 }
 
+/// Extrae el id de llegada externa (candidatos verificados en legacy ClienteApiSupertransporte):
+/// obj.obj.id → obj.id → obj.idLlegada → data.idLlegada → data.id → idLlegada → id.
+export function extraerIdLlegadaExterno(res: unknown): number | null {
+  const r = res as Record<string, unknown> | null;
+  const obj = (r?.["obj"] ?? {}) as Record<string, unknown>;
+  const objObj = (obj?.["obj"] ?? {}) as Record<string, unknown>;
+  const data = (r?.["data"] ?? {}) as Record<string, unknown>;
+  const candidatos = [
+    objObj?.["id"],
+    obj?.["id"],
+    obj?.["idLlegada"],
+    data?.["idLlegada"],
+    data?.["id"],
+    r?.["idLlegada"],
+    r?.["id"],
+  ];
+  for (const c of candidatos) {
+    const n = Number(c);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
 /// Mensaje de error externo tolerante.
 export function extraerMensajeError(err: unknown): string {
   const e = err as Record<string, unknown> | null;

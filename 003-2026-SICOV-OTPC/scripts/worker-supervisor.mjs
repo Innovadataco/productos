@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { writeFileSync, rmSync } from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const WORKER = join(__dirname, "worker-despachos.mjs");
+const WORKER = join(__dirname, "worker.mjs");
 const MAX_RESTARTS = 5;
 const RESTART_DELAY_MS = 2000;
 const PID_FILE = join(__dirname, "..", "worker.pid");
