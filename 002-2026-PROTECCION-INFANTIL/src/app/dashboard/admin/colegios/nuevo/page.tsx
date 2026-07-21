@@ -29,6 +29,15 @@ type FormState = typeof initialForm;
 
 type Mensaje = { type: "success" | "error"; text: string } | null;
 
+function toISOString(datetimeLocal: string) {
+    if (!datetimeLocal) return undefined;
+    try {
+        return new Date(datetimeLocal).toISOString();
+    } catch {
+        return undefined;
+    }
+}
+
 export default function NuevoColegioPage() {
     const router = useRouter();
     const [form, setForm] = useState<FormState>(initialForm);
@@ -117,8 +126,8 @@ export default function NuevoColegioPage() {
                     representanteLegalIdentificacion: form.representanteLegalIdentificacion,
                     representanteLegalEmail: form.representanteLegalEmail,
                     representanteLegalTelefono: form.representanteLegalTelefono || undefined,
-                    inicioServicio: form.inicioServicio,
-                    finServicio: form.finServicio,
+                    inicioServicio: toISOString(form.inicioServicio),
+                    finServicio: toISOString(form.finServicio),
                     tipoPeriodo: form.tipoPeriodo,
                     adminEmail: form.adminEmail,
                     adminNombre: form.adminNombre,

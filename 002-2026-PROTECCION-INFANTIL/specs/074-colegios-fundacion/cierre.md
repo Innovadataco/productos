@@ -78,7 +78,7 @@ specs/074-colegios-fundacion/research.md
 
 ## Resultados de validación
 
-- **Tests**: `npx vitest run` → 610 tests verdes (107 archivos).
+- **Tests**: `npx vitest run` → 611 tests verdes (107 archivos).
 - **Types**: `npx tsc --noEmit` → sin errores.
 - **Lint**: `npm run lint` → sin errores.
 - **Build**: `npm run build` → exitosa.
@@ -100,6 +100,7 @@ specs/074-colegios-fundacion/research.md
 3. `feat: US2 panel institucional y tema verde + US3 vigencia en rutas` (layout/page `/dashboard/colegio`, `/api/me/colegio`, login, globals.css).
 4. `feat: US4/US5 aislamiento SCHOOL_ADMIN de admin/operador/comité/reportes` (proxy, auth, helpers, componentes, endpoints, limpieza residual).
 5. `docs: cierre spec 074 + status CERRADA + research verified` (spec.md, research.md, cierre.md).
+6. `fix(074): convertir datetime-local a ISO en formulario de colegio` (`src/app/dashboard/admin/colegios/nuevo/page.tsx`, `src/app/dashboard/admin/colegios/page.tsx`, `src/app/api/admin/colegios/route.test.ts`).
 
 (Nota: los commits reales se agruparán en el push final; se listan aquí como evidencia de la intención de commit por US.)
 
@@ -125,3 +126,11 @@ specs/074-colegios-fundacion/research.md
 - Migración aditiva, sin `migrate reset`.
 - No se rompió acceso de ningún rol; smoke tests de 5 roles pasaron.
 - SCHOOL_ADMIN quedó aislado exclusivamente a su módulo; no puede ver reportes, operadores, comité ni crear reportes.
+
+---
+
+## Corrección post-cierre
+
+**Bug**: los formularios de crear/editar colegio enviaban fechas `datetime-local` sin zona horaria, lo que el schema rechazaba con 400.  
+**Fix**: convertir `inicioServicio`/`finServicio` a ISO 8601 antes del `fetch` en ambos formularios.  
+**Validación**: test agregado en `src/app/api/admin/colegios/route.test.ts` (envío `datetime-local` → ISO devuelve 201). Total de tests: 611.

@@ -80,6 +80,15 @@ function toDatetimeLocal(iso: string) {
     }
 }
 
+function datetimeLocalToISO(datetimeLocal: string) {
+    if (!datetimeLocal) return undefined;
+    try {
+        return new Date(datetimeLocal).toISOString();
+    } catch {
+        return undefined;
+    }
+}
+
 export default function AdminColegiosPage() {
     const router = useRouter();
     const [colegios, setColegios] = useState<Colegio[]>([]);
@@ -203,8 +212,8 @@ export default function AdminColegiosPage() {
             representanteLegalNombre: editForm.representanteLegalNombre,
             representanteLegalEmail: editForm.representanteLegalEmail || null,
             representanteLegalTelefono: editForm.representanteLegalTelefono || null,
-            inicioServicio: editForm.inicioServicio,
-            finServicio: editForm.finServicio,
+            inicioServicio: datetimeLocalToISO(editForm.inicioServicio || ""),
+            finServicio: datetimeLocalToISO(editForm.finServicio || ""),
             tipoPeriodo: editForm.tipoPeriodo,
             estado: editForm.estado,
         };

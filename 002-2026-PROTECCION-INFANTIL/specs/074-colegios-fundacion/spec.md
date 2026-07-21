@@ -243,6 +243,12 @@ El rol SCHOOL_ADMIN fue heredado en múltiples guards, helpers, endpoints y comp
 - **Tests**: `src/app/api/admin/colegios/route.test.ts` (6 tests) cubre creación, duplicados, permisos, listado, `/api/me/colegio`, login con vigencia vencida. `src/lib/role-visibility.test.tsx` y otros tests ajustados. Total: 610 tests verdes.
 - **Validación**: `npx tsc --noEmit`, `npm run lint`, `npm run build` y `npx vitest run` pasan. Deploy limpio con `./scripts/dev-restart.sh` (healthcheck ok, un worker). Smoke tests de 5 roles confirmaron accesos correctos.
 
+### Corrección post-cierre: fechas datetime-local en formulario de colegio
+
+- **Problema**: `src/app/dashboard/admin/colegios/nuevo/page.tsx` y `src/app/dashboard/admin/colegios/page.tsx` enviaban el valor crudo de los inputs `datetime-local` (sin zona horaria) al backend, que valida ISO 8601 con `z.string().datetime()`, produciendo error 400 "Datos inválidos".
+- **Solución**: agregar helper `toISOString()` (nuevo) y `datetimeLocalToISO()` (edición) que convierten el valor `datetime-local` a `toISOString()` antes del `fetch`.
+- **Validación**: se agregó test en `src/app/api/admin/colegios/route.test.ts` que simula el envío desde el formato `datetime-local` → ISO y verifica 201. Total actualizado: 611 tests verdes.
+
 ## Status
 
 CERRADA

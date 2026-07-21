@@ -89,6 +89,36 @@ describe("/api/admin/colegios", () => {
         expect(audit).not.toBeNull();
     });
 
+    it("crea un colegio enviando fechas en formato datetime-local", async () => {
+        const admin = await crearUsuario("ADMIN");
+        const { pais, ciudad } = await crearPaisCiudad();
+        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
+
+        const hoy = new Date();
+        const inicio = new Date(hoy);
+        inicio.setDate(inicio.getDate() - 1);
+        const fin = new Date(hoy);
+        fin.setFullYear(fin.getFullYear() + 1);
+
+        const body = {
+            ...baseColegio(pais.id, ciudad.id),
+            inicioServicio: new Date(inicio.toISOString().slice(0, 16)).toISOString(),
+            finServicio: new Date(fin.toISOString().slice(0, 16)).toISOString(),
+        };
+
+        const res = await POST(
+            new Request("http://localhost:5005/api/admin/colegios", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
+                body: JSON.stringify(body),
+            })
+        );
+
+        expect(res.status).toBe(201);
+        const json = await res.json();
+        expect(json.colegio.nombre).toBe("Colegio Test");
+    });
+
     it("rechaza SCHOOL_ADMIN intentando crear colegio", async () => {
         const schoolAdmin = await crearUsuario("SCHOOL_ADMIN");
         mockToken = await crearTokenUsuario(schoolAdmin.id, "SCHOOL_ADMIN");
