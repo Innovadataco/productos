@@ -117,6 +117,11 @@ En esta máquina viven **001 y 002 en desarrollo activo**. El 003 **no puede int
   Dump de respaldo (`pg_dump`) antes de tocar seed/datos.
 - **Nunca confiar en un build sin borrar el build viejo antes** (`rm -rf .next`/`dist` según stack).
 - **Un solo proceso/worker a la vez** — matar el viejo antes de levantar el nuevo.
+- **Matar procesos SOLO por PID exacto o por puerto del 003 (app 5010 / BD 5434).** Está
+  **prohibido** `pkill`/`killall` por patrón amplio (`next dev`, `node`, `worker`) porque puede
+  alcanzar los dev servers/workers de 001/002 en la misma máquina. Antes de matar, confirma con
+  `ps -p <pid> -o command=` que el proceso pertenece a `003-2026-SICOV-OTPC`. Para liberar un
+  puerto propio: `lsof -ti :5010 | xargs kill` (nunca un patrón por nombre de comando).
 - **Secretos por variables de entorno, nunca en el código.** `.env` va en `.gitignore`; se commitea
   `.env.example`. El `.env` real (credenciales de Supertransporte: `EXTERNAL_APP_USER`, `TOKEN`, token de
   vigilado) vive **solo local**, nunca en el repo (que además es público).
