@@ -386,33 +386,54 @@ model Plataforma {
 }
 
 model Pais {
-  id       String   @id @default(cuid())
-  codigo   String   @unique
-  nombre   String
-  esActivo Boolean  @default(true)
-  creadoEn DateTime @default(now())
+  id            String        @id @default(cuid())
+  codigo        String        @unique
+  nombre        String
+  esActivo      Boolean       @default(true)
+  creadoEn      DateTime      @default(now())
 
-  ciudades Ciudad[]
-  reportes Reporte[]
+  ciudades      Ciudad[]
+  departamentos Departamento[]
+  reportes      Reporte[]
 
   @@index([codigo])
   @@index([esActivo])
 }
 
-model Ciudad {
-  id       String   @id @default(cuid())
-  nombre   String
-  paisId   String
-  lat      Float?
-  lng      Float?
-  esActivo Boolean  @default(true)
-  creadoEn DateTime @default(now())
+model Departamento {
+  id            String   @id @default(cuid())
+  codigo        String?  @unique
+  nombre        String
+  paisId        String
+  esActivo      Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
 
-  pais     Pais      @relation(fields: [paisId], references: [id])
-  reportes Reporte[]
+  pais     Pais     @relation(fields: [paisId], references: [id])
+  ciudades Ciudad[]
 
   @@unique([nombre, paisId])
   @@index([paisId])
+  @@index([esActivo])
+}
+
+model Ciudad {
+  id             String        @id @default(cuid())
+  nombre         String
+  paisId         String
+  departamentoId String?
+  lat            Float?
+  lng            Float?
+  esActivo       Boolean       @default(true)
+  creadoEn       DateTime      @default(now())
+
+  pais         Pais          @relation(fields: [paisId], references: [id])
+  departamento Departamento? @relation(fields: [departamentoId], references: [id])
+  reportes     Reporte[]
+
+  @@unique([nombre, paisId])
+  @@index([paisId])
+  @@index([departamentoId])
   @@index([esActivo])
 }
 
