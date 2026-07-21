@@ -1,0 +1,83 @@
+/api/v1/mantenimiento/bulk/preventivo/xlsx:
+  post:
+    tags:
+      - Mantenimiento
+    summary: Cargar mantenimientos preventivos desde XLSX
+    description: Procesa un archivo XLSX con mantenimientos preventivos y programa la sincronización en lote.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - archivo
+            properties:
+              archivo:
+                type: string
+                format: binary
+                description: Archivo XLSX con las columnas definidas en la plantilla.
+    responses:
+      '202':
+        description: Resumen de la carga masiva.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - total
+                - exitosos
+                - errores
+              properties:
+                total:
+                  type: integer
+                exitosos:
+                  type: integer
+                errores:
+                  type: array
+                  items:
+                    type: string
+      '400':
+        description: Archivo faltante, inválido o con registros inconsistentes.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - total
+                - exitosos
+                - errores
+              properties:
+                total:
+                  type: integer
+                exitosos:
+                  type: integer
+                errores:
+                  type: array
+                  items:
+                    type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al procesar la carga masiva.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+}

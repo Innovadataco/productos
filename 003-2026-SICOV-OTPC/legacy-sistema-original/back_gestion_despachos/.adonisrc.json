@@ -1,0 +1,101 @@
+{
+  "typescript": true,
+  "commands": [
+    "./commands",
+    "@adonisjs/core/build/commands/index.js",
+    "@adonisjs/repl/build/commands",
+    "@adonisjs/lucid/build/commands",
+    "adonis5-swagger/build/commands",
+    "@adonisjs/mail/build/commands"
+  ],
+  "exceptionHandlerNamespace": "App/Exceptions/Handler",
+  "aliases": {
+    "App": "app",
+    "Config": "config",
+    "Database": "database",
+    "Contracts": "contracts"
+  },
+  "directories":{
+    "views": "./"
+  },
+  "preloads": [
+    "./start/routes",
+    "./start/kernel",
+    "./start/Rutas/ruta_archivo",
+    "./start/Rutas/ruta_autenticacion",
+    "./start/Rutas/ruta_enviar_email",
+    "./start/Rutas/ruta_exportacion",
+    "./start/Rutas/ruta_rol",
+    "./start/Rutas/ruta_maestras",
+    "./start/Rutas/ruta_vehiculo",
+    "./start/Rutas/ruta_soportes",
+    "./start/Rutas/ruta_estados",
+    "./start/Rutas/ruta_informes",
+    "./start/Rutas/ruta_usuario",
+    "./start/Rutas/ruta_terminales",
+    "./start/Rutas/ruta_verificador",
+    "./start/Rutas/ruta_mantenimiento",
+    "./start/Rutas/ruta_empresas",
+    "./start/Rutas/ruta_despachos",
+    "./start/Rutas/ruta_novedades",
+    "./start/Rutas/ruta_novedadesvehiculo",
+    "./start/Rutas/ruta_novedadesconductor",
+    "./start/Rutas/ruta_nivelservicio",
+    "./start/Rutas/ruta_archivo_programa",
+    "./start/Rutas/ruta_dashboard",
+    "./start/Rutas/ruta_integracion"
+  ],
+  "providers": [
+    "./providers/AppProvider",
+    "@adonisjs/core",
+    "@adonisjs/lucid",
+    "adonis5-swagger",
+    "@adonisjs/mail",
+    "@adonisjs/view"
+  ],
+  "aceProviders": [
+    "@adonisjs/repl"
+  ],
+  "tests": {
+    "suites": [
+      {
+        "name": "functional",
+        "files": [
+          "tests/functional/**/*.spec(.ts|.js)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "name": "integration",
+        "files": [
+          "tests/integracion/**/*.test(.ts|.js)"
+        ],
+        "timeout": 60000
+      }
+    ]
+  },
+  "testProviders": [
+    "@japa/preset-adonis/TestsProvider"
+  ],
+  "metaFiles": [
+    {
+      "pattern": "uploads/**"
+    },
+    {
+      "pattern": "**/*.edge",
+      "reloadServer": true
+    }
+  ],
+  "build": {
+    "copy": [
+      {
+        "from": "./.env",
+        "to": "./build/.env"
+      },
+      {
+        "from": "./app/Dominio/Email/Templates",
+        "to": "./build/app/Dominio/Email/Templates"
+      }
+    ]
+  }
+}

@@ -1,0 +1,114 @@
+<div class="py-2 px-sm-3 px-md-4 px-lg-5 margen">
+  <div class="d-block mb-3">
+    <div class="d-flex">
+      <h2 class="title" style="text-align: center;">Registro de protocolo de alistamiento</h2>
+      <button type="button" class="boton primario relleno" (click)="volver()" style="margin-left: auto;">
+        Volver <i class="bi bi-arrow-return-left"></i>
+      </button><!-- [routerLink]="['/administrar','rutas']" -->
+    </div>
+    <div class="d-block mb-3">
+      <form class="form-group" #registroForm="ngForm" (ngSubmit)="guardarRegistro(registroForm)">
+        <div class="row">
+          <div class="col-4">
+            <label for="placa">Placa:</label>
+            <input id="placa" name="placa" type="text" class="form-control" required [(ngModel)]="registro.placa"
+              disabled />
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="tipoIdentificacion">Tipo de identificación – Responsable empresa de transporte</label>
+            <select id="tipoIdentificacion" name="tipoIdentificacion" class="form-select" required
+              [disabled]="!estadoMantenimiento || isSupervisor"
+              [(ngModel)]="protocoloAlistamiento.tipoIdentificacion">
+              <option value="">Seleccione un tipo</option>
+              <option *ngFor="let tipo of tiposIdentificaciones" [value]="tipo.codigo">{{tipo.descripcion}}</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="numeroIdentificacion">Número de Identificación – Responsable empresa de transporte</label>
+            <input id="numeroIdentificacion" name="numeroIdentificacion" type="text" class="form-control" required
+              [maxlength]="tamanoMaximo"
+              [disabled]="!estadoMantenimiento || isSupervisor"
+              [(ngModel)]="protocoloAlistamiento.numeroIdentificacion"
+              #numeroIdentificacion="ngModel"
+              (keypress)="validarSoloLetrasyNumeros($event)"/>
+              <span *ngIf="numeroIdentificacion.touched && numeroIdentificacion.invalid" class="validacion">*El Número de identificación es obligatorio</span>
+          </div>
+          <div class="col">
+            <label for="nombreResponsable">Nombres y apellidos - Responsable empresa de transporte</label>
+            <input id="nombreResponsable" name="nombreResponsable" type="text" class="form-control" required
+              [disabled]="!estadoMantenimiento || isSupervisor"
+              [(ngModel)]="protocoloAlistamiento.nombreResponsable"
+              (input)="manejarNombre($event)"/>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="tipoIdentificacionConductor">Tipo de identificación – Conductor</label>
+            <select id="tipoIdentificacionConductor" name="tipoIdentificacionConductor" class="form-select" required
+              [disabled]="!estadoMantenimiento || isSupervisor"
+              [(ngModel)]="protocoloAlistamiento.tipoIdentificacionConductor">
+              <option value="">Seleccione un tipo</option>
+              <option *ngFor="let tipo of tiposIdentificaciones" [value]="tipo.codigo">{{tipo.descripcion}}</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="numeroIdentificacionConductor">Número de Identificación – Conductor</label>
+            <input id="numeroIdentificacionConductor" name="numeroIdentificacionConductor" type="text"
+              [maxlength]="tamanoMaximo"
+              [disabled]="!estadoMantenimiento || isSupervisor"
+              class="form-control" required [(ngModel)]="protocoloAlistamiento.numeroIdentificacionConductor"
+              #numeroIdentificacionConductor="ngModel"
+              (keypress)="validarSoloLetrasyNumeros($event)"/>
+              <span *ngIf="numeroIdentificacionConductor.touched && numeroIdentificacionConductor.invalid" class="validacion">*El Número de identificación es obligatorio</span>
+          </div>
+          <div class="col">
+            <label for="nombreConductor">Nombres y apellidos - Conductor</label>
+            <input id="nombreConductor" name="nombreConductor" type="text" class="form-control" required
+              [disabled]="!estadoMantenimiento || isSupervisor"
+              [(ngModel)]="protocoloAlistamiento.nombreConductor"
+              (input)="manejarNombre($event)"/>
+          </div>
+        </div>
+
+
+
+        <div class="d-flex mx-0 table-container tbody-listado mt-5">
+          <table class="table custom-scroll">
+            <thead class="encabezado">
+              <tr>
+                <th class="th-listado">
+                  Detalle de las actividades
+                </th>
+                <th class="th-listado">
+                  ¿Cumple con el requisito?
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let detalle of detallesActividades; let i = index">
+                <td id="alinear-texto">
+                  {{detalle.nombre}}
+                </td>
+                <td id="centrar-checkbox">
+                  <input type="checkbox" name="" [id]="'checkbox-' + detalle.id" [value]="detalle.id"
+                    [disabled]="!estadoMantenimiento || isSupervisor"
+                    (change)="cambiarEstado($event, detalle.id!)" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <label for="observacionActividades" class="mt-5 mb-2">Observación de las actividades</label>
+        <textarea id="observacionActividades" name="observacionActividades" class="form-control"
+          [disabled]="!estadoMantenimiento || isSupervisor"
+          [(ngModel)]="protocoloAlistamiento.detalleActividades"></textarea>
+
+        <button *ngIf="!isSupervisor" type="submit" class="boton primario relleno" [disabled]="!estadoMantenimiento">Guardar</button>
+      </form>
+    </div>
+  </div>
+</div>
+<app-popup #popup />

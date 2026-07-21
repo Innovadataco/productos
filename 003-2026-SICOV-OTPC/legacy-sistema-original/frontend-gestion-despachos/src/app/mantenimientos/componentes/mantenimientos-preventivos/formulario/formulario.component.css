@@ -1,0 +1,132 @@
+.informacion {
+  width: 480px;
+  border-color: 1px solid black !important;
+  box-shadow: 0px 3px 6px #00000029;
+  border-radius: 5px;
+}
+
+.titulo-fila {
+  color: #4b4b4b;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.ruta {
+  overflow: auto;
+  margin-top: 10px;
+  box-shadow: 0px 3px 6px #00000029;
+}
+
+.table-container {
+  width: 100%;  /* El ancho del contenedor */
+  overflow-x: auto;  /* Habilita el scroll horizontal */
+}
+
+.encabezado {
+  background: #e6effd 0% 0% no-repeat padding-box;
+  border-radius: 5px 5px 0px 0px;
+  opacity: 1;
+  color: #004884;
+  font-weight: 600;
+}
+
+.th-listado {
+  width: 100px; text-align: center;
+}
+
+.search-container {
+  margin-bottom: 1em;
+}
+
+.search-container label {
+  font-weight: bold;
+  margin-left: 10px;
+  margin-bottom: 0.5em;
+}
+
+.contenedor-input-botones{
+  display: flex;
+  gap: 0.5em;
+}
+
+/* PAGINACIÓN */
+/* Asegura que el contenedor del paginador esté centrado */
+::ng-deep .pagination-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px 0;
+}
+/* Aplica estilo al elemento paginador */
+::ng-deep .pagination-controls .ngx-pagination {
+  display: flex;
+  list-style-type: none;
+  padding: 5px;
+}
+/* Estilo para los enlaces dentro de cada botón */
+::ng-deep .pagination-controls .ngx-pagination li a {
+  color: #225685; /* Color del texto */
+  border-radius: 5px;  /* Bordes redondeados */
+  width: 40px; /* Ajusta este valor para el tamaño del cuadrado */
+  height: 40px; /* Debe ser igual al ancho */
+  line-height: 30px; /* Asegura que el texto esté centrado verticalmente */
+  text-align: center; /* Centra el texto horizontalmente */
+  display: inline-block; /* Asegura que se comporten como bloques en línea */
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+}
+/* Estilo cuando el usuario pasa el ratón sobre los botones */
+::ng-deep .pagination-controls .ngx-pagination li a:hover {
+  background-color: #e6effd; /* Cambia el color de fondo al hacer hover */
+}
+/* Estilo para la página actual */
+::ng-deep .pagination-controls .ngx-pagination .current {
+  background-color: #3366cc; /* Fondo azul para la página actual */
+  color: white; /* Texto blanco */
+  border-radius: 5px;  /* Bordes redondeados */
+  width: 40px; /* Ajusta este valor para el tamaño del cuadrado */
+  height: 40px; /* Debe ser igual al ancho */
+  line-height: 30px; /* Asegura que el texto esté centrado verticalmente */
+  text-align: center; /* Centra el texto horizontalmente */
+  display: inline-block; /* Asegura que se comporten como bloques en línea */
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+}
+/* Estilos para los botones de navegación (Anterior y Siguiente) */
+::ng-deep .pagination-controls .ngx-pagination .pagination-next a,
+::ng-deep .pagination-controls .ngx-pagination .pagination-previous a{
+  width: auto;
+  height: 40px; /* Debe ser igual al ancho */
+  line-height: 30px; /* Asegura que el texto esté centrado verticalmente */
+  background-color: transparent;
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+  text-align: center; /* Centrado horizontal */
+  display: auto;
+}
+::ng-deep .pagination-controls .ngx-pagination .pagination-next a:hover,
+::ng-deep .pagination-controls .ngx-pagination .pagination-previous a:hover{
+  background-color: transparent;
+  text-decoration: underline;
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+  text-align: center; /* Centrado horizontal */
+  display: inline-block;
+}
+/* Botones deshabilitados (anterior/siguiente) */
+::ng-deep .pagination-controls .pagination-previous.disabled,
+::ng-deep .pagination-controls .pagination-next.disabled {
+  width: auto;
+  height: 40px; /* Debe ser igual al ancho */
+  line-height: 30px; /* Asegura que el texto esté centrado verticalmente */
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+  text-align: center; /* Centrado horizontal */
+  display: auto;
+}
+
+::ng-deep .pagination-controls .pagination-ellipsis {
+  width: auto; /* No restringir el ancho */
+  height: auto;
+  line-height: normal; /* Ajuste vertical */
+  margin: 0 5px; /* Espaciado horizontal */
+}
+/* Estilo específico para las flechas */
+::ng-deep .pagination-controls .pagination-previous::before,
+::ng-deep .pagination-controls .pagination-next::after {
+  content: ''; /* Elimina herencia de contenido */
+}

@@ -1,0 +1,172 @@
+/api/v1/novedadesvehiculo:
+  put:
+    tags:
+      - Novedades Vehículo
+    summary: Actualizar novedad de vehículo
+    description: Actualiza la información de una novedad de vehículo existente.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - id
+              - idNovedad
+              - placa
+              - clase
+              - nivelServicio
+            properties:
+              id:
+                type: integer
+                format: int64
+              idNovedad:
+                type: integer
+                format: int64
+              placa:
+                type: string
+                maxLength: 10
+              soat:
+                type: string
+                maxLength: 50
+              fechaVencimientoSoat:
+                type: string
+                format: date
+              revisionTecnicoMecanica:
+                type: string
+                maxLength: 50
+              fechaRevisionTecnicoMecanica:
+                type: string
+                format: date
+              tarjetaOperacion:
+                type: string
+                maxLength: 50
+              fechaVencimientoTarjetaOperacion:
+                type: string
+                format: date
+              idMatenimientoPreventivo:
+                type: string
+                maxLength: 50
+              fechaMantenimientoPreventivo:
+                type: string
+                format: date
+              idProtocoloAlistamientodiario:
+                type: string
+                maxLength: 50
+              fechaProtocoloAlistamientodiario:
+                type: string
+                format: date
+              observaciones:
+                type: string
+              clase:
+                type: integer
+              nivelServicio:
+                type: integer
+              idPolizaContractual:
+                type: string
+              idPolizaExtracontractual:
+                type: string
+              vigenciaContractual:
+                type: string
+                format: date
+              vigenciaExtracontractual:
+                type: string
+                format: date
+    responses:
+      '200':
+        description: Novedad de vehículo actualizada correctamente.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+                - array_data
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string
+                array_data:
+                  type: object
+                  description: Datos de la novedad actualizada.
+                  additionalProperties: true
+      '400':
+        description: Petición inválida o token de autorización no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada o autenticación incompleta.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: La novedad de vehículo indicada no existe.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '422':
+        description: Datos inválidos para actualizar la novedad.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string
+      '500':
+        description: Error interno al actualizar la novedad de vehículo.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string

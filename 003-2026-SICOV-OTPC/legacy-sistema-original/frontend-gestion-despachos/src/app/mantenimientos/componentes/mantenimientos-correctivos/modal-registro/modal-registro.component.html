@@ -1,0 +1,61 @@
+<ng-template #modal let-modal>
+  <div class="modal-header">
+    <div class="d-flex justify-content-between" style="margin-bottom: -5px;">
+      <h5 class="modal-title">Registro de mantenimiento correctivo</h5>
+      <button type="button" class="btn-close" aria-label="Close" (click)="cerrarModal()"></button>
+    </div>
+    <br *ngIf="editar">
+    <p *ngIf="!editar && siHayRegistros">Este nuevo registro de mantenimiento correctivo reemplazará el actual.</p>
+  </div>
+  <div class="modal-body custom-modal-size">
+
+    <form class="form-group" #registroForm="ngForm" (ngSubmit)="guardarRegistro(registroForm)">
+      <label for="placa">Placa:</label>
+      <input id="placa" name="placa" type="text" class="form-control" required [(ngModel)]="registro.placa" disabled />
+
+      <label for="fecha">Fecha:</label>
+      <input id="fecha" name="fecha" type="date" class="form-control" [max]="maxDate" required
+        [(ngModel)]="mantenimientoCorrectivo.fecha" [disabled]="isSupervisor || (registro.estadoMantenimiento === 'Vencido' && editar)" />
+      <div *ngIf="validarFecha()" class="text-danger">La fecha no puede ser mayor que la actual.</div>
+
+      <label for="hora">Hora:</label>
+      <input id="hora" name="hora" type="time" class="form-control" required
+        [(ngModel)]="mantenimientoCorrectivo.hora" [disabled]="isSupervisor || (registro.estadoMantenimiento === 'Vencido' && editar)" />
+      <div *ngIf="validarHora(mantenimientoCorrectivo.hora)" class="text-danger">La hora no puede ser mayor que la actual.</div>
+
+      <label for="nit">NIT - Centro especializado:</label>
+      <input id="nit" name="nit" type="text" class="form-control" required (input)="limitarNumero($event)"
+        [(ngModel)]="mantenimientoCorrectivo.nit" [disabled]="isSupervisor || (registro.estadoMantenimiento === 'Vencido' && editar)" />
+
+      <label for="razonSocial">Razón Social - Centro especializado:</label>
+      <input id="razonSocial" name="razonSocial" type="text" class="form-control" required
+        [(ngModel)]="mantenimientoCorrectivo.razonSocial" [disabled]="isSupervisor || (registro.estadoMantenimiento === 'Vencido' && editar)" />
+
+      <label for="tipoIdentificacion">Tipo de identificación – Técnico mecánico:</label>
+      <select id="tipoIdentificacion" name="tipoIdentificacion" class="form-select" required
+        [(ngModel)]="mantenimientoCorrectivo.tipoIdentificacion" [disabled]="isSupervisor || (registro.estadoMantenimiento === 'Vencido' && editar)">
+        <option value="">Seleccione un tipo</option>
+        <option *ngFor="let tipo of tiposIdentificaciones" [value]="tipo.codigo">{{tipo.descripcion}}</option>
+      </select>
+
+      <label for="numeroIdentificacion">Número de Identificación – Técnico mecánico:</label><!-- (input)="limitarNumero($event)" -->
+      <input id="numeroIdentificacion" name="numeroIdentificacion" type="text" class="form-control" required
+         [(ngModel)]="mantenimientoCorrectivo.numeroIdentificacion" [disabled]="isSupervisor || (registro.estadoMantenimiento === 'Vencido' && editar)" maxlength="15"/>
+
+      <label for="nombreIngeniero">Nombres y apellidos - Técnico mecánico:</label>
+      <input id="nombreIngeniero" name="nombreIngeniero" type="text" class="form-control" required
+        (keypress)="validarSoloLetras($event)" [(ngModel)]="mantenimientoCorrectivo.nombreIngeniero" [disabled]="isSupervisor || (registro.estadoMantenimiento === 'Vencido' && editar)" />
+
+      <label for="detalleActividades">Detalle de las actividades:</label>
+      <textarea id="detalleActividades" name="detalleActividades" class="form-control" required
+        [(ngModel)]="mantenimientoCorrectivo.detalleActividades" [disabled]="isSupervisor || (registro.estadoMantenimiento === 'Vencido' && editar)"></textarea>
+
+      <button type="submit" class="boton primario relleno" *ngIf="!isSupervisor" [disabled]="registro.estadoMantenimiento === 'Vencido' && editar">
+        <span *ngIf="!editar">Guardar</span>
+        <span *ngIf="editar">Actualizar</span>
+      </button>
+    </form>
+
+  </div>
+  <app-popup #popup />
+</ng-template>

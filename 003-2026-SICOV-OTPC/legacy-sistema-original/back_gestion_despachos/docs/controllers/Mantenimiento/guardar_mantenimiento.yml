@@ -1,0 +1,93 @@
+/api/v1/mantenimiento/guardar-mantenimieto:
+  post:
+    tags:
+      - Mantenimiento
+    summary: Crear encabezado de mantenimiento
+    description: Registra el encabezado de un mantenimiento antes de diligenciar información detallada.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - vigiladoId
+              - placa
+              - tipoId
+            properties:
+              vigiladoId:
+                type: string
+                description: Identificador del vigilado que reporta el mantenimiento.
+              placa:
+                type: string
+                minLength: 6
+                maxLength: 6
+                description: Placa del vehículo.
+              tipoId:
+                type: integer
+                enum: [1, 2, 3, 4]
+                description: Tipo de mantenimiento (1 Preventivo, 2 Correctivo, 3 Alistamiento, 4 Autorización).
+              proveedorId:
+                type: string
+                description: Identificador del proveedor (autocompletado cuando el usuario es proveedor).
+              otrosCampos:
+                type: object
+                description: Campos adicionales aceptados por el repositorio.
+                additionalProperties: true
+    responses:
+      '201':
+        description: Mantenimiento creado exitosamente.
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Información del mantenimiento creado.
+              additionalProperties: true
+      '400':
+        description: Datos requeridos ausentes o inválidos.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Recurso relacionado no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al registrar el mantenimiento.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+                error:
+                  type: string

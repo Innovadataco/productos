@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+	/* Paleta principal (Azul platino) basada en #313453 */
+	--brand-500: #45507a; /* tono más claro para focos/bordes */
+	--brand-600: #3d486e;
+	--brand-700: #313453; /* color base (azul platino) */
+	--brand-800: #292d45;
+	--brand-900: #212437; /* tono más profundo para gradientes */
+
+	/* Verdes de apoyo (acentos) */
+	--accent-green-400: #A2C037; /* verde vivo */
+	--accent-green-500: #8BA431; /* verde más oscuro */
+
+	/* Variantes específicas (header/brand bars) para mejor contraste del logo */
+	--brand-bar-start: #7d86ab; /* más claro para contraste con texto del logo */
+	--brand-bar-end: #242838; /* base oscura refinada */
+
+	--page-bg: #cfcfcf;
+}
+
+html, body {
+	padding: 0;
+	margin: 0;
+}
+
+body {
+	font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	color: #0f172a;
+	background: var(--page-bg);
+}
+/* You can add global styles to this file, and also import other style files */
+
+/*
+	Global brand button styles
+	Usage:
+	 - <button class="btn-brand">Guardar</button>
+	 - <button class="btn-brand btn-brand--sm">Nuevo usuario</button>
+	 - <button class="btn-brand btn-brand--lg btn-brand--block">Iniciar sesión</button>
+	Also applies automatically to legacy "boton primario relleno" buttons.
+*/
+.btn-brand,
+.boton.primario.relleno {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: .5rem;
+	height: 40px;
+	padding: 0 1.125rem;
+	border: none;
+	border-radius: 999px;
+	color: #fff;
+	font-weight: 700;
+	text-decoration: none;
+	background-image: linear-gradient(90deg, var(--brand-700), var(--brand-900));
+	cursor: pointer;
+	transition: filter .2s ease, transform .02s ease, box-shadow .2s ease;
+}
+
+.btn-brand:hover,
+.boton.primario.relleno:hover {
+	filter: brightness(1.06);
+	box-shadow: 0 6px 18px color-mix(in srgb, var(--brand-700) 22%, transparent);
+  color: #fff;
+  background: #2d5277;
+}
+.btn-brand:active,
+.boton.primario.relleno:active { transform: translateY(1px); }
+.btn-brand:disabled,
+.boton.primario.relleno:disabled { opacity: .6; cursor: not-allowed; color: #fff;}
+.btn-brand:focus-visible,
+.boton.primario.relleno:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 25%, transparent); }
+
+/* Size modifiers */
+.btn-brand--sm { height: 36px; padding: 0 .875rem; font-weight: 600; }
+.btn-brand--lg { height: 48px; padding: 0 1.25rem; }
+.btn-brand--block { width: 100%; display: inline-flex; }
+
+/* Outline variant (brand) */
+.btn-outline-brand {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: .5rem;
+	height: 40px;
+	padding: 0 1.125rem;
+	border-radius: 999px;
+	font-weight: 600;
+	background: transparent;
+	color: var(--brand-700);
+	border: 2px solid var(--brand-700);
+	cursor: pointer;
+	transition: background .15s ease, color .15s ease, box-shadow .2s ease, filter .2s ease, transform .02s ease;
+}
+.btn-outline-brand.btn-brand--sm { height: 36px; padding: 0 .875rem; }
+.btn-outline-brand.btn-brand--lg { height: 48px; padding: 0 1.25rem; }
+.btn-outline-brand.btn-brand--block { width: 100%; }
+.btn-outline-brand:hover { background: var(--brand-700); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--brand-700) 20%, transparent); }
+.btn-outline-brand:active { transform: translateY(1px); }
+.btn-outline-brand:disabled { opacity: .55; cursor: not-allowed; }
+.btn-outline-brand:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 25%, transparent); }
+
+/* Convert Bootstrap outline-primary/secondary into pill shape (progressively enhance without breaking existing markup) */
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-danger,
+.btn-outline-success,
+.btn-outline-warning,
+.btn-outline-info {
+	border-radius: 999px !important;
+	font-weight: 600;
+	height: 40px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 1rem;
+}
+.btn-group .btn-outline-primary,
+.btn-group .btn-outline-secondary,
+.btn-group .btn-outline-danger,
+.btn-group .btn-outline-success,
+.btn-group .btn-outline-warning,
+.btn-group .btn-outline-info { height: 32px; padding: 0 .75rem; }
+
+/* Specific brand alignment for outline-primary to match design tokens */
+.btn-outline-primary { color: var(--brand-700); border-color: var(--brand-700); }
+.btn-outline-primary:hover { background: var(--brand-700); color: #fff; }
+.btn-outline-primary:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 30%, transparent); }
+
+.link { cursor: pointer; text-decoration: underline; color: blue; }
+.link:hover { color: darkblue; }
+.icon-info {
+  color: #6c757d;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: color .2s ease;
+}
+.icon-info:hover {
+  color: #2d5277;
+}
+
+

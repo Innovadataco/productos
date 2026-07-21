@@ -1,0 +1,105 @@
+/api/v1/mantenimiento/guardar-preventivo:
+  post:
+    tags:
+      - Mantenimiento
+    summary: Registrar mantenimiento preventivo
+    description: Diligencia la información de un mantenimiento preventivo previamente creado.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - mantenimientoId
+            properties:
+              mantenimientoId:
+                type: integer
+                format: int64
+                description: Identificador local del mantenimiento creado con guardar-mantenimieto.
+              placa:
+                type: string
+                description: Placa del vehículo.
+              fecha:
+                type: string
+                format: date
+                description: Fecha del mantenimiento (YYYY-MM-DD).
+              hora:
+                type: string
+                description: Hora del mantenimiento (HH:mm).
+              nit:
+                type: string
+                description: NIT de la empresa que ejecuta el mantenimiento.
+              razonSocial:
+                type: string
+                description: Razón social de la empresa ejecutora.
+              tipoIdentificacion:
+                type: string
+                description: Tipo de identificación del responsable.
+              numeroIdentificacion:
+                type: string
+                description: Número de identificación del responsable.
+              nombresResponsable:
+                type: string
+                description: Nombre completo del responsable.
+              detalleActividades:
+                type: string
+                description: Actividades realizadas en el mantenimiento preventivo.
+              otrosCampos:
+                type: object
+                additionalProperties: true
+                description: Campos adicionales aceptados por el repositorio.
+    responses:
+      '201':
+        description: Mantenimiento preventivo registrado exitosamente.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '400':
+        description: Datos obligatorios ausentes o formato inválido.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Mantenimiento no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al registrar el mantenimiento preventivo.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string

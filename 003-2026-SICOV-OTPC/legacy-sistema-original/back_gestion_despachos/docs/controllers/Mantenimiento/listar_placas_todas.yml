@@ -1,0 +1,77 @@
+/api/v1/mantenimiento/listar-placas-todas:
+  get:
+    tags:
+      - Mantenimiento
+    summary: Listar placas para un vigilado específico
+    description: Retorna las placas pertenecientes al vigilado indicado, según el tipo de mantenimiento.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: tipoId
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Identificador del tipo de mantenimiento.
+      - in: query
+        name: vigiladoId
+        required: true
+        schema:
+          type: string
+        description: Identificación del vigilado (NIT o documento).
+    responses:
+      '200':
+        description: Placas asociadas al vigilado.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                description: Estructura retornada por el repositorio.
+                additionalProperties: true
+      '400':
+        description: Falta alguno de los parámetros requeridos o tipoId inválido.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Vigilado no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+      '500':
+        description: Error interno al consultar las placas.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string

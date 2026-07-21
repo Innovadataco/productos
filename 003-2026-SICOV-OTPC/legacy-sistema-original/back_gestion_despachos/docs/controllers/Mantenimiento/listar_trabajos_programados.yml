@@ -1,0 +1,196 @@
+/api/v1/mantenimiento/jobs:
+  get:
+    tags:
+      - Mantenimiento
+    summary: Listar trabajos programados
+    description: Retorna los trabajos programados de sincronización de mantenimientos con filtros y paginación.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: pagina
+        schema:
+          type: integer
+          minimum: 1
+        description: Página a consultar.
+      - in: query
+        name: limite
+        schema:
+          type: integer
+          minimum: 1
+        description: Cantidad de registros por página.
+      - in: query
+        name: estado
+        schema:
+          type: string
+      - in: query
+        name: tipo
+        schema:
+          type: string
+      - in: query
+        name: placa
+        schema:
+          type: string
+      - in: query
+        name: vin
+        schema:
+          type: string
+      - in: query
+        name: usuario
+        schema:
+          type: string
+      - in: query
+        name: proveedor
+        schema:
+          type: string
+      - in: query
+        name: sincronizacionEstado
+        schema:
+          type: string
+      - in: query
+        name: nit
+        schema:
+          type: string
+      - in: query
+        name: fecha
+        schema:
+          type: string
+          format: date
+        description: Fecha en formato YYYY-MM-DD.
+      - in: query
+        name: terminoTipo
+        schema:
+          type: string
+      - in: query
+        name: terminoPlaca
+        schema:
+          type: string
+      - in: query
+        name: termino
+        schema:
+          type: string
+        description: Término libre aplicado a tipo y placa cuando los filtros específicos no se envían.
+      - in: query
+        name: ordenCampo
+        schema:
+          type: string
+      - in: query
+        name: ordenDireccion
+        schema:
+          type: string
+          enum: [asc, desc]
+    responses:
+      '200':
+        description: Trabajos programados filtrados.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - paginacion
+                - datos
+              properties:
+                paginacion:
+                  type: object
+                  required:
+                    - totalRegistros
+                    - paginaActual
+                    - totalPaginas
+                  properties:
+                    totalRegistros:
+                      type: integer
+                    paginaActual:
+                      type: integer
+                    totalPaginas:
+                      type: integer
+                datos:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - tipo
+                      - estado
+                      - reintentos
+                    properties:
+                      id:
+                        type: integer
+                      tipo:
+                        type: string
+                      estado:
+                        type: string
+                      reintentos:
+                        type: integer
+                      ultimoError:
+                        type: string
+                        nullable: true
+                      siguienteIntento:
+                        type: string
+                        nullable: true
+                      createdAt:
+                        type: string
+                        nullable: true
+                      updatedAt:
+                        type: string
+                        nullable: true
+                      mantenimientoLocalId:
+                        type: integer
+                        nullable: true
+                      detalleId:
+                        type: integer
+                        nullable: true
+                      vigiladoId:
+                        type: string
+                        nullable: true
+                      usuarioDocumento:
+                        type: string
+                        nullable: true
+                      payload:
+                        type: object
+                        nullable: true
+                        additionalProperties: true
+                      mantenimiento:
+                        type: object
+                        nullable: true
+                        additionalProperties: true
+                      detalle:
+                        type: object
+                        nullable: true
+                        additionalProperties: true
+                      datosCompletos:
+                        type: object
+                        nullable: true
+                        additionalProperties: true
+      '400':
+        description: Parámetro de paginación u orden inválido.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al listar los trabajos programados.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string

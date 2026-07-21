@@ -1,0 +1,56 @@
+/api/v1/mantenimiento/listar-historial:
+  get:
+    tags:
+      - Mantenimiento
+    summary: Listar historial de mantenimientos
+    description: Retorna el historial consolidado según los filtros proporcionados.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: tipoId
+        schema:
+          type: integer
+        description: Tipo de mantenimiento a filtrar.
+      - in: query
+        name: vigiladoId
+        schema:
+          type: string
+        description: Identificación del vigilado.
+      - in: query
+        name: placa
+        schema:
+          type: string
+        description: Placa del vehículo.
+    responses:
+      '200':
+        description: Historial consultado.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al listar el historial.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string

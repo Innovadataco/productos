@@ -1,0 +1,77 @@
+<html>
+    <head>
+        <style>
+            .contenedor{
+                display: block;
+                width: 90%;
+                max-width: 700px;
+                margin: 0 auto;
+            }
+            .cabecera{
+                width: 100%;
+                padding: 17px 20px;
+            }
+            .logo{
+                display: block;
+                width: 200px;
+                margin: 0 auto;
+            }
+            .cuerpo{
+                display: block;
+                width: 100%;
+                padding: 17px 20px;
+                font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            }
+            .pie-de-pagina{
+                display: block;
+                width: 100%;
+                padding: 30px 20px;
+            }
+            .pie-de-pagina table td{
+                vertical-align: middle;
+                padding: 10px;
+            }
+            .informacion{
+
+            }
+
+            /* fuentes */
+            .primario{
+                color: #00a3dd;
+            }
+            .secundario{
+                color: #39316b;
+            }
+            .gris{
+                color: #666465;
+            }
+            .negrita{
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="contenedor">
+            <div class="cabecera">
+                <div class="logo" style="width: 300px;">
+                                        @if(typeof logoCid !== 'undefined' && logoCid)
+                                            <img width="140px" src="cid:{{ logoCid }}" alt="logo" style="max-height:60px; width:auto; display:block;" />
+                                        @elseif(typeof logo !== 'undefined' && logo)
+                                            <img width="140px" src="{{ logo }}" alt="logo" />
+                                        @else
+                                            <div class="logo-circle">B</div>
+                                        @endif
+                </div>
+            </div>
+            <div class="cuerpo">
+                <h2 class="primario">Estimado usuario</h2>
+                <p><span class="secundario negrita">Nombre: </span>{{ nombre }}</p>
+                <p><span class="secundario negrita">Nit: </span>{{ nit }}</p>
+                <p class="gris">{{ descripcion }}</p>
+                <p>{{ respuesta }}</p>
+                <h3 class="primario">Atentamente..</h3>
+            </div>
+
+        </div>
+    </body>
+</html>

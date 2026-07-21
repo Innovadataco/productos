@@ -1,0 +1,456 @@
+<div class="py-2 px-sm-3 px-md-4 px-lg-5 margen">
+  <div class="d-block mb-3">
+    <div class="d-flex">
+      <h2 class="title" style="text-align: center;">Registro de Autorización</h2>
+      <button type="button" class="boton primario relleno" (click)="volver()" style="margin-left: auto;">
+        Volver <i class="bi bi-arrow-return-left"></i>
+      </button>
+    </div>
+    <div class="d-block mb-3">
+      <form class="form-group" #registroForm="ngForm" (ngSubmit)="guardarRegistro(registroForm)">
+        <div class="row">
+          <div class="col">
+            <label for="placa">Placa</label>
+            <input id="placa" name="placa" type="text" class="form-control" required [(ngModel)]="placa" disabled />
+          </div>
+          <div class="col">
+            <label for="fechaViaje">Fecha del viaje</label>
+            <input id="fechaViaje" name="fechaViaje" type="date" class="form-control"
+              [disabled]="!estadoMantenimiento || isSupervisor" (keydown)="bloquearEscritura($event)" required
+              [(ngModel)]="autorizacion.fechaViaje"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['fechaViaje'].invalid}"
+              [min]="minDate" #fechaViaje="ngModel" />
+            <!-- <div *ngIf="validarFecha() && !isSupervisor && fechaViaje.touched" class="validacion">*La fecha no puede ser menor que la actual.</div> -->
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="origen">Departamento origen <span class="small">(Filtro)</span></label>
+            <select id="Departamentoorigen" name="Departamentoorigen" class="form-select"
+              [(ngModel)]="departamentoOrigen" [disabled]="!estadoMantenimiento || isSupervisor" [attr.required]="!editar ? '' : null" (change)="cargarMunicipioOrigen($event)"
+              [ngClass]="{'validacionInputs': registroForm.submitted && departamentoOrigen == undefined}">
+              <option disabled selected value=undefined>Seleccione una opción</option>
+              <option *ngFor="let departamento of departamentos" [value]="departamento.codigo">
+                {{departamento.descripcion}}
+              </option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="departamentoDestino">Departamento destino <span class="small">(Filtro)</span></label>
+            <select id="departamentoDestino" name="departamentoDestino" class="form-select"
+              [(ngModel)]="departamentoDestino" [disabled]="!estadoMantenimiento || isSupervisor" [attr.required]="!editar ? '' : null" (change)="cargarMunicipioDestino($event)"
+              [ngClass]="{'validacionInputs': registroForm.submitted && departamentoDestino == undefined}">
+              <option disabled selected value=undefined>Seleccione una opción</option>
+              <option *ngFor="let departamento of departamentos" [value]="departamento.codigo">
+                {{departamento.descripcion}}
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="origen">Municipio origen <span class="small">(Filtro)</span></label>
+            <select id="municipiosOrigen" name="municipiosOrigen" class="form-select" [(ngModel)]="municipioOrigen"
+              [disabled]="!estadoMantenimiento || isSupervisor || departamentoOrigen === undefined" [attr.required]="!editar ? '' : null" (change)="cargarCentrosPobladosOrigen($event)"
+              [ngClass]="{'validacionInputs': registroForm.submitted && municipioOrigen == undefined}">
+              <option disabled selected value=undefined>Seleccione una opción</option>
+              <option *ngFor="let municipio of municipiosOrigen" [value]="municipio.codigo">{{municipio.descripcion}}
+              </option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="municipioDestino">Municipio destino <span class="small">(Filtro)</span></label>
+            <select id="municipioDestino" name="municipioDestino" class="form-select" [(ngModel)]="municipioDestino"
+              [disabled]="!estadoMantenimiento || isSupervisor || departamentoDestino === undefined" [attr.required]="!editar ? '' : null" (change)="cargarCentrosPobladosDestino($event)"
+              [ngClass]="{'validacionInputs': registroForm.submitted && municipioDestino == undefined}">
+              <option disabled selected value=undefined>Seleccione una opción</option>
+              <option *ngFor="let municipio of municipiosDestino" [value]="municipio.codigo">{{municipio.descripcion}}
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="origen">Centro poblado origen</label>
+            <select id="origen" name="origen" class="form-select" required [(ngModel)]="autorizacion.origen"
+              [disabled]="!estadoMantenimiento || isSupervisor || municipioOrigen === undefined"
+              [ngClass]="{'validacionInputs': registroForm.submitted && (registroForm.controls['origen'].invalid || autorizacion.origen== '')}">
+              <option value="">Seleccione una opción</option>
+              <option *ngFor="let ubicacion of ubicacionesOrigen" [value]="ubicacion.codigo">{{ubicacion.descripcion}}
+              </option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="destino">Centro poblado destino</label>
+            <select id="destino" name="destino" class="form-select" required [(ngModel)]="autorizacion.destino"
+              [disabled]="!estadoMantenimiento || isSupervisor || municipioDestino === undefined"
+              [ngClass]="{'validacionInputs': registroForm.submitted && (registroForm.controls['destino'].invalid || autorizacion.destino== '')}">
+              <option value="">Seleccione una opción</option>
+              <option *ngFor="let ubicacion of ubicacionesDestino" [value]="ubicacion.codigo">{{ubicacion.descripcion}}
+              </option>
+            </select>
+          </div>
+        </div>
+        <hr>
+        <h4>Información del menor de edad</h4>
+        <div class="row">
+          <div class="col">
+            <label for="tipoIdentificacionNna">Tipo de identificación – niño, niña o adolescente</label>
+            <select id="tipoIdentificacionNna" name="tipoIdentificacionNna" class="form-select" required
+              [(ngModel)]="autorizacion.tipoIdentificacionNna" [disabled]="!estadoMantenimiento || isSupervisor"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['tipoIdentificacionNna'].invalid}">
+              <option value="">Seleccione un tipo</option>
+              <option *ngFor="let tipo of tiposIdentificacionesMenoresEdad" [value]="tipo.codigo">{{tipo.descripcion}}</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="nombresApellidosNna">Nombres y apellidos – niño, niña o adolescente</label>
+            <input id="nombresApellidosNna" name="nombresApellidosNna" type="text" class="form-control" required
+              [(ngModel)]="autorizacion.nombresApellidosNna" [disabled]="!estadoMantenimiento || isSupervisor"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['nombresApellidosNna'].invalid}"
+              (input)="manejarNombre($event)" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="numeroIdentificacionNna">Número de Identificación – niño, niña o adolescente</label>
+            <input id="numeroIdentificacionNna" name="numeroIdentificacionNna" type="text" class="form-control"
+              [maxlength]="tamanoMaximo" required [(ngModel)]="autorizacion.numeroIdentificacionNna"
+              #numeroIdentificacionNna="ngModel"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['numeroIdentificacionNna'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (keypress)="validarSoloLetrasyNumeros($event)" />
+            <span *ngIf="numeroIdentificacionNna.touched && numeroIdentificacionNna.invalid" class="validacion">*El
+              Número de identificación es obligatorio</span>
+          </div>
+          <div class="col">
+            <label for="situacionDiscapacidad">¿El menor de edad se encuentra en situación de discapacidad?</label>
+            <select id="situacionDiscapacidad" name="situacionDiscapacidad" class="form-select" required
+              [(ngModel)]="autorizacion.situacionDiscapacidad"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['situacionDiscapacidad'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor">
+              <option value="">Seleccione una respuesta</option>
+              <option value="SI">SI</option>
+              <option value="NO">NO</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="perteneceComunidadEtnica">¿Pertenece a alguna comunidad étnica?</label>
+            <select id="perteneceComunidadEtnica" name="perteneceComunidadEtnica" class="form-select" required
+              [(ngModel)]="autorizacion.perteneceComunidadEtnica"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['perteneceComunidadEtnica'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor">
+              <option value="">Seleccione una respuesta</option>
+              <option value="SI">SI</option>
+              <option value="NO">NO</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="tipoDiscapacidad">Tipo de discapacidad</label>
+            <select id="tipoDiscapacidad" name="tipoDiscapacidad" class="form-select" required
+              [(ngModel)]="autorizacion.tipoDiscapacidad"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['tipoDiscapacidad'].invalid}"
+              [disabled]="!estadoMantenimiento || autorizacion.situacionDiscapacidad == 'NO' || isSupervisor">
+              <option value="">Seleccione un tipo</option>
+              <ng-container *ngFor="let discapacidad of discapacidades">
+                <option *ngIf="!(autorizacion.situacionDiscapacidad === 'SI' && discapacidad.descripcion === 'Ninguna')"
+                  [value]="discapacidad.codigo"
+                  [selected]="autorizacion.situacionDiscapacidad === 'NO' && discapacidad.descripcion === 'Ninguna'">
+                  {{ discapacidad.descripcion }}
+                </option>
+              </ng-container>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <label for="tipoPoblacionEtnica">Tipo de población étnica pertenece</label>
+            <select id="tipoPoblacionEtnica" name="tipoPoblacionEtnica" class="form-select" required
+              [(ngModel)]="autorizacion.tipoPoblacionEtnica"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['tipoPoblacionEtnica'].invalid}"
+              [disabled]="!estadoMantenimiento || autorizacion.perteneceComunidadEtnica == 'NO' || isSupervisor">
+              <option value="">Seleccione un tipo</option>
+              <ng-container *ngFor="let etnia of etnias">
+                <option *ngIf="!(autorizacion.perteneceComunidadEtnica === 'SI' && etnia.descripcion === 'Ninguna')"
+                  [value]="etnia.codigo"
+                  [selected]="autorizacion.perteneceComunidadEtnica == 'NO' && etnia.descripcion == 'Ninguna'">
+                  {{etnia.descripcion}}
+                </option>
+              </ng-container>
+            </select>
+          </div>
+        </div>
+        <hr>
+        <h4>Información de quien otorga el permiso</h4>
+        <div class="row">
+          <div class="col">
+            <label for="tipoIdentificacionOtorgante">Tipo de identificación – Quien Otorga el permiso</label>
+            <select id="tipoIdentificacionOtorgante" name="tipoIdentificacionOtorgante" class="form-select" required
+              [(ngModel)]="autorizacion.tipoIdentificacionOtorgante"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['tipoIdentificacionOtorgante'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor">
+              <option value="">Seleccione un tipo</option>
+              <option *ngFor="let tipo of tiposIdentificaciones" [value]="tipo.codigo">{{tipo.descripcion}}</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="nombresApellidosOtorgante">Nombres y apellidos – Quien Otorga el permiso</label>
+            <input id="nombresApellidosOtorgante" name="nombresApellidosOtorgante" type="text" class="form-control"
+              required [(ngModel)]="autorizacion.nombresApellidosOtorgante"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['nombresApellidosOtorgante'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (input)="manejarNombre($event)" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="numeroIdentificacionOtorgante">Número de Identificación – Quien Otorga el permiso</label>
+            <input id="numeroIdentificacionOtorgante" name="numeroIdentificacionOtorgante" type="text"
+              [maxlength]="tamanoMaximo" class="form-control" required
+              [(ngModel)]="autorizacion.numeroIdentificacionOtorgante" #numeroIdentificacionOtorgante="ngModel"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['numeroIdentificacionOtorgante'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (keypress)="validarSoloLetrasyNumeros($event)" />
+            <span *ngIf="numeroIdentificacionOtorgante.touched && numeroIdentificacionOtorgante.invalid"
+              class="validacion">*El Número de identificación es obligatorio</span>
+          </div>
+          <div class="col">
+            <label for="numeroTelefonicoOtorgante">Número Telefónico – Quien Otorga el permiso</label>
+            <input id="numeroTelefonicoOtorgante" name="numeroTelefonicoOtorgante" type="text" class="form-control"
+              required [(ngModel)]="autorizacion.numeroTelefonicoOtorgante"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['numeroTelefonicoOtorgante'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (input)="limitarNumero($event)" />
+            <span
+              *ngIf="!validarTelefono(autorizacion.numeroTelefonicoOtorgante!) && autorizacion.numeroTelefonicoOtorgante != null"
+              class="validacion">*Ingrese un número Telefónico valido</span>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="correoElectronicoOtorgante">Correo electrónico – Quien Otorga el permiso</label>
+            <input id="correoElectronicoOtorgante" name="correoElectronicoOtorgante" type="email" class="form-control"
+              required [(ngModel)]="autorizacion.correoElectronicoOtorgante" #correo="ngModel"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['correoElectronicoOtorgante'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" />
+            <span
+              *ngIf="!validarCorreo(autorizacion.correoElectronicoOtorgante!) && autorizacion.correoElectronicoOtorgante != ''"
+              class="validacion">*Formato de correo no valido</span>
+          </div>
+          <div class="col">
+            <label for="direccionFisicaOtorgante">Dirección física – Quien Otorga el permiso</label>
+            <input id="direccionFisicaOtorgante" name="direccionFisicaOtorgante" type="text" class="form-control"
+              required [(ngModel)]="autorizacion.direccionFisicaOtorgante"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['direccionFisicaOtorgante'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="sexoOtorgante">Sexo – Quien Otorga el permiso</label>
+            <select id="sexoOtorgante" name="sexoOtorgante" class="form-select" required
+              [(ngModel)]="autorizacion.sexoOtorgante"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['sexoOtorgante'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor">
+              <option value="">Seleccione una opción</option>
+              <option *ngFor="let sexo of sexos" [value]="sexo.codigo">{{sexo.descripcion}}</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="calidadActua">Calidad en que actúa</label>
+            <select id="calidadActua" name="calidadActua" class="form-select" required
+              [(ngModel)]="autorizacion.calidadActua"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['calidadActua'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor">
+              <option value="">Seleccione una opción</option>
+              <option *ngFor="let calidadActua of parentescos" [value]="calidadActua.codigo">
+                {{calidadActua.descripcion}}</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <label for="generoOtorgante">Género – Quien Otorga el permiso</label>
+            <select id="generoOtorgante" name="generoOtorgante" class="form-select"
+              [(ngModel)]="autorizacion.generoOtorgante"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['generoOtorgante'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor">
+              <option value="">Seleccione una opción</option>
+              <option *ngFor="let genero of generos" [value]="genero.codigo">{{genero.descripcion}}</option>
+            </select>
+          </div>
+        </div>
+        <hr>
+        <h4>Información de la persona autorizada para viajar con el menor de edad</h4>
+        <div class="row">
+          <div class="col">
+            <label for="tipoIdentificacionAutorizadoViajar">Tipo de identificación – Persona autorizada para viajar con
+              el menor de edad</label>
+            <select id="tipoIdentificacionAutorizadoViajar" name="tipoIdentificacionAutorizadoViajar"
+              class="form-select" required [(ngModel)]="autorizacion.tipoIdentificacionAutorizadoViajar"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['tipoIdentificacionAutorizadoViajar'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor">
+              <option value="">Seleccione un tipo</option>
+              <option *ngFor="let tipo of tiposIdentificaciones" [value]="tipo.codigo">{{tipo.descripcion}}</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="nombresApellidosAutorizadoViajar">Nombres y apellidos – Persona autorizada para viajar con el
+              menor de edad</label>
+            <input id="nombresApellidosAutorizadoViajar" name="nombresApellidosAutorizadoViajar" type="text"
+              class="form-control" required [(ngModel)]="autorizacion.nombresApellidosAutorizadoViajar"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['nombresApellidosAutorizadoViajar'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (input)="manejarNombre($event)" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="numeroIdentificacionAutorizadoViajar">Número de Identificación – Persona autorizada para viajar
+              con el menor de edad</label>
+            <input id="numeroIdentificacionAutorizadoViajar" name="numeroIdentificacionAutorizadoViajar" type="text"
+              [maxlength]="tamanoMaximo" class="form-control" required
+              [(ngModel)]="autorizacion.numeroIdentificacionAutorizadoViajar"
+              #numeroIdentificacionAutorizadoViajar="ngModel"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['numeroIdentificacionAutorizadoViajar'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (keypress)="validarSoloLetrasyNumeros($event)" />
+            <span *ngIf="numeroIdentificacionAutorizadoViajar.touched && numeroIdentificacionAutorizadoViajar.invalid"
+              class="validacion">*El Número de identificación es obligatorio</span>
+          </div>
+          <div class="col">
+            <label for="numeroTelefonicoAutorizadoViajar">Número Telefónico – Persona autorizada para viajar con el
+              menor de edad</label>
+            <input id="numeroTelefonicoAutorizadoViajar" name="numeroTelefonicoAutorizadoViajar" type="text"
+              class="form-control" required [(ngModel)]="autorizacion.numeroTelefonicoAutorizadoViajar"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['numeroTelefonicoAutorizadoViajar'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (input)="limitarNumero($event)" />
+            <span
+              *ngIf="!validarTelefono(autorizacion.numeroTelefonicoAutorizadoViajar!) && autorizacion.numeroTelefonicoAutorizadoViajar != null"
+              class="validacion">*Ingrese un número Telefónico valido</span>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <label for="direccionFisicaAutorizadoViajar">Dirección física – Persona autorizada para viajar con el menor
+              de edad</label>
+            <input id="direccionFisicaAutorizadoViajar" name="direccionFisicaAutorizadoViajar" type="text"
+              class="form-control" required [(ngModel)]="autorizacion.direccionFisicaAutorizadoViajar"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['direccionFisicaAutorizadoViajar'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" />
+          </div>
+        </div>
+        <hr>
+        <h4>Información de la persona autorizada para recoger al menor de edad</h4>
+        <div class="row">
+          <div class="col">
+            <label for="tipoIdentificacionAutorizadoRecoger">Tipo de identificación – Persona autorizada para recoger el
+              menor de edad</label>
+            <select id="tipoIdentificacionAutorizadoRecoger" name="tipoIdentificacionAutorizadoRecoger"
+              class="form-select" required [(ngModel)]="autorizacion.tipoIdentificacionAutorizadoRecoger"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['tipoIdentificacionAutorizadoRecoger'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor">
+              <option value="">Seleccione un tipo</option>
+              <option *ngFor="let tipo of tiposIdentificaciones" [value]="tipo.codigo">{{tipo.descripcion}}</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="nombresApellidosAutorizadoRecoger">Nombres y apellidos – Persona autorizada para recoger el
+              menor de edad</label>
+            <input id="nombresApellidosAutorizadoRecoger" name="nombresApellidosAutorizadoRecoger" type="text"
+              class="form-control" required [(ngModel)]="autorizacion.nombresApellidosAutorizadoRecoger"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['nombresApellidosAutorizadoRecoger'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (input)="manejarNombre($event)" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="numeroIdentificacionAutorizadoRecoger">Número de Identificación – Persona autorizada para
+              recoger el menor de edad</label>
+            <input id="numeroIdentificacionAutorizadoRecoger" name="numeroIdentificacionAutorizadoRecoger" type="text"
+              [maxlength]="tamanoMaximo" class="form-control" required
+              [(ngModel)]="autorizacion.numeroIdentificacionAutorizadoRecoger"
+              #numeroIdentificacionAutorizadoRecoger="ngModel"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['numeroIdentificacionAutorizadoRecoger'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (keypress)="validarSoloLetrasyNumeros($event)" />
+            <span *ngIf="numeroIdentificacionAutorizadoRecoger.touched && numeroIdentificacionAutorizadoRecoger.invalid"
+              class="validacion">*El Número de identificación es obligatorio</span>
+          </div>
+          <div class="col">
+            <label for="numeroTelefonicoAutorizadoRecoger">Número Telefónico – Persona autorizada para recoger el menor
+              de edad</label>
+            <input id="numeroTelefonicoAutorizadoRecoger" name="numeroTelefonicoAutorizadoRecoger" type="text"
+              class="form-control" required [(ngModel)]="autorizacion.numeroTelefonicoAutorizadoRecoger"
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['numeroTelefonicoAutorizadoRecoger'].invalid}"
+              [disabled]="!estadoMantenimiento || isSupervisor" (input)="limitarNumero($event)" />
+            <span
+              *ngIf="!validarTelefono(autorizacion.numeroTelefonicoAutorizadoRecoger!) && autorizacion.numeroTelefonicoAutorizadoRecoger != null"
+              class="validacion">*Ingrese un número Telefónico valido</span>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <label for="direccionFisicaAutorizadoRecoger">Dirección física – Persona autorizada para recoger el menor de
+              edad</label>
+            <input id="direccionFisicaAutorizadoRecoger" name="direccionFisicaAutorizadoRecoger" type="text"
+              class="form-control" required
+              [ngClass]="{'validacionInputs': registroForm.submitted && registroForm.controls['direccionFisicaAutorizadoRecoger'].invalid}"
+              [(ngModel)]="autorizacion.direccionFisicaAutorizadoRecoger"
+              [disabled]="!estadoMantenimiento || isSupervisor" />
+          </div>
+        </div>
+        <hr>
+        <h4>Documentación requerida</h4>
+        <div class="row">
+          <div class="col">
+            <label for="AutorizacionViaje">Copia de la manifestación expresa de autorización del viaje de la niña, niño
+              o adolescente</label>
+            <app-input-archivo [(ngModel)]="AutorizacionViaje" name="autorizacionViaje"
+              (ngModelChange)="manejarCambioArchivo($event, 1)" [disabled]="!estadoMantenimiento || isSupervisor"
+              [tipo]="[
+            'application/pdf'
+            ]" (excedeTamano)="manejarExcedeTamanio()" (tipoIncorrecto)="manejarTipoIncorrecto()"
+              [tamanoMaximoMb]="megasMaximas" [nombre]="'autorizacionViaje'" [acepta]="['.pdf']" />
+            <span *ngIf="autorizacion.copiaAutorizacionViajeNombreOriginal">Documento cargado: <a class="a"
+                (click)="descargarArchivo(autorizacion, 1)">{{autorizacion.copiaAutorizacionViajeNombreOriginal}}</a></span>
+          </div>
+          <div class="col">
+            <label for="DocumentoParentesco">Copia del documento que pruebe el parentesco</label>
+            <app-input-archivo [(ngModel)]="DocumentoParentesco" [disabled]="!estadoMantenimiento || isSupervisor"
+              name="documentoParentesco" (ngModelChange)="manejarCambioArchivo($event, 2)" [tipo]="[
+            'application/pdf'
+            ]" (excedeTamano)="manejarExcedeTamanio()" (tipoIncorrecto)="manejarTipoIncorrecto()"
+              [tamanoMaximoMb]="megasMaximas" [nombre]="'documentoParentesco'" [acepta]="['.pdf']" />
+            <span *ngIf="autorizacion.copiaDocumentoParentescoNombreOriginal">Documento cargado: <a class="a"
+                (click)="descargarArchivo(autorizacion, 2)">{{autorizacion.copiaDocumentoParentescoNombreOriginal}}</a></span>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="DocumentoIdentidadAutorizado">Copia del documento de identidad del mayor de edad al que se
+              autoriza</label>
+            <app-input-archivo [(ngModel)]="DocumentoIdentidadAutorizado"
+              [disabled]="!estadoMantenimiento || isSupervisor" name="DocumentoIdentidadAutorizado"
+              (ngModelChange)="manejarCambioArchivo($event, 3)" [tipo]="[
+            'application/pdf'
+            ]" (excedeTamano)="manejarExcedeTamanio()" (tipoIncorrecto)="manejarTipoIncorrecto()"
+              [tamanoMaximoMb]="megasMaximas" [nombre]="'DocumentoIdentidadAutorizado'" [acepta]="['.pdf']" />
+            <span *ngIf="autorizacion.copiaDocumentoIdentidadAutorizadoNombreOriginal">Documento cargado: <a class="a"
+                (click)="descargarArchivo(autorizacion, 3)">{{autorizacion.copiaDocumentoIdentidadAutorizadoNombreOriginal}}</a></span>
+          </div>
+          <div class="col">
+            <label for="ConstanciaEntrega">Copia del documento de constancia de entrega del menor de edad a la persona
+              autorizada</label>
+            <app-input-archivo [(ngModel)]="ConstanciaEntrega" name="ConstanciaEntrega"
+              [disabled]="!estadoMantenimiento || isSupervisor" (ngModelChange)="manejarCambioArchivo($event, 4)"
+              [tipo]="[
+            'application/pdf'
+            ]" (excedeTamano)="manejarExcedeTamanio()" (tipoIncorrecto)="manejarTipoIncorrecto()"
+              [tamanoMaximoMb]="megasMaximas" [nombre]="'ConstanciaEntrega'" [acepta]="['.pdf']" />
+            <span *ngIf="autorizacion.copiaConstanciaEntregaNombreOriginal">Documento cargado: <a class="a"
+                (click)="descargarArchivo(autorizacion, 4)">{{autorizacion.copiaConstanciaEntregaNombreOriginal}}</a></span>
+          </div>
+        </div>
+        <button *ngIf="!isSupervisor" type="submit" class="boton primario relleno"
+          [disabled]="!estadoMantenimiento ">Guardar</button>
+      </form>
+    </div>
+  </div>
+</div>
+<app-popup #popup />

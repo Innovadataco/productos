@@ -1,0 +1,47 @@
+/api/v1/mantenimiento/listar-actividades:
+  get:
+    tags:
+      - Mantenimiento
+    summary: Listar actividades disponibles
+    description: Retorna las actividades válidas para diligenciar alistamientos.
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Actividades disponibles.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required:
+                  - id
+                  - nombre
+                properties:
+                  id:
+                    type: integer
+                  nombre:
+                    type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al listar las actividades.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string

@@ -1,0 +1,170 @@
+.btn-close {
+  top: 10px; /* Distancia superior */
+  right: 10px; /* Distancia derecha */
+  margin-right: 10px; /* Margen derecho */
+}
+
+input, select {
+  margin-bottom: 10px; /* Margen inferior */
+}
+
+
+button {
+  margin-top: 10px; /* Margen superior */
+}
+
+textarea {
+  width: 100%; /* Ancho del textarea */
+  height: 70px; /* Altura del textarea */
+}
+
+.custom-file-input {
+  box-sizing: border-box;
+  width: 85px;
+  padding: 5px 10px;
+  border: 1px solid var(--azul);
+  color: var(--azul);
+  background-color: #ffff;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Estilos generales */
+input[type="checkbox"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #3366CC; /* Color azul */
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  vertical-align: middle;
+  background-color: #fff;
+}
+
+/* Cuando el checkbox está marcado */
+input[type="checkbox"]:checked {
+  background-color: #3366CC;
+  border-color: #3366CC;
+}
+
+/* Icono de check */
+input[type="checkbox"]:checked::after {
+  content: '✔';
+  color: white;
+  font-size: 16px;
+  font-weight: 20px;
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+}
+
+/* Checkbox deshabilitado */
+input[type="checkbox"]:disabled {
+  border-color: #737373;
+  background-color: #e5e5e5;
+  cursor: not-allowed;
+}
+
+input[type="checkbox"]:disabled::after {
+  color: #757575;
+}
+
+/* Checkbox deshabilitado y marcado */
+input[type="checkbox"]:checked:disabled {
+  background-color: #737373;
+  border-color: #737373;
+}
+
+input[type="checkbox"]:checked:disabled::after {
+  content: '✔';
+  color: white;
+  font-size: 16px;
+  font-weight: 20px;
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+}
+
+/* Efecto de foco */
+input[type="checkbox"]:focus {
+  outline: 2px solid #3366CC;
+  outline-offset: 2px;
+}
+
+.table-container {
+  width: 45%;  /* El ancho del contenedor */
+  overflow-x: auto;  /* Habilita el scroll horizontal */
+  border: 1px solid #ccc;  /* Borde del contenedor */
+  border-radius: 5px;  /* Bordes redondeados */
+}
+
+.table{
+  border-color: #f4f1f1;
+}
+
+#centrar-checkbox{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#alinear-texto{
+  text-align: left;
+}
+
+.encabezado {
+  background: #e6effd 0% 0% no-repeat padding-box;
+  border-radius: 5px 5px 0px 0px;
+  opacity: 1;
+  color: #004884;
+  font-weight: 600;
+}
+
+.th-listado {
+  /* width: 100px;  */
+  text-align: center;
+}
+
+.row {
+  display: flex;
+  gap: 10px; /* Espacio entre columnas */
+}
+
+.col {
+  flex: 1; /* Hace que todas las columnas tengan el mismo tamaño */
+  padding: 10px;
+}
+table tr td{
+  align-items: center;
+}
+
+table tr:nth-child(even) {
+  background-color: #f4f1f1;
+}
+
+table tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.tbody-listado{
+  display: block;
+  max-height: 300px; /* Altura máxima del área visible */
+  overflow-y: auto; /* Habilita el scroll vertical */
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #e6effd;
+  z-index: 2;
+}
+
+.validacionInputs{
+  border: 1px solid red !important;
+}
+

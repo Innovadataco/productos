@@ -1,0 +1,129 @@
+/api/v1/novedades:
+  post:
+    tags:
+      - Novedades
+    summary: Crear novedad
+    description: Registra una nueva novedad y la sincroniza con el servicio externo de despachos.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - idDespacho
+              - idTipoNovedad
+              - descripcion
+              - horaNovedad
+              - fechaNovedad
+            properties:
+              idDespacho:
+                type: integer
+                format: int64
+                description: Identificador interno del despacho relacionado.
+              idTipoNovedad:
+                type: integer
+                format: int64
+                description: Identificador del tipo de novedad.
+              descripcion:
+                type: string
+                maxLength: 255
+              otros:
+                type: string
+                maxLength: 255
+              horaNovedad:
+                type: string
+                pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+                description: Hora de la novedad en formato HH:mm.
+              fechaNovedad:
+                type: string
+                format: date
+                description: Fecha de la novedad en formato YYYY-MM-DD.
+              nitProveedor:
+                type: string
+                description: NIT del proveedor que reporta la novedad.
+              fuenteDato:
+                type: string
+                description: Fuente desde la que se registró la novedad.
+    responses:
+      '200':
+        description: Novedad creada correctamente.
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Estructura devuelta por el servicio externo. Puede incluir identificadores y mensajes adicionales.
+              additionalProperties: true
+      '400':
+        description: Petición inválida o token de autorización no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada o autenticación incompleta.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Recurso requerido no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '422':
+        description: Datos inválidos para crear la novedad.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string
+      '500':
+        description: Error interno al crear la novedad.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string

@@ -1,0 +1,100 @@
+/api/v1/dashboard:
+  get:
+    tags:
+      - Dashboard
+    summary: Obtener resumen de mantenimientos y novedades
+    description: >-
+      Retorna el consolidado de mantenimientos y novedades agrupados por empresa
+      y fecha. Permite filtrar por un NIT y por un rango de fechas.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: nit
+        schema:
+          type: string
+        description: NIT del vigilado a consultar. Si se omite se utiliza el usuario autenticado.
+      - in: query
+        name: fechaInicio
+        schema:
+          type: string
+          format: date
+        description: Fecha inicial del rango en formato YYYY-MM-DD.
+      - in: query
+        name: fechaFin
+        schema:
+          type: string
+          format: date
+        description: Fecha final del rango en formato YYYY-MM-DD.
+    responses:
+      '200':
+        description: Resumen agrupado por empresa y fecha.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required:
+                  - nitEmpresa
+                  - nombreEmpresa
+                  - mantenimientoCorrectivo
+                  - mantenimientoPreventivo
+                  - alistamiento
+                  - autorizaciones
+                  - novedades
+                properties:
+                  nitEmpresa:
+                    type: string
+                    description: NIT de la empresa vigilada.
+                  nombreEmpresa:
+                    type: string
+                    description: Razón social de la empresa vigilada.
+                  mantenimientoCorrectivo:
+                    type: integer
+                    format: int32
+                    description: Total de mantenimientos correctivos diligenciados en la fecha.
+                  mantenimientoPreventivo:
+                    type: integer
+                    format: int32
+                    description: Total de mantenimientos preventivos diligenciados en la fecha.
+                  alistamiento:
+                    type: integer
+                    format: int32
+                    description: Total de alistamientos registrados en la fecha.
+                  autorizaciones:
+                    type: integer
+                    format: int32
+                    description: Total de autorizaciones registradas en la fecha.
+                  novedades:
+                    type: integer
+                    format: int32
+                    description: Total de novedades registradas en la fecha.
+                  fecha:
+                    type: string
+                    description: Fecha de corte del resumen (DD/MM/YYYY).
+      '401':
+        description: Autenticación requerida o token inválido.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error inesperado al generar el resumen.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+                error:
+                  type: string
+                  description: Mensaje técnico opcional.

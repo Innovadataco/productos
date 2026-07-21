@@ -1,0 +1,103 @@
+<div class="py-2 px-sm-3 px-md-4 px-lg-5 margen">
+  <h2 *ngIf="isSupervisor">Historial de programas de mantenimientos preventivos</h2>
+  <div class="d-flex">
+    <div class="d-block mb-3">
+      <table class="informacion tabla-informacion ">
+        <thead>
+          <tr>
+            <th colspan="2" style="text-align: center !important;">Información del formulario</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fw-semibold titulo-fila" style="width: 150px !important;">Nit</td>
+            <td>
+              <ng-container>
+                {{usuario?.usuario}}
+              </ng-container>
+            </td>
+          </tr>
+          <tr>
+            <td class="fw-semibold titulo-fila" style="width: 150px !important;">Razón social</td>
+            <td>
+              <ng-container>
+                {{usuario?.nombre}}
+              </ng-container>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br>
+      <table *ngIf="!isSupervisor" class="informacion tabla-informacion ">
+        <thead>
+          <tr>
+            <th style="text-align: center !important;">PDF del programa de mantenimiento preventivo, máx. {{megasMaximas}}Mb</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <app-input-archivo [(ngModel)]="mantenimientoPreventivo" [tipo]="['application/pdf']" [tamanoMaximoMb]="megasMaximas"
+                [nombre]="'mantenimientoPreventivo'" [acepta]="['.pdf']" (excedeTamano)="manejarExcedeTamanio()"
+                (tipoIncorrecto)="manejarTipoIncorrecto()"
+                (ngModelChange)="manejarCambioArchivo($event)"></app-input-archivo>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div *ngIf="rol?.id !== 3" class="d-block mb-3" style="margin-left: 50px;">
+      <button type="button" class="boton primario delineado" (click)="volver()" style="position: absolute; right: 45px;">
+        Volver
+      </button>
+    </div>
+  </div>
+  <div class="ruta w-100 custom-scroll">
+    <div class="d-flex mx-0 table-container">
+      <table class="table custom-scroll">
+        <thead class="encabezado">
+          <tr>
+            <th class="th-listado">
+              PDF del programa de mantenimiento preventivo
+            </th>
+            <th class="th-listado">
+              Fecha
+            </th>
+            <th class="th-listado">
+              Estado
+            </th>
+            <th class="th-listado">
+              Descargar
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let documento of listaDocumentos | paginate: { itemsPerPage: itemsPerPagePrevent, currentPage: pagePrevent, id:'preventivo' }; let i = index">
+            <td style="width: 100px; text-align: center;">
+              {{documento.nombreOriginal}}
+            </td>
+            <td style="width: 100px; text-align: center;">
+                {{ documento.fecha!.split('T')[0] | date:'dd/MM/yyyy' }}
+            </td>
+            <td style="width: 100px; text-align: center;">
+              {{ documento.estado ? 'Activo' : 'Inactivo' }}
+            </td>
+            <td style="width: 100px; text-align: center;">
+              <button type="button" class="boton primario relleno" (click)="descargarArchivo(documento)">Descargar</button>
+            </td>
+          </tr>
+          <tr *ngIf="listaDocumentos.length === 0">
+            <td colspan="4" style="text-align: center;">No hay documentos</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-center">
+      <!-- Paginador -->
+      <pagination-controls class="pagination-controls"
+        (pageChange)="pagePrevent = $event" previousLabel="Anterior"
+        nextLabel="Siguiente" [maxSize]="7" [directionLinks]="true" [autoHide]="false" #paginador1 id="preventivo">
+      </pagination-controls>
+    </div>
+  </div>
+</div>

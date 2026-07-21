@@ -1,0 +1,198 @@
+/api/v1/mantenimiento/guardar-autorizacion:
+  post:
+    tags:
+      - Mantenimiento
+    summary: Registrar autorización de viaje
+    description: Diligencia la información y soportes requeridos para autorizaciones de viaje asociadas a un mantenimiento.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - fechaViaje
+              - origen
+              - destino
+              - tipoIdentificacionNna
+              - numeroIdentificacionNna
+              - nombresApellidosNna
+              - situacionDiscapacidad
+              - tipoDiscapacidad
+              - perteneceComunidadEtnica
+              - tipoPoblacionEtnica
+              - tipoIdentificacionOtorgante
+              - numeroIdentificacionOtorgante
+              - nombresApellidosOtorgante
+              - numeroTelefonicoOtorgante
+              - correoElectronicoOtorgante
+              - direccionFisicaOtorgante
+              - sexoOtorgante
+              - calidadActua
+              - tipoIdentificacionAutorizadoViajar
+              - numeroIdentificacionAutorizadoViajar
+              - nombresApellidosAutorizadoViajar
+              - numeroTelefonicoAutorizadoViajar
+              - direccionFisicaAutorizadoViajar
+              - tipoIdentificacionAutorizadoRecoger
+              - numeroIdentificacionAutorizadoRecoger
+              - nombresApellidosAutorizadoRecoger
+              - numeroTelefonicoAutorizadoRecoger
+              - direccionFisicaAutorizadoRecoger
+              - copiaAutorizacionViajeNombreOriginal
+              - copiaAutorizacionViajeDocumento
+              - copiaAutorizacionViajeRuta
+              - copiaDocumentoParentescoNombreOriginal
+              - copiaDocumentoParentescoDocumento
+              - copiaDocumentoParentescoRuta
+              - copiaDocumentoIdentidadAutorizadoNombreOriginal
+              - copiaDocumentoIdentidadAutorizadoDocumento
+              - copiaDocumentoIdentidadAutorizadoRuta
+              - copiaConstanciaEntregaNombreOriginal
+              - copiaConstanciaEntregaDocumento
+              - copiaConstanciaEntregaRuta
+              - mantenimientoId
+            properties:
+              fechaViaje:
+                type: string
+                description: Fecha del viaje autorizado (formato libre aceptado por el repositorio).
+              origen:
+                type: string
+              destino:
+                type: string
+              tipoIdentificacionNna:
+                type: string
+              numeroIdentificacionNna:
+                type: string
+              nombresApellidosNna:
+                type: string
+              situacionDiscapacidad:
+                type: string
+              tipoDiscapacidad:
+                type: string
+              perteneceComunidadEtnica:
+                type: boolean
+              tipoPoblacionEtnica:
+                type: string
+              tipoIdentificacionOtorgante:
+                type: string
+              numeroIdentificacionOtorgante:
+                type: string
+              nombresApellidosOtorgante:
+                type: string
+              numeroTelefonicoOtorgante:
+                type: string
+              correoElectronicoOtorgante:
+                type: string
+                format: email
+              direccionFisicaOtorgante:
+                type: string
+              sexoOtorgante:
+                type: string
+              calidadActua:
+                type: string
+              tipoIdentificacionAutorizadoViajar:
+                type: string
+              numeroIdentificacionAutorizadoViajar:
+                type: string
+              nombresApellidosAutorizadoViajar:
+                type: string
+              numeroTelefonicoAutorizadoViajar:
+                type: string
+              direccionFisicaAutorizadoViajar:
+                type: string
+              tipoIdentificacionAutorizadoRecoger:
+                type: string
+              numeroIdentificacionAutorizadoRecoger:
+                type: string
+              nombresApellidosAutorizadoRecoger:
+                type: string
+              numeroTelefonicoAutorizadoRecoger:
+                type: string
+              direccionFisicaAutorizadoRecoger:
+                type: string
+              copiaAutorizacionViajeNombreOriginal:
+                type: string
+              copiaAutorizacionViajeDocumento:
+                type: string
+              copiaAutorizacionViajeRuta:
+                type: string
+              copiaDocumentoParentescoNombreOriginal:
+                type: string
+              copiaDocumentoParentescoDocumento:
+                type: string
+              copiaDocumentoParentescoRuta:
+                type: string
+              copiaDocumentoIdentidadAutorizadoNombreOriginal:
+                type: string
+              copiaDocumentoIdentidadAutorizadoDocumento:
+                type: string
+              copiaDocumentoIdentidadAutorizadoRuta:
+                type: string
+              copiaConstanciaEntregaNombreOriginal:
+                type: string
+              copiaConstanciaEntregaDocumento:
+                type: string
+              copiaConstanciaEntregaRuta:
+                type: string
+              mantenimientoId:
+                type: integer
+                format: int64
+              otrosCampos:
+                type: object
+                additionalProperties: true
+                description: Campos adicionales permitidos por la sincronización externa.
+    responses:
+      '201':
+        description: Autorización registrada exitosamente.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '400':
+        description: Algún campo requerido está ausente o inválido.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Recurso relacionado no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al registrar la autorización.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string

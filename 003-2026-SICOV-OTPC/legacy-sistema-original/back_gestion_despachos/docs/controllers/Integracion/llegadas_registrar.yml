@@ -1,0 +1,110 @@
+/api/v1/integracion/llegadas:
+  post:
+    tags:
+      - Integración Llegadas
+    summary: Registrar llegada
+    description: |
+      Recibe el JSON de la llegada, lo persiste en `tbl_llegadas_solicitudes`
+      y lo reenvía al servicio externo `POST /llegadasempresas`.
+      Si el envío externo falla, la solicitud queda con `procesado=false`.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - idTipollegada
+              - placa
+              - numeroPasajero
+            properties:
+              idTipollegada:
+                type: integer
+                enum: [1, 2]
+                description: |
+                  Tipo de llegada: `1` con despacho (requiere `idDespacho`),
+                  `2` sin despacho (`idDespacho` debe ser null).
+              idDespacho:
+                type: integer
+                nullable: true
+                description: Obligatorio para tipo 1. Debe ser null para tipo 2.
+              placa:
+                type: string
+                description: Placa del vehículo (se normaliza sin espacios ni guiones).
+              numeroPasajero:
+                type: integer
+                minimum: 1
+                description: Cantidad de pasajeros al momento de la llegada.
+          examples:
+            conDespacho:
+              summary: Llegada tipo 1 (con despacho)
+              value:
+                idTipollegada: 1
+                idDespacho: 779
+                placa: AMD816
+                numeroPasajero: 25
+            sinDespacho:
+              summary: Llegada tipo 2 (sin despacho)
+              value:
+                idTipollegada: 2
+                idDespacho: null
+                placa: AMD816
+                numeroPasajero: 25
+    responses:
+      '200':
+        description: Llegada registrada y sincronizada con el servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                solicitudId:
+                  type: integer
+                  description: Identificador local de la solicitud guardada.
+                idLlegadaExterno:
+                  type: integer
+                  nullable: true
+                  description: Identificador devuelto por Supertransporte.
+              additionalProperties: true
+      '400':
+        description: Datos inválidos o token de autorización no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada o autenticación incompleta.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Recurso requerido no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno o respuesta de error del servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true

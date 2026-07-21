@@ -1,0 +1,78 @@
+/api/v1/dashboard/logs:
+  get:
+    tags:
+      - Dashboard
+    summary: Consultar logs de mantenimientos
+    description: Retorna el historial de mantenimientos registrados, con opción de filtrar por NIT.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: nit
+        schema:
+          type: string
+        description: NIT del vigilado a consultar.
+    responses:
+      '200':
+        description: Historial de mantenimientos registrados.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required:
+                  - tipo
+                  - fechaDiligenciamiento
+                  - placa
+                  - procesado
+                  - mantenimientoId
+                  - nit
+                  - nombre
+                properties:
+                  tipo:
+                    type: string
+                    description: Tipo de mantenimiento registrado.
+                  fechaDiligenciamiento:
+                    type: string
+                    description: Fecha y hora de registro.
+                  placa:
+                    type: string
+                    description: Placa del vehículo afectado.
+                  procesado:
+                    type: boolean
+                    description: Indica si el mantenimiento fue procesado por el sistema externo.
+                  mantenimientoId:
+                    type: integer
+                    format: int64
+                    description: Identificador interno del mantenimiento.
+                  nit:
+                    type: string
+                    description: NIT de la empresa vigilada.
+                  nombre:
+                    type: string
+                    description: Razón social de la empresa vigilada.
+      '401':
+        description: Autenticación requerida o token inválido.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error inesperado al obtener los logs de mantenimiento.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+                error:
+                  type: string

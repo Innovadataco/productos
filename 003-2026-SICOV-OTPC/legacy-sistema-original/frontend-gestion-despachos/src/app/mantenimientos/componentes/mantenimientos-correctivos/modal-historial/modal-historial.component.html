@@ -1,0 +1,60 @@
+<div class="modal fade" id="modalHistorial" tabindex="-1" aria-labelledby="modalHistorialLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalHistorialLabel">Historial de mantenimiento correctivo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="ruta w-100 custom-scroll">
+          <div class="d-flex mx-0 table-container">
+            <table class="table table-bordered">
+              <thead class="encabezado">
+                <tr>
+                  <th>#</th>
+                  <th>Placa</th>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                  <th>NIT</th>
+                  <th>Razón Social</th>
+                  <th>Tipo Identificación</th>
+                  <th>Número Identificación</th>
+                  <th>Nombre Ingeniero</th>
+                  <th>Detalle Actividades</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="historialRegistros.length <= 0">
+                  <td colspan="10" class="text-center">No hay registros disponibles</td>
+                </tr>
+                <tr
+                  *ngFor="let registro of historialRegistros | paginate: { itemsPerPage: itemsPerPageCorrect, currentPage: pageCorrect, id:'historialCorrectivo' }; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ registro.placa }}</td>
+                  <td>{{ registro.fecha.split('T')[0] | date:'dd/MM/yyyy' }}</td>
+                  <td>{{ registro.hora }}</td>
+                  <td>{{ registro.nit }}</td>
+                  <td>{{ registro.razon_social }}</td>
+                  <td>{{ tiposIdentificacion(registro.tipo_identificacion) }}</td>
+                  <td>{{ registro.numero_identificacion }}</td>
+                  <td>{{ registro.nombres_responsable }}</td>
+                  <td style="max-width: 300px;">{{ registro.detalle_actividades }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Paginador -->
+          <pagination-controls class="pagination-controls" (pageChange)="pageCorrect = $event" previousLabel="Anterior"
+            nextLabel="Siguiente" [maxSize]="7" [directionLinks]="true" [autoHide]="false" #paginador1
+            id="historialCorrectivo">
+          </pagination-controls>
+        </div>
+      </div>
+      <div *ngIf="isSupervisor" class="modal-footer">
+        <a type="button" class="boton primario relleno" [href]="exportarHistorial()">
+          <i class="bi bi-file-earmark-arrow-down"></i> Exportar
+        </a>
+      </div>
+    </div>
+  </div>
+  <app-popup #popup></app-popup>

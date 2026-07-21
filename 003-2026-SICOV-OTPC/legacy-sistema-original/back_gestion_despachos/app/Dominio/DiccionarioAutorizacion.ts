@@ -1,0 +1,17 @@
+export const ROLES = {
+    ADMINISTRADOR: 1,
+    CLIENTE: 2,
+}
+
+export const MODULOS = {
+    USUARIO: 1,
+    MATENIMIENTO_PREVENTIVO:2,
+    MATENIMIENTO_CORRECTIVO:3
+}
+
+export const FUNCIONALIDADES = {
+    CREAR: 1,
+    LEER: 2,
+    ACTUALIZAR: 3,
+    ELIMINAR: 4
+}

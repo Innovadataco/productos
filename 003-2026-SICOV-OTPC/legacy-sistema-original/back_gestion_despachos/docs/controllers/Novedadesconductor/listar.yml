@@ -1,0 +1,187 @@
+/api/v1/novedadesconductor:
+  get:
+    tags:
+      - Novedades Conductor
+    summary: Listar novedades de conductor
+    description: Obtiene el paginado de novedades asociadas a conductores.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: page
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Número de página a consultar.
+      - in: query
+        name: numero_items
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Cantidad de registros por página.
+      - in: query
+        name: find
+        schema:
+          type: string
+        description: Texto opcional para filtrar resultados.
+    responses:
+      '200':
+        description: Listado paginado de novedades de conductor.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+                - array_data
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string
+                array_data:
+                  type: object
+                  required:
+                    - meta
+                    - data
+                  properties:
+                    meta:
+                      type: object
+                      additionalProperties: true
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          idNovedad:
+                            type: integer
+                          tipoIdentificacionConductor:
+                            type: string
+                          numeroIdentificacion:
+                            type: string
+                          primerNombreConductor:
+                            type: string
+                          segundoNombreConductor:
+                            type: string
+                            nullable: true
+                          primerApellidoConductor:
+                            type: string
+                          segundoApellidoConductor:
+                            type: string
+                            nullable: true
+                          idPruebaAlcoholimetria:
+                            type: string
+                            nullable: true
+                          resultadoPruebaAlcoholimetria:
+                            type: string
+                            nullable: true
+                          fechaUltimaPruebaAlcoholimetria:
+                            type: string
+                            format: date
+                            nullable: true
+                          licenciaConduccion:
+                            type: string
+                          idExamenMedico:
+                            type: string
+                            nullable: true
+                          fechaUltimoExamenMedico:
+                            type: string
+                            format: date
+                            nullable: true
+                          fechaVencimientoLicencia:
+                            type: string
+                            format: date
+                          observaciones:
+                            type: string
+                            nullable: true
+                          estado:
+                            type: boolean
+                          procesado:
+                            type: boolean
+                          fechaCreacion:
+                            type: string
+                            format: date-time
+                          fechaActualizacion:
+                            type: string
+                            format: date-time
+      '400':
+        description: Petición inválida o token de autorización no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada o autenticación incompleta.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Recurso asociado no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '422':
+        description: Parámetros de consulta inválidos.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string
+      '500':
+        description: Error interno al listar las novedades de conductor.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string

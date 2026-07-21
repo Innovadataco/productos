@@ -1,0 +1,191 @@
+/api/v1/integracion/despachos:
+  post:
+    tags:
+      - Integración Despachos
+    summary: Registrar despacho
+    description: |
+      Recibe el JSON completo del despacho desde la web, lo persiste en `tbl_despachos_solicitudes`
+      y lo reenvía al servicio externo `POST /despachosempresa` de Supertransporte.
+      Si el envío externo falla, la solicitud queda con `procesado=false` para reintento futuro.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - obj_despacho
+              - obj_vehiculo
+              - obj_conductores
+              - obj_rutas
+            properties:
+              obj_despacho:
+                type: object
+                required:
+                  - nitEmpresaTransporte
+                  - razonSocial
+                  - fechaSalida
+                  - horaSalida
+                  - numeroPasajero
+                properties:
+                  nitEmpresaTransporte:
+                    type: string
+                    maxLength: 9
+                    description: NIT del vigilado.
+                  razonSocial:
+                    type: string
+                    maxLength: 200
+                  fechaSalida:
+                    type: string
+                    format: date
+                    description: Formato YYYY-MM-DD.
+                  horaSalida:
+                    type: string
+                    pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+                    description: Formato HH:mm (24h).
+                  numeroPasajero:
+                    type: integer
+                    minimum: 1
+                    maximum: 85
+                  valorTiquete:
+                    type: number
+                    format: float
+                  despachoEnTransito:
+                    type: boolean
+              obj_vehiculo:
+                type: object
+                required:
+                  - placa
+                  - clase
+                  - nivelServicio
+                properties:
+                  placa:
+                    type: string
+                    description: Placa sin espacios ni guiones (ej. ABC123).
+                  soat:
+                    type: string
+                  fechaVencimientoSoat:
+                    type: string
+                    format: date
+                  revisionTecnicoMecanica:
+                    type: string
+                  fechaRevisionTecnicoMecanica:
+                    type: string
+                    format: date
+                  tarjetaOperacion:
+                    type: string
+                  fechaVencimientoTarjetaOperacion:
+                    type: string
+                    format: date
+                  idMatenimientoPreventivo:
+                    type: integer
+                  idProtocoloAlistamientodiario:
+                    type: integer
+                  clase:
+                    type: integer
+                    description: ID paramétrico de clase de vehículo.
+                  nivelServicio:
+                    type: integer
+                    description: ID paramétrico de nivel de servicio.
+              obj_conductores:
+                type: object
+                properties:
+                  tipoIdentificacionPrincipal:
+                    type: integer
+                  numeroIdentificacion:
+                    type: string
+                  primerNombrePrincipal:
+                    type: string
+                  idExamenMedico:
+                    type: string
+                  idPruebaAlcoholimetria:
+                    type: string
+                  licenciaConduccion:
+                    type: string
+                  tipoIdentificacionSecundario:
+                    type: integer
+                  numeroIdentificacionSecundario:
+                    type: string
+                  primerNombreSecundario:
+                    type: string
+                  idExamenMedicoSecundario:
+                    type: string
+                  idPruebaAlcoholimetriaSecundario:
+                    type: string
+                  licenciaConduccionSecundario:
+                    type: string
+              obj_rutas:
+                type: object
+                properties:
+                  idOrigen:
+                    type: integer
+                  idDestino:
+                    type: integer
+                  centroPobladoOrigen:
+                    type: string
+                  centroPobladoDestino:
+                    type: string
+              array_autorizaciones:
+                type: array
+                description: Autorizaciones NNA asociadas al despacho (opcional).
+                items:
+                  type: object
+                  additionalProperties: true
+    responses:
+      '200':
+        description: Despacho registrado y sincronizado con el servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                solicitudId:
+                  type: integer
+                  description: Identificador local de la solicitud guardada.
+                idDespachoExterno:
+                  type: integer
+                  nullable: true
+                  description: Identificador devuelto por Supertransporte.
+              additionalProperties: true
+      '400':
+        description: Petición inválida o token de autorización del vigilado no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada o autenticación incompleta.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Usuario o recurso requerido no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno o respuesta de error del servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true

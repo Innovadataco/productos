@@ -1,0 +1,34 @@
+/api/v1/archivos:
+  post:
+    tags:
+      - Archivos
+    description: Guardar un archivo
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              archivo:
+                type: string
+                format: binary
+    responses:
+      '200':
+        description: Archivo guardado exitosamente
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombreAlmacenado:
+                  type: string
+                  description: Nombre del archivo almacenado
+                nombreOriginalArchivo:
+                  type: string
+                  description: Nombre original del archivo
+                ruta:
+                  type: string
+                  description: Ruta donde se almacenó el archivo

@@ -1,0 +1,74 @@
+/api/v1/mantenimiento/listar-placas:
+  get:
+    tags:
+      - Mantenimiento
+    summary: Listar placas habilitadas por tipo de mantenimiento
+    description: Retorna las placas asociadas al usuario autenticado para el tipo de mantenimiento indicado.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: tipoId
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Identificador del tipo de mantenimiento (1 Preventivo, 2 Correctivo, 3 Alistamiento, 4 Autorización).
+    responses:
+      '200':
+        description: Placas disponibles para el tipo solicitado.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                description: Estructura devuelta por el repositorio de mantenimientos.
+                additionalProperties: true
+      '400':
+        description: Falta el parámetro requerido tipoId.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Recursos relacionados no encontrados.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al obtener las placas.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+                error:
+                  type: string
+                  description: Mensaje técnico opcional.

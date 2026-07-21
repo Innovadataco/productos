@@ -1,0 +1,52 @@
+/api/v1/dashboard/placas:
+  get:
+    tags:
+      - Dashboard
+    summary: Listar placas con mantenimientos preventivos
+    description: Obtiene las placas habilitadas para mantener desde el dashboard.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: placa
+        schema:
+          type: string
+        description: Filtra el resultado por una placa específica.
+      - in: query
+        name: nit
+        schema:
+          type: string
+        description: NIT del vigilado a consultar. Si se omite se usa el usuario autenticado.
+    responses:
+      '200':
+        description: Listado de placas disponibles.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      '401':
+        description: Autenticación requerida o token inválido.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error inesperado al obtener las placas.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+                error:
+                  type: string

@@ -1,0 +1,166 @@
+.informacion {
+  width: 480px;
+  border-color: 1px solid black !important;
+  box-shadow: 0px 3px 6px #00000029;
+  border-radius: 5px;
+}
+
+.titulo-fila {
+  color: #4b4b4b;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.ruta {
+  overflow: auto;
+  margin-top: 10px;
+  box-shadow: 0px 3px 6px #00000029;
+}
+
+.table-container {
+  width: 100%; /* Ensure the container takes full width */
+  overflow-x: hidden; /* Disable horizontal scrolling */
+}
+
+.table {
+  table-layout: auto; /* Allow columns to adjust based on content */
+  width: 100%; /* Ensure table takes full width */
+  word-wrap: break-word; /* Break long words to prevent overflow */
+}
+
+.encabezado {
+  background: #e6effd 0% 0% no-repeat padding-box;
+  border-radius: 5px 5px 0px 0px;
+  opacity: 1;
+  color: #004884;
+  font-weight: 600;
+}
+
+.th-listado {
+  width: 100px; text-align: center;
+}
+
+.modal {
+  width: 95% !important; /* Expand modal width to fit content */
+  max-width: 1800px; /* Set a maximum width for large screens */
+}
+
+.modal-dialog {
+  max-width: 95% !important; /* Allow the modal to expand to 95% of the viewport width */
+  width: auto !important; /* Ensure the modal width adjusts dynamically */
+}
+
+.modal-content {
+  width: 100% !important; /* Ensure modal content takes full width */
+  max-width: none !important; /* Remove any maximum width constraints */
+}
+
+.custom-modal-size {
+  width: 1000px; /* Adjust width to fit content */
+  height: 90%; /* Keep height as is */
+  max-width: none; /* Remove fixed maximum width */
+  max-height: 800px; /* Keep maximum height */
+}
+
+.modal-body {
+  overflow-y: auto; /* Scroll vertical */
+}
+
+.btn-close {
+  top: 10px; /* Distancia superior */
+  right: 10px; /* Distancia derecha */
+  margin-right: 10px; /* Margen derecho */
+}
+.modal-header {
+  display: block; /* Mostrar */
+  padding-bottom: 0%;
+}
+.modal-header .btn-close {
+  position: absolute; /* Posición absoluta */
+  top: 10px; /* Distancia superior */
+  right: 10px; /* Distancia derecha */
+  margin-right: 10px; /* Margen derecho */
+  margin-top: 5px; /* Margen superior */
+}
+
+/* PAGINACIÓN */
+/* Asegura que el contenedor del paginador esté centrado */
+::ng-deep .pagination-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px 0;
+}
+/* Aplica estilo al elemento paginador */
+::ng-deep .pagination-controls .ngx-pagination {
+  display: flex;
+  list-style-type: none;
+  padding: 5px;
+}
+/* Estilo para los enlaces dentro de cada botón */
+::ng-deep .pagination-controls .ngx-pagination li a {
+  color: #225685; /* Color del texto */
+  border-radius: 5px;  /* Bordes redondeados */
+  width: 40px; /* Ajusta este valor para el tamaño del cuadrado */
+  height: 40px; /* Debe ser igual al ancho */
+  line-height: 30px; /* Asegura que el texto esté centrado verticalmente */
+  text-align: center; /* Centra el texto horizontalmente */
+  display: inline-block; /* Asegura que se comporten como bloques en línea */
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+}
+/* Estilo cuando el usuario pasa el ratón sobre los botones */
+::ng-deep .pagination-controls .ngx-pagination li a:hover {
+  background-color: #e6effd; /* Cambia el color de fondo al hacer hover */
+}
+/* Estilo para la página actual */
+::ng-deep .pagination-controls .ngx-pagination .current {
+  background-color: #3366cc; /* Fondo azul para la página actual */
+  color: white; /* Texto blanco */
+  border-radius: 5px;  /* Bordes redondeados */
+  width: 40px; /* Ajusta este valor para el tamaño del cuadrado */
+  height: 40px; /* Debe ser igual al ancho */
+  line-height: 30px; /* Asegura que el texto esté centrado verticalmente */
+  text-align: center; /* Centra el texto horizontalmente */
+  display: inline-block; /* Asegura que se comporten como bloques en línea */
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+}
+/* Estilos para los botones de navegación (Anterior y Siguiente) */
+::ng-deep .pagination-controls .ngx-pagination .pagination-next a,
+::ng-deep .pagination-controls .ngx-pagination .pagination-previous a{
+  width: auto;
+  height: 40px; /* Debe ser igual al ancho */
+  line-height: 30px; /* Asegura que el texto esté centrado verticalmente */
+  background-color: transparent;
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+  text-align: center; /* Centrado horizontal */
+  display: auto;
+}
+::ng-deep .pagination-controls .ngx-pagination .pagination-next a:hover,
+::ng-deep .pagination-controls .ngx-pagination .pagination-previous a:hover{
+  background-color: transparent;
+  text-decoration: underline;
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+  text-align: center; /* Centrado horizontal */
+  display: inline-block;
+}
+/* Botones deshabilitados (anterior/siguiente) */
+::ng-deep .pagination-controls .pagination-previous.disabled,
+::ng-deep .pagination-controls .pagination-next.disabled {
+  width: auto;
+  height: 40px; /* Debe ser igual al ancho */
+  line-height: 30px; /* Asegura que el texto esté centrado verticalmente */
+  box-sizing: border-box; /* Asegura que padding y border no desajusten el tamaño */
+  text-align: center; /* Centrado horizontal */
+  display: auto;
+}
+
+::ng-deep .pagination-controls .pagination-ellipsis {
+  width: auto; /* No restringir el ancho */
+  height: auto;
+  line-height: normal; /* Ajuste vertical */
+  margin: 0 5px; /* Espaciado horizontal */
+}
+/* Estilo específico para las flechas */
+::ng-deep .pagination-controls .pagination-previous::before,
+::ng-deep .pagination-controls .pagination-next::after {
+  content: ''; /* Elimina herencia de contenido */
+}

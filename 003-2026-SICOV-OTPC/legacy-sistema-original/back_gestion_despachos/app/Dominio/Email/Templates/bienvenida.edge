@@ -1,0 +1,72 @@
+<html>
+    <head>
+        <style>
+            .contenedor{
+                display: block;
+                width: 90%;
+                max-width: 700px;
+                margin: 0 auto;
+            }
+            .cabecera{
+                width: 100%;
+                padding: 17px 20px;
+            }
+            .logo{
+                display: block;
+                width: 200px;
+                margin: 0 auto;
+            }
+            .cuerpo{
+                display: block;
+                width: 100%;
+                padding: 17px 20px;
+                font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            }
+            .pie-de-pagina{
+                display: block;
+                width: 100%;
+                padding: 30px 20px;
+            }
+            .pie-de-pagina table td{
+                vertical-align: middle;
+                padding: 10px;
+            }
+            .informacion{
+
+            }
+
+            /* fuentes */
+            .primario{
+                color: #00a3dd;
+            }
+            .secundario{
+                color: #39316b;
+            }
+            .gris{
+                color: #666465;
+            }
+            .negrita{
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="contenedor">
+            <div class="cabecera">
+                <div class="logo" style="width: 300px;">
+                    @if(typeof logoCid !== 'undefined' && logoCid)
+                      <img src="cid:{{ logoCid }}" alt="" style="max-height:60px; width:auto; display:block;" />
+                    @else
+                      <div class="logo-circle">B</div>
+                    @endif
+                </div>
+            </div>
+            <div class="cuerpo">
+                <h2 class="primario">Bienvenido(a): <small>{{ nombre }}</small></h2>
+                <span class="secundario negrita">Su contraseña provisional es: </span><span class="gris">{{ clave }}</span><br>
+                <p class="gris">Una vez ingreses, debes realizar el cambio de la contraseña asignada por seguridad</p>
+                <h3 class="primario">Atentamente.</h3>
+            </div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,137 @@
+/api/v1/integracion/integradora/resumen:
+  post:
+    tags:
+      - Integración Integradora
+    summary: Consultar resumen integradora
+    description: |
+      Puente hacia `POST /api-integradora/resumen` de Supertransporte.
+      Valida conductor, vehículo, pólizas, mantenimientos y alistamiento antes de crear un despacho.
+      No persiste información en la base de datos local.
+
+      **Reglas de negocio:**
+      - Si `fechaConsulta` es hoy, `horaConsulta` es opcional (consulta en vivo).
+      - Si `fechaConsulta` es anterior a hoy, `horaConsulta` es obligatoria (búsqueda histórica ±5 min).
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - numeroIdentificacion1
+              - placa
+              - fechaConsulta
+            properties:
+              numeroIdentificacion1:
+                type: string
+                description: Documento del conductor principal.
+              numeroIdentificacion2:
+                type: string
+                description: Documento del segundo conductor (opcional).
+              placa:
+                type: string
+                description: Placa del vehículo (formato AAA123).
+              nit:
+                type: string
+                description: NIT de la empresa de transporte (opcional).
+              fechaConsulta:
+                type: string
+                format: date
+                description: Formato YYYY-MM-DD.
+              horaConsulta:
+                type: string
+                pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+                description: Formato HH:mm. Obligatoria si la fecha es anterior a hoy.
+          example:
+            numeroIdentificacion1: "1018483318"
+            placa: NHT279
+            nit: "900123456"
+            fechaConsulta: "2026-06-16"
+            horaConsulta: "08:30"
+    responses:
+      '200':
+        description: Consulta integradora exitosa.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  example: 200
+                titulo:
+                  type: string
+                  example: Consulta integradora exitosa
+                obj:
+                  type: object
+                  properties:
+                    conductor1:
+                      type: object
+                      additionalProperties: true
+                    vehiculo:
+                      type: object
+                      additionalProperties: true
+                    polizas:
+                      type: object
+                      additionalProperties: true
+                    tarjetaOperacion:
+                      type: object
+                      additionalProperties: true
+                    mantenimientoPreventivo:
+                      type: object
+                      additionalProperties: true
+                    mantenimientoCorrectivo:
+                      type: object
+                      additionalProperties: true
+                    alistamientoDiario:
+                      type: object
+                      additionalProperties: true
+                    meta:
+                      type: object
+                      properties:
+                        fromHistorico:
+                          type: boolean
+                        fechaConsultaIntegradora:
+                          type: string
+                          format: date
+                        horaConsultaIntegradora:
+                          type: string
+              additionalProperties: true
+      '400':
+        description: Parámetros faltantes o formato de fecha/hora incorrecto.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada o autenticación incompleta.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Recurso no encontrado en fuentes externas.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '500':
+        description: Error en servicios externos (RUNT, mantenimientos, etc.).
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true

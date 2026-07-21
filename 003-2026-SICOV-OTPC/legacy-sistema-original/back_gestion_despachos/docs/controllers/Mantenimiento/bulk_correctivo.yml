@@ -1,0 +1,120 @@
+/api/v1/mantenimiento/bulk/correctivo:
+  post:
+    tags:
+      - Mantenimiento
+    summary: Programar mantenimientos correctivos en lote
+    description: Recibe un arreglo de registros y programa mantenimientos correctivos de forma diferida.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - registros
+            properties:
+              registros:
+                type: array
+                minItems: 1
+                items:
+                  type: object
+                  required:
+                    - vigiladoId
+                    - placa
+                    - fecha
+                    - hora
+                    - nit
+                    - razonSocial
+                    - tipoIdentificacion
+                    - numeroIdentificacion
+                    - nombresResponsable
+                    - detalleActividades
+                  properties:
+                    vigiladoId:
+                      type: string
+                    placa:
+                      type: string
+                    fecha:
+                      type: string
+                      format: date
+                    hora:
+                      type: string
+                    nit:
+                      type: string
+                    razonSocial:
+                      type: string
+                    tipoIdentificacion:
+                      type: string
+                    numeroIdentificacion:
+                      type: string
+                    nombresResponsable:
+                      type: string
+                    detalleActividades:
+                      type: string
+                    otrosCampos:
+                      type: object
+                      additionalProperties: true
+    responses:
+      '202':
+        description: Resumen de la programación en lote.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - total
+                - exitosos
+                - errores
+              properties:
+                total:
+                  type: integer
+                exitosos:
+                  type: integer
+                errores:
+                  type: array
+                  items:
+                    type: string
+      '400':
+        description: No se enviaron registros o la estructura es inválida.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - total
+                - exitosos
+                - errores
+              properties:
+                total:
+                  type: integer
+                exitosos:
+                  type: integer
+                errores:
+                  type: array
+                  items:
+                    type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al programar los mantenimientos.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+}

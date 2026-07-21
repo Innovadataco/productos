@@ -1,0 +1,77 @@
+.contenedor-input-botones{
+  display: flex;
+  gap: 0.5em;
+}
+
+table {
+  border-collapse: collapse;  /* Elimina los espacios entre las celdas */
+  width: 100%;  /* Asegura que la tabla ocupe todo el ancho del contenedor */
+  table-layout: fixed;  /* Fija el ancho de las columnas según el estilo */
+}
+th, td {
+  /* border: 1px solid #ccc;  Bordes para las celdas */
+  padding: 8px;  /* Espacio interno de las celdas */
+  text-align: left;  /* Alineación de texto a la izquierda */
+  vertical-align: middle; /* Alineación vertical al centro */
+}
+.encabezado {
+  background: #e6effd 0% 0% no-repeat padding-box;
+  border-radius: 5px 5px 0px 0px;
+  opacity: 1;
+  color: #004884;
+  font-weight: 600;
+}
+.table th, .tabla, .table td{
+  font-size: 14px;
+  padding: 10px;
+  align-items: center;
+}
+.table th{
+  color: var(--azul-oscuro);
+  background-color: var(--azul-claro);
+}
+.table-container {
+  width: 100%;  /* El ancho del contenedor */
+  overflow-x: auto;  /* Habilita el scroll horizontal */
+}
+.fila{
+  align-items: center;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25em 0.4em;
+  font-size: 75%;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+}
+
+.badge-success {
+  color: #fff;
+  background-color: #28a745;
+}
+
+.badge-danger {
+  color: #fff;
+  background-color: #dc3545;
+}
+
+.bi {
+  margin-left: 5px;
+}
+.bi-arrow-up {
+  color: green;
+  font-weight: bold;
+}
+.bi-arrow-down {
+  color: red;
+  font-weight: bold;
+}
+.bi-arrow-right {
+  /* color: gray; */
+  font-weight: bold;
+}

@@ -1,0 +1,12 @@
+# Enforce SPA routing for Angular app on Apache
+Options -MultiViews
+RewriteEngine On
+RewriteBase /
+
+# Serve existing files/directories directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Fallback all other requests to index.html
+RewriteRule ^ index.html [L]

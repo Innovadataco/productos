@@ -1,0 +1,147 @@
+/api/v1/novedadesconductor:
+  post:
+    tags:
+      - Novedades Conductor
+    summary: Crear novedad de conductor
+    description: Registra una novedad asociada a un conductor y la envía al servicio externo.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - idNovedad
+              - tipoIdentificacionConductor
+              - numeroIdentificacion
+              - primerNombreConductor
+              - primerApellidoConductor
+              - licenciaConduccion
+              - fechaVencimientoLicencia
+            properties:
+              idNovedad:
+                type: integer
+                format: int64
+              tipoIdentificacionConductor:
+                type: string
+                maxLength: 20
+              numeroIdentificacion:
+                type: string
+                maxLength: 30
+              primerNombreConductor:
+                type: string
+                maxLength: 100
+              segundoNombreConductor:
+                type: string
+                maxLength: 100
+              primerApellidoConductor:
+                type: string
+                maxLength: 45
+              segundoApellidoConductor:
+                type: string
+                maxLength: 45
+              idPruebaAlcoholimetria:
+                type: string
+                maxLength: 50
+              resultadoPruebaAlcoholimetria:
+                type: string
+                maxLength: 20
+              fechaUltimaPruebaAlcoholimetria:
+                type: string
+                format: date
+              licenciaConduccion:
+                type: string
+                maxLength: 50
+              idExamenMedico:
+                type: string
+                maxLength: 50
+              fechaUltimoExamenMedico:
+                type: string
+                format: date
+              fechaVencimientoLicencia:
+                type: string
+                format: date
+              observaciones:
+                type: string
+    responses:
+      '200':
+        description: Novedad de conductor creada correctamente.
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Respuesta del servicio externo con los datos sincronizados.
+              additionalProperties: true
+      '400':
+        description: Petición inválida o token de autorización no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada o autenticación incompleta.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Recurso asociado no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '422':
+        description: Datos inválidos para crear la novedad.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string
+      '500':
+        description: Error interno al crear la novedad de conductor.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string

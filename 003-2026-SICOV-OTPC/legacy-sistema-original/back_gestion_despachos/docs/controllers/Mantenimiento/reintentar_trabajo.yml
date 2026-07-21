@@ -1,0 +1,85 @@
+/api/v1/mantenimiento/jobs-fallidos/{jobId}/reintentar:
+  post:
+    tags:
+      - Mantenimiento
+    summary: Reintentar trabajo fallido
+    description: Reintenta la sincronización de un trabajo fallido, permitiendo indicar la acción a ejecutar y un payload opcional.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          type: integer
+          format: int64
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              accion:
+                type: string
+                enum: [reprogramar, actualizar, marcarProcesado]
+                description: Acción a ejecutar. Por defecto reprogramar.
+              payload:
+                oneOf:
+                  - type: object
+                    additionalProperties: true
+                  - type: 'null'
+                description: Payload a utilizar en la reprogramación. Usar null para limpiar.
+    responses:
+      '200':
+        description: Resultado del reintento.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '400':
+        description: Parámetros inválidos o acción no permitida.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Trabajo no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al reintentar el trabajo.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+

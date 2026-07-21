@@ -1,0 +1,41 @@
+.custom-modal-size {
+  width: 90%; /* Ancho del modal */
+  height: 90%; /* Altura del modal */
+  max-width: 1000px; /* Ancho máximo del modal */
+  max-height: 800px; /* Altura máxima del modal */
+}
+
+.modal-body {
+  overflow-y: auto; /* Scroll vertical */
+}
+
+.btn-close {
+  top: 10px; /* Distancia superior */
+  right: 10px; /* Distancia derecha */
+  margin-right: 10px; /* Margen derecho */
+}
+
+input {
+  margin-bottom: 10px; /* Margen superior */
+}
+
+button {
+  margin-top: 10px; /* Margen superior */
+}
+
+textarea {
+  width: 100%; /* Ancho del textarea */
+  height: 70px; /* Altura del textarea */
+}
+
+.modal-header {
+  display: block; /* Mostrar */
+  padding-bottom: 0%;
+}
+.modal-header .btn-close {
+  position: absolute; /* Posición absoluta */
+  top: 10px; /* Distancia superior */
+  right: 10px; /* Distancia derecha */
+  margin-right: 10px; /* Margen derecho */
+  margin-top: 5px; /* Margen superior */
+}

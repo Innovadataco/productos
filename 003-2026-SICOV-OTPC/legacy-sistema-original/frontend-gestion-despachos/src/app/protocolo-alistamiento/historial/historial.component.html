@@ -1,0 +1,96 @@
+<div class="py-2 px-sm-3 px-md-4 px-lg-5 margen">
+  <h2>Alistamiento diario</h2>
+  <div class="d-block mb-3">
+    <div class="search-container">
+      <!-- Input para buscar por ID -->
+      <label for="filtro">Filtrar por nombre y estado</label>
+      <div class="contenedor-input-botones">
+        <div class="search-input-wrapper">
+          <app-input-busqueda (buscar)="filtrarRegistros()" [placeholder]="'Buscar'"
+            [(ngModel)]="filteredID"></app-input-busqueda>
+        </div>
+        <button type="button" class="boton primario relleno" (click)="limpiar()">
+          Limpiar
+        </button>
+        <button type="button" class="boton primario relleno" (click)="volver()" style="margin-left: auto;">
+          Volver <i class="bi bi-arrow-return-left"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <br />
+  <div class="ruta w-100 custom-scroll">
+    <div class="d-flex mx-0 table-container">
+      <table class="table custom-scroll">
+        <thead class="encabezado">
+          <tr>
+            <th class="th-listado">
+              N°
+            </th>
+            <th class="th-listado">
+              Placa
+            </th>
+            <th class="th-listado">
+              Nombre responsable
+            </th>
+            <th class="th-listado">
+              Nombre Conductor
+            </th>
+            <th class="th-listado">
+              Fecha de registro
+            </th>
+            <th class="th-listado">
+              Estado
+            </th>
+            <th class="th-listado">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let registro of listarRegistrosFiltrados | paginate: { itemsPerPage: itemsPerPagePrevent, currentPage: pagePrevent, id:'formularioAlistamiento' }; let i = index">
+            <td style="width: 100px; text-align: center;">
+              {{(pagePrevent - 1) * itemsPerPagePrevent + i + 1 }}
+            </td>
+            <td style="width: 100px; text-align: center;">
+              {{registro.placa}}
+            </td>
+            <td style="width: 100px; text-align: center;">
+              {{registro.nombre_responsable}}
+            </td>
+            <td style="width: 100px; text-align: center;">
+              {{registro.nombres_conductor}}
+            </td>
+            <td style="width: 100px; text-align: center;">
+              {{registro.created_at | date: 'dd/MM/yyyy'}}
+            </td>
+            <td style="width: 100px; text-align: center;">
+              {{registro.estadoMantenimiento ? 'Activo' : 'Inactivo'}}
+            </td>
+            <td style="width: 100px; text-align: center;">
+              <button type="button" class="boton primario relleno" title="Ver y editar" style="margin-right: 10px;"
+                (click)="abrirRegistro(registro, true)"><i class="bi bi-eye-fill"></i></button>
+            </td>
+          </tr>
+          <tr *ngIf="listarRegistros.length === 0">
+            <td colspan="7" *ngIf="!verificador" style="text-align: center;">No hay registros de protocolos para este
+              vehiculo</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-center">
+      <!-- Paginador -->
+      <pagination-controls class="pagination-controls" (pageChange)="pagePrevent = $event" previousLabel="Anterior"
+        nextLabel="Siguiente" [maxSize]="7" [directionLinks]="true" [autoHide]="false" #paginador1
+        id="formularioAlistamiento">
+      </pagination-controls>
+    </div>
+  </div>
+  <div class="d-flex justify-content-end" style="margin-top: 20px;" *ngIf="isSupervisor">
+    <a type="button" class="boton primario relleno" [href]="exportarHistorial()"
+      style="text-decoration: none !important;"><i class="bi bi-file-earmark-arrow-down"></i> Exportar</a>
+  </div>
+</div>
+<app-popup #popup />

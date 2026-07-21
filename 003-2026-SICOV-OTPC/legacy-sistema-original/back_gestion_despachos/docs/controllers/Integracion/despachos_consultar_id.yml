@@ -1,0 +1,66 @@
+/api/v1/integracion/despachos/consulta/{id}:
+  get:
+    tags:
+      - Integración Despachos
+    summary: Consultar despacho por ID externo
+    description: |
+      Puente hacia el servicio externo `GET /despachos/{id}`.
+      El parámetro `id` corresponde al identificador del despacho en Supertransporte.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Identificador del despacho en el servicio externo.
+    responses:
+      '200':
+        description: Despacho encontrado en el servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '400':
+        description: Petición inválida o token de autorización no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Despacho no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno o del servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true

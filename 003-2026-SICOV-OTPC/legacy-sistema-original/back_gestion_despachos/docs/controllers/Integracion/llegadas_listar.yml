@@ -1,0 +1,117 @@
+/api/v1/integracion/llegadas:
+  get:
+    tags:
+      - Integración Llegadas
+    summary: Listar llegadas
+    description: |
+      Puente hacia el servicio externo `GET /llegada` de despachos.
+      Devuelve el listado paginado de llegadas, opcionalmente filtrado por NIT.
+      No persiste información en la base de datos local.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: nit
+        required: false
+        schema:
+          type: string
+        description: NIT de la empresa de transporte por el cual filtrar las llegadas.
+      - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+        description: Número de página a consultar.
+      - in: query
+        name: numero_items
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 10
+        description: Cantidad de registros por página.
+    responses:
+      '200':
+        description: Listado de llegadas obtenido del servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                  example: 200
+                titulo:
+                  type: string
+                  example: Listado de llegadas
+                mensajes:
+                  type: array
+                  items:
+                    type: string
+                array_data:
+                  type: object
+                  properties:
+                    meta:
+                      type: object
+                      properties:
+                        total:
+                          type: integer
+                        per_page:
+                          type: integer
+                        current_page:
+                          type: integer
+                        last_page:
+                          type: integer
+                        first_page:
+                          type: integer
+                        first_page_url:
+                          type: string
+                        last_page_url:
+                          type: string
+                        next_page_url:
+                          type: string
+                          nullable: true
+                        previous_page_url:
+                          type: string
+                          nullable: true
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        additionalProperties: true
+                fechaConsulta:
+                  type: string
+                  format: date
+                horaConsulta:
+                  type: string
+      '400':
+        description: Petición inválida o token de autorización no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada o autenticación incompleta.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno o del servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true

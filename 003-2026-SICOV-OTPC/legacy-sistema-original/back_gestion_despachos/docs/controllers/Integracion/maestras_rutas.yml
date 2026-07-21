@@ -1,0 +1,124 @@
+/api/v1/integracion/maestras/rutas-activas-empresa:
+  get:
+    tags:
+      - Integración Maestras
+    summary: Listar rutas activas por empresa
+    description: |
+      Puente hacia `GET /maestras/rutas-activas-empresa` del servicio de rutas externo.
+      No persiste información en la base de datos local.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: nit
+        required: true
+        schema:
+          type: string
+        description: NIT de la empresa de transporte.
+    responses:
+      '200':
+        description: Rutas activas asociadas a la empresa.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '400':
+        description: Parámetro nit faltante o token de autorización no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error al consultar el servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+
+/api/v1/integracion/maestras/autorizaciones:
+  get:
+    tags:
+      - Integración Maestras
+    summary: Listar autorizaciones NNA
+    description: |
+      Puente hacia `GET /maestras/autorizaciones` del servicio de rutas externo.
+      Consulta autorizaciones de transporte de NNA por empresa, placa y fecha.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: nit
+        required: true
+        schema:
+          type: string
+        description: NIT de la empresa de transporte.
+      - in: query
+        name: placa
+        required: true
+        schema:
+          type: string
+        description: Placa del vehículo.
+      - in: query
+        name: fecha
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Fecha del viaje en formato YYYY-MM-DD.
+    responses:
+      '200':
+        description: Autorizaciones encontradas para los criterios indicados.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+      '400':
+        description: Parámetros nit, placa o fecha faltantes.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error al consultar el servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true

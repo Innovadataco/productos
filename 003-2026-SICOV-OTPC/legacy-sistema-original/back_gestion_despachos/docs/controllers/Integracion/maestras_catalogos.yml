@@ -1,0 +1,162 @@
+/api/v1/integracion/maestras/nivel-servicio:
+  get:
+    tags:
+      - Integración Maestras
+    summary: Listar niveles de servicio
+    description: |
+      Puente hacia `GET /nivelservicio` del servicio de despachos externo.
+      No persiste información en la base de datos local.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+        description: Número de página.
+      - in: query
+        name: numero_items
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+        description: Cantidad de registros por página.
+    responses:
+      '200':
+        description: Catálogo de niveles de servicio.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '401':
+        description: Sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error al consultar el servicio externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+
+/api/v1/integracion/maestras/tipo-identificaciones:
+  get:
+    tags:
+      - Integración Maestras
+    summary: Listar tipos de identificación
+    description: |
+      Puente hacia la API paramétrica externa `listar-tipo-identificaciones`.
+      Utiliza token paramétrico estático en el backend.
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Catálogo de tipos de identificación (Cédula, NIT, etc.).
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '401':
+        description: Sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error al consultar el servicio paramétrico externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+
+/api/v1/integracion/maestras/clase-vehiculo:
+  get:
+    tags:
+      - Integración Maestras
+    summary: Listar clases de vehículo
+    description: |
+      Puente hacia la API paramétrica externa `listar-clase-vehiculo`.
+      Utiliza token paramétrico estático en el backend.
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Catálogo de clases de vehículo (Bus, Microbús, etc.).
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '401':
+        description: Sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error al consultar el servicio paramétrico externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+
+/api/v1/integracion/maestras/centros-poblados:
+  get:
+    tags:
+      - Integración Maestras
+    summary: Listar centros poblados
+    description: |
+      Puente hacia la API paramétrica externa `listar-centros-poblados`.
+      Utiliza token paramétrico estático en el backend.
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Catálogo de centros poblados para homologación origen/destino.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '401':
+        description: Sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error al consultar el servicio paramétrico externo.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true

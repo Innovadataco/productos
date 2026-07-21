@@ -1,0 +1,69 @@
+/api/v1/mantenimiento/jobs/{jobId}:
+  get:
+    tags:
+      - Mantenimiento
+    summary: Consultar trabajo programado
+    description: Obtiene el detalle completo de un trabajo programado o fallido.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          type: integer
+          format: int64
+        description: Identificador del trabajo.
+    responses:
+      '200':
+        description: Detalle del trabajo solicitado.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      '400':
+        description: Identificador inválido.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Token inválido o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Trabajo no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '500':
+        description: Error interno al consultar el trabajo.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+

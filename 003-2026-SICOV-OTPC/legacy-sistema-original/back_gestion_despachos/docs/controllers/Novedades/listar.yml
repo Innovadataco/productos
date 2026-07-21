@@ -1,0 +1,183 @@
+/api/v1/novedades:
+  get:
+    tags:
+      - Novedades
+    summary: Listar novedades
+    description: Obtiene el paginado de novedades registradas.
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: page
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Número de página a consultar.
+      - in: query
+        name: numero_items
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Cantidad de registros por página.
+      - in: query
+        name: find
+        schema:
+          type: string
+        description: Texto opcional para filtrar por descripción de la novedad.
+    responses:
+      '200':
+        description: Listado paginado de novedades.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+                - array_data
+              properties:
+                status:
+                  type: integer
+                  format: int32
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string
+                array_data:
+                  type: object
+                  required:
+                    - meta
+                    - data
+                  properties:
+                    meta:
+                      type: object
+                      description: Metainformación de la paginación.
+                      properties:
+                        total:
+                          type: integer
+                        per_page:
+                          type: integer
+                        current_page:
+                          type: integer
+                        last_page:
+                          type: integer
+                      additionalProperties: true
+                    data:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          idDespacho:
+                            type: integer
+                          idNovedad:
+                            type: integer
+                            nullable: true
+                          idTipoNovedad:
+                            type: integer
+                          descripcion:
+                            type: string
+                          otros:
+                            type: string
+                            nullable: true
+                          fechaNovedad:
+                            type: string
+                            format: date
+                          horaNovedad:
+                            type: string
+                          nitProveedor:
+                            type: string
+                            nullable: true
+                          fuenteDato:
+                            type: string
+                            nullable: true
+                          estado:
+                            type: boolean
+                          procesado:
+                            type: boolean
+                          usuarioId:
+                            type: string
+                            nullable: true
+                          fechaCreacion:
+                            type: string
+                            format: date-time
+                          fechaActualizacion:
+                            type: string
+                            format: date-time
+      '400':
+        description: Petición inválida o datos de autorización faltantes.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '401':
+        description: Autenticación requerida o sesión expirada.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Recurso asociado no encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mensaje
+              properties:
+                mensaje:
+                  type: string
+      '422':
+        description: Parámetros de consulta inválidos.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string
+      '500':
+        description: Error interno al listar las novedades.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - titulo
+                - mensajes
+              properties:
+                status:
+                  type: integer
+                titulo:
+                  type: string
+                mensajes:
+                  type: array
+                  items:
+                    type: string
