@@ -70,6 +70,18 @@ export async function POST(request: Request) {
             data: { intentosFallidos: 0, estado: "activo", bloqueadoHasta: null, ultimaSesion: new Date() },
         });
 
+        // Verificar vigencia del servicio para cuentas institucionales
+        if (user.rol === "SCHOOL_ADMIN") {
+            const { verificarVigenciaColegio } = await import("@/lib/colegio/vigencia");
+            const vigencia = await verificarVigenciaColegio(user.id);
+            if (!vigencia.vigente) {
+                return NextResponse.json(
+                    { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
+                    { status: 403 }
+                );
+            }
+        }
+
         const token = await createToken({ sub: user.id, rol: user.rol });
         await setSessionCookie(request, token);
 

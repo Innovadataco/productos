@@ -111,3 +111,87 @@
         @apply bg-slate-400/80 dark:bg-slate-600/80;
     }
 }
+
+/* Tema institucional para colegios (SCHOOL_ADMIN) */
+.theme-colegio .text-accent,
+.theme-colegio.text-accent {
+    color: #047857;
+}
+
+.dark .theme-colegio .text-accent,
+.dark .theme-colegio.text-accent {
+    color: #34d399;
+}
+
+.theme-colegio .text-gradient,
+.theme-colegio.text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    background-image: linear-gradient(to right, #059669, #14b8a6);
+}
+
+.dark .theme-colegio .text-gradient,
+.dark .theme-colegio.text-gradient {
+    background-image: linear-gradient(to right, #34d399, #2dd4bf);
+}
+
+.theme-colegio .accent-gradient,
+.theme-colegio.accent-gradient {
+    background-image: linear-gradient(to right, #10b981, #14b8a6);
+}
+
+.dark .theme-colegio .accent-gradient,
+.dark .theme-colegio.accent-gradient {
+    background-image: linear-gradient(to right, #34d399, #2dd4bf);
+}
+
+.theme-colegio .ring-accent,
+.theme-colegio.ring-accent {
+    outline: none;
+}
+
+.theme-colegio .ring-accent:focus-visible,
+.theme-colegio.ring-accent:focus-visible {
+    outline: 2px solid #10b981;
+    outline-offset: 2px;
+}
+
+.dark .theme-colegio .ring-accent:focus-visible,
+.dark .theme-colegio.ring-accent:focus-visible {
+    outline-color: #34d399;
+}
+
+.theme-colegio .ring-accent-input,
+.theme-colegio.ring-accent-input {
+    --tw-ring-color: rgb(16 185 129 / 0.5);
+}
+
+.theme-colegio .ring-accent-input:focus,
+.theme-colegio.ring-accent-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px var(--tw-ring-color);
+}
+
+.dark .theme-colegio .ring-accent-input:focus,
+.dark .theme-colegio.ring-accent-input:focus {
+    border-color: #34d399;
+}
+
+.theme-colegio .bg-page,
+.theme-colegio.bg-page {
+    background:
+        radial-gradient(1200px 800px at 10% -10%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 90% 10%, rgba(20, 184, 166, 0.10) 0%, transparent 45%),
+        radial-gradient(900px 600px at 50% 110%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        #f8fafc;
+}
+
+.dark .theme-colegio .bg-page,
+.dark .theme-colegio.bg-page {
+    background:
+        radial-gradient(1200px 800px at 10% -10%, rgba(16, 185, 129, 0.18) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 90% 10%, rgba(20, 184, 166, 0.12) 0%, transparent 45%),
+        radial-gradient(900px 600px at 50% 110%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        #020617;
+}
