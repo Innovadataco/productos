@@ -12,6 +12,10 @@ const config = [
       "prisma/migrations/**",
     ],
   },
+  {
+    // setState tras await dentro de un efecto es un patrón válido de data-fetching (alineado con 002).
+    rules: { "react-hooks/set-state-in-effect": "off" },
+  },
 ];
 
 export default config;

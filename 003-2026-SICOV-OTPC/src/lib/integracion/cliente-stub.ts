@@ -5,6 +5,7 @@ import type {
   RespuestaIntegradora,
   Conductor,
 } from "@/lib/integracion/integradora-tipos";
+import type { RutaMaestra, AutorizacionMaestra } from "@/lib/despachos/despacho-tipos";
 
 /// Cliente STUB: NUNCA toca la red. Ejercita el armado de las 3 cabeceras (doble token) y la
 /// herencia rol 3, y devuelve una respuesta simulada. Es el cliente por defecto y el de tests.
@@ -97,5 +98,16 @@ export class ClienteStub implements ClienteSupertransporte {
       autorizaciones: [],
       empresa: { idEmpresa: "1", nit: body.nit ?? cabeceras.documento, razonSocial: "TRANSPORTES DEMO S.A.S." },
     };
+  }
+
+  async consultarRutasActivas(_nit: string): Promise<RutaMaestra[]> {
+    return [
+      { idRutaAutorizada: "1", idOrigen: "11001", detalleOrigen: "Bogotá", idDestino: "05001", detalleDestino: "Medellín", via: "1", centroPobladoOrigen: "", centroPobladoDestino: "", nombre: "Bogotá - Medellín" },
+      { idRutaAutorizada: "2", idOrigen: "11001", detalleOrigen: "Bogotá", idDestino: "76001", detalleDestino: "Cali", via: "2", centroPobladoOrigen: "", centroPobladoDestino: "", nombre: "Bogotá - Cali" },
+    ];
+  }
+
+  async consultarAutorizaciones(_nit: string, _placa: string, _fecha: string): Promise<AutorizacionMaestra[]> {
+    return [];
   }
 }

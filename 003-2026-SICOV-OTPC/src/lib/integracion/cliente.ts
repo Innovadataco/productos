@@ -2,6 +2,7 @@ import { modoIntegracion } from "@/lib/integracion/modo";
 import { ClienteStub } from "@/lib/integracion/cliente-stub";
 import { ClienteHttp } from "@/lib/integracion/cliente-http";
 import type { SolicitudIntegradora, RespuestaIntegradora } from "@/lib/integracion/integradora-tipos";
+import type { RutaMaestra, AutorizacionMaestra } from "@/lib/despachos/despacho-tipos";
 
 export type RespuestaExterna = Record<string, unknown>;
 
@@ -21,6 +22,10 @@ export interface ClienteSupertransporte {
     identificacion: string,
     idRol: number,
   ): Promise<RespuestaIntegradora>;
+
+  /// Maestras (read-through) para el wizard de salidas.
+  consultarRutasActivas(nit: string): Promise<RutaMaestra[]>;
+  consultarAutorizaciones(nit: string, placa: string, fecha: string): Promise<AutorizacionMaestra[]>;
 }
 
 let _cliente: ClienteSupertransporte | null = null;

@@ -83,3 +83,18 @@ describe("ClienteStub.consultarIntegradora (solo lectura, sin red)", () => {
     expect(r.conductor2?.persona.numeroIdentificacion).toBe("2");
   });
 });
+
+describe("ClienteStub maestras (sin red)", () => {
+  it("consultarRutasActivas devuelve rutas simuladas", async () => {
+    const cli = new ClienteStub();
+    const rutas = await cli.consultarRutasActivas("900853057");
+    expect(rutas.length).toBeGreaterThan(0);
+    expect(rutas[0].idRutaAutorizada).toBeTruthy();
+  });
+
+  it("consultarAutorizaciones devuelve lista (vacía por defecto)", async () => {
+    const cli = new ClienteStub();
+    const aut = await cli.consultarAutorizaciones("900853057", "ABC123", "2026-07-21");
+    expect(Array.isArray(aut)).toBe(true);
+  });
+});

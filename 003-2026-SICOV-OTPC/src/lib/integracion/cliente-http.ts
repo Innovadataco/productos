@@ -2,8 +2,9 @@ import type { ClienteSupertransporte, RespuestaExterna } from "@/lib/integracion
 import { construirCabeceras } from "@/lib/integracion/cabeceras";
 import { integracionRealActiva } from "@/lib/integracion/modo";
 import { requireEnv } from "@/lib/env";
-import { extraerObjeto } from "@/lib/normalizar";
+import { extraerObjeto, extraerLista } from "@/lib/normalizar";
 import type { SolicitudIntegradora, RespuestaIntegradora } from "@/lib/integracion/integradora-tipos";
+import type { RutaMaestra, AutorizacionMaestra } from "@/lib/despachos/despacho-tipos";
 
 /// Cliente REAL contra Supertransporte. ⚠️ Consume APIs productivas.
 /// Solo debe instanciarse en modo real (doble gate de env). NO se ejercita en tests ni en stub.
@@ -68,5 +69,30 @@ export class ClienteHttp implements ClienteSupertransporte {
     }
     // Normaliza obj?? raíz y devuelve como RespuestaIntegradora.
     return extraerObjeto(data) as unknown as RespuestaIntegradora;
+  }
+
+  // Maestras (read-through). Auth exacta [NEEDS CLARIFICATION]: el legacy usa TOKEN estático/paramétrico.
+  private async getMaestra<T>(path: string): Promise<T[]> {
+    const url = `${requireEnv("URL_MATENIMIENTOS")}${path}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${requireEnv("TOKEN")}`, "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(60_000),
+    });
+    const data = (await res.json().catch(() => ({}))) as RespuestaExterna;
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status}`) as Error & { status?: number };
+      err.status = res.status;
+      throw err;
+    }
+    return extraerLista<T>(data);
+  }
+
+  async consultarRutasActivas(nit: string): Promise<RutaMaestra[]> {
+    return this.getMaestra<RutaMaestra>(`/maestras/rutas-activas-empresa?nit=${encodeURIComponent(nit)}`);
+  }
+
+  async consultarAutorizaciones(nit: string, placa: string, fecha: string): Promise<AutorizacionMaestra[]> {
+    const qs = `nit=${encodeURIComponent(nit)}&placa=${encodeURIComponent(placa)}&fecha=${encodeURIComponent(fecha)}`;
+    return this.getMaestra<AutorizacionMaestra>(`/maestras/autorizaciones?${qs}`);
   }
 }
