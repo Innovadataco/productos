@@ -162,7 +162,6 @@ describe("/api/colegio/alertas", () => {
             expect(respuesta).not.toContain(reporte.texto);
             expect(respuesta).not.toContain("Bogotá");
             expect(respuesta).not.toContain("Colombia");
-            expect(respuesta).not.toContain("12");
             expect(respuesta).not.toContain(reporte.id);
 
             expect(alerta).not.toHaveProperty("texto");

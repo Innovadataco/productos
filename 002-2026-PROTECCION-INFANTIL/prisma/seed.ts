@@ -1,4 +1,4 @@
-import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, CasoEvalFuente, CategoriaConducta } from "@prisma/client";
+import { PrismaClient, RolUsuario, TipoPeriodoServicio, TipoParametro, CategoriaParametro, CasoEvalFuente, CategoriaConducta } from "@prisma/client";
 import { generarEmbedding } from "@/lib/ai/embedder";
 // DECISION-PENDIENTE-PO: categorías de plataforma podrían requerir ajuste
 import bcrypt from "bcryptjs";
@@ -8,28 +8,26 @@ import path from "path";
 const prisma = new PrismaClient();
 
 async function main() {
-    // Admin idempotente: upsert por email. Si no existe, ADMIN_PASSWORD es obligatorio.
-    const adminEmail = "admin@proteccion.local";
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    const adminExists = await prisma.usuario.findUnique({ where: { email: adminEmail } });
-
-    if (!adminExists && !adminPassword) {
-        throw new Error(
-            `ADMIN_PASSWORD debe estar definida para crear el usuario admin (${adminEmail}).`
-        );
-    }
-
+    // Admin de prueba para desarrollo (solo desarrollo; cambiar/eliminar antes de producción)
+    const adminEmail = "soporte@innovadataco.com";
+    const adminPassword = "Admin123!Test";
     await prisma.usuario.upsert({
         where: { email: adminEmail },
-        update: {},
+        update: {
+            passwordHash: await bcrypt.hash(adminPassword, 12),
+            estado: "activo",
+            debeCambiarPassword: false,
+        },
         create: {
             email: adminEmail,
             nombre: "Administrador",
-            passwordHash: await bcrypt.hash(adminPassword!, 12),
+            passwordHash: await bcrypt.hash(adminPassword, 12),
             rol: RolUsuario.ADMIN,
+            estado: "activo",
+            debeCambiarPassword: false,
         },
     });
-    console.log(adminExists ? "Admin ya existe (sin cambios)" : "Admin creado");
+    console.log("Admin de prueba creado/actualizado");
 
     // Default parameters
     const defaults = [
@@ -1105,6 +1103,9 @@ async function main() {
 
     // Empty SaaS tables - just verify they exist
     console.log("Tablas Tenant, Plan, Subscription, BillingCycle listas");
+
+    // Usuarios de prueba para desarrollo
+    await seedUsuariosPrueba();
 }
 
 async function seedEvalFixture() {
@@ -1246,6 +1247,118 @@ async function seedSpamExamples() {
     }
 
     console.log(`Ejemplos de spam: ${created} creados, ${updated} actualizados`);
+}
+
+async function seedUsuariosPrueba() {
+    // Usuarios de prueba para desarrollo. Solo para desarrollo; cambiar/eliminar antes de producción.
+    const usuarios = [
+        { email: "soporte@innovadataco.com", rol: RolUsuario.ADMIN, password: "Admin123!Test", nombre: "Administrador" },
+        { email: "padre@innovadataco.com", rol: RolUsuario.PARENT, password: "Padre123!Test", nombre: "padre" },
+        { email: "padre1@innovadataco.com", rol: RolUsuario.PARENT, password: "Padre123!Test", nombre: "padre1" },
+        { email: "carrillo_franco@hotmail.com", rol: RolUsuario.OPERADOR, password: "Operador123!Test", nombre: "operador1" },
+        { email: "jelkin.carrillo@gmail.com", rol: RolUsuario.COMITE_VALIDACION, password: "Comite123!Test", nombre: "comite" },
+        { email: "gerencia@innovadataco.com", rol: RolUsuario.SCHOOL_ADMIN, password: "Colegio123!Test", nombre: "colegio1" },
+    ];
+
+    // Limpieza de usuarios de prueba obsoletos de corridas anteriores del seed.
+    const emailsObsoletos = [
+        "admin@proteccion.local",
+        "padre1@proteccion.local",
+        "padre2@proteccion.local",
+        "operador1@proteccion.local",
+        "comite1@proteccion.local",
+        "colegio1@proteccion.local",
+    ];
+
+    try {
+        await prisma.usuario.deleteMany({
+            where: {
+                email: { in: emailsObsoletos },
+                // Solo eliminar si no tienen datos reales asociados (Prisma con onDelete Cascade)
+            },
+        });
+        console.log("Usuarios de prueba obsoletos eliminados");
+    } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn(`No se pudieron eliminar usuarios de prueba obsoletos: ${msg}`);
+    }
+
+    // Colegio de prueba para el SCHOOL_ADMIN (datos mínimos válidos, vigencia futura)
+    let colegioId: string | undefined;
+    const colegioAdmin = usuarios.find((u) => u.rol === RolUsuario.SCHOOL_ADMIN);
+    if (colegioAdmin) {
+        const pais = await prisma.pais.findUnique({ where: { codigo: "CO" } });
+        const departamento = await prisma.departamento.findFirst({ where: { nombre: "Antioquia", paisId: pais?.id } });
+        const ciudad = await prisma.ciudad.findFirst({ where: { nombre: "Medellín", paisId: pais?.id } });
+
+        if (!pais || !departamento || !ciudad) {
+            console.warn("No se encontró país/departamento/ciudad de Colombia; omitiendo colegio de prueba");
+        } else {
+            const tenant = await prisma.tenant.upsert({
+                where: { id: "tenant-colegio-pruebas" },
+                update: {},
+                create: { id: "tenant-colegio-pruebas", nombre: "Tenant Colegio de Pruebas", estado: "activo" },
+            });
+
+            const inicioServicio = new Date();
+            const finServicio = new Date();
+            finServicio.setFullYear(finServicio.getFullYear() + 1);
+
+            const colegio = await prisma.colegio.upsert({
+                where: { tenantId: tenant.id },
+                update: {},
+                create: {
+                    nombre: "Colegio de Pruebas",
+                    paisId: pais.id,
+                    departamentoId: departamento.id,
+                    ciudadId: ciudad.id,
+                    direccion: "Calle de Prueba 123",
+                    representanteLegalNombre: "Representante Legal de Prueba",
+                    representanteLegalIdentificacion: "123456789",
+                    representanteLegalEmail: "representante.colegio.prueba@proteccion.local",
+                    representanteLegalTelefono: "3001234567",
+                    inicioServicio,
+                    finServicio,
+                    tipoPeriodo: TipoPeriodoServicio.ANUAL,
+                    estado: "activo",
+                    tenantId: tenant.id,
+                },
+            });
+            colegioId = colegio.id;
+
+            // El colegio solo puede tener un SCHOOL_ADMIN; desvincular cualquier usuario previo
+            await prisma.usuario.updateMany({
+                where: { colegioId },
+                data: { colegioId: null },
+            });
+
+            console.log("Colegio de prueba creado/actualizado");
+        }
+    }
+
+    for (const u of usuarios) {
+        const passwordHash = await bcrypt.hash(u.password, 12);
+        await prisma.usuario.upsert({
+            where: { email: u.email },
+            update: {
+                passwordHash,
+                estado: "activo",
+                debeCambiarPassword: false,
+                ...(u.rol === RolUsuario.SCHOOL_ADMIN && colegioId ? { colegioId } : {}),
+            },
+            create: {
+                email: u.email,
+                nombre: u.nombre,
+                passwordHash,
+                rol: u.rol,
+                estado: "activo",
+                debeCambiarPassword: false,
+                ...(u.rol === RolUsuario.SCHOOL_ADMIN && colegioId ? { colegioId } : {}),
+            },
+        });
+    }
+
+    console.log("Usuarios de prueba creados/actualizados");
 }
 
 main()
