@@ -1,0 +1,124 @@
+// Esquema Gesmovil — diseño limpio del dominio sicov.
+// Dev: SQLite (cero dependencias). Prod: cambiar provider a "postgresql".
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Rol {
+  id       Int       @id @default(autoincrement())
+  nombre   String    @unique // administrador | cliente | operador
+  usuarios Usuario[]
+}
+
+model Usuario {
+  id             Int      @id @default(autoincrement())
+  identificacion String   @unique
+  usuario        String   @unique
+  nombre         String
+  clave          String   // hash bcrypt
+  rolId          Int
+  rol            Rol      @relation(fields: [rolId], references: [id])
+  empresaNit     String?
+  activo         Boolean  @default(true)
+  creadoEn       DateTime @default(now())
+}
+
+model Empresa {
+  id        Int      @id @default(autoincrement())
+  nit       String   @unique
+  nombre    String
+  token     String   // token de acceso del proveedor vigilado
+  vigenteHasta DateTime
+  activo    Boolean  @default(true)
+}
+
+// Estados de cola comunes: pendiente | procesando | procesado | fallido
+model Despacho {
+  id         Int      @id @default(autoincrement())
+  codigo     String   @unique
+  placa      String
+  empresa    String
+  nit        String
+  ruta       String
+  origen     String
+  destino    String
+  fechaHora  DateTime
+  estado     String   @default("pendiente")
+  reintentos Int      @default(0)
+  respuesta  String?
+  payload    String?  // JSON serializado
+  creadoEn   DateTime @default(now())
+}
+
+model Llegada {
+  id          Int      @id @default(autoincrement())
+  codigo      String   @unique
+  placa       String
+  empresa     String
+  nit         String
+  tipoLlegada String
+  terminal    String
+  fechaHora   DateTime
+  estado      String   @default("pendiente")
+  reintentos  Int      @default(0)
+  respuesta   String?
+  creadoEn    DateTime @default(now())
+}
+
+model Mantenimiento {
+  id          Int      @id @default(autoincrement())
+  codigo      String   @unique
+  placa       String
+  empresa     String
+  tipo        String   // Preventivo | Correctivo | Alistamiento | Autorización
+  descripcion String
+  fecha       DateTime
+  responsable String
+  estado      String   @default("registrado") // registrado | en_cola | enviado | fallido
+  creadoEn    DateTime @default(now())
+}
+
+model Novedad {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique
+  categoria String   // Vehículo | Conductor
+  placa     String
+  detalle   String
+  documento String
+  vence     DateTime
+  severidad String   // ok | porVencer | vencido
+}
+
+model Soporte {
+  id       Int      @id @default(autoincrement())
+  codigo   String   @unique
+  asunto   String
+  motivo   String
+  empresa  String
+  estado   String   @default("abierto") // abierto | respondido | cerrado
+  adjuntos Int      @default(0)
+  creadoEn DateTime @default(now())
+}
+
+model Ruta {
+  id         Int     @id @default(autoincrement())
+  codigo     String  @unique
+  ruta       String
+  empresa    String
+  paradas    Int     @default(0)
+  clase      String
+  habilitada Boolean @default(true)
+}
+
+model LogError {
+  id       Int      @id @default(autoincrement())
+  origen   String
+  nivel    String
+  mensaje  String
+  creadoEn DateTime @default(now())
+}
