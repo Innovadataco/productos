@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-21
 
-**Status**: PLANEADO — MODO PLAN, gate humano antes de implementar
+**Status**: IMPLEMENTADO y probado en vivo (modo stub) — pendiente de verificación humana antes de APIs productivas — ver `cierre.md`
 
 **Input**: User description: "Segunda feature del 003. Reutiliza el patrón del despacho (feature 001-US2): reporte a Supertransporte con doble token (3 cabeceras), worker table-driven sobre la tabla de solicitudes, estados/reintentos, reintento manual. Registro de una llegada (arribo de un vehículo a terminal destino) persistido en `tbl_llegadas_solicitudes` y reportado por el worker. Endpoint de registro + KPI de llegadas en el dashboard + listado paginado. Guardarraíl: INTEGRACIONES_MODO=stub, cero APIs reales hasta verificación humana."
 
