@@ -2,9 +2,9 @@
 
 **Propósito**: Este documento es la fuente de verdad de TODO lo que debe resolverse o verificarse ANTES de que el Producto 002 pase a producción. No se dispersa en los specs individuales; cualquier ítem de pre-producción se consolida aquí. Al final del desarrollo se ejecutará un spec dedicado (reservado ~SPEC-090) que tilda cada línea de este registro antes del despegue.
 
-**Versión**: `1.0.2`
+**Versión**: `1.0.3`
 
-**Última actualización**: 2026-07-20
+**Última actualización**: 2026-07-21
 
 ---
 
@@ -24,7 +24,8 @@
 |---|---|---|---|
 | `ENABLE_HTTPS_HEADERS` | `false` (dev accede por HTTP) | `true` (prod con dominio + HTTPS) | Activa `upgrade-insecure-requests` en CSP y `Strict-Transport-Security` (HSTS). Ver Spec 046. |
 | `DISABLE_RATE_LIMIT` | `true` (evita bloqueos locales) | quitar o `false` | El anti-abuso debe estar activo con usuarios reales. Ver `src/lib/rate-limit.ts`. |
-| Password del admin del seed | `Admin123!Secure` (default documentado) | cambiar obligatorio antes de prod | El seed debe fallar si `ADMIN_PASSWORD` no está configurado; nunca usar default en producción. Ver Spec 035 US5. |
+| Admin de prueba del seed | `soporte@innovadataco.com` / `Admin123!Test` | cambiar obligatorio antes de prod | El usuario admin de desarrollo se crea en el seed; nunca debe existir en producción. Ver `docs/USUARIOS-PRUEBA.md`. |
+| Usuarios de prueba del seed | `soporte@innovadataco.com` (ADMIN), `carrillo_franco@hotmail.com` (OPERADOR), `jelkin.carrillo@gmail.com` (COMITE), `gerencia@innovadataco.com` (SCHOOL_ADMIN), `padre@innovadataco.com`, `padre1@innovadataco.com` (PARENT) con contraseñas fijas | eliminar o desactivar antes de prod | Creados solo para agilizar desarrollo; nunca deben existir en producción. Ver `docs/USUARIOS-PRUEBA.md`. |
 | HTTPS real | HTTP por Tailscale/LAN | dominio + certificado (Let's Encrypt, Cloudflare Tunnel, Tailscale Funnel, etc.) | Definir infraestructura de despliegue real antes de producción. |
 
 ---
@@ -55,6 +56,7 @@ Antes del despegue se deben ejecutar y aprobar las siguientes verificaciones. Ca
 
 ## Changelog
 
+- **v1.0.3** — 2026-07-21: Se agrega ítem de usuarios de prueba del seed a eliminar/cambiar antes de producción.
 - **v1.0.2** — 2026-07-20: Se agrega verificación final de validación del clasificador contra datos humanos (Spec 050).
 - **v1.0.1** — 2026-07-20: Se agrega nota de validación de contraste con axe/Lighthouse pendiente del Spec 054.
 - **v1.0.0** — 2026-07-20: Creación del registro con planes sin implementar (Specs 045 US3, 046 US6, 053), interruptores de configuración y verificaciones finales.
