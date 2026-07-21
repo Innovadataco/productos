@@ -146,6 +146,58 @@
 
 ---
 
+## Phase 5.5: User Story 5 — Aislamiento del rol SCHOOL_ADMIN (Priority: P1)
+
+**Goal**: Audit and remove SCHOOL_ADMIN access from all admin/operator/committee/report endpoints and components.
+
+**Independent Test**: SCHOOL_ADMIN receives 403 or redirect on every non-colegio internal route; other roles keep access.
+
+### Tests for User Story 5
+
+- [ ] T061 [P] [US5] Security test: SCHOOL_ADMIN receives 403 on `GET /api/admin/operadores`.
+- [ ] T062 [P] [US5] Security test: SCHOOL_ADMIN receives 403 on `GET /api/admin/comite/pendientes`.
+- [ ] T063 [P] [US5] Security test: SCHOOL_ADMIN receives 403 on `GET /api/admin/reportes-revision`.
+- [ ] T064 [P] [US5] Security test: SCHOOL_ADMIN receives 403 on `GET /api/admin/estadisticas`.
+- [ ] T065 [P] [US5] Security test: SCHOOL_ADMIN receives 403 on `GET /api/admin/ia/modelos`.
+- [ ] T066 [P] [US5] Security test: SCHOOL_ADMIN receives 403 on `GET /api/admin/spam/pendientes`.
+- [ ] T067 [P] [US5] Security test: SCHOOL_ADMIN is redirected away from `/dashboard/admin` and `/dashboard/admin/operadores` by proxy.
+- [ ] T068 [P] [US5] Security test: SCHOOL_ADMIN is redirected away from `/mis-reportes` and `/dashboard/circulo-confianza` by proxy.
+- [ ] T069 [P] [US5] Component test: `AdminNav` does not render admin/operator/committee items for SCHOOL_ADMIN.
+- [ ] T070 [P] [US5] Component test: `ComiteSubNav` does not render tabs for SCHOOL_ADMIN.
+- [ ] T071 [P] [US5] Component test: `NavHeader` does not show admin dashboard link for SCHOOL_ADMIN; shows colegio link instead.
+- [ ] T072 [P] [US5] Regression test: ADMIN still accesses `/api/admin/operadores`, `/dashboard/admin`, etc.
+- [ ] T073 [P] [US5] Regression test: OPERADOR still accesses `/dashboard/admin`, `/api/admin/spam/pendientes`, etc.
+- [ ] T074 [P] [US5] Regression test: COMITE_VALIDACION still accesses `/dashboard/admin/comite` and resolver endpoints.
+- [ ] T075 [P] [US5] Regression test: PARENT still accesses `/reportar`, `/dashboard`, `/mis-reportes`, `/dashboard/circulo-confianza`.
+- [ ] T076 [P] [US5] Update `src/lib/role-visibility.test.tsx` to expect SCHOOL_ADMIN is isolated from admin/operator/committee views.
+
+### Implementation for User Story 5
+
+- [ ] T077 [US5] Run `grep -R "SCHOOL_ADMIN" src/` and document the full inventory in `research.md` (snapshot before changes).
+- [ ] T078 [US5] Update `src/lib/auth.ts`:
+  - Remove `SCHOOL_ADMIN` from `requireAdmin`, `requireOperadorOAdmin`, `requireComiteOAdmin`, `requireAdminOComiteOOperador`.
+  - Add `requireSchoolAdmin()` helper if needed.
+- [ ] T079 [US5] Update `src/lib/proxy.ts`:
+  - Remove `SCHOOL_ADMIN` from `ADMIN_ROLES`.
+  - Treat `SCHOOL_ADMIN` separately from `INTERNAL_ROLES`: allow only `/dashboard/colegio/*` and `/api/me/colegio`.
+  - Update `homeForRole` to return `/dashboard/colegio` for SCHOOL_ADMIN.
+- [ ] T080 [US5] Update `src/lib/operadores/permisos.ts`: `esAdminRol` should return `false` for SCHOOL_ADMIN when used in report/operator/committee context; or create `esAdminPlataforma` excluding SCHOOL_ADMIN.
+- [ ] T081 [US5] Update `src/lib/reporte-transiciones.ts`: remove SCHOOL_ADMIN from `ADMIN` mapping.
+- [ ] T082 [US5] Audit and update all `verifyAuth([..., "SCHOOL_ADMIN", ...])` in `src/app/api/admin/**/route.ts` to exclude SCHOOL_ADMIN.
+- [ ] T083 [US5] Update `src/components/modules/AdminNav.tsx` to exclude SCHOOL_ADMIN.
+- [ ] T084 [US5] Update `src/components/modules/AdminNav.tsx` type `RolNav` to exclude SCHOOL_ADMIN.
+- [ ] T085 [US5] Update `src/components/modules/ComiteSubNav.tsx` to exclude SCHOOL_ADMIN.
+- [ ] T086 [US5] Update `src/components/modules/NavHeader.tsx` to treat SCHOOL_ADMIN as its own category (colegio link, no admin menu items, no admin header styles).
+- [ ] T087 [US5] Update `src/app/login/page.tsx` to redirect SCHOOL_ADMIN to `/dashboard/colegio`.
+- [ ] T088 [US5] Update `src/app/cambiar-password/page.tsx` to redirect SCHOOL_ADMIN to `/dashboard/colegio`.
+- [ ] T089 [US5] Update `src/app/dashboard/admin/layout.tsx` to exclude SCHOOL_ADMIN (redirect to colegio).
+- [ ] T090 [US5] Update `src/app/mis-reportes/page.tsx` and `src/app/dashboard/circulo-confianza/page.tsx` to redirect SCHOOL_ADMIN to `/dashboard/colegio`.
+- [ ] T091 [US5] Run `grep -R "SCHOOL_ADMIN" src/` again and document final inventory in `research.md` (snapshot after changes).
+
+**Checkpoint**: SCHOOL_ADMIN is isolated to colegio routes only; all other roles retain access.
+
+---
+
 ## Phase 6: Polish & Documentation
 
 **Purpose**: Finalize docs, run validations, and prepare for human review.
@@ -169,7 +221,7 @@
 - **Phase 2 (US1)**: Depends on Phase 1.
 - **Phase 3 (US2)**: Depends on Phase 2 (colegio exists) and Phase 4 (vigencia login).
 - **Phase 4 (US3)**: Depends on Phase 2 (colegio model). Can be developed in parallel with Phase 3 UI once model exists.
-- **Phase 5 (US4)**: Depends on Phase 2. Can be parallel with Phase 3 and 4.
+- **Phase 5.5 (US5)**: Depends on Phase 1 (model not required, but must happen after migration safety). Can be parallel with Phase 2. Security-critical; should be completed before deploy.
 - **Phase 6 (Polish)**: Depends on all previous phases.
 
 ### Parallel Opportunities
@@ -178,6 +230,7 @@
 - T025-T028 (US2 tests) in parallel with T029-T033 (US2 UI).
 - T034-T039 (US3 tests) in parallel with T040-T044 (US3 vigencia).
 - T045-T049 (US4 tests) in parallel with T050-T052 (US4 restriction).
+- T061-T076 (US5 tests) in parallel with T077-T091 (US5 isolation).
 
 ---
 
@@ -186,11 +239,12 @@
 ### MVP First
 
 1. Backup DB and additive migration.
-2. Admin API for colegio CRUD + SCHOOL_ADMIN creation.
-3. Login vigencia check.
-4. Proxy vigencia + `/reportar` restriction.
-5. Green-themed colegio dashboard UI.
-6. Tests, docs, deploy.
+2. Audit and fix SCHOOL_ADMIN access (US5) — security prerequisite; do it before exposing the colegio module.
+3. Admin API for colegio CRUD + SCHOOL_ADMIN creation (US1).
+4. Login vigencia check (US3).
+5. Proxy vigencia + `/reportar` restriction (US4).
+6. Green-themed colegio dashboard UI (US2).
+7. Tests, docs, deploy.
 
 ---
 

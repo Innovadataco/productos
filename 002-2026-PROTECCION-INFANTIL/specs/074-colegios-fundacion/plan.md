@@ -8,7 +8,7 @@
 
 ## Summary
 
-Crear el modelo `Colegio`, asociarlo con un `Tenant` y un único usuario `SCHOOL_ADMIN`, reutilizando el patrón de creación de operadores. Implementar validación de vigencia de servicio en login y en el proxy/middleware. Aplicar identidad visual verde condicional en el panel del colegio reutilizando los tokens de acento existentes. Restringir a SCHOOL_ADMIN el acceso a reportar. Todo con migraciones aditivas, sin tocar el modelo de reportes ni cobro, y manteniendo los 605 tests actuales verdes.
+Crear el modelo `Colegio`, asociarlo con un `Tenant` y un único usuario `SCHOOL_ADMIN`, reutilizando el patrón de creación de operadores. Implementar validación de vigencia de servicio en login y en el proxy/middleware. Aplicar identidad visual verde condicional en el panel del colegio. **Auditar y corregir los accesos heredados de SCHOOL_ADMIN** para aislarlo exclusivamente a `/dashboard/colegio/*` y `/api/me/colegio`, quitándolo de guards, endpoints y componentes de admin/operador/comité/reportes. Todo con migraciones aditivas, sin tocar el modelo de reportes ni cobro, y manteniendo los 605 tests actuales verdes.
 
 ---
 
@@ -22,8 +22,8 @@ Crear el modelo `Colegio`, asociarlo con un `Tenant` y un único usuario `SCHOOL
 | **Testing** | Vitest + jsdom + `@testing-library/react` |
 | **Models affected** | `Colegio` (nuevo), `Usuario` (+ `colegioId`), `Tenant` (relación), `AuditLog` (nuevas acciones), `AccionAudit` (nuevos valores) |
 | **Seed affected** | `prisma/seed.ts` (posiblemente ajustes menores, no obligatorio) |
-| **Endpoints affected** | `/api/auth/login` (vigencia), `/api/admin/colegios/*` (nuevos), `/api/me/colegio` (nuevo), `/api/reportes` (restricción), `/reportar` (restricción proxy) |
-| **Components affected** | `src/app/dashboard/colegio/**` (nuevos), `src/app/globals.css` (variante verde), `src/lib/proxy.ts` (vigencia + restricción reportar) |
+| **Endpoints affected** | `/api/auth/login` (vigencia), `/api/admin/colegios/*` (nuevos), `/api/me/colegio` (nuevo), `/api/reportes` (restricción), `/api/admin/*` (quitar SCHOOL_ADMIN), `/reportar` (restricción proxy) |
+| **Components affected** | `src/app/dashboard/colegio/**` (nuevos), `src/app/globals.css` (variante verde), `src/lib/proxy.ts` (vigencia + aislamiento), `src/lib/auth.ts` (quitar SCHOOL_ADMIN de helpers), `src/components/modules/AdminNav.tsx`, `ComiteSubNav.tsx`, `NavHeader.tsx` (quitar SCHOOL_ADMIN) |
 | **Testing** | Vitest; todo endpoint nuevo con `.test.ts`; suite completo ≥ 605 tests |
 | **Constraints** | Migración aditiva, backup previo, sin `migrate reset/dev`, sin tocar `Reporte` ni modelo de IA |
 
@@ -48,7 +48,7 @@ Crear el modelo `Colegio`, asociarlo con un `Tenant` y un único usuario `SCHOOL
 | §4.1 Singletons | ✅ Pass | Prisma singleton sin cambios |
 | §4.2 Rutas API individuales | ✅ Pass | Cada método en su `route.ts` |
 | §4.3 Paginación estándar | ✅ Pass | Lista de colegios paginada |
-| §6.3 Protección de datos sensibles | ✅ Pass | No se toca PII de reportes |
+| §6.3 Protección de datos sensibles | ✅ Pass | No se toca PII de reportes; SCHOOL_ADMIN queda aislado de reportes reales |
 | §7.3 Estilos | ✅ Pass | Variante de tokens existentes; no duplica estilos |
 
 **Re-check post-design**: All gates still pass. No violations.
@@ -117,7 +117,44 @@ specs/074-colegios-fundacion/
 
 ## Complexity Tracking
 
-No constitution violations. Complejidad moderada: se tocan autenticación, autorización, estilos y un nuevo modelo. No se requiere justificación adicional. El riesgo principal es la vigencia en login, que debe no romper otros roles.
+No constitution violations. Complejidad moderada: se tocan autenticación, autorización, estilos y un nuevo modelo. El riesgo principal es la vigencia en login (que no debe romper otros roles) y la corrección de accesos heredados de SCHOOL_ADMIN, que requiere un inventario minucioso y tests de seguridad para evitar regresiones de permisos.
+
+---
+
+## Security Isolation — SCHOOL_ADMIN Access Audit
+
+### Inventory required before implementation
+
+Audit all occurrences of `SCHOOL_ADMIN` in:
+- `src/lib/auth.ts` (helpers `requireAdmin`, `requireOperadorOAdmin`, `requireComiteOAdmin`, `requireAdminOComiteOOperador`).
+- `src/lib/proxy.ts` (`INTERNAL_ROLES`, `ADMIN_ROLES`, `isInternalRoute`, `homeForRole`, `USER_FINAL_ROUTES`).
+- `src/lib/operadores/permisos.ts`.
+- `src/lib/reporte-transiciones.ts`.
+- Every `verifyAuth([..., "SCHOOL_ADMIN", ...])` in `src/app/api/**/route.ts`.
+- Components `AdminNav.tsx`, `ComiteSubNav.tsx`, `NavHeader.tsx`, `ReporteWizard.tsx`.
+- Pages `src/app/login/page.tsx`, `src/app/dashboard/admin/layout.tsx`, `src/app/mis-reportes/page.tsx`, `src/app/dashboard/circulo-confianza/page.tsx`, `src/app/cambiar-password/page.tsx`.
+- Tests that assume SCHOOL_ADMIN sees admin/operator/committee tabs (`src/lib/role-visibility.test.tsx`).
+
+### Expected state after implementation
+
+- SCHOOL_ADMIN is **only** allowed in:
+  - `verifyAuth(["SCHOOL_ADMIN"])` or `verifyAuth("SCHOOL_ADMIN")` for its own routes.
+  - `src/app/dashboard/colegio/**` and `src/app/api/me/colegio`.
+  - `src/app/api/auth/login` (to check service validity and redirect to `/dashboard/colegio`).
+  - `src/app/api/auth/cambiar-password` (to redirect to `/dashboard/colegio` after password change).
+  - `src/lib/proxy.ts` as its own allowed route set (`/dashboard/colegio/*`, `/api/me/colegio`), separate from `INTERNAL_ROLES`.
+- SCHOOL_ADMIN is **removed** from:
+  - `requireAdmin`, `requireOperadorOAdmin`, `requireComiteOAdmin`, `requireAdminOComiteOOperador`.
+  - `ADMIN_ROLES` in `proxy.ts`.
+  - All `/api/admin/*` endpoints except `/api/admin/colegios` (which is ADMIN only anyway).
+  - `AdminNav.tsx`, `ComiteSubNav.tsx`, `NavHeader.tsx` admin menus.
+  - `reporte-transiciones.ts` responsibility mapping.
+- `INTERNAL_ROLES` in `proxy.ts` may still include ADMIN/OPERADOR/COMITE, but SCHOOL_ADMIN must be treated separately: it is not allowed in `/dashboard/admin/*` nor `/api/admin/*`.
+
+### Tests to add
+
+- 403 or redirect for SCHOOL_ADMIN on: `/dashboard/admin`, `/dashboard/admin/operadores`, `/dashboard/admin/comite`, `/dashboard/admin/estadisticas`, `/dashboard/admin/ia`, `/dashboard/admin/configuracion`, `/dashboard/admin/spam`, `/dashboard/admin/apelaciones`, `/dashboard/admin/dataset-entrenamiento`, `/dashboard/admin/reportes-revision`, `/api/admin/reportes-revision`, `/api/admin/operadores`, `/api/admin/comite/pendientes`, `/api/admin/estadisticas`, `/api/admin/estadisticas/clasificacion`, `/api/admin/ia/modelos`, `/mis-reportes`, `/dashboard/circulo-confianza`.
+- Confirm ADMIN/OPERADOR/COMITE/PARENT still access their allowed routes.
 
 ---
 

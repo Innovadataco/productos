@@ -96,7 +96,34 @@ curl -X POST http://localhost:5005/api/reportes \
 
 ---
 
-## 7. Ejecutar tests y build
+## 7. Verificar aislamiento de SCHOOL_ADMIN
+
+1. Como SCHOOL_ADMIN autenticado, intentar acceder a:
+   - `http://localhost:5005/dashboard/admin`
+   - `http://localhost:5005/dashboard/admin/operadores`
+   - `http://localhost:5005/dashboard/admin/comite`
+   - `http://localhost:5005/dashboard/admin/estadisticas`
+   - `http://localhost:5005/mis-reportes`
+   - `http://localhost:5005/dashboard/circulo-confianza`
+
+**Esperado**: redirección a `/dashboard/colegio` o página de no permitido en todos los casos.
+
+2. Como SCHOOL_ADMIN, hacer peticiones a endpoints de admin:
+
+```bash
+curl -s -b "token=<tu-token>" http://localhost:5005/api/admin/operadores
+curl -s -b "token=<tu-token>" http://localhost:5005/api/admin/comite/pendientes
+curl -s -b "token=<tu-token>" http://localhost:5005/api/admin/reportes-revision
+curl -s -b "token=<tu-token>" http://localhost:5005/api/admin/estadisticas
+```
+
+**Esperado**: 403 en todos los casos.
+
+3. Verificar que ADMIN, OPERADOR, COMITE y PARENT conservan sus accesos habituales.
+
+---
+
+## 8. Ejecutar tests y build
 
 ```bash
 npm run test
@@ -107,7 +134,7 @@ npm run build
 
 ---
 
-## 8. Rollback si algo falla
+## 9. Rollback si algo falla
 
 Si se detecta regresión, restaurar desde el backup:
 

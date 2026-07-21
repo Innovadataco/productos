@@ -154,6 +154,82 @@ enum TipoPeriodoServicio {
 
 ---
 
+## Inventory of SCHOOL_ADMIN Accesses (Security Audit)
+
+### Current state (before fix)
+
+`SCHOOL_ADMIN` appears in multiple places that grant access beyond the institutional module:
+
+#### 1. Authorization helpers (`src/lib/auth.ts`)
+- `requireAdmin()` → `verifyAuth(["ADMIN", "SCHOOL_ADMIN"])`
+- `requireOperadorOAdmin()` → `verifyAuth(["ADMIN", "SCHOOL_ADMIN", "OPERADOR"])`
+- `requireComiteOAdmin()` → `verifyAuth(["ADMIN", "SCHOOL_ADMIN", "COMITE_VALIDACION"])`
+- `requireAdminOComiteOOperador()` → `verifyAuth(["ADMIN", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION"])`
+
+#### 2. Middleware / proxy (`src/lib/proxy.ts`)
+- `INTERNAL_ROLES` includes `SCHOOL_ADMIN` → allows access to `/dashboard/admin/*` and `/api/admin/*`.
+- `ADMIN_ROLES` includes `SCHOOL_ADMIN` → allows access to `/dashboard/admin/comite/gestion` and `/dashboard/admin/comite/auditoria`.
+- `homeForRole` redirects `SCHOOL_ADMIN` to `/dashboard/admin`.
+
+#### 3. Permission helpers (`src/lib/operadores/permisos.ts`)
+- `esAdminRol()` returns `true` for `ADMIN` or `SCHOOL_ADMIN`.
+- Tenant-scoped checks allow SCHOOL_ADMIN to manage resources of its tenant.
+
+#### 4. Reporte transitions (`src/lib/reporte-transiciones.ts`)
+- Maps `ADMIN` or `SCHOOL_ADMIN` to responsable `ADMIN`.
+
+#### 5. Navigation components (`src/components/modules/`)
+- `AdminNav.tsx`: SCHOOL_ADMIN sees admin/operator/committee/IA/dataset/config sections.
+- `ComiteSubNav.tsx`: SCHOOL_ADMIN sees all 3 tabs (Bandeja, Gestión, Auditoría).
+- `NavHeader.tsx`: SCHOOL_ADMIN is treated as employee, sees admin dashboard link, admin header styles, admin menu items.
+- `ReporteWizard.tsx`: already blocks SCHOOL_ADMIN (correct).
+
+#### 6. Pages (`src/app/`)
+- `login/page.tsx`: redirects `ADMIN` or `SCHOOL_ADMIN` to `/dashboard/admin`.
+- `cambiar-password/page.tsx`: redirects `ADMIN` or `SCHOOL_ADMIN` to `/dashboard/admin`.
+- `mis-reportes/page.tsx`: redirects internal roles including `SCHOOL_ADMIN`.
+- `dashboard/circulo-confianza/page.tsx`: redirects internal roles including `SCHOOL_ADMIN`.
+- `dashboard/admin/layout.tsx`: allows `ADMIN`, `SCHOOL_ADMIN`, `OPERADOR`, `COMITE_VALIDACION`.
+
+#### 7. Admin API endpoints (`src/app/api/admin/**`)
+Multiple endpoints accept `SCHOOL_ADMIN`:
+- `/api/admin/operadores/*` (GET, POST, PATCH, regenerar-password, reenviar-email, reactivar, asignación, modelo)
+- `/api/admin/comite/*` (resolver, asignar, reasignar, solicitudes, integrantes)
+- `/api/admin/spam/*` (pendientes, resolver)
+- `/api/admin/apelaciones`
+- `/api/admin/reportes-revision/*` (GET, reasignar)
+- `/api/admin/estadisticas/*` (indirectly, if SCHOOL_ADMIN passes `verifyAuth`)
+- `/api/admin/ia/modelos`
+
+#### 8. Tests (`src/lib/role-visibility.test.tsx`)
+- Tests assume `SCHOOL_ADMIN` sees admin nav tabs and committee tabs. These must be updated.
+
+### Desired state (after fix)
+
+- `SCHOOL_ADMIN` is **only** allowed in:
+  - `verifyAuth(["SCHOOL_ADMIN"])` for its own endpoints (`/api/me/colegio`, `/api/admin/colegios` is ADMIN only).
+  - `src/app/dashboard/colegio/**` pages.
+  - `src/app/api/auth/login` (validates service and redirects to `/dashboard/colegio`).
+  - `src/app/api/auth/cambiar-password` (redirects to `/dashboard/colegio`).
+  - `src/lib/proxy.ts` in a dedicated allowed set for colegio routes.
+- `SCHOOL_ADMIN` is **removed** from:
+  - `requireAdmin`, `requireOperadorOAdmin`, `requireComiteOAdmin`, `requireAdminOComiteOOperador`.
+  - `ADMIN_ROLES` in proxy.
+  - `INTERNAL_ROLES` in proxy (or treated separately, not allowed in `/dashboard/admin/*` / `/api/admin/*`).
+  - All `/api/admin/*` endpoints.
+  - `AdminNav.tsx`, `ComiteSubNav.tsx`, `NavHeader.tsx` admin sections.
+  - `reporte-transiciones.ts` responsibility mapping.
+  - `login/page.tsx` and `cambiar-password/page.tsx` redirect paths.
+- `SCHOOL_ADMIN` redirect home becomes `/dashboard/colegio`.
+- Existing tests that assume SCHOOL_ADMIN sees admin/operator/committee UI must be updated to expect 403/redirect.
+
+### Impact on other roles
+
+- ADMIN, OPERADOR, COMITE_VALIDACION, PARENT keep their current access.
+- No regression in existing admin/operator/committee flows.
+
+---
+
 ## Alternatives Considered
 
 | Alternative | Why Rejected |
@@ -169,4 +245,4 @@ enum TipoPeriodoServicio {
 
 ## Open Questions (0 remaining)
 
-All NEEDS CLARIFICATION resolved. El modelo, el patrón de creación, la vigencia, el tema verde y la restricción de reportes están definidos.
+All NEEDS CLARIFICATION resolved. El modelo, el patrón de creación, la vigencia, el tema verde, la restricción de reportes y el aislamiento de SCHOOL_ADMIN están definidos.

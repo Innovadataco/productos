@@ -105,6 +105,33 @@ La cuenta institucional del colegio no puede crear reportes. Si alguien de la in
 
 ---
 
+### User Story 5 — Aislamiento del rol SCHOOL_ADMIN (Priority: P1)
+
+El rol SCHOOL_ADMIN fue heredado en múltiples guards, helpers, endpoints y componentes que le otorgan acceso a funciones de administración, operación, comité y reportes reales de la plataforma. Esta User Story audita todos esos usos y restringe el rol exclusivamente a su propio módulo institucional (`/dashboard/colegio/*` y `/api/me/colegio`, con extensión futura a cursos/alumnos).
+
+**Why this priority**: Es un riesgo de seguridad y privacidad: un colegio no debe ver reportes, casos de operadores, ni datos de comité de otros usuarios ni de la plataforma. Debe quedar aislado a su propio dominio institucional.
+
+**Independent Test**: Un SCHOOL_ADMIN autenticado recibe 403 o redirección en cualquier ruta que no sea de su módulo colegio; ADMIN/OPERADOR/COMITE/PARENT conservan sus accesos actuales.
+
+**Acceptance Scenarios**:
+
+1. **Given** un SCHOOL_ADMIN autenticado, **When** intenta acceder a `/dashboard/admin`, `/dashboard/admin/operadores`, `/dashboard/admin/comite`, `/dashboard/admin/estadisticas`, `/dashboard/admin/ia`, `/dashboard/admin/configuracion` o cualquier subruta de `/dashboard/admin/*`, **Then** el proxy/middleware lo redirige a `/dashboard/colegio` con un mensaje de permisos insuficientes.
+2. **Given** un SCHOOL_ADMIN autenticado, **When** realiza una petición a cualquier endpoint bajo `/api/admin/*`, **Then** el endpoint devuelve 403 sin exponer datos.
+3. **Given** un SCHOOL_ADMIN autenticado, **When** intenta acceder a `/mis-reportes`, `/dashboard` o `/dashboard/circulo-confianza`, **Then** el proxy lo redirige a `/dashboard/colegio` (rutas de usuario final bloqueadas para roles internos).
+4. **Given** un SCHOOL_ADMIN autenticado, **When** intenta acceder a `/consulta` o `/dashboard-publico`, **Then** el acceso se permite como a cualquier usuario autenticado o interno (sin datos reales de reportes) — **salvo** que se decida en implementación que se redirija al panel institucional para evitar confusión.
+5. **Given** los helpers `requireAdmin`, `requireOperadorOAdmin`, `requireComiteOAdmin`, `requireAdminOComiteOOperador` en `src/lib/auth.ts`, **When** un SCHOOL_ADMIN los invoca, **Then** devuelven 403, ya que ninguno de ellos debe incluir a SCHOOL_ADMIN.
+6. **Given** un ADMIN, OPERADOR, COMITE o PARENT, **When** acceden a sus rutas habituales, **Then** el comportamiento es idéntico al actual (sin regresión).
+
+**Edge Cases**:
+- ¿Qué pasa si un SCHOOL_ADMIN tiene `tenantId` coincidente con reportes de su institución? Aunque coincide, no puede verlos en esta fase; el acceso se define por rol, no por tenant. La lógica multi-tenant existente se ignora para SCHOOL_ADMIN en módulos de reportes/operadores/comité.
+- ¿Qué pasa con `src/lib/reporte-transiciones.ts`? El helper que asigna responsable `ADMIN` para `ADMIN`/`SCHOOL_ADMIN` debe excluir a SCHOOL_ADMIN; un SCHOOL_ADMIN no realiza transiciones de reportes.
+- ¿Qué pasa con `src/lib/operadores/permisos.ts`? El check que devuelve `rol === ADMIN || rol === SCHOOL_ADMIN` debe limitarse a contextos institucionales; en el módulo de reportes debe devolver `false` para SCHOOL_ADMIN.
+- ¿Qué pasa con `src/components/modules/AdminNav.tsx` y `ComiteSubNav`? Se quita SCHOOL_ADMIN de las listas de roles permitidos; no ve pestañas ni secciones de admin.
+- ¿Qué pasa con `src/app/dashboard/admin/layout.tsx`? SCHOOL_ADMIN no debe pasar el layout de admin; se redirige antes.
+- ¿Qué pasa si hay rutas de admin que hoy no tienen guard explícito? Se audita y se corrige con `verifyAuth` adecuado o se protege en el proxy.
+
+---
+
 ## Edge Cases generales
 
 - ¿Qué ocurre si se elimina el usuario SCHOOL_ADMIN de un colegio? No se permite la eliminación física; se puede desactivar el colegio o regenerar el usuario. Si se desactiva el usuario, el colegio queda sin acceso.
@@ -134,9 +161,14 @@ La cuenta institucional del colegio no puede crear reportes. Si alguien de la in
 - **FR-013**: El sistema DEBE mantener el acceso anónimo y de PARENT a `/reportar` y `POST /api/reportes`.
 - **FR-014**: El sistema DEBE rechazar a SCHOOL_ADMIN en `/reportar` y `POST /api/reportes` con 403 (o redirección en página).
 - **FR-015**: El sistema DEBE exponer un endpoint `/api/me/colegio` para que el SCHOOL_ADMIN obtenga los datos de su colegio.
-- **FR-016**: El sistema DEBE migrar de forma aditiva: nunca eliminar datos ni tablas; no usar `prisma migrate reset` ni `prisma migrate dev` en entornos con datos.
-- **FR-017**: El sistema DEBE hacer un dump de respaldo de la BD antes de ejecutar migraciones o seed relacionados con colegios.
-- **FR-018**: El sistema DEBE mantener los 605 tests existentes verdes; todo endpoint nuevo debe tener su archivo `.test.ts`.
+- **FR-016**: El sistema DEBE quitar SCHOOL_ADMIN de todos los helpers `requireAdmin`, `requireOperadorOAdmin`, `requireComiteOAdmin` y `requireAdminOComiteOOperador` en `src/lib/auth.ts`, así como de cualquier `verifyAuth([..., "SCHOOL_ADMIN", ...])` en endpoints de admin/operador/comité/reportes.
+- **FR-017**: El sistema DEBE redirigir o rechazar con 403 a un SCHOOL_ADMIN que intente acceder a `/dashboard/admin/*`, `/api/admin/*`, `/mis-reportes`, `/dashboard` o `/dashboard/circulo-confianza`.
+- **FR-018**: El sistema DEBE actualizar `src/components/modules/AdminNav.tsx`, `ComiteSubNav.tsx` y `NavHeader.tsx` para que SCHOOL_ADMIN no vea opciones de admin/operador/comité.
+- **FR-019**: El sistema DEBE realizar un inventario previo y posterior de los usos de `SCHOOL_ADMIN` en `src/lib/auth.ts`, `src/lib/proxy.ts`, endpoints y componentes, y documentarlo en `research.md`.
+- **FR-020**: El sistema DEBE agregar tests que verifiquen 403/redirección para SCHOOL_ADMIN en al menos: `/dashboard/admin`, `/dashboard/admin/operadores`, `/dashboard/admin/comite`, `/dashboard/admin/estadisticas`, `/api/admin/reportes-revision`, `/api/admin/operadores`, `/api/admin/comite/pendientes`, `/api/admin/estadisticas`, `/mis-reportes`, `/dashboard/circulo-confianza`.
+- **FR-021**: El sistema DEBE migrar de forma aditiva: nunca eliminar datos ni tablas; no usar `prisma migrate reset` ni `prisma migrate dev` en entornos con datos.
+- **FR-022**: El sistema DEBE hacer un dump de respaldo de la BD antes de ejecutar migraciones o seed relacionados con colegios.
+- **FR-023**: El sistema DEBE mantener los 605 tests existentes verdes; todo endpoint nuevo o afectado por seguridad debe tener su archivo `.test.ts` actualizado.
 
 ### Key Entities
 
@@ -160,8 +192,10 @@ La cuenta institucional del colegio no puede crear reportes. Si alguien de la in
 - **SC-006**: El proxy/middleware verifica vigencia en rutas `/dashboard/colegio/*` y `/api/me/colegio`.
 - **SC-007**: Un SCHOOL_ADMIN autenticado recibe 403 (o redirección) al intentar `POST /api/reportes` o acceder a `/reportar`.
 - **SC-008**: Los usuarios anónimos y PARENT siguen pudiendo reportar sin cambios.
-- **SC-009**: `npm run test` pasa con ≥ 605 tests (sin regresión) y los nuevos tests de colegios cubren creación, login, vigencia, permisos y UI verde.
+- **SC-009**: `npm run test` pasa con ≥ 605 tests (sin regresión) y los nuevos tests de colegios cubren creación, login, vigencia, permisos, aislamiento de SCHOOL_ADMIN y UI verde.
 - **SC-010**: El suite `tsc`, `lint` y `build` sigue sin errores.
+- **SC-011**: SCHOOL_ADMIN recibe 403 o redirección en todas las rutas de admin/operador/comité/reportes/usuario-final auditadas; ADMIN/OPERADOR/COMITE/PARENT conservan sus accesos.
+- **SC-012**: El inventario de usos de `SCHOOL_ADMIN` en `research.md` refleja el estado previo y posterior de la corrección.
 
 ---
 
@@ -173,7 +207,8 @@ La cuenta institucional del colegio no puede crear reportes. Si alguien de la in
 - No se implementa cobro ni pasarela en esta fase; solo la validación de fechas de vigencia.
 - El patrón de creación de operadores (hash bcrypt, contraseña temporal, email de bienvenida) es reutilizable tal cual para SCHOOL_ADMIN.
 - El sistema de tokens de acento (`text-accent`, `accent-gradient`, etc.) se puede extender con una variante verde sin duplicar clases.
-- El proxy/middleware (src/lib/proxy.ts) puede agregar la ruta del colegio y la restricción de `/reportar` para roles internos sin afectar rutas públicas.
+- El rol SCHOOL_ADMIN será aislado exclusivamente a su propio módulo; se quitará de todos los guards, endpoints y componentes de admin/operador/comité/reportes como parte de la US5 de seguridad.
+- El proxy/middleware debe tratar a SCHOOL_ADMIN como una categoría separada de `INTERNAL_ROLES`, permitiéndole solo `/dashboard/colegio/*` y `/api/me/colegio`.
 - El acceso a `/reportar` es público para anónimos y PARENT, pero no para SCHOOL_ADMIN.
 
 ---

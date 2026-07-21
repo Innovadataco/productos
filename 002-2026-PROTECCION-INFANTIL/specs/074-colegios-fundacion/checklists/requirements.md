@@ -33,6 +33,7 @@
 
 - Specification aligns with project constitution (002-2026-PROTECCION-INFANTIL v1.0.0).
 - Scope explicitly excludes: cobro/pasarela, UI de reportes desde colegio, modificación del modelo `Reporte`, y soporte de múltiples admins por colegio.
+- Incluye corrección de seguridad obligatoria: aislamiento de SCHOOL_ADMIN, quitar accesos heredados a admin/operador/comité/reportes, e inventario de usos antes/después.
 - Reutilización documentada: patrón de operadores, tokens de acento, proxy/middleware, modelos de ubicación de la Fase 0, AuditLog.
 - Migration strategy documented as additive and non-destructive; backup required before migration.
 - No code will be implemented until human approval of the plan.
