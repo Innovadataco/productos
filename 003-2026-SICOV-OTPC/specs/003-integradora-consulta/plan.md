@@ -4,7 +4,7 @@
 **Stack:** el de las features 001/002 (Next.js 16 + Prisma `sicov`). **Sin migraciones** (consulta de solo lectura).
 
 ## 1. Resumen técnico
-Tercer punto de integración con la Super y el **único de solo lectura**. Consulta síncrona `POST /api/integracion/integradora/resumen` que verifica en vivo licencia/SOAT/RTM/alcoholimetría/pólizas/tarjeta de conductor(es)+vehículo. **Sin cola, sin worker, sin tablas.** Usa **solo** `Authorization: Bearer <tokenExterno>` (decisión del responsable). **Guardarraíl:** stub por defecto, cero APIs reales.
+Tercer punto de integración con la Super y el **único de solo lectura**. Consulta síncrona `POST /api/integracion/integradora/resumen` que verifica en vivo licencia/SOAT/RTM/alcoholimetría/pólizas/tarjeta de conductor(es)+vehículo. **Sin cola, sin worker, sin tablas.** Se llama **server-side** con las **3 cabeceras** del doble token (reusando `construirCabeceras`), como el backend legacy. **Guardarraíl:** stub por defecto, cero APIs reales.
 
 ## 2. Constitution Check
 | Principio | Cumplimiento |
@@ -12,17 +12,17 @@ Tercer punto de integración con la Super y el **único de solo lectura**. Consu
 | §1.1 Aislamiento Docker | reusa infra 003; sin cambios ✔ |
 | §1.2 Migraciones aditivas | **N/A** — no hay cambios de esquema ✔ |
 | §1.3 Secretos por env | sin secretos nuevos; `tokenExterno` del store ✔ |
-| §1.4 Doble token | **excepción justificada:** la integradora usa solo Bearer tokenExterno (no las 3 cabeceras), por instrucción y por paridad con el path del frontend legacy ✔ |
+| §1.4 Doble token | **cumple:** la integradora usa las **3 cabeceras** (`construirCabeceras`), server-side, como despachos/llegadas ✔ |
 | §1.5 5 reglas de oro | spec completo → commit por US → deploy limpio → pruebas → cierre ✔ |
 | Guardarraíl APIs | stub por defecto; tests solo stub ✔ |
 
-**Única desviación:** cabeceras de la integradora (1 vs 3). Documentada en `contracts/integradora.md` y `spec.md` FR-003; el legacy backend usaba 3 (postTransaccional) pero el frontend usaba 1 — se adopta 1 por instrucción.
+**Sin desviaciones.** La integradora replica el backend legacy (`postTransaccional`, 3 cabeceras). Si la Super exigiera solo Bearer en `/resumen`, es `[NEEDS CLARIFICATION]` a validar en modo real.
 
 ## 3. Decisiones de diseño
 - **D1. Solo lectura, síncrona.** No se toca `schema.prisma`; no hay worker. La request atraviesa al stub/real y devuelve directo.
-- **D2. Extender la interfaz del cliente** con `consultarIntegradora(body)`:
-  - `ClienteStub.consultarIntegradora` → `RespuestaIntegradora` simulada (documentos vigentes), sin red.
-  - `ClienteHttp.consultarIntegradora` → `POST {URL_INTEGRADORA}/api-integradora/resumen` con **solo Bearer tokenExterno** (via `getTokenProveedor()`), timeout 100 s, normaliza `obj ?? raíz`.
+- **D2. Extender la interfaz del cliente** con `consultarIntegradora(body, identificacion, idRol)`:
+  - `ClienteStub.consultarIntegradora` → arma las **3 cabeceras** (`construirCabeceras`, valida herencia rol 3) y devuelve `RespuestaIntegradora` simulada, sin red.
+  - `ClienteHttp.consultarIntegradora` → `construirCabeceras(identificacion, idRol)` (3 cabeceras) + `POST {URL_INTEGRADORA}/api-integradora/resumen`, timeout 100 s, normaliza `obj ?? raíz`.
 - **D3. Tipos** en `src/lib/integracion/integradora-tipos.ts` (del modelo real del frontend).
 - **D4. Endpoint** `POST /api/integracion/integradora/resumen`: valida placa/identificación/fecha-hora, resuelve `nit` efectivo, llama al cliente, normaliza, responde.
 - **D5. Pantalla** `/dashboard/integradora`: formulario + render del resumen (conductor(es)+vehículo con estados/vencimientos, resaltando vencidos).

@@ -4,9 +4,9 @@
 
 ## Fase 0 — Tipos y cliente
 - [ ] T001 `src/lib/integracion/integradora-tipos.ts`: DTOs `SolicitudIntegradora` + `RespuestaIntegradora` (Conductor, Persona, Licencia, Alcoholimetria, ExamenMedico, AptitudFisica, Vehiculo, Poliza(s), TarjetaOperacion, Empresa, Mantenimiento) — del modelo real del frontend.
-- [ ] T002 `src/lib/integracion/cliente.ts`: agregar `consultarIntegradora(body): Promise<RespuestaIntegradora>` a la interfaz `ClienteSupertransporte`.
-- [ ] T003 `src/lib/integracion/cliente-stub.ts`: implementar `consultarIntegradora` — devuelve `RespuestaIntegradora` simulada (documentos VIGENTES, placa/identificación consultadas, conductor2 solo si `numeroIdentificacion2`). NUNCA toca red. + test.
-- [ ] T004 `src/lib/integracion/cliente-http.ts`: implementar `consultarIntegradora` — `POST {URL_INTEGRADORA}/api-integradora/resumen` con **solo** `Authorization: Bearer <getTokenProveedor()>`, timeout 100 s, normaliza `obj ?? raíz`. Solo instanciable en modo real. **No se ejercita contra la Super.**
+- [ ] T002 `src/lib/integracion/cliente.ts`: agregar `consultarIntegradora(body, identificacion, idRol): Promise<RespuestaIntegradora>` a la interfaz `ClienteSupertransporte`.
+- [ ] T003 `src/lib/integracion/cliente-stub.ts`: implementar `consultarIntegradora` — arma las **3 cabeceras** (`construirCabeceras`, valida herencia rol 3) pero NUNCA toca red; devuelve `RespuestaIntegradora` simulada (documentos VIGENTES, placa/identificación consultadas, conductor2 solo si `numeroIdentificacion2`). + test.
+- [ ] T004 `src/lib/integracion/cliente-http.ts`: implementar `consultarIntegradora` — `construirCabeceras(identificacion, idRol)` (**3 cabeceras**) + `POST {URL_INTEGRADORA}/api-integradora/resumen`, timeout 100 s, normaliza `obj ?? raíz`. Solo instanciable en modo real. **No se ejercita contra la Super.**
 
 ## Fase 1 — Endpoint (US1)
 - [ ] T010 `src/app/api/integracion/integradora/resumen/route.ts` (POST): `verifyAuth([1,2,3])`; `limpiarPlaca`; validar `placa`/`numeroIdentificacion1` (400); exigir `horaConsulta` si `fechaConsulta`≠hoy(Bogota); `nit` efectivo; `cliente.consultarIntegradora`; normalizar; responder `RespuestaIntegradora`. Manejo de 502/504. + test.
@@ -17,7 +17,7 @@
 
 ## Fase 3 — Verificación y cierre
 - [ ] T030 `tsc --noEmit`, `lint`, `vitest run` (solo stub) verdes; `next build`.
-- [ ] T031 Smoke en vivo (modo stub): POST resumen con placa+identificación+fecha → `RespuestaIntegradora`; verificar **solo Bearer** (sin `token`/`documento`); segundo conductor con `numeroIdentificacion2`; validación 400. **Sin APIs reales.**
+- [ ] T031 Smoke en vivo (modo stub): POST resumen con placa+identificación+fecha → `RespuestaIntegradora`; verificar que el stub arma las **3 cabeceras** (log `[Authorization,token,documento,...]`); segundo conductor con `numeroIdentificacion2`; validación 400. **Sin APIs reales.**
 - [ ] T032 `cierre.md` + sección Implementación en `spec.md`.
 - [ ] T033 Commit `feat(003-US1)` + `docs(003)` con rutas explícitas `003-`; `git pull --rebase` (autostash) + push.
 
