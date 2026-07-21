@@ -161,3 +161,15 @@ export const identificadorAlumnoIdParamsSchema = z.object({
 export const confirmarCargaSchema = z.object({
     tokenConfirmacion: z.string(),
 });
+
+export const alertaEstadoSchema = z.object({
+    estado: z.enum(["nueva", "vista", "gestionada"]),
+});
+
+export const alertaIdParamsSchema = z.object({
+    id: cuidIdSchema,
+});
+
+export const alertaQuerySchema = z.object({
+    estado: z.enum(["nueva", "vista", "gestionada"]).optional(),
+});

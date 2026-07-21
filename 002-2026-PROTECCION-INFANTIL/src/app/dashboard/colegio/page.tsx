@@ -93,11 +93,14 @@ export default async function ColegioDashboardPage() {
                             <p className="mt-1 text-sm text-muted">Sube alumnos e identificadores desde Excel/CSV.</p>
                         </Link>
 
-                        <div className="rounded-2xl glass p-6 opacity-70">
+                        <Link
+                            href="/dashboard/colegio/alertas"
+                            className="rounded-2xl glass p-6 transition hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30"
+                        >
                             <div className="text-2xl">🚨</div>
                             <h2 className="mt-3 text-lg font-semibold text-body">Alertas</h2>
-                            <p className="mt-1 text-sm text-muted">Próximamente en Fase 4.</p>
-                        </div>
+                            <p className="mt-1 text-sm text-muted">Revisa alertas anonimizadas del colegio.</p>
+                        </Link>
 
                         <div className="rounded-2xl glass p-6 opacity-70">
                             <div className="text-2xl">📊</div>
