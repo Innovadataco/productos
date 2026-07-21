@@ -27,8 +27,14 @@ const PUBLIC_ROUTES = [
     "/apelar",
 ];
 
-// Rutas de usuario final: solo PARENT (o anónimo con token) puede usarlas; internos no.
+// Rutas de usuario final: solo PARENT (o anónimo) puede usarlas; internos no.
 const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes"];
+
+// Rutas exclusivas del módulo Colegio.
+const COLEGIO_ROUTES = ["/dashboard/colegio", "/api/me/colegio"];
+
+// Rutas públicas que los roles internos no pueden usar (la cuenta institucional no reporta).
+const REPORTAR_ROUTE = "/reportar";
 
 function getSecret(): Uint8Array | null {
     const secret = process.env.JWT_SECRET;
@@ -42,6 +48,14 @@ function isPublic(pathname: string): boolean {
 
 function isUserFinalRoute(pathname: string): boolean {
     return USER_FINAL_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
+}
+
+function isColegioRoute(pathname: string): boolean {
+    return COLEGIO_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
+}
+
+function isReportarRoute(pathname: string): boolean {
+    return pathname === REPORTAR_ROUTE || pathname.startsWith(REPORTAR_ROUTE + "/");
 }
 
 async function verifyToken(token: string) {
@@ -62,8 +76,8 @@ function redirectToLogin(request: NextRequest) {
     return res;
 }
 
-const INTERNAL_ROLES = new Set(["ADMIN", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
-const ADMIN_ROLES = new Set(["ADMIN", "SCHOOL_ADMIN"]);
+const INTERNAL_ROLES = new Set(["ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
+const ADMIN_ROLES = new Set(["ADMIN"]);
 
 function esRolInterno(rol: string) {
     return INTERNAL_ROLES.has(rol);
@@ -81,19 +95,21 @@ function esRutaAdminOnly(pathname: string) {
 
 function homeForRole(rol: string) {
     if (rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
+    if (rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
     return "/dashboard/admin";
+}
+
+function redirectToHome(request: NextRequest, rol: string) {
+    return NextResponse.redirect(new URL(homeForRole(rol), request.url));
 }
 
 async function proxyCore(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get("token")?.value ?? request.cookies.get("__Host-token")?.value;
 
-    // Public routes are always allowed for anonymous users.
-    // Routes like /reportar are public for anonymous but not for internal users.
     const isPublicRoute = isPublic(pathname);
-
-    // Internal routes (admin/operador panel and APIs)
     const isInternalRoute = pathname.startsWith("/dashboard/admin") || pathname.startsWith("/api/admin");
+    const isColegio = isColegioRoute(pathname);
 
     // If no token, behave as before: public -> next, protected -> redirect/401
     if (!token) {
@@ -116,15 +132,25 @@ async function proxyCore(request: NextRequest) {
         return redirectToLogin(request);
     }
 
-    // Admin-only routes inside the admin area: must be checked before the generic internal route check,
-    // so COMITE_VALIDACION (or OPERADOR) is redirected before being admitted as an internal user.
-    if (esRutaAdminOnly(pathname) && !esRolAdmin(payload.rol)) {
-        return NextResponse.redirect(new URL(homeForRole(payload.rol), request.url));
+    const rol = payload.rol;
+
+    // SCHOOL_ADMIN is isolated to colegio routes only.
+    if (rol === "SCHOOL_ADMIN") {
+        if (isColegio) return NextResponse.next();
+        if (pathname.startsWith("/api/")) {
+            return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
+        }
+        return redirectToHome(request, rol);
     }
 
-    // Internal routes: require internal role (ADMIN, SCHOOL_ADMIN, OPERADOR or COMITE_VALIDACION)
+    // Admin-only routes inside the admin area: must be checked before the generic internal route check.
+    if (esRutaAdminOnly(pathname) && !esRolAdmin(rol)) {
+        return redirectToHome(request, rol);
+    }
+
+    // Internal routes: require internal role (ADMIN, OPERADOR or COMITE_VALIDACION)
     if (isInternalRoute) {
-        if (!esRolInterno(payload.rol)) {
+        if (!esRolInterno(rol)) {
             if (pathname.startsWith("/api/admin")) {
                 return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
             }
@@ -134,8 +160,13 @@ async function proxyCore(request: NextRequest) {
     }
 
     // User-final routes: internal users must not access them; redirect to their home area.
-    if (isUserFinalRoute(pathname) && esRolInterno(payload.rol)) {
-        return NextResponse.redirect(new URL(homeForRole(payload.rol), request.url));
+    if (isUserFinalRoute(pathname) && esRolInterno(rol)) {
+        return redirectToHome(request, rol);
+    }
+
+    // /reportar is public for anonymous/PARENT, but not for internal platform roles.
+    if (isReportarRoute(pathname) && esRolInterno(rol)) {
+        return redirectToHome(request, rol);
     }
 
     return NextResponse.next();

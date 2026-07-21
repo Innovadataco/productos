@@ -51,8 +51,10 @@ export default function CambiarPasswordPage() {
             }
             setSuccess(true);
             setTimeout(() => {
-                const target = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
+                const target = user?.rol === "ADMIN"
                     ? "/dashboard/admin"
+                    : user?.rol === "SCHOOL_ADMIN"
+                    ? "/dashboard/colegio"
                     : user?.rol === "OPERADOR"
                     ? "/dashboard/admin"
                     : "/mis-reportes";

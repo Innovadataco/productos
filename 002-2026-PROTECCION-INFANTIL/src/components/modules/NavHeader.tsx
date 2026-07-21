@@ -35,9 +35,9 @@ export function NavHeader() {
         ? (user.nombre?.[0] || user.email[0]).toUpperCase()
         : "";
 
-    const esEmpleado = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN" || user?.rol === "OPERADOR" || user?.rol === "COMITE_VALIDACION";
+    const esEmpleado = user?.rol === "ADMIN" || user?.rol === "OPERADOR" || user?.rol === "COMITE_VALIDACION";
 
-    const headerBorderClass = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
+    const headerBorderClass = user?.rol === "ADMIN"
         ? "border-b-amber-500/40 dark:border-b-amber-400/30"
         : user?.rol === "OPERADOR"
         ? "border-b-violet-500/40 dark:border-b-violet-400/30"
@@ -45,7 +45,7 @@ export function NavHeader() {
         ? "border-b-emerald-500/40 dark:border-b-emerald-400/30"
         : "border-b-white/40 dark:border-b-white/10";
 
-    const avatarClass = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
+    const avatarClass = user?.rol === "ADMIN"
         ? "bg-amber-500"
         : user?.rol === "OPERADOR"
         ? "bg-violet-500"
@@ -53,13 +53,19 @@ export function NavHeader() {
         ? "bg-emerald-500"
         : "accent-gradient";
 
-    const rolBadgeClass = user?.rol === "ADMIN" || user?.rol === "SCHOOL_ADMIN"
+    const rolBadgeClass = user?.rol === "ADMIN"
         ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
         : user?.rol === "OPERADOR"
         ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
         : user?.rol === "COMITE_VALIDACION"
         ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
         : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+
+    const dashboardHref = user?.rol === "SCHOOL_ADMIN"
+        ? "/dashboard/colegio"
+        : user?.rol === "PARENT"
+        ? "/dashboard"
+        : "/dashboard-publico";
 
     return (
         <header className={`fixed top-0 left-0 right-0 z-50 glass ${headerBorderClass}`}>
@@ -76,7 +82,7 @@ export function NavHeader() {
                     <ThemeToggle />
 
                     <Link
-                        href={user?.rol === "PARENT" ? "/dashboard" : "/dashboard-publico"}
+                        href={dashboardHref}
                         className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
                     >
                         Dashboard
@@ -111,7 +117,7 @@ export function NavHeader() {
                                         </div>
                                     </div>
                                     <div className="py-1">
-                                        {(user.rol === "ADMIN" || user.rol === "SCHOOL_ADMIN") && (
+                                        {user.rol === "ADMIN" && (
                                             <>
                                                 <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
                                                     Panel de administración
@@ -120,6 +126,11 @@ export function NavHeader() {
                                                     Configuración
                                                 </NavDropdownLink>
                                             </>
+                                        )}
+                                        {user.rol === "SCHOOL_ADMIN" && (
+                                            <NavDropdownLink href="/dashboard/colegio" onClick={() => setOpen(false)}>
+                                                Mi colegio
+                                            </NavDropdownLink>
                                         )}
                                         {user.rol === "OPERADOR" && (
                                             <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
@@ -194,11 +205,14 @@ export function NavHeader() {
                                         <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>
                                     </>
                                 )}
-                                {(user.rol === "ADMIN" || user.rol === "SCHOOL_ADMIN") && (
+                                {user.rol === "ADMIN" && (
                                     <>
                                         <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Panel admin</MobileLink>
                                         <MobileLink href="/dashboard/admin/configuracion" onClick={() => setMobileOpen(false)}>Configuración</MobileLink>
                                     </>
+                                )}
+                                {user.rol === "SCHOOL_ADMIN" && (
+                                    <MobileLink href="/dashboard/colegio" onClick={() => setMobileOpen(false)}>Mi colegio</MobileLink>
                                 )}
                                 {user.rol === "OPERADOR" && (
                                     <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Mis casos</MobileLink>

@@ -21,17 +21,14 @@ function getClientInfo(request: Request) {
     };
 }
 
-async function getOperador(id: string, admin: { id: string; rol: string; tenantId: string | null }) {
+async function getOperador(id: string) {
     const where: Record<string, unknown> = { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } };
-    if (admin.rol === "SCHOOL_ADMIN") {
-        where.tenantId = admin.tenantId ?? null;
-    }
     return prisma.usuario.findFirst({ where, include: { perfilOperador: true } });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const admin = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -40,7 +37,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
         const { id } = await params;
-        const operador = await getOperador(id, admin);
+        const operador = await getOperador(id);
         if (!operador) {
             return NextResponse.json({ error: { message: "Operador no encontrado", code: ERROR_CODES.NOT_FOUND } }, { status: 404 });
         }
@@ -100,7 +97,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const admin = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -109,7 +106,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             );
         }
         const { id } = await params;
-        const operador = await getOperador(id, admin);
+        const operador = await getOperador(id);
         if (!operador) {
             return NextResponse.json({ error: { message: "Operador no encontrado", code: ERROR_CODES.NOT_FOUND } }, { status: 404 });
         }

@@ -74,7 +74,7 @@ function serializarIntegrante(integrante: {
 
 export async function GET(request: Request) {
     try {
-        const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const admin = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(request, "admin_read", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -100,13 +100,6 @@ export async function GET(request: Request) {
             );
         }
 
-        if (admin.rol === "SCHOOL_ADMIN" && comite.tenantId && comite.tenantId !== admin.tenantId) {
-            return NextResponse.json(
-                { error: { message: "No tienes permiso para ver este comité", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
-
         const integrantes = await prisma.integranteComite.findMany({
             where: { comiteId },
             orderBy: { creadoEn: "desc" },
@@ -126,7 +119,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const admin = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -150,13 +143,6 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 { error: { message: "Comité no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
-            );
-        }
-
-        if (admin.rol === "SCHOOL_ADMIN" && comite.tenantId && comite.tenantId !== admin.tenantId) {
-            return NextResponse.json(
-                { error: { message: "No tienes permiso para gestionar este comité", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
             );
         }
 

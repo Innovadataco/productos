@@ -38,7 +38,7 @@ export default function MisReportesPage() {
             return;
         }
 
-        if (["ADMIN", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION"].includes(user.rol)) {
+        if (["ADMIN", "OPERADOR", "COMITE_VALIDACION"].includes(user.rol)) {
             const target =
                 user.rol === "COMITE_VALIDACION"
                     ? "/dashboard/admin/comite"
@@ -46,6 +46,11 @@ export default function MisReportesPage() {
                       ? "/dashboard/admin/operadores"
                       : "/dashboard/admin";
             router.push(target);
+            return;
+        }
+
+        if (user.rol === "SCHOOL_ADMIN") {
+            router.push("/dashboard/colegio");
             return;
         }
 

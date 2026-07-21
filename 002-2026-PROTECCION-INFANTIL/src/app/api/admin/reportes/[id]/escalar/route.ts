@@ -82,13 +82,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        if (user.rol === "SCHOOL_ADMIN" && reporte.tenantId && reporte.tenantId !== user.tenantId) {
-            return NextResponse.json(
-                { error: { message: "No tienes permiso para escalar este caso", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
-
         if (reporte.estado !== "REVISION_MANUAL") {
             return NextResponse.json(
                 { error: { message: "Solo se pueden escalar casos en revisión manual", code: ERROR_CODES.VALIDATION_ERROR } },

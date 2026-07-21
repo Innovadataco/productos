@@ -13,7 +13,8 @@ const tabs = [
 const ADMIN_COMITE_TABS = new Set(["/dashboard/admin/comite/gestion", "/dashboard/admin/comite/auditoria"]);
 
 function puedeVerTab(rol: RolUsuario, href: string) {
-    if (rol === "ADMIN" || rol === "SCHOOL_ADMIN") return true;
+    if (rol === "SCHOOL_ADMIN") return false;
+    if (rol === "ADMIN") return true;
     return !ADMIN_COMITE_TABS.has(href);
 }
 

@@ -27,7 +27,7 @@ async function obtenerModeloActual() {
 
 export async function GET(req: Request) {
     try {
-        const user = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const user = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(req, "admin_read", { identifier: user.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -51,7 +51,7 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
     try {
-        const user = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const user = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(req, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
             return NextResponse.json(

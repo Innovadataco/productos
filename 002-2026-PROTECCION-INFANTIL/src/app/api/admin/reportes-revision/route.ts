@@ -81,11 +81,6 @@ export async function GET(req: Request) {
             where.operadorId = operadorId;
         }
 
-        // SCHOOL_ADMIN solo ve recursos de su tenant.
-        if (user.rol === "SCHOOL_ADMIN") {
-            where.tenantId = user.tenantId ?? null;
-        }
-
         const [reportes, total] = await Promise.all([
             prisma.reporte.findMany({
                 where,

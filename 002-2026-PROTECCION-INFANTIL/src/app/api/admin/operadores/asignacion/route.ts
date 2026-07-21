@@ -8,7 +8,7 @@ import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
 
 export async function GET(req: Request) {
     try {
-        const user = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const user = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(req, "admin_read", { identifier: user.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -17,19 +17,16 @@ export async function GET(req: Request) {
             );
         }
 
-        const whereTenant = user.rol === "SCHOOL_ADMIN" ? { tenantId: user.tenantId ?? null } : {};
-
         const [sinAsignar, operadoresRaw, distribucion, config] = await Promise.all([
             prisma.reporte.count({
                 where: {
                     estado: "REVISION_MANUAL",
                     operadorId: null,
                     eliminado: false,
-                    ...whereTenant,
                 },
             }),
             prisma.usuario.findMany({
-                where: { rol: "OPERADOR", estado: "activo", ...whereTenant },
+                where: { rol: "OPERADOR", estado: "activo" },
                 include: { perfilOperador: { select: { cupoMaximo: true, esRevisorDeApelaciones: true } } },
                 orderBy: { creadoEn: "asc" },
             }),
@@ -39,7 +36,6 @@ export async function GET(req: Request) {
                     estado: "REVISION_MANUAL",
                     eliminado: false,
                     operadorId: { not: null },
-                    ...whereTenant,
                 },
                 _count: { operadorId: true },
             }),

@@ -103,11 +103,11 @@ describe("ComiteSubNav", () => {
         expect(screen.getByText("Auditoría")).toBeTruthy();
     });
 
-    it("SCHOOL_ADMIN ve las 3 pestañas", () => {
+    it("SCHOOL_ADMIN no ve pestañas de comité", () => {
         render(<ComiteSubNav rol="SCHOOL_ADMIN" />);
-        expect(screen.getByText("Bandeja")).toBeTruthy();
-        expect(screen.getByText("Gestión")).toBeTruthy();
-        expect(screen.getByText("Auditoría")).toBeTruthy();
+        expect(screen.queryByText("Bandeja")).toBeNull();
+        expect(screen.queryByText("Gestión")).toBeNull();
+        expect(screen.queryByText("Auditoría")).toBeNull();
     });
 });
 
@@ -132,10 +132,10 @@ describe("AdminNav", () => {
         }
     });
 
-    it("SCHOOL_ADMIN ve todas las secciones", () => {
+    it("SCHOOL_ADMIN no ve secciones de administración", () => {
         render(<AdminNav rol="SCHOOL_ADMIN" />);
         for (const label of allLabels) {
-            expect(screen.getByText(label)).toBeTruthy();
+            expect(screen.queryByText(label)).toBeNull();
         }
     });
 
@@ -233,19 +233,15 @@ describe("puedeGestionarReporte", () => {
         expect(puedeGestionarReporte(user, reporteOtroOperador)).toBe(false);
     });
 
-    it("SCHOOL_ADMIN con reporte de otro tenant devuelve false", () => {
+    it("SCHOOL_ADMIN no puede gestionar reportes", () => {
         const user = makeUsuario({ id: "admin-1", rol: "SCHOOL_ADMIN", tenantId: "tenant-1" });
         expect(puedeGestionarReporte(user, reporteOtroTenant)).toBe(false);
+        expect(puedeGestionarReporte(user, reporteAsignado)).toBe(false);
     });
 
     it("ADMIN puede gestionar cualquier reporte", () => {
         const user = makeUsuario({ id: "admin-1", rol: "ADMIN", tenantId: "tenant-1" });
         expect(puedeGestionarReporte(user, reporteOtroTenant)).toBe(true);
-        expect(puedeGestionarReporte(user, reporteAsignado)).toBe(true);
-    });
-
-    it("SCHOOL_ADMIN puede gestionar reportes de su tenant", () => {
-        const user = makeUsuario({ id: "admin-1", rol: "SCHOOL_ADMIN", tenantId: "tenant-1" });
         expect(puedeGestionarReporte(user, reporteAsignado)).toBe(true);
     });
 

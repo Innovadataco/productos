@@ -126,19 +126,23 @@ export function requireRol(rol: RolUsuario | RolUsuario[]) {
 }
 
 export function requireAdmin() {
-    return () => verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+    return () => verifyAuth("ADMIN");
 }
 
 export function requireOperadorOAdmin() {
-    return () => verifyAuth(["ADMIN", "SCHOOL_ADMIN", "OPERADOR"]);
+    return () => verifyAuth(["ADMIN", "OPERADOR"]);
 }
 
 export function requireComiteOAdmin() {
-    return () => verifyAuth(["ADMIN", "SCHOOL_ADMIN", "COMITE_VALIDACION"]);
+    return () => verifyAuth(["ADMIN", "COMITE_VALIDACION"]);
 }
 
 export function requireAdminOComiteOOperador() {
-    return () => verifyAuth(["ADMIN", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
+    return () => verifyAuth(["ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
+}
+
+export function requireSchoolAdmin() {
+    return () => verifyAuth("SCHOOL_ADMIN");
 }
 
 export async function setSessionCookie(request: Request, token: string): Promise<void> {

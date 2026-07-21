@@ -5,7 +5,7 @@ type RecursoConOperadorYTenant = { operadorId: string | null; tenantId?: string 
 type RecursoConOperador = { operadorId: string | null };
 
 export function esAdminRol(rol: string) {
-    return rol === "ADMIN" || rol === "SCHOOL_ADMIN";
+    return rol === "ADMIN";
 }
 
 export function esOperadorRol(rol: string) {
@@ -30,10 +30,6 @@ export function requireComiteOAdmin(user: Usuario) {
 
 export function puedeGestionarReporte(user: Usuario, reporte: RecursoConOperadorYTenant) {
     if (esAdminRol(user.rol)) {
-        // SCHOOL_ADMIN solo ve recursos de su tenant (o sin tenant).
-        if (user.rol === "SCHOOL_ADMIN" && reporte.tenantId && reporte.tenantId !== user.tenantId) {
-            return false;
-        }
         return true;
     }
     if (user.rol === "OPERADOR") {

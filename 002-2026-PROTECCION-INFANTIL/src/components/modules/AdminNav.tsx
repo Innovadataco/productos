@@ -3,19 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type RolNav = "ADMIN" | "SCHOOL_ADMIN" | "OPERADOR" | "COMITE_VALIDACION";
+type RolNav = "ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "SCHOOL_ADMIN";
 
 const allLinks = [
-    { href: "/dashboard/admin", label: "Bandeja de reportes", icon: InboxIcon, roles: ["ADMIN", "SCHOOL_ADMIN", "OPERADOR"] as RolNav[] },
-    { href: "/dashboard/admin/spam", label: "Revisión de spam", icon: ShieldExclamationIcon, roles: ["ADMIN", "SCHOOL_ADMIN", "OPERADOR"] as RolNav[] },
-    { href: "/dashboard/admin/comite", label: "Comité", icon: ScaleIcon, roles: ["ADMIN", "SCHOOL_ADMIN", "COMITE_VALIDACION"] as RolNav[] },
-    { href: "/dashboard/admin/estadisticas", label: "Dashboard", icon: ChartIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/ia", label: "Centro de Control IA", icon: BrainIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/operadores", label: "Operadores", icon: UsersIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", icon: ShieldIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/apelaciones", label: "Apelaciones", icon: ScaleIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", icon: DatabaseIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/configuracion", label: "Configuración", icon: CogIcon, roles: ["ADMIN", "SCHOOL_ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin", label: "Bandeja de reportes", icon: InboxIcon, roles: ["ADMIN", "OPERADOR"] as RolNav[] },
+    { href: "/dashboard/admin/spam", label: "Revisión de spam", icon: ShieldExclamationIcon, roles: ["ADMIN", "OPERADOR"] as RolNav[] },
+    { href: "/dashboard/admin/comite", label: "Comité", icon: ScaleIcon, roles: ["ADMIN", "COMITE_VALIDACION"] as RolNav[] },
+    { href: "/dashboard/admin/estadisticas", label: "Dashboard", icon: ChartIcon, roles: ["ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/ia", label: "Centro de Control IA", icon: BrainIcon, roles: ["ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/operadores", label: "Operadores", icon: UsersIcon, roles: ["ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/colegios", label: "Colegios", icon: BuildingIcon, roles: ["ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", icon: ShieldIcon, roles: ["ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/apelaciones", label: "Apelaciones", icon: ScaleIcon, roles: ["ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", icon: DatabaseIcon, roles: ["ADMIN"] as RolNav[] },
+    { href: "/dashboard/admin/configuracion", label: "Configuración", icon: CogIcon, roles: ["ADMIN"] as RolNav[] },
 ];
 
 export function AdminNav({ rol }: { rol: RolNav }) {
@@ -124,6 +125,16 @@ function UsersIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.295-2.158-.81-3.05M15 19.128h.003M12 14a4 4 0 1 0-8 0 4 4 0 0 0 8 0Zm0 0h.003M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+    );
+}
+
+function BuildingIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 2.25h15A2.25 2.25 0 0 1 21.75 4.5v15A2.25 2.25 0 0 1 19.5 21.75h-15A2.25 2.25 0 0 1 2.25 19.5v-15A2.25 2.25 0 0 1 4.5 2.25Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Zm4.5-9h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Zm4.5-9h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.75V18" />
         </svg>
     );
 }

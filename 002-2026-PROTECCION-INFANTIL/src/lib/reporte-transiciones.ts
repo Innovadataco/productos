@@ -55,7 +55,7 @@ export async function registrarTransicion(params: RegistrarTransicionParams) {
 }
 
 export function responsableTipoFromRol(rol: string): ResponsableTransicion | null {
-    if (rol === "ADMIN" || rol === "SCHOOL_ADMIN") return "ADMIN";
+    if (rol === "ADMIN") return "ADMIN";
     if (rol === "OPERADOR") return "OPERADOR";
     if (rol === "COMITE_VALIDACION") return "COMITE";
     return null;

@@ -44,10 +44,6 @@ export async function GET(req: Request) {
             where.operadorId = user.id;
         }
 
-        if (user.rol === "SCHOOL_ADMIN") {
-            where.tenantId = user.tenantId ?? null;
-        }
-
         const [reportes, total] = await Promise.all([
             prisma.reporte.findMany({
                 where,

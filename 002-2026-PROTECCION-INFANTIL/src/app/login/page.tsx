@@ -28,7 +28,8 @@ export default function LoginPage() {
         }
 
         const getRoleHome = (rol: string | undefined) => {
-            if (rol === "ADMIN" || rol === "SCHOOL_ADMIN") return "/dashboard/admin";
+            if (rol === "ADMIN") return "/dashboard/admin";
+            if (rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
             if (rol === "OPERADOR") return "/dashboard/admin/operadores";
             if (rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
             return "/mis-reportes";

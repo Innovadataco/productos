@@ -21,7 +21,7 @@ function getClientInfo(request: Request) {
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const user = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const user = await verifyAuth("ADMIN");
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
@@ -66,13 +66,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             return NextResponse.json(
                 { error: { message: "Solo se pueden reasignar solicitudes asignadas", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 409 }
-            );
-        }
-
-        if (user.rol === "SCHOOL_ADMIN" && solicitud.reporte.tenantId && solicitud.reporte.tenantId !== user.tenantId) {
-            return NextResponse.json(
-                { error: { message: "No tienes permiso para reasignar esta solicitud", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
             );
         }
 

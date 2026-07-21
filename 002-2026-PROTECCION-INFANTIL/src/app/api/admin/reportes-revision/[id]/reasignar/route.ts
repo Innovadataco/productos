@@ -20,7 +20,7 @@ function getClientInfo(request: Request) {
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const admin = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -62,9 +62,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             rol: "OPERADOR",
             estado: "activo",
         };
-        if (admin.rol === "SCHOOL_ADMIN") {
-            operadorWhere.tenantId = admin.tenantId ?? null;
-        }
         const operador = await prisma.usuario.findFirst({
             where: operadorWhere,
             include: { perfilOperador: { select: { cupoMaximo: true } } },

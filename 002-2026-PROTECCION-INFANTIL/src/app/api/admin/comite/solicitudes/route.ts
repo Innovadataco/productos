@@ -46,9 +46,6 @@ export async function GET(request: Request) {
         if (esAdminRol(user.rol)) {
             where = {
                 estado: { in: ["PENDIENTE", "ASIGNADA", "RESUELTA"] },
-                ...(user.rol === "SCHOOL_ADMIN" && user.tenantId
-                    ? { reporte: { tenantId: user.tenantId } }
-                    : {}),
             };
         } else {
             where = {

@@ -37,7 +37,7 @@ function filtroTenant(admin: { rol: string; tenantId: string | null }) {
 
 export async function GET(request: Request) {
     try {
-        const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const admin = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(request, "admin_read", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const admin = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(

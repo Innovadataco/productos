@@ -40,9 +40,6 @@ export async function GET(request: Request) {
         if (user.rol === "OPERADOR") {
             where.operadorId = user.id;
         }
-        if (user.rol === "SCHOOL_ADMIN") {
-            where.tenantId = user.tenantId ?? null;
-        }
 
         const items = await prisma.apelacionIdentificador.findMany({
             where,

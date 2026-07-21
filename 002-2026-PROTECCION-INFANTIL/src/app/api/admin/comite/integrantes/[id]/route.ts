@@ -28,15 +28,12 @@ function getClientInfo(request: Request) {
     };
 }
 
-async function getIntegrante(id: string, admin: { id: string; rol: string; tenantId: string | null }) {
+async function getIntegrante(id: string) {
     const integrante = await prisma.integranteComite.findUnique({
         where: { id },
         include: { comite: true },
     });
     if (!integrante) return null;
-    if (admin.rol === "SCHOOL_ADMIN" && integrante.comite.tenantId && integrante.comite.tenantId !== admin.tenantId) {
-        return null;
-    }
     return integrante;
 }
 
@@ -76,7 +73,7 @@ function serializarIntegrante(integrante: {
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const admin = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -85,7 +82,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
         const { id } = await params;
-        const integrante = await getIntegrante(id, admin);
+        const integrante = await getIntegrante(id);
         if (!integrante) {
             return NextResponse.json({ error: { message: "Integrante no encontrado", code: ERROR_CODES.NOT_FOUND } }, { status: 404 });
         }
@@ -168,7 +165,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const admin = await verifyAuth(["ADMIN", "SCHOOL_ADMIN"]);
+        const admin = await verifyAuth("ADMIN");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -177,7 +174,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             );
         }
         const { id } = await params;
-        const integrante = await getIntegrante(id, admin);
+        const integrante = await getIntegrante(id);
         if (!integrante) {
             return NextResponse.json({ error: { message: "Integrante no encontrado", code: ERROR_CODES.NOT_FOUND } }, { status: 404 });
         }
