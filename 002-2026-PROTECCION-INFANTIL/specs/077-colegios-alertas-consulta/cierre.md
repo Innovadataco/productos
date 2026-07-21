@@ -72,7 +72,7 @@ A continuación se generan los commits:
 - Uno por User Story 3 (notificaciones).
 - Uno de documentación/cierre.
 
-Hash final: *(ver git log después del push)*.
+Hash final: `31d8572`.
 
 ## Deuda técnica
 
