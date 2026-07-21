@@ -74,7 +74,7 @@ export default async function ColegioDashboardPage() {
                         </div>
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <Link
                             href="/dashboard/colegio/cursos"
                             className="rounded-2xl glass p-6 transition hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30"
@@ -82,6 +82,15 @@ export default async function ColegioDashboardPage() {
                             <div className="text-2xl">📚</div>
                             <h2 className="mt-3 text-lg font-semibold text-body">Cursos</h2>
                             <p className="mt-1 text-sm text-muted">Gestiona cursos y alumnos.</p>
+                        </Link>
+
+                        <Link
+                            href="/dashboard/colegio/cursos/carga"
+                            className="rounded-2xl glass p-6 transition hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30"
+                        >
+                            <div className="text-2xl">📥</div>
+                            <h2 className="mt-3 text-lg font-semibold text-body">Carga masiva</h2>
+                            <p className="mt-1 text-sm text-muted">Sube alumnos e identificadores desde Excel/CSV.</p>
                         </Link>
 
                         <div className="rounded-2xl glass p-6 opacity-70">

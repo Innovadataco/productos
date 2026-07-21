@@ -157,3 +157,7 @@ export const identificadorAlumnoUpdateBodySchema = z.object({
 export const identificadorAlumnoIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
+
+export const confirmarCargaSchema = z.object({
+    tokenConfirmacion: z.string(),
+});
