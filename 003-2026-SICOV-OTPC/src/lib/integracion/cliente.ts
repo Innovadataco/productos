@@ -1,6 +1,7 @@
 import { modoIntegracion } from "@/lib/integracion/modo";
 import { ClienteStub } from "@/lib/integracion/cliente-stub";
 import { ClienteHttp } from "@/lib/integracion/cliente-http";
+import type { SolicitudIntegradora, RespuestaIntegradora } from "@/lib/integracion/integradora-tipos";
 
 export type RespuestaExterna = Record<string, unknown>;
 
@@ -13,6 +14,13 @@ export interface ClienteSupertransporte {
     identificacion: string,
     idRol: number,
   ): Promise<RespuestaExterna>;
+
+  /// Consulta integradora (solo lectura, síncrona). También arma las 3 cabeceras (server-side).
+  consultarIntegradora(
+    body: SolicitudIntegradora,
+    identificacion: string,
+    idRol: number,
+  ): Promise<RespuestaIntegradora>;
 }
 
 let _cliente: ClienteSupertransporte | null = null;

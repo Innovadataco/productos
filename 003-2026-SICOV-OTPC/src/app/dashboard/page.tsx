@@ -48,7 +48,7 @@ export default function DashboardPage() {
         {sesion.usuario.nombre} — rol {sesion.usuario.rol}
       </p>
 
-      <nav className="flex gap-3">
+      <nav className="flex flex-wrap gap-3">
         {sesion.modulos.map((m) => (
           <a
             key={m.id}
@@ -58,6 +58,12 @@ export default function DashboardPage() {
             {m.nombreMostrar ?? m.ruta}
           </a>
         ))}
+        <a
+          href="/dashboard/integradora"
+          className="px-4 py-2 bg-white border rounded shadow-sm text-sm hover:bg-gray-100"
+        >
+          Consulta integradora
+        </a>
       </nav>
     </main>
   );

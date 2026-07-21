@@ -57,3 +57,29 @@ describe("ClienteStub (nunca toca red)", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("ClienteStub.consultarIntegradora (solo lectura, sin red)", () => {
+  it("devuelve un resumen con conductor1 y vehículo consultados", async () => {
+    const cli = new ClienteStub();
+    const r = await cli.consultarIntegradora(
+      { placa: "ABC123", numeroIdentificacion1: "123", fechaConsulta: "2026-07-21" },
+      "900853057",
+      2,
+    );
+    expect(r.conductor1.persona.numeroIdentificacion).toBe("123");
+    expect(r.conductor2).toBeNull();
+    expect(r.vehiculo.placa).toBe("ABC123");
+    expect(r.vehiculo.soatVencimiento).toBeTruthy();
+    expect(r.tarjetaOperacion.estado).toBe("VIGENTE");
+  });
+
+  it("incluye conductor2 si se pasa numeroIdentificacion2", async () => {
+    const cli = new ClienteStub();
+    const r = await cli.consultarIntegradora(
+      { placa: "XYZ789", numeroIdentificacion1: "1", numeroIdentificacion2: "2", fechaConsulta: "2026-07-21" },
+      "900853057",
+      2,
+    );
+    expect(r.conductor2?.persona.numeroIdentificacion).toBe("2");
+  });
+});
