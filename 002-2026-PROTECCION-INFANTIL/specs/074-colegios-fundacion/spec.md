@@ -215,8 +215,34 @@ El rol SCHOOL_ADMIN fue heredado en múltiples guards, helpers, endpoints y comp
 
 ## Implementación
 
-*Pendiente. Se completará tras la aprobación del plan y la implementación de las User Stories.*
+### Resumen de cambios
+
+- **Migración y modelo**: `prisma/migrations/20260720214140_add_colegio` crea `Colegio` y agrega `Usuario.colegioId`; `AccionAudit` recibe `COLEGIO_*`; `TipoPeriodoServicio` nuevo. Backup previo realizado en `/tmp/backup-pre-074-20260721-020758.dump`.
+- **US1 (Admin crea colegios)**:
+  - `src/app/api/admin/colegios/route.ts` (GET/POST) y `src/app/api/admin/colegios/[id]/route.ts` (PATCH/DELETE).
+  - Creación transaccional de `Tenant`, `Colegio` y `Usuario` con `rol=SCHOOL_ADMIN`, `colegioId` y `tenantId` vinculados; contraseña temporal; email de bienvenida; `AuditLog`.
+  - UI: `src/app/dashboard/admin/colegios/page.tsx`, `src/app/dashboard/admin/colegios/nuevo/page.tsx` y link en `AdminNav`.
+  - Validación de ubicación (país/ciudad) en POST/PATCH.
+- **US2 (Login institucional + verde)**:
+  - `src/app/dashboard/colegio/layout.tsx` y `src/app/dashboard/colegio/page.tsx`.
+  - `src/app/globals.css`: clase `.theme-colegio` sobreescribe `text-accent`, `accent-gradient`, `text-gradient`, `ring-accent`, `ring-accent-input`, `bg-page` en tonos verdes/emerald.
+  - `NavHeader`, `login/page.tsx`, `cambiar-password/page.tsx` redirigen a `/dashboard/colegio` para SCHOOL_ADMIN.
+- **US3 (Vigencia)**:
+  - `src/lib/colegio/vigencia.ts`: verificación de vigencia, inactivo, sin colegio.
+  - `src/app/api/auth/login/route.ts`: rechaza login de SCHOOL_ADMIN fuera de vigencia con 403.
+  - `src/app/api/me/colegio/route.ts`: verifica vigencia antes de responder.
+  - `src/app/dashboard/colegio/layout.tsx`: muestra pantalla de servicio no vigente.
+- **US4 (Colegio no reporta)**:
+  - `src/lib/proxy.ts`: `REPORTAR_ROUTE` bloqueada para roles internos (`ADMIN`, `OPERADOR`, `COMITE_VALIDACION`); SCHOOL_ADMIN ya está aislado.
+- **US5 (Aislamiento SCHOOL_ADMIN)**:
+  - `src/lib/proxy.ts`: SCHOOL_ADMIN solo puede `/dashboard/colegio/*` y `/api/me/colegio`; redirige a home en otras rutas; `/api/admin/*` devuelve 403.
+  - `src/lib/auth.ts`: helpers sin SCHOOL_ADMIN; nuevo `requireSchoolAdmin`.
+  - `src/lib/operadores/permisos.ts`, `src/lib/reporte-transiciones.ts`: sin SCHOOL_ADMIN.
+  - `AdminNav`, `ComiteSubNav`, `NavHeader`, `dashboard/admin/layout.tsx`, `mis-reportes/page.tsx`, `circulo-confianza/page.tsx`: sin acceso para SCHOOL_ADMIN.
+  - Endpoints `/api/admin/**` con `verifyAuth([..., "SCHOOL_ADMIN", ...])` ajustados a `verifyAuth("ADMIN")` y lógica residual de tenant limpiada.
+- **Tests**: `src/app/api/admin/colegios/route.test.ts` (6 tests) cubre creación, duplicados, permisos, listado, `/api/me/colegio`, login con vigencia vencida. `src/lib/role-visibility.test.tsx` y otros tests ajustados. Total: 610 tests verdes.
+- **Validación**: `npx tsc --noEmit`, `npm run lint`, `npm run build` y `npx vitest run` pasan. Deploy limpio con `./scripts/dev-restart.sh` (healthcheck ok, un worker). Smoke tests de 5 roles confirmaron accesos correctos.
 
 ## Status
 
-PLANEADO
+CERRADA

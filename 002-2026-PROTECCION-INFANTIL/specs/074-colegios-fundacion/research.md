@@ -243,6 +243,19 @@ Multiple endpoints accept `SCHOOL_ADMIN`:
 
 ---
 
+### Verified state after implementation
+
+- `src/lib/auth.ts`: `requireAdmin`, `requireOperadorOAdmin`, `requireComiteOAdmin`, `requireAdminOComiteOOperador` requieren solo ADMIN/OPERADOR/COMITE. `requireSchoolAdmin` nuevo para `/api/me/colegio`.
+- `src/lib/proxy.ts`: `INTERNAL_ROLES = ADMIN/OPERADOR/COMITE`; `ADMIN_ROLES = ADMIN`; SCHOOL_ADMIN aislado a `/dashboard/colegio/*` y `/api/me/colegio`; redirige a `/dashboard/colegio`; rutas admin devuelven 403.
+- `src/lib/operadores/permisos.ts`: `esAdminRol` solo ADMIN.
+- `src/lib/reporte-transiciones.ts`: `ADMIN` mantiene responsable ADMIN; SCHOOL_ADMIN removido.
+- `AdminNav.tsx`, `ComiteSubNav.tsx`, `NavHeader.tsx`: SCHOOL_ADMIN no ve secciones de admin/operador/comité; Dashboard va a `/dashboard/colegio`.
+- `login/page.tsx`, `cambiar-password/page.tsx`: SCHOOL_ADMIN redirige a `/dashboard/colegio`.
+- `mis-reportes/page.tsx`, `dashboard/circulo-confianza/page.tsx`: SCHOOL_ADMIN redirige a `/dashboard/colegio`.
+- `dashboard/admin/layout.tsx`: SCHOOL_ADMIN removido de ADMIN_ROLES.
+- 34 archivos con `SCHOOL_ADMIN` auditados; endpoints `/api/admin/**` restringidos a ADMIN; lógica residual de tenant limpiada.
+- Smoke tests de 5 roles confirmaron accesos esperados sin lockout.
+
 ## Open Questions (0 remaining)
 
 All NEEDS CLARIFICATION resolved. El modelo, el patrón de creación, la vigencia, el tema verde, la restricción de reportes y el aislamiento de SCHOOL_ADMIN están definidos.
