@@ -4,9 +4,9 @@
 
 **Created**: 2026-07-20
 
-**Status**: PLANEADO
+**Status**: CERRADA
 
-**Input**: Ampliación del Spec 070 (Simulación de carga y comparación de modelos). En la tabla de resultados por caso se agrega un botón "Ver detalle" que abre el modal de detalle del reporte existente (`AdminReporteDetalle`), reutilizando el componente y el `Modal` del Spec 054. No se implementa código hasta aprobación humana del plan.
+**Input**: Ampliación del Spec 070 (Simulación de carga y comparación de modelos). En la tabla de resultados por caso se agrega un botón "Ver detalle" que abre el modal de detalle del reporte existente (`AdminReporteDetalle`), reutilizando el componente y el `Modal` del Spec 054.
 
 ---
 
@@ -91,8 +91,13 @@ Un administrador que revisa los resultados de una simulación necesita inspeccio
 
 ## Implementación
 
-*Pendiente. Se completará tras la aprobación del plan y la implementación de la User Story.*
+- Se agregó un botón "Ver detalle" por fila en `src/components/modules/ia/simulacion/TablaResultadosSimulacion.tsx`, con `aria-label` que incluye el identificador del caso.
+- Se agregó un estado local `reporteSeleccionado` (`useState<string | null>`) para controlar qué reporte está abierto.
+- Se renderiza `AdminReporteDetalle` condicionalmente cuando hay un `reporteSeleccionado`, pasando `reporteId`, `onClose` y `onRefresh`.
+- Se reutilizó `AdminReporteDetalle` y el `Modal` del Spec 054; no se creó un nuevo modal ni vista de detalle.
+- No se modificó el endpoint de resultados, ni el modelo `Reporte`, ni el pipeline de simulación. El `reporteId` ya venía en el endpoint y en el tipo `ResultadoCaso`.
+- Se agregó `src/components/modules/ia/simulacion/TablaResultadosSimulacion.test.tsx` con 5 tests que cubren el botón, la apertura con el `reporteId` correcto y el cierre del detalle.
 
 ## Status
 
-PLANEADO
+CERRADA
