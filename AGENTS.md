@@ -31,3 +31,15 @@ Reglas especificas para operar el repo `Innovadataco/productos`.
 - **Modelo de dos agentes:** ZEUS diseña/revisa (constitución, brief, compuerta); ODIN redacta spec/plan e implementa/prueba/despliega.
 - **5 reglas de oro:** aplicar Spec Kit · subir a GitHub · pruebas · validar despliegue · documentar.
 - **Índice de specs:** mantener `002-2026-PROTECCION-INFANTIL/specs/README.md` actualizado con cada spec nueva o cerrada.
+
+## Reporte a ZEUS (handoff post-commit)
+
+Al terminar, ODIN NO pega reportes largos. Reporta compacto (ZEUS lee el diff del repo):
+
+```
+commit <hash> — <qué hizo, 1 línea>
+hallazgos/pendientes: <lista corta, o "ninguno">
+push: sí/no
+```
+
+Solo se cuenta lo que NO se ve en el código: hallazgos, decisiones, deuda técnica.
