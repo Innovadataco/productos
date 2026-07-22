@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { parsearArchivoSimulacion } from "@/lib/simulacion/parser";
 import type { OllamaModel } from "./types";
@@ -16,7 +15,7 @@ interface NuevaSimulacionFormProps {
 export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormProps) {
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [models, setModels] = useState<OllamaModel[]>([]);
-    const [modelo, setModelo] = useState("");
+    const [modelos, setModelos] = useState<string[]>([]);
     const [archivo, setArchivo] = useState("");
     const [formato, setFormato] = useState<"csv" | "json">("csv");
     const [errores, setErrores] = useState<Array<{ indice: number; campo?: string; mensaje: string }>>([]);
@@ -31,7 +30,7 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
                 const data = await res.json();
                 const disponibles = (data.models || []).filter((m: OllamaModel) => !m.esEmbedding);
                 setModels(disponibles);
-                if (disponibles.length > 0) setModelo(`${disponibles[0].name}:${disponibles[0].tag}`);
+                if (disponibles.length > 0) setModelos([`${disponibles[0].name}:${disponibles[0].tag}`]);
             } catch {
                 setMessage({ type: "error", text: "Error cargando modelos disponibles" });
             }
@@ -57,9 +56,16 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
     }, []);
 
     const estimacionMinutos = useMemo(() => {
-        const segundosPorCaso = modelo.includes("32b") || modelo.includes("70b") ? 60 : 7;
-        return Math.max(1, Math.ceil((totalCasos * segundosPorCaso) / 60));
-    }, [modelo, totalCasos]);
+        const segundos = modelos.reduce((acc, m) => {
+            const segundosPorCaso = m.includes("32b") || m.includes("70b") ? 60 : 7;
+            return acc + totalCasos * segundosPorCaso;
+        }, 0);
+        return Math.max(1, Math.ceil(segundos / 60));
+    }, [modelos, totalCasos]);
+
+    function toggleModelo(valor: string) {
+        setModelos((prev) => (prev.includes(valor) ? prev.filter((m) => m !== valor) : [...prev, valor]));
+    }
 
     async function validar() {
         setErrores([]);
@@ -86,14 +92,15 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ modelo, archivo, formato }),
+                body: JSON.stringify({ modelos, archivo, formato }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data?.error?.message || "Error creando simulación");
             setStep(3);
+            const n = Array.isArray(data.runIds) ? data.runIds.length : 1;
             setMessage({
                 type: "success",
-                text: `Simulación encolada. Duración estimada: ${estimacionMinutos} min. ID: ${data.runId}`,
+                text: `${n} simulación(es) encolada(s) en secuencia. Duración estimada total: ${estimacionMinutos} min.`,
             });
             setTimeout(onCreated, 2000);
         } catch (err) {
@@ -184,23 +191,35 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
                     <div className="rounded-lg bg-slate-50 p-3 text-sm text-muted dark:bg-slate-800/50">
                         <p>Casos válidos: {totalCasos}</p>
                     </div>
-                    <Select
-                        label="Modelo de clasificación"
-                        value={modelo}
-                        onChange={(e) => setModelo(e.target.value)}
-                        options={[
-                            { value: "", label: "Seleccionar modelo..." },
-                            ...models.map((m) => ({ value: `${m.name}:${m.tag}`, label: `${m.name}:${m.tag}` })),
-                        ]}
-                    />
+                    <fieldset>
+                        <legend className="block text-sm font-medium text-body mb-1.5">
+                            Modelos de clasificación (se ejecutan en secuencia)
+                        </legend>
+                        <div className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                            {models.map((m) => {
+                                const valor = `${m.name}:${m.tag}`;
+                                return (
+                                    <label key={valor} className="flex items-center gap-2 text-sm text-body">
+                                        <input
+                                            type="checkbox"
+                                            checked={modelos.includes(valor)}
+                                            onChange={() => toggleModelo(valor)}
+                                            className="h-4 w-4"
+                                        />
+                                        {valor}
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    </fieldset>
                     <div className="rounded-lg bg-slate-50 p-3 text-sm text-muted dark:bg-slate-800/50">
-                        Estimación: ~{estimacionMinutos} minutos con {modelo || "el modelo seleccionado"}.
+                        Estimación total: ~{estimacionMinutos} minutos con {modelos.length} modelo(s) en secuencia.
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={() => setStep(1)}>
                             Atrás
                         </Button>
-                        <Button onClick={lanzar} isLoading={loading} disabled={!modelo}>
+                        <Button onClick={lanzar} isLoading={loading} disabled={modelos.length === 0}>
                             Lanzar simulación
                         </Button>
                     </div>

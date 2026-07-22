@@ -149,6 +149,10 @@ export async function POST(request: Request) {
             keywordsDetectadas: guardas.keywordsDetectadas,
         });
 
+        // I-06: si el reporte pertenece a una simulación, actualizar su progreso (fail-open).
+        const { marcarProgresoSimulacionPorReporte } = await import("@/lib/simulacion/progreso");
+        await marcarProgresoSimulacionPorReporte(reporte.id);
+
         return respuestaExito({ reporteId: reporte.id, estadoFinal, clasificacion });
     } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);

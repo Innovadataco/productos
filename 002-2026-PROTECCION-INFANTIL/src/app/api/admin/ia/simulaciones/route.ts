@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { isEmbeddingModel } from "@/lib/ai/ollama-config";
-import { sendSimulacionRun } from "@/lib/queue";
+import { sendSimulacionLote } from "@/lib/queue";
 import { parsearArchivoSimulacion, normalizarCategoriaEsperada } from "@/lib/simulacion/parser";
 import { CASO_MAXIMO, crearSimulacionSchema } from "@/lib/schemas/simulacion";
 import { RolUsuario } from "@prisma/client";
@@ -39,10 +39,16 @@ export async function POST(request: Request) {
             throw new AppError(first?.message || "Datos inválidos", ERROR_CODES.VALIDATION_ERROR, 400);
         }
 
-        const { modelo, archivo, formato } = parsed.data;
+        const { modelos, archivo, formato } = parsed.data;
 
-        if (isEmbeddingModel(modelo)) {
-            throw new AppError("No se permite usar modelos de embeddings para la clasificación", ERROR_CODES.VALIDATION_ERROR, 400);
+        for (const modelo of modelos) {
+            if (isEmbeddingModel(modelo)) {
+                throw new AppError(
+                    `No se permite usar modelos de embeddings para la clasificación (${modelo})`,
+                    ERROR_CODES.VALIDATION_ERROR,
+                    400
+                );
+            }
         }
 
         const parseo = parsearArchivoSimulacion(archivo, formato);
@@ -83,23 +89,27 @@ export async function POST(request: Request) {
             );
         }
 
-        const run = await prisma.simulacionRun.create({
-            data: {
-                modelo,
-                totalCasos: casos.length,
-                estado: "PENDIENTE",
-                casosJson: casos as any,
-                creadoPorId: user.id,
-            },
-        });
+        const runIds: string[] = [];
+        for (const modelo of modelos) {
+            const run = await prisma.simulacionRun.create({
+                data: {
+                    modelo,
+                    totalCasos: casos.length,
+                    estado: "PENDIENTE",
+                    casosJson: casos as any,
+                    creadoPorId: user.id,
+                },
+            });
+            runIds.push(run.id);
+        }
 
-        await sendSimulacionRun(run.id, modelo);
+        await sendSimulacionLote(runIds);
 
         return NextResponse.json(
             {
-                runId: run.id,
-                estado: run.estado,
-                totalCasos: run.totalCasos,
+                runIds,
+                estado: "PENDIENTE",
+                totalCasos: casos.length,
             },
             { status: 202 }
         );

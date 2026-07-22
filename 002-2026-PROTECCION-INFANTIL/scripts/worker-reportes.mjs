@@ -421,6 +421,83 @@ async function start() {
             throw err;
         }
     });
+
+    // I-06: lote multi-modelo. Ejecuta runs en SECUENCIA: crea/encola los
+    // reportes del run y espera su cierre (COMPLETADA/FALLIDA/CANCELADA lo
+    // determina el ciclo de completitud) antes de pasar al siguiente.
+    await boss.work("simulacion-lote", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        if (!job || !job.data || !Array.isArray(job.data.runIds)) {
+            console.error("[WORKER] Job de lote inválido:", JSON.stringify(jobs));
+            return;
+        }
+        const { runIds } = job.data;
+        console.log(`[WORKER] Iniciando lote de simulación: ${runIds.length} run(s) (job ${job.id})`);
+
+        const { runSimulacionBatchCreator } = await import("../src/lib/simulacion/executor.ts");
+        const { actualizarProgresoYEstado } = await import("../src/lib/simulacion/progreso.ts");
+
+        const paramTimeout = await prisma.parametroSistema.findUnique({
+            where: { clave: "ia.simulacion_timeout_minutos" },
+        });
+        const timeoutMin = Number(paramTimeout?.valor) > 0 ? Number(paramTimeout.valor) : 60;
+        const esperaMaxMs = timeoutMin * 60_000 + 10 * 60_000; // timeout del run + margen
+        const POLL_MS = 10_000;
+
+        const ESTADOS_FINALES_RUN = ["COMPLETADA", "FALLIDA", "CANCELADA"];
+
+        for (const runId of runIds) {
+            let run = await prisma.simulacionRun.findUnique({ where: { id: runId } });
+            if (!run) {
+                console.error(`[WORKER] Lote: run ${runId} no encontrado; se salta.`);
+                continue;
+            }
+            if (ESTADOS_FINALES_RUN.includes(run.estado)) {
+                console.log(`[WORKER] Lote: run ${runId} ya está ${run.estado}; se salta.`);
+                continue;
+            }
+
+            try {
+                if (run.estado === "PENDIENTE") {
+                    console.log(`[WORKER] Lote: creando reportes de run ${runId} modelo ${run.modelo}`);
+                    await runSimulacionBatchCreator(runId, run.modelo);
+                }
+
+                // Esperar completitud (poll de estado; el cierre lo fija el hook de progreso)
+                const inicio = Date.now();
+                for (;;) {
+                    await new Promise((r) => setTimeout(r, POLL_MS));
+                    const { estado } = await actualizarProgresoYEstado(runId);
+                    if (ESTADOS_FINALES_RUN.includes(estado)) {
+                        console.log(`[WORKER] Lote: run ${runId} terminó con estado ${estado}.`);
+                        break;
+                    }
+                    if (Date.now() - inicio > esperaMaxMs) {
+                        console.error(`[WORKER] Lote: run ${runId} excedió la espera máxima; se marca FALLIDA y se continúa.`);
+                        await prisma.simulacionRun.update({
+                            where: { id: runId },
+                            data: { estado: "FALLIDA", fechaFin: new Date() },
+                        });
+                        break;
+                    }
+                }
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : "Error desconocido";
+                console.error(`[WORKER] Lote: error en run ${runId}: ${msg}; se continúa con el siguiente.`);
+                try {
+                    await prisma.simulacionRun.update({
+                        where: { id: runId },
+                        data: { estado: "FALLIDA", fechaFin: new Date() },
+                    });
+                } catch (markErr) {
+                    console.error(`[WORKER] Lote: no se pudo marcar run ${runId} como fallido:`, markErr);
+                }
+            }
+        }
+
+        console.log(`[WORKER] OK lote de simulación (${runIds.length} run(s))`);
+        return { success: true, runIds };
+    });
 }
 
 start().catch((err) => {

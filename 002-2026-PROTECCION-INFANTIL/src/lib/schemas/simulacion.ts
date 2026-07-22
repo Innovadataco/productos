@@ -11,8 +11,13 @@ export const casoSimulacionSchema = crearReporteSchema
 
 export type CasoSimulacion = z.infer<typeof casoSimulacionSchema>;
 
+export const MODELOS_MAXIMO = 5;
+
 export const crearSimulacionSchema = z.object({
-    modelo: z.string().min(1, "El modelo es requerido"),
+    modelos: z
+        .array(z.string().min(1, "El modelo no puede estar vacío"))
+        .min(1, "Seleccione al menos un modelo")
+        .max(MODELOS_MAXIMO, `Máximo ${MODELOS_MAXIMO} modelos por corrida`),
     archivo: z.string().min(1, "El archivo es requerido"),
     formato: z.enum(["csv", "json"]),
 });

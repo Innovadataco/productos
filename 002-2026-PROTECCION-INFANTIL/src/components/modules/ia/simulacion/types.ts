@@ -52,8 +52,10 @@ export interface MetricasSimulacionUI {
         confianza: number;
         estado: string;
     }>;
+    latenciaPromedioMs: number;
     latenciaP50Ms: number;
     latenciaP95Ms: number;
+    usoDesempate: { casos: number; porcentaje: number };
     distribucionEstados: Record<string, number>;
 }
 

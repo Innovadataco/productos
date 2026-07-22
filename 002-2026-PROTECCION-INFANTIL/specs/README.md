@@ -7,7 +7,7 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **66** |
+| **Total de specs** | **67** |
 | **Cerradas / Implementadas** | **59** |
 | **Pendientes (en diseño / planeadas)** | **5** |
 
@@ -91,6 +91,7 @@
 | [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🔵 Planeado |
 | [080](080-orden-migraciones-colegio/spec.md) | Orden de migraciones (I-04) | 🟢 Finalizada (pendiente ACTA) |
 | [082](082-fusion-playground-modelos/spec.md) | Fusión Playground + Modelos (I-05) | 🟢 Finalizada (pendiente ACTA) |
+| [083](083-simulacion-completitud-multimodelo/spec.md) | Simulación: completitud + multi-modelo (I-06) | 🟢 Finalizada (pendiente ACTA) |
 
 ## Incidencias de calidad de datos (por resolver)
 

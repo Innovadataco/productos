@@ -35,7 +35,7 @@ describe("POST /api/admin/ia/simulaciones", () => {
 "Este es un texto de prueba con más de 20 caracteres para la simulación",instagram,usuario123,2026-01-15T10:00:00Z,Bogotá,Colombia,14,ACOSO`;
 
         const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
-            modelo: "ornith:9b",
+            modelos: ["ornith:9b"],
             archivo: csv,
             formato: "csv",
         });
@@ -43,13 +43,51 @@ describe("POST /api/admin/ia/simulaciones", () => {
         const res = await POST(req);
         expect(res.status).toBe(202);
         const body = await res.json();
-        expect(body.runId).toBeDefined();
+        expect(body.runIds).toHaveLength(1);
         expect(body.totalCasos).toBe(1);
 
-        const run = await prisma.simulacionRun.findUnique({ where: { id: body.runId } });
+        const run = await prisma.simulacionRun.findUnique({ where: { id: body.runIds[0] } });
         expect(run).not.toBeNull();
         expect(run?.modelo).toBe("ornith:9b");
         expect(run?.totalCasos).toBe(1);
+    });
+
+    it("creates one run per model when multiple models are selected", async () => {
+        const admin = await crearUsuario("ADMIN");
+        vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
+
+        const csv = `texto,plataforma,identificador,fechaIncidente,ciudad,pais,edadVictima,categoriaEsperada
+"Este es un texto de prueba con más de 20 caracteres para la simulación",instagram,usuario123,2026-01-15T10:00:00Z,Bogotá,Colombia,14,ACOSO`;
+
+        const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
+            modelos: ["ornith:9b", "qwen3:8b"],
+            archivo: csv,
+            formato: "csv",
+        });
+
+        const res = await POST(req);
+        expect(res.status).toBe(202);
+        const body = await res.json();
+        expect(body.runIds).toHaveLength(2);
+
+        const runs = await prisma.simulacionRun.findMany({ where: { id: { in: body.runIds } }, orderBy: { createdAt: "asc" } });
+        expect(runs).toHaveLength(2);
+        expect(runs.map((r) => r.modelo).sort()).toEqual(["ornith:9b", "qwen3:8b"]);
+        expect(runs.every((r) => r.estado === "PENDIENTE" && r.totalCasos === 1)).toBe(true);
+    });
+
+    it("rejects an empty model list", async () => {
+        const admin = await crearUsuario("ADMIN");
+        vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
+
+        const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
+            modelos: [],
+            archivo: "x",
+            formato: "csv",
+        });
+
+        const res = await POST(req);
+        expect(res.status).toBe(400);
     });
 
     it("rejects an embedding model", async () => {
@@ -57,7 +95,7 @@ describe("POST /api/admin/ia/simulaciones", () => {
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
 
         const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
-            modelo: "nomic-embed-text",
+            modelos: ["nomic-embed-text"],
             archivo: `texto,plataforma,identificador,fechaIncidente,ciudad,pais\n"texto de prueba suficientemente largo",instagram,usuario123,2026-01-15T10:00:00Z,Bogotá,Colombia`,
             formato: "csv",
         });
@@ -80,7 +118,7 @@ describe("POST /api/admin/ia/simulaciones", () => {
         }));
 
         const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
-            modelo: "ornith:9b",
+            modelos: ["ornith:9b"],
             archivo: JSON.stringify(casos),
             formato: "json",
         });
@@ -98,7 +136,7 @@ describe("POST /api/admin/ia/simulaciones", () => {
         });
 
         const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
-            modelo: "ornith:9b",
+            modelos: ["ornith:9b"],
             archivo: JSON.stringify([{
                 texto: "texto de prueba suficientemente largo",
                 plataforma: "instagram",

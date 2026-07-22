@@ -12,7 +12,11 @@ export function generarIdentificadorSimulacion(runIdShort: string, indice: numbe
 }
 
 export function shortRunId(runId: string): string {
-    return runId.slice(0, 6);
+    // cuid() comparte el prefijo (timestamp) entre runs creados en el mismo lote;
+    // el sufijo es la parte aleatoria y garantiza unicidad por run (I-06: evita
+    // que runs distintas generen los mismos identificadores SIM-xxx-NNN y se
+    // marquen como DUPLICADO entre sí).
+    return runId.slice(-6);
 }
 
 export async function crearReporteSimulacion(
@@ -88,6 +92,13 @@ export async function runSimulacionBatchCreator(runId: string, modeloClasificaci
         data: { estado: "EN_PROGRESO" },
     });
 
+    // Reanudabilidad: índices ya creados (reintento del job) se saltan.
+    const existentesPrevios = await prisma.simulacionReporte.findMany({
+        where: { simulacionRunId: runId },
+        select: { indice: true },
+    });
+    const indicesCreados = new Set(existentesPrevios.map((r) => r.indice));
+
     let creados = 0;
     let fallidos = 0;
     for (let i = 0; i < casos.length; i += BATCH_SIZE) {
@@ -101,9 +112,11 @@ export async function runSimulacionBatchCreator(runId: string, modeloClasificaci
         const batch = casos.slice(i, i + BATCH_SIZE);
         for (let j = 0; j < batch.length; j++) {
             const indice = i + j + 1;
+            if (indicesCreados.has(indice)) continue;
             const caso = batch[j];
             try {
                 await crearReporteSimulacion(runId, indice, caso, modeloClasificacion);
+                indicesCreados.add(indice);
                 creados++;
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
@@ -115,16 +128,30 @@ export async function runSimulacionBatchCreator(runId: string, modeloClasificaci
         await new Promise((resolve) => setImmediate(resolve));
     }
 
-    const estadoFinal = creados > 0 ? "COMPLETADA" : "FALLIDA";
+    // I-06: NO se marca COMPLETADA al encolar. La run queda EN_PROGRESO y la
+    // completitud la determina actualizarProgresoYEstado cuando todos los casos
+    // encolados alcancen estado final de clasificación (o FALLIDA por timeout).
+    const encolados = indicesCreados.size;
+    const casosFallidos = casos.length - encolados;
     const metricasActuales = (run.metricasJson ?? {}) as Record<string, unknown>;
+
+    if (encolados === 0) {
+        await prisma.simulacionRun.update({
+            where: { id: runId },
+            data: { estado: "FALLIDA", fechaFin: new Date(), metricasJson: { ...metricasActuales, casosFallidos } },
+        });
+        logger.error(`[SIMULACION] Run ${runId}: 0/${casos.length} reportes encolados; marcada FALLIDA.`);
+        return;
+    }
+
     await prisma.simulacionRun.update({
         where: { id: runId },
-        data: {
-            estado: estadoFinal,
-            fechaFin: new Date(),
-            metricasJson: { ...metricasActuales, casosFallidos: fallidos },
-        },
+        data: { metricasJson: { ...metricasActuales, casosFallidos } },
     });
 
-    logger.info(`[SIMULACION] Run ${runId}: ${creados}/${casos.length} reportes creados y encolados; ${fallidos} fallidos.`);
+    // Si todos los casos ya quedaron clasificados (p. ej. reintento tardío), cerrar ahora.
+    const { actualizarProgresoYEstado } = await import("./progreso");
+    await actualizarProgresoYEstado(runId);
+
+    logger.info(`[SIMULACION] Run ${runId}: ${encolados}/${casos.length} reportes encolados (${creados} nuevos); ${casosFallidos} fallidos.`);
 }

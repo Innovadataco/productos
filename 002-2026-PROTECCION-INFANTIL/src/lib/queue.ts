@@ -157,3 +157,12 @@ export async function sendSimulacionRun(runId: string, modeloClasificacion: stri
         retryBackoff: true,
     });
 }
+
+export async function sendSimulacionLote(runIds: string[]) {
+    await ensureQueue("simulacion-lote");
+    await boss.send("simulacion-lote", { runIds }, {
+        retryLimit: 2,
+        retryDelay: 60,
+        retryBackoff: true,
+    });
+}

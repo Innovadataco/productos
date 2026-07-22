@@ -29,8 +29,10 @@ export interface MetricasSimulacion {
     porCategoria: Record<string, MetricaCategoria>;
     matrizConfusion: Array<{ esperado: string; asignado: string; count: number }>;
     falsosNegativos: FalsoNegativo[];
+    latenciaPromedioMs: number;
     latenciaP50Ms: number;
     latenciaP95Ms: number;
+    usoDesempate: { casos: number; porcentaje: number };
     distribucionEstados: Record<string, number>;
 }
 
@@ -71,7 +73,7 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
 
     const clasificaciones = await prisma.clasificacionIA.findMany({
         where: { reporteId: { in: relacionados.map((r) => r.reporteId) } },
-        select: { reporteId: true, categoria: true, confianza: true, latenciaMs: true },
+        select: { reporteId: true, categoria: true, confianza: true, latenciaMs: true, usoCascada: true },
     });
 
     const reporteMap = new Map(reportes.map((r) => [r.id, r]));
@@ -80,6 +82,7 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
     let aciertos = 0;
     let fallos = 0;
     let omitidos = 0;
+    let casosDesempate = 0;
     const latencias: number[] = [];
     const distribucionEstados: Record<string, number> = {};
     const confusion: Map<string, number> = new Map();
@@ -94,6 +97,9 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
 
         if (clasif?.latenciaMs) {
             latencias.push(clasif.latenciaMs);
+        }
+        if (clasif?.usoCascada) {
+            casosDesempate++;
         }
 
         const esperadoRaw = rel.categoriaEsperada;
@@ -163,6 +169,7 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
 
     const totalConEsperado = aciertos + fallos;
     const accuracy = totalConEsperado > 0 ? aciertos / totalConEsperado : 0;
+    const latenciaPromedioMs = latencias.length > 0 ? latencias.reduce((a, b) => a + b, 0) / latencias.length : 0;
 
     return {
         totalCasos: relacionados.length,
@@ -174,8 +181,13 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
         porCategoria,
         matrizConfusion,
         falsosNegativos,
+        latenciaPromedioMs,
         latenciaP50Ms: percentil(latencias, 50),
         latenciaP95Ms: percentil(latencias, 95),
+        usoDesempate: {
+            casos: casosDesempate,
+            porcentaje: relacionados.length > 0 ? casosDesempate / relacionados.length : 0,
+        },
         distribucionEstados,
     };
 }

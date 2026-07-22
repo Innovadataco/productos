@@ -3,7 +3,7 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { actualizarProgresoYEstado, refrescarMetricasSimulacion } from "@/lib/simulacion/progreso";
+import { actualizarProgresoYEstado, refrescarMetricasSimulacion, tieneMetricasCompletas } from "@/lib/simulacion/progreso";
 import { RolUsuario } from "@prisma/client";
 import { z } from "zod";
 
@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
 
         const { progreso, estado } = await actualizarProgresoYEstado(run.id);
-        if (estado === "COMPLETADA" && !run.metricasJson) {
+        if (estado === "COMPLETADA" && !tieneMetricasCompletas(run.metricasJson)) {
             await refrescarMetricasSimulacion(run.id);
         }
 

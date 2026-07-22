@@ -143,6 +143,14 @@ async function main() {
             descripcion: "Máximo de reintentos ante fallo de procesamiento",
         },
         {
+            clave: "ia.simulacion_timeout_minutos",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Minutos máximos que una simulación puede estar EN_PROGRESO antes de marcarse FALLIDA",
+        },
+        {
             clave: "worker.retry_delay_segundos",
             valor: "30",
             tipo: TipoParametro.INTEGER,

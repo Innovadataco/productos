@@ -3,7 +3,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 const mockSimulacionRunFindUnique = vi.hoisted(() => vi.fn());
 const mockSimulacionRunUpdate = vi.hoisted(() => vi.fn());
 const mockSimulacionReporteCreate = vi.hoisted(() => vi.fn());
+const mockSimulacionReporteFindMany = vi.hoisted(() => vi.fn());
 const mockReporteCreate = vi.hoisted(() => vi.fn());
+const mockReporteFindMany = vi.hoisted(() => vi.fn());
+const mockParametroFindUnique = vi.hoisted(() => vi.fn());
 const mockPlataformaFindUnique = vi.hoisted(() => vi.fn());
 const mockSendReporte = vi.hoisted(() => vi.fn());
 const mockGenerarNumeroSeguimiento = vi.hoisted(() => vi.fn());
@@ -19,9 +22,14 @@ vi.mock("@/lib/prisma", () => ({
         },
         simulacionReporte: {
             create: (...args: unknown[]) => mockSimulacionReporteCreate(...args),
+            findMany: (...args: unknown[]) => mockSimulacionReporteFindMany(...args),
         },
         reporte: {
             create: (...args: unknown[]) => mockReporteCreate(...args),
+            findMany: (...args: unknown[]) => mockReporteFindMany(...args),
+        },
+        parametroSistema: {
+            findUnique: (...args: unknown[]) => mockParametroFindUnique(...args),
         },
         plataforma: {
             findUnique: (...args: unknown[]) => mockPlataformaFindUnique(...args),
@@ -79,6 +87,9 @@ describe("executor.ts", () => {
         mockPlataformaFindUnique.mockResolvedValue({ id: "plataforma-1" });
         mockReporteCreate.mockResolvedValue({ id: "reporte-1" });
         mockSimulacionReporteCreate.mockResolvedValue({ id: "sim-rep-1" });
+        mockSimulacionReporteFindMany.mockResolvedValue([]);
+        mockReporteFindMany.mockResolvedValue([]);
+        mockParametroFindUnique.mockResolvedValue(null);
     });
 
     describe("crearReporteSimulacion", () => {
@@ -158,6 +169,9 @@ describe("executor.ts", () => {
             mockSimulacionRunFindUnique.mockResolvedValue({
                 id: "run-1",
                 estado: "PENDIENTE",
+                totalCasos: 2,
+                progreso: 0,
+                fechaInicio: new Date(),
                 casosJson: [casoCompleto, casoCompleto],
                 metricasJson: {},
             });
@@ -166,19 +180,47 @@ describe("executor.ts", () => {
 
             expect(mockReporteCreate).toHaveBeenCalledTimes(2);
             expect(mockSendReporte).toHaveBeenCalledTimes(2);
+            // I-06: NO se marca COMPLETADA al encolar; queda EN_PROGRESO
+            const updatesConEstado = mockSimulacionRunUpdate.mock.calls
+                .map((c) => c[0]?.data?.estado)
+                .filter(Boolean);
+            expect(updatesConEstado).toContain("EN_PROGRESO");
+            expect(updatesConEstado).not.toContain("COMPLETADA");
             expect(mockSimulacionRunUpdate).toHaveBeenCalledWith(
                 expect.objectContaining({
                     data: expect.objectContaining({
-                        estado: "COMPLETADA",
+                        metricasJson: expect.objectContaining({ casosFallidos: 0 }),
                     }),
                 })
             );
+        });
+
+        it("es reanudable: salta índices ya creados en un reintento", async () => {
+            mockSimulacionRunFindUnique.mockResolvedValue({
+                id: "run-1",
+                estado: "PENDIENTE",
+                totalCasos: 2,
+                progreso: 0,
+                fechaInicio: new Date(),
+                casosJson: [casoCompleto, casoCompleto],
+                metricasJson: {},
+            });
+            // El índice 1 ya existe de un intento previo
+            mockSimulacionReporteFindMany.mockResolvedValue([{ indice: 1, reporteId: "reporte-previo" }]);
+
+            await runSimulacionBatchCreator("run-1", "ornith:9b");
+
+            expect(mockReporteCreate).toHaveBeenCalledTimes(1);
+            expect(mockSendReporte).toHaveBeenCalledTimes(1);
         });
 
         it("continúa si un caso falla y reporta el fallo en métricas", async () => {
             mockSimulacionRunFindUnique.mockResolvedValue({
                 id: "run-1",
                 estado: "PENDIENTE",
+                totalCasos: 2,
+                progreso: 0,
+                fechaInicio: new Date(),
                 casosJson: [casoCompleto, casoCompleto],
                 metricasJson: {},
             });
@@ -189,10 +231,13 @@ describe("executor.ts", () => {
             await runSimulacionBatchCreator("run-1", "ornith:9b");
 
             expect(mockReporteCreate).toHaveBeenCalledTimes(1);
+            const updatesConEstado = mockSimulacionRunUpdate.mock.calls
+                .map((c) => c[0]?.data?.estado)
+                .filter(Boolean);
+            expect(updatesConEstado).not.toContain("COMPLETADA");
             expect(mockSimulacionRunUpdate).toHaveBeenCalledWith(
                 expect.objectContaining({
                     data: expect.objectContaining({
-                        estado: "COMPLETADA",
                         metricasJson: expect.objectContaining({ casosFallidos: 1 }),
                     }),
                 })
@@ -203,6 +248,9 @@ describe("executor.ts", () => {
             mockSimulacionRunFindUnique.mockResolvedValue({
                 id: "run-1",
                 estado: "PENDIENTE",
+                totalCasos: 1,
+                progreso: 0,
+                fechaInicio: new Date(),
                 casosJson: [casoCompleto],
                 metricasJson: {},
             });
@@ -252,5 +300,19 @@ describe("executor.ts", () => {
                 })
             );
         });
+    });
+});
+
+describe("shortRunId / generarIdentificadorSimulacion", () => {
+    it("runs del mismo lote (mismo prefijo cuid) generan identificadores distintos", async () => {
+        const { shortRunId, generarIdentificadorSimulacion } = await import("./executor");
+        const run1 = "cmrwkwpub0001s47s0pwx2pkn";
+        const run2 = "cmrwkwpuk0003s47sdo4m9gem";
+        // Comparten los primeros 6 caracteres (prefijo de timestamp cuid)
+        expect(run1.slice(0, 6)).toBe(run2.slice(0, 6));
+        expect(shortRunId(run1)).not.toBe(shortRunId(run2));
+        expect(generarIdentificadorSimulacion(shortRunId(run1), 1)).not.toBe(
+            generarIdentificadorSimulacion(shortRunId(run2), 1)
+        );
     });
 });

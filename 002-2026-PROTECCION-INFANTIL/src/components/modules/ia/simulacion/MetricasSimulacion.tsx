@@ -15,9 +15,11 @@ export function MetricasSimulacion({ metricas }: MetricasSimulacionProps) {
 
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-3">
                 <MetricCard label="Accuracy" value={metricas.accuracy} />
                 <MetricCard label="Aciertos" value={metricas.aciertos / (metricas.aciertos + metricas.fallos || 1)} />
+                <MetricCard label="Desempate" value={metricas.usoDesempate?.porcentaje ?? 0} />
+                <MetricCard label="Latencia prom." value={(metricas.latenciaPromedioMs ?? 0) / 1000} />
                 <MetricCard label="Latencia p50" value={metricas.latenciaP50Ms / 1000} />
                 <MetricCard label="Latencia p95" value={metricas.latenciaP95Ms / 1000} />
             </div>
