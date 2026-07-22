@@ -129,3 +129,24 @@ integraciones con **stubs** tras interfaz hasta tener credenciales; datos **demo
 `/speckit.constitution` (principios: aislamiento Docker, migraciones aditivas, doble token, secretos por env) →
 `/speckit.specify` de la **primera feature P1** (sugerido: Autenticación + reporte de un despacho con doble token,
 que ejercita el core de integración) usando este documento como insumo → gate de plan → implementar.
+
+---
+
+## 9. Fe de erratas — verificación contra código real (2026-07-22, ZEUS)
+
+Hallazgos de la verificación línea a línea del legacy. Rutas relativas a `legacy-sistema-original/`.
+
+| # | Afirmación del handoff | Realidad verificada |
+|---|------------------------|---------------------|
+| 1 | "NO existe login por token de vigía" | **FALSO a nivel backend:** existe `POST /api/v1/autenticacion/inicio-vigia` (`ControladorAutenticacion.ts:31-54`) y el middleware `AutenticacionVigia` protege toda la superficie `api/v2/*` (empresas, mantenimiento v2, archivos, registro-vigia). El frontend sí hace login único, pero el canal vigía está **VIVO** en el backend. Decisión **D-005** pendiente (CEO): confirmar consumidores reales antes del switch-over. |
+| 2 | "Rol 9 ve todas las placas" | **NO existe en el código:** `DiccionarioAutorizacion.ts` solo define 1 y 2; las ramas reales manejan 1/2/3; grep de rol 9 vacío. |
+| 3 | "Token de proveedor cacheado con vigencia y auto-refresh" | **Parcialmente falso:** `TokenExterno.set()` se invoca siempre SIN expiración y con `_expiraEn=null` `isVigente()` devuelve `true` indefinidamente (`TokenExterno.ts:44-49`); solo se refresca si un error lo limpió. El TTL real del token de la Super debe validarse en modo real. |
+| 4 | "Login devuelve dos tokens" | Devuelve **TRES:** `token` (JWT interno), `tokenExterno` y `tokenParametrica` (`ServicioAutenticacion.ts:108,122`). Además hay doble nombre de env: `TOKEN_PARAMETRICA` (login) vs `TOKEN_PARAMETRICO` (`ClienteApiSupertransporte.ts:40`), y un bearer hardcodeado en `ControladorMantenimiento.ts:1180`. |
+| 5 | "Bugs: reintento no resetea contador; botón Reintentar sin handler" | Eso era del **DEMO**, no del legacy: el legacy SÍ resetea `reintentos=0` en el reintento manual (`ServicioSolicitudDespacho.ts:170`; `RepositorioMantenimientoDB.ts:1164`) y el botón tiene handler real. |
+| 6 | "29 tablas" | Son **27 tablas** creadas en **29 migraciones** (2 son ALTER). El archivo `..._tbl_intentos_inicio_sesions.ts` crea en realidad `tbl_bloqueo_usuarios`. |
+| 7 | "NO existen pantallas de Terminales ni CRUD de empresas" | Módulos backend **SIN pantalla** en el frontend legacy: **Soportes** (endpoints, algunos SIN autenticación), **Empresas/Proveedores vigilados** (CRUD completo bajo `autenticacionVigia`) y **Terminales** (CRUD rutas/paradas/clases/vías + `enviar-st`). No son "solo maestras": son superficie **máquina-a-máquina**. Novedades en el frontend vive como modal dentro de salidas, no como pantalla propia. |
+| 8 | (Seguridad del legacy — a NO replicar) | `postTransaccional` imprime cabeceras (ambos tokens) y body por `console.log` (`ClienteApiSupertransporte.ts:78-82`); `ruta_soportes.ts` tiene endpoints sin auth; `Autorizacion.ts` no hace `return` tras el 401 (sigue a `next()`); `ValidacionProveedor.ts` se salta TODA la validación si llega el header `fuentedato` (líneas 13-15); `BLOQUEO_CREDENCIALES=false` por defecto y el contador de intentos no se resetea tras login exitoso. |
+| 9 | (Cola de llegadas) | `tbl_llegadas_solicitudes` **NO** tiene columnas de reintentos/estado de cola (solo `procesado`), a diferencia de despachos. |
+| 10 | (Workers) | El worker legacy **NO es `setInterval`:** es bucle asíncrono continuo (`while true` + sleep 1s/2s) en `start/despachos_queue_worker.ts` y `mantenimiento_queue_worker.ts`; procesa lotes de 20, máx 3 reintentos, +5 min entre intentos. |
+
+**Estas correcciones prevalecen sobre §2–§6 donde contradigan.**

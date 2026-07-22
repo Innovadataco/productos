@@ -142,14 +142,19 @@ En esta máquina viven **001 y 002 en desarrollo activo**. El 003 **no puede int
 
 ## 8. Estado actual y decisiones abiertas
 
-- **Construido (demo):** frontend React+Vite (diseño propio, todos los módulos) + backend NestJS + Prisma
-  (SQLite en dev) + colas + capa de integración con stubs + seed demo. Todo en `web/` y `api/`.
-- **DECISIÓN ABIERTA (stack):** la fábrica está estandarizada en **Next.js 16 + Prisma** (ver proyecto 001).
-  El código actual es React+Vite + NestJS. **Confirmar con el responsable si se porta a Next.js** (recomendado
-  para consistencia; ~90% reaprovechable) o se mantiene, ANTES de construir mucho encima.
-- **DECISIÓN ABIERTA (BD):** hoy SQLite (andamio). Producción/objetivo: **PostgreSQL** en Docker propio del 003.
-- **Correcciones pendientes del demo:** ver `HANDOFF-SICOV.md` (login vigía→vigilado, doble token real,
-  esquema real de 29 tablas, 5 bugs de la revisión de código).
+- **DECISIÓN CERRADA (stack):** **Next.js 16.2.10 + Prisma 5.22 + PostgreSQL 16** en Docker propio del 003
+  (BD **:5434**, app **:5010**, colas con **pg-boss** sin Redis). El port ya se hizo.
+- **Construido y probado:** specs **001–004** implementadas y probadas en **modo stub**
+  (**52/52 tests**, `tsc --noEmit` / `lint` / `build` verdes).
+- **Carpetas `api/` y `web/`:** son el **demo antiguo** (React+Vite + NestJS + SQLite), **MUERTO** —
+  no se toca ni se construye encima. Pendiente decidir su eliminación (ver `LEEME-DEMO-MUERTO.md`
+  en cada carpeta).
+- **DECISIÓN CERRADA (BD):** **PostgreSQL 16**, migraciones **aditivas**.
+- **DECISIÓN ABIERTA (D-005):** canal **vigía/api-v2** y módulos backend sin UI (Soportes, Empresas,
+  Terminales) — **confirmar consumidores reales con Gesmovil antes del switch-over** (decisión del
+  CEO pendiente).
+- **Pendiente transversal:** verificación humana antes de consumir APIs productivas (hoy stub,
+  sin credenciales).
 
 ---
 

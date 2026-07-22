@@ -25,6 +25,8 @@
 
 > **Nota (verificado 2026-07-21):** el sistema legacy real solo implementa roles **1/2/3** (más 5/7 en flujos PESV/Vigía, fuera de alcance). El "rol 9 = ve todas las placas" que menciona `HANDOFF-SICOV.md` **no existe en el código**; por decisión del responsable (opción A) el 003 implementa solo 1/2/3.
 
+> **Nota (verificado 2026-07-22):** el canal vigía (`api/v2/*` + `POST /api/v1/autenticacion/inicio-vigia`) existe **VIVO** en el backend legacy. Su reemplazo o eliminación en el 003 es **decisión pendiente del CEO (D-005)**; el MVP **no lo construye**.
+
 **Límite fundamental:** la plataforma es un **canal de reporte e interoperación** hacia la Super; **no reemplaza** la responsabilidad legal del vigilado ni la vigencia de sus documentos (SOAT, RTM, pólizas, licencias). La "consulta integradora" **verifica en vivo** contra SICOV; el sistema no inventa ni cachea veredictos de habilitación.
 
 > El detalle de dominio, integración y modelo de datos vive en `HANDOFF-SICOV.md` (traspaso del sistema real: backend AdonisJS 5 + frontend Angular 20). Es insumo obligatorio de todo `spec.md` y `data-model.md`.
@@ -50,7 +52,7 @@ El 003 **crea y usa exclusivamente su propia infraestructura**, con prefijo `003
 - **Nunca** `prisma migrate reset` ni ninguna operación que borre datos.
 - Los cambios de esquema son **aditivos** (columnas/tablas nuevas, `nullable` o con `default`); las remociones se hacen en dos fases (deprecate → drop) y **nunca** sobre datos vivos sin respaldo.
 - **`pg_dump` de respaldo** antes de tocar seed o datos.
-- El esquema objetivo es **`sicov`** en PostgreSQL (29 tablas del sistema real; mapear columnas exactas desde `HANDOFF-SICOV.md` al construir `data-model.md`).
+- El esquema objetivo es **`sicov`** en PostgreSQL (**27 tablas** del sistema real —29 migraciones, 2 son ALTER—; mapear columnas exactas desde las migraciones del legacy y `HANDOFF-SICOV.md` §9 al construir `data-model.md`).
 
 ### 1.3 Secretos por variables de entorno — nunca en el repo
 - Todo secreto va en `.env` **local**; `.env` está en `.gitignore`; se commitea únicamente `.env.example` sin valores reales.
@@ -66,8 +68,8 @@ Toda petición transaccional a la Super lleva **tres cabeceras** (nada de atajos
 | `token: <tokenAutorizado>` | **Token del vigilado** | Campo `usn_token_autorizado` del usuario; el **subusuario (rol 3) hereda** el del administrador |
 | `documento: <nitVigilado>` | NIT del vigilado | Identificación del usuario (o del admin, si es subusuario) |
 
-- **Login único usuario/contraseña** → devuelve **dos tokens**: `token` (JWT interno de la app) y `tokenExterno` (para la API integradora). **NO existe login por token de "vigía"** (fue un error del demo; se corrige).
-- El token de proveedor **se cachea con auto-refresh**; nunca se solicita uno por request si el vigente sirve.
+- **Login único usuario/contraseña** → devuelve `token` (JWT interno de la app) y `tokenExterno` (API integradora); el legacy devuelve además **`tokenParametrica`** (paramétricas) — incluirlo si el 003 consume paramétricas. El frontend del 003 **no implementa** login por token de "vigía"; el canal vigía del backend legacy está **VIVO** y queda sujeto a **D-005** (ver nota en §0).
+- El token de proveedor **se cachea con vigencia y auto-refresh** (requisito del 003 — el legacy real nunca seteaba expiración; **validar el TTL real** del token de la Super en modo real).
 - Middleware de validación de proveedor: **token + NIT + contrato vigente** (`tpv_fecha_inicial`/`tpv_fecha_final`); petición fuera de vigencia **se rechaza**.
 - Mientras no haya credenciales reales, la integración vive **tras una interfaz con stubs**; el contrato de las 3 cabeceras se respeta igual en los stubs.
 
@@ -159,7 +161,7 @@ El sistema real usa **workers separados** (no `setInterval` en el proceso web). 
 `PrismaClient` (y el cliente de cola) se inicializan como singletons (patrón `globalThis` en `src/lib/prisma.ts`), igual que en 001/002.
 
 ### 4.2 Modelo de datos (esquema `sicov`)
-- Mapear las **29 tablas reales** desde `HANDOFF-SICOV.md` / migraciones del sistema real al construir `data-model.md`. No inventar tablas: **no existen** "Terminales" ni "CRUD de empresas" (las rutas son maestra del wizard) — el demo las inventó y se retiran.
+- Mapear las **27 tablas reales** desde las migraciones del sistema real / `HANDOFF-SICOV.md` §9 al construir `data-model.md`. No inventar tablas ni pantallas: en el frontend legacy **no existen pantallas** de "Terminales" ni "CRUD de empresas" (las rutas del wizard salen de maestras) — el demo las inventó como UI y se retiran. **SÍ existen** como módulos backend máquina-a-máquina (Terminales, Empresas/Proveedores vigilados, Soportes), sin UI, sujetos a **D-005**; el MVP no los construye.
 - Columnas clave confirmadas: `tbl_usuarios` (`usn_id`, `usn_usuario` unique, `usn_clave` bcrypt, `usn_clave_temporal`, `usn_token_autorizado`, `usn_rol_id`, `usn_administrador`, `usn_estado`), `tbl_proveedores_vigilados` (`tpv_token`, `tpv_fecha_inicial/final`, `tpv_documento`), `tbl_despachos_solicitudes` (cola).
 - `@@index` en toda foreign key y campo de búsqueda frecuente. IDs según el esquema real.
 

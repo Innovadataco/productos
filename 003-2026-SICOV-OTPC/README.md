@@ -1,73 +1,60 @@
-# Gesmovil · Plataforma de Gestión y Control
+# 003-2026-SICOV-OTPC — Rediseño de Gesmovil / SICOV
 
-Rediseño arquitectónico del sistema Gesmovil / Sicov, construido desde cero con
-identidad visual propia y stack moderno. Preserva las entidades, reglas de negocio
-y flujos del sistema actual (despachos, llegadas, mantenimientos, novedades,
-proveedores vigilados, integradora) sin reutilizar código heredado.
+Rediseño del sistema **Gesmovil / SICOV** (despachos, llegadas, mantenimientos, novedades,
+proveedores vigilados y consulta integradora, con reporte a la Superintendencia de Transporte).
+Metodología **Spec-Kit**; specs 001–004 implementadas y probadas en modo stub.
 
 ## Stack
 
 | Capa | Tecnología |
 |------|-----------|
-| Frontend | React 19 + Vite + TypeScript · sistema de diseño propio (sin plantillas) |
-| Datos (front) | TanStack Query + React Router |
-| Backend | NestJS 10 + TypeScript |
-| ORM / BD | Prisma · SQLite (dev) / PostgreSQL 16 (prod) |
-| Auth | JWT (Passport) · login interno y Vigía |
-| Colas | Procesador en proceso (dev) → BullMQ + Redis (prod) |
-| Integraciones | Capa única con stubs (Supertransporte, Vigía, integradora) |
+| Framework | Next.js 16.2.10 (App Router) + React + TypeScript |
+| ORM / BD | Prisma 5.22 · PostgreSQL 16 (Docker propio del 003, puerto host **5434**) |
+| Colas | **pg-boss** (sin Redis) · worker Node independiente |
+| Auth | JWT interno (cookie httpOnly) · login único usuario/contraseña |
+| Integraciones | Capa propia con **stubs** (Supertransporte / integradora) |
+| Testing | Vitest |
 
-## Estructura
+## Cómo ejecutar
 
-```
-plataforma/
-├── api/          Backend NestJS + Prisma
-│   ├── prisma/   Esquema del dominio + seed con datos demo
-│   └── src/      auth, despachos, llegadas, mantenimientos, catalogos,
-│                 usuarios, dashboard, colas, integraciones
-├── web/          Frontend React + Vite (diseño propio)
-│   └── src/      auth, api (cliente), ui (diseño+iconos), app (layout), pages
-└── docker-compose.yml   Postgres + Redis para producción
-```
-
-## Cómo ejecutar (desarrollo, sin dependencias externas)
-
-### 1. Backend (puerto 5050)
 ```bash
-cd api
+docker compose up -d     # levanta la BD PostgreSQL 16 del 003 (host :5434)
 npm install
-npm run setup      # genera Prisma, crea la BD SQLite y siembra datos demo
-npm run dev        # arranca la API en http://localhost:5050/api/v1
+npm run db:migrate       # migraciones (aditivas) + npm run db:seed si aplica
+npm run dev              # app en http://localhost:5010
+npm run worker           # worker de colas (pg-boss), en otra terminal
+npm test                 # suite Vitest
 ```
 
-### 2. Frontend (puerto 4300)
-```bash
-cd web
-npm install
-npm run dev        # http://localhost:4300  (proxy /api -> :5050)
+Verificación completa: `npx tsc --noEmit` · `npm run lint` · `npm test` · `npm run build`.
+
+## Specs (Spec-Kit)
+
+Cada feature vive en `specs/NNN-nombre/` con su set completo de artefactos
+(`spec.md`, `plan.md`, `tasks.md`, …). Implementadas: `001-auth-despacho-doble-token`,
+`002-llegadas-doble-token`, `003-integradora-consulta`, `004-salidas-wizard`.
+
+## Integraciones — modo stub por defecto
+
+Las integraciones con Supertransporte corren en **modo stub**:
+
+```
+INTEGRACIONES_MODO=stub
+SUPERTRANSPORTE_HABILITADO=false
 ```
 
-Si el backend no está arriba, el frontend cae automáticamente a datos demo
-locales para poder previsualizar la interfaz.
+**Nunca consumir las APIs productivas sin verificación humana previa** (hoy no hay
+credenciales reales en el entorno). El contrato de doble token (proveedor + vigilado + NIT)
+se respeta igual en los stubs.
 
-### Credenciales demo
-`admin / admin` (administrador) · `operador / operador` · `cliente / cliente`
+## Carpetas legacy
 
-## Pasar a PostgreSQL (producción)
+- `legacy-sistema-original/` — código del sistema en producción (AdonisJS 5 + Angular).
+  **Solo referencia**: fuente de verdad del dominio; no se modifica.
+- `api/` y `web/` — **demo inicial descartado** (React+Vite + NestJS + SQLite). No usar,
+  no compilar, no construir encima. Ver `LEEME-DEMO-MUERTO.md` en cada carpeta.
 
-1. `docker compose up -d` (Postgres + Redis).
-2. En `api/prisma/schema.prisma` cambiar `provider = "sqlite"` → `"postgresql"`.
-3. En `api/.env` poner el `DATABASE_URL` de Postgres.
-4. `npm run setup` para migrar y sembrar.
+## Documentación de referencia
 
-## Conectar integraciones reales
-
-La capa `src/integraciones/integraciones.service.ts` centraliza el contacto con
-Supertransporte / Vigía / integradora. Con `INTEGRACIONES_MODO=real` en `.env` se
-activan los `fetch` reales (pendientes de credenciales) sin tocar la UI ni las colas.
-
-## Seguridad — pendientes heredados del sistema actual
-
-- Aislar secretos en gestor propio y **rotar** todas las claves antes de desplegar.
-- Restringir CORS (hoy abierto en dev), servir tras TLS y detrás de dominio propio.
-- Los datos de este repo son **demo**; no contiene secretos vivos.
+`AGENTS.md` (reglas de operación) · `HANDOFF-SICOV.md` (análisis del sistema real + fe de
+erratas) · `.specify/memory/constitution.md` (constitución del proyecto).
