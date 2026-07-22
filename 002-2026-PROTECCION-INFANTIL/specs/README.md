@@ -1,55 +1,101 @@
 # Índice maestro de especificaciones
 
-> Última actualización: 2026-07-18.
-> Este índice enlaza cada spec con su `spec.md`, `plan.md` y reporte de cierre.
-> Para deuda técnica derivada, ver [`docs/deuda-tecnica.md`](../docs/deuda-tecnica.md).
+> Última actualización: **2026-07-22** (regenerado por ZEUS desde las carpetas reales de `specs/`).
+> Estado tomado del campo `Status` de cada `spec.md` y/o su reporte de cierre.
 
-| Número | Nombre | Estado | Fecha de cierre | `spec.md` | `plan.md` | Reporte de cierre |
-|--------|--------|--------|-----------------|-----------|-----------|-------------------|
-| `001` | Autenticación multi-rol y parámetros de configuración | CERRADA | 2026-07-12/14 (scaffold inicial) | [`spec.md`](001-multi-role-auth-config/spec.md) | [`plan.md`](001-multi-role-auth-config/plan.md) | [`spec.md`](001-multi-role-auth-config/spec.md) — sección de implementación agregada retroactivamente |
-| `003` | Frontend público y flujo de reporte | CERRADA | 2026-07-14 | [`spec.md`](003-frontend-publico/spec.md) | [`plan.md`](003-frontend-publico/plan.md) | [`spec.md`](003-frontend-publico/spec.md) — sección de implementación agregada retroactivamente |
-| `004` | Panel de administración | CERRADA | 2026-07-14 | [`spec.md`](004-panel-admin/spec.md) | [`plan.md`](004-panel-admin/plan.md) | [`spec.md`](004-panel-admin/spec.md) — sección de implementación agregada retroactivamente |
-| `005` | Restablecimiento de contraseña | CERRADA | 2026-07-14 | [`spec.md`](005-password-reset/spec.md) | [`plan.md`](005-password-reset/plan.md) | [`spec.md`](005-password-reset/spec.md) — sección de implementación agregada retroactivamente |
-| `006` | Páginas legales y footer | IMPLEMENTADA | 2026-07-14 | [`spec.md`](006-paginas-legales/spec.md) | [`plan.md`](006-paginas-legales/plan.md) | [`spec.md`](006-paginas-legales/spec.md) — sección de implementación agregada retroactivamente |
-| `007` | Alertas por email | IMPLEMENTADA | 2026-07-15 | [`spec.md`](007-alertas-email/spec.md) | [`plan.md`](007-alertas-email/plan.md) | [`spec.md`](007-alertas-email/spec.md) — sección de implementación agregada retroactivamente |
-| `008` | SEO y metadatos | CERRADA | 2026-07-15 | [`spec.md`](008-seo/spec.md) | [`plan.md`](008-seo/plan.md) | [`IMPLEMENTATION-REPORT.md`](../IMPLEMENTATION-REPORT.md) (Fase 008) |
-| `009` | Dashboard público | CERRADA | 2026-07-15 | [`spec.md`](009-dashboard-publico/spec.md) | — | [`IMPLEMENTATION-REPORT.md`](../IMPLEMENTATION-REPORT.md) (Fase 009) |
-| `010` | Rediseño del clasificador IA | CERRADA | 2026-07-16 | [`spec.md`](010-rediseño-clasificador-ia/spec.md) | [`plan.md`](010-rediseño-clasificador-ia/plan.md) | [`reporte-cierre.md`](010-rediseño-clasificador-ia/reporte-cierre.md) |
-| `011` | Centro de control IA | CERRADA | 2026-07-16 | [`spec.md`](011-centro-control-ia/spec.md) | [`plan.md`](011-centro-control-ia/plan.md) | [`reporte-cierre.md`](011-centro-control-ia/reporte-cierre.md) |
-| `012` | Baja/desactivación de reportes | CERRADA | 2026-07-16 | [`spec.md`](012-baja-reportes/spec.md) | [`plan.md`](012-baja-reportes/plan.md) | [`reporte-cierre.md`](012-baja-reportes/reporte-cierre.md) |
-| `013` | Administración del motor IA desde el panel | CERRADA | 2026-07-17 | [`spec.md`](013-admin-motor-ia/spec.md) | [`plan.md`](013-admin-motor-ia/plan.md) | [`reporte-cierre.md`](013-admin-motor-ia/reporte-cierre.md) |
-| `014` | Laboratorio de experimentos IA | CERRADA | 2026-07-17 | [`spec.md`](014-laboratorio-ia/spec.md) | [`plan.md`](014-laboratorio-ia/plan.md) | [`reporte-cierre.md`](014-laboratorio-ia/reporte-cierre.md) |
-| `015` | Defensas anti-abuso | CERRADA | 2026-07-17 | [`spec.md`](015-anti-abuso/spec.md) | [`plan.md`](015-anti-abuso/plan.md) | [`reporte-cierre.md`](015-anti-abuso/reporte-cierre.md) |
-| `016` | Círculo de Confianza | CERRADA | 2026-07-18 | [`spec.md`](016-circulo-confianza/spec.md) | [`plan.md`](016-circulo-confianza/plan.md) | [`reporte-cierre.md`](016-circulo-confianza/reporte-cierre.md) |
-| `017` | Módulo de documentación | EN DISEÑO | — | [`spec.md`](017-documentacion/spec.md) | [`plan.md`](017-documentacion/plan.md) | — |
-| `018` | Operadores de casos (revisión humana) | CERRADA | 2026-07-18 | [`spec.md`](018-operadores-casos/spec.md) | [`tasks.md`](018-operadores-casos/tasks.md) | [`reporte-cierre.md`](018-operadores-casos/reporte-cierre.md) |
-| `019` | Gestor de permisos de módulos | EN DISEÑO | — | [`spec.md`](019-permisos-modulos/spec.md) | [`diseno.md`](019-permisos-modulos/diseno.md) | — |
-| `020` | Reorganización de módulos + Tablero de monitoreo | CERRADA | 2026-07-18 | [`spec.md`](020-reorganizacion-monitoreo/spec.md) | [`plan.md`](020-reorganizacion-monitoreo/plan.md) | [`reporte-cierre.md`](020-reorganizacion-monitoreo/reporte-cierre.md) |
-| `021` | Reporte anónimo con sesión interna abierta | CERRADA | 2026-07-18 | [`spec.md`](021-reporte-anonimo-interno/spec.md) | [`plan.md`](021-reporte-anonimo-interno/plan.md) | [`reporte-cierre.md`](021-reporte-anonimo-interno/reporte-cierre.md) |
-| `022` | Expediente interno de transiciones | EN DISEÑO | — | [`spec.md`](022-expediente-transiciones/spec.md) | [`plan.md`](022-expediente-transiciones/plan.md) | — |
-| `023` | Estados de cara al usuario + SLA visible | EN DISEÑO | — | [`spec.md`](023-estados-usuario-sla/spec.md) | [`plan.md`](023-estados-usuario-sla/plan.md) | — |
-| `024` | Rol Comité de Validación + escalamiento | EN DISEÑO | — | [`spec.md`](024-comite-validacion/spec.md) | [`plan.md`](024-comite-validacion/plan.md) | — |
-| `025` | Anonimización reforzada + encriptación del original | EN DISEÑO | — | [`spec.md`](025-anonimizacion-reforzada/spec.md) | [`plan.md`](025-anonimizacion-reforzada/plan.md) | — |
-| `026` | Pipeline de spam | EN DISEÑO | — | [`spec.md`](026-pipeline-spam-prioridad/spec.md) | [`plan.md`](026-pipeline-spam-prioridad/plan.md) | — |
-| `027` | Motor de encolamiento | EN DISEÑO | — | [`spec.md`](027-motor-encolamiento/spec.md) | [`plan.md`](027-motor-encolamiento/plan.md) | — |
-| `02` | Módulo de reportes comunitarios | CERRADA | 2026-07-14 | [`spec.md`](02-reportes-comunitarios/spec.md) | [`plan.md`](02-reportes-comunitarios/plan.md) | [`IMPLEMENTATION-REPORT.md`](02-reportes-comunitarios/IMPLEMENTATION-REPORT.md) |
-| `borrador-anti-abuso` | Defensas anti-abuso (borrador de decisión) | BORRADOR | — | [`borrador-anti-abuso.md`](borrador-anti-abuso.md) | — | — |
-| `028` | Rediseño del home (landing) | CERRADA | 2026-07-18 | [`spec.md`](028-redisenio-home/spec.md) | [`plan.md`](028-redisenio-home/plan.md) | [`cierre.md`](028-redisenio-home/cierre.md) |
+## Resumen
+
+| Métrica | Valor |
+|---------|-------|
+| **Total de specs** | **64** |
+| **Cerradas / Implementadas** | **58** |
+| **Pendientes (en diseño / planeadas)** | **6** |
+
+## Backlog activo (pendientes)
+
+| Nº | Nombre | Estado |
+|----|--------|--------|
+| [017](017-documentacion/spec.md) | Módulo de documentación | 🟡 En diseño |
+| [019](019-permisos-modulos/spec.md) | Gestor de permisos de módulos | 🟡 En diseño |
+| [050b](050-pendientes-afinamiento/spec.md) | Pendientes de afinamiento | 🟡 En diseño |
+| [053](053-capa-datos-servicios/spec.md) | Capa de datos y servicios | 🔵 Planeado |
+| [074](074-colegios-fundacion/spec.md) | Colegios — Fase 1: Fundación | 🔵 Planeado |
+| [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🔵 Planeado |
+
+## Inventario completo
+
+| Nº | Nombre | Estado |
+|----|--------|--------|
+| [001](001-multi-role-auth-config/spec.md) | Autenticación multi-rol y configuración | 🟢 Cerrada |
+| [02](02-reportes-comunitarios/spec.md) | Reportes comunitarios (scoring, rate limiting) | 🟢 Cerrada |
+| [003](003-frontend-publico/spec.md) | Frontend público + PWA + onboarding | 🟢 Cerrada |
+| [004](004-panel-admin/spec.md) | Panel de administración | 🟢 Cerrada |
+| [005](005-password-reset/spec.md) | Restablecimiento de contraseña | 🟢 Cerrada |
+| [006](006-paginas-legales/spec.md) | Páginas legales y footer | 🟢 Implementada |
+| [007](007-alertas-email/spec.md) | Alertas por email | 🟢 Implementada |
+| [008](008-seo/spec.md) | SEO y metadatos | 🟢 Cerrada |
+| [009](009-dashboard-publico/spec.md) | Dashboard público | 🟢 Cerrada |
+| [010](010-rediseño-clasificador-ia/spec.md) | Rediseño del clasificador IA | 🟢 Cerrada |
+| [011](011-centro-control-ia/spec.md) | Centro de control IA | 🟢 Cerrada |
+| [012](012-baja-reportes/spec.md) | Baja/desactivación de reportes | 🟢 Cerrada |
+| [013](013-admin-motor-ia/spec.md) | Administración del motor IA | 🟢 Cerrada |
+| [014](014-laboratorio-ia/spec.md) | Laboratorio de experimentos IA | 🟢 Cerrada |
+| [015](015-anti-abuso/spec.md) | Defensas anti-abuso | 🟢 Cerrada |
+| [016](016-circulo-confianza/spec.md) | Círculo de Confianza | 🟢 Cerrada |
+| [017](017-documentacion/spec.md) | Módulo de documentación | 🟡 En diseño |
+| [018](018-operadores-casos/spec.md) | Operadores de casos (revisión humana) | 🟢 Cerrada |
+| [019](019-permisos-modulos/spec.md) | Gestor de permisos de módulos | 🟡 En diseño |
+| [020](020-reorganizacion-monitoreo/spec.md) | Reorganización de módulos + monitoreo | 🟢 Cerrada |
+| [021](021-reporte-anonimo-interno/spec.md) | Reporte anónimo con sesión interna | 🟢 Cerrada |
+| [022](022-expediente-transiciones/spec.md) | Expediente interno de transiciones | 🟢 Cerrada |
+| [023](023-estados-usuario-sla/spec.md) | Estados de usuario + SLA visible | 🟢 Cerrada |
+| [024](024-comite-validacion/spec.md) | Rol Comité de Validación + escalamiento | 🟢 Cerrada |
+| [025](025-anonimizacion-reforzada/spec.md) | Anonimización reforzada + encriptación | 🟢 Cerrada |
+| [026](026-pipeline-spam-prioridad/spec.md) | Pipeline de spam / prioridad | 🟢 Cerrada |
+| [027](027-motor-encolamiento/spec.md) | Motor de encolamiento | 🟢 Cerrada |
+| [028](028-redisenio-home/spec.md) | Rediseño del home (landing) | 🟢 Cerrada |
+| [029](029-redisenio-consulta-panel-usuario/spec.md) | Rediseño consulta / panel usuario | 🟢 Cerrada |
+| [030](030-circulo-confianza-multiples-identificadores/spec.md) | Círculo de Confianza — múltiples identificadores | 🟢 Cerrada |
+| [031](031-mejoras-ui-agrupacion-categorias/spec.md) | Mejoras UI — agrupación por categorías | 🟢 Cerrada |
+| [033](033-correcciones-vistas-roles/spec.md) | Correcciones de vistas por roles | 🟢 Cerrada |
+| [034](034-config-guardado-mapa-comite/spec.md) | Config guardado del mapa del comité | 🟢 Cerrada |
+| [035](035-correcciones-034-blindaje-critico/spec.md) | Correcciones 034 + blindaje crítico | 🟢 Cerrada |
+| [036](036-consistencia-limpieza/spec.md) | Consistencia y limpieza | 🟢 Cerrada |
+| [037](037-seguridad-limpieza/spec.md) | Seguridad y limpieza | 🟢 Cerrada |
+| [038](038-auditoria-operadores-comite/spec.md) | Auditoría de operadores y comité | 🟢 Cerrada |
+| [039](039-middleware-perimetral-real/spec.md) | Middleware perimetral real | 🟢 Cerrada |
+| [040](040-aislamiento-comite-bandeja/spec.md) | Aislamiento comité / bandeja | 🟢 Cerrada |
+| [041](041-cierre-blindaje-saneamiento/spec.md) | Cierre de blindaje y saneamiento | 🟢 Cerrada |
+| [042](042-operador-corrije-clasificacion/spec.md) | Operador corrige clasificación | 🟢 Cerrada |
+| [043](043-ux-comite-nav-padre/spec.md) | UX comité — navegación padre | 🟢 Cerrada |
+| [044](044-disciplina-spec-kit/spec.md) | Disciplina Spec Kit | 🟢 Cerrada |
+| [045](045-seguridad-fase-1/spec.md) | Seguridad — Fase 1 | 🟢 Cerrada |
+| [046](046-endurecimiento-seguridad/spec.md) | Endurecimiento de seguridad | 🟢 Cerrada |
+| [047](047-tests-rol-arquitectura/spec.md) | Tests de rol y arquitectura | 🟢 Cerrada |
+| [048](048-validacion-uniforme/spec.md) | Validación uniforme | 🟢 Cerrada |
+| [049](049-accesibilidad-wcag/spec.md) | Accesibilidad WCAG | 🟢 Cerrada |
+| [050a](050-mejora-prompt-clasificador/spec.md) | Mejora del prompt del clasificador | 🟢 Cerrada |
+| [050b](050-pendientes-afinamiento/spec.md) | Pendientes de afinamiento | 🟡 En diseño |
+| [051](051-claridad-estados/spec.md) | Claridad de estados | 🟢 Cerrada |
+| [052](052-dividir-archivos-grandes/spec.md) | Dividir archivos grandes | 🟢 Cerrada |
+| [053](053-capa-datos-servicios/spec.md) | Capa de datos y servicios | 🔵 Planeado |
+| [054](054-correccion-049-051-accesibilidad-ui/spec.md) | Corrección 049/051 — accesibilidad UI | 🟢 Cerrada |
+| [070](070-simulacion-carga-modelos/spec.md) | Simulación de carga de modelos | 🟢 Cerrada |
+| [071](071-correccion-fidelidad-simulacion-070/spec.md) | Corrección fidelidad simulación 070 | 🟢 Cerrada |
+| [072](072-simulacion-ver-detalle-reporte/spec.md) | Simulación — ver detalle de reporte | 🟢 Cerrada |
+| [073](073-ubicacion-departamentos/spec.md) | Ubicación: país → departamento → ciudad | 🟢 Cerrada |
+| [074](074-colegios-fundacion/spec.md) | Colegios — Fase 1: Fundación | 🔵 Planeado |
+| [075](075-colegios-cursos-alumnos/spec.md) | Colegios — cursos y alumnos | 🟢 Cerrada |
+| [076](076-colegios-carga-excel/spec.md) | Colegios — carga por Excel | 🟢 Cerrada |
+| [077](077-colegios-alertas-consulta/spec.md) | Colegios — alertas y consulta | 🟢 Cerrada |
+| [078](078-colegios-estadisticas-pdf/spec.md) | Colegios — estadísticas PDF | 🟢 Cerrada |
+| [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🔵 Planeado |
+
+## Incidencias de calidad de datos (por resolver)
+
+- **Colisión de numeración:** existen dos specs `050` (`050-mejora-prompt-clasificador` y `050-pendientes-afinamiento`). Renombrar requiere cuidado (referencias) → tarea de ODIN.
+- **Saltos de numeración:** faltan `032` y el rango `055-069`.
 
 ## Convención de archivos por spec
 
-Cada spec cerrada debe contener al menos:
-
-- `spec.md` — alcance, decisiones y requisitos.
-- `plan.md` — plan de implementación (puede ser retroactivo).
-- `reporte-cierre.md` — evidencia de cierre con verificaciones.
-
-Las specs `001`–`008` y `02` fueron documentadas antes de adoptar el Spec-Kit; sus reportes de cierre viven dentro del `spec.md` o en `IMPLEMENTATION-REPORT.md`.
-
-## Cómo usar este índice
-
-1. Si buscás el alcance original, abrí el `spec.md` de la spec.
-2. Si buscás el plan de implementación, abrí el `plan.md`.
-3. Si buscás evidencia de cierre, seguí el enlace de la columna **Reporte de cierre**.
-4. Para ver el estado global y artefactos faltantes, consultá [`docs/spec-kit/cumplimiento.md`](../docs/spec-kit/cumplimiento.md).
-5. Para deuda técnica derivada, consultá [`docs/deuda-tecnica.md`](../docs/deuda-tecnica.md).
+Cada spec cerrada debe contener al menos: `spec.md` (alcance), `plan.md` (plan) y `reporte-cierre.md`/`cierre.md` (evidencia de cierre).
