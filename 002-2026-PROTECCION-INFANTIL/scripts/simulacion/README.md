@@ -6,6 +6,7 @@
 
 | Archivo | Qué hace |
 |---------|----------|
+| `monitorear-simulacion.sql` | Monitor **en vivo** del progreso de las simulaciones (se refresca cada 3s con `\watch`; Ctrl+C para salir). |
 | `revisar-resultados-modelos.sql` | Muestra resultados de las simulaciones: runs, accuracy y latencia por modelo, error silencioso, matriz de confusión y detalle por caso. |
 | `purgar-simulaciones.sql` | Borra **todos** los datos de simulación (runs, reportes de sim y sus clasificaciones por cascada) y limpia la cola pg-boss. No toca reportes reales/seed. |
 | `simulacion-50-casos-eval.json` | Set de 50 casos de prueba con `categoriaEsperada` (12 categorías + benignos + spam), para evaluar accuracy en la pantalla de simulación. |
