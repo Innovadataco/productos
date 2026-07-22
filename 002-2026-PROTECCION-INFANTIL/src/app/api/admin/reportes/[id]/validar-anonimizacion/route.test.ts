@@ -42,7 +42,9 @@ async function crearReporteParaValidar(operadorId?: string) {
     });
 }
 
-describe("POST /api/admin/reportes/[id]/validar-anonimizacion", () => {
+// Timeout ampliado: la anonimización llama a Ollama real y bajo la carga de la
+// suite completa (integración secuencial sobre una única BD) puede superar los 5 s.
+describe("POST /api/admin/reportes/[id]/validar-anonimizacion", { timeout: 20000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();

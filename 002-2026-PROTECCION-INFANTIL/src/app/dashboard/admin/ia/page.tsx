@@ -13,7 +13,6 @@ interface PageProps {
 const TABS = [
     { key: "documentacion", label: "Documentación" },
     { key: "playground", label: "Playground" },
-    { key: "modelos", label: "Modelos" },
     { key: "eval", label: "Eval" },
     { key: "configuracion", label: "Configuración" },
 ];
@@ -79,8 +78,12 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
 
             <Suspense fallback={<div className="text-muted">Cargando...</div>}>
                 {activeTab === "documentacion" && <IaDocsPanel />}
-                {activeTab === "playground" && <IaPlayground initialOverrides={initialOverrides} />}
-                {activeTab === "modelos" && <IaModelSelector />}
+                {activeTab === "playground" && (
+                    <div className="space-y-6">
+                        <IaModelSelector />
+                        <IaPlayground initialOverrides={initialOverrides} />
+                    </div>
+                )}
                 {activeTab === "eval" && <IaEvalManager />}
                 {activeTab === "configuracion" && <ConfigPanel />}
             </Suspense>

@@ -7,7 +7,7 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **65** |
+| **Total de specs** | **66** |
 | **Cerradas / Implementadas** | **59** |
 | **Pendientes (en diseño / planeadas)** | **5** |
 
@@ -90,11 +90,12 @@
 | [078](078-colegios-estadisticas-pdf/spec.md) | Colegios — estadísticas PDF | 🟢 Cerrada |
 | [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🔵 Planeado |
 | [080](080-orden-migraciones-colegio/spec.md) | Orden de migraciones (I-04) | 🟢 Finalizada (pendiente ACTA) |
+| [082](082-fusion-playground-modelos/spec.md) | Fusión Playground + Modelos (I-05) | 🟢 Finalizada (pendiente ACTA) |
 
 ## Incidencias de calidad de datos (por resolver)
 
 - **Colisión de numeración:** existen dos specs `050` (`050-mejora-prompt-clasificador` y `050-pendientes-afinamiento`). Renombrar requiere cuidado (referencias) → tarea de ODIN.
-- **Saltos de numeración:** faltan `032` y el rango `055-069`.
+- **Saltos de numeración:** faltan `032`, el rango `055-069` y `081`.
 
 ## Convención de archivos por spec
 

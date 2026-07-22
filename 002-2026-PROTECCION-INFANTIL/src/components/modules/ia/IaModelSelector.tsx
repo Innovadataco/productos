@@ -48,14 +48,23 @@ export function IaModelSelector() {
         }
     }
 
+    async function fetchParam(clave: string): Promise<string> {
+        const res = await fetch(`/api/config/parametros/${encodeURIComponent(clave)}`, { credentials: "include" });
+        if (!res.ok) return "";
+        const data = await res.json();
+        return data.valor ?? "";
+    }
+
     async function fetchParams() {
         try {
-            const res = await fetch("/api/config/parametros", { credentials: "include" });
-            const data = await res.json();
-            const items: ParamValue[] = data.items || [];
-            setParams(items);
-            const modelo = items.find((p) => p.clave === "reportes.classification_model")?.valor || "";
-            const url = items.find((p) => p.clave === "system.ollama_base_url")?.valor || "";
+            const [modelo, url] = await Promise.all([
+                fetchParam("reportes.classification_model"),
+                fetchParam("system.ollama_base_url"),
+            ]);
+            setParams([
+                { clave: "reportes.classification_model", valor: modelo },
+                { clave: "system.ollama_base_url", valor: url },
+            ]);
             setSelectedModel(modelo);
             setOllamaUrl(url);
         } catch {
