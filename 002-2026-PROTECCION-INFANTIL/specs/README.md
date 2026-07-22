@@ -7,9 +7,9 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **64** |
-| **Cerradas / Implementadas** | **58** |
-| **Pendientes (en diseño / planeadas)** | **6** |
+| **Total de specs** | **65** |
+| **Cerradas / Implementadas** | **59** |
+| **Pendientes (en diseño / planeadas)** | **5** |
 
 ## Backlog activo (pendientes)
 
@@ -19,7 +19,6 @@
 | [019](019-permisos-modulos/spec.md) | Gestor de permisos de módulos | 🟡 En diseño |
 | [050b](050-pendientes-afinamiento/spec.md) | Pendientes de afinamiento | 🟡 En diseño |
 | [053](053-capa-datos-servicios/spec.md) | Capa de datos y servicios | 🔵 Planeado |
-| [074](074-colegios-fundacion/spec.md) | Colegios — Fase 1: Fundación | 🔵 Planeado |
 | [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🔵 Planeado |
 
 ## Inventario completo
@@ -84,12 +83,13 @@
 | [071](071-correccion-fidelidad-simulacion-070/spec.md) | Corrección fidelidad simulación 070 | 🟢 Cerrada |
 | [072](072-simulacion-ver-detalle-reporte/spec.md) | Simulación — ver detalle de reporte | 🟢 Cerrada |
 | [073](073-ubicacion-departamentos/spec.md) | Ubicación: país → departamento → ciudad | 🟢 Cerrada |
-| [074](074-colegios-fundacion/spec.md) | Colegios — Fase 1: Fundación | 🔵 Planeado |
+| [074](074-colegios-fundacion/spec.md) | Colegios — Fase 1: Fundación | 🟢 Cerrada |
 | [075](075-colegios-cursos-alumnos/spec.md) | Colegios — cursos y alumnos | 🟢 Cerrada |
 | [076](076-colegios-carga-excel/spec.md) | Colegios — carga por Excel | 🟢 Cerrada |
 | [077](077-colegios-alertas-consulta/spec.md) | Colegios — alertas y consulta | 🟢 Cerrada |
 | [078](078-colegios-estadisticas-pdf/spec.md) | Colegios — estadísticas PDF | 🟢 Cerrada |
 | [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🔵 Planeado |
+| [080](080-orden-migraciones-colegio/spec.md) | Orden de migraciones (I-04) | 🟢 Finalizada (pendiente ACTA) |
 
 ## Incidencias de calidad de datos (por resolver)
 
