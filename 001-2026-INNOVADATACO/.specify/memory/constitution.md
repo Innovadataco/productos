@@ -1,12 +1,73 @@
+<!--
+Sync Impact Report — 2026-07-22
+Version change: 1.0.0 → 2.0.0
+Bump rationale: MAJOR — se redefine el contrato de errores al cliente (el patrón
+estándar §2.1 devolvía `details: err.message` crudo; ahora está prohibido filtrar
+err.message al cliente). Además se añade la sección 0 "Principios rectores
+(gobernanza IDC)" con 6 principios nuevos (spec-driven, pruebas, tipado estricto,
+12-factor/ADR_001, aislamiento multiproyecto/ADR_002, IA local por defecto).
+Modified principles: §2.1 "Patrón estándar para errores" (ya no expone details al cliente);
+§2.4 refuerza "nunca err.message crudo al cliente".
+Added sections: §0 Principios rectores (gobernanza IDC); gobernanza de enmiendas en §10.
+Removed sections: ninguna.
+Templates: ✅ .specify/templates/plan-template.md (Constitution Check genérico, compatible);
+✅ .specify/templates/spec-template.md (sin cambios requeridos);
+✅ .specify/templates/tasks-template.md (sin cambios requeridos);
+✅ .claude/skills/speckit-* (integración claude 0.13.5, sin referencias obsoletas).
+Follow-up TODOs: ninguno.
+-->
+
 # SPECKIT CONSTITUTION — 001-2026-INNOVADATACO
 
-> **Versión:** 1.0.0  
-> **Fecha:** 2026-07-11  
+> **Versión:** 2.0.0  
+> **Ratificada:** 2026-07-11 · **Última enmienda:** 2026-07-22  
 > **Stack:** Next.js 16.2.10 + React 19.2.4 + Prisma 5.22.0 + PostgreSQL 16+ + TypeScript 5.x  
 > **Runtime:** Node.js >=22  
 > **Módulos activos:** Base Oficial, Licitaciones, Investigación, Proyectos, Configuración  
 > **Módulo FUERA DE SCOPE:** Financials (permanentemente no implementar)  
 > **Arquitectura API:** Next.js App Router API Routes (no PostgREST, no tRPC, no GraphQL)
+
+---
+
+## 0. PRINCIPIOS RECTORES (GOBERNANZA IDC)
+
+Estos seis principios son la fuente de autoridad del proyecto. Ante cualquier
+conflicto con el resto del documento o con una tarea, prevalecen estos principios.
+
+### 0.1 Spec-driven (Regla de Oro 1)
+Ningún cambio entra al código sin una spec aprobada por ZEUS (arquitecto) y Jelkin
+(CEO). El flujo es: `/speckit-specify` → aprobación → `/speckit-plan` →
+`/speckit-tasks` → `/speckit-implement`. Un cambio sin spec aprobada DEBE rechazarse,
+sin importar cuán pequeño o "obvio" parezca.
+
+### 0.2 Pruebas obligatorias
+Toda ruta API nueva o modificada DEBE llevar test Vitest. La suite DEBE estar en
+verde antes de cada commit. No se commitea con tests rojos ni se posterga el test
+"para después".
+
+### 0.3 Tipado estricto
+Prohibido introducir `any` nuevo (anotaciones, `as any`, supresiones). Los errores
+al cliente van SIEMPRE normalizados: mensaje legible y código HTTP correcto; NUNCA
+se filtra `err.message` crudo ni stack traces en la respuesta. El detalle del error
+vive solo en los logs del servidor.
+
+### 0.4 12-factor (ADR_001)
+Configuración por `.env` (nunca hardcodeada), secretos fuera del código y del
+repositorio, infraestructura declarada en `docker-compose.yml`. Criterio de
+portabilidad: migrar a un VPS DEBE reducirse a `repo + .env + docker compose up`.
+
+### 0.5 Aislamiento multiproyecto (ADR_002)
+A este proyecto le pertenecen SOLO los puertos **5001** (app) y **5435** (BD).
+Los puertos 5005/5433 (Protección Infantil) y 5010/5434 (SICOV) son INTOCABLES:
+prohibido usarlos, liberarlos o detener procesos/contenedores ajenos. Nunca tocar
+infraestructura (contenedores, volúmenes, archivos) de otros productos del monorepo.
+Antes de trabajo pesado (inferencia, cargas grandes): avisar a Jelkin y esperar OK;
+un solo modelo grande a la vez en la MacStudio. Ver `AGENTS.md`.
+
+### 0.6 IA local por defecto
+La inferencia usa Ollama local vía `OLLAMA_BASEURL` como proveedor por defecto.
+Proveedores externos (APIs de terceros) son opcionales, se configuran por `.env`/
+módulo de Configuración y nunca son requisito para que el sistema funcione.
 
 ---
 
@@ -51,13 +112,13 @@ El `tsconfig.json` tiene `"strict": true`. Esto significa:
 | `// @ts-ignore` | `// @ts-expect-error` con justificación | comentar por qué se espera el error |
 | Variables `let` no reasignadas | `const` siempre que sea posible | `const where: Prisma.LicitacionWhereInput = {}` |
 
-**Patrón estándar para errores:**
+**Patrón estándar para errores** (el detalle va al log, NUNCA al cliente — §0.3):
 ```typescript
 } catch (err: unknown) {
   const message = err instanceof Error ? err.message : "Error desconocido";
   console.error("[Módulo] Error en operación:", message);
   return NextResponse.json(
-    { error: "Descripción legible para el usuario", details: message },
+    { error: "Descripción legible para el usuario" }, // sin err.message crudo
     { status: 500 }
   );
 }
@@ -101,7 +162,8 @@ Toda ruta API debe retornar:
 - `502` — Error de upstream (llamada a modelo IA falló)
 - `503` — Servicio no disponible (sin modelo IA activo)
 
-Nunca retornar stack traces al cliente. Solo en logs del servidor.
+Nunca retornar stack traces ni `err.message` crudo al cliente (§0.3). Solo en logs
+del servidor.
 
 ### 2.5 Logs y auditoría
 - Usar `console.error` para errores, `console.warn` para advertencias, `console.log` solo para trazas de desarrollo.
@@ -401,9 +463,15 @@ Después de mergear a `main`, el agente debe:
 
 ## 10. HISTORIAL DE CAMBIOS
 
+**Gobernanza de enmiendas:** toda enmienda a esta constitución requiere aprobación
+de ZEUS y Jelkin, bump de versión semántico (MAJOR: redefinición/eliminación de
+principios; MINOR: principios o secciones nuevas; PATCH: aclaraciones) y registro
+en esta tabla. El cumplimiento se revisa en cada spec (`Constitution Check` del plan).
+
 | Versión | Fecha | Autor | Cambio |
 |---------|-------|-------|--------|
 | 1.0.0 | 2026-07-11 | Speckit | Creación inicial tras inspección de código real del proyecto |
+| 2.0.0 | 2026-07-22 | ODIN (aprob. pendiente ZEUS/Jelkin) | Principios rectores de gobernanza IDC (§0); contrato de errores sin `err.message` al cliente (§2.1, §2.4); gobernanza de enmiendas |
 
 ---
 
