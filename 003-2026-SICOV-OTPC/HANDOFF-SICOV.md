@@ -249,7 +249,17 @@ El manual documenta el envío a *"la entidad"* (Superintendencia) **únicamente*
 
 **Salidas y llegadas no tienen módulo, pantalla ni formulario en el manual.** Las salidas aparecen solo como **lista de solo-lectura** dentro de Novedades (columnas: #, placa, fecha, hora, razón social, NIT, **pasajeros**, estado `Iniciado`/`Finalizado`); las llegadas solo se infieren del estado *Finalizado*. Concuerda con la BD de producción: `tbl_despachos_solicitudes` y `tbl_llegadas_solicitudes` **vacías**.
 
-> **Conclusión:** las specs **002-llegadas** y **004-salidas** del 003 implementan funcionalidad que **nunca operó en el legacy**. No hay paridad verificable contra producción; sus reglas de negocio están **sin validar**. Pendiente de confirmación con el CEO.
+> **RESUELTO por el CEO (2026-07-22):** el manual es **v1.0 y está DESACTUALIZADO** — no existe versión al día. Salidas y llegadas **SÍ son operaciones reportables a la Super**, igual que los mantenimientos:
+>
+> - **Salida:** cuando el vehículo sale se reporta a la API de la Super (fecha, hora, placa, empresa…).
+> - **Llegada:** al llegar **se consulta si existe una salida previa**. Si existe, se reporta contra ella (la Super devuelve un número/id). Si **no** existe, el usuario simplemente cierra la operación cuando el vehículo llega.
+> - **Quién:** el **operador** de la empresa, previamente creado por el administrador de la empresa (rol cliente) con sus módulos asignados.
+>
+> ✅ **La implementación del 003 ya es correcta:** `src/app/api/integracion/llegadas/route.ts:24-39` exige `idDespacho` en llegada **tipo 1** y lo prohíbe en **tipo 2** — exactamente el flujo descrito.
+>
+> ⚠️ **Consecuencia de alcance:** el legacy solo tiene **5 módulos asignables** y SICOV necesita cubrir **7 operaciones**. SICOV debe añadir **Salidas** y **Llegadas** como módulos asignables para que el administrador de empresa pueda habilitarlos por operador (ver D-017).
+>
+> ⚠️ **Fuente de verdad para salidas/llegadas:** el **código legacy + lo definido por el CEO**, NO el manual (que no las cubre).
 
 ### 10.10 Plantillas XLSX — columnas exactas
 
