@@ -33,28 +33,53 @@ model UsuarioModulo {
   ...campos actuales...
   submoduloId Int? @map("usm_submodulo_id")   // ADITIVA, nullable: null = módulo completo
   submodulo   Submodulo? @relation(...)
-  // El unique actual (usuarioId, moduloId) pasa a (usuarioId, moduloId, submoduloId)
-  // en DOS FASES (crear índice nuevo → retirar el viejo) — sin pérdida de datos.
+  // NO se usa @@unique de Prisma: el unique de (usuarioId, moduloId, submoduloId) NO garantiza
+  // la unicidad del "módulo completo" porque en PostgreSQL dos filas (u, m, NULL) se consideran
+  // DISTINTAS entre sí. La unicidad se declara con DOS índices únicos PARCIALES en la migración
+  // SQL editada a mano (ver §Justificación). Prisma solo modela la columna + FK.
 }
 ```
+
+**B1 — unicidad por índices únicos PARCIALES (NO `@@unique`).** El unique actual
+`(usuarioId, moduloId)` se retira; en su lugar la migración SQL crea dos índices parciales que
+sí garantizan "una sola fila de módulo completo por usuario" (los `NULL` en un índice único de
+PostgreSQL son distintos entre sí, así que un unique de 3 columnas admitiría dos filas
+`(u, m, NULL)` — inaceptable):
+
+```sql
+CREATE UNIQUE INDEX ux_usmod_completo   ON sicov.tbl_usuarios_modulos (usm_usuario_id, usm_modulo_id)                    WHERE usm_submodulo_id IS NULL;
+CREATE UNIQUE INDEX ux_usmod_submodulo  ON sicov.tbl_usuarios_modulos (usm_usuario_id, usm_modulo_id, usm_submodulo_id) WHERE usm_submodulo_id IS NOT NULL;
+```
+
+Alternativa `UNIQUE NULLS NOT DISTINCT` descartada por dependencia de versión (solo si se
+confirma Prisma 5.22 + PG16); los parciales son la vía segura e independiente de versión.
 
 - Semántica: fila (usuario, mantenimientos, NULL) = todo el módulo; (usuario, mantenimientos,
   preventivos) = solo ese submódulo. `cargarModulos` no cambia (sigue proyectando módulos);
   se añade `cargarSubmodulos(usuarioId)` para el guard y el menú.
+- **B2 — exclusión completo ↔ submódulo (regla server-side, no solo índice):** por
+  `(usuario, módulo)` existe **o una única fila NULL (módulo completo) o N filas de submódulo,
+  NUNCA ambas**. Al asignar "módulo completo" el servicio borra las filas de submódulo de ese
+  módulo; al asignar submódulos borra la fila NULL — todo en la MISMA transacción. Los índices
+  parciales no impiden la coexistencia completo↔submódulo, así que la exclusión se valida y
+  materializa server-side (ver §4 y §5); sin ella la semántica del guard es ambigua.
 - **Seed aditivo** de `Submodulo`: `preventivos`/`correctivos` bajo `mantenimientos` (los de
   006/007/008 se siembran como catálogo asignable SIN pantalla: `alistamiento-diario`,
   `autorizaciones-nna`, `novedades-*` — solo nombres, cero lógica).
-- Módulo nuevo en catálogo: `configuracion` (id 9, solo rol 1) con submódulos `empresas`, `apis`
-  (spec 013); `usuarios` (id 8) gana pantalla.
+- Módulo nuevo en catálogo: `configuracion` (solo rol 1) con submódulos `empresas`, `apis`
+  (spec 013); `usuarios` gana pantalla. **NO se hardcodea el id** (los ids son `serial`): se
+  siembra por NOMBRE (`configuracion`) y se resuelve por nombre en el seed, el guard y el menú.
 - `Funcionalidad`/`RolModuloFuncionalidad`: se conservan tal cual (techo por ROL futuro); esta
   spec no las puebla más allá de lo existente — declarado en spec como fuera de alcance.
 
 ### Justificación de la única migración
 
-`ALTER TABLE tbl_usuarios_modulos ADD COLUMN usm_submodulo_id INT NULL` + FK a `tbl_submodulos` +
-índice único nuevo. Aditiva, `--create-only` + revisión. El cambio de unique es el ÚNICO punto
-delicado (drop de índice viejo tras crear el nuevo): dos fases en la misma migración revisada,
-sin tocar datos. Alternativa descartada: tabla puente nueva (prohibida por el encargo y redundante).
+`ALTER TABLE tbl_usuarios_modulos ADD COLUMN usm_submodulo_id INT NULL` + FK a `tbl_submodulos`.
+Aditiva, `--create-only` + **revisión manual obligatoria del SQL** (gate B1). En la MISMA migración
+revisada: `DROP` del unique viejo `(usm_usuario_id, usm_modulo_id)` y `CREATE` de los dos índices
+únicos PARCIALES de B1 (completo con `WHERE submodulo IS NULL`, submódulo con `WHERE submodulo IS
+NOT NULL`). Sin tocar datos. Alternativa descartada: tabla puente nueva (prohibida por el encargo
+y redundante).
 
 ## 3. Correo (D-048) — interfaz + adaptador Resend
 
@@ -96,10 +121,21 @@ Reglas server-side: subconjunto validado contra `cargarModulos/Submodulos` del O
 payload); rol 2 no toca usuarios con `usn_administrador != su NIT` (404); política de clave
 reutilizada; transacciones para empresa+usuario+módulos.
 
+- **B2 (server-side) al asignar módulos/submódulos:** dentro de la transacción, por cada
+  `(usuario, módulo)` afectado se materializa la exclusión — "módulo completo" ⇒ borra las filas
+  de submódulo de ese módulo; "submódulos" ⇒ borra la fila NULL. Nunca coexisten completo y
+  submódulo (los índices parciales de B1 no lo impiden; lo garantiza este servicio).
+- **El envío de correo va FUERA de la transacción de alta.** La transacción persiste
+  empresa+usuario+módulos y hace COMMIT; solo DESPUÉS se invoca la interfaz de correo. Un fallo de
+  Resend (o la ausencia de key) **nunca revierte** la creación — el alta queda firme y se ofrece
+  "reenviar credencial". El correo no participa jamás de la transacción de datos.
+
 ## 5. Guard extendido (reusa 005-A)
 
-`requiereModulo(usuario, modulo, submodulo?)`: si el usuario tiene fila NULL → pasa; si tiene
-filas por submódulo → exige el pedido. Se aplica: rutas de mantenimientos preventivo→
+`requiereModulo(usuario, modulo, submodulo?)`: si el usuario tiene fila NULL (módulo completo) →
+pasa; si tiene filas por submódulo → exige el pedido. La exclusión completo↔submódulo (B2) hace
+que esta decisión sea inequívoca: nunca hay a la vez fila NULL y filas de submódulo para el mismo
+`(usuario, módulo)`. Se aplica: rutas de mantenimientos preventivo→
 `("mantenimientos","preventivos")`, correctivo→`("mantenimientos","correctivos")` (bulk incluidos);
 rutas de configuración → `("configuracion", "empresas"|"apis")`. Tests de matriz (módulo completo /
 solo submódulo / sin nada).
@@ -122,8 +158,9 @@ anidados limitados al set del otorgante, servido por la API — nunca calculado 
 
 ## 8. Fases de implementación (post-aprobación)
 
-1. **Datos**: migración aditiva (`usm_submodulo_id` + unique en dos fases) + seeds (submódulos,
-   módulo configuracion, funcionalidades base) — `--create-only` + revisión + pg_dump previo.
+1. **Datos**: migración aditiva (`usm_submodulo_id` + FK + DROP unique viejo + 2 índices únicos
+   PARCIALES de B1) + seeds por NOMBRE (submódulos, módulo `configuracion`, funcionalidades base)
+   — `--create-only` + **revisión manual del SQL** + pg_dump previo.
 2. **Correo**: interfaz + adaptadores + refactor de recuperar + tests (US3, commit propio).
 3. **US1 empresas**: servicio + endpoints + UI + tests (commit `feat(003-US1-009)`).
 4. **US2 cascada**: servicio usuarios + guard extendido aplicado a preventivo/correctivo + UI +
@@ -134,8 +171,10 @@ anidados limitados al set del otorgante, servido por la API — nunca calculado 
 
 ## 9. Riesgos
 
-- Cambio del unique de `tbl_usuarios_modulos`: único DDL no-trivial — revisión manual del SQL en
-  el gate de la migración.
+- Cambio del unique de `tbl_usuarios_modulos` a **dos índices parciales** (B1): único DDL
+  no-trivial — revisión manual del SQL obligatoria en el gate de la migración.
+- Exclusión completo↔submódulo (B2): garantizada server-side, no por índice — test dedicado que
+  verifica que asignar completo purga los submódulos y viceversa.
 - Sincronía token empresa⇄usuario admin: transacción única + test dedicado (evitar divergencia).
 - Enumeración de usuarios entre empresas: respuestas 404 uniformes (D-015).
 - Resend sin dominio verificado: usar remitente sandbox de Resend hasta decisión del CEO

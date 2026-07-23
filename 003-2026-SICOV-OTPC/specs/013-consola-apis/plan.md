@@ -42,8 +42,8 @@ model ApiLlamada {
   modo       String    @map("apl_modo") @db.VarChar(10)      // stub | real
   metodo     String?   @map("apl_metodo") @db.VarChar(10)
   endpoint   String?   @map("apl_endpoint") @db.VarChar(255) // path externo declarado (no secreto)
-  request    Json?     @map("apl_request") @db.Json          // REDACTADO (claves sensibles → "***") y truncado
-  respuesta  Json?     @map("apl_respuesta") @db.Json        // truncada
+  request    Json?     @map("apl_request") @db.JsonB         // REDACTADO RECURSIVO (claves sensibles → "***") y truncado
+  respuesta  Json?     @map("apl_respuesta") @db.JsonB       // truncada
   status     Int?      @map("apl_status")
   duracionMs Int?      @map("apl_duracion_ms")
   error      String?   @map("apl_error") @db.Text
@@ -58,9 +58,11 @@ model ApiLlamada {
 ```
 
 Migración `add_consola_apis` (solo CREATE; `--create-only` + revisión). Prefijo `apl_` propio del
-003 (no existe en el legacy — tabla nueva declarada como tal). Redacción ANTES de persistir:
-lista de claves (`clave`, `contrasena`, `token`, `tokenAutorizado`, `Authorization`...) → `"***"`;
-truncado a 8 KB por columna Json (documentado).
+003 (no existe en el legacy — tabla nueva declarada como tal). Columnas `jsonb` (indexable, más
+eficiente para la bitácora). Redacción ANTES de persistir: lista de claves (`clave`, `contrasena`,
+`token`, `tokenAutorizado`, `Authorization`...) → `"***"`; **RECURSIVA** — recorre el árbol JSON
+completo (objetos y arrays anidados a cualquier profundidad), no solo el primer nivel; truncado a
+8 KB por columna jsonb (documentado).
 
 ## 4. Estructura
 
@@ -70,7 +72,7 @@ src/lib/consola-apis/
 │                    # + FASE_CONSOLA = 1 + tabla ejecutor→método del cliente
 ├── ejecutar.ts      # ejecutarOperacion(): valida contra catálogo, cronometra, llama al cliente
 │                    # (stub por gate), redacta y registra en ApiLlamada; nunca lanza sin registrar
-└── redactar.ts      # redacción de sensibles + truncado (+ tests)
+└── redactar.ts      # redacción RECURSIVA de sensibles (objetos/arrays anidados) + truncado (+ tests)
 
 src/app/api/configuracion/apis/
 ├── catalogo/route.ts   # GET catálogo (rol 1 + guard configuracion/apis)
@@ -116,8 +118,9 @@ Guard: `requiereModulo(u, "configuracion", "apis")` (extensión de submódulo de
 
 - **Tentación de "probar" real:** mitigada por doble candado (gate env apagado + `FASE_CONSOLA`
   en código) y test que asegura 403 del camino real.
-- Datos sensibles en bitácora: redacción testeada por lista de claves; revisión en el gate de
-  implementación con un payload real de ejemplo.
+- Datos sensibles en bitácora: redacción RECURSIVA testeada con payloads anidados (clave sensible
+  en objeto/array profundo → `"***"`); revisión en el gate de implementación con un payload real
+  de ejemplo.
 - Crecimiento de la bitácora: sin purga en Fase 1 (volumen bajo, solo rol 1); deuda anotada.
 
 ---
