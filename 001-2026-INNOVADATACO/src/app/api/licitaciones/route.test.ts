@@ -15,6 +15,11 @@ import { prisma } from "@/lib/prisma";
 import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { GET, POST } from "./route";
 
+// Todos los casos corren con sesión válida salvo los de 401 (spec 005, US-3).
+beforeEach(async () => {
+  await conSesion();
+});
+
 const LICITACION_VALIDA = {
   numero: "LIC-2026-001",
   titulo: "Adquisición de equipos",
@@ -103,5 +108,18 @@ describe("POST /api/licitaciones", () => {
     const data = primerArgumento(vi.mocked(prisma.licitacion.create)).data;
     expect(data.numero).toBe("LIC-2026-001");
     expect(data.estadoId).toBe(1); // parseInt aplicado
+  });
+});
+
+describe("GET /api/licitaciones — sesión obligatoria (spec 005, FR-008)", () => {
+  it("responde 401 sin sesión y no consulta la base", async () => {
+    await sinSesion();
+    vi.mocked(prisma.licitacion.findMany).mockReset();
+
+    const res = await GET(new NextRequest("http://localhost:5001/api/licitaciones"));
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.licitacion.findMany).not.toHaveBeenCalled();
   });
 });

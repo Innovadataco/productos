@@ -146,3 +146,16 @@ describe("DELETE /api/licitaciones/[id]", () => {
     expect(prisma.licitacion.delete).toHaveBeenCalledWith({ where: { id: "lic1" } });
   });
 });
+
+describe("GET /api/licitaciones/[id] — sesión obligatoria (spec 005, FR-008)", () => {
+  it("responde 401 sin sesión y no consulta la base", async () => {
+    await sinSesion();
+    vi.mocked(prisma.licitacion.findUnique).mockReset();
+
+    const res = await GET(req(), params);
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.licitacion.findUnique).not.toHaveBeenCalled();
+  });
+});

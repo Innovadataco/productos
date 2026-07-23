@@ -13,6 +13,11 @@ import { prisma } from "@/lib/prisma";
 import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { GET, POST } from "./route";
 
+// Todos los casos corren con sesión válida salvo los de 401 (spec 005, US-3).
+beforeEach(async () => {
+  await conSesion();
+});
+
 const url = "http://localhost:5001/api/config/apis";
 const API_VALIDA = {
   key: "list_models",
@@ -74,5 +79,18 @@ describe("POST /api/config/apis", () => {
     const data = vi.mocked(prisma.agentApi.create).mock.calls[0][0].data;
     expect(data.key).toBe("list_models");
     expect(typeof data.docs).toBe("string");
+  });
+});
+
+describe("GET /api/config/apis — sesión obligatoria (spec 005, FR-008)", () => {
+  it("responde 401 sin sesión y no consulta la base", async () => {
+    await sinSesion();
+    vi.mocked(prisma.agentApi.findMany).mockReset();
+
+    const res = await GET();
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.agentApi.findMany).not.toHaveBeenCalled();
   });
 });

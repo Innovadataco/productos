@@ -6,6 +6,9 @@ import { prisma } from "@/lib/prisma";
 // GET /api/licitaciones/estados - Listar todos los estados
 export async function GET(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const estados = await prisma.licitacionStatus.findMany({
       orderBy: { id: "asc" },
     });

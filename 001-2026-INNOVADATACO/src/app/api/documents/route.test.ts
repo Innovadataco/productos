@@ -19,6 +19,11 @@ import { extractPdfText } from "@/lib/documentProcessor";
 import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { GET, POST, PATCH } from "./route";
 
+// Todos los casos corren con sesión válida salvo los de 401 (spec 005, US-3).
+beforeEach(async () => {
+  await conSesion();
+});
+
 const url = "http://localhost:5001/api/documents";
 
 function peticionUpload(conArchivo = true) {
@@ -138,5 +143,18 @@ describe("PATCH /api/documents", () => {
     expect(data).toEqual({ titulo: "Nuevo" });
     expect(data).not.toHaveProperty("activo");
     expect(data).not.toHaveProperty("archivoUrl");
+  });
+});
+
+describe("GET /api/documents — sesión obligatoria (spec 005, FR-008)", () => {
+  it("responde 401 sin sesión y no consulta la base", async () => {
+    await sinSesion();
+    vi.mocked(prisma.documentoOficial.findMany).mockReset();
+
+    const res = await GET(new NextRequest("http://localhost:5001/api/documents"));
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.documentoOficial.findMany).not.toHaveBeenCalled();
   });
 });

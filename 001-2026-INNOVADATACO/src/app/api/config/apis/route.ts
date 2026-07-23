@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { noAutenticado } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const apis = await prisma.agentApi.findMany({
       orderBy: [{ module: "asc" }, { submodule: "asc" }, { name: "asc" }],
     });

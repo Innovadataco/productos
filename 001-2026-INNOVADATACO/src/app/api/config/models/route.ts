@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, detalleDeError } from "@/lib/apiError";
+import { apiError, detalleDeError, noAutenticado } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { auditLog } from "@/lib/audit";
 import { encrypt } from "@/lib/crypto";
@@ -7,6 +7,9 @@ import { verifyAuth } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const models = await prisma.aiModel.findMany({
       orderBy: { createdAt: "desc" },
       select: {

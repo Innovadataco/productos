@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { noAutenticado } from "@/lib/apiError";
+import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const { searchParams } = new URL(req.url);
     const action = searchParams.get("action") || undefined;
     const status = searchParams.get("status") || undefined;

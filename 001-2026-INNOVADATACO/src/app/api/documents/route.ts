@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { detalleDeError } from "@/lib/apiError";
+import { detalleDeError, noAutenticado } from "@/lib/apiError";
 import type { PgBoss } from "pg-boss";
 import { Prisma } from "@prisma/client";
 import { writeFile, mkdir } from "fs/promises";
@@ -132,6 +132,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const { searchParams } = new URL(req.url);
     const includeInactive = searchParams.get("includeInactive") === "true";
     const status = searchParams.get("status");

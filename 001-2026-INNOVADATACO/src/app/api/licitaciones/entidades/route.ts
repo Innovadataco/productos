@@ -6,6 +6,9 @@ import { prisma } from "@/lib/prisma";
 // GET /api/licitaciones/entidades - Listar todas las entidades
 export async function GET(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const entidades = await prisma.entidadLicitacion.findMany({
       orderBy: { nombreOficial: "asc" },
     });

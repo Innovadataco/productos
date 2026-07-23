@@ -6,9 +6,19 @@ vi.mock("@/lib/prisma", async () => {
   const { createPrismaMock } = await import("@/test/prismaMock");
   return { prisma: createPrismaMock() };
 });
+vi.mock("@/lib/auth", async () => {
+  const { createAuthMock } = await import("@/test/authMock");
+  return createAuthMock();
+});
 
 import { prisma } from "@/lib/prisma";
+import { conSesion, sinSesion } from "@/test/authMock";
 import { GET } from "./route";
+
+// Todos los casos corren con sesión válida salvo los de 401 (spec 005, US-3).
+beforeEach(async () => {
+  await conSesion();
+});
 
 const url = "http://localhost:5001/api/config/audit";
 
@@ -63,5 +73,18 @@ describe("GET /api/config/audit", () => {
     expect(res.status).toBe(500);
     expect(body).toEqual({ error: "Error listando auditoría" });
     expect(JSON.stringify(body)).not.toContain("10.0.0.8");
+  });
+});
+
+describe("GET /api/config/audit — sesión obligatoria (spec 005, FR-008)", () => {
+  it("responde 401 sin sesión y no consulta la base", async () => {
+    await sinSesion();
+    vi.mocked(prisma.auditLog.findMany).mockReset();
+
+    const res = await GET(new NextRequest("http://localhost:5001/api/config/audit"));
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.auditLog.findMany).not.toHaveBeenCalled();
   });
 });

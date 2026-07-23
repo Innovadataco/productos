@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiError } from "@/lib/apiError";
+import { apiError, noAutenticado } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 
 export async function GET() {
     try {
+        const session = await verifyAuth();
+        if (!session) return noAutenticado();
+
         const settings = await prisma.moduleSetting.findMany({
             include: {
                 aiModel: {

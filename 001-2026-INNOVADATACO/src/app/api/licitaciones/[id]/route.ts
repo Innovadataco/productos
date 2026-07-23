@@ -10,6 +10,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const { id } = await params;
 
     const licitacion = await prisma.licitacion.findUnique({

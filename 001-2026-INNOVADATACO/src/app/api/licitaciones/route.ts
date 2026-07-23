@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { apiError } from "@/lib/apiError";
+import { apiError, noAutenticado } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 
 // GET /api/licitaciones - Listar todas las licitaciones
 export async function GET(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const { searchParams } = new URL(req.url);
     const estado = searchParams.get("estado");
     const entidad = searchParams.get("entidad");

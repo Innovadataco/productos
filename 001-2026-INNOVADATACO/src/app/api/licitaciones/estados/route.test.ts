@@ -95,3 +95,16 @@ describe("POST /api/licitaciones/estados", () => {
     });
   });
 });
+
+describe("GET /api/licitaciones/estados — sesión obligatoria (spec 005, FR-008)", () => {
+  it("responde 401 sin sesión y no consulta la base", async () => {
+    await sinSesion();
+    vi.mocked(prisma.licitacionStatus.findMany).mockReset();
+
+    const res = await GET(new NextRequest("http://localhost:5001/api/licitaciones/estados"));
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.licitacionStatus.findMany).not.toHaveBeenCalled();
+  });
+});

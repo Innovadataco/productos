@@ -16,6 +16,11 @@ import { prisma } from "@/lib/prisma";
 import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { GET, POST } from "./route";
 
+// Todos los casos corren con sesión válida salvo los de 401 (spec 005, US-3).
+beforeEach(async () => {
+  await conSesion();
+});
+
 const url = "http://localhost:5001/api/config/models";
 const MODELO_VALIDO = { name: "Qwen Local", provider: "ollama", modelPath: "qwen2.5:32b" };
 
@@ -90,5 +95,18 @@ describe("POST /api/config/models", () => {
     expect(data.name).toBe("Qwen Local");
     expect(data.apiKey).not.toBe("sk-secreta");
     expect(String(data.apiKey)).toContain("cifrado:");
+  });
+});
+
+describe("GET /api/config/models — sesión obligatoria (spec 005, FR-008)", () => {
+  it("responde 401 sin sesión y no consulta la base", async () => {
+    await sinSesion();
+    vi.mocked(prisma.aiModel.findMany).mockReset();
+
+    const res = await GET();
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.aiModel.findMany).not.toHaveBeenCalled();
   });
 });

@@ -13,6 +13,11 @@ import { prisma } from "@/lib/prisma";
 import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { GET, PUT } from "./route";
 
+// Todos los casos corren con sesión válida salvo los de 401 (spec 005, US-3).
+beforeEach(async () => {
+  await conSesion();
+});
+
 const url = "http://localhost:5001/api/config/module-settings";
 const AJUSTE_VALIDO = { module: "base_oficial", settingKey: "modelo_analisis", aiModelId: "m1" };
 
@@ -80,5 +85,18 @@ describe("PUT /api/config/module-settings", () => {
       module_settingKey: { module: "base_oficial", settingKey: "modelo_analisis" },
     });
     expect(args.create).toMatchObject(AJUSTE_VALIDO);
+  });
+});
+
+describe("GET /api/config/module-settings — sesión obligatoria (spec 005, FR-008)", () => {
+  it("responde 401 sin sesión y no consulta la base", async () => {
+    await sinSesion();
+    vi.mocked(prisma.moduleSetting.findMany).mockReset();
+
+    const res = await GET();
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.moduleSetting.findMany).not.toHaveBeenCalled();
   });
 });
