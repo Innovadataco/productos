@@ -8,7 +8,7 @@
 | Métrica | Valor |
 |---------|-------|
 | **Total de specs** | **68** |
-| **Cerradas / Implementadas** | **63** |
+| **Cerradas / Implementadas** | **64** |
 | **Pendientes (en diseño / planeadas)** | **4** |
 
 ## Backlog activo (pendientes)

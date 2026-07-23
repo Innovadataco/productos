@@ -1,6 +1,6 @@
 # Spec 079 — Módulo Colegios: acceso institucional y auditoría del colegio
 
-**Status**: `FINALIZADO` (pendiente ACTA-VALIDACION de ZEUS → `CERRADA`)  
+**Status**: `CERRADA` (ACTA-VALIDACION aprobada por ZEUS 2026-07-23)
 **Rama**: `feature/001-scaffolding`  
 **Fase del programa**: Saneamiento / Mejoras del módulo Colegios  
 **Creado**: 2026-07-21  
