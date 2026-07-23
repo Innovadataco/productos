@@ -32,7 +32,7 @@
 
 ## NECESITA SPEC
 
-> Los ítems de afinamiento del modelo (curaduría de fixture, umbral de revisión, peso de fuente, modelo de desempate, reducción de error silencioso) se rastrean también en [`specs/050-pendientes-afinamiento/registro.md`](../specs/050-pendientes-afinamiento/registro.md).
+> Los ítems de afinamiento del modelo (curaduría de fixture, umbral de revisión, peso de fuente, modelo de desempate, reducción de error silencioso) se rastrean también en [`specs/088-pendientes-afinamiento/registro.md`](../specs/088-pendientes-afinamiento/registro.md).
 
 | # | Ítem | Contexto / riesgo | Disparador de revisión |
 |---|------|--------------------|------------------------|

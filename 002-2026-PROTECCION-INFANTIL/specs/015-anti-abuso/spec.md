@@ -1,5 +1,7 @@
 # Spec 015 — Defensas anti-abuso
 
+**Status**: CERRADA (inferida de reporte-cierre.md, spec 087-US1)
+
 ## Estado
 
 - Fase A: **Implementada** (ponderación de señal de fuente en el score).

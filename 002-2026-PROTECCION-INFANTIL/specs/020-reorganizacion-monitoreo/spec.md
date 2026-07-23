@@ -1,5 +1,7 @@
 # Spec 020 — Reorganización de módulos + Tablero de monitoreo
 
+**Status**: CERRADA (inferida de reporte-cierre.md, spec 087-US1)
+
 > Estado: **CERRADA**.
 > Plan: [`plan.md`](plan.md).
 > Tareas: [`tasks.md`](tasks.md).

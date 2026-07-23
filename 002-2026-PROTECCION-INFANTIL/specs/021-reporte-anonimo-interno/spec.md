@@ -1,5 +1,7 @@
 # Spec 021 — Reporte anónimo con sesión interna abierta
 
+**Status**: CERRADA (inferida de reporte-cierre.md, spec 087-US1)
+
 > Estado: **CERRADA**.
 > Plan: [`plan.md`](plan.md).
 > Tareas: [`tasks.md`](tasks.md).

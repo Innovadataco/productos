@@ -1,5 +1,7 @@
 # Spec 014 — Laboratorio de Experimentos IA
 
+**Status**: CERRADA (inferida de reporte-cierre.md, spec 087-US1)
+
 ## Estado
 - **Estado:** CERRADA
 - **Creada:** 2026-07-17

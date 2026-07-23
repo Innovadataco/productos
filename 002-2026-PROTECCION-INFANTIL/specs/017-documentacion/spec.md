@@ -1,6 +1,6 @@
 # Spec 017 — Módulo de documentación navegable
 
-> Estado: **EN DISEÑO** — índice propuesto en [`plan.md`](plan.md). Se espera aprobación del esqueleto antes de generar contenido o UI.
+> **Status**: PLANEADO (antes "EN DISEÑO", normalizado por spec 087-US1) — índice propuesto en [`plan.md`](plan.md). Se espera aprobación del esqueleto antes de generar contenido o UI.
 > Fecha: 2026-07-18.
 
 ## Objetivo

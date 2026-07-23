@@ -131,7 +131,7 @@ npm run lint
 git diff --name-only
 ```
 
-**Esperado**: Ningún archivo de `specs/050-pendientes-afinamiento/` ni `specs/060-*` aparece modificado (si existiera). El diff se limita a `specs/053-capa-datos-servicios/` y `src/lib/dal/` / `src/app/api/**` según corresponda.
+**Esperado**: Ningún archivo de `specs/088-pendientes-afinamiento/` ni `specs/060-*` aparece modificado (si existiera). El diff se limita a `specs/053-capa-datos-servicios/` y `src/lib/dal/` / `src/app/api/**` según corresponda.
 
 ---
 

@@ -1,5 +1,7 @@
 # Spec 013 — Administración del Motor IA desde el Panel
 
+**Status**: CERRADA (inferida de reporte-cierre.md, spec 087-US1)
+
 ## Estado
 - **Estado:** CERRADA
 - **Creada:** 2026-07-17

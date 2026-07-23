@@ -3,7 +3,7 @@
 ## Hallazgos de la exploración
 
 ### Número de spec
-El directorio `specs/` contiene specs hasta el 031 (`031-mejoras-ui-agrupacion-categorias`) y un spec `050-pendientes-afinamiento`. Por tanto, el siguiente número disponible es **033**.
+El directorio `specs/` contiene specs hasta el 031 (`031-mejoras-ui-agrupacion-categorias`) y un spec `088-pendientes-afinamiento`. Por tanto, el siguiente número disponible es **033**.
 
 ### User Story 1 — Menú del rol Comité
 - Archivo afectado: `src/components/modules/NavHeader.tsx`.

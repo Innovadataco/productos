@@ -53,7 +53,7 @@ Se completó la Fase 2 del PROGRAMA DE SANEAMIENTO: se entregaron tests de visib
 - `rm -rf .next && npm run build`: OK.
 - `./scripts/dev-restart.sh`: OK, healthcheck OK, un solo worker.
 - `quickstart.md` verificado.
-- No se tocaron `specs/050-pendientes-afinamiento` ni `specs/060-*`.
+- No se tocaron `specs/088-pendientes-afinamiento` ni `specs/060-*`.
 
 ## Commits
 

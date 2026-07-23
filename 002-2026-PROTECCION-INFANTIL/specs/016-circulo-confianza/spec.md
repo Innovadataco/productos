@@ -1,5 +1,7 @@
 # Spec 016 — Círculo de Confianza
 
+**Status**: CERRADA (inferida de reporte-cierre.md, spec 087-US1)
+
 ## Estado
 
 **EN DISEÑO** — fecha de inicio: 2026-07-18.

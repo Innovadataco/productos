@@ -1,5 +1,7 @@
 # Spec 011 — Centro de Control IA
 
+**Status**: CERRADA (inferida de reporte-cierre.md, spec 087-US1)
+
 > **Nota:** este `spec.md` se creó retroactivamente el 2026-07-18 a partir de `011-spec.md` y `report.md` para mantener la convención de nombre `spec.md` del Spec-Kit.
 
 ## Estado

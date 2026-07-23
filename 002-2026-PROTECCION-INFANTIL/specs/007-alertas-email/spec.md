@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: Implemented
+**Status**: IMPLEMENTADO
 
 **Input**: User description: "Enviar notificaciones por correo a administradores en eventos clave del flujo de reportes: cuando un reporte requiere revisión manual y cuando un identificador alcanza un score crítico. Reutilizar la infraestructura Resend existente."
 

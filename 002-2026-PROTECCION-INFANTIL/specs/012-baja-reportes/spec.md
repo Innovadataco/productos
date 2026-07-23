@@ -1,5 +1,7 @@
 # Spec 012 — Baja/Desactivación de reportes
 
+**Status**: CERRADA (inferida de reporte-cierre.md, spec 087-US1)
+
 > **Nota:** este `spec.md` se creó retroactivamente el 2026-07-18 a partir de `012-spec.md` y [`IMPLEMENTATION-REPORT.md`](IMPLEMENTATION-REPORT.md) para mantener la convención de nombre `spec.md` del Spec-Kit.
 
 ## Estado

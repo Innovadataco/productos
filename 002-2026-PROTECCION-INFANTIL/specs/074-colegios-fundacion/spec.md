@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-21
 
-**Status**: PLANEADO
+**Status**: CERRADA (reconciliado con cierre.md, spec 087-US2)
 
 **Input**: Fase 1 del módulo Colegios (SaaS institucional). La Fase 0 (Spec 073, ubicación país→departamento→ciudad) ya está cerrada. Esta fase crea el colegio, su usuario SCHOOL_ADMIN, el login con validación de vigencia de servicio y la identidad visual verde institucional. No se implementa cobro ni pasarela. No se permite que el SCHOOL_ADMIN cree reportes desde la cuenta institucional. No se implementa código hasta aprobación humana del plan.
 

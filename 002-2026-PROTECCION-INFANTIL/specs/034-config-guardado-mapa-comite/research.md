@@ -3,7 +3,7 @@
 ## Hallazgos de la exploración
 
 ### Número de spec
-El directorio `specs/` contiene specs hasta el 033 (`033-correcciones-vistas-roles`) y `050-pendientes-afinamiento`. El siguiente número disponible es **034**.
+El directorio `specs/` contiene specs hasta el 033 (`033-correcciones-vistas-roles`) y `088-pendientes-afinamiento`. El siguiente número disponible es **034**.
 
 ### User Story 1 — Redirect y protección del rol Comité
 - `src/app/login/page.tsx` (línea 30): el ternario de redirección solo considera `ADMIN`, `SCHOOL_ADMIN` y `OPERADOR`; todo lo demás va a `/mis-reportes`.
