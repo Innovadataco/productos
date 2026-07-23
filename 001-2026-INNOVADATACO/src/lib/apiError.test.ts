@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { apiError, detalleDeError, esCodigoPrisma } from "./apiError";
+import { apiError, detalleDeError, esCodigoPrisma, noAutenticado } from "./apiError";
 
 describe("apiError (FR-004, FR-005)", () => {
   afterEach(() => {
@@ -84,5 +84,20 @@ describe("esCodigoPrisma", () => {
     expect(esCodigoPrisma({ code: "P2025" }, "P2002")).toBe(false);
     expect(esCodigoPrisma(new Error("x"), "P2002")).toBe(false);
     expect(esCodigoPrisma(null, "P2002")).toBe(false);
+  });
+});
+
+describe("noAutenticado (spec 005, FR-009)", () => {
+  it("responde 401 con el cuerpo exacto del contrato", async () => {
+    const res = noAutenticado();
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+  });
+
+  it("no añade ningún campo extra ni detalle técnico", async () => {
+    const body = await noAutenticado().json();
+
+    expect(Object.keys(body)).toEqual(["error"]);
   });
 });

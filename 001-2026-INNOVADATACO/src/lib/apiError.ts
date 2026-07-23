@@ -11,6 +11,17 @@ import { NextResponse } from "next/server";
  * (constitución §0.3, §2.4).
  */
 
+/**
+ * Respuesta única de sesión ausente o inválida (spec 005, FR-009).
+ *
+ * Mismo cuerpo y mismo código que las rutas protegidas antes de esta spec: el
+ * contrato al cliente no cambia. El 401 se devuelve ANTES de tocar la base de
+ * datos o hacer cualquier llamada saliente (constitución §5.1).
+ */
+export function noAutenticado(): NextResponse {
+  return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+}
+
 /** ¿El error capturado es un error conocido de Prisma con este código? (p. ej. "P2002") */
 export function esCodigoPrisma(err: unknown, codigo: string): boolean {
   return (
