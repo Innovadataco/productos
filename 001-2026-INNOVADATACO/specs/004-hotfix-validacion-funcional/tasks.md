@@ -4,7 +4,9 @@
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md) (Approved), [research.md](./research.md), [quickstart.md](./quickstart.md)
 
-**Estado**: 🟢 EN EJECUCIÓN — aprobada por ZEUS y Jelkin (2026-07-23).
+**Estado**: ✅ IMPLEMENTADA (2026-07-23). Commits, uno por tramo:
+US1 `ce64695f` · US4 `d4f86260` · US3 `a76bcd47` · US2 `eabf19e7`, más
+`cbeba8ef` (reparación del type check arrastrado de la spec 002).
 
 **Trabajo pesado**: **ninguno**. `/api/tags` devuelve metadatos y el seed no ejecuta
 modelos. No requiere turno (ADR_002).
@@ -20,19 +22,19 @@ modelos. No requiere turno (ADR_002).
 
 ## Phase 1: Baseline
 
-- [ ] T001 Registrar el baseline del bloque §0 de quickstart.md: literal ×3, `NODE_ENV` ×1, `projects` sin test, `GET /api/projects` → 200 sin cookie, catálogos `0|0|0|0`. **Verif.**: coincide con la spec; si no, detenerse y reportar.
-- [ ] T002 [P] Confirmar rama (`git branch --show-current` → `feature/001-scaffolding`) y que el stack de Jelkin responde (HTTP 200 en 5001). **No bajarlo en ningún momento.**
+- [x] T001 Registrar el baseline del bloque §0 de quickstart.md: literal ×3, `NODE_ENV` ×1, `projects` sin test, `GET /api/projects` → 200 sin cookie, catálogos `0|0|0|0`. **Verif.**: coincide con la spec; si no, detenerse y reportar.
+- [x] T002 [P] Confirmar rama (`git branch --show-current` → `feature/001-scaffolding`) y que el stack de Jelkin responde (HTTP 200 en 5001). **No bajarlo en ningún momento.**
 
 ---
 
 ## Phase 2: I-005 — Sesión que persiste (US1, P1) 🎯 desbloquea la verificación manual
 
-- [ ] T003 [US1] Crear `src/lib/authCookie.ts` con `cookieSecure()`: lee `AUTH_COOKIE_SECURE`, normaliza (minúsculas, sin espacios) y devuelve `false` **solo** ante `"false"`; cualquier otro valor → `true` (research D-01). → FR-004
-- [ ] T004 [US1] Crear `src/lib/authCookie.test.ts`: default sin variable → `true`; `"false"` → `false`; `"FALSE"`/`" false "` → `false`; `""`, `"sí"`, `"1"`, basura → `true` (ante ambigüedad, seguro). → FR-004, §0.2
-- [ ] T005 [US1] `src/app/api/auth/login/route.ts:29`: sustituir `secure: process.env.NODE_ENV === "production"` por `secure: cookieSecure()`. **No tocar** `httpOnly`, `sameSite` ni `maxAge`. → FR-004, FR-006
-- [ ] T006 [US1] Documentar `AUTH_COOKIE_SECURE` en `.env.example` (significado, default `true`, cuándo apagarla) y añadirla al `.env` local con `false` (**no se commitea**). → FR-005
-- [ ] T007 [US1] `docker-compose.yml`: propagar `AUTH_COOKIE_SECURE` a los servicios que emiten la cookie. → FR-004
-- [ ] T008 [US1] **Gate US1**: `grep -rn "NODE_ENV" src/app/api/auth/` → 0 líneas que decidan `Secure`; pruebas de `authCookie` verdes. → SC-003
+- [x] T003 [US1] Crear `src/lib/authCookie.ts` con `cookieSecure()`: lee `AUTH_COOKIE_SECURE`, normaliza (minúsculas, sin espacios) y devuelve `false` **solo** ante `"false"`; cualquier otro valor → `true` (research D-01). → FR-004
+- [x] T004 [US1] Crear `src/lib/authCookie.test.ts`: default sin variable → `true`; `"false"` → `false`; `"FALSE"`/`" false "` → `false`; `""`, `"sí"`, `"1"`, basura → `true` (ante ambigüedad, seguro). → FR-004, §0.2
+- [x] T005 [US1] `src/app/api/auth/login/route.ts:29`: sustituir `secure: process.env.NODE_ENV === "production"` por `secure: cookieSecure()`. **No tocar** `httpOnly`, `sameSite` ni `maxAge`. → FR-004, FR-006
+- [x] T006 [US1] Documentar `AUTH_COOKIE_SECURE` en `.env.example` (significado, default `true`, cuándo apagarla) y añadirla al `.env` local con `false` (**no se commitea**). → FR-005
+- [x] T007 [US1] `docker-compose.yml`: propagar `AUTH_COOKIE_SECURE` a los servicios que emiten la cookie. → FR-004
+- [x] T008 [US1] **Gate US1**: `grep -rn "NODE_ENV" src/app/api/auth/` → 0 líneas que decidan `Secure`; pruebas de `authCookie` verdes. → SC-003
 
 **Checkpoint US1**: la sesión puede verificarse manualmente; el resto ya es comprobable.
 
@@ -40,41 +42,41 @@ modelos. No requiere turno (ADR_002).
 
 ## Phase 3: I-007 — Listado de proyectos protegido (US4, P2)
 
-- [ ] T009 [US4] `src/app/api/projects/route.ts`: añadir `verifyAuth()` al `GET`, respondiendo 401 sin sesión y sin devolver datos. → FR-012
-- [ ] T010 [US4] Migrar el `catch` del `GET` a `apiError("Proyectos", "GET lista", …)`: es la última ruta fuera del contrato de la spec 002 (research D-05). → FR-015
-- [ ] T011 [US4] Crear `src/app/api/projects/route.test.ts` con los mocks establecidos: `GET` 401 sin sesión, `GET` 200 con sesión y mismos datos, `POST` 401 sin sesión, 409 en `P2002`, y caso de fuga (el error no revela `err.message`). → FR-014, FR-013
-- [ ] T012 [US4] Verificar consumidores del listado (riesgo R-04): comprobar que ninguna pantalla lo consumía sin sesión. → FR-013
-- [ ] T013 [US4] **Gate US4**: pruebas verdes; `curl` sin cookie → 401. → SC-007
+- [x] T009 [US4] `src/app/api/projects/route.ts`: añadir `verifyAuth()` al `GET`, respondiendo 401 sin sesión y sin devolver datos. → FR-012
+- [x] T010 [US4] Migrar el `catch` del `GET` a `apiError("Proyectos", "GET lista", …)`: es la última ruta fuera del contrato de la spec 002 (research D-05). → FR-015
+- [x] T011 [US4] Crear `src/app/api/projects/route.test.ts` con los mocks establecidos: `GET` 401 sin sesión, `GET` 200 con sesión y mismos datos, `POST` 401 sin sesión, 409 en `P2002`, y caso de fuga (el error no revela `err.message`). → FR-014, FR-013
+- [x] T012 [US4] Verificar consumidores del listado (riesgo R-04): comprobar que ninguna pantalla lo consumía sin sesión. → FR-013
+- [x] T013 [US4] **Gate US4**: pruebas verdes; `curl` sin cookie → 401. → SC-007
 
 ---
 
 ## Phase 4: I-006 — Seed reproducible (US3, P1)
 
-- [ ] T014 [US3] Migración: `@unique` en `EntidadLicitacion.key` y `LicitacionStatus.key` (research D-03). Tablas vacías → índice sin riesgo. **Verif.**: `npx prisma migrate deploy` sin errores y sin bajar el stack. → FR-008
-- [ ] T015 [US3] Crear `scripts/seed.mjs`: `upsert` por `key` para `LicitacionStatus` (5 claves de la UI), `EntidadLicitacion` (desde `entidadesColombia.ts`) y `AgentApi` (catálogo de `seedApis.mjs`); `findFirst` + `create` para `AiModel` (uno de referencia, **inactivo**). Sin `deleteMany`. → FR-007, FR-008, FR-009
-- [ ] T016 [US3] El seed informa qué creó y qué omitió, y falla explícito si la base no está migrada. → FR-010
-- [ ] T017 [US3] `package.json`: script `seed`. → FR-007
-- [ ] T018 [US3] `README.md`: procedimiento de arranque limpio (recrear volumen → `migrate deploy` → `init-pgboss` → `seed`), cerrando el gap operativo de la spec 001 (D-010). → FR-011
-- [ ] T019 [US3] **Gate US3**: ejecutar el seed dos veces; los 4 catálogos > 0 y con recuentos idénticos; desactivar una API, re-sembrar y comprobar que sigue desactivada. → SC-005, SC-006
+- [x] T014 [US3] Migración: `@unique` en `EntidadLicitacion.key` y `LicitacionStatus.key` (research D-03). Tablas vacías → índice sin riesgo. **Verif.**: `npx prisma migrate deploy` sin errores y sin bajar el stack. → FR-008
+- [x] T015 [US3] Crear `scripts/seed.mjs`: `upsert` por `key` para `LicitacionStatus` (5 claves de la UI), `EntidadLicitacion` (desde `entidadesColombia.ts`) y `AgentApi` (catálogo de `seedApis.mjs`); `findFirst` + `create` para `AiModel` (uno de referencia, **inactivo**). Sin `deleteMany`. → FR-007, FR-008, FR-009
+- [x] T016 [US3] El seed informa qué creó y qué omitió, y falla explícito si la base no está migrada. → FR-010
+- [x] T017 [US3] `package.json`: script `seed`. → FR-007
+- [x] T018 [US3] `README.md`: procedimiento de arranque limpio (recrear volumen → `migrate deploy` → `init-pgboss` → `seed`), cerrando el gap operativo de la spec 001 (D-010). → FR-011
+- [x] T019 [US3] **Gate US3**: ejecutar el seed dos veces; los 4 catálogos > 0 y con recuentos idénticos; desactivar una API, re-sembrar y comprobar que sigue desactivada. → SC-005, SC-006
 
 ---
 
 ## Phase 5: I-004 — Descubrir operativo (US2, P1)
 
-- [ ] T020 [US2] `src/app/configuracion/page.tsx:102`: `baseUrl: "http://localhost:11434"` → `baseUrl: ""`. → FR-001
-- [ ] T021 [US2] `:289`: construir la URL **sin** el parámetro `baseUrl` cuando el campo esté vacío; con valor, enviarlo (el explícito manda). → FR-002
-- [ ] T022 [US2] Confirmar que el `placeholder` de `:380` **queda intacto**: es ayuda visual, no un valor. → FR-003
-- [ ] T023 [US2] **Gate US2**: `grep -n "11434" src/app/configuracion/page.tsx` → **1** sola línea. Verificación manual: campo vacío + *Descubrir* lista modelos. → SC-002, SC-004
+- [x] T020 [US2] `src/app/configuracion/page.tsx:102`: `baseUrl: "http://localhost:11434"` → `baseUrl: ""`. → FR-001
+- [x] T021 [US2] `:289`: construir la URL **sin** el parámetro `baseUrl` cuando el campo esté vacío; con valor, enviarlo (el explícito manda). → FR-002
+- [x] T022 [US2] Confirmar que el `placeholder` de `:380` **queda intacto**: es ayuda visual, no un valor. → FR-003
+- [x] T023 [US2] **Gate US2**: `grep -n "11434" src/app/configuracion/page.tsx` → **1** sola línea. Verificación manual: campo vacío + *Descubrir* lista modelos. → SC-002, SC-004
 
 ---
 
 ## Phase 6: Cierre
 
-- [ ] T024 Reconstruir la imagen y recrear los servicios para que tomen los cambios, **sin borrar volúmenes** (`down -v` prohibido aquí) y con el mínimo de interrupción para Jelkin.
-- [ ] T025 Verificación manual completa (SC-001, SC-004): login en Safari + acción autenticada; *Descubrir* con campo vacío.
-- [ ] T026 Gates globales: `npm run test` ≥ 107 verdes sin BD ni Ollama; `npm run build`; `npx eslint src/lib src/app/api` → 0 `no-explicit-any`. → FR-015, FR-016, SC-008, SC-009, SC-010
-- [ ] T027 Aislamiento: puertos 5005/5433/5010/5434 sin cambios; `git diff --cached --name-only` solo rutas de 001; rama = `feature/001-scaffolding`. → FR-017, SC-011, SC-012
-- [ ] T028 Commits convencionales con **staging explícito por ruta** (prohibido `git add -A`) y reporte compacto a ZEUS.
+- [x] T024 Reconstruir la imagen y recrear los servicios para que tomen los cambios, **sin borrar volúmenes** (`down -v` prohibido aquí) y con el mínimo de interrupción para Jelkin.
+- [x] T025 Verificación manual completa (SC-001, SC-004): login en Safari + acción autenticada; *Descubrir* con campo vacío.
+- [x] T026 Gates globales: `npm run test` ≥ 107 verdes sin BD ni Ollama; `npm run build`; `npx eslint src/lib src/app/api` → 0 `no-explicit-any`. → FR-015, FR-016, SC-008, SC-009, SC-010
+- [x] T027 Aislamiento: puertos 5005/5433/5010/5434 sin cambios; `git diff --cached --name-only` solo rutas de 001; rama = `feature/001-scaffolding`. → FR-017, SC-011, SC-012
+- [x] T028 Commits convencionales con **staging explícito por ruta** (prohibido `git add -A`) y reporte compacto a ZEUS.
 
 ---
 
@@ -121,3 +123,35 @@ modelos. No requiere turno (ADR_002).
 Otras rutas `GET` sin `verifyAuth` y la ausencia de `middleware.ts` son **I-008 e I-009**
 y pertenecen a la **spec 005**. Cerrarlas ahora, antes de que la sesión funcione, dejaría
 la interfaz entera respondiendo 401. Se dejan exactamente como están.
+
+---
+
+## Resultado (2026-07-23)
+
+| Criterio | Baseline | Final |
+|---|---|---|
+| SC-002 · literal en la UI | 3 ocurrencias | **1** (el `placeholder`) |
+| SC-003 · `NODE_ENV` decide `Secure` | 1 línea | **0** |
+| SC-001 · cookie emitida | `... Secure` | **`HttpOnly; SameSite=strict`**, sin `Secure` |
+| SC-004 · *Descubrir* sin `baseUrl` | `fetch failed` | **lista de modelos del host** |
+| SC-005 · catálogos | `0 \| 0 \| 0 \| 0` | **`1 \| 15 \| 52 \| 5`** |
+| SC-006 · seed idempotente | no existía | 2ª ejecución: **0 creados, 73 omitidos**, recuentos idénticos |
+| FR-009 · no destructivo | `deleteMany` | ajustes de usuario **conservados** |
+| SC-007 · `GET /api/projects` | 200 sin sesión | **401** sin sesión · 200 con sesión |
+| SC-008 · suite | 107 verdes | **118 verdes**, sin BD ni Ollama |
+| SC-009 · `no-explicit-any` en zonas saneadas | 0 | **0** |
+| SC-010 · `npm run build` | **fallaba el type check** | **limpio** (0 errores de tipos) |
+| SC-012 · puertos ajenos | — | sin cambios |
+
+**Hallazgos**
+
+1. **El type check llevaba roto desde la spec 002** (18 errores en archivos de prueba).
+   El gate de aquella spec no lo detectó. Reparado en `cbeba8ef`; verificado con
+   `git stash` que era preexistente.
+2. **`projects/page.tsx` habría roto con el 401**: hacía `.map()` sin validar la forma
+   de la respuesta. Detectado por la tarea T012 (verificar consumidores) y corregido.
+3. Se reconstruyó la imagen antes de recrear los servicios para reducir la interrupción
+   a ~6 s, ya que Jelkin estaba usando la aplicación.
+
+**Fuera de alcance, intacto**: las demás rutas `GET` sin `verifyAuth` y la ausencia de
+`middleware.ts` (I-008 / I-009, spec 005).
