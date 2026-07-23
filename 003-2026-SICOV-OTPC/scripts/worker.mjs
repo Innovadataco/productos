@@ -1,8 +1,10 @@
-// Worker table-driven ÚNICO del 003: dos pasadas por ciclo (despachos + llegadas)
-// bajo UN SOLO advisory lock. NO usa pg-boss. Ejecutar vía el supervisor (`npm run worker`).
+// Worker table-driven ÚNICO del 003: TRES pasadas por ciclo (despachos + llegadas +
+// mantenimientos, spec 005-A) bajo UN SOLO advisory lock. NO usa pg-boss. Reintentos/backoff
+// por env (COLA_MAX_REINTENTOS/COLA_BACKOFF_MIN — D-019b). Ejecutar vía `npm run worker`.
 import { prisma } from "../src/lib/prisma.ts";
 import { procesarLote } from "../src/lib/despachos/cola.ts";
 import { procesarLoteLlegadas } from "../src/lib/llegadas/cola.ts";
+import { procesarLoteMantenimientos } from "../src/lib/mantenimientos/cola.ts";
 
 // ID de advisory lock PROPIO del 003 (distinto al de 002) → coexistencia entre workers.
 const LOCK_ID = 30032026;
@@ -40,15 +42,20 @@ async function main() {
   console.log("[worker] iniciado (modo integración:", process.env.INTEGRACIONES_MODO ?? "stub", ")");
   while (corriendo) {
     try {
-      // Pasada 1: despachos. Pasada 2: llegadas. Mismo proceso, mismo lock.
+      // Pasada 1: despachos. Pasada 2: llegadas. Pasada 3: mantenimientos. Mismo proceso, mismo lock.
       const d = await procesarLote({});
       const l = await procesarLoteLlegadas({});
+      const m = await procesarLoteMantenimientos({});
       const hubo =
-        d.procesados + d.reprogramados + d.fallidos + l.procesados + l.reprogramados + l.fallidos;
+        d.procesados + d.reprogramados + d.fallidos +
+        l.procesados + l.reprogramados + l.fallidos +
+        m.procesados + m.reprogramados + m.fallidos;
       if (hubo === 0) {
         await sleep(1000); // idle backoff
       } else {
-        console.log(`[worker] despachos:${JSON.stringify(d)} llegadas:${JSON.stringify(l)}`);
+        console.log(
+          `[worker] despachos:${JSON.stringify(d)} llegadas:${JSON.stringify(l)} mantenimientos:${JSON.stringify(m)}`,
+        );
       }
     } catch (e) {
       console.error("[worker] error de ciclo:", e?.message ?? e);
