@@ -120,17 +120,8 @@ export interface ModeloEmbeddingsResuelto {
   enrichConfigHuella: string;
 }
 
-/** Forma mínima de Prisma que necesita este resolver (facilita el mock en tests). */
-interface PrismaRag {
-  moduleSetting: {
-    findUnique: (args: unknown) => Promise<{ aiModelId: string } | null>;
-  };
-  aiModel: {
-    findUnique: (
-      args: unknown,
-    ) => Promise<{ id: string; modelPath: string; baseUrl: string | null; config: string } | null>;
-  };
-}
+/** Subconjunto del cliente Prisma que usa este resolver (el mock se pasa `as never`). */
+type PrismaRag = Pick<import("@prisma/client").PrismaClient, "moduleSetting" | "aiModel">;
 
 /** Error explícito y trazable cuando falta el modelo de embeddings (FR-006). */
 export class ModeloEmbeddingsNoConfigurado extends Error {
