@@ -52,7 +52,8 @@ El 003 **crea y usa exclusivamente su propia infraestructura**, con prefijo `003
 - **Nunca** `prisma migrate reset` ni ninguna operación que borre datos.
 - Los cambios de esquema son **aditivos** (columnas/tablas nuevas, `nullable` o con `default`); las remociones se hacen en dos fases (deprecate → drop) y **nunca** sobre datos vivos sin respaldo.
 - **`pg_dump` de respaldo** antes de tocar seed o datos.
-- El esquema objetivo es **`sicov`** en PostgreSQL (**27 tablas** del sistema real —29 migraciones, 2 son ALTER—; mapear columnas exactas desde las migraciones del legacy y `HANDOFF-SICOV.md` §9 al construir `data-model.md`).
+- El esquema objetivo del 003 es **`sicov`** en PostgreSQL. **Es una decisión de diseño nuestra, NO una herencia del legacy**: verificado en producción (2026-07-22), el legacy usa la base **`appdb`** con las tablas en el esquema **`public`**. Todo script de migración de datos lee de `public.*` (origen) y escribe en `sicov.*` (destino).
+- Son **27 tablas** en el sistema real (29 migraciones, 2 son ALTER); mapear columnas exactas desde las migraciones del legacy y `HANDOFF-SICOV.md` §9 al construir `data-model.md`.
 
 ### 1.3 Secretos por variables de entorno — nunca en el repo
 - Todo secreto va en `.env` **local**; `.env` está en `.gitignore`; se commitea únicamente `.env.example` sin valores reales.

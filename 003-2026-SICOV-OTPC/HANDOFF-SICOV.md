@@ -150,3 +150,16 @@ Hallazgos de la verificación línea a línea del legacy. Rutas relativas a `leg
 | 10 | (Workers) | El worker legacy **NO es `setInterval`:** es bucle asíncrono continuo (`while true` + sleep 1s/2s) en `start/despachos_queue_worker.ts` y `mantenimiento_queue_worker.ts`; procesa lotes de 20, máx 3 reintentos, +5 min entre intentos. |
 
 **Estas correcciones prevalecen sobre §2–§6 donde contradigan.**
+
+### 9.1 Verificación contra la BD de producción (2026-07-22)
+
+Export de solo lectura autorizado por el CEO (acta CE-01 / D-009):
+
+| Hallazgo | Detalle |
+|---|---|
+| **Esquema real** | La BD se llama **`appdb`** y las tablas viven en el esquema **`public`** — **NO** en `sicov`. El esquema `sicov` es decisión de diseño del 003. Todo script de migración lee `public.*` → escribe `sicov.*`. |
+| **`tbl_proveedores_vigilados` VACÍA (0 filas)** | Es la tabla que valida el middleware `ValidacionProveedor` del canal máquina-a-máquina. Vacía ⇒ **ninguna petición M2M podría autenticarse hoy**. Indicio fuerte de que el canal vigía/`api/v2` no tiene consumidores (decisión **D-005**). |
+| **Volumen de datos real** | **9 usuarios**: 1 administrador (rol 1, sin token), **2 empresas vigiladas (rol 2, con token)** y 6 subusuarios (rol 3) que cuelgan de 2 NIT de administrador. La migración de datos es mínima. |
+| **`URL_INTEGRADORA` en producción** | Trae la **URL completa** (`.../api-integradora/resumen`) mientras el código le añade otra vez `/api-integradora/resumen` ⇒ **ruta duplicada en el legacy productivo**. En el 003 la convención es **host base únicamente** (ver `.env.example`). |
+| **`NODE_ENV=development`** | El despliegue productivo del legacy no está endurecido. No replicar. |
+| **PostgreSQL expuesto** | Escucha en `0.0.0.0:5432` (todas las interfaces) en el VPS del legacy. Revisar antes del switch-over. |
