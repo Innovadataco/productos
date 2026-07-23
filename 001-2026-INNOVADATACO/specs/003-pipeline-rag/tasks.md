@@ -217,9 +217,9 @@ suite completa. Ninguna de esas tareas hace red ni ejecuta modelos.
 **No ejecutar sin turno aprobado por Jelkin. Avisar y esperar OK. Un solo modelo grande a la
 vez en la MacStudio.**
 
-- [ ] T041 **TP-1** — Ingesta real: subir un PDF con texto; `count(*)` de sus chunks > 0
+- [x] T041 **TP-1** — Ingesta real: subir un PDF con texto; `count(*)` de sus chunks > 0
       (SC-001); todos los vectores de 768 (SC-002). ⛔ **turno**
-- [ ] T042 **TP-2** — Búsqueda real: consulta sin palabras en común recupera el documento
+- [x] T042 **TP-2** — Búsqueda real: consulta sin palabras en común recupera el documento
       (SC-005); identificador entre los 3 primeros por FTS (SC-013). ⛔ **turno**
 - [ ] T043 **TP-3** — Backfill: `node scripts/backfill-embeddings.mjs`; documentos con texto y
       0 chunks vigentes = 0 (SC-006); segunda ejecución no cambia el total (SC-007).
@@ -325,3 +325,41 @@ Implementado y verificado con embeddings mockeados, sin BD ni Ollama. Commits, u
   reconstruir la imagen dejaría la búsqueda devolviendo vacío hasta que corra el backfill
   (TP-3, turno). Por eso el despliegue va **junto con el turno**, no antes. El código está en
   la rama, verde y listo.
+
+---
+
+## Turno 1 — TP-1 y TP-2 con inferencia real (2026-07-23)
+
+Turno concedido por Jelkin (ADR_002), MacStudio libre, solo `nomic-embed-text` en RAM.
+Alcance: TP-1 y TP-2. **TP-3 (backfill) y TP-4 NO ejecutados** (van con el despliegue, D-045).
+
+**Despliegue del turno** (acotado como SPEC-004, sin tocar PI ni SICOV):
+- Migración aplicada a la BD viva (`prisma migrate deploy`): HNSW coseno, GIN y CASCADE
+  verificados sobre `innovadataco_001`. Aditiva sobre tabla vacía → instantánea.
+- Imagen reconstruida y `app`+`worker` recreados. `ModuleSetting base_oficial/embedding_model
+  → nomic-embed-text` configurado (FR-004): sin él el worker no vectoriza (FR-006).
+
+**TP-1 — ingesta real** (2 PDFs con capa de texto, temas dispares):
+- SC-001 ✅ `count(*)` de chunks > 0: doc de transporte → **3**, doc de residuos → **2**.
+- SC-002 ✅ **todos los vectores de 768 dims** (`vector_dims`), 0 filas con otra dimensión.
+  Cada chunk registra `embeddingModel=nomic-embed-text` y `enrichConfig=none` (apagado, D-031).
+
+**TP-2 — búsqueda real**:
+- SC-005 ✅ consulta *"estaciones donde suben viajeros a autobuses de larga distancia"* (sin
+  una sola palabra en común con el acto de transporte) recupera **ese** documento en primer
+  lugar, por la **rama vectorial** (ambos resultados `fuente: vectorial`, el FTS no matcheó
+  nada): la búsqueda semántica funciona con embeddings reales.
+- SC-013 ✅ consulta *"Resolución 99011 de 2026"* devuelve el documento en **posición 1**,
+  `fuente: ambas` — la rama FTS lo resuelve por el identificador. Verificado de paso que el
+  FTS es **insensible a acentos** (`Resolución` con tilde encontró `RESOLUCION` sin ella).
+
+**Ningún bug que los mocks no cazaran.** El pipeline se comportó exactamente como diseñado.
+
+**Higiene**: los 2 documentos de prueba se **borraron** al terminar (verifica CASCADE en
+vivo, FR-022: al borrar los documentos desaparecieron sus 5 chunks); PDFs de `uploads/`
+eliminados; modelo `nomic-embed-text` **liberado de la RAM de Ollama** (`/api/ps` vacío).
+
+**Estado tras el turno**: `DocumentoChunk` vuelve a estar **vacía**. Como `documents/search`
+ya consulta solo chunks, la búsqueda del CEO devuelve `[]` hasta que corra el backfill
+(**TP-3, con el despliegue definitivo — D-045**). El código está desplegado y la migración
+aplicada; falta poblar el histórico.
