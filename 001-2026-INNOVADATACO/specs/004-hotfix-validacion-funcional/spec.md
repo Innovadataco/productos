@@ -190,9 +190,13 @@ defectos que impiden usar la aplicación.
   ya implementada (FR-010 de la spec 001).
 - **FR-003**: el `placeholder` del campo de URL MUST conservarse (es ayuda visual, no un
   valor).
-- **FR-004**: la bandera `Secure` de la cookie de sesión MUST resolverse desde una
-  variable de configuración propia, con **default `true`**, y MUST NOT depender de
-  `NODE_ENV`.
+- **FR-004** *(precisado por D-036)*: la bandera `Secure` de la cookie de sesión MUST
+  resolverse desde una **variable de entorno**, con **default `true`**, y MUST NOT
+  depender de `NODE_ENV`. MUST NOT leerse de `ModuleSetting` ni de ningún ajuste editable
+  desde la interfaz: es una **característica de despliegue, no un parámetro de negocio**,
+  y un control de seguridad no puede poder apagarse desde la UI de la aplicación.
+  Esta es la **excepción explícita** a la precedencia general de §0.7 (BD/UI > entorno >
+  default): aquí el entorno es la única fuente admitida.
 - **FR-005**: esa variable MUST documentarse en `.env.example` con su significado y su
   default, y MUST quedar apagada en el `.env` local de desarrollo (que no se commitea).
 - **FR-006**: las demás propiedades de la cookie (`httpOnly`, `sameSite`, `maxAge`) MUST
@@ -265,7 +269,7 @@ Cerrada la implementación, la spec se considera terminada cuando se cumplen las
 | # | Regla | Cómo se acredita aquí |
 |---|---|---|
 | 1 | Spec Kit aplicado | `specs/004-hotfix-validacion-funcional/` con spec, plan y tasks |
-| 2 | Código en `main` en GitHub | Commits convencionales scopeados a `001-2026-INNOVADATACO/` |
+| 2 | Código subido a la **rama de pruebas** | Commits convencionales scopeados a `001-2026-INNOVADATACO/`, en **`feature/001-scaffolding`**. `main` es **producción** y solo recibe merges de liberación previa auditoría de ZEUS (METODOLOGIA-OPERATIVA §10): esta spec **no** llega a `main` |
 | 3 | Pruebas escritas y pasando | SC-008: suite verde sin infraestructura, con cobertura nueva de `projects` |
 | 4 | **Despliegue accesible y probable** | SC-001, SC-004, SC-005, SC-007: sesión útil, *Descubrir* operativo, catálogos poblados y listado protegido |
 | 5 | Revisión de arquitectura de ZEUS | Verificación de RZ-1…RZ-4 y de los contratos de la spec 002 |

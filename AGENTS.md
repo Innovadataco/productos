@@ -25,6 +25,15 @@ Reglas especificas para operar el repo `Innovadataco/productos`.
 - ODIN puede consultar y revisar PRs siguiendo `innovadataco-zeus-software-factory`.
 - No mergear sin ACTA-VALIDACION.
 
+## Ramas (INQUEBRANTABLE)
+
+Este repo tiene **dos ramas y solo dos**:
+
+- **`feature/001-scaffolding` — PRUEBAS.** Aquí va todo el trabajo diario. Es la rama en la que commitea ODIN, siempre.
+- **`main` — PRODUCCIÓN.** Solo recibe **merges de liberación**, previa auditoría de ZEUS. **Prohibido commitear directo a `main`** y prohibido abrir ramas nuevas por feature.
+
+Si un comando te deja en `main`, vuelve a la rama de pruebas antes de commitear. Ante la duda: **detente y reporta**.
+
 ## Metodología y estándares (fábrica IDC)
 
 - **Metodología oficial:** PM2 (gestión) + Spec Kit (desarrollo). Documento canónico en el repo `Metodologias` → `Desarrollo de software/METODOLOGIA-OPERATIVA-FABRICA-SOFTWARE-v1.0.md`.
