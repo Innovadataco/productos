@@ -11,6 +11,22 @@ Aplicación frontend de la Plataforma Operativa Innovadataco.
 - Prisma ORM
 - PostgreSQL
 
+## Modos de ejecución
+
+| Modo | Cuándo | Cómo |
+|---|---|---|
+| **PM2** (`ecosystem.config.js`) | Desarrollo en la Mac | `npm run start:all` (dev-server + worker supervisados). La BD corre en docker: `docker compose up -d db` → `localhost:5435`. |
+| **Docker compose sobre Colima** | Producción / VPS | `docker compose up -d --build` levanta app (5001) + worker (pg-boss) + BD (5435). |
+
+**Migración a VPS (ADR_001)**: clonar el repo + copiar `.env` + `docker compose up -d`.
+Nada más: la infraestructura completa (app, worker, BD) está declarada en
+`docker-compose.yml`.
+
+**Puertos (ADR_002)**: a este proyecto le pertenecen **5001** (app) y **5435** (BD).
+Los puertos 5005/5433 (Protección Infantil) y 5010/5434 (SICOV) son de otros
+productos y son **intocables**. Si algo falla por conflicto de puertos: detenerse y
+reportar; jamás liberar puertos ajenos.
+
 ## Levantar el entorno de desarrollo (forma oficial)
 
 Una sola terminal supervisa ambos procesos (dev server + worker). Si alguno muere, PM2 lo reinicia automáticamente:
@@ -35,11 +51,21 @@ node scripts/seedUser.mjs
 
 ## Variables de entorno
 
-Copiar `.env.example` a `.env.local` y ajustar los valores.
+Copiar `.env.example` a `.env` y ajustar los valores (`.env` es el archivo
+canónico: lo leen docker compose, Next.js y el worker; jamás se commitea).
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
+
+Notas:
+- Credenciales de BD: una sola verdad en el trío `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`.
+  El compose deriva de ahí el `DATABASE_URL` interno (`db:5432`); el `DATABASE_URL`
+  de `.env` (con `localhost:5435`) es para herramientas fuera de docker (PM2, prisma CLI).
+- `OLLAMA_BASEURL`: dejar vacío ⇒ en compose se usa `http://host.docker.internal:11434`
+  y en dev el fallback del código es `http://localhost:11434`. El valor configurado
+  en BD/UI (módulo Configuración) siempre tiene precedencia (FR-010).
+- `.env.local` sigue funcionando como override opcional de desarrollo.
 
 ## Post-Migración / Reset de Base de Datos
 

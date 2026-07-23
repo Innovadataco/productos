@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { resolveOllamaBaseUrl } from "@/lib/modelClients";
 
 export const dynamic = "force-dynamic";
 
@@ -45,8 +46,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     if (url.includes("{baseUrl}")) {
-      const baseUrl = cfg.baseUrl || "http://localhost:11434";
-      url = url.replace("{baseUrl}", baseUrl);
+      // FR-010: el baseUrl de la config (BD/UI) manda; la env var solo es fallback
+      url = url.replace("{baseUrl}", resolveOllamaBaseUrl(cfg.baseUrl));
     }
 
     // Construir body según API
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         break;
       }
       case "discover_models":
-        url = url.replace("{baseUrl}", cfg.baseUrl || "http://localhost:11434");
+        url = url.replace("{baseUrl}", resolveOllamaBaseUrl(cfg.baseUrl));
         break;
       case "list_audit":
         url = url.replace("{limit}", "5");

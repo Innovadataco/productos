@@ -4,24 +4,51 @@ services:
     ports:
       - "5001:5001"
     environment:
-      DATABASE_URL: postgresql://innova:innova@db:5432/innovadataco?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:?Definir POSTGRES_USER en .env}:${POSTGRES_PASSWORD:?Definir POSTGRES_PASSWORD en .env}@db:5432/${POSTGRES_DB:?Definir POSTGRES_DB en .env}?schema=public
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       JWT_SECRET: ${JWT_SECRET}
       OPENAI_APIKEY: ${OPENAI_APIKEY}
-      OLLAMA_BASEURL: ${OLLAMA_BASEURL:-http://localhost:11434}
+      OLLAMA_BASEURL: ${OLLAMA_BASEURL:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./uploads:/app/uploads
+
+  worker:
+    build:
+      context: .
+      target: builder
+    command: npx tsx scripts/worker.mjs
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      OPENAI_APIKEY: ${OPENAI_APIKEY}
+      OLLAMA_BASEURL: ${OLLAMA_BASEURL:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: innova
-      POSTGRES_PASSWORD: innova
-      POSTGRES_DB: innovadataco
+      POSTGRES_USER: ${POSTGRES_USER:?Definir POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Definir POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Definir POSTGRES_DB en .env}
     ports:
-      - "5432:5432"
+      - "5435:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
       - innovadataco_db_data:/var/lib/postgresql/data
 

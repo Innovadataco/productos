@@ -35,10 +35,20 @@ function parseConfig(config: string): ModelConfig {
   }
 }
 
+/**
+ * Resuelve la URL base de Ollama (FR-010, spec 001-saneamiento-infraestructura).
+ * Precedencia: valor explícito (BD/UI) > OLLAMA_BASEURL del entorno > default localhost.
+ * La variable de entorno solo reemplaza el fallback; nunca pisa lo configurado en BD/UI.
+ */
+export function resolveOllamaBaseUrl(explicit?: string | null): string {
+  const base = explicit || process.env.OLLAMA_BASEURL || "http://localhost:11434";
+  return base.replace(/\/$/, "");
+}
+
 async function ollamaCall(model: AiModelInput, prompt: string): Promise<ModelResult> {
   const start = Date.now();
   const cfg = parseConfig(model.config);
-  const baseUrl = (model.baseUrl || "http://localhost:11434").replace(/\/$/, "");
+  const baseUrl = resolveOllamaBaseUrl(model.baseUrl);
   console.log(`[Ollama] Iniciando llamada a ${model.modelPath} en ${baseUrl}...`);
   const res = await fetch(`${baseUrl}/api/generate`, {
     method: "POST",

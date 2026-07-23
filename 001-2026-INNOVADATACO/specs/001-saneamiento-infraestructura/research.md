@@ -119,6 +119,37 @@ Estado del código verificado leyendo los archivos reales del repo (no de memori
 - **Estado**: PREGUNTA PARA ZEUS (ver reporte). Las tasks de US3 cubren la capa
   compose (alcance escrito de la spec) y dejan este punto explícitamente bloqueado.
 
+## D-12 — HALLAZGO H-04 (implementación): Prisma necesita OpenSSL en Alpine
+
+- **Hecho verificado al levantar el stack (2026-07-22)**: con el Dockerfile que solo
+  añadía `npx prisma generate`, el contenedor `worker` entraba en bucle de reinicio:
+
+  ```
+  PrismaClientInitializationError: Unable to require(
+    /app/node_modules/.prisma/client/libquery_engine-linux-musl-arm64-openssl-1.1.x.so.node)
+  Details: Error loading shared library libssl.so.1.1: No such file or directory
+  ```
+
+- **Causa**: `node:22-alpine` (Alpine 3.2x) trae OpenSSL 3.x y no incluye el paquete
+  `openssl`. Sin él, Prisma 5.22 no detecta la versión de libssl (`prisma:warn Prisma
+  failed to detect the libssl/openssl version to use`), asume `openssl-1.1.x` y genera
+  y carga un engine cuya librería no existe en la imagen.
+- **Decision**: añadir `RUN apk add --no-cache openssl` al stage `base` del Dockerfile
+  (antes de `npx prisma generate`, que corre en `builder`). Al estar en `base`, cubre
+  `deps`, `builder` y `runner` con una sola línea: `prisma generate` detecta OpenSSL 3.x
+  y genera el engine correcto, y tanto el worker como las rutas API de la app lo cargan.
+- **Alternatives considered**: (a) fijar `binaryTargets = ["linux-musl-arm64-openssl-3.0.x"]`
+  en `schema.prisma` — rechazado: acopla el schema a una arquitectura concreta (arm64) y
+  rompería el build en un VPS x86; (b) cambiar la imagen base a `node:22-slim` (Debian) —
+  rechazado: cambio mayor de imagen, fuera del alcance de la spec.
+- **Desviación respecto al plan**: el plan preveía **un** cambio en el Dockerfile
+  (`prisma generate`); la implementación requirió **dos** (más `apk add openssl`).
+  Aprobado por ZEUS el 2026-07-22 como habilitador necesario dentro de esta spec
+  (sin él, FR-007 no se cumple: el worker no arranca).
+- **Verificación posterior**: `worker` levanta limpio (`[Worker] Listo para procesar
+  documentos!`) y `GET /api/config/models` en el contenedor `app` responde 200
+  (confirma que el engine también carga en el stage `runner`).
+
 ## D-08 — Omisión de data-model.md y contracts/
 
 - **Decision**: no generar `data-model.md` ni `contracts/`.

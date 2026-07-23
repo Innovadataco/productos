@@ -1,4 +1,15 @@
 import { PrismaClient } from "@prisma/client";
+import { config as loadEnv } from "dotenv";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+// Cargar variables de entorno (igual que scripts/worker.mjs)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+loadEnv({ path: join(__dirname, "../.env.local") });
+loadEnv({ path: join(__dirname, "../.env") });
+
+// FR-010 (spec 001): el seed toma el default de OLLAMA_BASEURL; localhost solo como fallback
+const OLLAMA_BASEURL = process.env.OLLAMA_BASEURL || "http://localhost:11434";
 
 const prisma = new PrismaClient();
 
@@ -45,7 +56,7 @@ const APIS = [
         name: "Qwen Local",
         provider: "ollama",
         modelPath: "qwen2.5:32b",
-        baseUrl: "http://localhost:11434",
+        baseUrl: OLLAMA_BASEURL,
         scope: "local",
         config: JSON.stringify({ temperature: 0.2, top_p: 0.9, max_tokens: 1024, systemPrompt: "Eres un experto legal colombiano." }),
       },
@@ -111,7 +122,7 @@ const APIS = [
     path: "/api/config/models/discover?baseUrl={baseUrl}",
     authType: "none",
     docs: JSON.stringify({
-      params: [{ name: "baseUrl", type: "string", in: "query", required: false, default: "http://localhost:11434" }],
+      params: [{ name: "baseUrl", type: "string", in: "query", required: false, default: OLLAMA_BASEURL }],
       request: null,
       response: { models: [{ name: "qwen2.5:32b", model: "qwen2.5:32b", parameter_size: "32B" }] },
     }),
@@ -252,9 +263,9 @@ const APIS = [
     method: "GET",
     path: "{baseUrl}/api/tags",
     authType: "none",
-    config: JSON.stringify({ baseUrl: "http://localhost:11434" }),
+    config: JSON.stringify({ baseUrl: OLLAMA_BASEURL }),
     docs: JSON.stringify({
-      params: [{ name: "baseUrl", type: "string", in: "config", required: false, default: "http://localhost:11434" }],
+      params: [{ name: "baseUrl", type: "string", in: "config", required: false, default: OLLAMA_BASEURL }],
       request: null,
       response: { models: [{ name: "qwen2.5:32b" }] },
     }),

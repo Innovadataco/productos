@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveOllamaBaseUrl } from "@/lib/modelClients";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const baseUrl = (searchParams.get("baseUrl") || "http://localhost:11434").replace(/\/$/, "");
+    // FR-010: el baseUrl explícito manda; OLLAMA_BASEURL solo reemplaza el fallback
+    const baseUrl = resolveOllamaBaseUrl(searchParams.get("baseUrl"));
     const res = await fetch(`${baseUrl}/api/tags`, { method: "GET" });
     if (!res.ok) {
       const text = await res.text();

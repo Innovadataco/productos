@@ -149,7 +149,12 @@ Puntos clave:
 
 ### 2. `Dockerfile` (habilitador de FR-007 y del build de `app`)
 
-Un solo cambio, en el stage `builder`, antes de `RUN npm run build`:
+> **Desviación aplicada (implementación 2026-07-22, aprobada por ZEUS)**: además del
+> `prisma generate` previsto aquí, hizo falta `RUN apk add --no-cache openssl` en el
+> stage `base`. Sin él, Prisma carga el engine `openssl-1.1.x` (inexistente en Alpine)
+> y el worker entra en bucle de reinicio. Detalle en research.md → D-12 / H-04.
+
+Cambio previsto en el plan, en el stage `builder`, antes de `RUN npm run build`:
 
 ```dockerfile
 COPY --from=deps /app/node_modules ./node_modules

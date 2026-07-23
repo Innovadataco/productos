@@ -4,7 +4,10 @@
 
 **Created**: 2026-07-22
 
-**Status**: Approved — aprobada por ZEUS (arquitecto) y Jelkin (CEO) el 2026-07-22
+**Status**: Approved — aprobada por ZEUS (arquitecto) y Jelkin (CEO) el 2026-07-22.
+Enmendada el 2026-07-22 con FR-010 (decisión ZEUS D-008) y FR-011 (decisión ZEUS
+D-009); D-010 confirma el enfoque de Dockerfile (target builder + prisma generate)
+y D-011 la recreación del volumen propio sin dump.
 
 **Input**: User description: "Saneamiento de infraestructura del proyecto 001: BD propia
 en puerto host 5435, unificación de credenciales/BD entre docker-compose y .env,
@@ -215,6 +218,19 @@ comandos y cuándo usar cada uno.
   (repo + `.env` + `docker compose up`).
 - **FR-009**: Ningún cambio de esta spec MUST tocar archivos, contenedores,
   volúmenes o puertos de `002-2026-PROTECCION-INFANTIL` ni `003-2026-SICOV-OTPC`.
+- **FR-010** *(enmienda ZEUS D-008, 2026-07-22 — resuelve H-01/D-07)*: los
+  fallbacks hardcodeados de Ollama en el código
+  (`src/lib/modelClients.ts`, `src/app/api/config/models/discover/route.ts`,
+  `src/app/api/config/apis/[id]/test/route.ts`) y el literal del seed
+  (`scripts/seedApis.mjs`) MUST pasar a usar
+  `process.env.OLLAMA_BASEURL ?? "http://localhost:11434"`.
+  **Precedencia**: el valor configurado en BD/UI manda; la variable de entorno
+  solo reemplaza defaults/fallbacks (y el literal sembrado). El código tocado
+  MUST llevar tests Vitest (constitución §0.2).
+- **FR-011** *(enmienda ZEUS D-009, 2026-07-22)*: el servicio `db` MUST declarar
+  `healthcheck` con `pg_isready`; `app` y `worker` MUST usar `depends_on` con
+  `condition: service_healthy`; los tres servicios MUST declarar
+  `restart: unless-stopped`.
 
 ### Key Entities
 

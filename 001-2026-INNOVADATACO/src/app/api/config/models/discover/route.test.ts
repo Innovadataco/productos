@@ -1,0 +1,64 @@
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { NextRequest } from "next/server";
+import { GET } from "./route";
+
+function mockOllamaTags() {
+  const fetchMock = vi.fn().mockResolvedValue(
+    new Response(JSON.stringify({ models: [{ name: "qwen2.5:32b", model: "qwen2.5:32b" }] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+describe("GET /api/config/models/discover (FR-010)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("sin baseUrl en query usa OLLAMA_BASEURL del entorno", async () => {
+    vi.stubEnv("OLLAMA_BASEURL", "http://host.docker.internal:11434");
+    const fetchMock = mockOllamaTags();
+
+    const req = new NextRequest("http://localhost:5001/api/config/models/discover");
+    const res = await GET(req);
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://host.docker.internal:11434/api/tags",
+      expect.objectContaining({ method: "GET" })
+    );
+  });
+
+  it("el baseUrl explícito de la query manda sobre la variable de entorno", async () => {
+    vi.stubEnv("OLLAMA_BASEURL", "http://host.docker.internal:11434");
+    const fetchMock = mockOllamaTags();
+
+    const req = new NextRequest(
+      "http://localhost:5001/api/config/models/discover?baseUrl=http://otro-host:9999"
+    );
+    const res = await GET(req);
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://otro-host:9999/api/tags",
+      expect.objectContaining({ method: "GET" })
+    );
+  });
+
+  it("sin query ni entorno cae al default localhost", async () => {
+    vi.stubEnv("OLLAMA_BASEURL", "");
+    const fetchMock = mockOllamaTags();
+
+    const req = new NextRequest("http://localhost:5001/api/config/models/discover");
+    await GET(req);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:11434/api/tags",
+      expect.objectContaining({ method: "GET" })
+    );
+  });
+});

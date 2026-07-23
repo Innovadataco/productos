@@ -1,5 +1,8 @@
 # Dockerfile para Next.js (Innovadataco Core)
 FROM node:22-alpine AS base
+# Prisma necesita libssl presente; sin él detecta mal la versión y carga el engine
+# openssl-1.1.x, que no existe en Alpine 3.2x (falla con "libssl.so.1.1 not found").
+RUN apk add --no-cache openssl
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -13,6 +16,8 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# El stage deps corre npm ci sin prisma/schema.prisma: hay que generar el cliente aquí
+RUN npx prisma generate
 RUN npm run build
 
 # Production image, copy all the files and run next
