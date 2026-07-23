@@ -129,6 +129,13 @@ En esta máquina viven **001 y 002 en desarrollo activo**. El 003 **no puede int
   vigilado) vive **solo local**, nunca en el repo (que además es público).
 - **Un agente por proyecto/rama.** No commitear a la misma rama que otro agente (p. ej. Kimi en 002) para
   evitar conflictos de git.
+- **Staging EXPLÍCITO en el monorepo (regla vinculante, 2026-07-23).** **PROHIBIDO `git add -A` y
+  `git add .`** en el repo `productos`: mezclan archivos de otros productos en el commit (pasó en
+  `bbaf0d20` y `7ea85eee`, con archivos de 001 y 002; no se reescriben — rama compartida, D-042).
+  Stagea SOLO rutas propias (`git add 003-2026-SICOV-OTPC/...`); antes de CADA commit ejecuta
+  `git diff --cached --name-only` y confirma que TODO empieza por `003-2026-SICOV-OTPC/` — si
+  aparece otra ruta, sácala del índice (`git restore --staged <ruta>`). Si un comando de git falla
+  por trabajo de otro frente: PARA y repórtalo.
 - **No cerrar** hasta completar TODAS las tareas y artefactos. **No dejar el sistema roto ni con lockout.**
 
 ---
