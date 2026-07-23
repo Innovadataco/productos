@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-23
 
-**Status**: PLANEADO — MODO PLAN (gate de revisión de ZEUS; NO implementar)
+**Status**: ✅ IMPLEMENTADO (2026-07-23, radicado 003-SICOV-007; auditoría ZEUS aprobada). Ver [cierre.md](./cierre.md).
 
 **Input**: Encargo 003-SICOV-004 (ZEUS). Submódulo APIs del módulo Configuración (solo rol 1).
 **FASE 1 (D-047): NO se ejecuta contra producción** — las respuestas salen del STUB actual; el
@@ -115,3 +115,16 @@ flujo); exportación de la bitácora.
 - El catálogo Fase 1 cubre las operaciones YA integradas vía stub (7: despachos, llegadas,
   mantenimiento base/preventivo/correctivo, integradora, maestras×2).
 - Retención de bitácora: sin purga automática en Fase 1 (deuda anotada).
+
+## Implementación (003-SICOV-007)
+
+**Estado**: ✅ IMPLEMENTADO. Detalle en [cierre.md](./cierre.md); pasos en [quickstart.md](./quickstart.md).
+
+- **Lib**: `src/lib/consola-apis/{catalogo,ejecutar,redactar,bitacora}.ts` — único camino stub por
+  gate, `FASE_CONSOLA=1`, redacción RECURSIVA + truncado, registro siempre. Modelo `ApiLlamada`
+  (jsonb) en [data-model.md](./data-model.md).
+- **Endpoints**: `src/app/api/configuracion/apis/{catalogo,ejecutar,llamadas}` (rol 1 + guard;
+  `real:true` → 403). **UI**: `/dashboard/configuracion/apis` (botón real deshabilitado).
+- **Verificación**: tests de consola verdes en 175/175 (incl. anti-red y redacción anidada); endpoint
+  real 403 confirmado. Reinicio limpio compartido: `npm run reiniciar`.
+- **Deuda**: purga/exportación de bitácora; `route.test.ts` no creado (tests de servicio).

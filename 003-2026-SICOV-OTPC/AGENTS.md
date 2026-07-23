@@ -46,8 +46,12 @@ NestJS + Prisma, con diseño propio y datos demo). Ver estado y decisiones abier
    `quickstart.md`, `contracts/`, `checklists/`, `tasks.md`) + checklist validado.
 2. **Subir al repo** — un commit por User Story + uno de documentación, con evidencia (`git log` +
    archivos tocados) y push a la rama de trabajo.
-3. **Desplegar limpio** — script de reinicio que borre el build viejo, levante la app y verifique el
-   healthcheck. Nunca dejar procesos/workers duplicados (uno solo).
+3. **Desplegar limpio** — `npm run reiniciar` (`scripts/reiniciar.sh`): mata SOLO el server del
+   puerto 5010 cuyo `cwd` es la raíz del 003 (por PID+cwd, nunca por nombre) → `rm -rf .next` →
+   **`prisma generate`** (IMPRESCINDIBLE tras cambio de esquema: Node cachea `node_modules/.prisma`
+   en memoria; un `next dev` vivo con el cliente VIEJO da **500 en runtime** que los tests NO atrapan)
+   → `prisma migrate deploy` → levanta la app → healthcheck `GET /login` = 200. Nunca dejar
+   procesos/workers duplicados (uno solo).
 4. **Probar** — con el `quickstart.md` + `tsc --noEmit` / `lint` / `test` / `build`.
 5. **Documentar** — `cierre.md` + sección Implementación en `spec.md` + deuda técnica.
 

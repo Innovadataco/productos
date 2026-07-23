@@ -92,7 +92,7 @@ resembrar**: 013 arranca tras la Foundational de 009.
 
 - [X] T018 [P] Test de guardarraíl anti-red a nivel suite: confirmar que ninguna ejecución de consola alcanza `*.supertransporte.gov.co` (reusa el mock global de la suite)
 - [X] T019 Ejecutar suite completa + `tsc --noEmit` + lint + `build`; suite previa verde
-- [ ] T020 Verificación en navegador (ventana privada): ejecutar una operación stub → ver bitácora → confirmar botón real deshabilitado y 403 del endpoint real
+- [X] T020 Verificación en navegador (ventana privada): ejecutar una operación stub → ver bitácora → confirmar botón real deshabilitado y 403 del endpoint real
 - [X] T021 Commit por fase con staging explícito (AGENTS §6): `feat(003-US1-013)`, `feat(003-US2-013)`
 
 ---
@@ -101,9 +101,9 @@ resembrar**: 013 arranca tras la Foundational de 009.
 
 **Purpose**: completar el set de artefactos de la regla de oro §1.5.1 que el MODO PLAN difirió.
 
-- [ ] T022 Escribir `specs/013-consola-apis/quickstart.md`: guion de humo (ejecutar operación stub → ver respuesta+duración → consultar bitácora → confirmar botón real deshabilitado y 403 del endpoint real)
-- [ ] T023 [P] Crear `specs/013-consola-apis/checklists/` con el checklist de validación (cero red, doble candado, jsonb, redacción recursiva, sin tokens en BD)
-- [ ] T024 Escribir `cierre.md` + sección Implementación en `spec.md` + deuda técnica (purga/exportación de bitácora); estado → PENDIENTE DE PRUEBA/FINALIZADO
+- [X] T022 Escribir `specs/013-consola-apis/quickstart.md`: guion de humo (ejecutar operación stub → ver respuesta+duración → consultar bitácora → confirmar botón real deshabilitado y 403 del endpoint real)
+- [X] T023 [P] Crear `specs/013-consola-apis/checklists/` con el checklist de validación (cero red, doble candado, jsonb, redacción recursiva, sin tokens en BD)
+- [X] T024 Escribir `cierre.md` + sección Implementación en `spec.md` + deuda técnica (purga/exportación de bitácora); estado → PENDIENTE DE PRUEBA/FINALIZADO
 
 ---
 

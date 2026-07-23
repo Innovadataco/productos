@@ -135,7 +135,7 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 - [X] T032 [P] Actualizar menú/navegación ([src/lib/navegacion.ts](../../src/lib/navegacion.ts)) para exponer `configuracion` (rol 1) y `usuarios` (rol 1/2) por NOMBRE de módulo
 - [X] T033 **[G1 — garantía FR-008/D-044]** Test de guardarraíl **anti-Super** en `src/lib/configuracion/anti-super.test.ts`: ejercitar los flujos de alta/edición de 009 y afirmar **cero peticiones** a `*.supertransporte.gov.co` (reusar el mock global de red de la suite; el token solo se persiste)
 - [X] T034 Ejecutar suite completa (`npm test`), `tsc --noEmit`, lint y `build`; verificar suite previa (127) + nuevos verdes
-- [ ] T035 Verificación en navegador (ventana privada): crear empresa → login con temporal (cambio forzado) → crear operador solo-preventivos → 403 en correctivos → 200 en preventivos → reenviar credencial
+- [X] T035 Verificación en navegador (ventana privada): crear empresa → login con temporal (cambio forzado) → crear operador solo-preventivos → 403 en correctivos → 200 en preventivos → reenviar credencial
 - [X] T036 Commit por fase con staging explícito (AGENTS §6): `feat(003-US1-009)`, `feat(003-US2-009)`, `feat(003-US3-009)`
 
 ---
@@ -144,9 +144,9 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 
 **Purpose**: completar el set de artefactos de la regla de oro §1.5.1 que el MODO PLAN difirió.
 
-- [ ] T037 Escribir `specs/009-configuracion-empresas-usuarios/quickstart.md`: guion de humo end-to-end (crear empresa → correo stub → login temporal → operador solo-preventivos → 403 correctivos) con comandos y checks
-- [ ] T038 [P] Crear `specs/009-configuracion-empresas-usuarios/checklists/` con el checklist de validación de la feature (seguridad D-015, secretos, migración B1 revisada, cero Super)
-- [ ] T039 Escribir `cierre.md` + sección Implementación en `spec.md` + deuda técnica (dominio Resend pendiente); estado → PENDIENTE DE PRUEBA/FINALIZADO
+- [X] T037 Escribir `specs/009-configuracion-empresas-usuarios/quickstart.md`: guion de humo end-to-end (crear empresa → correo stub → login temporal → operador solo-preventivos → 403 correctivos) con comandos y checks
+- [X] T038 [P] Crear `specs/009-configuracion-empresas-usuarios/checklists/` con el checklist de validación de la feature (seguridad D-015, secretos, migración B1 revisada, cero Super)
+- [X] T039 Escribir `cierre.md` + sección Implementación en `spec.md` + deuda técnica (dominio Resend pendiente); estado → PENDIENTE DE PRUEBA/FINALIZADO
 
 ---
 

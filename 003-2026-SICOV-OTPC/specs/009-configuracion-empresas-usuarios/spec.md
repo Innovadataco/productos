@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-23
 
-**Status**: PLANEADO — MODO PLAN (gate de revisión de ZEUS; NO implementar)
+**Status**: ✅ IMPLEMENTADO (2026-07-23, radicado 003-SICOV-007; auditoría ZEUS aprobada). Ver [cierre.md](./cierre.md).
 
 **Input**: Encargo 003-SICOV-004 (ZEUS). Módulo CONFIGURACIÓN (solo rol 1) con submódulos
 Clientes/Empresas y Usuarios (cascada de permisos D-017). **FASE 1 del roadmap D-047: todo
@@ -177,3 +177,17 @@ Aditivo: `usm_submodulo_id` (nullable) + seeds. Nada más.
   `usuarios`, resuelto por nombre) obtiene pantalla dentro de Configuración para rol 1 y en el
   dashboard para rol 2 según cascada §10.8. Ningún id serial se hardcodea (I1).
 - Plantillas de correo mínimas (texto plano con marca SICOV-OTPC); diseño HTML queda para pulido.
+
+## Implementación (003-SICOV-007)
+
+**Estado**: ✅ IMPLEMENTADO. Detalle y evidencia en [cierre.md](./cierre.md); pasos en [quickstart.md](./quickstart.md).
+
+- **Datos**: `usm_submodulo_id` (aditiva) + dos índices únicos PARCIALES (B1) en migración revisada a
+  mano; seeds `configuracion`/submódulos por NOMBRE. Modelo en [data-model.md](./data-model.md).
+- **Servicios**: `src/lib/configuracion/{empresas,usuarios,credenciales}.ts` (G2 token UUID único
+  server-side, G3 NIT único, B2 exclusión, subconjunto vs otorgante). Correo `src/lib/correo/*`.
+- **Endpoints**: `src/app/api/configuracion/empresas/**`, `src/app/api/usuarios/**`. Guard de
+  submódulo en mantenimientos. **UI**: `/dashboard/configuracion`, `/empresas`, `/usuarios`.
+- **Verificación**: 175/175 tests; cascada en vivo `scripts/verificar-cascada.sh` 12/0 (operador
+  solo-preventivos → 403 correctivos). Reinicio limpio: `npm run reiniciar`.
+- **Deuda**: dominio Resend (sandbox), `route.test.ts` no creados (convención de tests de servicio).
