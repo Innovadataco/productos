@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-22
 
-**Status**: PLANEADO — gate D-022 (dos entregas) resuelto e incorporado; pendiente orden de implementación
+**Status**: IMPLEMENTADO (005-A, 2026-07-23) — 005-B (pantalla + PDF programa) pendiente; modo stub, pendiente verificación humana antes de APIs productivas
 
 **Input**: User description: "005-mantenimientos — Paridad con el módulo de mantenimientos del legacy, SOLO preventivos y correctivos (alistamientos=006, autorizaciones=007). Tablas legacy: tbl_mantenimientos, tbl_preventivos, tbl_correctivos, tbl_tipo_mantenimientos, tbl_archivo_programas, tbl_mantenimiento_jobs. Cola MantenimientoQueueService (tmj_estado, máx 3 reintentos, +5 min, lotes de 20, reintento manual resetea reintentos=0). XLSX 100% server-side con ExcelJS (bulk/preventivo/xlsx, bulk/correctivo/xlsx, plantillas descargables, validación por fila 'Fila N: ...', 400 con errores / 202 con {total,exitosos,errores}). Pantalla tabs Preventivos/Correctivos con registro individual + carga masiva + plantilla. Restricciones: migraciones aditivas esquema sicov con @map, modo stub doble gate, reusar cliente doble token + herencia rol 3 + worker único (pasada nueva, no worker nuevo), America/Bogota, tests nuevos y 52 existentes verdes." + gate D-022 completo (dos entregas de ZEUS, 2026-07-22).
 
@@ -491,3 +491,33 @@ y descargar `errores_cargue_preventivo.txt`.
 
 - **[NEEDS CLARIFICATION]** Contrato exacto (payload/respuesta) del API externo real de
   mantenimientos (`URL_MATENIMIENTOS`); el stub respeta cabeceras y formas de id observadas.
+
+---
+
+## Implementación (005-A — 2026-07-23)
+
+**Flujo:** `/speckit.tasks` (35 tareas) → `/speckit.analyze` (0 críticos, coverage 100%) →
+implementación. Un commit por US en el orden de ZEUS:
+
+| Commit | Contenido |
+|---|---|
+| `cf6bc6c5` | Correcciones Spec Kit (checklist honesto, Status DESARROLLO) |
+| `bbaf0d20` | Datos + integración (T001-T012): deps, modelos, migración `--create-only` revisada, seed D-018, cabeceras/cliente/stub/normalizar |
+| `0c183040` | **US5** guard de módulos D-017 (aplicado a despachos/llegadas; rutas nuevas nacen con guard) |
+| `22284e90` | **US4** envío inmediato con caída a cola en despachos/llegadas + env D-019b |
+| `69b57bb4` | **US1** registro individual (base+detalle, ids separados B1, placas/historial) |
+| `971bd08c` | **US2** carga masiva XLSX/CSV todo-o-nada + plantilla + exportar |
+| `df6c308e` | **US3** cola en worker único + jobs D-015 + corregir-y-reenviar §10.6 |
+| `1a942187` | Artefactos faltantes spec 002 (I-11) |
+| `7ea85eee` | Hallazgos del smoke: disparador `FAL*` (FALLA* no pasa la regex de placa) y luxon enrollando horas fuera de rango (24:00→00:00) — rechazo en el borde restituido |
+
+**Resultados:** 117/117 tests · `tsc --noEmit`/`lint`/`build` limpios · smoke E2E en vivo
+(registro inmediato, caída a cola FAL999, CSV todo-o-nada con "Fila N", worker 3 pasadas con
+cabeceras correctas, corregir-y-reenviar con reset a 0, alcance D-015 con `nit` ajeno ignorado,
+403 rol 2) · navegador en ventana privada 8/8 (admin solo Inicio; vigilado con módulos D-018;
+I-14 intacto; operador registra E2E).
+
+**Deuda / pendientes:** 005-B (pantalla, PDF programa, modales); contrato real del API (stub);
+filtros legacy sin datos (`vin`, `proveedor`) ignorados; filtro placa/término de jobs en memoria
+sobre tope 2000 (documentado en cola.ts); TXT y carga masiva de otras operaciones (R-03/R-04 §11.3)
+fuera por prioridad CEO.

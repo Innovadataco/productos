@@ -2,8 +2,11 @@
 
 **Branch**: `feature/001-scaffolding` | **Date**: 2026-07-22 | **Spec**: [spec.md](./spec.md)
 
-**Status**: DESARROLLO — gate ZEUS-002 **APROBADO sin correcciones** (2026-07-23); 005-A en
-implementación (pasa a IMPLEMENTADO al cerrar 005-A)
+**Status**: IMPLEMENTADO (005-A, 2026-07-23) — pendiente 005-B (pantalla + PDF programa) y
+verificación humana antes de APIs productivas. Commits 005-A: bbaf0d20 (datos+integración),
+0c183040 (US5 guard), 22284e90 (US4 envío inmediato), 69b57bb4 (US1), 971bd08c (US2),
+df6c308e (US3), 1a942187 (spec 002/I-11), 7ea85eee (hallazgos del smoke).
+117/117 tests · tsc/lint/build limpios · smoke E2E + navegador en ventana privada verificados.
 
 **Input**: Feature specification from `specs/005-mantenimientos/spec.md` + `HANDOFF-SICOV.md`
 **§9, §9.1, §10, §11** (prevalecen sobre §2-§6)

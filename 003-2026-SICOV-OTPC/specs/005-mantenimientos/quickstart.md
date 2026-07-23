@@ -43,7 +43,7 @@ Esperado: en BD el base previo de la misma placa+tipo queda `tmt_estado=false`; 
 stub en **`tpv_mantenimiento_id_externo`** (gate B1). Repetir con `tipoId=2` y `/correctivo`.
 Con `tipoId=3` → 400 (alcance 006). Placa `AB123` o `1ABC23` → 400 (regex 3 letras + 3 dígitos).
 `hora: "8:75"` o `"24:00"` → 400 (regex de borde D-022 #3).
-**Envío inmediato (D-021):** con placa `FALLA1` el stub falla → la respuesta indica `encolado`, el
+**Envío inmediato (D-021):** con placa `FAL999` el stub falla → la respuesta indica `encolado`, el
 registro NO se pierde y aparece como job `pendiente`.
 
 ## 3. Plantilla y carga masiva XLSX/CSV (US2)
@@ -105,7 +105,7 @@ Esperado adicional: un job detalle cuyo base aún no sincroniza se reprograma +B
 # Despacho normal → procesado en la MISMA respuesta (sin esperar al worker)
 curl -b cookies.txt -X POST localhost:5010/api/integracion/despachos -d '{...payload demo...}'
 # → estado "procesado" + id externo (stub)
-# Despacho con placa FALLA1 → cae a cola: estado "pendiente", el worker lo reintenta
+# Despacho con placa FAL999 → cae a cola: estado "pendiente", el worker lo reintenta
 # Ídem llegadas. Con COLA_MAX_REINTENTOS=1 en .env, un FALLA* queda fallido tras 1 intento.
 ```
 
