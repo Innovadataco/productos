@@ -87,9 +87,11 @@ export async function runSimulacionBatchCreator(runId: string, modeloClasificaci
         return;
     }
 
+    // I-07: fechaInicio se fija al ARRANQUE real de la run (no en la creación
+    // del lote), para que el timeout mida el procesamiento propio de cada modelo.
     await prisma.simulacionRun.update({
         where: { id: runId },
-        data: { estado: "EN_PROGRESO" },
+        data: { estado: "EN_PROGRESO", fechaInicio: new Date() },
     });
 
     // Reanudabilidad: índices ya creados (reintento del job) se saltan.

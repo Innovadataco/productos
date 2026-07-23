@@ -195,6 +195,31 @@ describe("executor.ts", () => {
             );
         });
 
+        it("I-07: fija fechaInicio al pasar a EN_PROGRESO (timeout por arranque propio)", async () => {
+            const antes = Date.now();
+            mockSimulacionRunFindUnique.mockResolvedValue({
+                id: "run-1",
+                estado: "PENDIENTE",
+                totalCasos: 1,
+                progreso: 0,
+                // creada hace 30 min (lote multi-modelo); su arranque es AHORA
+                createdAt: new Date(antes - 30 * 60 * 1000),
+                fechaInicio: new Date(antes - 30 * 60 * 1000),
+                casosJson: [casoCompleto],
+                metricasJson: {},
+            });
+
+            await runSimulacionBatchCreator("run-1", "ornith:9b");
+
+            const updateEnProgreso = mockSimulacionRunUpdate.mock.calls.find(
+                (c) => c[0]?.data?.estado === "EN_PROGRESO"
+            );
+            expect(updateEnProgreso).toBeTruthy();
+            const fechaInicio = updateEnProgreso![0].data.fechaInicio;
+            expect(fechaInicio).toBeInstanceOf(Date);
+            expect(fechaInicio.getTime()).toBeGreaterThanOrEqual(antes - 5000);
+        });
+
         it("es reanudable: salta índices ya creados en un reintento", async () => {
             mockSimulacionRunFindUnique.mockResolvedValue({
                 id: "run-1",

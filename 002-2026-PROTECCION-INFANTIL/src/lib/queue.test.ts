@@ -134,7 +134,9 @@ describe("queue.ts", () => {
         });
 
         it("encola reportes pendientes respetando el cupo libre", async () => {
-            mockQueryRaw.mockResolvedValue([{ pendientes: 95 }]);
+            mockQueryRaw
+                .mockResolvedValueOnce([{ pendientes: 95 }]) // getQueueStats
+                .mockResolvedValueOnce([]); // reportes ya en cola
             mockFindMany.mockResolvedValue([
                 { id: "rep-1", prioridadAlta: false },
                 { id: "rep-2", prioridadAlta: true },
@@ -144,6 +146,23 @@ describe("queue.ts", () => {
             const result = await drainPending();
             expect(result.encolados).toBe(3);
             expect(mockSend).toHaveBeenCalledTimes(3);
+        });
+
+        it("no re-encola reportes que ya tienen un job en cola", async () => {
+            mockQueryRaw
+                .mockResolvedValueOnce([{ pendientes: 90 }]) // getQueueStats
+                .mockResolvedValueOnce([{ reporteId: "rep-1" }, { reporteId: "rep-2" }]); // ya en cola
+
+            await drainPending();
+
+            expect(mockFindMany).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: expect.objectContaining({
+                        estado: "PENDIENTE",
+                        id: { notIn: ["rep-1", "rep-2"] },
+                    }),
+                })
+            );
         });
 
         it("no encola si no hay cupo disponible", async () => {

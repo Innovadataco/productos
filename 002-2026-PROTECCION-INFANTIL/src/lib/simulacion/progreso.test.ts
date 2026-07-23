@@ -133,6 +133,22 @@ describe("progreso.ts — actualizarProgresoYEstado", () => {
         expect(result.estado).toBe("FALLIDA");
     });
 
+    it("I-07: NO marca FALLIDA si fechaInicio (arranque propio) es reciente, aunque la creación sea antigua", async () => {
+        // Hueco multi-modelo: la run se creó hace 2 h junto al lote, pero arrancó hace 5 min.
+        mockRunFindUnique.mockResolvedValue(
+            runBase({
+                createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+                fechaInicio: new Date(Date.now() - 5 * 60 * 1000),
+            })
+        );
+        mockVinculosYReportes(["CLASIFICADO", "PENDIENTE", "PENDIENTE"]);
+
+        const result = await actualizarProgresoYEstado("run-1");
+
+        expect(result.estado).toBe("EN_PROGRESO");
+        expect(mockLoggerWarn).not.toHaveBeenCalled();
+    });
+
     it("retorna temprano en estados finales sin tocar la BD", async () => {
         mockRunFindUnique.mockResolvedValue(runBase({ estado: "COMPLETADA", progreso: 3 }));
 

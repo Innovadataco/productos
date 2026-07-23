@@ -103,8 +103,19 @@ export async function drainPending(): Promise<{ encolados: number }> {
         return { encolados: 0 };
     }
 
+    // No re-encolar reportes que ya tienen un job en cola: sin este filtro el
+    // drenaje inunda la cola con duplicados del mismo reporte (backpressure
+    // permanente y procesamiento efectivo casi nulo).
+    const enCola = (await prisma.$queryRaw`
+        SELECT DISTINCT data->>'reporteId' AS "reporteId"
+        FROM pgboss.job
+        WHERE name = 'reporte-procesamiento'
+          AND state IN ('created', 'retry', 'active')
+    `) as { reporteId: string }[];
+    const idsEnCola = enCola.map((r) => r.reporteId);
+
     const pendientes = await prisma.reporte.findMany({
-        where: { estado: "PENDIENTE" },
+        where: { estado: "PENDIENTE", id: { notIn: idsEnCola } },
         orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "asc" }],
         take: cupo,
         select: { id: true, prioridadAlta: true },
