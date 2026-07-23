@@ -71,21 +71,10 @@ sin tocar RAG ni OCR (RZ-4)
    Mismo cuerpo y mismo código que las 11 rutas ya protegidas: **no cambia ningún contrato
    existente**. Las 11 apariciones antiguas se dejan como están (research D-02).
 
-2. **`src/lib/session.ts`** (nuevo) — verificación pura del token, sin `next/headers` y sin
-   lanzar al importar (research D-03, D-04):
-
-   ```ts
-   export type Sesion = { sub: string; username: string; role: string };
-   export async function verifyToken(token: string | undefined): Promise<Sesion | null>;
-   ```
-
-   Resuelve `JWT_SECRET` **al usarlo**; ante secreto ausente, token corrupto, firma
-   inválida o caducidad devuelve `null` (**falla cerrado**) y registra el motivo en el log
-   del servidor, nunca en la respuesta.
-
-3. **`src/lib/auth.ts`** — `verifyAuth()` pasa a ser *leer la cookie con `next/headers` +
-   `verifyToken`*. `signToken` y la firma pública de `verifyAuth` **no cambian**: los mocks
-   de la suite siguen valiendo tal cual.
+2. **`src/lib/auth.ts` NO se toca** (D-041). La versión anterior del plan extraía la
+   verificación a un módulo compartido para que el middleware pudiera verificar la firma en
+   el borde; con la barrera optimista ese módulo ya no tiene consumidor y se retira del
+   alcance. `verifyAuth` sigue siendo la autoridad y su mock, intacto.
 
 ### Bloque 1 · Cierre de la escritura (US-1, FR-001…FR-004) — primero
 
@@ -159,8 +148,9 @@ abierto (FR-011).
    | Cualquier otra página sin sesión | redirigir a `/login?next=<ruta+query>` (FR-017) |
    | Cualquier otra página con sesión | pasar |
 
-   La sesión se resuelve con `verifyToken(req.cookies.get("token")?.value)`: **sin tocar la
-   base de datos** (FR-016).
+   "Con sesión" significa aquí **`req.cookies.get("token")` presente**, y nada más
+   (**D-041**, FR-016): sin verificar firma, sin tocar la base y sin importar `@/lib/auth`.
+   Comprobación optimista en el borde, verificación real en cada ruta.
 
 2. **`src/lib/destinoSeguro.ts`** (nuevo) — helper puro: devuelve el destino solo si
    empieza por `/` y **no** por `//` ni `/\`; en cualquier otro caso, `/` (FR-018).
@@ -171,10 +161,12 @@ abierto (FR-011).
 
 ### Bloque 5 · Red de seguridad (FR-020…FR-023)
 
-- **`src/middleware.test.ts`** (nuevo): página protegida sin sesión → redirección a
-  `/login?next=…`; con sesión → pasa; `/login` con y sin sesión; `/api/**` sin sesión →
-  **401 JSON, no redirección**; `POST /api/auth/login` sin sesión → pasa; cookie
-  manipulada → tratada como ausente.
+- **`src/middleware.test.ts`** (nuevo): página protegida sin cookie → redirección a
+  `/login?next=…`; con cookie → pasa; `/login` con y sin cookie; `/api/**` sin cookie →
+  **401 JSON, no redirección**; `POST /api/auth/login` sin cookie → pasa. Se prueba también
+  el **comportamiento declarado de D-041**: una cookie cualquiera (aunque sea basura) pasa
+  la barrera — es la contrapartida asumida de la comprobación optimista, y la ruta la
+  rechaza igual.
 - **`src/app/api/superficie.test.ts`** (nuevo, prueba estructural): recorre
   `src/app/api/**/route.ts` con `import.meta.glob`, invoca cada manejador exportado sin
   sesión y exige 401. Lista blanca declarada: `POST /api/auth/login`,
@@ -208,7 +200,7 @@ Un commit por bloque, cada uno con su suite en verde y **push en el mismo acto**
 | FR-011 | Revisión archivo por archivo + prueba estructural | ningún archivo mixto |
 | FR-012…FR-014, FR-019 | `curl -sI` a las 5 páginas sin cookie y con cookie | redirección al login / 200 |
 | FR-015 | `curl -si .../api/documents` sin cookie | `401` + `content-type: application/json` |
-| FR-016 | Revisión del middleware | sin importar Prisma |
+| FR-016 | Revisión del middleware | sin importar Prisma ni `@/lib/auth`; decide por presencia de cookie (D-041) |
 | FR-017, FR-018 | Pruebas de `destinoSeguro` + prueba manual del retorno | vuelve al destino; destino externo → `/` |
 | FR-020, FR-021 | `npx vitest run` | 401 y "no se invocó la capa de datos" por manejador |
 | FR-022, FR-023 | `npx vitest run src/middleware.test.ts src/app/api/superficie.test.ts` | verdes; rojas si se retira una verificación |
@@ -228,10 +220,11 @@ Sin violaciones que justificar. Dos decisiones que parecen desviaciones y no lo 
 
 ## Riesgos
 
-- **R-01 · El secreto podría no llegar al middleware en ejecución.** Next resuelve parte de
-  las variables en compilación para el runtime *edge*. Se verifica en el contenedor antes
-  de dar el bloque por cerrado; contingencia y su orden, en research D-04. La opción
-  degradada **requiere el visto bueno de ZEUS**.
+- **R-01 · ~~El secreto podría no llegar al middleware~~ — cerrado por D-041.** El borde ya
+  no necesita el secreto: comprueba presencia de cookie. **Riesgo que lo sustituye**: la
+  barrera optimista solo es admisible si **no queda ni una ruta abierta** — con una sola,
+  una cookie inventada permite navegar hasta ella. Mitigación: es exactamente lo que
+  verifica la prueba estructural (FR-023), que por eso deja de ser un extra.
 - **R-02 · Una barrera mal ajustada deja al CEO fuera de su aplicación.** Mitigación: el
   middleware es el **último** bloque, va con pruebas propias antes de recrear el stack, y
   las exclusiones (login y estáticos) se prueban explícitamente.

@@ -38,8 +38,8 @@ npx tsc --noEmit                                                 # -> limpio
 ## 1. Cimientos
 
 ```bash
-npx vitest run src/lib                    # apiError, session, authCookie: verdes
-grep -n "next/headers" src/lib/session.ts # objetivo: NINGUNA línea (debe servir al middleware)
+npx vitest run src/lib                    # apiError (con noAutenticado), authCookie: verdes
+git diff --stat src/lib/auth.ts           # objetivo: SIN cambios (D-041: el borde no verifica)
 ```
 
 ## 2. Escritura (US-1) — el bloque que corta el daño irreversible
@@ -139,6 +139,6 @@ docker-compose build app             # construir ANTES para minimizar la interru
 docker-compose up -d app             # recrear solo lo necesario. down -v PROHIBIDO
 ```
 
-Verificar dentro del contenedor que el middleware tiene el secreto en ejecución (R-01):
-si las páginas protegidas redirigen al login **estando la sesión iniciada**, el secreto no
-llegó al borde → aplicar la contingencia de research D-04, en su orden.
+Con la sesión iniciada, las páginas protegidas **no** deben redirigir; sin cookie, todas
+deben llevar al login. El middleware no necesita el secreto de firma (**D-041**): decide
+por presencia de cookie y la verificación real la hace cada ruta.

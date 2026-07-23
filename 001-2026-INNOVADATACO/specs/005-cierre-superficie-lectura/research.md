@@ -33,47 +33,47 @@ stack en ejecución (solo lecturas y un `DELETE` sobre un id inexistente — D-0
   cambios que ZEUS tendría que auditar sin que aporten nada a esta spec. Se anota como
   higiene pendiente, no como trabajo de aquí.
 
-## D-03 — La verificación del token se extrae a un módulo compartido
+## D-03 — El middleware **no** verifica el token: comprueba presencia de cookie
+
+> **Revisado el 2026-07-23 por D-041 de ZEUS.** La versión anterior de este apartado
+> extraía la verificación a un módulo compartido `src/lib/session.ts` para que el
+> middleware pudiera verificar la firma en el borde. **Se retira**: ese módulo solo existía
+> para dar servicio al borde y ya no hace falta. Menos código, menos superficie, y el
+> secreto de firma no viaja a ningún sitio nuevo.
 
 - **Hecho**: `src/lib/auth.ts` usa `cookies()` de `next/headers`, que **no está disponible
   en el middleware**; el middleware lee la cookie de la propia petición
   (`req.cookies.get("token")`).
-- **Decision**: extraer la verificación pura a `src/lib/session.ts`:
+- **Decision (D-041)**: el middleware comprueba **solo si la cookie `token` está
+  presente**. Si no está, redirige a la pantalla de acceso (o responde 401 en `/api/**`).
+  **No** verifica firma, **no** consulta la base, **no** importa `@/lib/auth`.
+- **Rationale**: comprobación **optimista** en el borde, verificación **real** en la capa
+  de datos. La barrera resuelve un problema de navegación —que el usuario sepa que no ha
+  entrado—, no un problema de acceso. El control de acceso es `verifyAuth` en cada ruta
+  (D-01), que es justo lo que cierra esta spec, y sigue siendo la única fuente de verdad
+  (§5.1). Como efecto colateral, `src/lib/auth.ts` **no se toca**: el mock de la suite y
+  las 11 rutas ya protegidas siguen exactamente igual.
+- **Condición que sostiene la decisión**: solo es admisible si US-1 y US-3 cierran **todas**
+  las rutas. Con una sola abierta, cualquier cookie `token` inventada bastaría para navegar
+  hasta ella. Por eso la prueba estructural (FR-023) deja de ser una red de seguridad
+  agradable y pasa a ser **el requisito que hace admisible la barrera optimista**.
+- **Consecuencia asumida y declarada**: una cookie caducada o manipulada **sí** deja
+  renderizar la página; lo que el usuario ve es una pantalla vacía con su aviso, porque
+  ninguna de sus peticiones obtiene datos. Es el escenario 3 de US-4 tal como queda escrito.
 
-  ```ts
-  export async function verifyToken(token: string | undefined): Promise<Sesion | null>
-  ```
-
-  `verifyAuth()` pasa a ser *leer la cookie con `next/headers` + `verifyToken`*, y el
-  middleware es *leer la cookie de la petición + `verifyToken`*. **Una sola
-  implementación de la verificación**, dos formas de obtener el token.
-- **Rationale**: si el middleware verificara por su cuenta, habría dos criterios de
-  "sesión válida" y §5.1 dejaría de ser cierta. El resto de `auth.ts` (incluida
-  `signToken`) no cambia, y el mock de la suite (`@/test/authMock`) sigue funcionando
-  igual porque los tests mockean `@/lib/auth`, no el módulo nuevo.
-
-## D-04 — El secreto se resuelve de forma perezosa y se **falla cerrado**
+## D-04 — El secreto de firma no viaja al borde
 
 - **Hecho**: `src/lib/auth.ts:4-7` lanza **al importar** si `JWT_SECRET` falta o mide menos
   de 32 caracteres. En una ruta API eso es un fallo ruidoso y deseable; en el middleware
-  reventaría **todas** las peticiones del sitio, incluida la pantalla de acceso.
+  habría reventado **todas** las peticiones del sitio, incluida la pantalla de acceso.
 - **Hecho 2**: `docker-compose.yml:9` inyecta `JWT_SECRET` en tiempo de ejecución al
-  servicio de aplicación.
-- **Decision**: `session.ts` resuelve el secreto **al usarlo**, no al importarse. Ante
-  cualquier fallo (secreto ausente, token corrupto, firma inválida, caducado)
-  `verifyToken` devuelve `null` y el llamante trata la petición como **sin sesión**:
-  se **falla cerrado**, nunca abierto.
-- **Verificación obligatoria durante la implementación**: comprobar que
-  `process.env.JWT_SECRET` **llega al middleware en ejecución** dentro del contenedor. Next
-  ejecuta el middleware en el runtime *edge* por defecto, donde parte de las variables se
-  resuelven en compilación. Plan de contingencia, en este orden:
-  1. Declarar el middleware en runtime **Node.js** (soportado por Next 16).
-  2. Si tampoco, dejar el middleware comprobando **presencia** de cookie y registrar la
-     limitación — la verificación real seguiría estando en cada ruta (D-01), que es la
-     autoridad. Esta opción **degrada** el escenario 3 de US-4 (cookie manipulada) y por
-     tanto **solo se toma con el visto bueno de ZEUS**.
-  3. **Descartado de entrada**: pasar el secreto como argumento de construcción de la
-     imagen. Hornear un secreto en la imagen viola §0.4.
+  servicio de aplicación; Next resuelve parte de las variables en **compilación** para el
+  runtime *edge*, así que no había garantía de que llegara al middleware.
+- **Decision (D-041)**: el problema desaparece porque **el borde ya no necesita el
+  secreto**. No se declara runtime Node.js para el middleware, no se añade variable nueva y
+  no se toca `auth.ts`.
+- **Descartado explícitamente**: pasar `JWT_SECRET` como argumento de construcción de la
+  imagen. Hornear un secreto en la imagen viola §0.4, y ninguna comodidad lo compensa.
 
 ## D-05 — Para `/api/**` el middleware responde 401 en JSON, nunca redirige
 

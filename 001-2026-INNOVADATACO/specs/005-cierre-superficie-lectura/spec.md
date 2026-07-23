@@ -10,9 +10,10 @@ alcance aprobada y repriorizada). No se implementa hasta que ZEUS apruebe el pla
 
 **Input**: Incidencias **I-010** (escritura anónima: borrado y modificación sin sesión —
 **crítica**), **I-009** (toda la superficie de lectura es pública) e **I-008** (no existe
-`middleware.ts`). Decisiones vinculantes: **D-037** (seguridad antes que RAG) y **D-040**
+`middleware.ts`). Decisiones vinculantes: **D-037** (seguridad antes que RAG), **D-040**
 (la escritura se cierra primero: un borrado anónimo destruye, una lectura expuesta solo
-revela).
+revela) y **D-041** (la barrera de páginas comprueba **presencia** de cookie; la frontera
+de seguridad es `verifyAuth` en cada ruta).
 
 ## Contexto: la aplicación no tiene puerta
 
@@ -259,8 +260,11 @@ confunde, pero no expone. Sigue siendo obligatoria: I-008 no se cierra sin ella.
    de acceso y **no** se renderiza contenido de la página protegida.
 2. **Given** una sesión válida, **When** se solicita cualquiera de esas páginas, **Then**
    se muestran con normalidad: la barrera no estorba a quien sí ha entrado.
-3. **Given** una cookie caducada o manipulada, **When** se solicita una página protegida,
-   **Then** se trata como si no hubiera sesión.
+3. **Given** una cookie presente pero inválida, caducada o manipulada, **When** se solicita
+   una página protegida, **Then** la página se sirve —la barrera es optimista (**D-041**)—
+   pero **ningún dato llega a ella**: todas sus peticiones responden 401 y la pantalla se
+   muestra vacía con su aviso. La frontera de seguridad es `verifyAuth` en cada ruta, no la
+   barrera.
 4. **Given** que el usuario venía de una dirección concreta (por ejemplo `/licitaciones`),
    **When** inicia sesión, **Then** vuelve a esa dirección y no a una genérica.
 5. **Given** una dirección de retorno que apunte fuera de la aplicación, **When** se
@@ -276,11 +280,15 @@ confunde, pero no expone. Sigue siendo obligatoria: I-008 no se cierra sin ella.
 
 ### Edge Cases
 
-- ¿Qué pasa con una cookie presente pero con token caducado o firmado con otra clave? →
-  401, tratada igual que la ausencia de cookie. No hay ruta "medio autenticada".
-- ¿La barrera de páginas puede depender de la base de datos? → **No.** Debe resolverse con
-  la credencial que trae la propia petición; si dependiera de la base, cada navegación
-  costaría una consulta y una base caída dejaría fuera a todo el mundo.
+- ¿Qué pasa con una cookie presente pero con token caducado o firmado con otra clave? → En
+  **la API**, 401, tratada igual que la ausencia de cookie: no hay ruta "medio autenticada".
+  En **la barrera de páginas**, pasa (D-041): la página se sirve y se queda vacía porque
+  ninguna de sus peticiones obtiene datos.
+- ¿La barrera de páginas puede depender de la base de datos o verificar la firma? → **No a
+  ambas** (D-041). Comprueba **presencia** de cookie y nada más: es una comprobación
+  optimista de navegación, no un control de acceso. Verificar en el borde obligaría a que
+  el secreto de firma viajara hasta allí, y depender de la base pondría una consulta en
+  cada navegación y dejaría a todo el mundo fuera si la base cae.
 - ¿Qué pasa si la barrera se aplica también a la pantalla de acceso o a los recursos
   estáticos? → Bucle de redirección infinito. La lista de exclusiones es parte del diseño,
   no un detalle.
@@ -294,9 +302,12 @@ confunde, pero no expone. Sigue siendo obligatoria: I-008 no se cierra sin ella.
 - ¿`POST /api/auth/logout` debe exigir sesión? → No. Solo borra la cookie; exigirla para
   cerrarla no aporta seguridad y complica el caso de la sesión ya caducada. Se declara
   **explícitamente** como excepción para que nadie lo lea como un olvido.
-- ¿Basta con la barrera de páginas para proteger la API? → No. La barrera es una capa
-  añadida; `verifyAuth` en cada ruta sigue siendo **la única fuente de verdad** (§5.1) y es
-  lo que la suite verifica.
+- ¿Basta con la barrera de páginas para proteger la API? → **No, y menos aún siendo
+  optimista** (D-041). La barrera solo mejora la navegación; `verifyAuth` en cada ruta es
+  **la única fuente de verdad** (§5.1) y es lo que la suite verifica. **Condición que
+  sostiene D-041**: si quedara una sola ruta abierta, una cookie falsa cualquiera bastaría
+  para navegar hasta ella. Por eso la prueba estructural (FR-023) no es un extra: es lo que
+  hace admisible la barrera optimista.
 - ¿Qué pasa con el parámetro `baseUrl` de *Descubrir* una vez cerrado? → Exigir sesión
   elimina el sondeo anónimo. Restringir los destinos con lista blanca **no** entra aquí:
   es otro frente.
@@ -319,6 +330,12 @@ confunde, pero no expone. Sigue siendo obligatoria: I-008 no se cierra sin ella.
   final.
 - **RZ-6**: el manejo del 401 en `configuracion/page.tsx` es **criterio de aceptación
   propio** (US-2), no una tarea de la implementación de US-3.
+- **RZ-7** (**D-041**): la barrera de páginas comprueba **solo la presencia** de la cookie
+  y redirige; **no** verifica la firma en el borde ni consulta la base. La frontera de
+  seguridad es `verifyAuth` en cada ruta. **Descartado** inyectar `JWT_SECRET` como
+  argumento de construcción: hornearlo en la imagen viola §0.4. **Condición**: solo es
+  admisible si US-1 y US-3 cierran **todas** las rutas — una sola abierta convierte la
+  barrera optimista en un agujero.
 
 ### Functional Requirements
 
@@ -372,8 +389,10 @@ confunde, pero no expone. Sigue siendo obligatoria: I-008 no se cierra sin ella.
   sitio), para no producir bucles de redirección.
 - **FR-015**: ante una petición a `/api/**` sin sesión, la barrera MUST NOT redirigir: MUST
   responder **401 en JSON** (o dejar responder a la ruta, que ya lo hace).
-- **FR-016**: la barrera MUST resolver la sesión **sin acceder a la base de datos**, usando
-  únicamente la credencial que viaja en la petición.
+- **FR-016** *(fijado por D-041)*: la barrera MUST decidir por **presencia de la cookie de
+  sesión** en la petición. MUST NOT verificar la firma del token y MUST NOT acceder a la
+  base de datos. MUST NOT tratarse como frontera de seguridad: la autoridad es `verifyAuth`
+  en cada ruta (§5.1).
 - **FR-017**: la redirección al acceso MUST conservar la dirección solicitada y, tras un
   inicio de sesión correcto, el usuario MUST volver a ella; si no había dirección previa,
   a la página principal.
@@ -520,4 +539,5 @@ confunde, pero no expone. Sigue siendo obligatoria: I-008 no se cierra sin ella.
 | Versión | Fecha | Cambio |
 |---|---|---|
 | v1 | 2026-07-23 | Redacción inicial (`62736c2d`). La ampliación a la escritura se propuso aislada en US-3, retirable, en vez de ampliar el alcance por cuenta propia |
+| v3 | 2026-07-23 | **D-041**: la barrera de páginas comprueba **solo presencia** de cookie (comprobación optimista en el borde, verificación real en cada ruta). Deja de ser una contingencia y pasa a ser el diseño; se retira la verificación de firma en el borde y con ella el módulo compartido que solo existía para eso. Añadida RZ-7 y reescrito FR-016 |
 | v2 | 2026-07-23 | **Revisión de ZEUS.** Ampliación **aprobada** y elevada a P1 por delante del encargo original (**I-010** crítica, **D-040**); reordenadas las historias a escritura → interfaz → lectura → páginas; el manejo del 401 en `configuracion/page.tsx` pasa a historia propia con criterios de aceptación propios (RZ-6). **Renumeración**: los FR de escritura (antes FR-013…FR-016) son ahora FR-001…FR-004; los de lectura, FR-008…FR-011 |

@@ -42,18 +42,14 @@ anónimo podía provocarla. No requiere turno (ADR_002).
 - [ ] T004 `src/lib/apiError.ts`: añadir `noAutenticado()` → `{ error: "No autenticado" }`
       con **401**. Mismo cuerpo que las 11 rutas ya protegidas: no cambia ningún contrato.
       **No** migrar esas 11 (research D-02). → FR-009
-- [ ] T005 Crear `src/lib/session.ts` con `verifyToken(token)`: resuelve `JWT_SECRET`
-      **al usarlo** (no al importar), devuelve `null` ante secreto ausente, token corrupto,
-      firma inválida o caducidad —**falla cerrado**— y registra el motivo solo en el log.
-      **Sin importar `next/headers`** (debe servir al middleware). → FR-016, research D-03/D-04
-- [ ] T006 `src/lib/auth.ts`: `verifyAuth()` pasa a *leer la cookie con `next/headers` +
-      `verifyToken`*. `signToken` y la firma pública **no cambian**. → §5.1
-- [ ] T007 [P] Crear `src/lib/session.test.ts`: token válido → sesión; ausente, vacío,
-      corrupto, firmado con otra clave y caducado → `null`; sin `JWT_SECRET` → `null` y
-      **no lanza**. → FR-016, §0.2
-- [ ] T008 **Gate cimientos**: `npx vitest run src/lib` verde; `grep -n "next/headers"
-      src/lib/session.ts` → 0 líneas; suite completa sin regresión (los mocks de
-      `@/lib/auth` siguen valiendo).
+- [ ] T005 [P] Extender `src/lib/apiError.test.ts` con `noAutenticado()`: código 401, cuerpo
+      exacto `{ error: "No autenticado" }` y ningún campo extra. → §0.2
+- [ ] ~~T006~~ **Retirada por D-041**: `src/lib/auth.ts` **no se toca**. El módulo compartido
+      `session.ts` solo existía para que el middleware verificara la firma en el borde;
+      con la barrera optimista no tiene consumidor (research D-03).
+- [ ] ~~T007~~ Retirada por D-041 (era la prueba de `session.ts`).
+- [ ] T008 **Gate cimientos**: `npx vitest run src/lib` verde y suite completa sin
+      regresión (los mocks de `@/lib/auth` siguen valiendo porque `auth.ts` no cambia).
 
 **Commit 1** — cimientos. Push en el mismo acto.
 
@@ -142,19 +138,21 @@ consultar la base y de cualquier `fetch`.
 - [ ] T039 [P] [US4] Crear `src/lib/destinoSeguro.test.ts`: rutas internas con y sin query,
       `//evil.com`, `/\evil.com`, `https://…`, `null`, vacío. → FR-018, §0.2
 - [ ] T040 [US4] Crear `src/middleware.ts` con el orden de decisión del plan: estáticos y
-      rutas públicas pasan; `/api/**` sin sesión → **401 JSON**; `/login` con sesión → `/`;
-      página sin sesión → `/login?next=<ruta+query>`. Sesión vía
-      `verifyToken(req.cookies.get("token")?.value)`, **sin base de datos**. → FR-012…FR-017, FR-019
+      rutas públicas pasan; `/api/**` sin cookie → **401 JSON**; `/login` con cookie → `/`;
+      página sin cookie → `/login?next=<ruta+query>`. **D-041**: decide por **presencia** de
+      `req.cookies.get("token")` — sin verificar firma, sin base de datos y **sin importar
+      `@/lib/auth`**. → FR-012…FR-017, FR-019
 - [ ] T041 [US4] `matcher` que excluya `/_next/static`, `/_next/image` y el icono del sitio.
       → FR-014
 - [ ] T042 [US4] `src/app/login/page.tsx`: tras un login correcto navegar a
       `destinoSeguro(new URLSearchParams(window.location.search).get("next"))`. Sin
       `useSearchParams` (research D-06). Nada más de la pantalla se toca. → FR-017, FR-018
-- [ ] T043 [US4] Crear `src/middleware.test.ts`: página protegida sin sesión → redirección
-      a `/login?next=…`; con sesión → pasa; `/login` sin sesión → pasa; `/login` con sesión
-      → `/`; `/api/documents` sin sesión → **401 JSON, no redirección**;
-      `POST /api/auth/login` y `POST /api/auth/logout` sin sesión → pasan; cookie manipulada
-      → tratada como ausente. → FR-022
+- [ ] T043 [US4] Crear `src/middleware.test.ts`: página protegida sin cookie → redirección
+      a `/login?next=…`; con cookie → pasa; `/login` sin cookie → pasa; `/login` con cookie
+      → `/`; `/api/documents` sin cookie → **401 JSON, no redirección**;
+      `POST /api/auth/login` y `POST /api/auth/logout` sin cookie → pasan; y el
+      comportamiento **declarado** de D-041: una cookie basura pasa la barrera (la ruta la
+      rechaza igual). → FR-022
 - [ ] T044 [US4] **Gate US-4**: quickstart §5 — las 5 páginas redirigen sin cookie y se
       muestran con ella; `/login` responde 200 sin sesión (si redirige, hay bucle);
       `/api/**` devuelve JSON, nunca HTML. → SC-010, SC-011, SC-012, SC-013
@@ -173,10 +171,9 @@ consultar la base y de cualquier `fetch`.
       ruta cualquiera → la suite se pone **roja**; restaurar. → SC-015
 - [ ] T047 Recrear el stack con la mínima interrupción: `docker-compose build app` **antes**
       de `docker-compose up -d app`. **`down -v` prohibido.** → R-05
-- [ ] T048 Verificar R-01 en ejecución: con sesión iniciada, las páginas protegidas **no**
-      redirigen. Si redirigen, el secreto no llegó al middleware → aplicar la contingencia
-      de research D-04 **en su orden**; la opción degradada **exige el visto bueno de
-      ZEUS** antes de adoptarse.
+- [ ] T048 Verificar en ejecución que la barrera no estorba: con sesión iniciada, las
+      páginas protegidas **no** redirigen; sin cookie, todas llevan al login. (El riesgo del
+      secreto en el borde quedó cerrado por **D-041**: el middleware no lo necesita.)
 - [ ] T049 Verificación manual completa: login → las cinco pantallas funcionan igual que
       antes; retorno a la dirección solicitada; `?next=` externo termina en `/`. → SC-012, SC-014
 - [ ] T050 Gates globales: `npx vitest run` ≥ 118 verdes sin BD ni Ollama;
@@ -206,7 +203,7 @@ consultar la base y de cualquier `fetch`.
 | FR-011 | T036 |
 | FR-012…FR-014 | T040, T041 |
 | FR-015 | T040, T043 |
-| FR-016 | T005, T040 |
+| FR-016 | T040, T043 |
 | FR-017 | T040, T042 |
 | FR-018 | T038, T039, T042 |
 | FR-019 | T040, T043 |
@@ -227,8 +224,8 @@ consultar la base y de cualquier `fetch`.
 ## Dependencias
 
 - T001–T003 antes de todo. Si el baseline no coincide, **detenerse y reportar**.
-- Cimientos (T004–T008) antes de cualquier bloque: `noAutenticado` y `verifyToken` los usan
-  todos.
+- Cimientos (T004, T005, T008) antes de cualquier bloque: `noAutenticado` lo usan todos.
+  T006 y T007 quedan **retiradas por D-041**.
 - **US-1 (T009–T019) va primero** (D-040): el daño irreversible se corta antes que nada.
 - **US-2 (T020–T024) antes de US-3**: cerrar los `GET` de configuración sin la guarda
   reproduce el riesgo de T012 (RZ-1, RZ-6).
@@ -248,4 +245,6 @@ consultar la base y de cualquier `fetch`.
 - Estrenar el arnés de pruebas de componentes React (research D-07).
 - Pipeline RAG (spec 003) y OCR (D-025) — RZ-4.
 - Migrar las 11 apariciones antiguas del literal de 401 (research D-02).
+- Verificar la firma del token en el middleware, declarar runtime Node.js para el borde o
+  inyectar `JWT_SECRET` en la imagen (**D-041**; lo último, además, violaría §0.4).
 - Cualquier archivo de 002-Protección Infantil o 003-SICOV.
