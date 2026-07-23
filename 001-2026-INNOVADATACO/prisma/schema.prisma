@@ -191,12 +191,19 @@ model DocumentoChunk {
   contenido   String
   orden       Int
   embedding   Unsupported("vector(768)")
+  // Modelo + configuración de enriquecimiento con que se generó el vector.
+  // Juntos definen a qué espacio vectorial pertenece el fragmento (spec 003,
+  // FR-021/FR-026): la búsqueda filtra por ambos y no mezcla espacios.
+  embeddingModel String @default("")
+  enrichConfig   String @default("none")
+  // contenidoFts: tsvector GENERATED sobre `contenido` plano (FR-027). Lo crea la
+  // migración en SQL crudo porque Prisma no tipa `tsvector`; no se toca desde la app.
   createdAt   DateTime @default(now())
 
-  documento DocumentoOficial @relation(fields: [documentoId], references: [id])
+  documento DocumentoOficial @relation(fields: [documentoId], references: [id], onDelete: Cascade)
 
   @@index([documentoId])
-  @@index([embedding])
+  @@index([embeddingModel, enrichConfig])
 }
 
 model ModuleSetting {
