@@ -346,6 +346,7 @@ model AuditLog {
   recursoId     String?
   usuarioId     String?
   parametroId   String?
+  colegioId     String?
   valorAnterior String?
   valorNuevo    String?
   ipAddress     String
@@ -355,9 +356,11 @@ model AuditLog {
 
   usuario   Usuario?          @relation(fields: [usuarioId], references: [id])
   parametro ParametroSistema? @relation(fields: [parametroId], references: [id])
+  colegio   Colegio?          @relation(fields: [colegioId], references: [id], onDelete: SetNull)
 
   @@index([usuarioId])
   @@index([parametroId])
+  @@index([colegioId])
   @@index([accion])
   @@index([creadoEn])
 }
@@ -428,6 +431,7 @@ model Colegio {
   cursos       Curso[]
   alumnos      Alumno[]
   alertas      AlertaColegio[]
+  auditLogs    AuditLog[]
 
   @@index([paisId])
   @@index([departamentoId])

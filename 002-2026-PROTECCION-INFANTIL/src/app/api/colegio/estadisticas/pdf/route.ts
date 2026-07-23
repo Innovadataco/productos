@@ -59,6 +59,7 @@ export async function GET(request: Request) {
             tipoRecurso: "Colegio",
             recursoId: user.colegioId,
             usuarioId: user.id,
+            colegioId: user.colegioId ?? undefined,
             valorNuevo: JSON.stringify({ colegioId: user.colegioId, timestamp: new Date().toISOString() }),
             ipAddress,
             userAgent,

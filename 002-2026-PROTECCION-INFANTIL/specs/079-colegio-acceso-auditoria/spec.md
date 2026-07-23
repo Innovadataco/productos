@@ -1,6 +1,6 @@
 # Spec 079 — Módulo Colegios: acceso institucional y auditoría del colegio
 
-**Status**: `PLANEADO`  
+**Status**: `FINALIZADO` (pendiente ACTA-VALIDACION de ZEUS → `CERRADA`)  
 **Rama**: `feature/001-scaffolding`  
 **Fase del programa**: Saneamiento / Mejoras del módulo Colegios  
 **Creado**: 2026-07-21  
@@ -190,4 +190,10 @@ El módulo Colegios ya tiene su fase de fundación (Spec 074) y fases de cursos/
 
 ## Implementation
 
-_Pendiente. Se completará tras la aprobación de las Partes 2 y 3._
+**Fecha**: 2026-07-23 · **Cierre completo**: [`cierre.md`](./cierre.md)
+
+- Parte 1 (vigencia): fuera de alcance por ajuste de ZEUS — ya implementada en `97cdf95a`; verificada (5/5).
+- Parte 2: endpoints `regenerar-password` y `reenviar-email` para colegios (solo ADMIN); contraseña temporal una sola vez, nunca persistida en claro ni logueada; UI con botones + bloque de una sola vista.
+- Parte 3 (Opción B): migración aditiva `AuditLog.colegioId`; 16 call sites `COLEGIO_*` poblados; `GET /api/colegio/auditoria` con aislamiento estricto; vista `/dashboard/colegio/auditoria`.
+- Tests: FR-008 aislamiento 5/5 + endpoints 6/6. Gate: 753/753, lint/tsc/build OK, dev-restart OK.
+- Commit: `feat(colegios): restablecer/reenviar credenciales + auditoría aislada del colegio (spec 079)`.

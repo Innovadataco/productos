@@ -124,6 +124,7 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                     tipoRecurso: "AlertaColegio",
                     recursoId: alerta.id,
                     usuarioId: undefined,
+                    colegioId,
                     valorNuevo: JSON.stringify({
                         colegioId,
                         reporteId: reporte.id,
@@ -272,6 +273,7 @@ export async function cambiarEstadoAlerta(
         accion: "COLEGIO_ALERTA_ESTADO" as AccionAudit,
         tipoRecurso: "AlertaColegio",
         recursoId: alertaId,
+        colegioId: alerta.colegioId,
         valorAnterior: JSON.stringify({ estado: alerta.estado }),
         valorNuevo: JSON.stringify({ estado }),
         ipAddress,

@@ -11,10 +11,12 @@ export function AuditLogViewer({
     defaultActions,
     title,
     subtitle,
+    endpoint = "/api/admin/audit-logs",
 }: {
     defaultActions?: AccionAudit[];
     title: string;
     subtitle: string;
+    endpoint?: string;
 }) {
     const [filters, setFilters] = useState<Filters>({
         selectedActions: defaultActions ?? [],
@@ -41,7 +43,7 @@ export function AuditLogViewer({
             setError("");
             try {
                 const params = buildQueryParams(filters, page);
-                const res = await fetch(`/api/admin/audit-logs?${params.toString()}`, {
+                const res = await fetch(`${endpoint}?${params.toString()}`, {
                     credentials: "include",
                 });
                 const json = await res.json().catch(() => ({}));
@@ -62,7 +64,7 @@ export function AuditLogViewer({
         return () => {
             cancelled = true;
         };
-    }, [filters, page]);
+    }, [filters, page, endpoint]);
 
     function applyFilters(next: Partial<Filters>) {
         setFilters((prev) => ({ ...prev, ...next }));

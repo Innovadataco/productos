@@ -1,77 +1,28 @@
 # Tasks — Spec 079: Colegio acceso y auditoría
 
-## Phase 1 — Fix de vigencia (implementar ahora)
+**Spec**: `specs/079-colegio-acceso-auditoria/spec.md` · **Fecha**: 2026-07-23
 
-- **T001** [P] Corregir comparación de fechas en `src/lib/colegio/vigencia.ts`.
-  - Ruta: `src/lib/colegio/vigencia.ts`
-  - Dependencias: ninguna.
-  - Notas: usar `hoyNormalizado()` y `normalizarFechaServicio()` para inicio y fin.
+## Parte 1 — Fix de vigencia (FUERA DE ALCANCE por ajuste de ZEUS)
 
-- **T002** [P] Agregar tests unitarios de vigencia.
-  - Ruta: `src/lib/colegio/vigencia.test.ts`
-  - Dependencias: T001.
-  - Notas: casos hoy, mañana, ayer, fin hoy.
+- [x] T001 Verificado: ya implementada en commit `97cdf95a`; `vigencia.test.ts` 5/5 pasa. No se re-implementó.
 
-## Phase 2 — Gestión de acceso (plan, esperar aprobación)
+## Parte 2 — Gestión de acceso del colegio
 
-- **T003** [P] Endpoint regenerar contraseña del SCHOOL_ADMIN.
-  - Ruta: `src/app/api/admin/colegios/[id]/regenerar-password/route.ts`
-  - Dependencias: aprobación Parte 2.
-  - Notas: reutilizar patrón de operadores; acción `COLEGIO_PASSWORD_REGENERADA`.
+- [x] T002 `POST /api/admin/colegios/[id]/regenerar-password` (+test 3/3): temporal aleatoria, `debeCambiarPassword: true`, `COLEGIO_PASSWORD_REGENERADA` con `colegioId`; contraseña solo en la respuesta (nunca persistida en claro ni logueada).
+- [x] T003 `POST /api/admin/colegios/[id]/reenviar-email` (+test 3/3): nueva temporal + `enviarEmailBienvenidaColegio`; si el envío falla, temporal en respuesta para copia manual; `COLEGIO_EMAIL_REENVIADO` con `colegioId`.
+- [x] T004 UI listado admin/colegios: botones "Restablecer contraseña" y "Reenviar email" + bloque ámbar con la temporal una sola vez (mismo patrón del flujo de creación).
 
-- **T004** [P] Endpoint reenviar email de bienvenida.
-  - Ruta: `src/app/api/admin/colegios/[id]/reenviar-email/route.ts`
-  - Dependencias: aprobación Parte 2.
-  - Notas: crear helper `enviarEmailBienvenidaColegio` en `src/lib/email.ts`; acción `COLEGIO_EMAIL_REENVIADO`.
+## Parte 3 — Auditoría del colegio (Opción B aprobada)
 
-- **T005** [P] UI de credenciales temporales en creación/restablecimiento de colegio.
-  - Ruta: `src/app/dashboard/admin/colegios/page.tsx` y `src/app/dashboard/admin/colegios/[id]/page.tsx`
-  - Dependencias: T003, T004.
-  - Notas: modal/toast con copia de contraseña; mostrar una sola vez.
+- [x] T005 Migración aditiva `20260723013000_add_audit_log_colegio_id` (`AuditLog.colegioId` nullable, FK `ON DELETE SET NULL`, índice) + schema + `logAudit({ colegioId })`.
+- [x] T006 `colegioId` poblado en los 16 call sites de acciones `COLEGIO_*` (rutas `/api/colegio/**`, `/api/admin/colegios/**`, `lib/colegio/alertas.ts`).
+- [x] T007 `GET /api/colegio/auditoria`: SCHOOL_ADMIN + vigencia, filtro forzado `colegioId` propio + acciones `COLEGIO_*`, mismos filtros/paginación del viewer admin.
+- [x] T008 Vista `/dashboard/colegio/auditoria` (AuditLogViewer con prop `endpoint`) + entrada "Auditoría" en `ColegioNav` + grupo "Colegios" en `AUDIT_ACTION_GROUPS`.
+- [x] T009 Tests de aislamiento FR-008 (5/5): colegio A nunca ve B, sin `colegioId` excluido, no-`COLEGIO_*` excluido, filtro por acción, 403 otros roles, 401 sin auth.
 
-- **T006** [P] Tests de endpoints y UI de acceso.
-  - Ruta: `src/app/api/admin/colegios/[id]/regenerar-password/route.test.ts`, `.../reenviar-email/route.test.ts`
-  - Dependencias: T003, T004.
-  - Notas: ADMIN OK, no ADMIN 403, colegio sin admin 404.
+## Cierre
 
-## Phase 3 — Auditoría del colegio (plan, esperar aprobación)
-
-- **T007** [P] Migración aditiva `AuditLog.colegioId`.
-  - Ruta: `prisma/migrations/YYYYMMDDHHmmss_add_audit_log_colegio_id/migration.sql` + `prisma/schema.prisma`
-  - Dependencias: aprobación Parte 3 (Opción B).
-  - Notas: nullable, onDelete SetNull, índice.
-
-- **T008** [P] Poblar `colegioId` en acciones `COLEGIO_*` existentes.
-  - Ruta: archivos que llaman `logAudit` con acciones COLEGIO_*.
-  - Dependencias: T007.
-  - Notas: identificar todos los logAudit de COLEGIO_* y pasar `colegioId`.
-
-- **T009** [P] Endpoint `GET /api/colegio/auditoria`.
-  - Ruta: `src/app/api/colegio/auditoria/route.ts`
-  - Dependencias: T007, T008.
-  - Notas: verifyAuth SCHOOL_ADMIN; filtrar por `colegioId` y acciones COLEGIO_*.
-
-- **T010** [P] Vista `/dashboard/colegio/auditoria`.
-  - Ruta: `src/app/dashboard/colegio/auditoria/page.tsx`
-  - Dependencias: T009.
-  - Notas: reutilizar `AuditLogViewer` con `COLEGIO_AUDIT_ACTIONS`.
-
-- **T011** [P] Tests de aislamiento y funcionalidad de auditoría.
-  - Ruta: `src/app/api/colegio/auditoria/route.test.ts`
-  - Dependencias: T009, T010.
-  - Notas: SCHOOL_ADMIN ve solo su colegio; otro SCHOOL_ADMIN no ve nada; ADMIN no afectado.
-
-## Phase 4 — Validación y cierre (post-implementación)
-
-- **T012** [P] Validar tsc, lint, tests y build.
-  - Dependencias: T002, T006, T011.
-  - Notas: `npx tsc --noEmit`, `npm run lint`, `npx vitest run`, `npm run build`.
-
-- **T013** [P] Deploy limpio y quickstart.
-  - Dependencias: T012.
-  - Notas: `./scripts/dev-restart.sh`; probar pasos del quickstart.
-
-- **T014** [P] Documentación de cierre.
-  - Ruta: `specs/079-colegio-acceso-auditoria/spec.md`, `specs/079-colegio-acceso-auditoria/cierre.md`
-  - Dependencias: T013.
-  - Notas: sección Implementation, evidencia, commits, deuda técnica.
+- [x] T010 Gate: lint 0 errores · tsc OK · 753/753 tests · build limpio · `dev-restart.sh` healthcheck OK.
+- [x] T011 Validación en vivo (colegio `cmrwwckzx0003gd0u8df7q0cr`): regenerar → login con temporal → auditoría propia visible; reenviar email OK; ADMIN → 403 en endpoint de colegio.
+- [x] T012 Docs: cierre.md, sección Implementation en spec.md, índice.
+- [x] T013 Commit: `feat(colegios): restablecer/reenviar credenciales + auditoría aislada del colegio (spec 079)`.

@@ -138,6 +138,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             tipoRecurso: "IdentificadorAlumno",
             recursoId: identificador.id,
             usuarioId: user.id,
+            colegioId: user.colegioId ?? undefined,
             valorNuevo: JSON.stringify({
                 alumnoId: id,
                 tipo: body.tipo,

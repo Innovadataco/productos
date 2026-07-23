@@ -9,7 +9,7 @@
 |---------|-------|
 | **Total de specs** | **68** |
 | **Cerradas / Implementadas** | **63** |
-| **Pendientes (en diseño / planeadas)** | **5** |
+| **Pendientes (en diseño / planeadas)** | **4** |
 
 ## Backlog activo (pendientes)
 
@@ -19,7 +19,6 @@
 | [019](019-permisos-modulos/spec.md) | Gestor de permisos de módulos | 🟡 En diseño |
 | [050b](050-pendientes-afinamiento/spec.md) | Pendientes de afinamiento | 🟡 En diseño |
 | [053](053-capa-datos-servicios/spec.md) | Capa de datos y servicios | 🔵 Planeado |
-| [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🔵 Planeado |
 
 ## Inventario completo
 
@@ -88,7 +87,7 @@
 | [076](076-colegios-carga-excel/spec.md) | Colegios — carga por Excel | 🟢 Cerrada |
 | [077](077-colegios-alertas-consulta/spec.md) | Colegios — alertas y consulta | 🟢 Cerrada |
 | [078](078-colegios-estadisticas-pdf/spec.md) | Colegios — estadísticas PDF | 🟢 Cerrada |
-| [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🔵 Planeado |
+| [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🟢 Finalizada (pendiente ACTA) |
 | [080](080-orden-migraciones-colegio/spec.md) | Orden de migraciones (I-04) | 🟢 Cerrada |
 | [082](082-fusion-playground-modelos/spec.md) | Fusión Playground + Modelos (I-05) | 🟢 Cerrada |
 | [083](083-simulacion-completitud-multimodelo/spec.md) | Simulación: completitud + multi-modelo (I-06) | 🟢 Cerrada |

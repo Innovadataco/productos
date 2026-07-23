@@ -8,9 +8,14 @@ export const COMITE_AUDIT_ACTIONS = Object.values(AccionAudit).filter(
     (accion): accion is AccionAudit => typeof accion === "string" && accion.startsWith("COMITE_")
 );
 
+export const COLEGIO_AUDIT_ACTIONS = Object.values(AccionAudit).filter(
+    (accion): accion is AccionAudit => typeof accion === "string" && accion.startsWith("COLEGIO_")
+);
+
 export const AUDIT_ACTION_GROUPS = [
     { key: "OPERADOR", label: "Operadores", actions: OPERADOR_AUDIT_ACTIONS },
     { key: "COMITE", label: "Comité", actions: COMITE_AUDIT_ACTIONS },
+    { key: "COLEGIO", label: "Colegios", actions: COLEGIO_AUDIT_ACTIONS },
 ] as const;
 
 export function labelAccionAudit(accion: AccionAudit): string {

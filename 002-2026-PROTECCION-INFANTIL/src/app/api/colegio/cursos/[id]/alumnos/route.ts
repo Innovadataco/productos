@@ -113,6 +113,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             tipoRecurso: "Alumno",
             recursoId: alumno.id,
             usuarioId: user.id,
+            colegioId: user.colegioId ?? undefined,
             valorNuevo: JSON.stringify({ nombre: body.nombre, cursoId: id, colegioId: curso.colegioId }),
             ipAddress,
             userAgent,

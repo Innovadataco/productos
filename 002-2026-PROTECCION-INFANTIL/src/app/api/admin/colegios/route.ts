@@ -173,6 +173,7 @@ export async function POST(request: Request) {
             tipoRecurso: "Colegio",
             recursoId: colegio.id,
             usuarioId: admin.id,
+            colegioId: colegio.id,
             valorNuevo: JSON.stringify({
                 nombre,
                 paisId,

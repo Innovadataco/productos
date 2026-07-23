@@ -103,6 +103,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             tipoRecurso: "Colegio",
             recursoId: id,
             usuarioId: admin.id,
+            colegioId: id,
             valorAnterior: JSON.stringify({
                 nombre: colegio.nombre,
                 estado: colegio.estado,
@@ -166,6 +167,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             tipoRecurso: "Colegio",
             recursoId: id,
             usuarioId: admin.id,
+            colegioId: id,
             valorAnterior: JSON.stringify({ estado: colegio.estado }),
             valorNuevo: JSON.stringify({ estado: "eliminado" }),
             ipAddress,

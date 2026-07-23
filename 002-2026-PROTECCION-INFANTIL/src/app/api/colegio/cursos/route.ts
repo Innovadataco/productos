@@ -39,7 +39,7 @@ export async function GET(request: Request) {
         }
 
         const cursos = await prisma.curso.findMany({
-            where: { colegioId: user.colegioId, estado: "activo" },
+            where: { colegioId: user.colegioId ?? undefined, estado: "activo" },
             orderBy: { nombre: "asc" },
         });
 
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 
         const existente = await prisma.curso.findFirst({
             where: {
-                colegioId: user.colegioId,
+                colegioId: user.colegioId ?? undefined,
                 nombre,
                 grado: grado ?? null,
                 anioLectivo: anioLectivo ?? null,
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
 
         const curso = await prisma.curso.create({
             data: {
-                colegioId: user.colegioId,
+                colegioId: user.colegioId ?? undefined,
                 nombre,
                 grado,
                 anioLectivo,
@@ -115,6 +115,7 @@ export async function POST(request: Request) {
             tipoRecurso: "Curso",
             recursoId: curso.id,
             usuarioId: user.id,
+            colegioId: user.colegioId ?? undefined,
             valorNuevo: JSON.stringify({ nombre, grado, anioLectivo, colegioId: user.colegioId }),
             ipAddress,
             userAgent,

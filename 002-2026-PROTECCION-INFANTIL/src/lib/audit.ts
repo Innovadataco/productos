@@ -7,6 +7,7 @@ export async function logAudit(params: {
     recursoId?: string;
     parametroId?: string;
     usuarioId?: string;
+    colegioId?: string;
     valorAnterior?: string;
     valorNuevo?: string;
     ipAddress?: string;
@@ -22,6 +23,7 @@ export async function logAudit(params: {
             recursoId: params.recursoId ?? null,
             parametroId: params.parametroId ?? null,
             usuarioId: params.usuarioId ?? null,
+            colegioId: params.colegioId ?? null,
             valorAnterior: params.valorAnterior ?? null,
             valorNuevo: params.valorNuevo ?? null,
             ipAddress: params.ipAddress ?? "unknown",

@@ -9,6 +9,7 @@ const navItems = [
     { href: "/dashboard/colegio/cursos/carga", label: "Carga masiva" },
     { href: "/dashboard/colegio/alertas", label: "Alertas" },
     { href: "/dashboard/colegio/estadisticas", label: "Estadísticas" },
+    { href: "/dashboard/colegio/auditoria", label: "Auditoría" },
 ];
 
 export function ColegioNav() {

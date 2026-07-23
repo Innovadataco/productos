@@ -93,6 +93,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             tipoRecurso: "IdentificadorAlumno",
             recursoId: id,
             usuarioId: user.id,
+            colegioId: user.colegioId ?? undefined,
             valorAnterior: JSON.stringify({
                 tipo: identificador.tipo,
                 valor: identificador.valor,

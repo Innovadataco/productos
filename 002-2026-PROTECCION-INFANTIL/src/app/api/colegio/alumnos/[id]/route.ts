@@ -111,6 +111,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             tipoRecurso: "Alumno",
             recursoId: id,
             usuarioId: user.id,
+            colegioId: user.colegioId ?? undefined,
             valorAnterior: JSON.stringify({ nombre: alumno.nombre }),
             valorNuevo: JSON.stringify({ nombre: actualizado.nombre }),
             ipAddress,

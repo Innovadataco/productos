@@ -57,6 +57,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             tipoRecurso: "Curso",
             recursoId: id,
             usuarioId: user.id,
+            colegioId: user.colegioId ?? undefined,
             valorAnterior: JSON.stringify({ estado: curso.estado }),
             valorNuevo: JSON.stringify({ estado: actualizado.estado }),
             ipAddress,

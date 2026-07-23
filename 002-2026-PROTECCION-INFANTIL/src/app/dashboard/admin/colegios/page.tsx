@@ -100,6 +100,8 @@ export default function AdminColegiosPage() {
     const [paises, setPaises] = useState<Pais[]>([]);
     const [ciudades, setCiudades] = useState<Ciudad[]>([]);
     const [saving, setSaving] = useState(false);
+    const [accionandoId, setAccionandoId] = useState<string | null>(null);
+    const [passwordInfo, setPasswordInfo] = useState<{ colegioNombre: string; email: string; password: string } | null>(null);
 
     async function cargar() {
         setLoading(true);
@@ -173,6 +175,49 @@ export default function AdminColegiosPage() {
             setMessage({ type: "error", text: "Error de red cambiando estado" });
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function regenerarPassword(colegio: Colegio) {
+        setAccionandoId(colegio.id);
+        setMessage(null);
+        setPasswordInfo(null);
+        try {
+            const res = await fetch(`/api/admin/colegios/${colegio.id}/regenerar-password`, {
+                method: "POST",
+                credentials: "include",
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error?.message || "Error restableciendo la contraseña");
+            // Se muestra una sola vez; no se persiste en ningún otro estado.
+            setPasswordInfo({ colegioNombre: colegio.nombre, email: data.admin.email, password: data.passwordTemporal });
+        } catch (err) {
+            setMessage({ type: "error", text: err instanceof Error ? err.message : "Error" });
+        } finally {
+            setAccionandoId(null);
+        }
+    }
+
+    async function reenviarEmail(colegio: Colegio) {
+        setAccionandoId(colegio.id);
+        setMessage(null);
+        setPasswordInfo(null);
+        try {
+            const res = await fetch(`/api/admin/colegios/${colegio.id}/reenviar-email`, {
+                method: "POST",
+                credentials: "include",
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error?.message || "Error reenviando el email");
+            if (data.passwordTemporal) {
+                setPasswordInfo({ colegioNombre: colegio.nombre, email: data.admin.email, password: data.passwordTemporal });
+            } else {
+                setMessage({ type: "success", text: data.mensaje || "Email reenviado." });
+            }
+        } catch (err) {
+            setMessage({ type: "error", text: err instanceof Error ? err.message : "Error" });
+        } finally {
+            setAccionandoId(null);
         }
     }
 
@@ -258,6 +303,29 @@ export default function AdminColegiosPage() {
                     Nuevo colegio
                 </Button>
             </div>
+
+            {passwordInfo && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                    <p className="font-semibold">Contraseña temporal de {passwordInfo.email} ({passwordInfo.colegioNombre})</p>
+                    <p className="mt-1 opacity-80">Muéstrela una vez; no se volverá a mostrar.</p>
+                    <div className="mt-3 flex items-center gap-3">
+                        <code className="rounded-lg bg-white/60 px-3 py-1.5 font-mono text-base dark:bg-slate-900/60">
+                            {passwordInfo.password}
+                        </code>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="px-3 py-1.5 text-xs"
+                            onClick={() => navigator.clipboard.writeText(passwordInfo.password)}
+                        >
+                            Copiar
+                        </Button>
+                        <Button type="button" variant="ghost" className="px-3 py-1.5 text-xs" onClick={() => setPasswordInfo(null)}>
+                            Cerrar
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {message && (
                 <div
@@ -366,6 +434,22 @@ export default function AdminColegiosPage() {
                                                             isLoading={saving}
                                                         >
                                                             {colegio.estado === "activo" ? "Desactivar" : "Activar"}
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="px-3 py-1.5 text-xs"
+                                                            onClick={() => regenerarPassword(colegio)}
+                                                            isLoading={accionandoId === colegio.id}
+                                                        >
+                                                            Restablecer contraseña
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="px-3 py-1.5 text-xs"
+                                                            onClick={() => reenviarEmail(colegio)}
+                                                            isLoading={accionandoId === colegio.id}
+                                                        >
+                                                            Reenviar email
                                                         </Button>
                                                     </div>
                                                 </td>

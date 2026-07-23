@@ -74,6 +74,7 @@ export async function POST(request: Request) {
                 accion: "COLEGIO_CARGA_MASIVA",
                 tipoRecurso: "CargaMasivaAlumnos",
                 usuarioId: user.id,
+                colegioId: user.colegioId ?? undefined,
                 valorNuevo: JSON.stringify({
                     colegioId: payload.colegioId,
                     filas: payload.filas.length,
