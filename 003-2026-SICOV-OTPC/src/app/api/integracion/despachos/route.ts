@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { requiereModulo } from "@/lib/guard-modulos";
+import { intentarEnvioInmediato } from "@/lib/envio-inmediato";
+import { enviarSolicitud } from "@/lib/despachos/cola";
 import { resolverContextoEfectivo } from "@/lib/integracion/contexto-usuario";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { envBool } from "@/lib/env";
@@ -44,8 +46,19 @@ export async function POST(req: Request) {
       },
     });
 
+    // D-021: la vía web intenta reportar DE UNA VEZ; si la Super falla, la solicitud ya quedó
+    // `pendiente` y cae a la cola del worker (los reintentos los cuenta el worker, no aquí).
+    const inmediato = await intentarEnvioInmediato(() => enviarSolicitud(solicitud));
+    const final = inmediato
+      ? await prisma.despachoSolicitud.findUnique({ where: { id: solicitud.id } })
+      : solicitud;
+
     return NextResponse.json(
-      { solicitudId: solicitud.id, estado: solicitud.estado },
+      {
+        solicitudId: solicitud.id,
+        estado: final?.estado ?? "pendiente",
+        idDespachoExterno: final?.idDespachoExterno ?? null,
+      },
       { status: 202 },
     );
   } catch (err: unknown) {

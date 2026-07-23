@@ -74,3 +74,14 @@ describe("reintentarLlegada", () => {
     });
   });
 });
+
+describe("parámetros por env (D-019b)", () => {
+  it("sin opts, respeta COLA_MAX_REINTENTOS del entorno (1 → fallido al primer error)", async () => {
+    vi.stubEnv("COLA_MAX_REINTENTOS", "1");
+    findMany.mockResolvedValue([{ id: 9, payload: {}, usuarioId: "900853057", rolId: 2, reintentos: 0 }]);
+    getCli.mockReturnValue({ postTransaccional: vi.fn().mockRejectedValue(new Error("boom")) });
+    const r = await procesarLoteLlegadas({});
+    expect(r.fallidos).toBe(1);
+    vi.unstubAllEnvs();
+  });
+});

@@ -3,9 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getClienteSupertransporte } from "@/lib/integracion/cliente";
 import { extraerIdDespachoExterno, extraerMensajeError } from "@/lib/normalizar";
 import { envOr } from "@/lib/env";
+import { colaMaxReintentos, colaBackoffMs } from "@/lib/cola-config";
 
-const BACKOFF_MIN = 5;
-export const MAX_REINTENTOS = 3;
 export const LOTE = 20;
 
 function urlDespachos(): string {
@@ -48,7 +47,8 @@ export async function procesarLote(
   opts: { limite?: number; maxReintentos?: number } = {},
 ): Promise<ResultadoLote> {
   const limite = opts.limite ?? LOTE;
-  const maxReintentos = opts.maxReintentos ?? MAX_REINTENTOS;
+  // D-019b: parametrizable por env (default 3), compartido por las 3 colas.
+  const maxReintentos = opts.maxReintentos ?? colaMaxReintentos();
   const ahora = new Date();
 
   const solicitudes = await prisma.despachoSolicitud.findMany({
@@ -91,7 +91,7 @@ export async function procesarLote(
             estado: "pendiente",
             reintentos,
             errorExterno: mensaje,
-            siguienteIntento: new Date(Date.now() + BACKOFF_MIN * 60_000),
+            siguienteIntento: new Date(Date.now() + colaBackoffMs()),
             fechaActualizacion: new Date(),
           },
         });

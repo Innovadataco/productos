@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { requiereModulo } from "@/lib/guard-modulos";
+import { intentarEnvioInmediato } from "@/lib/envio-inmediato";
+import { enviarLlegada } from "@/lib/llegadas/cola";
 import { resolverContextoEfectivo } from "@/lib/integracion/contexto-usuario";
 import { limpiarPlaca } from "@/lib/normalizar";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -64,7 +66,20 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ solicitudId: solicitud.id, estado: solicitud.estado }, { status: 202 });
+    // D-021: intento síncrono con caída a cola (mismo patrón que despachos).
+    const inmediato = await intentarEnvioInmediato(() => enviarLlegada(solicitud));
+    const final = inmediato
+      ? await prisma.llegadaSolicitud.findUnique({ where: { id: solicitud.id } })
+      : solicitud;
+
+    return NextResponse.json(
+      {
+        solicitudId: solicitud.id,
+        estado: final?.estado ?? "pendiente",
+        idLlegadaExterno: final?.idLlegadaExterno ?? null,
+      },
+      { status: 202 },
+    );
   } catch (err: unknown) {
     if (err instanceof AppError) return NextResponse.json(err.toJSON(), { status: err.statusCode });
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
