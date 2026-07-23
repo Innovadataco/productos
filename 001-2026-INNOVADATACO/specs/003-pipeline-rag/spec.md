@@ -4,7 +4,11 @@
 
 **Created**: 2026-07-22
 
-**Status**: Draft — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO)
+**Status**: **Draft** — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO).
+Actualizada el 2026-07-22 con las decisiones **D-019…D-023**: búsqueda híbrida FTS+vectorial
+fusionada con RRF (D-019), coseno + HNSW (D-020), `ON DELETE CASCADE` (D-021), cambio de
+modelo siempre permitido con modelo registrado por fragmento (D-022) y fe de erratas de
+§3.4 reubicada a la enmienda constitucional 2.1.0 (D-023).
 
 **Input**: User description: "Construir lo que H-05 reveló que no existe: (a) chunking
 del texto extraído en el worker; (b) embeddings vía Ollama con nomic-embed-text (768
@@ -132,7 +136,7 @@ los registros creados y las transiciones de estado, sin Ollama real.
 
 ---
 
-### User Story 4 - Búsqueda semántica real (Priority: P2)
+### User Story 4 - Búsqueda híbrida real: FTS + vectorial fusionadas con RRF (Priority: P2)
 
 Como usuario de Base Oficial, quiero encontrar normativa por significado y no solo por
 coincidencia literal de palabras, para localizar documentos que usan otra terminología.
@@ -161,6 +165,18 @@ aislada, verificar el orden por similitud y la forma de la respuesta.
    sola vez, aunque varios de sus fragmentos coincidan.
 6. **Given** un error interno de la búsqueda, **When** se responde, **Then** no se filtra
    `err.message` al cliente (contrato de la spec 002, FR-004).
+7. **Given** una consulta por identificador ("Resolución 14306 de 2024"), **When** se
+   busca, **Then** la rama FTS la resuelve y el documento aparece en los primeros
+   puestos, aunque la semántica pura fallara.
+8. **Given** una consulta conceptual sin coincidencias literales ("requisitos de
+   operación de terminales"), **When** se busca, **Then** la rama vectorial la resuelve.
+9. **Given** ambas ramas con resultados, **When** se fusionan, **Then** el orden final
+   sale de **RRF** con los pesos configurados, y cambiar esos pesos cambia el orden sin
+   tocar código.
+10. **Given** un documento dado de baja lógica (`activo = false`), **When** se busca,
+    **Then** no aparece en los resultados, aunque conserve sus fragmentos.
+11. **Given** fragmentos generados por un modelo distinto del vigente, **When** se busca,
+    **Then** se ignoran (solo se usan los del modelo vigente, FR-021).
 
 ---
 
@@ -235,18 +251,23 @@ existía (origen de H-05).
 - ¿Qué pasa si un fragmento excede el límite de tokens del modelo de embeddings? → El
   troceado debe garantizar fragmentos por debajo del límite del modelo configurado; el
   plan define cómo se comprueba.
-- ¿Qué pasa si el modelo configurado cambia (p. ej. de 768 a otra dimensión)? → Los
-  vectores existentes dejan de ser comparables. El plan debe definir la conducta:
-  bloquear el cambio, o exigir re-vectorización completa. **No** mezclar espacios
-  vectoriales distintos en la misma tabla.
+- ¿Qué pasa si cambia el modelo de embeddings? → **Resuelto (D-022)**: el cambio jamás se
+  bloquea. Cada fragmento registra su modelo, la búsqueda usa solo los del modelo vigente
+  y el sistema reporta cuántos documentos faltan por re-vectorizar. Los espacios
+  vectoriales conviven en la tabla sin mezclarse porque se filtran por modelo. Cambiar la
+  **dimensión** es harina de otro costal: migración + re-vectorización total.
 - ¿Qué pasa si Ollama responde lento con documentos grandes? → El job es asíncrono
   (pg-boss) y no bloquea la respuesta HTTP; el plan define lotes y tiempos límite.
-- ¿Qué pasa si se borra un documento? → Sus fragmentos deben irse con él; hoy la FK es
-  `ON DELETE RESTRICT`, así que un borrado fallaría mientras existan fragmentos.
-- ¿Y la búsqueda mientras el histórico no esté backfilleado? → Convivencia entre
-  semántica y textual (US4, escenario 4): el plan decide y lo documenta.
-- ¿El índice vectorial? → El actual es btree y no sirve para similitud; el plan debe
-  crear el índice adecuado y justificar la métrica de distancia elegida.
+- ¿Qué pasa si se borra un documento? → **Resuelto (D-021)**: la FK pasa a
+  `ON DELETE CASCADE` en esta spec (hoy es `RESTRICT` y el borrado fallaría). La baja
+  lógica (`activo = false`) **no** borra fragmentos, pero la búsqueda excluye esos
+  documentos.
+- ¿Y la búsqueda mientras el histórico no esté backfilleado? → **Resuelto (D-019)**: la
+  rama FTS cubre todo el corpus desde el primer día (no depende de vectores), así que la
+  búsqueda es útil aunque falten embeddings; la rama vectorial va sumando conforme avanza
+  el backfill.
+- ¿El índice vectorial? → **Resuelto (D-020)**: HNSW con `vector_cosine_ops`. El btree
+  actual se reemplaza. Además hace falta un índice **GIN** para la rama FTS.
 
 ## Requirements *(mandatory)*
 
@@ -283,16 +304,25 @@ existía (origen de H-05).
 - **FR-012**: La consulta vectorial MUST implementarse con SQL crudo parametrizado
   (`$queryRaw` de Prisma) porque el cliente no soporta el tipo `vector`; MUST NOT
   construirse por concatenación de strings (riesgo de inyección).
-- **FR-013**: MUST crearse un índice vectorial apropiado (`ivfflat` o `hnsw`) con la clase
-  de operador correspondiente a la métrica de distancia elegida; la elección MUST
-  justificarse en `research.md`. El índice btree actual sobre `embedding` MUST
-  reemplazarse, ya que no acelera búsqueda por similitud.
+- **FR-013** *(decisión ZEUS D-020)*: la métrica MUST ser **coseno**
+  (`vector_cosine_ops`) y el índice MUST ser **HNSW** —o IVFFlat si el plan justifica
+  por qué—. El índice btree actual sobre `embedding` MUST reemplazarse: no acelera
+  búsqueda por similitud. **No** se compara L2 contra coseno: con vectores normalizados
+  el ranking es idéntico y medirlo sería gastar ciclos.
 - **FR-014**: La búsqueda MUST seguir respetando los filtros existentes (`tipo`,
   `entidad`, `sector`, `fechaDesde`, `fechaHasta`) y MUST devolver cada documento una
   sola vez.
-- **FR-015**: La estrategia de convivencia con la búsqueda textual actual (reemplazo,
-  híbrido o respaldo) MUST decidirse y documentarse en el plan, incluyendo qué ocurre
-  cuando no hay fragmentos o el servicio de embeddings no responde.
+- **FR-015** *(decisión ZEUS D-019)*: la búsqueda MUST ser **híbrida**: PostgreSQL FTS
+  (diccionario `spanish` + `unaccent` + índice **GIN**) y búsqueda vectorial, fusionadas
+  con **RRF** (Reciprocal Rank Fusion). Los filtros de metadatos (`tipo`, `entidad`,
+  `sector`, fechas) MUST aplicarse **antes** de ambas ramas. Los **pesos de la fusión y
+  el top-k MUST ser configurables** (ADR_004, §0.7).
+  Justificación: la semántica pura falla con identificadores ("resolución 1234") y
+  términos cortos ("taxi"); la textual pura falla con consultas conceptuales
+  ("requisitos de operación de terminales"). Cada rama cubre el punto ciego de la otra.
+- **FR-015b**: la puntuación en memoria de Node (`text.includes(term)` sobre todos los
+  documentos) MUST desaparecer: no es viable a 2000 documentos. Toda la búsqueda y el
+  ranking MUST resolverse en PostgreSQL.
 - **FR-016**: MUST existir un proceso de backfill idempotente y reanudable que vectorice
   los documentos con texto y sin fragmentos, informando progreso y resumen final.
 - **FR-017**: Toda la lógica nueva MUST ser testeable con embeddings **mockeados**:
@@ -301,11 +331,39 @@ existía (origen de H-05).
 - **FR-018**: Las respuestas de error de las rutas tocadas MUST respetar el contrato de la
   spec 002 (sin `err.message` al cliente) y el tipado estricto MUST mantenerse: cero `any`
   nuevos en `src/lib` y rutas API (§0.3).
-- **FR-019**: MUST aplicarse la fe de erratas a la constitución §3.4 (D-015),
-  describiendo el pipeline como diseño previsto, y MUST actualizarse a la realidad cuando
-  esta spec cierre.
+- **FR-019** *(decisión ZEUS D-023 — REUBICADO)*: la fe de erratas de §3.4 **ya no
+  pertenece a esta spec**. Se aplicó antes, en la enmienda constitucional **2.1.0**
+  (commit propio), porque la constitución gobierna la implementación. Lo único que
+  permanece aquí: al **cerrar** esta spec, §3.4 MUST actualizarse para describir el
+  pipeline real en lugar del diseño previsto, registrando la enmienda en §10.
 - **FR-020**: Ningún cambio MUST tocar archivos, contenedores, volúmenes o puertos de
   `002-2026-PROTECCION-INFANTIL` ni `003-2026-SICOV-OTPC` (ADR_002).
+- **FR-021** *(decisión ZEUS D-022)*: cambiar de modelo de embeddings MUST estar siempre
+  permitido; el sistema MUST NOT bloquearlo (ADR_004). Para ello:
+  (a) cada fragmento MUST registrar **el modelo que lo generó**;
+  (b) la búsqueda MUST usar únicamente fragmentos del **modelo vigente**;
+  (c) el sistema MUST reportar cuántos documentos quedan **pendientes de
+  re-vectorizar** y ofrecer el job de backfill correspondiente (trabajo pesado, TP-3).
+  Así conviven dos modelos en la misma tabla y la comparación A/B es natural.
+  Cambiar la **dimensión** sí exige migración de esquema y re-vectorización total.
+- **FR-022** *(decisión ZEUS D-021)*: la relación `DocumentoChunk → DocumentoOficial`
+  MUST pasar a `ON DELETE CASCADE` mediante migración incluida en esta spec: los
+  fragmentos son datos derivados, propiedad del documento. **Ojo**: la baja lógica
+  (`activo = false`) MUST NOT borrar fragmentos, pero la búsqueda MUST excluir los
+  documentos inactivos.
+- **FR-023** *(corrección de violación viva del ADR_004)*: el worker y las rutas MUST
+  leer el modelo configurado en `ModuleSetting` (`embedding_model` para vectorizar,
+  `generation_model` para análisis) en lugar de `aiModel.findFirst({ active: true })`,
+  con la precedencia de §0.7. Hoy la UI escribe esos ajustes y **nadie los lee**: no es
+  una funcionalidad pendiente, es un defecto que esta spec corrige.
+- **FR-024**: los parámetros del RAG —tamaño de fragmento, solape, `top-k`, umbral de
+  similitud y pesos de la fusión RRF— MUST persistirse en configuración (§0.7) y MUST
+  NOT quedar como literales en el código. Cambiarlos MUST NOT requerir editar archivos
+  ni recompilar.
+- **FR-025** *(ADR_004 §2.3)*: cada invocación de búsqueda y de vectorización MUST
+  registrar métricas: latencia, modelo usado, número de fragmentos recuperados y si hubo
+  evidencia (resultados por encima del umbral). Son la base para comparar modelos y
+  detectar degradaciones; MUST quedar consultables (auditoría), no solo en logs.
 
 ### Key Entities
 
@@ -344,6 +402,20 @@ existía (origen de H-05).
 - **SC-011**: La constitución §3.4 no describe como existente ninguna pieza que no lo
   esté (verificable contrastando con el código).
 - **SC-012**: Los puertos 5005/5433/5010/5434 permanecen sin cambios.
+- **SC-013**: Una consulta por identificador exacto ("Resolución 14306 de 2024") devuelve
+  ese documento entre los 3 primeros resultados (lo resuelve la rama FTS).
+- **SC-014**: Cambiar los pesos de la fusión RRF o el `top-k` **desde configuración**
+  altera el orden de resultados sin editar ni recompilar código (verificación de §0.7).
+- **SC-015**: Ningún documento con `activo = false` aparece en los resultados de búsqueda.
+- **SC-016**: Existe un índice **GIN** sobre el vector de FTS en español y un índice
+  **HNSW** con `vector_cosine_ops` sobre `embedding`; no queda el índice btree.
+- **SC-017**: Tras cambiar el modelo de embeddings configurado, el sistema reporta el
+  número de documentos pendientes de re-vectorizar y la búsqueda sigue funcionando con
+  los fragmentos del modelo vigente (sin bloquear el cambio).
+- **SC-018**: Cada búsqueda y cada vectorización dejan registrada su métrica (latencia,
+  modelo, fragmentos recuperados, si hubo evidencia), consultable desde auditoría.
+- **SC-019**: `grep` de `text.includes(` en `api/documents/search` devuelve 0: el ranking
+  ya no se calcula en memoria de Node.
 
 ## Trabajo pesado (ADR_002)
 
@@ -365,8 +437,8 @@ la suite completa) se implementa y verifica **con embeddings mockeados, sin turn
 - El modelo de referencia es `nomic-embed-text` (768 dimensiones, coincide con el esquema
   ya migrado) y está disponible en el Ollama del host — se verificó su presencia durante
   T018 de la spec 001.
-- La dimensión 768 se trata como **fija** en esta spec: cambiarla implicaría migración de
-  esquema y re-vectorización completa, fuera de alcance.
+- Cambiar de **modelo** está siempre permitido (FR-021). Cambiar de **dimensión** sí
+  exige migración de esquema y re-vectorización total: fuera del alcance de esta spec.
 - Los fragmentos y sus vectores se guardan en la misma base PostgreSQL del proyecto
   (puerto 5435); no se introduce una base vectorial aparte.
 - La suite unitaria sigue el patrón de la spec 002: mocks de Prisma y de los clientes de
@@ -377,8 +449,8 @@ la suite completa) se implementa y verifica **con embeddings mockeados, sin turn
 
 - Generación de respuestas con RAG (recuperar fragmentos y redactar una respuesta con un
   LLM): esta spec construye la **recuperación**, no la generación.
-- Reranking, búsqueda híbrida con BM25/`tsvector` u otras técnicas avanzadas, más allá de
-  la estrategia de convivencia que exige FR-015.
+- Reranking con modelo (cross-encoder) y otras técnicas avanzadas más allá de la fusión
+  RRF que exige FR-015. (La búsqueda híbrida FTS+vectorial **sí** entra: es D-019.)
 - Cambiar la dimensión del vector o el proveedor de embeddings a un servicio externo.
 - Interfaz de usuario nueva para la búsqueda semántica: se reutiliza la existente (la
   configuración de modelo ya tiene su pantalla).
