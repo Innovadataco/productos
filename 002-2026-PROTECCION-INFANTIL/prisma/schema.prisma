@@ -1053,6 +1053,7 @@ model SimulacionReporte {
   reporteId         String        @unique
   indice            Int
   categoriaEsperada String?
+  secundariaEsperada String?
   createdAt         DateTime      @default(now())
 
   @@index([simulacionRunId])

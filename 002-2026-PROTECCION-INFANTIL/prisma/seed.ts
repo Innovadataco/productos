@@ -190,11 +190,11 @@ async function main() {
     const reportesParams = [
         {
             clave: "reportes.classification_model",
-            valor: "ornith:9b",
+            valor: "gemma2:27b",
             tipo: TipoParametro.STRING,
             categoria: CategoriaParametro.SECURITY,
             esPublico: false,
-            descripcion: "Modelo Ollama para clasificación de conductas",
+            descripcion: "Modelo Ollama para clasificación de conductas (default ADR_006: gemma2:27b, 0 errores silenciosos)",
         },
         {
             clave: "reportes.classification.umbral_revision",
@@ -909,6 +909,37 @@ async function main() {
             descripcion: "Frecuencia mínima entre alertas al comité de validación (horas)",
         },
     ];
+
+    // Severidades por categoría (spec 085: fuente de verdad en parámetros, no en código)
+    const severidadesSeed: Array<[string, number]> = [
+        ["CONTACTO_INSISTENTE", 30],
+        ["SOLICITUD_MATERIAL", 80],
+        ["OFRECIMIENTO_REGALOS", 60],
+        ["SUPLANTACION_IDENTIDAD", 70],
+        ["SOLICITUD_ENCUENTRO", 90],
+        ["COMPARTIMIENTO_SEXUAL", 95],
+        ["EXTORSION", 85],
+        ["CONTENIDO_GENERADO_IA", 75],
+        ["DIFUSION_NO_CONSENTIDA", 90],
+        ["DOXING", 85],
+        ["SPAM", 0],
+        ["OTRO", 20],
+    ];
+    for (const [cat, valor] of severidadesSeed) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: `scoring.severity.${cat}` },
+            update: {},
+            create: {
+                clave: `scoring.severity.${cat}`,
+                valor: String(valor),
+                tipo: TipoParametro.INTEGER,
+                categoria: CategoriaParametro.VISIBILITY,
+                esPublico: false,
+                descripcion: `Severidad de la categoría ${cat} (0-100)`,
+            },
+        });
+    }
+    console.log("Severidades scoring.severity.* listas");
 
     for (const p of reportesParams) {
         await prisma.parametroSistema.upsert({

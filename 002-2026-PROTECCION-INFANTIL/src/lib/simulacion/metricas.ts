@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { obtenerSeveridades } from "@/lib/scoring";
+import { getParametroSistema } from "@/lib/parametros";
 import type { CategoriaConducta } from "@prisma/client";
 
 export interface MetricaCategoria {
@@ -19,6 +21,15 @@ export interface FalsoNegativo {
     estado: string;
 }
 
+export interface ErrorSilencioso {
+    indice: number;
+    identificador: string;
+    esperado: string;
+    asignado: string;
+    confianza: number;
+    deltaSeveridad: number;
+}
+
 export interface MetricasSimulacion {
     totalCasos: number;
     progreso: number;
@@ -33,6 +44,10 @@ export interface MetricasSimulacion {
     latenciaP50Ms: number;
     latenciaP95Ms: number;
     usoDesempate: { casos: number; porcentaje: number };
+    erroresSilenciosos: { count: number; casos: ErrorSilencioso[] };
+    subestimaciones: { count: number; severidadPerdida: number };
+    esps: number;
+    umbralRevision: number;
     distribucionEstados: Record<string, number>;
 }
 
@@ -60,10 +75,27 @@ export function canonizarCategoria(valor?: string | null): string {
     return valor.trim().toUpperCase().replace(/\s+/g, "_");
 }
 
+/** ESPS (ADR_006): Σ|Δseveridad| sobre errores silenciosos, subestimaciones ×3. */
+export function calcularEsps(
+    silenciosos: Array<{ deltaSeveridad: number }>,
+    factorSubestimacion = 3
+): number {
+    return silenciosos.reduce((acc, e) => {
+        const magnitud = Math.abs(e.deltaSeveridad);
+        return acc + (e.deltaSeveridad < 0 ? magnitud * factorSubestimacion : magnitud);
+    }, 0);
+}
+
+async function obtenerUmbralRevision(): Promise<number> {
+    const param = await getParametroSistema("reportes.classification.umbral_revision", prisma);
+    const valor = param ? parseFloat(param.valor) : NaN;
+    return Number.isFinite(valor) ? valor : 1.0;
+}
+
 export async function calcularMetricasSimulacion(runId: string): Promise<MetricasSimulacion> {
     const relacionados = await prisma.simulacionReporte.findMany({
         where: { simulacionRunId: runId },
-        select: { reporteId: true, indice: true, categoriaEsperada: true },
+        select: { reporteId: true, indice: true, categoriaEsperada: true, secundariaEsperada: true },
     });
 
     const reportes = await prisma.reporte.findMany({
@@ -75,6 +107,10 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
         where: { reporteId: { in: relacionados.map((r) => r.reporteId) } },
         select: { reporteId: true, categoria: true, confianza: true, latenciaMs: true, usoCascada: true },
     });
+
+    // Severidad y umbral desde parámetros (ADR_004 / ADR_006: nunca duplicados en código)
+    const [severidades, umbralRevision] = await Promise.all([obtenerSeveridades(), obtenerUmbralRevision()]);
+    const sev = (cat: string): number => severidades[cat as CategoriaConducta] ?? 0;
 
     const reporteMap = new Map(reportes.map((r) => [r.id, r]));
     const clasifMap = new Map(clasificaciones.map((c) => [c.reporteId, c]));
@@ -88,6 +124,9 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
     const confusion: Map<string, number> = new Map();
     const categoryStats: Map<string, { tp: number; fp: number; fn: number; support: number }> = new Map();
     const falsosNegativos: FalsoNegativo[] = [];
+    const silenciosos: ErrorSilencioso[] = [];
+    let subestimaciones = 0;
+    let severidadPerdida = 0;
 
     for (const rel of relacionados) {
         const reporte = reporteMap.get(rel.reporteId);
@@ -109,6 +148,7 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
         }
 
         const esperado = canonizarCategoria(esperadoRaw);
+        const secundaria = rel.secundariaEsperada ? canonizarCategoria(rel.secundariaEsperada) : null;
         const asignado = clasif ? String(clasif.categoria) : "DESCONOCIDA";
 
         const confKey = `${esperado}::${asignado}`;
@@ -119,23 +159,45 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
         }
         const esperadoStats = categoryStats.get(esperado)!;
         esperadoStats.support += 1;
-        if (esperado === asignado) {
+
+        // Multi-etiqueta (spec 085): la secundaria también cuenta como acierto.
+        const esAcierto = esperado === asignado || (secundaria !== null && secundaria === asignado);
+
+        if (esAcierto) {
             esperadoStats.tp += 1;
             aciertos += 1;
         } else {
             esperadoStats.fn += 1;
             fallos += 1;
+
+            // Métricas de seguridad (ADR_006) sobre el fallo
+            const deltaSev = sev(asignado) - sev(esperado);
+            if (deltaSev < 0) {
+                subestimaciones++;
+                severidadPerdida += Math.abs(deltaSev);
+            }
+            const confianza = clasif?.confianza ?? 0;
+            if (confianza >= umbralRevision) {
+                silenciosos.push({
+                    indice: rel.indice,
+                    identificador: reporte?.identificador ?? "",
+                    esperado,
+                    asignado,
+                    confianza,
+                    deltaSeveridad: deltaSev,
+                });
+            }
         }
 
         if (!categoryStats.has(asignado)) {
             categoryStats.set(asignado, { tp: 0, fp: 0, fn: 0, support: 0 });
         }
         const asignadoStats = categoryStats.get(asignado)!;
-        if (esperado !== asignado) {
+        if (!esAcierto) {
             asignadoStats.fp += 1;
         }
 
-        if (CATEGORIAS_GRAVE.has(esperado) && esperado !== asignado) {
+        if (CATEGORIAS_GRAVE.has(esperado) && !esAcierto) {
             falsosNegativos.push({
                 indice: rel.indice,
                 identificador: reporte?.identificador ?? "",
@@ -188,6 +250,10 @@ export async function calcularMetricasSimulacion(runId: string): Promise<Metrica
             casos: casosDesempate,
             porcentaje: relacionados.length > 0 ? casosDesempate / relacionados.length : 0,
         },
+        erroresSilenciosos: { count: silenciosos.length, casos: silenciosos },
+        subestimaciones: { count: subestimaciones, severidadPerdida },
+        esps: calcularEsps(silenciosos),
+        umbralRevision,
         distribucionEstados,
     };
 }

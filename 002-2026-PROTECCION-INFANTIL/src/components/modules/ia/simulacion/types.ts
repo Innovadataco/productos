@@ -56,6 +56,10 @@ export interface MetricasSimulacionUI {
     latenciaP50Ms: number;
     latenciaP95Ms: number;
     usoDesempate: { casos: number; porcentaje: number };
+    erroresSilenciosos: { count: number; casos: Array<{ indice: number; esperado: string; asignado: string; confianza: number; deltaSeveridad: number }> };
+    subestimaciones: { count: number; severidadPerdida: number };
+    esps: number;
+    umbralRevision: number;
     distribucionEstados: Record<string, number>;
 }
 
@@ -66,6 +70,9 @@ export interface ComparacionRunResumen {
     aciertos: number;
     fallos: number;
     accuracy: number;
+    erroresSilenciosos: number;
+    subestimaciones: number;
+    esps: number;
     latenciaP50Ms: number;
     latenciaP95Ms: number;
     distribucionEstados: Record<string, number>;

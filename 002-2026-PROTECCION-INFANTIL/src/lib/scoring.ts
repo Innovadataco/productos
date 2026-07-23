@@ -349,3 +349,13 @@ export async function recalcularYGuardarScore(
 
     return resultado;
 }
+
+/**
+ * Mapa de severidad por categoría, con fuente en parámetros `scoring.severity.*`
+ * (ADR_004: los valores viven en ParametroSistema; los defaults del código son
+ * solo respaldo cuando el parámetro no existe). Spec 085.
+ */
+export async function obtenerSeveridades(tx?: Prisma.TransactionClient): Promise<Record<CategoriaConducta, number>> {
+    const params = await getScoringParams(tx);
+    return params.severity;
+}

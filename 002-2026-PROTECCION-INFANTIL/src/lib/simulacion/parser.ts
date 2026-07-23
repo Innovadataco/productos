@@ -130,18 +130,26 @@ export function parsearJSON(contenido: string): ResultadoParseo {
     } catch {
         return { ok: false, mensaje: "El archivo JSON no es válido" };
     }
-    if (!Array.isArray(raw)) {
-        return { ok: false, mensaje: "El JSON debe ser un array de casos" };
+    // Formato con metadatos (spec 085): { fixtureVersion, casos: [...] }
+    let lista: unknown = raw;
+    if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+        const envoltorio = raw as { casos?: unknown };
+        if (Array.isArray(envoltorio.casos)) {
+            lista = envoltorio.casos;
+        }
     }
-    if (raw.length === 0) {
+    if (!Array.isArray(lista)) {
+        return { ok: false, mensaje: "El JSON debe ser un array de casos (o un objeto { fixtureVersion, casos })" };
+    }
+    if (lista.length === 0) {
         return { ok: false, mensaje: "El archivo no contiene casos" };
     }
 
     const casos: CasoValidado[] = [];
     const errores: ErrorValidacion[] = [];
 
-    for (let i = 0; i < raw.length; i++) {
-        const preprocesado = typeof raw[i] === "object" && raw[i] !== null ? preprocesarCaso(raw[i] as Record<string, unknown>) : raw[i];
+    for (let i = 0; i < lista.length; i++) {
+        const preprocesado = typeof lista[i] === "object" && lista[i] !== null ? preprocesarCaso(lista[i] as Record<string, unknown>) : lista[i];
         const { caso, error } = validarCaso(preprocesado, i + 1);
         if (error) {
             errores.push(error);

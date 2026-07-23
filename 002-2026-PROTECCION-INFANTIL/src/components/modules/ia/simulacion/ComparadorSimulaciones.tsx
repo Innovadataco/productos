@@ -102,6 +102,9 @@ export function ComparadorSimulaciones({ runs, onBack, onRepeat }: ComparadorSim
                         </thead>
                         <tbody>
                             {[
+                                { label: "Errores silenciosos", key: "erroresSilenciosos" as const },
+                                { label: "ESPS", key: "esps" as const },
+                                { label: "Subestimaciones", key: "subestimaciones" as const },
                                 { label: "Accuracy", key: "accuracy" as const },
                                 { label: "Aciertos", key: "aciertos" as const },
                                 { label: "Fallos", key: "fallos" as const },

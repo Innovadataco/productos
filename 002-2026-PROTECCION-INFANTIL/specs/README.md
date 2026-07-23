@@ -90,6 +90,7 @@
 | [082](082-fusion-playground-modelos/spec.md) | Fusión de tabs "Playground" + "Modelos" en admin/ia (y corrección I-05) | 🟢 Cerrada |
 | [083](083-simulacion-completitud-multimodelo/spec.md) | Simulación: completitud/métricas + selección multi-modelo (I-06) | 🟢 Cerrada |
 | [084](084-fix-timeout-multimodelo/spec.md) | Fix timeout multi-modelo de simulación (I-07) | 🟢 Cerrada |
+| [085](085-evaluacion-error-silencioso/spec.md) | Evaluación por error silencioso y modelo por defecto (ADR_006) | 🟢 Finalizada (pendiente ACTA) |
 | [086](086-navegacion-gobernada-permisos/spec.md) | Navegación y páginas gobernadas por permisos | 🟢 Finalizada (pendiente ACTA) |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
@@ -97,7 +98,7 @@
 ## Incidencias de calidad de datos
 
 - **Colisión 050 resuelta (spec 087):** `050-pendientes-afinamiento` renombrada a `088-pendientes-afinamiento`; referencias actualizadas.
-- **Saltos de numeración:** faltan `032`, el rango `055-069`, `081` y `085`.
+- **Saltos de numeración:** faltan `032`, el rango `055-069` y `081`.
 
 ## Convención de archivos por spec
 

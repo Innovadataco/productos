@@ -7,6 +7,8 @@ export const casoSimulacionSchema = crearReporteSchema
     .omit({ paisId: true, ciudadId: true, otraPlataforma: true })
     .extend({
         categoriaEsperada: z.string().max(100).optional(),
+        secundariaEsperada: z.string().max(100).optional(),
+        fuente: z.string().max(100).optional(),
     });
 
 export type CasoSimulacion = z.infer<typeof casoSimulacionSchema>;

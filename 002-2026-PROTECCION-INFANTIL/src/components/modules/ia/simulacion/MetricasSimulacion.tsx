@@ -16,6 +16,9 @@ export function MetricasSimulacion({ metricas }: MetricasSimulacionProps) {
     return (
         <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
+                <MetricCard label="Errores silenciosos" value={metricas.erroresSilenciosos?.count ?? 0} formato="numero" />
+                <MetricCard label="ESPS" value={metricas.esps ?? 0} formato="numero" />
+                <MetricCard label="Subestimaciones" value={metricas.subestimaciones?.count ?? 0} formato="numero" />
                 <MetricCard label="Accuracy" value={metricas.accuracy} />
                 <MetricCard label="Aciertos" value={metricas.aciertos / (metricas.aciertos + metricas.fallos || 1)} />
                 <MetricCard label="Desempate" value={metricas.usoDesempate?.porcentaje ?? 0} />

@@ -82,8 +82,12 @@ export async function POST(request: Request) {
                 const rep = reporteMap.get(rel.reporteId);
                 const clasif = clasifMap.get(rel.reporteId);
                 const esperado = canonizarCategoria(rel.categoriaEsperada);
+                const secundaria = rel.secundariaEsperada ? canonizarCategoria(rel.secundariaEsperada) : null;
                 const asignado = clasif ? String(clasif.categoria) : "DESCONOCIDA";
-                const acierto = rel.categoriaEsperada && esperado !== "DESCONOCIDA" ? esperado === asignado : null;
+                const acierto =
+                    rel.categoriaEsperada && esperado !== "DESCONOCIDA"
+                        ? esperado === asignado || (secundaria !== null && secundaria === asignado)
+                        : null;
 
                 if (!resultadosPorIndice[rel.indice]) {
                     resultadosPorIndice[rel.indice] = [];
@@ -114,15 +118,29 @@ export async function POST(request: Request) {
             aciertos: metricas.aciertos,
             fallos: metricas.fallos,
             accuracy: metricas.accuracy,
+            erroresSilenciosos: metricas.erroresSilenciosos.count,
+            subestimaciones: metricas.subestimaciones.count,
+            esps: metricas.esps,
             latenciaP50Ms: metricas.latenciaP50Ms,
             latenciaP95Ms: metricas.latenciaP95Ms,
             distribucionEstados: metricas.distribucionEstados,
         }));
 
+        // Procedencia del banco (spec 085): no mezclar bancos distintos en una comparación.
+        const fuentesPorRun = runs.map(
+            (r) =>
+                new Set(
+                    ((r.casosJson ?? []) as Array<{ fuente?: string }>).map((c) => c.fuente ?? "sin-procedencia")
+                )
+        );
+        const mezcla = fuentesPorRun.some((f) => ![...f].every((x) => fuentesPorRun[0].has(x)));
+
         const advertencia =
-            runs.some((r) => r.totalCasos !== runs[0].totalCasos) ?
-                "Las corridas tienen diferente cantidad de casos; la comparación solo incluye índices presentes en ambas." :
-                undefined;
+            mezcla
+                ? "Las corridas usan bancos de procedencia distinta; comparar resultados entre bancos no es válido."
+                : runs.some((r) => r.totalCasos !== runs[0].totalCasos)
+                  ? "Las corridas tienen diferente cantidad de casos; la comparación solo incluye índices presentes en ambas."
+                  : undefined;
 
         return NextResponse.json({
             runs: resumen,

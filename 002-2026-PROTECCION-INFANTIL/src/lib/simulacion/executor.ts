@@ -61,6 +61,7 @@ export async function crearReporteSimulacion(
                 reporteId: reporte.id,
                 indice,
                 categoriaEsperada: caso.categoriaEsperada,
+                secundariaEsperada: caso.secundariaEsperada,
             },
         });
 
