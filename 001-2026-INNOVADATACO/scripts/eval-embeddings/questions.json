@@ -1,12 +1,12 @@
 {
-  "_estado": "BORRADOR PENDIENTE DE VALIDACIÓN DE JELKIN. Preguntas propuestas por ODIN a partir de la lectura del corpus real; cada una está anclada a contenido verificado del documento esperado, no inventada. Antes de usarlas como criterio de decisión deben ser revisadas por negocio.",
+  "_estado": "LÍNEA BASE FIRMADA POR EL CEO (D-034, 2026-07-23): las 22 preguntas quedan aceptadas como referencia de INNOVADATACO · SPEC-003. NO es todavía criterio de aceptación: arrastra la fuga de etiqueta de D-032 (documentoEsperado == nombre del archivo == valor que enrich.mjs antepone al texto que se rankea). Antes de usarlo como arnés de regresión hay que ejecutar FR-028 de la spec 003: documentoEsperado pasa a id opaco, el título va como campo aparte con calidad realista. Pendiente además ampliarlo con preguntas conceptuales reales capturadas durante el uso (hoy 10 identificador / 8 conceptual / 4 temática; el valor de negocio está en las conceptuales, donde el sistema va peor).",
   "_corpus": "25 actos normativos de transporte (MinTransporte, SuperTransporte, decretos presidenciales). 4 de ellos son escaneos sin capa de texto y quedan fuera de la evaluación: DECRETO-1079-2015, Mintransporte Resoluciob 378 de 2013, Mintransporte resolucion 3600 de 2001, Mintransporte resolucion 36325 de 2021.",
   "_tipos": {
     "tematica": "consulta por tema, sin citar el acto",
     "identificador": "consulta que cita número y año del acto",
     "conceptual": "consulta por concepto o requisito, con vocabulario que no necesariamente aparece literal"
   },
-  "_documentoEsperado": "Corresponde al nombre del PDF sin extensión (id del documento en el banco).",
+  "_documentoEsperado": "HOY es el nombre del PDF sin extensión, lo que causa la fuga de D-032. FR-028 de la spec 003 exige sustituirlo por un id OPACO sin relación con el texto que se rankea, y mover el título a un campo aparte. La corrección es tarea de implementación de la spec 003, no de esta enmienda de spec: aquí solo se declara el estado.",
   "_advertencia": "El corpus contiene documentos casi duplicados por diseño (tres circulares de cronograma SICOV y dos de instrucciones SICOV, con asuntos idénticos y meses distintos). Las preguntas 12-16 los distinguen por número y fecha: son deliberadamente exigentes para recall@1 y sirven para medir si el modelo confunde documentos hermanos.",
 
   "preguntas": [

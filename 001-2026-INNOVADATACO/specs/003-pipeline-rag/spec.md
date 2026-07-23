@@ -5,10 +5,18 @@
 **Created**: 2026-07-22
 
 **Status**: **Draft** — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO).
-Actualizada el 2026-07-22 con las decisiones **D-019…D-023**: búsqueda híbrida FTS+vectorial
-fusionada con RRF (D-019), coseno + HNSW (D-020), `ON DELETE CASCADE` (D-021), cambio de
-modelo siempre permitido con modelo registrado por fragmento (D-022) y fe de erratas de
-§3.4 reubicada a la enmienda constitucional 2.1.0 (D-023).
+
+Actualizada el 2026-07-22 con **D-019…D-023**: búsqueda híbrida FTS+vectorial fusionada con
+RRF (D-019), coseno + HNSW (D-020), `ON DELETE CASCADE` (D-021), cambio de modelo siempre
+permitido con modelo registrado por fragmento (D-022) y fe de erratas de §3.4 reubicada a la
+enmienda constitucional 2.1.0 (D-023).
+
+Enmendada el 2026-07-23 con **D-029…D-032**, derivadas del barrido de troceado
+(`43bbe1a0`) que ejecutó el propio proyecto: troceado **estructural / 1800** deja de ser un
+supuesto y pasa a estar medido, con el **solape 200 declarado como NO medido** (D-029); el
+**texto que se vectoriza se separa del que se almacena** y el prefijo de metadatos es
+configurable y **apagado por defecto** (D-030, D-031); y el banco de evaluación arrastra
+una **fuga de etiqueta** que hay que corregir antes de usarlo como arnés (D-032).
 
 **Input**: User description: "Construir lo que H-05 reveló que no existe: (a) chunking
 del texto extraído en el worker; (b) embeddings vía Ollama con nomic-embed-text (768
@@ -70,6 +78,13 @@ fragmentos, límites de tamaño y solape, sin BD ni Ollama.
    cero fragmentos y el pipeline lo trata como documento sin contenido indexable.
 5. **Given** los fragmentos generados, **When** se persisten, **Then** conservan su orden
    original (campo `orden`) empezando en 0 y sin huecos.
+6. **Given** el troceado estructural con tamaño 1800 y solape 200 (defaults de D-029),
+   **When** se trocea un texto, **Then** el resultado respeta esos valores; los tres son
+   **configurables** (§0.7) y solo estructural y 1800 están **medidos** (research §1), el
+   solape no.
+7. **Given** un fragmento a punto de vectorizarse, **When** el prefijo de enriquecimiento
+   está **apagado** (default), **Then** el texto enviado al modelo es idéntico al
+   `contenido` que se almacena (D-030).
 
 ---
 
@@ -268,14 +283,33 @@ existía (origen de H-05).
   el backfill.
 - ¿El índice vectorial? → **Resuelto (D-020)**: HNSW con `vector_cosine_ops`. El btree
   actual se reemplaza. Además hace falta un índice **GIN** para la rama FTS.
+- ¿Qué pasa si se enciende el prefijo de metadatos y se re-vectoriza solo una parte del
+  corpus? → **Resuelto (D-030)**: cada fragmento registra su configuración de
+  enriquecimiento y la búsqueda filtra por ella, igual que por modelo (FR-021, FR-026). Sin
+  ese registro, medio corpus con prefijo y medio sin él convivirían en la misma tabla sin
+  que nada lo delatara: dos espacios vectoriales mezclados en silencio.
+- ¿Por qué el prefijo va apagado por defecto si "ayuda a los identificadores"? →
+  **Resuelto (D-031)**: porque ese beneficio o es ruido (+0,017, la única medición limpia) o
+  está contaminado por la fuga de etiqueta (FR-028), y el **costo sí está medido limpio**
+  (concep@1 baja en las tres variantes). Ataca además el mismo fallo que ya resuelve la rama
+  FTS gratis. Se decidirá con datos cuando el híbrido esté montado y la fuga corregida.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: El sistema MUST trocear el texto extraído en fragmentos con tamaño máximo y
-  solape **configurables**, cuyos valores por defecto MUST justificarse en `research.md`
-  (no elegirse por costumbre).
+- **FR-001** *(medido — D-029)*: El sistema MUST trocear el texto extraído en fragmentos con
+  estrategia, tamaño máximo y solape **configurables** (§0.7). Los defaults quedan así:
+  - **Estrategia estructural** (cortes por CONSIDERANDO / RESUELVE / ARTÍCULO / numerales) y
+    **1800 caracteres**: **justificados por el barrido** de 24 configuraciones
+    ([`research.md`](./research.md) §1, datos crudos en
+    `scripts/eval-embeddings/RESULTADOS.md`). Estructural gana en las cuatro métricas y en
+    los tres tamaños (MRR 0,704 vs 0,610); 9 de las 10 mejores configuraciones son
+    estructurales; 1800 es el mejor tamaño en MRR estructural. Deja de ser un supuesto.
+  - **Solape 200: NO MEDIDO.** El barrido **no varió esta variable**, así que su valor entra
+    como **default declarado sin justificar**, no como decisión respaldada. El plan MUST
+    tratarlo como tal: o se barre en un ciclo propio, o se implementa dejando constancia de
+    que nadie lo ha medido. **MUST NOT presentarse como justificado.**
 - **FR-002**: El troceado MUST respetar límites naturales del texto (párrafo/frase) y
   MUST NOT partir palabras.
 - **FR-003**: El sistema MUST generar embeddings llamando a la API de embeddings de
@@ -338,14 +372,20 @@ existía (origen de H-05).
   pipeline real en lugar del diseño previsto, registrando la enmienda en §10.
 - **FR-020**: Ningún cambio MUST tocar archivos, contenedores, volúmenes o puertos de
   `002-2026-PROTECCION-INFANTIL` ni `003-2026-SICOV-OTPC` (ADR_002).
-- **FR-021** *(decisión ZEUS D-022)*: cambiar de modelo de embeddings MUST estar siempre
-  permitido; el sistema MUST NOT bloquearlo (ADR_004). Para ello:
-  (a) cada fragmento MUST registrar **el modelo que lo generó**;
-  (b) la búsqueda MUST usar únicamente fragmentos del **modelo vigente**;
-  (c) el sistema MUST reportar cuántos documentos quedan **pendientes de
-  re-vectorizar** y ofrecer el job de backfill correspondiente (trabajo pesado, TP-3).
-  Así conviven dos modelos en la misma tabla y la comparación A/B es natural.
-  Cambiar la **dimensión** sí exige migración de esquema y re-vectorización total.
+- **FR-021** *(decisión ZEUS D-022, **extendida por D-030**)*: cambiar de modelo de
+  embeddings MUST estar siempre permitido; el sistema MUST NOT bloquearlo (ADR_004).
+  **La identidad del espacio vectorial la forman DOS cosas, no una**: el modelo **y** la
+  configuración de enriquecimiento (FR-026). Por tanto:
+  (a) cada fragmento MUST registrar **el modelo que lo generó** *y* **la configuración de
+  enriquecimiento con la que se vectorizó**;
+  (b) la búsqueda MUST usar únicamente fragmentos que coincidan en **ambos**;
+  (c) el contador de **pendientes de re-vectorizar** MUST cubrir **las dos causas** —cambio
+  de modelo y cambio de enriquecimiento— y ofrecer el job de backfill correspondiente
+  (trabajo pesado, TP-3).
+  Sin (a)+(b)+(c) completos, encender el prefijo y re-vectorizar a medias **mezcla dos
+  espacios vectoriales en silencio**: la mitad del corpus vectorizada con prefijo y la otra
+  mitad sin él, sin que nada lo delate y con un ranking que nadie puede explicar.
+  Cambiar la **dimensión** sigue exigiendo migración de esquema y re-vectorización total.
 - **FR-022** *(decisión ZEUS D-021)*: la relación `DocumentoChunk → DocumentoOficial`
   MUST pasar a `ON DELETE CASCADE` mediante migración incluida en esta spec: los
   fragmentos son datos derivados, propiedad del documento. **Ojo**: la baja lógica
@@ -356,24 +396,62 @@ existía (origen de H-05).
   `generation_model` para análisis) en lugar de `aiModel.findFirst({ active: true })`,
   con la precedencia de §0.7. Hoy la UI escribe esos ajustes y **nadie los lee**: no es
   una funcionalidad pendiente, es un defecto que esta spec corrige.
-- **FR-024**: los parámetros del RAG —tamaño de fragmento, solape, `top-k`, umbral de
-  similitud y pesos de la fusión RRF— MUST persistirse en configuración (§0.7) y MUST
-  NOT quedar como literales en el código. Cambiarlos MUST NOT requerir editar archivos
-  ni recompilar.
+- **FR-024** *(ampliado por D-030)*: los parámetros del RAG —estrategia de troceado, tamaño
+  de fragmento, solape, `top-k`, umbral de similitud, pesos de la fusión RRF **y la
+  configuración de enriquecimiento** (qué campos forman el prefijo y si se aplica)— MUST
+  persistirse en configuración (§0.7) y MUST NOT quedar como literales en el código.
+  Cambiarlos MUST NOT requerir editar archivos ni recompilar. El enriquecimiento, además,
+  arrastra la consecuencia de FR-021/FR-026: cambiarlo invalida el espacio vectorial vigente
+  igual que cambiar de modelo.
 - **FR-025** *(ADR_004 §2.3)*: cada invocación de búsqueda y de vectorización MUST
   registrar métricas: latencia, modelo usado, número de fragmentos recuperados y si hubo
   evidencia (resultados por encima del umbral). Son la base para comparar modelos y
   detectar degradaciones; MUST quedar consultables (auditoría), no solo en logs.
+- **FR-026** *(decisión ZEUS D-030 y D-031)*: **el texto que se vectoriza deja de ser el
+  texto que se almacena.** El sistema MUST distinguir dos valores por fragmento:
+  (a) el **contenido almacenado**, que es el texto tal cual del documento y es lo que se
+  devuelve al usuario y lo que indexa la rama FTS;
+  (b) el **texto que se envía al modelo de embeddings**, que MAY llevar delante un
+  **prefijo de metadatos** (tipo, número, año, entidad, fecha, título).
+  El prefijo MUST ser **configurable** (§0.7): qué campos lo componen y si se aplica.
+  MUST estar **apagado por defecto** (D-031), y esto **no es prudencia**: es lo único que
+  sostienen los datos. Su costo está medido limpio (concep@1 **0,354 → 0,312** en las tres
+  variantes) y su beneficio no: la única medición limpia da **+0,017** —ruido— y la fuerte
+  (+0,350) está contaminada por la fuga de etiqueta de FR-028. Se reevalúa **con el híbrido
+  ya montado**, juzgando **ident@1 y concep@1 por separado, nunca por MRR global**: el banco
+  es 10/22 de identificador, así que el MRR está dominado por el caso que el FTS ya resuelve
+  gratis.
+- **FR-027** *(decisión ZEUS D-030)*: la rama **FTS MUST indexar el `contenido` plano**,
+  nunca el texto enriquecido. Si indexara el prefijo, el identificador contaría dos veces
+  —una en el texto y otra en el prefijo— y la rama textual dejaría de ser el control limpio
+  contra el que se compara la vectorial.
+- **FR-028** *(decisión ZEUS D-032)*: el banco de evaluación MUST corregir su **fuga de
+  etiqueta** antes de usarse como arnés de regresión (D-028):
+  (a) `documentoEsperado` MUST pasar a ser un **identificador opaco**, sin relación con el
+  texto que se rankea;
+  (b) el **título** MUST ser un campo aparte, con **calidad realista** (el corpus ya tiene
+  un archivo llamado `3476`), y nunca el mismo valor que la etiqueta;
+  (c) mientras la fuga siga ahí, el banco MUST tratarse como **línea base firmada por el
+  CEO** (D-034) y **MUST NOT** usarse como criterio de aceptación de esta spec.
+  Motivo: `scripts/eval-embeddings/lib/enrich.mjs:62` antepone `doc.id` a cada fragmento y
+  `doc.id` **es** el `documentoEsperado`; la variante "título" inyecta la respuesta correcta
+  dentro del texto que se rankea. El +0,350 no es una cota superior optimista: **no es
+  evidencia**.
 
 ### Key Entities
 
 - **Fragmento (`DocumentoChunk`)**: porción de texto de un documento con su posición
-  (`orden`) y su representación vectorial (`embedding`, 768 dims). Ya existe en el
-  esquema; esta spec lo llena por primera vez.
+  (`orden`), su representación vectorial (`embedding`, 768 dims), el **modelo** que lo generó
+  y la **configuración de enriquecimiento** con la que se vectorizó (D-030). Estos dos
+  últimos definen a qué espacio vectorial pertenece el fragmento. Ya existe en el esquema;
+  esta spec lo llena por primera vez y le añade el registro de enriquecimiento.
 - **Modelo de embeddings (`AiModel` + `ModuleSetting`)**: la configuración
   `base_oficial / embedding_model` que la UI ya escribe y que el backend pasará a leer.
-- **Consulta semántica**: texto del usuario vectorizado con el mismo modelo que los
-  fragmentos, comparado por distancia en el espacio vectorial.
+- **Configuración de enriquecimiento**: qué campos forman el prefijo de metadatos y si se
+  aplica (§0.7). Junto con el modelo, forma la **identidad del espacio vectorial** (FR-021,
+  FR-026); apagada por defecto (D-031).
+- **Consulta semántica**: texto del usuario vectorizado con el mismo modelo **y el mismo
+  enriquecimiento** que los fragmentos, comparado por distancia en el espacio vectorial.
 
 ## Success Criteria *(mandatory)*
 
@@ -416,6 +494,22 @@ existía (origen de H-05).
   modelo, fragmentos recuperados, si hubo evidencia), consultable desde auditoría.
 - **SC-019**: `grep` de `text.includes(` en `api/documents/search` devuelve 0: el ranking
   ya no se calcula en memoria de Node.
+- **SC-020** *(D-029)*: los defaults de troceado son **estructural / 1800 / solape 200**, y
+  `research.md` los declara con su procedencia: estructural y 1800 **medidos** por el
+  barrido; solape 200 **no medido**. Ningún documento presenta el solape como justificado.
+- **SC-021** *(D-030)*: con el prefijo **apagado** (default), el texto vectorizado es
+  idéntico al `contenido` almacenado. Verificable: para un fragmento cualquiera, el texto
+  enviado al modelo coincide byte a byte con su `contenido`.
+- **SC-022** *(D-030)*: dos fragmentos generados con **distinta** configuración de
+  enriquecimiento (o distinto modelo) **no** se mezclan en una misma búsqueda: la consulta
+  filtra por modelo **y** enriquecimiento vigentes, y el contador de pendientes de
+  re-vectorizar refleja **ambas** causas.
+- **SC-023** *(D-030)*: el índice FTS se construye sobre `contenido` plano; encender el
+  prefijo **no** cambia lo que indexa la rama textual (verificable: el vector de `tsvector`
+  no contiene el prefijo).
+- **SC-024** *(D-032)*: en `questions.json`, ningún `documentoEsperado` coincide con un
+  campo textual usado para rankear; el título es un campo aparte. Verificable: no existe
+  fragmento cuyo texto de ranking contenga literalmente su propia etiqueta.
 
 ## Trabajo pesado (ADR_002)
 
@@ -443,6 +537,12 @@ la suite completa) se implementa y verifica **con embeddings mockeados, sin turn
   (puerto 5435); no se introduce una base vectorial aparte.
 - La suite unitaria sigue el patrón de la spec 002: mocks de Prisma y de los clientes de
   modelos; sin BD ni red.
+- Los defaults de troceado **estructural / 1800** están respaldados por el barrido
+  (`43bbe1a0`, research §1); el **solape 200 no lo está** y entra como default declarado sin
+  medir (D-029). El enriquecimiento va **apagado por defecto** (D-031) y su decisión final se
+  toma con el híbrido montado y el banco sin fuga (D-032).
+- El banco `questions.json` es **línea base firmada por el CEO** (D-034), **no** criterio de
+  aceptación de esta spec mientras arrastre la fuga de etiqueta (D-032, FR-028).
 - Esta spec **no se implementa** hasta ser aprobada por ZEUS y Jelkin (§0.1).
 
 ## Out of Scope
@@ -457,3 +557,10 @@ la suite completa) se implementa y verifica **con embeddings mockeados, sin turn
 - Base de datos vectorial dedicada (pgvector es suficiente para el volumen actual).
 - Los `any` restantes en componentes `.tsx` y demás deuda de la spec 002 fuera de alcance.
 - Cualquier cambio en 002-Protección Infantil o 003-SICOV.
+
+## Historial de la spec
+
+| Versión | Fecha | Cambio |
+|---|---|---|
+| v1 | 2026-07-22 | Redacción inicial (Draft) con D-019…D-023: híbrida FTS+vectorial (RRF), coseno+HNSW, CASCADE, modelo por fragmento, fe de erratas §3.4 reubicada |
+| v2 | 2026-07-23 | **Enmienda D-029…D-032**, del barrido de troceado (`43bbe1a0`). FR-001: estructural/1800 **medidos**, solape 200 **declarado no medido**. Nuevos FR-026 (texto vectorizado ≠ almacenado; prefijo configurable apagado por defecto), FR-027 (FTS indexa contenido plano), FR-028 (corregir la fuga de etiqueta del banco). FR-021 extendido a modelo+enriquecimiento como identidad del espacio vectorial. FR-024 incluye el enriquecimiento como parámetro configurable. SC-020…SC-024. `questions.json._estado` a línea base firmada por el CEO (D-034), no criterio de aceptación mientras la fuga siga. Sigue en **Draft** |
