@@ -4,7 +4,9 @@
 
 **Created**: 2026-07-22
 
-**Status**: **Draft** — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO).
+**Status**: **Aprobada (2026-07-23, D-044)** por ZEUS (arquitecto) y Jelkin (CEO). Habilita
+`/speckit-plan` y `/speckit-tasks`. La implementación no arranca hasta que ZEUS apruebe el
+plan; el trabajo pesado (TP-1…TP-4) exige además turno de Jelkin en su momento (ADR_002).
 
 Actualizada el 2026-07-22 con **D-019…D-023**: búsqueda híbrida FTS+vectorial fusionada con
 RRF (D-019), coseno + HNSW (D-020), `ON DELETE CASCADE` (D-021), cambio de modelo siempre
