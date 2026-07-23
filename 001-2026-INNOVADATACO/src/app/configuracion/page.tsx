@@ -99,7 +99,11 @@ const DEFAULT_CONFIG = {
 const emptyForm = (): Partial<AiModel> => ({
   provider: "ollama",
   scope: "local",
-  baseUrl: "http://localhost:11434",
+  // Vacío a propósito (spec 004, FR-001): la UI no impone ningún literal. Si el
+  // usuario no escribe una URL, el backend aplica la precedencia (§0.7 / FR-010
+  // de la spec 001). Un literal aquí viajaba como valor explícito y ganaba a todo,
+  // apuntando a "localhost" desde dentro del contenedor.
+  baseUrl: "",
   modelPath: "",
   active: true,
   config: JSON.stringify(DEFAULT_CONFIG, null, 2),
@@ -286,8 +290,12 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
     if (form.provider !== "ollama") return;
     setDiscovering(true);
     try {
-      const baseUrl = form.baseUrl || "http://localhost:11434";
-      const res = await fetch(`/api/config/models/discover?baseUrl=${encodeURIComponent(baseUrl)}`);
+      // Sin valor explícito no se envía el parámetro: así resuelve el backend (FR-002).
+      const baseUrl = form.baseUrl?.trim();
+      const url = baseUrl
+        ? `/api/config/models/discover?baseUrl=${encodeURIComponent(baseUrl)}`
+        : "/api/config/models/discover";
+      const res = await fetch(url);
       const data = await res.json();
       if (data.models?.length) {
         setDiscovered(data.models);
