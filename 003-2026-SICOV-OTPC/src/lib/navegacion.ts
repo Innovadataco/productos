@@ -20,6 +20,9 @@ const ETIQUETAS: Record<string, string> = {
   autorizaciones: "Autorizaciones",
   novedades: "Novedades",
   usuarios: "Usuarios",
+  configuracion: "Configuración",
+  empresas: "Empresas",
+  apis: "APIs",
 };
 
 function etiquetaDe(segmento: string): string {
