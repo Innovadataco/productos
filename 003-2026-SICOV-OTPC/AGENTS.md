@@ -115,6 +115,13 @@ En esta máquina viven **001 y 002 en desarrollo activo**. El 003 **no puede int
 
 ## 6. Reglas de oro técnicas (siempre)
 
+- **🚫 PROHIBIDO CONSUMIR LAS APIs DE LA SUPER (regla del CEO, 2026-07-23 — la más importante).**
+  La API de la Superintendencia es un **AMBIENTE DE PRODUCCIÓN REAL**. Mientras el desarrollo no esté
+  probado y aprobado, **NADIE conecta contra ella**: todo corre en `stub`. El doble gate
+  (`INTEGRACIONES_MODO=stub` + `SUPERTRANSPORTE_HABILITADO=false`, D-004) se queda **apagado**. Pasar
+  a `real`/`true` es una **decisión EXPLÍCITA del CEO**, no de ODIN ni de ZEUS, y solo después de:
+  verificación funcional completa, corrección de I-01 e I-02, y credenciales reales cargadas (I-03).
+  Un reporte enviado por error a producción NO se puede deshacer. Ante la duda: **stub**.
 - **Migraciones SIEMPRE aditivas y NO destructivas.** Nunca `prisma migrate reset` ni nada que borre datos.
   Dump de respaldo (`pg_dump`) antes de tocar seed/datos.
 - **Nunca confiar en un build sin borrar el build viejo antes** (`rm -rf .next`/`dist` según stack).
