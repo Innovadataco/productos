@@ -74,13 +74,13 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T016 [P] [US1] Test de servicio de empresas en `src/lib/configuracion/empresas.test.ts`: alta crea proveedor+usuario+módulos en una transacción; correo se invoca DESPUÉS del commit (B2/menor: fallo de Resend NO revierte el alta)
-- [ ] T017 [P] [US1] Test de endpoints en `src/app/api/configuracion/empresas/route.test.ts`: 201 alta, 409 NIT/usuario duplicado, 403 roles 2/3, token visible solo rol 1
+- [ ] T016 [P] [US1] Test de servicio de empresas en `src/lib/configuracion/empresas.test.ts`: alta crea proveedor+usuario+módulos en una transacción; correo se invoca DESPUÉS del commit (menor: fallo de Resend NO revierte el alta)
+- [ ] T017 [P] [US1] Test de endpoints en `src/app/api/configuracion/empresas/route.test.ts`: 201 alta, **409 por NIT duplicado** (unicidad vía `usn_identificacion @unique` — G3), **409 por token de empresa duplicado** (validación server-side, no índice — G2), 403 roles 2/3, token visible solo rol 1
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Crear el servicio `src/lib/configuracion/empresas.ts`: `crearEmpresa()` (transacción: ProveedorVigilado + Usuario rol 2 con `identificacion=NIT`, `tokenAutorizado=token`, `claveTemporal=true` + `UsuarioModulo`), `actualizarEmpresa()` (NIT/rol inmutables; desactivación lógica), `modificarToken()` (sincroniza `tpv_token`⇄`usn_token_autorizado` en transacción). **El envío de correo va FUERA de la transacción** (se invoca tras el commit)
-- [ ] T019 [US1] Crear `POST` y `GET` en `src/app/api/configuracion/empresas/route.ts` (`verifyAuth([1])` + `requiereModulo(u,"configuracion","empresas")`); tras crear, invocar `getCorreo().enviarCorreo(...)` fuera de la tx; fallo → alta persiste + aviso
+- [ ] T018 [US1] Crear el servicio `src/lib/configuracion/empresas.ts`: `crearEmpresa()` (transacción: ProveedorVigilado + Usuario rol 2 con `identificacion=NIT`, `tokenAutorizado=token`, `claveTemporal=true` + `UsuarioModulo`), `actualizarEmpresa()` (NIT/rol inmutables; desactivación lógica), `modificarToken()` (sincroniza `tpv_token`⇄`usn_token_autorizado` en transacción). **Validación server-side de token único** (G2): antes de crear/modificar, verificar que ningún otro `ProveedorVigilado` tenga ese token → 409 (NO índice único en BD, la columna es nullable). **El envío de correo va FUERA de la transacción** (se invoca tras el commit)
+- [ ] T019 [US1] Crear `POST` y `GET` en `src/app/api/configuracion/empresas/route.ts` (`verifyAuth([1])` + `requiereModulo(u,"configuracion","empresas")`); el `GET` usa **paginación server-side estándar** (`page`/`pageSize`, `DEFAULT_PAGE_SIZE=25`, `MAX_PAGE_SIZE=100`, `findMany`+`count` en `Promise.all` — §4.3 constitución — P1); tras crear, invocar `getCorreo().enviarCorreo(...)` fuera de la tx; fallo → alta persiste + aviso
 - [ ] T020 [P] [US1] Crear `GET`/`PATCH` en `src/app/api/configuracion/empresas/[nit]/route.ts` (detalle sin exponer clave; token solo rol 1; NIT no editable)
 - [ ] T021 [P] [US1] Crear `PATCH` en `src/app/api/configuracion/empresas/[nit]/token/route.ts` (modifica token, sincroniza admin) y `POST` en `.../[nit]/reenviar-credencial/route.ts` (regenera temporal, reenvía; nunca reusa la anterior)
 - [ ] T022 [US1] UI `src/app/dashboard/configuracion/page.tsx` (tarjetas Empresas y APIs) + `src/app/dashboard/configuracion/empresas/page.tsx` (tabla + modal crear/editar + modal token + reenviar). Hereda breadcrumb del layout (I-14)
@@ -103,7 +103,7 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 ### Implementation for User Story 2
 
 - [ ] T025 [US2] Crear el servicio `src/lib/configuracion/usuarios.ts`: `crearUsuario()`/`actualizarUsuario()` con validación de subconjunto contra `cargarModulos/Submodulos` del otorgante; **B2 server-side**: al asignar módulo completo borra filas de submódulo del módulo, al asignar submódulos borra la fila NULL — misma transacción; identificación/rol inmutables; alcance D-015; correo FUERA de la tx
-- [ ] T026 [US2] Crear `POST`/`GET` en `src/app/api/usuarios/route.ts` (rol 1 ve todo; rol 2 solo su NIT; rol 3 sin `usuarios`) y `PATCH` + `POST reenviar-credencial` en `src/app/api/usuarios/[id]/route.ts`
+- [ ] T026 [US2] Crear `POST`/`GET` en `src/app/api/usuarios/route.ts` (rol 1 ve todo; rol 2 solo su NIT; rol 3 sin `usuarios`; `GET` con **paginación server-side estándar** 25/100 — P1) y `PATCH` + `POST reenviar-credencial` en `src/app/api/usuarios/[id]/route.ts`
 - [ ] T027 [US2] Aplicar `requiereModulo(u,"mantenimientos","preventivos")` a las rutas de preventivo y `("mantenimientos","correctivos")` a las de correctivo (incl. bulk) en `src/app/api/mantenimientos/**` — extensión del guard ya presente
 - [ ] T028 [US2] UI `src/app/dashboard/usuarios/page.tsx` (rol 1 y 2): tabla del alcance + modal crear/editar con selector módulos→submódulos (checkboxes anidados limitados al set del otorgante, servido por la API — nunca calculado en cliente)
 
@@ -133,9 +133,20 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 ## Phase 6: Polish & Cross-Cutting Concerns
 
 - [ ] T032 [P] Actualizar menú/navegación ([src/lib/navegacion.ts](../../src/lib/navegacion.ts)) para exponer `configuracion` (rol 1) y `usuarios` (rol 1/2) por NOMBRE de módulo
-- [ ] T033 Ejecutar suite completa (`npm test`), `tsc --noEmit`, lint y `build`; verificar suite previa (127) + nuevos verdes
-- [ ] T034 Verificación en navegador (ventana privada): crear empresa → login con temporal (cambio forzado) → crear operador solo-preventivos → 403 en correctivos → 200 en preventivos → reenviar credencial
-- [ ] T035 Commit por fase con staging explícito (AGENTS §6): `feat(003-US1-009)`, `feat(003-US2-009)`, `feat(003-US3-009)`
+- [ ] T033 **[G1 — garantía FR-008/D-044]** Test de guardarraíl **anti-Super** en `src/lib/configuracion/anti-super.test.ts`: ejercitar los flujos de alta/edición de 009 y afirmar **cero peticiones** a `*.supertransporte.gov.co` (reusar el mock global de red de la suite; el token solo se persiste)
+- [ ] T034 Ejecutar suite completa (`npm test`), `tsc --noEmit`, lint y `build`; verificar suite previa (127) + nuevos verdes
+- [ ] T035 Verificación en navegador (ventana privada): crear empresa → login con temporal (cambio forzado) → crear operador solo-preventivos → 403 en correctivos → 200 en preventivos → reenviar credencial
+- [ ] T036 Commit por fase con staging explícito (AGENTS §6): `feat(003-US1-009)`, `feat(003-US2-009)`, `feat(003-US3-009)`
+
+---
+
+## Phase 7: CIERRE (obligatorio antes de FINALIZAR — no "algún día", evita I-11)
+
+**Purpose**: completar el set de artefactos de la regla de oro §1.5.1 que el MODO PLAN difirió.
+
+- [ ] T037 Escribir `specs/009-configuracion-empresas-usuarios/quickstart.md`: guion de humo end-to-end (crear empresa → correo stub → login temporal → operador solo-preventivos → 403 correctivos) con comandos y checks
+- [ ] T038 [P] Crear `specs/009-configuracion-empresas-usuarios/checklists/` con el checklist de validación de la feature (seguridad D-015, secretos, migración B1 revisada, cero Super)
+- [ ] T039 Escribir `cierre.md` + sección Implementación en `spec.md` + deuda técnica (dominio Resend pendiente); estado → PENDIENTE DE PRUEBA/FINALIZADO
 
 ---
 

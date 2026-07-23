@@ -81,7 +81,7 @@ resembrar**: 013 arranca tras la Foundational de 009.
 
 - [ ] T014 [US2] Crear `src/lib/consola-apis/redactar.ts`: redacción RECURSIVA por lista de claves (recorre objetos y arrays anidados a cualquier profundidad) + truncado a 8 KB por columna jsonb (documentado)
 - [ ] T015 [US2] Integrar `redactar()` en `ejecutar.ts` (T009) ANTES de persistir request/respuesta; registrar `modo` desde `modoIntegracion()` (stub|real) para que Fase 2 use el mismo esquema
-- [ ] T016 [US2] Crear `GET src/app/api/configuracion/apis/llamadas/route.ts`: bitácora paginada server-side con filtros (operacion, modo, status, fecha), solo rol 1 + guard; detalle por fila
+- [ ] T016 [US2] Crear `GET src/app/api/configuracion/apis/llamadas/route.ts`: bitácora **paginada server-side estándar** (`page`/`pageSize`, `DEFAULT_PAGE_SIZE=25`, `MAX_PAGE_SIZE=100`, `findMany`+`count` en `Promise.all` — §4.3 constitución — P1) con filtros (operacion, modo, status, fecha), solo rol 1 + guard; detalle por fila
 - [ ] T017 [US2] Añadir a la UI (T011) el panel de bitácora paginada con filtros y detalle por fila
 
 **Checkpoint**: US1 + US2 — ejecución stub + bitácora completa con redacción recursiva.
@@ -94,6 +94,16 @@ resembrar**: 013 arranca tras la Foundational de 009.
 - [ ] T019 Ejecutar suite completa + `tsc --noEmit` + lint + `build`; suite previa verde
 - [ ] T020 Verificación en navegador (ventana privada): ejecutar una operación stub → ver bitácora → confirmar botón real deshabilitado y 403 del endpoint real
 - [ ] T021 Commit por fase con staging explícito (AGENTS §6): `feat(003-US1-013)`, `feat(003-US2-013)`
+
+---
+
+## Phase 6: CIERRE (obligatorio antes de FINALIZAR — no "algún día", evita I-11)
+
+**Purpose**: completar el set de artefactos de la regla de oro §1.5.1 que el MODO PLAN difirió.
+
+- [ ] T022 Escribir `specs/013-consola-apis/quickstart.md`: guion de humo (ejecutar operación stub → ver respuesta+duración → consultar bitácora → confirmar botón real deshabilitado y 403 del endpoint real)
+- [ ] T023 [P] Crear `specs/013-consola-apis/checklists/` con el checklist de validación (cero red, doble candado, jsonb, redacción recursiva, sin tokens en BD)
+- [ ] T024 Escribir `cierre.md` + sección Implementación en `spec.md` + deuda técnica (purga/exportación de bitácora); estado → PENDIENTE DE PRUEBA/FINALIZADO
 
 ---
 

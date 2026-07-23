@@ -47,6 +47,8 @@ Fase 1**.
    vigencia, token, módulos ⊆ asignables D-018 con Usuarios incluido), **Then** se crean
    `ProveedorVigilado` + `Usuario` rol 2 (identificación=NIT, `usn_token_autorizado`=token,
    `claveTemporal=true`) + sus `UsuarioModulo`, y se envía la credencial al correo definido; 201.
+   La unicidad del NIT la garantiza `usn_identificacion @unique` del admin de empresa (G3); el
+   **token** de empresa se valida **único server-side** (no por índice, la columna es nullable — G2).
 2. **Given** una empresa existente, **When** rol 1 **modifica el token**, **Then** se actualizan
    `tpv_token` y `usn_token_autorizado` del admin de empresa en conjunto (auditado); los operadores
    lo heredan (herencia rol 3 ya existente) sin tocar sus filas.
@@ -79,6 +81,11 @@ cascada se valida **SERVER-SIDE**: nadie otorga lo que no tiene (D-015/D-017).
    correctivos, **Then** 403 (guard extendido a submódulo); con el módulo completo, opera ambos.
 4. **Given** rol 2, **When** intenta asignar un módulo que su empresa no tiene, o el módulo
    Usuarios a un operador, **Then** 400/403 server-side (ignorando lo que mande el cliente).
+7. **Given** un operador con submódulos sueltos de mantenimientos, **When** rol 2 le asigna el
+   **módulo completo**, **Then** las filas de submódulo previas se **borran** en la misma
+   transacción (y viceversa: asignar submódulos borra la fila de módulo completo). Por
+   `(usuario, módulo)` existe **o una fila de módulo completo o N de submódulo, NUNCA ambas**
+   (regla de exclusión B2, validada server-side).
 5. **Given** rol 2, **When** lista/edita usuarios, **Then** solo ve los de SU empresa
    (`usn_administrador` = su NIT — D-015); rol 1 ve todas (desviación deliberada aprobada).
 6. **Given** una clave nueva, **When** no cumple la política (mín 8, may/min/número/símbolo),
@@ -114,7 +121,9 @@ el nombre.
 ## Requirements *(mandatory)*
 
 - **FR-001**: Módulo `configuracion` (catálogo D-018 ampliado; solo rol 1) con submódulos
-  Clientes/Empresas y APIs (013); Usuarios ya existe en el catálogo y gana su pantalla.
+  Clientes/Empresas y APIs (013); Usuarios ya existe en el catálogo y gana su pantalla. Los módulos
+  y submódulos se siembran y **resuelven por NOMBRE** (`configuracion`, `usuarios`, `empresas`,
+  `apis`, …); **nunca por id** (los ids son `serial`, no garantizados).
 - **FR-002**: CRUD de empresas sobre `ProveedorVigilado` + `Usuario` rol 2 enlazados por NIT
   (join lógico existente): crear (con token asignable), editar (NIT NO editable), **modificar
   token** (sincroniza `tpv_token` y `usn_token_autorizado`), activar/desactivar. Sin borrado físico.
@@ -164,6 +173,7 @@ Aditivo: `usm_submodulo_id` (nullable) + seeds. Nada más.
 ## Assumptions
 
 - "Credencial" = usuario + clave temporal (política vigente) — nunca el token de empresa por correo.
-- El módulo Configuración es NUEVO en el catálogo (aditivo al seed D-018); Usuarios (id 8) obtiene
-  pantalla dentro de Configuración para rol 1 y en el dashboard para rol 2 según cascada §10.8.
+- El módulo Configuración es NUEVO en el catálogo (aditivo al seed D-018); Usuarios (módulo
+  `usuarios`, resuelto por nombre) obtiene pantalla dentro de Configuración para rol 1 y en el
+  dashboard para rol 2 según cascada §10.8. Ningún id serial se hardcodea (I1).
 - Plantillas de correo mínimas (texto plano con marca SICOV-OTPC); diseño HTML queda para pulido.
