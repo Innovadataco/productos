@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { destinoSeguro } from "@/lib/destinoSeguro";
 import { ShieldCheck, Send } from "lucide-react";
 
 export default function LoginPage() {
@@ -19,7 +20,11 @@ export default function LoginPage() {
                 body: JSON.stringify(formData)
             });
             if (!res.ok) throw new Error("Login fallido");
-            router.push("/");
+            // Vuelve a la página que pidió el usuario antes de la barrera
+            // (spec 005, FR-017); el helper descarta destinos externos (FR-018).
+            // Se lee aquí y no con useSearchParams para no arrastrar un límite
+            // de suspensión a toda la pantalla.
+            router.push(destinoSeguro(new URLSearchParams(window.location.search).get("next")));
         } catch (err: any) {
             alert("Error: " + (err.message || "Credenciales inválidas"));
         } finally {
