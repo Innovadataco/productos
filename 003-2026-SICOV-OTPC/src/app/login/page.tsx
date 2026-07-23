@@ -69,7 +69,13 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          disabled={cargando || !usuario || !contrasena}
+          // Solo `cargando`: la validación de campos vacíos la hacen los `required` nativos de
+          // los inputs, que no dependen de React. Un `disabled` calculado con estado se renderiza
+          // en el servidor como true y solo se recalcula si React hidrata: cualquier fallo de
+          // hidratación dejaba el formulario muerto sin error visible (I-12). Esto NO hace que el
+          // login funcione sin JavaScript; hace que un fallo de hidratación se vea como un error
+          // en vez de un botón permanentemente deshabilitado.
+          disabled={cargando}
           className="w-full bg-sicov-700 text-white rounded py-2 disabled:opacity-50"
         >
           {cargando ? "Iniciando sesión…" : "Ingresar"}
