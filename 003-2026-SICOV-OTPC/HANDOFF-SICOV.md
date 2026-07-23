@@ -290,3 +290,34 @@ El manual documenta el envío a *"la entidad"* (Superintendencia) **únicamente*
 - **Quién y cómo registra salidas y llegadas.**
 - Plazos legales y **referencias normativas**: el manual **no cita ninguna resolución ni decreto**.
 - Qué significa el estado **"Inicio"** de una placa.
+
+---
+
+## 11. Modelo de reporte a la Super — definido por el CEO (2026-07-22)
+
+Aplica a **las 7 operaciones**. Todo reporte va **siempre por la API de la Super**.
+
+### 11.1 Dos vías de entrada
+
+| Vía | Comportamiento |
+|---|---|
+| **Web (registro individual)** | El sistema **intenta reportar de una vez** contra la API de la Super en el momento del registro |
+| **Carga masiva (archivo)** | El sistema **recibe el archivo y procesa por colas**. Formatos: **Excel y TXT**. Aplica a **todas las operaciones** |
+
+### 11.2 Política de reintentos
+
+1. Si el envío falla (p. ej. caída de la Super), el sistema **reintenta 3 veces**.
+2. **El número de reintentos es PARAMETRIZABLE** (configuración, no constante en código).
+3. Si el último intento falla → el registro queda en un **log de errores para revisión**.
+4. Desde ese log el usuario puede **volver a enviar**, y el sistema ejecuta **otros 3 intentos**.
+
+### 11.3 ⚠️ Brechas contra lo ya construido en el 003
+
+| # | Requisito del CEO | Estado actual del 003 | Impacto |
+|---|---|---|---|
+| **R-01** | Reporte **inmediato** desde la web | `src/app/api/integracion/despachos/route.ts:32-39` **solo encola** (`estado: "pendiente"`); el envío lo hace el worker después | Afecta specs **001** y **002** ya cerradas: hay que añadir intento síncrono con caída a cola |
+| **R-02** | Reintentos **parametrizables** | `src/lib/despachos/cola.ts:8` → `MAX_REINTENTOS = 3` **hardcodeado**; `BACKOFF_MIN` idem | Bajo: pasar a variable de entorno |
+| **R-03** | Carga masiva en **Excel y TXT** | Solo XLSX (y solo previsto para mantenimientos) | Medio: añadir parser TXT |
+| **R-04** | Carga masiva para **TODAS las operaciones** | El legacy solo la tiene para preventivo, correctivo y alistamiento | **Alto**: añade carga masiva a autorizaciones, novedades, salidas y llegadas — 4 operaciones más de las que tiene el legacy |
+
+> **R-04 es expansión de alcance sobre el legacy**, no paridad. Requiere decisión de priorización del CEO frente a la fecha 2026-08-15.
