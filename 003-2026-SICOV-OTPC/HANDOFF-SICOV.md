@@ -163,3 +163,71 @@ Export de solo lectura autorizado por el CEO (acta CE-01 / D-009):
 | **`URL_INTEGRADORA` en producción** | Trae la **URL completa** (`.../api-integradora/resumen`) mientras el código le añade otra vez `/api-integradora/resumen` ⇒ **ruta duplicada en el legacy productivo**. En el 003 la convención es **host base únicamente** (ver `.env.example`). |
 | **`NODE_ENV=development`** | El despliegue productivo del legacy no está endurecido. No replicar. |
 | **PostgreSQL expuesto** | Escucha en `0.0.0.0:5432` (todas las interfaces) en el VPS del legacy. Revisar antes del switch-over. |
+
+---
+
+## 10. Modelo de negocio según el MANUAL DE USUARIO (v1.0, 2025-02-27)
+
+> Fuente: *"MANUAL DE USUARIO THOMAS (V1)"* — 86 páginas. El sistema se llamó **Thomas** y **Gesmovil**.
+> Cubre **5 de las 7 operaciones**: mantenimiento preventivo, correctivo, alistamiento diario,
+> autorizaciones NNA y novedades. **NO cubre salidas/despachos ni llegadas.**
+> Estas reglas **no están en el código** y son insumo obligatorio de las specs 005–008.
+
+### 10.1 Roles en lenguaje de negocio (confirmado por el CEO)
+
+| Rol | Nombre en el manual | Qué hace | Crea a |
+|---|---|---|---|
+| 1 | **Administrador** | Solo 2 módulos: *inicio* y *usuario*. No opera. | Usuarios rol **cliente** y rol **administrador**. Al crear un cliente le asigna **módulos autorizados** + **token autorizado** (pág. 15) |
+| 2 | **Cliente** = **empresa de transporte (vigilado)** | Opera con los módulos que le asignó el administrador | Usuarios rol **operador**, **y les asigna los módulos** que podrán gestionar (pág. 50) |
+| 3 | **Operador** | Registra mantenimientos, autorizaciones y novedades **según los permisos que le autorizó el cliente** (pág. 52) | — |
+
+> **La cascada de permisos por módulo es una regla de negocio central**, no un adorno de menú.
+
+### 10.2 ⚠️ El módulo "mantenimientos" significa COSAS DISTINTAS por rol
+
+| Rol | Qué hace en el módulo |
+|---|---|
+| **Cliente** | **Carga el PDF del PROGRAMA** de mantenimiento (preventivo/correctivo) y del alistamiento diario. Campos: nombre archivo, fecha, estado activo/inactivo, descargar. **El último cargado queda ACTIVO**. Máx **4 MB**, solo PDF (págs. 27-36) |
+| **Operador** | **Registra los mantenimientos específicos** (formulario) y por **carga masiva XLSX**; ve el historial (págs. 53-83) |
+
+### 10.3 Cadencia legal y máquina de estados
+
+- **Preventivo: mínimo cada DOS MESES** (pág. 53).
+- **Correctivo: cada vez que se presente** (pág. 62).
+- **Alistamiento diario: previo a CADA despacho** (pág. 73).
+- **Autorización NNA: previa a cada inicio de la prestación del servicio (despacho-salida)** (pág. 37).
+- **Estados del preventivo:** `sin reporte · inicio · reportado vigente · próximo a vencer · vencido` (pág. 54) — derivan de la cadencia de 2 meses.
+- **Estados del correctivo y del alistamiento:** `sin reporte · inicio · reportado vigente` (págs. 63, 76).
+- **Alistamiento:** queda activo el **último registrado** (pág. 78).
+
+### 10.4 Reglas de novedades (spec 008)
+
+- **Si el despacho está FINALIZADO (ya se registró la llegada) NO se permite registrar novedades**; solo mientras esté *iniciado* (pág. 40).
+- Tipos: **cambio de vehículo**, **cambio de conductor** (o ambos) y **otra causa** (solo encabezado).
+- **Máximo 2 conductores** por novedad; **no se puede repetir** el mismo (págs. 44-45).
+- **No se puede registrar el mismo vehículo del despacho** (pág. 46).
+
+### 10.5 Carga masiva XLSX — detalles del manual
+
+- La plantilla se **descarga desde la aplicación** e incluye **hojas auxiliares**: *tipos de identificación* (con código) y, para alistamiento, *actividades* (los ids se ingresan **separados por coma**).
+- Campo **`vigiladoId`** = empresa de transporte a la que se carga el registro.
+- Si hay errores: **se descargan en un archivo `.txt`** vía botón *Descargar errores* (pág. 58) — no solo se muestran en pantalla.
+- Resumen del procesamiento: *"se procesaron N registros, Exitosos: M"*.
+
+### 10.6 Cola de envío a la Super (visible como "Logs de carga masiva" en el módulo inicio)
+
+- Campos: placa, tipo, **estado** (`pendiente` · `procesado` · `fallido`), **reintentos**, descripción del error, acciones.
+- **3 intentos automáticos**; si falla los tres → `fallido`.
+- **Reintento automático:** reprograma y vuelve a hacer los tres intentos (pág. 22).
+- **Reintento manual: NO es solo reenviar — abre el registro para CORREGIR los campos con error y reenviar** (pág. 25). Diferencia funcional importante.
+- Filtros: placa, fecha, estado, tipo.
+
+### 10.7 Otras reglas verificadas
+
+- **Solo vehículos activos con pólizas vigentes** admiten mantenimientos, alistamientos y autorizaciones (págs. 9, 18).
+- **Placa: 3 letras + 3 dígitos** (pág. 11).
+- **Clave: mínimo 8, mayúscula, minúscula, número y símbolo** (pág. 6) — coincide con el regex del código.
+- **Recuperar clave:** usuario (identificación/NIT) + correo → **clave temporal por correo**.
+- **Al crear un usuario se le envía la clave temporal por correo** (págs. 15, 17, 50).
+- **Archivos de autorización NNA: PDF, máx 4 MB** (págs. 38-39).
+- **Identificación y rol NO son editables** al actualizar un usuario (pág. 13).
