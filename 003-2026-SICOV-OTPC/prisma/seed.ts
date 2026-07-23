@@ -6,6 +6,29 @@ const prisma = new PrismaClient();
 
 const NIT_VIGILADO = "900853057";
 
+/// Upsert de módulo POR NOMBRE (los ids son serial; nunca se hardcodean — I1/ZEUS-006).
+async function upsertModuloPorNombre(m: {
+  nombre: string;
+  nombreMostrar: string;
+  ruta: string;
+  icono: string;
+  orden: number;
+}) {
+  const existe = await prisma.modulo.findFirst({ where: { nombre: m.nombre } });
+  if (existe) return prisma.modulo.update({ where: { id: existe.id }, data: { ...m, estado: true } });
+  return prisma.modulo.create({ data: { ...m, estado: true } });
+}
+
+/// Upsert de submódulo POR NOMBRE bajo su módulo padre (idempotente).
+async function upsertSubmoduloPorNombre(
+  moduloId: number,
+  s: { nombre: string; nombreMostrar: string; ruta?: string },
+) {
+  const existe = await prisma.submodulo.findFirst({ where: { nombre: s.nombre, moduloId } });
+  if (existe) return prisma.submodulo.update({ where: { id: existe.id }, data: { ...s, moduloId, estado: true } });
+  return prisma.submodulo.create({ data: { ...s, moduloId, estado: true } });
+}
+
 async function main() {
   // Roles con ids canónicos 1/2/3 (el rol 9 no existe en el sistema real).
   const roles = [
@@ -41,11 +64,52 @@ async function main() {
     });
   }
 
+  // Los módulos base se insertan con id EXPLÍCITO (1-8), lo que NO avanza la secuencia serial;
+  // realineamos antes de crear `configuracion` sin id para evitar colisión de PK.
+  await prisma.$executeRawUnsafe(
+    `SELECT setval(pg_get_serial_sequence('sicov.tbl_modulos','mod_id'), COALESCE((SELECT MAX(mod_id) FROM sicov.tbl_modulos), 1))`,
+  );
+
+  // Módulo Configuración (spec 009) + submódulos — SEMBRADOS Y RESUELTOS POR NOMBRE (I1/ZEUS-006):
+  // los ids son serial; nunca se hardcodean. `configuracion` es solo de rol 1.
+  await upsertModuloPorNombre({
+    nombre: "configuracion",
+    nombreMostrar: "Configuración",
+    ruta: "/dashboard/configuracion",
+    icono: "bi-gear",
+    orden: 9,
+  });
+
+  // Submódulos por nombre bajo su módulo padre. `configuracion` (empresas/apis 013) y
+  // `mantenimientos` (preventivos/correctivos, guard D-017 extendido). El resto es CATÁLOGO
+  // asignable SIN pantalla (006/007/008): solo nombres, cero lógica.
+  const submodulosPorModulo: { modulo: string; submodulos: { nombre: string; nombreMostrar: string; ruta?: string }[] }[] = [
+    { modulo: "configuracion", submodulos: [
+      { nombre: "empresas", nombreMostrar: "Empresas", ruta: "/dashboard/configuracion/empresas" },
+      { nombre: "apis", nombreMostrar: "APIs", ruta: "/dashboard/configuracion/apis" },
+    ] },
+    { modulo: "mantenimientos", submodulos: [
+      { nombre: "preventivos", nombreMostrar: "Preventivos" },
+      { nombre: "correctivos", nombreMostrar: "Correctivos" },
+    ] },
+    { modulo: "alistamientos", submodulos: [{ nombre: "alistamiento-diario", nombreMostrar: "Alistamiento diario" }] },
+    { modulo: "autorizaciones", submodulos: [{ nombre: "autorizaciones-nna", nombreMostrar: "Autorizaciones NNA" }] },
+    { modulo: "novedades", submodulos: [{ nombre: "novedades-registro", nombreMostrar: "Novedades" }] },
+  ];
+  for (const grupo of submodulosPorModulo) {
+    const mod = await prisma.modulo.findFirst({ where: { nombre: grupo.modulo } });
+    if (!mod) continue;
+    for (const s of grupo.submodulos) await upsertSubmoduloPorNombre(mod.id, s);
+  }
+
   // roles_modulos (I-13 + D-017/D-018, HANDOFF §10.1/§10.8): el rol 1 (administrador de
-  // plataforma) NO opera — solo ve Inicio (Usuarios llega con la spec 009). Roles 2 y 3 reciben
-  // los módulos operativos ya construidos (Salidas, Llegadas API, Mantenimientos 005-A); el resto
-  // del catálogo se asigna cuando llegue su spec. El bloqueo real es el guard server-side (D-017).
-  const modulosPorRol: Record<number, number[]> = { 1: [1], 2: [1, 2, 3, 4], 3: [1, 2, 3, 4] };
+  // plataforma) ve Inicio + Configuración + Usuarios (spec 009, resueltos por NOMBRE). Roles 2 y 3
+  // reciben los módulos operativos ya construidos; el resto del catálogo se asigna cuando llegue su
+  // spec. El bloqueo real es el guard server-side (D-017).
+  const modConfig = await prisma.modulo.findFirst({ where: { nombre: "configuracion" } });
+  const modUsuarios = await prisma.modulo.findFirst({ where: { nombre: "usuarios" } });
+  const rol1 = [1, modUsuarios?.id, modConfig?.id].filter((x): x is number => typeof x === "number");
+  const modulosPorRol: Record<number, number[]> = { 1: rol1, 2: [1, 2, 3, 4], 3: [1, 2, 3, 4] };
   for (const [rol, moduloIds] of Object.entries(modulosPorRol)) {
     const rolId = Number(rol);
     // Sincroniza: retira asignaciones semilla que ya no correspondan (p. ej. salidas para rol 1).

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { getCorreo } from "@/lib/correo/correo";
 
 /// Genera una clave temporal y (en modo real) la enviaría por correo. En P1 el envío de correo
 /// queda tras interfaz stub. Respuesta genérica: no revela si el usuario existe.
@@ -21,8 +22,13 @@ export async function POST(req: Request) {
         where: { id: u.id },
         data: { clave: await hashPassword(temporal), claveTemporal: true, actualizacion: new Date() },
       });
-      // STUB: en modo real aquí se enviaría el correo con la clave temporal.
-      console.log(`[recuperar][stub] clave temporal generada para usuario=${usuario}`);
+      // Interfaz única de correo (D-048): con RESEND_API_KEY sale real; sin ella cae a stub/log.
+      // Un fallo de envío NO altera la respuesta genérica (no se filtra existencia del usuario).
+      await getCorreo().enviarCorreo({
+        para: u.correo,
+        asunto: "Recuperación de clave — SICOV-OTPC",
+        texto: `Su clave temporal es: ${temporal}\nDeberá cambiarla al iniciar sesión.`,
+      });
     }
 
     // Siempre respuesta genérica.

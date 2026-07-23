@@ -92,7 +92,8 @@ model Submodulo {
   creado        DateTime? @default(now()) @map("smod_creado") @db.Timestamptz()
   actualizado   DateTime? @default(now()) @map("smod_actualizado") @db.Timestamptz()
 
-  modulo Modulo? @relation(fields: [moduloId], references: [id])
+  modulo          Modulo?         @relation(fields: [moduloId], references: [id])
+  usuariosModulos UsuarioModulo[]
 
   @@map("tbl_submodulos")
   @@schema("sicov")
@@ -145,14 +146,19 @@ model UsuarioModulo {
   id          Int       @id @default(autoincrement()) @map("usm_id")
   usuarioId   Int?      @map("usm_usuario_id")
   moduloId    Int?      @map("usm_modulo_id")
+  submoduloId Int?      @map("usm_submodulo_id") // ADITIVA (B1). NULL = módulo completo
   estado      Boolean?  @default(true) @map("usm_estado")
   creado      DateTime? @default(now()) @map("usm_creado") @db.Timestamptz()
   actualizado DateTime? @default(now()) @map("usm_actualizado") @db.Timestamptz()
 
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  modulo  Modulo?  @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  usuario   Usuario?   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  modulo    Modulo?    @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  submodulo Submodulo? @relation(fields: [submoduloId], references: [id], onDelete: Cascade)
 
-  @@unique([usuarioId, moduloId])
+  // SIN @@unique de Prisma: la unicidad va por DOS índices únicos PARCIALES en el SQL manual (B1).
+  // En PostgreSQL los NULL son distintos entre sí, así que un @@unique de 3 columnas admitiría
+  // dos filas (u, m, NULL) — se pierde la unicidad del "módulo completo". Ver migración manual.
+  @@index([submoduloId])
   @@map("tbl_usuarios_modulos")
   @@schema("sicov")
 }
@@ -393,5 +399,31 @@ model LogError {
   creacion   DateTime? @default(now()) @map("log_creacion") @db.Timestamptz()
 
   @@map("tbl_logs_errores")
+  @@schema("sicov")
+}
+
+/// Bitácora de la consola de APIs (spec 013). Tabla NUEVA propia del 003 (prefijo apl_, no
+/// existe en el legacy). Fase 1: todas las filas modo="stub". request/respuesta en jsonb,
+/// REDACTADAS de forma recursiva y truncadas antes de persistir (nunca tokens, solo nombres).
+model ApiLlamada {
+  id          Int       @id @default(autoincrement()) @map("apl_id")
+  usuarioId   Int       @map("apl_usuario_id")
+  rolId       Int?      @map("apl_rol_id")
+  nitEfectivo String?   @map("apl_nit_efectivo") @db.VarChar(30)
+  operacion   String    @map("apl_operacion") @db.VarChar(60)
+  modo        String    @map("apl_modo") @db.VarChar(10) // stub | real
+  metodo      String?   @map("apl_metodo") @db.VarChar(10)
+  endpoint    String?   @map("apl_endpoint") @db.VarChar(255) // path externo declarado (no secreto)
+  request     Json?     @map("apl_request") @db.JsonB // REDACTADO recursivo + truncado
+  respuesta   Json?     @map("apl_respuesta") @db.JsonB // truncada
+  status      Int?      @map("apl_status")
+  duracionMs  Int?      @map("apl_duracion_ms")
+  error       String?   @map("apl_error") @db.Text
+  creado      DateTime? @default(now()) @map("apl_creado") @db.Timestamptz()
+
+  @@index([creado])
+  @@index([operacion])
+  @@index([modo])
+  @@map("tbl_api_llamadas")
   @@schema("sicov")
 }
