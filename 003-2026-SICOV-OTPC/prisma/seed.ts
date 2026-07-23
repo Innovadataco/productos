@@ -34,9 +34,15 @@ async function main() {
     });
   }
 
-  // roles_modulos: los 3 roles ven Inicio y Salidas.
-  for (const rolId of [1, 2, 3]) {
-    for (const moduloId of [1, 2]) {
+  // roles_modulos (I-13, HANDOFF §10.8): el rol 1 (administrador de plataforma) NO opera —
+  // solo ve Inicio (Usuarios llega con la spec 009). Roles 2 y 3 ven Inicio y Salidas.
+  // El bloqueo server-side real es el guard de módulos de 005-A (D-017); esto es solo el dato semilla.
+  const modulosPorRol: Record<number, number[]> = { 1: [1], 2: [1, 2], 3: [1, 2] };
+  for (const [rol, moduloIds] of Object.entries(modulosPorRol)) {
+    const rolId = Number(rol);
+    // Sincroniza: retira asignaciones semilla que ya no correspondan (p. ej. salidas para rol 1).
+    await prisma.rolModulo.deleteMany({ where: { rolId, moduloId: { notIn: moduloIds } } });
+    for (const moduloId of moduloIds) {
       const existe = await prisma.rolModulo.findFirst({ where: { rolId, moduloId } });
       if (!existe) await prisma.rolModulo.create({ data: { rolId, moduloId } });
     }
