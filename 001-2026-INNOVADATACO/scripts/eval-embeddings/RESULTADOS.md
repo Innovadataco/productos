@@ -154,3 +154,111 @@ banco de preguntas más grande y validado, no con estos 22 casos.
   (`--max-chars`, `--overlap-chars`).
 - La proyección de disco cubre solo la columna vectorial: excluye el texto del fragmento
   y el índice HNSW.
+
+---
+
+# Barrido de troceado (D-027) — 2026-07-22
+
+Ejecutado con **`nomic-embed-text` (768) únicamente**, ya congelado en D-024, para que
+la única variable sea la configuración. Mismo corpus (21 documentos con texto) y mismo
+banco (22 preguntas). Matriz completa: 2 estrategias × 3 tamaños × 4 enriquecimientos =
+**24 configuraciones**.
+
+```bash
+node scripts/eval-embeddings/sweep.mjs --sizes=1000,1800,2800 \
+  --enrich=ninguno,metadatos,titulo,metadatos+titulo
+```
+
+## (a) Troceado estructural vs ventana fija — **gana estructural, sin discusión**
+
+Promedio de las 12 configuraciones de cada estrategia:
+
+| Estrategia | MRR | recall@1 | recall@5 | ident@1 |
+|---|---|---|---|---|
+| **Estructural** (por marcas del acto) | **0,704** | **0,587** | **0,909** | **0,717** |
+| Ventana fija (por tamaño) | 0,610 | 0,470 | 0,852 | 0,633 |
+| **Diferencia** | **+0,094** | **+0,117** | +0,057 | +0,084 |
+
+**9 de las 10 mejores configuraciones son estructurales.** La peor configuración de todo
+el barrido es `tamano/1800/ninguno` (MRR 0,486); la mejor con ventana fija
+(`tamano/1800/titulo`, MRR 0,681) queda por debajo de cinco configuraciones estructurales.
+
+> **La decisión que ZEUS tomó en la spec estaba bien.** Pedía que se le dijera si perdía;
+> no pierde: gana en las cuatro métricas y en todos los tamaños probados. Ya no es una
+> decisión sin evidencia.
+
+Cortar por CONSIDERANDO / RESUELVE / ARTÍCULO produce fragmentos que coinciden con
+unidades de sentido jurídico; la ventana fija parte artículos por la mitad y mezcla el
+final de uno con el principio del siguiente.
+
+## (b) Enriquecimiento con metadatos — **la hipótesis se confirma, con matices**
+
+Promedio de las 6 configuraciones de cada variante:
+
+| Variante del prefijo | MRR | recall@1 | **ident@1** | concep@1 |
+|---|---|---|---|---|
+| Ninguno | 0,602 | 0,462 | 0,533 | **0,354** |
+| Metadatos del texto (tipo, número, año, entidad, fecha) | 0,650 | 0,485 | 0,550 | 0,312 |
+| **Solo título** | 0,685 | **0,599** | **0,883** | 0,312 |
+| Metadatos + título | **0,693** | 0,568 | 0,733 | 0,312 |
+
+**Mejor configuración global**: `estructural / 1800 / titulo` →
+**MRR 0,803 · recall@1 0,727 · recall@5 0,909 · ident@1 0,90**
+
+Frente a la línea base (`estructural/1800/ninguno`, MRR 0,702, ident@1 0,50):
+**MRR +0,101 y consultas por identificador +0,40 (de 0,50 a 0,90)**.
+
+### Tres matices que cambian cómo hay que leer esto
+
+**1. El título hace casi todo el trabajo; los metadatos extraídos del texto, poco.**
+Antepone solo número, entidad y fecha → ident@1 pasa de 0,533 a 0,550 (**+0,017**,
+ruido). Antepone solo el título → 0,883 (**+0,350**). Y combinar ambos es *peor* que el
+título solo (0,733): los metadatos añaden ruido que diluye la señal del título.
+
+**2. Mi medición probablemente exagera el efecto del título.** El "título" de esta
+evaluación es el nombre del archivo, y en este corpus los nombres son excepcionalmente
+limpios (`SuperTransporte Circular 114 DE 2025`), muy parecidos a como están redactadas
+las preguntas. En producción el título es un campo real —la aplicación usa el nombre del
+archivo como valor por defecto (`documents/route.ts`)— pero su calidad es variable. Con
+títulos pobres ("escaneo_3.pdf"), la ganancia se evapora. **La cota inferior defendible
+es la de los metadatos extraídos del texto: +0,017. La cota superior es +0,350.**
+
+**3. El enriquecimiento degrada las consultas conceptuales, siempre.** concep@1 baja de
+0,354 a 0,312 en las **tres** variantes de enriquecimiento. El prefijo ocupa espacio
+semántico del fragmento: gana identificación, pierde comprensión. Es un intercambio, no
+una mejora gratuita.
+
+## ¿Cambia el diseño de la spec 003?
+
+**Sí, en un punto concreto**: el texto que se vectoriza deja de ser igual al texto que se
+almacena. Hoy la spec asume implícitamente que se vectoriza el contenido del fragmento;
+hay que separar ambos conceptos y hacer el prefijo **configurable** (§0.7): qué campos lo
+componen y si se aplica.
+
+**Pero recomiendo NO darlo por decidido todavía**, por una razón de fondo:
+
+> El enriquecimiento ataca **exactamente el mismo fallo** que la rama FTS (D-019): las
+> consultas por identificador. Si el FTS ya resuelve "Circular 114 de 2025" con un
+> `WHERE` sobre el número —y lo hará, de forma exacta y barata—, el enriquecimiento
+> aportaría poco y **seguiría cobrando su peaje en las consultas conceptuales**.
+
+Propuesta: implementar el prefijo como opción configurable, **desactivada por defecto**,
+y volver a medir con el híbrido ya montado. El banco queda como arnés de regresión
+(D-028) precisamente para eso: entonces se decide con datos si el enriquecimiento suma
+algo por encima del FTS o solo estorba a las conceptuales.
+
+## Parámetros recomendados para la implementación
+
+| Parámetro | Valor | Base |
+|---|---|---|
+| Estrategia de troceado | **estructural** | Gana en las 4 métricas y en los 3 tamaños |
+| Tamaño de fragmento | **1800** caracteres | Mejor MRR en estructural (0,702 sin enriquecer, frente a 0,701 con 1000 y 0,610 con 2800) |
+| Solape | 200 caracteres | No barrido; conviene medirlo en el siguiente ciclo |
+| Prefijo de metadatos | **configurable, apagado por defecto** | Ver razonamiento arriba |
+
+## Límite de este barrido
+
+Sigue siendo **una muestra de 22 preguntas**: un acierto vale 4,5 puntos de recall. Las
+conclusiones robustas son las que se sostienen en todo el barrido —que estructural gana
+y que el prefijo ayuda a los identificadores—, no las diferencias finas entre
+configuraciones vecinas. El solape (200) no se varió.

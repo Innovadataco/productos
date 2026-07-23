@@ -5,6 +5,10 @@
  * Compara varios modelos de Ollama con EL MISMO troceado y las mismas preguntas,
  * y reporta recall@1, recall@k, MRR, latencias, dimensión y proyección de disco.
  *
+ * Para comparar CONFIGURACIONES (troceado, enriquecimiento) con un solo modelo,
+ * usa `sweep.mjs`. Ambos comparten el núcleo de evaluación (`lib/runner.mjs`)
+ * para no medir cosas sutilmente distintas.
+ *
  * Solo modelos de EMBEDDINGS: nunca invoca modelos generativos (ADR_002).
  * El corpus es de SOLO LECTURA y su ruta es configuración, no un literal (ADR_004).
  *
@@ -17,107 +21,11 @@ import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { cargarConfig, BASE_DIR } from "./lib/config.mjs";
 import { cargarCorpus } from "./lib/corpus.mjs";
-import { trocear } from "./lib/chunk.mjs";
-import { embedLote, embed, modeloDisponible } from "./lib/embed.mjs";
-import { rankearDocumentos, posicion, agregarMetricas, proyectarDisco } from "./lib/metrics.mjs";
+import { modeloDisponible } from "./lib/embed.mjs";
+import { construirFragmentos, evaluar, filtrarPreguntas } from "./lib/runner.mjs";
 
 function log(msg) {
   process.stdout.write(`${msg}\n`);
-}
-
-async function evaluarModelo(modelo, cfg, fragmentos, preguntas) {
-  log(`\n── ${modelo} ──`);
-
-  if (!(await modeloDisponible(cfg.ollamaBaseUrl, modelo))) {
-    log(`   ⚠️  no disponible en Ollama; se omite (ejecuta: ollama pull ${modelo})`);
-    return { modelo, disponible: false };
-  }
-
-  // 1) Vectorizar fragmentos
-  const textos = fragmentos.map((f) => f.contenido);
-  const t0 = Date.now();
-  const { vectores, latenciaTotalMs } = await embedLote(
-    cfg.ollamaBaseUrl,
-    modelo,
-    textos,
-    cfg.batchSize,
-    (hechos, total) => {
-      if (hechos % (cfg.batchSize * 10) === 0 || hechos === total) {
-        process.stdout.write(`   vectorizando ${hechos}/${total}\r`);
-      }
-    },
-  );
-  const segundosIndexado = (Date.now() - t0) / 1000;
-  const dimension = vectores[0].length;
-  log(`   ${fragmentos.length} fragmentos · ${dimension} dims · ${segundosIndexado.toFixed(1)}s`);
-
-  const indexados = fragmentos.map((f, i) => ({ ...f, vector: vectores[i] }));
-
-  // 2) Consultar
-  const resultados = [];
-  const latenciasConsulta = [];
-
-  for (const q of preguntas) {
-    const tq = Date.now();
-    const { embeddings } = await embed(cfg.ollamaBaseUrl, modelo, [q.pregunta]);
-    latenciasConsulta.push(Date.now() - tq);
-
-    const ranking = rankearDocumentos(embeddings[0], indexados, cfg.topK);
-    const pos = posicion(ranking, q.documentoEsperado);
-
-    resultados.push({
-      id: q.id,
-      tipo: q.tipo,
-      pregunta: q.pregunta,
-      esperado: q.documentoEsperado,
-      posicion: pos,
-      acierto1: pos === 1,
-      aciertoK: pos > 0 && pos <= cfg.topK,
-      recuperado: ranking[0]?.documentoId ?? null,
-      score: ranking[0] ? Number(ranking[0].score.toFixed(4)) : null,
-    });
-  }
-
-  const posiciones = resultados.map((r) => r.posicion);
-  const metricas = agregarMetricas(posiciones, cfg.topK);
-
-  // Métricas por tipo de consulta
-  const porTipo = {};
-  for (const tipo of [...new Set(preguntas.map((q) => q.tipo))]) {
-    const subset = resultados.filter((r) => r.tipo === tipo).map((r) => r.posicion);
-    porTipo[tipo] = agregarMetricas(subset, cfg.topK);
-  }
-
-  const promedio = (arr) => arr.reduce((a, b) => a + b, 0) / (arr.length || 1);
-
-  const salida = {
-    modelo,
-    disponible: true,
-    dimension,
-    indexado: {
-      fragmentos: fragmentos.length,
-      segundos: Number(segundosIndexado.toFixed(1)),
-      msPorFragmento: Number((latenciaTotalMs / fragmentos.length).toFixed(1)),
-    },
-    consulta: {
-      msPromedio: Number(promedio(latenciasConsulta).toFixed(1)),
-      msMaximo: Math.max(...latenciasConsulta),
-    },
-    metricas,
-    porTipo,
-    disco: proyectarDisco({
-      fragmentos: fragmentos.length,
-      documentos: new Set(fragmentos.map((f) => f.documentoId)).size,
-      dimension,
-      documentosObjetivo: cfg.projection.documentos,
-    }),
-    fallos: resultados.filter((r) => !r.acierto1),
-  };
-
-  log(
-    `   recall@1 ${metricas["recall@1"]} · recall@${cfg.topK} ${metricas[`recall@${cfg.topK}`]} · MRR ${metricas.mrr}`,
-  );
-  return salida;
 }
 
 async function main() {
@@ -140,28 +48,46 @@ async function main() {
   }
 
   // Troceado: idéntico para todos los modelos
-  const fragmentos = [];
-  for (const doc of documentos) {
-    for (const frag of trocear(doc.texto, cfg.chunk)) {
-      fragmentos.push({ documentoId: doc.id, orden: frag.orden, contenido: frag.contenido });
-    }
-  }
+  const fragmentos = construirFragmentos(documentos, cfg.chunk, cfg.enrichFields || []);
   log(`Fragmentos: ${fragmentos.length} (mismo troceado para todos los modelos)`);
 
   // Preguntas
   const banco = JSON.parse(readFileSync(join(BASE_DIR, "questions.json"), "utf8"));
-  const idsCorpus = new Set(documentos.map((d) => d.id));
-  const preguntas = banco.preguntas.filter((q) => idsCorpus.has(q.documentoEsperado));
-  const descartadas = banco.preguntas.filter((q) => !idsCorpus.has(q.documentoEsperado));
-
-  log(`Preguntas: ${preguntas.length}${descartadas.length ? ` (${descartadas.length} descartadas: su documento no tiene texto)` : ""}`);
+  const { preguntas, descartadas } = filtrarPreguntas(banco, documentos);
+  log(
+    `Preguntas: ${preguntas.length}${descartadas.length ? ` (${descartadas.length} descartadas: su documento no tiene texto)` : ""}`,
+  );
   if (descartadas.length) for (const q of descartadas) log(`   · ${q.id} → ${q.documentoEsperado}`);
 
   // Evaluación
   const resultados = [];
   for (const modelo of cfg.models) {
+    log(`\n── ${modelo} ──`);
+
+    if (!(await modeloDisponible(cfg.ollamaBaseUrl, modelo))) {
+      log(`   ⚠️  no disponible en Ollama; se omite (ejecuta: ollama pull ${modelo})`);
+      resultados.push({ modelo, disponible: false });
+      continue;
+    }
+
     try {
-      resultados.push(await evaluarModelo(modelo, cfg, fragmentos, preguntas));
+      const r = await evaluar({
+        modelo,
+        cfg,
+        fragmentos,
+        preguntas,
+        onProgreso: (hechos, total) => {
+          if (hechos % (cfg.batchSize * 10) === 0 || hechos === total) {
+            process.stdout.write(`   vectorizando ${hechos}/${total}\r`);
+          }
+        },
+      });
+
+      log(`   ${r.indexado.fragmentos} fragmentos · ${r.dimension} dims · ${r.indexado.segundos}s`);
+      log(
+        `   recall@1 ${r.metricas["recall@1"]} · recall@${cfg.topK} ${r.metricas[`recall@${cfg.topK}`]} · MRR ${r.metricas.mrr}`,
+      );
+      resultados.push({ ...r, disponible: true });
     } catch (err) {
       log(`   ❌ error con ${modelo}: ${err.message}`);
       resultados.push({ modelo, disponible: false, error: err.message });
@@ -175,6 +101,7 @@ async function main() {
       corpusPath: cfg.corpusPath,
       ollamaBaseUrl: cfg.ollamaBaseUrl,
       chunk: cfg.chunk,
+      enrichFields: cfg.enrichFields || [],
       topK: cfg.topK,
       proyeccionDocumentos: cfg.projection.documentos,
     },

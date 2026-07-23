@@ -58,16 +58,38 @@ export function extraerMetadatos(nombreArchivo, texto) {
   else if (/DECRETO/i.test(cabecera)) tipo = "decreto";
   else if (/ANEXO\s+T[EÉ]CNICO/i.test(cabecera)) tipo = "anexo_tecnico";
 
+  // Número "humano" del acto (el que usa la gente para citarlo).
   const mNumero =
     cabecera.match(/DECRETO\s+(?:N[UÚ]MERO\s+)?(\d{1,5})\s+DE\s+(\d{4})/i) ||
-    cabecera.match(/RESOLUCI[OÓ]N\s+(?:N[UÚ]MERO\s+)?(\d{1,6})\s+DE\s+(\d{4})/i) ||
-    cabecera.match(/CIRCULAR\s+EXTERNA\s+(?:No\.?\s*)?(\d{4})(\d+)/i);
+    cabecera.match(/RESOLUCI[OÓ]N\s+(?:N[UÚ]MERO\s+)?(\d{1,6})\s+DE\s+(\d{4})/i);
 
-  const numero = mNumero ? mNumero[1] : null;
+  // Radicado largo de las circulares externas (p. ej. 20255330000114).
+  const mRadicado = cabecera.match(/\b(20\d{12,14})\b/);
+  const radicado = mRadicado ? mRadicado[1] : null;
+
+  let numero = mNumero ? mNumero[1] : null;
+  // En las circulares el número corto son los últimos dígitos del radicado
+  // (20255330000114 -> 114); se conserva sin ceros a la izquierda.
+  if (!numero && radicado) numero = String(Number(radicado.slice(-6)));
+
   const mAnio = cabecera.match(/\b(19|20)\d{2}\b/);
-  const anio = mNumero && mNumero[2] && mNumero[2].length === 4 ? mNumero[2] : mAnio ? mAnio[0] : null;
+  let anio = mNumero && mNumero[2] ? mNumero[2] : null;
+  if (!anio && radicado) anio = radicado.slice(0, 4);
+  if (!anio && mAnio) anio = mAnio[0];
 
-  return { entidad, tipo, numero, anio, archivo: basename(nombreArchivo) };
+  // Fecha completa (dd-mm-aaaa o dd/mm/aaaa) tal como aparece en el encabezado.
+  const mFecha = cabecera.match(/\b(\d{2})[-/](\d{2})[-/](\d{4})\b/);
+  const fecha = mFecha ? `${mFecha[1]}-${mFecha[2]}-${mFecha[3]}` : null;
+
+  return {
+    entidad,
+    tipo,
+    numero,
+    anio,
+    radicado,
+    fecha,
+    archivo: basename(nombreArchivo),
+  };
 }
 
 export function cargarCorpus(corpusPath) {

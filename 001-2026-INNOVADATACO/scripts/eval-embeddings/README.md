@@ -63,6 +63,33 @@ O crea `config.local.json` (ignorado por git):
 El reporte queda en `reports/ultima-evaluacion.json`, con el detalle de las preguntas
 falladas por cada modelo.
 
+### Barrido de configuraciones (`sweep.mjs`)
+
+Compara configuraciones de troceado con **un solo modelo**, para que la única
+variable sea la configuración:
+
+```bash
+# Matriz completa: 2 estrategias x 3 tamaños x 4 enriquecimientos
+node scripts/eval-embeddings/sweep.mjs \
+  --sizes=1000,1800,2800 \
+  --enrich=ninguno,metadatos,titulo,metadatos+titulo
+
+# Solo estructural, un tamaño
+node scripts/eval-embeddings/sweep.mjs --strategies=estructural --sizes=1800
+```
+
+Variables que barre:
+
+| Variable | Valores | Qué prueba |
+|---|---|---|
+| `--strategies` | `estructural`, `tamano` | Cortar por marcas del acto vs ventana fija |
+| `--sizes` | lista de enteros | Tamaño máximo de fragmento |
+| `--enrich` | `ninguno`, `metadatos`, `titulo`, `metadatos+titulo` | Anteponer metadatos del acto al fragmento **antes de vectorizar** |
+
+El resultado ordenado por MRR queda en `reports/barrido-troceado.json`, con el
+desglose por tipo de consulta (temática, identificador, conceptual), que es donde se
+ven las diferencias reales.
+
 ## Corpus
 
 **Solo lectura.** Los PDFs no se copian al repositorio, no se modifican y no se
