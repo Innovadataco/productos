@@ -7,6 +7,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:?Definir POSTGRES_USER en .env}:${POSTGRES_PASSWORD:?Definir POSTGRES_PASSWORD en .env}@db:5432/${POSTGRES_DB:?Definir POSTGRES_DB en .env}?schema=public
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       JWT_SECRET: ${JWT_SECRET}
+      # Característica de despliegue (spec 004, D-036): default seguro; se apaga
+      # explícitamente en el .env local porque se sirve por http://localhost.
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
       OPENAI_APIKEY: ${OPENAI_APIKEY}
       OLLAMA_BASEURL: ${OLLAMA_BASEURL:-http://host.docker.internal:11434}
     extra_hosts:

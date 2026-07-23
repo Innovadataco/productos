@@ -3,6 +3,7 @@ import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/auth";
+import { cookieSecure } from "@/lib/authCookie";
 
 export async function POST(req: NextRequest) {
     try {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
         const res = NextResponse.json({ ok: true });
         res.cookies.set("token", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            secure: cookieSecure(),
             sameSite: "strict",
             maxAge: 604800, // 7 días
         });
