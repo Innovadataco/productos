@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { detalleDeError } from "@/lib/apiError";
+import type { PgBoss } from "pg-boss";
+import { Prisma } from "@prisma/client";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { prisma } from "@/lib/prisma";
@@ -22,7 +25,7 @@ function parseDate(value?: string | null): Date | null {
 }
 
 // Singleton de pg-boss usando promesa para evitar condición de carrera
-let bossPromise: Promise<any> | null = null;
+let bossPromise: Promise<PgBoss> | null = null;
 
 async function getBoss() {
   if (!bossPromise) {
@@ -62,9 +65,9 @@ export async function POST(req: NextRequest) {
     let extractionError: string | null = null;
     try {
       texto = await extractPdfText(buffer);
-    } catch (err: any) {
-      extractionError = err?.message || "No se pudo extraer texto del PDF";
-      console.warn("PDF extraction warning:", extractionError);
+    } catch (err: unknown) {
+      extractionError = detalleDeError(err);
+      console.warn("[Documentos] Extracción de PDF: advertencia —", extractionError);
     }
 
     // Guardar archivo
@@ -133,7 +136,7 @@ export async function GET(req: NextRequest) {
     const includeInactive = searchParams.get("includeInactive") === "true";
     const status = searchParams.get("status");
 
-    const where: any = includeInactive ? {} : { activo: true };
+    const where: Prisma.DocumentoOficialWhereInput = includeInactive ? {} : { activo: true };
     if (status) {
       where.status = status;
     }

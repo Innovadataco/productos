@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
     const entidad = searchParams.get("entidad");
     const busqueda = searchParams.get("q");
 
-    const where: any = {};
+    const where: Prisma.LicitacionWhereInput = {};
 
     if (estado) {
       where.estado = { key: estado };

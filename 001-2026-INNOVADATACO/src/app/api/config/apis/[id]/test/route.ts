@@ -33,8 +33,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const cfg = JSON.parse(api.config || "{}") as Record<string, string>;
 
     let url = api.path;
-    let body: any = null;
-    let headers: Record<string, string> = {};
+    let body: string | null = null;
+    const headers: Record<string, string> = {};
 
     // Placeholders internos
     if (url.includes("{id}")) {
@@ -102,7 +102,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     const text = await res.text();
-    let data: any = null;
+    // La respuesta puede ser JSON de cualquier forma o texto plano.
+    let data: unknown = null;
     try {
       data = JSON.parse(text);
     } catch {

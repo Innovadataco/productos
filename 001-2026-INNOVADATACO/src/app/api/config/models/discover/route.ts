@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/apiError";
 import { resolveOllamaBaseUrl } from "@/lib/modelClients";
 
+/** Forma de la respuesta de `GET {baseUrl}/api/tags` de Ollama (solo lo que usamos). */
+interface OllamaModelTag {
+  name: string;
+  model: string;
+  size?: number;
+  details?: {
+    parameter_size?: string;
+    family?: string;
+  };
+}
+
+interface OllamaTagsResponse {
+  models?: OllamaModelTag[];
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -12,8 +27,8 @@ export async function GET(req: NextRequest) {
       const text = await res.text();
       return NextResponse.json({ models: [], error: `Ollama ${res.status}: ${text}` }, { status: 502 });
     }
-    const data = await res.json();
-    const models = (data.models || []).map((m: any) => ({
+    const data: OllamaTagsResponse = await res.json();
+    const models = (data.models || []).map((m: OllamaModelTag) => ({
       name: m.name,
       model: m.model,
       size: m.size,

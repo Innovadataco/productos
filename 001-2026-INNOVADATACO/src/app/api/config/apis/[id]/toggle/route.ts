@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -13,8 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data: { active },
     });
     return NextResponse.json(updated);
-  } catch (err: any) {
-    console.error(err);
-    return NextResponse.json({ error: "Error actualizando API" }, { status: 500 });
+  } catch (err: unknown) {
+    return apiError("Configuración", "PATCH toggle API", "Error actualizando API", 500, err);
   }
 }

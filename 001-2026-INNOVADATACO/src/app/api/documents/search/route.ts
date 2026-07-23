@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { DocumentoOficial } from "@prisma/client";
+import { Prisma, type DocumentoOficial } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Consulta requerida" }, { status: 400 });
     }
 
-    const where: any = { activo: true };
+    const where: Prisma.DocumentoOficialWhereInput = { activo: true };
     if (tipo) where.tipo = tipo;
     if (entidad) where.entidad = entidad;
     if (sector) where.sector = sector;

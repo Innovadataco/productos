@@ -134,6 +134,32 @@ export function analyzeDocument(text: string): DocumentAnalysis {
   };
 }
 
+/**
+ * Forma mínima del JSON que emite pdf2json, limitada a lo que consumimos aquí
+ * (FR-007, spec 002). El paquete no publica tipos utilizables para este flujo,
+ * así que se declaran localmente en vez de recurrir a `any`.
+ */
+interface PdfTextRun {
+  /** Texto del fragmento, URI-encoded. */
+  T: string;
+}
+
+interface PdfText {
+  R: PdfTextRun[];
+}
+
+interface PdfPage {
+  Texts: PdfText[];
+}
+
+interface PdfData {
+  Pages: PdfPage[];
+}
+
+interface PdfParserError {
+  parserError?: Error;
+}
+
 export function extractPdfText(buffer: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
     const pdfParser = new PDFParser();
@@ -144,21 +170,21 @@ export function extractPdfText(buffer: Buffer): Promise<string> {
         reject(new Error("Timeout extrayendo texto del PDF"));
       }
     }, 15000);
-    pdfParser.on("pdfParser_dataError", (err: any) => {
+    pdfParser.on("pdfParser_dataError", (err: PdfParserError) => {
       if (!resolved) {
         resolved = true;
         clearTimeout(timer);
         reject(err?.parserError || err || new Error("Error parseando PDF"));
       }
     });
-    pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
+    pdfParser.on("pdfParser_dataReady", (pdfData: PdfData) => {
       if (!resolved) {
         resolved = true;
         clearTimeout(timer);
         const text = pdfData.Pages
-          .map((page: any) =>
-            page.Texts.map((t: any) =>
-              t.R.map((r: any) => decodeURIComponent(r.T)).join(" ")
+          .map((page: PdfPage) =>
+            page.Texts.map((t: PdfText) =>
+              t.R.map((r: PdfTextRun) => decodeURIComponent(r.T)).join(" ")
             ).join(" ")
           )
           .join("\n\n");

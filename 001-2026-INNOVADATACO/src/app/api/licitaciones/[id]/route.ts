@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 
@@ -59,7 +60,9 @@ export async function PATCH(
       );
     }
 
-    const updateData: any = {};
+    // Unchecked: la ruta asigna las claves foráneas escalares (estadoId, entidadId,
+    // areaIdSala) en vez de conectar relaciones anidadas.
+    const updateData: Prisma.LicitacionUncheckedUpdateInput = {};
     
     if (data.numero !== undefined) updateData.numero = data.numero;
     if (data.titulo !== undefined) updateData.titulo = data.titulo;

@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: result.error, latencyMs: result.latencyMs }, { status: 502 });
     }
 
-    let analysis: Record<string, any> | null = null;
+    let analysis: Record<string, unknown> | null = null;
     try {
       analysis = JSON.parse(sanitizeJsonText(result.text));
     } catch (err: unknown) {
