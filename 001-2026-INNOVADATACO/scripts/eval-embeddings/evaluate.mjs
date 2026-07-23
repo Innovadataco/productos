@@ -39,8 +39,11 @@ async function main() {
     `Troceado: ${cfg.chunk.strategy}, max ${cfg.chunk.maxChars} chars, solape ${cfg.chunk.overlapChars}`,
   );
 
-  // Corpus
-  const { documentos, sinTexto } = cargarCorpus(cfg.corpusPath);
+  // Banco: se lee ANTES del corpus para mapear archivo → id opaco (FR-028).
+  const banco = JSON.parse(readFileSync(join(BASE_DIR, "questions.json"), "utf8"));
+
+  // Corpus (con el mapa de documentos del banco: asigna ids opacos y títulos aparte)
+  const { documentos, sinTexto } = cargarCorpus(cfg.corpusPath, banco.documentos || {});
   log(`\nDocumentos con texto: ${documentos.length}`);
   if (sinTexto.length) {
     log(`Sin capa de texto (requieren OCR, excluidos): ${sinTexto.length}`);
@@ -52,7 +55,6 @@ async function main() {
   log(`Fragmentos: ${fragmentos.length} (mismo troceado para todos los modelos)`);
 
   // Preguntas
-  const banco = JSON.parse(readFileSync(join(BASE_DIR, "questions.json"), "utf8"));
   const { preguntas, descartadas } = filtrarPreguntas(banco, documentos);
   log(
     `Preguntas: ${preguntas.length}${descartadas.length ? ` (${descartadas.length} descartadas: su documento no tiene texto)` : ""}`,

@@ -58,8 +58,8 @@ async function main() {
   log(`Tamaños:         ${tamanos.join(", ")} caracteres`);
   log(`Enriquecimiento: ${enriquecimientos.join(", ")}`);
 
-  const { documentos, sinTexto } = cargarCorpus(cfg.corpusPath);
   const banco = JSON.parse(readFileSync(join(BASE_DIR, "questions.json"), "utf8"));
+  const { documentos, sinTexto } = cargarCorpus(cfg.corpusPath, banco.documentos || {});
   const { preguntas } = filtrarPreguntas(banco, documentos);
   log(`\nCorpus: ${documentos.length} documentos con texto (${sinTexto.length} sin OCR) · ${preguntas.length} preguntas\n`);
 

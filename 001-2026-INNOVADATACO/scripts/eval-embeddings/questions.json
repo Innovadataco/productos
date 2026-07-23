@@ -1,167 +1,253 @@
 {
-  "_estado": "LÍNEA BASE FIRMADA POR EL CEO (D-034, 2026-07-23): las 22 preguntas quedan aceptadas como referencia de INNOVADATACO · SPEC-003. NO es todavía criterio de aceptación: arrastra la fuga de etiqueta de D-032 (documentoEsperado == nombre del archivo == valor que enrich.mjs antepone al texto que se rankea). Antes de usarlo como arnés de regresión hay que ejecutar FR-028 de la spec 003: documentoEsperado pasa a id opaco, el título va como campo aparte con calidad realista. Pendiente además ampliarlo con preguntas conceptuales reales capturadas durante el uso (hoy 10 identificador / 8 conceptual / 4 temática; el valor de negocio está en las conceptuales, donde el sistema va peor).",
+  "_estado": "LÍNEA BASE FIRMADA POR EL CEO (D-034, 2026-07-23): las 22 preguntas quedan aceptadas como referencia de INNOVADATACO · SPEC-003. FUGA DE D-032 CORREGIDA (FR-028, 2026-07-23): documentoEsperado es ahora id opaco (DOC-NN) y el título vive en el mapa 'documentos' como campo aparte; enrich.mjs usa doc.titulo, no doc.id. Verificado por scripts/eval-embeddings/questions.test.mjs (SC-024). Sigue SIN ser criterio de aceptación pleno mientras no se re-mida con el híbrido montado y no se amplíe con preguntas conceptuales reales capturadas durante el uso (hoy 10 identificador / 8 conceptual / 4 temática; el valor de negocio está en las conceptuales, donde el sistema va peor). Las cifras de enriquecimiento por título anteriores a esta corrección (+0,350) NO son evidencia y deben re-medirse.",
   "_corpus": "25 actos normativos de transporte (MinTransporte, SuperTransporte, decretos presidenciales). 4 de ellos son escaneos sin capa de texto y quedan fuera de la evaluación: DECRETO-1079-2015, Mintransporte Resoluciob 378 de 2013, Mintransporte resolucion 3600 de 2001, Mintransporte resolucion 36325 de 2021.",
   "_tipos": {
     "tematica": "consulta por tema, sin citar el acto",
     "identificador": "consulta que cita número y año del acto",
     "conceptual": "consulta por concepto o requisito, con vocabulario que no necesariamente aparece literal"
   },
-  "_documentoEsperado": "HOY es el nombre del PDF sin extensión, lo que causa la fuga de D-032. FR-028 de la spec 003 exige sustituirlo por un id OPACO sin relación con el texto que se rankea, y mover el título a un campo aparte. La corrección es tarea de implementación de la spec 003, no de esta enmienda de spec: aquí solo se declara el estado.",
+  "_documentoEsperado": "Id OPACO del documento (DOC-NN), sin relación con el texto que se rankea (D-032/FR-028). El mapa 'documentos' traduce el id a su archivo y su título real. El título es de calidad realista (p.ej. DOC-01 es '3476'): puede parecerse o no a la pregunta, como en producción.",
+  "_fuga_corregida": "2026-07-23 (FR-028): antes documentoEsperado era el nombre del archivo y enrich.mjs lo anteponía al texto vectorizado (variante 'titulo'), inyectando la etiqueta en lo que se rankea. Ahora el id es opaco y enrich usa doc.titulo (campo aparte), no doc.id.",
   "_advertencia": "El corpus contiene documentos casi duplicados por diseño (tres circulares de cronograma SICOV y dos de instrucciones SICOV, con asuntos idénticos y meses distintos). Las preguntas 12-16 los distinguen por número y fecha: son deliberadamente exigentes para recall@1 y sirven para medir si el modelo confunde documentos hermanos.",
-
+  "documentos": {
+    "DOC-01": {
+      "archivo": "3476",
+      "titulo": "3476"
+    },
+    "DOC-02": {
+      "archivo": "ANEXO_TECNICO_CONTROL_DE_LA_OPERACION_DEL_SERVICIO_PUBLICO_DE_TRANSPORTE_TERRESTRE_DE_PASAJEROS_POR_CARRETERA",
+      "titulo": "ANEXO TECNICO CONTROL DE LA OPERACION DEL SERVICIO PUBLICO DE TRANSPORTE TERRESTRE DE PASAJEROS POR CARRETERA"
+    },
+    "DOC-03": {
+      "archivo": "Decreto_105_de_1995",
+      "titulo": "Decreto 105 de 1995"
+    },
+    "DOC-04": {
+      "archivo": "Decreto_1326_de_1998",
+      "titulo": "Decreto 1326 de 1998"
+    },
+    "DOC-05": {
+      "archivo": "Decreto_171_de_2001",
+      "titulo": "Decreto 171 de 2001"
+    },
+    "DOC-06": {
+      "archivo": "Decreto_2028_de_2006",
+      "titulo": "Decreto 2028 de 2006"
+    },
+    "DOC-07": {
+      "archivo": "Decreto_2263_de_1995",
+      "titulo": "Decreto 2263 de 1995"
+    },
+    "DOC-08": {
+      "archivo": "Decreto_2762_2001",
+      "titulo": "Decreto 2762 2001"
+    },
+    "DOC-09": {
+      "archivo": "MinTransporte  Circular 387 de 2025",
+      "titulo": "MinTransporte  Circular 387 de 2025"
+    },
+    "DOC-10": {
+      "archivo": "MinTransporte 127 De 2024",
+      "titulo": "MinTransporte 127 De 2024"
+    },
+    "DOC-11": {
+      "archivo": "MinTransporte Circular 837 DE 2023",
+      "titulo": "MinTransporte Circular 837 DE 2023"
+    },
+    "DOC-12": {
+      "archivo": "Mintransporte Circular 507 de 2024",
+      "titulo": "Mintransporte Circular 507 de 2024"
+    },
+    "DOC-13": {
+      "archivo": "SuperTransporte  Anexo Tecnico Resolucion  1455",
+      "titulo": "SuperTransporte  Anexo Tecnico Resolucion  1455"
+    },
+    "DOC-14": {
+      "archivo": "SuperTransporte  Anexo Tecnico Resolucion 14306",
+      "titulo": "SuperTransporte  Anexo Tecnico Resolucion 14306"
+    },
+    "DOC-15": {
+      "archivo": "SuperTransporte  Circular 114 DE 2025",
+      "titulo": "SuperTransporte  Circular 114 DE 2025"
+    },
+    "DOC-16": {
+      "archivo": "SuperTransporte  Circular 124 DE 2025",
+      "titulo": "SuperTransporte  Circular 124 DE 2025"
+    },
+    "DOC-17": {
+      "archivo": "SuperTransporte Circular 14 DE 2026",
+      "titulo": "SuperTransporte Circular 14 DE 2026"
+    },
+    "DOC-18": {
+      "archivo": "SuperTransporte Circular 164 DE 2025",
+      "titulo": "SuperTransporte Circular 164 DE 2025"
+    },
+    "DOC-19": {
+      "archivo": "SuperTransporte Circular 94 DE 2025",
+      "titulo": "SuperTransporte Circular 94 DE 2025"
+    },
+    "DOC-20": {
+      "archivo": "SuperTransporte Resolucion 14306 de 2024",
+      "titulo": "SuperTransporte Resolucion 14306 de 2024"
+    },
+    "DOC-21": {
+      "archivo": "SuperTransporte Resolucion 1455 de 2025",
+      "titulo": "SuperTransporte Resolucion 1455 de 2025"
+    }
+  },
   "preguntas": [
     {
       "id": "Q01",
       "tipo": "tematica",
       "pregunta": "¿Qué normas regulan las tarifas del servicio de taxi y el uso del taxímetro?",
-      "documentoEsperado": "Decreto_2263_de_1995",
+      "documentoEsperado": "DOC-07",
       "anclaje": "ARTÍCULO 3: 'Para las tarifas del servicio de taxi, en las ciudades en las cuales se utiliza taxímetro, la carrera mínima se reajustará...'"
     },
     {
       "id": "Q02",
       "tipo": "conceptual",
       "pregunta": "¿Cuáles son los requisitos para la creación y habilitación de terminales de transporte terrestre de pasajeros por carretera?",
-      "documentoEsperado": "Decreto_2762_2001",
+      "documentoEsperado": "DOC-08",
       "anclaje": "Título: 'Por el cual se reglamenta la creación, habilitación, homologación y operación de los terminales de transporte terrestre automotor de pasajeros por carretera'"
     },
     {
       "id": "Q03",
       "tipo": "tematica",
       "pregunta": "¿Se pueden autorizar terminales de transporte satélites o periféricas?",
-      "documentoEsperado": "Decreto_2028_de_2006",
+      "documentoEsperado": "DOC-06",
       "anclaje": "Título: 'por el cual se adiciona el Decreto 2762 del 20 de diciembre de 2001 para autorizar el funcionamiento de las Terminales de Transporte de Operación Satélite, Periférica'"
     },
     {
       "id": "Q04",
       "tipo": "conceptual",
       "pregunta": "¿Qué reglamentación existe sobre el servicio público de transporte terrestre automotor de pasajeros por carretera?",
-      "documentoEsperado": "Decreto_171_de_2001",
+      "documentoEsperado": "DOC-05",
       "anclaje": "Título: 'por el cual se reglamenta el Servicio Público de Transporte Terrestre Automotor de Pasajeros por Carretera'"
     },
     {
       "id": "Q05",
       "tipo": "identificador",
       "pregunta": "Resumen del Decreto 1326 de 1998",
-      "documentoEsperado": "Decreto_1326_de_1998",
+      "documentoEsperado": "DOC-04",
       "anclaje": "'Por el cual se reglamenta el artículo 2 de la Ley 336 del 20 de diciembre de 1996', sobre la seguridad como prioridad del sector transporte"
     },
     {
       "id": "Q06",
       "tipo": "identificador",
       "pregunta": "¿Qué establece el Decreto 105 de 1995?",
-      "documentoEsperado": "Decreto_105_de_1995",
+      "documentoEsperado": "DOC-03",
       "anclaje": "'por el cual se reglamenta la Ley 105 de 1993'; modificado por el Decreto Nacional 2263 de 1995"
     },
     {
       "id": "Q07",
       "tipo": "identificador",
       "pregunta": "Resumen de la Resolución 14306 de 2024 de la Superintendencia de Transporte",
-      "documentoEsperado": "SuperTransporte Resolucion 14306 de 2024",
+      "documentoEsperado": "DOC-20",
       "anclaje": "'Por la cual se incorpora el artículo 3.5.7 del capítulo 5 del título III de la Circular Única de Infraestructura y Transporte'"
     },
     {
       "id": "Q08",
       "tipo": "identificador",
       "pregunta": "¿Qué modificó la Resolución 1455 de 2025 de la Superintendencia de Transporte?",
-      "documentoEsperado": "SuperTransporte Resolucion 1455 de 2025",
+      "documentoEsperado": "DOC-21",
       "anclaje": "'Por medio de la cual se corrige y modifica el Título VII, se modifica el capítulo 9 del Título V... de la Circular Única de Infraestructura y Transporte'"
     },
     {
       "id": "Q09",
       "tipo": "identificador",
       "pregunta": "¿Qué dispone la Resolución 3476 de 2026?",
-      "documentoEsperado": "3476",
+      "documentoEsperado": "DOC-01",
       "anclaje": "'Por medio de la cual se modifica el artículo 3.5.7.8 de la Resolución 14306 de 31 de diciembre de 2024... se actualiza el anexo técnico del control de la operación'"
     },
     {
       "id": "Q10",
       "tipo": "conceptual",
       "pregunta": "¿Qué obligaciones tienen los proveedores tecnológicos y cómo se registran en el RUNT?",
-      "documentoEsperado": "ANEXO_TECNICO_CONTROL_DE_LA_OPERACION_DEL_SERVICIO_PUBLICO_DE_TRANSPORTE_TERRESTRE_DE_PASAJEROS_POR_CARRETERA",
+      "documentoEsperado": "DOC-02",
       "anclaje": "Sección 4 del anexo: 'REGISTRO DE PROVEEDORES TECNOLOGICOS EN EL REGISTRO UNICO NACIONAL DE TRÁNSITO RUNT'"
     },
     {
       "id": "Q11",
       "tipo": "conceptual",
       "pregunta": "¿Cómo se reporta la información de pruebas de alcoholimetría y exámenes médicos de aptitud física de los conductores?",
-      "documentoEsperado": "SuperTransporte  Anexo Tecnico Resolucion 14306",
+      "documentoEsperado": "DOC-14",
       "anclaje": "Introducción: 'deberán reportar... pruebas de alcoholimetría, exámenes médicos generales de aptitud física, inventarios de dispositivos'"
     },
     {
       "id": "Q12",
       "tipo": "conceptual",
       "pregunta": "¿Cuáles son las alternativas para reportar información al sistema SICOV-OTPC?",
-      "documentoEsperado": "SuperTransporte  Anexo Tecnico Resolucion  1455",
+      "documentoEsperado": "DOC-13",
       "anclaje": "Tabla de contenido: '3. ALTERNATIVAS DE REPORTE DE INFORMACIÓN — 3.1 a través del módulo web del SINST (VIGIA 2)...'"
     },
     {
       "id": "Q13",
       "tipo": "identificador",
       "pregunta": "Circular externa 20255330000094 del 10 de junio de 2025 sobre el cronograma del SICOV",
-      "documentoEsperado": "SuperTransporte Circular 94 DE 2025",
+      "documentoEsperado": "DOC-19",
       "anclaje": "Circular Externa No. 20255330000094, fecha 10-06-2025, 'Actualización del Cronograma de Inicio de Operación del SICOV-OTPC'"
     },
     {
       "id": "Q14",
       "tipo": "identificador",
       "pregunta": "Circular 114 de 2025 de la Superintendencia de Transporte, del 15 de agosto de 2025",
-      "documentoEsperado": "SuperTransporte  Circular 114 DE 2025",
+      "documentoEsperado": "DOC-15",
       "anclaje": "Circular Externa No. 20255330000114, fecha 15-08-2025, 'Actualización del Cronograma de Inicio de Operación del SICOV-OTPC'"
     },
     {
       "id": "Q15",
       "tipo": "identificador",
       "pregunta": "¿Qué dice la Circular 14 de 2026 sobre el cronograma de implementación del SICOV?",
-      "documentoEsperado": "SuperTransporte Circular 14 DE 2026",
+      "documentoEsperado": "DOC-17",
       "anclaje": "Circular Externa No. 20265330000014, fecha 31-01-2026, 'Modificación del Cronograma para la implementación del SICOV-OTPC'"
     },
     {
       "id": "Q16",
       "tipo": "identificador",
       "pregunta": "Circular 164 de 2025 con instrucciones de implementación del SICOV-OTPC",
-      "documentoEsperado": "SuperTransporte Circular 164 DE 2025",
+      "documentoEsperado": "DOC-18",
       "anclaje": "Circular Externa No. 20255330000164, fecha 18-11-2025, 'Instrucciones implementación del SICOV-OTPC'"
     },
     {
       "id": "Q17",
       "tipo": "tematica",
       "pregunta": "¿Las empresas de transporte pueden modificar libremente sus horarios de despacho?",
-      "documentoEsperado": "Mintransporte Circular 507 de 2024",
+      "documentoEsperado": "DOC-12",
       "anclaje": "Asunto: 'LIBERTAD DE HORARIOS – MODIFICACIÓN DE HORARIOS – DEMOSTRACIÓN DE EXISTENCIA DE SERVICIOS...'; cita la resolución 7811 de 2001"
     },
     {
       "id": "Q18",
       "tipo": "conceptual",
       "pregunta": "¿Qué lineamientos existen para el cumplimiento del programa de seguridad por parte de los operadores?",
-      "documentoEsperado": "MinTransporte Circular 837 DE 2023",
+      "documentoEsperado": "DOC-11",
       "anclaje": "Asunto: 'LINEAMIENTOS PARA EL CUMPLIMIENTO DE LAS RESOLUCIONES 2734 DE 2018, 2222 DE 2002 Y 4222 DE 2002'"
     },
     {
       "id": "Q19",
       "tipo": "identificador",
       "pregunta": "¿Qué alcance dio la circular 127 de 2024 a la circular 837 de 2023?",
-      "documentoEsperado": "MinTransporte 127 De 2024",
+      "documentoEsperado": "DOC-10",
       "anclaje": "Asunto: 'ALCANCE CIRCULAR 20234000000837 DEL 21 DE DICIEMBRE DE 2023, SOBRE LINEAMIENTOS PARA EL CUMPLIMIENTO DE LAS RESOLUCIONES 2734 DE 2018...'"
     },
     {
       "id": "Q20",
       "tipo": "tematica",
       "pregunta": "¿Qué lineamientos hay para la operación de infraestructuras de ascenso y descenso de pasajeros, como bahías y paraderos?",
-      "documentoEsperado": "MinTransporte  Circular 387 de 2025",
+      "documentoEsperado": "DOC-09",
       "anclaje": "Asunto: 'LINEAMIENTOS PARA LA OPERACIÓN DE INFRAESTRUCTURAS...', circular 20254000000387 del 18-07-2025"
     },
     {
       "id": "Q21",
       "tipo": "conceptual",
       "pregunta": "¿Cómo se cobra y reporta la tasa de uso de los terminales de transporte?",
-      "documentoEsperado": "Decreto_2762_2001",
+      "documentoEsperado": "DOC-08",
       "anclaje": "El decreto de terminales regula la tasa de uso; el término aparece también en los anexos técnicos, por lo que esta pregunta mide discriminación entre norma marco y anexo operativo."
     },
     {
       "id": "Q22",
       "tipo": "conceptual",
       "pregunta": "¿Qué instrucciones dio la Superintendencia en septiembre de 2025 para implementar el sistema de vigilancia y control?",
-      "documentoEsperado": "SuperTransporte  Circular 124 DE 2025",
+      "documentoEsperado": "DOC-16",
       "anclaje": "Circular Externa No. 20255330000124, fecha 05-09-2025, 'Instrucciones implementación del SICOV-OTPC'"
     }
   ]

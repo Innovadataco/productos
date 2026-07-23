@@ -17,6 +17,13 @@
  * (`documents/route.ts`: `titulo || file.name.replace(/\.pdf$/i, "")`), así que
  * incluirlo no es hacer trampa: es lo que habría en producción. Aun así se ofrece
  * como campo separado para poder medir su efecto por sí solo.
+ *
+ * FE DE ERRATAS (2026-07-23, FR-028 / D-032): la versión anterior anteponía
+ * `doc.id`, y `doc.id` era el nombre del archivo = el `documentoEsperado` del
+ * banco. Eso inyectaba la etiqueta dentro del texto que se rankea (fuga). Ahora
+ * `doc.id` es un id OPACO (DOC-NN) y el título sale de `doc.titulo`, un campo
+ * aparte de calidad realista. El +0,350 que reportó la variante "título" no era
+ * evidencia; hay que volver a medir con el banco corregido.
  */
 
 const CAMPOS_VALIDOS = ["tipo", "numero", "anio", "entidad", "fecha", "radicado", "titulo"];
@@ -59,7 +66,11 @@ export function construirPrefijo(doc, campos) {
   if (usar.includes("radicado") && doc.radicado) partes.push(`radicado ${doc.radicado}`);
   if (usar.includes("entidad") && doc.entidad) partes.push(doc.entidad);
   if (usar.includes("fecha") && doc.fecha) partes.push(doc.fecha);
-  if (usar.includes("titulo") && doc.id) partes.push(doc.id.replace(/_/g, " "));
+  // FR-028 (D-032): el título sale de `doc.titulo` (campo aparte, calidad realista),
+  // NUNCA de `doc.id`. `doc.id` es ahora un id opaco (DOC-NN) igual al
+  // `documentoEsperado` del banco: anteponerlo inyectaría la etiqueta en el texto
+  // que se rankea, que era exactamente la fuga corregida.
+  if (usar.includes("titulo") && doc.titulo) partes.push(doc.titulo);
 
   return partes.length ? `[${partes.join(" · ")}]` : "";
 }

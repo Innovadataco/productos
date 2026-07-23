@@ -92,14 +92,33 @@ export function extraerMetadatos(nombreArchivo, texto) {
   };
 }
 
-export function cargarCorpus(corpusPath) {
+/**
+ * Carga el corpus asignando a cada documento un **id OPACO** (FR-028 / D-032).
+ *
+ * El id ya NO es el nombre del archivo: eso causaba la fuga de etiqueta (el id
+ * coincidía con el `documentoEsperado` del banco y `enrich.mjs` lo anteponía al
+ * texto que se rankea). El `mapaDocumentos` del banco (opaque id → {archivo,
+ * titulo}) traduce nombre de archivo → id opaco, y aporta un `titulo` de calidad
+ * realista como **campo aparte**. Un archivo sin entrada en el mapa conserva su
+ * nombre como id (no participa del banco, así que no puede filtrar nada).
+ */
+export function cargarCorpus(corpusPath, mapaDocumentos = {}) {
   const documentos = [];
   const sinTexto = [];
+
+  // Índice inverso: nombre de archivo (sin extensión) → id opaco + título.
+  const porArchivo = {};
+  for (const [oid, info] of Object.entries(mapaDocumentos)) {
+    porArchivo[info.archivo] = { id: oid, titulo: info.titulo };
+  }
 
   for (const ruta of listarPdfs(corpusPath)) {
     const bruto = extraerTexto(ruta);
     const texto = normalizar(bruto);
-    const id = basename(ruta, extname(ruta));
+    const archivo = basename(ruta, extname(ruta));
+    const mapeo = porArchivo[archivo];
+    const id = mapeo ? mapeo.id : archivo;
+    const titulo = mapeo ? mapeo.titulo : archivo.replace(/_/g, " ");
 
     if (texto.length < 200) {
       sinTexto.push({
@@ -111,7 +130,9 @@ export function cargarCorpus(corpusPath) {
       continue;
     }
 
-    documentos.push({ id, ruta, texto, ...extraerMetadatos(ruta, texto) });
+    // `titulo` es un campo aparte del `id` opaco (FR-028): así la variante de
+    // enriquecimiento por título usa un valor realista, no la etiqueta.
+    documentos.push({ id, titulo, ruta, texto, ...extraerMetadatos(ruta, texto) });
   }
 
   return { documentos, sinTexto };
