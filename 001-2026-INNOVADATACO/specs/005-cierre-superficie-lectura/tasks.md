@@ -138,18 +138,17 @@ consultar la base y de cualquier `fetch`.
 - [ ] T039 [P] [US4] Crear `src/lib/destinoSeguro.test.ts`: rutas internas con y sin query,
       `//evil.com`, `/\evil.com`, `https://…`, `null`, vacío. → FR-018, §0.2
 - [ ] T040 [US4] Crear `src/middleware.ts` con el orden de decisión del plan: estáticos y
-      rutas públicas pasan; `/api/**` sin cookie → **401 JSON**; `/login` con cookie → `/`;
-      página sin cookie → `/login?next=<ruta+query>`. **D-041**: decide por **presencia** de
+      rutas públicas pasan; `/api/**` sin cookie → **401 JSON**; `/login` **siempre pasa**
+      (D-043: FR-019 retirado); página sin cookie → `/login?next=<ruta+query>`. **D-041**: decide por **presencia** de
       `req.cookies.get("token")` — sin verificar firma, sin base de datos y **sin importar
-      `@/lib/auth`**. → FR-012…FR-017, FR-019
+      `@/lib/auth`**. → FR-012…FR-017, FR-019 (retirado)
 - [ ] T041 [US4] `matcher` que excluya `/_next/static`, `/_next/image` y el icono del sitio.
       → FR-014
 - [ ] T042 [US4] `src/app/login/page.tsx`: tras un login correcto navegar a
       `destinoSeguro(new URLSearchParams(window.location.search).get("next"))`. Sin
       `useSearchParams` (research D-06). Nada más de la pantalla se toca. → FR-017, FR-018
 - [ ] T043 [US4] Crear `src/middleware.test.ts`: página protegida sin cookie → redirección
-      a `/login?next=…`; con cookie → pasa; `/login` sin cookie → pasa; `/login` con cookie
-      → `/`; `/api/documents` sin cookie → **401 JSON, no redirección**;
+      a `/login?next=…`; con cookie → pasa; `/login` **con y sin cookie → pasa** (D-043); `/api/documents` sin cookie → **401 JSON, no redirección**;
       `POST /api/auth/login` y `POST /api/auth/logout` sin cookie → pasan; y el
       comportamiento **declarado** de D-041: una cookie basura pasa la barrera (la ruta la
       rechaza igual). → FR-022
@@ -206,7 +205,7 @@ consultar la base y de cualquier `fetch`.
 | FR-016 | T040, T043 |
 | FR-017 | T040, T042 |
 | FR-018 | T038, T039, T042 |
-| FR-019 | T040, T043 |
+| FR-019 (retirado, D-043) | T040, T043 — se prueba que `/login` **nunca** redirige |
 | FR-020, FR-021 | T017, T035 |
 | FR-022 | T043 |
 | FR-023 | T045 |

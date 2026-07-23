@@ -269,8 +269,11 @@ confunde, pero no expone. Sigue siendo obligatoria: I-008 no se cierra sin ella.
    **When** inicia sesión, **Then** vuelve a esa dirección y no a una genérica.
 5. **Given** una dirección de retorno que apunte fuera de la aplicación, **When** se
    procesa, **Then** se descarta y se usa la página principal.
-6. **Given** una sesión ya iniciada, **When** se solicita la pantalla de acceso, **Then**
-   se lleva al usuario a la aplicación en vez de pedirle credenciales otra vez.
+6. **Given** una cookie presente (válida o no), **When** se solicita la pantalla de acceso,
+   **Then** se sirve el formulario. **La barrera nunca aparta a nadie del login**
+   (**D-043**): con la comprobación optimista de D-041, apartar a quien "parece" tener
+   sesión encerraría fuera al usuario con la cookie caducada, que es precisamente quien
+   necesita volver a entrar.
 7. **Given** una petición a una ruta de la API sin sesión, **When** la atiende la barrera,
    **Then** responde **401 en JSON** y **nunca** una redirección: un `fetch` que recibiera
    el HTML del login lo interpretaría como éxito y rompería la interfaz.
@@ -399,8 +402,12 @@ confunde, pero no expone. Sigue siendo obligatoria: I-008 no se cierra sin ella.
 - **FR-018**: la dirección de retorno MUST ser **interna a la aplicación**; una dirección
   absoluta o externa MUST descartarse y sustituirse por la página principal (evita usar el
   login como trampolín a un sitio de terceros).
-- **FR-019**: con sesión válida, solicitar la pantalla de acceso MUST llevar al usuario a
-  la aplicación en lugar de mostrar el formulario.
+- **FR-019** *(retirado por D-043)*: ~~con sesión válida, solicitar la pantalla de acceso
+  MUST llevar al usuario a la aplicación en lugar de mostrar el formulario.~~ La barrera
+  **MUST servir siempre** la pantalla de acceso, haya cookie o no. Bajo D-041 la barrera no
+  distingue una sesión viva de una caducada, así que redirigir por "parecer" autenticado
+  dejaría encerrado justo a quien necesita volver a entrar. Su valor era cosmético; el
+  coste, real.
 
 **Bloque 5 · Pruebas y no regresión**
 
@@ -539,5 +546,6 @@ confunde, pero no expone. Sigue siendo obligatoria: I-008 no se cierra sin ella.
 | Versión | Fecha | Cambio |
 |---|---|---|
 | v1 | 2026-07-23 | Redacción inicial (`62736c2d`). La ampliación a la escritura se propuso aislada en US-3, retirable, en vez de ampliar el alcance por cuenta propia |
+| v4 | 2026-07-23 | **D-042** (la contaminación cruzada de `bbaf0d20` no se reescribe; la regla de staging sube al `AGENTS.md` raíz) y **D-043**: se **retira FR-019** — la barrera sirve siempre la pantalla de acceso. `POST /api/auth/logout` se confirma público como excepción declarada a §5.1 por inocuo |
 | v3 | 2026-07-23 | **D-041**: la barrera de páginas comprueba **solo presencia** de cookie (comprobación optimista en el borde, verificación real en cada ruta). Deja de ser una contingencia y pasa a ser el diseño; se retira la verificación de firma en el borde y con ella el módulo compartido que solo existía para eso. Añadida RZ-7 y reescrito FR-016 |
 | v2 | 2026-07-23 | **Revisión de ZEUS.** Ampliación **aprobada** y elevada a P1 por delante del encargo original (**I-010** crítica, **D-040**); reordenadas las historias a escritura → interfaz → lectura → páginas; el manejo del 401 en `configuracion/page.tsx` pasa a historia propia con criterios de aceptación propios (RZ-6). **Renumeración**: los FR de escritura (antes FR-013…FR-016) son ahora FR-001…FR-004; los de lectura, FR-008…FR-011 |

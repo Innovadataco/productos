@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ParametrizacionTab from "@/components/configuracion/ParametrizacionTab";
+import { listaSegura } from "@/lib/respuestaApi";
 import {
   Settings, Cpu, Globe, Terminal, Save, Plus, Trash2, RefreshCw,
   CheckCircle, XCircle, AlertCircle, Clock, X, ArrowLeft
@@ -146,19 +147,27 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
   };
 
+  // Las tres cargas validan la respuesta antes de volcarla al estado (spec 005, FR-005):
+  // sin esto, un 401 metía `{ error: ... }` donde después se hace `.map()` y la pantalla
+  // se rompía entera. Es el caso que T012 evitó en projects/page.tsx, por triplicado.
   const loadModels = async () => {
-    const res = await fetch("/api/config/models");
-    setModels(await res.json());
+    const { items, error } = await listaSegura<AiModel>(await fetch("/api/config/models"));
+    setModels(items);
+    if (error) toast("error", `Modelos: ${error}`);
   };
 
   const loadApis = async () => {
-    const res = await fetch("/api/config/apis");
-    setApis(await res.json());
+    const { items, error } = await listaSegura<AgentApi>(await fetch("/api/config/apis"));
+    setApis(items);
+    if (error) toast("error", `APIs: ${error}`);
   };
 
   const loadAudit = async () => {
-    const res = await fetch("/api/config/audit?limit=100");
-    setLogs(await res.json());
+    const { items, error } = await listaSegura<AuditLog>(
+      await fetch("/api/config/audit?limit=100"),
+    );
+    setLogs(items);
+    if (error) toast("error", `Auditoría: ${error}`);
   };
 
   useEffect(() => {

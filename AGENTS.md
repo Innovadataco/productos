@@ -34,6 +34,12 @@ Este repo tiene **dos ramas y solo dos**:
 
 Si un comando te deja en `main`, vuelve a la rama de pruebas antes de commitear. Ante la duda: **detente y reporta**.
 
+## Staging (INQUEBRANTABLE, todos los frentes)
+
+Prohibido `git add -A` y `git add .`. Cada frente stagea SOLO rutas de su producto:
+`git add 001-2026-INNOVADATACO/...`. Varios frentes trabajan en la misma rama: un staging
+global se lleva el trabajo de otro y arruina la trazabilidad del commit.
+
 ## Metodología y estándares (fábrica IDC)
 
 - **Metodología oficial:** PM2 (gestión) + Spec Kit (desarrollo). Documento canónico en el repo `Metodologias` → `Desarrollo de software/METODOLOGIA-OPERATIVA-FABRICA-SOFTWARE-v1.0.md`.

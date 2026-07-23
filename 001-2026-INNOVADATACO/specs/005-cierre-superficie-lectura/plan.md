@@ -143,8 +143,7 @@ abierto (FR-011).
    | Recurso estático (`/_next/*`, icono del sitio) | pasar (excluido por `matcher`) |
    | `POST /api/auth/login`, `POST /api/auth/logout` | pasar |
    | Resto de `/api/**` sin sesión | **401 JSON**, nunca redirección (FR-015) |
-   | `/login` **con** sesión | redirigir a `/` (FR-019) |
-   | `/login` sin sesión | pasar (FR-014) |
+   | `/login`, haya cookie o no | **pasar siempre** (FR-014, FR-019 retirado por D-043) |
    | Cualquier otra página sin sesión | redirigir a `/login?next=<ruta+query>` (FR-017) |
    | Cualquier otra página con sesión | pasar |
 
@@ -198,7 +197,8 @@ Un commit por bloque, cada uno con su suite en verde y **push en el mismo acto**
 | FR-005…FR-007 | `npx vitest run src/lib/respuestaApi.test.ts` + verificación manual del quickstart | pantalla vacía y aviso, sin romperse |
 | FR-008…FR-010 | `curl` sin cookie a los 11 `GET`; con cookie, comparar cuerpo | 401 sin datos (hoy 200 con datos); mismo cuerpo con sesión |
 | FR-011 | Revisión archivo por archivo + prueba estructural | ningún archivo mixto |
-| FR-012…FR-014, FR-019 | `curl -sI` a las 5 páginas sin cookie y con cookie | redirección al login / 200 |
+| FR-012…FR-014 | `curl -sI` a las 5 páginas sin cookie y con cookie | redirección al login / 200 |
+| FR-019 (D-043) | `curl -sI /login` con y sin cookie | **200 en ambos**: la barrera nunca aparta del login |
 | FR-015 | `curl -si .../api/documents` sin cookie | `401` + `content-type: application/json` |
 | FR-016 | Revisión del middleware | sin importar Prisma ni `@/lib/auth`; decide por presencia de cookie (D-041) |
 | FR-017, FR-018 | Pruebas de `destinoSeguro` + prueba manual del retorno | vuelve al destino; destino externo → `/` |
