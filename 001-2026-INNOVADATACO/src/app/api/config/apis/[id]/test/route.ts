@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { resolveOllamaBaseUrl } from "@/lib/modelClients";
 
@@ -115,8 +116,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       url: targetUrl,
       response: data,
     });
-  } catch (err: any) {
-    console.error(err);
-    return NextResponse.json({ ok: false, error: err.message, latencyMs: Date.now() - start }, { status: 500 });
+  } catch (err: unknown) {
+    return apiError("Configuración", "POST test API", "Error ejecutando la prueba de la API", 500, err, {
+      ok: false,
+      latencyMs: Date.now() - start,
+    });
   }
 }

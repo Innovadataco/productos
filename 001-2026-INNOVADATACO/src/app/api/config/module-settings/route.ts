@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 
@@ -18,8 +19,8 @@ export async function GET() {
             }
         });
         return NextResponse.json({ settings });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return apiError("Configuración", "module-settings", "Error en la configuración de módulos", 500, error);
     }
 }
 
@@ -70,7 +71,7 @@ export async function PUT(request: NextRequest) {
         });
 
         return NextResponse.json({ setting });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return apiError("Configuración", "module-settings", "Error en la configuración de módulos", 500, error);
     }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, detalleDeError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { testModel } from "@/lib/modelClients";
 import { auditLog } from "@/lib/audit";
@@ -25,9 +26,12 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(result);
-  } catch (err: any) {
-    console.error(err);
-    await auditLog({ action: "test_model", entityType: "AiModel", status: "error", message: err.message });
-    return NextResponse.json({ ok: false, error: err.message, latencyMs: 0, text: "" }, { status: 500 });
+  } catch (err: unknown) {
+    await auditLog({ action: "test_model", entityType: "AiModel", status: "error", message: detalleDeError(err) });
+    return apiError("Configuración", "POST test modelo", "Error probando el modelo", 500, err, {
+      ok: false,
+      latencyMs: 0,
+      text: "",
+    });
   }
 }

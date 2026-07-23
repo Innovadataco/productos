@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/licitaciones/[id] - Obtener una licitación específica
@@ -33,12 +34,8 @@ export async function GET(
     }
 
     return NextResponse.json(licitacion);
-  } catch (error: any) {
-    console.error("Error al obtener licitación:", error);
-    return NextResponse.json(
-      { error: "Error al obtener licitación", details: error.message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return apiError("Licitaciones", "GET detalle", "Error al obtener licitación", 500, error);
   }
 }
 
@@ -84,12 +81,8 @@ export async function PATCH(
     });
 
     return NextResponse.json(licitacion);
-  } catch (error: any) {
-    console.error("Error al actualizar licitación:", error);
-    return NextResponse.json(
-      { error: "Error al actualizar licitación", details: error.message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return apiError("Licitaciones", "PATCH detalle", "Error al actualizar licitación", 500, error);
   }
 }
 
@@ -117,11 +110,7 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true, message: "Licitación eliminada" });
-  } catch (error: any) {
-    console.error("Error al eliminar licitación:", error);
-    return NextResponse.json(
-      { error: "Error al eliminar licitación", details: error.message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return apiError("Licitaciones", "DELETE detalle", "Error al eliminar licitación", 500, error);
   }
 }

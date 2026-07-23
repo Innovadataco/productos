@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, detalleDeError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { auditLog } from "@/lib/audit";
 import { encrypt } from "@/lib/crypto";
@@ -57,10 +58,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
     });
 
     return NextResponse.json(model);
-  } catch (err: any) {
-    console.error(err);
-    await auditLog({ action: "update_model", entityType: "AiModel", status: "error", message: err.message });
-    return NextResponse.json({ error: err.message || "Error actualizando modelo" }, { status: 500 });
+  } catch (err: unknown) {
+    await auditLog({ action: "update_model", entityType: "AiModel", status: "error", message: detalleDeError(err) });
+    return apiError("Configuración", "PATCH modelo", "Error actualizando modelo", 500, err);
   }
 }
 
@@ -73,9 +73,8 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     await prisma.aiModel.delete({ where: { id } });
     await auditLog({ action: "delete_model", entityType: "AiModel", entityId: id, status: "success", message: "Modelo eliminado" });
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    console.error(err);
-    await auditLog({ action: "delete_model", entityType: "AiModel", status: "error", message: err.message });
-    return NextResponse.json({ error: err.message || "Error eliminando modelo" }, { status: 500 });
+  } catch (err: unknown) {
+    await auditLog({ action: "delete_model", entityType: "AiModel", status: "error", message: detalleDeError(err) });
+    return apiError("Configuración", "DELETE modelo", "Error eliminando modelo", 500, err);
   }
 }

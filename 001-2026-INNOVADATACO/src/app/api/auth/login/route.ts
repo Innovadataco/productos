@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/auth";
@@ -30,8 +31,7 @@ export async function POST(req: NextRequest) {
             maxAge: 604800, // 7 días
         });
         return res;
-    } catch (err: any) {
-        console.error(err);
-        return NextResponse.json({ error: err.message || "Error en login" }, { status: 500 });
+    } catch (err: unknown) {
+        return apiError("Auth", "POST login", "Error en login", 500, err);
     }
 }

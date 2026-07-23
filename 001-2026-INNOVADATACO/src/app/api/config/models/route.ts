@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, detalleDeError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { auditLog } from "@/lib/audit";
 import { encrypt } from "@/lib/crypto";
@@ -81,9 +82,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(model, { status: 201 });
-  } catch (err: any) {
-    console.error(err);
-    await auditLog({ action: "create_model", entityType: "AiModel", status: "error", message: err.message });
-    return NextResponse.json({ error: err.message || "Error creando modelo" }, { status: 500 });
+  } catch (err: unknown) {
+    // El detalle sí se registra en auditoría y logs; nunca se devuelve al cliente.
+    await auditLog({ action: "create_model", entityType: "AiModel", status: "error", message: detalleDeError(err) });
+    return apiError("Configuración", "POST modelo", "Error creando modelo", 500, err);
   }
 }

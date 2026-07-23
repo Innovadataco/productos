@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { callModel } from "@/lib/modelClients";
 import { buildResearchPrompt, sanitizeJsonText } from "@/lib/prompts";
@@ -37,8 +38,14 @@ export async function POST(req: NextRequest) {
     let analysis: Record<string, any> | null = null;
     try {
       analysis = JSON.parse(sanitizeJsonText(result.text));
-    } catch (err: any) {
-      return NextResponse.json({ ok: false, error: `JSON inválido: ${err.message}`, rawText: result.text, latencyMs: result.latencyMs }, { status: 502 });
+    } catch (err: unknown) {
+      // rawText/latencyMs son datos legítimos de la respuesta; el detalle del
+      // error de parseo va solo al log del servidor.
+      return apiError("Investigación", "POST analyze", "El modelo devolvió un JSON inválido", 502, err, {
+        ok: false,
+        rawText: result.text,
+        latencyMs: result.latencyMs,
+      });
     }
 
     return NextResponse.json({

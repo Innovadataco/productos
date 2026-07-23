@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/licitaciones/entidades - Listar todas las entidades
@@ -9,12 +10,8 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(entidades);
-  } catch (error: any) {
-    console.error("Error al obtener entidades:", error);
-    return NextResponse.json(
-      { error: "Error al obtener entidades", details: error.message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return apiError("Licitaciones", "GET entidades", "Error al obtener entidades", 500, error);
   }
 }
 
@@ -39,11 +36,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(entidad, { status: 201 });
-  } catch (error: any) {
-    console.error("Error al crear entidad:", error);
-    return NextResponse.json(
-      { error: "Error al crear entidad", details: error.message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return apiError("Licitaciones", "POST entidad", "Error al crear entidad", 500, error);
   }
 }

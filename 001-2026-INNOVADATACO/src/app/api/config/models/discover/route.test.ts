@@ -49,6 +49,22 @@ describe("GET /api/config/models/discover (FR-010)", () => {
     );
   });
 
+  it("no filtra el mensaje de excepción al cliente y conserva models: [] (FR-004)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("connect ECONNREFUSED 192.168.5.2:11434")),
+    );
+
+    const req = new NextRequest("http://localhost:5001/api/config/models/discover");
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(body).toEqual({ error: "No se pudo contactar Ollama", models: [] });
+    expect(JSON.stringify(body)).not.toContain("ECONNREFUSED");
+  });
+
   it("sin query ni entorno cae al default localhost", async () => {
     vi.stubEnv("OLLAMA_BASEURL", "");
     const fetchMock = mockOllamaTags();

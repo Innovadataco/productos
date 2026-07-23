@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { resolveOllamaBaseUrl } from "@/lib/modelClients";
 
 export async function GET(req: NextRequest) {
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
       family: m.details?.family,
     }));
     return NextResponse.json({ models });
-  } catch (err: any) {
-    return NextResponse.json({ models: [], error: err.message || "No se pudo contactar Ollama" }, { status: 502 });
+  } catch (err: unknown) {
+    return apiError("Configuración", "GET discover", "No se pudo contactar Ollama", 502, err, { models: [] });
   }
 }

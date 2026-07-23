@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, esCodigoPrisma } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 
@@ -37,11 +38,10 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json(proyecto, { status: 201 });
-    } catch (err: any) {
-        console.error(err);
-        if (err.code === "P2002") {
-            return NextResponse.json({ error: "Ya existe un proyecto con ese código" }, { status: 409 });
+    } catch (err: unknown) {
+        if (esCodigoPrisma(err, "P2002")) {
+            return apiError("Proyectos", "POST proyecto", "Ya existe un proyecto con ese código", 409, err);
         }
-        return NextResponse.json({ error: err.message || "Error creando proyecto" }, { status: 500 });
+        return apiError("Proyectos", "POST proyecto", "Error creando proyecto", 500, err);
     }
 }

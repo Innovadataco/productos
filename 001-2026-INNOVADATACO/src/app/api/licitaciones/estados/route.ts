@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/licitaciones/estados - Listar todos los estados
@@ -9,12 +10,8 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(estados);
-  } catch (error: any) {
-    console.error("Error al obtener estados:", error);
-    return NextResponse.json(
-      { error: "Error al obtener estados", details: error.message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return apiError("Licitaciones", "GET estados", "Error al obtener estados", 500, error);
   }
 }
 
@@ -39,11 +36,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(estado, { status: 201 });
-  } catch (error: any) {
-    console.error("Error al crear estado:", error);
-    return NextResponse.json(
-      { error: "Error al crear estado", details: error.message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return apiError("Licitaciones", "POST estado", "Error al crear estado", 500, error);
   }
 }

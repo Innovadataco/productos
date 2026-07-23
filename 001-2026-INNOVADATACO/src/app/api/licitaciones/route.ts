@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 
@@ -47,12 +48,8 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(licitaciones);
-  } catch (error: any) {
-    console.error("Error al obtener licitaciones:", error);
-    return NextResponse.json(
-      { error: "Error al obtener licitaciones", details: error.message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return apiError("Licitaciones", "GET lista", "Error al obtener licitaciones", 500, error);
   }
 }
 

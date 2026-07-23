@@ -72,4 +72,18 @@ describe("POST /api/auth/login", () => {
     expect(cookie?.value).toBeTruthy();
     expect(cookie?.httpOnly).toBe(true);
   });
+
+  it("no filtra el mensaje de excepción al cliente ante un error interno (FR-004)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(prisma.user.findUnique).mockRejectedValue(
+      new Error("conexión rechazada en 127.0.0.1:5435"),
+    );
+
+    const res = await POST(peticionLogin(CREDENCIALES));
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body).toEqual({ error: "Error en login" });
+    expect(JSON.stringify(body)).not.toContain("127.0.0.1");
+  });
 });
