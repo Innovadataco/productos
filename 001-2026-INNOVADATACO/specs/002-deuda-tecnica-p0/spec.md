@@ -4,7 +4,8 @@
 
 **Created**: 2026-07-22
 
-**Status**: Draft — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO)
+**Status**: Approved — aprobada por ZEUS (arquitecto) y Jelkin (CEO) el 2026-07-22
+(plan y tasks aprobados el mismo día)
 
 **Input**: User description: "Deuda técnica P0 (alcance decidido por ZEUS):
 (a) harness de tests — vitest carga variables de entorno y el test de login queda
