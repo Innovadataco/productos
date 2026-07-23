@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { requiereModulo } from "@/lib/guard-modulos";
 import { reintentarSolicitud } from "@/lib/despachos/cola";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 /// Reintento manual de una solicitud fallida (corrige bug 2: el botón del demo no tenía handler).
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    await verifyAuth([1, 2, 3]);
+    const u = await verifyAuth([1, 2, 3]);
+    await requiereModulo(u, "salidas"); // D-017
     const { id } = await ctx.params;
     const solicitudId = Number(id);
     if (!Number.isFinite(solicitudId) || solicitudId <= 0) {

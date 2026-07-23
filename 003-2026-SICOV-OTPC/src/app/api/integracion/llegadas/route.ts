@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { requiereModulo } from "@/lib/guard-modulos";
 import { resolverContextoEfectivo } from "@/lib/integracion/contexto-usuario";
 import { limpiarPlaca } from "@/lib/normalizar";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -9,6 +10,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 export async function POST(req: Request) {
   try {
     const u = await verifyAuth([1, 2, 3]);
+    await requiereModulo(u, "llegadas"); // D-017: el permiso por módulo se valida en la ruta, no solo en el menú
     const payload = (await req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!payload || typeof payload !== "object") {
       throw new AppError("Payload inválido", ERROR_CODES.VALIDATION_ERROR, 400);
@@ -73,6 +75,7 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const u = await verifyAuth([1, 2, 3]);
+    await requiereModulo(u, "llegadas"); // D-017: el permiso por módulo se valida en la ruta, no solo en el menú
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize") ?? "25")));
