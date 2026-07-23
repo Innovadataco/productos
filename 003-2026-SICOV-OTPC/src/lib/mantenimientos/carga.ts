@@ -38,9 +38,10 @@ export async function manejarCargaMasiva(
   formato: keyof typeof FORMATOS,
 ): Promise<NextResponse> {
   try {
-    // Roles 1 y 3: el cliente (rol 2) no carga registros (§10.2). Guard de módulo D-017.
+    // Roles 1 y 3: el cliente (rol 2) no carga registros (§10.2). Guard de módulo D-017 extendido a
+    // submódulo (spec 009): la carga masiva respeta el mismo permiso preventivos/correctivos.
     const u = await verifyAuth([1, 3]);
-    await requiereModulo(u, "mantenimientos");
+    await requiereModulo(u, "mantenimientos", tipo === 1 ? "preventivos" : "correctivos");
 
     const form = await req.formData().catch(() => null);
     const archivo = form?.get("archivo");

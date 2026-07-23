@@ -9,7 +9,7 @@ import type { RegistroDetalle } from "@/lib/mantenimientos/tipos";
 export async function POST(req: Request) {
   try {
     const u = await verifyAuth([1, 3]);
-    await requiereModulo(u, "mantenimientos");
+    await requiereModulo(u, "mantenimientos", "correctivos");
     const body = (await req.json().catch(() => ({}))) as Partial<RegistroDetalle> & {
       mantenimientoId?: unknown;
     };
