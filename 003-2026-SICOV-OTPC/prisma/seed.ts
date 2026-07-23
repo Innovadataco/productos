@@ -210,7 +210,7 @@ async function main() {
     });
     const baseFallido = await prisma.mantenimiento.create({
       data: {
-        placa: "FALLA1",
+        placa: "FAL999",
         tipoId: 2,
         usuarioId: BigInt(NIT_VIGILADO),
         fechaDiligenciamiento: new Date(),
@@ -228,7 +228,7 @@ async function main() {
         estado: "fallido",
         reintentos: 3,
         ultimoError: "Fallo simulado por el stub",
-        payload: { vigiladoId: NIT_VIGILADO, placa: "FALLA1", tipoId: 2 },
+        payload: { vigiladoId: NIT_VIGILADO, placa: "FAL999", tipoId: 2 },
       },
     });
   }

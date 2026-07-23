@@ -102,7 +102,8 @@ export class ClienteStub implements ClienteSupertransporte {
 
   /// POST de mantenimientos (base o detalle). Arma y valida las cabeceras del contrato propio
   /// (Authorization+token, vigiladoId solo si opts.conVigiladoId) SIN tocar la red.
-  /// Placas `FALLA*` fuerzan error (para ejercitar caída a cola y reintentos).
+  /// Placas `FAL*` (p. ej. FAL999 — formato válido 3+3) fuerzan error para ejercitar la caída a
+  /// cola y los reintentos; `FALLA*` no pasa la regex de placa de mantenimientos.
   async postMantenimiento(
     path: string,
     body: unknown,
@@ -116,7 +117,7 @@ export class ClienteStub implements ClienteSupertransporte {
 
     const b = (body ?? {}) as Record<string, unknown>;
     const placa = String(b["placa"] ?? "").toUpperCase();
-    if (b["__stubFallo"] === true || placa.startsWith("FALLA")) {
+    if (b["__stubFallo"] === true || placa.startsWith("FAL")) {
       const err = new Error("Fallo simulado por el stub") as Error & { responseData?: unknown };
       err.responseData = { mensaje: "Fallo simulado por el stub" };
       throw err;

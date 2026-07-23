@@ -108,10 +108,10 @@ describe("ClienteStub mantenimientos (spec 005 — cabeceras propias, sin red)",
     expect(Number(r["mantenimientoId"])).toBe(9001);
   });
 
-  it("placa FALLA* fuerza error (caída a cola)", async () => {
+  it("placa FAL* (formato válido, ej. FAL999) fuerza error (caída a cola)", async () => {
     const cli = new ClienteStub();
     await expect(
-      cli.postMantenimiento("/guardar-mantenimieto", { placa: "FALLA1", tipoId: 1 }, "900853057", 2),
+      cli.postMantenimiento("/guardar-mantenimieto", { placa: "FAL999", tipoId: 1 }, "900853057", 2),
     ).rejects.toThrow("Fallo simulado");
   });
 

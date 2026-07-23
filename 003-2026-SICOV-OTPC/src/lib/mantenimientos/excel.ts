@@ -68,6 +68,11 @@ export function normalizarHoraExcel(valor: unknown): string | null {
   if (typeof valor === "string") {
     const limpio = valor.trim();
     if (limpio === "") return null;
+    // Luxon "enrolla" horas fuera de rango (24:00→00:00, 8:75→9:15): si el string tiene forma de
+    // hora pero con componentes inválidos, se devuelve tal cual para que la regex del gate
+    // D-022 #3 lo RECHACE ("Fila N: ...") en vez de normalizarlo en silencio.
+    const forma = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(limpio);
+    if (forma && (Number(forma[1]) > 23 || Number(forma[2]) > 59)) return limpio;
     const candidatos = [
       DateTime.fromFormat(limpio, "HH:mm"),
       DateTime.fromFormat(limpio, "H:mm"),
@@ -77,7 +82,7 @@ export function normalizarHoraExcel(valor: unknown): string | null {
       DateTime.fromFormat(limpio, "h:mm a"),
       DateTime.fromFormat(limpio, "hh:mm:ss a"),
       DateTime.fromFormat(limpio, "h:mm:ss a"),
-      DateTime.fromISO(limpio),
+      // NO fromISO: aceptaría "24:00" como medianoche y el gate D-022 #3 exige rechazarla.
     ];
     for (const c of candidatos) if (c.isValid) return c.toFormat("HH:mm");
     return limpio; // la regex del borde lo reportará
