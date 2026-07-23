@@ -1,4 +1,18 @@
 <!--
+Sync Impact Report — 2026-07-23 (fe de erratas de la spec 005)
+Version change: 2.1.0 → 2.1.1
+Bump rationale: PATCH — solo aclaraciones y corrección de afirmaciones falsas
+verificadas contra el código. No se añade, elimina ni redefine ningún principio.
+Modified sections: §3.2 (árbol de rutas regenerado leyendo los 20 archivos reales),
+§4.4 (casillas de tests corregidas contra `ls`), §8.1 (métricas del 2026-07-11
+sustituidas por la medición del 2026-07-23, con comando por cifra; cobertura pasa a
+"sin medir"), §8.2 (casillas que cerró la spec 002).
+Intactas por instrucción de ZEUS: §3.3 (paginación de documents y licitaciones: sigue
+pendiente de verdad, es deuda bien declarada) y §5.1 (la resuelve la spec 005).
+Templates: sin cambios (el Constitution Check es genérico).
+Follow-up TODOs: §3.4 sigue esperando el cierre de la spec 003; falta instalar
+`@vitest/coverage-v8` para que la cobertura deje de estar sin medir.
+
 Sync Impact Report — 2026-07-22 (segunda enmienda del día)
 Version change: 2.0.0 → 2.1.0
 Bump rationale: MINOR — se añaden dos principios rectores nuevos (§0.7
@@ -20,8 +34,8 @@ describir el pipeline RAG real en vez del diseño previsto.
 
 # SPECKIT CONSTITUTION — 001-2026-INNOVADATACO
 
-> **Versión:** 2.1.0  
-> **Ratificada:** 2026-07-11 · **Última enmienda:** 2026-07-22  
+> **Versión:** 2.1.1  
+> **Ratificada:** 2026-07-11 · **Última enmienda:** 2026-07-23  
 > **Stack:** Next.js 16.2.10 + React 19.2.4 + Prisma 5.22.0 + PostgreSQL 16+ + TypeScript 5.x  
 > **Runtime:** Node.js >=22  
 > **Módulos activos:** Base Oficial, Licitaciones, Investigación, Proyectos, Configuración  
@@ -240,25 +254,40 @@ export async function getBoss(): Promise<PgBoss> {
 ```
 
 ### 3.2 Estructura de rutas API
+> **FE DE ERRATAS (2026-07-23, v2.1.1).** El árbol anterior describía rutas y métodos
+> que no coinciden con el código: listaba un `documents/[id]/route.ts` **inexistente**,
+> daba `documents/search` como `GET` cuando es `POST`, omitía los `POST` de
+> `licitaciones/entidades` y `licitaciones/estados`, atribuía un `DELETE` a
+> `config/apis/[id]` que no existe y no mencionaba `documents/[id]/logs`. El árbol de
+> abajo se generó **leyendo los `export async function` de los 20 archivos reales**.
+
 ```
-src/app/api/
-├── auth/login/route.ts          # POST (público)
-├── auth/logout/route.ts         # POST (requiere auth)
-├── documents/route.ts           # GET, POST, PATCH
-├── documents/[id]/route.ts      # GET, DELETE
-├── documents/search/route.ts    # GET
-├── licitaciones/route.ts        # GET, POST
-├── licitaciones/[id]/route.ts   # GET, PATCH, DELETE
-├── licitaciones/entidades/route.ts   # GET
-├── licitaciones/estados/route.ts     # GET
-├── projects/route.ts            # GET, POST
-├── research/analyze/route.ts    # POST
-├── config/apis/route.ts         # GET, POST
-├── config/apis/[id]/...         # PATCH, DELETE, test, toggle
-├── config/models/...            # CRUD + discover + test
-├── config/audit/route.ts        # GET (paginado)
-└── config/module-settings/route.ts   # GET, POST/PUT
+src/app/api/                              # 20 archivos, 31 manejadores
+├── auth/login/route.ts               # POST — ÚNICA ruta pública por diseño (§5.1)
+├── auth/logout/route.ts              # POST — pública por excepción declarada: solo borra la cookie
+├── documents/route.ts                # GET, POST, PATCH
+├── documents/[id]/logs/route.ts      # GET
+├── documents/search/route.ts         # POST (no GET: recibe filtros en el cuerpo)
+├── licitaciones/route.ts             # GET, POST
+├── licitaciones/[id]/route.ts        # GET, PATCH, DELETE
+├── licitaciones/entidades/route.ts   # GET, POST
+├── licitaciones/estados/route.ts     # GET, POST
+├── projects/route.ts                 # GET, POST
+├── research/analyze/route.ts         # POST
+├── config/apis/route.ts              # GET, POST
+├── config/apis/[id]/test/route.ts    # POST
+├── config/apis/[id]/toggle/route.ts  # PATCH
+├── config/models/route.ts            # GET, POST
+├── config/models/[id]/route.ts       # PUT, DELETE
+├── config/models/discover/route.ts   # GET
+├── config/models/test/route.ts       # POST
+├── config/audit/route.ts             # GET (limit/offset)
+└── config/module-settings/route.ts   # GET, PUT
 ```
+
+Los 29 manejadores que no son las dos rutas de `auth` exigen sesión, y
+`src/app/api/superficie.test.ts` lo verifica recorriendo este árbol: una ruta nueva sin
+`verifyAuth()` pone la suite en rojo (spec 005, FR-023).
 
 **Reglas:**
 - Cada endpoint HTTP tiene su propio `route.ts`. No agrupar métodos en archivos separados.
@@ -368,13 +397,20 @@ describe("POST /api/resource", () => {
 - Todo nuevo endpoint CRUD debe incluir su archivo `.test.ts` antes de mergear.
 
 ### 4.4 Tests que deben existir (checklist)
+
+> **FE DE ERRATAS (2026-07-23, v2.1.1).** Tres casillas seguían sin marcar pese a que las
+> specs 002 y 004 crearon esos archivos. Estado verificado con `ls`, no de memoria.
+
 - [x] `src/app/api/auth/login/route.test.ts` — Login con credenciales
-- [ ] `src/app/api/documents/route.test.ts` — Upload PDF, GET lista, PATCH
-- [ ] `src/app/api/licitaciones/route.test.ts` — CRUD completo
-- [ ] `src/app/api/projects/route.test.ts` — CRUD
-- [ ] `src/lib/documentProcessor.test.ts` — `extractPdfText`, parsers
-- [ ] `src/lib/audit.test.ts` — `auditLog` crea registro
-- [ ] `src/lib/modelClients.test.ts` — ya existe, mantener
+- [x] `src/app/api/documents/route.test.ts` — Upload PDF, GET lista, PATCH *(spec 002)*
+- [x] `src/app/api/licitaciones/route.test.ts` — CRUD completo *(spec 002)*
+- [x] `src/app/api/projects/route.test.ts` — CRUD *(spec 004, T011)*
+- [ ] `src/lib/documentProcessor.test.ts` — `extractPdfText`, parsers · **no existe**
+- [ ] `src/lib/audit.test.ts` — `auditLog` crea registro · **no existe**
+- [x] `src/lib/modelClients.test.ts` — ya existe, mantener
+
+Los dos que faltan siguen faltando: no se marcan "por cercanía". Son deuda declarada, no
+trabajo hecho.
 
 ---
 
@@ -471,24 +507,40 @@ Después de mergear a `main`, el agente debe:
 
 ## 8. MÉTRICAS Y DEUDA TÉCNICA
 
-### 8.1 Estado base (2026-07-11)
-| Métrica | Valor actual | Objetivo |
-|---------|-------------|----------|
-| Errores ESLint | 90 errores + 22 warnings (112 total) | 0 |
-| Uso de `any` | presente en `documentProcessor.ts`, `route.ts` | 0 |
-| Tests que pasan | 2 (login falla si no hay DB, modelClients pasa) | >20 |
-| Cobertura | ~5% | >60% |
-| `require()` en ESM | 1 (`pdf2json` en `documentProcessor.ts`) | 0 |
-| Código muerto | Sí (componentes licitaciones sin usar; `sanitizeJsonText` no usada) | 0 |
+### 8.1 Estado medido (2026-07-23)
+
+> **FE DE ERRATAS (2026-07-23, v2.1.1).** La tabla anterior era la línea base del
+> **2026-07-11** presentada como "valor actual" y llevaba dos specs desactualizada. Se
+> sustituye por la medición de hoy, con el comando de cada cifra para que cualquiera pueda
+> reproducirla. La columna de la izquierda es historia; la del medio, el presente.
+
+| Métrica | Base 2026-07-11 | Medido 2026-07-23 | Comando | Objetivo |
+|---------|-----------------|-------------------|---------|----------|
+| Problemas ESLint | 112 (90 errores + 22 avisos) | **62** (41 errores + 21 avisos) | `npx eslint src` | 0 |
+| `any` en `src/lib` + rutas API | 34 | **0** | `npx eslint src/lib src/app/api` | 0 |
+| `any` en el resto (componentes `.tsx`) | — | **26** | `npx eslint src` | deuda de D-016 |
+| Pruebas que pasan | 2 | **181** en 27 archivos | `npx vitest run` | >20 ✅ |
+| Cobertura | ~5 % | **sin medir** — falta `@vitest/coverage-v8` | — | >60 % |
+| Fugas de `err.message` al cliente | 14 | **0** | helper `apiError` (spec 002) | 0 |
+| `require()` en ESM | 1 | **1** (`pdf2json` en `documentProcessor.ts`) | `npx eslint src` | 0 |
+| Código muerto | Sí | `sanitizeJsonText` sigue sin usarse | `npx eslint src` | 0 |
+| Manejadores API sin sesión | 20 de 31 | **0** | `src/app/api/superficie.test.ts` | 0 ✅ |
+
+La cobertura se declara **sin medir** en vez de estimarse: la dependencia de cobertura no
+está instalada, así que cualquier porcentaje sería inventado.
 
 ### 8.2 Checklist de saneamiento (extraído de PLAN-DEUDA-TECNICA-001.md)
-- [ ] Eliminar todos los `any` en `src/`
-- [ ] Corregir `prefer-const` y variables no usadas
-- [ ] Tipar filtros `where` con tipos de Prisma
-- [ ] Agregar paginación a `GET /api/documents` y `GET /api/licitaciones`
+
+> **FE DE ERRATAS (2026-07-23, v2.1.1).** Varias casillas seguían sin marcar pese a que la
+> spec 002 las cerró y ZEUS lo verificó. Lo pendiente se deja pendiente.
+
+- [ ] Eliminar todos los `any` en `src/` — **parcial**: 0 en `src/lib` y rutas API (spec 002); quedan 26 en componentes `.tsx`, fuera de alcance por D-016
+- [x] Corregir `prefer-const` y variables no usadas *(spec 002)*
+- [x] Tipar filtros `where` con tipos de Prisma *(spec 002)*
+- [ ] Agregar paginación a `GET /api/documents` y `GET /api/licitaciones` — **sigue pendiente de verdad** (§3.3)
 - [ ] Implementar Zod para validación de inputs
-- [ ] Aumentar tests a >20 archivos
-- [ ] Eliminar código muerto (`LicitacionCard`, `LicitacionForm`, `LicitacionModal` si no se usan)
+- [x] Aumentar tests a >20 archivos *(27 archivos, 181 pruebas)*
+- [ ] Eliminar código muerto (`LicitacionCard`, `LicitacionForm`, `LicitacionModal` si no se usan; `sanitizeJsonText`)
 - [ ] Documentar API con OpenAPI (opcional post-Sprint 4)
 
 ---
@@ -518,6 +570,7 @@ en esta tabla. El cumplimiento se revisa en cada spec (`Constitution Check` del 
 |---------|-------|-------|--------|
 | 1.0.0 | 2026-07-11 | Speckit | Creación inicial tras inspección de código real del proyecto |
 | 2.0.0 | 2026-07-22 | ODIN (aprob. pendiente ZEUS/Jelkin) | Principios rectores de gobernanza IDC (§0); contrato de errores sin `err.message` al cliente (§2.1, §2.4); gobernanza de enmiendas |
+| 2.1.1 | 2026-07-23 | ODIN (encargo de ZEUS, spec 005) | **Fe de erratas, sin principios nuevos.** §3.2: el árbol de rutas listaba una ruta inexistente, daba `documents/search` como `GET` y omitía manejadores reales; se regenera leyendo los 20 archivos. §4.4: se marcan los tests de `documents`, `licitaciones` y `projects`, que ya existían; `documentProcessor` y `audit` siguen sin marcar porque siguen sin existir. §8.1: las métricas eran la línea base del 2026-07-11 presentada como actual; se sustituyen por la medición del 2026-07-23 con su comando, y la cobertura pasa a "sin medir" en vez de estimada. §8.2: se marcan las casillas que cerró la spec 002. **Intactas por instrucción de ZEUS**: §3.3 (la paginación sigue pendiente de verdad) y §5.1 (la resuelve la spec 005) |
 | 2.1.0 | 2026-07-22 | ODIN (decisiones D-019…D-023 de ZEUS) | Fe de erratas §3.4 (RAG es diseño previsto, no código); §0.7 configurabilidad y precedencia (ADR_004); §0.8 agentes persona+corpus+modelo compartido (ADR_003); retiro de Financials registrado en §1.2 |
 
 ---
