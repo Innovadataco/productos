@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-22
 
-**Status**: Draft — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO)
+**Status**: Approved — aprobada por ZEUS (arquitecto) y Jelkin (CEO) el 2026-07-22
 
 **Input**: User description: "Saneamiento de infraestructura del proyecto 001: BD propia
 en puerto host 5435, unificación de credenciales/BD entre docker-compose y .env,
