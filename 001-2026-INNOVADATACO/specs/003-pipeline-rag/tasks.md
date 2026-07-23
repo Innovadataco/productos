@@ -192,7 +192,7 @@ suite completa. Ninguna de esas tareas hace red ni ejecuta modelos.
       → FR-028
 - [x] T034 [US7] Prueba/aserción de que ningún `documentoEsperado` coincide con texto de
       ranking (SC-024). → FR-028, SC-024
-- [ ] T035 [US7] **Al CIERRE**, constitución **§3.4**: describir el pipeline **real** en vez
+- [x] T035 [US7] **Al CIERRE**, constitución **§3.4**: describir el pipeline **real** en vez
       del diseño previsto; registrar la enmienda en §10 con versión y fecha. → FR-019, SC-011
 
 **Commit 8** — banco corregido y §3.4. Push en el mismo acto.
@@ -221,10 +221,10 @@ vez en la MacStudio.**
       (SC-001); todos los vectores de 768 (SC-002). ⛔ **turno**
 - [x] T042 **TP-2** — Búsqueda real: consulta sin palabras en común recupera el documento
       (SC-005); identificador entre los 3 primeros por FTS (SC-013). ⛔ **turno**
-- [ ] T043 **TP-3** — Backfill: `node scripts/backfill-embeddings.mjs`; documentos con texto y
+- [x] T043 **TP-3** — Backfill: `node scripts/backfill-embeddings.mjs`; documentos con texto y
       0 chunks vigentes = 0 (SC-006); segunda ejecución no cambia el total (SC-007).
       ⛔ **turno** (la tarea más costosa)
-- [ ] T044 **TP-4** — Latencia y comparación de modelos; alimenta FR-025/SC-018. ⛔ **turno**
+- [x] T044 **TP-4** — Latencia y comparación de modelos; alimenta FR-025/SC-018. ⛔ **turno**
 
 ---
 
@@ -363,3 +363,41 @@ eliminados; modelo `nomic-embed-text` **liberado de la RAM de Ollama** (`/api/ps
 ya consulta solo chunks, la búsqueda del CEO devuelve `[]` hasta que corra el backfill
 (**TP-3, con el despliegue definitivo — D-045**). El código está desplegado y la migración
 aplicada; falta poblar el histórico.
+
+## Turno 2 — TP-3, despliegue efectivo y TP-4 (2026-07-23)
+
+Turno concedido por Jelkin (ADR_002). La BD viva tenía **1 documento con texto y sin
+chunks** (el corpus de evaluación vivía en los scripts, nunca se ingirió): backfill trivial.
+
+**TP-3 — backfill** (`npm run backfill-embeddings`):
+- SC-006 ✅ documentos con texto y cero chunks: **1 → 0** tras la primera pasada.
+- SC-007 ✅ **idempotente**: segunda pasada ve 0 pendientes y el total de fragmentos no
+  cambia (1 y 1). Informa progreso y resumen: `procesados=1 omitidos=0 fallidos=0 fragmentos=1`.
+
+**Despliegue efectivo**: con los chunks poblados, la búsqueda del CEO **ya devuelve
+resultados**. Verificado en vivo: *"Resolución 1234 de 2026"* → el documento por FTS
+(`fuente: ambas`); *"archivo digital de normas de la entidad"* (sin palabras literales) →
+el documento por la rama vectorial. La regresión a `[]` del turno anterior queda cerrada.
+
+**TP-4 — latencia** (FR-025/SC-018):
+- Búsqueda end-to-end ~**66–82 ms** (curl), de los cuales el SQL híbrido es ~**4–9 ms**
+  (audit `latencyMs`) y el resto es el embedding de la consulta contra Ollama.
+- Vectorización ~**40–100 ms/doc** en caliente (447 ms la primera llamada, con carga del
+  modelo en RAM).
+- Cada búsqueda y cada vectorización dejan su métrica en auditoría: modelo, latencia,
+  recuperados y si hubo evidencia (SC-018 ✅). Ejemplo real:
+  `{"modelo":"nomic-embed-text","vectorial":true,"recuperados":1,"evidencia":true}`.
+
+**SC-014** ✅ los pesos RRF y el top-k salen de configuración y cambian el orden sin
+recompilar: verificado por unidad sobre `fusionarRRF`, la misma función que usa la búsqueda
+viva (con un solo documento en la BD no hay orden que alterar en vivo).
+
+**T035** ✅ constitución **§3.4** reescrita para describir el pipeline **real** (v2.1.2,
+registrada en §10): es el reverso de H-05, ya no anticipa un diseño sino que constata el
+estado verificado.
+
+**Higiene**: modelo `nomic-embed-text` liberado de la RAM de Ollama al terminar. PI y SICOV
+intactos.
+
+**SPEC-003 lista para su ACTA.** Los cuatro trabajos pesados (TP-1…TP-4) están probados con
+inferencia real; el pipeline está desplegado y operando en el stack del CEO.

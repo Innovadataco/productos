@@ -1,4 +1,16 @@
 <!--
+Sync Impact Report — 2026-07-23 (cierre de la spec 003: pipeline RAG real)
+Version change: 2.1.1 → 2.1.2
+Bump rationale: PATCH — §3.4 pasa de "diseño previsto, no implementado" a describir
+el pipeline RAG REAL, ya construido por la spec 003 y validado con inferencia real
+(TP-1…TP-4). No se añade, elimina ni redefine ningún principio: se constata un estado
+que antes se anticipaba. Es el reverso de H-05.
+Modified sections: §3.4 (chunking, embeddings, búsqueda híbrida FTS+vectorial con RRF,
+índices HNSW/GIN, backfill: descritos como existentes y verificados).
+Intactas: §3.3 (paginación sigue pendiente); §5.1 (resuelta por la spec 005).
+Follow-up TODOs: ninguno pendiente de la spec 003. Cobertura sigue "sin medir" (§8.1)
+hasta instalar @vitest/coverage-v8.
+
 Sync Impact Report — 2026-07-23 (fe de erratas de la spec 005)
 Version change: 2.1.0 → 2.1.1
 Bump rationale: PATCH — solo aclaraciones y corrección de afirmaciones falsas
@@ -34,7 +46,7 @@ describir el pipeline RAG real en vez del diseño previsto.
 
 # SPECKIT CONSTITUTION — 001-2026-INNOVADATACO
 
-> **Versión:** 2.1.1  
+> **Versión:** 2.1.2  
 > **Ratificada:** 2026-07-11 · **Última enmienda:** 2026-07-23  
 > **Stack:** Next.js 16.2.10 + React 19.2.4 + Prisma 5.22.0 + PostgreSQL 16+ + TypeScript 5.x  
 > **Runtime:** Node.js >=22  
@@ -324,32 +336,49 @@ Rutas que aún no tienen paginación y deben agregarla:
 - `GET /api/licitaciones`
 - `GET /api/config/audit` (ya tiene, usar como referencia)
 
-### 3.4 Procesamiento asíncrono con pg-boss
+### 3.4 Procesamiento asíncrono con pg-boss y pipeline RAG
 
-> **FE DE ERRATAS (2026-07-22, D-015).** Hasta la versión 2.0.0 esta sección
-> describía chunking y embeddings como parte del flujo **existente**. Era falso:
-> la verificación del hallazgo **H-05** (spec 001, T018) demostró que no hay una
-> sola línea de chunking ni de embeddings en `src/lib/` ni en `scripts/worker.mjs`,
-> y que `DocumentoChunk` está migrada pero **vacía**. El texto se corrige a
-> continuación separando lo que existe de lo que es diseño previsto.
+> **ACTUALIZACIÓN (2026-07-23, v2.1.2 — cierre de la spec 003).** La fe de erratas
+> D-015 (v2.1.0) separó el flujo real del diseño previsto porque el RAG **no
+> existía** (hallazgo H-05). La spec 003 lo construyó y sus criterios se validaron
+> con inferencia real (TP-1…TP-4, turnos de Jelkin del 2026-07-23): chunks poblados
+> con vectores de 768 dims, búsqueda semántica que recupera sin palabras comunes y
+> por identificador vía FTS. Esta sección pasa a describir el pipeline **real**. Es
+> lo contrario de la afirmación que originó H-05: ya no anticipa, constata.
 
-**Flujo REAL hoy** (patrón canónico vigente):
+**Flujo de ingesta (real y verificado):**
 1. API recibe PDF → extrae texto → guarda en BD con status `queued` → encola job
    `process-document`.
 2. Worker (`scripts/worker.mjs`) consume la cola.
 3. Worker analiza el documento: si hay modelo IA activo llama al modelo para
    extraer metadatos; si no, aplica extracción por reglas (`analyzeDocument`).
-4. Estados posibles: `queued` → `processing` → `completed` | `needs_review` | `error`.
+4. **Vectorización** (spec 003): trocea el texto (`src/lib/chunker.ts`, estructural /
+   1800 / solape 200 — estructural y 1800 medidos, solape declarado no medido, D-029),
+   enriquece **solo para vectorizar** (`src/lib/enrich.ts`, prefijo configurable y
+   **apagado por defecto**, D-030/D-031), genera el embedding con el modelo configurado
+   en `ModuleSetting` (`base_oficial/embedding_model`, `embedText` → `/api/embeddings`,
+   768 dims validadas) y **reemplaza** los fragmentos del documento en `DocumentoChunk`
+   (idempotente). Cada fragmento registra **modelo + configuración de enriquecimiento**:
+   juntos definen su espacio vectorial (FR-021/FR-026).
+5. Estados: `queued` → `processing` → `completed` | `needs_review` | `error`. Un fallo de
+   vectorización deja `needs_review` **sin perder el texto** ya extraído.
 
-**DISEÑO PREVISTO, aún NO implementado** (spec 003 `pipeline-rag`):
-- Troceado del texto en fragmentos y generación de embeddings.
-- Poblado de `DocumentoChunk` y búsqueda semántica con pgvector.
+**Búsqueda híbrida (real y verificada):** `POST /api/documents/search` resuelve todo el
+ranking en PostgreSQL (ya **no** puntúa en memoria de Node). Dos ramas con los filtros de
+metadatos aplicados antes y los inactivos excluidos: **FTS** en español (`tsvector`
+generado sobre el contenido plano, índice **GIN**, `unaccent`) y **vectorial** por coseno
+(índice **HNSW**), filtrada por el modelo + enriquecimiento vigentes. Se fusionan con
+**RRF** (pesos y `top-k` configurables). Si no hay embedding de consulta (Ollama caído o
+sin modelo), la rama FTS responde sola: degradación útil, no error.
 
-Mientras la spec 003 no cierre, ninguna afirmación sobre RAG en este proyecto debe
-darse por cierta. Al cerrarla, esta sección se actualiza describiendo el pipeline
-real y se registra la enmienda en §10.
+**Configuración (ADR_004):** modelo, URL y todos los parámetros del RAG (estrategia,
+tamaño, solape, top-k, umbral, pesos RRF, enriquecimiento) salen de configuración; nada
+hardcodeado. El **backfill** (`scripts/backfill-embeddings.mjs`) revectoriza los pendientes
+—los que no coinciden en modelo o enriquecimiento vigentes— de forma idempotente y
+reanudable; es trabajo pesado (ADR_002).
 
-No bloquear la respuesta HTTP con operaciones de IA o embeddings.
+No bloquear la respuesta HTTP con operaciones de IA o embeddings: la vectorización ocurre
+en el worker, no en la ruta de subida.
 
 ### 3.5 Base de datos — Convenciones Prisma
 - Usar `@map("snake_case")` para nombres de tabla cuando difieran del modelo.
@@ -570,6 +599,7 @@ en esta tabla. El cumplimiento se revisa en cada spec (`Constitution Check` del 
 |---------|-------|-------|--------|
 | 1.0.0 | 2026-07-11 | Speckit | Creación inicial tras inspección de código real del proyecto |
 | 2.0.0 | 2026-07-22 | ODIN (aprob. pendiente ZEUS/Jelkin) | Principios rectores de gobernanza IDC (§0); contrato de errores sin `err.message` al cliente (§2.1, §2.4); gobernanza de enmiendas |
+| 2.1.2 | 2026-07-23 | ODIN (cierre spec 003, D-044/D-045) | **§3.4 pasa a describir el pipeline RAG REAL.** La spec 003 construyó el chunking, los embeddings (nomic-embed-text 768), el poblado de `DocumentoChunk` y la búsqueda híbrida FTS+vectorial con RRF (índices HNSW coseno y GIN), y sus criterios se validaron con inferencia real (TP-1…TP-4, turnos de Jelkin): chunks con vectores de 768 dims, recuperación semántica sin palabras comunes y por identificador vía FTS, backfill idempotente. Es el reverso de H-05: §3.4 ya no anticipa un diseño, constata el estado. Sin principios nuevos (PATCH) |
 | 2.1.1 | 2026-07-23 | ODIN (encargo de ZEUS, spec 005) | **Fe de erratas, sin principios nuevos.** §3.2: el árbol de rutas listaba una ruta inexistente, daba `documents/search` como `GET` y omitía manejadores reales; se regenera leyendo los 20 archivos. §4.4: se marcan los tests de `documents`, `licitaciones` y `projects`, que ya existían; `documentProcessor` y `audit` siguen sin marcar porque siguen sin existir. §8.1: las métricas eran la línea base del 2026-07-11 presentada como actual; se sustituyen por la medición del 2026-07-23 con su comando, y la cobertura pasa a "sin medir" en vez de estimada. §8.2: se marcan las casillas que cerró la spec 002. **Intactas por instrucción de ZEUS**: §3.3 (la paginación sigue pendiente de verdad) y §5.1 (la resuelve la spec 005) |
 | 2.1.0 | 2026-07-22 | ODIN (decisiones D-019…D-023 de ZEUS) | Fe de erratas §3.4 (RAG es diseño previsto, no código); §0.7 configurabilidad y precedencia (ADR_004); §0.8 agentes persona+corpus+modelo compartido (ADR_003); retiro de Financials registrado en §1.2 |
 
