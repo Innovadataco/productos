@@ -11,3 +11,4 @@ uploads/*.PDF
 coverage
 logs/
 .clinerules/
+*.tsbuildinfo
