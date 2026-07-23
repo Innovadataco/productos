@@ -2,7 +2,7 @@
 
 **Branch**: `feature/001-scaffolding` | **Date**: 2026-07-22 | **Spec**: [spec.md](./spec.md)
 
-**Status**: IMPLEMENTADO (005-A, 2026-07-23) — pendiente 005-B (pantalla + PDF programa) y
+**Status**: IMPLEMENTADO y probado en vivo — 005-A y 005-B completas (2026-07-23); pendiente
 verificación humana antes de APIs productivas. Commits 005-A: bbaf0d20 (datos+integración),
 0c183040 (US5 guard), 22284e90 (US4 envío inmediato), 69b57bb4 (US1), 971bd08c (US2),
 df6c308e (US3), 1a942187 (spec 002/I-11), 7ea85eee (hallazgos del smoke).

@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-22
 
-**Status**: IMPLEMENTADO (005-A, 2026-07-23) — 005-B (pantalla + PDF programa) pendiente; modo stub, pendiente verificación humana antes de APIs productivas
+**Status**: IMPLEMENTADO y probado en vivo (modo stub) — 005-A y 005-B completas (2026-07-23); pendiente ACTA-VALIDACIÓN de ZEUS y verificación humana antes de APIs productivas — ver cierre.md
 
 **Input**: User description: "005-mantenimientos — Paridad con el módulo de mantenimientos del legacy, SOLO preventivos y correctivos (alistamientos=006, autorizaciones=007). Tablas legacy: tbl_mantenimientos, tbl_preventivos, tbl_correctivos, tbl_tipo_mantenimientos, tbl_archivo_programas, tbl_mantenimiento_jobs. Cola MantenimientoQueueService (tmj_estado, máx 3 reintentos, +5 min, lotes de 20, reintento manual resetea reintentos=0). XLSX 100% server-side con ExcelJS (bulk/preventivo/xlsx, bulk/correctivo/xlsx, plantillas descargables, validación por fila 'Fila N: ...', 400 con errores / 202 con {total,exitosos,errores}). Pantalla tabs Preventivos/Correctivos con registro individual + carga masiva + plantilla. Restricciones: migraciones aditivas esquema sicov con @map, modo stub doble gate, reusar cliente doble token + herencia rol 3 + worker único (pasada nueva, no worker nuevo), America/Bogota, tests nuevos y 52 existentes verdes." + gate D-022 completo (dos entregas de ZEUS, 2026-07-22).
 

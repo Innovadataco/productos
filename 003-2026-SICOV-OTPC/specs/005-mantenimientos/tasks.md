@@ -93,9 +93,9 @@ US5+US4 (estructurales) + US1 (primer flujo de negocio completo). US2/US3 comple
 
 ## Phase 9: 005-B — Pantalla, PDF del programa y modales (US6)
 
-- [ ] T036 [US6] Interfaz de almacenamiento `guardarArchivo`/`leerArchivo` con raíz `ALMACENAMIENTO_DIR` (env, FUERA de la app — D-022 #2) en src/lib/almacenamiento.ts + test
-- [ ] T037 [US6] Servicio del programa PDF (solo PDF, ≤4MB→413, roles CLIENTE; **el último cargado queda ACTIVO y desactiva los anteriores** §10.2; alcance D-015) en src/lib/mantenimientos/archivos.ts + test
-- [ ] T038 [US6] Rutas: POST/GET /api/archivos-programas (subir rol 1,2 / listar 1,2,3) + GET /api/archivos-programas/[id]/descargar (streaming) — todas con guard `mantenimientos` (D-017) en src/app/api/archivos-programas/** + tests
-- [ ] T039 [US6] `ALMACENAMIENTO_DIR` en .env.example (fuera del directorio de la app)
-- [ ] T040 [US6] Pantalla /dashboard/mantenimientos: tabs Preventivos/Correctivos; card PDF del programa (roles 1-2: subir/listar/descargar, activo/inactivo); card Vehículos (roles 1-3: placas stub con estado 5/3, modal registro base+detalle con responsable rotulado, modal historial); cargue masivo XLSX/CSV + plantilla + modal resumen §10.10 + botón Descargar errores (.txt); tabla de sincronización con corregir-y-reenviar. Hereda breadcrumb del layout (I-14), no crea navegación propia. En src/app/dashboard/mantenimientos/page.tsx
-- [ ] T041 Gates 005-B: 117 previos + nuevos verdes; tsc/lint/build; navegador en ventana privada (incluye PDF nuevo ACTIVO y el anterior Inactivo); cierre.md
+- [x] T036 [US6] Interfaz de almacenamiento `guardarArchivo`/`leerArchivo` con raíz `ALMACENAMIENTO_DIR` (env, FUERA de la app — D-022 #2) en src/lib/almacenamiento.ts + test
+- [x] T037 [US6] Servicio del programa PDF (solo PDF, ≤4MB→413, roles CLIENTE; **el último cargado queda ACTIVO y desactiva los anteriores** §10.2; alcance D-015) en src/lib/mantenimientos/archivos.ts + test
+- [x] T038 [US6] Rutas: POST/GET /api/archivos-programas (subir rol 1,2 / listar 1,2,3) + GET /api/archivos-programas/[id]/descargar (streaming) — todas con guard `mantenimientos` (D-017) en src/app/api/archivos-programas/** + tests
+- [x] T039 [US6] `ALMACENAMIENTO_DIR` en .env.example (fuera del directorio de la app)
+- [x] T040 [US6] Pantalla /dashboard/mantenimientos: tabs Preventivos/Correctivos; card PDF del programa (roles 1-2: subir/listar/descargar, activo/inactivo); card Vehículos (roles 1-3: placas stub con estado 5/3, modal registro base+detalle con responsable rotulado, modal historial); cargue masivo XLSX/CSV + plantilla + modal resumen §10.10 + botón Descargar errores (.txt); tabla de sincronización con corregir-y-reenviar. Hereda breadcrumb del layout (I-14), no crea navegación propia. En src/app/dashboard/mantenimientos/page.tsx
+- [x] T041 Gates 005-B: 117 previos + nuevos verdes; tsc/lint/build; navegador en ventana privada (incluye PDF nuevo ACTIVO y el anterior Inactivo); cierre.md
