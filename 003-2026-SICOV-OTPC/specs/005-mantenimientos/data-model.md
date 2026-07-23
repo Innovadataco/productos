@@ -37,7 +37,7 @@ Seed: `1=Preventivo, 2=Correctivo, 3=Alistamiento, 4=Autorización` (005 opera 1
 | `id` | `tap_id` | Int PK serial | no | auto |
 | `nombreOriginal` | `tap_nombre_original` | varchar(200) | sí | — |
 | `documento` | `tap_documento` | varchar(200) | sí | — (nombre físico del archivo) |
-| `ruta` | `tap_ruta` | varchar(200) | sí | — (ruta relativa bajo `UPLOADS_DIR`) |
+| `ruta` | `tap_ruta` | varchar(200) | sí | — (ruta relativa bajo `ALMACENAMIENTO_DIR`, vía interfaz de almacenamiento — D-022 #2) |
 | `tipoId` | `tap_tipo_id` | Int → `ttm_id` (FK real en legacy) | sí | — |
 | `usuarioId` | `tap_usuario_id` | Int | sí | — (id del usuario/vigilado dueño) |
 | `estado` | `tap_estado` | Boolean | sí | true |

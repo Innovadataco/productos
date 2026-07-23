@@ -38,9 +38,13 @@ curl -b cookies.txt -X POST localhost:5010/api/mantenimientos/preventivo \
 ```
 
 Esperado: en BD el base previo de la misma placa+tipo queda `tmt_estado=false`; el nuevo tiene
-`tmt_mantenimiento_id` (id stub) y `tmt_procesado=true`. Repetir con `tipoId=2` y `/correctivo`.
-Con `tipoId=3` → 400 (alcance 006). Placa de 5 caracteres → 400. `hora: "8:75"` o `"24:00"` → 400
-(regex de borde D-022 #3).
+`tmt_mantenimiento_id` (id externo stub, **columna separada** del `tmt_id` local) y
+`tmt_procesado=true`; el detalle conserva `tpv_mantenimiento_id` (enlace local) y guarda el id
+stub en **`tpv_mantenimiento_id_externo`** (gate B1). Repetir con `tipoId=2` y `/correctivo`.
+Con `tipoId=3` → 400 (alcance 006). Placa `AB123` o `1ABC23` → 400 (regex 3 letras + 3 dígitos).
+`hora: "8:75"` o `"24:00"` → 400 (regex de borde D-022 #3).
+**Envío inmediato (D-021):** con placa `FALLA1` el stub falla → la respuesta indica `encolado`, el
+registro NO se pierde y aparece como job `pendiente`.
 
 ## 3. Plantilla y carga masiva XLSX/CSV (US2)
 
@@ -54,8 +58,9 @@ curl -b cookies.txt -X POST localhost:5010/api/mantenimientos/bulk/preventivo/xl
   -F archivo=@plantilla.xlsx
 # → 202 {"total":3,"exitosos":3,"errores":[]}  y 6 jobs (3 base + 3 preventivo) en tbl_mantenimiento_jobs
 
-# Archivo con una fila sin nit y una placa de 8 caracteres:
+# Archivo con UNA fila mala (sin nit, o placa que no sea 3 letras+3 dígitos) → TODO-O-NADA (§10.10):
 # → 400 {"total":N,"exitosos":0,"errores":["Fila 2: ...","Fila 3: ..."]} y CERO jobs nuevos
+#   (nunca un lote parcial: o entran todas las filas o ninguna)
 
 # CSV (formato nuevo D-019e) — mismas columnas de encabezado, mismo pipeline:
 printf 'vigiladoId,placa,fecha,hora,nit,razonSocial,tipoIdentificacion,numeroIdentificacion,nombresResponsable,detalleActividades\n900123456,DEF456,2026-07-20,09:15,900555444,TALLER DEMO,1,1010,MECANICO DEMO,Cambio de frenos\n' > carga.csv
@@ -82,27 +87,52 @@ Dependencia y reintentos:
 curl -b cookies.txt 'localhost:5010/api/mantenimientos/jobs?estado=fallido'
 curl -b cookies.txt 'localhost:5010/api/mantenimientos/jobs/fallidos'
 
-# Reintento manual con payload corregido (resetea reintentos=0)
+# Reintento manual = CORREGIR y reenviar (§10.6): payload corregido, resetea reintentos=0
 curl -b cookies.txt -X POST localhost:5010/api/mantenimientos/jobs/<jobId>/reintentar \
   -H 'Content-Type: application/json' \
   -d '{"accion":"actualizar","payload":{"placa":"ABC123"}}'
-# → 200; el job vuelve a pendiente con reintentos=0 y el worker lo procesa
+# → 200; corrige los datos locales, el job vuelve a pendiente con reintentos=0 (ciclo completo nuevo)
 ```
 
-Esperado adicional: un job detalle cuyo base aún no sincroniza se reprograma +5 min SIN aumentar
+Esperado adicional: un job detalle cuyo base aún no sincroniza se reprograma +BACKOFF SIN aumentar
 `tmj_reintentos` (ver `tmj_ultimo_error` = "mantenimiento base aún no ha sido sincronizado").
+**Alcance D-015:** logueado como rol 3, `GET /jobs` devuelve los del NIT del administrador (no cero);
+`GET /jobs?nit=<otro>` como rol 2/3 ignora el `nit` (mismos resultados); como rol 1 sí filtra.
 
-## 5. Pantalla y PDF del programa (US4)
+## 4b. Envío inmediato en despachos y llegadas (US4 — D-021)
+
+```bash
+# Despacho normal → procesado en la MISMA respuesta (sin esperar al worker)
+curl -b cookies.txt -X POST localhost:5010/api/integracion/despachos -d '{...payload demo...}'
+# → estado "procesado" + id externo (stub)
+# Despacho con placa FALLA1 → cae a cola: estado "pendiente", el worker lo reintenta
+# Ídem llegadas. Con COLA_MAX_REINTENTOS=1 en .env, un FALLA* queda fallido tras 1 intento.
+```
+
+## 4c. Guard de módulos (US5 — D-017)
+
+```bash
+# Usuario demo SIN el módulo Mantenimientos → 403 en cualquier endpoint del módulo
+# Usuario demo sin Salidas → 403 en POST /api/integracion/despachos (ídem Llegadas)
+# Con el módulo asignado → 200/201 normal. El menú solo muestra módulos asignados.
+```
+
+## 5. Pantalla y PDF del programa (US6 — **005-B**)
 
 En `localhost:5010` (login demo):
 1. Menú → Mantenimientos → tabs **Preventivos / Correctivos**.
-2. Como rol 2: subir un PDF < 4 MB en "PDF del programa" → aparece en la tabla → descargar. Un PDF
-   > 4 MB → error 413 con mensaje. Un `.txt` → 400.
-3. Como rol 3 (o admin): tabla de **vehículos** (placas stub) → "Registrar mantenimiento" (modal,
-   flujo del paso 2) → "Historial" (modal con datos stub, filtros de texto/fecha).
-4. Cargue masivo desde la card: subir XLSX inválido → se muestran los errores "Fila N: ..." y el
-   botón descarga `errores_cargue_*.txt`; XLSX válido → resumen `{total, exitosos}`.
-5. Exportar historial: descarga `Historial.xlsx` (autenticado).
+2. Como rol 2 (cliente): subir un PDF < 4 MB en "PDF del programa" → aparece **como ACTIVO y el
+   anterior pasa a Inactivo** (§10.2) → descargar. > 4 MB → 413. Un `.txt` → 400. El rol 2 NO ve el
+   formulario de registro individual.
+3. Como rol 3 (operador) o rol 1: tabla de **vehículos** (placas stub) con **estado** (preventivo:
+   5 estados; correctivo: 3) → "Registrar mantenimiento" (modal, flujo del paso 2; responsable
+   rotulado ingeniero/técnico mecánico) → "Historial" (modal con datos stub, filtros).
+4. Cargue masivo desde la card: archivo inválido → modal *"Se procesaron N registros. Exitosos: 0.
+   Fallidos: Y. Errores a corregir: Z"* + botón **Descargar errores** (`errores_cargue_preventivo.txt`);
+   archivo válido → resumen con exitosos.
+5. Job fallido en la tabla de sincronización → "Reintentar" abre el registro para **corregir los
+   campos** y reenviar.
+6. Exportar historial: descarga `Historial.xlsx` (autenticado).
 
 ## 6. Gates de calidad (obligatorios antes de commit)
 

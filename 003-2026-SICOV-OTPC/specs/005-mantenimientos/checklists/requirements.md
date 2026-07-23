@@ -14,8 +14,10 @@
 
 ## Requirement Completeness
 
-- [x] No [NEEDS CLARIFICATION] markers remain — quedan 3, acotados en sección propia; **no bloquean**
-      el alcance en modo stub (patrón aprobado en specs 002-004)
+- [x] No [NEEDS CLARIFICATION] markers remain — queda **1** (contrato real del API externo de
+      mantenimientos), acotado en sección propia; **no bloquea** el alcance en modo stub (patrón
+      aprobado en specs 002-004). Los otros 2 se resolvieron en el gate D-022 (catálogo de tipos de
+      identificación; variante JSON cortada)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -33,7 +35,9 @@
 
 ## Notes
 
-- Las 3 preguntas abiertas siguen el patrón de las specs 001-004: dependen de credenciales/contratos
-  reales de la Super y no bloquean la implementación en modo stub.
+- La única pregunta abierta (contrato real del API de mantenimientos) sigue el patrón de las specs
+  001-004: depende de credenciales reales de la Super y no bloquea la implementación en modo stub.
 - La sección "Contexto verificado contra el legacy" es intencional: registra la verificación línea a
   línea (estilo fe de erratas §9 del handoff) que prevalece sobre supuestos.
+- Revalidado 2026-07-22 tras incorporar la segunda entrega del gate D-022 (bloqueantes B1-B4,
+  D-021/D-017/D-016 y reglas del manual §10): checklist sigue en verde.

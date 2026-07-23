@@ -49,9 +49,11 @@
 
 ## R4. Cola: pasada adicional del worker único
 
-- **Decisión:** `src/lib/mantenimientos/cola.ts` con `procesarLoteMantenimientos({limite:20,
-  maxReintentos:3})` (mismo patrón que `llegadas/cola.ts`) y `scripts/worker.mjs` gana una **tercera
-  pasada** (despachos → llegadas → mantenimientos) bajo el MISMO advisory lock `30032026`. La
+- **Decisión:** `src/lib/mantenimientos/cola.ts` con `procesarLoteMantenimientos({limite:20})`
+  (mismo patrón que `llegadas/cola.ts`; máx reintentos y backoff desde env `COLA_MAX_REINTENTOS`/
+  `COLA_BACKOFF_MIN`, defaults 3 y 5 — D-019b, compartidos por las 3 colas) y `scripts/worker.mjs`
+  gana una **tercera pasada** (despachos → llegadas → mantenimientos) bajo el MISMO advisory lock
+  `30032026`. La
   dependencia base→detalle se modela con un error tipado `MantenimientoPendienteError` que reprograma
   +5 min **sin** incrementar `reintentos` (paridad `MantenimientoQueueService`).
 - **Racional:** cumple la restricción "un solo worker" (constitución §1.5-R3 y AGENTS §6) y la
