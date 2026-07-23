@@ -1,7 +1,7 @@
-# Specification Quality Checklist: Cierre de la superficie de lectura de la API
+# Specification Quality Checklist: Cierre de la superficie de la API
 
 **Purpose**: Validar la completitud y calidad de la especificación antes de planificar
-**Created**: 2026-07-23
+**Created**: 2026-07-23 · **Actualizado**: 2026-07-23 (revisión de ZEUS)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -34,9 +34,12 @@
 - **Excepción deliberada a "sin detalles de implementación"**: las tablas de inventario y
   de auditoría de consumidores citan archivo y línea. No es diseño: es la **evidencia
   verificada** del defecto, y sin ella el alcance no sería auditable por ZEUS ni
-  reproducible. Es el mismo criterio que siguió la spec 004.
-- **Decisión pendiente de ZEUS**: la spec amplía el alcance del encargo (12 `GET`) al
-  hallazgo de **8 manejadores de escritura sin sesión**, incluido
-  `DELETE /api/licitaciones/[id]`. Va aislado en US-3 / FR-013…FR-016 para poder retirarse
-  sin tocar el resto si ZEUS decide no ampliar.
-- La spec **no se implementa** hasta la aprobación de ZEUS y Jelkin (§0.1).
+  reproducible. Mismo criterio que la spec 004.
+- **Resuelto en la revisión de ZEUS (2026-07-23)**:
+  1. La ampliación a la superficie de escritura queda **aprobada** y elevada a P1 por
+     delante del encargo original — **I-010** (crítica) y **D-040**. Historias reordenadas:
+     escritura → interfaz → lectura → páginas.
+  2. El manejo del 401 en `configuracion/page.tsx` deja de ser tarea de implementación y
+     pasa a **historia propia (US-2) con criterios de aceptación propios** (RZ-6),
+     verificable **antes** de cerrar los `GET` que consume.
+- La spec **no se implementa** hasta que ZEUS apruebe el plan.
