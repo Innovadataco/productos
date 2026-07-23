@@ -4,8 +4,17 @@ import { LayoutGrid, Plus, Search, Filter, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import ProjectForm from "@/components/ProjectForm";
 
+interface Proyecto {
+  id: string;
+  codigo: string;
+  nombre: string;
+  cliente: string;
+  estado: string;
+  currentPhase: string;
+}
+
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState<Proyecto[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -13,7 +22,10 @@ export default function ProjectsPage() {
     try {
       const res = await fetch("/api/projects");
       const data = await res.json();
-      setProjects(data);
+      // El listado exige sesión (spec 004, FR-012): ante 401 la respuesta es un
+      // objeto de error, no un arreglo. Sin esta guarda, el .map() de más abajo
+      // rompería la página en lugar de mostrarla vacía.
+      setProjects(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -71,7 +83,7 @@ export default function ProjectsPage() {
             No hay proyectos registrados en Innovadataco.
           </div>
         ) : (
-          projects.map((p: any) => (
+          projects.map((p) => (
             <div key={p.id} className="glass-panel group p-6 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer">
               <div className="flex items-center gap-6">
                 <div className="h-10 w-10 rounded bg-white/5 flex items-center justify-center text-neonCyan group-hover:bg-neonCyan/20 transition-colors">

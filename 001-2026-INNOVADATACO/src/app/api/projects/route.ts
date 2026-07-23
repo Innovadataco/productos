@@ -5,13 +5,15 @@ import { verifyAuth } from "@/lib/auth";
 
 export async function GET() {
     try {
+        const session = await verifyAuth();
+        if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
         const proyectos = await prisma.proyecto.findMany({
             orderBy: { createdAt: "desc" },
         });
         return NextResponse.json(proyectos);
-    } catch (err) {
-        console.error(err);
-        return NextResponse.json({ error: "Error listando proyectos" }, { status: 500 });
+    } catch (err: unknown) {
+        return apiError("Proyectos", "GET lista", "Error listando proyectos", 500, err);
     }
 }
 
