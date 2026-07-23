@@ -151,6 +151,58 @@ export function callModel(model: AiModelInput, prompt: string): Promise<ModelRes
   }
 }
 
+/** Dimensión del espacio vectorial fijada por el esquema `vector(768)` (D-024). */
+export const EMBEDDING_DIMS = 768;
+
+export interface EmbedResult {
+  ok: boolean;
+  embedding: number[];
+  latencyMs: number;
+  error?: string;
+}
+
+/**
+ * Genera el embedding de un texto vía la API `/api/embeddings` de Ollama (spec
+ * 003, FR-003). Reutiliza la resolución de URL de FR-010 (§0.7). Valida que el
+ * vector mide exactamente 768 dimensiones ANTES de devolverlo (FR-007): un
+ * modelo de otra dimensión se rechaza en vez de corromper la columna vector(768).
+ *
+ * No ejecuta inferencia en la suite: se mockea `fetch` igual que en `callModel`.
+ */
+export async function embedText(model: AiModelInput, texto: string): Promise<EmbedResult> {
+  const start = Date.now();
+  const baseUrl = resolveOllamaBaseUrl(model.baseUrl);
+  try {
+    const res = await fetch(`${baseUrl}/api/embeddings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: model.modelPath, prompt: texto }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      return { ok: false, embedding: [], latencyMs: Date.now() - start, error: `Ollama ${res.status}: ${text}` };
+    }
+    const data = (await res.json()) as { embedding?: unknown };
+    const embedding = Array.isArray(data.embedding)
+      ? data.embedding.filter((n): n is number => typeof n === "number")
+      : [];
+
+    if (embedding.length !== EMBEDDING_DIMS) {
+      return {
+        ok: false,
+        embedding: [],
+        latencyMs: Date.now() - start,
+        error: `Dimensión inesperada: se esperaban ${EMBEDDING_DIMS} y llegaron ${embedding.length}`,
+      };
+    }
+
+    return { ok: true, embedding, latencyMs: Date.now() - start };
+  } catch (err: unknown) {
+    const detalle = err instanceof Error ? err.message : "Error desconocido";
+    return { ok: false, embedding: [], latencyMs: Date.now() - start, error: detalle };
+  }
+}
+
 export async function testModel(model: AiModelInput): Promise<ModelResult> {
   const prompt = "Describe brevemente tus principales características técnicas como modelo de lenguaje: arquitectura, tamaño aproximado, capacidades y limitaciones.";
   const cfg = parseConfig(model.config);
