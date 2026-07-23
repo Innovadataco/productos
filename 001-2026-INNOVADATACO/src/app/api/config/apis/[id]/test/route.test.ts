@@ -10,7 +10,13 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+vi.mock("@/lib/auth", async () => {
+  const { createAuthMock } = await import("@/test/authMock");
+  return createAuthMock();
+});
+
 import { prisma } from "@/lib/prisma";
+import { conSesion, sinSesion } from "@/test/authMock";
 import { POST } from "./route";
 
 const baseApi = {
@@ -44,13 +50,26 @@ function makeReq() {
 }
 
 describe("POST /api/config/apis/[id]/test — resolución de {baseUrl} (FR-010)", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.mocked(prisma.agentApi.findUnique).mockReset();
+    await conSesion();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+  });
+
+  it("rechaza con 401 sin sesión, sin llamada saliente (spec 005, FR-003)", async () => {
+    await sinSesion();
+    const fetchMock = mockFetchOk();
+
+    const res = await POST(makeReq(), { params: Promise.resolve({ id: "api-test-1" }) });
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.agentApi.findUnique).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("config sin baseUrl → usa OLLAMA_BASEURL del entorno", async () => {

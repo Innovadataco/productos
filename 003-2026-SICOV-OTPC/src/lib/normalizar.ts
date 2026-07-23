@@ -64,6 +64,29 @@ export function extraerIdLlegadaExterno(res: unknown): number | null {
   return null;
 }
 
+/// Extrae el id de mantenimiento externo (spec 005; candidatos verificados en el legacy
+/// RepositorioMantenimientoDB): id → mantenimientoId → mantenimiento_id → data.* → obj.*.
+export function extraerIdMantenimientoExterno(res: unknown): number | null {
+  const r = res as Record<string, unknown> | null;
+  const data = (r?.["data"] ?? {}) as Record<string, unknown>;
+  const obj = (r?.["obj"] ?? {}) as Record<string, unknown>;
+  const candidatos = [
+    r?.["id"],
+    r?.["mantenimientoId"],
+    r?.["mantenimiento_id"],
+    data?.["id"],
+    data?.["mantenimientoId"],
+    data?.["mantenimiento_id"],
+    obj?.["id"],
+    obj?.["mantenimientoId"],
+  ];
+  for (const c of candidatos) {
+    const n = Number(c);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
 /// Mensaje de error externo tolerante.
 export function extraerMensajeError(err: unknown): string {
   const e = err as Record<string, unknown> | null;

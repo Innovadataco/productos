@@ -26,6 +26,23 @@ export interface ClienteSupertransporte {
   /// Maestras (read-through) para el wizard de salidas.
   consultarRutasActivas(nit: string): Promise<RutaMaestra[]>;
   consultarAutorizaciones(nit: string, placa: string, fecha: string): Promise<AutorizacionMaestra[]>;
+
+  /// Mantenimientos (spec 005): contrato de cabeceras propio (Authorization+token; vigiladoId
+  /// solo en detalle — nunca `documento`). `path` relativo a {URL_MATENIMIENTOS} [sic].
+  postMantenimiento(
+    path: string,
+    body: unknown,
+    identificacion: string,
+    idRol: number,
+    opts?: { conVigiladoId?: boolean },
+  ): Promise<RespuestaExterna>;
+
+  getMantenimiento(
+    path: string,
+    params: Record<string, string>,
+    identificacion: string,
+    idRol: number,
+  ): Promise<RespuestaExterna>;
 }
 
 let _cliente: ClienteSupertransporte | null = null;

@@ -24,3 +24,30 @@ export async function construirCabeceras(
     "Content-Type": "application/json",
   };
 }
+
+/// Cabeceras del API externo de MANTENIMIENTOS (contrato verificado en el legacy, distinto de
+/// despachos — R2 del spec 005): `Authorization` + `token` SIEMPRE; `vigiladoId` (NIT) SOLO en los
+/// POST de detalle (guardar-preventivo/correctivo). NUNCA lleva la cabecera `documento`.
+export interface CabecerasMantenimiento {
+  Authorization: string;
+  token: string;
+  "Content-Type": string;
+  vigiladoId?: string;
+  [k: string]: string | undefined;
+}
+
+export async function construirCabecerasMantenimiento(
+  identificacion: string,
+  idRol: number,
+  opts: { conVigiladoId?: boolean } = {},
+): Promise<{ cabeceras: CabecerasMantenimiento; nitVigilado: string }> {
+  const tokenExterno = await getTokenProveedor();
+  const { tokenAutorizado, nitVigilado } = await resolverContextoEfectivo(identificacion, idRol);
+  const cabeceras: CabecerasMantenimiento = {
+    Authorization: `Bearer ${tokenExterno}`,
+    token: tokenAutorizado,
+    "Content-Type": "application/json",
+  };
+  if (opts.conVigiladoId) cabeceras.vigiladoId = nitVigilado;
+  return { cabeceras, nitVigilado };
+}

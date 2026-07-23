@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiError } from "@/lib/apiError";
+import { apiError, noAutenticado } from "@/lib/apiError";
+import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/licitaciones/estados - Listar todos los estados
@@ -18,6 +19,9 @@ export async function GET(req: NextRequest) {
 // POST /api/licitaciones/estados - Crear nuevo estado
 export async function POST(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const data = await req.json();
     const { key, nombreOficial } = data;
 

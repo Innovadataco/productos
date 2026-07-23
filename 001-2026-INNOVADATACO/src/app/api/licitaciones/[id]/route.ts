@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { apiError } from "@/lib/apiError";
+import { apiError, noAutenticado } from "@/lib/apiError";
+import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/licitaciones/[id] - Obtener una licitación específica
@@ -46,6 +47,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const { id } = await params;
     const data = await req.json();
 
@@ -95,6 +99,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const { id } = await params;
 
     const licitacionExistente = await prisma.licitacion.findUnique({

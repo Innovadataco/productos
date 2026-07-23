@@ -8,17 +8,34 @@ vi.mock("@/lib/audit", () => ({ auditLog: vi.fn() }));
 // Sin inferencia real (ADR_002): el cliente de modelos se mockea.
 vi.mock("@/lib/modelClients", () => ({ testModel: vi.fn() }));
 
+vi.mock("@/lib/auth", async () => {
+  const { createAuthMock } = await import("@/test/authMock");
+  return createAuthMock();
+});
+
 import { prisma } from "@/lib/prisma";
 import { testModel } from "@/lib/modelClients";
-import { peticionJson } from "@/test/authMock";
+import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { POST } from "./route";
 
 const url = "http://localhost:5001/api/config/models/test";
 
 describe("POST /api/config/models/test", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.mocked(prisma.aiModel.findUnique).mockReset();
     vi.mocked(testModel).mockReset();
+    await conSesion();
+  });
+
+  it("rechaza con 401 sin sesión, sin disparar inferencia (spec 005, FR-003)", async () => {
+    await sinSesion();
+
+    const res = await POST(peticionJson(url, { id: "m1" }));
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.aiModel.findUnique).not.toHaveBeenCalled();
+    expect(testModel).not.toHaveBeenCalled();
   });
 
   it("rechaza con 400 si falta el id", async () => {

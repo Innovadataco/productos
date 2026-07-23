@@ -6,9 +6,19 @@ vi.mock("@/lib/prisma", async () => {
   return { prisma: createPrismaMock() };
 });
 
+vi.mock("@/lib/auth", async () => {
+  const { createAuthMock } = await import("@/test/authMock");
+  return createAuthMock();
+});
+
 import { prisma } from "@/lib/prisma";
-import { peticionJson } from "@/test/authMock";
+import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { GET, POST } from "./route";
+
+// Por defecto todos los casos corren con sesión válida; los de 401 la quitan.
+beforeEach(async () => {
+  await conSesion();
+});
 
 describe("GET /api/licitaciones/estados", () => {
   beforeEach(() => {
@@ -41,6 +51,21 @@ describe("GET /api/licitaciones/estados", () => {
 describe("POST /api/licitaciones/estados", () => {
   beforeEach(() => {
     vi.mocked(prisma.licitacionStatus.create).mockReset();
+  });
+
+  it("rechaza con 401 sin sesión, sin crear nada (spec 005, FR-001)", async () => {
+    await sinSesion();
+
+    const res = await POST(
+      peticionJson("http://localhost:5001/api/licitaciones/estados", {
+        key: "abierta",
+        nombreOficial: "Abierta",
+      }),
+    );
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.licitacionStatus.create).not.toHaveBeenCalled();
   });
 
   it("rechaza con 400 si faltan key o nombreOficial", async () => {

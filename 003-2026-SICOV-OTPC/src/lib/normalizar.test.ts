@@ -59,3 +59,16 @@ describe("normalizar: errores y placa", () => {
     expect(limpiarPlaca(" abc-123 ")).toBe("ABC123");
   });
 });
+
+describe("normalizar: id de mantenimiento externo (spec 005)", () => {
+  it("prueba candidatos id | mantenimientoId | mantenimiento_id | data.* | obj.*", async () => {
+    const { extraerIdMantenimientoExterno } = await import("./normalizar");
+    expect(extraerIdMantenimientoExterno({ id: 9001 })).toBe(9001);
+    expect(extraerIdMantenimientoExterno({ mantenimientoId: 7 })).toBe(7);
+    expect(extraerIdMantenimientoExterno({ mantenimiento_id: "8" })).toBe(8);
+    expect(extraerIdMantenimientoExterno({ data: { mantenimientoId: 9 } })).toBe(9);
+    expect(extraerIdMantenimientoExterno({ obj: { id: 10 } })).toBe(10);
+    expect(extraerIdMantenimientoExterno({ mensaje: "sin id" })).toBeNull();
+    expect(extraerIdMantenimientoExterno(null)).toBeNull();
+  });
+});

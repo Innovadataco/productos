@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, detalleDeError } from "@/lib/apiError";
+import { apiError, detalleDeError, noAutenticado } from "@/lib/apiError";
+import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { testModel } from "@/lib/modelClients";
 import { auditLog } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
 

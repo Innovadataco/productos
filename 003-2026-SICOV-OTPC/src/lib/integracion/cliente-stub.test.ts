@@ -84,6 +84,75 @@ describe("ClienteStub.consultarIntegradora (solo lectura, sin red)", () => {
   });
 });
 
+describe("ClienteStub mantenimientos (spec 005 — cabeceras propias, sin red)", () => {
+  it("postMantenimiento base devuelve id externo (sin cabecera documento)", async () => {
+    const cli = new ClienteStub();
+    const r = await cli.postMantenimiento(
+      "/guardar-mantenimieto",
+      { vigiladoId: 900853057, placa: "ABC123", tipoId: 1 },
+      "900853057",
+      2,
+    );
+    expect(Number(r["id"])).toBeGreaterThan(0);
+  });
+
+  it("postMantenimiento detalle devuelve mantenimientoId", async () => {
+    const cli = new ClienteStub();
+    const r = await cli.postMantenimiento(
+      "/guardar-preventivo",
+      { placa: "ABC123", mantenimientoId: 9001 },
+      "900853057",
+      2,
+      { conVigiladoId: true },
+    );
+    expect(Number(r["mantenimientoId"])).toBe(9001);
+  });
+
+  it("placa FALLA* fuerza error (caída a cola)", async () => {
+    const cli = new ClienteStub();
+    await expect(
+      cli.postMantenimiento("/guardar-mantenimieto", { placa: "FALLA1", tipoId: 1 }, "900853057", 2),
+    ).rejects.toThrow("Fallo simulado");
+  });
+
+  it("herencia rol 3: usa token y NIT del administrador", async () => {
+    findFirst
+      .mockResolvedValueOnce({
+        id: 3,
+        identificacion: "1010101010",
+        tokenAutorizado: null,
+        administradorId: 900853057,
+      })
+      .mockResolvedValueOnce({
+        id: 2,
+        identificacion: "900853057",
+        tokenAutorizado: "TOK-ADMIN",
+        administradorId: null,
+      });
+    const cli = new ClienteStub();
+    const r = await cli.postMantenimiento(
+      "/guardar-mantenimieto",
+      { vigiladoId: 900853057, placa: "ABC123", tipoId: 1 },
+      "1010101010",
+      3,
+    );
+    expect(Number(r["id"])).toBeGreaterThan(0);
+  });
+
+  it("getMantenimiento listar-placas y listar-historial devuelven datos demo", async () => {
+    const cli = new ClienteStub();
+    const placas = await cli.getMantenimiento("/listar-placas", { tipoId: "1" }, "900853057", 2);
+    expect(Array.isArray(placas["data"])).toBe(true);
+    const hist = await cli.getMantenimiento(
+      "/listar-historial",
+      { tipoId: "1", placa: "ABC123" },
+      "900853057",
+      2,
+    );
+    expect((hist["data"] as unknown[]).length).toBeGreaterThan(0);
+  });
+});
+
 describe("ClienteStub maestras (sin red)", () => {
   it("consultarRutasActivas devuelve rutas simuladas", async () => {
     const cli = new ClienteStub();

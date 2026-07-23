@@ -1,5 +1,5 @@
 import type { ClienteSupertransporte, RespuestaExterna } from "@/lib/integracion/cliente";
-import { construirCabeceras } from "@/lib/integracion/cabeceras";
+import { construirCabeceras, construirCabecerasMantenimiento } from "@/lib/integracion/cabeceras";
 import { integracionRealActiva } from "@/lib/integracion/modo";
 import { requireEnv } from "@/lib/env";
 import { extraerObjeto, extraerLista } from "@/lib/normalizar";
@@ -85,6 +85,60 @@ export class ClienteHttp implements ClienteSupertransporte {
       throw err;
     }
     return extraerLista<T>(data);
+  }
+
+  /// POST al API externo de mantenimientos ({URL_MATENIMIENTOS} [sic] — typo heredado que se
+  /// conserva, gate B2). Cabeceras del contrato propio; vigiladoId solo en detalle.
+  async postMantenimiento(
+    path: string,
+    body: unknown,
+    identificacion: string,
+    idRol: number,
+    opts: { conVigiladoId?: boolean } = {},
+  ): Promise<RespuestaExterna> {
+    const { cabeceras } = await construirCabecerasMantenimiento(identificacion, idRol, opts);
+    const url = `${requireEnv("URL_MATENIMIENTOS")}/mantenimiento${path}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: cabeceras as Record<string, string>,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(100_000),
+    });
+    const data = (await res.json().catch(() => ({}))) as RespuestaExterna;
+    if (!res.ok) {
+      const err = new Error(
+        (data?.["mensaje"] as string) ?? (data?.["message"] as string) ?? `HTTP ${res.status}`,
+      ) as Error & { responseData?: unknown; status?: number };
+      err.responseData = data;
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  async getMantenimiento(
+    path: string,
+    params: Record<string, string>,
+    identificacion: string,
+    idRol: number,
+  ): Promise<RespuestaExterna> {
+    const { cabeceras } = await construirCabecerasMantenimiento(identificacion, idRol);
+    const qs = new URLSearchParams(params).toString();
+    const url = `${requireEnv("URL_MATENIMIENTOS")}/mantenimiento${path}${qs ? `?${qs}` : ""}`;
+    const res = await fetch(url, {
+      headers: cabeceras as Record<string, string>,
+      signal: AbortSignal.timeout(60_000),
+    });
+    const data = (await res.json().catch(() => ({}))) as RespuestaExterna;
+    if (!res.ok) {
+      const err = new Error(
+        (data?.["mensaje"] as string) ?? (data?.["message"] as string) ?? `HTTP ${res.status}`,
+      ) as Error & { responseData?: unknown; status?: number };
+      err.responseData = data;
+      err.status = res.status;
+      throw err;
+    }
+    return data;
   }
 
   async consultarRutasActivas(nit: string): Promise<RutaMaestra[]> {

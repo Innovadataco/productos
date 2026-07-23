@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { noAutenticado } from "@/lib/apiError";
+import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma, type DocumentoOficial } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const body = await req.json();
     const { query, tipo, entidad, sector, fechaDesde, fechaHasta } = body;
     if (!query || typeof query !== "string") {

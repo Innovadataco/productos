@@ -1,5 +1,12 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
+
+vi.mock("@/lib/auth", async () => {
+  const { createAuthMock } = await import("@/test/authMock");
+  return createAuthMock();
+});
+
+import { conSesion, sinSesion } from "@/test/authMock";
 import { GET } from "./route";
 
 function mockOllamaTags() {
@@ -14,9 +21,27 @@ function mockOllamaTags() {
 }
 
 describe("GET /api/config/models/discover (FR-010)", () => {
+  beforeEach(async () => {
+    await conSesion();
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+  });
+
+  it("rechaza con 401 sin sesión y no sondea la red (spec 005, FR-003)", async () => {
+    await sinSesion();
+    const fetchMock = mockOllamaTags();
+
+    const req = new NextRequest(
+      "http://localhost:5001/api/config/models/discover?baseUrl=http://127.0.0.1:1",
+    );
+    const res = await GET(req);
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("sin baseUrl en query usa OLLAMA_BASEURL del entorno", async () => {

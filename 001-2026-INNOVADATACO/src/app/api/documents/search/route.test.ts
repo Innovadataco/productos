@@ -6,9 +6,19 @@ vi.mock("@/lib/prisma", async () => {
   return { prisma: createPrismaMock() };
 });
 
+vi.mock("@/lib/auth", async () => {
+  const { createAuthMock } = await import("@/test/authMock");
+  return createAuthMock();
+});
+
 import { prisma } from "@/lib/prisma";
-import { peticionJson } from "@/test/authMock";
+import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { POST } from "./route";
+
+// Por defecto todos los casos corren con sesión válida; los de 401 la quitan.
+beforeEach(async () => {
+  await conSesion();
+});
 
 const url = "http://localhost:5001/api/documents/search";
 
@@ -26,6 +36,16 @@ function doc(extra: Record<string, unknown>) {
 describe("POST /api/documents/search", () => {
   beforeEach(() => {
     vi.mocked(prisma.documentoOficial.findMany).mockReset();
+  });
+
+  it("rechaza con 401 sin sesión, sin consultar el corpus (spec 005, FR-001)", async () => {
+    await sinSesion();
+
+    const res = await POST(peticionJson(url, { query: "taxi" }));
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.documentoOficial.findMany).not.toHaveBeenCalled();
   });
 
   it("rechaza con 400 si falta la consulta", async () => {

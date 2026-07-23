@@ -5,16 +5,32 @@ vi.mock("@/lib/prisma", async () => {
   return { prisma: createPrismaMock() };
 });
 
+vi.mock("@/lib/auth", async () => {
+  const { createAuthMock } = await import("@/test/authMock");
+  return createAuthMock();
+});
+
 import { prisma } from "@/lib/prisma";
-import { peticionJson } from "@/test/authMock";
+import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { PATCH } from "./route";
 
 const url = "http://localhost:5001/api/config/apis/api1/toggle";
 const params = { params: Promise.resolve({ id: "api1" }) };
 
 describe("PATCH /api/config/apis/[id]/toggle", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.mocked(prisma.agentApi.update).mockReset();
+    await conSesion();
+  });
+
+  it("rechaza con 401 sin sesión, sin actualizar nada (spec 005, FR-001)", async () => {
+    await sinSesion();
+
+    const res = await PATCH(peticionJson(url, { active: true }, "PATCH"), params);
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.agentApi.update).not.toHaveBeenCalled();
   });
 
   it("rechaza con 400 si active no es booleano", async () => {

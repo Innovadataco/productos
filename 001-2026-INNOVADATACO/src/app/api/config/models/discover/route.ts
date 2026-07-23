@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiError } from "@/lib/apiError";
+import { apiError, noAutenticado } from "@/lib/apiError";
+import { verifyAuth } from "@/lib/auth";
 import { resolveOllamaBaseUrl } from "@/lib/modelClients";
 
 /** Forma de la respuesta de `GET {baseUrl}/api/tags` de Ollama (solo lo que usamos). */
@@ -19,6 +20,11 @@ interface OllamaTagsResponse {
 
 export async function GET(req: NextRequest) {
   try {
+    // Sin sesión no se hace la llamada saliente: sin esto, cualquiera podía usar
+    // el servidor para sondear la red interna vía `baseUrl` (spec 005, FR-003).
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const { searchParams } = new URL(req.url);
     // FR-010: el baseUrl explícito manda; OLLAMA_BASEURL solo reemplaza el fallback
     const baseUrl = resolveOllamaBaseUrl(searchParams.get("baseUrl"));

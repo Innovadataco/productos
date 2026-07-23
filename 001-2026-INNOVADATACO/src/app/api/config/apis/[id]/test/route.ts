@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiError } from "@/lib/apiError";
+import { apiError, noAutenticado } from "@/lib/apiError";
+import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveOllamaBaseUrl } from "@/lib/modelClients";
 
@@ -24,6 +25,9 @@ async function resolvePlaceholder(key: string): Promise<string> {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const start = Date.now();
   try {
+    const session = await verifyAuth();
+    if (!session) return noAutenticado();
+
     const { id } = await params;
     const api = await prisma.agentApi.findUnique({ where: { id } });
     if (!api) return NextResponse.json({ error: "API no encontrada" }, { status: 404 });

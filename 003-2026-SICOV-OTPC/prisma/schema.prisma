@@ -254,6 +254,135 @@ model Estado {
   @@schema("sicov")
 }
 
+/// Catálogo de tipos de mantenimiento (1=Preventivo, 2=Correctivo, 3=Alistamiento, 4=Autorización).
+model TipoMantenimiento {
+  id          Int       @id @default(autoincrement()) @map("ttm_id")
+  nombre      String?   @map("ttm_nombre") @db.VarChar(150)
+  estado      Boolean?  @default(true) @map("ttm_estado")
+  creado      DateTime? @default(now()) @map("ttm_creado") @db.Timestamptz()
+  actualizado DateTime? @default(now()) @map("ttm_actualizado") @db.Timestamptz()
+
+  archivos ArchivoPrograma[]
+
+  @@map("tbl_tipo_mantenimientos")
+  @@schema("sicov")
+}
+
+/// PDF del programa de mantenimiento por tipo y vigilado (la gestión de archivos llega en 005-B).
+model ArchivoPrograma {
+  id             Int       @id @default(autoincrement()) @map("tap_id")
+  nombreOriginal String?   @map("tap_nombre_original") @db.VarChar(200)
+  documento      String?   @map("tap_documento") @db.VarChar(200)
+  ruta           String?   @map("tap_ruta") @db.VarChar(200)
+  tipoId         Int?      @map("tap_tipo_id")
+  usuarioId      Int?      @map("tap_usuario_id")
+  estado         Boolean?  @default(true) @map("tap_estado")
+  creado         DateTime? @default(now()) @map("tap_creado") @db.Timestamptz()
+  actualizado    DateTime? @default(now()) @map("tap_actualizado") @db.Timestamptz()
+
+  tipo TipoMantenimiento? @relation(fields: [tipoId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, tipoId])
+  @@map("tbl_archivo_programas")
+  @@schema("sicov")
+}
+
+/// Cabecera base placa+tipo+vigilado. usuarioId guarda el NIT del vigilado (paridad legacy;
+/// BigInt por ser NIT). mantenimientoIdExterno = id devuelto por la Super — SEPARADO del id local.
+model Mantenimiento {
+  id                     Int       @id @default(autoincrement()) @map("tmt_id")
+  placa                  String?   @map("tmt_placa") @db.VarChar(6)
+  fechaDiligenciamiento  DateTime? @map("tmt_fecha_diligenciamiento") @db.Timestamptz()
+  tipoId                 Int?      @map("tmt_tipo_id")
+  usuarioId              BigInt?   @map("tmt_usuario_id")
+  estado                 Boolean?  @default(true) @map("tmt_estado")
+  procesado              Boolean?  @default(false) @map("tmt_procesado")
+  mantenimientoIdExterno Int?      @map("tmt_mantenimiento_id")
+  creado                 DateTime? @default(now()) @map("tmt_creado") @db.Timestamptz()
+  actualizado            DateTime? @default(now()) @map("tmt_actualizado") @db.Timestamptz()
+
+  @@index([usuarioId, placa, tipoId])
+  @@index([procesado])
+  @@map("tbl_mantenimientos")
+  @@schema("sicov")
+}
+
+/// Detalle preventivo. mantenimientoId = enlace LOCAL al base (nunca se sobrescribe);
+/// mantenimientoIdExterno = columna ADITIVA 003 con el id de la Super (gate B1).
+model Preventivo {
+  id                     Int       @id @default(autoincrement()) @map("tpv_id")
+  placa                  String?   @map("tpv_placa") @db.VarChar(6)
+  fecha                  DateTime? @map("tpv_fecha") @db.Date
+  hora                   String?   @map("tpv_hora") @db.VarChar(8)
+  nit                    BigInt?   @map("tpv_nit")
+  razonSocial            String?   @map("tpv_razon_social") @db.VarChar(200)
+  tipoIdentificacion     Int?      @map("tpv_tipo_identificacion")
+  numeroIdentificacion   String?   @map("tpv_numero_identificacion") @db.VarChar(255)
+  nombresResponsable     String?   @map("tpv_nombres_responsable") @db.VarChar(255)
+  mantenimientoId        Int?      @map("tpv_mantenimiento_id")
+  mantenimientoIdExterno Int?      @map("tpv_mantenimiento_id_externo")
+  detalleActividades     String?   @map("tpv_detalle_actividades") @db.Text
+  estado                 Boolean?  @default(true) @map("tpv_estado")
+  procesado              Boolean?  @default(false) @map("tpv_procesado")
+  creado                 DateTime? @default(now()) @map("tpv_creado") @db.Timestamptz()
+  actualizado            DateTime? @default(now()) @map("tpv_actualizado") @db.Timestamptz()
+
+  @@index([mantenimientoId])
+  @@index([procesado])
+  @@map("tbl_preventivos")
+  @@schema("sicov")
+}
+
+/// Detalle correctivo — espejo de Preventivo con prefijo tcv_.
+model Correctivo {
+  id                     Int       @id @default(autoincrement()) @map("tcv_id")
+  placa                  String?   @map("tcv_placa") @db.VarChar(6)
+  fecha                  DateTime? @map("tcv_fecha") @db.Date
+  hora                   String?   @map("tcv_hora") @db.VarChar(8)
+  nit                    BigInt?   @map("tcv_nit")
+  razonSocial            String?   @map("tcv_razon_social") @db.VarChar(200)
+  tipoIdentificacion     Int?      @map("tcv_tipo_identificacion")
+  numeroIdentificacion   String?   @map("tcv_numero_identificacion") @db.VarChar(255)
+  nombresResponsable     String?   @map("tcv_nombres_responsable") @db.VarChar(200)
+  mantenimientoId        Int?      @map("tcv_mantenimiento_id")
+  mantenimientoIdExterno Int?      @map("tcv_mantenimiento_id_externo")
+  detalleActividades     String?   @map("tcv_detalle_actividades") @db.Text
+  estado                 Boolean?  @default(true) @map("tcv_estado")
+  procesado              Boolean?  @default(false) @map("tcv_procesado")
+  creado                 DateTime? @default(now()) @map("tcv_creado") @db.Timestamptz()
+  actualizado            DateTime? @default(now()) @map("tcv_actualizado") @db.Timestamptz()
+
+  @@index([mantenimientoId])
+  @@index([procesado])
+  @@map("tbl_correctivos")
+  @@schema("sicov")
+}
+
+/// Cola de sincronización de mantenimientos. Tipos: base|preventivo|correctivo (005) +
+/// alistamiento|autorizacion reservados para 006/007 (varchar validado en app, no enum PG).
+model MantenimientoJob {
+  id                   Int       @id @default(autoincrement()) @map("tmj_id")
+  tipo                 String    @map("tmj_tipo") @db.VarChar(20)
+  mantenimientoLocalId Int?      @map("tmj_mantenimiento_local_id")
+  detalleId            Int?      @map("tmj_detalle_id")
+  vigiladoId           String    @map("tmj_vigilado_id") @db.VarChar(30)
+  usuarioDocumento     String    @map("tmj_usuario_documento") @db.VarChar(30)
+  rolId                Int       @map("tmj_rol_id")
+  estado               String    @default("pendiente") @map("tmj_estado") @db.VarChar(30)
+  reintentos           Int       @default(0) @map("tmj_reintentos")
+  ultimoError          String?   @map("tmj_ultimo_error") @db.Text
+  siguienteIntento     DateTime? @default(now()) @map("tmj_siguiente_intento") @db.Timestamptz()
+  payload              Json?     @map("tmj_payload") @db.Json
+  creado               DateTime? @default(now()) @map("tmj_creado") @db.Timestamptz()
+  actualizado          DateTime? @default(now()) @map("tmj_actualizado") @db.Timestamptz()
+
+  @@index([estado, siguienteIntento], map: "tmj_estado_intento_idx")
+  @@index([vigiladoId])
+  @@index([mantenimientoLocalId])
+  @@map("tbl_mantenimiento_jobs")
+  @@schema("sicov")
+}
+
 /// Registro de errores (tabla real: tbl_logs_errores).
 model LogError {
   id         Int       @id @default(autoincrement()) @map("log_id")

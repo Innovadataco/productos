@@ -21,10 +21,17 @@ async function main() {
     });
   }
 
-  // Módulos del menú data-driven.
+  // Módulos del menú data-driven — catálogo COMPLETO D-018: los 5 asignables del legacy
+  // (Usuarios, Novedades, Mantenimientos, Autorizaciones, Alistamientos) MÁS Salidas y Llegadas.
   const modulos = [
     { id: 1, nombre: "inicio", nombreMostrar: "Inicio", ruta: "/dashboard", icono: "bi-house-door", orden: 1 },
     { id: 2, nombre: "salidas", nombreMostrar: "Salidas", ruta: "/dashboard/salidas", icono: "bi-box-arrow-right", orden: 2 },
+    { id: 3, nombre: "llegadas", nombreMostrar: "Llegadas", ruta: "/dashboard/llegadas", icono: "bi-box-arrow-in-down", orden: 3 },
+    { id: 4, nombre: "mantenimientos", nombreMostrar: "Mantenimientos", ruta: "/dashboard/mantenimientos", icono: "bi-tools", orden: 4 },
+    { id: 5, nombre: "alistamientos", nombreMostrar: "Alistamientos", ruta: "/dashboard/alistamientos", icono: "bi-clipboard-check", orden: 5 },
+    { id: 6, nombre: "autorizaciones", nombreMostrar: "Autorizaciones", ruta: "/dashboard/autorizaciones", icono: "bi-person-check", orden: 6 },
+    { id: 7, nombre: "novedades", nombreMostrar: "Novedades", ruta: "/dashboard/novedades", icono: "bi-exclamation-triangle", orden: 7 },
+    { id: 8, nombre: "usuarios", nombreMostrar: "Usuarios", ruta: "/dashboard/usuarios", icono: "bi-people", orden: 8 },
   ];
   for (const m of modulos) {
     await prisma.modulo.upsert({
@@ -34,10 +41,11 @@ async function main() {
     });
   }
 
-  // roles_modulos (I-13, HANDOFF §10.8): el rol 1 (administrador de plataforma) NO opera —
-  // solo ve Inicio (Usuarios llega con la spec 009). Roles 2 y 3 ven Inicio y Salidas.
-  // El bloqueo server-side real es el guard de módulos de 005-A (D-017); esto es solo el dato semilla.
-  const modulosPorRol: Record<number, number[]> = { 1: [1], 2: [1, 2], 3: [1, 2] };
+  // roles_modulos (I-13 + D-017/D-018, HANDOFF §10.1/§10.8): el rol 1 (administrador de
+  // plataforma) NO opera — solo ve Inicio (Usuarios llega con la spec 009). Roles 2 y 3 reciben
+  // los módulos operativos ya construidos (Salidas, Llegadas API, Mantenimientos 005-A); el resto
+  // del catálogo se asigna cuando llegue su spec. El bloqueo real es el guard server-side (D-017).
+  const modulosPorRol: Record<number, number[]> = { 1: [1], 2: [1, 2, 3, 4], 3: [1, 2, 3, 4] };
   for (const [rol, moduloIds] of Object.entries(modulosPorRol)) {
     const rolId = Number(rol);
     // Sincroniza: retira asignaciones semilla que ya no correspondan (p. ej. salidas para rol 1).
@@ -46,6 +54,21 @@ async function main() {
       const existe = await prisma.rolModulo.findFirst({ where: { rolId, moduloId } });
       if (!existe) await prisma.rolModulo.create({ data: { rolId, moduloId } });
     }
+  }
+
+  // Tipos de mantenimiento (catálogo real; 005 opera 1 y 2).
+  const tiposMantenimiento = [
+    { id: 1, nombre: "Preventivo" },
+    { id: 2, nombre: "Correctivo" },
+    { id: 3, nombre: "Alistamiento" },
+    { id: 4, nombre: "Autorización" },
+  ];
+  for (const t of tiposMantenimiento) {
+    await prisma.tipoMantenimiento.upsert({
+      where: { id: t.id },
+      update: { nombre: t.nombre, estado: true },
+      create: { id: t.id, nombre: t.nombre, estado: true },
+    });
   }
 
   // Usuarios demo (claves cumplen la política).
@@ -152,6 +175,61 @@ async function main() {
         { payload: { ...baseLleg, placa: "ABC123" }, nitVigilado: NIT_VIGILADO, usuarioId: NIT_VIGILADO, rolId: 2, tipoLlegada: 2, placa: "ABC123", estado: "pendiente", procesado: false },
         { payload: { ...baseLleg, placa: "XYZ789" }, nitVigilado: NIT_VIGILADO, usuarioId: NIT_VIGILADO, rolId: 2, tipoLlegada: 2, placa: "XYZ789", estado: "procesado", procesado: true, idLlegadaExterno: 7001 },
       ],
+    });
+  }
+
+  // Mantenimientos demo (base procesado con detalle + 1 job fallido para corregir-y-reenviar).
+  const totalMant = await prisma.mantenimiento.count();
+  if (totalMant === 0) {
+    const basePrev = await prisma.mantenimiento.create({
+      data: {
+        placa: "ABC123",
+        tipoId: 1,
+        usuarioId: BigInt(NIT_VIGILADO),
+        fechaDiligenciamiento: new Date(),
+        estado: true,
+        procesado: true,
+        mantenimientoIdExterno: 9001,
+      },
+    });
+    await prisma.preventivo.create({
+      data: {
+        placa: "ABC123",
+        fecha: new Date("2026-07-20"),
+        hora: "08:30",
+        nit: BigInt("900555444"),
+        razonSocial: "Taller Demo S.A.S.",
+        tipoIdentificacion: 1,
+        numeroIdentificacion: "1010",
+        nombresResponsable: "Ingeniero Demo",
+        mantenimientoId: basePrev.id,
+        mantenimientoIdExterno: 9001,
+        detalleActividades: "Cambio de aceite y filtros",
+        procesado: true,
+      },
+    });
+    const baseFallido = await prisma.mantenimiento.create({
+      data: {
+        placa: "FALLA1",
+        tipoId: 2,
+        usuarioId: BigInt(NIT_VIGILADO),
+        fechaDiligenciamiento: new Date(),
+        estado: true,
+        procesado: false,
+      },
+    });
+    await prisma.mantenimientoJob.create({
+      data: {
+        tipo: "base",
+        mantenimientoLocalId: baseFallido.id,
+        vigiladoId: NIT_VIGILADO,
+        usuarioDocumento: NIT_VIGILADO,
+        rolId: 2,
+        estado: "fallido",
+        reintentos: 3,
+        ultimoError: "Fallo simulado por el stub",
+        payload: { vigiladoId: NIT_VIGILADO, placa: "FALLA1", tipoId: 2 },
+      },
     });
   }
 

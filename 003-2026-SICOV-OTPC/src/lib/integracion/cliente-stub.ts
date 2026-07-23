@@ -1,5 +1,5 @@
 import type { ClienteSupertransporte, RespuestaExterna } from "@/lib/integracion/cliente";
-import { construirCabeceras } from "@/lib/integracion/cabeceras";
+import { construirCabeceras, construirCabecerasMantenimiento } from "@/lib/integracion/cabeceras";
 import type {
   SolicitudIntegradora,
   RespuestaIntegradora,
@@ -98,6 +98,88 @@ export class ClienteStub implements ClienteSupertransporte {
       autorizaciones: [],
       empresa: { idEmpresa: "1", nit: body.nit ?? cabeceras.documento, razonSocial: "TRANSPORTES DEMO S.A.S." },
     };
+  }
+
+  /// POST de mantenimientos (base o detalle). Arma y valida las cabeceras del contrato propio
+  /// (Authorization+token, vigiladoId solo si opts.conVigiladoId) SIN tocar la red.
+  /// Placas `FALLA*` fuerzan error (para ejercitar caída a cola y reintentos).
+  async postMantenimiento(
+    path: string,
+    body: unknown,
+    identificacion: string,
+    idRol: number,
+    opts: { conVigiladoId?: boolean } = {},
+  ): Promise<RespuestaExterna> {
+    const { cabeceras } = await construirCabecerasMantenimiento(identificacion, idRol, opts);
+    // Solo NOMBRES de cabecera en logs, jamás valores.
+    console.log(`[stub] POST mantenimiento${path} headers=[${Object.keys(cabeceras).join(",")}]`);
+
+    const b = (body ?? {}) as Record<string, unknown>;
+    const placa = String(b["placa"] ?? "").toUpperCase();
+    if (b["__stubFallo"] === true || placa.startsWith("FALLA")) {
+      const err = new Error("Fallo simulado por el stub") as Error & { responseData?: unknown };
+      err.responseData = { mensaje: "Fallo simulado por el stub" };
+      throw err;
+    }
+
+    const id = ClienteStub.contador++;
+    if (path.includes("guardar-mantenimieto")) {
+      return { id, mensaje: "Mantenimiento registrado (stub)" };
+    }
+    // Detalle preventivo/correctivo: el legacy responde con mantenimientoId (id externo del base).
+    const mantenimientoId = Number((b["mantenimientoId"] as number | string) ?? id);
+    return { mantenimientoId, mensaje: "Detalle registrado (stub)" };
+  }
+
+  /// GET de mantenimientos (listar-placas, listar-historial). Cabeceras sin vigiladoId; el
+  /// vigilado viaja como query param (contrato legacy).
+  async getMantenimiento(
+    path: string,
+    params: Record<string, string>,
+    identificacion: string,
+    idRol: number,
+  ): Promise<RespuestaExterna> {
+    const { cabeceras, nitVigilado } = await construirCabecerasMantenimiento(identificacion, idRol);
+    console.log(`[stub] GET mantenimiento${path} headers=[${Object.keys(cabeceras).join(",")}]`);
+
+    if (path.includes("listar-placas")) {
+      // Solo vehículos ACTIVOS con póliza vigente (§10.7) — la Super ya filtra; el stub simula.
+      return {
+        data: [
+          { placa: "ABC123", estado: "reportado vigente", fecha: "2026-07-20" },
+          { placa: "DEF456", estado: "sin reporte", fecha: null },
+          { placa: "GHI789", estado: "proximo a vencer", fecha: "2026-05-15" },
+        ],
+      };
+    }
+    if (path.includes("listar-historial")) {
+      const placa = params["placa"] ?? "ABC123";
+      return {
+        data: [
+          {
+            fecha: "2026-07-20",
+            hora: "08:30",
+            nit: 900555444,
+            razon_social: "TALLER DEMO S.A.S.",
+            tipo_identificacion: 1,
+            numero_identificacion: "1010",
+            nombres_responsable: "INGENIERO DEMO",
+            detalle_actividades: `Cambio de aceite (${placa}, vigilado ${nitVigilado})`,
+          },
+          {
+            fecha: "2026-05-14",
+            hora: "14:00",
+            nit: 900555444,
+            razon_social: "TALLER DEMO S.A.S.",
+            tipo_identificacion: 1,
+            numero_identificacion: "1010",
+            nombres_responsable: "INGENIERO DEMO",
+            detalle_actividades: `Revisión de frenos (${placa})`,
+          },
+        ],
+      };
+    }
+    return { data: [] };
   }
 
   async consultarRutasActivas(_nit: string): Promise<RutaMaestra[]> {
