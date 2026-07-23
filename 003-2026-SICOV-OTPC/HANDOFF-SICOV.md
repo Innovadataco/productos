@@ -321,3 +321,25 @@ Aplica a **las 7 operaciones**. Todo reporte va **siempre por la API de la Super
 | **R-04** | Carga masiva para **TODAS las operaciones** | El legacy solo la tiene para preventivo, correctivo y alistamiento | **Alto**: añade carga masiva a autorizaciones, novedades, salidas y llegadas — 4 operaciones más de las que tiene el legacy |
 
 > **R-04 es expansión de alcance sobre el legacy**, no paridad. Requiere decisión de priorización del CEO frente a la fecha 2026-08-15.
+
+### 11.4 Decisión de arquitectura — procesador de reportes (CEO 2026-07-22)
+
+**Pregunta del CEO:** ¿debe haber un demonio, un cron o algo parecido procesando los reportes?
+
+**DECISIÓN (ZEUS): demonio persistente, NO cron.** Ya está construido y verificado funcionando:
+
+| Pieza | Qué hace |
+|---|---|
+| `scripts/worker.mjs` | Bucle continuo (`while` + `sleep`). Toma `pg_try_advisory_lock` con un ID propio del 003 ⇒ **garantiza una sola instancia** aunque se lance dos veces. Libera el lock ante SIGINT/SIGTERM |
+| `scripts/worker-supervisor.mjs` | Lo **relanza si cae** (máx. 5 reinicios), escribe `worker.pid`. Si el hijo sale con código 2 (otra instancia tiene el lock) **no relanza** |
+| Arranque | `npm run worker` |
+
+**Por qué demonio y no cron:** el cron no puede garantizar instancia única (dos ejecuciones se solapan si una tarda), no reacciona en segundos, y complica el backoff entre reintentos. El advisory lock de PostgreSQL da exclusión mutua real sin infraestructura extra.
+
+**En producción:** el worker debe correr como **servicio gestionado** (systemd o pm2, como el legacy), no en una terminal. Se define junto con el VPS (D-013).
+
+### 11.5 Formato y ubicación de la carga masiva (CEO 2026-07-22)
+
+- **Formato: CSV** — decisión delegada a ZEUS con el criterio "fácil para el usuario final". CSV se abre y edita en Excel sin plugins, se valida línea a línea y no requiere librería de parseo binario. Se mantiene además **XLSX** donde el legacy ya lo tiene (preventivo, correctivo, alistamiento) para no romper a los usuarios actuales.
+- **La carga es POR OPERACIÓN, dentro de su propio módulo**: estando en Mantenimientos solo se cargan mantenimientos; en Alistamientos solo alistamientos, etc. **No hay un cargador universal.** Cada módulo expone su plantilla y su endpoint de carga.
+- **Prioridad (CEO):** primero **las operaciones reportando bien**; la carga masiva de las operaciones que hoy no la tienen va **después**.

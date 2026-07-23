@@ -94,7 +94,7 @@ Toda petición transaccional a la Super lleva **tres cabeceras** (nada de atajos
 | UI | **React 19** + TypeScript 5.x | Server Components por defecto; `"use client"` solo donde haga falta |
 | ORM | **Prisma** | PostgreSQL obligatorio (esquema `sicov`); raw SQL solo en migraciones manuales |
 | Autenticación | **JWT manual** (`jose` + `bcryptjs`) | Cookie `httpOnly`; sin NextAuth/Auth.js; login único usuario/contraseña |
-| Colas asíncronas | **Worker Node independiente** (BullMQ+Redis o `pg-boss`) | Despachos/llegadas/mantenimientos como **workers separados** del server web, con estados y reintentos |
+| Colas asíncronas | **Worker Node independiente, table-driven sobre PostgreSQL** con `pg_try_advisory_lock` (sin Redis, **sin pg-boss** — verificado 2026-07-22) | Despachos/llegadas/mantenimientos en **un solo worker demonio** separado del server web, con supervisor, estados y reintentos **parametrizables** |
 | Cliente HTTP externo | Capa de integración propia con **stubs** tras interfaz | Doble token (§1.4); normalización tolerante de respuestas |
 | Testing | **Vitest** | Todo endpoint/función nueva con su `.test.ts` |
 | Estilo | ESLint (`eslint-config-next`) | — |

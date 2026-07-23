@@ -10,7 +10,7 @@ Metodología **Spec-Kit**; specs 001–004 implementadas y probadas en modo stub
 |------|-----------|
 | Framework | Next.js 16.2.10 (App Router) + React + TypeScript |
 | ORM / BD | Prisma 5.22 · PostgreSQL 16 (Docker propio del 003, puerto host **5434**) |
-| Colas | **pg-boss** (sin Redis) · worker Node independiente |
+| Colas | **Table-driven en PostgreSQL** + advisory lock (sin Redis, sin pg-boss) · worker Node independiente con supervisor |
 | Auth | JWT interno (cookie httpOnly) · login único usuario/contraseña |
 | Integraciones | Capa propia con **stubs** (Supertransporte / integradora) |
 | Testing | Vitest |
@@ -22,7 +22,7 @@ docker compose up -d     # levanta la BD PostgreSQL 16 del 003 (host :5434)
 npm install
 npm run db:migrate       # migraciones (aditivas) + npm run db:seed si aplica
 npm run dev              # app en http://localhost:5010
-npm run worker           # worker de colas (pg-boss), en otra terminal
+npm run worker           # worker de colas (demonio + supervisor), en otra terminal
 npm test                 # suite Vitest
 ```
 

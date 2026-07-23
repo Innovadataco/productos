@@ -143,7 +143,7 @@ En esta máquina viven **001 y 002 en desarrollo activo**. El 003 **no puede int
 ## 8. Estado actual y decisiones abiertas
 
 - **DECISIÓN CERRADA (stack):** **Next.js 16.2.10 + Prisma 5.22 + PostgreSQL 16** en Docker propio del 003
-  (BD **:5434**, app **:5010**, colas con **pg-boss** sin Redis). El port ya se hizo.
+  (BD **:5434**, app **:5010**, cola **table-driven en PostgreSQL** con advisory lock — sin Redis y **sin pg-boss**). El port ya se hizo.
 - **Construido y probado:** specs **001–004** implementadas y probadas en **modo stub**
   (**52/52 tests**, `tsc --noEmit` / `lint` / `build` verdes).
 - **Carpetas `api/` y `web/`:** son el **demo antiguo** (React+Vite + NestJS + SQLite), **MUERTO** —

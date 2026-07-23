@@ -1,6 +1,6 @@
 # Infraestructura AISLADA del proyecto 003 (constitución §1.1).
 # NO interfiere con 001 (:5432) ni 002 (:5433). Todo con prefijo 003- y puerto propio 5434.
-# Sin Redis: la cola usa pg-boss sobre este mismo PostgreSQL (research.md R2).
+# Sin Redis: la cola es table-driven sobre este mismo PostgreSQL, con advisory lock (NO usa pg-boss).
 # Levantar: docker compose up -d   ·   Apagar sin perder datos: docker compose stop
 services:
   db:
