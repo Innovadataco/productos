@@ -154,7 +154,7 @@ model LicitacionDocumento {
 
 model EntidadLicitacion {
   id            Int                   @id @default(autoincrement())
-  key           String
+  key           String        @unique
   nombreOficial String
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
@@ -164,7 +164,7 @@ model EntidadLicitacion {
 
 model LicitacionStatus {
   id            Int          @id @default(autoincrement())
-  key           String
+  key           String       @unique
   nombreOficial String
   createdAt     DateTime     @default(now())
   licitaciones  Licitacion[]

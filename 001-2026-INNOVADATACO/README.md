@@ -40,14 +40,24 @@ npm run stop:all    # Detener todos los procesos
 
 **Requiere PM2 instalado** (se instala como devDependency: `npm install -D pm2`).
 
-**Setup inicial de la base de datos** (solo una vez):
+### Arranque limpio de la base de datos
+
+Este es el procedimiento completo tras crear o **recrear el volumen**. Omitir el
+seed deja la aplicación accesible pero inservible: sin entidades ni estados de
+licitación, sin catálogo de APIs y sin modelos de IA.
 
 ```bash
-npx prisma migrate deploy
-npm run init-pgboss   # Crea tablas de pg-boss en PostgreSQL
-node scripts/seedApis.mjs
-node scripts/seedUser.mjs
+docker compose up -d db          # 1. Levantar la base (puerto host 5435)
+npx prisma migrate deploy        # 2. Aplicar migraciones
+npm run init-pgboss              # 3. Crear las tablas de pg-boss
+npm run seed                     # 4. Sembrar los catálogos base
+node scripts/seedUser.mjs        # 5. Crear el usuario administrador
 ```
+
+`npm run seed` es **idempotente y no destructivo**: se puede ejecutar las veces que
+haga falta y no pisa la configuración hecha desde la interfaz (una API desactivada,
+un estado renombrado). Siembra `LicitacionStatus`, `EntidadLicitacion`, `AgentApi` y
+un `AiModel` de referencia (inactivo: activarlo es decisión del operador).
 
 ## Variables de entorno
 
@@ -75,7 +85,7 @@ Tras cualquier migración o reset de la base de datos PostgreSQL, ejecutar:
 npm install
 npx prisma migrate deploy
 npm run init-pgboss      # Re-crear tablas de pg-boss
-node scripts/seedApis.mjs
+npm run seed             # Re-sembrar catálogos (idempotente)
 ```
 
 Esto asegura que el catálogo de APIs (`AgentApi`) y la cola pg-boss estén poblados correctamente.

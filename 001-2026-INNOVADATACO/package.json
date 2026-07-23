@@ -16,7 +16,8 @@
     "start:all": "pm2 start ecosystem.config.js",
     "stop:all": "pm2 stop all",
     "logs": "pm2 logs",
-    "status": "pm2 status"
+    "status": "pm2 status",
+    "seed": "tsx scripts/seed.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
