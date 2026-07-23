@@ -12,3 +12,5 @@ coverage
 logs/
 .clinerules/
 *.tsbuildinfo
+scripts/eval-embeddings/config.local.json
+scripts/eval-embeddings/reports/

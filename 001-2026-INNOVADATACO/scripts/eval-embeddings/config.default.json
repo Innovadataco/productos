@@ -1,0 +1,37 @@
+{
+  "_comentario": "Defaults documentados del banco de evaluación (ADR_004 / constitución §0.7). Precedencia: argumentos CLI > variables de entorno > config.local.json > estos defaults. NINGÚN valor operativo debe quedar como literal en el código.",
+
+  "corpusPath": null,
+  "_corpusPath": "OBLIGATORIO. Ruta del corpus (solo lectura). No se versiona ni se copia al repo. Definir por --corpus-path, EVAL_CORPUS_PATH o config.local.json.",
+
+  "ollamaBaseUrl": null,
+  "_ollamaBaseUrl": "Si es null se usa OLLAMA_BASEURL y, en su ausencia, http://localhost:11434 (misma precedencia que la app, D-008).",
+
+  "models": ["nomic-embed-text"],
+  "_models": "Modelos de embeddings a comparar. Cada uno debe estar disponible en Ollama (ollama pull <modelo>).",
+
+  "chunk": {
+    "strategy": "estructural",
+    "_strategy": "estructural = corta por marcas del acto normativo (CONSIDERANDO, RESUELVE, ARTÍCULO...) y hace fallback por tamaño. Alternativa: 'tamano'.",
+    "maxChars": 1800,
+    "_maxChars": "Tamaño máximo de fragmento en caracteres. ~450 tokens en español, holgado para el límite de los modelos evaluados.",
+    "overlapChars": 200,
+    "_overlapChars": "Solape entre fragmentos consecutivos, para no perder contexto en los cortes.",
+    "minChars": 120,
+    "_minChars": "Fragmentos más cortos que esto se fusionan con el siguiente (evita ruido de encabezados sueltos)."
+  },
+
+  "topK": 5,
+  "_topK": "Profundidad máxima de recuperación evaluada (recall@5 y MRR se calculan sobre este tope).",
+
+  "batchSize": 16,
+  "_batchSize": "Fragmentos por lote enviados a Ollama.",
+
+  "projection": {
+    "documentos": 2000,
+    "_documentos": "Volumen objetivo para proyectar el tamaño en disco del índice vectorial."
+  },
+
+  "outputDir": "reports",
+  "_outputDir": "Directorio (relativo a scripts/eval-embeddings/) donde se escribe el reporte."
+}
