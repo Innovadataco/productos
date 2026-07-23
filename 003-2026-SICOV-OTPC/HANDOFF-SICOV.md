@@ -231,3 +231,52 @@ Export de solo lectura autorizado por el CEO (acta CE-01 / D-009):
 - **Al crear un usuario se le envía la clave temporal por correo** (págs. 15, 17, 50).
 - **Archivos de autorización NNA: PDF, máx 4 MB** (págs. 38-39).
 - **Identificación y rol NO son editables** al actualizar un usuario (pág. 13).
+
+### 10.8 Módulos asignables — lista EXACTA (pantallas del manual)
+
+**Solo existen 5 módulos asignables.** No hay módulo "Salidas" ni "Llegadas".
+
+| Asignador | Módulos que puede otorgar |
+|---|---|
+| Administrador → **Cliente** | Usuarios · Novedades · Mantenimientos · Autorizaciones · Alistamientos (+ "Seleccionar todos") |
+| Cliente → **Operador** | Novedades · Mantenimientos · Autorizaciones · Alistamientos — **sin Usuarios**. Leyenda en pantalla: *"El módulo principal quedará excluido automáticamente"* (pág. 50) |
+
+Barra de navegación real (rotulada **"MÓDULOS SICOV"**): Inicio · Mantenimientos · Alistamientos · Autorizaciones · Novedades · Usuarios. El administrador solo ve Inicio y Usuarios. **El administrador no ve ni gestiona operadores** (su listado filtra solo roles cliente y administrador, pág. 11) ⇒ **multi-tenant con administración delegada**.
+
+### 10.9 ⚠️ BRECHA CRÍTICA — solo 3 operaciones se reportan a la Super
+
+El manual documenta el envío a *"la entidad"* (Superintendencia) **únicamente** para **preventivo, correctivo y alistamiento** — las mismas 3 que tienen carga masiva y aparecen en el *log de carga masiva*. **Nunca describe que autorizaciones NNA ni novedades se envíen a la entidad.**
+
+**Salidas y llegadas no tienen módulo, pantalla ni formulario en el manual.** Las salidas aparecen solo como **lista de solo-lectura** dentro de Novedades (columnas: #, placa, fecha, hora, razón social, NIT, **pasajeros**, estado `Iniciado`/`Finalizado`); las llegadas solo se infieren del estado *Finalizado*. Concuerda con la BD de producción: `tbl_despachos_solicitudes` y `tbl_llegadas_solicitudes` **vacías**.
+
+> **Conclusión:** las specs **002-llegadas** y **004-salidas** del 003 implementan funcionalidad que **nunca operó en el legacy**. No hay paridad verificable contra producción; sus reglas de negocio están **sin validar**. Pendiente de confirmación con el CEO.
+
+### 10.10 Plantillas XLSX — columnas exactas
+
+**Preventivo y correctivo (idénticas):** `vigiladoId` · `placa` · `fecha` (**AAAA-MM-DD**) · `hora` (**HH:mm**) · `nit` · `razonSocial` · `tipoIdentificacion` · `numeroIdentificacion` · `nombresResponsable` · `detalleActividades`.
+
+**Alistamiento:** `vigiladoId` · `placa` · `tipoIdentificacionResponsable` · `numeroIdentificacionResponsable` · `nombreResponsable` · `tipoIdentificacionConductor` · `numeroIdentificacionConductor` · `nombresConductor` · `detalleActividades` · `actividades` (ids **separados por coma**). **No tiene columnas `fecha` ni `hora`** (inconsistencia real).
+
+**Hojas auxiliares:** *tipos de identificación* con 12 códigos (1 CC · 2 CE · 3 Pasaporte · 4 CC digital · 5 TI · 6 Registro civil · 7 PEP · 8 DIE · 9 NIT · 10 NN · 11 Carnet Diplomático · 12 PPT) y, en alistamiento, *actividades* con 11 ids.
+
+**Protocolo de alistamiento — 11 actividades:** 1 Fugas del motor · 2 Tensión correas · 3 Ajuste de tapas · 4 Niveles de aceite (motor, transmisión, dirección, frenos) · 5 Nivel agua limpiaparabrisas · 6 Aditivos de radiador · 7 Filtros húmedos y secos · 8 Baterías (electrolito, bornes, sulfatación) · 9 Llantas (desgaste, presión) · 10 Equipo de carretera · 11 Botiquín.
+
+**⚠️ Regla TODO-O-NADA:** con **un solo registro inválido el lote completo falla** (`Exitosos: 0`). Modal: *"Se procesaron N registros. Exitosos: X. Fallidos: Y. Errores a corregir: Z"* + botón **Descargar errores** (`.txt`, ej. `errores_cargue_preventivo`).
+
+**Errores de negocio que devuelve la entidad:** *"No tiene autorización, consulte con el vigilado"* · *"La placa no pertenece al vigilado"* · *"La placa debe tener 6 caracteres"* ⇒ existe una **matriz de autorización placa↔vigilado externa** que la Super valida.
+
+### 10.11 Detalles de negocio por operación
+
+- **Responsable diferenciado:** preventivo → **ingeniero mecánico**; correctivo → **técnico mecánico**; alistamiento → **responsable de la empresa + conductor**.
+- **Estados de placa:** preventivo tiene los 5 (`sin reporte · inicio · reportado vigente · próximo a vencer · vencido`); correctivo y alistamiento solo los 3 primeros.
+- **Autorización NNA (sin carga masiva):** bloques Viaje (placa, fecha, departamento/municipio/**centro poblado** origen y destino), **NNA** (identificación, nombres, **¿situación de discapacidad?** + tipo, **¿comunidad étnica?** + tipo), **Otorgante** (datos + correo, teléfono, dirección, sexo, género *opcional*, **calidad en que actúa**), **Autorizado para viajar**, **Autorizado para recoger**, y **4 PDF obligatorios** (autorización del viaje · prueba de parentesco · identidad del autorizado · constancia de entrega), cada uno ≤4 MB.
+- **Novedades (sin carga masiva):** tipos `Conductor/Vehículo` y `Otra`. La consulta de conductor devuelve alcoholimetría, licencia y examen de aptitud física; la de vehículo devuelve SOAT, tecnomecánica, pólizas contractual/extracontractual, tarjeta de operación **y N° de mantenimiento y de protocolo de alistamiento con sus fechas**. El botón *Registrar* solo se habilita tras diligenciar **Observaciones**.
+- **Integradora:** acepta **fecha y hora retroactivas** (si la fecha es anterior a hoy aparece el campo hora) ⇒ **consulta de estado histórico**, no solo actual. El manual **no define qué pasa si un documento está vencido** (sin bloqueo ni alerta documentados).
+
+### 10.12 Vacíos del manual — cerrar con negocio, NO inventar
+
+- Qué ocurre si SOAT/tecnomecánica/licencia/póliza/tarjeta de operación está **vencido** (¿bloquea el despacho?).
+- Para qué sirve el **token autorizado** (el manual lo muestra pero no lo explica).
+- **Quién y cómo registra salidas y llegadas.**
+- Plazos legales y **referencias normativas**: el manual **no cita ninguna resolución ni decreto**.
+- Qué significa el estado **"Inicio"** de una placa.
