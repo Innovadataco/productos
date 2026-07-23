@@ -9,7 +9,10 @@ uploads/*.PDF
 *.sqlite-journal
 *.sqlite.backup*
 coverage
-logs/
+# Solo los logs de ejecución de la raíz del producto. Sin la barra inicial, el
+# patrón ignoraba TAMBIÉN src/app/api/documents/[id]/logs/, dejando su prueba
+# fuera del repositorio (hallazgo de la spec 005).
+/logs/
 .clinerules/
 *.tsbuildinfo
 scripts/eval-embeddings/config.local.json
