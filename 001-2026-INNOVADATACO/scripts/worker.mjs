@@ -15,8 +15,11 @@ const prisma = new PrismaClient();
 // Importar funciones de los módulos TypeScript
 // tsx permite importar archivos .ts directamente
 const { extractPdfText, analyzeDocument } = await import('../src/lib/documentProcessor.ts');
-const { callModel } = await import('../src/lib/modelClients.ts');
+const { callModel, embedText } = await import('../src/lib/modelClients.ts');
 const { buildDocumentAnalysisPrompt, sanitizeJsonText } = await import('../src/lib/prompts.ts');
+// Pipeline RAG (spec 003): vectorización como parte de la ingesta.
+const { vectorizarDocumento } = await import('../src/lib/ingestChunks.ts');
+const { resolverModeloEmbeddings, ModeloEmbeddingsNoConfigurado } = await import('../src/lib/ragConfig.ts');
 
 function parseDate(value) {
     if (!value) return null;
@@ -190,6 +193,68 @@ async function processDocument(jobs) {
             where: { id: documentId },
             data: final,
         });
+
+        // --- Pipeline RAG (spec 003, US3): trocear + vectorizar + poblar DocumentoChunk ---
+        // Solo si el documento tiene texto y hay modelo de embeddings configurado. Un fallo
+        // aquí NO pierde el texto ya guardado: deja el documento en needs_review (FR-010).
+        // Sin modelo configurado no se adivina (FR-006): se deja anotado para reprocesar.
+        try {
+            const docActualizado = await prisma.documentoOficial.findUnique({ where: { id: documentId } });
+            const texto = docActualizado?.contenidoTexto || '';
+            if (texto.trim()) {
+                const modelo = await resolverModeloEmbeddings(prisma);
+                const startEmb = Date.now();
+                const res = await vectorizarDocumento(
+                    prisma,
+                    {
+                        id: documentId,
+                        contenidoTexto: texto,
+                        tipo: docActualizado.tipo,
+                        numero: docActualizado.numero,
+                        entidad: docActualizado.entidad,
+                        fecha: docActualizado.fechaExpedicion ? docActualizado.fechaExpedicion.toISOString().slice(0, 10) : null,
+                    },
+                    modelo,
+                    (t) => embedText({ provider: 'ollama', modelPath: modelo.modelPath, baseUrl: modelo.baseUrl, config: '{}' }, t),
+                );
+                await auditLog({
+                    action: 'vectorize',
+                    entityType: 'DocumentoOficial',
+                    entityId: documentId,
+                    status: 'success',
+                    message: `Vectorización: ${res.chunksCreados} fragmentos (modelo ${modelo.modelPath})`,
+                    metadata: { chunks: res.chunksCreados, sinContenido: res.sinContenido, enrich: modelo.enrichConfigHuella },
+                    latencyMs: Date.now() - startEmb,
+                });
+                console.log(`[Worker] Vectorizados ${res.chunksCreados} fragmentos de ${documentId}`);
+            }
+        } catch (embErr) {
+            if (embErr instanceof ModeloEmbeddingsNoConfigurado) {
+                // No es un fallo del documento: falta configurar el modelo. Reprocesable por backfill.
+                console.warn(`[Worker] Sin modelo de embeddings configurado; ${documentId} queda sin vectorizar.`);
+                await auditLog({
+                    action: 'vectorize',
+                    entityType: 'DocumentoOficial',
+                    entityId: documentId,
+                    status: 'error',
+                    message: 'Sin modelo de embeddings configurado (FR-006): pendiente de re-vectorizar',
+                });
+            } else {
+                // Fallo real de vectorización: needs_review SIN perder el texto ya extraído (FR-010).
+                console.error(`[Worker] Error vectorizando ${documentId}:`, embErr);
+                await prisma.documentoOficial.update({
+                    where: { id: documentId },
+                    data: { status: 'needs_review', processingError: `Vectorización: ${embErr.message || 'error desconocido'}` },
+                });
+                await auditLog({
+                    action: 'vectorize',
+                    entityType: 'DocumentoOficial',
+                    entityId: documentId,
+                    status: 'error',
+                    message: embErr.message || 'Error vectorizando',
+                });
+            }
+        }
 
         console.log(`[Worker] Documento ${documentId} procesado exitosamente. Status: ${final.status}`);
 
