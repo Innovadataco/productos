@@ -1,25 +1,26 @@
 <!--
-Sync Impact Report — 2026-07-22
-Version change: 1.0.0 → 2.0.0
-Bump rationale: MAJOR — se redefine el contrato de errores al cliente (el patrón
-estándar §2.1 devolvía `details: err.message` crudo; ahora está prohibido filtrar
-err.message al cliente). Además se añade la sección 0 "Principios rectores
-(gobernanza IDC)" con 6 principios nuevos (spec-driven, pruebas, tipado estricto,
-12-factor/ADR_001, aislamiento multiproyecto/ADR_002, IA local por defecto).
-Modified principles: §2.1 "Patrón estándar para errores" (ya no expone details al cliente);
-§2.4 refuerza "nunca err.message crudo al cliente".
-Added sections: §0 Principios rectores (gobernanza IDC); gobernanza de enmiendas en §10.
+Sync Impact Report — 2026-07-22 (segunda enmienda del día)
+Version change: 2.0.0 → 2.1.0
+Bump rationale: MINOR — se añaden dos principios rectores nuevos (§0.7
+configurabilidad y precedencia / ADR_004; §0.8 agentes / ADR_003) y se corrige
+§3.4 con una fe de erratas. No se elimina ni redefine ningún principio previo,
+por lo que no procede MAJOR.
+Modified principles: §3.4 "Procesamiento asíncrono con pg-boss" — describía
+chunking y embeddings como existentes; el hallazgo H-05 (spec 001, T018) probó
+que no existen. Ahora separa el flujo REAL del DISEÑO PREVISTO (spec 003).
+Added sections: §0.7 Configurabilidad y precedencia (ADR_004); §0.8 Agentes:
+persona + corpus + modelo compartido (ADR_003); nota de retiro de Financials
+en §1.2.
 Removed sections: ninguna.
-Templates: ✅ .specify/templates/plan-template.md (Constitution Check genérico, compatible);
-✅ .specify/templates/spec-template.md (sin cambios requeridos);
-✅ .specify/templates/tasks-template.md (sin cambios requeridos);
-✅ .claude/skills/speckit-* (integración claude 0.13.5, sin referencias obsoletas).
-Follow-up TODOs: ninguno.
+Templates: ✅ plan-template.md, spec-template.md, tasks-template.md (el
+Constitution Check es genérico y absorbe los principios nuevos sin cambios).
+Follow-up TODOs: §3.4 debe volver a actualizarse cuando cierre la spec 003, para
+describir el pipeline RAG real en vez del diseño previsto.
 -->
 
 # SPECKIT CONSTITUTION — 001-2026-INNOVADATACO
 
-> **Versión:** 2.0.0  
+> **Versión:** 2.1.0  
 > **Ratificada:** 2026-07-11 · **Última enmienda:** 2026-07-22  
 > **Stack:** Next.js 16.2.10 + React 19.2.4 + Prisma 5.22.0 + PostgreSQL 16+ + TypeScript 5.x  
 > **Runtime:** Node.js >=22  
@@ -31,7 +32,7 @@ Follow-up TODOs: ninguno.
 
 ## 0. PRINCIPIOS RECTORES (GOBERNANZA IDC)
 
-Estos seis principios son la fuente de autoridad del proyecto. Ante cualquier
+Estos ocho principios son la fuente de autoridad del proyecto. Ante cualquier
 conflicto con el resto del documento o con una tarea, prevalecen estos principios.
 
 ### 0.1 Spec-driven (Regla de Oro 1)
@@ -69,6 +70,33 @@ La inferencia usa Ollama local vía `OLLAMA_BASEURL` como proveedor por defecto.
 Proveedores externos (APIs de terceros) son opcionales, se configuran por `.env`/
 módulo de Configuración y nunca son requisito para que el sistema funcione.
 
+### 0.7 Configurabilidad y precedencia (ADR_004)
+Todo parámetro operativo del sistema (modelos de IA, URLs de servicios, tamaños de
+fragmento, solape, top-k, umbrales, pesos de fusión, rutas de corpus) DEBE ser
+configurable. La **precedencia es única y no negociable**:
+
+1. **Configuración en BD/UI** (`AiModel`, `ModuleSetting`, módulo de Configuración) — manda.
+2. **Variable de entorno** (`.env`) — solo si no hay valor en (1).
+3. **Default documentado en el código** — solo si no hay (1) ni (2), y siempre explícito.
+
+**PROHIBIDO** el valor que solo pueda cambiarse editando código. Si un parámetro
+requiere recompilar o tocar un archivo `.ts` para ajustarse, es un defecto, no una
+decisión de diseño.
+
+Corolario operativo: escribir la configuración no basta — hay que **leerla**. Una
+pantalla de configuración cuyo valor el backend ignora es una violación de este
+principio, no una funcionalidad pendiente. Esta regla aplica también a las
+herramientas de apoyo (bancos de evaluación, scripts de análisis), no solo a la
+aplicación.
+
+### 0.8 Agentes: persona + corpus + modelo compartido (ADR_003)
+Un "agente" de esta plataforma se compone de **persona** (rol e instrucciones),
+**corpus filtrado** (el subconjunto documental que puede consultar) y un **modelo
+compartido** de inferencia. NUNCA se entrenan ni afinan modelos propios: la
+especialización se logra por contexto y filtrado del corpus, no por pesos.
+Consecuencia: un agente nuevo no implica un modelo nuevo; implica configuración
+(§0.7) y curaduría documental.
+
 ---
 
 ## 1. PRINCIPIOS GENERALES
@@ -88,14 +116,14 @@ Antes de implementar cualquier cambio, el agente DEBE:
 | Investigación (`/research`, `/api/research`) | Activo | Análisis con IA local/remota |
 | Proyectos (`/projects`, `/api/projects`) | Activo | Gestión de proyectos locales |
 | Configuración (`/configuracion`, `/api/config`) | Activo | Modelos IA, APIs, audit logs |
-| **Financials** | **FUERA DE SCOPE** | **NO crear tablas, rutas, páginas ni componentes. Ignorar completamente.** |
+| **Financials** | **FUERA DE SCOPE** | **NO crear tablas, rutas, páginas ni componentes. Ignorar completamente.** Retirado del código el 2026-07-22 (aprobación del CEO, I-003): se eliminó `src/app/financials/page.tsx`, único vestigio que quedaba. El esquema nunca tuvo entidades financieras. |
 
 ### 1.3 Decisiones arquitectónicas inmutables
 - **API Layer:** Únicamente Next.js App Router API Routes (`src/app/api/**/route.ts`). No se autoriza PostgREST, tRPC, GraphQL ni server actions para lógica de negocio.
 - **Base de datos:** PostgreSQL con Prisma ORM. No usar raw SQL salvo para migraciones manuales o funciones `Unsupported("vector")`.
 - **Autenticación:** JWT manual con `jose` + `bcryptjs`. No instalar NextAuth.js ni Auth.js sin aprobación explícita del tech lead.
 - **Colas:** `pg-boss` para procesamiento asíncrono (documentos, embeddings). No usar Bull, Bee Queue ni RabbitMQ.
-- **Testing:** Vitest + jsdom + `@testing-library/react`. No Jest.
+- **Testing:** Vitest. Entorno por defecto `node` (las rutas API y `src/lib` son código de servidor; bajo jsdom el `TextEncoder` de otro realm rompe el `instanceof` de `jose`). Los tests de componentes React usan `@testing-library/react` declarando `// @vitest-environment jsdom` en su cabecera. No Jest.
 - **Estilo:** ESLint con `eslint-config-next`. No Prettier configurado; respetar el estilo existente.
 
 ---
@@ -268,11 +296,29 @@ Rutas que aún no tienen paginación y deben agregarla:
 - `GET /api/config/audit` (ya tiene, usar como referencia)
 
 ### 3.4 Procesamiento asíncrono con pg-boss
-El flujo de documentos es el patrón canónico:
-1. API recibe PDF → guarda en BD con status `queued` → encola job `process-document`.
+
+> **FE DE ERRATAS (2026-07-22, D-015).** Hasta la versión 2.0.0 esta sección
+> describía chunking y embeddings como parte del flujo **existente**. Era falso:
+> la verificación del hallazgo **H-05** (spec 001, T018) demostró que no hay una
+> sola línea de chunking ni de embeddings en `src/lib/` ni en `scripts/worker.mjs`,
+> y que `DocumentoChunk` está migrada pero **vacía**. El texto se corrige a
+> continuación separando lo que existe de lo que es diseño previsto.
+
+**Flujo REAL hoy** (patrón canónico vigente):
+1. API recibe PDF → extrae texto → guarda en BD con status `queued` → encola job
+   `process-document`.
 2. Worker (`scripts/worker.mjs`) consume la cola.
-3. Worker extrae texto (si falló antes), genera chunks, genera embeddings, actualiza campos AI.
+3. Worker analiza el documento: si hay modelo IA activo llama al modelo para
+   extraer metadatos; si no, aplica extracción por reglas (`analyzeDocument`).
 4. Estados posibles: `queued` → `processing` → `completed` | `needs_review` | `error`.
+
+**DISEÑO PREVISTO, aún NO implementado** (spec 003 `pipeline-rag`):
+- Troceado del texto en fragmentos y generación de embeddings.
+- Poblado de `DocumentoChunk` y búsqueda semántica con pgvector.
+
+Mientras la spec 003 no cierre, ninguna afirmación sobre RAG en este proyecto debe
+darse por cierta. Al cerrarla, esta sección se actualiza describiendo el pipeline
+real y se registra la enmienda en §10.
 
 No bloquear la respuesta HTTP con operaciones de IA o embeddings.
 
@@ -472,6 +518,7 @@ en esta tabla. El cumplimiento se revisa en cada spec (`Constitution Check` del 
 |---------|-------|-------|--------|
 | 1.0.0 | 2026-07-11 | Speckit | Creación inicial tras inspección de código real del proyecto |
 | 2.0.0 | 2026-07-22 | ODIN (aprob. pendiente ZEUS/Jelkin) | Principios rectores de gobernanza IDC (§0); contrato de errores sin `err.message` al cliente (§2.1, §2.4); gobernanza de enmiendas |
+| 2.1.0 | 2026-07-22 | ODIN (decisiones D-019…D-023 de ZEUS) | Fe de erratas §3.4 (RAG es diseño previsto, no código); §0.7 configurabilidad y precedencia (ADR_004); §0.8 agentes persona+corpus+modelo compartido (ADR_003); retiro de Financials registrado en §1.2 |
 
 ---
 
