@@ -76,7 +76,7 @@ código (§0.2). Gate global: suite completa verde + validaciones de infra
 - [x] T015b [US4] **(nueva por FR-011 / ZEUS D-009)** `docker-compose.yml`: `healthcheck` con `pg_isready` en `db`; `depends_on: {db: {condition: service_healthy}}` en `app` y `worker`; `restart: unless-stopped` en los tres servicios. → FR-011
 - [x] T016 [US4] `Dockerfile`: añadir `RUN npx prisma generate` en stage `builder` entre `COPY . .` y `RUN npm run build` (plan §2, research D-05). **+ desviación aprobada por ZEUS**: también `RUN apk add --no-cache openssl` en el stage `base`, sin el cual Prisma carga el engine `openssl-1.1.x` y el worker crashea en bucle (research D-12 / H-04). → habilitador FR-007
 - [x] T017 [US4] Validar: `docker compose config` muestra el worker conforme a FR-007; `docker compose up -d --build` levanta app+worker+db; logs del worker sin errores de conexión (quickstart §3). → SC-001, SC-006 (parcial)
-- [ ] ⚠️ T018 [US4] Job end-to-end (subir PDF → worker procesa → estado final): **REQUIERE TURNO DE TRABAJO PESADO APROBADO POR JELKIN (ADR_002)** — ejecuta inferencia. Coordinar antes de correr. Nota: el resultado IA puede depender además de T019/D-07. → SC-006
+- [x] T018 [US4] Job end-to-end (subir PDF → worker procesa → estado final). **Ejecutada el 2026-07-22 con turno aprobado por Jelkin (ADR_002).** Resultado: `queued` → worker consume → `processing` → `needs_review`; audit trail `upload_pdf` → `process_start` → `process_end`. **Sin inferencia**: se ejecutó con 0 modelos IA activos, por lo que el worker usó extracción por reglas (`analyzeDocument`). **No se ejercitó ningún modelo**: el tramo de embeddings NO existe en el código (hallazgo H-05, research D-13) y la ruta de análisis IA exige un modelo grande de generación, fuera del alcance del turno. → SC-006 (plumbing ✓; capa IA no verificable hoy)
 
 **Checkpoint US4**: `repo + .env + docker compose up` levanta el sistema completo.
 
@@ -117,7 +117,7 @@ código (§0.2). Gate global: suite completa verde + validaciones de infra
 | SC-003 | T001, T008, T022 |
 | SC-004 | T004, T011, T023 |
 | SC-005 | T014 |
-| SC-006 | T017, T018 (⚠️ turno) |
+| SC-006 | T017, T018 (✓ plumbing; capa IA/embeddings no existe — H-05) |
 | SC-007 | T020, T021 |
 
 ## Dependencias

@@ -150,6 +150,27 @@ Estado del código verificado leyendo los archivos reales del repo (no de memori
   documentos!`) y `GET /api/config/models` en el contenedor `app` responde 200
   (confirma que el engine también carga en el stage `runner`).
 
+## D-13 — HALLAZGO H-05 (T018): el pipeline de embeddings NO existe en el código
+
+- **Hecho verificado (2026-07-22, ejecución de T018 con turno aprobado)**: no hay
+  ninguna referencia a embeddings/chunking en `src/lib/` ni en `scripts/worker.mjs`
+  (`grep -rn "embed" src/ scripts/` → 0 coincidencias de implementación). La tabla
+  `DocumentoChunk` con `embedding Unsupported("vector(768)")` existe en
+  `prisma/schema.prisma` y su migración está aplicada, pero **nada la puebla**:
+  tras procesar un documento, `select count(*) from "DocumentoChunk"` = 0.
+- **Implicación**: la descripción del flujo canónico en la constitución §3.4
+  ("genera chunks, genera embeddings") describe el diseño previsto, no el código
+  actual. El worker solo: extrae texto → (si hay modelo activo) llama a `callModel`
+  para análisis por **generación** → si no, aplica `analyzeDocument` (reglas).
+- **Consecuencia para T018**: el turno autorizaba usar el modelo de embeddings
+  (`nomic-embed-text`), pero no existe ruta de código que lo consuma; y la ruta de
+  análisis IA exige un modelo **grande de generación**, fuera del alcance del turno.
+  Se validó por tanto la cadena de encolado/consumo/estado (que es lo que exige
+  SC-006) con 0 modelos activos y **sin ejecutar inferencia alguna**.
+- **Estado**: hallazgo abierto, fuera del alcance de la spec 001. Candidato a spec
+  propia (RAG/embeddings) — decisión de ZEUS. La fe de erratas de la constitución
+  §3.4 también queda pendiente.
+
 ## D-08 — Omisión de data-model.md y contracts/
 
 - **Decision**: no generar `data-model.md` ni `contracts/`.
