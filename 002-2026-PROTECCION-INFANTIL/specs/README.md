@@ -9,14 +9,13 @@
 |---------|-------|
 | **Total de specs** | **68** |
 | **Cerradas / Implementadas** | **64** |
-| **Pendientes (en diseño / planeadas)** | **4** |
+| **Pendientes (en diseño / planeadas)** | **3** |
 
 ## Backlog activo (pendientes)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
 | [017](017-documentacion/spec.md) | Módulo de documentación | 🟡 En diseño |
-| [019](019-permisos-modulos/spec.md) | Gestor de permisos de módulos | 🟡 En diseño |
 | [050b](050-pendientes-afinamiento/spec.md) | Pendientes de afinamiento | 🟡 En diseño |
 | [053](053-capa-datos-servicios/spec.md) | Capa de datos y servicios | 🔵 Planeado |
 
@@ -42,7 +41,7 @@
 | [016](016-circulo-confianza/spec.md) | Círculo de Confianza | 🟢 Cerrada |
 | [017](017-documentacion/spec.md) | Módulo de documentación | 🟡 En diseño |
 | [018](018-operadores-casos/spec.md) | Operadores de casos (revisión humana) | 🟢 Cerrada |
-| [019](019-permisos-modulos/spec.md) | Gestor de permisos de módulos | 🟡 En diseño |
+| [019](019-permisos-modulos/spec.md) | Gestor de permisos de módulos | 🟢 Implementada (pendiente validación Jelkin) |
 | [020](020-reorganizacion-monitoreo/spec.md) | Reorganización de módulos + monitoreo | 🟢 Cerrada |
 | [021](021-reporte-anonimo-interno/spec.md) | Reporte anónimo con sesión interna | 🟢 Cerrada |
 | [022](022-expediente-transiciones/spec.md) | Expediente interno de transiciones | 🟢 Cerrada |

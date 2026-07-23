@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { reactivarReporte } from "@/lib/reporte-lifecycle";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -14,6 +15,7 @@ function requireAdmin(user: { rol: string }) {
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
+        await assertModulo(user, "bandeja_reportes");
         requireAdmin(user);
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });

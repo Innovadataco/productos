@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
@@ -10,6 +11,7 @@ import { cambiarEstadoAlerta } from "@/lib/colegio/alertas";
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
+        await assertModulo(user, "colegios_gestion");
         const vigencia = await verificarVigenciaColegio(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(

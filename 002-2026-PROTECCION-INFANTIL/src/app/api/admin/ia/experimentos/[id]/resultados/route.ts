@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -15,6 +16,7 @@ const RESULTADOS_POR_PAGINA = 50;
 export async function GET(request: Request, context: RouteContext) {
     try {
         const user = await verifyAuth(RolUsuario.ADMIN);
+        await assertModulo(user, "ia_eval");
         const { id } = await context.params;
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });

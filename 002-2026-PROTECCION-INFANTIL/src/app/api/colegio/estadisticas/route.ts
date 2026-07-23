@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { calcularEstadisticasColegio } from "@/lib/colegio/estadisticas";
@@ -11,6 +12,7 @@ export const revalidate = 0;
 export async function GET(request: Request) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
+        await assertModulo(user, "colegios_gestion");
         const vigencia = await verificarVigenciaColegio(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(

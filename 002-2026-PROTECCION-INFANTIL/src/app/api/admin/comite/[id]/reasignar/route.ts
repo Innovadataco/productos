@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -22,6 +23,7 @@ function getClientInfo(request: Request) {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth("ADMIN");
+        await assertModulo(user, "comite_bandeja");
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { clampPageSize, clampPage } from "@/lib/pagination";
@@ -14,6 +15,7 @@ function requireAdmin(user: { rol: string }) {
 export async function GET(request: Request) {
     try {
         const user = await verifyAuth();
+        await assertModulo(user, "dataset_entrenamiento");
         requireAdmin(user);
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });

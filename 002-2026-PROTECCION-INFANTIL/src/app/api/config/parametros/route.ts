@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { RolUsuario } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { clampPageSize, clampPage } from "@/lib/pagination";
 
 export async function GET(request: Request) {
     try {
-        await verifyAuth(RolUsuario.ADMIN);
+        await assertModulo(await verifyAuth(RolUsuario.ADMIN), "configuracion_sistema");
 
         const { searchParams } = new URL(request.url);
         const categoria = searchParams.get("categoria");

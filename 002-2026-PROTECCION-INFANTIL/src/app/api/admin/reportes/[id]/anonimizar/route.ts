@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { auditAnonimizacion } from "@/lib/audit";
 import { generarEmbedding } from "@/lib/ai/embedder";
@@ -31,6 +32,7 @@ function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoAct
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
+        await assertModulo(user, "bandeja_reportes");
         requireAdmin(user);
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
@@ -20,6 +21,7 @@ function getClientInfo(request: Request) {
 export async function PATCH(request: Request, context: RouteContext) {
     try {
         const user = await verifyAuth(RolUsuario.ADMIN);
+        await assertModulo(user, "ia_eval");
         const { id } = withValidation.params(operadorIdParamsSchema)(await context.params);
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });

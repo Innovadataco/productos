@@ -1,3 +1,4 @@
+import { CATALOGO_MODULOS } from "../src/lib/permisos-catalogo";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, CasoEvalFuente } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
@@ -1106,6 +1107,67 @@ async function main() {
 
     // Tablas SaaS vacías en desarrollo (no se cargan datos de prueba)
     console.log("Tablas Tenant, Plan, Subscription, BillingCycle listas");
+
+    // ── Permisos de módulos por rol (spec 019) ─────────────────────────────
+    const modulosSeed = CATALOGO_MODULOS;
+
+    const moduloIds = new Map<string, string>();
+    for (const m of modulosSeed.filter((x) => !x.padre)) {
+        const row = await prisma.moduloPermisible.upsert({
+            where: { clave: m.clave },
+            update: { nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden },
+            create: { clave: m.clave, nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden },
+        });
+        moduloIds.set(m.clave, row.id);
+    }
+    for (const m of modulosSeed.filter((x) => x.padre)) {
+        const padreId = moduloIds.get(m.padre!);
+        if (!padreId) throw new Error(`Padre no encontrado para ${m.clave}`);
+        const row = await prisma.moduloPermisible.upsert({
+            where: { clave: m.clave },
+            update: { nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden, padreId },
+            create: { clave: m.clave, nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden, padreId },
+        });
+        moduloIds.set(m.clave, row.id);
+    }
+
+    // Backfill: reproduce el acceso implícito actual por rol (denegar por defecto al resto).
+    const clavesPorRol: Record<string, string[]> = {
+        ADMIN: modulosSeed.map((m) => m.clave),
+        SCHOOL_ADMIN: ["colegios", "colegios_gestion", "colegios_auditoria"],
+        OPERADOR: ["bandeja_reportes", "reportes_revision"],
+        COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_auditoria"],
+    };
+    let permisosCreados = 0;
+    for (const [rol, claves] of Object.entries(clavesPorRol)) {
+        for (const clave of claves) {
+            const moduloId = moduloIds.get(clave)!;
+            const existente = await prisma.permisoModulo.findUnique({
+                where: { rol_moduloId: { rol, moduloId } },
+            });
+            if (!existente) {
+                await prisma.permisoModulo.create({
+                    data: { rol, moduloId, activo: true },
+                });
+                permisosCreados++;
+            }
+        }
+    }
+
+    await prisma.parametroSistema.upsert({
+        where: { clave: "seguridad.permisos_roles_protegidos" },
+        update: {},
+        create: {
+            clave: "seguridad.permisos_roles_protegidos",
+            valor: JSON.stringify(["ADMIN"]),
+            tipo: TipoParametro.STRING_ARRAY,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Roles protegidos por el anti-lockout de permisos de módulos",
+        },
+    });
+
+    console.log(`Permisos de módulos: ${modulosSeed.length} módulos en catálogo, ${permisosCreados} permisos backfill`);
 }
 
 async function seedEvalFixture() {

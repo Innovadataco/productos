@@ -1,4 +1,4 @@
-import ConfigPanel from "@/components/modules/ConfigPanel";
+import { ConfiguracionTabs } from "@/components/modules/ConfiguracionTabs";
 
 export default function AdminConfiguracionPage() {
     return (
@@ -9,7 +9,7 @@ export default function AdminConfiguracionPage() {
                     Editá los parámetros que controlan el scoring, visibilidad pública, alertas y límites. Los cambios se aplican de inmediato.
                 </p>
             </div>
-            <ConfigPanel />
+            <ConfiguracionTabs />
         </div>
     );
 }

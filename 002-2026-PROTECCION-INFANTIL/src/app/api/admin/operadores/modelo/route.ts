@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
@@ -28,6 +29,7 @@ async function obtenerModeloActual() {
 export async function GET(req: Request) {
     try {
         const user = await verifyAuth("ADMIN");
+        await assertModulo(user, "operadores");
         const rate = await checkRateLimit(req, "admin_read", { identifier: user.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -52,6 +54,7 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
     try {
         const user = await verifyAuth("ADMIN");
+        await assertModulo(user, "operadores");
         const rate = await checkRateLimit(req, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
             return NextResponse.json(

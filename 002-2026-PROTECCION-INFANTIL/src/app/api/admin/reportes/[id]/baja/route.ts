@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { darDeBajaReporte } from "@/lib/reporte-lifecycle";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +18,7 @@ function requireOperadorOAdmin(user: { rol: string }) {
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
+        await assertModulo(user, "bandeja_reportes");
         requireOperadorOAdmin(user);
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });

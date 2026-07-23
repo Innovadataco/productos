@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol } from "@/lib/operadores/permisos";
@@ -32,6 +33,7 @@ function endOfDay(date: Date) {
 export async function GET(req: Request) {
     try {
         const user = await verifyAuth();
+        await assertModulo(user, "estadisticas");
         if (!esAdminRol(user.rol)) {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },

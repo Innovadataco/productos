@@ -1,209 +1,146 @@
-# Diseño — Spec 019: Gestor de permisos de módulos
+# Diseño — Spec 019: Gestor de permisos de módulos por ROL
 
-> Estado: **EN REVISIÓN** (`🛑` esperando ok del owner antes de implementar).
-> Fecha del diseño: 2026-07-18.
+> Estado: **RE-ESPECIFICADO — EN REVISIÓN** (🛑 esperando OK de ZEUS).
+> Re-diseñado: 2026-07-23 aplicando los 5 cambios obligatorios.
 
-## 1. Principios rector
+## 1. Principios
 
-- **Denegar por defecto**: un módulo no configurado para un usuario interno es inaccesible para ese usuario.
-- **No toca usuarios finales**: `PARENT` y flujos públicos quedan fuera del alcance.
-- **Protección en backend**: la validación ocurre en la API route/página, no solo en el menú.
-- **Anti-lockout**: el admin owner (o rol equivalente) nunca se puede quitar permisos críticos sobre sí mismo.
-- **Sin duplicar auth/roles**: se apoya en `RolUsuario`, `verifyAuth` y `esAdminRol` existentes.
+- **Por ROL, no por usuario**: una fila por (rol, módulo). Sin overrides individuales (YAGNI).
+- **Denegar por defecto**: sin fila o `activo=false` → acceso denegado.
+- **Jerarquía AND**: submódulo accesible solo si el padre y el submódulo están activos para el rol.
+- **Cero hardcodeo**: roles protegidos por parámetro; roles gestionados desde datos.
+- **Absorber, no generalizar**: `rol` como String y catálogo como datos — un rol futuro entra con filas nuevas; no hay CRUD de roles ni motor de entidades.
 
-## 2. Modelo de datos
-
-### 2.1 Nuevas tablas
+## 2. Modelo de datos (migración aditiva)
 
 ```prisma
 model ModuloPermisible {
-  id          String   @id @default(cuid())
-  clave       String   @unique
-  nombre      String
-  descripcion String?
-  categoria   String   // ej: "admin", "operador"
-  esCritico   Boolean  @default(false) // módulos que requieren guard anti-lockout
-  orden       Int      @default(0)
-  creadoEn    DateTime @default(now())
+  id            String   @id @default(cuid())
+  clave         String   @unique
+  nombre        String
+  descripcion   String?
+  padreId       String?             // null = módulo raíz
+  categoria     String              // "admin" | "operador" | "comite" | "colegio"
+  esCritico     Boolean  @default(false)
+  orden         Int      @default(0)
+  creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
-  permisos PermisoModulo[]
+  padre      ModuloPermisible?  @relation("JerarquiaModulos", fields: [padreId], references: [id], onDelete: Restrict)
+  submodulos ModuloPermisible[] @relation("JerarquiaModulos")
+  permisos   PermisoModulo[]
+
+  @@index([padreId])
 }
 
 model PermisoModulo {
-  id        String @id @default(cuid())
-  usuarioId String
-  moduloId  String
-  habilitado Boolean @default(false)
-  asignadoPorId String?
-  creadoEn  DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  id               String   @id @default(cuid())
+  rol              String   // String, NO enum: absorbe roles futuros sin migración
+  moduloId         String
+  activo           Boolean  @default(false)
+  actualizadoPorId String?
+  creadoEn         DateTime @default(now())
+  actualizadoEn    DateTime @updatedAt
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  modulo  ModuloPermisible @relation(fields: [moduloId], references: [id], onDelete: Cascade)
-  asignadoPor Usuario? @relation("PermisoAsignadoPor", fields: [asignadoPorId], references: [id])
+  modulo        ModuloPermisible @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  actualizadoPor Usuario?        @relation(fields: [actualizadoPorId], references: [id])
 
-  @@unique([usuarioId, moduloId])
-  @@index([usuarioId])
+  @@unique([rol, moduloId])
+  @@index([rol])
 }
 ```
 
-Ampliar `RolUsuario` NO es necesario; los permisos son una capa adicional sobre el rol.
+Notas:
+- `onDelete: Restrict` en el padre: no se borra un módulo con submódulos (el catálogo se gestiona por seed/migración, no por UI).
+- Se descarta `PermisoModulo.usuarioId` (diseño anterior) — la capa por usuario no se construye.
 
-### 2.2 Catálogo inicial de módulos permisibles
-
-| Clave | Nombre | Categoría | Crítico | Notas |
-|-------|--------|-----------|---------|-------|
-| `bandeja_reportes` | Bandeja de reportes | `operador` | Sí | Todo operador debe tenerlo; anti-lockout para admins |
-| `reportes_revision` | Cola de revisión manual | `operador` | Sí | |
-| `apelaciones` | Apelaciones (Fase C) | `admin` | No | |
-| `centro_control_ia` | Centro de Control IA | `admin` | No | |
-| `dataset_entrenamiento` | Dataset de entrenamiento | `admin` | No | |
-| `configuracion_sistema` | Configuración del sistema | `admin` | Sí | Anti-lockout: admin owner siempre lo conserva |
-| `operadores` | Gestión de operadores | `admin` | Sí | Anti-lockout: admin owner siempre lo conserva |
-| `anti_abuso` | Anti-abuso | `admin` | No | |
-| `estadisticas` | Estadísticas | `admin` | No | |
-| `circulo_confianza` | Círculo de Confianza (vista admin) | `admin` | No | Vista de supervision, no el módulo de usuario |
-| `audit_logs` | Logs de auditoría | `admin` | Sí | Anti-lockout |
-
-Módulos **siempre-admin-fijos** (no configurables, siempre accesibles para `ADMIN`/`SCHOOL_ADMIN`):
-- Acceso al propio panel `/dashboard/admin`.
-- Perfil/cambio de contraseña.
-- Cierre de sesión.
-
-## 3. Lógica de negocio
-
-### 3.1 Reglas de acceso
+## 3. Lógica de acceso
 
 ```ts
-async function puedeAccederAModulo(usuario: Usuario, moduloClave: string): Promise<boolean> {
-  // Super-admins / owner nunca se bloquean
-  if (usuario.rol === "ADMIN" && usuario.esOwner) return true;
+async function puedeAccederAModulo(rol: string, clave: string): Promise<boolean> {
+  const modulo = await prisma.moduloPermisible.findUnique({ where: { clave }, include: { padre: true } });
+  if (!modulo) return false; // clave desconocida → denegar
 
-  // Admins sin módulos explícitos: heredan acceso a módulos no críticos?
-  // Decisión: NO. Denegar por defecto. Pero la migración inicial les otorga todos los permisos.
-  const modulo = await prisma.moduloPermisible.findUnique({ where: { clave: moduloClave } });
-  if (!modulo) return false;
-
-  const permiso = await prisma.permisoModulo.findUnique({
-    where: { usuarioId_moduloId: { usuarioId: usuario.id, moduloId: modulo.id } },
+  const propio = await prisma.permisoModulo.findUnique({
+    where: { rol_moduloId: { rol, moduloId: modulo.id } },
   });
+  if (propio?.activo !== true) return false;
 
-  // Sin registro = denegado
-  return permiso?.habilitado === true;
+  // AND jerárquico (un nivel): el padre también debe estar activo
+  if (modulo.padreId) {
+    const padre = await prisma.permisoModulo.findUnique({
+      where: { rol_moduloId: { rol, moduloId: modulo.padreId } },
+    });
+    return padre?.activo === true;
+  }
+  return true;
 }
-```
 
-### 3.2 Anti-lockout
-
-- El campo `Usuario.esOwner` (o un email/rol hardcodeado) identifica al admin owner.
-- Para módulos críticos, el sistema impide deshabilitar el último admin con acceso.
-- La UI deshabilita el toggle de módulos críticos sobre el propio usuario logueado.
-
-### 3.3 Operadores
-
-- Un `OPERADOR` sin permisos configurados no accede a nada del panel interno.
-- Por defecto, al crear un operador se le otorgan: `bandeja_reportes`, `reportes_revision`.
-- El admin puede quitar/agregar módulos no críticos posteriormente.
-
-## 4. Guard de rutas
-
-### 4.1 Páginas (server-side)
-
-En cada `layout.tsx` o `page.tsx` protegido del panel:
-
-```ts
-const user = await verifyAuth();
-const puede = await puedeAccederAModulo(user, "centro_control_ia");
-if (!puede) redirect("/dashboard/admin");
-```
-
-### 4.2 API routes
-
-Helper:
-
-```ts
-export async function requireModulo(request: Request, moduloClave: string) {
+// API routes
+async function requireModulo(request: Request, clave: string) {
   const user = await verifyAuth();
-  const puede = await puedeAccederAModulo(user, moduloClave);
-  if (!puede) throw new AppError("Sin acceso al módulo", ERROR_CODES.FORBIDDEN, 403);
+  if (!(await puedeAccederAModulo(user.rol, clave))) {
+    throw new AppError("Sin acceso al módulo", ERROR_CODES.FORBIDDEN, 403);
+  }
   return user;
 }
 ```
 
-Uso:
+- Páginas: mismo chequeo en `layout.tsx`/`page.tsx` server-side → redirect a `/dashboard` con aviso "sin acceso".
+- Edge middleware: fuera (sin Prisma); solo redirecciones gruesas existentes.
 
-```ts
-const user = await requireModulo(request, "operadores");
-```
+## 4. Anti-lockout (configurable, cambio 4)
 
-### 4.3 Middleware (capa adicional)
+- Parámetro `seguridad.permisos_roles_protegidos` (STRING_ARRAY, default `["ADMIN"]`), editable desde Configuración.
+- Regla en el PATCH: para cualquier módulo `esCritico`, el resultado final debe dejar **al menos un rol protegido con `activo=true`**; si no → 409 `PERMISOS_LOCKOUT`.
+- `esCritico` es dato del catálogo (seed), no código. Sin `esOwner`, sin emails.
 
-El `middleware.ts` existente puede verificar rutas bajo `/dashboard/admin/:slug*` y consultar permisos. Como el middleware corre en edge y no tiene Prisma, la validación principal queda en los layouts/API routes. El middleware se mantiene solo para redirecciones de rol grosseras (operador vs parent), no para permisos finos.
+## 5. Endpoints (todos ADMIN)
 
-## 5. UI en configuración existente
+- `GET /api/admin/permisos-modulos` → `{ roles: string[], modulos: árbol, permisos: [{rol, moduloId, activo}] }`. `roles` se deriva de `SELECT DISTINCT rol FROM PermisoModulo` (aparecen roles futuros solos).
+- `PATCH /api/admin/permisos-modulos` → body `{ cambios: [{ rol, moduloId, activo }] }` (máx 100). Valida anti-lockout simulando el estado final; aplica en transacción; `AuditLog` `PERMISOS_MODULO_ACTUALIZADOS` con antes/después; `actualizadoPorId` = admin.
 
-Sección nueva en `/dashboard/admin/configuracion`:
+Nota: la acción `PERMISOS_MODULO_ACTUALIZADOS` requiere `ALTER TYPE "AccionAudit" ADD VALUE` en la misma migración aditiva.
 
-- Tab "Permisos de módulos".
-- Selector de usuario interno (dropdown con `ADMIN`, `SCHOOL_ADMIN`, `OPERADOR`).
-- Tabla/grilla de módulos con toggle on/off.
-- Módulos críticos marcados con candado; deshabilitados para el propio owner.
-- Botón "Guardar" que envía `PATCH /api/admin/permisos`.
-- Reutilizar `AdminNav`, `MetricCard`, `Toggle`/`Switch` del design system.
+## 6. UI (`/dashboard/admin/configuracion`, tab "Permisos por rol")
 
-### 5.1 Endpoints
+- Selector de rol (lista derivada del backend).
+- Árbol módulo → submódulos con toggles; al apagar un padre se muestran los hijos como inaccesibles (UI los marca, el backend los deniega igual).
+- Candado en críticos; intento de violar anti-lockout muestra el 409 del backend.
+- Reutiliza componentes del design system (GlassCard, Button, Badge); sin librerías nuevas.
 
-- `GET /api/admin/permisos/usuarios` — usuarios internos + resumen de permisos.
-- `GET /api/admin/permisos?usuarioId=...` — permisos detallados de un usuario.
-- `PATCH /api/admin/permisos` — actualizar permisos (body `{ usuarioId, permisos: [{ moduloId, habilitado }] }`).
-  - Requiere admin.
-  - Valida anti-lockout antes de guardar.
-  - AuditLog `PERMISOS_MODULO_ACTUALIZADOS`.
+## 7. Migración de datos (idempotente)
 
-## 6. Migración de datos
+1. Crear tablas + enum value.
+2. Seed del catálogo (raíces + submódulos, ver spec §Catálogo).
+3. Backfill por rol (reproduce acceso implícito actual):
+   - `ADMIN`: todo activo.
+   - `SCHOOL_ADMIN`: `colegios` + `colegios_gestion` + `colegios_auditoria` activos.
+   - `OPERADOR`: `bandeja_reportes` + `reportes_revision` activos (módulos nuevos del catálogo).
+   - `COMITE_VALIDACION`: `comite` + `comite_bandeja` + `comite_auditoria` activos.
+4. Los guards se activan módulo a módulo (cada API/layout adopta `requireModulo` en su propia tarea), evitando big-bang.
 
-1. Crear tabla `ModuloPermisible` con el catálogo inicial.
-2. Crear tabla `PermisoModulo`.
-3. Backfill: para cada `ADMIN`/`SCHOOL_ADMIN` existente, crear permisos `habilitado=true` en todos los módulos no críticos + críticos.
-4. Para cada `OPERADOR` existente, crear permisos `habilitado=true` en `bandeja_reportes` y `reportes_revision`.
+## 8. Integración con guards existentes
 
-## 7. AuditLog
+- Los guards actuales por rol (`verifyAuth(ROL)`) NO se eliminan en esta entrega: el permiso de módulo es una capa ADICIONAL (`verifyAuth` primero, `requireModulo` después). Así un rol sin filas queda denegado por defecto y no hay regresión.
+- Adopción incremental: PR de esta spec cubre el centro de control IA, operadores, comité y colegios (los del catálogo inicial).
 
-- Acción: `PERMISOS_MODULO_ACTUALIZADOS`.
-- Valor anterior: JSON con permisos previos.
-- Valor nuevo: JSON con permisos nuevos.
-- `recursoId`: usuarioId afectado.
-- `usuarioId`: admin que hizo el cambio.
+## 9. Tests clave
 
-## 8. Integración con specs existentes
+- `puedeAccederAModulo`: denegar sin fila; AND jerárquico (padre off + hijo on → denegado; padre on + hijo off → hijo denegado, padre accesible).
+- PATCH: anti-lockout 409 al dejar roles protegidos sin módulo crítico; parámetro con 2 roles protegidos exige que al menos uno conserve.
+- Absorción: crear filas para rol `FISCALIA` (string libre) y verificar acceso/denegación sin tocar código.
+- Endpoint colegio/auditoria con `SCHOOL_ADMIN` y `colegios_auditoria` inactivo → 403.
 
-- **Spec 018 (Operadores)**: al crear un operador, el sistema le asigna los módulos base.
-- **Spec 017 (Documentación)**: el módulo `documentacion` se agrega al catálogo cuando se implemente.
-- **Auth actual**: `verifyAuth` y roles no cambian; los permisos son una capa extra.
-
-## 9. Riesgos y mitigaciones
+## 10. Riesgos
 
 | Riesgo | Mitigación |
 |--------|------------|
-| Admin se bloquea solo | `esOwner` + validación anti-lockout en backend |
-| Bypass por URL directa | Guard en API routes y server layouts |
-| Escalación de privilegios | Solo admins editan permisos; audit log |
-| Complejidad excesiva | Denegar por defecto; catálogo cerrado; no permisos por acción |
-| Datos migrados inconsistentes | Backfill idempotente en migración |
+| Lockout de admins | Anti-lockout configurable + backfill fiel al acceso actual |
+| Big-bang al activar guards | Adopción incremental por módulo; capa adicional, no reemplazo |
+| Rol futuro inconsistente | `rol` String + roles derivados de datos; sin listas en código |
+| Sobrediseño | Sin usuarios individuales, sin CRUD de roles, jerarquía de 1 solo nivel |
 
-## 10. Fases de implementación (estimación)
+## 11. Estimación
 
-1. **Schema + migración + catálogo** (1 día).
-2. **Helpers `puedeAccederAModulo` / `requireModulo`** (0.5 día).
-3. **Integración en layouts/API routes del panel** (1 día).
-4. **UI en configuración** (1 día).
-5. **Tests + audit log + anti-lockout** (1 día).
-
-Total estimado: **4–5 días**.
-
-## 11. Preguntas abiertas para el owner
-
-1. ¿Definimos `Usuario.esOwner` como booleano, o usamos un email/rol hardcodeado?
-2. ¿Los `SCHOOL_ADMIN` pueden gestionar permisos de usuarios de su tenant, o solo `ADMIN` global?
-3. ¿El módulo de documentación (Spec 017) se incluye en el catálogo inicial o se agrega luego?
+Schema+migración+catálogo (0.5d) · helpers (0.5d) · endpoints+UI (1d) · adopción guards en módulos del catálogo (1d) · tests (0.5d) ≈ **3.5 días**.

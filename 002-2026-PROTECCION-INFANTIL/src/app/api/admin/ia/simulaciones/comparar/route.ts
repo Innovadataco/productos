@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -17,6 +18,7 @@ const schema = z.object({
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth(RolUsuario.ADMIN);
+        await assertModulo(user, "ia_simulaciones");
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });
         if (!rate.allowed) {

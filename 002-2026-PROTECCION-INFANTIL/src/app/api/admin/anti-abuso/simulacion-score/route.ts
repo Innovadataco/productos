@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { calcularScore, determinarNivelRiesgo } from "@/lib/scoring";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -27,6 +28,7 @@ export interface SimulacionScoreItem {
 export async function GET(req: Request) {
     try {
         const user = await verifyAuth();
+        await assertModulo(user, "anti_abuso");
         if (String(user.rol) !== "ADMIN") {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },

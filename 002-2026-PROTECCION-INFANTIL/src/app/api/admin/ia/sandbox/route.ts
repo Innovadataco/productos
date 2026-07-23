@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { withValidation } from "@/lib/validation";
@@ -51,6 +52,7 @@ function sanitizeOverrides(raw: unknown): SandboxOverrides {
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth(RolUsuario.ADMIN);
+        await assertModulo(user, "ia_playground");
 
         const { texto, parametrosOverride, comparar } = await withValidation.body(sandboxBodySchema)(request);
         const sanitizedOverrides = sanitizeOverrides(parametrosOverride);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -14,6 +15,7 @@ const idSchema = z.string().min(1);
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth(RolUsuario.ADMIN);
+        await assertModulo(user, "ia_simulaciones");
         const { id } = await params;
         const parsedId = idSchema.safeParse(id);
         if (!parsedId.success) {

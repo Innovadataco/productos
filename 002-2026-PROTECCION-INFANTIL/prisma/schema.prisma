@@ -91,6 +91,7 @@ enum AccionAudit {
   ANONIMIZACION_VALIDADA
   ANONIMIZACION_RECHAZADA
   COLEGIO_CREADO
+  PERMISOS_MODULO_ACTUALIZADOS
   COLEGIO_ACTUALIZADO
   COLEGIO_DESACTIVADO
   COLEGIO_REACTIVADO
@@ -207,6 +208,7 @@ model Usuario {
   colegio                      Colegio?                 @relation(fields: [colegioId], references: [id])
   parametros                   ParametroSistema[]
   auditLogs                    AuditLog[]
+  permisosModuloActualizados   PermisoModulo[]
   codigos                      CodigoVerificacion[]
   tokensRecuperacion           TokenRecuperacion[]
   reportes                     Reporte[]
@@ -1057,4 +1059,39 @@ model SimulacionReporte {
   @@index([indice])
   @@index([reporteId])
   @@map("simulacion_reportes")
+}
+
+model ModuloPermisible {
+  id            String   @id @default(cuid())
+  clave         String   @unique
+  nombre        String
+  descripcion   String?
+  padreId       String?
+  categoria     String
+  esCritico     Boolean  @default(false)
+  orden         Int      @default(0)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  padre      ModuloPermisible?  @relation("JerarquiaModulos", fields: [padreId], references: [id], onDelete: Restrict)
+  submodulos ModuloPermisible[] @relation("JerarquiaModulos")
+  permisos   PermisoModulo[]
+
+  @@index([padreId])
+}
+
+model PermisoModulo {
+  id               String   @id @default(cuid())
+  rol              String
+  moduloId         String
+  activo           Boolean  @default(false)
+  actualizadoPorId String?
+  creadoEn         DateTime @default(now())
+  actualizadoEn    DateTime @updatedAt
+
+  modulo         ModuloPermisible @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  actualizadoPor Usuario?         @relation(fields: [actualizadoPorId], references: [id])
+
+  @@unique([rol, moduloId])
+  @@index([rol])
 }

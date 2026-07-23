@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { decryptParameter } from "@/lib/param-encryption";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -9,7 +10,7 @@ type RouteContext = { params: Promise<{ clave: string }> };
 
 export async function POST(request: Request, context: RouteContext) {
     try {
-        await verifyAuth("ADMIN" as never);
+        await assertModulo(await verifyAuth("ADMIN" as never), "configuracion_sistema");
         const rate = await checkRateLimit(request, "admin_read");
         if (!rate.allowed) {
             return NextResponse.json(

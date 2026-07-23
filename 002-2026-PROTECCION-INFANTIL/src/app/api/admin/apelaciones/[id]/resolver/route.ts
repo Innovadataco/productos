@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolverApelacion } from "@/lib/apelaciones";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -16,6 +17,7 @@ const schema = z.object({
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
+        await assertModulo(user, "apelaciones");
         if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },

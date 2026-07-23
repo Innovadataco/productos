@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
@@ -47,6 +48,7 @@ async function validarUbicacionActualizada(
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth("ADMIN");
+        await assertModulo(admin, "colegios_gestion");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(
@@ -136,6 +138,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth("ADMIN");
+        await assertModulo(admin, "colegios_gestion");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(

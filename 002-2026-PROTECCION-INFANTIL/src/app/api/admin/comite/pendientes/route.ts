@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol } from "@/lib/operadores/permisos";
@@ -14,6 +15,7 @@ const querySchema = z.object({
 export async function GET(request: Request) {
     try {
         const user = await verifyAuth();
+        await assertModulo(user, "comite_bandeja");
         if (!esAdminRol(user.rol) && user.rol !== "COMITE_VALIDACION") {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },

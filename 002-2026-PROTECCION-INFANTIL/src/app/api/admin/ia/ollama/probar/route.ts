@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { listOllamaModels, isLocalOllamaUrl } from "@/lib/ai/ollama-config";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
@@ -10,6 +11,7 @@ import { RolUsuario } from "@prisma/client";
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth(RolUsuario.ADMIN);
+        await assertModulo(user, "ia_configuracion");
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });
         if (!rate.allowed) {

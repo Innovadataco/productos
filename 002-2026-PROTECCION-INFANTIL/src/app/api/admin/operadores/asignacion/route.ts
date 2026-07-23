@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol } from "@/lib/operadores/permisos";
@@ -9,6 +10,7 @@ import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
 export async function GET(req: Request) {
     try {
         const user = await verifyAuth("ADMIN");
+        await assertModulo(user, "operadores");
         const rate = await checkRateLimit(req, "admin_read", { identifier: user.id });
         if (!rate.allowed) {
             return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
@@ -21,6 +22,7 @@ function detectarExtension(nombreArchivo: string): "csv" | "xlsx" | null {
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
+        await assertModulo(user, "colegios_gestion");
         const vigencia = await verificarVigenciaColegio(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(

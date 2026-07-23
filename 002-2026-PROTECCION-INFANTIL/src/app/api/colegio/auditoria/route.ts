@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma, AccionAudit } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { COLEGIO_AUDIT_ACTIONS } from "@/lib/audit-actions";
@@ -19,6 +20,7 @@ export const revalidate = 0;
 export async function GET(request: Request) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
+        await assertModulo(user, "colegios_auditoria");
         const vigencia = await verificarVigenciaColegio(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(

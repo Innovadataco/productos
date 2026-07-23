@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
@@ -19,6 +20,7 @@ function getClientInfo(request: Request) {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth("ADMIN");
+        await assertModulo(admin, "colegios_gestion");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(

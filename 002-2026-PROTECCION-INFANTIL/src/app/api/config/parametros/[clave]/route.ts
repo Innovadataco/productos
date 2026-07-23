@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { logAudit } from "@/lib/audit";
 import { invalidateCache } from "@/lib/config-cache";
 import { isLocalOllamaUrl } from "@/lib/ai/ollama-config";
@@ -35,7 +36,7 @@ const PARAM_CREATE_DEFAULTS: Record<
 
 export async function GET(_request: Request, context: RouteContext) {
     try {
-        await verifyAuth("ADMIN" as never);
+        await assertModulo(await verifyAuth("ADMIN" as never), "configuracion_sistema");
         const { clave } = await context.params;
 
         const param = await prisma.parametroSistema.findUnique({
@@ -78,6 +79,7 @@ export async function GET(_request: Request, context: RouteContext) {
 export async function PATCH(request: Request, context: RouteContext) {
     try {
         const user = await verifyAuth("ADMIN" as never);
+        await assertModulo(user, "configuracion_sistema");
         const { clave } = withValidation.params(parametroClaveParamsSchema)(await context.params);
         const body = await withValidation.body(parametroPatchBodySchema)(request);
 
@@ -155,7 +157,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
     try {
-        await verifyAuth("ADMIN" as never);
+        await assertModulo(await verifyAuth("ADMIN" as never), "configuracion_sistema");
         const { clave } = withValidation.params(parametroClaveParamsSchema)(await context.params);
 
         const param = await prisma.parametroSistema.findUnique({
