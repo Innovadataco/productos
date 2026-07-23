@@ -181,7 +181,7 @@ export default function UsuariosPage() {
 
             <fieldset className="border rounded p-2">
               <legend className="text-xs text-gray-500 px-1">Permisos (módulos y submódulos) — máximo: lo que usted tiene</legend>
-              <p className="text-xs text-gray-400 mb-2">"Módulo completo" y elegir submódulos son excluyentes.</p>
+              <p className="text-xs text-gray-400 mb-2">«Módulo completo» y elegir submódulos son excluyentes.</p>
               {asignables.map((m) => (
                 <div key={m.id} className="mb-2 border-b pb-2">
                   <label className="flex items-center gap-2 font-medium">
