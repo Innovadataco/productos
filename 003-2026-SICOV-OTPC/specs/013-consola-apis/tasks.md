@@ -27,7 +27,7 @@ resembrar**: 013 arranca tras la Foundational de 009.
 
 **Purpose**: no hay setup propio — reusa la tanda de datos de 009. Punto de control de precondición.
 
-- [ ] T001 Verificar precondición: la Foundational de 009 está aplicada (columna `usm_submodulo_id`, guard extendido, módulo `configuracion` + submódulo `apis` sembrados por nombre). Si no, completar 009 Foundational primero
+- [X] T001 Verificar precondición: la Foundational de 009 está aplicada (columna `usm_submodulo_id`, guard extendido, módulo `configuracion` + submódulo `apis` sembrados por nombre). Si no, completar 009 Foundational primero
 
 ---
 
@@ -35,9 +35,9 @@ resembrar**: 013 arranca tras la Foundational de 009.
 
 **Purpose**: tabla de bitácora `tbl_api_llamadas` (nueva, aditiva) — la necesitan US1 (registro de ejecución) y US2 (consulta).
 
-- [ ] T002 En [prisma/schema.prisma](../../prisma/schema.prisma) añadir el modelo `ApiLlamada` (`@@map("tbl_api_llamadas")`, `@@schema("sicov")`, prefijo `apl_`): `request`/`respuesta` como `Json? @db.JsonB` (ZEUS: jsonb, no Json); índices `@@index([creado])`, `@@index([operacion])`, `@@index([modo])`; `creado @db.Timestamptz()`
-- [ ] T003 Generar migración `npx prisma migrate dev --create-only --name add_consola_apis` (solo CREATE) — revisión del SQL
-- [ ] T004 Aplicar la migración (`pg_dump` previo) + `npx prisma generate`. Puede ir en la MISMA tanda de datos que 009
+- [X] T002 En [prisma/schema.prisma](../../prisma/schema.prisma) añadir el modelo `ApiLlamada` (`@@map("tbl_api_llamadas")`, `@@schema("sicov")`, prefijo `apl_`): `request`/`respuesta` como `Json? @db.JsonB` (ZEUS: jsonb, no Json); índices `@@index([creado])`, `@@index([operacion])`, `@@index([modo])`; `creado @db.Timestamptz()`
+- [X] T003 Generar migración `npx prisma migrate dev --create-only --name add_consola_apis` (solo CREATE) — revisión del SQL
+- [X] T004 Aplicar la migración (`pg_dump` previo) + `npx prisma generate`. Puede ir en la MISMA tanda de datos que 009
 
 **Checkpoint**: tabla de bitácora lista; jsonb confirmado en el SQL.
 
@@ -51,16 +51,16 @@ resembrar**: 013 arranca tras la Foundational de 009.
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T005 [P] [US1] Test del catálogo en `src/lib/consola-apis/catalogo.test.ts`: cada entrada declara ejecutor válido ∈ métodos de `ClienteSupertransporte`; `FASE_CONSOLA === 1`; 006/007/008 marcadas "pendiente" (no ejecutables)
-- [ ] T006 [P] [US1] Test de `ejecutarOperacion` en `src/lib/consola-apis/ejecutar.test.ts`: usa `getClienteSupertransporte()` (stub por gate), **cero red**, registra en éxito y en error, nunca lanza sin registrar
+- [X] T005 [P] [US1] Test del catálogo en `src/lib/consola-apis/catalogo.test.ts`: cada entrada declara ejecutor válido ∈ métodos de `ClienteSupertransporte`; `FASE_CONSOLA === 1`; 006/007/008 marcadas "pendiente" (no ejecutables)
+- [X] T006 [P] [US1] Test de `ejecutarOperacion` en `src/lib/consola-apis/ejecutar.test.ts`: usa `getClienteSupertransporte()` (stub por gate), **cero red**, registra en éxito y en error, nunca lanza sin registrar
 - [ ] T007 [P] [US1] Test de endpoint `src/app/api/configuracion/apis/ejecutar/route.test.ts`: 403 roles 2/3, 400 payload inválido (intento registrado), 403 fijo cuando `real=true` (Fase 2)
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Crear `src/lib/consola-apis/catalogo.ts`: constante tipada de las 7 operaciones Fase 1 (despachos, llegadas, mantenimiento base/preventivo/correctivo, integradora, maestras×2) + entradas "pendiente" 006/007/008; cada una {clave, título, método, pathExterno, cabeceras (nombres), ejemplo, ejecutor, opciones}; `FASE_CONSOLA = 1`; tabla ejecutor→método del cliente (`postTransaccional`|`postMantenimiento`|`getMantenimiento`|`consultarIntegradora`|`consultarRutasActivas`|`consultarAutorizaciones`)
-- [ ] T009 [US1] Crear `src/lib/consola-apis/ejecutar.ts`: `ejecutarOperacion(clave, payload, usuario)` — valida contra catálogo, cronometra, despacha por la tabla de ejecutores a `getClienteSupertransporte()` (stub), redacta y registra en `ApiLlamada` (siempre); devuelve {respuesta, duracionMs, logId, modo}
-- [ ] T010 [US1] Crear `GET src/app/api/configuracion/apis/catalogo/route.ts` (`verifyAuth([1])` + `requiereModulo(u,"configuracion","apis")`) y `POST src/app/api/configuracion/apis/ejecutar/route.ts` (stub + bitácora; body `real=true` → 403 fijo Fase 1)
-- [ ] T011 [US1] UI `src/app/dashboard/configuracion/apis/page.tsx`: lista de operaciones + formulario (ejemplo editable) + resultado (request/respuesta/duración) + botón "Ejecutar en real" `disabled` con nota "Fase 2 — requiere habilitación del CEO". Hereda breadcrumb (I-14)
+- [X] T008 [US1] Crear `src/lib/consola-apis/catalogo.ts`: constante tipada de las 7 operaciones Fase 1 (despachos, llegadas, mantenimiento base/preventivo/correctivo, integradora, maestras×2) + entradas "pendiente" 006/007/008; cada una {clave, título, método, pathExterno, cabeceras (nombres), ejemplo, ejecutor, opciones}; `FASE_CONSOLA = 1`; tabla ejecutor→método del cliente (`postTransaccional`|`postMantenimiento`|`getMantenimiento`|`consultarIntegradora`|`consultarRutasActivas`|`consultarAutorizaciones`)
+- [X] T009 [US1] Crear `src/lib/consola-apis/ejecutar.ts`: `ejecutarOperacion(clave, payload, usuario)` — valida contra catálogo, cronometra, despacha por la tabla de ejecutores a `getClienteSupertransporte()` (stub), redacta y registra en `ApiLlamada` (siempre); devuelve {respuesta, duracionMs, logId, modo}
+- [X] T010 [US1] Crear `GET src/app/api/configuracion/apis/catalogo/route.ts` (`verifyAuth([1])` + `requiereModulo(u,"configuracion","apis")`) y `POST src/app/api/configuracion/apis/ejecutar/route.ts` (stub + bitácora; body `real=true` → 403 fijo Fase 1)
+- [X] T011 [US1] UI `src/app/dashboard/configuracion/apis/page.tsx`: lista de operaciones + formulario (ejemplo editable) + resultado (request/respuesta/duración) + botón "Ejecutar en real" `disabled` con nota "Fase 2 — requiere habilitación del CEO". Hereda breadcrumb (I-14)
 
 **Checkpoint**: US1 funcional — ejecutar stub, ver resultado, botón real bloqueado (UI + 403 server-side).
 
@@ -74,15 +74,15 @@ resembrar**: 013 arranca tras la Foundational de 009.
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T012 [P] [US2] Test de redacción **RECURSIVA** en `src/lib/consola-apis/redactar.test.ts`: clave sensible (`clave`,`contrasena`,`token`,`tokenAutorizado`,`Authorization`) en objeto/array ANIDADO a cualquier profundidad → `"***"`; truncado a 8 KB por columna
+- [X] T012 [P] [US2] Test de redacción **RECURSIVA** en `src/lib/consola-apis/redactar.test.ts`: clave sensible (`clave`,`contrasena`,`token`,`tokenAutorizado`,`Authorization`) en objeto/array ANIDADO a cualquier profundidad → `"***"`; truncado a 8 KB por columna
 - [ ] T013 [P] [US2] Test de bitácora paginada en `src/app/api/configuracion/apis/llamadas/route.test.ts`: paginación server-side, filtros (operacion, modo, status, fecha), solo rol 1
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Crear `src/lib/consola-apis/redactar.ts`: redacción RECURSIVA por lista de claves (recorre objetos y arrays anidados a cualquier profundidad) + truncado a 8 KB por columna jsonb (documentado)
-- [ ] T015 [US2] Integrar `redactar()` en `ejecutar.ts` (T009) ANTES de persistir request/respuesta; registrar `modo` desde `modoIntegracion()` (stub|real) para que Fase 2 use el mismo esquema
-- [ ] T016 [US2] Crear `GET src/app/api/configuracion/apis/llamadas/route.ts`: bitácora **paginada server-side estándar** (`page`/`pageSize`, `DEFAULT_PAGE_SIZE=25`, `MAX_PAGE_SIZE=100`, `findMany`+`count` en `Promise.all` — §4.3 constitución — P1) con filtros (operacion, modo, status, fecha), solo rol 1 + guard; detalle por fila
-- [ ] T017 [US2] Añadir a la UI (T011) el panel de bitácora paginada con filtros y detalle por fila
+- [X] T014 [US2] Crear `src/lib/consola-apis/redactar.ts`: redacción RECURSIVA por lista de claves (recorre objetos y arrays anidados a cualquier profundidad) + truncado a 8 KB por columna jsonb (documentado)
+- [X] T015 [US2] Integrar `redactar()` en `ejecutar.ts` (T009) ANTES de persistir request/respuesta; registrar `modo` desde `modoIntegracion()` (stub|real) para que Fase 2 use el mismo esquema
+- [X] T016 [US2] Crear `GET src/app/api/configuracion/apis/llamadas/route.ts`: bitácora **paginada server-side estándar** (`page`/`pageSize`, `DEFAULT_PAGE_SIZE=25`, `MAX_PAGE_SIZE=100`, `findMany`+`count` en `Promise.all` — §4.3 constitución — P1) con filtros (operacion, modo, status, fecha), solo rol 1 + guard; detalle por fila
+- [X] T017 [US2] Añadir a la UI (T011) el panel de bitácora paginada con filtros y detalle por fila
 
 **Checkpoint**: US1 + US2 — ejecución stub + bitácora completa con redacción recursiva.
 
@@ -90,10 +90,10 @@ resembrar**: 013 arranca tras la Foundational de 009.
 
 ## Phase 5: Polish & Cross-Cutting Concerns
 
-- [ ] T018 [P] Test de guardarraíl anti-red a nivel suite: confirmar que ninguna ejecución de consola alcanza `*.supertransporte.gov.co` (reusa el mock global de la suite)
-- [ ] T019 Ejecutar suite completa + `tsc --noEmit` + lint + `build`; suite previa verde
+- [X] T018 [P] Test de guardarraíl anti-red a nivel suite: confirmar que ninguna ejecución de consola alcanza `*.supertransporte.gov.co` (reusa el mock global de la suite)
+- [X] T019 Ejecutar suite completa + `tsc --noEmit` + lint + `build`; suite previa verde
 - [ ] T020 Verificación en navegador (ventana privada): ejecutar una operación stub → ver bitácora → confirmar botón real deshabilitado y 403 del endpoint real
-- [ ] T021 Commit por fase con staging explícito (AGENTS §6): `feat(003-US1-013)`, `feat(003-US2-013)`
+- [X] T021 Commit por fase con staging explícito (AGENTS §6): `feat(003-US1-013)`, `feat(003-US2-013)`
 
 ---
 

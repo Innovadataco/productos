@@ -26,8 +26,8 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 
 **Purpose**: variables de entorno y andamiaje sin lógica.
 
-- [ ] T001 Añadir a [.env.example](../../.env.example) las claves `RESEND_API_KEY=""` y `CORREO_REMITENTE="SICOV-OTPC <onboarding@resend.dev>"` (nombres solo; la key la carga el CEO — nunca en repo)
-- [ ] T002 [P] Añadir `RESEND_API_KEY` y `CORREO_REMITENTE` (opcionales) al validador de entorno en [src/lib/env.ts](../../src/lib/env.ts) sin hacerlas requeridas
+- [X] T001 Añadir a [.env.example](../../.env.example) las claves `RESEND_API_KEY=""` y `CORREO_REMITENTE="SICOV-OTPC <onboarding@resend.dev>"` (nombres solo; la key la carga el CEO — nunca en repo)
+- [X] T002 [P] Añadir `RESEND_API_KEY` y `CORREO_REMITENTE` (opcionales) al validador de entorno en [src/lib/env.ts](../../src/lib/env.ts) sin hacerlas requeridas
 
 ---
 
@@ -39,28 +39,28 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 
 ### Esquema y migración (B1)
 
-- [ ] T003 En [prisma/schema.prisma](../../prisma/schema.prisma) añadir a `UsuarioModulo` el campo `submoduloId Int? @map("usm_submodulo_id")` + relación `submodulo Submodulo? @relation(fields: [submoduloId], references: [id], onDelete: Cascade)`; **eliminar** `@@unique([usuarioId, moduloId])` y documentar en comentario que la unicidad va por índices parciales SQL (B1). Añadir back-relation `usuariosModulos UsuarioModulo[]` a `Submodulo`
-- [ ] T004 Generar la migración con `npx prisma migrate dev --create-only --name add_submodulo_id_usuarios_modulos` (NO aplicar aún)
-- [ ] T005 **[REVISIÓN MANUAL OBLIGATORIA]** Editar a mano el SQL de la migración generada: (a) `ALTER TABLE sicov.tbl_usuarios_modulos ADD COLUMN usm_submodulo_id INT NULL` + FK a `sicov.tbl_submodulos(smod_id)` ON DELETE CASCADE; (b) `DROP` del unique viejo `(usm_usuario_id, usm_modulo_id)`; (c) crear los DOS índices únicos PARCIALES de B1: `ux_usmod_completo (usm_usuario_id, usm_modulo_id) WHERE usm_submodulo_id IS NULL` y `ux_usmod_submodulo (usm_usuario_id, usm_modulo_id, usm_submodulo_id) WHERE usm_submodulo_id IS NOT NULL`
-- [ ] T006 `pg_dump` previo + aplicar la migración (`npx prisma migrate deploy` en local) y regenerar el cliente (`npx prisma generate`)
+- [X] T003 En [prisma/schema.prisma](../../prisma/schema.prisma) añadir a `UsuarioModulo` el campo `submoduloId Int? @map("usm_submodulo_id")` + relación `submodulo Submodulo? @relation(fields: [submoduloId], references: [id], onDelete: Cascade)`; **eliminar** `@@unique([usuarioId, moduloId])` y documentar en comentario que la unicidad va por índices parciales SQL (B1). Añadir back-relation `usuariosModulos UsuarioModulo[]` a `Submodulo`
+- [X] T004 Generar la migración con `npx prisma migrate dev --create-only --name add_submodulo_id_usuarios_modulos` (NO aplicar aún)
+- [X] T005 **[REVISIÓN MANUAL OBLIGATORIA]** Editar a mano el SQL de la migración generada: (a) `ALTER TABLE sicov.tbl_usuarios_modulos ADD COLUMN usm_submodulo_id INT NULL` + FK a `sicov.tbl_submodulos(smod_id)` ON DELETE CASCADE; (b) `DROP` del unique viejo `(usm_usuario_id, usm_modulo_id)`; (c) crear los DOS índices únicos PARCIALES de B1: `ux_usmod_completo (usm_usuario_id, usm_modulo_id) WHERE usm_submodulo_id IS NULL` y `ux_usmod_submodulo (usm_usuario_id, usm_modulo_id, usm_submodulo_id) WHERE usm_submodulo_id IS NOT NULL`
+- [X] T006 `pg_dump` previo + aplicar la migración (`npx prisma migrate deploy` en local) y regenerar el cliente (`npx prisma generate`)
 
 ### Seeds por NOMBRE (menor ZEUS: sin id 9 hardcodeado)
 
-- [ ] T007 En [prisma/seed.ts](../../prisma/seed.ts) sembrar (idempotente, `upsert` por nombre) el módulo `configuracion` (solo rol 1) resolviendo su id por NOMBRE; nunca asumir id 9
-- [ ] T008 [P] En [prisma/seed.ts](../../prisma/seed.ts) sembrar los `Submodulo` de `configuracion`: `empresas` y `apis` (013), resueltos por nombre del módulo padre
-- [ ] T009 [P] En [prisma/seed.ts](../../prisma/seed.ts) sembrar submódulos de `mantenimientos`: `preventivos`, `correctivos`; y el catálogo asignable SIN pantalla de 006/007/008 (`alistamiento-diario`, `autorizaciones-nna`, `novedades-*`) — solo nombres, cero lógica
+- [X] T007 En [prisma/seed.ts](../../prisma/seed.ts) sembrar (idempotente, `upsert` por nombre) el módulo `configuracion` (solo rol 1) resolviendo su id por NOMBRE; nunca asumir id 9
+- [X] T008 [P] En [prisma/seed.ts](../../prisma/seed.ts) sembrar los `Submodulo` de `configuracion`: `empresas` y `apis` (013), resueltos por nombre del módulo padre
+- [X] T009 [P] En [prisma/seed.ts](../../prisma/seed.ts) sembrar submódulos de `mantenimientos`: `preventivos`, `correctivos`; y el catálogo asignable SIN pantalla de 006/007/008 (`alistamiento-diario`, `autorizaciones-nna`, `novedades-*`) — solo nombres, cero lógica
 
 ### Guard extendido y helpers de permisos
 
-- [ ] T010 Extender [src/lib/guard-modulos.ts](../../src/lib/guard-modulos.ts): `requiereModulo(usuario, modulo, submodulo?)` — si el usuario tiene fila NULL (módulo completo) pasa; si tiene filas por submódulo exige el pedido. Añadir `"configuracion"` a `ModuloOperacion`. Rol 1 sigue pasando
-- [ ] T011 [P] Crear `cargarSubmodulos(usuarioId)` en [src/lib/modulos.ts](../../src/lib/modulos.ts) que proyecta las filas de `UsuarioModulo` con `submoduloId` no nulo (para menú y guard)
-- [ ] T012 [P] Tests de matriz del guard en [src/lib/guard-modulos.test.ts](../../src/lib/guard-modulos.test.ts): módulo completo (fila NULL) / solo submódulo / sin nada → pasa/403 correctos, incl. `configuracion`
+- [X] T010 Extender [src/lib/guard-modulos.ts](../../src/lib/guard-modulos.ts): `requiereModulo(usuario, modulo, submodulo?)` — si el usuario tiene fila NULL (módulo completo) pasa; si tiene filas por submódulo exige el pedido. Añadir `"configuracion"` a `ModuloOperacion`. Rol 1 sigue pasando
+- [X] T011 [P] Crear `cargarSubmodulos(usuarioId)` en [src/lib/modulos.ts](../../src/lib/modulos.ts) que proyecta las filas de `UsuarioModulo` con `submoduloId` no nulo (para menú y guard)
+- [X] T012 [P] Tests de matriz del guard en [src/lib/guard-modulos.test.ts](../../src/lib/guard-modulos.test.ts): módulo completo (fila NULL) / solo submódulo / sin nada → pasa/403 correctos, incl. `configuracion`
 
 ### Interfaz de correo (D-048) — stub + factory (US3 añade Resend)
 
-- [ ] T013 Crear la interfaz `src/lib/correo/correo.ts`: `enviarCorreo({para, asunto, texto}): Promise<ResultadoEnvio>` + factory `getCorreo()` (con `RESEND_API_KEY` → AdaptadorResend [US3]; sin ella → AdaptadorStub)
-- [ ] T014 [P] Crear `src/lib/correo/stub.ts`: log `"[correo][stub] para=… asunto=…"` SIN clave temporal en el log; retorna `ResultadoEnvio` aceptado
-- [ ] T015 [P] Tests de la interfaz+stub+factory en `src/lib/correo/correo.test.ts` (factory con/sin key; el stub nunca loguea la clave)
+- [X] T013 Crear la interfaz `src/lib/correo/correo.ts`: `enviarCorreo({para, asunto, texto}): Promise<ResultadoEnvio>` + factory `getCorreo()` (con `RESEND_API_KEY` → AdaptadorResend [US3]; sin ella → AdaptadorStub)
+- [X] T014 [P] Crear `src/lib/correo/stub.ts`: log `"[correo][stub] para=… asunto=…"` SIN clave temporal en el log; retorna `ResultadoEnvio` aceptado
+- [X] T015 [P] Tests de la interfaz+stub+factory en `src/lib/correo/correo.test.ts` (factory con/sin key; el stub nunca loguea la clave)
 
 **Checkpoint**: datos migrados (B1 verificado), seeds por nombre, guard de submódulo con tests, interfaz de correo lista.
 
@@ -74,16 +74,16 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T016 [P] [US1] Test de servicio de empresas en `src/lib/configuracion/empresas.test.ts`: alta crea proveedor+usuario+módulos en una transacción; correo se invoca DESPUÉS del commit (menor: fallo de Resend NO revierte el alta)
+- [X] T016 [P] [US1] Test de servicio de empresas en `src/lib/configuracion/empresas.test.ts`: alta crea proveedor+usuario+módulos en una transacción; correo se invoca DESPUÉS del commit (menor: fallo de Resend NO revierte el alta)
 - [ ] T017 [P] [US1] Test de endpoints en `src/app/api/configuracion/empresas/route.test.ts`: 201 alta, **409 por NIT duplicado** (unicidad vía `usn_identificacion @unique` — G3), **409 por token de empresa duplicado** (validación server-side, no índice — G2), 403 roles 2/3, token visible solo rol 1
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Crear el servicio `src/lib/configuracion/empresas.ts`: `crearEmpresa()` (transacción: ProveedorVigilado + Usuario rol 2 con `identificacion=NIT`, `tokenAutorizado=token`, `claveTemporal=true` + `UsuarioModulo`), `actualizarEmpresa()` (NIT/rol inmutables; desactivación lógica), `modificarToken()` (sincroniza `tpv_token`⇄`usn_token_autorizado` en transacción). **Validación server-side de token único** (G2): antes de crear/modificar, verificar que ningún otro `ProveedorVigilado` tenga ese token → 409 (NO índice único en BD, la columna es nullable). **El envío de correo va FUERA de la transacción** (se invoca tras el commit)
-- [ ] T019 [US1] Crear `POST` y `GET` en `src/app/api/configuracion/empresas/route.ts` (`verifyAuth([1])` + `requiereModulo(u,"configuracion","empresas")`); el `GET` usa **paginación server-side estándar** (`page`/`pageSize`, `DEFAULT_PAGE_SIZE=25`, `MAX_PAGE_SIZE=100`, `findMany`+`count` en `Promise.all` — §4.3 constitución — P1); tras crear, invocar `getCorreo().enviarCorreo(...)` fuera de la tx; fallo → alta persiste + aviso
-- [ ] T020 [P] [US1] Crear `GET`/`PATCH` en `src/app/api/configuracion/empresas/[nit]/route.ts` (detalle sin exponer clave; token solo rol 1; NIT no editable)
-- [ ] T021 [P] [US1] Crear `PATCH` en `src/app/api/configuracion/empresas/[nit]/token/route.ts` (modifica token, sincroniza admin) y `POST` en `.../[nit]/reenviar-credencial/route.ts` (regenera temporal, reenvía; nunca reusa la anterior)
-- [ ] T022 [US1] UI `src/app/dashboard/configuracion/page.tsx` (tarjetas Empresas y APIs) + `src/app/dashboard/configuracion/empresas/page.tsx` (tabla + modal crear/editar + modal token + reenviar). Hereda breadcrumb del layout (I-14)
+- [X] T018 [US1] Crear el servicio `src/lib/configuracion/empresas.ts`: `crearEmpresa()` (transacción: ProveedorVigilado + Usuario rol 2 con `identificacion=NIT`, `tokenAutorizado=token`, `claveTemporal=true` + `UsuarioModulo`), `actualizarEmpresa()` (NIT/rol inmutables; desactivación lógica), `modificarToken()` (sincroniza `tpv_token`⇄`usn_token_autorizado` en transacción). **Validación server-side de token único** (G2): antes de crear/modificar, verificar que ningún otro `ProveedorVigilado` tenga ese token → 409 (NO índice único en BD, la columna es nullable). **El envío de correo va FUERA de la transacción** (se invoca tras el commit)
+- [X] T019 [US1] Crear `POST` y `GET` en `src/app/api/configuracion/empresas/route.ts` (`verifyAuth([1])` + `requiereModulo(u,"configuracion","empresas")`); el `GET` usa **paginación server-side estándar** (`page`/`pageSize`, `DEFAULT_PAGE_SIZE=25`, `MAX_PAGE_SIZE=100`, `findMany`+`count` en `Promise.all` — §4.3 constitución — P1); tras crear, invocar `getCorreo().enviarCorreo(...)` fuera de la tx; fallo → alta persiste + aviso
+- [X] T020 [P] [US1] Crear `GET`/`PATCH` en `src/app/api/configuracion/empresas/[nit]/route.ts` (detalle sin exponer clave; token solo rol 1; NIT no editable)
+- [X] T021 [P] [US1] Crear `PATCH` en `src/app/api/configuracion/empresas/[nit]/token/route.ts` (modifica token, sincroniza admin) y `POST` en `.../[nit]/reenviar-credencial/route.ts` (regenera temporal, reenvía; nunca reusa la anterior)
+- [X] T022 [US1] UI `src/app/dashboard/configuracion/page.tsx` (tarjetas Empresas y APIs) + `src/app/dashboard/configuracion/empresas/page.tsx` (tabla + modal crear/editar + modal token + reenviar). Hereda breadcrumb del layout (I-14)
 
 **Checkpoint**: US1 funcional e independiente — crear/editar empresa + token + reenviar credencial.
 
@@ -97,15 +97,15 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T023 [P] [US2] Test de servicio de usuarios en `src/lib/configuracion/usuarios.test.ts`: subconjunto validado contra el OTORGANTE (no el payload); **B2** — asignar completo borra submódulos y viceversa en la misma transacción; nunca coexisten
-- [ ] T024 [P] [US2] Test de alcance/guard en `src/app/api/usuarios/route.test.ts`: rol 2 solo su NIT (404 ajeno), rol 3 sin módulo `usuarios`, política de clave (400), rol 1 ve todo
+- [X] T023 [P] [US2] Test de servicio de usuarios en `src/lib/configuracion/usuarios.test.ts`: subconjunto validado contra el OTORGANTE (no el payload); **B2** — asignar completo borra submódulos y viceversa en la misma transacción; nunca coexisten
+- [X] T024 [P] [US2] Test de alcance/guard en `src/app/api/usuarios/route.test.ts`: rol 2 solo su NIT (404 ajeno), rol 3 sin módulo `usuarios`, política de clave (400), rol 1 ve todo
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Crear el servicio `src/lib/configuracion/usuarios.ts`: `crearUsuario()`/`actualizarUsuario()` con validación de subconjunto contra `cargarModulos/Submodulos` del otorgante; **B2 server-side**: al asignar módulo completo borra filas de submódulo del módulo, al asignar submódulos borra la fila NULL — misma transacción; identificación/rol inmutables; alcance D-015; correo FUERA de la tx
-- [ ] T026 [US2] Crear `POST`/`GET` en `src/app/api/usuarios/route.ts` (rol 1 ve todo; rol 2 solo su NIT; rol 3 sin `usuarios`; `GET` con **paginación server-side estándar** 25/100 — P1) y `PATCH` + `POST reenviar-credencial` en `src/app/api/usuarios/[id]/route.ts`
-- [ ] T027 [US2] Aplicar `requiereModulo(u,"mantenimientos","preventivos")` a las rutas de preventivo y `("mantenimientos","correctivos")` a las de correctivo (incl. bulk) en `src/app/api/mantenimientos/**` — extensión del guard ya presente
-- [ ] T028 [US2] UI `src/app/dashboard/usuarios/page.tsx` (rol 1 y 2): tabla del alcance + modal crear/editar con selector módulos→submódulos (checkboxes anidados limitados al set del otorgante, servido por la API — nunca calculado en cliente)
+- [X] T025 [US2] Crear el servicio `src/lib/configuracion/usuarios.ts`: `crearUsuario()`/`actualizarUsuario()` con validación de subconjunto contra `cargarModulos/Submodulos` del otorgante; **B2 server-side**: al asignar módulo completo borra filas de submódulo del módulo, al asignar submódulos borra la fila NULL — misma transacción; identificación/rol inmutables; alcance D-015; correo FUERA de la tx
+- [X] T026 [US2] Crear `POST`/`GET` en `src/app/api/usuarios/route.ts` (rol 1 ve todo; rol 2 solo su NIT; rol 3 sin `usuarios`; `GET` con **paginación server-side estándar** 25/100 — P1) y `PATCH` + `POST reenviar-credencial` en `src/app/api/usuarios/[id]/route.ts`
+- [X] T027 [US2] Aplicar `requiereModulo(u,"mantenimientos","preventivos")` a las rutas de preventivo y `("mantenimientos","correctivos")` a las de correctivo (incl. bulk) en `src/app/api/mantenimientos/**` — extensión del guard ya presente
+- [X] T028 [US2] UI `src/app/dashboard/usuarios/page.tsx` (rol 1 y 2): tabla del alcance + modal crear/editar con selector módulos→submódulos (checkboxes anidados limitados al set del otorgante, servido por la API — nunca calculado en cliente)
 
 **Checkpoint**: US1 + US2 funcionan de forma independiente; guard de submódulo activo en mantenimientos.
 
@@ -119,12 +119,12 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T029 [P] [US3] Test del adaptador Resend en `src/lib/correo/resend.ts` con fetch mockeado (cero red): éxito devuelve id; error devuelve `ResultadoEnvio` fallido sin exponer la key ni la clave temporal
+- [X] T029 [P] [US3] Test del adaptador Resend en `src/lib/correo/resend.ts` con fetch mockeado (cero red): éxito devuelve id; error devuelve `ResultadoEnvio` fallido sin exponer la key ni la clave temporal
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Crear `src/lib/correo/resend.ts`: adaptador HTTP `POST https://api.resend.com/emails` con `Authorization: Bearer <key>` vía `fetch` (cero deps); usa `CORREO_REMITENTE`
-- [ ] T031 [US3] Refactorizar [src/app/api/auth/recuperar/route.ts](../../src/app/api/auth/recuperar/route.ts) para usar `getCorreo()` en vez del stub inline (mismo contrato)
+- [X] T030 [US3] Crear `src/lib/correo/resend.ts`: adaptador HTTP `POST https://api.resend.com/emails` con `Authorization: Bearer <key>` vía `fetch` (cero deps); usa `CORREO_REMITENTE`
+- [X] T031 [US3] Refactorizar [src/app/api/auth/recuperar/route.ts](../../src/app/api/auth/recuperar/route.ts) para usar `getCorreo()` en vez del stub inline (mismo contrato)
 
 **Checkpoint**: correo real disponible cuando el CEO cargue la key; sin ella, todo sigue igual.
 
@@ -132,11 +132,11 @@ Next.js App Router: `src/app/api/**` (endpoints), `src/app/dashboard/**` (UI), `
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T032 [P] Actualizar menú/navegación ([src/lib/navegacion.ts](../../src/lib/navegacion.ts)) para exponer `configuracion` (rol 1) y `usuarios` (rol 1/2) por NOMBRE de módulo
-- [ ] T033 **[G1 — garantía FR-008/D-044]** Test de guardarraíl **anti-Super** en `src/lib/configuracion/anti-super.test.ts`: ejercitar los flujos de alta/edición de 009 y afirmar **cero peticiones** a `*.supertransporte.gov.co` (reusar el mock global de red de la suite; el token solo se persiste)
-- [ ] T034 Ejecutar suite completa (`npm test`), `tsc --noEmit`, lint y `build`; verificar suite previa (127) + nuevos verdes
+- [X] T032 [P] Actualizar menú/navegación ([src/lib/navegacion.ts](../../src/lib/navegacion.ts)) para exponer `configuracion` (rol 1) y `usuarios` (rol 1/2) por NOMBRE de módulo
+- [X] T033 **[G1 — garantía FR-008/D-044]** Test de guardarraíl **anti-Super** en `src/lib/configuracion/anti-super.test.ts`: ejercitar los flujos de alta/edición de 009 y afirmar **cero peticiones** a `*.supertransporte.gov.co` (reusar el mock global de red de la suite; el token solo se persiste)
+- [X] T034 Ejecutar suite completa (`npm test`), `tsc --noEmit`, lint y `build`; verificar suite previa (127) + nuevos verdes
 - [ ] T035 Verificación en navegador (ventana privada): crear empresa → login con temporal (cambio forzado) → crear operador solo-preventivos → 403 en correctivos → 200 en preventivos → reenviar credencial
-- [ ] T036 Commit por fase con staging explícito (AGENTS §6): `feat(003-US1-009)`, `feat(003-US2-009)`, `feat(003-US3-009)`
+- [X] T036 Commit por fase con staging explícito (AGENTS §6): `feat(003-US1-009)`, `feat(003-US2-009)`, `feat(003-US3-009)`
 
 ---
 
