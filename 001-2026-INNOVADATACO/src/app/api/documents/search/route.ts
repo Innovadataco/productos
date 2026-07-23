@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { noAutenticado } from "@/lib/apiError";
+import { apiError, noAutenticado } from "@/lib/apiError";
 import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Prisma, type DocumentoOficial } from "@prisma/client";
+import { buscarHibrida } from "@/lib/search/hibrida";
+import { resolverModeloEmbeddings, ModeloEmbeddingsNoConfigurado } from "@/lib/ragConfig";
+import { embedText } from "@/lib/modelClients";
+import { auditLog } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,32 +18,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Consulta requerida" }, { status: 400 });
     }
 
-    const where: Prisma.DocumentoOficialWhereInput = { activo: true };
-    if (tipo) where.tipo = tipo;
-    if (entidad) where.entidad = entidad;
-    if (sector) where.sector = sector;
-    if (fechaDesde || fechaHasta) {
-      where.fechaExpedicion = {};
-      if (fechaDesde) where.fechaExpedicion.gte = new Date(fechaDesde);
-      if (fechaHasta) where.fechaExpedicion.lte = new Date(fechaHasta);
+    // Modelo de embeddings vigente: define el espacio vectorial de la rama semántica
+    // (FR-021b). Si no está configurado, la búsqueda degrada a solo FTS (US4-4), que
+    // cubre todo el corpus desde el primer día (D-019).
+    let embeddingModel = "";
+    let enrichConfig = "none";
+    let queryEmbedding: number[] | null = null;
+    let parametros;
+
+    try {
+      const modelo = await resolverModeloEmbeddings(prisma);
+      embeddingModel = modelo.modelPath;
+      enrichConfig = modelo.enrichConfigHuella;
+      parametros = modelo.parametros;
+      const emb = await embedText(
+        { provider: "ollama", modelPath: modelo.modelPath, baseUrl: modelo.baseUrl, config: "{}" },
+        query,
+      );
+      if (emb.ok) queryEmbedding = emb.embedding;
+    } catch (err: unknown) {
+      // Sin modelo configurado: no es un error de búsqueda, se sigue con FTS.
+      if (!(err instanceof ModeloEmbeddingsNoConfigurado)) throw err;
     }
 
-    const docs = await prisma.documentoOficial.findMany({ where });
+    const start = Date.now();
+    const resultados = await buscarHibrida(prisma, {
+      query,
+      filtros: { tipo, entidad, sector, fechaDesde, fechaHasta },
+      parametros: parametros ?? (await import("@/lib/ragConfig")).PARAMETROS_RAG_DEFAULT,
+      embeddingModel,
+      enrichConfig,
+      queryEmbedding,
+    });
 
-    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-    const scored = (docs as DocumentoOficial[])
-      .map((doc: DocumentoOficial) => {
-        const text = `${doc.titulo} ${doc.contenidoTexto} ${doc.resumen} ${doc.proposito}`.toLowerCase();
-        const score = terms.reduce((acc, term) => acc + (text.includes(term) ? 1 : 0), 0);
-        return { ...doc, score };
-      })
-      .filter((d: { score: number }) => d.score > 0)
-      .sort((a: { score: number }, b: { score: number }) => b.score - a.score)
-      .slice(0, 20);
+    // Métrica de la búsqueda (FR-025): modelo, latencia, recuperados, si hubo evidencia.
+    await auditLog({
+      action: "search",
+      entityType: "DocumentoOficial",
+      status: "success",
+      message: `Búsqueda híbrida: ${resultados.length} resultados`,
+      metadata: {
+        modelo: embeddingModel || "solo-fts",
+        vectorial: queryEmbedding !== null,
+        recuperados: resultados.length,
+        evidencia: resultados.length > 0,
+      },
+      latencyMs: Date.now() - start,
+    });
 
-    return NextResponse.json(scored);
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Error en búsqueda" }, { status: 500 });
+    return NextResponse.json(resultados);
+  } catch (err: unknown) {
+    return apiError("Documentos", "POST search", "Error en búsqueda", 500, err);
   }
 }
