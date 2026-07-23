@@ -2,8 +2,8 @@
 
 **Branch**: `feature/001-scaffolding` | **Date**: 2026-07-22 | **Spec**: [spec.md](./spec.md)
 
-**Status**: PLANEADO — **gate D-022 resuelto en DOS entregas (2026-07-22) e incorporado**;
-pendiente orden de implementación (NO generar tasks.md sin orden explícita)
+**Status**: DESARROLLO — gate ZEUS-002 **APROBADO sin correcciones** (2026-07-23); 005-A en
+implementación (pasa a IMPLEMENTADO al cerrar 005-A)
 
 **Input**: Feature specification from `specs/005-mantenimientos/spec.md` + `HANDOFF-SICOV.md`
 **§9, §9.1, §10, §11** (prevalecen sobre §2-§6)

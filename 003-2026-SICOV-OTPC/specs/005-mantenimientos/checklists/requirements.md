@@ -14,7 +14,7 @@
 
 ## Requirement Completeness
 
-- [x] No [NEEDS CLARIFICATION] markers remain — queda **1** (contrato real del API externo de
+- [ ] No [NEEDS CLARIFICATION] markers remain — queda **1** (contrato real del API externo de
       mantenimientos), acotado en sección propia; **no bloquea** el alcance en modo stub (patrón
       aprobado en specs 002-004). Los otros 2 se resolvieron en el gate D-022 (catálogo de tipos de
       identificación; variante JSON cortada)
