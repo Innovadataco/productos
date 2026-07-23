@@ -78,11 +78,13 @@ Usar la **misma versión de Spec-Kit y el mismo preset** que el proyecto 002, pa
 
 - **Repo:** `Innovadataco/productos` (monorepo de la Fábrica de Software).
 - **Este proyecto:** carpeta `003-2026-SICOV-OTPC/`.
-- **Rama de trabajo:** `feature/003-sicov-otpc-scaffolding`.
-- **Flujo de integración:** rama de trabajo → **PR** hacia `feature/001-scaffolding` (rama de desarrollo)
-  → luego a `main`.
-- **Gobierno del repo:** todo código pasa por **PR y revisión**; **sin ACTA-VALIDACIÓN no hay merge**;
-  nunca subir secretos; documentar cambios de arquitectura. Líder: **ZEUS**. Agente de revisión: **ODIN**.
+- **Rama de trabajo:** **`feature/001-scaffolding`** — rama única de desarrollo del monorepo
+  (decisión CEO, 2026-07-22). **No se abren ramas por feature.**
+- **Documentación de gestión** (`Gestion-de-proyectos`, `Metodologias`): son repos **aparte**, y ahí
+  se trabaja **directo sobre `main`**. No mezclar con este repo.
+- **Gobierno del repo:** la compuerta **no es el PR**, es la **auditoría de ZEUS sobre cada commit**;
+  **sin ACTA-VALIDACIÓN no se da por Terminado**; nunca subir secretos; documentar cambios de
+  arquitectura. Compuerta de arquitectura: **ZEUS**. Implementador: **ODIN**.
 - **Commits:** prefijos `feat(003-USx): …`, `fix(003): …`, `docs(003): …`, `test(003): …`. Un commit por
   User Story; no mezclar features.
 
@@ -153,6 +155,18 @@ En esta máquina viven **001 y 002 en desarrollo activo**. El 003 **no puede int
 - **DECISIÓN ABIERTA (D-005):** canal **vigía/api-v2** y módulos backend sin UI (Soportes, Empresas,
   Terminales) — **confirmar consumidores reales con Gesmovil antes del switch-over** (decisión del
   CEO pendiente).
+- **DECISIÓN CERRADA (D-022, 2026-07-22, gate del plan 005-mantenimientos):** `exceljs` aprobada y
+  **CSV (D-019e) se suma** como formato de carga masiva; variante JSON de `bulk/*` **cortada**; PDFs
+  tras **interfaz de almacenamiento** con `ALMACENAMIENTO_DIR` **fuera de la app** (respaldo =
+  requisito de switch-over); `hora` varchar(8) como desviación documentada con validación
+  `^([01]\d|2[0-3]):[0-5]\d$` en el borde; catálogo de tipos de identificación = 12 valores del
+  manual. Detalle en `specs/005-mantenimientos/plan.md`.
+- **DECISIÓN CERRADA (D-021, CEO, dentro de 005-A):** **envío inmediato (intento síncrono con caída
+  a cola)** para **LAS TRES COLAS** (despachos, llegadas y mantenimientos) se implementa **dentro de
+  la feature 005-A** — las specs 001/002 ya están cerradas y hacerlo después obligaría a reabrirlas
+  por separado. Incluye **reintentos/backoff parametrizables por env** (D-019b, defaults 3 y 5 min)
+  y reenvío manual que dispara un ciclo completo nuevo (conserva `reintentos=0`). Modelo de reporte:
+  `HANDOFF-SICOV.md §11`.
 - **Pendiente transversal:** verificación humana antes de consumir APIs productivas (hoy stub,
   sin credenciales).
 
