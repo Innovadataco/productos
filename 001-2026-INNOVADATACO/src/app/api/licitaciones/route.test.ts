@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { primerArgumento } from "@/test/mockArgs";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/prisma", async () => {
@@ -43,10 +44,12 @@ describe("GET /api/licitaciones", () => {
       new NextRequest("http://localhost:5001/api/licitaciones?estado=abierta&entidad=3&q=equipos"),
     );
 
-    const where = vi.mocked(prisma.licitacion.findMany).mock.calls[0][0].where;
-    expect(where.estado).toEqual({ key: "abierta" });
-    expect(where.entidadId).toBe(3);
-    expect(where.OR).toHaveLength(3);
+    const { where } = primerArgumento(vi.mocked(prisma.licitacion.findMany));
+    expect(where).toMatchObject({
+      estado: { key: "abierta" },
+      entidadId: 3,
+    });
+    expect(where?.OR).toHaveLength(3);
   });
 
   it("no filtra el mensaje de excepción al cliente (FR-004)", async () => {
@@ -97,7 +100,7 @@ describe("POST /api/licitaciones", () => {
     const res = await POST(peticionJson("http://localhost:5001/api/licitaciones", LICITACION_VALIDA));
 
     expect(res.status).toBe(201);
-    const data = vi.mocked(prisma.licitacion.create).mock.calls[0][0].data;
+    const data = primerArgumento(vi.mocked(prisma.licitacion.create)).data;
     expect(data.numero).toBe("LIC-2026-001");
     expect(data.estadoId).toBe(1); // parseInt aplicado
   });

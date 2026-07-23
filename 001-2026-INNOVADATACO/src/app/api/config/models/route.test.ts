@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { primerArgumento } from "@/test/mockArgs";
 
 vi.mock("@/lib/prisma", async () => {
   const { createPrismaMock } = await import("@/test/prismaMock");
@@ -38,7 +39,7 @@ describe("GET /api/config/models", () => {
 
     await GET();
 
-    const select = vi.mocked(prisma.aiModel.findMany).mock.calls[0][0].select;
+    const select = primerArgumento(vi.mocked(prisma.aiModel.findMany)).select;
     expect(select).not.toHaveProperty("apiKey");
   });
 
@@ -85,7 +86,7 @@ describe("POST /api/config/models", () => {
     const res = await POST(peticionJson(url, { ...MODELO_VALIDO, apiKey: "sk-secreta" }));
 
     expect([200, 201]).toContain(res.status);
-    const data = vi.mocked(prisma.aiModel.create).mock.calls[0][0].data;
+    const data = primerArgumento(vi.mocked(prisma.aiModel.create)).data;
     expect(data.name).toBe("Qwen Local");
     expect(data.apiKey).not.toBe("sk-secreta");
     expect(String(data.apiKey)).toContain("cifrado:");

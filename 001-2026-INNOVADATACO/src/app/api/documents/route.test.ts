@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { primerArgumento } from "@/test/mockArgs";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/prisma", async () => {
@@ -68,7 +69,7 @@ describe("GET /api/documents", () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(fixture);
-    expect(vi.mocked(prisma.documentoOficial.findMany).mock.calls[0][0].where).toEqual({
+    expect(primerArgumento(vi.mocked(prisma.documentoOficial.findMany)).where).toEqual({
       activo: true,
     });
   });
@@ -78,7 +79,7 @@ describe("GET /api/documents", () => {
 
     await GET(new NextRequest(`${url}?includeInactive=true&status=queued`));
 
-    expect(vi.mocked(prisma.documentoOficial.findMany).mock.calls[0][0].where).toEqual({
+    expect(primerArgumento(vi.mocked(prisma.documentoOficial.findMany)).where).toEqual({
       status: "queued",
     });
   });
@@ -133,7 +134,7 @@ describe("PATCH /api/documents", () => {
     );
 
     expect(res.status).toBe(200);
-    const data = vi.mocked(prisma.documentoOficial.update).mock.calls[0][0].data;
+    const data = primerArgumento(vi.mocked(prisma.documentoOficial.update)).data;
     expect(data).toEqual({ titulo: "Nuevo" });
     expect(data).not.toHaveProperty("activo");
     expect(data).not.toHaveProperty("archivoUrl");

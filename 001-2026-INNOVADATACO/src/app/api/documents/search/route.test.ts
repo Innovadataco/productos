@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { primerArgumento } from "@/test/mockArgs";
 
 vi.mock("@/lib/prisma", async () => {
   const { createPrismaMock } = await import("@/test/prismaMock");
@@ -69,12 +70,14 @@ describe("POST /api/documents/search", () => {
       }),
     );
 
-    const where = vi.mocked(prisma.documentoOficial.findMany).mock.calls[0][0].where;
-    expect(where.activo).toBe(true);
-    expect(where.tipo).toBe("ley");
-    expect(where.entidad).toBe("Minhacienda");
-    expect(where.sector).toBe("Hacienda");
-    expect(where.fechaExpedicion).toHaveProperty("gte");
+    const { where } = primerArgumento(vi.mocked(prisma.documentoOficial.findMany));
+    expect(where).toMatchObject({
+      activo: true,
+      tipo: "ley",
+      entidad: "Minhacienda",
+      sector: "Hacienda",
+    });
+    expect(where?.fechaExpedicion).toHaveProperty("gte");
   });
 
   it("no filtra el mensaje de excepción al cliente (FR-004)", async () => {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { primerArgumento } from "@/test/mockArgs";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/prisma", async () => {
@@ -31,7 +32,7 @@ describe("GET /api/config/audit", () => {
 
     await GET(new NextRequest(url));
 
-    expect(vi.mocked(prisma.auditLog.findMany).mock.calls[0][0].take).toBe(50);
+    expect(primerArgumento(vi.mocked(prisma.auditLog.findMany)).take).toBe(50);
   });
 
   it("topa el límite en 200 aunque se pida más", async () => {
@@ -39,7 +40,7 @@ describe("GET /api/config/audit", () => {
 
     await GET(new NextRequest(`${url}?limit=5000`));
 
-    expect(vi.mocked(prisma.auditLog.findMany).mock.calls[0][0].take).toBe(200);
+    expect(primerArgumento(vi.mocked(prisma.auditLog.findMany)).take).toBe(200);
   });
 
   it("filtra por acción y estado, y pagina con offset", async () => {
@@ -47,7 +48,7 @@ describe("GET /api/config/audit", () => {
 
     await GET(new NextRequest(`${url}?action=upload_pdf&status=error&offset=10`));
 
-    const args = vi.mocked(prisma.auditLog.findMany).mock.calls[0][0];
+    const args = primerArgumento(vi.mocked(prisma.auditLog.findMany));
     expect(args.where).toEqual({ action: "upload_pdf", status: "error" });
     expect(args.skip).toBe(10);
   });
