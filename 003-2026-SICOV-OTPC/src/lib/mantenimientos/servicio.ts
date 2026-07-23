@@ -292,6 +292,100 @@ export async function guardarDetalle(
   }
 }
 
+/// Carga masiva DIFERIDA y TRANSACCIONAL (US2, manual §10.10 — TODO-O-NADA).
+/// Precondición: las filas YA pasaron la validación completa (lector + validarTiposDeDato);
+/// aquí solo se encola. Si el encolado falla a mitad, la transacción revierte TODO: nunca un
+/// lote parcial. El vigilado es SIEMPRE el NIT efectivo server-side (D-015): la columna
+/// vigiladoId del archivo se ignora para roles 2/3.
+export async function guardarMasivo(
+  tipo: TipoOperable,
+  filas: Array<Record<string, string>>,
+  usuario: string,
+  idRol: number,
+): Promise<{ total: number; exitosos: number; errores: string[] }> {
+  const contexto = await resolverContextoEfectivo(usuario, idRol);
+  const nit = BigInt(contexto.nitVigilado);
+
+  await prisma.$transaction(async (tx) => {
+    for (const fila of filas) {
+      const placa = fila["placa"];
+      await tx.mantenimiento.updateMany({
+        where: { usuarioId: nit, placa, tipoId: tipo },
+        data: { estado: false, actualizado: new Date() },
+      });
+      const base = await tx.mantenimiento.create({
+        data: {
+          placa,
+          tipoId: tipo,
+          usuarioId: nit,
+          fechaDiligenciamiento: new Date(),
+          estado: true,
+          procesado: false,
+        },
+      });
+      await tx.mantenimientoJob.create({
+        data: {
+          tipo: "base",
+          mantenimientoLocalId: base.id,
+          vigiladoId: contexto.nitVigilado.slice(0, 30),
+          usuarioDocumento: usuario.slice(0, 30),
+          rolId: idRol,
+          estado: "pendiente",
+          reintentos: 0,
+          siguienteIntento: new Date(),
+          payload: { vigiladoId: Number(contexto.nitVigilado), placa, tipoId: tipo },
+        },
+      });
+
+      const datosDetalle = {
+        placa,
+        fecha: new Date(`${fila["fecha"]}T00:00:00Z`),
+        hora: fila["hora"],
+        nit: BigInt(fila["nit"]),
+        razonSocial: fila["razonSocial"],
+        tipoIdentificacion: Number(fila["tipoIdentificacion"]),
+        numeroIdentificacion: fila["numeroIdentificacion"],
+        nombresResponsable: fila["nombresResponsable"],
+        mantenimientoId: base.id, // enlace LOCAL (gate B1)
+        detalleActividades: fila["detalleActividades"],
+        estado: true,
+        procesado: false,
+      };
+      const detalle =
+        tipo === 1
+          ? await tx.preventivo.create({ data: datosDetalle })
+          : await tx.correctivo.create({ data: datosDetalle });
+
+      await tx.mantenimientoJob.create({
+        data: {
+          tipo: NOMBRE_TIPO[tipo],
+          mantenimientoLocalId: base.id,
+          detalleId: detalle.id,
+          vigiladoId: contexto.nitVigilado.slice(0, 30),
+          usuarioDocumento: usuario.slice(0, 30),
+          rolId: idRol,
+          estado: "pendiente",
+          reintentos: 0,
+          siguienteIntento: new Date(),
+          payload: {
+            placa,
+            fecha: fila["fecha"],
+            hora: fila["hora"],
+            nit: Number(fila["nit"]),
+            razonSocial: fila["razonSocial"],
+            tipoIdentificacion: Number(fila["tipoIdentificacion"]),
+            numeroIdentificacion: fila["numeroIdentificacion"],
+            nombresResponsable: fila["nombresResponsable"],
+            detalleActividades: fila["detalleActividades"],
+          },
+        },
+      });
+    }
+  });
+
+  return { total: filas.length, exitosos: filas.length, errores: [] };
+}
+
 /// Consultas externas (proxy vía cliente stub/real). El vigilado SIEMPRE es el efectivo
 /// server-side (D-015): se ignora cualquier nit del cliente.
 export async function listarPlacas(tipoId: unknown, usuario: string, idRol: number) {

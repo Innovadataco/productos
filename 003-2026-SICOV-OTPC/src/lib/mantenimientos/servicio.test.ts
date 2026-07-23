@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
+vi.mock("@/lib/prisma", () => {
+  const base = {
     mantenimiento: {
       updateMany: vi.fn(),
       create: vi.fn(),
@@ -11,8 +11,15 @@ vi.mock("@/lib/prisma", () => ({
     preventivo: { create: vi.fn(), update: vi.fn() },
     correctivo: { create: vi.fn(), update: vi.fn() },
     mantenimientoJob: { create: vi.fn() },
-  },
-}));
+  };
+  return {
+    prisma: {
+      ...base,
+      // La transacción del masivo ejecuta el callback con los MISMOS delegados mockeados.
+      $transaction: vi.fn(async (cb: (tx: typeof base) => Promise<void>) => cb(base)),
+    },
+  };
+});
 vi.mock("@/lib/integracion/cliente", () => ({ getClienteSupertransporte: vi.fn() }));
 vi.mock("@/lib/integracion/contexto-usuario", () => ({
   resolverContextoEfectivo: vi.fn().mockResolvedValue({
@@ -143,6 +150,42 @@ describe("guardarDetalle (US1)", () => {
   it("base inexistente → 404", async () => {
     m.findUnique.mockResolvedValue(null);
     await expect(guardarDetalle(1, { mantenimientoId: 999 }, "u", 3)).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe("guardarMasivo (US2 — todo-o-nada transaccional)", () => {
+  const fila = {
+    vigiladoId: "900853057",
+    placa: "ABC123",
+    fecha: "2026-07-20",
+    hora: "08:30",
+    nit: "900555444",
+    razonSocial: "TALLER",
+    tipoIdentificacion: "1",
+    numeroIdentificacion: "1010",
+    nombresResponsable: "ING",
+    detalleActividades: "Aceite",
+  };
+
+  it("encola base + detalle por fila dentro de la transacción y devuelve exitosos=total", async () => {
+    const { guardarMasivo } = await import("./servicio");
+    m.create.mockResolvedValue({ id: 30 });
+    const r = await guardarMasivo(1, [fila, { ...fila, placa: "DEF456" }], "900853057", 2);
+    expect(r).toEqual({ total: 2, exitosos: 2, errores: [] });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(job).toHaveBeenCalledTimes(4); // 2 base + 2 detalle
+    const tipos = job.mock.calls.map((c) => c[0].data.tipo);
+    expect(tipos).toEqual(["base", "preventivo", "base", "preventivo"]);
+    // el detalle referencia el base LOCAL (gate B1)
+    expect(prev.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ mantenimientoId: 30 }) }),
+    );
+  });
+
+  it("si el encolado revienta a mitad, la transacción propaga y NO hay lote parcial", async () => {
+    const { guardarMasivo } = await import("./servicio");
+    m.create.mockResolvedValueOnce({ id: 31 }).mockRejectedValueOnce(new Error("db"));
+    await expect(guardarMasivo(1, [fila, fila], "900853057", 2)).rejects.toThrow("db");
   });
 });
 
