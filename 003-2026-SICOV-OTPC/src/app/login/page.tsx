@@ -74,10 +74,7 @@ export default function LoginPage() {
         >
           {cargando ? "Iniciando sesión…" : "Ingresar"}
         </button>
-
-        <a href="/recuperar" className="block text-center text-sm text-sicov-600 hover:underline">
-          ¿Olvidó su contraseña?
-        </a>
+        {/* Enlace "¿Olvidó su contraseña?" retirado: /recuperar da 404 hasta la spec de usuarios (009). */}
       </form>
     </main>
   );
