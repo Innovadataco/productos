@@ -1135,7 +1135,7 @@ async function main() {
     const clavesPorRol: Record<string, string[]> = {
         ADMIN: modulosSeed.map((m) => m.clave),
         SCHOOL_ADMIN: ["colegios", "colegios_gestion", "colegios_auditoria"],
-        OPERADOR: ["bandeja_reportes", "reportes_revision"],
+        OPERADOR: ["bandeja_reportes"],
         COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_auditoria"],
     };
     let permisosCreados = 0;

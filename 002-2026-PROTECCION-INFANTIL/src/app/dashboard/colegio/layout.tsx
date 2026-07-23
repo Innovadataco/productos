@@ -4,6 +4,8 @@ import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
+import { ColegioNav } from "@/components/modules/colegio/ColegioNav";
+import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
 export default async function ColegioLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();
@@ -50,8 +52,11 @@ export default async function ColegioLayout({ children }: { children: React.Reac
         );
     }
 
+    const permitidos = await modulosPermitidosParaRol("SCHOOL_ADMIN");
+
     return (
         <div className="theme-colegio min-h-screen bg-page">
+            <ColegioNav modulosPermitidos={[...permitidos]} />
             {children}
         </div>
     );

@@ -7,7 +7,7 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **68** |
+| **Total de specs** | **69** |
 | **Cerradas / Implementadas** | **64** |
 | **Pendientes (en diseño / planeadas)** | **3** |
 

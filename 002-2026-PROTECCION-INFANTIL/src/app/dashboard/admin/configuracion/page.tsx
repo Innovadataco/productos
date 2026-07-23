@@ -1,6 +1,10 @@
 import { ConfiguracionTabs } from "@/components/modules/ConfiguracionTabs";
+import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
+import { verificarAccesoPagina } from "@/lib/permisos-modulos";
 
-export default function AdminConfiguracionPage() {
+export default async function AdminConfiguracionPage() {
+    const acceso = await verificarAccesoPagina("configuracion_sistema");
+    if (!acceso.permitido) return <SinAccesoModulo />;
     return (
         <div className="mx-auto max-w-5xl">
             <div className="mb-6">

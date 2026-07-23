@@ -5,17 +5,13 @@ import { IaModelSelector } from "@/components/modules/ia/IaModelSelector";
 import { IaEvalManager } from "@/components/modules/ia/IaEvalManager";
 import ConfigPanel from "@/components/modules/ConfigPanel";
 import type { SandboxOverrides } from "@/lib/ai/sandbox";
+import { IA_TABS } from "@/lib/nav-items";
+import { modulosPermitidosParaRol, verificarAccesoPagina } from "@/lib/permisos-modulos";
+import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 
 interface PageProps {
     searchParams: Promise<{ tab?: string } & Record<string, string | undefined>>;
 }
-
-const TABS = [
-    { key: "documentacion", label: "Documentación" },
-    { key: "playground", label: "Playground" },
-    { key: "eval", label: "Eval" },
-    { key: "configuracion", label: "Configuración" },
-];
 
 function parseOverrides(params: Record<string, string | undefined>): SandboxOverrides {
     const overrides: SandboxOverrides = {};
@@ -39,8 +35,17 @@ function parseOverrides(params: Record<string, string | undefined>): SandboxOver
 }
 
 export default async function CentroControlIAPage({ searchParams }: PageProps) {
+    const acceso = await verificarAccesoPagina("centro_control_ia");
+    if (!acceso.permitido || !acceso.rol) {
+        return <SinAccesoModulo />;
+    }
+
+    // Tabs filtradas por submódulo (spec 086, corrección 3)
+    const permitidos = await modulosPermitidosParaRol(acceso.rol);
+    const tabsVisibles = IA_TABS.filter((t) => t.modulo === null || permitidos.has(t.modulo));
+
     const params = await searchParams;
-    const activeTab = TABS.some((t) => t.key === params.tab) ? params.tab! : "documentacion";
+    const activeTab = tabsVisibles.some((t) => t.key === params.tab) ? params.tab! : (tabsVisibles[0]?.key ?? "documentacion");
     const initialOverrides = parseOverrides(params);
 
     return (
@@ -57,7 +62,7 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
 
             <div className="border-b border-slate-200 dark:border-slate-700">
                 <nav className="-mb-px flex gap-6" aria-label="Tabs">
-                    {TABS.map((tab) => {
+                    {tabsVisibles.map((tab) => {
                         const isActive = activeTab === tab.key;
                         return (
                             <a

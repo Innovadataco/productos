@@ -10,7 +10,7 @@ import { esAdminRol, esComiteRol, puedeGestionarReporte } from "@/lib/operadores
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        await assertModulo(user, "reportes_revision");
+        await assertModulo(user, "bandeja_reportes");
         if (!esAdminRol(user.rol) && user.rol !== "OPERADOR" && !esComiteRol(user.rol)) {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },

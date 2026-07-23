@@ -1,6 +1,6 @@
 import { RolUsuario } from "@prisma/client";
 import { prisma } from "./prisma";
-import { verifyAuth } from "./auth";
+import { verifyAuth, verifyToken } from "./auth";
 import { AppError, ERROR_CODES } from "./errors";
 
 /**
@@ -25,6 +25,25 @@ export async function puedeAccederAModulo(rol: string, clave: string): Promise<b
         return padre?.activo === true;
     }
     return true;
+}
+
+/**
+ * Claves de módulos accesibles para un rol (activo propio AND padre activo).
+ * Una sola pasada por BD: pensado para layouts/páginas server.
+ */
+export async function modulosPermitidosParaRol(rol: string): Promise<Set<string>> {
+    const [permisos, modulos] = await Promise.all([
+        prisma.permisoModulo.findMany({ where: { rol }, select: { moduloId: true, activo: true } }),
+        prisma.moduloPermisible.findMany({ select: { id: true, clave: true, padreId: true } }),
+    ]);
+    const activoPorModulo = new Map(permisos.map((p) => [p.moduloId, p.activo]));
+    const permitidos = new Set<string>();
+    for (const modulo of modulos) {
+        if (activoPorModulo.get(modulo.id) !== true) continue;
+        if (modulo.padreId && activoPorModulo.get(modulo.padreId) !== true) continue;
+        permitidos.add(modulo.clave);
+    }
+    return permitidos;
 }
 
 /**
@@ -75,4 +94,20 @@ export async function obtenerRolesProtegidos(): Promise<string[]> {
         // valor no JSON; cae al default
     }
     return ["ADMIN"];
+}
+
+/**
+ * Guard de página (server components): resuelve token → rol → permiso.
+ * Uso:
+ *   const acceso = await verificarAccesoPagina("bandeja_reportes");
+ *   if (!acceso.permitido) return <SinAccesoModulo />;
+ */
+export async function verificarAccesoPagina(clave: string): Promise<{ rol: string | null; permitido: boolean }> {
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
+    const payload = token ? await verifyToken(token) : null;
+    const rol = (payload?.rol as string | undefined) ?? null;
+    if (!rol) return { rol: null, permitido: false };
+    return { rol, permitido: await puedeAccederAModulo(rol, clave) };
 }

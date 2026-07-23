@@ -3,9 +3,13 @@ import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ColegioNav } from "@/components/modules/colegio/ColegioNav";
+import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
+import { verificarAccesoPagina } from "@/lib/permisos-modulos";
 
 export default async function ColegioDashboardPage() {
+    const acceso = await verificarAccesoPagina("colegios");
+    if (!acceso.permitido) return <SinAccesoModulo volver="/dashboard/colegio" />;
+
     const cookieStore = await cookies();
     const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
 
@@ -25,7 +29,6 @@ export default async function ColegioDashboardPage() {
 
     return (
         <>
-            <ColegioNav />
             <main className="min-h-screen p-4 sm:p-6 lg:p-8">
                 <div className="mx-auto max-w-4xl space-y-6">
                     <div className="rounded-2xl glass p-6 sm:p-8">

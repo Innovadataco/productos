@@ -59,7 +59,7 @@ function getClientInfo(request: Request) {
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth();
-        await assertModulo(user, "reportes_revision");
+        await assertModulo(user, "bandeja_reportes");
         requireOperadorOAdmin(user);
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });

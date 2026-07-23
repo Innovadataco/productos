@@ -22,7 +22,7 @@ function getClientInfo(request: Request) {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth("ADMIN");
-        await assertModulo(admin, "reportes_revision");
+        await assertModulo(admin, "bandeja_reportes");
         const rate = await checkRateLimit(request, "admin_write", { identifier: admin.id });
         if (!rate.allowed) {
             return NextResponse.json(

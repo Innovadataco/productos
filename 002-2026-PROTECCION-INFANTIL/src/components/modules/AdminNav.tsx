@@ -2,26 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ADMIN_NAV_ITEMS } from "@/lib/nav-items";
 
 type RolNav = "ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "SCHOOL_ADMIN";
 
-const allLinks = [
-    { href: "/dashboard/admin", label: "Bandeja de reportes", icon: InboxIcon, roles: ["ADMIN", "OPERADOR"] as RolNav[] },
-    { href: "/dashboard/admin/spam", label: "Revisión de spam", icon: ShieldExclamationIcon, roles: ["ADMIN", "OPERADOR"] as RolNav[] },
-    { href: "/dashboard/admin/comite", label: "Comité", icon: ScaleIcon, roles: ["ADMIN", "COMITE_VALIDACION"] as RolNav[] },
-    { href: "/dashboard/admin/estadisticas", label: "Dashboard", icon: ChartIcon, roles: ["ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/ia", label: "Centro de Control IA", icon: BrainIcon, roles: ["ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/operadores", label: "Operadores", icon: UsersIcon, roles: ["ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/colegios", label: "Colegios", icon: BuildingIcon, roles: ["ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", icon: ShieldIcon, roles: ["ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/apelaciones", label: "Apelaciones", icon: ScaleIcon, roles: ["ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", icon: DatabaseIcon, roles: ["ADMIN"] as RolNav[] },
-    { href: "/dashboard/admin/configuracion", label: "Configuración", icon: CogIcon, roles: ["ADMIN"] as RolNav[] },
-];
+const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element> = {
+    "/dashboard/admin": InboxIcon,
+    "/dashboard/admin/spam": ShieldExclamationIcon,
+    "/dashboard/admin/comite": ScaleIcon,
+    "/dashboard/admin/estadisticas": ChartIcon,
+    "/dashboard/admin/ia": BrainIcon,
+    "/dashboard/admin/operadores": UsersIcon,
+    "/dashboard/admin/colegios": BuildingIcon,
+    "/dashboard/admin/anti-abuso": ShieldIcon,
+    "/dashboard/admin/apelaciones": ScaleIcon,
+    "/dashboard/admin/dataset-entrenamiento": DatabaseIcon,
+    "/dashboard/admin/configuracion": CogIcon,
+};
 
-export function AdminNav({ rol }: { rol: RolNav }) {
+export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermitidos: string[] }) {
     const pathname = usePathname();
-    const links = allLinks.filter((l) => l.roles.includes(rol));
+    const permitidos = new Set(modulosPermitidos);
+    const links = ADMIN_NAV_ITEMS.filter((l) => permitidos.has(l.modulo)).map((l) => ({
+        ...l,
+        icon: ICONS[l.href] ?? InboxIcon,
+    }));
     const titulo = rol === "OPERADOR" ? "Operador" : "Administración";
 
     return (

@@ -88,59 +88,60 @@ async function makeCookieForRol(rol: RolUsuario) {
     return `token=${token}`;
 }
 
-describe("ComiteSubNav", () => {
-    it("COMITE_VALIDACION solo ve 'Bandeja' y no 'Gestión' ni 'Auditoría'", () => {
-        render(<ComiteSubNav rol="COMITE_VALIDACION" />);
+describe("ComiteSubNav (filtrada por módulo, spec 086)", () => {
+    it("con solo comite_bandeja permitido solo ve 'Bandeja'", () => {
+        render(<ComiteSubNav modulosPermitidos={["comite_bandeja"]} />);
         expect(screen.getByText("Bandeja")).toBeTruthy();
         expect(screen.queryByText("Gestión")).toBeNull();
         expect(screen.queryByText("Auditoría")).toBeNull();
     });
 
-    it("ADMIN ve las 3 pestañas", () => {
-        render(<ComiteSubNav rol="ADMIN" />);
+    it("con los 3 módulos permitidos ve las 3 pestañas", () => {
+        render(<ComiteSubNav modulosPermitidos={["comite_bandeja", "comite", "comite_auditoria"]} />);
         expect(screen.getByText("Bandeja")).toBeTruthy();
         expect(screen.getByText("Gestión")).toBeTruthy();
         expect(screen.getByText("Auditoría")).toBeTruthy();
     });
 
-    it("SCHOOL_ADMIN no ve pestañas de comité", () => {
-        render(<ComiteSubNav rol="SCHOOL_ADMIN" />);
+    it("sin módulos permitidos no ve pestañas", () => {
+        render(<ComiteSubNav modulosPermitidos={[]} />);
         expect(screen.queryByText("Bandeja")).toBeNull();
         expect(screen.queryByText("Gestión")).toBeNull();
         expect(screen.queryByText("Auditoría")).toBeNull();
     });
 });
 
-describe("AdminNav", () => {
-    const allLabels = [
-        "Bandeja de reportes",
-        "Revisión de spam",
-        "Comité",
-        "Dashboard",
-        "Centro de Control IA",
-        "Operadores",
-        "Anti-abuso",
-        "Apelaciones",
-        "Dataset",
-        "Configuración",
+describe("AdminNav (filtrada por módulo, spec 086)", () => {
+    const todosLosModulos = [
+        "bandeja_reportes",
+        "revision_spam",
+        "comite_bandeja",
+        "estadisticas",
+        "centro_control_ia",
+        "operadores",
+        "colegios_gestion",
+        "anti_abuso",
+        "apelaciones",
+        "dataset_entrenamiento",
+        "configuracion_sistema",
     ];
 
-    it("ADMIN ve todas las secciones", () => {
-        render(<AdminNav rol="ADMIN" />);
-        for (const label of allLabels) {
-            expect(screen.getByText(label)).toBeTruthy();
-        }
+    it("con todos los módulos ve todas las secciones", () => {
+        render(<AdminNav rol="ADMIN" modulosPermitidos={todosLosModulos} />);
+        expect(screen.getByText("Bandeja de reportes")).toBeTruthy();
+        expect(screen.getByText("Revisión de spam")).toBeTruthy();
+        expect(screen.getByText("Comité")).toBeTruthy();
+        expect(screen.getByText("Configuración")).toBeTruthy();
     });
 
-    it("SCHOOL_ADMIN no ve secciones de administración", () => {
-        render(<AdminNav rol="SCHOOL_ADMIN" />);
-        for (const label of allLabels) {
-            expect(screen.queryByText(label)).toBeNull();
-        }
+    it("sin módulos permitidos no ve secciones", () => {
+        render(<AdminNav rol="SCHOOL_ADMIN" modulosPermitidos={[]} />);
+        expect(screen.queryByText("Bandeja de reportes")).toBeNull();
+        expect(screen.queryByText("Configuración")).toBeNull();
     });
 
-    it("OPERADOR ve solo 'Bandeja de reportes' y 'Revisión de spam'", () => {
-        render(<AdminNav rol="OPERADOR" />);
+    it("con solo bandeja y spam ve solo esas dos", () => {
+        render(<AdminNav rol="OPERADOR" modulosPermitidos={["bandeja_reportes", "revision_spam"]} />);
         expect(screen.getByText("Bandeja de reportes")).toBeTruthy();
         expect(screen.getByText("Revisión de spam")).toBeTruthy();
         expect(screen.queryByText("Comité")).toBeNull();
@@ -153,14 +154,11 @@ describe("AdminNav", () => {
         expect(screen.queryByText("Configuración")).toBeNull();
     });
 
-    it("COMITE_VALIDACION solo ve 'Comité'", () => {
-        render(<AdminNav rol="COMITE_VALIDACION" />);
+    it("con solo comite_bandeja solo ve 'Comité'", () => {
+        render(<AdminNav rol="COMITE_VALIDACION" modulosPermitidos={["comite_bandeja"]} />);
         expect(screen.getByText("Comité")).toBeTruthy();
-        for (const label of allLabels) {
-            if (label !== "Comité") {
-                expect(screen.queryByText(label)).toBeNull();
-            }
-        }
+        expect(screen.queryByText("Bandeja de reportes")).toBeNull();
+        expect(screen.queryByText("Configuración")).toBeNull();
     });
 });
 

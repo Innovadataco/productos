@@ -2,18 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { COLEGIO_NAV_ITEMS } from "@/lib/nav-items";
 
-const navItems = [
-    { href: "/dashboard/colegio", label: "Inicio" },
-    { href: "/dashboard/colegio/cursos", label: "Cursos" },
-    { href: "/dashboard/colegio/cursos/carga", label: "Carga masiva" },
-    { href: "/dashboard/colegio/alertas", label: "Alertas" },
-    { href: "/dashboard/colegio/estadisticas", label: "Estadísticas" },
-    { href: "/dashboard/colegio/auditoria", label: "Auditoría" },
-];
-
-export function ColegioNav() {
+export function ColegioNav({ modulosPermitidos }: { modulosPermitidos: string[] }) {
     const pathname = usePathname();
+    const permitidos = new Set(modulosPermitidos);
+    const navItems = COLEGIO_NAV_ITEMS.filter((item) => permitidos.has(item.modulo));
 
     return (
         <nav className="border-b border-emerald-200/30 bg-emerald-50/40 dark:border-emerald-900/30 dark:bg-emerald-950/20">

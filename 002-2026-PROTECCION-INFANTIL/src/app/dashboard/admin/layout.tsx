@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { AdminNav } from "@/components/modules/AdminNav";
+import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
 const ADMIN_ROLES = new Set(["ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
 type AdminRol = "ADMIN" | "OPERADOR" | "COMITE_VALIDACION";
@@ -20,9 +21,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         redirect("/");
     }
 
+    const permitidos = await modulosPermitidosParaRol(rol);
+
     return (
         <div className="flex min-h-screen">
-            <AdminNav rol={rol as AdminRol} />
+            <AdminNav rol={rol as AdminRol} modulosPermitidos={[...permitidos]} />
             <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">{children}</main>
         </div>
     );

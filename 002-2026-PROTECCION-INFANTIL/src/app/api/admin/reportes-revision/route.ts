@@ -13,7 +13,7 @@ const MAX_PAGE_SIZE = 100;
 export async function GET(req: Request) {
     try {
         const user = await verifyAuth();
-        await assertModulo(user, "reportes_revision");
+        await assertModulo(user, "bandeja_reportes");
         if (!esAdminRol(user.rol) && user.rol !== "OPERADOR" && !esComiteRol(user.rol)) {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },

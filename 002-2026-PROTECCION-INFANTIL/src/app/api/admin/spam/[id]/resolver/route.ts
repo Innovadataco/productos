@@ -35,7 +35,7 @@ const CATEGORIAS_VALIDAS: CategoriaConducta[] = [
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        await assertModulo(user, "anti_abuso");
+        await assertModulo(user, "revision_spam");
         if (!esAdminRol(user.rol) && !esOperadorRol(user.rol)) {
             return NextResponse.json(
                 { error: { message: "Solo el operador asignado o un admin puede resolver", code: ERROR_CODES.FORBIDDEN } },

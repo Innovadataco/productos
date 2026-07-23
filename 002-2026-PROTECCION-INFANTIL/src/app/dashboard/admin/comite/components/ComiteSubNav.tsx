@@ -2,25 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { RolUsuario } from "@prisma/client";
+import { COMITE_NAV_TABS } from "@/lib/nav-items";
 
-const tabs = [
-    { href: "/dashboard/admin/comite", label: "Bandeja" },
-    { href: "/dashboard/admin/comite/gestion", label: "Gestión" },
-    { href: "/dashboard/admin/comite/auditoria", label: "Auditoría" },
-];
-
-const ADMIN_COMITE_TABS = new Set(["/dashboard/admin/comite/gestion", "/dashboard/admin/comite/auditoria"]);
-
-function puedeVerTab(rol: RolUsuario, href: string) {
-    if (rol === "SCHOOL_ADMIN") return false;
-    if (rol === "ADMIN") return true;
-    return !ADMIN_COMITE_TABS.has(href);
-}
-
-export function ComiteSubNav({ rol }: { rol: RolUsuario }) {
+export function ComiteSubNav({ modulosPermitidos }: { modulosPermitidos: string[] }) {
     const pathname = usePathname();
-    const visibleTabs = tabs.filter((tab) => puedeVerTab(rol, tab.href));
+    const permitidos = new Set(modulosPermitidos);
+    const visibleTabs = COMITE_NAV_TABS.filter((tab) => permitidos.has(tab.modulo));
     return (
         <nav className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-3 dark:border-slate-800">
             {visibleTabs.map((tab) => {
