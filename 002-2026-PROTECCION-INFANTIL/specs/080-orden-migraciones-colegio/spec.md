@@ -1,6 +1,6 @@
 # Spec 080 — Corrección del orden de migraciones (incidencia I-04)
 
-**Status**: `FINALIZADO` (pendiente ACTA-VALIDACION de ZEUS → `CERRADA`)
+**Status**: `CERRADA` (ACTA-VALIDACION aprobada por ZEUS 2026-07-23)
 **Rama**: `feature/001-scaffolding`
 **Fase del programa**: Saneamiento / Infraestructura de datos
 **Creado**: 2026-07-22

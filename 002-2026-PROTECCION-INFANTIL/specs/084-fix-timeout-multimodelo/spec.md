@@ -1,6 +1,6 @@
 # Spec 084 — Fix timeout multi-modelo de simulación (I-07)
 
-**Status**: `FINALIZADO` (pendiente ACTA-VALIDACION de ZEUS → `CERRADA`)
+**Status**: `CERRADA` (ACTA-VALIDACION aprobada por ZEUS 2026-07-23)
 **Rama**: `feature/001-scaffolding`
 **Fase del programa**: Corrección de incidencias
 **Creado**: 2026-07-22

@@ -8,7 +8,7 @@
 | Métrica | Valor |
 |---------|-------|
 | **Total de specs** | **68** |
-| **Cerradas / Implementadas** | **59** |
+| **Cerradas / Implementadas** | **63** |
 | **Pendientes (en diseño / planeadas)** | **5** |
 
 ## Backlog activo (pendientes)
@@ -89,10 +89,10 @@
 | [077](077-colegios-alertas-consulta/spec.md) | Colegios — alertas y consulta | 🟢 Cerrada |
 | [078](078-colegios-estadisticas-pdf/spec.md) | Colegios — estadísticas PDF | 🟢 Cerrada |
 | [079](079-colegio-acceso-auditoria/spec.md) | Colegio — acceso y auditoría | 🔵 Planeado |
-| [080](080-orden-migraciones-colegio/spec.md) | Orden de migraciones (I-04) | 🟢 Finalizada (pendiente ACTA) |
-| [082](082-fusion-playground-modelos/spec.md) | Fusión Playground + Modelos (I-05) | 🟢 Finalizada (pendiente ACTA) |
-| [083](083-simulacion-completitud-multimodelo/spec.md) | Simulación: completitud + multi-modelo (I-06) | 🟢 Finalizada (pendiente ACTA) |
-| [084](084-fix-timeout-multimodelo/spec.md) | Fix timeout multi-modelo (I-07) | 🟢 Finalizada (pendiente ACTA) |
+| [080](080-orden-migraciones-colegio/spec.md) | Orden de migraciones (I-04) | 🟢 Cerrada |
+| [082](082-fusion-playground-modelos/spec.md) | Fusión Playground + Modelos (I-05) | 🟢 Cerrada |
+| [083](083-simulacion-completitud-multimodelo/spec.md) | Simulación: completitud + multi-modelo (I-06) | 🟢 Cerrada |
+| [084](084-fix-timeout-multimodelo/spec.md) | Fix timeout multi-modelo (I-07) | 🟢 Cerrada |
 
 ## Incidencias de calidad de datos (por resolver)
 

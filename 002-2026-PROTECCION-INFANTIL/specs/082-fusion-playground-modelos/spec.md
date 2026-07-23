@@ -1,6 +1,6 @@
 # Spec 082 — Fusión de tabs "Playground" + "Modelos" en admin/ia (y corrección I-05)
 
-**Status**: `FINALIZADO` (pendiente ACTA-VALIDACION de ZEUS → `CERRADA`)
+**Status**: `CERRADA` (ACTA-VALIDACION aprobada por ZEUS 2026-07-23)
 **Rama**: `feature/001-scaffolding`
 **Fase del programa**: Mejoras UX admin / Corrección de incidencias
 **Creado**: 2026-07-22

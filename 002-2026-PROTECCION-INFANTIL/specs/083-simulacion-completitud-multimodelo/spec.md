@@ -1,6 +1,6 @@
 # Spec 083 — Simulación: completitud/métricas + selección multi-modelo (I-06)
 
-**Status**: `FINALIZADO` (pendiente ACTA-VALIDACION de ZEUS → `CERRADA`)
+**Status**: `CERRADA` (ACTA-VALIDACION aprobada por ZEUS 2026-07-23)
 **Rama**: `feature/001-scaffolding`
 **Fase del programa**: Corrección de incidencias / Mejoras del módulo IA
 **Creado**: 2026-07-22
