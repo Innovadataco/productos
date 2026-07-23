@@ -109,7 +109,9 @@ async function main() {
   const modConfig = await prisma.modulo.findFirst({ where: { nombre: "configuracion" } });
   const modUsuarios = await prisma.modulo.findFirst({ where: { nombre: "usuarios" } });
   const rol1 = [1, modUsuarios?.id, modConfig?.id].filter((x): x is number => typeof x === "number");
-  const modulosPorRol: Record<number, number[]> = { 1: rol1, 2: [1, 2, 3, 4], 3: [1, 2, 3, 4] };
+  // Rol 2 (admin de empresa) gestiona su equipo → necesita el módulo `usuarios` (cascada §10.8).
+  const rol2 = [1, 2, 3, 4, modUsuarios?.id].filter((x): x is number => typeof x === "number");
+  const modulosPorRol: Record<number, number[]> = { 1: rol1, 2: rol2, 3: [1, 2, 3, 4] };
   for (const [rol, moduloIds] of Object.entries(modulosPorRol)) {
     const rolId = Number(rol);
     // Sincroniza: retira asignaciones semilla que ya no correspondan (p. ej. salidas para rol 1).

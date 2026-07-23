@@ -48,7 +48,7 @@ function ningunaLlamadaALaSuper() {
 
 describe("anti-Super (G1 / FR-008 / D-044)", () => {
   it("crearEmpresa no genera NINGUNA petición a la Super", async () => {
-    await crearEmpresa({ empresa: "T", nit: "900111222", correo: "a@b.com", token: "tok", modulos: [1] });
+    await crearEmpresa({ empresa: "T", nit: "900111222", correo: "a@b.com", token: "11111111-1111-1111-1111-111111111111", modulos: [1] });
     ningunaLlamadaALaSuper();
   });
 

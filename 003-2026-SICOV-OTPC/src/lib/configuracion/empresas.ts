@@ -3,14 +3,24 @@
 ///  - G2: token de empresa único validado SERVER-SIDE (no índice: la columna es nullable) → 409.
 ///  - G3: unicidad de NIT por `usn_identificacion @unique` + verificación previa → 409.
 ///  - Correo SIEMPRE FUERA de la transacción: un fallo de Resend nunca revierte el alta.
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { getCorreo } from "@/lib/correo/correo";
 import { resolverPagina, construirPaginado, type Paginado } from "@/lib/paginacion";
-import { generarClaveTemporal, esCorreoValido } from "./credenciales";
+import { generarClaveTemporal, esCorreoValido, esUuid } from "./credenciales";
 
 const ROL_ADMIN_EMPRESA = 2;
+
+/// Normaliza el token de empresa: si viene, debe ser UUID válido (tpv_token @db.Uuid) → 400 si no;
+/// si no viene, se genera uno (token "generado o digitado", spec US1).
+function normalizarToken(tokenRaw?: string | null): string {
+  const t = tokenRaw?.trim();
+  if (!t) return randomUUID();
+  if (!esUuid(t)) throw new AppError("El token debe ser un UUID válido", ERROR_CODES.VALIDATION_ERROR, 400);
+  return t;
+}
 
 export interface EmpresaListado {
   nit: string | null;
@@ -126,8 +136,8 @@ export async function crearEmpresa(input: CrearEmpresaInput): Promise<ResultadoA
     throw new AppError("Ya existe un usuario con ese NIT", ERROR_CODES.CONFLICT, 409);
   }
 
-  const token = input.token?.trim() || null;
-  if (token) await exigirTokenUnico(token); // G2, server-side
+  const token = normalizarToken(input.token); // UUID válido o generado (400 si UUID inválido)
+  await exigirTokenUnico(token); // G2, server-side
 
   const temporal = generarClaveTemporal();
   const clave = await hashPassword(temporal);
@@ -212,8 +222,10 @@ export async function actualizarEmpresa(nit: string, patch: ActualizarEmpresaInp
 /// Modifica el token de la empresa sincronizando `tpv_token` ⇄ `usn_token_autorizado` del admin
 /// en una transacción. Valida unicidad server-side (G2). Los operadores heredan por join.
 export async function modificarToken(nit: string, nuevoToken: string): Promise<void> {
-  const token = nuevoToken?.trim();
-  if (!token) throw new AppError("Token requerido", ERROR_CODES.VALIDATION_ERROR, 400);
+  const raw = nuevoToken?.trim();
+  if (!raw) throw new AppError("Token requerido", ERROR_CODES.VALIDATION_ERROR, 400);
+  if (!esUuid(raw)) throw new AppError("El token debe ser un UUID válido", ERROR_CODES.VALIDATION_ERROR, 400);
+  const token = raw;
   const prov = await prisma.proveedorVigilado.findFirst({ where: { documento: nit } });
   if (!prov) throw new AppError("Empresa no encontrada", ERROR_CODES.NOT_FOUND, 404);
   await exigirTokenUnico(token, prov.id); // G2

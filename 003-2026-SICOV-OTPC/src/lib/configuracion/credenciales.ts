@@ -13,3 +13,10 @@ const CORREO_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function esCorreoValido(correo: string): boolean {
   return CORREO_RE.test(correo);
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/// El token de empresa se persiste en `tpv_token @db.Uuid`: debe ser un UUID válido.
+export function esUuid(valor: string): boolean {
+  return UUID_RE.test(valor);
+}

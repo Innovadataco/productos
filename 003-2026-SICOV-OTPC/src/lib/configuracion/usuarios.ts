@@ -45,6 +45,8 @@ interface PermisosOtorgante {
 }
 
 /// Resuelve qué puede OTORGAR el otorgante (contra sus propias filas). Rol 1 = root: otorga todo.
+/// Espeja `cargarModulos`: si NO tiene personalización (`UsuarioModulo`), hereda los módulos de su
+/// ROL, todos como COMPLETOS. Así el admin de empresa que opera por rol también puede repartir.
 async function permisosDelOtorgante(otorgante: UsuarioGuardCtx): Promise<PermisosOtorgante> {
   if (otorgante.rolId === 1) {
     return { esRoot: true, submodulosPorModulo: new Map(), completos: new Set(), modulos: new Set() };
@@ -53,9 +55,22 @@ async function permisosDelOtorgante(otorgante: UsuarioGuardCtx): Promise<Permiso
     where: { usuarioId: otorgante.id, estado: true },
     select: { moduloId: true, submoduloId: true },
   });
+
   const submodulosPorModulo = new Map<number, Set<number>>();
   const completos = new Set<number>();
   const modulos = new Set<number>();
+
+  if (filas.length === 0 && otorgante.rolId != null) {
+    // Sin personalización → módulos del ROL, todos completos (mismo criterio que cargarModulos).
+    const delRol = await prisma.rolModulo.findMany({ where: { rolId: otorgante.rolId }, select: { moduloId: true } });
+    for (const r of delRol) {
+      if (r.moduloId == null) continue;
+      modulos.add(r.moduloId);
+      completos.add(r.moduloId);
+    }
+    return { esRoot: false, submodulosPorModulo, completos, modulos };
+  }
+
   for (const f of filas) {
     if (f.moduloId == null) continue;
     modulos.add(f.moduloId);

@@ -43,7 +43,8 @@ const tx = prisma.__tx as {
   usuarioModulo: { create: ReturnType<typeof vi.fn> };
 };
 
-const base = { empresa: "Transportes X", nit: "900111222", correo: "x@y.com", token: "tok-1", modulos: [1, 2] };
+const TOKEN_UUID = "11111111-1111-1111-1111-111111111111";
+const base = { empresa: "Transportes X", nit: "900111222", correo: "x@y.com", token: TOKEN_UUID, modulos: [1, 2] };
 
 beforeEach(() => {
   orden.length = 0;
@@ -83,6 +84,18 @@ describe("crearEmpresa (US1)", () => {
     await expect(crearEmpresa({ ...base, correo: "no-es-correo" })).rejects.toMatchObject({ statusCode: 400 });
     expect(tx.proveedorVigilado.create).not.toHaveBeenCalled();
   });
+
+  it("400 por token que no es UUID (tpv_token @db.Uuid)", async () => {
+    await expect(crearEmpresa({ ...base, token: "no-es-uuid" })).rejects.toMatchObject({ statusCode: 400 });
+    expect(tx.proveedorVigilado.create).not.toHaveBeenCalled();
+  });
+
+  it("sin token → genera un UUID y crea la empresa", async () => {
+    const r = await crearEmpresa({ ...base, token: undefined });
+    expect(r.proveedorId).toBe(10);
+    const dataProv = tx.proveedorVigilado.create.mock.calls[0][0].data as { token: string };
+    expect(dataProv.token).toMatch(/^[0-9a-f-]{36}$/i);
+  });
 });
 
 describe("modificarToken (US1)", () => {
@@ -90,6 +103,6 @@ describe("modificarToken (US1)", () => {
     provFindFirst
       .mockResolvedValueOnce({ id: 10, documento: "900111222" }) // la empresa objetivo
       .mockResolvedValueOnce({ id: 7 }); // otra empresa con ese token
-    await expect(modificarToken("900111222", "tok-usado")).rejects.toMatchObject({ statusCode: 409 });
+    await expect(modificarToken("900111222", "22222222-2222-2222-2222-222222222222")).rejects.toMatchObject({ statusCode: 409 });
   });
 });
