@@ -1,0 +1,477 @@
+{
+ "casos": 200,
+ "descartesErroneos": 70,
+ "porcentaje": 0.35,
+ "detalle": [
+  {
+   "indice": 30,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "plausibles": [
+    "DIFUSION_NO_CONSENTIDA"
+   ]
+  },
+  {
+   "indice": 31,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 32,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 33,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 34,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 35,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 36,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 37,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 38,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 39,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 40,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 42,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 46,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "plausibles": [
+    "CONTACTO_INSISTENTE"
+   ]
+  },
+  {
+   "indice": 49,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 50,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 65,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "plausibles": [
+    "COMPARTIMIENTO_SEXUAL",
+    "EXTORSION"
+   ]
+  },
+  {
+   "indice": 73,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "plausibles": [
+    "SOLICITUD_MATERIAL",
+    "SOLICITUD_ENCUENTRO"
+   ]
+  },
+  {
+   "indice": 75,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "plausibles": [
+    "SOLICITUD_MATERIAL",
+    "CONTACTO_INSISTENTE",
+    "EXTORSION"
+   ]
+  },
+  {
+   "indice": 88,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "plausibles": [
+    "SOLICITUD_MATERIAL"
+   ]
+  },
+  {
+   "indice": 102,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "plausibles": [
+    "DIFUSION_NO_CONSENTIDA"
+   ]
+  },
+  {
+   "indice": 103,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "plausibles": [
+    "DIFUSION_NO_CONSENTIDA"
+   ]
+  },
+  {
+   "indice": 105,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "plausibles": [
+    "DIFUSION_NO_CONSENTIDA"
+   ]
+  },
+  {
+   "indice": 108,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "plausibles": [
+    "DIFUSION_NO_CONSENTIDA",
+    "EXTORSION"
+   ]
+  },
+  {
+   "indice": 110,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": "SOLICITUD_MATERIAL",
+   "plausibles": [
+    "EXTORSION",
+    "DIFUSION_NO_CONSENTIDA"
+   ]
+  },
+  {
+   "indice": 112,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": [
+    "SUPLANTACION_IDENTIDAD"
+   ]
+  },
+  {
+   "indice": 113,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 114,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 115,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 116,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 117,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 118,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 119,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 120,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 121,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 122,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 123,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": [
+    "SUPLANTACION_IDENTIDAD"
+   ]
+  },
+  {
+   "indice": 124,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 125,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 132,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 138,
+   "esperada": "EXTORSION",
+   "secundaria": "CONTENIDO_GENERADO_IA",
+   "plausibles": [
+    "SUPLANTACION_IDENTIDAD"
+   ]
+  },
+  {
+   "indice": 146,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "plausibles": [
+    "SUPLANTACION_IDENTIDAD"
+   ]
+  },
+  {
+   "indice": 165,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "plausibles": [
+    "DIFUSION_NO_CONSENTIDA"
+   ]
+  },
+  {
+   "indice": 171,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "plausibles": [
+    "DIFUSION_NO_CONSENTIDA"
+   ]
+  },
+  {
+   "indice": 172,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "plausibles": [
+    "CONTACTO_INSISTENTE"
+   ]
+  },
+  {
+   "indice": 174,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "plausibles": [
+    "DIFUSION_NO_CONSENTIDA"
+   ]
+  },
+  {
+   "indice": 175,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "plausibles": [
+    "DIFUSION_NO_CONSENTIDA"
+   ]
+  },
+  {
+   "indice": 177,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 178,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 179,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 180,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 181,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 182,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 183,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 184,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 185,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 186,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 187,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": [
+    "SOLICITUD_MATERIAL"
+   ]
+  },
+  {
+   "indice": 188,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 189,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 190,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 191,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 192,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 193,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": [
+    "OFRECIMIENTO_REGALOS"
+   ]
+  },
+  {
+   "indice": 194,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 195,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 196,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 197,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 198,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 199,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  },
+  {
+   "indice": 200,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "plausibles": []
+  }
+ ]
+}

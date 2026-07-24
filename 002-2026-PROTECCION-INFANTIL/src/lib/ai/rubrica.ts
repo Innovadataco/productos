@@ -139,13 +139,18 @@ export function cumpleCategoria(
 }
 
 function construirPromptEmbudo(texto: string, categorias: string[]): string {
-    return `Eres un analista de reportes de riesgos para menores. Lee el texto y decide QUÉ categorías tienen ALGUNA señal (sospecha razonable). Sé estricto: incluye una categoría SOLO si hay una señal concreta en el texto; ante la duda, NO la incluyas.
+    // Spec 092-US2: el embudo mató la categoría correcta en el 35% del banco (70/200).
+    // Se hace PERMISIVO: su trabajo es NO descartar de más; el filtro estricto
+    // (preguntas decisivas) viene después y es el que decide.
+    return `Eres un analista de reportes de riesgos para menores. Lee el texto y lista las categorías que podrían tener ALGUNA relación, señal o sospecha, aunque sea débil o implícita.
+
+REGLA CLAVE: ante la duda, INCLUYE la categoría. Es mucho peor descartar una conducta real que evaluar una de más (después otro filtro estricto decide). Solo excluye una categoría si el texto claramente NO tiene nada que ver con ella.
 
 Categorías posibles: ${categorias.join(", ")}
 
 Texto del reporte: "${texto}"
 
-Responde SOLO con JSON: {"categoriasPlausibles": ["CATEGORIA1", ...]} (vacío si ninguna tiene señal).`;
+Responde SOLO con JSON: {"categoriasPlausibles": ["CATEGORIA1", ...]} (vacío solo si el texto no trata de ninguna conducta de riesgo en absoluto).`;
 }
 
 function construirPromptVoto(texto: string, sets: SetsRubrica, categorias: string[]): string {
@@ -268,6 +273,11 @@ export async function clasificarConRubrica(texto: string, config?: Partial<Confi
     } catch (err) {
         embudoFallback = true;
         logger.warn(`[RUBRICA] Embudo falló (${err instanceof Error ? err.message : String(err)}); rúbrica completa sobre todas las categorías.`);
+        plausibles = categoriasPosibles;
+    }
+
+    // Spec 092-US2: red de seguridad — si el embudo queda casi vacío, evaluar todo.
+    if (plausibles.length < 2) {
         plausibles = categoriasPosibles;
     }
 

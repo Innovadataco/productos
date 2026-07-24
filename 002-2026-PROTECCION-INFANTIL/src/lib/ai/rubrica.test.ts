@@ -158,12 +158,18 @@ describe("clasificarConRubrica — flujo completo (mocks)", () => {
         expect(res.estado).toBe("REVISION_MANUAL");
     });
 
-    it("embudo sin plausibles → OTRO → revisión, sin llamadas a los modelos", async () => {
+    it("embudo vacío → red de seguridad evalúa todas las categorías (spec 092-US2) y sigue sin presentes", async () => {
         mockLlamar.mockResolvedValueOnce(respuestaEmbudo([]));
+        // Los 3 modelos votan "no cumple" en todas
+        for (let i = 0; i < 3; i++) {
+            mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: false, CONTACTO_INSISTENTE: false, OFRECIMIENTO_REGALOS: false }));
+        }
 
         const res = await clasificarConRubrica("texto sin señal", CONFIG_TEST);
 
-        expect(mockLlamar).toHaveBeenCalledTimes(1);
+        // Con la red de seguridad (plausibles < 2 → todas), se llama embudo + 3 modelos
+        expect(mockLlamar).toHaveBeenCalledTimes(4);
+        expect(res.categoriasPresentes).toEqual([]);
         expect(res.categoria).toBe("OTRO");
         expect(res.estado).toBe("REVISION_MANUAL");
     });

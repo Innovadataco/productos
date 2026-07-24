@@ -93,7 +93,7 @@
 | [089](089-presentacion-usuario/spec.md) | Presentación al usuario: estados, categorías y consulta pública | 🟢 Finalizada (pendiente ACTA) |
 | [090](090-clasificacion-rubrica-multimodelo/spec.md) | Clasificación por rúbrica multi-etiqueta + multi-modelo | 🟢 Finalizada (pendiente ACTA) |
 | [091](091-ux-privacidad-consulta-seguimiento/spec.md) | UX y privacidad de la consulta + seguimiento | 🟢 Finalizada (pendiente ACTA) |
-| [092](092-motor-logica-corregida/spec.md) | Motor: lógica corregida y validada | 🟠 En desarrollo |
+| [092](092-motor-logica-corregida/spec.md) | Motor: lógica corregida y validada | 🟢 Finalizada (pendiente ACTA) |
 | [093](093-coherencia-padre/spec.md) | Coherencia del padre autenticado | 🟢 Finalizada (pendiente ACTA) |
 | [094](094-deuda-tecnica-documentacion/spec.md) | Deuda técnica y documentación | 🟢 Finalizada (pendiente ACTA) |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
