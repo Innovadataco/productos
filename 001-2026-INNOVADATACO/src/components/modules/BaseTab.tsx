@@ -369,8 +369,12 @@ function useProcessingDocs() {
 
   useEffect(() => {
     console.log("[useProcessingDocs] Montando componente");
-    fetchActiveModel();
-    fetchProcessingDocs();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await fetchActiveModel();
+      await fetchProcessingDocs();
+    })();
     // Siempre iniciar polling para detectar nuevos documentos
     startPolling();
     return () => stopPolling();
@@ -860,7 +864,11 @@ function BusquedaRag() {
   };
 
   useEffect(() => {
-    fetchDocs();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await fetchDocs();
+    })();
   }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -1090,7 +1098,11 @@ function Repositorio() {
   };
 
   useEffect(() => {
-    fetchDocs();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await fetchDocs();
+    })();
   }, [showInactive]);
 
   const toggleActivo = async (doc: Doc) => {

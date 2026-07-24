@@ -71,7 +71,11 @@ export default function LicitacionesPage() {
   };
 
   useEffect(() => {
-    fetchLicitaciones();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await fetchLicitaciones();
+    })();
   }, []);
 
   // Filtrar licitaciones

@@ -48,7 +48,11 @@ export default function ParametrizacionTab({
   };
 
   useEffect(() => {
-    loadSettings();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await loadSettings();
+    })();
   }, []);
 
   const getSelectedModel = (settingKey: string) => {

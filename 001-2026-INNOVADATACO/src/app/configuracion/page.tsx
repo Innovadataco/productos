@@ -198,9 +198,13 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
   };
 
   useEffect(() => {
-    loadModels();
-    loadApis();
-    loadAudit();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await loadModels();
+      await loadApis();
+      await loadAudit();
+    })();
   }, []);
 
   const saveModel = async (e: React.FormEvent) => {

@@ -106,7 +106,11 @@ function ListadoSubmodulo() {
   };
 
   useEffect(() => {
-    fetchData();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await fetchData();
+    })();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -624,7 +628,11 @@ function EntidadesSubmodulo() {
   };
 
   useEffect(() => {
-    fetchEntidades();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await fetchEntidades();
+    })();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -717,7 +725,11 @@ function EstadosSubmodulo() {
   };
 
   useEffect(() => {
-    fetchEstados();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await fetchEstados();
+    })();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -810,7 +822,11 @@ function TiposSubmodulo() {
   };
 
   useEffect(() => {
-    fetchTipos();
+    // Las cargas van dentro de una función asíncrona propia: así el efecto no
+    // ejecuta setState de forma síncrona (§6.2). Mismo momento, mismo resultado.
+    void (async () => {
+      await fetchTipos();
+    })();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
