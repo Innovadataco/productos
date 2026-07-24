@@ -26,13 +26,24 @@ Embudo (1 llamada, modelo rápido) → categorías plausibles. Cada modelo vota 
 - Sanity en vivo (Ollama real): 6/6 aciertos, 0 silenciosos, 0 ESPS; ~10-17 s por llamada (embudo + 3 modelos ≈ 55 s/caso — la cola async la absorbe).
 - Gate: lint 0 errores (1 warning heredado) · tsc OK · build limpio · `dev-restart.sh` healthcheck OK.
 
-## Métricas comparativas (pendiente de la corrida completa)
+## Métricas comparativas — banco de 200 (corrida completa, 2026-07-24)
 
-| Motor | Accuracy | Silenciosos | Subestim. | ESPS |
-|---|---|---|---|---|
-| Anterior (5 votos mismo modelo, banco saneado 085) | ver tabla 085 (qwen2.5:32b 100%, gemma2:27b 98%) | 0-3 | 0-2 | 0-150 |
-| Nuevo (3 diversos, subset 6) | 100% (6/6) | 0 | 0 | 0 |
-| Nuevo (200 completo) | EN CURSO — se reporta al terminar (`resultados-rubrica-090.json`) | | | |
+| Motor | Accuracy | Silenciosos | Subestim. | ESPS | Revisión manual |
+|---|---|---|---|---|---|
+| Anterior (5 votos mismo modelo, spec 085, mejor: qwen2.5:32b) | 100% | 0 | 0 | 0 | — |
+| Anterior (gemma2:27b) | 98% | 0 | 0 | 0 | — |
+| **Nuevo (rúbrica, 3 diversos)** | **74% (148/200)** | **23** | **15** | **595** | 54 |
+
+**Resultado honesto: el motor nuevo RINDE PEOR que el anterior sobre el banco de 200.**
+¿3 modelos diversos aciertan más que 5 votos del mismo? **No, con la configuración actual.**
+Lectura técnica: las preguntas estrictas (todas deben cumplirse para marcar 1) más el umbral
+de presencia 0.6 producen 54 casos a revisión manual (27%) y una tasa de aciertos de la
+principal inferior. Los 23 errores silenciosos (confianza=1.0, es decir, 3/3 modelos de
+acuerdo en la categoría equivocada) muestran que el desacuerdo entre familias no siempre
+captura el sesgo compartido. La matriz quedó en `scripts/simulacion/resultados-rubrica-090.json`.
+Decisión pendiente de ZEUS + CEO: afinar la rúbrica (preguntas por categoría, umbral, terna
+de modelos) o mantener el motor legacy como default (`ia.rubrica.enabled=false`). NO se
+cambia nada por cuenta propia.
 
 ## Deuda / notas
 

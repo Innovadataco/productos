@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ConsultaForm } from "./ConsultaForm";
+import { formatPlataformasResumen } from "@/lib/plataforma";
+import { RPT_STORAGE_KEY } from "./HomePageClient";
 
-type Ubicacion = { pais: string; ciudad: string; fecha: string };
-type Plataforma = { id: string; nombre: string; totalReportes: number };
+type Ubicacion = { pais: string; ciudad?: string; fecha?: string };
+type Plataforma = { id: string; nombre: string; total: number };
 
 export type ResultadoConsulta = {
     identificador: string;
@@ -83,6 +87,18 @@ export function LandingHero({
     error: string | null;
     buscado: boolean;
 }) {
+    const router = useRouter();
+    const [rpt, setRpt] = useState("");
+
+    function irASeguimiento(e: React.FormEvent) {
+        e.preventDefault();
+        const numero = rpt.trim();
+        if (!numero) return;
+        // El RPT viaja por sessionStorage, nunca por query string (spec 091-US2).
+        sessionStorage.setItem(RPT_STORAGE_KEY, numero);
+        router.push("/seguimiento");
+    }
+
     const resultado = data as ResultadoConsulta | null;
 
     return (
@@ -127,6 +143,30 @@ export function LandingHero({
                                 <UserIcon className="h-5 w-5" aria-hidden="true" />
                                 Reportar con mi cuenta
                             </Link>
+
+                            {/* Spec 091-B: re-consulta del propio reporte, discreta, dentro de la tarjeta */}
+                            <form onSubmit={irASeguimiento} className="mt-4 border-t border-sky-200/60 pt-4">
+                                <label htmlFor="rpt-input" className="text-xs font-medium text-sky-700">
+                                    ¿Ya reportaste? Consulta el estado de tu reporte
+                                </label>
+                                <div className="mt-1.5 flex gap-2">
+                                    <input
+                                        id="rpt-input"
+                                        type="text"
+                                        value={rpt}
+                                        onChange={(e) => setRpt(e.target.value)}
+                                        placeholder="RPT-XXXXXX"
+                                        className="w-full rounded-xl border border-sky-200 bg-white/80 px-3 py-2 text-sm text-sky-900 placeholder:text-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!rpt.trim()}
+                                        className="rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-sky-700 disabled:opacity-50"
+                                    >
+                                        Ver estado
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
@@ -163,46 +203,29 @@ export function LandingHero({
                                     <div className="space-y-3">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="text-sm font-semibold text-white">{resultado.identificador}</span>
-                                            {(resultado.totalReportes ?? 0) > 2 && (
-                                                <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white">
-                                                    {resultado.totalReportes} reportes
-                                                </span>
-                                            )}
+                                            <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white">
+                                                {resultado.totalReportes} reportes
+                                            </span>
+                                            <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white">
+                                                Actividad {resultado.actividad ?? "baja"} de reportes
+                                            </span>
                                         </div>
 
-                                        {(resultado.totalReportes ?? 0) <= 2 ? (
-                                            <div className="space-y-2 text-sm text-white/90">
-                                                {!!resultado.plataformas?.length && (
-                                                    <p>
-                                                        Plataforma{resultado.plataformas.length > 1 ? "s" : ""}:{" "}
-                                                        {resultado.plataformas.map((p) => `${p.nombre} (${p.totalReportes})`).join(", ")}
-                                                    </p>
-                                                )}
-                                                {!!resultado.ubicaciones?.length && (
-                                                    <p>
-                                                        Ubicación{resultado.ubicaciones.length > 1 ? "es" : ""}:{" "}
-                                                        {resultado.ubicaciones
-                                                            .map((u) => `${u.ciudad ? `${u.ciudad}, ` : ""}${u.pais}`)
-                                                            .join("; ")}
-                                                    </p>
-                                                )}
-                                                {resultado.ultimoReporte && (
-                                                    <p>Último reporte: {formatearFecha(resultado.ultimoReporte)}</p>
-                                                )}
-                                                <p className="text-xs text-white/80">
-                                                    Reportes autenticados: {resultado.reportesAutenticados ?? 0} · Anónimos: {resultado.reportesAnonimos ?? 0}
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-2 text-sm text-white/90">
+                                        <div className="space-y-2 text-sm text-white/90">
+                                            {!!resultado.plataformas?.length && (
+                                                <p>{formatPlataformasResumen(resultado.plataformas, resultado.totalReportes)}</p>
+                                            )}
+                                            {/* Anónimo: ubicación SOLO por países (spec 089-US5) */}
+                                            {!!resultado.ubicaciones?.length && (
                                                 <p>
-                                                    Total: {resultado.totalReportes} · Autenticados: {resultado.reportesAutenticados ?? 0} · Anónimos: {resultado.reportesAnonimos ?? 0}
+                                                    {resultado.ubicaciones.length > 1 ? "Países" : "País"}:{" "}
+                                                    {resultado.ubicaciones.map((u) => u.pais).join(", ")}
                                                 </p>
-                                                <p className="text-xs text-white/80">
-                                                    Actividad {resultado.actividad ?? "baja"} de reportes
-                                                </p>
-                                            </div>
-                                        )}
+                                            )}
+                                            <p className="text-xs text-white/80">
+                                                Total: {resultado.totalReportes} · Autenticados: {resultado.reportesAutenticados ?? 0} · Anónimos: {resultado.reportesAnonimos ?? 0}
+                                            </p>
+                                        </div>
                                     </div>
                                 )}
                             </div>

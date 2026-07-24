@@ -1,0 +1,1814 @@
+{
+ "motor": "rubrica-090 (3 modelos diversos)",
+ "casos": 200,
+ "aciertos": 148,
+ "fallos": 52,
+ "accuracy": 0.74,
+ "revisionManual": 54,
+ "erroresSilenciosos": 23,
+ "subestimaciones": 15,
+ "severidadPerdida": 425,
+ "esps": 595,
+ "detalle": [
+  {
+   "indice": 1,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 2,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 3,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 4,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 5,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 6,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 7,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 8,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 9,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 10,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 11,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 12,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 13,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 14,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 15,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 16,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 17,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 18,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 19,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 0.6666666666666666,
+   "acierto": false
+  },
+  {
+   "indice": 20,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 21,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 22,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 23,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 24,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 25,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 26,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 27,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": "COMPARTIMIENTO_SEXUAL",
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 28,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DOXING",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 29,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DOXING",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 30,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 31,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 32,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 33,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 34,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 35,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 36,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 37,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 38,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 39,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 40,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 41,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 42,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 43,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 44,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 45,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": "SOLICITUD_ENCUENTRO",
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 46,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 47,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 48,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 49,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 50,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 51,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 52,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 53,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 54,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 55,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 56,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 57,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 58,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 59,
+   "esperada": "CONTACTO_INSISTENTE",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 60,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": "CONTACTO_INSISTENTE",
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 61,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 62,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 63,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 64,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 65,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 66,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 67,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 0.6666666666666666,
+   "acierto": true
+  },
+  {
+   "indice": 68,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 69,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": "CONTACTO_INSISTENTE",
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 70,
+   "esperada": "SOLICITUD_MATERIAL",
+   "secundaria": "SUPLANTACION_IDENTIDAD",
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 71,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 72,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 73,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 74,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 75,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 76,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 77,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 78,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 79,
+   "esperada": "OFRECIMIENTO_REGALOS",
+   "secundaria": "CONTACTO_INSISTENTE",
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 80,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": "OFRECIMIENTO_REGALOS",
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 81,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 82,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 83,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 84,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SOLICITUD_MATERIAL",
+   "estado": "CLASIFICADO",
+   "confianza": 0.6666666666666666,
+   "acierto": false
+  },
+  {
+   "indice": 85,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 86,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 87,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 88,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 89,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 90,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": "CONTACTO_INSISTENTE",
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 91,
+   "esperada": "SUPLANTACION_IDENTIDAD",
+   "secundaria": "OFRECIMIENTO_REGALOS",
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 92,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 93,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 94,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 95,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 96,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 97,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 98,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 99,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": null,
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 100,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": "CONTACTO_INSISTENTE",
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 101,
+   "esperada": "SOLICITUD_ENCUENTRO",
+   "secundaria": "OFRECIMIENTO_REGALOS",
+   "asignada": "SOLICITUD_ENCUENTRO",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 102,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 103,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 104,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 105,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 106,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 107,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 108,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 109,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": null,
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 0.6666666666666666,
+   "acierto": true
+  },
+  {
+   "indice": 110,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": "SOLICITUD_MATERIAL",
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 0.6666666666666666,
+   "acierto": false
+  },
+  {
+   "indice": 111,
+   "esperada": "COMPARTIMIENTO_SEXUAL",
+   "secundaria": "SOLICITUD_ENCUENTRO",
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 112,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 113,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 114,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 115,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 116,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 117,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 118,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 119,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 120,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 121,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 122,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 123,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 124,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 125,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 126,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 127,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 0.6666666666666666,
+   "acierto": false
+  },
+  {
+   "indice": 128,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 129,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 130,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 131,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 132,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 133,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 134,
+   "esperada": "EXTORSION",
+   "secundaria": null,
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 135,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": "EXTORSION",
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 136,
+   "esperada": "EXTORSION",
+   "secundaria": "CONTENIDO_GENERADO_IA",
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 137,
+   "esperada": "EXTORSION",
+   "secundaria": "DOXING",
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 138,
+   "esperada": "EXTORSION",
+   "secundaria": "CONTENIDO_GENERADO_IA",
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 139,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 140,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 141,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 142,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 143,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 144,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 145,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 146,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "SUPLANTACION_IDENTIDAD",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 147,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 148,
+   "esperada": "CONTENIDO_GENERADO_IA",
+   "secundaria": null,
+   "asignada": "CONTENIDO_GENERADO_IA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 149,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": "CONTENIDO_GENERADO_IA",
+   "asignada": "COMPARTIMIENTO_SEXUAL",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 150,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": "CONTENIDO_GENERADO_IA",
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 151,
+   "esperada": "EXTORSION",
+   "secundaria": "CONTENIDO_GENERADO_IA",
+   "asignada": "EXTORSION",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 152,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 153,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 154,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 155,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 156,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 157,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 158,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 0.6666666666666666,
+   "acierto": true
+  },
+  {
+   "indice": 159,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 160,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 161,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 162,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": "EXTORSION",
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 163,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": "DOXING",
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 164,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": "DOXING",
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 165,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 166,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DOXING",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 167,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DOXING",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 168,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DOXING",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 169,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DOXING",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 170,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DOXING",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 171,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 172,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "CONTACTO_INSISTENTE",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 173,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DOXING",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 174,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 175,
+   "esperada": "DOXING",
+   "secundaria": null,
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 176,
+   "esperada": "DIFUSION_NO_CONSENTIDA",
+   "secundaria": "DOXING",
+   "asignada": "DIFUSION_NO_CONSENTIDA",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": true
+  },
+  {
+   "indice": 177,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 178,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 179,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 180,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 181,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 182,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 183,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 184,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 185,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 186,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 187,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 188,
+   "esperada": "SPAM",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": false
+  },
+  {
+   "indice": 189,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 190,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 191,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 192,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 193,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OFRECIMIENTO_REGALOS",
+   "estado": "CLASIFICADO",
+   "confianza": 1,
+   "acierto": false
+  },
+  {
+   "indice": 194,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 195,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 196,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 197,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 198,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 199,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  },
+  {
+   "indice": 200,
+   "esperada": "OTRO",
+   "secundaria": null,
+   "asignada": "OTRO",
+   "estado": "REVISION_MANUAL",
+   "confianza": 0,
+   "acierto": true
+  }
+ ]
+}

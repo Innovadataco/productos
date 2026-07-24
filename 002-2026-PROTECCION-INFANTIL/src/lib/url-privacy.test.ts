@@ -41,6 +41,18 @@ describe("privacidad URL del identificador (spec 091 fix)", () => {
         expect(violaciones).toEqual([]);
     });
 
+    it("ningún fetch() deja el identificador en la URL (query string)", () => {
+        const violaciones: string[] = [];
+        for (const archivo of archivos(SRC)) {
+            const contenido = fs.readFileSync(archivo, "utf-8");
+            // fetch(`/algo?identificador=` o fetch("/algo?identificador="
+            if (/fetch\(`[^`]*\?[^`]*identificador=/.test(contenido) || /fetch\(["'][^"']*\?[^"']*identificador=/.test(contenido)) {
+                violaciones.push(archivo);
+            }
+        }
+        expect(violaciones).toEqual([]);
+    });
+
     it("ningún router.push deja el identificador en la URL", () => {
         const violaciones: string[] = [];
         for (const archivo of archivos(SRC)) {

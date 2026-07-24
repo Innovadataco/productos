@@ -35,3 +35,17 @@ La API ya era POST, pero el identificador seguía yendo a la URL por NAVEGACIÓN
 Suite tras el fix: **827/827**. Build limpio (`rm -rf .next`), healthcheck OK.
 
 - `fix(consulta): elimina página /consulta y fuga del identificador por navegación (spec 091)` — commit `eb9feb92`
+
+## Cierre — 5 correcciones finales (2026-07-24)
+
+A. **Home un solo formato (LandingHero)**: eliminado el condicional ≤2 reportes (doble interfaz, formato viejo pre-089 con CIUDAD). Un solo formato siempre: `formatPlataformasResumen` · ubicación SOLO por países · "Total: N · Autenticados: N · Anónimos: N" · señal de actividad · chip de reportes siempre visible. Bug `p.totalReportes`→`p.total` corregido ("(undefined)" muerto). Tests con 1, 2 y 4 reportes → mismo formato, sin "undefined", sin ciudad.
+
+B. **Bloque RPT reubicado**: el campo "¿Ya reportaste? Consulta el estado de tu reporte" vive DENTRO de la tarjeta "Crear un reporte" (LandingHero), bajo los dos botones, discreto (ya no es un bloque suelto abajo en el home).
+
+C. **Animación con viaje real (EstadoTransicion)**: extremos siempre visibles [En proceso]—[Procesado]; una píldora que se DESLIZA (translateX 0→120px, ease-in-out, ~1s, arranque a los 400ms, una vez) cambiando gris→verde; al llegar, "Procesado" se ilumina y aparece el check con rebote. En proceso: la píldora pulsa en el extremo izquierdo. Tests: posición en el tiempo, ambos extremos siempre.
+
+D. **`/api/consulta/detalle` a POST** (misma refactor de handler compartido) + `ConsultaEnriquecidaClient` por POST. Guard estructural ampliado: también `fetch()` con `identificador=` en la URL (4/4).
+
+E. **Código muerto eliminado**: `ConsultaResultado.tsx` (+su test) y `ScoreDisplay.tsx` borrados por completo (contenían nivel de riesgo, score y recomendaciones prohibidas por §1.3/§1.5).
+
+Gate final: suite + build limpio + healthcheck (ver reporte).

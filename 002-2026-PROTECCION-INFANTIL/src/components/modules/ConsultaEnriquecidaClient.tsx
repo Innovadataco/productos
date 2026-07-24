@@ -79,8 +79,11 @@ export function ConsultaEnriquecidaClient() {
         setError("");
         setData(null);
         try {
-            const res = await fetch(`/api/consulta/detalle?identificador=${encodeURIComponent(identificador)}`, {
+            const res = await fetch(`/api/consulta/detalle`, {
+                method: "POST",
                 credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ identificador }),
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) {
