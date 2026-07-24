@@ -21,7 +21,11 @@ const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefi
 
 export const SUBMODULES: Record<ModuleId, SubmoduleDef[]> = {
   investigacion: [{ id: "analisis", title: "Análisis" }],
-  proyectos: [{ id: "listado", title: "Listado" }],
+  proyectos: [
+    { id: "listado", title: "Listado" },
+    // Tablero de fases PM2 (spec 008, US2): reutiliza el Kanban de SPEC-007.
+    { id: "fases", title: "Fases PM²" },
+  ],
   base: [
     { id: "carga_documental", title: "Carga documental" },
     { id: "busqueda_rag", title: "Búsqueda RAG" },
