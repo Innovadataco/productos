@@ -88,13 +88,13 @@ if (!hayProyectos) {
   check("I-011 · la flecha de la tarjeta existe", pulsada);
   check("I-011 · abre la edición del proyecto", Boolean(modal));
 
-  // Gestión PM2 (spec 008, US3–US6): las cinco pestañas dentro de la edición.
-  const pestanas = await page.evaluate(() => {
-    const esperadas = ["Entregables", "Cronograma", "Presupuesto", "Recursos", "Lecciones"];
-    const texto = document.body.textContent || "";
-    return esperadas.filter((p) => texto.includes(p));
-  });
-  check("PM2 · las 5 colecciones están en la edición", pestanas.length === 5, pestanas.join(" · "));
+  // Spec 014 FR-007: la gestión se movió del modal al submódulo Gestión. El
+  // modal ya NO contiene las pestañas; en su lugar apunta al submódulo. Esta
+  // comprobación cambió a propósito respecto al turno 014.
+  const modalApunta = await page.evaluate(() =>
+    (document.body.textContent || "").includes("se gestionan en"),
+  );
+  check("spec 014 (FR-007) · el modal apunta a Gestión, ya no duplica las pestañas", modalApunta);
 
   await page.screenshot({ path: path.join(capturas, "funcional-proyecto-edicion.png") });
   await page.keyboard.press("Escape");
@@ -127,6 +127,59 @@ check(
 );
 check("spec 013 · con motivo en lenguaje llano", repositorio.motivo);
 await page.screenshot({ path: path.join(capturas, "funcional-repositorio.png") });
+
+// ── 4 · Gestión: cartera + detalle + Gantt (spec 014/015/016) ────────────────
+await abrirModulo(page, "Proyectos");
+const tieneGestion = await page.evaluate(() =>
+  Array.from(document.querySelectorAll("button")).some((b) => b.textContent?.trim().toUpperCase() === "GESTIÓN"),
+);
+check("spec 014 · el submódulo Gestión existe", tieneGestion);
+
+if (tieneGestion) {
+  await abrirSubmodulo(page, "Gestión");
+  const cartera = await page.evaluate(() => {
+    const t = document.body.textContent || "";
+    return { titulo: t.includes("Cartera de Proyectos"), presupuesto: t.includes("Presupuesto"), riesgos: t.includes("Riesgos") };
+  });
+  check("spec 014 · la cartera carga con sus columnas", cartera.titulo && cartera.presupuesto);
+  await page.screenshot({ path: path.join(capturas, "015-cartera.png") });
+
+  // Entrar al detalle del primer proyecto.
+  const entro = await page.evaluate(() => {
+    const card = document.querySelector('.grid button');
+    if (!card) return false;
+    card.click();
+    return true;
+  });
+  await dormir(1400);
+  if (entro) {
+    const detalle = await page.evaluate(() => {
+      const t = document.body.textContent || "";
+      const pestanas = ["Entregables", "Cronograma", "Gantt", "Presupuesto", "Recursos", "Lecciones", "Riesgos"];
+      return { volver: t.includes("Volver a la cartera"), pestanas: pestanas.filter((x) => t.includes(x)) };
+    });
+    check("spec 014 · el detalle reutiliza GestionPm2 fuera del modal", detalle.volver);
+    check("spec 014/016 · detalle con las 7 pestañas (incl. Gantt y Riesgos)", detalle.pestanas.length === 7, detalle.pestanas.join(" · "));
+
+    // Abrir la pestaña Gantt.
+    await page.evaluate(() => {
+      const b = Array.from(document.querySelectorAll("button")).find((x) => x.textContent?.trim() === "Gantt");
+      b?.click();
+    });
+    await dormir(1200);
+    const gantt = await page.evaluate(() => {
+      const t = document.body.textContent || "";
+      // O dibuja (escalas Día/Semana/Mes) o el estado vacío claro.
+      return t.includes("Día") && t.includes("Semana") && t.includes("Mes")
+        ? "escalas"
+        : t.includes("Sin cronograma que dibujar")
+          ? "vacio"
+          : "?";
+    });
+    check("spec 015 · el Gantt se monta (escalas o estado vacío)", gantt === "escalas" || gantt === "vacio", gantt);
+    await page.screenshot({ path: path.join(capturas, "015-gantt.png") });
+  }
+}
 
 await navegador.close();
 console.log(`\n${fallos === 0 ? "=== TODO OK ===" : `=== ${fallos} FALLO(S) ===`}`);
