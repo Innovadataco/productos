@@ -6,17 +6,21 @@ import { buscarHibrida } from "@/lib/search/hibrida";
 import { resolverModeloEmbeddings, ModeloEmbeddingsNoConfigurado } from "@/lib/ragConfig";
 import { embedText } from "@/lib/modelClients";
 import { auditLog } from "@/lib/audit";
+import { esquemaBusquedaDocumentos, validar } from "@/lib/esquemas";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await verifyAuth();
     if (!session) return noAutenticado();
 
-    const body = await req.json();
-    const { query, tipo, entidad, sector, fechaDesde, fechaHasta } = body;
-    if (!query || typeof query !== "string") {
-      return NextResponse.json({ error: "Consulta requerida" }, { status: 400 });
+    // Validación con Zod (spec 009, FR-008). Añade el tope de §2.6 —500
+    // caracteres— que la ruta no aplicaba: aceptaba una consulta de cualquier
+    // tamaño y la mandaba a embeder.
+    const validacion = validar(esquemaBusquedaDocumentos, await req.json());
+    if (!validacion.ok) {
+      return NextResponse.json({ error: validacion.mensaje }, { status: 400 });
     }
+    const { query, tipo, entidad, sector, fechaDesde, fechaHasta } = validacion.datos;
 
     // Modelo de embeddings vigente: define el espacio vectorial de la rama semántica
     // (FR-021b). Si no está configurado, la búsqueda degrada a solo FTS (US4-4), que

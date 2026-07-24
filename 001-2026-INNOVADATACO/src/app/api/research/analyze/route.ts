@@ -4,23 +4,28 @@ import { prisma } from "@/lib/prisma";
 import { callModel } from "@/lib/modelClients";
 import { buildResearchPrompt, sanitizeJsonText } from "@/lib/prompts";
 import { verifyAuth } from "@/lib/auth";
+import { esquemaAnalisisInvestigacion, validar } from "@/lib/esquemas";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await verifyAuth();
     if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-    const { documentId, text } = await req.json();
+    // Validación con Zod (spec 009, FR-008). Añade el tope de §2.6 —16000
+    // caracteres de prompt— que la ruta no aplicaba.
+    const validacion = validar(esquemaAnalisisInvestigacion, await req.json());
+    if (!validacion.ok) {
+      return NextResponse.json({ error: validacion.mensaje }, { status: 400 });
+    }
+    const { documentId, text } = validacion.datos;
 
     let content = "";
     if (documentId) {
       const doc = await prisma.documentoOficial.findUnique({ where: { id: documentId } });
       if (!doc) return NextResponse.json({ error: "Documento no encontrado" }, { status: 404 });
       content = doc.contenidoTexto;
-    } else if (text) {
-      content = text;
     } else {
-      return NextResponse.json({ error: "documentId o text requerido" }, { status: 400 });
+      content = text ?? "";
     }
 
     const activeModel = await prisma.aiModel.findFirst({ where: { active: true } });
