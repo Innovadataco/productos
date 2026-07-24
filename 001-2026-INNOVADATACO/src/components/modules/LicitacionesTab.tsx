@@ -42,6 +42,14 @@ interface Estado {
   nombreOficial: string;
 }
 
+interface TipoOportunidad {
+  id: number;
+  key: string;
+  nombreOficial: string;
+  exigeNumero: boolean;
+  exigeFechaApertura: boolean;
+}
+
 interface LicitacionesTabProps {
   submoduleId: string;
 }
@@ -54,7 +62,7 @@ const estadoColores: Record<string, string> = {
   "cancelada": "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
-// Componente: Listado de Licitaciones
+// Componente: Listado de Oportunidades
 function ListadoSubmodulo() {
   const [licitaciones, setLicitaciones] = useState<Licitacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +136,7 @@ function ListadoSubmodulo() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar esta licitación?")) return;
+    if (!confirm("¿Eliminar esta oportunidad?")) return;
     try {
       const response = await fetch(`/api/licitaciones/${id}`, { method: "DELETE" });
       if (response.ok) await fetchData();
@@ -205,25 +213,18 @@ function ListadoSubmodulo() {
         </div>
       </div>
 
-      {/* Search and Add */}
+      {/* Search — el listado solo consulta; la creación vive en el submódulo "Nueva" (FR-016) */}
       <div className="flex gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/30" />
           <input
             type="text"
-            placeholder="Buscar licitaciones..."
+            placeholder="Buscar oportunidades..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder:text-foreground/30 focus:border-neonCyan focus:outline-none"
           />
         </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center gap-2 px-4 py-3 bg-neonCyan/10 border border-neonCyan/30 rounded-lg text-neonCyan hover:bg-neonCyan/20 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="text-xs font-bold uppercase tracking-wider">Nueva</span>
-        </button>
       </div>
 
       {/* List */}
@@ -234,7 +235,7 @@ function ListadoSubmodulo() {
       ) : filteredLicitaciones.length === 0 ? (
         <div className="text-center py-12 text-foreground/30">
           <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p className="text-sm">No hay licitaciones registradas</p>
+          <p className="text-sm">No hay oportunidades registradas</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -297,7 +298,7 @@ function ListadoSubmodulo() {
           <div className="glass-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-white/10">
               <h2 className="text-lg font-bold text-white">
-                {editingId ? "Editar Licitación" : "Nueva Licitación"}
+                {editingId ? "Editar Oportunidad" : "Nueva Oportunidad"}
               </h2>
             </div>
             
@@ -333,7 +334,7 @@ function ListadoSubmodulo() {
                   required
                   value={formData.titulo}
                   onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                  placeholder="Título de la licitación"
+                  placeholder="Título de la oportunidad"
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-neonCyan focus:outline-none"
                 />
               </div>
@@ -374,7 +375,7 @@ function ListadoSubmodulo() {
                   rows={3}
                   value={formData.descripcion}
                   onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                  placeholder="Descripción de la licitación"
+                  placeholder="Descripción de la oportunidad"
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-neonCyan focus:outline-none resize-none"
                 />
               </div>
@@ -403,32 +404,42 @@ function ListadoSubmodulo() {
   );
 }
 
-// Componente: Nueva Licitación (Formulario directo)
+// Componente: Nueva Oportunidad (Formulario directo)
 function NuevaSubmodulo() {
   const [entidades, setEntidades] = useState<Entidad[]>([]);
   const [estados, setEstados] = useState<Estado[]>([]);
+  const [tipos, setTipos] = useState<TipoOportunidad[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const FORM_INICIAL = {
     numero: "",
     titulo: "",
     descripcion: "",
+    tipoId: "",
     estadoId: "",
     entidadId: "",
+    ciudadEjecucion: "",
     areaIdSala: "",
     fechaApertura: "",
     documentoUrl: "",
-  });
+  };
+  const [formData, setFormData] = useState(FORM_INICIAL);
+
+  // El tipo seleccionado decide si número/fecha son obligatorios (banderas del
+  // catálogo, no nombres cableados — §0.7).
+  const tipoSel = tipos.find((t) => String(t.id) === formData.tipoId);
 
   useEffect(() => {
     const fetchCatalogos = async () => {
-      const [entRes, estRes] = await Promise.all([
+      const [entRes, estRes, tipRes] = await Promise.all([
         fetch("/api/licitaciones/entidades"),
         fetch("/api/licitaciones/estados"),
+        fetch("/api/licitaciones/tipos"),
       ]);
       if (entRes.ok) setEntidades(await entRes.json());
       if (estRes.ok) setEstados(await estRes.json());
+      if (tipRes.ok) setTipos(await tipRes.json());
     };
     fetchCatalogos();
   }, []);
@@ -445,16 +456,7 @@ function NuevaSubmodulo() {
 
       if (response.ok) {
         setSuccess(true);
-        setFormData({
-          numero: "",
-          titulo: "",
-          descripcion: "",
-          estadoId: "",
-          entidadId: "",
-          areaIdSala: "",
-          fechaApertura: "",
-          documentoUrl: "",
-        });
+        setFormData(FORM_INICIAL);
         setTimeout(() => setSuccess(false), 3000);
       } else {
         const error = await response.json();
@@ -472,22 +474,39 @@ function NuevaSubmodulo() {
       <div className="glass-panel p-6">
         <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
           <Plus className="w-5 h-5 text-neonCyan" />
-          Crear Nueva Licitación
+          Crear Nueva Oportunidad
         </h2>
 
         {success && (
           <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 text-sm">
-            ✅ Licitación creada exitosamente
+            ✅ Oportunidad creada exitosamente
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-foreground/40 mb-2">Tipo de oportunidad *</label>
+            <select
+              required
+              value={formData.tipoId}
+              onChange={(e) => setFormData({ ...formData, tipoId: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-neonCyan focus:outline-none"
+            >
+              <option value="">Seleccione...</option>
+              {tipos.map((t) => (
+                <option key={t.id} value={t.id}>{t.nombreOficial}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs uppercase tracking-wider text-foreground/40 mb-2">Número *</label>
+              <label className="block text-xs uppercase tracking-wider text-foreground/40 mb-2">
+                Número{tipoSel?.exigeNumero ? " *" : ""}
+              </label>
               <input
                 type="text"
-                required
+                required={!!tipoSel?.exigeNumero}
                 value={formData.numero}
                 onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
                 placeholder="Ej: L-06196"
@@ -495,10 +514,12 @@ function NuevaSubmodulo() {
               />
             </div>
             <div>
-              <label className="block text-xs uppercase tracking-wider text-foreground/40 mb-2">Fecha Apertura *</label>
+              <label className="block text-xs uppercase tracking-wider text-foreground/40 mb-2">
+                Fecha Apertura{tipoSel?.exigeFechaApertura ? " *" : ""}
+              </label>
               <input
                 type="datetime-local"
-                required
+                required={!!tipoSel?.exigeFechaApertura}
                 value={formData.fechaApertura}
                 onChange={(e) => setFormData({ ...formData, fechaApertura: e.target.value })}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-neonCyan focus:outline-none"
@@ -513,7 +534,18 @@ function NuevaSubmodulo() {
               required
               value={formData.titulo}
               onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-              placeholder="Título de la licitación"
+              placeholder="Título de la oportunidad"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-neonCyan focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-foreground/40 mb-2">Ciudad de ejecución</label>
+            <input
+              type="text"
+              value={formData.ciudadEjecucion}
+              onChange={(e) => setFormData({ ...formData, ciudadEjecucion: e.target.value })}
+              placeholder="Ej: Bogotá"
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-neonCyan focus:outline-none"
             />
           </div>
@@ -554,7 +586,7 @@ function NuevaSubmodulo() {
               rows={4}
               value={formData.descripcion}
               onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-              placeholder="Descripción detallada de la licitación..."
+              placeholder="Descripción detallada de la oportunidad..."
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-neonCyan focus:outline-none resize-none"
             />
           </div>
@@ -565,7 +597,7 @@ function NuevaSubmodulo() {
             className="w-full py-4 bg-neonCyan text-black font-black text-xs uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {loading ? "Creando..." : "Crear Licitación"}
+            {loading ? "Creando..." : "Crear Oportunidad"}
           </button>
         </form>
       </div>
@@ -759,6 +791,115 @@ function EstadosSubmodulo() {
   );
 }
 
+// Componente: Tipos de oportunidad (catálogo configurable, spec 006)
+function TiposSubmodulo() {
+  const [tipos, setTipos] = useState<TipoOportunidad[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [nuevo, setNuevo] = useState({ key: "", nombreOficial: "", exigeNumero: false, exigeFechaApertura: false });
+
+  const fetchTipos = async () => {
+    try {
+      const res = await fetch("/api/licitaciones/tipos");
+      if (res.ok) setTipos(await res.json());
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTipos();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/licitaciones/tipos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nuevo),
+      });
+      if (res.ok) {
+        setNuevo({ key: "", nombreOficial: "", exigeNumero: false, exigeFechaApertura: false });
+        fetchTipos();
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="glass-panel p-6">
+        <h3 className="text-xs font-bold uppercase mb-4 flex items-center gap-2">
+          <Plus className="w-3 h-3" /> Nuevo Tipo de oportunidad
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex gap-4">
+            <input
+              type="text"
+              placeholder="Key (ej: convocatoria)"
+              value={nuevo.key}
+              onChange={(e) => setNuevo({ ...nuevo, key: e.target.value })}
+              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-neonCyan focus:outline-none"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Nombre oficial"
+              value={nuevo.nombreOficial}
+              onChange={(e) => setNuevo({ ...nuevo, nombreOficial: e.target.value })}
+              className="flex-2 w-96 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-neonCyan focus:outline-none"
+              required
+            />
+          </div>
+          <div className="flex gap-6 items-center">
+            <label className="flex items-center gap-2 text-xs text-foreground/60">
+              <input type="checkbox" checked={nuevo.exigeNumero} onChange={(e) => setNuevo({ ...nuevo, exigeNumero: e.target.checked })} />
+              Exige número
+            </label>
+            <label className="flex items-center gap-2 text-xs text-foreground/60">
+              <input type="checkbox" checked={nuevo.exigeFechaApertura} onChange={(e) => setNuevo({ ...nuevo, exigeFechaApertura: e.target.checked })} />
+              Exige fecha de apertura
+            </label>
+            <button
+              type="submit"
+              className="ml-auto px-6 py-3 bg-neonCyan/10 border border-neonCyan/30 rounded-lg text-neonCyan text-sm font-bold hover:bg-neonCyan/20 transition-colors"
+            >
+              Agregar
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-neonCyan" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {tipos.map((tipo) => (
+            <div key={tipo.id} className="glass-panel p-4">
+              <div className="flex items-center gap-3">
+                <Tag className="w-5 h-5 text-neonCyan" />
+                <div>
+                  <p className="text-white font-medium text-sm">{tipo.nombreOficial}</p>
+                  <p className="text-foreground/40 text-xs">Key: {tipo.key}</p>
+                  <p className="text-foreground/40 text-xs">
+                    {tipo.exigeNumero ? "Exige número" : "Número opcional"} ·{" "}
+                    {tipo.exigeFechaApertura ? "Exige fecha" : "Fecha opcional"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Componente principal que enruta a los submódulos
 export default function LicitacionesTab({ submoduleId }: LicitacionesTabProps) {
   switch (submoduleId) {
@@ -766,6 +907,8 @@ export default function LicitacionesTab({ submoduleId }: LicitacionesTabProps) {
       return <ListadoSubmodulo />;
     case "nueva":
       return <NuevaSubmodulo />;
+    case "tipos":
+      return <TiposSubmodulo />;
     case "entidades":
       return <EntidadesSubmodulo />;
     case "estados":
@@ -774,7 +917,7 @@ export default function LicitacionesTab({ submoduleId }: LicitacionesTabProps) {
       return (
         <div className="flex flex-col items-center justify-center h-96 text-foreground/20">
           <FileText className="w-12 h-12 mb-4" />
-          <p className="text-sm">Selecciona un submódulo de licitaciones</p>
+          <p className="text-sm">Selecciona un submódulo de oportunidades</p>
         </div>
       );
   }

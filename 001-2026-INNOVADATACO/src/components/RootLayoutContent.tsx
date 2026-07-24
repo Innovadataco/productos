@@ -14,7 +14,7 @@ const MODULES: { id: ModuleId; icon: React.ReactNode; label: string }[] = [
   { id: "investigacion", icon: <Terminal size={20} />, label: "Investigación" },
   { id: "proyectos", icon: <LayoutGrid size={20} />, label: "Proyectos" },
   { id: "base", icon: <Database size={20} />, label: "Base Oficial" },
-  { id: "licitaciones", icon: <FileText size={20} />, label: "Licitaciones" },
+  { id: "licitaciones", icon: <FileText size={20} />, label: "Oportunidades" },
   { id: "configuracion", icon: <Settings size={20} />, label: "Configuración" },
 ];
 

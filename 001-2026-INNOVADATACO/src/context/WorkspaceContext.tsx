@@ -35,7 +35,8 @@ export const SUBMODULES: Record<ModuleId, SubmoduleDef[]> = {
   ],
   licitaciones: [
     { id: "listado", title: "Listado" },
-    { id: "nueva", title: "Nueva Licitación" },
+    { id: "nueva", title: "Nueva Oportunidad" },
+    { id: "tipos", title: "Tipos" },
     { id: "entidades", title: "Entidades" },
     { id: "estados", title: "Estados" },
   ],
