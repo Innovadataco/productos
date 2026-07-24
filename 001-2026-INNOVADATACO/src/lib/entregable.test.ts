@@ -54,9 +54,24 @@ describe("datosEntregable (spec 008, US3)", () => {
       descripcion: "",
       avance: 0,
       estado: "pendiente",
+      fechaInicio: null,
       fechaCompromiso: null,
       responsable: "",
     });
+  });
+
+  it("convierte fechaInicio (spec 015) y rechaza un fin anterior al inicio", () => {
+    const datos = datosEntregable({
+      nombre: "Informe",
+      fechaInicio: "2026-09-01",
+      fechaCompromiso: "2026-09-30",
+    });
+    expect(datos.fechaInicio?.toISOString().slice(0, 10)).toBe("2026-09-01");
+
+    // La validación no deja un compromiso anterior al inicio.
+    expect(
+      validarEntregable({ nombre: "X", fechaInicio: "2026-09-30", fechaCompromiso: "2026-09-01" }),
+    ).toContain("no puede ser anterior");
   });
 
   it("convierte la fecha de compromiso y redondea el avance", () => {

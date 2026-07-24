@@ -4,6 +4,7 @@ import { useState } from "react";
 import EntregablesProyecto from "@/components/proyectos/EntregablesProyecto";
 import PanelColeccion from "@/components/proyectos/PanelColeccion";
 import PanelPresupuesto from "@/components/proyectos/PanelPresupuesto";
+import GanttProyecto from "@/components/proyectos/GanttProyecto";
 import { TIPOS_RECURSO } from "@/lib/proyectoPm2";
 import { PROBABILIDADES_RIESGO, IMPACTOS_RIESGO, ESTADOS_RIESGO } from "@/lib/riesgo";
 
@@ -47,7 +48,7 @@ interface Riesgo {
   estado: string;
 }
 
-const PESTANAS = ["Entregables", "Cronograma", "Presupuesto", "Recursos", "Lecciones", "Riesgos"] as const;
+const PESTANAS = ["Entregables", "Cronograma", "Gantt", "Presupuesto", "Recursos", "Lecciones", "Riesgos"] as const;
 type Pestana = (typeof PESTANAS)[number];
 
 const fecha = (valor: string | null) =>
@@ -99,6 +100,8 @@ export default function GestionPm2({ proyectoId }: { proyectoId: string }) {
           )}
         />
       )}
+
+      {activa === "Gantt" && <GanttProyecto proyectoId={proyectoId} />}
 
       {activa === "Presupuesto" && <PanelPresupuesto proyectoId={proyectoId} />}
 

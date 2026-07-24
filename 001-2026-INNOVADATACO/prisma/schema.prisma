@@ -257,6 +257,9 @@ model Entregable {
   avance         Int       @default(0)
   /// Estado libre y corto: "pendiente", "en curso", "entregado"…
   estado         String    @default("pendiente")
+  /// Inicio planificado (spec 015): la barra del Gantt va de aquí a
+  /// fechaCompromiso. Opcional; los entregables previos usan createdAt.
+  fechaInicio     DateTime?
   fechaCompromiso DateTime?
   responsable    String    @default("")
   createdAt      DateTime  @default(now())

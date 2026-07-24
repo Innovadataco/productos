@@ -13,6 +13,7 @@ export interface DatosEntregable {
   descripcion: string;
   avance: number;
   estado: string;
+  fechaInicio: Date | null;
   fechaCompromiso: Date | null;
   responsable: string;
 }
@@ -42,23 +43,34 @@ export function validarEntregable(datos: unknown): string | null {
     }
   }
 
+  const inicio =
+    d.fechaInicio !== undefined && d.fechaInicio !== null && d.fechaInicio !== ""
+      ? new Date(String(d.fechaInicio))
+      : null;
+  if (d.fechaInicio !== undefined && d.fechaInicio !== null && d.fechaInicio !== "" && isNaN(inicio!.getTime())) {
+    return "La fecha de inicio no es una fecha válida";
+  }
+
+  let compromiso: Date | null = null;
   if (d.fechaCompromiso !== undefined && d.fechaCompromiso !== null && d.fechaCompromiso !== "") {
-    const fecha = new Date(String(d.fechaCompromiso));
-    if (isNaN(fecha.getTime())) return "La fecha de compromiso no es una fecha válida";
+    compromiso = new Date(String(d.fechaCompromiso));
+    if (isNaN(compromiso.getTime())) return "La fecha de compromiso no es una fecha válida";
+  }
+
+  // Una barra que termina antes de empezar no es un dato raro: es imposible.
+  if (inicio && compromiso && compromiso < inicio) {
+    return "La fecha de compromiso no puede ser anterior a la de inicio";
   }
 
   return null;
 }
 
 /** Normaliza lo validado a los campos que persiste Prisma. */
-export function datosEntregable(datos: Record<string, unknown>): DatosEntregable {
-  const fecha =
-    datos.fechaCompromiso === undefined ||
-    datos.fechaCompromiso === null ||
-    datos.fechaCompromiso === ""
-      ? null
-      : new Date(String(datos.fechaCompromiso));
+function comoFechaOpcional(valor: unknown): Date | null {
+  return valor === undefined || valor === null || valor === "" ? null : new Date(String(valor));
+}
 
+export function datosEntregable(datos: Record<string, unknown>): DatosEntregable {
   return {
     nombre: String(datos.nombre).trim(),
     descripcion: datos.descripcion ? String(datos.descripcion) : "",
@@ -67,7 +79,8 @@ export function datosEntregable(datos: Record<string, unknown>): DatosEntregable
         ? 0
         : Math.round(Number(datos.avance)),
     estado: datos.estado ? String(datos.estado) : "pendiente",
-    fechaCompromiso: fecha,
+    fechaInicio: comoFechaOpcional(datos.fechaInicio),
+    fechaCompromiso: comoFechaOpcional(datos.fechaCompromiso),
     responsable: datos.responsable ? String(datos.responsable) : "",
   };
 }
