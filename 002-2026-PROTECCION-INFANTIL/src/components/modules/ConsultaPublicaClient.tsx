@@ -66,8 +66,11 @@ export function ConsultaPublicaClient() {
         setError("");
         setData(null);
         try {
-            const res = await fetch(`/api/consulta?identificador=${encodeURIComponent(identificador)}`, {
+            const res = await fetch(`/api/consulta`, {
+                method: "POST",
                 credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ identificador }),
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) {

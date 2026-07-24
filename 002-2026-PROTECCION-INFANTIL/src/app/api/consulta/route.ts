@@ -28,7 +28,7 @@ function formatFecha(date: Date | string) {
  * Divulgación progresiva: anónimo = resumen; autenticado = ciudad, timeline,
  * plataformas completas e informe.
  */
-export async function GET(request: Request) {
+async function resolverConsulta(request: Request, identificador: string) {
     try {
         const rate = await checkRateLimit(request, "consulta");
         if (!rate.allowed) {
@@ -43,9 +43,6 @@ export async function GET(request: Request) {
                 { status: 429, headers: rate.headers }
             );
         }
-
-        const { searchParams } = new URL(request.url);
-        const identificador = searchParams.get("identificador");
 
         const parsed = consultaSchema.safeParse({ identificador });
         if (!parsed.success) {
@@ -230,4 +227,28 @@ export async function GET(request: Request) {
             { status: 500 }
         );
     }
+}
+
+/**
+ * GET /api/consulta?identificador=... (compatibilidad de API).
+ * El cliente web usa POST: el identificador NUNCA debe viajar en la URL (spec 091-US1).
+ */
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    return resolverConsulta(request, searchParams.get("identificador") ?? "");
+}
+
+/**
+ * POST /api/consulta — consulta pública con el identificador en el CUERPO.
+ * Regla dura de privacidad: el identificador nunca queda en historial, logs ni caché de URLs.
+ */
+export async function POST(request: Request) {
+    let identificador = "";
+    try {
+        const body = await request.json();
+        identificador = typeof body?.identificador === "string" ? body.identificador : "";
+    } catch {
+        identificador = "";
+    }
+    return resolverConsulta(request, identificador);
 }

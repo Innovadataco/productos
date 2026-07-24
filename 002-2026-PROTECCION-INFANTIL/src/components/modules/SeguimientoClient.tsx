@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import type { BadgeVariant } from "@/components/ui/Badge";
 import { CATEGORIAS_LABELS } from "@/lib/labels";
+import { EstadoTransicion } from "./EstadoTransicion";
 
 type ClasificacionData = {
     categoria: string;
@@ -88,7 +89,19 @@ function conductasOrdenadas(clasificacion: ClasificacionData): string[] {
 
 export function SeguimientoClient() {
     const searchParams = useSearchParams();
-    const [numeroInicial] = useState(() => searchParams.get("numero") || "");
+    // Spec 091-US2: sin query param, el RPT puede llegar por sessionStorage (URL limpia).
+    const [numeroInicial] = useState(() => {
+        const porUrl = searchParams.get("numero");
+        if (porUrl) return porUrl;
+        if (typeof window !== "undefined") {
+            const guardado = sessionStorage.getItem("seguimiento.rpt");
+            if (guardado) {
+                sessionStorage.removeItem("seguimiento.rpt");
+                return guardado;
+            }
+        }
+        return "";
+    });
     const [data, setData] = useState<SeguimientoData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
@@ -162,7 +175,10 @@ export function SeguimientoClient() {
                             <p className="text-xs text-subtle">{data.plataforma}</p>
                             <h2 className="text-lg font-semibold text-body">{data.identificador}</h2>
                         </div>
-                        <Badge variant={badgeVariant(data.badge)}>{data.estadoVisual}</Badge>
+                        <div className="flex items-center gap-3">
+                            <EstadoTransicion enProceso={data.enProceso} />
+                            <Badge variant={badgeVariant(data.badge)}>{data.estadoVisual}</Badge>
+                        </div>
                     </div>
 
                     <div className={infoBox}>

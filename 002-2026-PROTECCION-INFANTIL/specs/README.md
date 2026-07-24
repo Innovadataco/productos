@@ -91,7 +91,8 @@
 | [085](085-evaluacion-error-silencioso/spec.md) | Evaluación por error silencioso y modelo por defecto (ADR_006) | 🟢 Finalizada (pendiente ACTA) |
 | [086](086-navegacion-gobernada-permisos/spec.md) | Navegación y páginas gobernadas por permisos | 🟢 Finalizada (pendiente ACTA) |
 | [089](089-presentacion-usuario/spec.md) | Presentación al usuario: estados, categorías y consulta pública | 🟢 Finalizada (pendiente ACTA) |
-| [090](090-clasificacion-rubrica-multimodelo/spec.md) | Clasificación por rúbrica multi-etiqueta + multi-modelo | 🟠 En desarrollo |
+| [090](090-clasificacion-rubrica-multimodelo/spec.md) | Clasificación por rúbrica multi-etiqueta + multi-modelo | 🟢 Finalizada (pendiente ACTA) |
+| [091](091-ux-privacidad-consulta-seguimiento/spec.md) | UX y privacidad de la consulta + seguimiento | 🟢 Finalizada (pendiente ACTA) |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 

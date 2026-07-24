@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { GET } from "./route";
+import { GET, POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -182,6 +182,36 @@ describe("GET /api/consulta", () => {
         const res = await GET(req);
         const body = await res.json();
         expect(body.tieneReportes).toBe(false);
+    });
+
+    it("spec 091-US1: POST devuelve el mismo contrato sin identificador en la URL", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        await crearReporteVisible("+57300POST", plataforma!.id, "EXTORSION", false);
+
+        // La Request NO lleva query string: el identificador viaja SOLO en el cuerpo
+        const req = new Request("http://localhost:5005/api/consulta", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ identificador: "+57300POST" }),
+        });
+        expect(new URL(req.url).search).toBe("");
+
+        const res = await POST(req);
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.tieneReportes).toBe(true);
+        expect(body.totalReportes).toBe(1);
+        expect(body.nivelRiesgo).toBeUndefined();
+    });
+
+    it("spec 091-US1: POST sin identificador en el cuerpo → 400", async () => {
+        const req = new Request("http://localhost:5005/api/consulta", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(400);
     });
 
     it("rechaza parámetros inválidos", async () => {
