@@ -18,6 +18,17 @@ vi.mock("@/lib/ai/classifier", () => ({
     clasificarConVotos: (...args: unknown[]) => mockClasificar(...args),
 }));
 
+// Spec 090: el pipeline usa el motor rúbrica cuando está habilitado; en estos tests
+// se ejerce el MISMO mock del clasificador legacy (los tests validan el pipeline, no el motor).
+vi.mock("@/lib/ai/rubrica", () => ({
+    clasificarConRubrica: async (...args: unknown[]) => {
+        const r = await mockClasificar(...args);
+        return { ...r, votosModelos: [], porcentajes: {} };
+    },
+    cargarConfigRubrica: async () => ({ enabled: true }),
+    generarAnalisisRubrica: () => "",
+}));
+
 vi.mock("@/lib/ai/embedder", () => ({
     generarEmbedding: (...args: unknown[]) => mockEmbedding(...args),
 }));

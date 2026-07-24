@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { clasificarConVotos } from "@/lib/ai/classifier";
+import { clasificarConRubrica, cargarConfigRubrica } from "@/lib/ai/rubrica";
 import { detectarPiiCombinado } from "@/lib/ai/pii-detector";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
 import type { ParametrosClasificacion } from "./parametros";
@@ -49,24 +50,44 @@ export async function clasificarReporte({
         return { clasificacion, piiResult: undefined as unknown as Awaited<ReturnType<typeof detectarPiiCombinado>> };
     }
 
+    // Spec 090: motor por rúbrica multi-etiqueta/multi-modelo si está habilitado
+    // (ia.rubrica.enabled); si no, motor legacy de votos del mismo modelo.
+    const configRubrica = await cargarConfigRubrica();
+
     const [clasifResult, piiResult] = await Promise.all([
-        clasificarConVotos(parametros.modeloClasificacion, texto, {
-            nVotos: parametros.nVotos,
-            temperatura: parametros.temperaturaVotos,
-            minScoreCategoria: parametros.minScoreCategoria,
-            umbralRevision: parametros.umbralRevision,
-            ollamaNumParallel: parametros.ollamaNumParallel,
-            ejemplos: ejemplosRag,
-            modeloDesempate: parametros.modeloDesempate,
-            keepAliveDesempate: 0,
-        }),
+        configRubrica.enabled
+            ? clasificarConRubrica(texto, configRubrica).then((r) => ({
+                  categoria: r.categoria,
+                  confianza: r.confianza,
+                  categoriasSecundarias: r.categoriasSecundarias,
+                  posibleAgresorPar: (r as unknown as { posibleAgresorPar?: boolean }).posibleAgresorPar ?? false,
+                  estado: r.estado,
+                  metrics: { modelo: r.metrics.modelo, latenciaMs: r.metrics.latenciaMs },
+                  rawResponse: r.rawResponse,
+                  votos: r.votosModelos as unknown as unknown[],
+                  promptTokens: r.metrics.promptTokens,
+                  responseTokens: r.metrics.responseTokens,
+                  usoCascada: false,
+                  modeloCascada: undefined as string | undefined,
+                  __rubrica: r,
+              }))
+            : clasificarConVotos(parametros.modeloClasificacion, texto, {
+                  nVotos: parametros.nVotos,
+                  temperatura: parametros.temperaturaVotos,
+                  minScoreCategoria: parametros.minScoreCategoria,
+                  umbralRevision: parametros.umbralRevision,
+                  ollamaNumParallel: parametros.ollamaNumParallel,
+                  ejemplos: ejemplosRag,
+                  modeloDesempate: parametros.modeloDesempate,
+                  keepAliveDesempate: 0,
+              }),
         detectarPiiCombinado(parametros.modeloAnonimizacion, texto),
     ]);
 
     const clasificacion: ClasificacionResult = { ...clasifResult };
 
     try {
-        await prisma.clasificacionIA.create({
+        const clasificacionCreada = await prisma.clasificacionIA.create({
             data: {
                 reporteId,
                 categoria: clasificacion.categoria,
@@ -85,6 +106,25 @@ export async function clasificarReporte({
                 rawResponse: String(clasificacion.rawResponse) as string | undefined,
             },
         });
+
+        // Spec 090: persistir la matriz categoría × modelo × 0/1 (con preguntas cumplidas)
+        const rubrica = (clasifResult as Record<string, unknown>).__rubrica as
+            | { votosModelos: Array<{ modelo: string; categorias: Record<string, { cumple: boolean; preguntasCumplidas: string[] }> }> }
+            | undefined;
+        if (rubrica && Array.isArray(rubrica.votosModelos)) {
+            const filas = rubrica.votosModelos.flatMap((vm) =>
+                Object.entries(vm.categorias).map(([categoria, v]) => ({
+                    clasificacionIAId: clasificacionCreada.id,
+                    modelo: vm.modelo,
+                    categoria,
+                    cumple: v.cumple,
+                    preguntasJson: v.preguntasCumplidas as unknown as Prisma.InputJsonValue,
+                }))
+            );
+            if (filas.length > 0) {
+                await prisma.clasificacionRubricaVoto.createMany({ data: filas });
+            }
+        }
     } catch (err) {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
             const clasifRecuperada = await prisma.clasificacionIA.findUnique({

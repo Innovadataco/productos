@@ -17,6 +17,7 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "ia_eval", nombre: "Evaluación del clasificador", categoria: "admin", orden: 12, padre: "centro_control_ia" },
     { clave: "ia_simulaciones", nombre: "Simulaciones", categoria: "admin", orden: 13, padre: "centro_control_ia" },
     { clave: "ia_configuracion", nombre: "Configuración del motor IA", categoria: "admin", orden: 14, padre: "centro_control_ia" },
+    { clave: "ia_rubrica", nombre: "Rúbrica de clasificación", categoria: "admin", orden: 15, padre: "centro_control_ia" },
     { clave: "operadores", nombre: "Gestión de operadores", categoria: "admin", esCritico: true, orden: 20 },
     { clave: "bandeja_reportes", nombre: "Bandeja de reportes", categoria: "operador", esCritico: true, orden: 30 },
     { clave: "revision_spam", nombre: "Revisión de spam", categoria: "operador", orden: 35 },

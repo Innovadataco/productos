@@ -106,6 +106,17 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                                 {new Date(r.creadoEn).toLocaleDateString("es-CO")}
                             </span>
                         </div>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/dashboard/mis-reportes/${r.id}`);
+                            }}
+                            className="text-xs font-medium text-accent hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded"
+                            aria-label={`Ver detalle del reporte ${r.numeroSeguimiento || r.identificador}`}
+                        >
+                            Ver detalle
+                        </button>
                         <p className="text-xs text-muted max-w-xs text-right">{r.mensaje}</p>
                         {r.ranking && (
                             <div className="flex items-center gap-2">

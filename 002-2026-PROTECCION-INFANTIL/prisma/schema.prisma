@@ -869,6 +869,7 @@ model ClasificacionIA {
 
   reporte    Reporte          @relation(fields: [reporteId], references: [id], onDelete: Cascade)
   correccion CorreccionAdmin?
+  rubricaVotos ClasificacionRubricaVoto[]
 
   @@index([categoria])
   @@index([confianza])
@@ -1095,4 +1096,18 @@ model PermisoModulo {
 
   @@unique([rol, moduloId])
   @@index([rol])
+}
+
+model ClasificacionRubricaVoto {
+  id                String   @id @default(cuid())
+  clasificacionIAId String
+  clasificacionIA   ClasificacionIA @relation(fields: [clasificacionIAId], references: [id], onDelete: Cascade)
+  modelo            String
+  categoria         String
+  cumple            Boolean
+  preguntasJson     Json
+  creadoEn          DateTime @default(now())
+
+  @@index([clasificacionIAId])
+  @@map("clasificacion_rubrica_votos")
 }

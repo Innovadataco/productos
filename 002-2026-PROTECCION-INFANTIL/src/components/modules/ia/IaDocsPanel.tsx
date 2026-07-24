@@ -28,16 +28,22 @@ const PIPELINE_STEPS = [
             "El texto se convierte en un vector numérico con el modelo de embeddings. Ese vector se usa para buscar ejemplos similares en el dataset de correcciones.",
     },
     {
+        id: "deduplicacion",
+        label: "Deduplicación",
+        description:
+            "Antes de clasificar, la similitud de embeddings detecta reportes duplicados del mismo identificador y plataforma (umbral configurable). El duplicado no se clasifica de nuevo.",
+    },
+    {
         id: "rag",
         label: "RAG",
         description:
             "Recuperación de ejemplos corregidos por administradores que son semánticamente similares al texto de entrada. Se inyectan en el prompt como contexto.",
     },
     {
-        id: "votacion",
-        label: "Votación",
+        id: "rubrica",
+        label: "Rúbrica multi-etiqueta / multi-modelo",
         description:
-            "El modelo de clasificación vota N veces sobre la categoría. La categoría ganadora es la moda. La confianza es la proporción de votos que recibió.",
+            "Un pase barato (embudo) descarta categorías sin señal. Luego N modelos DIVERSOS votan en secuencia aplicando el set de preguntas factuales de cada categoría (1 solo con evidencia clara; ante la duda, 0). % por categoría = modelos que marcaron 1 / N. Una categoría cuenta solo si supera el umbral de presencia (default 60%). Sets de preguntas, modelos, umbral y temperatura son configurables (tab Rúbrica).",
     },
     {
         id: "pii",
@@ -55,7 +61,7 @@ const PIPELINE_STEPS = [
         id: "decision",
         label: "Decisión",
         description:
-            "Si la confianza supera el umbral configurado el reporte queda CLASIFICADO; de lo contrario va a REVISION_MANUAL. Las guardas pueden forzar revisión manual.",
+            "La conducta principal es la de MAYOR GRAVEDAD entre las que superan el umbral de presencia. Si ninguna la supera (desacuerdo entre modelos), si el resultado es OTRO, o si las guardas lo fuerzan, el reporte va a revisión humana (REVISION_MANUAL). La matriz categoría × modelo queda persistida para auditoría.",
     },
 ];
 
@@ -123,7 +129,7 @@ function VoteDistributionDemo() {
                     ]}
                 />
                 <p className="mt-3 text-xs text-muted">
-                    La moda gana pero sin unanimidad. Con umbral 1.0 va a REVISION_MANUAL.
+                    La conducta principal es la de mayor gravedad entre las que superan el umbral de presencia. Sin mayoría clara (desacuerdo entre modelos) u OTRO, va a REVISION_MANUAL.
                 </p>
             </GlassCard>
         </div>

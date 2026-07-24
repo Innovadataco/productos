@@ -1,4 +1,5 @@
 import { CATALOGO_MODULOS } from "../src/lib/permisos-catalogo";
+import { RUBRICA_SEMILLA } from "../src/lib/ai/rubrica-semilla";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, CasoEvalFuente } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
@@ -948,6 +949,31 @@ async function main() {
         });
     }
     console.log("Severidades scoring.severity.* listas");
+
+    // ── Rúbrica de clasificación (spec 090) ────────────────────────────────
+    const rubricaParams = [
+        { clave: "ia.rubrica.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, descripcion: "Motor de clasificación por rúbrica multi-etiqueta/multi-modelo activo" },
+        { clave: "ia.rubrica.preguntas", valor: JSON.stringify(RUBRICA_SEMILLA), tipo: TipoParametro.JSON, descripcion: "Sets de preguntas factuales por categoría (editables por expertos)" },
+        { clave: "ia.rubrica.modelos", valor: JSON.stringify(["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"]), tipo: TipoParametro.JSON, descripcion: "Modelos diversos que votan en la rúbrica (secuencial, 1 voto c/u)" },
+        { clave: "ia.rubrica.temperatura", valor: "0.2", tipo: TipoParametro.FLOAT, descripcion: "Temperatura de los votos de la rúbrica (baja = determinista)" },
+        { clave: "ia.rubrica.umbral_presencia", valor: "0.6", tipo: TipoParametro.FLOAT, descripcion: "% mínimo de modelos que deben marcar 1 para que una categoría cuente (0.6 ≈ 2/3)" },
+        { clave: "ia.rubrica.modelo_embudo", valor: "qwen2.5:14b", tipo: TipoParametro.STRING, descripcion: "Modelo del pase barato que descarta categorías sin señal" },
+    ];
+    for (const rp of rubricaParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: rp.clave },
+            update: {},
+            create: {
+                clave: rp.clave,
+                valor: rp.valor,
+                tipo: rp.tipo,
+                categoria: CategoriaParametro.SYSTEM,
+                esPublico: false,
+                descripcion: rp.descripcion,
+            },
+        });
+    }
+    console.log("Rúbrica de clasificación (spec 090) lista");
 
     for (const p of reportesParams) {
         await prisma.parametroSistema.upsert({

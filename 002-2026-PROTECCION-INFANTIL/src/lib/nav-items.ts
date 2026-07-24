@@ -42,6 +42,7 @@ export const COLEGIO_NAV_ITEMS: NavItem[] = [
 export const IA_TABS: Array<{ key: string; label: string; modulo: string | null }> = [
     { key: "documentacion", label: "Documentación", modulo: null },
     { key: "playground", label: "Playground", modulo: "ia_playground" },
+    { key: "rubrica", label: "Rúbrica", modulo: "ia_rubrica" },
     { key: "eval", label: "Eval", modulo: "ia_eval" },
     { key: "configuracion", label: "Configuración", modulo: "ia_configuracion" },
 ];

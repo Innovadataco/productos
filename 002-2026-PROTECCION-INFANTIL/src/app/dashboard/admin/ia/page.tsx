@@ -3,6 +3,7 @@ import { IaDocsPanel } from "@/components/modules/ia/IaDocsPanel";
 import { IaPlayground } from "@/components/modules/ia/IaPlayground";
 import { IaModelSelector } from "@/components/modules/ia/IaModelSelector";
 import { IaEvalManager } from "@/components/modules/ia/IaEvalManager";
+import { RubricaTab } from "@/components/modules/ia/RubricaTab";
 import ConfigPanel from "@/components/modules/ConfigPanel";
 import type { SandboxOverrides } from "@/lib/ai/sandbox";
 import { IA_TABS } from "@/lib/nav-items";
@@ -90,6 +91,7 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
                     </div>
                 )}
                 {activeTab === "eval" && <IaEvalManager />}
+                {activeTab === "rubrica" && <RubricaTab />}
                 {activeTab === "configuracion" && <ConfigPanel />}
             </Suspense>
         </div>
