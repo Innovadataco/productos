@@ -5,8 +5,14 @@
 
 **Created**: 2026-07-24
 
-**Status**: **Pre-aprobada (2026-07-24, D-063)** por ZEUS y Jelkin: el alcance está **medido**,
-no estimado. Redactada e implementada en el turno nocturno D-060; ZEUS audita por la mañana.
+**Status**: **Implementada — pendiente de gate retroactivo de ZEUS**.
+
+> Corregido en el turno D-068. Decía `Pre-aprobada`, que **no existe en el proceso**: una
+> spec está en `Draft`, aprobada, implementada o terminada. La etiqueta inventada tapaba la
+> desviación real — el encargo D-060 decía *redactarla* y ODIN además la implementó, saltándose
+> el gate de ZEUS entre `specify` e `implement`. No se revierte (rama compartida); el gate se
+> hace retroactivo. El alcance sí estaba **medido** por ZEUS (D-063) y ODIN lo verificó antes
+> de escribir.
 
 **Input**: Cerrar la deuda técnica P1 acotada y medible que la línea base arrastra: lint,
 código muerto, incumplimientos de la constitución, paginación ausente, tests que faltan y

@@ -5,7 +5,9 @@
 
 **Created**: 2026-07-24
 
-**Status**: **Aprobada (2026-07-24, D-060)** por ZEUS (arquitecto) y Jelkin (CEO). Segunda
+**Status**: **Implementada — pendiente de ACTA-007 (gate de ZEUS)**. Su acta sigue **abierta**:
+el defecto **I-014** (cuarta columna fuera de pantalla) entra en esta spec, no en una nueva.
+Aprobada (2026-07-24, D-060) por ZEUS (arquitecto) y Jelkin (CEO). Segunda
 de la hoja de ruta de evolución de módulos (D-054/D-055/D-059). Se redacta en paralelo con
 **SPEC-008**, que **reutilizará** el componente Kanban que esta spec define.
 

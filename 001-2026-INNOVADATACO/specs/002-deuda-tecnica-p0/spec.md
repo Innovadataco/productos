@@ -4,8 +4,10 @@
 
 **Created**: 2026-07-22
 
-**Status**: Approved — aprobada por ZEUS (arquitecto) y Jelkin (CEO) el 2026-07-22
-(plan y tasks aprobados el mismo día)
+**Status**: **Terminada (ACTA-VALIDACION 002, 2026-07-23)**. Aprobada por ZEUS (arquitecto)
+y Jelkin (CEO) el 2026-07-22 (plan y tasks aprobados el mismo día). El acta lleva fe de
+erratas: el criterio 3 se dio por bueno con la suite verde mientras el type check seguía
+roto; el gate es `npx tsc --noEmit`, no `npm run build`.
 
 **Input**: User description: "Deuda técnica P0 (alcance decidido por ZEUS):
 (a) harness de tests — vitest carga variables de entorno y el test de login queda

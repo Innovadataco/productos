@@ -5,7 +5,8 @@
 
 **Created**: 2026-07-24
 
-**Status**: **Aprobada (2026-07-24, D-060)** por ZEUS (arquitecto) y Jelkin (CEO). Tercera de
+**Status**: **Implementada — pendiente de ACTA-008 (gate de ZEUS)**.
+Aprobada (2026-07-24, D-060) por ZEUS (arquitecto) y Jelkin (CEO). Tercera de
 la hoja de ruta de evolución de módulos (D-054/D-055/D-059). **Depende de SPEC-007**: reutiliza
 su componente Kanban para las fases del proyecto.
 

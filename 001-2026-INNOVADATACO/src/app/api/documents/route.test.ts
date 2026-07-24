@@ -13,6 +13,11 @@ vi.mock("@/lib/auth", async () => {
 vi.mock("@/lib/audit", () => ({ auditLog: vi.fn() }));
 // La extracción real de PDF y la cola quedan fuera del test unitario.
 vi.mock("@/lib/documentProcessor", () => ({ extractPdfText: vi.fn() }));
+// El disco también: sin esto, el caso de travesía de directorios escribía un
+// fichero DE VERDAD en uploads/ en cada `npm test`. La aserción no pierde nada
+// —comprueba el `archivoUrl` que recibe Prisma, no el inodo—, y el árbol del
+// CEO deja de llenarse de basura de la suite.
+vi.mock("fs/promises", () => ({ writeFile: vi.fn(), mkdir: vi.fn() }));
 
 import { prisma } from "@/lib/prisma";
 import { extractPdfText } from "@/lib/documentProcessor";

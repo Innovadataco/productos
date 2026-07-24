@@ -4,7 +4,11 @@
 
 **Created**: 2026-07-23
 
-**Status**: Draft — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO)
+**Status**: **Terminada (ACTA-VALIDACION 003, 2026-07-23)**.
+
+> Corregido en el turno D-068: la spec seguía marcada `Draft` cuando llevaba terminada
+> desde el 2026-07-23. Es la spec que **desbloqueó la Regla de Oro 4** para las actas 001 y
+> 002, así que dejarla en `Draft` contradecía a otras dos actas, no solo a la suya.
 
 **Input**: Cuatro defectos detectados durante la validación funcional (incidencias
 **I-004, I-005, I-006, I-007**) que bloquean la **Regla de Oro 4**. Restricciones de

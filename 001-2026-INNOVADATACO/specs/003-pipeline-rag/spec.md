@@ -4,7 +4,9 @@
 
 **Created**: 2026-07-22
 
-**Status**: **Aprobada (2026-07-23, D-044)** por ZEUS (arquitecto) y Jelkin (CEO). Habilita
+**Status**: **Terminada (ACTA-VALIDACION 005, 2026-07-23)** — primera spec del proyecto
+firmada funcionalmente por el CEO. Aprobada (2026-07-23, D-044) por ZEUS (arquitecto) y
+Jelkin (CEO). Habilita
 `/speckit-plan` y `/speckit-tasks`. La implementación no arranca hasta que ZEUS apruebe el
 plan; el trabajo pesado (TP-1…TP-4) exige además turno de Jelkin en su momento (ADR_002).
 
