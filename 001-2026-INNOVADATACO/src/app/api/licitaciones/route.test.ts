@@ -63,8 +63,10 @@ describe("GET /api/licitaciones (oportunidades)", () => {
     vi.mocked(prisma.licitacion.count).mockResolvedValue(0 as never);
 
     await GET(new NextRequest(`${url}?page=3&pageSize=10`));
-    let args = primerArgumento(vi.mocked(prisma.licitacion.findMany));
-    expect(args).toMatchObject({ skip: 20, take: 10 });
+    expect(primerArgumento(vi.mocked(prisma.licitacion.findMany))).toMatchObject({
+      skip: 20,
+      take: 10,
+    });
 
     await GET(new NextRequest(`${url}?pageSize=99999`));
     // Última llamada: `primerArgumento` mira la primera y aquí van dos.
