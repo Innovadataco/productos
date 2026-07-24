@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, Building2, Tag, Calendar, Plus, Search, Trash2, Edit, Eye, Loader2, X, Save } from "lucide-react";
+import { FileText, Building2, Tag, Calendar, Plus, Search, Trash2, Edit, Loader2, Save } from "lucide-react";
 import TableroOportunidades from "@/components/licitaciones/TableroOportunidades";
 
 interface Licitacion {

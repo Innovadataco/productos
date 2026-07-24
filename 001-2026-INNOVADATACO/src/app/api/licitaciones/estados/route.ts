@@ -4,7 +4,7 @@ import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/licitaciones/estados - Listar todos los estados
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await verifyAuth();
     if (!session) return noAutenticado();

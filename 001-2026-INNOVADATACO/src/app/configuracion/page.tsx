@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import ParametrizacionTab from "@/components/configuracion/ParametrizacionTab";
 import { listaSegura } from "@/lib/respuestaApi";
 import {
-  Settings, Cpu, Globe, Terminal, Save, Plus, Trash2, RefreshCw,
+  Cpu, Globe, Terminal, Save, Plus, Trash2, RefreshCw,
   CheckCircle, XCircle, AlertCircle, Clock, X, ArrowLeft
 } from "lucide-react";
 

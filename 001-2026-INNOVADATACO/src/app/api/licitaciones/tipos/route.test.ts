@@ -9,7 +9,6 @@ vi.mock("@/lib/auth", async () => {
   return createAuthMock();
 });
 
-import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { GET, POST } from "./route";
@@ -27,7 +26,7 @@ describe("GET /api/licitaciones/tipos (spec 006, FR-002)", () => {
 
   it("rechaza con 401 sin sesión y no consulta la base", async () => {
     await sinSesion();
-    const res = await GET(new NextRequest(url));
+    const res = await GET();
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
     expect(prisma.tipoOportunidad.findMany).not.toHaveBeenCalled();
@@ -36,7 +35,7 @@ describe("GET /api/licitaciones/tipos (spec 006, FR-002)", () => {
   it("devuelve el catálogo de tipos", async () => {
     const fixture = [{ id: 1, key: "licitacion-publica", nombreOficial: "Licitación pública", exigeNumero: true, exigeFechaApertura: true }];
     vi.mocked(prisma.tipoOportunidad.findMany).mockResolvedValue(fixture as never);
-    const res = await GET(new NextRequest(url));
+    const res = await GET();
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(fixture);
   });
@@ -44,7 +43,7 @@ describe("GET /api/licitaciones/tipos (spec 006, FR-002)", () => {
   it("no filtra el mensaje de excepción al cliente (FR-020)", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(prisma.tipoOportunidad.findMany).mockRejectedValue(new Error("fallo en 10.0.0.9"));
-    const res = await GET(new NextRequest(url));
+    const res = await GET();
     const body = await res.json();
     expect(res.status).toBe(500);
     expect(body).toEqual({ error: "Error al obtener tipos" });

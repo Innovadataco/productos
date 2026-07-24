@@ -18,12 +18,6 @@ const TIPO_JERARQUIA: Record<string, number> = {
   otro: 9,
 };
 
-function parseDate(value?: string | null): Date | null {
-  if (!value) return null;
-  const d = new Date(value);
-  return isNaN(d.getTime()) ? null : d;
-}
-
 // Singleton de pg-boss usando promesa para evitar condición de carrera
 let bossPromise: Promise<PgBoss> | null = null;
 
@@ -51,9 +45,13 @@ export async function POST(req: NextRequest) {
     const tipo = (form.get("tipo") as string) || "otro";
     const sector = (form.get("sector") as string) || "";
     const entidad = (form.get("entidad") as string) || "";
-    const fechaExpedicion = (form.get("fechaExpedicion") as string) || null;
-    const numero = (form.get("numero") as string) || "";
     const titulo = (form.get("titulo") as string) || "";
+    // OJO (hallazgo de la auditoría de deuda, spec 009): el formulario también
+    // envía `numero` y `fechaExpedicion`, y esta ruta los leía sin persistirlos
+    // nunca — se perdían en silencio. Se retira la lectura muerta para no
+    // fingir que se usan; **persistirlos es un cambio de comportamiento** sobre
+    // Base Oficial (¿pisa el worker lo que escribe el usuario?) y queda
+    // reportado para que lo decida ZEUS, no resuelto a ciegas de madrugada.
     const padreId = (form.get("padreId") as string) || null;
 
     if (!file) return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });

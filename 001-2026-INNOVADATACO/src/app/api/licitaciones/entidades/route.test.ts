@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { NextRequest } from "next/server";
 
 vi.mock("@/lib/prisma", async () => {
   const { createPrismaMock } = await import("@/test/prismaMock");
@@ -29,7 +28,7 @@ describe("GET /api/licitaciones/entidades", () => {
     const fixture = [{ id: 1, key: "minhacienda", nombreOficial: "Ministerio de Hacienda" }];
     vi.mocked(prisma.entidadLicitacion.findMany).mockResolvedValue(fixture as never);
 
-    const res = await GET(new NextRequest("http://localhost:5001/api/licitaciones/entidades"));
+    const res = await GET();
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(fixture);
@@ -39,7 +38,7 @@ describe("GET /api/licitaciones/entidades", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(prisma.entidadLicitacion.findMany).mockRejectedValue(new Error("fallo interno en 10.0.0.7"));
 
-    const res = await GET(new NextRequest("http://localhost:5001/api/licitaciones/entidades"));
+    const res = await GET();
     const body = await res.json();
 
     expect(res.status).toBe(500);
@@ -101,7 +100,7 @@ describe("GET /api/licitaciones/entidades — sesión obligatoria (spec 005, FR-
     await sinSesion();
     vi.mocked(prisma.entidadLicitacion.findMany).mockReset();
 
-    const res = await GET(new NextRequest("http://localhost:5001/api/licitaciones/entidades"));
+    const res = await GET();
 
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({ error: "No autenticado" });

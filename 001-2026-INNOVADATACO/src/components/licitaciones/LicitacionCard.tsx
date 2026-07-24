@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+
 
 interface Licitacion {
   id: string;
@@ -46,8 +46,6 @@ export default function LicitacionCard({
   onDelete,
   onView,
 }: LicitacionCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   const formatoFecha = (fecha: string) => {
     return new Date(fecha).toLocaleDateString("es-CO", {
       year: "numeric",

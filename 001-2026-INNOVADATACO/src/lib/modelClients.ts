@@ -1,4 +1,3 @@
-import { sanitizeJsonText } from "./prompts";
 import { decrypt } from "./crypto";
 
 export interface ModelConfig {

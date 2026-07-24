@@ -1,4 +1,3 @@
-const PDFParser = require("pdf2json");
 import { ENTIDADES_COLOMBIA } from "./entidadesColombia";
 import { SECTORES_COLOMBIA } from "./sectoresColombia";
 
@@ -156,11 +155,24 @@ interface PdfData {
   Pages: PdfPage[];
 }
 
-interface PdfParserError {
-  parserError?: Error;
-}
+/**
+ * Forma del error que emite pdf2json. Al pasar de `require()` a importación
+ * dinámica el paquete aporta sus propios tipos, así que este alias sigue al
+ * suyo en vez de inventar uno paralelo.
+ */
+type PdfParserError = Error | { parserError: Error };
 
-export function extractPdfText(buffer: Buffer): Promise<string> {
+/**
+ * Extrae el texto de un PDF (spec 009, FR-007).
+ *
+ * pdf2json se carga con **importación dinámica**, no con `require()` (§8.1,
+ * objetivo 0). El efecto secundario es bueno: la carga pasa a ser perezosa, así
+ * que importar este módulo —por ejemplo desde la suite— ya no arrastra el parser
+ * si nadie extrae un PDF.
+ */
+export async function extractPdfText(buffer: Buffer): Promise<string> {
+  const { default: PDFParser } = await import("pdf2json");
+
   return new Promise((resolve, reject) => {
     const pdfParser = new PDFParser();
     let resolved = false;
@@ -174,7 +186,8 @@ export function extractPdfText(buffer: Buffer): Promise<string> {
       if (!resolved) {
         resolved = true;
         clearTimeout(timer);
-        reject(err?.parserError || err || new Error("Error parseando PDF"));
+        const detalle = err instanceof Error ? err : err?.parserError;
+        reject(detalle || new Error("Error parseando PDF"));
       }
     });
     pdfParser.on("pdfParser_dataReady", (pdfData: PdfData) => {

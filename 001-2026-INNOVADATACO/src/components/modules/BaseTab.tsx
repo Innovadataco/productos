@@ -60,13 +60,6 @@ type QueueItem = {
   error?: string;
 };
 
-type ProcessingDoc = {
-  id: string;
-  titulo: string;
-  status: string;
-  createdAt: string;
-};
-
 const TIPOS = [
   { value: "constitucion", label: "Constitución", nivel: 1 },
   { value: "ley", label: "Ley", nivel: 2 },
@@ -391,7 +384,7 @@ function useProcessingDocs() {
 }
 
 function CargaDocumental() {
-  const { queue, addFiles, processQueue, removeItem, clearCompleted, setQueue } = useQueue();
+  const { queue, addFiles, processQueue, removeItem, clearCompleted } = useQueue();
   const { processingDocs, activeModel, refresh: refreshProcessing } = useProcessingDocs();
   const [editingResult, setEditingResult] = useState<Doc | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<{ show: boolean; count: number }>({ show: false, count: 0 });
