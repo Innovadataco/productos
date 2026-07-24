@@ -234,6 +234,10 @@ model Proyecto {
   updatedAt    DateTime @updatedAt
 
   entregables Entregable[]
+  hitos       HitoProyecto[]
+  partidas    PartidaProyecto[]
+  recursos    RecursoProyecto[]
+  lecciones   LeccionAprendida[]
 
   @@index([estado])
   @@index([currentPhase])
@@ -261,6 +265,80 @@ model Entregable {
 
   @@index([proyectoId])
   @@map("entregables")
+}
+
+/// Hito o actividad del cronograma (spec 008, US4 / FR-011). `fecha` es la del
+/// hito; `fechaFin` solo la usan las actividades que abarcan un periodo.
+model HitoProyecto {
+  id         String    @id @default(cuid())
+  proyectoId String
+  nombre     String
+  fecha      DateTime
+  fechaFin   DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+
+  @@index([proyectoId])
+  @@map("hitos_proyecto")
+}
+
+/// Partida de presupuesto con control de gasto PM2 (spec 008, US5 / FR-012).
+/// Replica el patrón de `PartidaPresupuesto` de Oportunidades y lo extiende con
+/// planeado vs ejecutado: son dominios distintos, así que se replica el patrón,
+/// no la tabla. Que lo ejecutado supere lo planeado es un dato a MOSTRAR
+/// (desviación), no algo que impedir.
+model PartidaProyecto {
+  id             String   @id @default(cuid())
+  proyectoId     String
+  concepto       String
+  montoPlaneado  Decimal  @default(0) @db.Decimal(18, 2)
+  montoEjecutado Decimal  @default(0) @db.Decimal(18, 2)
+  moneda         String   @default("COP")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+
+  @@index([proyectoId])
+  @@map("partidas_proyecto")
+}
+
+/// Recurso del proyecto (spec 008, US5 / FR-013). El CEO pidió los cuatro datos:
+/// nombre y rol, tipo, costo/tarifa y disponibilidad. `rol` puede quedar vacío
+/// en los materiales, que no tienen rol (spec, Edge Cases).
+model RecursoProyecto {
+  id             String   @id @default(cuid())
+  proyectoId     String
+  nombre         String
+  rol            String   @default("")
+  tipo           String   @default("humano")
+  costo          Decimal  @default(0) @db.Decimal(18, 2)
+  disponibilidad String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+
+  @@index([proyectoId])
+  @@map("recursos_proyecto")
+}
+
+/// Lección aprendida (spec 008, US6 / FR-014). Parte del Cierre PM2.
+model LeccionAprendida {
+  id          String   @id @default(cuid())
+  proyectoId  String
+  descripcion String
+  categoria   String   @default("")
+  impacto     String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+
+  @@index([proyectoId])
+  @@map("lecciones_aprendidas")
 }
 
 model DocumentoChunk {

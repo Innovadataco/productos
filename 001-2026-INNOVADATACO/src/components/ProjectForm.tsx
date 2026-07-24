@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X, Send, ShieldCheck, Database, Calendar } from "lucide-react";
 import { FASES_PM2 } from "@/lib/fasesPm2";
-import EntregablesProyecto from "@/components/proyectos/EntregablesProyecto";
+import GestionPm2 from "@/components/proyectos/GestionPm2";
 
 /**
  * Formulario de proyecto: crea Y edita (spec 008, FR-004).
@@ -84,7 +84,7 @@ export default function ProjectForm({ onClose, onRefresh, proyecto }: ProjectFor
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="glass-panel w-full max-w-lg p-8 space-y-6 relative overflow-hidden">
+      <div className="glass-panel w-full max-w-lg p-8 space-y-6 relative max-h-[90vh] overflow-y-auto">
         <div className="absolute top-0 right-0 p-4">
           <button onClick={onClose} className="text-[#444] hover:text-white transition-colors">
             <X className="w-5 h-5" />
@@ -164,9 +164,9 @@ export default function ProjectForm({ onClose, onRefresh, proyecto }: ProjectFor
           </button>
         </form>
 
-        {/* Los entregables solo tienen sentido sobre un proyecto que ya existe
-            (spec 008, US3): en el alta todavía no hay id al que colgarlos. */}
-        {editando && <EntregablesProyecto proyectoId={proyecto.id} />}
+        {/* La gestión PM2 solo tiene sentido sobre un proyecto que ya existe
+            (spec 008, US3–US6): en el alta todavía no hay id al que colgar nada. */}
+        {editando && <GestionPm2 proyectoId={proyecto.id} />}
 
         <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[8px] text-[#444] font-bold uppercase tracking-widest">
            {/* El rótulo decía "Local Storage Active": los proyectos viven en
