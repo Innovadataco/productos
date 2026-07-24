@@ -5,6 +5,7 @@ import { prisma } from "./prisma";
 import { AppError, ERROR_CODES } from "./errors";
 import { requireEnv } from "./env";
 import type { RolUsuario } from "@prisma/client";
+import { getParametroSistema } from "./parametros";
 
 const LEGACY_COOKIE_NAME = "token";
 const HOST_COOKIE_NAME = "__Host-token";
@@ -17,7 +18,15 @@ function getSecret(): Uint8Array {
     return new TextEncoder().encode(requireEnv("JWT_SECRET", 32));
 }
 
-const JWT_TTL = "24h";
+// Spec 095-US2 (D-21): el TTL del JWT es un parámetro (security.jwt_ttl_hours), no un literal.
+// Fallback seguro: 24h si el parámetro no existe o es inválido.
+const JWT_TTL_FALLBACK_HOURS = 24;
+
+async function obtenerJwtTtlSegundos(): Promise<number> {
+    const param = await getParametroSistema("security.jwt_ttl_hours");
+    const horas = param ? parseInt(param.valor, 10) : NaN;
+    return (Number.isFinite(horas) && horas > 0 ? horas : JWT_TTL_FALLBACK_HOURS) * 3600;
+}
 
 export function isSecureRequest(request: Request): boolean {
     // Permite forzar el comportamiento desde variables de entorno.
@@ -52,7 +61,7 @@ export async function createToken(payload: Record<string, unknown>): Promise<str
     return new SignJWT(payload)
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
-        .setExpirationTime(JWT_TTL)
+        .setExpirationTime(`${(await obtenerJwtTtlSegundos()) / 3600}h`)
         .sign(getSecret());
 }
 

@@ -72,14 +72,6 @@ async function main() {
             descripcion: "Vida del token JWT en horas",
         },
         {
-            clave: "system.maintenance_mode",
-            valor: "false",
-            tipo: TipoParametro.BOOLEAN,
-            categoria: CategoriaParametro.SYSTEM,
-            esPublico: true,
-            descripcion: "Modo mantenimiento de la plataforma",
-        },
-        {
             clave: "ui.sla_horas_procesamiento",
             valor: "24",
             tipo: TipoParametro.INTEGER,
@@ -308,22 +300,6 @@ async function main() {
             categoria: CategoriaParametro.SECURITY,
             esPublico: true,
             descripcion: "Longitud mínima de texto para no marcar como spam",
-        },
-        {
-            clave: "reportes.worker.max_retries",
-            valor: "3",
-            tipo: TipoParametro.INTEGER,
-            categoria: CategoriaParametro.SECURITY,
-            esPublico: false,
-            descripcion: "Máximo de reintentos de procesamiento por job",
-        },
-        {
-            clave: "reportes.worker.stalled_threshold_minutes",
-            valor: "5",
-            tipo: TipoParametro.INTEGER,
-            categoria: CategoriaParametro.SECURITY,
-            esPublico: false,
-            descripcion: "Minutos antes de alertar cola estancada",
         },
         {
             clave: "reportes.anonymization_model",
@@ -952,7 +928,7 @@ async function main() {
 
     // ── Rúbrica de clasificación (spec 090) ────────────────────────────────
     const rubricaParams = [
-        { clave: "ia.rubrica.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, descripcion: "Motor de clasificación por rúbrica multi-etiqueta/multi-modelo activo" },
+        { clave: "ia.rubrica.enabled", valor: "false", tipo: TipoParametro.BOOLEAN, descripcion: "Motor rúbrica multi-etiqueta/multi-modelo (D-19: legacy por defecto; la rúbrica sigue en desarrollo, activable por parámetro)" },
         { clave: "ia.rubrica.preguntas", valor: JSON.stringify(RUBRICA_SEMILLA), tipo: TipoParametro.JSON, descripcion: "Sets de preguntas factuales por categoría (editables por expertos)" },
         { clave: "ia.rubrica.modelos", valor: JSON.stringify(["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"]), tipo: TipoParametro.JSON, descripcion: "Modelos diversos que votan en la rúbrica (secuencial, 1 voto c/u)" },
         { clave: "ia.rubrica.temperatura", valor: "0.2", tipo: TipoParametro.FLOAT, descripcion: "Temperatura de los votos de la rúbrica (baja = determinista)" },
@@ -1300,6 +1276,49 @@ async function seedEvalFixture() {
     }
 
     console.log(`Casos de evaluación SEMILLA: ${created} creados, ${updated} actualizados`);
+
+    // Spec 095-US3a (D-20): el banco GOBERNADO es el de 200 casos (fixtureVersion 2,
+    // scripts/simulacion/simulacion-50-casos-eval.json); el fixture v1 (110) queda subordinado.
+    await seedBancoGobernado();
+}
+
+async function seedBancoGobernado() {
+    const bancoPath = path.join(process.cwd(), "scripts", "simulacion", "simulacion-50-casos-eval.json");
+    let raw: string;
+    try {
+        raw = await fs.readFile(bancoPath, "utf-8");
+    } catch {
+        console.warn("No se encontró el banco gobernado; omitiendo");
+        return;
+    }
+    const banco = JSON.parse(raw) as { casos?: { texto: string; categoriaEsperada?: string; secundariaEsperada?: string }[] };
+    const casos = banco.casos ?? [];
+    let created = 0;
+    let updated = 0;
+    for (const c of casos) {
+        if (!c.categoriaEsperada) continue;
+        const existing = await prisma.casoEval.findFirst({
+            where: { texto: c.texto, fuente: CasoEvalFuente.SEMILLA, fixtureVersion: 2 },
+        });
+        const data = {
+            categoriaEsperada: c.categoriaEsperada,
+            secundariaEsperada: c.secundariaEsperada ?? null,
+            ruido: false,
+            activo: true,
+        };
+        if (existing) {
+            if (existing.categoriaEsperada !== data.categoriaEsperada || existing.secundariaEsperada !== data.secundariaEsperada) {
+                await prisma.casoEval.update({ where: { id: existing.id }, data });
+                updated++;
+            }
+        } else {
+            await prisma.casoEval.create({
+                data: { texto: c.texto, ...data, fuente: CasoEvalFuente.SEMILLA, fixtureVersion: 2, creadoPorId: null },
+            });
+            created++;
+        }
+    }
+    console.log(`Banco gobernado (fixtureVersion 2): ${created} creados, ${updated} actualizados (${casos.length} casos)`);
 }
 
 main()

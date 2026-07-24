@@ -3,17 +3,18 @@ import { z } from "zod";
 import { verifyAuth, hashPassword, verifyPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { getParametroSistema } from "@/lib/parametros";
 
-const schema = z.object({
+const schemaBase = z.object({
     passwordActual: z.string().min(1),
-    passwordNueva: z.string().min(8).max(100),
+    passwordNueva: z.string().max(100),
 });
 
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth();
         const body = await request.json();
-        const parsed = schema.safeParse(body);
+        const parsed = schemaBase.safeParse(body);
         if (!parsed.success) {
             return NextResponse.json(
                 { error: { message: "Datos inválidos", code: ERROR_CODES.VALIDATION_ERROR } },
@@ -22,6 +23,16 @@ export async function POST(request: Request) {
         }
 
         const { passwordActual, passwordNueva } = parsed.data;
+
+        // Spec 095-US2: longitud mínima de contraseña desde parámetro (security.password_min_length, fallback 8)
+        const paramMin = await getParametroSistema("security.password_min_length");
+        const minLength = parseInt(paramMin?.valor ?? "8", 10);
+        if (passwordNueva.length < minLength) {
+            return NextResponse.json(
+                { error: { message: `La contraseña debe tener al menos ${minLength} caracteres`, code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
 
         const valid = await verifyPassword(passwordActual, user.passwordHash);
         if (!valid) {

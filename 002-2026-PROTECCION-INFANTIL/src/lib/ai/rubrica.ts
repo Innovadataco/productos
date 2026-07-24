@@ -102,7 +102,8 @@ export async function cargarConfigRubrica(): Promise<ConfigRubrica> {
         getParametroSistema("ia.rubrica.modelo_embudo"),
     ]);
     return {
-        enabled: enabled?.valor !== "false",
+        // D-19 (spec 095): el default seguro es el motor LEGACY; la rúbrica se activa explícitamente.
+        enabled: enabled?.valor === "true",
         preguntas: preguntas ? (JSON.parse(preguntas.valor) as SetsRubrica) : RUBRICA_SEMILLA,
         modelos: modelos ? (JSON.parse(modelos.valor) as string[]) : ["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"],
         temperatura: temperatura ? parseFloat(temperatura.valor) : 0.2,

@@ -96,6 +96,7 @@
 | [092](092-motor-logica-corregida/spec.md) | Motor: lógica corregida y validada | 🟢 Finalizada (pendiente ACTA) |
 | [093](093-coherencia-padre/spec.md) | Coherencia del padre autenticado | 🟢 Finalizada (pendiente ACTA) |
 | [094](094-deuda-tecnica-documentacion/spec.md) | Deuda técnica y documentación | 🟢 Finalizada (pendiente ACTA) |
+| [095](095-default-seguro-jwt-banco/spec.md) | Default seguro, JWT parametrizado y banco gobernado | 🟠 En desarrollo |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 
