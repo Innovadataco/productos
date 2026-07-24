@@ -5,9 +5,10 @@
 
 **Created**: 2026-07-23
 
-**Status**: **Draft** — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO).
-Primera de tres specs de la hoja de ruta de evolución de módulos (D-054, D-055). El Kanban
-de estados es **SPEC-007** y **no** entra aquí.
+**Status**: **Aprobada (2026-07-23, D-056)** por ZEUS (arquitecto) y Jelkin (CEO). Habilita
+`/speckit-plan`, `/speckit-analyze` e `/speckit-implement`. Primera de tres specs de la hoja
+de ruta de evolución de módulos (D-054, D-055). El Kanban de estados es **SPEC-007** y **no**
+entra aquí.
 
 **Input**: Renombre conceptual de "Licitación" a "Oportunidad" (concepto más amplio) más
 enriquecimiento del modelo y un expediente de documentos adjuntos. Alcance y restricciones
