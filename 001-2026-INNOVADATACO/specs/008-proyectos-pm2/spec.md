@@ -5,9 +5,18 @@
 
 **Created**: 2026-07-24
 
-**Status**: **Draft** — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO). Tercera de
+**Status**: **Aprobada (2026-07-24, D-060)** por ZEUS (arquitecto) y Jelkin (CEO). Tercera de
 la hoja de ruta de evolución de módulos (D-054/D-055/D-059). **Depende de SPEC-007**: reutiliza
 su componente Kanban para las fases del proyecto.
+
+> **D-060**: turno nocturno desatendido. La compuerta del plan queda delegada en ODIN y la
+> sustituye `/speckit-analyze`; ZEUS audita por la mañana. **US1 y US2 son el mínimo de la
+> noche**; US3–US6 entran por prioridad si queda tiempo, cada una en su commit.
+
+> **Incidencia I-011** (reportada por el CEO probando la app, 2026-07-24) entra en **US1**:
+> la tarjeta de proyecto pinta un icono `ArrowRight` con efecto hover pero sin `onClick` ni
+> enlace — el usuario pulsa y no pasa nada. Criterio general que se aplica a todo el módulo:
+> **ningún elemento debe señalar interactividad que no tiene**.
 
 **Input**: Hoy Proyectos solo crea y no edita. Se reconstruye como gestión de proyectos según la
 metodología **PM2** de IDC: editar, fases en Kanban (reusando SPEC-007), entregables, cronograma,
