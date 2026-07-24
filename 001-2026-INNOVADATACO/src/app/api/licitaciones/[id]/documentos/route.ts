@@ -4,6 +4,7 @@ import { join } from "path";
 import { apiError, noAutenticado } from "@/lib/apiError";
 import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { extensionDe, nombreDeArchivo, validaArchivo } from "@/lib/subidaArchivos";
 
 /**
  * Expediente de una oportunidad (spec 006, US4). Sube documentos del proceso
@@ -14,20 +15,11 @@ import { prisma } from "@/lib/prisma";
  * del RAG. Este archivo no importa NADA del pipeline documental.
  */
 
-const MAX_SIZE = 10 * 1024 * 1024; // 10 MB (§2.6)
-
-// Tipos aceptados: PDF y Excel. Se valida por extensión (fiable) y, si viene,
-// por MIME. Un .exe o una imagen se rechazan.
+// Tipos aceptados: PDF y Excel. Se valida por extensión. Un .exe o una imagen
+// se rechazan. La validación vive en @/lib/subidaArchivos desde la spec 009:
+// era la única ruta que la tenía y POST /api/documents no, así que se compartió
+// en vez de duplicarla.
 const EXTENSIONES = [".pdf", ".xlsx", ".xls"];
-
-function extensionDe(nombre: string): string {
-  const i = nombre.lastIndexOf(".");
-  return i >= 0 ? nombre.slice(i).toLowerCase() : "";
-}
-
-function saneaNombre(nombre: string): string {
-  return nombre.replace(/[^a-zA-Z0-9._-]/g, "_");
-}
 
 // POST /api/licitaciones/[id]/documentos - Adjuntar un documento al expediente
 export async function POST(
@@ -51,18 +43,13 @@ export async function POST(
     if (!file) return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
 
     const ext = extensionDe(file.name);
-    if (!EXTENSIONES.includes(ext)) {
-      return NextResponse.json(
-        { error: "Tipo de archivo no permitido. Solo PDF o Excel (.pdf, .xlsx, .xls)" },
-        { status: 400 }
-      );
-    }
-
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: "El archivo excede el tamaño máximo (10 MB)" },
-        { status: 413 }
-      );
+    const problema = validaArchivo(
+      file,
+      EXTENSIONES,
+      "Tipo de archivo no permitido. Solo PDF o Excel (.pdf, .xlsx, .xls)",
+    );
+    if (problema) {
+      return NextResponse.json({ error: problema.error }, { status: problema.status });
     }
 
     // Guardar el archivo con nombre generado (nunca el original directo, §5.3).
@@ -70,7 +57,7 @@ export async function POST(
     const buffer = Buffer.from(bytes);
     const uploadDir = join(process.cwd(), "uploads", "expedientes");
     await mkdir(uploadDir, { recursive: true });
-    const fileName = `${Date.now()}_${saneaNombre(file.name)}`;
+    const fileName = nombreDeArchivo(file.name, Date.now());
     await writeFile(join(uploadDir, fileName), buffer);
 
     // Crear el registro del expediente. NO se extrae texto ni se encola: es un

@@ -119,7 +119,13 @@ de empezar el siguiente.
 | `react-hooks/exhaustive-deps` | 6 | **6** | ⚠️ declarados (warnings) |
 | `no-require-imports` (`src/`) | 1 | **0** | ✅ |
 | `react-hooks/refs` / `purity` | 1 / 1 | **1 / 1** | ⚠️ declarados (RZ-2) |
-| **Total `src/`** | **64** | **10** (2 errores + 8 warnings) | **−84 %** |
+| **Total `src/`** | **64** | **10** (4 errores + 6 warnings) | **−84 %** |
+
+> **SC-001 no se cumple al pie de la letra** y conviene decirlo claro: pedía **0 errores** en
+> `src/` y quedan **4** (los 2 `set-state-in-effect` declarados, `refs` y `purity`). Los cuatro
+> están dentro de lo que el plan declaró como "no demostrable esta noche" —tres de ellos en el
+> componente que RZ-2 protege— y FR-001 contempla expresamente declararlos en vez de tocarlos.
+> No se cierra la casilla: se deja abierta y nombrada, para ZEUS.
 
 | Gate | Resultado |
 |---|---|

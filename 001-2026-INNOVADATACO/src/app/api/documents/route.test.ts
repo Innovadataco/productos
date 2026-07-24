@@ -59,6 +59,52 @@ describe("POST /api/documents (upload)", () => {
     expect(res.status).toBe(400);
     expect(prisma.documentoOficial.create).not.toHaveBeenCalled();
   });
+
+  // Validación de subida (§2.6/§5.3). Hasta la spec 009 esta ruta —la puerta de
+  // Base Oficial— no validaba nada: ni tipo, ni tamaño, ni saneaba el nombre.
+  function peticionConArchivo(file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("titulo", "Documento de prueba");
+    form.append("tipo", "resolucion");
+    return new Request(url, { method: "POST", body: form }) as never;
+  }
+
+  it("rechaza con 400 lo que no es PDF (§2.6)", async () => {
+    const res = await POST(
+      peticionConArchivo(new File(["MZ"], "malicioso.exe", { type: "application/octet-stream" })),
+    );
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Solo se admiten archivos PDF" });
+    expect(prisma.documentoOficial.create).not.toHaveBeenCalled();
+  });
+
+  it("rechaza con 413 un PDF que excede los 10 MB (§2.6)", async () => {
+    // Archivo real: al viajar por el cuerpo de la petición, el File se
+    // reconstruye y un `size` falseado con defineProperty no sobrevive.
+    const enorme = new File([new Uint8Array(10 * 1024 * 1024 + 1)], "enorme.pdf", {
+      type: "application/pdf",
+    });
+
+    const res = await POST(peticionConArchivo(enorme));
+
+    expect(res.status).toBe(413);
+    expect(prisma.documentoOficial.create).not.toHaveBeenCalled();
+  });
+
+  it("sanea el nombre del archivo: un '../' no puede escribir fuera de uploads/ (§5.3)", async () => {
+    vi.mocked(extractPdfText).mockResolvedValue("texto");
+    vi.mocked(prisma.documentoOficial.create).mockResolvedValue({ id: "doc1" } as never);
+
+    await POST(peticionConArchivo(new File(["%PDF-1.4"], "../../etc/passwd.pdf", { type: "application/pdf" })));
+
+    const { archivoUrl } = vi.mocked(prisma.documentoOficial.create).mock.calls[0][0].data;
+    // Lo que corta la travesía no es que desaparezcan los puntos, es que
+    // desaparecen las barras: el nombre ya no puede salir de uploads/.
+    expect(String(archivoUrl).split("/")).toHaveLength(3);
+    expect(archivoUrl).toMatch(/^\/uploads\/\d+_\.\._\.\._etc_passwd\.pdf$/);
+  });
 });
 
 describe("GET /api/documents", () => {

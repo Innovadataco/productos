@@ -9,6 +9,7 @@ import { extractPdfText } from "@/lib/documentProcessor";
 import { auditLog } from "@/lib/audit";
 import { verifyAuth } from "@/lib/auth";
 import { leerPaginacion, respuestaPaginada } from "@/lib/paginacion";
+import { nombreDeArchivo, validaArchivo } from "@/lib/subidaArchivos";
 
 const TIPO_JERARQUIA: Record<string, number> = {
   constitucion: 1,
@@ -57,6 +58,15 @@ export async function POST(req: NextRequest) {
 
     if (!file) return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
 
+    // Validación de tipo y tamaño (§2.6). La constitución nombra ESTE archivo
+    // como el sitio donde hacerla y no se hacía: se aceptaba cualquier fichero,
+    // de cualquier tamaño. La UI ya solo ofrece .pdf, así que esto no cierra
+    // ninguna puerta que estuviera en uso.
+    const problema = validaArchivo(file, [".pdf"], "Solo se admiten archivos PDF");
+    if (problema) {
+      return NextResponse.json({ error: problema.error }, { status: problema.status });
+    }
+
     // Extraer texto del PDF
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -72,7 +82,9 @@ export async function POST(req: NextRequest) {
     // Guardar archivo
     const uploadDir = join(process.cwd(), "uploads");
     await mkdir(uploadDir, { recursive: true });
-    const fileName = `${Date.now()}_${file.name}`;
+    // Nombre saneado (§5.3): antes se concatenaba `file.name` crudo y se escribía
+    // con join(), así que un nombre con "../" habría escrito fuera de uploads/.
+    const fileName = nombreDeArchivo(file.name, Date.now());
     const filePath = join(uploadDir, fileName);
     await writeFile(filePath, buffer);
 
