@@ -1,6 +1,5 @@
 import { llamarOllamaStructured, type OllamaMetrics } from "./ollama-client";
 import { getParametroSistema } from "@/lib/parametros";
-import { obtenerSeveridades } from "@/lib/scoring";
 import { logger } from "@/lib/logger";
 import { RUBRICA_SEMILLA, type SetsRubrica, type PreguntaRubrica } from "./rubrica-semilla";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
@@ -116,6 +115,29 @@ function preguntasActivas(sets: SetsRubrica, categoria: string): PreguntaRubrica
     return (sets[categoria] ?? []).filter((p) => p.activo);
 }
 
+/** Spec 092-US1: decisivas = núcleo obligatorio; contexto = no bloquea (default si falta `tipo`). */
+export function preguntasDecisivas(sets: SetsRubrica, categoria: string): PreguntaRubrica[] {
+    return preguntasActivas(sets, categoria).filter((p) => p.tipo === "decisiva");
+}
+
+/**
+ * La categoría cumple si TODAS sus preguntas DECISIVAS están en preguntasCumplidas.
+ * Las de contexto se reportan pero no bloquean. Si la categoría no tiene decisivas
+ * activas, basta el 0/1 del modelo (defensivo).
+ */
+export function cumpleCategoria(
+    sets: SetsRubrica,
+    categoria: string,
+    preguntasCumplidas: string[],
+    votoModelo: boolean
+): boolean {
+    if (!votoModelo) return false;
+    const decisivas = preguntasDecisivas(sets, categoria);
+    if (decisivas.length === 0) return votoModelo;
+    const cumplidas = new Set(preguntasCumplidas);
+    return decisivas.every((p) => cumplidas.has(p.texto));
+}
+
 function construirPromptEmbudo(texto: string, categorias: string[]): string {
     return `Eres un analista de reportes de riesgos para menores. Lee el texto y decide QUÉ categorías tienen ALGUNA señal (sospecha razonable). Sé estricto: incluye una categoría SOLO si hay una señal concreta en el texto; ante la duda, NO la incluyas.
 
@@ -129,19 +151,24 @@ Responde SOLO con JSON: {"categoriasPlausibles": ["CATEGORIA1", ...]} (vacío si
 function construirPromptVoto(texto: string, sets: SetsRubrica, categorias: string[]): string {
     const bloques = categorias
         .map((cat) => {
-            const preguntas = preguntasActivas(sets, cat)
-                .map((p, i) => `  ${i + 1}. ${p.texto}`)
+            const activas = preguntasActivas(sets, cat);
+            const lineas = activas
+                .map((p, i) => {
+                    const tipo = p.tipo === "decisiva" ? "DECISIVA" : "contexto";
+                    return `  ${i + 1}. [${tipo}] ${p.texto}`;
+                })
                 .join("\n");
-            return `- ${cat}:\n${preguntas}`;
+            return `- ${cat}:\n${lineas}`;
         })
         .join("\n");
     return `Eres un evaluador ESTRICTO de reportes de riesgos para menores. Evalúa el texto con la rúbrica de cada categoría.
 
 REGLAS OBLIGATORIAS:
-- Marca 1 SOLO si TODAS las preguntas activas de la categoría se cumplen con evidencia CLARA en el texto.
-- Ante la duda, marca 0. Denegar por defecto: la ausencia de evidencia es 0, nunca 1.
+- Las preguntas marcadas [DECISIVA] son el núcleo de la conducta: marca 1 SOLO si TODAS las decisivas se cumplen con evidencia CLARA en el texto. Ante la duda en una decisiva, marca 0.
+- Las preguntas [contexto] NO son obligatorias: no bloquean la categoría, pero repórtalas si se cumplen.
+- Denegar por defecto en las decisivas: la ausencia de evidencia es 0, nunca 1.
 - Las preguntas son factuales y específicas: "¿se COMPARTIÓ?" no es lo mismo que "¿se pidió?". No confundas categorías.
-- En "preguntasCumplidas" lista el texto de las preguntas que efectivamente se cumplen.
+- En "preguntasCumplidas" copia VERBATIM el texto de las preguntas que se cumplen (decisivas y de contexto).
 
 Texto del reporte: "${texto}"
 
@@ -196,6 +223,27 @@ export function generarAnalisisRubrica(
     return partes.join(" ");
 }
 
+/** Ejecuta SOLO el embudo (spec 092-US2: medición independiente). */
+export async function evaluarEmbudo(
+    texto: string,
+    config?: Partial<ConfigRubrica>
+): Promise<{ plausibles: string[]; fallback: boolean }> {
+    const cfg: ConfigRubrica = { ...(await cargarConfigRubrica()), ...config };
+    const categoriasPosibles = Object.keys(cfg.preguntas).filter((cat) => preguntasActivas(cfg.preguntas, cat).length > 0);
+    try {
+        const embudo = await llamarOllamaStructured<{ categoriasPlausibles: string[] }>(
+            cfg.modeloEmbudo,
+            construirPromptEmbudo(texto, categoriasPosibles),
+            embudoSchema,
+            "Eres un analista estricto de reportes.",
+            { temperature: cfg.temperatura }
+        );
+        return { plausibles: embudo.data.categoriasPlausibles.filter((c) => categoriasPosibles.includes(c)), fallback: false };
+    } catch {
+        return { plausibles: categoriasPosibles, fallback: true };
+    }
+}
+
 export async function clasificarConRubrica(texto: string, config?: Partial<ConfigRubrica>): Promise<ResultadoRubrica> {
     const cfg: ConfigRubrica = { ...(await cargarConfigRubrica()), ...config };
     const categoriasPosibles = Object.keys(cfg.preguntas).filter((cat) => preguntasActivas(cfg.preguntas, cat).length > 0);
@@ -240,7 +288,12 @@ export async function clasificarConRubrica(texto: string, config?: Partial<Confi
                 const categorias: Record<string, VotoRubricaCategoria> = {};
                 for (const cat of plausibles) {
                     const v = voto.data.categorias[cat];
-                    categorias[cat] = { cumple: v?.cumple === 1, preguntasCumplidas: v?.preguntasCumplidas ?? [] };
+                    const preguntasCumplidas = v?.preguntasCumplidas ?? [];
+                    // Spec 092-US1: cumple solo si TODAS las decisivas están cumplidas
+                    categorias[cat] = {
+                        cumple: cumpleCategoria(cfg.preguntas, cat, preguntasCumplidas, v?.cumple === 1),
+                        preguntasCumplidas,
+                    };
                 }
                 votosModelos.push({ modelo, categorias, metrics: voto.metrics, fallback: false });
             } catch (err) {
@@ -257,18 +310,21 @@ export async function clasificarConRubrica(texto: string, config?: Partial<Confi
 
     const votosValidos = votosModelos.filter((v) => !v.fallback);
     const porcentajes = calcularPorcentajes(votosModelos, plausibles);
-    const severidades = await obtenerSeveridades();
-    const severidadesStr: Record<string, number> = Object.fromEntries(
-        Object.entries(severidades).map(([k, v]) => [k, v])
-    );
-    const { presentes, principal } = resolverPresentesYPrincipal(porcentajes, cfg.umbralPresencia, severidadesStr);
 
-    // Decisión (spec 089 intacta): ninguna supera umbral → revisión humana (desacuerdo); OTRO → revisión.
-    const categoriaFinal = (principal ?? "OTRO") as CategoriaConducta;
-    const estado: EstadoReporte = principal === null ? "REVISION_MANUAL" : "CLASIFICADO";
-    const confianza = principal ? (porcentajes[principal] ?? 0) : 0;
+    // Spec 092-US3: SIN "principal" por gravedad. Se muestran TODAS las conductas
+    // que superan el umbral. La gravedad ya no decide nada de cara al usuario.
+    const presentes = Object.entries(porcentajes)
+        .filter(([, pct]) => pct >= cfg.umbralPresencia)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([cat]) => cat);
+
+    // Decisión: ≥1 presente → PROCESADO (CLASIFICADO); ninguna → revisión humana (desacuerdo).
+    // `categoria` (campo requerido por schema) = la de mayor %; OTRO si no hay ninguna.
+    const categoriaFinal = (presentes[0] ?? "OTRO") as CategoriaConducta;
+    const estado: EstadoReporte = presentes.length === 0 ? "REVISION_MANUAL" : "CLASIFICADO";
+    const confianza = presentes.length > 0 ? (porcentajes[presentes[0]] ?? 0) : 0;
     const categoriasSecundarias = presentes
-        .filter((cat) => cat !== principal)
+        .filter((cat) => cat !== categoriaFinal)
         .map((cat) => ({ categoria: cat, score: porcentajes[cat] ?? 0 }));
 
     const fallback = votosValidos.length === 0 && plausibles.length > 0;

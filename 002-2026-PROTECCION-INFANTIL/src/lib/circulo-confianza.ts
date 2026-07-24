@@ -1,3 +1,4 @@
+import { whereReporteAprobado } from "./reporte-aprobado";
 import { prisma } from "./prisma";
 import { getParametroSistemaValor } from "./parametros";
 import { logAudit } from "./audit";
@@ -18,6 +19,19 @@ export type IdentificadorInput = {
 const ESTADOS_CLASIFICADOS: EstadoReporte[] = ["CLASIFICADO", "CORREGIDO"];
 const ESTADOS_REVISION: EstadoReporte[] = ["REVISION_MANUAL", "POSIBLE_SPAM", "REQUIERE_ANONIMIZACION"];
 const ESTADOS_VISIBLES: EstadoReporte[] = [...ESTADOS_CLASIFICADOS, ...ESTADOS_REVISION];
+
+// Spec 093-US1: el círculo cuenta (a) reportes APROBADOS (predicado único: sin SPAM/OTRO)
+// y (b) reportes en revisión humana ("En proceso"). POSIBLE_SPAM y DUPLICADO no cuentan.
+function whereReportesCirculo(extra: Prisma.ReporteWhereInput = {}): Prisma.ReporteWhereInput {
+    return {
+        ...extra,
+        eliminado: false,
+        OR: [
+            whereReporteAprobado(),
+            { estado: { in: ["REVISION_MANUAL", "REQUIERE_ANONIMIZACION"] } },
+        ],
+    };
+}
 
 interface DatosReporte {
     id: string;
@@ -98,11 +112,7 @@ export async function determinarEstadoContacto(
     }
 
     const reportes = (await c.reporte.findMany({
-        where: {
-            identificador: { in: valores },
-            eliminado: false,
-            estado: { in: ESTADOS_VISIBLES },
-        },
+        where: whereReportesCirculo({ identificador: { in: valores } }),
         select: {
             id: true,
             identificador: true,
@@ -455,11 +465,7 @@ export async function obtenerDetalleContacto(id: string, usuarioId: string, clie
     const identificadoresConEstado = await Promise.all(
         contacto.identificadores.map(async (i) => {
             const r = (await c.reporte.findMany({
-                where: {
-                    identificador: i.valor,
-                    eliminado: false,
-                    estado: { in: ESTADOS_VISIBLES },
-                },
+                where: whereReportesCirculo({ identificador: i.valor }),
                 select: {
                     id: true,
                     identificador: true,
@@ -607,11 +613,7 @@ export async function obtenerVistaAgregada(usuarioId: string, client?: Prisma.Tr
     }
 
     const reportes = (await c.reporte.findMany({
-        where: {
-            identificador: { in: valoresArray },
-            eliminado: false,
-            estado: { in: ESTADOS_VISIBLES },
-        },
+        where: whereReportesCirculo({ identificador: { in: valoresArray } }),
         select: {
             id: true,
             identificador: true,

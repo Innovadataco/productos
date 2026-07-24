@@ -131,18 +131,32 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
                 </div>
                 {clasificacion && (
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-muted">Categoría principal:</span>
-                        <span className="rounded-full bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 text-xs font-medium text-accent">
-                            {clasificacion.categoriaLabel}
-                        </span>
-                        {clasificacion.categoriasSecundarias.map((s) => (
-                            <span
-                                key={s.categoria}
-                                className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-muted"
-                            >
-                                {formatCategoria(s.categoria)}
-                            </span>
-                        ))}
+                        {(() => {
+                            // Spec 093-US2: SPAM y OTRO nunca se muestran; sin riesgo → mensaje neutro
+                            const conductas = [
+                                { categoria: clasificacion.categoria, label: clasificacion.categoriaLabel },
+                                ...clasificacion.categoriasSecundarias.map((s) => ({
+                                    categoria: s.categoria,
+                                    label: formatCategoria(s.categoria),
+                                })),
+                            ].filter((c) => c.categoria !== "SPAM" && c.categoria !== "OTRO");
+                            if (conductas.length === 0) {
+                                return <p className="text-sm text-muted">No se identifica riesgo</p>;
+                            }
+                            return (
+                                <>
+                                    <span className="text-xs text-muted">Conductas identificadas:</span>
+                                    {conductas.map((c) => (
+                                        <span
+                                            key={c.categoria}
+                                            className="rounded-full bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 text-xs font-medium text-accent"
+                                        >
+                                            {c.label}
+                                        </span>
+                                    ))}
+                                </>
+                            );
+                        })()}
                     </div>
                 )}
             </GlassCard>

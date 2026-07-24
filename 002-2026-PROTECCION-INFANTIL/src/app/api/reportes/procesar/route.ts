@@ -12,6 +12,7 @@ import { detectarRafaga } from "./helpers/rafagas";
 import { clasificarReporte } from "./helpers/clasificacion";
 import { anonimizarReporte } from "./helpers/anonimizacion";
 import { aplicarGuardasSeguridad } from "./helpers/guardas";
+import { aplicarGuardasPrevias } from "./helpers/guardas-previas";
 import {
     finalizarReporte,
     respuestaExito,
@@ -79,17 +80,7 @@ export async function POST(request: Request) {
         const vector = await generarEmbedding(parametros.modeloEmbedding, reporte.texto);
         await guardarEmbedding(reporte.id, parametros.modeloEmbedding, vector);
 
-        // Recuperar ejemplos corregidos similares para RAG
-        const ragTopK = parametros.ragTopK ?? 3;
-        const ejemplosRecuperados = await buscarEjemplosSimilares(vector, { topK: ragTopK });
-        const ejemplosRag: EjemploRecuperado[] = ejemplosRecuperados.map((e) => ({
-            datasetId: e.datasetId,
-            texto: e.texto,
-            categoria: e.categoria,
-            similitud: e.similitud,
-        }));
-
-        // Deduplicación anónima por similitud de embeddings
+        // Spec 092-US4: deduplicación ANTES del RAG (si es duplicado, el RAG no se gasta)
         const duplicado = await detectarDuplicado({
             reporteId: reporte.id,
             identificador: reporte.identificador,
@@ -99,13 +90,45 @@ export async function POST(request: Request) {
         });
         if (duplicado.esDuplicado) return duplicado.response;
 
-        // Detectar ráfaga de reportes contra identificador sin historial previo
+        // Spec 092-US4: GUARDAS PREVIAS baratas (solo texto/frecuencia) — si disparan,
+        // CORTAN a revisión SIN gastar los modelos de clasificación.
         const esRafaga = await detectarRafaga({
             identificador: reporte.identificador,
             plataformaId: reporte.plataformaId,
             rafagaN: parametros.rafagaN,
             rafagaHoras: parametros.rafagaHoras,
         });
+        const guardaPrevia = aplicarGuardasPrevias({ texto: reporte.texto, esRafaga });
+        if (guardaPrevia.cortar) {
+            const estadoCorte = await finalizarReporte({
+                reporteId: reporte.id,
+                estadoFinal: "REVISION_MANUAL",
+                clasificacion: {
+                    categoria: "OTRO",
+                    confianza: 0,
+                    categoriasSecundarias: [],
+                    posibleAgresorPar: false,
+                    estado: "REVISION_MANUAL",
+                    metrics: { modelo: "guardas-previas", latenciaMs: 0 },
+                    rawResponse: JSON.stringify({ motivo: guardaPrevia.motivo }),
+                    votos: [],
+                },
+                esRafaga,
+                prioridadAlta: guardaPrevia.prioridadAlta,
+                keywordsDetectadas: guardaPrevia.keywordsDetectadas,
+            });
+            return NextResponse.json({ reporteId: reporte.id, estado: estadoCorte, clasificacion: null, corteGuardaPrevia: true });
+        }
+
+        // Recuperar ejemplos corregidos similares para RAG (después de dedup)
+        const ragTopK = parametros.ragTopK ?? 3;
+        const ejemplosRecuperados = await buscarEjemplosSimilares(vector, { topK: ragTopK });
+        const ejemplosRag: EjemploRecuperado[] = ejemplosRecuperados.map((e) => ({
+            datasetId: e.datasetId,
+            texto: e.texto,
+            categoria: e.categoria,
+            similitud: e.similitud,
+        }));
 
         // Clasificar y detectar PII
         const { clasificacion, piiResult } = await clasificarReporte({

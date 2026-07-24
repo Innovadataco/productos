@@ -52,7 +52,9 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
     // nunca viaja en la URL, spec 091-US1). Con RPT: se navega al seguimiento.
     async function verIdentificador(r: ReporteItem) {
         if (r.numeroSeguimiento) {
-            router.push(`/seguimiento?numero=${encodeURIComponent(r.numeroSeguimiento)}`);
+            // Spec 093-US4: el número viaja por sessionStorage, no por query string.
+            sessionStorage.setItem("seguimiento.rpt", r.numeroSeguimiento);
+            router.push("/seguimiento");
             return;
         }
         if (expandidoId === r.id) {

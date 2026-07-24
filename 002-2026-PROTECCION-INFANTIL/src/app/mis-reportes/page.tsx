@@ -21,7 +21,7 @@ type MisReporteItem = {
     esAnonimo: boolean;
     creadoEn: string;
     clasificacion: { categoria: string; categoriaLabel: string; categoriaGrupo: string; confianza: number } | null;
-    ranking: { score: number; nivelRiesgo: "BAJO" | "MEDIO" | "ALTO"; totalReportes: number } | null;
+    ranking: { totalReportes: number } | null;
 };
 
 export default function MisReportesPage() {

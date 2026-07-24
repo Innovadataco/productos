@@ -25,9 +25,9 @@ vi.mock("@/lib/prisma", () => ({
 const CONFIG_TEST = {
     enabled: true,
     preguntas: {
-        SOLICITUD_ENCUENTRO: [{ texto: "¿Alguien propone verse?", activo: true }],
-        CONTACTO_INSISTENTE: [{ texto: "¿Hay mensajes repetidos?", activo: true }],
-        OFRECIMIENTO_REGALOS: [{ texto: "¿Se ofrece algo de valor?", activo: true }],
+        SOLICITUD_ENCUENTRO: [{ texto: "¿Alguien propone verse?", activo: true, tipo: "decisiva" as const }],
+        CONTACTO_INSISTENTE: [{ texto: "¿Hay mensajes repetidos?", activo: true, tipo: "decisiva" as const }],
+        OFRECIMIENTO_REGALOS: [{ texto: "¿Se ofrece algo de valor?", activo: true, tipo: "decisiva" as const }],
     },
     modelos: ["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"],
     temperatura: 0.2,
@@ -43,13 +43,19 @@ function respuestaEmbudo(categorias: string[]) {
     };
 }
 
+const PREGUNTAS_TEST: Record<string, string> = {
+    SOLICITUD_ENCUENTRO: "¿Alguien propone verse?",
+    CONTACTO_INSISTENTE: "¿Hay mensajes repetidos?",
+    OFRECIMIENTO_REGALOS: "¿Se ofrece algo de valor?",
+};
+
 function respuestaVoto(cumplimientos: Record<string, boolean>) {
     return {
         data: {
             categorias: Object.fromEntries(
                 Object.entries(cumplimientos).map(([cat, cumple]) => [
                     cat,
-                    { cumple: cumple ? 1 : 0, preguntasCumplidas: cumple ? ["pregunta 1"] : [] },
+                    { cumple: cumple ? 1 : 0, preguntasCumplidas: cumple ? [PREGUNTAS_TEST[cat]] : [] },
                 ])
             ),
         },
@@ -130,10 +136,12 @@ describe("clasificarConRubrica — flujo completo (mocks)", () => {
         expect(res.votosModelos[0].categorias.SOLICITUD_ENCUENTRO.cumple).toBe(true);
         expect(res.porcentajes.SOLICITUD_ENCUENTRO).toBeCloseTo(2 / 3);
         expect(res.porcentajes.CONTACTO_INSISTENTE).toBe(1);
-        // Gravedad: SOLICITUD_ENCUENTRO (90) > CONTACTO_INSISTENTE (30)
-        expect(res.categoria).toBe("SOLICITUD_ENCUENTRO");
+        // Spec 092-US3: sin gravedad — `categoria` = la de mayor % (CONTACTO_INSISTENTE, 100%)
+        expect(res.categoria).toBe("CONTACTO_INSISTENTE");
+        expect(res.categoriasPresentes).toContain("SOLICITUD_ENCUENTRO");
         expect(res.estado).toBe("CLASIFICADO");
-        expect(res.categoriasSecundarias.map((c) => c.categoria)).toContain("CONTACTO_INSISTENTE");
+        // Con CI como principal, la secundaria es SOLICITUD_ENCUENTRO
+        expect(res.categoriasSecundarias.map((c) => c.categoria)).toContain("SOLICITUD_ENCUENTRO");
     });
 
     it("ninguna supera el umbral → REVISION_MANUAL (desacuerdo entre modelos)", async () => {

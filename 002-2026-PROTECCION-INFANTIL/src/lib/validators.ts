@@ -16,7 +16,9 @@ export type ReactivarReporteInput = z.infer<typeof reactivarReporteSchema>;
 export const crearReporteSchema = z.object({
     identificador: z.string().min(3).max(100),
     plataforma: z.string().min(1),
-    texto: z.string().min(20).max(5000),
+    // La longitud mínima efectiva se valida en la route desde ParametroSistema
+    // (reportes.spam.min_text_length, spec 092-US5); aquí solo se exige no vacío.
+    texto: z.string().min(1).max(5000),
     fechaIncidente: z.string().datetime().refine(
         (val) => new Date(val) <= new Date(),
         { message: "La fecha del incidente no puede ser futura" }

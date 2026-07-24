@@ -40,9 +40,9 @@ describe("parser.ts", () => {
         expect(result.mensaje).toContain("pais");
     });
 
-    it("rechaza CSV con texto corto", () => {
+    it("rechaza CSV con texto vacío", () => {
         const csv = `${csvCabecera}
-"corto",instagram,usuario123,2026-01-15T10:00:00Z,Bogotá,Colombia,14,ACOSO`;
+"",instagram,usuario123,2026-01-15T10:00:00Z,Bogotá,Colombia,14,ACOSO`;
         const result = parsearCSV(csv);
         expect(result.ok).toBe(false);
         expect(result.errores).toHaveLength(1);

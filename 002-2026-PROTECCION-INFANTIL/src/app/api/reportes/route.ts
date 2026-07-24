@@ -26,6 +26,16 @@ export async function POST(request: Request) {
 
         const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima } = parsed.data;
 
+        // Spec 092-US5: la longitud mínima es un parámetro (ADR_004), no un literal.
+        const paramMinTexto = await prisma.parametroSistema.findUnique({ where: { clave: "reportes.spam.min_text_length" } });
+        const minTexto = parseInt(paramMinTexto?.valor ?? "20", 10);
+        if (texto.trim().length < minTexto) {
+            return NextResponse.json(
+                { error: { message: `El texto del reporte debe tener al menos ${minTexto} caracteres`, code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+
         // Obtener usuario autenticado (puede ser null)
         const user = await getUserFromToken(request);
         if (user && user.rol !== "PARENT") {

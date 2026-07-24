@@ -1,8 +1,10 @@
 "use client";
 
+import { useMinTextoReporte } from "./use-min-texto-reporte";
+
 export function ReporteStepDescripcion({ value, onChange }: { value: string; onChange: (v: string) => void }) {
     const chars = value.length;
-    const min = 20;
+    const min = useMinTextoReporte();
     const max = 5000;
     const isValid = chars >= min && chars <= max;
 

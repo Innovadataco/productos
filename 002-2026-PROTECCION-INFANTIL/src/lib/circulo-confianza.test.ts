@@ -184,6 +184,19 @@ describe("circulo-confianza", () => {
             expect(estado).toBe("enRevision");
         });
 
+        it("spec 093-US1: SPAM/OTRO no cambia el estado del contacto (predicado de aprobación)", async () => {
+            const usuario = await crearUsuario("PARENT");
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+            const contacto = await agregarContacto(usuario.id, {
+                identificadores: [{ valor: "+57300SPAMC", plataformaId: plataforma!.id }],
+            });
+            await crearReporte("+57300SPAMC", plataforma!.id, "CLASIFICADO", "SPAM");
+            await crearReporte("+57300SPAMC", plataforma!.id, "CLASIFICADO", "OTRO");
+            const { estado, totalReportes } = await determinarEstadoContacto(contacto.id);
+            expect(estado).toBe("sinReportes");
+            expect(totalReportes).toBe(0);
+        });
+
         it("detecta reporte clasificado", async () => {
             const usuario = await crearUsuario("PARENT");
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });

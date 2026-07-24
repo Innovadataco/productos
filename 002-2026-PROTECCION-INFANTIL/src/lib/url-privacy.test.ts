@@ -53,6 +53,20 @@ describe("privacidad URL del identificador (spec 091 fix)", () => {
         expect(violaciones).toEqual([]);
     });
 
+    it("área del padre: ningún href/push/fetch deja identificador ni RPT en la URL (spec 093-US4)", () => {
+        const areasPadre = ["src/app/dashboard/mis-reportes", "src/app/dashboard/circulo-confianza", "src/app/dashboard/page.tsx", "src/components/modules/MisReporte", "src/components/modules/DashboardUsuario", "src/components/modules/SeguimientoClient", "src/components/modules/CirculoConfianza"];
+        const violaciones: string[] = [];
+        for (const archivo of archivos(SRC)) {
+            if (!areasPadre.some((a) => archivo.includes(a))) continue;
+            if (archivo.includes("/admin/")) continue; // el área ADMIN no es el área del padre
+            const contenido = fs.readFileSync(archivo, "utf-8");
+            if (/href=\{[^}]*\?[^}]*\$\{/.test(contenido) || /router\.push\(`[^`]*\?[^`]*\$\{/.test(contenido)) {
+                violaciones.push(archivo);
+            }
+        }
+        expect(violaciones).toEqual([]);
+    });
+
     it("ningún router.push deja el identificador en la URL", () => {
         const violaciones: string[] = [];
         for (const archivo of archivos(SRC)) {

@@ -541,7 +541,7 @@ describe("POST /api/reportes/procesar", () => {
         expect(clasif?.posibleAgresorPar).toBe(true);
     });
 
-    it("escala a revisión manual cuando detectarDoxing dispara y el LLM no incluye DOXING", async () => {
+    it("guarda previa: doxing CORTA a revisión manual SIN clasificar (spec 092-US4)", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const reporte = await prisma.reporte.create({
             data: {
@@ -557,46 +557,18 @@ describe("POST /api/reportes/procesar", () => {
             },
         });
 
-        mockClasificar.mockResolvedValue({
-            categoria: "OTRO" as CategoriaConducta,
-            confianza: 0.6,
-            categoriasSecundarias: [],
-            posibleAgresorPar: false,
-            estado: "CLASIFICADO",
-            rawResponse: "{}",
-            metrics: { modelo: "ornith:9b", latenciaMs: 1000 },
-            fallback: false,
-            votos: [{ categoria: "OTRO" as CategoriaConducta, confianza: 0.6, posibleAgresorPar: false }],
-        });
-        mockPii.mockResolvedValueOnce({
-            contienePii: true,
-            contienePiiDeterministico: true,
-            contienePiiLLM: false,
-            piiDetectada: ["mi dirección", "mi número"],
-            piiDetectadaDeterministica: ["mi dirección", "mi número"],
-            piiDetectadaLLM: [],
-            metrics: { modelo: "ornith:9b", latenciaMs: 0, promptTokens: null, responseTokens: null },
-            rawResponse: "{}",
-        });
-        mockAnonimizar.mockResolvedValueOnce({
-            textoAnonimizado: "Publicó [DIRECCION] exacta y [TELEFONO] para que otros me acosen",
-            piiDetectada: ["mi dirección", "mi número"],
-            metrics: { modelo: "ornith:9b", latenciaMs: 800 },
-        });
         mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
 
         const res = await POST(crearRequestProcesar(reporte.id));
         expect(res.status).toBe(200);
         const body = await res.json();
+        // La guarda previa corta antes de gastar los modelos: no hay clasificación
         expect(body.estado).toBe("REVISION_MANUAL");
-
+        expect(body.corteGuardaPrevia).toBe(true);
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("REVISION_MANUAL");
         expect(actualizado?.prioridadAlta).toBe(true);
-        expect(actualizado?.keywordsDetectadas.length).toBeGreaterThan(0);
-
-        const clasif = await prisma.clasificacionIA.findUnique({ where: { reporteId: reporte.id } });
-        expect(clasif?.categoria).toBe("OTRO");
+        expect(mockClasificar).not.toHaveBeenCalled();
     });
 
     it("detecta ráfaga de reportes y fuerza revisión manual con prioridad alta", async () => {

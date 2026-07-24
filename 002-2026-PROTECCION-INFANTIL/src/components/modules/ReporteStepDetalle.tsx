@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { useMinTextoReporte } from "./use-min-texto-reporte";
 
 type PaisOption = { id: string; nombre: string };
 type CiudadOption = { id: string; nombre: string; paisId: string };
@@ -115,7 +116,7 @@ export function ReporteStepDetalle({
     };
 
     const chars = texto.length;
-    const min = 20;
+    const min = useMinTextoReporte();
     const max = 5000;
     const isValid = chars >= min && chars <= max;
 
