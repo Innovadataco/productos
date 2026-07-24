@@ -4,6 +4,8 @@ import { useState } from "react";
 import {
   agruparPorColumna,
   esMovimientoReal,
+  plantillaDeColumnas,
+  seRepartenLasColumnas,
   type ColumnaKanban,
   type TarjetaKanban,
 } from "@/lib/kanban";
@@ -67,18 +69,34 @@ export default function KanbanBoard({
     onMover(tarjetaId, columnaDestinoId);
   };
 
+  // I-014: las columnas reparten el ancho disponible en vez de imponerlo. Solo
+  // se vuelve al desplazamiento horizontal cuando el catálogo crece tanto que
+  // repartir dejaría las tarjetas ilegibles (FR-012).
+  const reparte = seRepartenLasColumnas(columnas.length);
+
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
+    <div
+      /* Anclas de verificación: `scripts/verify-tableros.mjs` mide I-014 sobre la
+         app desplegada y necesita localizar el tablero sin depender de clases de
+         maquetado, que es justo lo que la corrección cambia. */
+      data-testid="kanban-tablero"
+      data-reparte={reparte ? "si" : "no"}
+      className={reparte ? "grid gap-4 items-start" : "flex gap-4 overflow-x-auto pb-2"}
+      style={reparte ? { gridTemplateColumns: plantillaDeColumnas(columnas.length) } : undefined}
+    >
       {grupos.map(({ columna, tarjetas: deLaColumna }) => (
         <div
           key={columna.id}
+          data-testid="kanban-columna"
           onDragOver={(e) => {
             e.preventDefault();
             setColumnaSobrevolada(columna.id);
           }}
           onDragLeave={() => setColumnaSobrevolada((actual) => (actual === columna.id ? null : actual))}
           onDrop={() => soltarEn(columna.id)}
-          className={`flex-shrink-0 w-72 rounded-lg border transition-colors ${
+          className={`rounded-lg border transition-colors ${
+            reparte ? "min-w-0" : "flex-shrink-0 w-72"
+          } ${
             columnaSobrevolada === columna.id
               ? "border-neonCyan/50 bg-neonCyan/5"
               : "border-white/10 bg-white/[0.02]"

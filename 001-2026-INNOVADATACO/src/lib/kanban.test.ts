@@ -3,6 +3,9 @@ import {
   agruparPorColumna,
   tarjetasHuerfanas,
   esMovimientoReal,
+  seRepartenLasColumnas,
+  plantillaDeColumnas,
+  MAX_COLUMNAS_REPARTIDAS,
   type ColumnaKanban,
   type TarjetaKanban,
 } from "./kanban";
@@ -62,6 +65,31 @@ describe("tarjetasHuerfanas (spec 007, US1-2)", () => {
 
   it("devuelve vacío cuando todo dato es consistente", () => {
     expect(tarjetasHuerfanas(COLUMNAS, TARJETAS)).toEqual([]);
+  });
+});
+
+describe("reparto del ancho (spec 007, FR-012 — defecto I-014)", () => {
+  it("reparte con las 4 fases PM2 y con los 5 estados del catálogo: es el caso de I-014", () => {
+    expect(seRepartenLasColumnas(4)).toBe(true);
+    expect(seRepartenLasColumnas(5)).toBe(true);
+  });
+
+  it("reparte hasta el umbral inclusive", () => {
+    expect(seRepartenLasColumnas(MAX_COLUMNAS_REPARTIDAS)).toBe(true);
+  });
+
+  it("por encima del umbral vuelve al desplazamiento: repartir 12 columnas daría tarjetas ilegibles", () => {
+    expect(seRepartenLasColumnas(MAX_COLUMNAS_REPARTIDAS + 1)).toBe(false);
+    expect(seRepartenLasColumnas(12)).toBe(false);
+  });
+
+  it("sin columnas no hay nada que repartir", () => {
+    expect(seRepartenLasColumnas(0)).toBe(false);
+  });
+
+  it("la plantilla reparte a partes iguales con mínimo 0, para que una palabra larga no estire su columna", () => {
+    expect(plantillaDeColumnas(4)).toBe("repeat(4, minmax(0, 1fr))");
+    expect(plantillaDeColumnas(5)).toBe("repeat(5, minmax(0, 1fr))");
   });
 });
 

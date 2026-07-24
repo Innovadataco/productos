@@ -14,6 +14,14 @@ de la hoja de ruta de evolución de módulos (D-054/D-055/D-059). Se redacta en 
 > **D-060**: turno nocturno desatendido. La compuerta del plan queda delegada en ODIN y la
 > sustituye `/speckit-analyze`; ZEUS audita por la mañana.
 
+> **Incidencia I-014** (reportada por el CEO sobre la app ya desplegada, 2026-07-24). En **ambos**
+> tableros la última columna quedaba fuera de la pantalla tras una barra de desplazamiento, con
+> chrome recortado arriba a la derecha y una franja muerta bajo el tablero. Causa: columnas de
+> ancho fijo (`w-72`) dentro de un área de contenido acotada — 5 columnas piden ~1504 px y el área
+> real son ~1184 px. Entra en **esta** spec (FR-012, FR-013, SC-012, SC-013) porque el componente
+> es suyo y su acta sigue abierta. **Es que el tablero se pueda usar, no un rediseño**: el
+> rediseño visual es SPEC-012.
+
 **Input**: El submódulo "Estado" (hoy "Estados") de Oportunidades pasa de catálogo a un
 **tablero Kanban**: una columna por estado del catálogo, cada oportunidad una tarjeta;
 arrastrar una tarjeta entre columnas cambia y persiste su estado con registro en auditoría.
@@ -203,7 +211,12 @@ administro, para que añadir o renombrar un estado se refleje en el tablero sin 
 - **FR-011**: la vista de tablero MUST sustituir o complementar el submódulo de estado de
   Oportunidades (el plan decide si reemplaza "Estados" o añade un submódulo "Tablero"); el
   catálogo de estados MUST seguir administrándose.
-- **FR-012**: cero `any` nuevos en `src/lib` y rutas API; ningún cambio MUST tocar Base Oficial,
+- **FR-012** *(ampliación 2026-07-24, defecto **I-014**)*: las columnas MUST **repartir el ancho
+  disponible** y el tablero MUST ocupar el área real de contenido; MUST NOT imponer un ancho fijo
+  que empuje columnas fuera de la pantalla.
+- **FR-013** *(ampliación 2026-07-24, defecto **I-014**)*: ningún elemento del marco (barra de
+  submódulos, cabecera) MUST quedar recortado.
+- **FR-014**: cero `any` nuevos en `src/lib` y rutas API; ningún cambio MUST tocar Base Oficial,
   el RAG, ni archivos/puertos de `002-2026-PROTECCION-INFANTIL` ni `003-2026-SICOV-OTPC` (ADR_002).
 
 ### Key Entities
@@ -237,6 +250,11 @@ administro, para que añadir o renombrar un estado se refleje en el tablero sin 
 - **SC-010**: `npx tsc --noEmit` limpio y `npx eslint src/lib src/app/api` con **0** errores
   `no-explicit-any`.
 - **SC-011**: los puertos 5005/5433/5010/5434 y el RAG permanecen sin cambios.
+- **SC-012** *(I-014)*: a **1280, 1440 y 1920 px** las **4 columnas** del tablero de fases y las
+  **5** del de oportunidades se ven **enteras y sin desplazamiento horizontal**, medido sobre la
+  app **desplegada** con un navegador real (`scripts/verify-tableros.mjs`), no sobre el árbol.
+- **SC-013** *(I-014)*: `KanbanBoard.tsx` sigue sin importar dominio: solo React y `@/lib/kanban`
+  (RZ-1 intacta).
 
 ## Definición de terminado
 

@@ -107,8 +107,12 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
         </header>
 
         {activeModuleId && SUBMODULES[activeModuleId].length > 0 && (
-          <div className="flex items-center justify-between px-6 pt-4 border-b border-white/5">
-            <div className="flex items-end gap-1">
+          /* I-014 (FR-013): la barra no puede recortar nada. Con seis submódulos
+             —Oportunidades ya los tiene— las pestañas apretaban al botón de
+             cerrar contra el borde derecho. Ahora envuelven en vez de empujar, y
+             el botón no se encoge. */
+          <div className="flex items-center justify-between gap-4 flex-wrap px-6 pt-4 border-b border-white/5">
+            <div className="flex items-end gap-1 flex-wrap min-w-0">
               {SUBMODULES[activeModuleId].map((sub) => (
                 <button
                   key={sub.id}
@@ -124,7 +128,7 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
             </div>
             <button
               onClick={closeModule}
-              className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors"
+              className="shrink-0 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-red-400 transition-colors"
             >
               <X size={12} className="inline mr-1" /> Cerrar
             </button>
