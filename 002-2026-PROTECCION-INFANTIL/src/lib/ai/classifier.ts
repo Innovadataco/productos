@@ -1,4 +1,5 @@
 import { llamarOllamaStructured, type OllamaMetrics } from "./ollama-client";
+import { obtenerSeveridades } from "@/lib/scoring";
 import { classificationResponseSchema, type ClassificationResponse } from "./schemas";
 import { logger } from "@/lib/logger";
 
@@ -303,14 +304,21 @@ export async function clasificarConVotos(
         conteo.set(v.categoria, actual);
     }
 
+    // Spec 089-US2b: la conducta líder es la de MAYOR GRAVEDAD (severidad desde
+    // scoring.severity.*, ADR_004), no la más votada. Un leve mayoritario nunca
+    // oculta un grave minoritario; el grave con baja confianza va a revisión humana.
+    const severidades = await obtenerSeveridades();
+
     const ranking = Array.from(conteo.entries())
         .map(([categoria, { count, confSum }]) => ({
             categoria,
             count,
             score: count / cfg.nVotos,
             confPromedio: confSum / count,
+            severidad: severidades[categoria] ?? 0,
         }))
         .sort((a, b) => {
+            if (b.severidad !== a.severidad) return b.severidad - a.severidad;
             if (b.count !== a.count) return b.count - a.count;
             return b.confPromedio - a.confPromedio;
         });
@@ -361,6 +369,13 @@ export async function clasificarConVotos(
             }
             // Si contradice la moda, se mantiene REVISION_MANUAL.
         }
+    }
+
+    // Spec 089-US2a: un reporte OTRO SIEMPRE va a revisión humana, sin importar
+    // la confianza (incluye la cascada que confirma OTRO). "Procesado" siempre
+    // implica una categoría real decidida por un humano.
+    if (categoriaFinal === "OTRO" && estado === "CLASIFICADO") {
+        estado = "REVISION_MANUAL";
     }
 
     const allFallback = votosResult.every((v) => v.fallback);

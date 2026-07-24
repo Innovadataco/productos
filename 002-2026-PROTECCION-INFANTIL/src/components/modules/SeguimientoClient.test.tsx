@@ -20,7 +20,7 @@ function mockFetch(response: unknown, ok = true) {
 
 const baseData = {
     numeroSeguimiento: "RPT-ABC123",
-    estadoVisual: "Verificado",
+    estadoVisual: "Procesado",
     estadoInterno: "CLASIFICADO",
     badge: "success",
     enProceso: false,
@@ -34,16 +34,12 @@ const baseData = {
         categoria: "SOLICITUD_MATERIAL",
         categoriaLabel: "Solicitud de material",
         categoriaGrupo: "Contacto sexual",
+        categoriasSecundarias: ["CONTACTO_INSISTENTE"],
         contienePii: true,
         piiDetectada: ["nombre", "telefono"],
     },
-    ranking: {
-        score: 72,
-        nivelRiesgo: "ALTO",
-        totalReportes: 5,
-        reportesAutenticados: 3,
-        reportesAnonimos: 2,
-    },
+    ranking: { totalReportes: 5, reportesAutenticados: 2, reportesAnonimos: 3 },
+    actividad: "alta",
 };
 
 describe("SeguimientoClient", () => {
@@ -55,7 +51,7 @@ describe("SeguimientoClient", () => {
         vi.restoreAllMocks();
     });
 
-    it("muestra el estado simplificado, la clasificación y el riesgo con buen contraste", async () => {
+    it("muestra el estado simplificado, las conductas y el riesgo con buen contraste", async () => {
         mockFetch(baseData);
         render(<SeguimientoClient />);
 
@@ -66,14 +62,72 @@ describe("SeguimientoClient", () => {
 
         await waitFor(() => {
             const body = document.body.textContent || "";
-            expect(body).toContain("Verificado");
+            expect(body).toContain("Procesado");
             expect(body).toContain("Tu reporte ha sido procesado y clasificado.");
-            expect(body).toContain("Categoría del reporte");
-            expect(body).toContain("Contacto sexual");
-            expect(body).toContain("Nivel de riesgo del identificador");
-            expect(body).toContain("72");
-            expect(body).toContain("Riesgo ALTO");
+            expect(body).toContain("Gracias por reportar.");
+            expect(body).toContain("Conductas identificadas");
+            expect(body).toContain("Solicitud de material");
+            expect(body).toContain("Contacto insistente");
+            // spec 089-US6: sin score ni etiqueta de riesgo; señal descriptiva de actividad
+            expect(body).toContain("Actividad del identificador");
+            expect(body).toContain("Actividad alta de reportes");
+            expect(body).not.toContain("Riesgo ALTO");
+            expect(body).not.toContain("Nivel de riesgo del identificador");
             expect(body).toContain("El texto fue anonimizado");
+        });
+    });
+
+    it("muestra todas las conductas ordenadas por gravedad (principal + secundarias)", async () => {
+        mockFetch({
+            ...baseData,
+            clasificacion: {
+                ...baseData.clasificacion,
+                categoria: "CONTACTO_INSISTENTE",
+                categoriasSecundarias: ["EXTORSION", "SOLICITUD_ENCUENTRO"],
+            },
+        });
+        render(<SeguimientoClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("RPT-XXXXXX"), {
+            target: { value: "RPT-ABC123" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            const body = document.body.textContent || "";
+            expect(body).toContain("Solicitud de encuentro");
+            expect(body).toContain("Extorsión");
+            expect(body).toContain("Contacto insistente");
+            const iEncuentro = body.indexOf("Solicitud de encuentro");
+            const iExtorsion = body.indexOf("Extorsión");
+            const iContacto = body.indexOf("Contacto insistente");
+            expect(iEncuentro).toBeGreaterThan(-1);
+            expect(iEncuentro).toBeLessThan(iExtorsion);
+            expect(iExtorsion).toBeLessThan(iContacto);
+        });
+    });
+
+    it.each(["SPAM", "OTRO"])("muestra 'No se identifica riesgo' cuando la única categoría es %s", async (categoria) => {
+        mockFetch({
+            ...baseData,
+            clasificacion: {
+                ...baseData.clasificacion,
+                categoria,
+                categoriasSecundarias: [],
+            },
+        });
+        render(<SeguimientoClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("RPT-XXXXXX"), {
+            target: { value: "RPT-ABC123" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            const body = document.body.textContent || "";
+            expect(body).toContain("No se identifica riesgo");
+            expect(body).not.toContain("SPAM");
+            expect(body).not.toContain("Otro");
         });
     });
 
@@ -98,7 +152,7 @@ describe("SeguimientoClient", () => {
             const body = document.body.textContent || "";
             expect(body).toContain("En proceso");
             expect(body).toContain("puede tardar hasta 24 horas");
-            expect(body).not.toContain("Clasificación del reporte");
+            expect(body).not.toContain("Conductas identificadas");
             expect(body).not.toContain("Contacto sexual");
         });
     });

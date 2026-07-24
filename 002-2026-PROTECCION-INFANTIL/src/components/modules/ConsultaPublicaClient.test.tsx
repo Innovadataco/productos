@@ -37,13 +37,16 @@ function mockFetch(response: unknown, ok = true) {
 const baseConReportes = {
     identificador: "3001111111",
     tieneReportes: true,
-    nivelRiesgo: "MEDIO" as const,
+    actividad: "baja" as const,
     totalReportes: 1,
     reportesAutenticados: 0,
     reportesAnonimos: 1,
     ultimoReporte: "2026-07-16T15:55:26.045Z",
     plataformas: [{ id: "p1", nombre: "Facebook", clave: "facebook", total: 1, otraPlataforma: null }],
     resumenPlataformas: "1 reporte en Facebook",
+    categorias: [{ categoria: "CONTACTO_INSISTENTE", total: 1 }],
+    ubicaciones: [{ pais: "Colombia", total: 1 }],
+    autenticado: false,
 };
 
 describe("ConsultaPublicaClient", () => {
@@ -88,7 +91,7 @@ describe("ConsultaPublicaClient", () => {
         });
     });
 
-    it("renderiza nivel de riesgo, cantidad y fecha cuando hay reportes", async () => {
+    it("renderiza badge de actividad (sin nivel de riesgo), cantidad y fecha cuando hay reportes", async () => {
         mockFetch(baseConReportes);
         render(<ConsultaPublicaClient />);
 
@@ -98,14 +101,15 @@ describe("ConsultaPublicaClient", () => {
         fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
 
         await waitFor(() => {
-            expect(document.body.textContent).toContain("Riesgo medio");
+            expect(document.body.textContent).toContain("Actividad baja de reportes");
             expect(document.body.textContent).toContain("Total reportes");
             expect(document.body.textContent).toContain("Último reporte");
             expect(document.body.textContent).toContain("1 reporte en Facebook");
+            expect(document.body.textContent).not.toContain("Riesgo");
         });
     });
 
-    it("no muestra contenido de reportes, mapa ni ubicaciones al anónimo", async () => {
+    it("muestra las categorías como badges con su total", async () => {
         mockFetch(baseConReportes);
         render(<ConsultaPublicaClient />);
 
@@ -115,10 +119,63 @@ describe("ConsultaPublicaClient", () => {
         fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
 
         await waitFor(() => {
-            expect(document.body.textContent).not.toContain("Ubicaciones");
+            expect(document.body.textContent).toContain("Contacto insistente · 1");
+        });
+    });
+
+    it("no muestra la sección de categorías cuando está vacía", async () => {
+        mockFetch({ ...baseConReportes, categorias: [] });
+        render(<ConsultaPublicaClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
+            target: { value: "3001111111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            expect(document.body.textContent).toContain("1 reporte en Facebook");
+            expect(document.body.textContent).not.toContain("Contacto insistente");
+        });
+    });
+
+    it("al anónimo muestra solo el resumen con ubicaciones por país (sin ciudad ni timeline)", async () => {
+        mockFetch(baseConReportes);
+        render(<ConsultaPublicaClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
+            target: { value: "3001111111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            expect(document.body.textContent).toContain("Ubicaciones con reportes");
+            expect(document.body.textContent).toContain("Colombia");
+            expect(document.body.textContent).not.toContain("Bogotá");
             expect(document.body.textContent).not.toContain("Reportes por mes");
-            expect(document.body.textContent).not.toContain("Plataformas");
             expect(document.body.textContent).not.toContain("Cochabamba");
+        });
+    });
+
+    it("al autenticado muestra ubicaciones con ciudad, timeline y resumen si están presentes", async () => {
+        mockFetch({
+            ...baseConReportes,
+            autenticado: true,
+            ubicaciones: [{ pais: "Colombia", departamento: "Cundinamarca", ciudad: "Bogotá", total: 1, lat: 4.711, lng: -74.0721 }],
+            timeline: [{ mes: "2026-07", total: 1 }],
+            resumen: "Se han reportado 1 vez(es) entre 2026-07-16 y 2026-07-16 en 1 ciudad(es) de 1 país(es) y 1 plataforma(s).",
+        });
+        render(<ConsultaPublicaClient />);
+
+        fireEvent.change(screen.getByPlaceholderText("Ej: 3002222222 o @usuario"), {
+            target: { value: "3001111111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+
+        await waitFor(() => {
+            expect(document.body.textContent).toContain("Bogotá, Cundinamarca, Colombia");
+            expect(document.body.textContent).toContain("Reportes por mes");
+            expect(document.body.textContent).toContain("2026-07");
+            expect(document.body.textContent).toContain("Se han reportado 1 vez(es)");
         });
     });
 

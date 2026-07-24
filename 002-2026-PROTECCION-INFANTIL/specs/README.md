@@ -19,8 +19,6 @@
 | [053](053-capa-datos-servicios/spec.md) | Feature Specification: Capa de datos / servicios (DAL) | 🔵 Planeado |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 
-## Inventario completo
-
 | Nº | Nombre | Estado |
 |----|--------|--------|
 | [001](001-multi-role-auth-config/spec.md) | Feature Specification: Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
@@ -92,6 +90,7 @@
 | [084](084-fix-timeout-multimodelo/spec.md) | Fix timeout multi-modelo de simulación (I-07) | 🟢 Cerrada |
 | [085](085-evaluacion-error-silencioso/spec.md) | Evaluación por error silencioso y modelo por defecto (ADR_006) | 🟢 Finalizada (pendiente ACTA) |
 | [086](086-navegacion-gobernada-permisos/spec.md) | Navegación y páginas gobernadas por permisos | 🟢 Finalizada (pendiente ACTA) |
+| [089](089-presentacion-usuario/spec.md) | Presentación al usuario: estados, categorías y consulta pública | 🟢 Finalizada (pendiente ACTA) |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 

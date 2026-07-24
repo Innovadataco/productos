@@ -81,6 +81,7 @@ export async function GET(
         }
 
         const slaRaw = await getParametroSistemaValor("ui.sla_horas_procesamiento");
+        const actividadAltaMin = parseInt((await getParametroSistemaValor("visibility.actividad_alta_min")) ?? "5", 10);
         const slaHoras = parseSlaHoras(slaRaw);
         const estadoUsuario = mapEstadoUsuario(reporte.estado);
         const mensaje = getMensajeUsuario(reporte.estado, slaHoras);
@@ -105,14 +106,20 @@ export async function GET(
                           categoriaLabel:
                               CATEGORIA_LABELS[reporte.clasificacion.categoria] || reporte.clasificacion.categoria,
                           categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, reporte.clasificacion.categoria),
+                          categoriasSecundarias: (
+                              (reporte.clasificacion.categoriasSecundarias ?? []) as Array<{ categoria?: string }>
+                          )
+                              .map((s) => s.categoria)
+                              .filter((c): c is string => typeof c === "string"),
                           contienePii: reporte.clasificacion.contienePii,
                           piiDetectada: reporte.clasificacion.piiDetectada,
                       }
                     : null,
+            // Spec 089-US6: nunca score ni etiqueta de riesgo sobre el identificador.
+            // Se exponen solo hechos agregados (conteos) y la señal descriptiva.
+            actividad: ranking ? (ranking.totalReportes >= actividadAltaMin ? "alta" : "baja") : null,
             ranking: ranking
                 ? {
-                    score: ranking.score,
-                    nivelRiesgo: ranking.nivelRiesgo,
                     totalReportes: ranking.totalReportes,
                     reportesAutenticados: ranking.reportesAutenticados,
                     reportesAnonimos: ranking.reportesAnonimos,

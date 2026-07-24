@@ -37,7 +37,11 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
             </div>
             <ul className="flex-1 p-3 space-y-1">
                 {links.map((link) => {
-                    const active = pathname === link.href || pathname?.startsWith(link.href + "/");
+                    // La raíz ("/dashboard/admin") solo activa con match exacto; si no,
+                    // coincidiría con TODAS las subrutas (doble resaltado, US8).
+                    const active =
+                        pathname === link.href ||
+                        (link.href !== "/dashboard/admin" && (pathname?.startsWith(link.href + "/") ?? false));
                     return (
                         <li key={link.href}>
                             <Link

@@ -100,14 +100,18 @@ describe("GET /api/consulta", () => {
         expect(body.visibleEnDashboard).toBe(false);
         expect(body.totalReportes).toBe(1);
         expect(body.plataformas).toHaveLength(1);
+        // Anónimo: ubicación agregada por PAÍS (spec 089-US5)
         expect(body.ubicaciones).toHaveLength(1);
-        expect(body.ubicaciones[0].lat).toBe(4.711);
-        expect(body.ubicaciones[0].lng).toBe(-74.0721);
+        expect(body.ubicaciones[0].pais).toBe("Colombia");
+        expect(body.ubicaciones[0].lat).toBeUndefined();
+        expect(body.actividad).toBe("baja");
+        expect(body.autenticado).toBe(false);
+        expect(body.nivelRiesgo).toBeUndefined();
         expect(body.texto).toBeUndefined();
         expect(body.textoOriginal).toBeUndefined();
     });
 
-    it("usuario anónimo ve nivel de riesgo y resumen agregado básico", async () => {
+    it("usuario anónimo ve señal de actividad y resumen agregado básico (sin nivelRiesgo, spec 089-US6)", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         for (let i = 0; i < 3; i++) {
             await crearReporteVisible("+57300ANON", plataforma!.id, "OFRECIMIENTO_REGALOS", i === 0);
@@ -120,17 +124,20 @@ describe("GET /api/consulta", () => {
         expect(body.tieneReportes).toBe(true);
         expect(body.visibleEnDashboard).toBe(true);
         expect(body.totalReportes).toBe(3);
-        expect(body.nivelRiesgo).toBeDefined();
+        expect(body.nivelRiesgo).toBeUndefined();
+        expect(body.actividad).toBe("baja");
         expect(body.resumenPlataformas).toBeDefined();
         expect(body.ubicaciones).toHaveLength(1);
-        expect(body.resumen).toContain("3");
+        // Divulgación progresiva: el detalle (resumen/timeline) es solo para autenticados
+        expect(body.resumen).toBeUndefined();
+        expect(body.timeline).toBeUndefined();
         expect(body.plataformas).toHaveLength(1);
         expect(body.plataformas[0].nombre).toBe("WhatsApp");
         expect(body.texto).toBeUndefined();
         expect(body.textoOriginal).toBeUndefined();
     });
 
-    it("no expone score, categorías ni datos del denunciante", async () => {
+    it("no expone score ni datos del denunciante; categorías de riesgo sí visibles sin SPAM/OTRO (spec 089-US4)", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         for (let i = 0; i < 3; i++) {
             await crearReporteVisible("+57300AUTH", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
@@ -142,8 +149,39 @@ describe("GET /api/consulta", () => {
         const body = await res.json();
         expect(body.tieneReportes).toBe(true);
         expect(body.score).toBeUndefined();
-        expect(body.categorias).toBeUndefined();
-        expect(body.timeline).toHaveLength(1);
+        expect(body.categorias).toBeDefined();
+        expect(body.categorias.map((c: { categoria: string }) => c.categoria)).toContain("OFRECIMIENTO_REGALOS");
+        expect(body.categorias.every((c: { categoria: string }) => !["SPAM", "OTRO"].includes(c.categoria))).toBe(true);
+        // Anónimo: sin timeline
+        expect(body.timeline).toBeUndefined();
+    });
+
+    it("spec 089-US3: SPAM y OTRO no cuentan en el conteo público", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        // 2 reportes clasificados como SPAM + 1 OTRO + 1 con riesgo real
+        await crearReporteVisible("+57300SPAM", plataforma!.id, "SPAM", false);
+        await crearReporteVisible("+57300SPAM", plataforma!.id, "SPAM", false);
+        await crearReporteVisible("+57300SPAM", plataforma!.id, "OTRO", false);
+        await crearReporteVisible("+57300SPAM", plataforma!.id, "EXTORSION", false);
+
+        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300SPAM");
+        const res = await GET(req);
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        // Antes del predicado único contaba 4; ahora solo el aprobado (riesgo real)
+        expect(body.totalReportes).toBe(1);
+        expect(body.categorias).toHaveLength(1);
+        expect(body.categorias[0].categoria).toBe("EXTORSION");
+    });
+
+    it("spec 089-US3: identificador con SOLO spam/otro responde sin reportes", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        await crearReporteVisible("+57300SOLOSPAM", plataforma!.id, "SPAM", false);
+
+        const req = new Request("http://localhost:5005/api/consulta?identificador=%2B57300SOLOSPAM");
+        const res = await GET(req);
+        const body = await res.json();
+        expect(body.tieneReportes).toBe(false);
     });
 
     it("rechaza parámetros inválidos", async () => {
@@ -167,7 +205,7 @@ describe("GET /api/consulta", () => {
         expect(body.tieneReportes).toBe(true);
         expect(body.totalReportes).toBe(6);
         expect(body.plataformas).toHaveLength(2);
-        expect(body.categorias).toBeUndefined();
+        expect(body.categorias).toHaveLength(2);
     });
 
     it("no muestra reportes que aún están en revisión manual", async () => {

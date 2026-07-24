@@ -64,7 +64,7 @@ describe("GET /api/reportes/mis-reportes", () => {
         expect(pendiente.mensaje).toBe("Tu reporte está en proceso — puede tardar hasta 24 horas");
         expect(pendiente.slaHoras).toBe(24);
 
-        expect(procesado.estadoVisual).toBe("Verificado");
+        expect(procesado.estadoVisual).toBe("Procesado");
         expect(procesado.badge).toBe("success");
         expect(procesado.mensaje).toBe("Tu reporte ha sido verificado y clasificado.");
 

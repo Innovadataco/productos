@@ -10,7 +10,7 @@ type Distribucion = { porCiudad: Record<string, number>; porPais: Record<string,
 
 type Resultado = {
     identificador: string;
-    plataformas?: { id: string; nombre: string; clave?: string; otraPlataforma?: string | null; totalReportes: number }[];
+    plataformas?: { id: string; nombre: string; clave?: string; otraPlataforma?: string | null; total: number }[];
     tieneReportes: boolean;
     totalReportes?: number;
     reportesAutenticados?: number;
@@ -57,7 +57,7 @@ export function ConsultaResultado({ data }: { data: Resultado }) {
                         <span
                             key={p.id}
                             className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-accent dark:bg-sky-950/40"
-                            title={`${p.totalReportes} reportes`}
+                            title={`${p.total} reportes`}
                         >
                             {formatPlataforma(p.nombre, p.otraPlataforma, p.clave)}
                         </span>

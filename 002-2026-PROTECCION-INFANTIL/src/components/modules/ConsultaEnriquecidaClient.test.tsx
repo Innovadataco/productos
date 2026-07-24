@@ -22,13 +22,17 @@ function mockFetch(response: unknown, ok = true) {
 const detalleConReportes = {
     identificador: "3001111111",
     tieneReportes: true,
-    nivelRiesgo: "ALTO",
+    actividad: "baja",
     totalReportes: 2,
     reportesAutenticados: 1,
     reportesAnonimos: 1,
     ultimoReporte: "2026-07-16T15:55:26.045Z",
     plataformas: [{ id: "p1", nombre: "WhatsApp", clave: "whatsapp", total: 2, otraPlataforma: null }],
     resumenPlataformas: "2 reportes en WhatsApp",
+    categorias: [
+        { categoria: "SOLICITUD_MATERIAL", total: 1 },
+        { categoria: "CONTACTO_INSISTENTE", total: 1 },
+    ],
     reportes: [
         {
             id: "r1",
@@ -38,7 +42,6 @@ const detalleConReportes = {
             categoria: "SOLICITUD_MATERIAL",
             categoriaLabel: "Solicitud de material",
             categoriaGrupo: "Contacto sexual",
-            nivelRiesgo: "ALTO",
         },
         {
             id: "r2",
@@ -48,7 +51,6 @@ const detalleConReportes = {
             categoria: "CONTACTO_INSISTENTE",
             categoriaLabel: "Contacto insistente",
             categoriaGrupo: "Manipulación o engaño",
-            nivelRiesgo: "MEDIO",
         },
     ],
     ubicaciones: [
@@ -75,7 +77,10 @@ describe("ConsultaEnriquecidaClient", () => {
         fireEvent.click(screen.getByRole("button", { name: /buscar/i }));
 
         await waitFor(() => {
-            expect(document.body.textContent).toContain("Riesgo alto");
+            expect(document.body.textContent).toContain("Actividad baja de reportes");
+            expect(document.body.textContent).not.toContain("Riesgo");
+            expect(document.body.textContent).toContain("Solicitud de material · 1");
+            expect(document.body.textContent).toContain("Contacto insistente · 1");
             expect(document.body.textContent).toContain("Contacto sexual");
             expect(document.body.textContent).toContain("Manipulación o engaño");
             expect(document.body.textContent).toContain("2 reportes en WhatsApp");

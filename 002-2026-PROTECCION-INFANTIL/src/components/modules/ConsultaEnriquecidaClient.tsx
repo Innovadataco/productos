@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { formatPlataformasResumen } from "@/lib/plataforma";
-import type { NivelRiesgoConsulta } from "@/lib/riesgo-consulta";
+import { CATEGORIAS_LABELS } from "@/lib/labels";
 
 const MapaUbicaciones = dynamic(
     () => import("./MapaUbicaciones").then((mod) => mod.MapaUbicaciones),
@@ -19,18 +19,6 @@ function formatFecha(iso: string | null | undefined) {
     return new Date(iso).toLocaleDateString("es-CO", { dateStyle: "medium" });
 }
 
-function badgeRiesgo(nivel: NivelRiesgoConsulta) {
-    switch (nivel) {
-        case "ALTO":
-            return { variant: "danger" as const, label: "Riesgo alto" };
-        case "MEDIO":
-            return { variant: "warning" as const, label: "Riesgo medio" };
-        case "BAJO":
-        default:
-            return { variant: "success" as const, label: "Riesgo bajo" };
-    }
-}
-
 type ReporteDetalle = {
     id: string;
     plataforma: string;
@@ -39,7 +27,6 @@ type ReporteDetalle = {
     categoria: string;
     categoriaLabel: string;
     categoriaGrupo: string;
-    nivelRiesgo: NivelRiesgoConsulta;
 };
 
 type UbicacionDetalle = {
@@ -62,15 +49,18 @@ type DetalleResponse = {
     identificador: string;
     tieneReportes: boolean;
     mensaje?: string;
-    nivelRiesgo?: NivelRiesgoConsulta;
+    actividad?: "alta" | "baja";
     totalReportes?: number;
     reportesAutenticados?: number;
     reportesAnonimos?: number;
     ultimoReporte?: string | null;
     plataformas?: PlataformaDetalle[];
     resumenPlataformas?: string;
+    categorias?: { categoria: string; total: number }[];
     reportes?: ReporteDetalle[];
     ubicaciones?: UbicacionDetalle[];
+    timeline?: { mes: string; total: number }[];
+    resumen?: string;
 };
 
 export function ConsultaEnriquecidaClient() {
@@ -149,13 +139,22 @@ export function ConsultaEnriquecidaClient() {
                     <GlassCard className="text-center">
                         <p className="text-sm text-subtle">{data.identificador}</p>
                         <div className="mt-3 flex justify-center">
-                            <Badge variant={badgeRiesgo(data.nivelRiesgo ?? "BAJO").variant} className="text-sm px-3 py-1">
-                                {badgeRiesgo(data.nivelRiesgo ?? "BAJO").label}
+                            <Badge variant="info" className="text-sm px-3 py-1">
+                                Actividad {data.actividad === "alta" ? "alta" : "baja"} de reportes
                             </Badge>
                         </div>
                         <p className="mt-4 text-base font-medium text-body">
                             {data.resumenPlataformas || formatPlataformasResumen(data.plataformas ?? [], data.totalReportes)}
                         </p>
+                        {data.categorias && data.categorias.length > 0 && (
+                            <div className="mt-4 flex flex-wrap justify-center gap-2">
+                                {data.categorias.map((c) => (
+                                    <Badge key={c.categoria} variant="neutral">
+                                        {CATEGORIAS_LABELS[c.categoria] ?? c.categoria} · {c.total}
+                                    </Badge>
+                                ))}
+                            </div>
+                        )}
                     </GlassCard>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -194,6 +193,24 @@ export function ConsultaEnriquecidaClient() {
                             </table>
                         </div>
                     </GlassCard>
+
+                    {data.timeline && data.timeline.length > 0 && (
+                        <GlassCard>
+                            <h3 className="text-base font-semibold text-body mb-3">Reportes por mes</h3>
+                            <ul className="space-y-1 text-sm text-body">
+                                {data.timeline.map((t) => (
+                                    <li key={t.mes} className="flex items-center justify-between gap-2">
+                                        <span>{t.mes}</span>
+                                        <span className="text-xs text-subtle">{t.total} reportes</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </GlassCard>
+                    )}
+
+                    {data.resumen && (
+                        <p className="text-sm text-muted text-center">{data.resumen}</p>
+                    )}
 
                     {puntosMapa.length > 0 && (
                         <GlassCard>

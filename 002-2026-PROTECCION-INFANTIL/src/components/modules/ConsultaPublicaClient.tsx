@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { formatPlataformasResumen } from "@/lib/plataforma";
-import type { NivelRiesgoConsulta } from "@/lib/riesgo-consulta";
+import { CATEGORIAS_LABELS } from "@/lib/labels";
 
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -18,29 +18,32 @@ function formatFecha(iso: string | null | undefined) {
     return new Date(iso).toLocaleDateString("es-CO", { dateStyle: "medium" });
 }
 
-function badgeRiesgo(nivel: NivelRiesgoConsulta) {
-    switch (nivel) {
-        case "ALTO":
-            return { variant: "danger" as const, label: "Riesgo alto" };
-        case "MEDIO":
-            return { variant: "warning" as const, label: "Riesgo medio" };
-        case "BAJO":
-        default:
-            return { variant: "success" as const, label: "Riesgo bajo" };
-    }
-}
+type UbicacionConsulta = {
+    pais: string;
+    departamento?: string | null;
+    ciudad?: string;
+    total: number;
+    lat?: number | null;
+    lng?: number | null;
+};
 
 type ConsultaResponse = {
     identificador: string;
     tieneReportes: boolean;
     mensaje?: string;
-    nivelRiesgo?: NivelRiesgoConsulta;
+    actividad?: "alta" | "baja";
     totalReportes?: number;
     reportesAutenticados?: number;
     reportesAnonimos?: number;
+    primerReporte?: string | null;
     ultimoReporte?: string | null;
     plataformas?: { id: string; nombre: string; clave: string; total: number; otraPlataforma?: string | null }[];
     resumenPlataformas?: string;
+    categorias?: { categoria: string; total: number }[];
+    ubicaciones?: UbicacionConsulta[];
+    timeline?: { mes: string; total: number }[];
+    resumen?: string;
+    autenticado?: boolean;
 };
 
 export function ConsultaPublicaClient() {
@@ -123,7 +126,7 @@ export function ConsultaPublicaClient() {
             {data && !data.tieneReportes && (
                 <div className="mx-auto mt-6 max-w-xl rounded-xl glass p-6 text-center">
                     <p className="text-body">
-                        {data.mensaje || "No hay reportes suficientes para este identificador. La información se muestra solo cuando hay múltiples reportes independientes."}
+                        {data.mensaje || "Sin reportes registrados para este identificador."}
                     </p>
                 </div>
             )}
@@ -133,19 +136,62 @@ export function ConsultaPublicaClient() {
                     <GlassCard className="text-center">
                         <p className="text-sm text-subtle">{data.identificador}</p>
                         <div className="mt-3 flex justify-center">
-                            <Badge variant={badgeRiesgo(data.nivelRiesgo ?? "BAJO").variant} className="text-sm px-3 py-1">
-                                {badgeRiesgo(data.nivelRiesgo ?? "BAJO").label}
+                            <Badge variant="info" className="text-sm px-3 py-1">
+                                Actividad {data.actividad === "alta" ? "alta" : "baja"} de reportes
                             </Badge>
                         </div>
                         <p className="mt-4 text-base font-medium text-body">
                             {data.resumenPlataformas || formatPlataformasResumen(data.plataformas ?? [], data.totalReportes)}
                         </p>
+                        {data.categorias && data.categorias.length > 0 && (
+                            <div className="mt-4 flex flex-wrap justify-center gap-2">
+                                {data.categorias.map((c) => (
+                                    <Badge key={c.categoria} variant="neutral">
+                                        {CATEGORIAS_LABELS[c.categoria] ?? c.categoria} · {c.total}
+                                    </Badge>
+                                ))}
+                            </div>
+                        )}
                     </GlassCard>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <MetricCard label="Total reportes" value={data.totalReportes ?? 0} />
-                        <MetricCard label="Último reporte" value={formatFecha(data.ultimoReporte)} />
+                        {data.ultimoReporte && (
+                            <MetricCard label="Último reporte" value={formatFecha(data.ultimoReporte)} />
+                        )}
                     </div>
+
+                    {data.ubicaciones && data.ubicaciones.length > 0 && (
+                        <GlassCard>
+                            <h3 className="text-base font-semibold text-body mb-3">Ubicaciones con reportes</h3>
+                            <ul className="space-y-1 text-sm text-body">
+                                {data.ubicaciones.map((u, i) => (
+                                    <li key={i} className="flex items-center justify-between gap-2">
+                                        <span>{[u.ciudad, u.departamento, u.pais].filter(Boolean).join(", ")}</span>
+                                        <span className="text-xs text-subtle">{u.total} reportes</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </GlassCard>
+                    )}
+
+                    {data.timeline && data.timeline.length > 0 && (
+                        <GlassCard>
+                            <h3 className="text-base font-semibold text-body mb-3">Reportes por mes</h3>
+                            <ul className="space-y-1 text-sm text-body">
+                                {data.timeline.map((t) => (
+                                    <li key={t.mes} className="flex items-center justify-between gap-2">
+                                        <span>{t.mes}</span>
+                                        <span className="text-xs text-subtle">{t.total} reportes</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </GlassCard>
+                    )}
+
+                    {data.resumen && (
+                        <p className="text-sm text-muted text-center">{data.resumen}</p>
+                    )}
 
                     <div className="glass rounded-2xl p-6 text-center">
                         {isAutenticado ? (

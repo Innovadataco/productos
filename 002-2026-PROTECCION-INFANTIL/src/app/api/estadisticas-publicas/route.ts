@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { obtenerGruposCategoria, agruparCategorias } from "@/lib/categoria-grupos";
+import { whereReporteAprobado, ESTADOS_APROBADOS, CATEGORIAS_NO_APROBADAS } from "@/lib/reporte-aprobado";
 
 export async function GET() {
     try {
@@ -14,41 +15,38 @@ export async function GET() {
             porPlataforma,
             porPais,
             porCiudadConIds,
-            porNivelRiesgo,
             categoriasRaw,
         ] = await Promise.all([
-            prisma.reporte.count({ where: { eliminado: false } }),
+            prisma.reporte.count({ where: whereReporteAprobado() }),
             prisma.identificadorReportado.count(),
-            prisma.reporte.count({ where: { eliminado: false, esAnonimo: false } }),
-            prisma.reporte.count({ where: { eliminado: false, esAnonimo: true } }),
+            prisma.reporte.count({ where: whereReporteAprobado({ esAnonimo: false }) }),
+            prisma.reporte.count({ where: whereReporteAprobado({ esAnonimo: true }) }),
             prisma.identificadorReportado.aggregate({
                 _avg: { score: true },
             }),
             prisma.reporte.groupBy({
                 by: ["plataformaId"],
                 _count: { id: true },
-                where: { eliminado: false },
+                where: whereReporteAprobado(),
             }),
             prisma.reporte.groupBy({
                 by: ["pais"],
                 _count: { id: true },
-                where: { eliminado: false },
+                where: whereReporteAprobado(),
                 orderBy: { _count: { id: "desc" } },
             }),
             prisma.reporte.groupBy({
                 by: ["ciudadId"],
                 _count: { id: true },
-                where: { eliminado: false, ciudadId: { not: null } },
+                where: whereReporteAprobado({ ciudadId: { not: null } }),
                 orderBy: { _count: { id: "desc" } },
                 take: 50,
             }),
-            prisma.identificadorReportado.groupBy({
-                by: ["nivelRiesgo"],
-                where: { nivelRiesgo: { not: null } },
-                _count: { identificador: true },
-            }),
             prisma.clasificacionIA.findMany({
-                where: { reporte: { eliminado: false } },
+                where: {
+                    categoria: { notIn: [...CATEGORIAS_NO_APROBADAS] },
+                    reporte: { estado: { in: [...ESTADOS_APROBADOS] }, eliminado: false },
+                },
                 select: { categoria: true },
             }),
         ]);
@@ -117,10 +115,6 @@ export async function GET() {
             })),
             porPais: porPais.map((p) => ({ pais: p.pais, count: p._count.id })),
             porCiudad,
-            porNivelRiesgo: porNivelRiesgo.map((n) => ({
-                nivel: n.nivelRiesgo || "SIN_CLASIFICAR",
-                count: n._count.identificador,
-            })),
             porCategoria,
             porGrupoCategoria,
         });

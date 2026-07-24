@@ -353,7 +353,7 @@ export default function CirculoConfianzaPage() {
             <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <MetricCard label="Sin reportes" value={resumen.sinReportes} sub={resumen.activos > 0 ? "activos" : undefined} />
                 <MetricCard label="En proceso" value={resumen.enRevision} />
-                <MetricCard label="Verificado" value={resumen.clasificado} />
+                <MetricCard label="Procesado" value={resumen.clasificado} />
                 <MetricCard label="Contactos activos" value={resumen.activos} />
             </div>
 

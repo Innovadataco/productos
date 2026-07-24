@@ -3,15 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
-import type { EstadoReporte } from "@prisma/client";
+import { verifyToken } from "@/lib/auth";
 import { formatPlataforma, formatPlataformasResumen } from "@/lib/plataforma";
-import { getRiesgoConsultaParams, calcularRiesgoConsulta } from "@/lib/riesgo-consulta";
+import { whereReporteAprobado, CATEGORIAS_NO_APROBADAS } from "@/lib/reporte-aprobado";
+import { obtenerSeveridades } from "@/lib/scoring";
+import { getParametroSistema } from "@/lib/parametros";
+import type { CategoriaConducta } from "@prisma/client";
 
 const consultaSchema = z.object({
     identificador: z.string().min(3).max(100),
 });
-
-const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
 
 function formatFecha(date: Date | string) {
     return new Date(date).toISOString().slice(0, 10);
@@ -21,9 +22,11 @@ function formatFecha(date: Date | string) {
  * GET /api/consulta?identificador=...
  * Consulta pública de un identificador reportado (número, nick o usuario).
  *
- * Devuelve un resumen agregado SIN exponer textos de reportes, nombres de
- * personas ni datos personales. Incluye distribución geográfica agregada por
- * ciudad/país, fechas de reporte y del incidente, plataformas y categorías.
+ * Informa con hechos agregados, NUNCA juzga a la persona (sin nivelRiesgo ni score —
+ * spec 089-US6). Solo cuenta reportes aprobados (spec 089-US3: estado CLASIFICADO/
+ * CORREGIDO, categoría ∉ {SPAM,OTRO}, no eliminado).
+ * Divulgación progresiva: anónimo = resumen; autenticado = ciudad, timeline,
+ * plataformas completas e informe.
  */
 export async function GET(request: Request) {
     try {
@@ -52,23 +55,29 @@ export async function GET(request: Request) {
             );
         }
 
-        // Parámetros de visibilidad (solo para indicar si aparece en el dashboard público)
+        // Divulgación progresiva (US7): sesión opcional, nunca bloquea al anónimo.
+        // El token se lee del header cookie de la Request (sin next/headers: funciona
+        // también fuera de request scope, p. ej. en tests de integración).
+        const cookieHeader = request.headers.get("cookie") ?? "";
+        const tokenMatch = cookieHeader.match(/(?:^|;\s*)(?:__Host-token|token)=([^;]+)/);
+        const payload = tokenMatch ? await verifyToken(tokenMatch[1]) : null;
+        const autenticado = !!payload;
+
+        // Parámetros de visibilidad (listado del dashboard; la consulta directa siempre muestra detalle — US5)
         const paramUmbral = await prisma.parametroSistema.findUnique({
             where: { clave: "visibility.report_threshold" },
         });
         const paramRatio = await prisma.parametroSistema.findUnique({
             where: { clave: "visibility.min_authenticated_ratio" },
         });
+        const paramActividad = await getParametroSistema("visibility.actividad_alta_min", prisma);
         const umbral = parseInt(paramUmbral?.valor || "3", 10);
         const minRatio = parseFloat(paramRatio?.valor || "0.5");
+        const actividadAltaMin = parseInt(paramActividad?.valor || "5", 10);
 
-        // Reportes visibles del identificador (CLASIFICADO / CORREGIDO)
+        // Reportes APROBADOS del identificador (predicado único spec 089-US3)
         const reportes = await prisma.reporte.findMany({
-            where: {
-                identificador: parsed.data.identificador,
-                estado: { in: ESTADOS_VISIBLES },
-                eliminado: false,
-            },
+            where: whereReporteAprobado({ identificador: parsed.data.identificador }),
             select: {
                 id: true,
                 ciudad: true,
@@ -77,8 +86,8 @@ export async function GET(request: Request) {
                 fechaIncidente: true,
                 esAnonimo: true,
                 plataforma: { select: { id: true, nombre: true, clave: true } },
-                clasificacion: { select: { categoria: true, confianza: true } },
-                ciudadRel: { select: { lat: true, lng: true } },
+                clasificacion: { select: { categoria: true, confianza: true, categoriasSecundarias: true } },
+                ciudadRel: { select: { nombre: true, lat: true, lng: true, departamento: { select: { nombre: true } } } },
                 otraPlataforma: true,
             },
             orderBy: { creadoEn: "desc" },
@@ -101,6 +110,9 @@ export async function GET(request: Request) {
         const ultimoReporte = reportes[0]?.creadoEn ?? null;
         const primerReporte = reportes[reportes.length - 1]?.creadoEn ?? null;
 
+        // Señal descriptiva (US5/US6): describe los DATOS, no el riesgo del identificador
+        const actividad = totalReportes >= actividadAltaMin ? "alta" : "baja";
+
         // Plataformas (agrupadas respetando el nombre personalizado en "otro")
         const porPlataforma = new Map<
             string,
@@ -121,77 +133,97 @@ export async function GET(request: Request) {
         }
         const plataformas = Array.from(porPlataforma.values()).sort((a, b) => b.total - a.total);
 
-        // Ubicaciones agregadas por ciudad/país
-        const ubicacionKey = (r: (typeof reportes)[0]) => `${r.pais}|${r.ciudad}`;
-        const porUbicacion = new Map<
-            string,
-            {
-                pais: string;
-                ciudad: string;
-                total: number;
-                fechasReporte: string[];
-                fechasIncidente: string[];
-                lat: number | null;
-                lng: number | null;
+        // Categorías (US4): principal + secundarias, sin SPAM/OTRO, ordenadas por gravedad
+        const severidades = await obtenerSeveridades();
+        const conteoCategorias = new Map<string, number>();
+        for (const r of reportes) {
+            const principal = r.clasificacion?.categoria;
+            if (principal && !(CATEGORIAS_NO_APROBADAS as readonly string[]).includes(principal)) {
+                conteoCategorias.set(principal, (conteoCategorias.get(principal) ?? 0) + 1);
             }
-        >();
-
-        for (const r of reportes) {
-            const key = ubicacionKey(r);
-            const actual = porUbicacion.get(key) || {
-                pais: r.pais,
-                ciudad: r.ciudad,
-                total: 0,
-                fechasReporte: [] as string[],
-                fechasIncidente: [] as string[],
-                lat: r.ciudadRel?.lat ?? null,
-                lng: r.ciudadRel?.lng ?? null,
-            };
-            actual.total += 1;
-            actual.fechasReporte.push(formatFecha(r.creadoEn));
-            actual.fechasIncidente.push(formatFecha(r.fechaIncidente));
-            porUbicacion.set(key, actual);
+            const secundarias = (r.clasificacion?.categoriasSecundarias ?? []) as Array<{ categoria?: string }>;
+            for (const s of secundarias) {
+                const cat = s.categoria;
+                if (cat && !(CATEGORIAS_NO_APROBADAS as readonly string[]).includes(cat)) {
+                    conteoCategorias.set(cat, (conteoCategorias.get(cat) ?? 0) + 1);
+                }
+            }
         }
-        const ubicaciones = Array.from(porUbicacion.values())
-            .map((u) => ({
-                ...u,
-                fechasReporte: [...new Set(u.fechasReporte)].sort().reverse(),
-                fechasIncidente: [...new Set(u.fechasIncidente)].sort().reverse(),
-            }))
-            .sort((a, b) => b.total - a.total);
+        const categorias = Array.from(conteoCategorias.entries())
+            .map(([categoria, total]) => ({ categoria, total, severidad: severidades[categoria as CategoriaConducta] ?? 0 }))
+            .sort((a, b) => b.severidad - a.severidad || b.total - a.total)
+            .map(({ categoria, total }) => ({ categoria, total }));
 
-        // Timeline mensual
-        const porMes = new Map<string, number>();
-        for (const r of reportes) {
-            const mes = formatFecha(r.creadoEn).slice(0, 7);
-            porMes.set(mes, (porMes.get(mes) || 0) + 1);
+        // Ubicación: anónimo = rollup por PAÍS; autenticado = departamento/ciudad
+        let ubicaciones: unknown[];
+        if (!autenticado) {
+            const porPais = new Map<string, number>();
+            for (const r of reportes) {
+                porPais.set(r.pais, (porPais.get(r.pais) ?? 0) + 1);
+            }
+            ubicaciones = Array.from(porPais.entries())
+                .map(([pais, total]) => ({ pais, total }))
+                .sort((a, b) => b.total - a.total);
+        } else {
+            const porUbicacion = new Map<
+                string,
+                { pais: string; departamento: string | null; ciudad: string; total: number; lat: number | null; lng: number | null }
+            >();
+            for (const r of reportes) {
+                const departamento = r.ciudadRel?.departamento?.nombre ?? null;
+                const ciudad = r.ciudadRel?.nombre ?? r.ciudad;
+                const key = `${r.pais}|${departamento ?? ""}|${ciudad}`;
+                const actual = porUbicacion.get(key) || {
+                    pais: r.pais,
+                    departamento,
+                    ciudad,
+                    total: 0,
+                    lat: r.ciudadRel?.lat ?? null,
+                    lng: r.ciudadRel?.lng ?? null,
+                };
+                actual.total += 1;
+                porUbicacion.set(key, actual);
+            }
+            ubicaciones = Array.from(porUbicacion.values()).sort((a, b) => b.total - a.total);
         }
-        const timeline = Array.from(porMes.entries())
-            .map(([mes, total]) => ({ mes, total }))
-            .sort((a, b) => a.mes.localeCompare(b.mes));
 
         const ciudadesUnicas = new Set(reportes.map((r) => r.ciudad)).size;
         const paisesUnicos = new Set(reportes.map((r) => r.pais)).size;
 
-        const riesgoParams = await getRiesgoConsultaParams();
-        const riesgo = calcularRiesgoConsulta(reportes, riesgoParams);
-
-        return NextResponse.json({
+        // Respuesta base (anónimo = resumen)
+        const respuesta: Record<string, unknown> = {
             identificador: parsed.data.identificador,
             tieneReportes: true,
             visibleEnDashboard,
-            nivelRiesgo: riesgo.nivelRiesgo,
+            actividad,
             totalReportes,
             reportesAutenticados,
             reportesAnonimos,
-            primerReporte: primerReporte?.toISOString() ?? null,
-            ultimoReporte: ultimoReporte?.toISOString() ?? null,
             plataformas,
             resumenPlataformas: formatPlataformasResumen(plataformas, totalReportes),
+            categorias,
             ubicaciones,
-            timeline,
-            resumen: `Se han reportado ${totalReportes} vez(es) entre ${formatFecha(primerReporte || new Date())} y ${formatFecha(ultimoReporte || new Date())} en ${ciudadesUnicas} ciudad(es) de ${paisesUnicos} país(es) y ${plataformas.length} plataforma(s).`,
-        });
+            autenticado,
+        };
+
+        // Divulgación progresiva (US5/US7): detalle solo autenticado
+        if (autenticado) {
+            const porMes = new Map<string, number>();
+            for (const r of reportes) {
+                const mes = formatFecha(r.creadoEn).slice(0, 7);
+                porMes.set(mes, (porMes.get(mes) || 0) + 1);
+            }
+            const timeline = Array.from(porMes.entries())
+                .map(([mes, total]) => ({ mes, total }))
+                .sort((a, b) => a.mes.localeCompare(b.mes));
+
+            respuesta.primerReporte = primerReporte?.toISOString() ?? null;
+            respuesta.ultimoReporte = ultimoReporte?.toISOString() ?? null;
+            respuesta.timeline = timeline;
+            respuesta.resumen = `Se han reportado ${totalReportes} vez(es) entre ${formatFecha(primerReporte || new Date())} y ${formatFecha(ultimoReporte || new Date())} en ${ciudadesUnicas} ciudad(es) de ${paisesUnicos} país(es) y ${plataformas.length} plataforma(s).`;
+        }
+
+        return NextResponse.json(respuesta);
     } catch {
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },

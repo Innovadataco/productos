@@ -109,7 +109,8 @@ describe("GET /api/estadisticas-publicas", () => {
         expect(bogota.lat).toBe(4.711);
         expect(bogota.lng).toBe(-74.0721);
 
-        expect(body.porNivelRiesgo).toHaveLength(2);
+        // spec 089-US6: la distribución por nivel de riesgo ya no se expone públicamente
+        expect(body.porNivelRiesgo).toBeUndefined();
         expect(body.porCategoria).toHaveLength(3);
 
         expect(body.porGrupoCategoria).toBeDefined();

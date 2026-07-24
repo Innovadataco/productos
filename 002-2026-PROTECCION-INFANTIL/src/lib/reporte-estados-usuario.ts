@@ -1,6 +1,6 @@
 import { EstadoReporte } from "@prisma/client";
 
-export type EstadoVisualUsuario = "En proceso" | "Verificado";
+export type EstadoVisualUsuario = "En proceso" | "Procesado";
 export type BadgeVisualUsuario = "warning" | "success" | "muted";
 
 export type EstadoContactoVisual = "sinReportes" | "enRevision" | "clasificado";
@@ -14,14 +14,14 @@ export type MapEstadoUsuarioResult = {
 /**
  * Mapeo puro de estados internos de un reporte a los estados simplificados
  * que ve el usuario final, según la Spec 031:
- * - CLASIFICADO / CORREGIDO → "Verificado"
+ * - CLASIFICADO / CORREGIDO → "Procesado"
  * - Todo lo demás → "En proceso"
  */
 export function mapEstadoUsuario(estado: EstadoReporte): MapEstadoUsuarioResult {
     switch (estado) {
         case EstadoReporte.CLASIFICADO:
         case EstadoReporte.CORREGIDO:
-            return { estadoVisual: "Verificado", badge: "success", enProceso: false };
+            return { estadoVisual: "Procesado", badge: "success", enProceso: false };
         case EstadoReporte.PENDIENTE:
         case EstadoReporte.PROCESANDO:
         case EstadoReporte.REVISION_MANUAL:
@@ -47,7 +47,7 @@ export function formatEstadoUsuario(estado: EstadoReporte): EstadoVisualUsuario 
 export function formatEstadoCirculo(estado: EstadoContactoVisual): string {
     switch (estado) {
         case "clasificado":
-            return "Verificado";
+            return "Procesado";
         case "enRevision":
             return "En proceso";
         case "sinReportes":

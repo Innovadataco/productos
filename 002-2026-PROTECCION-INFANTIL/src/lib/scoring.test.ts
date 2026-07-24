@@ -97,8 +97,9 @@ describe("calcularScore", () => {
 
     it("devuelve scores desagregados y pesos unitarios cuando el flag está desactivado", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        await crearReporteClasificado("+57300MIX", plataforma!.id, "OTRO", true, new Date());
-        await crearReporteClasificado("+57300MIX", plataforma!.id, "OTRO", false, new Date());
+        // spec 089-US3: OTRO no cuenta para el score; usar categoría de riesgo real
+        await crearReporteClasificado("+57300MIX", plataforma!.id, "CONTACTO_INSISTENTE", true, new Date());
+        await crearReporteClasificado("+57300MIX", plataforma!.id, "CONTACTO_INSISTENTE", false, new Date());
 
         expect(await isSourceWeightEnabled()).toBe(false);
 

@@ -10,8 +10,8 @@ describe("mapEstadoUsuario", () => {
         [EstadoReporte.POSIBLE_SPAM, "En proceso", "warning", true],
         [EstadoReporte.REQUIERE_ANONIMIZACION, "En proceso", "warning", true],
         [EstadoReporte.DUPLICADO, "En proceso", "warning", true],
-        [EstadoReporte.CLASIFICADO, "Verificado", "success", false],
-        [EstadoReporte.CORREGIDO, "Verificado", "success", false],
+        [EstadoReporte.CLASIFICADO, "Procesado", "success", false],
+        [EstadoReporte.CORREGIDO, "Procesado", "success", false],
     ])("mapea %s a %s con badge %s", (estado, estadoVisual, badge, enProceso) => {
         const result = mapEstadoUsuario(estado);
         expect(result.estadoVisual).toBe(estadoVisual);
@@ -22,7 +22,7 @@ describe("mapEstadoUsuario", () => {
 
 describe("formatEstadoUsuario", () => {
     it("devuelve 'Verificado' para CLASIFICADO", () => {
-        expect(formatEstadoUsuario(EstadoReporte.CLASIFICADO)).toBe("Verificado");
+        expect(formatEstadoUsuario(EstadoReporte.CLASIFICADO)).toBe("Procesado");
     });
 
     it("devuelve 'En proceso' para estados no verificados", () => {
@@ -33,7 +33,7 @@ describe("formatEstadoUsuario", () => {
 
 describe("formatEstadoCirculo", () => {
     it("devuelve 'Verificado' para clasificado", () => {
-        expect(formatEstadoCirculo("clasificado")).toBe("Verificado");
+        expect(formatEstadoCirculo("clasificado")).toBe("Procesado");
     });
 
     it("devuelve 'En proceso' para enRevision", () => {

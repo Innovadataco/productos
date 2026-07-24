@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { getParametroSistema } from "./parametros";
 import type { Prisma, CategoriaConducta, EstadoReporte } from "@prisma/client";
+import { whereReporteAprobado } from "./reporte-aprobado";
 
 export type NivelRiesgo = "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
 
@@ -40,7 +41,8 @@ interface ScoringParams {
     severity: Record<CategoriaConducta, number>;
 }
 
-const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
+// Spec 089-US3: la cuenta del scoring usa el predicado único esReporteAprobado
+// (estado ∈ {CLASIFICADO,CORREGIDO} ∧ categoría ∉ {SPAM,OTRO} ∧ eliminado=false).
 
 const CATEGORIAS_DEFAULT: CategoriaConducta[] = [
     "CONTACTO_INSISTENTE",
@@ -230,11 +232,7 @@ export async function calcularScore(
     const params = await getScoringParams(tx);
     const sourceWeightEnabled = opts?.forceSourceWeight || (await isSourceWeightEnabled(tx));
 
-    const where: { identificador: string; plataformaId?: string; estado: { in: EstadoReporte[] }; eliminado: boolean } = {
-        identificador,
-        estado: { in: ESTADOS_VISIBLES },
-        eliminado: false,
-    };
+    const where = whereReporteAprobado({ identificador });
     if (plataformaId) {
         where.plataformaId = plataformaId;
     }

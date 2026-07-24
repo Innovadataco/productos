@@ -39,6 +39,7 @@ async function crearReporteClasificadoVisible(numeroSeguimiento: string, identif
             confianza: 0.92,
             contienePii: true,
             piiDetectada: ["María"],
+            categoriasSecundarias: [{ categoria: "CONTACTO_INSISTENTE" }],
             modeloUsado: "ornith:9b",
             latenciaMs: 1000,
         },
@@ -108,7 +109,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(res.status).toBe(200);
         const body = await res.json();
 
-        expect(body.estadoVisual).toBe("Verificado");
+        expect(body.estadoVisual).toBe("Procesado");
         expect(body.estadoInterno).toBe("CLASIFICADO");
         expect(body.enProceso).toBe(false);
         expect(body.badge).toBe("success");
@@ -116,6 +117,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(body.slaHoras).toBe(24);
         expect(body.clasificacion).not.toBeNull();
         expect(body.clasificacion.confianza).toBeUndefined();
+        expect(body.clasificacion.categoriasSecundarias).toEqual(["CONTACTO_INSISTENTE"]);
         expect(body.ranking).not.toBeNull();
     });
 

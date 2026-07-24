@@ -144,6 +144,14 @@ async function main() {
             descripcion: "Máximo de reintentos ante fallo de procesamiento",
         },
         {
+            clave: "visibility.actividad_alta_min",
+            valor: "5",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.VISIBILITY,
+            esPublico: true,
+            descripcion: "Reportes mínimos para mostrar la señal 'Actividad alta de reportes' en consulta y seguimiento",
+        },
+        {
             clave: "ia.simulacion_timeout_minutos",
             valor: "60",
             tipo: TipoParametro.INTEGER,
