@@ -15,111 +15,158 @@ import { prisma } from "@/lib/prisma";
 import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
 import { GET, POST } from "./route";
 
-// Todos los casos corren con sesión válida salvo los de 401 (spec 005, US-3).
+const url = "http://localhost:5001/api/licitaciones";
+
+// Tipos del catálogo configurable: la licitación pública exige numero+fecha; la
+// contratación directa no exige ninguno (banderas, no nombres cableados — §0.7).
+const TIPO_LICITACION = { id: 1, key: "licitacion-publica", nombreOficial: "Licitación pública", exigeNumero: true, exigeFechaApertura: true };
+const TIPO_DIRECTA = { id: 3, key: "contratacion-directa", nombreOficial: "Contratación directa", exigeNumero: false, exigeFechaApertura: false };
+
 beforeEach(async () => {
   await conSesion();
 });
 
-const LICITACION_VALIDA = {
-  numero: "LIC-2026-001",
-  titulo: "Adquisición de equipos",
-  estadoId: "1",
-  fechaApertura: "2026-08-01",
-};
-
-describe("GET /api/licitaciones", () => {
+describe("GET /api/licitaciones (oportunidades)", () => {
   beforeEach(() => {
     vi.mocked(prisma.licitacion.findMany).mockReset();
   });
 
-  it("devuelve la lista de licitaciones", async () => {
-    const fixture = [{ id: "lic1", numero: "LIC-2026-001", titulo: "Adquisición" }];
-    vi.mocked(prisma.licitacion.findMany).mockResolvedValue(fixture as never);
+  it("devuelve la lista con el total de presupuesto calculado", async () => {
+    vi.mocked(prisma.licitacion.findMany).mockResolvedValue([
+      { id: "op1", titulo: "Una", partidas: [{ monto: 100 }, { monto: 250 }] },
+    ] as never);
 
-    const res = await GET(new NextRequest("http://localhost:5001/api/licitaciones"));
+    const res = await GET(new NextRequest(url));
+    const body = await res.json();
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual(fixture);
+    expect(body[0].totalPresupuesto).toBe(350);
   });
 
-  it("aplica los filtros de estado, entidad y búsqueda", async () => {
+  it("aplica los filtros de estado, entidad, tipo y búsqueda", async () => {
     vi.mocked(prisma.licitacion.findMany).mockResolvedValue([] as never);
 
-    await GET(
-      new NextRequest("http://localhost:5001/api/licitaciones?estado=abierta&entidad=3&q=equipos"),
-    );
+    await GET(new NextRequest(`${url}?estado=abierta&entidad=3&tipo=contratacion-directa&q=equipos`));
 
     const { where } = primerArgumento(vi.mocked(prisma.licitacion.findMany));
     expect(where).toMatchObject({
       estado: { key: "abierta" },
       entidadId: 3,
+      tipo: { key: "contratacion-directa" },
     });
     expect(where?.OR).toHaveLength(3);
   });
 
-  it("no filtra el mensaje de excepción al cliente (FR-004)", async () => {
+  it("responde 401 sin sesión y no consulta la base", async () => {
+    await sinSesion();
+    vi.mocked(prisma.licitacion.findMany).mockReset();
+    const res = await GET(new NextRequest(url));
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
+    expect(prisma.licitacion.findMany).not.toHaveBeenCalled();
+  });
+
+  it("no filtra el mensaje de excepción al cliente (FR-020)", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.mocked(prisma.licitacion.findMany).mockRejectedValue(
-      new Error("relation \"Licitacion\" does not exist en 10.0.0.5"),
-    );
-
-    const res = await GET(new NextRequest("http://localhost:5001/api/licitaciones"));
+    vi.mocked(prisma.licitacion.findMany).mockRejectedValue(new Error("fallo en 10.0.0.5"));
+    const res = await GET(new NextRequest(url));
     const body = await res.json();
-
     expect(res.status).toBe(500);
-    expect(body).toEqual({ error: "Error al obtener licitaciones" });
+    expect(body).toEqual({ error: "Error al obtener oportunidades" });
     expect(JSON.stringify(body)).not.toContain("10.0.0.5");
   });
 });
 
-describe("POST /api/licitaciones", () => {
+describe("POST /api/licitaciones — validación por tipo (spec 006, FR-003)", () => {
   beforeEach(() => {
     vi.mocked(prisma.licitacion.create).mockReset();
+    vi.mocked(prisma.tipoOportunidad.findUnique).mockReset();
   });
 
-  it("rechaza con 401 si no hay sesión", async () => {
+  it("rechaza con 401 sin sesión, sin crear nada", async () => {
     await sinSesion();
-
-    const res = await POST(peticionJson("http://localhost:5001/api/licitaciones", LICITACION_VALIDA));
-
+    const res = await POST(peticionJson(url, { titulo: "X", tipoId: "3", estadoId: "1" }));
     expect(res.status).toBe(401);
     expect(prisma.licitacion.create).not.toHaveBeenCalled();
   });
 
-  it("rechaza con 400 si faltan campos requeridos", async () => {
-    await conSesion();
-
-    const res = await POST(
-      peticionJson("http://localhost:5001/api/licitaciones", { titulo: "Sin número ni estado" }),
-    );
-
+  it("rechaza con 400 si faltan título, tipo o estado", async () => {
+    const res = await POST(peticionJson(url, { titulo: "Sin tipo ni estado" }));
     expect(res.status).toBe(400);
     expect(prisma.licitacion.create).not.toHaveBeenCalled();
   });
 
-  it("crea la licitación y responde 201", async () => {
-    await conSesion();
-    const creada = { id: "lic1", ...LICITACION_VALIDA };
-    vi.mocked(prisma.licitacion.create).mockResolvedValue(creada as never);
+  it("SC-001: crea una contratación directa SIN numero ni fechaApertura", async () => {
+    vi.mocked(prisma.tipoOportunidad.findUnique).mockResolvedValue(TIPO_DIRECTA as never);
+    vi.mocked(prisma.licitacion.create).mockResolvedValue({ id: "op1" } as never);
 
-    const res = await POST(peticionJson("http://localhost:5001/api/licitaciones", LICITACION_VALIDA));
+    const res = await POST(peticionJson(url, { titulo: "Negocio directo", tipoId: "3", estadoId: "1" }));
 
     expect(res.status).toBe(201);
     const data = primerArgumento(vi.mocked(prisma.licitacion.create)).data;
-    expect(data.numero).toBe("LIC-2026-001");
-    expect(data.estadoId).toBe(1); // parseInt aplicado
+    expect(data.numero).toBeNull();
+    expect(data.fechaApertura).toBeNull();
+    expect(data.tipoId).toBe(3);
   });
-});
 
-describe("GET /api/licitaciones — sesión obligatoria (spec 005, FR-008)", () => {
-  it("responde 401 sin sesión y no consulta la base", async () => {
-    await sinSesion();
-    vi.mocked(prisma.licitacion.findMany).mockReset();
+  it("SC-002: rechaza una licitación pública SIN numero", async () => {
+    vi.mocked(prisma.tipoOportunidad.findUnique).mockResolvedValue(TIPO_LICITACION as never);
 
-    const res = await GET(new NextRequest("http://localhost:5001/api/licitaciones"));
+    const res = await POST(peticionJson(url, { titulo: "Licitación", tipoId: "1", estadoId: "1", fechaApertura: "2026-08-01" }));
+    const body = await res.json();
 
-    expect(res.status).toBe(401);
-    await expect(res.json()).resolves.toEqual({ error: "No autenticado" });
-    expect(prisma.licitacion.findMany).not.toHaveBeenCalled();
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/número/i);
+    expect(prisma.licitacion.create).not.toHaveBeenCalled();
+  });
+
+  it("SC-002: rechaza una licitación pública SIN fechaApertura", async () => {
+    vi.mocked(prisma.tipoOportunidad.findUnique).mockResolvedValue(TIPO_LICITACION as never);
+
+    const res = await POST(peticionJson(url, { titulo: "Licitación", tipoId: "1", estadoId: "1", numero: "LIC-1" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/apertura/i);
+  });
+
+  it("crea una licitación pública completa con cronograma, ciudad y partidas", async () => {
+    vi.mocked(prisma.tipoOportunidad.findUnique).mockResolvedValue(TIPO_LICITACION as never);
+    vi.mocked(prisma.licitacion.create).mockResolvedValue({ id: "op1" } as never);
+
+    const res = await POST(
+      peticionJson(url, {
+        titulo: "Licitación completa",
+        tipoId: "1",
+        estadoId: "1",
+        numero: "LIC-2026-001",
+        fechaApertura: "2026-08-01",
+        fechaCierre: "2026-09-01",
+        ciudadEjecucion: "Bogotá",
+        partidas: [{ concepto: "Obra", monto: 1000, moneda: "COP" }],
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    const data = primerArgumento(vi.mocked(prisma.licitacion.create)).data;
+    expect(data.ciudadEjecucion).toBe("Bogotá");
+    expect(data.fechaCierre).toBeInstanceOf(Date);
+    expect(data.partidas).toEqual({ create: [{ concepto: "Obra", monto: expect.anything(), moneda: "COP" }] });
+  });
+
+  it("rechaza con 400 un tipo inexistente", async () => {
+    vi.mocked(prisma.tipoOportunidad.findUnique).mockResolvedValue(null);
+    const res = await POST(peticionJson(url, { titulo: "X", tipoId: "99", estadoId: "1" }));
+    expect(res.status).toBe(400);
+    expect(prisma.licitacion.create).not.toHaveBeenCalled();
+  });
+
+  it("rechaza con 400 una partida con monto negativo (FR-008)", async () => {
+    vi.mocked(prisma.tipoOportunidad.findUnique).mockResolvedValue(TIPO_DIRECTA as never);
+    const res = await POST(
+      peticionJson(url, { titulo: "X", tipoId: "3", estadoId: "1", partidas: [{ concepto: "y", monto: -1 }] }),
+    );
+    expect(res.status).toBe(400);
+    expect(prisma.licitacion.create).not.toHaveBeenCalled();
   });
 });

@@ -27,14 +27,16 @@ describe("GET /api/licitaciones/[id]", () => {
     vi.mocked(prisma.licitacion.findUnique).mockReset();
   });
 
-  it("devuelve la licitación cuando existe", async () => {
-    const fixture = { id: "lic1", numero: "LIC-2026-001" };
+  it("devuelve la oportunidad con el total de presupuesto cuando existe", async () => {
+    const fixture = { id: "lic1", numero: "LIC-2026-001", partidas: [{ monto: 100 }, { monto: 50 }] };
     vi.mocked(prisma.licitacion.findUnique).mockResolvedValue(fixture as never);
 
     const res = await GET(req(), params);
+    const body = await res.json();
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual(fixture);
+    expect(body.id).toBe("lic1");
+    expect(body.totalPresupuesto).toBe(150);
   });
 
   it("responde 404 cuando no existe", async () => {
@@ -53,7 +55,7 @@ describe("GET /api/licitaciones/[id]", () => {
     const body = await res.json();
 
     expect(res.status).toBe(500);
-    expect(body).toEqual({ error: "Error al obtener licitación" });
+    expect(body).toEqual({ error: "Error al obtener oportunidad" });
     expect(JSON.stringify(body)).not.toContain("db:5432");
   });
 });
