@@ -4,6 +4,7 @@ import { apiError, noAutenticado } from "@/lib/apiError";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { validarPartidas, construirDatosPartidas } from "@/lib/oportunidad";
+import { leerPaginacion, respuestaPaginada } from "@/lib/paginacion";
 
 // GET /api/licitaciones - Listar oportunidades
 export async function GET(req: NextRequest) {
@@ -31,19 +32,28 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const oportunidades = await prisma.licitacion.findMany({
-      where,
-      include: {
-        estado: true,
-        entidad: true,
-        tipo: true,
-        partidas: true,
-        documentos: {
-          select: { id: true, nombre: true, tipo: true, fechaInicio: true, fechaFin: true },
+    // Paginación estándar (§3.3, spec 009): la lista de oportunidades puede
+    // crecer sin techo y hasta ahora devolvía todo en cada carga.
+    const { page, pageSize, skip } = leerPaginacion(searchParams);
+
+    const [oportunidades, total] = await Promise.all([
+      prisma.licitacion.findMany({
+        where,
+        include: {
+          estado: true,
+          entidad: true,
+          tipo: true,
+          partidas: true,
+          documentos: {
+            select: { id: true, nombre: true, tipo: true, fechaInicio: true, fechaFin: true },
+          },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+      }),
+      prisma.licitacion.count({ where }),
+    ]);
 
     // El total del presupuesto se calcula al leer (FR-008): suma de las partidas.
     const conTotal = oportunidades.map((op) => ({
@@ -51,7 +61,7 @@ export async function GET(req: NextRequest) {
       totalPresupuesto: op.partidas.reduce((acc, p) => acc + Number(p.monto), 0),
     }));
 
-    return NextResponse.json(conTotal);
+    return NextResponse.json(respuestaPaginada(conTotal, total, page, pageSize));
   } catch (error: unknown) {
     return apiError("Oportunidades", "GET lista", "Error al obtener oportunidades", 500, error);
   }

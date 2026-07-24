@@ -70,13 +70,46 @@ describe("GET /api/documents", () => {
     const fixture = [{ id: "doc1", titulo: "Resolución 1234" }];
     vi.mocked(prisma.documentoOficial.findMany).mockResolvedValue(fixture as never);
 
+    vi.mocked(prisma.documentoOficial.count).mockResolvedValue(1 as never);
+
     const res = await GET(new NextRequest(url));
+    const body = await res.json();
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual(fixture);
+    expect(body.items).toEqual(fixture);
     expect(primerArgumento(vi.mocked(prisma.documentoOficial.findMany)).where).toEqual({
       activo: true,
     });
+  });
+
+  it("pagina según §3.3: primera página por defecto y metadatos (spec 009, FR-004)", async () => {
+    vi.mocked(prisma.documentoOficial.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.documentoOficial.count).mockResolvedValue(30 as never);
+
+    const res = await GET(new NextRequest(url));
+    const body = await res.json();
+
+    expect(body.pagination).toEqual({ page: 1, pageSize: 25, total: 30, totalPages: 2 });
+    expect(primerArgumento(vi.mocked(prisma.documentoOficial.findMany))).toMatchObject({
+      skip: 0,
+      take: 25,
+    });
+  });
+
+  it("respeta page/pageSize y acota el tamaño máximo (spec 009, FR-004)", async () => {
+    vi.mocked(prisma.documentoOficial.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.documentoOficial.count).mockResolvedValue(0 as never);
+
+    await GET(new NextRequest(`${url}?page=2&pageSize=5`));
+    expect(primerArgumento(vi.mocked(prisma.documentoOficial.findMany))).toMatchObject({
+      skip: 5,
+      take: 5,
+    });
+
+    await GET(new NextRequest(`${url}?pageSize=99999`));
+    // Última llamada: `primerArgumento` mira la primera y aquí van dos.
+    const ultima = vi.mocked(prisma.documentoOficial.findMany).mock.calls.at(-1)?.[0];
+    expect(ultima?.take).toBe(100);
   });
 
   it("incluye inactivos y filtra por status cuando se pide", async () => {

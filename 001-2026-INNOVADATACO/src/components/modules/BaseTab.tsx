@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mensajeDeError } from "@/lib/mensajeError";
+import { itemsDeCuerpo } from "@/lib/respuestaApi";
 import {
   Database,
   Search,
@@ -324,11 +325,18 @@ function useProcessingDocs() {
   const fetchProcessingDocs = async () => {
     console.log("[useProcessingDocs] Fetching documentos en proceso...");
     try {
-      const res = await fetch("/api/documents");
-      if (res.ok) {
-        const allDocs = await res.json();
-        // Filtrar solo los que están en queued o processing
-        const filtered = allDocs.filter((d: Doc) => d.status === "queued" || d.status === "processing");
+      // Se piden los dos estados AL SERVIDOR en vez de traerse todo y filtrar
+      // aquí (spec 009): al paginar la ruta (§3.3), el filtrado en cliente solo
+      // habría visto la primera página y el panel se habría quedado corto sin
+      // avisar. La ruta ya sabía filtrar por `status`; ahora se usa.
+      const [colaRes, procesandoRes] = await Promise.all([
+        fetch("/api/documents?status=queued&pageSize=100"),
+        fetch("/api/documents?status=processing&pageSize=100"),
+      ]);
+      if (colaRes.ok && procesandoRes.ok) {
+        const enCola = itemsDeCuerpo<Doc>(await colaRes.json()) ?? [];
+        const procesando = itemsDeCuerpo<Doc>(await procesandoRes.json()) ?? [];
+        const filtered = [...enCola, ...procesando];
         console.log("[useProcessingDocs] Documentos en proceso:", filtered.length);
         setProcessingDocs(filtered);
       }
@@ -860,7 +868,7 @@ function BusquedaRag() {
 
   const fetchDocs = async () => {
     const res = await fetch("/api/documents");
-    if (res.ok) setAllDocs(await res.json());
+    if (res.ok) setAllDocs(itemsDeCuerpo<Doc>(await res.json()) ?? []);
   };
 
   useEffect(() => {
@@ -1089,7 +1097,7 @@ function Repositorio() {
     try {
       const res = await fetch(`/api/documents?includeInactive=${showInactive}`);
       if (!res.ok) throw new Error("Error cargando documentos");
-      setDocs(await res.json());
+      setDocs(itemsDeCuerpo<Doc>(await res.json()) ?? []);
     } catch (e: unknown) {
       setError(mensajeDeError(e));
     } finally {

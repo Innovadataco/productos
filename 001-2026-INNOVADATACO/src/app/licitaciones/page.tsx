@@ -5,6 +5,7 @@ import LicitacionCard from "@/components/licitaciones/LicitacionCard";
 import LicitacionForm from "@/components/licitaciones/LicitacionForm";
 import LicitacionModal from "@/components/licitaciones/LicitacionModal";
 import { mensajeDeError } from "@/lib/mensajeError";
+import { itemsDeCuerpo } from "@/lib/respuestaApi";
 
 interface Licitacion {
   id: string;
@@ -61,8 +62,7 @@ export default function LicitacionesPage() {
       if (!response.ok) {
         throw new Error("Error al cargar licitaciones");
       }
-      const data = await response.json();
-      setLicitaciones(data);
+      setLicitaciones(itemsDeCuerpo<Licitacion>(await response.json()) ?? []);
     } catch (err: unknown) {
       setError(mensajeDeError(err));
     } finally {

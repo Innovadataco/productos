@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { extractPdfText } from "@/lib/documentProcessor";
 import { auditLog } from "@/lib/audit";
 import { verifyAuth } from "@/lib/auth";
+import { leerPaginacion, respuestaPaginada } from "@/lib/paginacion";
 
 const TIPO_JERARQUIA: Record<string, number> = {
   constitucion: 1,
@@ -142,12 +143,21 @@ export async function GET(req: NextRequest) {
       where.status = status;
     }
 
-    const docs = await prisma.documentoOficial.findMany({
-      where,
-      orderBy: [{ jerarquiaNivel: "asc" }, { fechaExpedicion: "desc" }],
-      include: { padre: { select: { id: true, titulo: true, tipo: true } } },
-    });
-    return NextResponse.json(docs);
+    // Paginación estándar (§3.3, spec 009): Base Oficial crece con cada carga
+    // documental y esta lista las devolvía todas.
+    const { page, pageSize, skip } = leerPaginacion(searchParams);
+
+    const [docs, total] = await Promise.all([
+      prisma.documentoOficial.findMany({
+        where,
+        orderBy: [{ jerarquiaNivel: "asc" }, { fechaExpedicion: "desc" }],
+        include: { padre: { select: { id: true, titulo: true, tipo: true } } },
+        skip,
+        take: pageSize,
+      }),
+      prisma.documentoOficial.count({ where }),
+    ]);
+    return NextResponse.json(respuestaPaginada(docs, total, page, pageSize));
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Error listando documentos" }, { status: 500 });

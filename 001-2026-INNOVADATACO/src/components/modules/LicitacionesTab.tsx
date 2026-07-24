@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { FileText, Building2, Tag, Calendar, Plus, Search, Trash2, Edit, Loader2, Save } from "lucide-react";
 import TableroOportunidades from "@/components/licitaciones/TableroOportunidades";
+import { itemsDeCuerpo } from "@/lib/respuestaApi";
 
 interface Licitacion {
   id: string;
@@ -95,7 +96,7 @@ function ListadoSubmodulo() {
         fetch("/api/licitaciones/estados"),
       ]);
 
-      if (licRes.ok) setLicitaciones(await licRes.json());
+      if (licRes.ok) setLicitaciones(itemsDeCuerpo<Licitacion>(await licRes.json()) ?? []);
       if (entRes.ok) setEntidades(await entRes.json());
       if (estRes.ok) setEstados(await estRes.json());
     } catch (error) {

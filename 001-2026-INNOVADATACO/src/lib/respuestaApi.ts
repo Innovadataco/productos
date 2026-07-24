@@ -18,8 +18,28 @@ function mensajeSegunEstado(status: number): string {
 }
 
 /**
- * Devuelve `items` solo si la respuesta fue correcta Y el cuerpo es una lista.
- * En cualquier otro caso: lista vacía y mensaje legible.
+ * Extrae la lista de un cuerpo de respuesta, acepte la forma que acepte.
+ *
+ * Desde la spec 009 hay dos formas legítimas en la API: la lista pelada de las
+ * rutas de catálogo y la paginada `{ items, pagination }` de §3.3. Las pantallas
+ * no tienen por qué saber cuál les toca, y así paginar una ruta más no vuelve a
+ * romper a sus consumidores.
+ */
+export function itemsDeCuerpo<T>(cuerpo: unknown): T[] | null {
+  if (Array.isArray(cuerpo)) return cuerpo as T[];
+  if (
+    cuerpo !== null &&
+    typeof cuerpo === "object" &&
+    Array.isArray((cuerpo as { items?: unknown }).items)
+  ) {
+    return (cuerpo as { items: T[] }).items;
+  }
+  return null;
+}
+
+/**
+ * Devuelve `items` solo si la respuesta fue correcta Y el cuerpo es una lista
+ * (pelada o paginada). En cualquier otro caso: lista vacía y mensaje legible.
  */
 export async function listaSegura<T>(
   res: Response,
@@ -29,11 +49,11 @@ export async function listaSegura<T>(
   }
 
   try {
-    const cuerpo: unknown = await res.json();
-    if (!Array.isArray(cuerpo)) {
+    const items = itemsDeCuerpo<T>(await res.json());
+    if (items === null) {
       return { items: [], error: "Respuesta inesperada del servidor" };
     }
-    return { items: cuerpo as T[], error: null };
+    return { items, error: null };
   } catch {
     return { items: [], error: "Respuesta ilegible del servidor" };
   }

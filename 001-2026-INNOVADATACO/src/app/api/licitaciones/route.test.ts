@@ -36,11 +36,40 @@ describe("GET /api/licitaciones (oportunidades)", () => {
       { id: "op1", titulo: "Una", partidas: [{ monto: 100 }, { monto: 250 }] },
     ] as never);
 
+    vi.mocked(prisma.licitacion.count).mockResolvedValue(1 as never);
+
     const res = await GET(new NextRequest(url));
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body[0].totalPresupuesto).toBe(350);
+    expect(body.items[0].totalPresupuesto).toBe(350);
+  });
+
+  it("pagina según §3.3: primera página por defecto y metadatos (spec 009, FR-004)", async () => {
+    vi.mocked(prisma.licitacion.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.licitacion.count).mockResolvedValue(60 as never);
+
+    const res = await GET(new NextRequest(url));
+    const body = await res.json();
+
+    expect(body.pagination).toEqual({ page: 1, pageSize: 25, total: 60, totalPages: 3 });
+    const args = primerArgumento(vi.mocked(prisma.licitacion.findMany));
+    expect(args.skip).toBe(0);
+    expect(args.take).toBe(25);
+  });
+
+  it("respeta page/pageSize y acota el tamaño máximo (spec 009, FR-004)", async () => {
+    vi.mocked(prisma.licitacion.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.licitacion.count).mockResolvedValue(0 as never);
+
+    await GET(new NextRequest(`${url}?page=3&pageSize=10`));
+    let args = primerArgumento(vi.mocked(prisma.licitacion.findMany));
+    expect(args).toMatchObject({ skip: 20, take: 10 });
+
+    await GET(new NextRequest(`${url}?pageSize=99999`));
+    // Última llamada: `primerArgumento` mira la primera y aquí van dos.
+    const ultima = vi.mocked(prisma.licitacion.findMany).mock.calls.at(-1)?.[0];
+    expect(ultima?.take).toBe(100);
   });
 
   it("aplica los filtros de estado, entidad, tipo y búsqueda", async () => {
