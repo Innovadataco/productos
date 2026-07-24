@@ -1,6 +1,6 @@
 # Spec 094 — Deuda técnica y documentación
 
-**Status**: `DESARROLLO`
+**Status**: `FINALIZADO` (pendiente ACTA-VALIDACION de ZEUS → `CERRADA`)
 **Rama**: `feature/001-scaffolding`
 **Creado**: 2026-07-24
 **Cola nocturna 008** (3/3)
