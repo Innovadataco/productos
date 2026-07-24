@@ -5,9 +5,12 @@
 
 **Created**: 2026-07-24
 
-**Status**: **Draft** — pendiente de aprobación por ZEUS (arquitecto) y Jelkin (CEO). Segunda
+**Status**: **Aprobada (2026-07-24, D-060)** por ZEUS (arquitecto) y Jelkin (CEO). Segunda
 de la hoja de ruta de evolución de módulos (D-054/D-055/D-059). Se redacta en paralelo con
 **SPEC-008**, que **reutilizará** el componente Kanban que esta spec define.
+
+> **D-060**: turno nocturno desatendido. La compuerta del plan queda delegada en ODIN y la
+> sustituye `/speckit-analyze`; ZEUS audita por la mañana.
 
 **Input**: El submódulo "Estado" (hoy "Estados") de Oportunidades pasa de catálogo a un
 **tablero Kanban**: una columna por estado del catálogo, cada oportunidad una tarjeta;

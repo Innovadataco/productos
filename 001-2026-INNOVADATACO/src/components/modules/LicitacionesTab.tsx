@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { FileText, Building2, Tag, Calendar, Plus, Search, Trash2, Edit, Eye, Loader2, X, Save } from "lucide-react";
+import TableroOportunidades from "@/components/licitaciones/TableroOportunidades";
 
 interface Licitacion {
   id: string;
@@ -905,6 +906,8 @@ export default function LicitacionesTab({ submoduleId }: LicitacionesTabProps) {
   switch (submoduleId) {
     case "listado":
       return <ListadoSubmodulo />;
+    case "tablero":
+      return <TableroOportunidades />;
     case "nueva":
       return <NuevaSubmodulo />;
     case "tipos":

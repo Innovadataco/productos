@@ -35,6 +35,9 @@ export const SUBMODULES: Record<ModuleId, SubmoduleDef[]> = {
   ],
   licitaciones: [
     { id: "listado", title: "Listado" },
+    // Vista operativa por estado (spec 007). "Estados" se conserva: sigue siendo
+    // la pantalla que administra el catálogo del que salen estas columnas.
+    { id: "tablero", title: "Tablero" },
     { id: "nueva", title: "Nueva Oportunidad" },
     { id: "tipos", title: "Tipos" },
     { id: "entidades", title: "Entidades" },

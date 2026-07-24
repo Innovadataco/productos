@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { apiError, noAutenticado } from "@/lib/apiError";
+import { auditLog } from "@/lib/audit";
 import { verifyAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -73,7 +74,11 @@ export async function PATCH(
     if (data.numero !== undefined) updateData.numero = data.numero || null;
     if (data.titulo !== undefined) updateData.titulo = data.titulo;
     if (data.descripcion !== undefined) updateData.descripcion = data.descripcion;
-    if (data.estadoId !== undefined) updateData.estadoId = parseInt(data.estadoId);
+    // Se guarda aparte como número para poder comparar con el estado anterior y
+    // decidir si el cambio merece auditoría (spec 007, FR-007/FR-009).
+    const nuevoEstadoId: number | undefined =
+      data.estadoId !== undefined ? parseInt(data.estadoId) : undefined;
+    if (nuevoEstadoId !== undefined) updateData.estadoId = nuevoEstadoId;
     if (data.tipoId !== undefined) updateData.tipoId = data.tipoId ? parseInt(data.tipoId) : null;
     if (data.entidadId !== undefined) updateData.entidadId = data.entidadId ? parseInt(data.entidadId) : null;
     if (data.areaIdSala !== undefined) updateData.areaIdSala = data.areaIdSala ? parseInt(data.areaIdSala) : null;
@@ -91,6 +96,21 @@ export async function PATCH(
       data: updateData,
       include: { estado: true, entidad: true, tipo: true, partidas: true },
     });
+
+    // Auditoría del cambio de estado (spec 007, FR-007). Se registra SOLO si el
+    // estado cambió de verdad: un PATCH que reenvía el mismo estadoId no es un
+    // movimiento y no debe dejar rastro (FR-009, también en el servidor).
+    if (nuevoEstadoId !== undefined && nuevoEstadoId !== existente.estadoId) {
+      await auditLog({
+        action: "oportunidad.estado.cambio",
+        entityType: "Licitacion",
+        entityId: id,
+        userId: session.sub,
+        status: "success",
+        message: `Estado ${existente.estadoId} → ${nuevoEstadoId}`,
+        metadata: { estadoAnterior: existente.estadoId, estadoNuevo: nuevoEstadoId },
+      });
+    }
 
     return NextResponse.json(oportunidad);
   } catch (error: unknown) {

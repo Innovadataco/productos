@@ -9,9 +9,11 @@ vi.mock("@/lib/auth", async () => {
   const { createAuthMock } = await import("@/test/authMock");
   return createAuthMock();
 });
+vi.mock("@/lib/audit", () => ({ auditLog: vi.fn() }));
 
 import { prisma } from "@/lib/prisma";
-import { conSesion, sinSesion, peticionJson } from "@/test/authMock";
+import { auditLog } from "@/lib/audit";
+import { conSesion, sinSesion, peticionJson, SESION_FIXTURE } from "@/test/authMock";
 import { GET, PATCH, DELETE } from "./route";
 
 const params = { params: Promise.resolve({ id: "lic1" }) };
@@ -108,6 +110,62 @@ describe("PATCH /api/licitaciones/[id]", () => {
     expect(res.status).toBe(200);
     const data = vi.mocked(prisma.licitacion.update).mock.calls[0][0].data;
     expect(data).toEqual({ titulo: "Nuevo", estadoId: 7 });
+  });
+});
+
+describe("PATCH /api/licitaciones/[id] — auditoría del cambio de estado (spec 007, FR-007)", () => {
+  beforeEach(() => {
+    vi.mocked(prisma.licitacion.findUnique).mockReset();
+    vi.mocked(prisma.licitacion.update).mockReset();
+    vi.mocked(auditLog).mockReset();
+  });
+
+  const moverEstado = async (estadoActual: number, estadoEnviado: string) => {
+    vi.mocked(prisma.licitacion.findUnique).mockResolvedValue({
+      id: "lic1",
+      estadoId: estadoActual,
+    } as never);
+    vi.mocked(prisma.licitacion.update).mockResolvedValue({ id: "lic1" } as never);
+
+    return PATCH(
+      peticionJson("http://localhost:5001/api/licitaciones/lic1", { estadoId: estadoEnviado }, "PATCH"),
+      params,
+    );
+  };
+
+  it("registra quién movió qué oportunidad, de qué estado a cuál (SC-004)", async () => {
+    const res = await moverEstado(1, "3");
+
+    expect(res.status).toBe(200);
+    expect(auditLog).toHaveBeenCalledTimes(1);
+    const registro = vi.mocked(auditLog).mock.calls[0][0];
+    expect(registro).toMatchObject({
+      action: "oportunidad.estado.cambio",
+      entityType: "Licitacion",
+      entityId: "lic1",
+      userId: SESION_FIXTURE.sub,
+      status: "success",
+      metadata: { estadoAnterior: 1, estadoNuevo: 3 },
+    });
+  });
+
+  it("NO audita si el estado que llega es el que ya tenía (SC-007, FR-009)", async () => {
+    const res = await moverEstado(2, "2");
+
+    expect(res.status).toBe(200);
+    expect(auditLog).not.toHaveBeenCalled();
+  });
+
+  it("NO audita cuando el PATCH no toca el estado", async () => {
+    vi.mocked(prisma.licitacion.findUnique).mockResolvedValue({ id: "lic1", estadoId: 1 } as never);
+    vi.mocked(prisma.licitacion.update).mockResolvedValue({ id: "lic1" } as never);
+
+    await PATCH(
+      peticionJson("http://localhost:5001/api/licitaciones/lic1", { titulo: "Otro" }, "PATCH"),
+      params,
+    );
+
+    expect(auditLog).not.toHaveBeenCalled();
   });
 });
 
