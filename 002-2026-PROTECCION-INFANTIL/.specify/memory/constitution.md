@@ -1,6 +1,6 @@
 # SPECKIT CONSTITUTION — 002-2026-PROTECCION-INFANTIL
 
-> **Versión:** 1.0.0  
+> **Versión:** 1.1.0  
 > **Fecha:** 2026-07-11  
 > **Stack:** Next.js 16.2.10 + React 19.2.4 + Prisma 5.22.0 + PostgreSQL 16+ + TypeScript 5.x  
 > **Runtime:** Node.js >=22  
@@ -36,12 +36,7 @@ Las consultas públicas nunca afirman culpabilidad ni emiten juicios de valor so
 | Etiquetas de riesgo | Gráficas de frecuencia temporal y geográfica |
 
 ### 1.4 Umbral de publicación parametrizable
-Un número telefónico, nick o usuario **solo aparece en resultados de consulta pública** cuando ha acumulado un mínimo configurable de reportes independientes. Este umbral:
-
-- Vive en base de datos (tabla de parámetros del sistema), no en código fuente
-- Es editable únicamente por usuarios con rol **ADMIN** desde el módulo de Configuración
-- Aplica tanto a consultas anónimas como autenticadas
-- Reportes por debajo del umbral se almacenan para análisis agregado pero no se exponen individualmente
+El umbral configurable de reportes rige la aparición de un identificador en el **LISTADO del dashboard público**. La **CONSULTA DIRECTA** de un identificador muestra siempre los reportes aprobados que existan, con una señal descriptiva de actividad (baja/alta) según el volumen. El umbral y el ratio de autenticados se conservan como medida anti-abuso configurable por **ADMIN**.
 
 ### 1.5 Clasificación de conductas, no scoring de personas
 La inteligencia artificial clasifica **las conductas descritas en el texto del reporte**, nunca genera un "score de peligrosidad" sobre individuos.
@@ -435,6 +430,7 @@ Después de mergear a `main`, el agente debe:
 | Versión | Fecha | Autor | Cambio |
 |---------|-------|-------|--------|
 | 1.0.0 | 2026-07-11 | Speckit | Creación inicial con principios del producto y técnicos heredados del proyecto 001 |
+| 1.1.0 | 2026-07-24 | ZEUS (addendum spec 089) | §1.4: el umbral rige el LISTADO del dashboard; la consulta directa siempre muestra los reportes aprobados + señal descriptiva de actividad |
 
 ---
 
