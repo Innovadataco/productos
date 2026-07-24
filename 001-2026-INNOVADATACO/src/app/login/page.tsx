@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { destinoSeguro } from "@/lib/destinoSeguro";
+import { mensajeDeError } from "@/lib/mensajeError";
 import { ShieldCheck, Send } from "lucide-react";
 
 export default function LoginPage() {
@@ -25,8 +26,8 @@ export default function LoginPage() {
             // Se lee aquí y no con useSearchParams para no arrastrar un límite
             // de suspensión a toda la pantalla.
             router.push(destinoSeguro(new URLSearchParams(window.location.search).get("next")));
-        } catch (err: any) {
-            alert("Error: " + (err.message || "Credenciales inválidas"));
+        } catch (err: unknown) {
+            alert("Error: " + mensajeDeError(err, "Credenciales inválidas"));
         } finally {
             setLoading(false);
         }

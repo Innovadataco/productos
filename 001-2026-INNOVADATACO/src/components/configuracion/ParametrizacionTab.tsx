@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Save, Cpu, AlertCircle, ArrowRight } from "lucide-react";
+import { mensajeDeError } from "@/lib/mensajeError";
 
 interface AiModel {
   id: string;
@@ -41,8 +42,8 @@ export default function ParametrizacionTab({
       const res = await fetch("/api/config/module-settings");
       const data = await res.json();
       setSettings(data.settings || []);
-    } catch (err: any) {
-      toast("error", "Error cargando configuraciones: " + err.message);
+    } catch (err: unknown) {
+      toast("error", "Error cargando configuraciones: " + mensajeDeError(err));
     }
   };
 
@@ -76,8 +77,8 @@ export default function ParametrizacionTab({
       if (!res.ok) throw new Error("Error guardando");
       await loadSettings();
       toast("success", "Configuración guardada");
-    } catch (err: any) {
-      toast("error", err.message);
+    } catch (err: unknown) {
+      toast("error", mensajeDeError(err));
     } finally {
       setSaving(null);
     }

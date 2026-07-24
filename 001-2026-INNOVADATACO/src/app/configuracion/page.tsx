@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ParametrizacionTab from "@/components/configuracion/ParametrizacionTab";
 import { listaSegura } from "@/lib/respuestaApi";
+import { mensajeDeError } from "@/lib/mensajeError";
 import {
   Cpu, Globe, Terminal, Save, Plus, Trash2, RefreshCw,
   CheckCircle, XCircle, AlertCircle, Clock, X, ArrowLeft
@@ -48,6 +49,32 @@ interface AuditLog {
   latencyMs: number | null;
   createdAt: string;
   aiModel: { name: string; provider: string } | null;
+}
+
+/** Resultado de probar una API registrada (`POST /api/config/apis/[id]/test`). */
+interface ApiTestResult {
+  ok?: boolean;
+  skipped?: boolean;
+  latencyMs?: number;
+  error?: string;
+  [campo: string]: unknown;
+}
+
+/** Parámetro documentado de una API (campo `docs`, JSON libre del registro). */
+interface ApiDocParam {
+  name: string;
+  type?: string;
+  in?: string;
+  required?: boolean;
+  desc?: string;
+  default?: string;
+}
+
+/** Documentación de una API: JSON del registro, de forma conocida pero laxa. */
+interface ApiDocs {
+  params?: ApiDocParam[];
+  request?: unknown;
+  response?: unknown;
 }
 
 interface Toast {
@@ -136,7 +163,7 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
   const [discovering, setDiscovering] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [testingApiId, setTestingApiId] = useState<string | null>(null);
-  const [apiTestResult, setApiTestResult] = useState<{ id: string; result: any } | null>(null);
+  const [apiTestResult, setApiTestResult] = useState<{ id: string; result: ApiTestResult } | null>(null);
   const [expandedApiId, setExpandedApiId] = useState<string | null>(null);
   const [selectedApiModule, setSelectedApiModule] = useState<string | null>(null);
   const [selectedApiSubmodule, setSelectedApiSubmodule] = useState<string | null>(null);
@@ -202,8 +229,8 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
       await loadModels();
       await loadAudit();
       toast("success", editingId ? "Modelo actualizado" : "Modelo creado");
-    } catch (err: any) {
-      toast("error", err.message);
+    } catch (err: unknown) {
+      toast("error", mensajeDeError(err));
     } finally {
       setLoading(false);
     }
@@ -225,9 +252,9 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
       if (data.ok) toast("success", `Conexión OK ${data.latencyMs}ms`);
       else toast("error", `Fallo: ${data.error}`);
       await loadAudit();
-    } catch (err: any) {
-      setTestResult({ modelId: id, requestedAt, completedAt: new Date().toISOString(), ok: false, latencyMs: 0, text: "", error: err.message });
-      toast("error", err.message);
+    } catch (err: unknown) {
+      setTestResult({ modelId: id, requestedAt, completedAt: new Date().toISOString(), ok: false, latencyMs: 0, text: "", error: mensajeDeError(err) });
+      toast("error", mensajeDeError(err));
     } finally {
       setTestingId(null);
     }
@@ -243,8 +270,8 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
       if (!res.ok) throw new Error("Error toggling API");
       await loadApis();
       toast("success", active ? "API activada" : "API inhabilitada");
-    } catch (err: any) {
-      toast("error", err.message);
+    } catch (err: unknown) {
+      toast("error", mensajeDeError(err));
     }
   };
 
@@ -258,9 +285,9 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
       if (data.ok) toast("success", `Test OK ${data.latencyMs}ms`);
       else if (data.skipped) toast("info", data.reason);
       else toast("error", data.error || `HTTP ${data.status}`);
-    } catch (err: any) {
-      toast("error", err.message);
-      setApiTestResult({ id: api.id, result: { ok: false, error: err.message } });
+    } catch (err: unknown) {
+      toast("error", mensajeDeError(err));
+      setApiTestResult({ id: api.id, result: { ok: false, error: mensajeDeError(err) } });
     } finally {
       setTestingApiId(null);
     }
@@ -275,8 +302,8 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
       await loadModels();
       await loadAudit();
       toast("success", "Modelo eliminado");
-    } catch (err: any) {
-      toast("error", err.message);
+    } catch (err: unknown) {
+      toast("error", mensajeDeError(err));
     }
   };
 
@@ -313,8 +340,8 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
         setDiscovered([]);
         toast("error", data.error || "No se encontraron modelos locales");
       }
-    } catch (err: any) {
-      toast("error", err.message);
+    } catch (err: unknown) {
+      toast("error", mensajeDeError(err));
     } finally {
       setDiscovering(false);
     }
@@ -382,13 +409,13 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
               </Field>
 
               <Field label="Proveedor">
-                <select value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value as any, modelPath: "" })} className="bg-white/5 border border-white/10 p-2 text-xs">
+                <select value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value as AiModel["provider"], modelPath: "" })} className="bg-white/5 border border-white/10 p-2 text-xs">
                   {PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
               </Field>
 
               <Field label="Ámbito de despliegue">
-                <select value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value as any })} className="bg-white/5 border border-white/10 p-2 text-xs">
+                <select value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value as AiModel["scope"] })} className="bg-white/5 border border-white/10 p-2 text-xs">
                   {SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </Field>
@@ -560,7 +587,7 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
                   .map((api) => {
                     const docs = (() => {
                       try {
-                        return JSON.parse(api.docs || "{}") as { params?: any[]; request?: any; response?: any };
+                        return JSON.parse(api.docs || "{}") as ApiDocs;
                       } catch {
                         return {};
                       }
@@ -612,7 +639,7 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
                               <div>
                                 <div className="text-[9px] uppercase tracking-widest text-[#666] mb-1">Parámetros</div>
                                 <div className="space-y-1">
-                                  {docs.params.map((p: any, i: number) => (
+                                  {docs.params.map((p, i) => (
                                     <div key={i} className="text-[10px] text-[#888]">
                                       <span className="text-neonCyan font-bold">{p.name}</span>
                                       <span className="text-[#444]"> ({p.type}{p.in ? ` · ${p.in}` : ""}{p.required ? "" : " · opcional"})</span>

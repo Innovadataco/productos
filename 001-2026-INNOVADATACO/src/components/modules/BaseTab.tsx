@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { mensajeDeError } from "@/lib/mensajeError";
 import {
   Database,
   Search,
@@ -290,9 +291,9 @@ function useQueue() {
         const result: Doc = await res.json();
         console.log("[useQueue] Documento procesado exitosamente:", result.id, result.status);
         updateItem(itemToProcess.id, { status: "done", result });
-      } catch (err: any) {
-        console.error("[useQueue] Error en fetch:", err.message, err);
-        updateItem(itemToProcess.id, { status: "error", error: err.message });
+      } catch (err: unknown) {
+        console.error("[useQueue] Error en fetch:", mensajeDeError(err), err);
+        updateItem(itemToProcess.id, { status: "error", error: mensajeDeError(err) });
       }
 
       console.log("[useQueue] Item procesado, continuando con siguiente...");
@@ -340,8 +341,8 @@ function useProcessingDocs() {
     try {
       const res = await fetch("/api/config/models");
       if (res.ok) {
-        const models = await res.json();
-        const active = models.find((m: any) => m.active);
+        const models: Array<{ name: string; active: boolean }> = await res.json();
+        const active = models.find((m) => m.active);
         if (active) {
           const isLarge = /32b|70b|8x7b|mixtral|codestral/i.test(active.name);
           setActiveModel({ name: active.name, isLarge });
@@ -874,8 +875,8 @@ function BusquedaRag() {
       });
       if (!res.ok) throw new Error("Error en búsqueda");
       setResults(await res.json());
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(mensajeDeError(err));
     } finally {
       setLoading(false);
     }
@@ -1009,8 +1010,19 @@ function BusquedaRag() {
   );
 }
 
+/** Registro de auditoría tal como lo devuelve `GET /api/documents/[id]/logs`. */
+type LogDocumento = {
+  id: string;
+  action: string;
+  status: string;
+  message: string;
+  createdAt: string;
+  userId?: string | null;
+  aiModel?: { name: string; provider: string } | null;
+};
+
 function DocumentLogs({ docId }: { docId: string }) {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<LogDocumento[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1070,8 +1082,8 @@ function Repositorio() {
       const res = await fetch(`/api/documents?includeInactive=${showInactive}`);
       if (!res.ok) throw new Error("Error cargando documentos");
       setDocs(await res.json());
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(mensajeDeError(e));
     } finally {
       setLoading(false);
     }

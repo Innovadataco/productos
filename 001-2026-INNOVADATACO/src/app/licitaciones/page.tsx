@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import LicitacionCard from "@/components/licitaciones/LicitacionCard";
 import LicitacionForm from "@/components/licitaciones/LicitacionForm";
 import LicitacionModal from "@/components/licitaciones/LicitacionModal";
+import { mensajeDeError } from "@/lib/mensajeError";
 
 interface Licitacion {
   id: string;
@@ -62,8 +63,8 @@ export default function LicitacionesPage() {
       }
       const data = await response.json();
       setLicitaciones(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(mensajeDeError(err));
     } finally {
       setLoading(false);
     }
@@ -98,8 +99,8 @@ export default function LicitacionesPage() {
 
       await fetchLicitaciones();
       setIsModalOpen(false);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(mensajeDeError(err));
     } finally {
       setFormLoading(false);
     }
@@ -125,8 +126,8 @@ export default function LicitacionesPage() {
       await fetchLicitaciones();
       setIsModalOpen(false);
       setEditingId(null);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(mensajeDeError(err));
     } finally {
       setFormLoading(false);
     }
@@ -146,8 +147,8 @@ export default function LicitacionesPage() {
       }
 
       await fetchLicitaciones();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(mensajeDeError(err));
     }
   };
 
