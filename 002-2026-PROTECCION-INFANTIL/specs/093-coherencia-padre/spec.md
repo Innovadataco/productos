@@ -1,6 +1,6 @@
 # Spec 093 — Coherencia del padre autenticado
 
-**Status**: `DESARROLLO`
+**Status**: `FINALIZADO` (pendiente ACTA-VALIDACION de ZEUS → `CERRADA`)
 **Rama**: `feature/001-scaffolding`
 **Creado**: 2026-07-24
 **Cola nocturna 008** (2/3)
