@@ -127,9 +127,64 @@ describe("GET /api/documents", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.items).toEqual(fixture);
+    expect(body.items).toMatchObject(fixture);
     expect(primerArgumento(vi.mocked(prisma.documentoOficial.findMany)).where).toEqual({
       activo: true,
+    });
+  });
+
+  // Indexabilidad derivada (spec 013, FR-002): la respuesta dice, por documento,
+  // si la búsqueda puede encontrarlo. Se calcula al leer, no se guarda.
+  it("marca como NO buscable el documento sin fragmentos ni texto (SC-001)", async () => {
+    vi.mocked(prisma.documentoOficial.findMany).mockResolvedValue([
+      {
+        id: "roto",
+        titulo: "SuperTransporte Circular 164",
+        status: "needs_review",
+        contenidoTexto: "",
+        processingError: "Timeout extrayendo texto del PDF",
+        _count: { chunks: 0 },
+      },
+    ] as never);
+    vi.mocked(prisma.documentoOficial.count).mockResolvedValue(1 as never);
+
+    const body = await (await GET(new NextRequest(url))).json();
+
+    expect(body.items[0].indexabilidad.buscable).toBe(false);
+    expect(body.items[0].indexabilidad.motivo).toContain("No se pudo leer el texto del PDF");
+  });
+
+  it("un documento CON fragmentos es buscable aunque esté en needs_review (SC-005)", async () => {
+    vi.mocked(prisma.documentoOficial.findMany).mockResolvedValue([
+      {
+        id: "ley",
+        titulo: "ley 2199 de 2022",
+        status: "needs_review",
+        contenidoTexto: "mucho texto",
+        processingError: "Sin modelo IA activo",
+        _count: { chunks: 68 },
+      },
+    ] as never);
+    vi.mocked(prisma.documentoOficial.count).mockResolvedValue(1 as never);
+
+    const body = await (await GET(new NextRequest(url))).json();
+
+    expect(body.items[0].indexabilidad.buscable).toBe(true);
+    expect(body.items[0].indexabilidad.motivo).toBeNull();
+  });
+
+  it("un documento en cola no se presenta como roto, sino como en proceso (FR-004)", async () => {
+    vi.mocked(prisma.documentoOficial.findMany).mockResolvedValue([
+      { id: "nuevo", status: "queued", contenidoTexto: "", _count: { chunks: 0 } },
+    ] as never);
+    vi.mocked(prisma.documentoOficial.count).mockResolvedValue(1 as never);
+
+    const body = await (await GET(new NextRequest(url))).json();
+
+    expect(body.items[0].indexabilidad).toMatchObject({
+      buscable: false,
+      enProceso: true,
+      motivo: null,
     });
   });
 

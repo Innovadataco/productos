@@ -53,6 +53,8 @@ type Doc = {
   padreId?: string | null;
   padre?: { id: string; titulo: string; tipo: string } | null;
   createdAt: string;
+  /** Derivada por la API (spec 013): ¿puede la búsqueda encontrar este documento? */
+  indexabilidad?: { buscable: boolean; enProceso: boolean; motivo: string | null };
 };
 
 type QueueItem = {
@@ -1288,8 +1290,27 @@ function Repositorio() {
                     {statusLabels[doc.status] || doc.status}
                   </Badge>
                   {!doc.activo && <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Inactivo</Badge>}
+                  {/* Un documento que la búsqueda no puede encontrar tiene que
+                      decirlo (spec 013, FR-003): antes se veía igual que los
+                      demás y el usuario creía tenerlo. */}
+                  {doc.indexabilidad && !doc.indexabilidad.buscable && (
+                    <Badge
+                      className={
+                        doc.indexabilidad.enProceso
+                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                          : "bg-orange-500/10 text-orange-300 border-orange-500/30"
+                      }
+                    >
+                      {doc.indexabilidad.enProceso ? "Indexando" : "No buscable"}
+                    </Badge>
+                  )}
                 </div>
                 <h3 className="text-sm font-bold uppercase tracking-tight">{doc.titulo}</h3>
+                {doc.indexabilidad?.motivo && (
+                  <p className="text-[10px] text-orange-300/70 normal-case tracking-normal">
+                    {doc.indexabilidad.motivo}
+                  </p>
+                )}
               </button>
               <div className="flex items-center gap-2 shrink-0">
                 <button
