@@ -472,8 +472,14 @@ existía (origen de H-05).
 - **SC-005**: Una consulta semánticamente equivalente pero **sin palabras en común** con
   el documento lo recupera; la búsqueda textual actual no lo hace. (Verificación con
   embeddings reales: **requiere turno**.)
-- **SC-006**: Tras el backfill, el número de documentos con texto y **cero** fragmentos es
-  **0**.
+- **SC-006** *(enmendado 2026-07-24, D-071)*: el número de documentos **indexables** con
+  **cero** fragmentos es **0**. Un documento es *indexable* si su texto se pudo extraer; un PDF
+  corrupto o escaneado **legítimamente** queda sin fragmentos, **marcado como no buscable** con
+  su motivo (spec 013) y contabilizado aparte. La redacción original —"documentos con texto y
+  cero fragmentos = 0"— fallaba en la BD viva porque `SuperTransporte Circular 164` (0 texto,
+  0 chunks, `Timeout`) no era "con texto" pero sí un hueco silencioso: la enmienda lo captura
+  como no indexable marcado, no como incumplimiento. La indexabilidad se **deriva** de tener o
+  no fragmentos (`evaluarIndexabilidad`, spec 013), no de un campo que mantener.
 - **SC-007**: Ejecutar el backfill dos veces no cambia el número total de fragmentos.
 - **SC-008**: `npm run test` pasa entera **sin BD y sin Ollama**, y el número de archivos
   de test de rutas API no baja de 19 (spec 002).

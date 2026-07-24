@@ -60,10 +60,23 @@
 | Migración / dependencias | **ninguna** / **ninguna** |
 | Documento invisible de la BD viva | queda marcado **"No buscable"** con su motivo |
 
-### SC-002 · Enmienda **propuesta** a SPEC-003 (la firma ZEUS)
+### Cierre de ACTA-013 (turno 015, radicado 001-IDC-015)
 
-SC-006 de la SPEC-003 dice *"documentos sin chunks = 0"* y **hoy no se cumple** en la BD viva.
-Se propone reformularlo:
+- **B0.1 — enmienda SC-006 APLICADA (D-071).** ZEUS firmó la reformulación. Vive ya en
+  `specs/003-pipeline-rag/spec.md` (SC-006) y en `src/lib/indexabilidad.test.ts` como criterio
+  medible: *"ningún documento buscable tiene cero fragmentos; los no buscables están marcados y
+  se cuentan aparte"*.
+- **B0.2 — reproceso del documento vivo con `Timeout`.** `scripts/reprocesar-documento.mjs`
+  vuelve a leer el PDF con reintento y, si extrae, lo encola; si no, lo deja marcado. Ejecutado
+  sobre `SuperTransporte Circular 164`: **genuinamente no legible** (3 intentos, `Timeout` en
+  todos; es un PDF malformado que `pdf2json` no parsea). Queda `needs_review`, 0 chunks, con
+  audit `reproceso_ingesta` que documenta el intento, y **la indexabilidad derivada lo muestra
+  "No buscable" con motivo** — que es el resultado honesto que B0.2 admitía.
+
+### SC-002 · Enmienda **propuesta** a SPEC-003 (histórico — ya aplicada, ver arriba)
+
+SC-006 de la SPEC-003 decía *"documentos con texto y cero fragmentos = 0"* y no se cumplía en la
+BD viva. Se propuso reformularlo:
 
 > *"Todo documento **indexable** tiene al menos un fragmento. Los no indexables están
 > **marcados** como tal y se contabilizan aparte."*

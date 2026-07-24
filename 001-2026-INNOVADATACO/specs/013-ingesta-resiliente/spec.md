@@ -156,10 +156,12 @@ documento.
 
 - **SC-001**: un PDF corrupto **no** queda como `needs_review` silencioso: consta como **no
   buscable**, con motivo, en la API y en el listado.
-- **SC-002**: **enmienda propuesta a SC-006 de la SPEC-003.** Aquel criterio decía "documentos
-  sin chunks = 0" y **hoy no se cumple en la BD viva**. Se propone reformularlo: *"todo
-  documento **indexable** tiene al menos un fragmento; los no indexables están **marcados** y
-  contabilizados aparte"*. Queda **propuesto**; la enmienda la firma ZEUS.
+- **SC-002** *(APLICADA, D-071)*: **enmienda a SC-006 de la SPEC-003.** Aquel criterio decía
+  "documentos con texto y cero fragmentos = 0" y **no se cumplía en la BD viva**. ZEUS lo firmó
+  (D-071) reformulado a: *"el número de documentos **indexables** con cero fragmentos es 0; los
+  no indexables están **marcados** como no buscables y contabilizados aparte"*. La enmienda ya
+  vive en `specs/003-pipeline-rag/spec.md` (SC-006) y se acredita con
+  `src/lib/indexabilidad.test.ts` (criterio derivado) y el conteo de cierre de esta spec.
 - **SC-003**: una extracción que falla una vez y acierta a la siguiente termina indexada.
 - **SC-004**: los reintentos se agotan y no se insiste indefinidamente.
 - **SC-005**: un documento con fragmentos consta como buscable aunque esté en `needs_review`.

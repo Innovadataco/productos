@@ -73,3 +73,33 @@ describe("evaluarIndexabilidad (spec 013, FR-002)", () => {
     expect(evaluarIndexabilidad({ status: "error", chunks: 0 }).buscable).toBe(false);
   });
 });
+
+describe("SC-006 enmendado (SPEC-003, D-071): indexable sin chunks = 0", () => {
+  // El criterio corregido: todo documento que se dé por BUSCABLE debe tener
+  // fragmentos; los no buscables están marcados y se cuentan aparte. Se
+  // verifica sobre los tres casos reales de la BD viva del turno 014.
+  const corpusVivo = [
+    { status: "needs_review", contenidoTexto: "292 chars", chunks: 1 }, // RESOLUCION 1234
+    { status: "needs_review", contenidoTexto: "", chunks: 0 }, // SuperTransporte (Timeout)
+    { status: "needs_review", contenidoTexto: "88k chars", chunks: 68 }, // ley 2199
+  ];
+
+  it("ningún documento buscable tiene cero fragmentos", () => {
+    const buscablesSinChunks = corpusVivo
+      .map((doc) => ({ doc, ind: evaluarIndexabilidad(doc) }))
+      .filter(({ doc, ind }) => ind.buscable && doc.chunks === 0);
+
+    expect(buscablesSinChunks).toEqual([]);
+  });
+
+  it("los no buscables están marcados con motivo y se cuentan aparte", () => {
+    const noBuscables = corpusVivo
+      .map((doc) => evaluarIndexabilidad(doc))
+      .filter((ind) => !ind.buscable && !ind.enProceso);
+
+    // El de Timeout: 1 no buscable, con su motivo. No es un incumplimiento
+    // silencioso, es un hueco marcado.
+    expect(noBuscables).toHaveLength(1);
+    expect(noBuscables[0].motivo).toBeTruthy();
+  });
+});
