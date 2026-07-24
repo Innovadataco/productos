@@ -19,25 +19,25 @@ desechable primero (D-039); NO aplicar a la viva sin conteo antes/después verde
 
 ## Phase 1: Baseline
 
-- [ ] T001 Baseline (quickstart §0): suite **249/36**, `tsc` limpio; anotar `count(*)` de
+- [x] T001 Baseline (quickstart §0): suite **249/36**, `tsc` limpio; anotar `count(*)` de
       `licitaciones`, `LicitacionStatus`, `EntidadLicitacion` en la viva (solo lectura).
-- [ ] T002 [P] Confirmar rama `feature/001-scaffolding` y stack respondiendo en 5001. No bajarlo.
+- [x] T002 [P] Confirmar rama `feature/001-scaffolding` y stack respondiendo en 5001. No bajarlo.
 
 ---
 
 ## Phase 2: Esquema y migración (US1 — el riesgo)
 
-- [ ] T003 Esquema Prisma: modelo **`TipoOportunidad`** (key único, nombreOficial,
+- [x] T003 Esquema Prisma: modelo **`TipoOportunidad`** (key único, nombreOficial,
       `exigeNumero`/`exigeFechaApertura` bool); evolucionar `Licitacion` (`numero?`,
       `fechaApertura?`, `tipoId?`+index, `ciudadEjecucion?`, 4 fechas de cronograma,
       relación `partidas`); nuevo **`PartidaPresupuesto`** (CASCADE); columnas ampliadas
       opcionales en `EntidadLicitacion`. Comentar el `@@unique([numero, fechaApertura])`
       (FR-006). → data-model
-- [ ] T004 Migración `add_oportunidades` en el **orden seguro**: (1) crear tablas y columnas
+- [x] T004 Migración `add_oportunidades` en el **orden seguro**: (1) crear tablas y columnas
       nullable/default; (2) sembrar 3 tipos; (3) `UPDATE licitaciones SET tipoId=<licitación
       pública> WHERE tipoId IS NULL`; (4) **después** relajar `NOT NULL` de `numero` y
       `fechaApertura`. → FR-004, R-01, R-02
-- [ ] T005 **Gate migración (SC-003)** en **BD desechable** (D-039): `count(*)` de los tres
+- [x] T005 **Gate migración (SC-003)** en **BD desechable** (D-039): `count(*)` de los tres
       catálogos/tabla idéntico antes y después; ninguna oportunidad sin `tipoId`; `numero`/
       `fechaApertura` conservados. Si algo no cuadra, **detenerse y reportar**. **No** aplicar a
       la viva aún.
@@ -48,14 +48,14 @@ desechable primero (D-039); NO aplicar a la viva sin conteo antes/después verde
 
 ## Phase 3: Catálogo de tipos (US2)
 
-- [ ] T006 [US2] `src/app/api/licitaciones/tipos/route.ts`: `GET` (lista) y `POST` (crea con
+- [x] T006 [US2] `src/app/api/licitaciones/tipos/route.ts`: `GET` (lista) y `POST` (crea con
       `key`, `nombreOficial`, `exigeNumero`, `exigeFechaApertura`), con `verifyAuth` +
       `apiError`. → FR-002, FR-019
-- [ ] T007 [US2] `tipos/route.test.ts`: 401 sin sesión; GET lista; POST valida requeridos y
+- [x] T007 [US2] `tipos/route.test.ts`: 401 sin sesión; GET lista; POST valida requeridos y
       crea; sin fuga de `err.message`. → FR-002, FR-019, FR-020
-- [ ] T008 [US2] `scripts/seed.mjs`: `sembrarPorClave(prisma.tipoOportunidad, ...)` con los 3
+- [x] T008 [US2] `scripts/seed.mjs`: `sembrarPorClave(prisma.tipoOportunidad, ...)` con los 3
       tipos (idempotente); README de arranque limpio suma el catálogo. → FR-005
-- [ ] T009 [US2] **Gate tipos**: `npm run seed` dos veces no duplica; `GET /tipos` ≥ 3. → SC-004
+- [x] T009 [US2] **Gate tipos**: `npm run seed` dos veces no duplica; `GET /tipos` ≥ 3. → SC-004
 
 **Commit 2** — catálogo de tipos. Push.
 
@@ -63,20 +63,20 @@ desechable primero (D-039); NO aplicar a la viva sin conteo antes/después verde
 
 ## Phase 4: Validación por tipo + enriquecimiento (US1, US3)
 
-- [ ] T010 [US1] `POST /api/licitaciones`: exigir `titulo` y `tipoId`; exigir
+- [x] T010 [US1] `POST /api/licitaciones`: exigir `titulo` y `tipoId`; exigir
       `numero`/`fechaApertura` **solo si** el tipo referenciado tiene `exigeNumero`/
       `exigeFechaApertura` (leídas de BD, **sin `if` por nombre**). Migrar el `catch` a
       `apiError`. → FR-003, §0.7
-- [ ] T011 [US3] `POST`/`PATCH`: aceptar y persistir `ciudadEjecucion`, los 4 hitos nuevos de
+- [x] T011 [US3] `POST`/`PATCH`: aceptar y persistir `ciudadEjecucion`, los 4 hitos nuevos de
       cronograma, y las **partidas** de presupuesto (concepto, monto ≥ 0 validado, moneda).
       → FR-007, FR-008, FR-009
-- [ ] T012 [US3] `GET`/`GET [id]`: incluir `tipo`, `partidas` (con total calculado), cronograma,
+- [x] T012 [US3] `GET`/`GET [id]`: incluir `tipo`, `partidas` (con total calculado), cronograma,
       ciudad y la **entidad ampliada** en la respuesta. → FR-008, FR-010
-- [ ] T013 [US1/US3] Extender `licitaciones/route.test.ts` y `[id]/route.test.ts`: SC-001 (crea
+- [x] T013 [US1/US3] Extender `licitaciones/route.test.ts` y `[id]/route.test.ts`: SC-001 (crea
       sin numero/fecha para tipo sin exigencias), SC-002 (rechaza licitación pública sin ellos),
       partidas/cronograma/ciudad persistidos, total = suma, monto negativo → 400. Mantener 401 y
       contrato. → FR-003, FR-007, FR-008, SC-001, SC-002, SC-005, SC-006
-- [ ] T014 [US1/US3] **Gate**: pruebas verdes; la validación por tipo verificada con un tipo
+- [x] T014 [US1/US3] **Gate**: pruebas verdes; la validación por tipo verificada con un tipo
       configurado a mano (banderas), no por nombre. → SC-001, SC-002
 
 **Commit 3** — validación por tipo + enriquecimiento. Push.
@@ -85,14 +85,14 @@ desechable primero (D-039); NO aplicar a la viva sin conteo antes/después verde
 
 ## Phase 5: Expediente — SIN RAG (US4)
 
-- [ ] T015 [US4] `src/app/api/licitaciones/[id]/documentos/route.ts`: `POST` sube archivo
+- [x] T015 [US4] `src/app/api/licitaciones/[id]/documentos/route.ts`: `POST` sube archivo
       (PDF/`.xlsx`/`.xls`), valida **tipo** y **tamaño** (413), sanea nombre, guarda en
       `uploads/`, crea `LicitacionDocumento`. **Sin** extracción, **sin** cola, **sin**
       embeddings. `GET` lista el expediente. `verifyAuth` + `apiError`. → FR-011, FR-012, FR-015
-- [ ] T016 [US4] `[id]/documentos/route.test.ts`: 401 sin sesión; PDF y Excel aceptados; tipo
+- [x] T016 [US4] `[id]/documentos/route.test.ts`: 401 sin sesión; PDF y Excel aceptados; tipo
       no permitido → 400; excede tamaño → 413; **`expect(prisma.documentoChunk.create).not.toHaveBeenCalled()`**
       (SC-008); CASCADE al borrar la oportunidad. → FR-011…FR-015, SC-007, SC-008, SC-009
-- [ ] T017 [US4] **Gate expediente**: pruebas verdes; revisión de que la ruta **no importa**
+- [x] T017 [US4] **Gate expediente**: pruebas verdes; revisión de que la ruta **no importa**
       nada del pipeline RAG. → FR-013, SC-008
 
 **Commit 4** — expediente. Push.
@@ -101,16 +101,16 @@ desechable primero (D-039); NO aplicar a la viva sin conteo antes/después verde
 
 ## Phase 6: Interfaz (US5)
 
-- [ ] T018 [US5] Quitar el botón "Nueva" de `ListadoSubmodulo` (`LicitacionesTab.tsx:220`); la
+- [x] T018 [US5] Quitar el botón "Nueva" de `ListadoSubmodulo` (`LicitacionesTab.tsx:220`); la
       creación permanece en `NuevaSubmodulo`. → FR-016
-- [ ] T019 [US5] Renombrar textos visibles "Licitación(es)" → "Oportunidad(es)" en
+- [x] T019 [US5] Renombrar textos visibles "Licitación(es)" → "Oportunidad(es)" en
       `LicitacionesTab.tsx`, `LicitacionForm.tsx`, `LicitacionCard.tsx` y los títulos de
       submódulo en `WorkspaceContext.tsx`. Sin tocar identificadores técnicos (SC-011). → FR-017
-- [ ] T020 [US5] Sumar al formulario ("Nueva") el **selector de tipo** (catálogo) y los campos
+- [x] T020 [US5] Sumar al formulario ("Nueva") el **selector de tipo** (catálogo) y los campos
       nuevos (cronograma, ciudad, partidas); solo cambian textos del resto (RZ-5). → FR-018
-- [ ] T021 [US5] Submódulo "Tipos" en `SUBMODULES.licitaciones` con su tab (patrón de
+- [x] T021 [US5] Submódulo "Tipos" en `SUBMODULES.licitaciones` con su tab (patrón de
       Entidades/Estados). → FR-002
-- [ ] T022 [US5] **Gate UI**: listado sin botón de crear; `grep` de "Licitaci" en textos
+- [x] T022 [US5] **Gate UI**: listado sin botón de crear; `grep` de "Licitaci" en textos
       visibles → 0. → SC-010, SC-011
 
 **Commit 5** — interfaz. Push.
@@ -119,15 +119,15 @@ desechable primero (D-039); NO aplicar a la viva sin conteo antes/después verde
 
 ## Phase 7: Cierre y despliegue
 
-- [ ] T023 Gates globales: `npx vitest run` ≥ 249 sin BD ni Ollama; `npx tsc --noEmit` limpio;
+- [x] T023 Gates globales: `npx vitest run` ≥ 249 sin BD ni Ollama; `npx tsc --noEmit` limpio;
       `npx eslint src/lib src/app/api` → 0 `no-explicit-any`. → SC-012, SC-013
-- [ ] T024 Aislamiento: puertos 5005/5433/5010/5434 y el RAG intactos; `git diff --cached
+- [x] T024 Aislamiento: puertos 5005/5433/5010/5434 y el RAG intactos; `git diff --cached
       --name-only` solo rutas de `001-`. → SC-014
-- [ ] T025 **Aplicar la migración a la viva** solo tras T005 verde: `npx prisma migrate deploy`
+- [x] T025 **Aplicar la migración a la viva** solo tras T005 verde: `npx prisma migrate deploy`
       + `npm run seed` (idempotente); reconstruir imagen y recrear app/worker acotando la
       interrupción (SPEC-004), sin bajar PI/SICOV. Verificar `count(*)` sin cambios en la viva
       (SC-003) y HTTP 200. → SC-003, SC-014
-- [ ] T026 Reporte de una línea a ZEUS; commits scopeados y pusheados.
+- [x] T026 Reporte de una línea a ZEUS; commits scopeados y pusheados.
 
 ---
 
@@ -178,3 +178,41 @@ desechable primero (D-039); NO aplicar a la viva sin conteo antes/después verde
 - Renombre físico del modelo/tabla/rutas (identificador técnico conservado, SC-011).
 - `any` de componentes `.tsx` preexistentes (D-016).
 - Base Oficial, pipeline RAG, 002-Protección Infantil, 003-SICOV.
+
+---
+
+## Resultado (2026-07-23)
+
+Implementación completa sin turno (no hay inferencia). Commits, uno por fase:
+`7abae8cc` esquema+migración · `ffdb0b2e` catálogo de tipos · `abbf889f` validación por
+tipo + enriquecimiento · `03ac5a3e` expediente · `df376a6c` interfaz.
+
+| Gate | Resultado |
+|---|---|
+| Suite sin BD ni Ollama | **282 verdes** (baseline 249) |
+| `npx tsc --noEmit` | limpio |
+| `npx eslint src/lib src/app/api` | **0** `no-explicit-any` |
+| `npm run build` | compila con las rutas nuevas (tipos, expediente) |
+| Migración (SC-003, cero pérdida) | **ensayada en BD desechable** y luego aplicada a la viva; conteo 2/5/52 idéntico antes y después en ambas |
+| FR-004 | las 2 oportunidades vivas quedaron "licitación pública" conservando numero/fechaApertura |
+| Puertos 5005/5433/5010/5434 + RAG | intactos (PI/SICOV healthy; DocumentoChunk sin tocar) |
+
+**Verificación en vivo tras el despliegue** (token propio de 15 min, limpiado):
+- SC-001: crear una contratación directa **sin** numero/fecha → **201**, tipo correcto.
+- SC-002: crear una licitación pública **sin** numero → **400**.
+- Catálogo `/api/licitaciones/tipos` devuelve los 3 tipos con sus banderas.
+- La oportunidad de prueba se **borró** (CASCADE dejó 0 partidas huérfanas); back a 2.
+
+**Cobertura con mocks**: tipos (FR-002), validación por tipo SC-001/SC-002 (FR-003),
+partidas/cronograma/ciudad (FR-007/008/009), expediente PDF/Excel con 413 y SC-008
+($executeRaw no llamado — no toca el RAG), 401 en toda ruta nueva.
+
+## Frontera respetada
+
+- **El expediente NO pasa por el RAG** (FR-013/SC-008): la ruta no importa nada del
+  pipeline; el test lo blinda con `$executeRaw` no llamado.
+- **La obligatoriedad de campos es una bandera del tipo** (§0.7): la validación lee
+  `exigeNumero`/`exigeFechaApertura` de BD; no hay `if` por nombre de tipo.
+- **Identidad técnica conservada** (SC-011): el renombre es de cara al usuario; el modelo
+  Prisma, la tabla y las rutas siguen igual, minimizando el riesgo de la migración.
+- **Kanban de estados NO tocado** (SPEC-007, RZ-6).
