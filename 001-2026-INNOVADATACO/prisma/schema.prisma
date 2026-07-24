@@ -111,28 +111,74 @@ model AgentApi {
   @@index([category])
 }
 
+// Oportunidad (spec 006). Se conserva el nombre técnico `Licitacion` y la tabla
+// `licitaciones` (SC-011): "Oportunidad" es el concepto de cara al usuario. La
+// licitación pública es UN tipo dentro del catálogo configurable TipoOportunidad.
 model Licitacion {
   id            String                @id @default(cuid())
-  numero        String
+  // numero y fechaApertura pasan a OPCIONALES: su exigencia la fija el `tipo`
+  // (banderas configurables), no un if por nombre (§0.7, FR-003).
+  numero        String?
   titulo        String
   estadoId      Int
   entidadId     Int?
+  tipoId        Int?
   areaIdSala    Int?
-  fechaApertura DateTime
+  // Cronograma (FR-007): 5 hitos opcionales. `fechaApertura` es el hito "apertura".
+  fechaApertura           DateTime?
+  fechaPliegosDefinitivos DateTime?
+  fechaEntregaPropuesta   DateTime?
+  fechaAdjudicacion       DateTime?
+  fechaCierre             DateTime?
+  ciudadEjecucion String?
   descripcion   String                @default("")
   documentoUrl  String?
   contenido     String                @default("")
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
   documentos    LicitacionDocumento[]
+  partidas      PartidaPresupuesto[]
   entidad       EntidadLicitacion?    @relation("EntidadesLicitaciones", fields: [entidadId], references: [id])
   estado        LicitacionStatus      @relation(fields: [estadoId], references: [id])
+  tipo          TipoOportunidad?      @relation(fields: [tipoId], references: [id])
 
+  // Con numero y fechaApertura opcionales, Postgres permite múltiples NULL: esta
+  // unicidad solo ata a las oportunidades que tienen AMBOS (las licitaciones
+  // públicas). Es deliberado (FR-006), no accidental.
   @@unique([numero, fechaApertura])
   @@index([estadoId])
   @@index([entidadId])
+  @@index([tipoId])
   @@index([createdAt])
   @@map("licitaciones")
+}
+
+// Catálogo CONFIGURABLE de tipos de oportunidad (FR-002). Como entidades y estados,
+// se administra desde el módulo. Las banderas exige* son la propiedad que decide la
+// obligatoriedad de campos por tipo (FR-003), en lugar de nombres de tipo cableados.
+model TipoOportunidad {
+  id                 Int          @id @default(autoincrement())
+  key                String       @unique
+  nombreOficial      String
+  exigeNumero        Boolean      @default(false)
+  exigeFechaApertura Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  oportunidades      Licitacion[]
+}
+
+// Presupuesto DESGLOSADO (FR-008): varias partidas por oportunidad, cada una con su
+// moneda (no se asume una sola divisa). El total se calcula al leer.
+model PartidaPresupuesto {
+  id           String     @id @default(cuid())
+  licitacionId String
+  concepto     String
+  monto        Decimal    @db.Decimal(18, 2)
+  moneda       String     @default("COP")
+  createdAt    DateTime   @default(now())
+  licitacion   Licitacion @relation(fields: [licitacionId], references: [id], onDelete: Cascade)
+
+  @@index([licitacionId])
 }
 
 model LicitacionDocumento {
@@ -156,6 +202,13 @@ model EntidadLicitacion {
   id            Int                   @id @default(autoincrement())
   key           String        @unique
   nombreOficial String
+  // Información ampliada de la entidad (FR-010): toda opcional para no romper las
+  // filas ya sembradas.
+  nit           String?
+  sitioWeb      String?
+  telefono      String?
+  direccion     String?
+  ciudad        String?
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
   documentos    LicitacionDocumento[] @relation("EntidadesDocumentos")
