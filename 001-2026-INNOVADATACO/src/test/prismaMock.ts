@@ -54,6 +54,7 @@ const MODELOS = [
   "partidaProyecto",
   "recursoProyecto",
   "leccionAprendida",
+  "riesgoProyecto",
   "documentoChunk",
   "moduleSetting",
 ] as const;

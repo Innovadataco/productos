@@ -25,6 +25,8 @@ export const SUBMODULES: Record<ModuleId, SubmoduleDef[]> = {
     { id: "listado", title: "Listado" },
     // Tablero de fases PM2 (spec 008, US2): reutiliza el Kanban de SPEC-007.
     { id: "fases", title: "Fases PM²" },
+    // Espacio de gestión (spec 014): cartera + detalle + riesgos.
+    { id: "gestion", title: "Gestión" },
   ],
   base: [
     { id: "carga_documental", title: "Carga documental" },

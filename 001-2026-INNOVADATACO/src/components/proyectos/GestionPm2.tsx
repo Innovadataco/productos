@@ -5,6 +5,7 @@ import EntregablesProyecto from "@/components/proyectos/EntregablesProyecto";
 import PanelColeccion from "@/components/proyectos/PanelColeccion";
 import PanelPresupuesto from "@/components/proyectos/PanelPresupuesto";
 import { TIPOS_RECURSO } from "@/lib/proyectoPm2";
+import { PROBABILIDADES_RIESGO, IMPACTOS_RIESGO, ESTADOS_RIESGO } from "@/lib/riesgo";
 
 /**
  * Gestión PM2 de un proyecto: entregables, cronograma, presupuesto, recursos y
@@ -37,7 +38,16 @@ interface Leccion {
   impacto: string;
 }
 
-const PESTANAS = ["Entregables", "Cronograma", "Presupuesto", "Recursos", "Lecciones"] as const;
+interface Riesgo {
+  id: string;
+  descripcion: string;
+  probabilidad: string;
+  impacto: string;
+  mitigacion: string;
+  estado: string;
+}
+
+const PESTANAS = ["Entregables", "Cronograma", "Presupuesto", "Recursos", "Lecciones", "Riesgos"] as const;
 type Pestana = (typeof PESTANAS)[number];
 
 const fecha = (valor: string | null) =>
@@ -137,6 +147,30 @@ export default function GestionPm2({ proyectoId }: { proyectoId: string }) {
                   {[leccion.categoria, leccion.impacto].filter(Boolean).join(" · ")}
                 </p>
               )}
+            </>
+          )}
+        />
+      )}
+
+      {activa === "Riesgos" && (
+        <PanelColeccion<Riesgo>
+          proyectoId={proyectoId}
+          recurso="riesgos"
+          titulo="Riesgos"
+          vacio="Sin riesgos todavía"
+          campos={[
+            { nombre: "descripcion", etiqueta: "Riesgo", ancho: true, requerido: true },
+            { nombre: "probabilidad", etiqueta: "Probabilidad", tipo: "select", opciones: PROBABILIDADES_RIESGO },
+            { nombre: "impacto", etiqueta: "Impacto", tipo: "select", opciones: IMPACTOS_RIESGO },
+            { nombre: "mitigacion", etiqueta: "Mitigación", ancho: true },
+            { nombre: "estado", etiqueta: "Estado", tipo: "select", opciones: ESTADOS_RIESGO },
+          ]}
+          render={(riesgo) => (
+            <>
+              <p className="text-xs truncate">{riesgo.descripcion}</p>
+              <p className="text-[9px] text-[#666] uppercase tracking-widest">
+                {riesgo.estado} · prob. {riesgo.probabilidad} · imp. {riesgo.impacto}
+              </p>
             </>
           )}
         />

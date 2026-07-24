@@ -238,6 +238,7 @@ model Proyecto {
   partidas    PartidaProyecto[]
   recursos    RecursoProyecto[]
   lecciones   LeccionAprendida[]
+  riesgos     RiesgoProyecto[]
 
   @@index([estado])
   @@index([currentPhase])
@@ -339,6 +340,27 @@ model LeccionAprendida {
 
   @@index([proyectoId])
   @@map("lecciones_aprendidas")
+}
+
+/// Riesgo de un proyecto PM2 (spec 014, US3 / FR-004). Los cinco campos los fijó
+/// el CEO (D-073). `probabilidad` y `impacto` son enums textuales validados en la
+/// ruta; `estado` decide si el riesgo cuenta como abierto en la cartera
+/// (abierto/mitigado sí; cerrado no).
+model RiesgoProyecto {
+  id           String   @id @default(cuid())
+  proyectoId   String
+  descripcion  String
+  probabilidad String   @default("media")
+  impacto      String   @default("medio")
+  mitigacion   String   @default("")
+  estado       String   @default("abierto")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+
+  @@index([proyectoId])
+  @@map("riesgos_proyecto")
 }
 
 model DocumentoChunk {

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { X, Send, ShieldCheck, Database, Calendar } from "lucide-react";
 import { FASES_PM2 } from "@/lib/fasesPm2";
-import GestionPm2 from "@/components/proyectos/GestionPm2";
 
 /**
  * Formulario de proyecto: crea Y edita (spec 008, FR-004).
@@ -164,9 +163,17 @@ export default function ProjectForm({ onClose, onRefresh, proyecto }: ProjectFor
           </button>
         </form>
 
-        {/* La gestión PM2 solo tiene sentido sobre un proyecto que ya existe
-            (spec 008, US3–US6): en el alta todavía no hay id al que colgar nada. */}
-        {editando && <GestionPm2 proyectoId={proyecto.id} />}
+        {/* La gestión PM2 (entregables, cronograma, presupuesto, recursos,
+            lecciones y riesgos) se movió al submódulo "Gestión" (spec 014): un
+            modal era mal sitio para gestionar el ciclo de vida de un proyecto, y
+            tenerla en dos lados sería la interactividad duplicada que I-011
+            enseñó a evitar. El modal vuelve a ser edición básica. */}
+        {editando && (
+          <p className="text-[9px] text-[#666] uppercase tracking-widest pt-2 border-t border-white/10">
+            Entregables, cronograma, presupuesto, recursos, riesgos y lecciones se gestionan en
+            el submódulo <span className="text-neonCyan">Gestión</span>.
+          </p>
+        )}
 
         <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[8px] text-[#444] font-bold uppercase tracking-widest">
            {/* El rótulo decía "Local Storage Active": los proyectos viven en
