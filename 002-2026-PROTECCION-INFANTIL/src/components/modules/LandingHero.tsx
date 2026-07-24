@@ -13,7 +13,7 @@ export type ResultadoConsulta = {
     reportesAutenticados?: number;
     reportesAnonimos?: number;
     ultimoReporte?: string | null;
-    nivelRiesgo?: "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
+    actividad?: "baja" | "alta";
     plataformas?: Plataforma[];
     ubicaciones?: Ubicacion[];
     mensaje?: string;
@@ -198,15 +198,9 @@ export function LandingHero({
                                                 <p>
                                                     Total: {resultado.totalReportes} · Autenticados: {resultado.reportesAutenticados ?? 0} · Anónimos: {resultado.reportesAnonimos ?? 0}
                                                 </p>
-                                                {resultado.nivelRiesgo && (
-                                                    <p>Nivel de riesgo: {resultado.nivelRiesgo}</p>
-                                                )}
-                                                <Link
-                                                    href={`/consulta?identificador=${encodeURIComponent(resultado.identificador)}`}
-                                                    className="inline-flex text-sm font-semibold text-white underline underline-offset-2 hover:text-sky-100"
-                                                >
-                                                    Ver vista completa
-                                                </Link>
+                                                <p className="text-xs text-white/80">
+                                                    Actividad {resultado.actividad ?? "baja"} de reportes
+                                                </p>
                                             </div>
                                         )}
                                     </div>

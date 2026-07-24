@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type BadgeVisual = "warning" | "success" | "muted";
@@ -10,9 +11,8 @@ type ClasificacionItem = {
     categoriaGrupo: string;
 };
 
+// Spec 089/091: sin score ni etiqueta de riesgo — solo hechos agregados.
 type RankingItem = {
-    score: number;
-    nivelRiesgo: "BAJO" | "MEDIO" | "ALTO";
     totalReportes: number;
 };
 
@@ -33,14 +33,51 @@ type ReporteItem = {
     ranking: RankingItem | null;
 };
 
-const NIVEL_STYLES = {
-    BAJO: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200",
-    MEDIO: "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200",
-    ALTO: "bg-red-100 text-red-900 dark:bg-red-950/50 dark:text-red-200",
+type ConsultaInline = {
+    tieneReportes: boolean;
+    actividad?: string;
+    totalReportes?: number;
+    resumenPlataformas?: string;
+    categorias?: { categoria: string; total: number }[];
+    mensaje?: string;
 };
 
 export function MisReportesList({ items }: { items: ReporteItem[] }) {
     const router = useRouter();
+    const [expandidoId, setExpandidoId] = useState<string | null>(null);
+    const [consultaInline, setConsultaInline] = useState<ConsultaInline | null>(null);
+    const [cargandoInline, setCargandoInline] = useState(false);
+
+    // Sin numeroSeguimiento: la consulta se expande INLINE vía POST (el identificador
+    // nunca viaja en la URL, spec 091-US1). Con RPT: se navega al seguimiento.
+    async function verIdentificador(r: ReporteItem) {
+        if (r.numeroSeguimiento) {
+            router.push(`/seguimiento?numero=${encodeURIComponent(r.numeroSeguimiento)}`);
+            return;
+        }
+        if (expandidoId === r.id) {
+            setExpandidoId(null);
+            setConsultaInline(null);
+            return;
+        }
+        setExpandidoId(r.id);
+        setCargandoInline(true);
+        setConsultaInline(null);
+        try {
+            const res = await fetch("/api/consulta", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ identificador: r.identificador }),
+            });
+            const json = await res.json();
+            setConsultaInline(json as ConsultaInline);
+        } catch {
+            setConsultaInline({ tieneReportes: false, mensaje: "No se pudo cargar la consulta." });
+        } finally {
+            setCargandoInline(false);
+        }
+    }
 
     if (items.length === 0) {
         return (
@@ -58,17 +95,11 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                     role="button"
                     tabIndex={0}
                     aria-label={`Ver seguimiento del reporte ${r.numeroSeguimiento || r.identificador}`}
-                    onClick={() =>
-                        r.numeroSeguimiento
-                            ? router.push(`/seguimiento?numero=${encodeURIComponent(r.numeroSeguimiento)}`)
-                            : router.push(`/consulta?identificador=${encodeURIComponent(r.identificador)}`)
-                    }
+                    onClick={() => verIdentificador(r)}
                     onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            r.numeroSeguimiento
-                                ? router.push(`/seguimiento?numero=${encodeURIComponent(r.numeroSeguimiento)}`)
-                                : router.push(`/consulta?identificador=${encodeURIComponent(r.identificador)}`);
+                            void verIdentificador(r);
                         }
                     }}
                     className="glass rounded-2xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent"
@@ -119,15 +150,35 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                         </button>
                         <p className="text-xs text-muted max-w-xs text-right">{r.mensaje}</p>
                         {r.ranking && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono font-bold text-accent">{r.ranking.score}</span>
-                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${NIVEL_STYLES[r.ranking.nivelRiesgo]}`}>
-                                    {r.ranking.nivelRiesgo}
-                                </span>
-                                <span className="text-[10px] text-subtle">{r.ranking.totalReportes} reportes</span>
-                            </div>
+                            <span className="text-[10px] text-subtle">{r.ranking.totalReportes} reportes registrados</span>
                         )}
                     </div>
+
+                    {expandidoId === r.id && (
+                        <div
+                            className="w-full border-t border-slate-200 dark:border-slate-700 pt-3"
+                            data-testid={`consulta-inline-${r.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {cargandoInline ? (
+                                <p className="text-xs text-muted">Consultando...</p>
+                            ) : consultaInline ? (
+                                consultaInline.tieneReportes ? (
+                                    <div className="space-y-1.5 text-xs text-muted">
+                                        <p className="font-medium text-body">
+                                            {consultaInline.resumenPlataformas ?? `${consultaInline.totalReportes ?? 0} reportes`}
+                                        </p>
+                                        <p>
+                                            Actividad {consultaInline.actividad ?? "baja"} de reportes ·{" "}
+                                            {(consultaInline.categorias ?? []).map((c) => `${c.categoria} (${c.total})`).join(" · ") || "sin categorías de riesgo"}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-muted">{consultaInline.mensaje ?? "Sin reportes registrados."}</p>
+                                )
+                            ) : null}
+                        </div>
+                    )}
                 </div>
             ))}
         </div>
