@@ -204,7 +204,7 @@ export function LandingHero({
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="text-sm font-semibold text-white">{resultado.identificador}</span>
                                             <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white">
-                                                {resultado.totalReportes} reportes
+                                                {resultado.totalReportes === 1 ? "1 reporte" : `${resultado.totalReportes} reportes`}
                                             </span>
                                             <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white">
                                                 Actividad {resultado.actividad ?? "baja"} de reportes

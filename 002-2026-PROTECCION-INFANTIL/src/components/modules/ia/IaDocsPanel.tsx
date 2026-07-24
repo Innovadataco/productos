@@ -43,7 +43,7 @@ const PIPELINE_STEPS = [
         id: "rubrica",
         label: "Rúbrica multi-etiqueta / multi-modelo",
         description:
-            "Un pase barato (embudo) descarta categorías sin señal. Luego N modelos DIVERSOS votan en secuencia aplicando el set de preguntas factuales de cada categoría (1 solo con evidencia clara; ante la duda, 0). % por categoría = modelos que marcaron 1 / N. Una categoría cuenta solo si supera el umbral de presencia (default 60%). Sets de preguntas, modelos, umbral y temperatura son configurables (tab Rúbrica).",
+            "Tras guardas baratas previas (ráfaga/doxing cortan sin gastar modelos), un embudo PERMISIVO lista categorías plausibles (su trabajo es no descartar de más; el filtro estricto viene después). N modelos DIVERSOS votan en secuencia con la rúbrica de cada categoría: preguntas DECISIVAS (obligatorias) y de CONTEXTO (no bloquean). % por categoría = modelos que marcaron 1 / N; cuenta solo si supera el umbral de presencia. Configurable en el tab Rúbrica.",
     },
     {
         id: "pii",
@@ -61,7 +61,7 @@ const PIPELINE_STEPS = [
         id: "decision",
         label: "Decisión",
         description:
-            "La conducta principal es la de MAYOR GRAVEDAD entre las que superan el umbral de presencia. Si ninguna la supera (desacuerdo entre modelos), si el resultado es OTRO, o si las guardas lo fuerzan, el reporte va a revisión humana (REVISION_MANUAL). La matriz categoría × modelo queda persistida para auditoría.",
+            "Se muestran TODAS las conductas que superan el umbral de presencia (ya no se elige una principal por gravedad). Si ninguna la supera (desacuerdo entre modelos), si el resultado es OTRO, o si las guardas lo fuerzan, el reporte va a revisión humana (REVISION_MANUAL). La matriz categoría × modelo queda persistida para auditoría.",
     },
 ];
 

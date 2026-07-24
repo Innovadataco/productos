@@ -40,7 +40,7 @@
 | N2 | **Modelo de desempate** | `reportes.classification.modelo_desempate` está vacío. Se deshabilitó por no mejorar métricas en evaluaciones. | Cuando el Laboratorio IA demuestre una config de desempate que mejore la baseline. |
 | N3 | **Backfill de scores históricos con peso de fuente** | `scoring.source_weight.enabled=false`. Al activarse, los scores viejos no se recalculan automáticamente. | Junto con la simulación post-despliegue que apruebe el owner. |
 | N4 | **Hard-delete / purga física** | Solo existe soft-delete. Órdenes legales o GDPR pueden requerir eliminación física con prueba de destrucción. | Orden legal, auditoría de privacidad o cambio de retención. |
-| N5 | **Automatización de jobs de mantenimiento** | Vencimiento de apelaciones y limpieza de fuentes requieren ejecutarse periódicamente; hoy son comandos manuales. | Antes del primer despliegue productivo. |
+| N5 | **Automatización de jobs de mantenimiento** | Limpieza de fuentes requiere ejecutarse periódicamente; hoy son comandos manuales. (La parte de vencimiento de apelaciones quedó FUERA DE ALCANCE por decisión del CEO, 2026-07-24 — ver D-APE-1.) | Antes del primer despliegue productivo. |
 | N6 | **Eval de PII administrable desde el panel** | El eval de PII sigue con fixture JSON (`scripts/eval-pii-fixture.json`) porque no encaja en `CasoEval`. | Si el owner requiere gestionar casos de PII desde el mismo UI de evals. |
 | N7 | **Resolución de los 14 casos dudosos del fixture** | 14 casos de `fixtureVersion=11` tienen etiquetas discutibles; pueden mover la baseline. | Sesión de curaduría con el owner; luego re-correr baseline v3. |
 | N8 | **Restauración de ejemplos purgados del dataset** | Al reactivar un reporte dado de baja por `REPORTE_FALSO`/`ORDEN_LEGAL`, su fila de `DatasetEntrenamiento` no se recupera automáticamente. | Si se habilita la reactivación de reportes purgados como flujo normal. |
@@ -49,13 +49,20 @@
 
 ---
 
-## ACEPTADO
+## NECESITA DECISIÓN
+
+| ID | Ítem | Detalle | Requiere |
+|----|------|---------|----------|
+| D-APE-1 | **Mecanismo de apelación fuera de alcance** | El CEO sacó las apelaciones del alcance (2026-07-24) pero el código vivo sigue (flujo, pausa de visibilidad, job de vencimiento manual). Opciones: implementarlo bien, retirarlo, o enmendar §1.6 de la constitución. | CEO + revisión legal ANTES de producción (Ley 1581 / habeas data). NO automatizar ni tocar el flujo hasta decidir. |
+| D-SEV-1 | **Escala de gravedad sin criterio** (`scoring.severity.*`) | Números (30/60/90) sin criterio documentado ni validación experta. Tras la 092 ya no decide de cara al usuario, pero sigue usándose internamente (priorización de bandeja). | NECESITA SPEC: definir el criterio de la escala con expertos. |
+
+## FIX AHORA hechos
 
 | # | Ítem | Contexto / por qué se acepta |
 |---|------|------------------------------|
 | A1 | **Soft-delete como único mecanismo de baja** | Mantiene trazabilidad de auditoría; se prioriza la capacidad de investigar sobre el ahorro de espacio. |
 | A2 | **Modelos de IA solo locales (Ollama)** | Restricción R2: textos sensibles de menores no salen del entorno de confianza. |
-| A3 | **Apelaciones por nick sin verificación de titularidad** | Se acepta el riesgo de apelaciones falsas; se mitiga con badge admin, pausa única y bloqueo tras rechazo. |
+| A3 | **Apelaciones: mecanismo FUERA DE ALCANCE (CEO, 2026-07-24)** | Ya no se acepta el riesgo: el mecanismo está fuera de alcance. Ver D-APE-1. |
 | A4 | **Baseline de error silencioso 16.7 %** | Nueva línea base sobre `fixtureVersion=11`. No cumple el KPI de producto (<5 %); la mejora depende de correcciones reales de producción. |
 | A5 | **Fingerprint server-side con IP truncada a /24** | Balance entre privacidad (no almacenar IP en claro) y utilidad anti-abuso. |
 | A6 | **No reprocesar reportes existentes al cambiar modelo/config** | Decisión de diseño para evitar costos y efectos impredecibles; solo afecta reportes nuevos. |
@@ -78,3 +85,15 @@ Revisar y, de ser necesario, actualizar este documento cuando ocurra cualquiera 
 3. **Decisión del owner**: cualquier cambio en flags, proveedores o políticas de retención.
 4. **Trimestral**: revisión programada para detectar deuda obsoleta o que dejó de aplicar.
 5. **Antes de cada despliegue**: verificar que ningún ítem `NECESITA SPEC` bloquee el release.
+
+## Deuda registrada en el barrido del 2026-07-24 (spec 094)
+
+| ID | Ítem | Detalle | Estado |
+|----|------|---------|--------|
+| D-094-1 | Parámetros muertos: `security.password_min_length`, `system.maintenance_mode`, `reportes.worker.max_retries`, `reportes.worker.stalled_threshold_minutes` | Sembrados pero NADIE los lee (verificado con grep en `src/` y `scripts/`). | PENDIENTE: eliminar del seed o implementar lectura. |
+| D-094-2 | `security.jwt_ttl_hours` sembrado pero `JWT_TTL = "24h"` QUEMADO en `src/lib/auth.ts:20` | Viola ADR_004: el TTL debe leerse del parámetro. | PENDIENTE (spec de saneamiento de parámetros). |
+| D-094-3 | Patrón "sembrado pero nadie lee" (`reportes.spam.min_text_length`) | El valor estaba quemado en 3 lugares (2 componentes + Zod). Corregido en spec 092-US5 (front y backend leen el parámetro). | CORREGIDA en 092; patrón documentado para futuros parámetros. |
+| D-094-4 | Patrón "condicional escondido mantiene viva una interfaz vieja" | `LandingHero` (totalReportes<=2) mantuvo vivo el formato pre-089 con fuga de ciudad y "(undefined)". Corregido en el cierre de la 091. | CORREGIDA en 091; patrón a vigilar en refactors de UI (eliminar ramas, no acumularlas). |
+| D-094-5 | Dos bancos de evaluación divergentes | `CasoEval` en BD: 110 casos `fixtureVersion=1` (eval-runner). Banco de simulación: 200 casos `fixtureVersion=2` (`scripts/simulacion/simulacion-50-casos-eval.json`). No hay fuente única. | PENDIENTE: decidir fuente única y re-sembrar/reconciliar (requiere decisión de ZEUS; no se re-sembra solo). |
+| D-094-6 | Usuarios de prueba del seed | El seed crea usuarios de prueba (`soporte@innovadataco.com` etc.); deben eliminarse antes de producción. | PENDIENTE antes del despliegue productivo. |
+| D-094-7 | `calcularRanking` / `riesgo-consulta.ts` en código | Se conservan para priorización operativa interna (declarado en cierre de la 089); no se exponen en superficie pública. | DECLARADA (intencional). |
