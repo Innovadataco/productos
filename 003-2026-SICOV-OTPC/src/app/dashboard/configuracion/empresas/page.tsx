@@ -35,6 +35,9 @@ export default function EmpresasPage() {
   const [editNit, setEditNit] = useState<string | null>(null);
   const [form, setForm] = useState({ ...VACIO });
   const [tokenNuevo, setTokenNuevo] = useState("");
+  // I-17: el error de guardado se muestra DENTRO del modal (el overlay fixed tapa el aviso de arriba).
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
   const cargar = useCallback(async () => {
     const res = await fetch("/api/configuracion/empresas?pageSize=100");
@@ -63,6 +66,7 @@ export default function EmpresasPage() {
     setEditNit(null);
     setModal("crear");
     setMensaje(null);
+    setModalError(null);
   }
 
   async function abrirEditar(nit: string) {
@@ -80,6 +84,7 @@ export default function EmpresasPage() {
     });
     setEditNit(nit);
     setModal("editar");
+    setModalError(null);
   }
 
   function toggleModulo(id: number) {
@@ -90,28 +95,33 @@ export default function EmpresasPage() {
   }
 
   async function guardar() {
-    setMensaje(null);
-    if (modal === "crear") {
-      const res = await fetch("/api/configuracion/empresas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const d = (await res.json().catch(() => ({}))) as { error?: string; correoEnviado?: boolean };
-      if (!res.ok) return setMensaje(d.error ?? "No fue posible crear la empresa");
-      setMensaje(d.correoEnviado ? "Empresa creada; credencial enviada." : "Empresa creada; correo no enviado (reenvíe la credencial).");
-    } else if (modal === "editar" && editNit) {
-      const res = await fetch(`/api/configuracion/empresas/${editNit}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ empresa: form.empresa, correo: form.correo, fechaInicial: form.fechaInicial, fechaFinal: form.fechaFinal }),
-      });
-      const d = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) return setMensaje(d.error ?? "No fue posible editar");
-      setMensaje("Empresa actualizada.");
+    setModalError(null);
+    setGuardando(true);
+    try {
+      if (modal === "crear") {
+        const res = await fetch("/api/configuracion/empresas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const d = (await res.json().catch(() => ({}))) as { error?: string; correoEnviado?: boolean };
+        if (!res.ok) { setModalError(d.error ?? "No fue posible crear la empresa"); return; }
+        setMensaje(d.correoEnviado ? "Empresa creada; credencial enviada." : "Empresa creada; correo no enviado (reenvíe la credencial).");
+      } else if (modal === "editar" && editNit) {
+        const res = await fetch(`/api/configuracion/empresas/${editNit}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ empresa: form.empresa, correo: form.correo, fechaInicial: form.fechaInicial, fechaFinal: form.fechaFinal }),
+        });
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) { setModalError(d.error ?? "No fue posible editar"); return; }
+        setMensaje("Empresa actualizada.");
+      }
+      setModal(null);
+      await cargar();
+    } finally {
+      setGuardando(false);
     }
-    setModal(null);
-    await cargar();
   }
 
   async function cambiarEstado(nit: string, estado: boolean) {
@@ -125,15 +135,22 @@ export default function EmpresasPage() {
 
   async function guardarToken() {
     if (!editNit) return;
-    const res = await fetch(`/api/configuracion/empresas/${editNit}/token`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: tokenNuevo }),
-    });
-    const d = (await res.json().catch(() => ({}))) as { error?: string };
-    setMensaje(res.ok ? "Token actualizado (sincronizado con el admin)." : (d.error ?? "No fue posible actualizar el token"));
-    setModal(null);
-    await cargar();
+    setModalError(null);
+    setGuardando(true);
+    try {
+      const res = await fetch(`/api/configuracion/empresas/${editNit}/token`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: tokenNuevo }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) { setModalError(d.error ?? "No fue posible actualizar el token"); return; }
+      setMensaje("Token actualizado (sincronizado con el admin).");
+      setModal(null);
+      await cargar();
+    } finally {
+      setGuardando(false);
+    }
   }
 
   async function reenviar(nit: string) {
@@ -182,7 +199,7 @@ export default function EmpresasPage() {
                 </td>
                 <td className="px-2 py-1 flex flex-wrap gap-2">
                   <button className="text-sicov-700 hover:underline" onClick={() => e.nit && abrirEditar(e.nit)}>Editar</button>
-                  <button className="text-sicov-700 hover:underline" onClick={() => { setEditNit(e.nit); setTokenNuevo(""); setModal("token"); }}>Token</button>
+                  <button className="text-sicov-700 hover:underline" onClick={() => { setEditNit(e.nit); setTokenNuevo(""); setModalError(null); setModal("token"); }}>Token</button>
                   <button className="text-sicov-700 hover:underline" onClick={() => e.nit && reenviar(e.nit)}>Reenviar credencial</button>
                   <button className="text-gray-600 hover:underline" onClick={() => e.nit && cambiarEstado(e.nit, !e.estado)}>
                     {e.estado ? "Desactivar" : "Activar"}
@@ -231,9 +248,14 @@ export default function EmpresasPage() {
                 ))}
               </div>
             </fieldset>
+            {modalError && (
+              <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">{modalError}</p>
+            )}
             <div className="flex justify-end gap-2">
-              <button className="px-3 py-1.5 border rounded" onClick={() => setModal(null)}>Cancelar</button>
-              <button className="px-3 py-1.5 bg-sicov-700 text-white rounded" onClick={guardar}>Guardar</button>
+              <button className="px-3 py-1.5 border rounded" disabled={guardando} onClick={() => setModal(null)}>Cancelar</button>
+              <button className="px-3 py-1.5 bg-sicov-700 text-white rounded disabled:opacity-60" disabled={guardando} onClick={guardar}>
+                {guardando ? "Guardando…" : "Guardar"}
+              </button>
             </div>
           </div>
         </div>
@@ -247,9 +269,14 @@ export default function EmpresasPage() {
               <input className="mt-1 w-full border rounded px-2 py-1" value={tokenNuevo} onChange={(e) => setTokenNuevo(e.target.value)} />
             </label>
             <p className="text-xs text-gray-500">Se sincroniza con el admin de la empresa; los operadores lo heredan.</p>
+            {modalError && (
+              <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">{modalError}</p>
+            )}
             <div className="flex justify-end gap-2">
-              <button className="px-3 py-1.5 border rounded" onClick={() => setModal(null)}>Cancelar</button>
-              <button className="px-3 py-1.5 bg-sicov-700 text-white rounded" onClick={guardarToken}>Guardar token</button>
+              <button className="px-3 py-1.5 border rounded" disabled={guardando} onClick={() => setModal(null)}>Cancelar</button>
+              <button className="px-3 py-1.5 bg-sicov-700 text-white rounded disabled:opacity-60" disabled={guardando} onClick={guardarToken}>
+                {guardando ? "Guardando…" : "Guardar token"}
+              </button>
             </div>
           </div>
         </div>

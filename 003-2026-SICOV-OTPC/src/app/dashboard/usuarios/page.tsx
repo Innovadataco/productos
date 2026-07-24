@@ -23,6 +23,9 @@ export default function UsuariosPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState({ nombre: "", identificacion: "", correo: "", rolId: 3 as 2 | 3 });
   const [sel, setSel] = useState<Seleccion>({});
+  // I-17: el error de guardado se muestra DENTRO del modal (el overlay fixed tapa el aviso de arriba).
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
   const cargar = useCallback(async () => {
     const res = await fetch("/api/usuarios?pageSize=100");
@@ -48,6 +51,7 @@ export default function UsuariosPage() {
     setEditId(null);
     setModal("crear");
     setMensaje(null);
+    setModalError(null);
   }
 
   function toggleCompleto(moduloId: number) {
@@ -75,28 +79,33 @@ export default function UsuariosPage() {
   }
 
   async function guardar() {
-    setMensaje(null);
-    if (modal === "crear") {
-      const res = await fetch("/api/usuarios", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, permisos: permisosPayload() }),
-      });
-      const d = (await res.json().catch(() => ({}))) as { error?: string; correoEnviado?: boolean };
-      if (!res.ok) return setMensaje(d.error ?? "No fue posible crear el usuario");
-      setMensaje(d.correoEnviado ? "Usuario creado; credencial enviada." : "Usuario creado; correo no enviado.");
-    } else if (modal === "editar" && editId) {
-      const res = await fetch(`/api/usuarios/${editId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: form.nombre, correo: form.correo, permisos: permisosPayload() }),
-      });
-      const d = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) return setMensaje(d.error ?? "No fue posible editar");
-      setMensaje("Usuario actualizado.");
+    setModalError(null);
+    setGuardando(true);
+    try {
+      if (modal === "crear") {
+        const res = await fetch("/api/usuarios", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, permisos: permisosPayload() }),
+        });
+        const d = (await res.json().catch(() => ({}))) as { error?: string; correoEnviado?: boolean };
+        if (!res.ok) { setModalError(d.error ?? "No fue posible crear el usuario"); return; }
+        setMensaje(d.correoEnviado ? "Usuario creado; credencial enviada." : "Usuario creado; correo no enviado.");
+      } else if (modal === "editar" && editId) {
+        const res = await fetch(`/api/usuarios/${editId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: form.nombre, correo: form.correo, permisos: permisosPayload() }),
+        });
+        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) { setModalError(d.error ?? "No fue posible editar"); return; }
+        setMensaje("Usuario actualizado.");
+      }
+      setModal(null);
+      await cargar();
+    } finally {
+      setGuardando(false);
     }
-    setModal(null);
-    await cargar();
   }
 
   async function cambiarEstado(id: number, estado: boolean) {
@@ -147,7 +156,7 @@ export default function UsuariosPage() {
                   </span>
                 </td>
                 <td className="px-2 py-1 flex flex-wrap gap-2">
-                  <button className="text-sicov-700 hover:underline" onClick={() => { setEditId(u.id); setForm({ nombre: u.nombre, identificacion: u.identificacion ?? "", correo: u.correo ?? "", rolId: (u.rolId === 2 ? 2 : 3) }); setSel({}); setModal("editar"); }}>Editar</button>
+                  <button className="text-sicov-700 hover:underline" onClick={() => { setEditId(u.id); setForm({ nombre: u.nombre, identificacion: u.identificacion ?? "", correo: u.correo ?? "", rolId: (u.rolId === 2 ? 2 : 3) }); setSel({}); setModalError(null); setModal("editar"); }}>Editar</button>
                   <button className="text-sicov-700 hover:underline" onClick={() => reenviar(u.id)}>Reenviar credencial</button>
                   <button className="text-gray-600 hover:underline" onClick={() => cambiarEstado(u.id, !u.estado)}>{u.estado ? "Desactivar" : "Activar"}</button>
                 </td>
@@ -210,9 +219,14 @@ export default function UsuariosPage() {
               ))}
             </fieldset>
 
+            {modalError && (
+              <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">{modalError}</p>
+            )}
             <div className="flex justify-end gap-2">
-              <button className="px-3 py-1.5 border rounded" onClick={() => setModal(null)}>Cancelar</button>
-              <button className="px-3 py-1.5 bg-sicov-700 text-white rounded" onClick={guardar}>Guardar</button>
+              <button className="px-3 py-1.5 border rounded" disabled={guardando} onClick={() => setModal(null)}>Cancelar</button>
+              <button className="px-3 py-1.5 bg-sicov-700 text-white rounded disabled:opacity-60" disabled={guardando} onClick={guardar}>
+                {guardando ? "Guardando…" : "Guardar"}
+              </button>
             </div>
           </div>
         </div>
