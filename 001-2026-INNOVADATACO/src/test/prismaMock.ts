@@ -49,6 +49,7 @@ const MODELOS = [
   "tipoOportunidad",
   "partidaPresupuesto",
   "proyecto",
+  "entregable",
   "documentoChunk",
   "moduleSetting",
 ] as const;

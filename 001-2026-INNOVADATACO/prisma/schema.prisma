@@ -233,9 +233,34 @@ model Proyecto {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  entregables Entregable[]
+
   @@index([estado])
   @@index([currentPhase])
   @@map("proyectos")
+}
+
+/// Entregable de un proyecto PM2 (spec 008, US3). Los cinco campos mínimos los
+/// fijó el CEO en /speckit-clarify: nombre, descripción, estado/avance, fecha
+/// compromiso y responsable. CASCADE: al borrar el proyecto no quedan huérfanos.
+model Entregable {
+  id             String    @id @default(cuid())
+  proyectoId     String
+  nombre         String
+  descripcion    String    @default("")
+  /// Avance en porcentaje (0-100). La ruta lo valida; aquí solo se guarda.
+  avance         Int       @default(0)
+  /// Estado libre y corto: "pendiente", "en curso", "entregado"…
+  estado         String    @default("pendiente")
+  fechaCompromiso DateTime?
+  responsable    String    @default("")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+
+  @@index([proyectoId])
+  @@map("entregables")
 }
 
 model DocumentoChunk {

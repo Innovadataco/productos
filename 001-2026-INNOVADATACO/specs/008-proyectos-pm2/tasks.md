@@ -95,8 +95,14 @@ ya basta para editar y mover fases.
 > Requieren **migración** (tablas nuevas). Ninguna se aplica a la BD viva sin ensayo previo en
 > BD desechable con conteo antes/después (D-039). Cada una en **su** commit.
 
-- [ ] T020 [US3] Entregables (P2): entidad CASCADE con nombre, descripción, estado/avance,
+- [x] T020 [US3] Entregables (P2): entidad CASCADE con nombre, descripción, estado/avance,
       fecha compromiso y responsable + rutas + tests. → FR-009, FR-010
+      **Hecha** (2026-07-24). Migración `20260724020000_add_entregables_proyecto`,
+      estrictamente aditiva, **ensayada en BD desechable** antes de la viva (D-039):
+      2 proyectos antes → 2 después, tabla creada y CASCADE verificado (0 huérfanos).
+      Aplicada a la viva con el mismo conteo antes/después (proyectos 1, licitaciones 2,
+      DocumentoChunk 84). Rutas `GET`/`POST /api/projects/[id]/entregables` y
+      `PATCH`/`DELETE .../[entregableId]`, con UI en el formulario de edición.
 - [ ] T021 [US5] Presupuesto por partidas (planeado/ejecutado/desviación) y recursos (P2).
       → FR-012, FR-013
 - [ ] T022 [US4] Cronograma de hitos (P3). → FR-011
@@ -116,9 +122,15 @@ ya basta para editar y mover fases.
 | RZ-2 / SC-005 | `KanbanBoard.tsx` **sin modificar**: el diff no lo toca |
 | Puertos 5005/5433/5010/5434 + RAG | intactos |
 
-**US1 y US2 completas.** US3–US6 **no implementadas** esta noche: exigen migración y la noche
-se destinó a cerrar el mínimo verde más SPEC-009 (deuda P1), la auditoría de deuda y la
-redacción de SPEC-010. Quedan como el siguiente frente natural, ya troceadas arriba.
+**US1, US2 y US3 completas.** US5, US4 y US6 **no implementadas** esta noche: la noche se
+destinó al mínimo (US1+US2), a SPEC-009 (deuda P1), a la auditoría de deuda, a la redacción de
+SPEC-010 y a poner main al día; con el tiempo restante entró US3, que era la siguiente por
+prioridad. Quedan como el siguiente frente natural, ya troceadas arriba.
+
+**US3 · Entregables** (2026-07-24): la migración es estrictamente aditiva —crea una tabla y
+nada más, no altera `proyectos`—, que es la clase de menor riesgo posible sobre datos vivos. Se
+ensayó igual en BD desechable antes de tocar la viva, porque el criterio de D-039 no depende de
+lo fácil que parezca la migración.
 
 **I-011 cerrada con alcance ampliado**: el barrido encontró 4 elementos que fingían
 interactividad, no 1. Los cuatro quedan resueltos (tres funcionan, uno se retira).

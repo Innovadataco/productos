@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, Send, ShieldCheck, Database, Calendar } from "lucide-react";
 import { FASES_PM2 } from "@/lib/fasesPm2";
+import EntregablesProyecto from "@/components/proyectos/EntregablesProyecto";
 
 /**
  * Formulario de proyecto: crea Y edita (spec 008, FR-004).
@@ -162,6 +163,10 @@ export default function ProjectForm({ onClose, onRefresh, proyecto }: ProjectFor
             {loading ? "Sincronizando..." : <><Send className="w-3 h-3" /> {editando ? "Guardar cambios" : "Registrar en Base de Datos"}</>}
           </button>
         </form>
+
+        {/* Los entregables solo tienen sentido sobre un proyecto que ya existe
+            (spec 008, US3): en el alta todavía no hay id al que colgarlos. */}
+        {editando && <EntregablesProyecto proyectoId={proyecto.id} />}
 
         <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[8px] text-[#444] font-bold uppercase tracking-widest">
            {/* El rótulo decía "Local Storage Active": los proyectos viven en
