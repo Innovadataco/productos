@@ -46,6 +46,8 @@ const MODELOS = [
   "licitacionDocumento",
   "entidadLicitacion",
   "licitacionStatus",
+  "tipoOportunidad",
+  "partidaPresupuesto",
   "proyecto",
   "documentoChunk",
   "moduleSetting",

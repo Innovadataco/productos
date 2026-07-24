@@ -56,8 +56,9 @@ node scripts/seedUser.mjs        # 5. Crear el usuario administrador
 
 `npm run seed` es **idempotente y no destructivo**: se puede ejecutar las veces que
 haga falta y no pisa la configuración hecha desde la interfaz (una API desactivada,
-un estado renombrado). Siembra `LicitacionStatus`, `EntidadLicitacion`, `AgentApi` y
-un `AiModel` de referencia (inactivo: activarlo es decisión del operador).
+un estado renombrado). Siembra `LicitacionStatus`, `TipoOportunidad`,
+`EntidadLicitacion`, `AgentApi` y un `AiModel` de referencia (inactivo: activarlo es
+decisión del operador).
 
 ## Variables de entorno
 

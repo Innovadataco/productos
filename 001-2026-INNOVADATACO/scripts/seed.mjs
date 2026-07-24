@@ -38,6 +38,15 @@ const ESTADOS = [
   { key: "cancelada", nombreOficial: "Cancelada" },
 ];
 
+// Tipos de oportunidad (spec 006, FR-005). Catálogo configurable: el CEO puede
+// añadir más desde el módulo. Las banderas exige* fijan la obligatoriedad de
+// numero/fechaApertura por tipo (§0.7), sin nombres cableados en el código.
+const TIPOS_OPORTUNIDAD = [
+  { key: "licitacion-publica", nombreOficial: "Licitación pública", exigeNumero: true, exigeFechaApertura: true },
+  { key: "concurso-meritos", nombreOficial: "Concurso de méritos", exigeNumero: false, exigeFechaApertura: false },
+  { key: "contratacion-directa", nombreOficial: "Contratación directa", exigeNumero: false, exigeFechaApertura: false },
+];
+
 /** Modelo de referencia. Se siembra INACTIVO: activarlo es decisión del operador. */
 const MODELO_REFERENCIA = {
   name: "Nomic Embed Text (local)",
@@ -85,6 +94,10 @@ async function sembrarEstados() {
   await sembrarPorClave(prisma.licitacionStatus, "LicitacionStatus", ESTADOS);
 }
 
+async function sembrarTiposOportunidad() {
+  await sembrarPorClave(prisma.tipoOportunidad, "TipoOportunidad", TIPOS_OPORTUNIDAD);
+}
+
 async function sembrarEntidades() {
   const { ENTIDADES_COLOMBIA } = await import("../src/lib/entidadesColombia.ts");
   const entidades = ENTIDADES_COLOMBIA.map((nombreOficial) => ({
@@ -126,6 +139,7 @@ async function sembrarModelo() {
 async function verificarMigraciones() {
   try {
     await prisma.licitacionStatus.count();
+    await prisma.tipoOportunidad.count();
     await prisma.entidadLicitacion.count();
     await prisma.agentApi.count();
     await prisma.aiModel.count();
@@ -142,6 +156,7 @@ async function main() {
   await verificarMigraciones();
 
   await sembrarEstados();
+  await sembrarTiposOportunidad();
   await sembrarEntidades();
   await sembrarApis();
   await sembrarModelo();
