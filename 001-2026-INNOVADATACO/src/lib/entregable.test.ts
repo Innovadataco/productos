@@ -57,6 +57,7 @@ describe("datosEntregable (spec 008, US3)", () => {
       fechaInicio: null,
       fechaCompromiso: null,
       responsable: "",
+      dependeDe: null,
     });
   });
 

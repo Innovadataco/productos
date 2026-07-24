@@ -35,6 +35,13 @@ describe("entregablesAItems (spec 015, FR-006)", () => {
 
     expect(items).toEqual([]);
   });
+
+  it("propaga la dependencia (spec 016)", () => {
+    const items = entregablesAItems([
+      { id: "e4", nombre: "B", avance: 0, fechaInicio: "2026-09-01", fechaCompromiso: "2026-09-10", createdAt: "", dependeDe: "hito:h1" },
+    ]);
+    expect(items[0].dependeDe).toBe("hito:h1");
+  });
 });
 
 describe("hitosAItems (spec 015, FR-001)", () => {

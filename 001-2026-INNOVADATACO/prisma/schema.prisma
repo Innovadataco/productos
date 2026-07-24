@@ -260,6 +260,10 @@ model Entregable {
   /// Inicio planificado (spec 015): la barra del Gantt va de aquí a
   /// fechaCompromiso. Opcional; los entregables previos usan createdAt.
   fechaInicio     DateTime?
+  /// Dependencia fin→inicio (spec 016): id de item del Gantt (p. ej.
+  /// "entregable:x" o "hito:y") del que depende. Polimórfico y opcional; una
+  /// referencia colgada no genera conflicto.
+  dependeDe       String?
   fechaCompromiso DateTime?
   responsable    String    @default("")
   createdAt      DateTime  @default(now())
@@ -279,6 +283,8 @@ model HitoProyecto {
   nombre     String
   fecha      DateTime
   fechaFin   DateTime?
+  /// Dependencia fin→inicio (spec 016): id de item del Gantt del que depende.
+  dependeDe  String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 

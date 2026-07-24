@@ -16,6 +16,7 @@ export interface DatosEntregable {
   fechaInicio: Date | null;
   fechaCompromiso: Date | null;
   responsable: string;
+  dependeDe: string | null;
 }
 
 /**
@@ -82,5 +83,7 @@ export function datosEntregable(datos: Record<string, unknown>): DatosEntregable
     fechaInicio: comoFechaOpcional(datos.fechaInicio),
     fechaCompromiso: comoFechaOpcional(datos.fechaCompromiso),
     responsable: datos.responsable ? String(datos.responsable) : "",
+    // Dependencia del Gantt (spec 016). "" limpia la dependencia.
+    dependeDe: datos.dependeDe ? String(datos.dependeDe) : null,
   };
 }

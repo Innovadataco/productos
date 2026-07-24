@@ -23,6 +23,8 @@ export interface ItemGantt {
   /** Avance 0-100, solo en barras. */
   avance?: number;
   label: string;
+  /** Id de la tarea de la que depende (fin→inicio), opcional (spec 016). */
+  dependeDe?: string | null;
 }
 
 export interface RangoGantt {

@@ -12,6 +12,7 @@ export interface EntregableGantt {
   fechaInicio: string | null;
   fechaCompromiso: string | null;
   createdAt: string;
+  dependeDe?: string | null;
 }
 
 export interface HitoGantt {
@@ -19,6 +20,7 @@ export interface HitoGantt {
   nombre: string;
   fecha: string;
   fechaFin: string | null;
+  dependeDe?: string | null;
 }
 
 /**
@@ -39,6 +41,7 @@ export function entregablesAItems(entregables: EntregableGantt[]): ItemGantt[] {
       fin: new Date(e.fechaCompromiso as string),
       avance: e.avance,
       label: e.nombre,
+      dependeDe: e.dependeDe ?? null,
     }));
 }
 
@@ -53,6 +56,7 @@ export function hitosAItems(hitos: HitoGantt[]): ItemGantt[] {
     inicio: new Date(h.fecha),
     fin: h.fechaFin ? new Date(h.fechaFin) : null,
     label: h.nombre,
+    dependeDe: h.dependeDe ?? null,
   }));
 }
 

@@ -40,6 +40,7 @@ export interface DatosHito {
   nombre: string;
   fecha: Date;
   fechaFin: Date | null;
+  dependeDe: string | null;
 }
 
 export function validarHito(datos: unknown): Validacion {
@@ -66,6 +67,8 @@ export function datosHito(datos: Record<string, unknown>): DatosHito {
     nombre: String(datos.nombre).trim(),
     fecha: comoFecha(datos.fecha) as Date,
     fechaFin: (comoFecha(datos.fechaFin) as Date | null) ?? null,
+    // Dependencia del Gantt (spec 016). "" limpia la dependencia.
+    dependeDe: datos.dependeDe ? String(datos.dependeDe) : null,
   };
 }
 
