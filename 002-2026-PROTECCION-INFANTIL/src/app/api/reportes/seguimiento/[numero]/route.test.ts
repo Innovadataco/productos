@@ -113,7 +113,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(body.estadoInterno).toBe("CLASIFICADO");
         expect(body.enProceso).toBe(false);
         expect(body.badge).toBe("success");
-        expect(body.mensaje).toBe("Tu reporte ha sido verificado y clasificado.");
+        expect(body.mensaje).toBe("Tu reporte ha sido procesado y clasificado.");
         expect(body.slaHoras).toBe(24);
         expect(body.clasificacion).not.toBeNull();
         expect(body.clasificacion.confianza).toBeUndefined();

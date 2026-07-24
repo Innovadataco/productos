@@ -63,8 +63,8 @@ const MENSAJES_ESTADO: Record<EstadoReporte, string> = {
     [EstadoReporte.POSIBLE_SPAM]: "Tu reporte está en proceso — puede tardar hasta {{sla}} horas",
     [EstadoReporte.REQUIERE_ANONIMIZACION]: "Tu reporte está en proceso — puede tardar hasta {{sla}} horas",
     [EstadoReporte.DUPLICADO]: "Tu reporte está en proceso — puede tardar hasta {{sla}} horas",
-    [EstadoReporte.CLASIFICADO]: "Tu reporte ha sido verificado y clasificado.",
-    [EstadoReporte.CORREGIDO]: "Tu reporte ha sido verificado y corregido.",
+    [EstadoReporte.CLASIFICADO]: "Tu reporte ha sido procesado y clasificado.",
+    [EstadoReporte.CORREGIDO]: "Tu reporte ha sido procesado y corregido.",
 };
 
 /**

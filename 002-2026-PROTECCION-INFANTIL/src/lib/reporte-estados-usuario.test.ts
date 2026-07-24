@@ -53,11 +53,11 @@ describe("getMensajeUsuario", () => {
     });
 
     it("usa mensaje específico para CLASIFICADO", () => {
-        expect(getMensajeUsuario(EstadoReporte.CLASIFICADO, 24)).toBe("Tu reporte ha sido verificado y clasificado.");
+        expect(getMensajeUsuario(EstadoReporte.CLASIFICADO, 24)).toBe("Tu reporte ha sido procesado y clasificado.");
     });
 
     it("usa mensaje específico para CORREGIDO", () => {
-        expect(getMensajeUsuario(EstadoReporte.CORREGIDO, 24)).toBe("Tu reporte ha sido verificado y corregido.");
+        expect(getMensajeUsuario(EstadoReporte.CORREGIDO, 24)).toBe("Tu reporte ha sido procesado y corregido.");
     });
 
     it("usa mensaje de en proceso para DUPLICADO", () => {

@@ -66,7 +66,7 @@ describe("GET /api/reportes/mis-reportes", () => {
 
         expect(procesado.estadoVisual).toBe("Procesado");
         expect(procesado.badge).toBe("success");
-        expect(procesado.mensaje).toBe("Tu reporte ha sido verificado y clasificado.");
+        expect(procesado.mensaje).toBe("Tu reporte ha sido procesado y clasificado.");
 
         const eliminado = body.items.find((r: { identificador: string }) => r.identificador === "+57300BAJA");
         expect(eliminado).toBeUndefined();
