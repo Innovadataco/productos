@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Save, Cpu, AlertCircle, ArrowRight } from "lucide-react";
 import { mensajeDeError } from "@/lib/mensajeError";
 
@@ -37,7 +37,9 @@ export default function ParametrizacionTab({
 
   const ollamaModels = models.filter((m) => m.provider === "ollama");
 
-  const loadSettings = async () => {
+  // Estable mientras lo sea `toast`, que el padre memoriza. Así el efecto puede
+  // declarar su dependencia real sin cambiar cuándo se ejecuta.
+  const loadSettings = useCallback(async () => {
     try {
       const res = await fetch("/api/config/module-settings");
       const data = await res.json();
@@ -45,7 +47,7 @@ export default function ParametrizacionTab({
     } catch (err: unknown) {
       toast("error", "Error cargando configuraciones: " + mensajeDeError(err));
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     // Las cargas van dentro de una función asíncrona propia: así el efecto no
@@ -53,7 +55,7 @@ export default function ParametrizacionTab({
     void (async () => {
       await loadSettings();
     })();
-  }, []);
+  }, [loadSettings]);
 
   const getSelectedModel = (settingKey: string) => {
     const setting = settings.find(

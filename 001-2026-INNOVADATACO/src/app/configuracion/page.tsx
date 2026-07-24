@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ParametrizacionTab from "@/components/configuracion/ParametrizacionTab";
 import { listaSegura } from "@/lib/respuestaApi";
 import { mensajeDeError } from "@/lib/mensajeError";
@@ -168,34 +168,37 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
   const [selectedApiModule, setSelectedApiModule] = useState<string | null>(null);
   const [selectedApiSubmodule, setSelectedApiSubmodule] = useState<string | null>(null);
 
-  const toast = (type: Toast["type"], message: string) => {
+  // Estable: solo usa actualizadores de estado, que React garantiza estables.
+  // Serlo es lo que permite que las cargas de abajo también lo sean y que el
+  // efecto declare sus dependencias de verdad, en vez de mentir con `[]`.
+  const toast = useCallback((type: Toast["type"], message: string) => {
     const id = Math.random().toString(36).slice(2);
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
-  };
+  }, []);
 
   // Las tres cargas validan la respuesta antes de volcarla al estado (spec 005, FR-005):
   // sin esto, un 401 metía `{ error: ... }` donde después se hace `.map()` y la pantalla
   // se rompía entera. Es el caso que T012 evitó en projects/page.tsx, por triplicado.
-  const loadModels = async () => {
+  const loadModels = useCallback(async () => {
     const { items, error } = await listaSegura<AiModel>(await fetch("/api/config/models"));
     setModels(items);
     if (error) toast("error", `Modelos: ${error}`);
-  };
+  }, [toast]);
 
-  const loadApis = async () => {
+  const loadApis = useCallback(async () => {
     const { items, error } = await listaSegura<AgentApi>(await fetch("/api/config/apis"));
     setApis(items);
     if (error) toast("error", `APIs: ${error}`);
-  };
+  }, [toast]);
 
-  const loadAudit = async () => {
+  const loadAudit = useCallback(async () => {
     const { items, error } = await listaSegura<AuditLog>(
       await fetch("/api/config/audit?limit=100"),
     );
     setLogs(items);
     if (error) toast("error", `Auditoría: ${error}`);
-  };
+  }, [toast]);
 
   useEffect(() => {
     // Las cargas van dentro de una función asíncrona propia: así el efecto no
@@ -205,7 +208,10 @@ export default function ConfiguracionPage({ activeSubmodule }: { activeSubmodule
       await loadApis();
       await loadAudit();
     })();
-  }, []);
+    // Las tres cargas son estables (useCallback), así que declararlas NO cambia
+    // cuándo corre el efecto: sigue siendo una vez al montar, igual que con `[]`.
+    // La diferencia es que ahora la lista dice la verdad.
+  }, [loadModels, loadApis, loadAudit]);
 
   const saveModel = async (e: React.FormEvent) => {
     e.preventDefault();
