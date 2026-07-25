@@ -21,6 +21,8 @@ const SIN_PANTALLA_PROPIA = new Set([
     "ia_configuracion",
     "configuracion_permisos",
     "audit_logs",
+    // Permiso de acción (spec 096): revelar texto original dentro del expediente, sin pantalla propia
+    "expediente_revelar_original",
 ]);
 
 const TODOS_LOS_ITEMS = [...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS];

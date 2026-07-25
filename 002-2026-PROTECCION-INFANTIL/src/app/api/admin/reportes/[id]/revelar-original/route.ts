@@ -8,12 +8,6 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
 import { decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
 
-function requireAdmin(user: { rol: string }) {
-    if (String(user.rol) !== "ADMIN") {
-        throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
-    }
-}
-
 function getClientInfo(request: Request) {
     return {
         ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
@@ -25,7 +19,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     try {
         const user = await verifyAuth();
         await assertModulo(user, "bandeja_reportes");
-        requireAdmin(user);
+        // Spec 096-US5: el permiso es un módulo del catálogo (default solo ADMIN),
+        // ya no un chequeo de rol duro.
+        await assertModulo(user, "expediente_revelar_original");
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });
         if (!rate.allowed) {

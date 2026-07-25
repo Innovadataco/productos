@@ -951,6 +951,60 @@ async function main() {
     }
     console.log("Rúbrica de clasificación (spec 090) lista");
 
+    // ── Expediente del reporte (spec 096) ──────────────────────────────────
+    const ETAPAS_EXPEDIENTE = [
+        { orden: 1, fase: "A", faseNombre: "Ingesta", clave: "recepcion", nombre: "Recepción", icono: "inbox", capa: 1, gated: false,
+            campos: ["creadoEn", "numeroSeguimiento", "plataforma", "pais", "ciudad", "esAnonimo", "edadVictima", "estado"] },
+        { orden: 2, fase: "A", faseNombre: "Ingesta", clave: "peso_fuente", nombre: "Peso de fuente", icono: "scale", capa: 1, gated: false,
+            campos: ["pesoAplicado", "cuentaDiasAntiguedad", "reportesPrevios", "reportesConfirmados", "reportesDescartados"],
+            camposGated: ["ipHash", "fingerprintHash"] },
+        { orden: 3, fase: "B", faseNombre: "Preparación", clave: "embedding", nombre: "Embedding", icono: "vector", capa: 1, gated: false,
+            campos: ["modeloUsado", "creadoEn", "latenciaMs"] },
+        { orden: 4, fase: "B", faseNombre: "Preparación", clave: "deduplicacion", nombre: "Deduplicación", icono: "copy", capa: 2, gated: false,
+            campos: ["reporteOrigenId", "scoreSimilitud"] },
+        { orden: 5, fase: "B", faseNombre: "Preparación", clave: "guardas", nombre: "Guardas baratas", icono: "shield", capa: 2, gated: false,
+            campos: ["esRafaga", "keywordsDetectadas", "prioridadAlta"] },
+        { orden: 6, fase: "C", faseNombre: "Evaluación", clave: "contexto_rag", nombre: "Contexto RAG", icono: "book", capa: 2, gated: false,
+            campos: ["casosSimilares", "categoriasVecinas"] },
+        { orden: 7, fase: "C", faseNombre: "Evaluación", clave: "clasificacion", nombre: "Clasificación por rúbrica", icono: "brain", capa: 1, gated: false,
+            campos: ["categorias", "confianza", "usoCascada", "modeloCascada", "latenciaMs", "promptTokens", "responseTokens"],
+            camposGated: ["rawResponse"] },
+        { orden: 8, fase: "D", faseNombre: "Cierre", clave: "anonimizacion", nombre: "Anonimización PII", icono: "mask", capa: 1, gated: false,
+            campos: ["contienePii", "piiDetectada", "anonimizacionValidadaPorId", "anonimizacionValidadaEn"],
+            camposGated: ["textoOriginal"] },
+        { orden: 9, fase: "D", faseNombre: "Cierre", clave: "decision", nombre: "Decisión", icono: "gavel", capa: 2, gated: false,
+            campos: ["transiciones"] },
+        { orden: 10, fase: "D", faseNombre: "Cierre", clave: "finalizacion", nombre: "Finalización", icono: "flag", capa: 1, gated: false,
+            campos: ["estado", "reintentos", "processingError"] },
+    ];
+    const CANALES_PADRE = [
+        { nombre: "Línea 141 ICBF", contacto: "141",
+            descripcion: "Línea gratuita del ICBF para reportar riesgos contra niños, niñas y adolescentes" },
+        { nombre: "Te Protejo", contacto: "https://teprotejo.org",
+            descripcion: "Canal para reportar material de abuso sexual infantil en internet" },
+        { nombre: "CAI Virtual — Policía Nacional", contacto: "123",
+            descripcion: "Emergencias y denuncias de la Policía Nacional" },
+    ];
+    const expedienteParams = [
+        { clave: "admin.expediente.etapas", valor: JSON.stringify(ETAPAS_EXPEDIENTE), descripcion: "Etapas del expediente del reporte (traza del pipeline, vista admin; ADR_004: nada quemado en código)" },
+        { clave: "mensaje.padre.canales", valor: JSON.stringify(CANALES_PADRE), descripcion: "Canales oficiales que se muestran en el mensaje al padre (revisable por legal, editable sin desplegar)" },
+    ];
+    for (const ep of expedienteParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: ep.clave },
+            update: {},
+            create: {
+                clave: ep.clave,
+                valor: ep.valor,
+                tipo: TipoParametro.JSON,
+                categoria: CategoriaParametro.SYSTEM,
+                esPublico: false,
+                descripcion: ep.descripcion,
+            },
+        });
+    }
+    console.log("Parámetros del expediente del reporte (spec 096) listos");
+
     for (const p of reportesParams) {
         await prisma.parametroSistema.upsert({
             where: { clave: p.clave },

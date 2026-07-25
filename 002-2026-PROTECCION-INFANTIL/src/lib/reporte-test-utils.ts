@@ -243,3 +243,63 @@ export function bodyToRequest(body: unknown): Request {
         body: JSON.stringify(body),
     });
 }
+
+/**
+ * Spec 096: siembra los parámetros del expediente (10 etapas, canales del
+ * mensaje al padre) y una rúbrica mínima de prueba. Misma estructura que el
+ * seed real (`prisma/seed.ts`), versión compacta para tests.
+ */
+export async function crearParametrosExpediente() {
+    const etapas = [
+        { orden: 1, fase: "A", faseNombre: "Ingesta", clave: "recepcion", nombre: "Recepción", icono: "inbox", capa: 1, gated: false,
+            campos: ["creadoEn", "numeroSeguimiento", "plataforma", "pais", "ciudad", "esAnonimo", "edadVictima", "estado"] },
+        { orden: 2, fase: "A", faseNombre: "Ingesta", clave: "peso_fuente", nombre: "Peso de fuente", icono: "scale", capa: 1, gated: false,
+            campos: ["pesoAplicado", "cuentaDiasAntiguedad", "reportesPrevios", "reportesConfirmados", "reportesDescartados"],
+            camposGated: ["ipHash", "fingerprintHash"] },
+        { orden: 3, fase: "B", faseNombre: "Preparación", clave: "embedding", nombre: "Embedding", icono: "vector", capa: 1, gated: false,
+            campos: ["modeloUsado", "creadoEn", "latenciaMs"] },
+        { orden: 4, fase: "B", faseNombre: "Preparación", clave: "deduplicacion", nombre: "Deduplicación", icono: "copy", capa: 2, gated: false,
+            campos: ["reporteOrigenId", "scoreSimilitud"] },
+        { orden: 5, fase: "B", faseNombre: "Preparación", clave: "guardas", nombre: "Guardas baratas", icono: "shield", capa: 2, gated: false,
+            campos: ["esRafaga", "keywordsDetectadas", "prioridadAlta"] },
+        { orden: 6, fase: "C", faseNombre: "Evaluación", clave: "contexto_rag", nombre: "Contexto RAG", icono: "book", capa: 2, gated: false,
+            campos: ["casosSimilares", "categoriasVecinas"] },
+        { orden: 7, fase: "C", faseNombre: "Evaluación", clave: "clasificacion", nombre: "Clasificación por rúbrica", icono: "brain", capa: 1, gated: false,
+            campos: ["categorias", "confianza", "usoCascada", "modeloCascada", "latenciaMs", "promptTokens", "responseTokens"],
+            camposGated: ["rawResponse"] },
+        { orden: 8, fase: "D", faseNombre: "Cierre", clave: "anonimizacion", nombre: "Anonimización PII", icono: "mask", capa: 1, gated: false,
+            campos: ["contienePii", "piiDetectada", "anonimizacionValidadaPorId", "anonimizacionValidadaEn"],
+            camposGated: ["textoOriginal"] },
+        { orden: 9, fase: "D", faseNombre: "Cierre", clave: "decision", nombre: "Decisión", icono: "gavel", capa: 2, gated: false,
+            campos: ["transiciones"] },
+        { orden: 10, fase: "D", faseNombre: "Cierre", clave: "finalizacion", nombre: "Finalización", icono: "flag", capa: 1, gated: false,
+            campos: ["estado", "reintentos", "processingError"] },
+    ];
+    const canales = [
+        { nombre: "Línea 141 ICBF", contacto: "141",
+            descripcion: "Línea gratuita del ICBF para reportar riesgos contra niños, niñas y adolescentes" },
+        { nombre: "Te Protejo", contacto: "https://teprotejo.org",
+            descripcion: "Canal para reportar material de abuso sexual infantil en internet" },
+    ];
+    const preguntasRubrica = {
+        SOLICITUD_MATERIAL: [
+            { texto: "¿Alguien pide fotos, videos o material visual a otra persona?", activo: true, tipo: "decisiva" },
+            { texto: "¿La persona a quien se le pide es menor de edad?", activo: true, tipo: "contexto" },
+        ],
+        CONTACTO_INSISTENTE: [
+            { texto: "¿Hay mensajes o llamadas repetidas a pesar de no recibir respuesta?", activo: true, tipo: "decisiva" },
+        ],
+    };
+    const params = [
+        { clave: "admin.expediente.etapas", valor: JSON.stringify(etapas) },
+        { clave: "mensaje.padre.canales", valor: JSON.stringify(canales) },
+        { clave: "ia.rubrica.preguntas", valor: JSON.stringify(preguntasRubrica) },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor },
+            create: { clave: p.clave, valor: p.valor, tipo: "JSON", categoria: "SYSTEM", esPublico: false },
+        });
+    }
+}

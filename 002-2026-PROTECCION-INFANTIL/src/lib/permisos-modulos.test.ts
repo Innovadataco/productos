@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
+import { CATALOGO_MODULOS } from "./permisos-catalogo";
 import { puedeAccederAModulo, rolesConocidos } from "./permisos-modulos";
 
 async function crearModulo(clave: string, padreId?: string) {
@@ -63,5 +64,40 @@ describe("permisos-modulos", () => {
         const roles = await rolesConocidos();
         expect(roles).toContain("FISCALIA");
         expect(roles).toContain("ADMIN");
+    });
+
+    // Spec 096: expediente_revelar_original (padre bandeja_reportes).
+    // resetDatabase + otorgarTodosLosPermisos recrean el catálogo y lo otorgan
+    // a todos los roles; aquí se reproduce el backfill real del seed
+    // (ADMIN = todos, OPERADOR = solo bandeja_reportes) ajustando los permisos.
+    it("expediente_revelar_original: ADMIN sí, OPERADOR no (denegar por defecto)", async () => {
+        const catalogoRevelar = CATALOGO_MODULOS.find((m) => m.clave === "expediente_revelar_original");
+        expect(catalogoRevelar).toBeDefined();
+        expect(catalogoRevelar?.padre).toBe("bandeja_reportes");
+        expect(catalogoRevelar?.esCritico).toBe(true);
+        expect(catalogoRevelar?.categoria).toBe("operador");
+        expect(catalogoRevelar?.orden).toBe(31);
+
+        const padre = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave: "bandeja_reportes" } });
+        const revelar = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave: "expediente_revelar_original" } });
+        expect(revelar.padreId).toBe(padre.id);
+
+        // Backfill del seed: ADMIN recibe todos los módulos del catálogo
+        await setPermiso("ADMIN", padre.id, true);
+        await setPermiso("ADMIN", revelar.id, true);
+        expect(await puedeAccederAModulo("ADMIN", "expediente_revelar_original")).toBe(true);
+
+        // OPERADOR conserva solo bandeja_reportes → sin revelación por defecto
+        await setPermiso("OPERADOR", padre.id, true);
+        await setPermiso("OPERADOR", revelar.id, false);
+        expect(await puedeAccederAModulo("OPERADOR", "expediente_revelar_original")).toBe(false);
+
+        // Otorgarlo manualmente a OPERADOR sí habilita (padre activo AND propio activo)
+        await setPermiso("OPERADOR", revelar.id, true);
+        expect(await puedeAccederAModulo("OPERADOR", "expediente_revelar_original")).toBe(true);
+
+        // Jerarquía AND: sin el padre, el submódulo se deniega aunque esté activo
+        await setPermiso("OPERADOR", padre.id, false);
+        expect(await puedeAccederAModulo("OPERADOR", "expediente_revelar_original")).toBe(false);
     });
 });
