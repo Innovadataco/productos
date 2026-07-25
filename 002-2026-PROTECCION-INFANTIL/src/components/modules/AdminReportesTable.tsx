@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { AdminReporteDetalle } from "./AdminReporteDetalle";
+import { AdminReporteExpediente } from "./AdminReporteExpediente";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 
@@ -81,6 +82,7 @@ export function AdminReportesTable() {
     const [error, setError] = useState("");
     const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
     const [selectedReporteId, setSelectedReporteId] = useState<string | null>(null);
+    const [expedienteReporteId, setExpedienteReporteId] = useState<string | null>(null);
 
     const [estado, setEstado] = useState(searchParams.get("estado") || "");
     const [plataformaId, setPlataformaId] = useState(searchParams.get("plataformaId") || "");
@@ -304,9 +306,14 @@ export function AdminReportesTable() {
                                         <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString()}</td>
                                         <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : "Autenticado"}</td>
                                         <td className="px-4 py-3">
-                                            <Button onClick={() => setSelectedReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
-                                                Ver detalle
-                                            </Button>
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button onClick={() => setSelectedReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                                                    Ver detalle
+                                                </Button>
+                                                <Button onClick={() => setExpedienteReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                                                    Ver proceso
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -337,6 +344,13 @@ export function AdminReportesTable() {
                     reporteId={selectedReporteId}
                     onClose={() => setSelectedReporteId(null)}
                     onRefresh={fetchReportes}
+                />
+            )}
+
+            {expedienteReporteId && (
+                <AdminReporteExpediente
+                    reporteId={expedienteReporteId}
+                    onClose={() => setExpedienteReporteId(null)}
                 />
             )}
         </div>
