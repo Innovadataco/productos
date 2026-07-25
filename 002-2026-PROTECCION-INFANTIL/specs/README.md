@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-07-23** (regenerado por ODIN desde las carpetas reales de `specs/`, spec 087).
+> Última actualización: **2026-07-25** (spec 096 finalizada, pendiente ACTA).
 > Estado tomado del campo `Status`/`Estado` de cada `spec.md`.
 
 ## Resumen
@@ -8,8 +8,8 @@
 | Métrica | Valor |
 |---------|-------|
 | **Total de specs** | **70** |
-| **Cerradas / Implementadas / Finalizadas** | **67** |
-| **Pendientes (planeadas / en desarrollo)** | **3** |
+| **Cerradas / Implementadas / Finalizadas** | **68** |
+| **Pendientes (planeadas / en desarrollo)** | **2** |
 
 ## Backlog activo (pendientes)
 
@@ -97,6 +97,7 @@
 | [093](093-coherencia-padre/spec.md) | Coherencia del padre autenticado | 🟢 Finalizada (pendiente ACTA) |
 | [094](094-deuda-tecnica-documentacion/spec.md) | Deuda técnica y documentación | 🟢 Finalizada (pendiente ACTA) |
 | [095](095-default-seguro-jwt-banco/spec.md) | Default seguro, JWT parametrizado y banco gobernado | 🟢 Finalizada (pendiente ACTA) |
+| [096](096-expediente-reporte/spec.md) | Expediente del reporte — traza del modelo (rol Admin) | 🟢 Finalizada (pendiente ACTA) |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 

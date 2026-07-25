@@ -50,6 +50,8 @@ curl -X PATCH http://localhost:5005/api/config/parametros/visibility.report_thre
 | `scoring.*` | Sistema de score F1 actual |
 | `ratelimit.*` | Límites de peticiones por ventana de tiempo |
 | `alerts.*` | Envío de alertas por email |
+| `admin.*` | Vistas de administración (expediente del reporte) |
+| `mensaje.*` | Textos de mensajes generados por plantilla (mensaje al padre) |
 
 ---
 
@@ -153,6 +155,17 @@ Cada scope lee dos claves: `{scope}.window_seconds` y `{scope}.max_requests`.
 |-------|------|---------|-----------|---------|-------|-------------|-------------|
 | `system.maintenance_mode` | `BOOLEAN` | `false` | `SYSTEM` | ✅ | ❌ | Modo mantenimiento de la plataforma | **No implementado en runtime.** No hay middleware ni página que lo consulte. |
 
+### 3.9 Expediente del reporte (spec 096)
+
+Estos parámetros gobiernan el expediente del reporte (traza del pipeline, vista admin vía `GET /api/admin/reportes/{id}/expediente` y botón "Ver proceso" en la Bandeja). Se leen en vivo en cada petición: un cambio se refleja sin desplegar.
+
+| Clave | Tipo | Default | Categoría | Público | Usado | Descripción | Cómo probar |
+|-------|------|---------|-----------|---------|-------|-------------|-------------|
+| `admin.expediente.etapas` | `JSON` | Array de 10 etapas (ver seed) | `SYSTEM` | ❌ | ✅ | Definición de las etapas del expediente: `orden`, `fase`/`faseNombre`, `clave`, `nombre`, `icono`, `capa` (1 = modelos Prisma, 2 = `PasoProcesamiento`), `campos` y `camposGated` (solo visibles con el módulo `expediente_revelar_original` + `?revelar=true`). Nada de etiquetas de etapa está quemado en código (ADR_004) | 1. Renombra una etapa o cambia su orden vía PATCH `/api/config/parametros/admin.expediente.etapas` o directo en BD. 2. Recarga `GET /api/admin/reportes/{id}/expediente` (o el modal "Ver proceso"). 3. El nombre/orden nuevo aparece sin redeploy. Restaura el valor después. |
+| `mensaje.padre.canales` | `JSON` | Línea 141 ICBF / Te Protejo / CAI Virtual 123 (ver seed) | `SYSTEM` | ❌ | ✅ | Canales oficiales que aparecen en el borrador del mensaje al padre del expediente (array de `{ nombre, contacto, descripcion }`; revisable por legal, editable sin desplegar) | 1. Edita un canal (nombre o contacto) vía PATCH o en BD. 2. Recarga el expediente: la sección "Mensaje al padre" muestra los canales nuevos sin redeploy. 3. Restaura el valor. |
+
+> **Nota**: los campos listados en `camposGated` (p. ej. `textoOriginal`, `ipHash`, `fingerprintHash`, `rawResponse`) solo se incluyen cuando el usuario tiene el módulo `expediente_revelar_original` y pide `?revelar=true`; cada revelación registra `TEXTO_ORIGINAL_REVELADO` en `AuditLog`.
+
 ---
 
 ## 4. Parámetros huérfanos (en seed pero no usados)
@@ -249,4 +262,4 @@ curl -X POST http://localhost:5005/api/reportes \
 
 ---
 
-*Documento generado automáticamente a partir del schema Prisma y el código fuente. Última actualización: 2026-07-15.*
+*Documento generado automáticamente a partir del schema Prisma y el código fuente. Última actualización: 2026-07-25.*
