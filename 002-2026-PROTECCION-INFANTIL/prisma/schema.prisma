@@ -642,6 +642,7 @@ model Reporte {
   ciudadRel                Ciudad?             @relation(fields: [ciudadId], references: [id])
   transiciones             TransicionReporte[]
   reintentos               ReintentoReporte[]
+  pasosProcesamiento       PasoProcesamiento[]
   solicitudComite          SolicitudComite?
   alertasColegio           AlertaColegio[]
 
@@ -713,6 +714,23 @@ model ReintentoReporte {
 
   @@index([reporteId])
   @@index([creadoEn])
+}
+
+// Spec 096-US3: traza de pasos del pipeline (guardas, deduplicación, RAG, métricas).
+// Escritura best-effort; onDelete Cascade para no dejar pasos huérfanos (disputas Ley 1581).
+model PasoProcesamiento {
+  id         String   @id @default(cuid())
+  reporteId  String
+  etapa      String
+  veredicto  String?
+  detalle    Json?
+  latenciaMs Int?
+  creadoEn   DateTime @default(now())
+
+  reporte Reporte @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+
+  @@index([reporteId, creadoEn])
+  @@map("pasos_procesamiento")
 }
 
 model FuenteReporte {

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { buscarReporteSimilar } from "@/lib/ai/similarity";
+import { buscarReporteSimilar, buscarSimilitudMaxima } from "@/lib/ai/similarity";
 import { registrarTransicion } from "@/lib/reporte-transiciones";
+import { registrarPaso } from "@/lib/expediente/pasos";
 import { NextResponse } from "next/server";
 
 export async function detectarDuplicado({
@@ -16,7 +17,13 @@ export async function detectarDuplicado({
     vector: number[];
     esAnonimo: boolean;
 }): Promise<{ esDuplicado: false } | { esDuplicado: true; response: NextResponse }> {
-    if (!esAnonimo) return { esDuplicado: false };
+    if (!esAnonimo) {
+        await registrarPaso(reporteId, "deduplicacion", {
+            veredicto: "no_aplica",
+            detalle: { motivo: "reporte no anónimo" },
+        });
+        return { esDuplicado: false };
+    }
 
     const paramThreshold = await prisma.parametroSistema.findUnique({
         where: { clave: "reportes.duplicate.similarity_threshold" },
@@ -40,6 +47,10 @@ export async function detectarDuplicado({
                 data: { estado: "DUPLICADO", reporteOrigenId: similar.reporteId },
             });
         });
+        await registrarPaso(reporteId, "deduplicacion", {
+            veredicto: "duplicado",
+            detalle: { reporteOrigenId: similar.reporteId, scoreSimilitud: similar.similarity, threshold },
+        });
         return {
             esDuplicado: true,
             response: NextResponse.json({
@@ -51,5 +62,10 @@ export async function detectarDuplicado({
         };
     }
 
+    const scoreMaximo = await buscarSimilitudMaxima(reporteId, identificador, plataformaId, vector);
+    await registrarPaso(reporteId, "deduplicacion", {
+        veredicto: "sin_duplicado",
+        detalle: { scoreSimilitud: scoreMaximo, threshold },
+    });
     return { esDuplicado: false };
 }

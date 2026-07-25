@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { registrarTransicion } from "@/lib/reporte-transiciones";
+import { registrarPaso } from "@/lib/expediente/pasos";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { enviarAlertaRevision, enviarAlertaScoreCritico, enviarAlertasSuscriptores } from "@/lib/email";
@@ -25,7 +26,7 @@ export async function finalizarReporte({
     prioridadAlta: boolean;
     keywordsDetectadas: string[];
 }): Promise<EstadoReporte> {
-    const estadoFinalTx = await prisma.$transaction(async (tx) => {
+    const resultadoTx = await prisma.$transaction(async (tx) => {
         const reporteActual = await tx.reporte.findUnique({
             where: { id: reporteId },
             select: { estado: true },
@@ -35,7 +36,7 @@ export async function finalizarReporte({
         }
         if (ESTADOS_FINALES.has(reporteActual.estado)) {
             // Idempotencia: otro proceso ya finalizó el reporte.
-            return reporteActual.estado;
+            return { estado: reporteActual.estado, estadoAnterior: reporteActual.estado, yaFinalizado: true };
         }
         await registrarTransicion({
             reporteId,
@@ -62,7 +63,25 @@ export async function finalizarReporte({
                 esRafaga,
             },
         });
-        return estadoFinal;
+        return { estado: estadoFinal, estadoAnterior: reporteActual.estado, yaFinalizado: false };
+    });
+    const estadoFinalTx = resultadoTx.estado;
+
+    // Spec 096-US3: decisión final del pipeline (best-effort).
+    await registrarPaso(reporteId, "decision", {
+        veredicto: estadoFinalTx,
+        detalle: {
+            estadoAnterior: resultadoTx.estadoAnterior,
+            yaFinalizado: resultadoTx.yaFinalizado,
+            motivo:
+                estadoFinalTx === "REVISION_MANUAL" ? "Requiere revisión humana" : "Clasificación automática completada",
+            categoria: clasificacion.categoria,
+            confianza: clasificacion.confianza,
+            modelo: clasificacion.metrics.modelo,
+            esRafaga,
+            prioridadAlta,
+        },
+        latenciaMs: clasificacion.metrics.latenciaMs,
     });
 
     // Fase 3: asignación automática de operador para revisión manual o posible spam
@@ -172,6 +191,11 @@ export async function fallbackARevisionManual({
                     processingError: `Error durante el procesamiento del reporte (código: ${errorCode})`,
                 },
             });
+        });
+
+        await registrarPaso(reporteId, "decision", {
+            veredicto: "REVISION_MANUAL",
+            detalle: { estadoAnterior: estadoPrevio, motivo: "error_procesamiento", errorCode },
         });
 
         asignarOperadorAReporte(reporteId).catch((err) =>

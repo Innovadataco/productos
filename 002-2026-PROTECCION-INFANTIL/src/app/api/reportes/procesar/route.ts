@@ -4,6 +4,7 @@ import { generarEmbedding } from "@/lib/ai/embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "@/lib/ai/dataset-retrieval";
 import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { esErrorTransitorio, ESTADOS_FINALES, respuestaTransitoria, respuestaErrorProcesamiento } from "./helpers/errors";
+import { registrarPaso } from "@/lib/expediente/pasos";
 import { validarWorkerSecret, parsearBody, obtenerReporte } from "./helpers/seguridad";
 import { guardarEmbedding } from "./helpers/embedding";
 import { detectarDuplicado } from "./helpers/duplicados";
@@ -93,12 +94,13 @@ export async function POST(request: Request) {
         // Spec 092-US4: GUARDAS PREVIAS baratas (solo texto/frecuencia) — si disparan,
         // CORTAN a revisión SIN gastar los modelos de clasificación.
         const esRafaga = await detectarRafaga({
+            reporteId: reporte.id,
             identificador: reporte.identificador,
             plataformaId: reporte.plataformaId,
             rafagaN: parametros.rafagaN,
             rafagaHoras: parametros.rafagaHoras,
         });
-        const guardaPrevia = aplicarGuardasPrevias({ texto: reporte.texto, esRafaga });
+        const guardaPrevia = aplicarGuardasPrevias({ reporteId: reporte.id, texto: reporte.texto, esRafaga });
         if (guardaPrevia.cortar) {
             const estadoCorte = await finalizarReporte({
                 reporteId: reporte.id,
@@ -130,6 +132,20 @@ export async function POST(request: Request) {
             similitud: e.similitud,
         }));
 
+        // Spec 096-US3: traza del contexto RAG (sin textos, solo referencias y scores).
+        await registrarPaso(reporte.id, "contexto_rag", {
+            veredicto: ejemplosRag.length > 0 ? "casos_recuperados" : "sin_casos",
+            detalle: {
+                casosSimilares: ejemplosRag.map((e) => ({
+                    datasetId: e.datasetId,
+                    categoria: e.categoria,
+                    similitud: e.similitud,
+                })),
+                categoriasVecinas: Array.from(new Set(ejemplosRag.map((e) => e.categoria))),
+                topK: ragTopK,
+            },
+        });
+
         // Clasificar y detectar PII
         const { clasificacion, piiResult } = await clasificarReporte({
             reporteId: reporte.id,
@@ -154,6 +170,7 @@ export async function POST(request: Request) {
 
         // Aplicar guardas de seguridad
         const guardas = aplicarGuardasSeguridad({
+            reporteId: reporte.id,
             texto: reporte.texto,
             clasificacion,
             estadoInicial: estadoFinal,

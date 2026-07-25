@@ -1,11 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { registrarPaso } from "@/lib/expediente/pasos";
 
 export async function detectarRafaga({
+    reporteId,
     identificador,
     plataformaId,
     rafagaN,
     rafagaHoras,
 }: {
+    reporteId: string;
     identificador: string;
     plataformaId: string;
     rafagaN: number;
@@ -21,7 +24,13 @@ export async function detectarRafaga({
             creadoEn: { lt: inicioVentana },
         },
     });
-    if (historialPrevio > 0) return false;
+    if (historialPrevio > 0) {
+        await registrarPaso(reporteId, "guardas", {
+            veredicto: "sin_rafaga",
+            detalle: { motivo: "historial_previo", historialPrevio, rafagaN, rafagaHoras },
+        });
+        return false;
+    }
 
     const reportesEnVentana = await prisma.reporte.count({
         where: {
@@ -41,7 +50,15 @@ export async function detectarRafaga({
             },
             data: { esRafaga: true },
         });
+        await registrarPaso(reporteId, "guardas", {
+            veredicto: "rafaga_detectada",
+            detalle: { reportesEnVentana, rafagaN, rafagaHoras },
+        });
         return true;
     }
+    await registrarPaso(reporteId, "guardas", {
+        veredicto: "sin_rafaga",
+        detalle: { reportesEnVentana, rafagaN, rafagaHoras },
+    });
     return false;
 }
