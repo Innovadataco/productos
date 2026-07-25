@@ -43,4 +43,4 @@
 - [x] T041: gate completo (`npx tsc --noEmit` + `npm run lint` + `npm run test` + `npm run build`) + deploy limpio `./scripts/dev-restart.sh` + healthcheck OK.
 - [x] T042: validar el `quickstart.md` sección por sección contra la app levantada.
 - [x] T043: `cierre.md` en `specs/096-expediente-reporte/` + sección Implementación en `spec.md` (Status → `FINALIZADO` pendiente ACTA) + marcar `checklists/requirements.md` + deuda técnica registrada.
-- [ ] T044: commits (uno por US + uno de docs, mensajes en español imperativo) con staging explícito `git add 002-2026-PROTECCION-INFANTIL/...` y push a `feature/001-scaffolding`; actualizar `specs/README.md` (096 → Finalizada pendiente ACTA).
+- [x] T044: commits (uno por US + uno de docs, mensajes en español imperativo) con staging explícito `git add 002-2026-PROTECCION-INFANTIL/...` y push a `feature/001-scaffolding`; actualizar `specs/README.md` (096 → Finalizada pendiente ACTA).
