@@ -41,12 +41,16 @@ export const RUBRICA_SEMILLA: SetsRubrica = {
     ],
     CONTACTO_INSISTENTE: [
         { texto: "¿Hay mensajes o llamadas repetidas a pesar de no recibir respuesta?", activo: true, tipo: "decisiva" },
+        // Spec 098 (targeting): distingue acoso interpersonal de spam/publicidad masiva.
+        { texto: "¿El contacto insistente va dirigido personalmente a ESTE menor (interacción individual), y no es un mensaje masivo, automatizado o publicitario?", activo: true, tipo: "decisiva" },
         { texto: "¿La insistencia genera incomodidad o miedo descrito en el texto?", activo: true },
         { texto: "¿El contacto proviene de un desconocido o de alguien mayor?", activo: true },
         { texto: "¿Continúa el contacto a pesar de pedirle que pare o de bloquearlo?", activo: true },
     ],
     OFRECIMIENTO_REGALOS: [
         { texto: "¿Se ofrece algo de valor (dinero, regalos, recargas, skins, ropa)?", activo: true, tipo: "decisiva" },
+        // Spec 098 (targeting): regalo como gancho interpersonal, no concurso/estafa masiva.
+        { texto: "¿El ofrecimiento va dirigido personalmente a ESTE menor (contacto individual), y no es publicidad, concurso o estafa masiva?", activo: true, tipo: "decisiva" },
         { texto: "¿El ofrecimiento viene de un adulto o un desconocido?", activo: true },
         { texto: "¿Va dirigido a un menor de edad?", activo: true },
         { texto: "¿Se ofrece a cambio de algo o para ganar la confianza del menor?", activo: true },

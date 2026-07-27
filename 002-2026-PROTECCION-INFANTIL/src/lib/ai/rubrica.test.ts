@@ -136,12 +136,15 @@ describe("clasificarConRubrica — flujo completo (mocks)", () => {
         expect(res.votosModelos[0].categorias.SOLICITUD_ENCUENTRO.cumple).toBe(true);
         expect(res.porcentajes.SOLICITUD_ENCUENTRO).toBeCloseTo(2 / 3);
         expect(res.porcentajes.CONTACTO_INSISTENTE).toBe(1);
-        // Spec 092-US3: sin gravedad — `categoria` = la de mayor % (CONTACTO_INSISTENTE, 100%)
-        expect(res.categoria).toBe("CONTACTO_INSISTENTE");
+        // Spec 098: `categoria` (uso interno) = la de MAYOR GRAVEDAD entre las presentes
+        // (SOLICITUD_ENCUENTRO), aunque CONTACTO_INSISTENTE tenga mayor % (100%).
+        // La presentación sigue mostrando todas (D-13); severidades = defaults (mock null).
+        expect(res.categoria).toBe("SOLICITUD_ENCUENTRO");
+        expect(res.confianza).toBeCloseTo(2 / 3);
         expect(res.categoriasPresentes).toContain("SOLICITUD_ENCUENTRO");
         expect(res.estado).toBe("CLASIFICADO");
-        // Con CI como principal, la secundaria es SOLICITUD_ENCUENTRO
-        expect(res.categoriasSecundarias.map((c) => c.categoria)).toContain("SOLICITUD_ENCUENTRO");
+        // Con SOLICITUD_ENCUENTRO como principal, la secundaria es CONTACTO_INSISTENTE
+        expect(res.categoriasSecundarias.map((c) => c.categoria)).toContain("CONTACTO_INSISTENTE");
     });
 
     it("ninguna supera el umbral → REVISION_MANUAL (desacuerdo entre modelos)", async () => {

@@ -1,5 +1,6 @@
 import { llamarOllamaStructured, type OllamaMetrics } from "./ollama-client";
 import { getParametroSistema } from "@/lib/parametros";
+import { obtenerSeveridades } from "@/lib/scoring";
 import { logger } from "@/lib/logger";
 import { RUBRICA_SEMILLA, type SetsRubrica, type PreguntaRubrica } from "./rubrica-semilla";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
@@ -322,18 +323,29 @@ export async function clasificarConRubrica(texto: string, config?: Partial<Confi
     const votosValidos = votosModelos.filter((v) => !v.fallback);
     const porcentajes = calcularPorcentajes(votosModelos, plausibles);
 
-    // Spec 092-US3: SIN "principal" por gravedad. Se muestran TODAS las conductas
-    // que superan el umbral. La gravedad ya no decide nada de cara al usuario.
+    // Spec 092-US3: SIN "principal" por gravedad DE CARA AL USUARIO. Se muestran TODAS
+    // las conductas que superan el umbral.
     const presentes = Object.entries(porcentajes)
         .filter(([, pct]) => pct >= cfg.umbralPresencia)
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
         .map(([cat]) => cat);
 
     // Decisión: ≥1 presente → PROCESADO (CLASIFICADO); ninguna → revisión humana (desacuerdo).
-    // `categoria` (campo requerido por schema) = la de mayor %; OTRO si no hay ninguna.
-    const categoriaFinal = (presentes[0] ?? "OTRO") as CategoriaConducta;
+    // Spec 098 (hallazgo de motor, caso #131): `categoria` (campo requerido por schema, uso
+    // INTERNO) = la de MAYOR gravedad entre las presentes — no la más votada/lezve. La
+    // presentación sigue mostrando todas (D-13); esto solo corrige la selección interna.
+    const severidades = await obtenerSeveridades();
+    const sev = (cat: string): number => severidades[cat as CategoriaConducta] ?? 0;
+    const categoriaFinal = (presentes.length > 0
+        ? [...presentes].sort(
+              (a, b) =>
+                  sev(b) - sev(a) ||
+                  (porcentajes[b] ?? 0) - (porcentajes[a] ?? 0) ||
+                  a.localeCompare(b)
+          )[0]
+        : "OTRO") as CategoriaConducta;
     const estado: EstadoReporte = presentes.length === 0 ? "REVISION_MANUAL" : "CLASIFICADO";
-    const confianza = presentes.length > 0 ? (porcentajes[presentes[0]] ?? 0) : 0;
+    const confianza = presentes.length > 0 ? (porcentajes[categoriaFinal] ?? 0) : 0;
     const categoriasSecundarias = presentes
         .filter((cat) => cat !== categoriaFinal)
         .map((cat) => ({ categoria: cat, score: porcentajes[cat] ?? 0 }));

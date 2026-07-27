@@ -49,6 +49,9 @@ interface MetricasMotor {
 }
 
 const LIMITE = parseInt(process.argv[2] ?? "200", 10);
+// Spec 098: con --rubrica-only se reusan las salidas del legacy de la corrida anterior
+// (resultados-dual-095.json) y SOLO se re-clasifica con la rúbrica (una variable a la vez).
+const RUBRICA_ONLY = process.argv.includes("--rubrica-only");
 
 function canonizar(v?: string): string {
     return (v ?? "").trim().toUpperCase().replace(/\s+/g, "_");
@@ -83,7 +86,9 @@ function puntuar(
             subestimaciones++;
             severidadPerdida += Math.abs(deltaSev);
         }
-        if (s.confianza >= umbralRevision) {
+        // Spec 098: esperada === asignada = contenido CORRECTO que se abstuvo
+        // (REVISION_MANUAL, Δ=0) — es abstención, no error silencioso.
+        if (s.confianza >= umbralRevision && s.categoria !== etq.esperada) {
             silenciosos.push({
                 indice: i + 1,
                 esperado: etq.esperada,
@@ -128,15 +133,27 @@ async function main() {
     const rubricaSalidas: SalidaMotor[] = [];
     const detalle: unknown[] = [];
 
+    let legacyPrevio: SalidaMotor[] | null = null;
+    if (RUBRICA_ONLY) {
+        const corrida = JSON.parse(fs.readFileSync("scripts/simulacion/resultados-dual-095.json", "utf-8"));
+        legacyPrevio = (corrida.detalle as { legacy: SalidaMotor }[]).map((d) => d.legacy);
+        if (legacyPrevio.length < casos.length) throw new Error("resultados-dual-095.json no tiene detalle legacy suficiente para --rubrica-only");
+        console.log(`[DUAL] --rubrica-only: reutilizando ${legacyPrevio.length} salidas legacy de la corrida anterior`);
+    }
+
     for (let i = 0; i < casos.length; i++) {
         const caso = casos[i];
 
         let legacy: SalidaMotor = { categoria: "OTRO", estado: "REVISION_MANUAL", confianza: 0, presentes: [] };
-        try {
-            const r = await clasificarConVotos("gemma2:27b", caso.texto, { umbralRevision: 1.0 });
-            legacy = { categoria: r.categoria, estado: r.estado, confianza: r.confianza, presentes: [] };
-        } catch (err) {
-            console.error(`[DUAL] legacy caso ${i + 1}: ${err instanceof Error ? err.message : String(err)}`);
+        if (legacyPrevio) {
+            legacy = legacyPrevio[i];
+        } else {
+            try {
+                const r = await clasificarConVotos("gemma2:27b", caso.texto, { umbralRevision: 1.0 });
+                legacy = { categoria: r.categoria, estado: r.estado, confianza: r.confianza, presentes: [] };
+            } catch (err) {
+                console.error(`[DUAL] legacy caso ${i + 1}: ${err instanceof Error ? err.message : String(err)}`);
+            }
         }
 
         let rubrica: SalidaMotor = { categoria: "OTRO", estado: "REVISION_MANUAL", confianza: 0, presentes: [] };
