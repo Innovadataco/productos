@@ -49,9 +49,13 @@ interface MetricasMotor {
 }
 
 const LIMITE = parseInt(process.argv[2] ?? "200", 10);
-// Spec 098: con --rubrica-only se reusan las salidas del legacy de la corrida anterior
-// (resultados-dual-095.json) y SOLO se re-clasifica con la rúbrica (una variable a la vez).
+// Spec 098: con --rubrica-only se reusan las salidas del legacy de una corrida anterior
+// y SOLO se re-clasifica con la rúbrica (una variable a la vez).
+// Spec 104 (I-30): el archivo de entrada es argumento CLI (--legacy-desde=<ruta>) con
+// default al baseline de 200 casos (la ruta de escritura no cambia).
 const RUBRICA_ONLY = process.argv.includes("--rubrica-only");
+const ARG_LEGACY = process.argv.find((a) => a.startsWith("--legacy-desde="));
+const LEGACY_DESDE = ARG_LEGACY?.split("=")[1] ?? "scripts/simulacion/resultados-dual-095-baseline-pre098.json";
 
 function canonizar(v?: string): string {
     return (v ?? "").trim().toUpperCase().replace(/\s+/g, "_");
@@ -135,10 +139,10 @@ async function main() {
 
     let legacyPrevio: SalidaMotor[] | null = null;
     if (RUBRICA_ONLY) {
-        const corrida = JSON.parse(fs.readFileSync("scripts/simulacion/resultados-dual-095.json", "utf-8"));
+        const corrida = JSON.parse(fs.readFileSync(LEGACY_DESDE, "utf-8"));
         legacyPrevio = (corrida.detalle as { legacy: SalidaMotor }[]).map((d) => d.legacy);
-        if (legacyPrevio.length < casos.length) throw new Error("resultados-dual-095.json no tiene detalle legacy suficiente para --rubrica-only");
-        console.log(`[DUAL] --rubrica-only: reutilizando ${legacyPrevio.length} salidas legacy de la corrida anterior`);
+        if (legacyPrevio.length < casos.length) throw new Error(`${LEGACY_DESDE} no tiene detalle legacy suficiente para --rubrica-only`);
+        console.log(`[DUAL] --rubrica-only: reutilizando ${legacyPrevio.length} salidas legacy de ${LEGACY_DESDE}`);
     }
 
     for (let i = 0; i < casos.length; i++) {

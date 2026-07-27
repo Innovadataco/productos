@@ -63,7 +63,11 @@ const votoCategoriaSchema = {
     type: "object",
     properties: {
         cumple: { type: "integer", enum: [0, 1], description: "1 solo si TODAS las preguntas se cumplen con evidencia clara." },
-        preguntasCumplidas: { type: "array", items: { type: "string" } },
+        preguntasCumplidas: {
+            type: "array",
+            items: { type: "integer", minimum: 1 },
+            description: "NÚMEROS (índices) de las preguntas que se cumplen, según la numeración de la rúbrica.",
+        },
     },
     required: ["cumple", "preguntasCumplidas"],
     additionalProperties: false,
@@ -90,7 +94,7 @@ interface EmbudoResponse {
 }
 
 interface VotoModeloResponse {
-    categorias: Record<string, { cumple: number; preguntasCumplidas: string[] }>;
+    categorias: Record<string, { cumple: number; preguntasCumplidas: number[] }>;
 }
 
 export async function cargarConfigRubrica(): Promise<ConfigRubrica> {
@@ -123,21 +127,47 @@ export function preguntasDecisivas(sets: SetsRubrica, categoria: string): Pregun
 }
 
 /**
- * La categoría cumple si TODAS sus preguntas DECISIVAS están en preguntasCumplidas.
+ * Spec 104: índices (1-based) de las preguntas DECISIVAS dentro del set ACTIVO de la
+ * categoría, en el mismo orden con que se numeran en el prompt de voto.
+ */
+export function indicesDecisivas(sets: SetsRubrica, categoria: string): number[] {
+    return preguntasActivas(sets, categoria)
+        .map((p, i) => (p.tipo === "decisiva" ? i + 1 : null))
+        .filter((i): i is number => i !== null);
+}
+
+/**
+ * Spec 104: filtra índices inválidos (fuera de rango del set activo, duplicados) y traduce
+ * los válidos a los textos CANÓNICOS del set leído en esta llamada (para persistencia y
+ * expediente). El índice es formato de cable: nace y muere dentro de la clasificación.
+ */
+export function filtrarYTraducirIndices(
+    sets: SetsRubrica,
+    categoria: string,
+    indices: number[]
+): { validos: number[]; textos: string[] } {
+    const activas = preguntasActivas(sets, categoria);
+    // Orden determinista (el del set): la persistencia no depende del orden del modelo.
+    const validos = [...new Set(indices.filter((i) => Number.isInteger(i) && i >= 1 && i <= activas.length))].sort((a, b) => a - b);
+    return { validos, textos: validos.map((i) => activas[i - 1].texto) };
+}
+
+/**
+ * La categoría cumple si TODAS sus preguntas DECISIVAS están entre los índices reportados.
  * Las de contexto se reportan pero no bloquean. Si la categoría no tiene decisivas
- * activas, basta el 0/1 del modelo (defensivo).
+ * activas, basta el 0/1 del modelo (defensivo). Comparación por ÍNDICES, nunca por cadenas.
  */
 export function cumpleCategoria(
     sets: SetsRubrica,
     categoria: string,
-    preguntasCumplidas: string[],
+    indicesCumplidos: number[],
     votoModelo: boolean
 ): boolean {
     if (!votoModelo) return false;
-    const decisivas = preguntasDecisivas(sets, categoria);
+    const decisivas = indicesDecisivas(sets, categoria);
     if (decisivas.length === 0) return votoModelo;
-    const cumplidas = new Set(preguntasCumplidas);
-    return decisivas.every((p) => cumplidas.has(p.texto));
+    const cumplidos = new Set(indicesCumplidos);
+    return decisivas.every((i) => cumplidos.has(i));
 }
 
 function construirPromptEmbudo(texto: string, categorias: string[]): string {
@@ -175,14 +205,14 @@ REGLAS OBLIGATORIAS:
 - Las preguntas [contexto] NO son obligatorias: no bloquean la categoría, pero repórtalas si se cumplen.
 - Denegar por defecto en las decisivas: la ausencia de evidencia es 0, nunca 1.
 - Las preguntas son factuales y específicas: "¿se COMPARTIÓ?" no es lo mismo que "¿se pidió?". No confundas categorías.
-- En "preguntasCumplidas" copia VERBATIM el texto de las preguntas que se cumplen (decisivas y de contexto).
+- En "preguntasCumplidas" devuelve los NÚMEROS de las preguntas que se cumplen (decisivas y de contexto), según la numeración de cada categoría. NO copies el texto de las preguntas: solo los números.
 
 Texto del reporte: "${texto}"
 
 Rúbrica por categoría:
 ${bloques}
 
-Responde SOLO con JSON: {"categorias": {"CATEGORIA": {"cumple": 0|1, "preguntasCumplidas": ["..."]}, ...}} incluyendo TODAS las categorías de la rúbrica.`;
+Responde SOLO con JSON: {"categorias": {"CATEGORIA": {"cumple": 0|1, "preguntasCumplidas": [1, 3]}, ...}} incluyendo TODAS las categorías de la rúbrica.`;
 }
 
 /** % por categoría = nº de modelos que marcaron 1 / N. */
@@ -300,11 +330,13 @@ export async function clasificarConRubrica(texto: string, config?: Partial<Confi
                 const categorias: Record<string, VotoRubricaCategoria> = {};
                 for (const cat of plausibles) {
                     const v = voto.data.categorias[cat];
-                    const preguntasCumplidas = v?.preguntasCumplidas ?? [];
+                    // Spec 104: el modelo devuelve ÍNDICES; se filtran los inválidos y se
+                    // persisten los textos CANÓNICOS del set leído en esta llamada.
+                    const { validos, textos } = filtrarYTraducirIndices(cfg.preguntas, cat, v?.preguntasCumplidas ?? []);
                     // Spec 092-US1: cumple solo si TODAS las decisivas están cumplidas
                     categorias[cat] = {
-                        cumple: cumpleCategoria(cfg.preguntas, cat, preguntasCumplidas, v?.cumple === 1),
-                        preguntasCumplidas,
+                        cumple: cumpleCategoria(cfg.preguntas, cat, validos, v?.cumple === 1),
+                        preguntasCumplidas: textos,
                     };
                 }
                 votosModelos.push({ modelo, categorias, metrics: voto.metrics, fallback: false });

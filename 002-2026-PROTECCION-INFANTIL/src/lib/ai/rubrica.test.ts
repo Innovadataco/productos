@@ -4,6 +4,9 @@ import {
     calcularPorcentajes,
     resolverPresentesYPrincipal,
     generarAnalisisRubrica,
+    cumpleCategoria,
+    filtrarYTraducirIndices,
+    indicesDecisivas,
     type VotoRubricaModelo,
 } from "./rubrica";
 
@@ -49,13 +52,29 @@ const PREGUNTAS_TEST: Record<string, string> = {
     OFRECIMIENTO_REGALOS: "¿Se ofrece algo de valor?",
 };
 
+function respuestaVotoConIndices(categorias: Record<string, number[]>) {
+    return {
+        data: {
+            categorias: Object.fromEntries(
+                Object.entries(categorias).map(([cat, indices]) => [
+                    cat,
+                    { cumple: indices.length > 0 ? 1 : 0, preguntasCumplidas: indices },
+                ])
+            ),
+        },
+        rawResponse: "{}",
+        metrics: { modelo: "m", latenciaMs: 10, promptTokens: 1, responseTokens: 1, totalDuration: 10, loadDuration: null },
+    };
+}
+
 function respuestaVoto(cumplimientos: Record<string, boolean>) {
     return {
         data: {
             categorias: Object.fromEntries(
                 Object.entries(cumplimientos).map(([cat, cumple]) => [
                     cat,
-                    { cumple: cumple ? 1 : 0, preguntasCumplidas: cumple ? [PREGUNTAS_TEST[cat]] : [] },
+                    // Spec 104: el modelo devuelve ÍNDICES (1-based), no textos.
+                    { cumple: cumple ? 1 : 0, preguntasCumplidas: cumple ? [1] : [] },
                 ])
             ),
         },
@@ -174,6 +193,75 @@ describe("clasificarConRubrica — flujo completo (mocks)", () => {
         expect(mockLlamar).toHaveBeenCalledTimes(4);
         expect(res.categoriasPresentes).toEqual([]);
         expect(res.categoria).toBe("OTRO");
+        expect(res.estado).toBe("REVISION_MANUAL");
+    });
+});
+
+// Spec 104: votación por ÍNDICES — el cumplimiento no depende del formato del texto.
+describe("spec 104 — cumplimiento por índices (adiós verbatim)", () => {
+    const SETS = {
+        GROOMING: [
+            { texto: "¿Se ofrece algo de valor?", activo: true, tipo: "decisiva" as const },
+            { texto: "¿El ofrecimiento es personal, dirigido específicamente a este menor?", activo: true, tipo: "decisiva" as const },
+            { texto: "¿Viene de un adulto o desconocido?", activo: true },
+        ],
+        BENIGNA: [{ texto: "¿Es de día?", activo: true }],
+    };
+
+    it("cumpleCategoria: todas las decisivas presentes por índice → true; falta una → false", () => {
+        expect(cumpleCategoria(SETS, "GROOMING", [1, 2], true)).toBe(true);
+        expect(cumpleCategoria(SETS, "GROOMING", [1], true)).toBe(false);
+        expect(cumpleCategoria(SETS, "GROOMING", [2], true)).toBe(false);
+        expect(cumpleCategoria(SETS, "GROOMING", [1, 2], false)).toBe(false);
+        // Sin decisivas activas: basta el 0/1 del modelo
+        expect(cumpleCategoria(SETS, "BENIGNA", [], true)).toBe(true);
+    });
+
+    it("indicesDecisivas: posiciones 1-based dentro del set activo", () => {
+        expect(indicesDecisivas(SETS, "GROOMING")).toEqual([1, 2]);
+        expect(indicesDecisivas(SETS, "BENIGNA")).toEqual([]);
+    });
+
+    it("filtrarYTraducirIndices: fuera de rango y duplicados descartados; textos canónicos", () => {
+        const { validos, textos } = filtrarYTraducirIndices(SETS, "GROOMING", [1, 99, 1, -3, 3, 0]);
+        expect(validos).toEqual([1, 3]);
+        expect(textos).toEqual(["¿Se ofrece algo de valor?", "¿Viene de un adulto o desconocido?"]);
+    });
+
+    it("ACEPTACIÓN B1: el resultado no depende del formato — índices con ruido (duplicados/fuera de rango) dan el MISMO veredicto", async () => {
+        // El modo viejo (verbatim) moría con "1. [DECISIVA] …" o sin "¿": el modelo
+        // entendía pero la cadena no coincidía. Con índices, el texto ya no participa.
+        const config = { ...CONFIG_TEST, preguntas: SETS };
+        for (const indices of [[1, 2], [1, 2, 99, 1], [2, 1]]) {
+            mockLlamar.mockReset();
+            mockParametroFindUnique.mockResolvedValue(null);
+            mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["GROOMING"]));
+            for (let m = 0; m < 3; m++) {
+                mockLlamar.mockResolvedValueOnce(respuestaVotoConIndices({ GROOMING: indices }));
+            }
+            const res = await clasificarConRubrica("texto con señal", config);
+            expect(res.categoriasPresentes).toEqual(["GROOMING"]);
+            expect(res.estado).toBe("CLASIFICADO");
+            // Persistencia: textos CANÓNICOS (traducidos desde índice), no los del modelo
+            for (const v of res.votosModelos) {
+                expect(v.categorias.GROOMING.preguntasCumplidas).toEqual([
+                    "¿Se ofrece algo de valor?",
+                    "¿El ofrecimiento es personal, dirigido específicamente a este menor?",
+                ]);
+            }
+        }
+    });
+
+    it("índice de decisiva ausente en 2/3 modelos → no presente (bloqueo decisivo intacto)", async () => {
+        const config = { ...CONFIG_TEST, preguntas: SETS };
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["GROOMING"]));
+        mockLlamar.mockResolvedValueOnce(respuestaVotoConIndices({ GROOMING: [1, 2] }));
+        mockLlamar.mockResolvedValueOnce(respuestaVotoConIndices({ GROOMING: [1] })); // falta decisiva 2
+        mockLlamar.mockResolvedValueOnce(respuestaVotoConIndices({ GROOMING: [1] }));
+
+        const res = await clasificarConRubrica("texto con señal", config);
+        // Solo 1/3 cumple todas las decisivas → 0.33 < 0.6 → no presente
+        expect(res.categoriasPresentes).toEqual([]);
         expect(res.estado).toBe("REVISION_MANUAL");
     });
 });
