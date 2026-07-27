@@ -7,6 +7,7 @@ import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { withValidation } from "@/lib/validation";
 import { colegioIdParamsSchema, colegioUpdateBodySchema } from "@/lib/schemas";
+import { esRangoServicioValido } from "@/lib/colegio/periodo";
 
 function getClientInfo(request: Request) {
     return {
@@ -72,6 +73,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
 
         await validarUbicacionActualizada(body, colegio);
+
+        // Validación cruzada de vigencia: si cambia alguna fecha, fin debe ser > inicio.
+        if (body.inicioServicio !== undefined || body.finServicio !== undefined) {
+            const inicio = body.inicioServicio !== undefined ? new Date(body.inicioServicio) : colegio.inicioServicio;
+            const fin =
+                body.finServicio !== undefined
+                    ? body.finServicio
+                        ? new Date(body.finServicio)
+                        : null
+                    : colegio.finServicio;
+            if (fin && !esRangoServicioValido(inicio, fin)) {
+                throw new AppError(
+                    "La fecha de fin del servicio debe ser posterior a la fecha de inicio",
+                    ERROR_CODES.VALIDATION_ERROR,
+                    400
+                );
+            }
+        }
 
         const data: Record<string, unknown> = {};
         if (body.nombre !== undefined) data.nombre = body.nombre;

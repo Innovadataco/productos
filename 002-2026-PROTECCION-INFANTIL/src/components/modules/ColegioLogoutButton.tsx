@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function ColegioLogoutButton({ className }: { className?: string }) {
+export function ColegioLogoutButton({ className, label = "Volver al inicio" }: { className?: string; label?: string }) {
     const [loading, setLoading] = useState(false);
 
     async function handleLogout() {
@@ -21,7 +21,7 @@ export function ColegioLogoutButton({ className }: { className?: string }) {
             disabled={loading}
             className={className}
         >
-            {loading ? "Cerrando sesión..." : "Volver al inicio"}
+            {loading ? "Cerrando sesión..." : label}
         </button>
     );
 }

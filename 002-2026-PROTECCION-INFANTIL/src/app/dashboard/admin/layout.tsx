@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { AdminNav } from "@/components/modules/AdminNav";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
@@ -19,6 +20,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const rol = payload?.rol as string | undefined;
     if (!rol || !ADMIN_ROLES.has(rol)) {
         redirect("/");
+    }
+
+    // Enforcement central: cualquier rol interno con contraseña temporal debe
+    // cambiarla antes de usar el panel (igual que SCHOOL_ADMIN en su layout).
+    if (payload?.sub) {
+        const usuario = await prisma.usuario.findUnique({
+            where: { id: payload.sub as string },
+            select: { debeCambiarPassword: true },
+        });
+        if (usuario?.debeCambiarPassword) {
+            redirect("/cambiar-password");
+        }
     }
 
     const permitidos = await modulosPermitidosParaRol(rol);

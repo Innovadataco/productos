@@ -67,10 +67,21 @@ export function NavHeader() {
         ? "/dashboard"
         : "/dashboard-publico";
 
+    // El logo lleva al panel del rol autenticado; sin sesión, al inicio público (C-8).
+    const logoHref = !user
+        ? "/"
+        : user.rol === "ADMIN" || user.rol === "OPERADOR"
+        ? "/dashboard/admin"
+        : user.rol === "COMITE_VALIDACION"
+        ? "/dashboard/admin/comite"
+        : user.rol === "SCHOOL_ADMIN"
+        ? "/dashboard/colegio"
+        : "/dashboard";
+
     return (
         <header className={`fixed top-0 left-0 right-0 z-50 glass ${headerBorderClass}`}>
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-                <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight text-body">
+                <Link href={logoHref} className="flex items-center gap-2 text-lg font-bold tracking-tight text-body">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg accent-gradient text-white shadow-md">
                         <ShieldIcon className="h-4 w-4" />
                     </span>

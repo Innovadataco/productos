@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 type EstadisticasCurso = {
     cursoId: string;
@@ -125,10 +126,11 @@ export default function ColegioEstadisticasPageClient() {
                             <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
                         </div>
                     ) : !estadisticas ? (
-                        <EmptyState
+                        // Si la carga falla el botón de PDF queda inhabilitado; se ofrece reintento sin recargar la página.
+                        <ErrorState
                             title="No se pudieron cargar las estadísticas"
-                            description="Intenta recargar la página."
-                            icon={<span className="text-2xl">📊</span>}
+                            description={error || "Intenta recargar la página."}
+                            onRetry={cargar}
                         />
                     ) : (
                         <>

@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { enviarEmailBienvenidaColegio } from "@/lib/email";
 import { withValidation } from "@/lib/validation";
 import { colegioBodySchema } from "@/lib/schemas";
+import { calcularFinServicio, esRangoServicioValido } from "@/lib/colegio/periodo";
 import { randomBytes } from "crypto";
 
 function tempPassword() {
@@ -119,6 +120,18 @@ export async function POST(request: Request) {
 
         await validarUbicacion({ paisId, departamentoId, ciudadId });
 
+        // La fecha de fin se calcula en el servidor según el tipo de período;
+        // solo con período LIBRE se acepta la fecha manual, siempre fin > inicio.
+        const inicio = new Date(inicioServicio);
+        const fin = tipoPeriodo === "LIBRE" ? new Date(finServicio) : calcularFinServicio(inicio, tipoPeriodo);
+        if (!fin || !esRangoServicioValido(inicio, fin)) {
+            throw new AppError(
+                "La fecha de fin del servicio debe ser posterior a la fecha de inicio",
+                ERROR_CODES.VALIDATION_ERROR,
+                400
+            );
+        }
+
         const existingUser = await prisma.usuario.findUnique({ where: { email: adminEmail.toLowerCase() } });
         if (existingUser) {
             return NextResponse.json(
@@ -147,8 +160,8 @@ export async function POST(request: Request) {
                     representanteLegalIdentificacion,
                     representanteLegalEmail,
                     representanteLegalTelefono,
-                    inicioServicio: new Date(inicioServicio),
-                    finServicio: new Date(finServicio),
+                    inicioServicio: inicio,
+                    finServicio: fin,
                     tipoPeriodo,
                     estado: "activo",
                     tenantId: tenant.id,

@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { GRADO_OPTIONS } from "@/lib/colegio/grados";
 
 export default function NuevoCursoPageClient() {
     const router = useRouter();
@@ -64,12 +66,11 @@ export default function NuevoCursoPageClient() {
                                 onChange={(e) => setNombre(e.target.value)}
                                 placeholder="Ej. 6A"
                             />
-                            <Input
+                            <Select
                                 label="Grado"
-                                maxLength={100}
+                                options={GRADO_OPTIONS}
                                 value={grado}
                                 onChange={(e) => setGrado(e.target.value)}
-                                placeholder="Ej. Sexto"
                             />
                             <Input
                                 label="Año lectivo"

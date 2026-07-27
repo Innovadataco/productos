@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = [
     "/api/config/parametros/publicos",
     "/api/plataformas",
     "/api/paises",
+    "/api/departamentos",
     "/api/ciudades",
     "/api/consulta",
     "/api/reportes",
@@ -32,6 +33,22 @@ const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes"];
 
 // Rutas exclusivas del módulo Colegio.
 const COLEGIO_ROUTES = ["/dashboard/colegio", "/api/me/colegio", "/api/colegio"];
+
+// Rutas de sesión propias de cualquier rol autenticado: datos del usuario actual
+// (el header las consulta para reconocer la sesión) y cambio de contraseña
+// (obligatorio cuando debeCambiarPassword=true).
+const SESION_ROUTES = ["/api/me", "/cambiar-password"];
+
+/**
+ * Indica si un SCHOOL_ADMIN autenticado puede acceder a la ruta.
+ * Además de las rutas del módulo Colegio, puede usar las rutas de sesión:
+ * sin "/api/me" el header público no reconoce la sesión (I-25) y sin
+ * "/cambiar-password" el cambio obligatorio de contraseña queda en bucle (C-9).
+ */
+export function esRutaPermitidaSchoolAdmin(pathname: string): boolean {
+    if (isColegioRoute(pathname)) return true;
+    return SESION_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
+}
 
 // Rutas públicas que los roles internos no pueden usar (la cuenta institucional no reporta).
 const REPORTAR_ROUTE = "/reportar";
@@ -109,7 +126,6 @@ async function proxyCore(request: NextRequest) {
 
     const isPublicRoute = isPublic(pathname);
     const isInternalRoute = pathname.startsWith("/dashboard/admin") || pathname.startsWith("/api/admin");
-    const isColegio = isColegioRoute(pathname);
 
     // If no token, behave as before: public -> next, protected -> redirect/401
     if (!token) {
@@ -134,9 +150,9 @@ async function proxyCore(request: NextRequest) {
 
     const rol = payload.rol;
 
-    // SCHOOL_ADMIN is isolated to colegio routes only.
+    // SCHOOL_ADMIN is isolated to colegio routes plus its own session routes.
     if (rol === "SCHOOL_ADMIN") {
-        if (isColegio) return NextResponse.next();
+        if (esRutaPermitidaSchoolAdmin(pathname)) return NextResponse.next();
         if (pathname.startsWith("/api/")) {
             return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
         }

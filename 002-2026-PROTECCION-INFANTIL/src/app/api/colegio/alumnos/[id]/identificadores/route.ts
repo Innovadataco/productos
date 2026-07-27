@@ -9,7 +9,7 @@ import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
 import { alumnoIdParamsSchema, identificadorAlumnoBodySchema } from "@/lib/schemas";
 import { verificarPropiedadAlumno } from "@/lib/colegio/permisos";
-import { normalizarIdentificador } from "@/lib/colegio/normalizacion";
+import { normalizarIdentificador, inferirTipoIdentificador } from "@/lib/colegio/normalizacion";
 import type { EtiquetaRelacionAlumno } from "@prisma/client";
 
 function getClientInfo(request: Request) {
@@ -94,7 +94,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         await verificarPropiedadAlumno(user.id, id);
 
-        const valorNormalizado = normalizarIdentificador(body.valor, body.tipo);
+        // El tipo ya no se pide en el formulario: si no viene, se infiere del valor.
+        const tipo = body.tipo?.trim() || inferirTipoIdentificador(body.valor);
+        const valorNormalizado = normalizarIdentificador(body.valor, tipo);
 
         if (body.plataformaId) {
             const plataforma = await prisma.plataforma.findUnique({
@@ -111,7 +113,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const duplicado = await prisma.identificadorAlumno.findFirst({
             where: {
                 alumnoId: id,
-                tipo: body.tipo,
+                tipo,
                 valor: valorNormalizado,
                 plataformaId: body.plataformaId ?? null,
             },
@@ -126,7 +128,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const identificador = await prisma.identificadorAlumno.create({
             data: {
                 alumnoId: id,
-                tipo: body.tipo,
+                tipo,
                 valor: valorNormalizado,
                 plataformaId: body.plataformaId ?? null,
                 etiquetaRelacion: (body.etiquetaRelacion ?? "ALUMNO") as EtiquetaRelacionAlumno,
@@ -144,7 +146,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             colegioId: user.colegioId ?? undefined,
             valorNuevo: JSON.stringify({
                 alumnoId: id,
-                tipo: body.tipo,
+                tipo,
                 valor: valorNormalizado,
                 plataformaId: body.plataformaId ?? null,
                 etiquetaRelacion: body.etiquetaRelacion ?? "ALUMNO",

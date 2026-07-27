@@ -58,7 +58,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
     const [message, setMessage] = useState<Mensaje>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [nuevo, setNuevo] = useState({ tipo: "", valor: "", plataformaId: "", etiquetaRelacion: "ALUMNO" });
+    const [nuevo, setNuevo] = useState({ valor: "", plataformaId: "", etiquetaRelacion: "ALUMNO" });
 
     useEffect(() => {
         params.then((p) => {
@@ -106,12 +106,11 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
     }
 
     async function agregarIdentificador() {
-        if (!alumnoId || !nuevo.tipo.trim() || !nuevo.valor.trim()) return;
+        if (!alumnoId || !nuevo.valor.trim()) return;
         setSaving(true);
         setMessage(null);
         try {
             const payload: Record<string, unknown> = {
-                tipo: nuevo.tipo.trim(),
                 valor: nuevo.valor.trim(),
                 etiquetaRelacion: nuevo.etiquetaRelacion,
             };
@@ -126,7 +125,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setModalOpen(false);
-                setNuevo({ tipo: "", valor: "", plataformaId: "", etiquetaRelacion: "ALUMNO" });
+                setNuevo({ valor: "", plataformaId: "", etiquetaRelacion: "ALUMNO" });
                 setMessage({ type: "success", text: "Identificador agregado" });
                 if (alumnoId) await cargar(alumnoId);
             } else {
@@ -259,20 +258,12 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
             <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Agregar identificador">
                 <div className="space-y-4">
                     <Input
-                        label="Tipo"
-                        required
-                        maxLength={50}
-                        value={nuevo.tipo}
-                        onChange={(e) => setNuevo({ ...nuevo, tipo: e.target.value })}
-                        placeholder="Ej. teléfono, email, nick"
-                    />
-                    <Input
                         label="Valor"
                         required
                         maxLength={255}
                         value={nuevo.valor}
                         onChange={(e) => setNuevo({ ...nuevo, valor: e.target.value })}
-                        placeholder="Ej. +573001234567"
+                        placeholder="Ej. +573001234567, correo@dominio.com o nick"
                     />
                     <Select
                         label="Plataforma"

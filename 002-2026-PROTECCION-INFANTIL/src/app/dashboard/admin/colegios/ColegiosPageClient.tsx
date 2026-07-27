@@ -28,7 +28,7 @@ type Colegio = {
     representanteLegalTelefono?: string | null;
     inicioServicio: string;
     finServicio: string;
-    tipoPeriodo: "MENSUAL" | "SEMESTRAL" | "ANUAL";
+    tipoPeriodo: "MENSUAL" | "SEMESTRAL" | "ANUAL" | "LIBRE";
     estado: "activo" | "inactivo";
     admin: AdminUsuario;
     tenantId: string;
@@ -43,7 +43,7 @@ type ColegioFormEdit = {
     representanteLegalTelefono?: string;
     inicioServicio?: string;
     finServicio?: string;
-    tipoPeriodo?: "MENSUAL" | "SEMESTRAL" | "ANUAL";
+    tipoPeriodo?: "MENSUAL" | "SEMESTRAL" | "ANUAL" | "LIBRE";
     estado?: "activo" | "inactivo";
 };
 
@@ -53,6 +53,7 @@ const tipoPeriodoLabels: Record<string, string> = {
     MENSUAL: "Mensual",
     SEMESTRAL: "Semestral",
     ANUAL: "Anual",
+    LIBRE: "Libre",
 };
 
 function formatDate(iso: string) {
@@ -580,6 +581,7 @@ function EditRow({
                             label="Fin servicio"
                             type="datetime-local"
                             required
+                            min={values.inicioServicio || undefined}
                             value={values.finServicio || ""}
                             onChange={(e) => setValues({ ...values, finServicio: e.target.value })}
                         />
@@ -595,6 +597,7 @@ function EditRow({
                                 <option value="MENSUAL">Mensual</option>
                                 <option value="SEMESTRAL">Semestral</option>
                                 <option value="ANUAL">Anual</option>
+                                <option value="LIBRE">Libre (fechas manuales)</option>
                             </select>
                         </div>
                         <div>

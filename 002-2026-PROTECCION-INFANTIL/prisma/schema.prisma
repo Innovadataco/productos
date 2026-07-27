@@ -118,6 +118,7 @@ enum TipoPeriodoServicio {
   MENSUAL
   SEMESTRAL
   ANUAL
+  LIBRE
 }
 
 enum EstadoApelacion {

@@ -6,7 +6,6 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const paisId = searchParams.get("paisId");
-        const departamentoId = searchParams.get("departamentoId");
 
         if (!paisId) {
             return NextResponse.json(
@@ -15,22 +14,13 @@ export async function GET(request: Request) {
             );
         }
 
-        const ciudades = await prisma.ciudad.findMany({
-            where: {
-                paisId,
-                esActivo: true,
-                ...(departamentoId ? { departamentoId } : {}),
-            },
+        const departamentos = await prisma.departamento.findMany({
+            where: { paisId, esActivo: true },
             orderBy: { nombre: "asc" },
-            select: { id: true, nombre: true, paisId: true, departamentoId: true },
+            select: { id: true, nombre: true, paisId: true },
         });
 
-        const resultado = [
-            ...ciudades,
-            { id: "otra", nombre: "Otra ciudad o municipio", paisId },
-        ];
-
-        return NextResponse.json({ ciudades: resultado });
+        return NextResponse.json({ departamentos });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

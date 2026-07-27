@@ -22,11 +22,17 @@ export default async function ColegioLayout({ children }: { children: React.Reac
 
     const usuario = await prisma.usuario.findUnique({
         where: { id: payload.sub as string },
-        select: { id: true, rol: true, colegioId: true, estado: true },
+        select: { id: true, rol: true, colegioId: true, estado: true, debeCambiarPassword: true },
     });
 
     if (!usuario || usuario.estado !== "activo" || usuario.rol !== "SCHOOL_ADMIN") {
         redirect("/login");
+    }
+
+    // Enforcement central: cualquier usuario con contraseña temporal debe cambiarla
+    // antes de usar su panel (mismo criterio que el comité de validación).
+    if (usuario.debeCambiarPassword) {
+        redirect("/cambiar-password");
     }
 
     const vigencia = await verificarVigenciaColegio(usuario.id);

@@ -398,8 +398,10 @@ export default function GestionPageClient() {
                 </div>
             ) : !hayCuenta ? (
                 <GlassCard>
-                    <h2 className="text-lg font-semibold text-body">Crear cuenta del comité</h2>
-                    <p className="text-sm text-muted">Se genera una contraseña temporal y se envía por email.</p>
+                    <h2 className="text-lg font-semibold text-body">Cuenta de acceso del comité</h2>
+                    <p className="text-sm text-muted">
+                        Es la única credencial con acceso al panel del comité. El sistema genera una contraseña temporal y la envía por email.
+                    </p>
                     <form onSubmit={crearCuenta} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <Input
                             label="Email"
@@ -447,7 +449,7 @@ export default function GestionPageClient() {
                                 {editingIntegranteId ? "Editar integrante" : "Nuevo integrante"}
                             </h2>
                         <p className="text-sm text-muted">
-                            Los datos del integrante son privados. El número de identificación se guarda cifrado.
+                            Los integrantes son solo el roster del comité: no tienen acceso a la plataforma y el email registrado es únicamente de contacto. El número de identificación se guarda cifrado.
                         </p>
                         <form onSubmit={guardarIntegrante} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             <Input
@@ -514,7 +516,10 @@ export default function GestionPageClient() {
 
                     <section className="space-y-4" aria-labelledby="comite-listado-title">
                         <GlassCard>
-                            <h2 id="comite-listado-title" className="text-lg font-semibold text-body">Integrantes del comité</h2>
+                            <h2 id="comite-listado-title" className="text-lg font-semibold text-body">Integrantes del comité (roster, sin acceso)</h2>
+                            <p className="mt-1 text-sm text-muted">
+                                Listado informativo de las personas que conforman el comité. El ingreso a la plataforma se hace solo con la cuenta de acceso del comité.
+                            </p>
                             {loadingIntegrantes ? (
                                 <div className="flex items-center gap-3 py-8 text-muted">
                                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
@@ -629,7 +634,10 @@ function CuentaComiteCard({
         <GlassCard>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
-                    <h2 className="text-lg font-semibold text-body">Cuenta del comité</h2>
+                    <h2 className="text-lg font-semibold text-body">Cuenta de acceso del comité</h2>
+                    <p className="text-sm text-muted">
+                        Credencial única de ingreso al panel del comité, con contraseña temporal generada por el sistema. Los integrantes del roster no usan esta cuenta.
+                    </p>
                     <div className="flex items-center gap-2">
                         {editando ? (
                             <div className="flex items-center gap-2">

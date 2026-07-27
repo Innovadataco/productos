@@ -73,6 +73,26 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
         expect(getJson.identificadores).toHaveLength(1);
     });
 
+    it("infiere el tipo cuando el formulario no lo envía (C-4)", async () => {
+        const { admin } = await setupSchoolAdmin();
+        const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
+        const alumno = await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+
+        const res = await POST(
+            request(
+                "POST",
+                `http://localhost:5005/api/colegio/alumnos/${alumno.id}/identificadores`,
+                { valor: "+573001234567", etiquetaRelacion: "ALUMNO" },
+                mockToken
+            ),
+            { params: Promise.resolve({ id: alumno.id }) }
+        );
+
+        expect(res.status).toBe(201);
+        const json = await res.json();
+        expect(json.identificador.tipo).toBe("telefono");
+    });
+
     it("normaliza identificadores a minúsculas y sin espacios", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });

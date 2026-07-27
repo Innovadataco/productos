@@ -5,13 +5,18 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { calcularFinServicio } from "@/lib/colegio/periodo";
 
 type Pais = { id: string; nombre: string; codigo?: string };
-type Ciudad = { id: string; nombre: string; paisId?: string };
+type Departamento = { id: string; nombre: string; paisId?: string };
+type Ciudad = { id: string; nombre: string; paisId?: string; departamentoId?: string | null };
+
+type TipoPeriodo = "MENSUAL" | "SEMESTRAL" | "ANUAL" | "LIBRE";
 
 const initialForm = {
     nombre: "",
     paisId: "",
+    departamentoId: "",
     ciudadId: "",
     direccion: "",
     representanteLegalNombre: "",
@@ -20,7 +25,7 @@ const initialForm = {
     representanteLegalTelefono: "",
     inicioServicio: "",
     finServicio: "",
-    tipoPeriodo: "MENSUAL" as "MENSUAL" | "SEMESTRAL" | "ANUAL",
+    tipoPeriodo: "MENSUAL" as TipoPeriodo,
     adminEmail: "",
     adminNombre: "",
 };
@@ -42,6 +47,7 @@ export default function NuevoColegioPageClient() {
     const router = useRouter();
     const [form, setForm] = useState<FormState>(initialForm);
     const [paises, setPaises] = useState<Pais[]>([]);
+    const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
     const [ciudades, setCiudades] = useState<Ciudad[]>([]);
     const [loadingPaises, setLoadingPaises] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -59,20 +65,43 @@ export default function NuevoColegioPageClient() {
     }, []);
 
     useEffect(() => {
-        if (!form.paisId) {
-            setCiudades([]);
-            setForm((f) => ({ ...f, ciudadId: "" }));
-            return;
-        }
-        fetch(`/api/ciudades?paisId=${encodeURIComponent(form.paisId)}`, { credentials: "include" })
+        if (!form.paisId) return;
+        fetch(`/api/departamentos?paisId=${encodeURIComponent(form.paisId)}`, { credentials: "include" })
+            .then((r) => r.json().catch(() => ({})))
+            .then((data) => setDepartamentos(data.departamentos || []))
+            .catch(() => setError({ type: "error", text: "Error cargando departamentos" }));
+    }, [form.paisId]);
+
+    useEffect(() => {
+        if (!form.paisId) return;
+        const params = new URLSearchParams({ paisId: form.paisId });
+        if (form.departamentoId) params.set("departamentoId", form.departamentoId);
+        fetch(`/api/ciudades?${params.toString()}`, { credentials: "include" })
             .then((r) => r.json().catch(() => ({})))
             .then((data) => setCiudades(data.ciudades || []))
             .catch(() => setError({ type: "error", text: "Error cargando ciudades" }));
-    }, [form.paisId]);
+    }, [form.paisId, form.departamentoId]);
 
     function update<K extends keyof FormState>(field: K, value: FormState[K]) {
         setForm((prev) => ({ ...prev, [field]: value }) as FormState);
     }
+
+    function onPaisChange(paisId: string) {
+        setDepartamentos([]);
+        setCiudades([]);
+        setForm((prev) => ({ ...prev, paisId, departamentoId: "", ciudadId: "" }));
+    }
+
+    function onDepartamentoChange(departamentoId: string) {
+        setCiudades([]);
+        setForm((prev) => ({ ...prev, departamentoId, ciudadId: "" }));
+    }
+
+    const esPeriodoLibre = form.tipoPeriodo === "LIBRE";
+    const finCalculado =
+        !esPeriodoLibre && form.inicioServicio
+            ? calcularFinServicio(new Date(form.inicioServicio), form.tipoPeriodo)
+            : null;
 
     function validate() {
         const required: (keyof FormState)[] = [
@@ -83,7 +112,6 @@ export default function NuevoColegioPageClient() {
             "representanteLegalIdentificacion",
             "representanteLegalEmail",
             "inicioServicio",
-            "finServicio",
             "tipoPeriodo",
             "adminEmail",
             "adminNombre",
@@ -94,8 +122,13 @@ export default function NuevoColegioPageClient() {
                 return "Completa todos los campos requeridos";
             }
         }
-        if (form.finServicio <= form.inicioServicio) {
-            return "La fecha de fin debe ser posterior al inicio";
+        if (esPeriodoLibre) {
+            if (!form.finServicio) {
+                return "Completa la fecha de fin del servicio";
+            }
+            if (form.finServicio <= form.inicioServicio) {
+                return "La fecha de fin debe ser posterior al inicio";
+            }
         }
         return null;
     }
@@ -120,6 +153,7 @@ export default function NuevoColegioPageClient() {
                 body: JSON.stringify({
                     nombre: form.nombre,
                     paisId: form.paisId,
+                    departamentoId: form.departamentoId || undefined,
                     ciudadId: form.ciudadId,
                     direccion: form.direccion || undefined,
                     representanteLegalNombre: form.representanteLegalNombre,
@@ -127,7 +161,9 @@ export default function NuevoColegioPageClient() {
                     representanteLegalEmail: form.representanteLegalEmail,
                     representanteLegalTelefono: form.representanteLegalTelefono || undefined,
                     inicioServicio: toISOString(form.inicioServicio),
-                    finServicio: toISOString(form.finServicio),
+                    finServicio: esPeriodoLibre
+                        ? toISOString(form.finServicio)
+                        : finCalculado?.toISOString(),
                     tipoPeriodo: form.tipoPeriodo,
                     adminEmail: form.adminEmail,
                     adminNombre: form.adminNombre,
@@ -212,7 +248,7 @@ export default function NuevoColegioPageClient() {
                                 <select
                                     required
                                     value={form.paisId}
-                                    onChange={(e) => update("paisId", e.target.value)}
+                                    onChange={(e) => onPaisChange(e.target.value)}
                                     className="w-full rounded-xl px-4 py-3 text-sm text-body glass-input ring-accent-input"
                                     disabled={loadingPaises}
                                 >
@@ -220,6 +256,24 @@ export default function NuevoColegioPageClient() {
                                     {paises.map((p) => (
                                         <option key={p.id} value={p.id}>
                                             {p.nombre}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium text-body">Departamento</label>
+                                <select
+                                    value={form.departamentoId}
+                                    onChange={(e) => onDepartamentoChange(e.target.value)}
+                                    className="w-full rounded-xl px-4 py-3 text-sm text-body glass-input ring-accent-input"
+                                    disabled={!form.paisId}
+                                >
+                                    <option value="">
+                                        {form.paisId ? "Todos los departamentos" : "Selecciona país primero"}
+                                    </option>
+                                    {departamentos.map((d) => (
+                                        <option key={d.id} value={d.id}>
+                                            {d.nombre}
                                         </option>
                                     ))}
                                 </select>
@@ -284,6 +338,22 @@ export default function NuevoColegioPageClient() {
                     <section className="space-y-4">
                         <h2 className="text-lg font-semibold text-body">Vigencia del servicio</h2>
                         <div className="grid gap-4 sm:grid-cols-3">
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium text-body">
+                                    Tipo de período <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    required
+                                    value={form.tipoPeriodo}
+                                    onChange={(e) => update("tipoPeriodo", e.target.value as TipoPeriodo)}
+                                    className="w-full rounded-xl px-4 py-3 text-sm text-body glass-input ring-accent-input"
+                                >
+                                    <option value="MENSUAL">Mensual</option>
+                                    <option value="SEMESTRAL">Semestral</option>
+                                    <option value="ANUAL">Anual</option>
+                                    <option value="LIBRE">Libre (fechas manuales)</option>
+                                </select>
+                            </div>
                             <Input
                                 label="Inicio del servicio"
                                 type="datetime-local"
@@ -291,25 +361,25 @@ export default function NuevoColegioPageClient() {
                                 value={form.inicioServicio}
                                 onChange={(e) => update("inicioServicio", e.target.value)}
                             />
-                            <Input
-                                label="Fin del servicio"
-                                type="datetime-local"
-                                required
-                                value={form.finServicio}
-                                onChange={(e) => update("finServicio", e.target.value)}
-                            />
-                            <div>
-                                <label className="mb-1.5 block text-sm font-medium text-body">Tipo de periodo</label>
-                                <select
-                                    value={form.tipoPeriodo}
-                                    onChange={(e) => update("tipoPeriodo", e.target.value as FormState["tipoPeriodo"])}
-                                    className="w-full rounded-xl px-4 py-3 text-sm text-body glass-input ring-accent-input"
-                                >
-                                    <option value="MENSUAL">Mensual</option>
-                                    <option value="SEMESTRAL">Semestral</option>
-                                    <option value="ANUAL">Anual</option>
-                                </select>
-                            </div>
+                            {esPeriodoLibre ? (
+                                <Input
+                                    label="Fin del servicio"
+                                    type="datetime-local"
+                                    required
+                                    min={form.inicioServicio || undefined}
+                                    value={form.finServicio}
+                                    onChange={(e) => update("finServicio", e.target.value)}
+                                />
+                            ) : (
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-body">Fin del servicio</label>
+                                    <div className="w-full rounded-xl px-4 py-3 text-sm text-muted glass-input">
+                                        {finCalculado
+                                            ? `Se calcula automáticamente: ${finCalculado.toLocaleDateString("es-CO")}`
+                                            : "Se calcula automáticamente al elegir el inicio"}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </section>
 

@@ -178,6 +178,57 @@ describe("/api/admin/colegios", () => {
         const json = await res.json();
         expect(json.colegios).toHaveLength(1);
     });
+
+    it("rechaza período LIBRE con fecha fin menor o igual al inicio", async () => {
+        const admin = await crearUsuario("ADMIN");
+        const { pais, ciudad } = await crearPaisCiudad();
+        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
+
+        const hoy = new Date();
+        const body = {
+            ...baseColegio(pais.id, ciudad.id),
+            tipoPeriodo: "LIBRE",
+            inicioServicio: hoy.toISOString(),
+            finServicio: hoy.toISOString(),
+        };
+
+        const res = await POST(
+            new Request("http://localhost:5005/api/admin/colegios", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
+                body: JSON.stringify(body),
+            })
+        );
+
+        expect(res.status).toBe(400);
+    });
+
+    it("calcula la fecha fin en el servidor según el tipo de período", async () => {
+        const admin = await crearUsuario("ADMIN");
+        const { pais, ciudad } = await crearPaisCiudad();
+        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
+
+        const inicio = new Date();
+        const body = {
+            ...baseColegio(pais.id, ciudad.id),
+            tipoPeriodo: "MENSUAL",
+            inicioServicio: inicio.toISOString(),
+        };
+
+        const res = await POST(
+            new Request("http://localhost:5005/api/admin/colegios", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
+                body: JSON.stringify(body),
+            })
+        );
+
+        expect(res.status).toBe(201);
+        const json = await res.json();
+        const finEsperado = new Date(inicio.getTime());
+        finEsperado.setMonth(finEsperado.getMonth() + 1);
+        expect(new Date(json.colegio.finServicio).toISOString()).toBe(finEsperado.toISOString());
+    });
 });
 
 describe("/api/me/colegio", () => {
@@ -236,6 +287,8 @@ describe("/api/auth/login vigencia SCHOOL_ADMIN", () => {
         const body = baseColegio(pais.id, ciudad.id);
         body.inicioServicio = inicio.toISOString();
         body.finServicio = fin.toISOString();
+        // Con período LIBRE el servidor respeta las fechas manuales (vencido a propósito).
+        body.tipoPeriodo = "LIBRE";
 
         const createRes = await POST(
             new Request("http://localhost:5005/api/admin/colegios", {

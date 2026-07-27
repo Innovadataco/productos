@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
+import { GRADO_OPTIONS } from "@/lib/colegio/grados";
 
 type Curso = {
     id: string;
@@ -211,8 +213,9 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
                                             value={editForm.nombre || ""}
                                             onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
                                         />
-                                        <Input
+                                        <Select
                                             label="Grado"
+                                            options={GRADO_OPTIONS}
                                             value={editForm.grado || ""}
                                             onChange={(e) => setEditForm({ ...editForm, grado: e.target.value })}
                                         />

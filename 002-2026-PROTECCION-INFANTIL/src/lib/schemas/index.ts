@@ -69,7 +69,7 @@ export const parametroPatchBodySchema = z.object({
 });
 
 // Colegios
-export const tipoPeriodoServicioSchema = z.enum(["MENSUAL", "SEMESTRAL", "ANUAL"]);
+export const tipoPeriodoServicioSchema = z.enum(["MENSUAL", "SEMESTRAL", "ANUAL", "LIBRE"]);
 
 export const colegioBodySchema = z.object({
     nombre: z.string().min(2).max(150),
@@ -141,7 +141,7 @@ export const alumnoIdParamsSchema = z.object({
 export const etiquetaRelacionAlumnoSchema = z.enum(["ALUMNO", "MADRE", "PADRE", "PRIMO", "TUTOR", "OTRO"]);
 
 export const identificadorAlumnoBodySchema = z.object({
-    tipo: z.string().min(1).max(50),
+    tipo: z.string().min(1).max(50).optional(),
     valor: z.string().min(1).max(255),
     plataformaId: cuidIdSchema.optional(),
     etiquetaRelacion: etiquetaRelacionAlumnoSchema.optional(),
