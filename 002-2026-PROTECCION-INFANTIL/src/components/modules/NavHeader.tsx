@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -8,6 +9,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 
 export function NavHeader() {
     const { user, isLoading, logout } = useAuth();
+    const pathname = usePathname();
     const [open, setOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -67,8 +69,11 @@ export function NavHeader() {
         ? "/dashboard"
         : "/dashboard-publico";
 
-    // El logo lleva al panel del rol autenticado; sin sesión, al inicio público (C-8).
-    const logoHref = !user
+    // El logo lleva al panel del rol SOLO dentro del área autenticada (/dashboard/**).
+    // En rutas públicas va al home público aunque haya sesión (SPEC-106: un ADMIN debe
+    // poder navegar la app pública y reportar anónimamente sin que el header lo secuestre).
+    const enAreaAutenticada = pathname?.startsWith("/dashboard") ?? false;
+    const logoHref = !user || !enAreaAutenticada
         ? "/"
         : user.rol === "ADMIN" || user.rol === "OPERADOR"
         ? "/dashboard/admin"

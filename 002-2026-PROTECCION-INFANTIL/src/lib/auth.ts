@@ -154,14 +154,23 @@ export function requireSchoolAdmin() {
     return () => verifyAuth("SCHOOL_ADMIN");
 }
 
+// Spec 106: fuente única de atributos de la cookie de sesión. La creación (login) y el
+// borrado (logout) DEBEN usar los mismos atributos: un Set-Cookie de borrado sin ellos es
+// rechazado por el navegador (prefijo __Host- exige Secure + Path=/).
+export function sessionCookieAttributes(secure: boolean) {
+    return {
+        httpOnly: true,
+        secure,
+        sameSite: secure ? ("strict" as const) : ("lax" as const),
+        path: "/",
+    };
+}
+
 export async function setSessionCookie(request: Request, token: string): Promise<void> {
     const secure = isSecureRequest(request);
     const cookieStore = await cookies();
     cookieStore.set(getCookieName(secure), token, {
-        httpOnly: true,
-        secure,
-        sameSite: secure ? "strict" : "lax",
+        ...sessionCookieAttributes(secure),
         maxAge: 60 * 60 * 24,
-        path: "/",
     });
 }

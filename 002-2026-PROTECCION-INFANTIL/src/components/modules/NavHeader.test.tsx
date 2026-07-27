@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { NavHeader } from "./NavHeader";
 
+let mockPathname = "/";
+
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ push: vi.fn() }),
-    usePathname: () => "/",
+    usePathname: () => mockPathname,
 }));
 
 vi.mock("@/components/ui/ThemeToggle", () => ({
@@ -32,6 +34,22 @@ function mockAuth(user: { id: string; email: string; nombre: string; rol: string
 describe("NavHeader", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockPathname = "/";
+    });
+
+    it("logo va al home público aunque haya sesión de ADMIN en ruta pública (SPEC-106)", () => {
+        mockAuth({ id: "1", email: "admin@test.com", nombre: "Admin", rol: "ADMIN" });
+        render(<NavHeader />);
+        const logo = screen.getByText("Infantil").closest("a");
+        expect(logo?.getAttribute("href")).toBe("/");
+    });
+
+    it("logo va al panel del rol cuando el ADMIN está dentro de /dashboard/** (SPEC-106)", () => {
+        mockPathname = "/dashboard/admin";
+        mockAuth({ id: "1", email: "admin@test.com", nombre: "Admin", rol: "ADMIN" });
+        render(<NavHeader />);
+        const logo = screen.getByText("Infantil").closest("a");
+        expect(logo?.getAttribute("href")).toBe("/dashboard/admin");
     });
 
     it("botón Dashboard apunta a /dashboard para padre autenticado", () => {
