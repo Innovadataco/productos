@@ -38,4 +38,4 @@
 - [x] T051 Blindaje 2: Ollama tailnet-only verificado (curl a IP pública de la Mac → timeout); ACL de Tailscale documentada como acción pendiente del CEO (admin console).
 - [x] T052 Blindaje 3: drop-in SSH preparado (NO aplicado); aplicar solo si el CEO confirma; si no, reportar como pendiente.
 - [x] T042: gate final (lint+test+tsc+build en Mac) + healthcheck VPS + `specs/097-despliegue-hibrido-produccion/cierre.md` (evidencias, claves entregadas al CEO, pendientes como Cloudflare Access) + sección Implementación en spec.md (Status → IMPLEMENTADO pendiente ACTA) + specs/README.md.
-- [ ] T043: commits (staging explícito solo rutas del 002) + push a `feature/001-scaffolding`.
+- [x] T043: commits (staging explícito solo rutas del 002) + push a `feature/001-scaffolding`.
