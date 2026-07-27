@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-27
 
-**Status**: PLANEADO (en compuerta §4 — pendiente aprobación de ZEUS)
+**Status**: FINALIZADO (SIN desplegar, pendiente release + ACTA)
 
 **Input**: "Alta en producción: 'Cerrar sesión' no cierra la sesión. POST /api/auth/logout
 responde 200 y emite el borrado de `__Host-token` SIN el atributo `Secure`; el navegador

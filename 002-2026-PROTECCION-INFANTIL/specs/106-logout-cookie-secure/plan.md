@@ -54,9 +54,15 @@ Sin violaciones que justificar.
   (mismo helper, mismos valores).
 - `src/app/api/auth/logout/route.ts`: en vez de `delete()`, emitir para cada nombre el
   borrado explícito con atributos completos y expiración pasada:
-  `cookieStore.set(getCookieName(secure), "", { ...sessionCookieAttributes(secure), maxAge: 0 })`
+  `cookieStore.set("__Host-token", "", { ...sessionCookieAttributes(true), maxAge: 0 })`
   — y para el legacy: `cookieStore.set("token", "", { ...sessionCookieAttributes(false),
-  maxAge: 0 })`. El esquema se determina con `isSecureRequest(request)` igual que al crear.
+  maxAge: 0 })`.
+- **CORRECCIÓN ZEUS (002-PI-023)**: `__Host-token` se borra SIEMPRE con `secure: true` y
+  `path: "/"`, SIN consultar `isSecureRequest` — esa detección depende de `COOKIE_SECURE` o
+  de `x-forwarded-proto` (auth.ts:31-43); si la cabecera no llega en producción devuelve
+  false y el borrado saldría sin `Secure`, reintroduciendo I-32 solo visible en prod. El
+  prefijo `__Host-` exige `Secure` siempre, no según esquema detectado. La detección de
+  esquema queda SOLO para los atributos de la cookie legacy `token`.
 - Nota de compatibilidad: `cookieStore.set(name, "", { maxAge: 0, ...attrs })` emite
   `Set-Cookie: name=; Expires=<pasado>; <attrs>` — aceptado por el navegador porque el
   prefijo `__Host-` queda satisfecho (`Secure` + `Path=/`).
@@ -68,6 +74,9 @@ Sin violaciones que justificar.
   borrado de `__Host-token` incluye `Secure`, `Path=/` y `Expires` en el pasado; y que el
   de `token` lleva `Path=/` y expiración pasada sin exigir `Secure` (esquema legacy). El
   test NO se limita al status (el servidor siempre dijo 200).
+- **TEST ADICIONAL (corrección ZEUS)**: con la cabecera `x-forwarded-proto` AUSENTE en la
+  petición, el borrado de `__Host-token` sigue incluyendo `Secure` y `Path=/` (el borrado
+  del prefijo `__Host-` nunca depende del esquema detectado).
 
 ### 3. Logo: enrutado por rol solo dentro de /dashboard/** (FR-004/FR-005)
 
