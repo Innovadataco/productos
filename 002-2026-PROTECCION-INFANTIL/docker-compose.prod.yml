@@ -53,6 +53,8 @@ services:
     command: node scripts/worker-supervisor.mjs
     environment:
       WORKER_RUN_DIR: /app/run
+      # En la red interna de Docker la app es `app:3000` (no localhost:5005).
+      API_BASE_URL: http://app:3000
     volumes:
       - pi_worker_run:/app/run
     depends_on:
