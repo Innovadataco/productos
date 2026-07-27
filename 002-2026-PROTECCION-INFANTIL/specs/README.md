@@ -7,9 +7,9 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **87** |
+| **Total de specs** | **88** |
 | **Cerradas / Implementadas / Finalizadas** | **84** |
-| **Pendientes (planeadas / en desarrollo)** | **3** |
+| **Pendientes (planeadas / en desarrollo)** | **4** |
 
 ## Backlog activo (pendientes)
 
@@ -18,6 +18,7 @@
 | [017](017-documentacion/spec.md) | Módulo de documentación navegable | 🔵 Planeado |
 | [053](053-capa-datos-servicios/spec.md) | Feature Specification: Capa de datos / servicios (DAL) | 🔵 Planeado |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
+| [104](104-motor-indices-rubrica/spec.md) | Motor de rúbrica: votación por índices (adiós verbatim) | 🔵 Planeado (en compuerta §4) |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -105,6 +106,7 @@
 | [102](102-sello-version/spec.md) | Sello de versión (dev y prod) | 🟢 Finalizada (pendiente ACTA) |
 | [103](103-fix-fuga-pii-seguimiento/spec.md) | Fix fuga de PII en seguimiento público (I-28, Crítica) | 🟢 Finalizada (desplegada en f500f94, pendiente ACTA) |
 | [105](105-seed-admin-seguro/spec.md) | Seed del admin inicial sin credencial literal (I-31) | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
+| [104](104-motor-indices-rubrica/spec.md) | Motor de rúbrica: votación por índices (adiós verbatim) | 🔵 Planeado (en compuerta §4) |
 | [098](098-afinamiento-motor/spec.md) | Afinamiento del motor (targeting, principal por gravedad, métrica) | 🟢 Finalizada (pendiente ACTA) |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
