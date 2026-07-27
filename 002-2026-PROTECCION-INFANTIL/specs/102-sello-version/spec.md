@@ -1,6 +1,6 @@
 # Feature Specification: Sello de versión (dev y prod)
 
-**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-27 | **Status**: DESARROLLO
+**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-27 | **Status**: FINALIZADO (pendiente ACTA)
 
 ## Contexto
 

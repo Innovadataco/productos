@@ -1,6 +1,6 @@
 # Feature Specification: Afinamiento del motor (rúbrica) — targeting, principal por gravedad y métrica
 
-**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-27 | **Status**: DESARROLLO
+**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-27 | **Status**: FINALIZADO (pendiente ACTA)
 
 ## Contexto
 

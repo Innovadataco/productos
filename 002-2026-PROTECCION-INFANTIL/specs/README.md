@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-07-27** (cola 002-PI-014 en curso: specs 100/101/102/098).
+> Última actualización: **2026-07-27** (cola 002-PI-014 cerrada: 098/100/101/102 finalizadas, desplegado a prod e07890a, pendiente ACTA).
 > Estado tomado del campo `Status`/`Estado` de cada `spec.md`.
 
 ## Resumen
@@ -8,8 +8,8 @@
 | Métrica | Valor |
 |---------|-------|
 | **Total de specs** | **85** |
-| **Cerradas / Implementadas / Finalizadas** | **78** |
-| **Pendientes (planeadas / en desarrollo)** | **7** |
+| **Cerradas / Implementadas / Finalizadas** | **82** |
+| **Pendientes (planeadas / en desarrollo)** | **3** |
 
 ## Backlog activo (pendientes)
 
@@ -100,10 +100,10 @@
 | [096](096-expediente-reporte/spec.md) | Expediente del reporte — traza del modelo (rol Admin) | 🟢 Finalizada (pendiente ACTA) |
 | [097](097-despliegue-hibrido-produccion/spec.md) | Despliegue híbrido a producción (VPS + cerebro en la Mac) | 🟢 Implementada (pendiente ACTA) |
 | [099](099-rotacion-claves-i22/spec.md) | Rotación de claves filtradas + regla no-secretos (I-22) | 🟢 Finalizada (pendiente ACTA) |
-| [100](100-correcciones-colegios/spec.md) | Correcciones módulo Colegios (+ Comité) | 🟡 Desarrollo |
-| [101](101-app-publica-entorno/spec.md) | App pública y entorno (I-23 / I-24 / A-2) | 🟡 Desarrollo |
-| [102](102-sello-version/spec.md) | Sello de versión (dev y prod) | 🟡 Desarrollo |
-| [098](098-afinamiento-motor/spec.md) | Afinamiento del motor (targeting, principal por gravedad, métrica) | 🟡 Desarrollo |
+| [100](100-correcciones-colegios/spec.md) | Correcciones módulo Colegios (+ Comité) | 🟢 Finalizada (pendiente ACTA) |
+| [101](101-app-publica-entorno/spec.md) | App pública y entorno (I-23 / I-24 / A-2) | 🟢 Finalizada (pendiente ACTA) |
+| [102](102-sello-version/spec.md) | Sello de versión (dev y prod) | 🟢 Finalizada (pendiente ACTA) |
+| [098](098-afinamiento-motor/spec.md) | Afinamiento del motor (targeting, principal por gravedad, métrica) | 🟢 Finalizada (pendiente ACTA) |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 

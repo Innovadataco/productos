@@ -1,6 +1,6 @@
 # Feature Specification: App pública y entorno (I-23 / I-24 / A-2)
 
-**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-27 | **Status**: DESARROLLO
+**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-27 | **Status**: FINALIZADO (pendiente ACTA)
 
 ## Contexto
 
