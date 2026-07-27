@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-27
 
-**Status**: PLANEADO (en compuerta §4 — pendiente aprobación de ZEUS)
+**Status**: FINALIZADO (implementada; medición de reproducibilidad = B5 de la cola 002-PI-025)
 
 **Input**: "Motor: eliminar la fragilidad del match verbatim. El prompt exige copia VERBATIM
 de las preguntas y el código compara con igualdad exacta de cadena; cualquier variación de
