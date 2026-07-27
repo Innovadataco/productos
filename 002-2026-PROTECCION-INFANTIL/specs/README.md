@@ -1,15 +1,15 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-07-25** (spec 096 finalizada, pendiente ACTA).
+> Última actualización: **2026-07-26** (spec 097 en desarrollo — despliegue híbrido).
 > Estado tomado del campo `Status`/`Estado` de cada `spec.md`.
 
 ## Resumen
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **70** |
+| **Total de specs** | **71** |
 | **Cerradas / Implementadas / Finalizadas** | **68** |
-| **Pendientes (planeadas / en desarrollo)** | **2** |
+| **Pendientes (planeadas / en desarrollo)** | **3** |
 
 ## Backlog activo (pendientes)
 
@@ -18,6 +18,7 @@
 | [017](017-documentacion/spec.md) | Módulo de documentación navegable | 🔵 Planeado |
 | [053](053-capa-datos-servicios/spec.md) | Feature Specification: Capa de datos / servicios (DAL) | 🔵 Planeado |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
+| [097](097-despliegue-hibrido-produccion/spec.md) | Despliegue híbrido a producción (VPS + cerebro en la Mac) | 🟡 En desarrollo |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -98,8 +99,10 @@
 | [094](094-deuda-tecnica-documentacion/spec.md) | Deuda técnica y documentación | 🟢 Finalizada (pendiente ACTA) |
 | [095](095-default-seguro-jwt-banco/spec.md) | Default seguro, JWT parametrizado y banco gobernado | 🟢 Finalizada (pendiente ACTA) |
 | [096](096-expediente-reporte/spec.md) | Expediente del reporte — traza del modelo (rol Admin) | 🟢 Finalizada (pendiente ACTA) |
+| [097](097-despliegue-hibrido-produccion/spec.md) | Despliegue híbrido a producción (VPS + cerebro en la Mac) | 🟡 En desarrollo |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
+| [097](097-despliegue-hibrido-produccion/spec.md) | Despliegue híbrido a producción (VPS + cerebro en la Mac) | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 
