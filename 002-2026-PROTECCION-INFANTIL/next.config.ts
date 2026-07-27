@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+    // Spec 097: build standalone para la imagen Docker de producción (no afecta dev).
+    output: "standalone",
     async headers() {
         const enableHttpsHeaders = process.env.ENABLE_HTTPS_HEADERS === "true";
 

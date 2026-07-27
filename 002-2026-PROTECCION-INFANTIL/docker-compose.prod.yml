@@ -1,0 +1,58 @@
+# Spec 097 (US3): stack de producción de PI en el VPS.
+# Convive con Gesmovil: NO usa 5432 ni 80; la app solo escucha en 127.0.0.1:5005
+# (la publica el Cloudflare Tunnel). Interpolación de variables vía
+# `docker compose --env-file .env.production -f docker-compose.prod.yml ...`.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: pi-db
+    restart: always
+    environment:
+      POSTGRES_USER: proteccion
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: proteccion_infantil
+    volumes:
+      - pi_postgres_data:/var/lib/postgresql/data
+    # SIN publicación de puerto al host (refuerzo 097-seguridad-1): la BD de PI vive
+    # SOLO en la red interna de Docker; la app y el worker le hablan por `db:5432`.
+    # Nunca como el Postgres de Gesmovil (0.0.0.0:5432). Backups/debug: `docker compose exec db ...`.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U proteccion"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-app
+    restart: always
+    env_file: .env.production
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      # Solo localhost: lo publica cloudflared (pi.innovadataco.com).
+      - "127.0.0.1:5005:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-worker
+    restart: always
+    env_file: .env.production
+    # Supervisor: levanta UN worker-reportes (advisory lock en Postgres).
+    command: node scripts/worker-supervisor.mjs
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+volumes:
+  pi_postgres_data:

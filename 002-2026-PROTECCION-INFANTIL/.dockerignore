@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.specify
+.env
+.env.*
+!.env.example
+!.env.production.example
+specs
+docs
+design
+design-system
+tests
+scripts/simulacion
+*.md
+!README.md
+.DS_Store
