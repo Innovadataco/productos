@@ -137,6 +137,7 @@ async function start() {
     await ensureQueue("dataset-embedding-backfill");
     await ensureQueue("eval-classifier-run");
     await ensureQueue("simulacion-run");
+    await ensureQueue("simulacion-lote");
 
     const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
