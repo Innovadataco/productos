@@ -35,7 +35,8 @@
 | Rúbrica multi-modelo | antes | 64.5% (129/200) | 30 | 15 | 290 | 1170 |
 | Rúbrica | **después** | **70.5% (141/200)** | 18 | **4** | 115 | **625** |
 
-Resultado completo (detalle por caso): `scripts/simulacion/resultados-dual-095.json`.
+Resultado completo (detalle por caso): `scripts/simulacion/resultados-dual-095-baseline-pre098.json`
+(200 casos; el nombre `resultados-dual-095.json` lo regenera el runner en la próxima corrida completa).
 
 **Lectura**: la curaduría sube el accuracy medido de ambos motores (el banco forzaba
 etiquetas incorrectas) y, más importante, colapsa las subestimaciones de la rúbrica de 15 a
@@ -61,7 +62,7 @@ en accuracy crudo (74.5% vs 70.5%).
   texto; el export ahora usa orden determinista (`creadoEn, id`). Quedan 3 pares adyacentes
   intercambiados entre la foto "antes" y el export curado (mismo `creadoEn`, nuevo id al
   re-etiquetar): #111↔#112, #146↔#147, #149↔#150. Sin efecto en las métricas (match por
-  texto); los índices del detalle en `resultados-dual-095.json` siguen el orden del banco
+  texto); los índices del detalle en `resultados-dual-095-baseline-pre098.json` siguen el orden del banco
   curado.
 - **Corrección post-corrida**: la primera corrida normalizó la confianza de la rúbrica
   con `/100` creyéndola porcentaje, pero `calcularPorcentajes` devuelve fracciones 0–1.

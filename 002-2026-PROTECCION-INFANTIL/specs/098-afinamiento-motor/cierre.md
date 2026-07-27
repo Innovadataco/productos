@@ -68,5 +68,6 @@ preguntas es ruido. Alternativa: decisiva por índice de pregunta, no por texto.
 ## Deuda
 
 - Varianza inter-corrida alta del motor 092 (medir dos veces antes de cualquier afinamiento).
-- `resultados-dual-095.json` quedó con el subconjunto A/B de 20 casos; regenerar con la
-  próxima medición completa.
+- El subconjunto A/B de 20 casos quedó archivado como `resultados-ab-098-20casos.json`
+  (renombrado tras el cierre para no inducir a error: NO es la corrida de 200 de la 095);
+  `resultados-dual-095.json` lo regenera el runner en la próxima medición completa.
