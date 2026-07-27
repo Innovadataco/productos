@@ -100,7 +100,8 @@ docs/               # ARCHITECTURE.md, cierres, evidencia
 
 ## Seguridad
 
-- Cifrado en reposo del texto original del reporte con AES-256-GCM (`src/lib/param-encryption.ts`); claves solo en variables de entorno.
+- **REGLA DURA (I-22, spec 099): NUNCA escribir valores de secretos en commits, `cierre.md`, specs, docs ni en el chat** — ni siquiera "para entregar al CEO". Los valores viven SOLO en: (a) `.env` fuera de git (dev en la Mac, prod en el VPS) y (b) el gestor de contraseñas del CEO. En documentos y chat se escribe SIEMPRE un puntero: "entregado al CEO por canal seguro; ver `INVENTARIO-DE-SECRETOS.md` (repo de gestión)". Si una clave se expone, se rota de inmediato y se reporta.
+- Cifrado en reposo del texto original del reporte con AES-256-GCM (`src/lib/param-encryption.ts`); claves solo en variables de entorno. `PARAM_ENCRYPTION_KEY` acepta base64 de 32 bytes o string UTF-8 de 32 chars (NO hex).
 - Rate limiting en PostgreSQL con scopes configurables vía `ParametroSistema` (`ratelimit.{scope}.*`); fail-open con log si el limitador falla.
 - Headers de seguridad en `next.config.ts` (CSP, X-Frame-Options, etc.); HSTS y `upgrade-insecure-requests` solo con `ENABLE_HTTPS_HEADERS=true`.
 - Cookies `httpOnly`, `secure` en HTTPS, `SameSite`; JWT de 24 h.

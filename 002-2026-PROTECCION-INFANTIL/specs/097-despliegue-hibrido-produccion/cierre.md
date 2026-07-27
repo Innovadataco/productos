@@ -14,10 +14,12 @@
   `restart: always` en todo. Migraciones (50) aplicadas; seed limpio ejecutado (BD de prod
   NUEVA, sin datos de la Mac). Imágenes etiquetadas por commit (`pi-app:<sha>` + `latest`).
 - **US4 — Secretos**: `.env.production` (600, root) solo en el VPS, valores fuertes aleatorios.
-  **Claves para respaldo del CEO (fuera del VPS)**:
-  - `PARAM_ENCRYPTION_KEY=iiuGLjIufM0PgYHSZd8c5YTypioyBRgGR6CX33n0KOk=` ← VIGENTE (cifra los textos de reportes).
-  - `ENCRYPTION_KEY=c9c0516d916a2c0bcd27b90f52e3459b74f6723b4ea1d4d673bcebad0869da57` (definida en el env pero SIN consumidor en el código actual; ver deuda).
-  - La primera `PARAM_ENCRYPTION_KEY` hex generada se descartó (formato inválido: el parser exige base64-32B o string de 32 chars; nunca cifró datos).
+  **Claves entregadas al CEO por canal seguro para su gestor; los valores NO van en git ni
+  en este documento** (ver `INVENTARIO-DE-SECRETOS.md` en el repo de gestión).
+  ⚠️ Las claves originales del despliegue fueron ROTADAS el 2026-07-27 (spec 099, I-22) por
+  haber quedado expuestas en este archivo; las que aquí aparecieron están muertas.
+  - Nota de formato: `PARAM_ENCRYPTION_KEY` exige base64 de 32 bytes o string UTF-8 de 32
+    chars (NO hex); la primera generada en hex se descartó sin cifrar datos.
 - **US5 — Cerebro híbrido**: Mac expone Ollama SOLO a la tailnet (`tailscale serve --bg
   --tcp=11434 tcp://localhost:11434`, sin Funnel). `OLLAMA_BASE_URL=http://100.91.87.86:11434`
   en el VPS. Worker reporta `Ollama health: OK`.
