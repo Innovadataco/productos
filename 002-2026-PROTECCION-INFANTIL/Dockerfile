@@ -22,7 +22,8 @@ COPY . .
 # vía env_file (.env.production); NUNCA secretos en la imagen.
 ENV RESEND_API_KEY=build-placeholder \
     EMAIL_FROM=build@placeholder.local \
-    DATABASE_URL=postgresql://build:build@localhost:5432/build
+    DATABASE_URL=postgresql://build:build@localhost:5432/build \
+    ENABLE_HTTPS_HEADERS=true
 RUN npx prisma generate && npm run build
 
 FROM node:22-alpine AS runner
