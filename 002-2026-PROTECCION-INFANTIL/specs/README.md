@@ -101,6 +101,7 @@
 | [097](097-despliegue-hibrido-produccion/spec.md) | Despliegue híbrido a producción (VPS + cerebro en la Mac) | 🟢 Implementada (pendiente ACTA) |
 | [099](099-rotacion-claves-i22/spec.md) | Rotación de claves filtradas + regla no-secretos (I-22) | 🟢 Finalizada (pendiente ACTA) |
 | [100](100-correcciones-colegios/spec.md) | Correcciones módulo Colegios (+ Comité) | 🟡 Desarrollo |
+| [101](101-app-publica-entorno/spec.md) | App pública y entorno (I-23 / I-24 / A-2) | 🟡 Desarrollo |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 

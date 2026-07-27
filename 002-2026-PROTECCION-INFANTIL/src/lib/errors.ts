@@ -7,6 +7,7 @@ export const ERROR_CODES = {
     CONFLICT: "CONFLICT",
     RATE_LIMITED: "RATE_LIMITED",
     INTERNAL_ERROR: "INTERNAL_ERROR",
+    SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
 } as const;
 
 export class AppError extends Error {

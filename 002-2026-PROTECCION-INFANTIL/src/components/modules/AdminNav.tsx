@@ -66,7 +66,7 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
 function InboxIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5 0c0-4.142 3.358-7.5 7.5-7.5h6.75c4.142 0 7.5 3.358 7.5 7.5m-19.5 0v2.25a2.25 2.25 0 002.25 2.25h15a2.25-2.25V13.5m-19.5 0h19.5" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5 0c0-4.142 3.358-7.5 7.5-7.5h6.75c4.142 0 7.5 3.358 7.5 7.5m-19.5 0v2.25a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25V13.5m-19.5 0h19.5" />
         </svg>
     );
 }

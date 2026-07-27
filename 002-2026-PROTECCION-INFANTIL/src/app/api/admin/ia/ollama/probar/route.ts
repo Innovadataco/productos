@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { listOllamaModels, isLocalOllamaUrl } from "@/lib/ai/ollama-config";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
-import { withValidation } from "@/lib/validation";
-import { ollamaProbarBodySchema } from "@/lib/schemas";
+import { getOllamaBaseUrl, listOllamaModels, isLocalOllamaUrl } from "@/lib/ai/ollama-config";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { RolUsuario } from "@prisma/client";
 
 export async function POST(request: Request) {
@@ -21,7 +19,10 @@ export async function POST(request: Request) {
             );
         }
 
-        const { url } = await withValidation.body(ollamaProbarBodySchema)(request);
+        // Fuente única de la URL de Ollama (I-24): el parámetro de sistema
+        // system.ollama_base_url / OLLAMA_BASE_URL vía getOllamaBaseUrl.
+        // Nunca se sondea una URL enviada por el cliente.
+        const url = await getOllamaBaseUrl();
         if (!isLocalOllamaUrl(url)) {
             throw new AppError(
                 "los textos de reportes solo pueden procesarse en entorno local/privado (R2)",
@@ -30,7 +31,18 @@ export async function POST(request: Request) {
             );
         }
 
-        const models = await listOllamaModels(url);
+        let models;
+        try {
+            models = await listOllamaModels(url);
+        } catch (ollamaError) {
+            // Degradación controlada: un cerebro inalcanzable no es una excepción no controlada.
+            console.error("[IA-OLLAMA-PROBAR] Ollama inalcanzable:", ollamaError);
+            return NextResponse.json(
+                { ok: false, error: { message: "Ollama inalcanzable", code: ERROR_CODES.SERVICE_UNAVAILABLE } },
+                { status: 503 }
+            );
+        }
+
         return NextResponse.json({
             ok: true,
             url,
@@ -42,9 +54,9 @@ export async function POST(request: Request) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        console.error("[IA-OLLAMA-PROBAR] Error conectando con Ollama:", error);
+        console.error("[IA-OLLAMA-PROBAR] Error en sondeo de Ollama:", error);
         return NextResponse.json(
-            { error: { message: "No se pudo conectar con Ollama", code: ERROR_CODES.INTERNAL_ERROR } },
+            { error: { message: "No se pudo completar el sondeo de Ollama", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }
         );
     }
