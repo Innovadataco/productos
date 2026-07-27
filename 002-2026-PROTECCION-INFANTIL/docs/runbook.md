@@ -629,6 +629,39 @@ Los valores deben ser legibles (no comenzar con `enc:`). Si no lo son, revisar b
 
 ---
 
+## 12b. Rotación de la credencial del admin inicial (spec 105, I-31)
+
+> **Quién**: la ejecuta el CEO personalmente (Metodología §7). Este documento es solo el
+> procedimiento; no contiene valores.
+
+Contexto: el seed crea el admin inicial SOLO desde `SEED_ADMIN_PASSWORD` (sin default) y
+SOLO si no existe; nunca pisa una credencial ya rotada (`create` puro, sin `update:`).
+
+### Si el admin de producción quedó con una contraseña comprometida (publicada en el repo)
+
+1. **Rotar la credencial viva** (elige una):
+   - Desde la UI: entrar con la contraseña actual y usar el flujo de cambio de contraseña
+     (si el admin quedó con `debeCambiarPassword=true`, el sistema lo fuerza en el primer
+     ingreso); o
+   - Como otro ADMIN: forzar restablecimiento desde el panel de usuarios, si está
+     disponible; o
+   - Directo en BD (último recurso): generar hash nuevo con bcrypt(12) y actualizar
+     `passwordHash` + `debeCambiarPassword=true` para ese usuario.
+2. **Verificar** que el hash en BD cambió y que el login viejo ya no entra.
+3. **Guardar la nueva contraseña** en el gestor del CEO (respaldo maestro). Nunca en git,
+   nunca en el chat (regla I-22).
+4. **La contraseña vieja queda muerta**: si estuvo expuesta en git, el historial la conserva
+   pero ya no sirve; la limpieza del historial es higiene secundaria (decisión de ZEUS).
+
+### Antes de correr el seed en producción (p.ej. en un deploy con seed)
+
+- Definir `SEED_ADMIN_PASSWORD` en el entorno del VPS SOLO si se quiere crear el admin
+  inicial en una base vacía. En una base ya operada, el seed dirá "existente, sin cambios"
+  y no tocará la credencial rotada — no hace falta definirla.
+- Sin `SEED_ADMIN_PASSWORD`, el seed omite el admin con log y completa el resto sin error.
+
+---
+
 ## 13. Contacto y escalamiento
 
 - Si reiniciar Ollama/worker/app no resuelve el problema: revisar `app.log` y `worker.log`.

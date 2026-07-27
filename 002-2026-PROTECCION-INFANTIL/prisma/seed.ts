@@ -8,26 +8,37 @@ import path from "path";
 const prisma = new PrismaClient();
 
 async function main() {
-    // Admin de prueba para desarrollo (solo desarrollo; cambiar/eliminar antes de producción)
-    const adminEmail = "soporte@innovadataco.com";
-    const adminPassword = "Admin123!Test";
-    await prisma.usuario.upsert({
-        where: { email: adminEmail },
-        update: {
-            passwordHash: await bcrypt.hash(adminPassword, 12),
-            estado: "activo",
-            debeCambiarPassword: false,
-        },
-        create: {
-            email: adminEmail,
-            nombre: "Administrador",
-            passwordHash: await bcrypt.hash(adminPassword, 12),
-            rol: RolUsuario.ADMIN,
-            estado: "activo",
-            debeCambiarPassword: false,
-        },
+    // Admin inicial: SOLO desde variable de entorno, SOLO si no existe (spec 105, I-31).
+    // Nunca un literal en el repo; el seed nunca pisa una credencial ya rotada.
+    const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "soporte@innovadataco.com";
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "";
+    const minLengthParam = await prisma.parametroSistema.findUnique({
+        where: { clave: "security.password_min_length" },
     });
-    console.log("Admin de prueba creado/actualizado");
+    const minLength = Number.isFinite(parseInt(minLengthParam?.valor ?? ""))
+        ? parseInt(minLengthParam!.valor)
+        : 12;
+
+    if (adminPassword.trim().length < minLength) {
+        console.log(`[SEED] Admin omitido: SEED_ADMIN_PASSWORD no definida o débil (mínimo ${minLength} caracteres).`);
+    } else {
+        const existente = await prisma.usuario.findUnique({ where: { email: adminEmail } });
+        if (existente) {
+            console.log("[SEED] Admin existente, sin cambios (el seed nunca pisa credenciales).");
+        } else {
+            await prisma.usuario.create({
+                data: {
+                    email: adminEmail,
+                    nombre: "Administrador",
+                    passwordHash: await bcrypt.hash(adminPassword, 12),
+                    rol: RolUsuario.ADMIN,
+                    estado: "activo",
+                    debeCambiarPassword: true,
+                },
+            });
+            console.log("[SEED] Admin inicial creado (debeCambiarPassword=true).");
+        }
+    }
 
     // Default parameters
     const defaults = [
