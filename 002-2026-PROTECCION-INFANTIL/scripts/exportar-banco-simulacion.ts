@@ -7,9 +7,11 @@ import fs from "fs";
 import { prisma } from "../src/lib/prisma";
 
 async function main() {
+    // Spec 095 (curaduría): el banco v2 mezcla SEMILLA (casos intactos) y MANUAL_ADMIN
+    // (re-etiquetados por adjudicación); los 110 de fixtureVersion=1 quedan fuera por versión.
     const casos = await prisma.casoEval.findMany({
-        where: { fuente: "SEMILLA", fixtureVersion: 2, activo: true },
-        orderBy: { creadoEn: "asc" },
+        where: { fixtureVersion: 2, activo: true },
+        orderBy: [{ creadoEn: "asc" }, { id: "asc" }],
     });
     const salida = {
         fixtureVersion: 2,

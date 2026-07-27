@@ -2,8 +2,10 @@
 
 > Casos donde los 3 modelos (3/3) contradicen la etiqueta actual del banco.
 > Trabajo de ZEUS + CEO + experto: adjudicar la etiqueta correcta y la razón.
-> **No decidir aquí** — las columnas finales quedan vacías a propósito.
-> Generada: 2026-07-24 · casos: 42
+> **42/42 adjudicados (2026-07-24)**: 28 por las 3 reglas de taxonomía (D-24) + 14 por el CEO actuando de experto.
+> Fuente de verdad: `Gestion-de-proyectos/.../05-ENTREGABLES/ADJUDICACION-BANCO-PRIMERA-PASADA.md`.
+> #149 queda con etiqueta PROVISIONAL pendiente de confirmación legal (material de menor generado con IA).
+> Generada: 2026-07-24 · casos: 42 · Adjudicada: 2026-07-24
 
 ## Caso #5
 
@@ -14,8 +16,8 @@
   - gemma2:27b: SOLICITUD_MATERIAL, OFRECIMIENTO_REGALOS
   - qwen2.5:14b: SOLICITUD_MATERIAL, OFRECIMIENTO_REGALOS
   - aya-expanse:32b: SOLICITUD_MATERIAL, OFRECIMIENTO_REGALOS
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SOLICITUD_MATERIAL (secundaria: OFRECIMIENTO_REGALOS)
+- **Razón**: Tipo 1 (multi-etiqueta): el regalo es el gancho; la solicitud de material es la conducta grave. Principal del banco correcta, se agrega la secundaria.
 
 ## Caso #28
 
@@ -26,8 +28,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: DOXING
+- **Razón**: Regla 2 (doxing↔difusión): dirección del colegio + rutina diaria = información que localiza al menor. Banco correcto.
 
 ## Caso #43
 
@@ -38,8 +40,8 @@
   - gemma2:27b: CONTACTO_INSISTENTE
   - qwen2.5:14b: CONTACTO_INSISTENTE
   - aya-expanse:32b: SOLICITUD_MATERIAL, CONTACTO_INSISTENTE
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SOLICITUD_MATERIAL (secundaria: CONTACTO_INSISTENTE)
+- **Razón**: Adjudicado por el CEO (experto): pedir acceso visual íntimo en vivo a un menor es solicitud de material. Intención a validar por experto.
 
 ## Caso #44
 
@@ -50,8 +52,8 @@
   - gemma2:27b: SOLICITUD_MATERIAL, OFRECIMIENTO_REGALOS
   - qwen2.5:14b: OFRECIMIENTO_REGALOS
   - aya-expanse:32b: SOLICITUD_MATERIAL, OFRECIMIENTO_REGALOS
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SOLICITUD_MATERIAL (secundaria: OFRECIMIENTO_REGALOS)
+- **Razón**: Tipo 1: ofrece dinero por fotos; la solicitud es la conducta grave y el pago es el gancho.
 
 ## Caso #67
 
@@ -62,8 +64,8 @@
   - gemma2:27b: CONTACTO_INSISTENTE
   - qwen2.5:14b: CONTACTO_INSISTENTE
   - aya-expanse:32b: SOLICITUD_MATERIAL, CONTACTO_INSISTENTE
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SOLICITUD_MATERIAL (secundaria: CONTACTO_INSISTENTE)
+- **Razón**: Adjudicado por el CEO (experto): un adulto desconocido insistiendo días en fotos de una niña de 12 es solicitud de material en curso; el 'todavía no explícito' no la desactiva.
 
 ## Caso #75
 
@@ -74,8 +76,8 @@
   - gemma2:27b: SOLICITUD_MATERIAL, EXTORSION
   - qwen2.5:14b: SOLICITUD_MATERIAL
   - aya-expanse:32b: SOLICITUD_MATERIAL, EXTORSION
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SOLICITUD_MATERIAL (secundaria: OFRECIMIENTO_REGALOS)
+- **Razón**: Regla 3 (método vs conducta) / Tipo 1: ofrece dinero por videos con secreto a una menor de 15; la conducta grave es la solicitud. El modelo acertaba más que el banco.
 
 ## Caso #95
 
@@ -86,8 +88,8 @@
   - gemma2:27b: SOLICITUD_ENCUENTRO, CONTACTO_INSISTENTE
   - qwen2.5:14b: SOLICITUD_ENCUENTRO, CONTACTO_INSISTENTE
   - aya-expanse:32b: SOLICITUD_ENCUENTRO, CONTACTO_INSISTENTE
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SOLICITUD_ENCUENTRO (secundaria: CONTACTO_INSISTENTE)
+- **Razón**: Tipo 1: cita con secreto ('que lo espere sola', 'sin avisarle a su mamá'); los 3 modelos votaron ambas conductas.
 
 ## Caso #97
 
@@ -98,8 +100,8 @@
   - gemma2:27b: SOLICITUD_ENCUENTRO, CONTACTO_INSISTENTE
   - qwen2.5:14b: CONTACTO_INSISTENTE
   - aya-expanse:32b: SOLICITUD_ENCUENTRO, CONTACTO_INSISTENTE
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SOLICITUD_ENCUENTRO (secundaria: CONTACTO_INSISTENTE)
+- **Razón**: Tipo 1: insiste cada semana en conocerla en persona y ya sabe el barrio.
 
 ## Caso #98
 
@@ -110,8 +112,8 @@
   - gemma2:27b: SOLICITUD_ENCUENTRO, CONTACTO_INSISTENTE
   - qwen2.5:14b: SOLICITUD_ENCUENTRO, CONTACTO_INSISTENTE
   - aya-expanse:32b: SOLICITUD_ENCUENTRO, CONTACTO_INSISTENTE
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SOLICITUD_ENCUENTRO (secundaria: CONTACTO_INSISTENTE)
+- **Razón**: Tipo 1: quiere verla salir del colegio y pregunta hora y ruta; solicitud de encuentro en preparación.
 
 ## Caso #102
 
@@ -122,8 +124,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: COMPARTIMIENTO_SEXUAL, DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: COMPARTIMIENTO_SEXUAL (secundaria: DIFUSION_NO_CONSENTIDA)
+- **Razón**: Regla 1 (contenido sexual de menor): difusión sin amenaza → COMPARTIMIENTO_SEXUAL principal por ser material de una menor.
 
 ## Caso #103
 
@@ -134,8 +136,8 @@
   - gemma2:27b: COMPARTIMIENTO_SEXUAL, DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: COMPARTIMIENTO_SEXUAL, DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: COMPARTIMIENTO_SEXUAL (secundaria: DIFUSION_NO_CONSENTIDA)
+- **Razón**: Regla 1: el ex publicó fotos íntimas de una menor, ya guardadas y compartidas.
 
 ## Caso #104
 
@@ -146,8 +148,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: COMPARTIMIENTO_SEXUAL, DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: COMPARTIMIENTO_SEXUAL (secundaria: DIFUSION_NO_CONSENTIDA)
+- **Razón**: Regla 1: grupo repartiendo imágenes íntimas de niñas; red de distribución, prioridad.
 
 ## Caso #105
 
@@ -158,8 +160,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA, EXTORSION
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA, EXTORSION
   - aya-expanse:32b: DIFUSION_NO_CONSENTIDA, EXTORSION
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: COMPARTIMIENTO_SEXUAL (secundaria: DIFUSION_NO_CONSENTIDA)
+- **Razón**: Adjudicado por el CEO: principal COMPARTIMIENTO_SEXUAL (repartió el video íntimo); la amenaza si habla suma EXTORSION (tercera conducta, fuera del par principal/secundaria).
 
 ## Caso #106
 
@@ -170,8 +172,8 @@
   - gemma2:27b: COMPARTIMIENTO_SEXUAL, SOLICITUD_MATERIAL
   - qwen2.5:14b: SOLICITUD_MATERIAL
   - aya-expanse:32b: COMPARTIMIENTO_SEXUAL, SOLICITUD_MATERIAL
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SOLICITUD_MATERIAL (secundaria: COMPARTIMIENTO_SEXUAL)
+- **Razón**: Regla 1: hay solicitud ('le pide que él también mande fotos') → SOLICITUD_MATERIAL principal; el reenvío de material queda de secundaria.
 
 ## Caso #107
 
@@ -182,8 +184,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: COMPARTIMIENTO_SEXUAL, DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: COMPARTIMIENTO_SEXUAL (secundaria: DIFUSION_NO_CONSENTIDA)
+- **Razón**: Regla 1: mostró las fotos íntimas a amigos en el celular; difusión acotada sin amenaza.
 
 ## Caso #108
 
@@ -194,8 +196,8 @@
   - gemma2:27b: EXTORSION
   - qwen2.5:14b: EXTORSION
   - aya-expanse:32b: EXTORSION
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: EXTORSION (secundaria: COMPARTIMIENTO_SEXUAL)
+- **Razón**: Regla 1: sextorsión — amenaza explícita de publicar si no vuelve con él. Aquí el modelo (EXTORSION) acertaba más que el banco.
 
 ## Caso #109
 
@@ -206,8 +208,8 @@
   - gemma2:27b: SOLICITUD_MATERIAL
   - qwen2.5:14b: SOLICITUD_MATERIAL, DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: COMPARTIMIENTO_SEXUAL, SOLICITUD_MATERIAL, DIFUSION_NO_CONSENTIDA, DOXING
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: COMPARTIMIENTO_SEXUAL (secundaria: SOLICITUD_MATERIAL)
+- **Razón**: Regla 1: grupo que pide y reparte 'packs' de niñas con nombre y curso (también DOXING como tercera conducta). Muy grave.
 
 ## Caso #110
 
@@ -218,8 +220,8 @@
   - gemma2:27b: EXTORSION
   - qwen2.5:14b: SOLICITUD_MATERIAL, EXTORSION
   - aya-expanse:32b: SOLICITUD_MATERIAL, EXTORSION, DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: EXTORSION (secundaria: SOLICITUD_MATERIAL)
+- **Razón**: Regla 1: sextorsión — difunde lo que tiene si no manda más (también COMPARTIMIENTO_SEXUAL como tercera conducta).
 
 ## Caso #111
 
@@ -230,8 +232,8 @@
   - gemma2:27b: EXTORSION
   - qwen2.5:14b: EXTORSION
   - aya-expanse:32b: EXTORSION, DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: EXTORSION (secundaria: COMPARTIMIENTO_SEXUAL)
+- **Razón**: Regla 1: sextorsión — amenaza con subir el material para forzar un encuentro (SOLICITUD_ENCUENTRO como tercera conducta).
 
 ## Caso #112
 
@@ -242,8 +244,8 @@
   - gemma2:27b: SUPLANTACION_IDENTIDAD
   - qwen2.5:14b: SUPLANTACION_IDENTIDAD
   - aya-expanse:32b: SUPLANTACION_IDENTIDAD, DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: OTRO
+- **Razón**: Tipo 3 (banco correcto): suplantación de superficie benigna y resuelta (broma familiar, se disculpa y borra).
 
 ## Caso #117
 
@@ -254,8 +256,8 @@
   - gemma2:27b: CONTACTO_INSISTENTE
   - qwen2.5:14b: CONTACTO_INSISTENTE
   - aya-expanse:32b: CONTACTO_INSISTENTE
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: OTRO
+- **Razón**: Tipo 3 (banco correcto): insistente pero académico y entre pares del mismo salón.
 
 ## Caso #118
 
@@ -266,8 +268,8 @@
   - gemma2:27b: OFRECIMIENTO_REGALOS
   - qwen2.5:14b: OFRECIMIENTO_REGALOS
   - aya-expanse:32b: OFRECIMIENTO_REGALOS
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: OTRO
+- **Razón**: Tipo 3 (banco correcto): regalo de cumpleaños familiar sin 'a cambio de'; la rúbrica disparó sin la pregunta decisiva.
 
 ## Caso #122
 
@@ -278,8 +280,8 @@
   - gemma2:27b: CONTACTO_INSISTENTE
   - qwen2.5:14b: CONTACTO_INSISTENTE
   - aya-expanse:32b: CONTACTO_INSISTENTE
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: OTRO
+- **Razón**: Tipo 3 (banco correcto): videollamadas familiares con los papás presentes; el contexto anula el riesgo.
 
 ## Caso #123
 
@@ -290,8 +292,8 @@
   - gemma2:27b: SUPLANTACION_IDENTIDAD
   - qwen2.5:14b: SUPLANTACION_IDENTIDAD
   - aya-expanse:32b: OFRECIMIENTO_REGALOS, SUPLANTACION_IDENTIDAD
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SPAM
+- **Razón**: Tipo 3 (banco correcto): suplanta una marca (no a una persona) para pescar datos; estafa masiva no dirigida al menor. Límite con SUPLANTACION_IDENTIDAD.
 
 ## Caso #131
 
@@ -302,8 +304,8 @@
   - gemma2:27b: CONTACTO_INSISTENTE, EXTORSION
   - qwen2.5:14b: CONTACTO_INSISTENTE, SUPLANTACION_IDENTIDAD, EXTORSION
   - aya-expanse:32b: CONTACTO_INSISTENTE, EXTORSION
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: EXTORSION (secundaria: CONTACTO_INSISTENTE)
+- **Razón**: Tipo 1: secuestro virtual ('tenemos a tu hijo, consigna'); los 3 modelos votaron EXTORSION y el colapso a una etiqueta eligió la leve.
 
 ## Caso #135
 
@@ -314,8 +316,8 @@
   - gemma2:27b: EXTORSION, COMPARTIMIENTO_SEXUAL, DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: EXTORSION, COMPARTIMIENTO_SEXUAL, DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: EXTORSION, COMPARTIMIENTO_SEXUAL, DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: EXTORSION (secundaria: DIFUSION_NO_CONSENTIDA)
+- **Razón**: Regla 1: sextorsión — exige dinero, ya difundió una foto y amenaza con el resto (COMPARTIMIENTO_SEXUAL como tercera conducta). Se invierte principal/secundaria del banco.
 
 ## Caso #138
 
@@ -326,8 +328,8 @@
   - gemma2:27b: SUPLANTACION_IDENTIDAD
   - qwen2.5:14b: SUPLANTACION_IDENTIDAD, EXTORSION
   - aya-expanse:32b: SUPLANTACION_IDENTIDAD
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: EXTORSION (secundaria: SUPLANTACION_IDENTIDAD)
+- **Razón**: Regla 3 (método vs conducta): la voz con IA es el método; la conducta es la extorsión (CONTENIDO_GENERADO_IA como tercera conducta).
 
 ## Caso #146
 
@@ -338,8 +340,8 @@
   - gemma2:27b: SUPLANTACION_IDENTIDAD
   - qwen2.5:14b: SUPLANTACION_IDENTIDAD
   - aya-expanse:32b: SUPLANTACION_IDENTIDAD
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SUPLANTACION_IDENTIDAD (secundaria: CONTENIDO_GENERADO_IA)
+- **Razón**: Regla 3: el banco etiquetó por el método (IA); la conducta es la suplantación de un compañero para sacar datos.
 
 ## Caso #149
 
@@ -350,8 +352,8 @@
   - gemma2:27b: CONTENIDO_GENERADO_IA, COMPARTIMIENTO_SEXUAL
   - qwen2.5:14b: CONTENIDO_GENERADO_IA, COMPARTIMIENTO_SEXUAL
   - aya-expanse:32b: CONTENIDO_GENERADO_IA, COMPARTIMIENTO_SEXUAL
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: COMPARTIMIENTO_SEXUAL (secundaria: DIFUSION_NO_CONSENTIDA)
+- **Razón**: CEO: aprobada de forma PROVISIONAL — material sexual de menor generado con IA, ya difundido (CONTENIDO_GENERADO_IA como tercera conducta). PENDIENTE de confirmación legal antes de producción (frente R08).
 
 ## Caso #169
 
@@ -362,8 +364,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: DOXING
+- **Razón**: Regla 2: fachada de la casa + dirección exacta = información que localiza. Banco correcto.
 
 ## Caso #171
 
@@ -374,8 +376,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA, DOXING
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA, DOXING
   - aya-expanse:32b: DIFUSION_NO_CONSENTIDA, DOXING
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: DOXING (secundaria: DIFUSION_NO_CONSENTIDA)
+- **Razón**: Regla 2 / Tipo 1: nombre completo + colegio identifican y localizan a la menor; los 3 modelos votaron DOXING.
 
 ## Caso #172
 
@@ -386,8 +388,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: CONTACTO_INSISTENTE, DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: DOXING (secundaria: CONTACTO_INSISTENTE)
+- **Razón**: Regla 2: difundir el número del niño lo localiza; el acoso resultante de desconocidos va como secundaria.
 
 ## Caso #174
 
@@ -398,8 +400,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: DOXING
+- **Razón**: Regla 2: ubicación en tiempo real compartida = localización directa. Banco correcto.
 
 ## Caso #175
 
@@ -410,8 +412,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: DOXING
+- **Razón**: Regla 2: foto con uniforme que permite identificar colegio, grado y profesor. Banco correcto.
 
 ## Caso #178
 
@@ -422,8 +424,8 @@
   - gemma2:27b: OFRECIMIENTO_REGALOS
   - qwen2.5:14b: CONTACTO_INSISTENTE, OFRECIMIENTO_REGALOS
   - aya-expanse:32b: CONTACTO_INSISTENTE, OFRECIMIENTO_REGALOS
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SPAM
+- **Razón**: Tipo 3 (banco correcto): publicidad masiva de 'inversiones', no dirigida al menor.
 
 ## Caso #180
 
@@ -434,8 +436,8 @@
   - gemma2:27b: CONTACTO_INSISTENTE
   - qwen2.5:14b: CONTACTO_INSISTENTE
   - aya-expanse:32b: CONTACTO_INSISTENTE
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SPAM
+- **Razón**: Tipo 3 (banco correcto): mensaje copiado masivo de votos/likes; no es acoso interpersonal.
 
 ## Caso #184
 
@@ -446,8 +448,8 @@
   - gemma2:27b: OFRECIMIENTO_REGALOS
   - qwen2.5:14b: OFRECIMIENTO_REGALOS
   - aya-expanse:32b: OFRECIMIENTO_REGALOS
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SPAM
+- **Razón**: Tipo 3 (banco correcto): esquema piramidal masivo; no dirigido al menor.
 
 ## Caso #185
 
@@ -458,8 +460,8 @@
   - gemma2:27b: CONTACTO_INSISTENTE
   - qwen2.5:14b: CONTACTO_INSISTENTE
   - aya-expanse:32b: CONTACTO_INSISTENTE
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SPAM
+- **Razón**: Tipo 3 (banco correcto): anuncio repetido masivo de tareas por plata; correo no deseado.
 
 ## Caso #188
 
@@ -470,8 +472,8 @@
   - gemma2:27b: OFRECIMIENTO_REGALOS
   - qwen2.5:14b: OFRECIMIENTO_REGALOS
   - aya-expanse:32b: OFRECIMIENTO_REGALOS
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: SPAM
+- **Razón**: Tipo 3 (banco correcto): cadena de encuestas con premios; publicidad masiva.
 
 ## Caso #193
 
@@ -482,8 +484,8 @@
   - gemma2:27b: OFRECIMIENTO_REGALOS
   - qwen2.5:14b: OFRECIMIENTO_REGALOS
   - aya-expanse:32b: OFRECIMIENTO_REGALOS
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: OTRO
+- **Razón**: Tipo 3 (banco correcto): nada concreto; es el límite donde la revisión humana vale (política de cautela).
 
 ## Caso #197
 
@@ -494,8 +496,8 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: OTRO
+- **Razón**: Tipo 3 (banco correcto): falso positivo por 'niños en vestido de baño'; fotos familiares con papás presentes.
 
 ## Caso #200
 
@@ -506,5 +508,5 @@
   - gemma2:27b: DIFUSION_NO_CONSENTIDA
   - qwen2.5:14b: DIFUSION_NO_CONSENTIDA
   - aya-expanse:32b: DIFUSION_NO_CONSENTIDA
-- **Etiqueta adjudicada**: _(vacío)_
-- **Razón**: _(vacío)_
+- **Etiqueta adjudicada**: OTRO
+- **Razón**: Tipo 3 (banco correcto): stickers/filtros entre amigas sin mala intención.
