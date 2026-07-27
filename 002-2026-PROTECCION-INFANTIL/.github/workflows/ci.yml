@@ -1,0 +1,51 @@
+# SPEC-107 (cola 025, B3-c): CI mínimo como compuerta real — tsc + lint + test + build.
+# Alcance: SOLO el producto 002-2026-PROTECCION-INFANTIL (monorepo por productos).
+name: ci-002-proteccion-infantil
+
+on:
+  push:
+    branches: [feature/001-scaffolding]
+    paths:
+      - "002-2026-PROTECCION-INFANTIL/**"
+  pull_request:
+    paths:
+      - "002-2026-PROTECCION-INFANTIL/**"
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: proteccion
+          POSTGRES_PASSWORD: proteccion_ci
+          POSTGRES_DB: proteccion_infantil_test
+        ports:
+          - "5433:5432"
+        options: >-
+          --health-cmd "pg_isready -U proteccion"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_ci@localhost:5433/proteccion_infantil_test
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      # La suite comparte una única Postgres (fileParallelism: false en vitest.config).
+      # Los tests que llaman modelos van con mocks; si alguno requiriese Ollama en CI,
+      # se documenta en el cierre de la SPEC-107 (regla 8: no improvisar).
+      - run: npm run test
+      - run: npm run build

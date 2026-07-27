@@ -7,7 +7,7 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **89** |
+| **Total de specs** | **90** |
 | **Cerradas / Implementadas / Finalizadas** | **86** |
 | **Pendientes (planeadas / en desarrollo)** | **3** |
 
@@ -18,7 +18,8 @@
 | [017](017-documentacion/spec.md) | Módulo de documentación navegable | 🔵 Planeado |
 | [053](053-capa-datos-servicios/spec.md) | Feature Specification: Capa de datos / servicios (DAL) | 🔵 Planeado |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
-| [106](106-logout-cookie-secure/spec.md) | Cerrar sesión de verdad (cookie __Host- y logo público) | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
+| [106](106-logout-cookie-secure/spec.md) | Cerrar sesión de verdad (cookie __Host- y logo público) | 🟢 Finalizada (desplegada en d130e46, pendiente ACTA) |
+| [107](107-gate-antirrecaidas/spec.md) | El gate que evita recaídas (disciplina specs, anti-literal, CI, imagen sin devDeps) | 🟢 Finalizada |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|

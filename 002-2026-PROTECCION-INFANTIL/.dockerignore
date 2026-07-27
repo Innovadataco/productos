@@ -15,3 +15,5 @@ scripts/simulacion
 *.md
 !README.md
 .DS_Store
+.venv-presidio
+prisma/dev.db

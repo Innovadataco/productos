@@ -30,6 +30,15 @@ ENV RESEND_API_KEY=build-placeholder \
     APP_BUILD_SHA=$APP_BUILD_SHA
 RUN npx prisma generate && npm run build
 
+FROM node:22-alpine AS prod-deps
+WORKDIR /app
+# Deps de PRODUCCIÓN solamente (SPEC-107, B3-e: la imagen no lleva devDependencies).
+# tsx y prisma CLI son dependencies de runtime (worker con --import tsx; migrate/seed).
+RUN apk add --no-cache openssl
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+RUN npm ci --omit=dev && npx prisma generate
+
 FROM node:22-alpine AS runner
 WORKDIR /app
 # Se repite el ARG/ENV en runtime: el panel admin lee APP_BUILD_SHA en servidor
@@ -45,8 +54,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Worker (corre con --import tsx sobre src/) + Prisma CLI para migrate/seed.
-# node_modules completo del builder (incluye tsx y prisma CLI).
-COPY --from=builder /app/node_modules ./node_modules
+# node_modules de PRODUCCIÓN (sin devDependencies).
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/prisma ./prisma
