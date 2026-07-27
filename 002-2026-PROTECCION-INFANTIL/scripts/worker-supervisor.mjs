@@ -12,7 +12,11 @@ import { writeFileSync, unlinkSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const WORKER_SCRIPT = resolve(import.meta.dirname, "worker-reportes.mjs");
-const PID_FILE = resolve(import.meta.dirname, "..", "worker.pid");
+// Spec 097: en contenedores app y worker son procesos separados; el heartbeat compartido
+// (volumen) reemplaza al chequeo de PID. WORKER_RUN_DIR=/app/run en prod, raíz en dev.
+const RUN_DIR = process.env.WORKER_RUN_DIR ?? resolve(import.meta.dirname, "..");
+const PID_FILE = resolve(RUN_DIR, "worker.pid");
+const HEARTBEAT_FILE = resolve(RUN_DIR, "worker.heartbeat");
 const MAX_RESTARTS = 5;
 const RESTART_DELAY_MS = 2000;
 
@@ -44,7 +48,8 @@ function startWorker() {
     if (shuttingDown) return;
 
     log(`Iniciando worker (intento ${restartCount + 1}/${MAX_RESTARTS})`);
-    worker = spawn("node", ["--env-file=.env", "--import", "tsx", WORKER_SCRIPT], {
+    // --env-file-if-exists: dev carga .env; en contenedor las vars llegan por compose.
+    worker = spawn("node", ["--env-file-if-exists=.env", "--import", "tsx", WORKER_SCRIPT], {
         stdio: "inherit",
         cwd: process.cwd(),
     });
@@ -96,5 +101,15 @@ function shutdown(signal) {
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
+
+// Heartbeat para /api/health/worker (válido también entre contenedores vía volumen compartido)
+const heartbeat = setInterval(() => {
+    try {
+        writeFileSync(HEARTBEAT_FILE, String(Date.now()), "utf8");
+    } catch (err) {
+        log(`No se pudo escribir heartbeat: ${err.message}`);
+    }
+}, 15000);
+heartbeat.unref();
 
 startWorker();

@@ -34,6 +34,9 @@ services:
     environment:
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     ports:
       # Solo localhost: lo publica cloudflared (pi.innovadataco.com).
       - "127.0.0.1:5005:3000"
@@ -48,6 +51,10 @@ services:
     env_file: .env.production
     # Supervisor: levanta UN worker-reportes (advisory lock en Postgres).
     command: node scripts/worker-supervisor.mjs
+    environment:
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     depends_on:
       db:
         condition: service_healthy
@@ -56,3 +63,4 @@ services:
 
 volumes:
   pi_postgres_data:
+  pi_worker_run:

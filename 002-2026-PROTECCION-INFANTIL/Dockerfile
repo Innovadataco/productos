@@ -44,6 +44,9 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json /app/tsconfig.json /app/next.config.ts ./
 
+# Directorio compartido app↔worker para el heartbeat del healthcheck (spec 097)
+RUN mkdir -p /app/run && chown nextjs:nodejs /app/run
+
 USER nextjs
 EXPOSE 3000
 # Next standalone honra PORT y HOSTNAME (compose los fija: 3000 / 0.0.0.0)

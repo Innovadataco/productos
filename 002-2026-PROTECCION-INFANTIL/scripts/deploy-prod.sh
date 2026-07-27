@@ -26,5 +26,5 @@ $COMPOSE exec -T app npx prisma migrate deploy
 
 echo "==> Healthcheck"
 sleep 5
-curl -sf http://127.0.0.1:5005/api/health && echo "  <- app OK"
+curl -sf http://127.0.0.1:5005/api/health/worker && echo "  <- app+worker OK"
 echo "==> Listo. Tag desplegado: ${PI_APP_TAG}"

@@ -22,6 +22,7 @@ Thumbs.db
 
 # Worker runtime
 worker.pid
+worker.heartbeat
 
 # Backups de migraciones de secretos (contienen texto plano)
 backups/
