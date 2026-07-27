@@ -4,6 +4,8 @@
 
 FROM node:22-alpine AS deps
 WORKDIR /app
+# OpenSSL 3 para que Prisma detecte y descargue el engine linux-musl-openssl-3.0.x
+RUN apk add --no-cache openssl
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 RUN npm ci
@@ -11,18 +13,23 @@ RUN npm ci
 FROM node:22-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Placeholders SOLO de build: src/lib/email.ts valida RESEND_API_KEY/EMAIL_FROM al
-# importarse y `next build` evalúa los módulos al recolectar page data. Los valores
-# reales llegan en runtime vía env_file (.env.production); NUNCA secretos en la imagen.
-ENV RESEND_API_KEY=build-placeholder EMAIL_FROM=build@placeholder.local
+# importarse y la inicialización de Prisma/cola pide DATABASE_URL cuando `next build`
+# evalúa los módulos al recolectar page data. Los valores reales llegan en runtime
+# vía env_file (.env.production); NUNCA secretos en la imagen.
+ENV RESEND_API_KEY=build-placeholder \
+    EMAIL_FROM=build@placeholder.local \
+    DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npx prisma generate && npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
-RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
+# libssl/libcrypto en runtime para el query engine de Prisma
+RUN apk add --no-cache openssl && addgroup -S nodejs && adduser -S nextjs -G nodejs
 
 # App standalone (server.js en la raíz del standalone)
 COPY --from=builder /app/public ./public
