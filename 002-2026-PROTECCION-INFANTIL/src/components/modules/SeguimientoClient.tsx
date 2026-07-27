@@ -19,7 +19,6 @@ type ClasificacionData = {
     categoriaGrupo: string;
     categoriasSecundarias?: string[];
     contienePii: boolean;
-    piiDetectada: string[];
 };
 
 type RankingData = {

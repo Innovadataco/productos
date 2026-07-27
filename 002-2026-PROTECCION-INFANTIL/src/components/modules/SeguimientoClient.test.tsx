@@ -36,7 +36,6 @@ const baseData = {
         categoriaGrupo: "Contacto sexual",
         categoriasSecundarias: ["CONTACTO_INSISTENTE"],
         contienePii: true,
-        piiDetectada: ["nombre", "telefono"],
     },
     ranking: { totalReportes: 5, reportesAutenticados: 2, reportesAnonimos: 3 },
     actividad: "alta",

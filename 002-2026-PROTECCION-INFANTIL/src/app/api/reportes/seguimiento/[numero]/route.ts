@@ -112,7 +112,6 @@ export async function GET(
                               .map((s) => s.categoria)
                               .filter((c): c is string => typeof c === "string"),
                           contienePii: reporte.clasificacion.contienePii,
-                          piiDetectada: reporte.clasificacion.piiDetectada,
                       }
                     : null,
             // Spec 089-US6: nunca score ni etiqueta de riesgo sobre el identificador.

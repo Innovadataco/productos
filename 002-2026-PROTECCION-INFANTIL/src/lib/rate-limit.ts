@@ -48,6 +48,13 @@ function getScopeDefaults(scope: string): ScopeDefaults {
     return DEFAULTS[scope] || { windowSeconds: 60, maxRequests: 30 };
 }
 
+/**
+ * Scopes sensibles a abuso de credenciales/identificadores que DEBEN fallar
+ * cerrado si el store de rate limiting no responde (I-28). El resto de scopes
+ * mantiene el comportamiento fail-open para no bloquear la aplicación.
+ */
+const FAIL_CLOSED_SCOPES = new Set(["seguimiento", "login"]);
+
 async function getScopeConfig(scope: string): Promise<ScopeDefaults> {
     const defaults = getScopeDefaults(scope);
     const [windowParam, maxParam] = await Promise.all([
@@ -150,18 +157,24 @@ export async function checkRateLimit(
 
         return { allowed, limit: config.maxRequests, remaining, resetAt, headers };
     } catch (error) {
-        // Fallo del limitador no debe bloquear la aplicación
+        // Fallo del limitador: fail-open por defecto; los scopes de
+        // FAIL_CLOSED_SCOPES fallan cerrado (bloquean) ante un store caído.
         logger.error("[RATE-LIMIT] Error consultando límite:", error);
+        const failClosed = FAIL_CLOSED_SCOPES.has(scope);
+        const headers: Record<string, string> = {
+            "X-RateLimit-Limit": String(config.maxRequests),
+            "X-RateLimit-Remaining": String(failClosed ? 0 : config.maxRequests),
+            "X-RateLimit-Reset": String(Math.ceil(resetAt / 1000)),
+        };
+        if (failClosed) {
+            headers["Retry-After"] = String(Math.ceil((resetAt - now) / 1000));
+        }
         return {
-            allowed: true,
+            allowed: !failClosed,
             limit: config.maxRequests,
-            remaining: config.maxRequests,
+            remaining: failClosed ? 0 : config.maxRequests,
             resetAt,
-            headers: {
-                "X-RateLimit-Limit": String(config.maxRequests),
-                "X-RateLimit-Remaining": String(config.maxRequests),
-                "X-RateLimit-Reset": String(Math.ceil(resetAt / 1000)),
-            },
+            headers,
         };
     }
 }

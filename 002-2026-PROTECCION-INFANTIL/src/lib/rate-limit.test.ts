@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { checkRateLimit, getClientIp, resetRateLimitStore } from "./rate-limit";
 import { prisma } from "./prisma";
 import { resetDatabase } from "./test-utils";
@@ -172,5 +172,41 @@ describe("checkRateLimit", () => {
 
         const otherFp = await checkRateLimit(req, "report_fingerprint", { identifier: "fp-other" });
         expect(otherFp.allowed).toBe(true);
+    });
+});
+
+describe("fail-closed ante fallo del store (I-28)", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it("scope seguimiento falla cerrado si el store no responde", async () => {
+        if (rateLimitDisabled) return;
+        await crearParametrosReportes();
+
+        vi.spyOn(prisma, "$queryRaw").mockRejectedValueOnce(new Error("store no disponible"));
+        const result = await checkRateLimit(makeRequest("10.9.9.9"), "seguimiento");
+        expect(result.allowed).toBe(false);
+        expect(result.remaining).toBe(0);
+        expect(result.headers["Retry-After"]).toBeDefined();
+    });
+
+    it("scope login falla cerrado si el store no responde", async () => {
+        if (rateLimitDisabled) return;
+        await crearParametrosReportes();
+
+        vi.spyOn(prisma, "$queryRaw").mockRejectedValueOnce(new Error("store no disponible"));
+        const result = await checkRateLimit(makeRequest("10.9.9.9"), "login");
+        expect(result.allowed).toBe(false);
+    });
+
+    it("otros scopes siguen fail-open si el store no responde", async () => {
+        if (rateLimitDisabled) return;
+        await crearParametrosReportes();
+
+        vi.spyOn(prisma, "$queryRaw").mockRejectedValueOnce(new Error("store no disponible"));
+        const result = await checkRateLimit(makeRequest("10.9.9.8"), "consulta");
+        expect(result.allowed).toBe(true);
+        expect(result.remaining).toBeGreaterThan(0);
     });
 });
