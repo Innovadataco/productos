@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-27
 
-**Status**: PLANEADO (en compuerta §4 — pendiente aprobación de ZEUS)
+**Status**: FINALIZADO (SIN desplegar, pendiente release + ACTA)
 
 **Input**: "Fast-follow Crítico I-31: prisma/seed.ts siembra el ADMIN de producción con la
 contraseña como LITERAL versionado en el repo, con `debeCambiarPassword:false` y bloque
