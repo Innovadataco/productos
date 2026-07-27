@@ -7,9 +7,9 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **88** |
+| **Total de specs** | **89** |
 | **Cerradas / Implementadas / Finalizadas** | **84** |
-| **Pendientes (planeadas / en desarrollo)** | **4** |
+| **Pendientes (planeadas / en desarrollo)** | **5** |
 
 ## Backlog activo (pendientes)
 
@@ -19,6 +19,8 @@
 | [053](053-capa-datos-servicios/spec.md) | Feature Specification: Capa de datos / servicios (DAL) | 🔵 Planeado |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 | [104](104-motor-indices-rubrica/spec.md) | Motor de rúbrica: votación por índices (adiós verbatim) | 🔵 Planeado (en compuerta §4) |
+| [106](106-logout-cookie-secure/spec.md) | Cerrar sesión de verdad (cookie __Host- y logo público) | 🔵 Planeado (en compuerta §4) |
+| [106](106-logout-cookie-secure/spec.md) | Cerrar sesión de verdad (cookie __Host- y logo público) | 🔵 Planeado (en compuerta §4) |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
