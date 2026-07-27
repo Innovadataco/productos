@@ -13,6 +13,10 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Placeholders SOLO de build: src/lib/email.ts valida RESEND_API_KEY/EMAIL_FROM al
+# importarse y `next build` evalúa los módulos al recolectar page data. Los valores
+# reales llegan en runtime vía env_file (.env.production); NUNCA secretos en la imagen.
+ENV RESEND_API_KEY=build-placeholder EMAIL_FROM=build@placeholder.local
 RUN npx prisma generate && npm run build
 
 FROM node:22-alpine AS runner
