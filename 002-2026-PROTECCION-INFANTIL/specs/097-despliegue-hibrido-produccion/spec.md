@@ -1,6 +1,6 @@
 # Feature Specification: Despliegue híbrido a producción (VPS + cerebro en la Mac)
 
-**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-26 | **Status**: DESARROLLO
+**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-26 | **Status**: IMPLEMENTADO (pendiente ACTA)
 
 ## Contexto
 
@@ -73,6 +73,9 @@ Como operador, quiero imágenes etiquetadas, migraciones aditivas y una página
 - **FR-010**: pi.innovadataco.com DEBE resolverse por el tunnel existente hacia la app de PI; el acceso DEBE quedar restringido (Cloudflare Access o, mínimo, login de la app sin registro abierto).
 - **FR-011**: DEBE existir `scripts/deploy-prod.sh` documentado (pull + build + up).
 - **FR-012**: Las imágenes DEBEN etiquetarse por commit (rollback = `docker compose up -d` con tag anterior, documentado en docs/despliegue).
+- **FR-013** (blindaje 1): el Postgres de PI NO se expone: el servicio db NO publica puerto al host (`docker port pi-db` vacío); la app le habla por la red interna de Docker. (El Postgres de Gesmovil en 0.0.0.0:5432 no se toca.)
+- **FR-014** (blindaje 2): Ollama NO responde desde internet público (verificado con curl a la IP pública de la Mac → timeout); idealmente ACL de Tailscale que solo el nodo del VPS alcance 11434 (acción del CEO en el admin console).
+- **FR-015** (blindaje 3): hardening SSH (`PasswordAuthentication no`, `PermitRootLogin prohibit-password`) se deja PREPARADO en `/etc/ssh/sshd_config.d/60-pi-hardening.conf.PENDIENTE` y se aplica SOLO con confirmación del CEO (él conserva la consola de Hostinger).
 
 ## Success Criteria
 
@@ -86,3 +89,16 @@ Como operador, quiero imágenes etiquetadas, migraciones aditivas y una página
 - El CEO ya habilitó SSH por llave (alias `pi-vps` en la Mac, verificado 2026-07-26).
 - La Mac Studio (`mac-studio-de-idc`, 100.91.87.86) permanece encendida con Ollama corriendo; es un riesgo aceptado de la arquitectura híbrida (D-25).
 - Cloudflare Access puede requerir acción del CEO en el dashboard Zero Trust (no automatizable desde CLI sin API token); si bloquea, queda registrado y la app queda detrás de login.
+
+## Implementación (2026-07-27)
+
+Desplegado y verificado en producción: app + worker + Postgres de PI en Docker en el VPS
+(`pi-app`/`pi-worker`/`pi-db`, `restart: always`, db sin puerto publicado), swap 4G, Docker
+Engine 29.6.2, Ollama consumido desde la Mac SOLO por Tailscale (`tailscale serve`,
+verificado timeout por IP pública), pi.innovadataco.com publicado por el tunnel "hermes"
+con MX intactos, BD limpia con seed, secretos fuertes fuera de git (claves de cifrado
+entregadas al CEO para respaldo). E2E: reporte `RPT-9SA2BA` clasificado SOLICITUD_MATERIAL
+viajando VPS → Tailscale → Ollama Mac → VPS en 45 s. Gesmovil intacto en cada fase.
+Detalle, hallazgos y pendientes (Cloudflare Access, ACL Tailscale, hardening SSH no
+aplicado por decisión del CEO): [cierre.md](./cierre.md). Runbook deploy/rollback:
+`docs/despliegue/produccion-vps.md`.
