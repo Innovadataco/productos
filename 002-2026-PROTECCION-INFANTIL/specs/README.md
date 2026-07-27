@@ -1,14 +1,14 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-07-27** (spec 097 implementada: PI en producción híbrida VPS + Ollama Mac, pendiente ACTA).
+> Última actualización: **2026-07-27** (spec 099: rotación de claves I-22 ejecutada; 097 implementada, ambas pendientes ACTA).
 > Estado tomado del campo `Status`/`Estado` de cada `spec.md`.
 
 ## Resumen
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **71** |
-| **Cerradas / Implementadas / Finalizadas** | **69** |
+| **Total de specs** | **72** |
+| **Cerradas / Implementadas / Finalizadas** | **70** |
 | **Pendientes (planeadas / en desarrollo)** | **2** |
 
 ## Backlog activo (pendientes)
@@ -99,6 +99,7 @@
 | [095](095-default-seguro-jwt-banco/spec.md) | Default seguro, JWT parametrizado y banco gobernado | 🟢 Finalizada (pendiente ACTA) |
 | [096](096-expediente-reporte/spec.md) | Expediente del reporte — traza del modelo (rol Admin) | 🟢 Finalizada (pendiente ACTA) |
 | [097](097-despliegue-hibrido-produccion/spec.md) | Despliegue híbrido a producción (VPS + cerebro en la Mac) | 🟢 Implementada (pendiente ACTA) |
+| [099](099-rotacion-claves-i22/spec.md) | Rotación de claves filtradas + regla no-secretos (I-22) | 🟢 Finalizada (pendiente ACTA) |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 
