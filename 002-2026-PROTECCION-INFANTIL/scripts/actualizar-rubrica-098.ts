@@ -13,8 +13,8 @@ async function main() {
     if (!actual) throw new Error("Parámetro ia.rubrica.preguntas no existe (correr seed primero)");
 
     const decisivasNuevas = [
-        "¿El contacto insistente va dirigido personalmente a ESTE menor (interacción individual), y no es un mensaje masivo, automatizado o publicitario?",
-        "¿El ofrecimiento va dirigido personalmente a ESTE menor (contacto individual), y no es publicidad, concurso o estafa masiva?",
+        "¿El contacto es personal y dirigido específicamente a este menor?",
+        "¿El ofrecimiento es personal, dirigido específicamente a este menor?",
     ];
     const sets = JSON.parse(actual.valor) as Record<string, { texto: string }[]>;
     const yaAplicado = decisivasNuevas.every((d) => Object.values(sets).some((qs) => qs.some((q) => q.texto === d)));
