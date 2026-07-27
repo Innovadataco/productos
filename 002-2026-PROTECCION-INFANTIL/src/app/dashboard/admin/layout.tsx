@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AdminNav } from "@/components/modules/AdminNav";
+import { AdminVersionBadge } from "@/components/modules/AdminVersionBadge";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
 const ADMIN_ROLES = new Set(["ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
@@ -39,7 +40,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return (
         <div className="flex min-h-screen">
             <AdminNav rol={rol as AdminRol} modulosPermitidos={[...permitidos]} />
-            <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">{children}</main>
+            <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+                {children}
+                <AdminVersionBadge />
+            </main>
         </div>
     );
 }

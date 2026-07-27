@@ -9,6 +9,9 @@ pkill -f worker-supervisor.mjs 2>/dev/null || true
 sleep 1
 
 echo "==> [2/4] Rebuild limpio (rm -rf .next && build)"
+# Sello de versión (spec 102): SHA corto del build, solo servidor. Si git falla,
+# queda vacío y el panel admin muestra solo la versión (no rompe el build).
+export APP_BUILD_SHA=$(git rev-parse --short HEAD 2>/dev/null || true)
 rm -rf .next
 npm run build
 

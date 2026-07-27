@@ -1,15 +1,15 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-07-27** (spec 099: rotación de claves I-22 ejecutada; 097 implementada, ambas pendientes ACTA).
+> Última actualización: **2026-07-27** (cola 002-PI-014 en curso: specs 100/101/102/098).
 > Estado tomado del campo `Status`/`Estado` de cada `spec.md`.
 
 ## Resumen
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **72** |
-| **Cerradas / Implementadas / Finalizadas** | **70** |
-| **Pendientes (planeadas / en desarrollo)** | **2** |
+| **Total de specs** | **85** |
+| **Cerradas / Implementadas / Finalizadas** | **78** |
+| **Pendientes (planeadas / en desarrollo)** | **7** |
 
 ## Backlog activo (pendientes)
 
@@ -102,6 +102,8 @@
 | [099](099-rotacion-claves-i22/spec.md) | Rotación de claves filtradas + regla no-secretos (I-22) | 🟢 Finalizada (pendiente ACTA) |
 | [100](100-correcciones-colegios/spec.md) | Correcciones módulo Colegios (+ Comité) | 🟡 Desarrollo |
 | [101](101-app-publica-entorno/spec.md) | App pública y entorno (I-23 / I-24 / A-2) | 🟡 Desarrollo |
+| [102](102-sello-version/spec.md) | Sello de versión (dev y prod) | 🟡 Desarrollo |
+| [098](098-afinamiento-motor/spec.md) | Afinamiento del motor (targeting, principal por gravedad, métrica) | 🟡 Desarrollo |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 

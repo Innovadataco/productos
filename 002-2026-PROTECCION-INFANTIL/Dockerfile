@@ -20,15 +20,22 @@ COPY . .
 # importarse y la inicialización de Prisma/cola pide DATABASE_URL cuando `next build`
 # evalúa los módulos al recolectar page data. Los valores reales llegan en runtime
 # vía env_file (.env.production); NUNCA secretos en la imagen.
+# APP_BUILD_SHA (spec 102): SHA corto del commit, informativo (no secreto); se pasa
+# como build-arg desde deploy-prod.sh y queda horneado para el sello de versión.
+ARG APP_BUILD_SHA
 ENV RESEND_API_KEY=build-placeholder \
     EMAIL_FROM=build@placeholder.local \
     DATABASE_URL=postgresql://build:build@localhost:5432/build \
-    ENABLE_HTTPS_HEADERS=true
+    ENABLE_HTTPS_HEADERS=true \
+    APP_BUILD_SHA=$APP_BUILD_SHA
 RUN npx prisma generate && npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+# Se repite el ARG/ENV en runtime: el panel admin lee APP_BUILD_SHA en servidor
+# por request (layout dinámico), y el ENV del stage builder no llega al runner.
+ARG APP_BUILD_SHA
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 APP_BUILD_SHA=$APP_BUILD_SHA
 # libssl/libcrypto en runtime para el query engine de Prisma
 RUN apk add --no-cache openssl && addgroup -S nodejs && adduser -S nextjs -G nodejs
 

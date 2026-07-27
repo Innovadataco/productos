@@ -27,6 +27,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Sello de versión (spec 102): deploy-prod.sh exporta APP_BUILD_SHA.
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-}
     image: pi-app:${PI_APP_TAG:-latest}
     container_name: pi-app
     restart: always

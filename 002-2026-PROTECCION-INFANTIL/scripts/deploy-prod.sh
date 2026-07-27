@@ -14,6 +14,8 @@ if [[ "${1:-}" != "--skip-pull" ]]; then
 fi
 
 export PI_APP_TAG="$(git rev-parse --short HEAD)"
+# Sello de versión (spec 102): el mismo SHA se hornea en la imagen vía build-arg.
+export APP_BUILD_SHA="${PI_APP_TAG}"
 echo "==> Build pi-app:${PI_APP_TAG}"
 $COMPOSE build
 docker tag "pi-app:${PI_APP_TAG}" pi-app:latest
