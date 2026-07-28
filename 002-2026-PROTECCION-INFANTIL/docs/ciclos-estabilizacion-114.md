@@ -62,3 +62,13 @@ Prueba lenta con motor real: opt-in (`E2E_LENTA=true`), fuera del gate rápido.
 - Suite completa (cuando salió verde): 965 verdes, 1 skipped (lenta). Duración: ~3,7 min.
 
 ## Ciclo 6
+
+| Recorrido | Rojos y causa | Arreglo (commit) | Deuda para ZEUS |
+|---|---|---|---|
+| operador-comite · "bandeja y confirma" | 1 rojo FLAKY (2ª aparición): falló en la corrida rápida (`vitest run src/lib/e2e`, 17:35, E2E_CICLO=6) y la suite completa posterior salió verde. **Evidencia**: el test tardó **5142 ms** y `vitest.config.ts` no define `testTimeout` → default 5000 ms. Hipótesis fuerte: timeout del harness bajo contención de CPU (Ollama cargado + bcrypt puro JS), no una aserción rota. El mensaje exacto volvió a no capturarse (salida filtrada por grep) — limitación declarada | Calibración del harness SOLO para los 7 journeys: `describe(..., { timeout: 30_000 })`. **Ninguna aserción tocada** — no es ablandar, es darle al test de integración más pesado del repo el tiempo que el harness default no le da. ZEUS puede vetarlo | Si reaparece CON 30 s de margen, ya no es timeout: capturar mensaje completo + estado de BD antes de tocar |
+
+- Caza dirigida: 20 corridas del journey aislado → 20/20 verde; 20 corridas de la suite e2e
+  completa → 20/20 verde. Solo falla en contexto de corrida grande (contención), coherente
+  con la hipótesis de timeout.
+- Suite completa ciclo 6: 965 verdes, 1 skipped. Duración: ~3,7 min.
+

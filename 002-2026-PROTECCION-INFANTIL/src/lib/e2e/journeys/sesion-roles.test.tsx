@@ -46,7 +46,7 @@ const RUTA_PRIVADA_POR_ROL: Record<RolUsuario, string> = {
     COMITE_VALIDACION: "/dashboard/admin/comite",
 };
 
-describe(`SPEC-114 · sesión de los 5 roles (ciclo ${CICLO})`, () => {
+describe(`SPEC-114 · sesión de los 5 roles (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await sembrarBase();
         limpiarJar();

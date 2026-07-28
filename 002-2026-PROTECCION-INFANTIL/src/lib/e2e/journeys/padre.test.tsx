@@ -33,7 +33,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/components/ui/ThemeToggle", () => ({ ThemeToggle: () => <button type="button">Theme</button> }));
 
-describe(`SPEC-114 · padre (ciclo ${CICLO})`, () => {
+describe(`SPEC-114 · padre (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await sembrarBase();
         limpiarJar();

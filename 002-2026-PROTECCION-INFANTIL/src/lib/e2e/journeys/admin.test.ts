@@ -19,7 +19,7 @@ async function getJson(importPath: string, url: string) {
     return res;
 }
 
-describe(`SPEC-114 · admin (ciclo ${CICLO})`, () => {
+describe(`SPEC-114 · admin (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await sembrarBase();
         limpiarJar();

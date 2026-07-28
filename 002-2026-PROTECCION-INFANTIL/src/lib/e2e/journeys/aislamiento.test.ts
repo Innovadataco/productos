@@ -54,7 +54,7 @@ const EMAILS: Record<RolUsuario, string> = {
     COMITE_VALIDACION: `e2e-c${CICLO}-ais-comite@test.local`,
 };
 
-describe(`SPEC-114 · aislamiento por rol (ciclo ${CICLO})`, () => {
+describe(`SPEC-114 · aislamiento por rol (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     const sesiones = new Map<RolUsuario, Sesion>();
 
     beforeEach(async () => {

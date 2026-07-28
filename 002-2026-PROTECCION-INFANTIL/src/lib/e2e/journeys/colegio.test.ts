@@ -15,7 +15,7 @@ import { POST as loginPOST } from "@/app/api/auth/login/route";
 
 const CICLO = Number(process.env.E2E_CICLO ?? "1");
 
-describe(`SPEC-114 · colegio (ciclo ${CICLO})`, () => {
+describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await sembrarBase();
         limpiarJar();

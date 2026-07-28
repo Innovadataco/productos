@@ -78,7 +78,7 @@ async function sesionDe(usuario: { id: string; email: string; password: string }
     return { usuarioId: usuario.id, email: usuario.email, rol, token };
 }
 
-describe(`SPEC-114 · operador y comité (ciclo ${CICLO})`, () => {
+describe(`SPEC-114 · operador y comité (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await sembrarBase();
         limpiarJar();

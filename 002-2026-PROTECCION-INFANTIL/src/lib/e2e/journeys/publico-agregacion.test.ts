@@ -56,7 +56,7 @@ function exigirSinScoreNiRiesgo(valor: unknown, ruta = "raíz") {
     }
 }
 
-describe(`SPEC-114 · público y agregación (ciclo ${CICLO})`, () => {
+describe(`SPEC-114 · público y agregación (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await sembrarBase();
         limpiarJar();
