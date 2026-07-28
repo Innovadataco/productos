@@ -33,9 +33,11 @@ const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes"];
 const COLEGIO_ROUTES = ["/dashboard/colegio", "/api/me/colegio", "/api/colegio"];
 
 // Rutas de sesión propias de cualquier rol autenticado: datos del usuario actual
-// (el header las consulta para reconocer la sesión) y cambio de contraseña
-// (obligatorio cuando debeCambiarPassword=true).
-const SESION_ROUTES = ["/api/me", "/cambiar-password"];
+// (el header las consulta para reconocer la sesión), el cambio de contraseña
+// (obligatorio cuando debeCambiarPassword=true) y el cierre de sesión.
+// I-35/I-35b: la página /cambiar-password llama a /api/auth/cambiar-password y el botón
+// de cerrar sesión a /api/auth/logout — sin ambos endpoints el colegio queda atrapado.
+const SESION_ROUTES = ["/api/me", "/cambiar-password", "/api/auth/cambiar-password", "/api/auth/logout"];
 
 /**
  * Indica si un SCHOOL_ADMIN autenticado puede acceder a la ruta.
@@ -63,6 +65,27 @@ function isPublic(pathname: string): boolean {
 
 function isUserFinalRoute(pathname: string): boolean {
     return USER_FINAL_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
+}
+
+/**
+ * SPEC-113 (I-36): criterio único de "qué puede usar este rol" reutilizable FUERA del
+ * middleware (el menú del header lo consume para ofrecer solo lo permitido, sin una
+ * segunda fuente de verdad de permisos). Refleja las MISMAS reglas del proxyCore:
+ * - rutas de usuario final (/dashboard, /mis-reportes): solo PARENT o anónimo;
+ * - SCHOOL_ADMIN: solo colegio + rutas de sesión;
+ * - roles internos: no usuario final ni /reportar;
+ * - anónimo: área pública/usuario final.
+ */
+export function esDestinoPermitidoPorRol(rol: string | null | undefined, pathname: string): boolean {
+    if (!rol) return !pathname.startsWith("/dashboard/admin");
+    if (rol === "SCHOOL_ADMIN") return esRutaPermitidaSchoolAdmin(pathname);
+    if (esRolInterno(rol)) {
+        if (isUserFinalRoute(pathname) || isReportarRoute(pathname)) return false;
+        return true;
+    }
+    // PARENT: área de usuario final y rutas públicas; no área interna.
+    if (pathname.startsWith("/dashboard/admin") || pathname.startsWith("/api/admin")) return false;
+    return true;
 }
 
 function isColegioRoute(pathname: string): boolean {

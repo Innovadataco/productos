@@ -55,7 +55,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const logout = useCallback(async () => {
-        await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+        // I-35b (SPEC-113): la salida NO depende del resultado de la API — aunque la
+        // llamada falle (red, 403 histórico), la sesión local se limpia igual y la UI
+        // puede navegar al inicio público.
+        try {
+            await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+        } catch {
+            // La cookie la borra el servidor cuando puede; la UI no se bloquea por ello.
+        }
         setUser(null);
     }, []);
 

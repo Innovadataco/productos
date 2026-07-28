@@ -17,6 +17,14 @@ describe("esRutaPermitidaSchoolAdmin", () => {
         expect(esRutaPermitidaSchoolAdmin("/cambiar-password")).toBe(true);
     });
 
+    it("permite el endpoint /api/auth/cambiar-password que la página llama (I-35)", () => {
+        expect(esRutaPermitidaSchoolAdmin("/api/auth/cambiar-password")).toBe(true);
+    });
+
+    it("permite el endpoint /api/auth/logout para salir de la pantalla (I-35b)", () => {
+        expect(esRutaPermitidaSchoolAdmin("/api/auth/logout")).toBe(true);
+    });
+
     it("no confunde /api/me con rutas ajenas como /api/metricas", () => {
         expect(esRutaPermitidaSchoolAdmin("/api/metricas")).toBe(false);
     });

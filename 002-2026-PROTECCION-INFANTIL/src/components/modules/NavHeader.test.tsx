@@ -66,6 +66,24 @@ describe("NavHeader", () => {
         expect(dashboard?.getAttribute("href")).toBe("/dashboard-publico");
     });
 
+    it("SCHOOL_ADMIN NO ve las entradas del área de padres en el menú (I-36)", () => {
+        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
+        render(<NavHeader />);
+        const toggle = screen.getByText("Colegio").closest("button");
+        if (toggle) fireEvent.click(toggle);
+        expect(screen.queryByText("Círculo de Confianza")).toBeNull();
+        expect(screen.queryByText("Mis reportes")).toBeNull();
+    });
+
+    it("PARENT sí ve las entradas de su área en el menú (I-36)", () => {
+        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
+        render(<NavHeader />);
+        const toggle = screen.getByText("Padre").closest("button");
+        if (toggle) fireEvent.click(toggle);
+        expect(screen.getByText("Círculo de Confianza").closest("a")?.getAttribute("href")).toBe("/dashboard/circulo-confianza");
+        expect(screen.getByText("Mis reportes").closest("a")?.getAttribute("href")).toBe("/mis-reportes");
+    });
+
     it("menú desplegable de padre muestra enlace a Mi panel", () => {
         mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);

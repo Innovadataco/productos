@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 
@@ -158,7 +159,7 @@ export function NavHeader() {
                                                 Mi bandeja
                                             </NavDropdownLink>
                                         )}
-                                        {!esEmpleado && (
+                                        {!esEmpleado && esDestinoPermitidoPorRol(user.rol, "/dashboard") && (
                                             <>
                                                 <NavDropdownLink href="/dashboard" onClick={() => setOpen(false)}>
                                                     Mi panel
@@ -218,7 +219,7 @@ export function NavHeader() {
                         <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Dashboard</MobileLink>
                         {user ? (
                             <>
-                                {!esEmpleado && (
+                                {!esEmpleado && esDestinoPermitidoPorRol(user.rol, "/dashboard") && (
                                     <>
                                         <MobileLink href="/dashboard" onClick={() => setMobileOpen(false)}>Mi panel</MobileLink>
                                         <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>
