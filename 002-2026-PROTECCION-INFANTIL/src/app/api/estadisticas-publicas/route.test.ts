@@ -14,8 +14,13 @@ async function crearReporteAgregado(
     esAnonimo: boolean
 ) {
     const numeroSeguimiento = `RPT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const ciudadRecord = await prisma.ciudad.findUnique({
-        where: { nombre_paisId: { nombre: ciudad, paisId: (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!.id } },
+    // Fixture autocontenido: la ciudad del reporte debe existir en el catálogo
+    // (en CI la BD arranca vacía; localmente sobrevivía del seed de desarrollo).
+    const paisCO = (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!;
+    const ciudadRecord = await prisma.ciudad.upsert({
+        where: { nombre_paisId: { nombre: ciudad, paisId: paisCO.id } },
+        update: {},
+        create: { nombre: ciudad, paisId: paisCO.id },
     });
     const reporte = await prisma.reporte.create({
         data: {
