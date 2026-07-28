@@ -50,14 +50,23 @@ pública en el proxy para PARENT; la trampa I-35 era exclusiva del colegio.
 - `npm run lint`: 0 errores (1 warning preexistente en `IaModelSelector.tsx`, fuera de alcance).
 - `npm run test`: 965 verdes, 1 skipped (la lenta opt-in).
 - `npm run build` (con `rm -rf .next`): verde.
-- CI GitHub: verificado en el run del push final.
+- CI GitHub: primer run (30406450104) en **ROJO** por dos causas, ambas arregladas (d7c07f93):
+  1. `plan.md`/`research.md`/`tasks.md` de la 114 nunca se habían commiteado (untracked) —
+     rojo de specs-discipline. Lección: verificar `git status`, no asumir.
+  2. El journey admin exigía 200 de `/api/admin/ia/modelos`, que sin Ollama (CI no tiene
+     cerebro) responde 500 con error **controlado** por diseño. El camino del admin ahora se
+     verifica con cerebro presente (200 + lista) o ausente (500 estructurado, no excepción).
+- CI run final: **30407027665 · success** (tras el fix d7c07f93).
 
 ## Deuda para ZEUS
 
 1. **Flaky**: si reaparece CON 30 s de margen, ya no es timeout — capturar mensaje completo +
    estado de BD antes de tocar (protocolo en la bitácora).
-2. Warning de lint preexistente en `IaModelSelector.tsx:77` (exhaustive-deps) — no tocado.
-3. El recorrido padre no puede verse afectado por una reversión tipo SPEC-113 vía proxy
+2. **`/api/admin/ia/modelos` no degrada como el sondeo de I-24 (SPEC-101)**: con Ollama caído
+   responde 500 con error controlado en vez de una respuesta degradada útil para el Centro IA.
+   Misma familia que I-24; el journey ya acepta ambos contratos. Decisión de producto.
+3. Warning de lint preexistente en `IaModelSelector.tsx:77` (exhaustive-deps) — no tocado.
+4. El recorrido padre no puede verse afectado por una reversión tipo SPEC-113 vía proxy
    (`/api/auth/*` público): si se quiere esa cobertura, es decisión de diseño del proxy, no de la suite.
 
 ## Fuera de alcance (registrado, no decidido)
