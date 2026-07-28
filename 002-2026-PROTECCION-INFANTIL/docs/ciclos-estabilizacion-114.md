@@ -19,19 +19,46 @@ Prueba lenta con motor real: opt-in (`E2E_LENTA=true`), fuera del gate rápido.
   Nota: el recorrido padre NO se ve afectado por esa reversión porque `/api/auth/*` es ruta
   pública en el proxy para PARENT; la trampa I-35 era exclusiva del colegio.
 - Tiempo suite e2e (rápida): ~25 s.
+- **Suite completa (965 tests)**: 1 rojo — `specs-discipline` exigía indexar la 114 en
+  `specs/README.md`; arreglado (4fdabde3). Re-corrida: 965 verdes, 1 skipped (lenta opt-in).
+  Duración: ~3,6 min.
 
 ## Ciclo 2
 
-(pendiente)
+| Recorrido | Rojos y causa | Arreglo (commit) | Deuda para ZEUS |
+|---|---|---|---|
+| todos (datos del ciclo 2) | 0 rojos | — | — |
+
+- Suite completa: 965 verdes, 1 skipped (lenta). Duración: ~3,6 min.
 
 ## Ciclo 3
 
-(pendiente)
+| Recorrido | Rojos y causa | Arreglo (commit) | Deuda para ZEUS |
+|---|---|---|---|
+| todos (datos del ciclo 3) | 0 rojos | — | — |
+
+- Suite completa: 965 verdes, 1 skipped (lenta). Duración: ~3,6 min.
 
 ## Ciclo 4
 
-(pendiente)
+| Recorrido | Rojos y causa | Arreglo (commit) | Deuda para ZEUS |
+|---|---|---|---|
+| todos (datos del ciclo 4) | 0 rojos | — | — |
+
+- Suite completa: 965 verdes, 1 skipped (lenta). Duración: ~3,7 min.
 
 ## Ciclo 5
 
-(pendiente)
+| Recorrido | Rojos y causa | Arreglo (commit) | Deuda para ZEUS |
+|---|---|---|---|
+| suite completa (datos del ciclo 5) | 1 rojo FLAKY: 1 test falló de 965 (17:13, E2E_CICLO=5). **Evidencia perdida**: la captura fue `tail -6` y la salida completa no se guardó — el test, la aserción y el mensaje NO son recuperables. No se sabe qué recorrido fue. | Sin arreglo (no hay diagnóstico posible con cero evidencia) | Test intermitente no identificado, tasa observada ~1/5 corridas. Si reaparece, hay protocolo de captura abajo |
+
+- Re-corrida inmediata: VERDE. Tres corridas más de caza (mismo ciclo 5): VERDE, VERDE, VERDE.
+  4 verdes consecutivas tras el rojo; no se reprodujo.
+- **Protocolo de captura vigente desde el ciclo 6** (nota ZEUS): toda corrida guarda log
+  completo (`/tmp/cicloN.log`). Si el flaky reaparece: capturar ANTES de tocar nada —
+  salida completa, estado de la BD en ese momento y recorrido en curso. Con una sola
+  aparición no se diagnostica; con dos y evidencia, sí.
+- Suite completa (cuando salió verde): 965 verdes, 1 skipped (lenta). Duración: ~3,7 min.
+
+## Ciclo 6
