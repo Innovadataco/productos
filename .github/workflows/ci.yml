@@ -13,6 +13,8 @@ on:
   pull_request:
     paths:
       - "002-2026-PROTECCION-INFANTIL/**"
+  # Permite disparar el gate a mano (p.ej. tras un fix del propio CI, cuyo paths no cubre la raíz)
+  workflow_dispatch:
 
 jobs:
   gate:
@@ -49,7 +51,7 @@ jobs:
         run: |
           cat > .env.test <<'EOF'
           DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
-          PARAM_ENCRYPTION_KEY=test-param-encryption-key-32chars!
+          PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
           ANTI_ABUSO_SALT=test-anti-abuso-salt
           NEXT_PUBLIC_APP_URL=http://localhost:5005
           OLLAMA_BASE_URL=http://localhost:11434
