@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-28
 
-**Status**: PLANEADO (en compuerta §4 — pendiente aprobación de ZEUS)
+**Status**: FINALIZADO (SIN desplegar, pendiente release + ACTA)
 
 **Input**: "I-35 (bloquea el piloto): el proxy permite la pantalla /cambiar-password pero
 bloquea con 403 el endpoint /api/auth/cambiar-password al que llama — el colegio no puede
