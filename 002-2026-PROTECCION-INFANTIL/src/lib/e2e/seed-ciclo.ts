@@ -80,11 +80,11 @@ export async function sembrarBancoCiclo(datos: BancoCiclo, plataformaClave = "wh
         return r;
     };
 
-    // I-11: pocos (1 reporte, bajo umbral) y varios (sobre umbral, mayoría autenticados)
+    // I-11: pocos (1 reporte, bajo umbral) y varios (sobre umbral, ratio autenticados 0.5 → visible)
     await crear(datos.identificadorPocos, "CONTACTO_INSISTENTE", true, `${datos.textoBase} (rama pocos reportes)`);
     const umbral = 3; // visibility.report_threshold del seed de test
     for (let i = 0; i < umbral + 1; i++) {
-        await crear(datos.identificadorVarios, "SOLICITUD_MATERIAL", i !== 0, `${datos.textoBase} (rama varios ${i + 1})`);
+        await crear(datos.identificadorVarios, "SOLICITUD_MATERIAL", i % 2 === 1, `${datos.textoBase} (rama varios ${i + 1})`);
     }
     // Varios reportes al mismo identificador (para contadores D-08)
     const creados: string[] = [];
