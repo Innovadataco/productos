@@ -38,7 +38,8 @@ export async function entrarComo(rol: RolUsuario, email: string, password: strin
         emailLogin = admin.email;
         password = "TestPass123";
     } else {
-        usuario = await crearUsuario(rol, email, password);
+        const existente = await prisma.usuario.findUnique({ where: { email } });
+        usuario = existente ?? (await crearUsuario(rol, email, password));
     }
     const res = await loginPOST(
         new Request("http://localhost:5005/api/auth/login", {

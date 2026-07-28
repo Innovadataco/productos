@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { MisReportesList } from "@/components/modules/MisReportesList";
@@ -67,10 +68,21 @@ export function DashboardUsuarioClient() {
     return (
         <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-body">Panel de reportes</h1>
-                <p className="mt-1 text-sm text-muted">
-                    Consulta el estado de tus reportes y busca información agregada de cualquier identificador.
-                </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h1 className="text-2xl font-bold text-body">Panel de reportes</h1>
+                        <p className="mt-1 text-sm text-muted">
+                            Consulta el estado de tus reportes y busca información agregada de cualquier identificador.
+                        </p>
+                    </div>
+                    {/* I-38 (SPEC-114): el camino a la función central del producto desde el área del padre */}
+                    <Link
+                        href="/reportar"
+                        className="rounded-xl accent-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
+                    >
+                        Reportar un riesgo
+                    </Link>
+                </div>
             </div>
 
             <div className="space-y-8">
