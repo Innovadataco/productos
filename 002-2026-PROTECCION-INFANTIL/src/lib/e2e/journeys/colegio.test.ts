@@ -77,10 +77,16 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, () => {
         expect(resLogin.status, "el primer ingreso con la contraseña temporal debe funcionar").toBe(200);
         const hashAntes = (await prisma.usuario.findUnique({ where: { id: usuarioColegio!.id } }))!.passwordHash;
 
-        // Cambio obligatorio de contraseña por el endpoint real (I-35: sin él el colegio queda atrapado)
+        // Cambio obligatorio de contraseña por el camino real: el proxy debe dejar
+        // llegar al endpoint (I-35: sin esa ruta el colegio queda atrapado en la pantalla)
         const tokenColegio = await crearTokenUsuario(usuarioColegio!.id, "SCHOOL_ADMIN");
         jar.set("token", { name: "token", value: tokenColegio });
         jar.set("__Host-token", { name: "__Host-token", value: tokenColegio });
+        const sesionColegio = { usuarioId: usuarioColegio!.id, email: emailColegio, rol: "SCHOOL_ADMIN" as const, token: tokenColegio };
+        esperarPasoLibre(
+            await viaProxy(sesionColegio, "/api/auth/cambiar-password", "POST"),
+            "el colegio alcanza el endpoint de cambio obligatorio (I-35)"
+        );
         const { POST: cambiarPOST } = await import("@/app/api/auth/cambiar-password/route");
         const resCambio = await cambiarPOST(
             new Request("http://localhost:5005/api/auth/cambiar-password", {

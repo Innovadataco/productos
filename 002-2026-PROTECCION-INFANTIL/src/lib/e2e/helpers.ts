@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { POST as loginPOST } from "@/app/api/auth/login/route";
 import { crearTokenUsuario, crearUsuario } from "@/lib/reporte-test-utils";
 import { decryptParameter } from "@/lib/param-encryption";
-import type { RolUsuario } from "@prisma/client";
+import type { RolUsuario, AccionAudit } from "@prisma/client";
 
 export interface Sesion {
     usuarioId: string;
@@ -56,7 +56,7 @@ export async function entrarComo(rol: RolUsuario, email: string, password: strin
 }
 
 /** Pide una ruta al PROXY con la sesión (prueba el camino de acceso, no solo el endpoint). */
-export function viaProxy(sesion: Sesion, pathname: string, method = "GET"): Promise<ReturnType<typeof proxy>> {
+export function viaProxy(sesion: Sesion, pathname: string, method = "GET"): ReturnType<typeof proxy> {
     return proxy(
         new NextRequest(`http://localhost:5005${pathname}`, {
             method,
@@ -81,6 +81,9 @@ export function esperarBloqueo(res: { status: number }, contexto: string) {
 
 /** Cierra sesión por el camino real y exige que la ruta privada devuelva al login. */
 export async function salirYExigirSesionMuerta(sesion: Sesion, rutaPrivada: string) {
+    // El CAMINO al endpoint pasa por el proxy (I-35: si el proxy lo bloquea, el botón
+    // de cerrar sesión de la pantalla nunca alcanza la API aunque la pieza funcione)
+    esperarPasoLibre(await viaProxy(sesion, "/api/auth/logout", "POST"), `${sesion.rol} alcanza /api/auth/logout`);
     const { POST: logoutPOST } = await import("@/app/api/auth/logout/route");
     const res = await logoutPOST();
     if (res.status !== 200) throw new Error(`Logout falló (${res.status}) para ${sesion.rol}`);
@@ -95,6 +98,7 @@ export async function salirYExigirSesionMuerta(sesion: Sesion, rutaPrivada: stri
 export async function verificarTextoIntacto(reporteId: string, textoEnviado: string) {
     const reporte = await prisma.reporte.findUnique({ where: { id: reporteId } });
     if (!reporte) throw new Error("Reporte no persistido");
+    if (!reporte.textoOriginal) throw new Error("§9: textoOriginal no persistido");
     if (reporte.textoOriginal === textoEnviado) {
         throw new Error("§9: textoOriginal quedó EN CLARO en BD (debe ir cifrado)");
     }
@@ -112,7 +116,7 @@ export function verificarHashBcrypt(passwordHash: string, password: string) {
 }
 
 /** §9: existe AuditLog reciente de una acción sobre un recurso. */
-export async function verificarAuditLog(accion: string, recursoId: string) {
+export async function verificarAuditLog(accion: AccionAudit, recursoId: string) {
     const log = await prisma.auditLog.findFirst({
         where: { accion, recursoId },
         orderBy: { creadoEn: "desc" },
