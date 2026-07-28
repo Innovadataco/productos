@@ -44,12 +44,18 @@ describe("NavHeader", () => {
         expect(logo?.getAttribute("href")).toBe("/");
     });
 
-    it("logo va al panel del rol cuando el ADMIN está dentro de /dashboard/** (SPEC-106)", () => {
-        mockPathname = "/dashboard/admin";
+    it("logo va al panel del rol desde OTRA página del área (SPEC-106); en el home del rol va al home público (I-38, nunca clic muerto)", () => {
+        mockPathname = "/dashboard/admin/reportes";
         mockAuth({ id: "1", email: "admin@test.com", nombre: "Admin", rol: "ADMIN" });
-        render(<NavHeader />);
-        const logo = screen.getByText("Infantil").closest("a");
+        const { unmount } = render(<NavHeader />);
+        let logo = screen.getByText("Infantil").closest("a");
         expect(logo?.getAttribute("href")).toBe("/dashboard/admin");
+        unmount();
+
+        mockPathname = "/dashboard/admin";
+        render(<NavHeader />);
+        logo = screen.getByText("Infantil").closest("a");
+        expect(logo?.getAttribute("href")).toBe("/");
     });
 
     it("botón Dashboard apunta a /dashboard para padre autenticado", () => {

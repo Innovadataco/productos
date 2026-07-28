@@ -74,7 +74,7 @@ export function NavHeader() {
     // En rutas públicas va al home público aunque haya sesión (SPEC-106: un ADMIN debe
     // poder navegar la app pública y reportar anónimamente sin que el header lo secuestre).
     const enAreaAutenticada = pathname?.startsWith("/dashboard") ?? false;
-    const logoHref = !user || !enAreaAutenticada
+    const logoDestino = !user || !enAreaAutenticada
         ? "/"
         : user.rol === "ADMIN" || user.rol === "OPERADOR"
         ? "/dashboard/admin"
@@ -83,6 +83,9 @@ export function NavHeader() {
         : user.rol === "SCHOOL_ADMIN"
         ? "/dashboard/colegio"
         : "/dashboard";
+    // I-38 (SPEC-114): el logo NUNCA es un clic muerto — si el destino es la página actual,
+    // va al home público.
+    const logoHref = logoDestino === pathname ? "/" : logoDestino;
 
     return (
         <header className={`fixed top-0 left-0 right-0 z-50 glass ${headerBorderClass}`}>
