@@ -80,6 +80,11 @@ export function esDestinoPermitidoPorRol(rol: string | null | undefined, pathnam
     if (!rol) return !pathname.startsWith("/dashboard/admin");
     if (rol === "SCHOOL_ADMIN") return esRutaPermitidaSchoolAdmin(pathname);
     if (esRolInterno(rol)) {
+        // Mismo orden que proxyCore: admin-only primero, luego el área interna, y solo
+        // después usuario-final/reportar. Sin esto, "/dashboard/admin" caía en el
+        // startsWith("/dashboard") de usuario-final y el criterio contradecía al proxy.
+        if (esRutaAdminOnly(pathname) && !esRolAdmin(rol)) return false;
+        if (pathname.startsWith("/dashboard/admin") || pathname.startsWith("/api/admin")) return true;
         if (isUserFinalRoute(pathname) || isReportarRoute(pathname)) return false;
         return true;
     }
