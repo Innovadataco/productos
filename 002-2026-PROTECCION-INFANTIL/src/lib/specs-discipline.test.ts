@@ -74,11 +74,11 @@ describe("disciplina Spec-Kit (spec 087)", () => {
         expect(violaciones, violaciones.join("; ")).toEqual([]);
     });
 
-    it("specs >021 CERRADA tienen cierre (carpeta o docs/)", () => {
+    it("specs CERRADA tienen cierre (carpeta o docs/) — SIN exenciones (auditoría §3.2a)", () => {
         const violaciones: string[] = [];
         for (const carpeta of carpetas) {
             const num = parseInt(carpeta.split("-")[0], 10);
-            if (Number.isNaN(num) || num <= 21) continue;
+            if (Number.isNaN(num)) continue;
             const status = statusDe(path.join(SPECS_DIR, carpeta, "spec.md"));
             if (status !== "CERRADA") continue;
             const archivos = fs.readdirSync(path.join(SPECS_DIR, carpeta));
@@ -114,10 +114,12 @@ describe("disciplina Spec-Kit (spec 087)", () => {
         expect(violaciones, violaciones.join("; ")).toEqual([]);
     });
 
-    it("DEUDA_HEREDADA no crece (toda carpeta de la lista sigue existiendo)", () => {
-        // Si una carpeta de la lista fue saneada (completados plan/tasks), debe SALIR de
-        // la lista: este test solo falla si alguien borra la carpeta sin tocar la lista,
-        // no si la lista encoge. La lista se edita a mano y solo puede encoger.
+    it("DEUDA_HEREDADA no crece (tope duro: añadir una entrada pone la suite en rojo)", () => {
+        // Auditoría §3.2b: la lista SOLO PUEDE ENCOGER. Tope duro en el valor actual (19);
+        // al sanear una spec (completar sus artefactos) se baja el tope a mano en el mismo commit.
+        expect(DEUDA_HEREDADA.size).toBeLessThanOrEqual(19);
+        // Consistencia: toda carpeta de la lista sigue existiendo (si se sana una spec, hay
+        // que sacarla de la lista, no borrar la carpeta).
         const inexistentes = [...DEUDA_HEREDADA].filter((c) => !carpetas.includes(c));
         expect(inexistentes, inexistentes.join("; ")).toEqual([]);
     });

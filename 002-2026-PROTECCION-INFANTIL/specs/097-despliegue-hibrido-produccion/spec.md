@@ -1,6 +1,6 @@
 # Feature Specification: Despliegue híbrido a producción (VPS + cerebro en la Mac)
 
-**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-26 | **Status**: IMPLEMENTADO (pendiente ACTA)
+**Feature Branch**: `feature/001-scaffolding` | **Date**: 2026-07-26 | **Status**: FINALIZADO (pendiente ACTA)
 
 ## Contexto
 

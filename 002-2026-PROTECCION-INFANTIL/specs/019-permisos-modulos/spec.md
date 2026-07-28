@@ -1,6 +1,6 @@
 # Spec 019 — Gestor de permisos de módulos por ROL
 
-> Estado: **IMPLEMENTADO** (pendiente validación funcional de Jelkin + ACTA-VALIDACION).
+> Estado: **FINALIZADO** (pendiente ACTA)
 > Diseño: [`diseno.md`](diseno.md) · Plan: [`plan.md`](plan.md).
 > Re-especificada: 2026-07-23 con 5 cambios obligatorios de ZEUS.
 
