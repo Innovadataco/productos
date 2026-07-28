@@ -7,8 +7,8 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **90** |
-| **Cerradas / Implementadas / Finalizadas** | **86** |
+| **Total de specs** | **91** |
+| **Cerradas / Implementadas / Finalizadas** | **87** |
 | **Pendientes (planeadas / en desarrollo)** | **3** |
 
 ## Backlog activo (pendientes)
@@ -20,6 +20,7 @@
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 | [106](106-logout-cookie-secure/spec.md) | Cerrar sesión de verdad (cookie __Host- y logo público) | 🟢 Finalizada (desplegada en d130e46, pendiente ACTA) |
 | [107](107-gate-antirrecaidas/spec.md) | El gate que evita recaídas (disciplina specs, anti-literal, CI, imagen sin devDeps) | 🟢 Finalizada |
+| [108](108-higiene-seguridad-ux/spec.md) | Higiene de seguridad y UX (I-33, I-29, O-1) | 🟢 Finalizada |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|

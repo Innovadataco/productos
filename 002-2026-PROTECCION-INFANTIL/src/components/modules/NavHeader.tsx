@@ -172,6 +172,10 @@ export function NavHeader() {
                                             </>
                                         )}
                                         <hr className="my-1 border-slate-100 dark:border-slate-800" />
+                                        {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible para TODOS los roles */}
+                                        <NavDropdownLink href="/cambiar-password" onClick={() => setOpen(false)}>
+                                            Cambiar contraseña
+                                        </NavDropdownLink>
                                         <button
                                             onClick={async () => {
                                                 setOpen(false);

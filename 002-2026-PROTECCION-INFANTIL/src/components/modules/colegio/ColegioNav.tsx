@@ -33,7 +33,16 @@ export function ColegioNav({ modulosPermitidos }: { modulosPermitidos: string[] 
                             );
                         })}
                     </div>
-                    <ColegioLogoutButton label="Cerrar sesión" className="whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30" />
+                    <div className="flex items-center gap-1">
+                        {/* I-33 (SPEC-108): acceso a cambio de contraseña desde el panel del colegio */}
+                        <Link
+                            href="/cambiar-password"
+                            className="whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-900/40"
+                        >
+                            Cambiar contraseña
+                        </Link>
+                        <ColegioLogoutButton label="Cerrar sesión" className="whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30" />
+                    </div>
                 </div>
             </div>
         </nav>

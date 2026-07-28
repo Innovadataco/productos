@@ -209,4 +209,17 @@ describe("fail-closed ante fallo del store (I-28)", () => {
         expect(result.allowed).toBe(true);
         expect(result.remaining).toBeGreaterThan(0);
     });
+
+    it("O-1 (SPEC-108): si la LECTURA DE PARÁMETROS falla (no solo el upsert), seguimiento responde 429 fail-closed y no lanza 500", async () => {
+        if (rateLimitDisabled) return;
+        await crearParametrosReportes();
+
+        // Antes del fix, getScopeConfig leía parámetros FUERA del try: un fallo aquí
+        // lanzaba y el endpoint respondía 500 en vez del 429 + Retry-After prometido.
+        vi.spyOn(prisma.parametroSistema, "findUnique").mockRejectedValue(new Error("postgres caído"));
+        const result = await checkRateLimit(makeRequest("10.9.9.7"), "seguimiento");
+        expect(result.allowed).toBe(false);
+        expect(result.remaining).toBe(0);
+        expect(result.headers["Retry-After"]).toBeDefined();
+    });
 });

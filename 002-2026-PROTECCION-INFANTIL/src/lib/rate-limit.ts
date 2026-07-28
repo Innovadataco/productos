@@ -107,14 +107,16 @@ export async function checkRateLimit(
     }
 
     const identifier = options?.identifier ?? getClientIp(request);
-    const config = await getScopeConfig(scope);
-    const windowMs = config.windowSeconds * 1000;
-    const now = Date.now();
-    const windowStartMs = Math.floor(now / windowMs) * windowMs;
-    const resetAt = windowStartMs + windowMs;
-    const key = `${scope}:${identifier}:${windowStartMs}`;
 
     try {
+        // O-1 (SPEC-108): la config se lee DENTRO del try. Con Postgres caído, los scopes
+        // de FAIL_CLOSED_SCOPES deben responder 429 + Retry-After (SPEC-103), no 500.
+        const config = await getScopeConfig(scope);
+        const windowMs = config.windowSeconds * 1000;
+        const now = Date.now();
+        const windowStartMs = Math.floor(now / windowMs) * windowMs;
+        const resetAt = windowStartMs + windowMs;
+        const key = `${scope}:${identifier}:${windowStartMs}`;
         // Atomic upsert: crea la ventana o incrementa el contador
         const rows = await prisma.$queryRaw<{ count: number }[]>`
             INSERT INTO "RateLimit" (key, scope, identifier, "windowStart", count, "createdAt", "actualizadoEn")
@@ -159,20 +161,23 @@ export async function checkRateLimit(
     } catch (error) {
         // Fallo del limitador: fail-open por defecto; los scopes de
         // FAIL_CLOSED_SCOPES fallan cerrado (bloquean) ante un store caído.
+        // Defaults sincrónicos (sin BD): el catch también debe funcionar con Postgres caído.
         logger.error("[RATE-LIMIT] Error consultando límite:", error);
         const failClosed = FAIL_CLOSED_SCOPES.has(scope);
+        const defaults = getScopeDefaults(scope);
+        const resetAt = Date.now() + defaults.windowSeconds * 1000;
         const headers: Record<string, string> = {
-            "X-RateLimit-Limit": String(config.maxRequests),
-            "X-RateLimit-Remaining": String(failClosed ? 0 : config.maxRequests),
+            "X-RateLimit-Limit": String(defaults.maxRequests),
+            "X-RateLimit-Remaining": String(failClosed ? 0 : defaults.maxRequests),
             "X-RateLimit-Reset": String(Math.ceil(resetAt / 1000)),
         };
         if (failClosed) {
-            headers["Retry-After"] = String(Math.ceil((resetAt - now) / 1000));
+            headers["Retry-After"] = String(Math.ceil((resetAt - Date.now()) / 1000));
         }
         return {
             allowed: !failClosed,
-            limit: config.maxRequests,
-            remaining: failClosed ? 0 : config.maxRequests,
+            limit: defaults.maxRequests,
+            remaining: failClosed ? 0 : defaults.maxRequests,
             resetAt,
             headers,
         };

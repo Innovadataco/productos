@@ -11,7 +11,6 @@ export async function GET() {
             identificadoresUnicos,
             reportesAutenticados,
             reportesAnonimos,
-            scorePromedio,
             porPlataforma,
             porPais,
             porCiudadConIds,
@@ -21,9 +20,6 @@ export async function GET() {
             prisma.identificadorReportado.count(),
             prisma.reporte.count({ where: whereReporteAprobado({ esAnonimo: false }) }),
             prisma.reporte.count({ where: whereReporteAprobado({ esAnonimo: true }) }),
-            prisma.identificadorReportado.aggregate({
-                _avg: { score: true },
-            }),
             prisma.reporte.groupBy({
                 by: ["plataformaId"],
                 _count: { id: true },
@@ -107,7 +103,7 @@ export async function GET() {
                 identificadoresUnicos,
                 reportesAutenticados,
                 reportesAnonimos,
-                scorePromedio: Math.round(scorePromedio._avg.score ?? 0),
+                // I-29 (SPEC-108): NUNCA scorePromedio en la API pública (D-10/§1.3/§1.5).
             },
             porPlataforma: porPlataforma.map((p) => ({
                 plataforma: plataformasMap[p.plataformaId || ""] || "Desconocida",

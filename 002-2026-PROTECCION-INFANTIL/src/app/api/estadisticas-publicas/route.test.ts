@@ -93,7 +93,9 @@ describe("GET /api/estadisticas-publicas", () => {
         expect(body.totales.identificadoresUnicos).toBe(2);
         expect(body.totales.reportesAutenticados).toBe(4);
         expect(body.totales.reportesAnonimos).toBe(1);
-        expect(body.totales.scorePromedio).toBe(60);
+        // I-29 (SPEC-108): la API pública NO debe traer scorePromedio en ningún nivel
+        expect(body.totales.scorePromedio).toBeUndefined();
+        expect(JSON.stringify(body)).not.toContain("scorePromedio");
 
         expect(body.porPlataforma).toHaveLength(2);
         const whatsappEntry = body.porPlataforma.find((p: { plataforma: string }) => p.plataforma === "WhatsApp");

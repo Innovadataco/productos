@@ -59,7 +59,25 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
                     );
                 })}
             </ul>
+            {/* I-33 (SPEC-108): acceso a cambio de contraseña desde el panel admin/operador/comité */}
+            <div className="border-t border-slate-200 p-3 dark:border-slate-800">
+                <Link
+                    href="/cambiar-password"
+                    className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-muted transition hover:bg-slate-100 hover:text-body dark:hover:bg-slate-800/60"
+                >
+                    <KeyIcon className="h-4 w-4" />
+                    Cambiar contraseña
+                </Link>
+            </div>
         </nav>
+    );
+}
+
+function KeyIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+        </svg>
     );
 }
 
