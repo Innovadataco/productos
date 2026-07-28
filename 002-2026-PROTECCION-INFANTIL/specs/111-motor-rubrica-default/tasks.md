@@ -9,19 +9,19 @@
 
 ## Fase 1: US1/US2 — encendido de verdad
 
-- [ ] T001 [US1] `prisma/seed.ts`: `ia.rubrica.enabled` se siembra con valor `true` (base nueva).
-- [ ] T002 [US2] Script idempotente `scripts/aplicar-rubrica-default-111.ts`: lee el parámetro; `true` → no-op con log; si no → fija `true` con evidencia. Sin ejecutar en prod (lote del CEO).
-- [ ] T003 [US1] Test de efecto (`src/app/api/reportes/procesar/...test.ts`): `enabled=true` → el reporte procesado tiene filas en `ClasificacionRubricaVoto`; `enabled=false` → no las tiene.
+- [x] T001 [US1] `prisma/seed.ts`: `ia.rubrica.enabled` se siembra con valor `true` (base nueva).
+- [x] T002 [US2] Script idempotente `scripts/aplicar-rubrica-default-111.ts`: lee el parámetro; `true` → no-op con log; si no → fija `true` con evidencia. Sin ejecutar en prod (lote del CEO).
+- [x] T003 [US1] Test de efecto (`src/app/api/reportes/procesar/...test.ts`): `enabled=true` → el reporte procesado tiene filas en `ClasificacionRubricaVoto`; `enabled=false` → no las tiene.
 
 ## Fase 2: US3 — reversión
 
-- [ ] T004 [US3] `docs/runbook.md`: sección de reversión en caliente a legacy (parámetro a `false`, efecto inmediato, verificación por ausencia de votos de rúbrica).
+- [x] T004 [US3] `docs/runbook.md`: sección de reversión en caliente a legacy (parámetro a `false`, efecto inmediato, verificación por ausencia de votos de rúbrica).
 
 ## Fase 3: Cierre
 
-- [ ] T005 Verificación de restricciones: diff sin tocar textos de preguntas, terna ni umbral 60%.
-- [ ] T006 Gate: `npx tsc --noEmit` + `npm run lint` + `npm run test` + `npm run build`.
-- [ ] T007 `cierre.md` + `specs/README.md` (111 → estado final) + commits + push. **NO desplegar** (lo autoriza el CEO por lote).
+- [x] T005 Verificación de restricciones: diff sin tocar textos de preguntas, terna ni umbral 60%.
+- [x] T006 Gate: `npx tsc --noEmit` + `npm run lint` + `npm run test` + `npm run build`.
+- [x] T007 `cierre.md` + `specs/README.md` (111 → estado final) + commits + push. **NO desplegar** (lo autoriza el CEO por lote).
 
 ## Dependencias
 

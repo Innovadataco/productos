@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-28
 
-**Status**: PLANEADO (en compuerta §4 — pendiente aprobación de ZEUS)
+**Status**: FINALIZADO (SIN desplegar, pendiente release + ACTA)
 
 **Input**: "Ejecutar la D-28: ia.rubrica.enabled pasa a true de verdad (seed + parámetro en
 producción), con test que prueba el EFECTO (rúbrica con true, legacy con false),
