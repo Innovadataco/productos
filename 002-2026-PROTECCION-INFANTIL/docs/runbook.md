@@ -662,6 +662,35 @@ SOLO si no existe; nunca pisa una credencial ya rotada (`create` puro, sin `upda
 
 ---
 
+## 12c. Reversión en caliente del motor de rúbrica a legacy (D-28, SPEC-111)
+
+> Si algo sale mal en producción con la rúbrica activa (`ia.rubrica.enabled=true`), se
+> vuelve a legacy EN CALIENTE: un parámetro, sin reiniciar ni desplegar. El parámetro se
+> lee en cada procesamiento, así que el cambio aplica desde el siguiente reporte.
+
+1. **Revertir** (elige una):
+   - Panel de admin → Parámetros → `ia.rubrica.enabled` = `false`; o
+   - SQL directo:
+     ```bash
+     docker exec pi-db psql -U proteccion -d proteccion_infantil -c \
+       "UPDATE \"ParametroSistema\" SET valor='false', \"actualizadoEn\"=NOW() WHERE clave='ia.rubrica.enabled';"
+     ```
+2. **Verificar** que el siguiente reporte se clasifica por LEGACY:
+   ```bash
+   # Procesar un reporte de prueba y comprobar que NO se crean votos de rúbrica:
+   docker exec pi-db psql -U proteccion -d proteccion_infantil -tAc \
+     "SELECT count(*) FROM \"ClasificacionRubricaVoto\" v JOIN \"ClasificacionIA\" c ON v.\"clasificacionIAId\"=c.id WHERE c.\"creadoEn\" > NOW() - interval '10 minutes';"
+   # Esperado: 0 (legacy no genera votos de rúbrica).
+   ```
+3. **Volver a rúbrica** cuando ZEUS lo autorice: mismo paso con `valor='true'` (o
+   `npx tsx scripts/aplicar-rubrica-default-111.ts`, idempotente).
+
+**Evidencia de que el cambio es en caliente (sin reinicio)**: medición 2026-07-28
+(`scripts/medicion-capacidad-111.ts`) — dos procesamientos seguidos en el mismo proceso:
+`enabled=false` → legacy (37.7 s) y `enabled=true` → rúbrica (52.0 s), sin reiniciar nada.
+
+---
+
 ## 13. Contacto y escalamiento
 
 - Si reiniciar Ollama/worker/app no resuelve el problema: revisar `app.log` y `worker.log`.
