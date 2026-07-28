@@ -33,6 +33,5 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "audit_logs", nombre: "Logs de auditoría", categoria: "admin", esCritico: true, orden: 80 },
     { clave: "estadisticas", nombre: "Estadísticas", categoria: "admin", orden: 90 },
     { clave: "anti_abuso", nombre: "Anti-abuso", categoria: "admin", orden: 100 },
-    { clave: "apelaciones", nombre: "Apelaciones", categoria: "admin", orden: 110 },
     { clave: "dataset_entrenamiento", nombre: "Dataset de entrenamiento", categoria: "admin", orden: 120 },
 ];

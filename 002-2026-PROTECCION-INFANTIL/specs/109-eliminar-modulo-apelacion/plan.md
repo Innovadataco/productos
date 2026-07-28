@@ -75,8 +75,21 @@ Lo que quedaría huérfano al eliminar y su destino (verificado en fuente 2026-0
    `scripts/smoke-apelaciones.ts`, `src/components/modules/AdminApelaciones.tsx` y
    `src/lib/sms.ts`.
 2. **FR-004**: migración `DROP TABLE "ApelacionIdentificador"` + `DROP TYPE
-   "EstadoApelacion"` (vacía: 0 filas en prod, verificado); schema sin el modelo, el enum
-   y las relaciones de la tabla de huérfanos.
+   "EstadoApelacion"` (vacía: 0 filas en prod, verificado) **con la guarda DENTRO de la
+   migración** (corrección ZEUS 002-PI-034 — `prisma migrate deploy` no comprueba filas y
+   `/apelar` sigue vivo en producción hasta el despliegue):
+
+   ```sql
+   DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM "ApelacionIdentificador") THEN
+       RAISE EXCEPTION 'SPEC-109: hay apelaciones registradas. Abortar y avisar a ZEUS.';
+     END IF;
+   END $$;
+   ```
+
+   La migración FALLA sin borrar nada si aparece una fila (verificado rojo: fila insertada
+   → aborta; verde: sin filas → pasa). Schema sin el modelo, el enum y las relaciones de la
+   tabla de huérfanos.
 3. **FR-005/006**: seed sin `anti_abuso.apelacion_pausa_dias` ni `ratelimit.apelacion.*`;
    proxy sin la ruta; rate-limit sin los dos scopes; catálogo sin el módulo; nav-items y
    AdminNav sin la entrada; asignador sin la rama; permisos sin la función; helpers de
@@ -88,7 +101,7 @@ Lo que quedaría huérfano al eliminar y su destino (verificado en fuente 2026-0
 
 | Riesgo | Mitigación |
 |--------|------------|
-| Fila aparece en prod entre PASO 0 y la migración | Antes de aplicar en prod (lote), re-verificar `COUNT(*)`; si > 0, PARAR y reportar a ZEUS |
+| Fila aparece en prod entre PASO 0 y la migración | Guarda DENTRO de la migración (DO $$ que aborta si existe cualquier fila): la migración falla sin borrar nada y avisa a ZEUS — verificada rojo/verde en dev |
 | Import muerto rompe el build | El inventario de huérfanos de arriba + gate completo |
 | El módulo de permisos queda en la BD de prod (PermisoModulo) | Se documenta en el cierre: limpieza del registro en prod va en el lote (o queda inerte sin catálogo) |
 

@@ -8,8 +8,8 @@
 | Métrica | Valor |
 |---------|-------|
 | **Total de specs** | **93** |
-| **Cerradas / Implementadas / Finalizadas** | **88** |
-| **Pendientes (planeadas / en desarrollo)** | **4** |
+| **Cerradas / Implementadas / Finalizadas** | **89** |
+| **Pendientes (planeadas / en desarrollo)** | **3** |
 
 ## Backlog activo (pendientes)
 
@@ -18,12 +18,11 @@
 | [017](017-documentacion/spec.md) | Módulo de documentación navegable | 🔵 Planeado |
 | [053](053-capa-datos-servicios/spec.md) | Feature Specification: Capa de datos / servicios (DAL) | 🔵 Planeado |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
-| [109](109-eliminar-modulo-apelacion/spec.md) | Eliminar el módulo de apelación actual (D-34) | 🔵 Planeado (en compuerta §4) |
 | [106](106-logout-cookie-secure/spec.md) | Cerrar sesión de verdad (cookie __Host- y logo público) | 🟢 Finalizada (desplegada en d130e46, pendiente ACTA) |
 | [107](107-gate-antirrecaidas/spec.md) | El gate que evita recaídas (disciplina specs, anti-literal, CI, imagen sin devDeps) | 🟢 Finalizada |
 | [108](108-higiene-seguridad-ux/spec.md) | Higiene de seguridad y UX (I-33, I-29, O-1) | 🟢 Finalizada |
 | [111](111-motor-rubrica-default/spec.md) | D-28: la rúbrica como motor predeterminado | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
-| [109](109-eliminar-modulo-apelacion/spec.md) | Eliminar el módulo de apelación actual (D-34) | 🔵 Planeado (en compuerta §4) |
+| [109](109-eliminar-modulo-apelacion/spec.md) | Eliminar el módulo de apelación actual (D-34) | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|

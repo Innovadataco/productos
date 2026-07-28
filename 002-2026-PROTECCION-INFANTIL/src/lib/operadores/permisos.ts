@@ -38,16 +38,6 @@ export function puedeGestionarReporte(user: Usuario, reporte: RecursoConOperador
     return false;
 }
 
-export function puedeGestionarApelacion(user: Usuario, apelacion: RecursoConOperador) {
-    if (esAdminRol(user.rol)) {
-        return true;
-    }
-    if (user.rol === "OPERADOR") {
-        return apelacion.operadorId === user.id;
-    }
-    return false;
-}
-
 export function validarExclusividadRolComite(input: { rol: string; esComite?: boolean }) {
     const esComite = input.esComite ?? false;
     if (input.rol === "OPERADOR" && esComite) {

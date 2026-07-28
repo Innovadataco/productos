@@ -37,8 +37,6 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     seguimiento: { windowSeconds: 60, maxRequests: 10 },
     report_identificador: { windowSeconds: 3600, maxRequests: 10 },
     report_fingerprint: { windowSeconds: 3600, maxRequests: 5 },
-    apelacion: { windowSeconds: 86400, maxRequests: 3 },
-    apelacion_sms: { windowSeconds: 3600, maxRequests: 3 },
     circulo_contacto: { windowSeconds: 3600, maxRequests: 20 },
     recuperar_solicitar: { windowSeconds: 3600, maxRequests: 5 },
     verificacion_solicitar: { windowSeconds: 3600, maxRequests: 5 },

@@ -24,8 +24,6 @@ const PUBLIC_ROUTES = [
     "/api/reportes",
     "/api/estadisticas-publicas",
     "/api/health",
-    "/api/apelaciones",
-    "/apelar",
 ];
 
 // Rutas de usuario final: solo PARENT (o anónimo) puede usarlas; internos no.

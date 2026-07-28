@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-28
 
-**Status**: PLANEADO (en compuerta §4 — pendiente aprobación de ZEUS)
+**Status**: FINALIZADO (SIN desplegar, pendiente release + ACTA)
 
 **Input**: "Eliminar por completo el módulo de apelación de la spec 015 (D-34: se rediseña
 desde cero, nada se reutiliza). Crear una apelación ocultaba el identificador de inmediato

@@ -15,7 +15,6 @@ const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element
     "/dashboard/admin/operadores": UsersIcon,
     "/dashboard/admin/colegios": BuildingIcon,
     "/dashboard/admin/anti-abuso": ShieldIcon,
-    "/dashboard/admin/apelaciones": ScaleIcon,
     "/dashboard/admin/dataset-entrenamiento": DatabaseIcon,
     "/dashboard/admin/configuracion": CogIcon,
 };

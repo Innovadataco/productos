@@ -121,14 +121,6 @@ enum TipoPeriodoServicio {
   LIBRE
 }
 
-enum EstadoApelacion {
-  RECIBIDA
-  EN_REVISION
-  ACEPTADA
-  RECHAZADA
-  VENCIDA
-}
-
 enum EtiquetaRelacionAlumno {
   ALUMNO
   MADRE
@@ -221,10 +213,8 @@ model Usuario {
   casosEval                    CasoEval[]
   evalRuns                     EvalRun[]
   simulaciones                 SimulacionRun[]
-  apelaciones                  ApelacionIdentificador[]
   casosAsignados               Reporte[]                @relation("CasosOperador")
   casosComiteAsignados         Reporte[]                @relation("CasosComite")
-  apelacionesAsignadas         ApelacionIdentificador[] @relation("ApelacionesOperador")
   anonimizacionesValidadas     Reporte[]                @relation("AnonimizacionesValidadas")
   perfilOperador               PerfilOperador?
   operadoresCreados            PerfilOperador[]         @relation("OperadoresCreados")
@@ -530,7 +520,6 @@ model Plataforma {
   reportes                Reporte[]
   identificadores         IdentificadorReportado[]
   alertasSuscripcion      AlertaSuscripcion[]
-  apelaciones             ApelacionIdentificador[]
   identificadoresContacto IdentificadorContacto[]
   identificadoresAlumno IdentificadorAlumno[]
 
@@ -773,7 +762,6 @@ model IdentificadorReportado {
   actualizadoEn         DateTime  @updatedAt
 
   plataforma  Plataforma               @relation(fields: [plataformaId], references: [id])
-  apelaciones ApelacionIdentificador[]
 
   @@unique([identificador, plataformaId])
   @@index([esVisiblePublicamente])
@@ -781,39 +769,6 @@ model IdentificadorReportado {
   @@index([score])
 }
 
-model ApelacionIdentificador {
-  id                    String          @id @default(cuid())
-  identificador         String
-  plataformaId          String
-  tokenAcceso           String          @unique
-  estado                EstadoApelacion @default(RECIBIDA)
-  motivoSolicitud       String
-  evidenciaUrl          String?
-  respuestaAdmin        String?
-  adminId               String?
-  operadorId            String?
-  tipoVerificacion      String // SMS | NICK
-  contacto              String?
-  smsCodigoHash         String?
-  smsVerificado         Boolean         @default(false)
-  smsIntentos           Int             @default(0)
-  pausaHasta            DateTime?
-  visibilidadRestaurada Boolean         @default(false)
-  derechoApelar         Boolean         @default(true)
-  notaRehabilitacion    String?
-  creadoEn              DateTime        @default(now())
-  actualizadoEn         DateTime        @updatedAt
-
-  plataforma             Plataforma             @relation(fields: [plataformaId], references: [id])
-  admin                  Usuario?               @relation(fields: [adminId], references: [id])
-  operador               Usuario?               @relation(fields: [operadorId], references: [id], name: "ApelacionesOperador")
-  identificadorReportado IdentificadorReportado @relation(fields: [identificador, plataformaId], references: [identificador, plataformaId])
-
-  @@index([identificador, plataformaId])
-  @@index([estado])
-  @@index([tokenAcceso])
-  @@index([operadorId])
-}
 
 model ContactoConfianza {
   id            String   @id @default(cuid())
