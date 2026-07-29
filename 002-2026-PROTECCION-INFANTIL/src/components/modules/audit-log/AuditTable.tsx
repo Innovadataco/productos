@@ -4,6 +4,9 @@ import { Fragment } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 import { ChevronIcon } from "./AuditFilters";
 import { formatDate, formatValorNuevo } from "./types";
 import type { AuditResponse } from "./types";
@@ -20,7 +23,7 @@ interface AuditTableProps {
 
 export function AuditTable({ data, loading, error, page, expandedIds, onToggle, onPageChange }: AuditTableProps) {
     if (error) {
-        return <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">{error}</div>;
+        return <Alerta tono="error" className="p-4">{error}</Alerta>;
     }
 
     return (
@@ -37,19 +40,16 @@ export function AuditTable({ data, loading, error, page, expandedIds, onToggle, 
             </div>
 
             {loading ? (
-                <div className="flex items-center gap-3 py-8 text-muted">
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                    Cargando auditoría...
-                </div>
+                <Cargando inline texto="Cargando auditoría..." className="py-8" />
             ) : !data || data.items.length === 0 ? (
                 <EmptyState
                     title="No hay registros de auditoría"
                     description="Prueba ajustar los filtros de acción o fecha."
                 />
             ) : (
-                <div className="mt-4 overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="border-b border-slate-200 dark:border-slate-800">
+                <div className="mt-4">
+                    <Tabla sinContenedor>
+                        <TablaHead variante="borde">
                             <tr className="text-subtle">
                                 <th className="pb-3 font-medium">Acción</th>
                                 <th className="pb-3 font-medium">Recurso</th>
@@ -57,8 +57,8 @@ export function AuditTable({ data, loading, error, page, expandedIds, onToggle, 
                                 <th className="pb-3 font-medium">Fecha</th>
                                 <th className="pb-3 font-medium text-right">Detalle</th>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        </TablaHead>
+                        <TablaBody>
                             {data.items.map((item) => (
                                 <Fragment key={item.id}>
                                     <tr className="align-top transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
@@ -114,8 +114,8 @@ export function AuditTable({ data, loading, error, page, expandedIds, onToggle, 
                                     )}
                                 </Fragment>
                             ))}
-                        </tbody>
-                    </table>
+                        </TablaBody>
+                    </Tabla>
                 </div>
             )}
 
