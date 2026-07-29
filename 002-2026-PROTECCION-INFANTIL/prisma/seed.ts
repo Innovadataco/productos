@@ -1,5 +1,6 @@
 import { CATALOGO_MODULOS } from "../src/lib/permisos-catalogo";
 import { RUBRICA_SEMILLA } from "../src/lib/ai/rubrica-semilla";
+import { normalizarNombreGeografico } from "../src/lib/normalizar";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, CasoEvalFuente } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
@@ -1198,6 +1199,7 @@ async function main() {
                             lat: coords?.lat,
                             lng: coords?.lng,
                             departamentoId,
+                            nombreNormalizado: normalizarNombreGeografico(c),
                         },
                         create: {
                             nombre: c,
@@ -1205,6 +1207,7 @@ async function main() {
                             lat: coords?.lat,
                             lng: coords?.lng,
                             departamentoId,
+                            nombreNormalizado: normalizarNombreGeografico(c),
                         },
                     });
                 }
@@ -1218,8 +1221,8 @@ async function main() {
             const coords = COORDENADAS_CIUDADES[`${p.codigo}:${c}`];
             await prisma.ciudad.upsert({
                 where: { nombre_paisId: { nombre: c, paisId: pais.id } },
-                update: { lat: coords?.lat, lng: coords?.lng },
-                create: { nombre: c, paisId: pais.id, lat: coords?.lat, lng: coords?.lng },
+                update: { lat: coords?.lat, lng: coords?.lng, nombreNormalizado: normalizarNombreGeografico(c) },
+                create: { nombre: c, paisId: pais.id, lat: coords?.lat, lng: coords?.lng, nombreNormalizado: normalizarNombreGeografico(c) },
             });
         }
     }

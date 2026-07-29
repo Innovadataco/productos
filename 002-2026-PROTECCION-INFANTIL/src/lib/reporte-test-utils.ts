@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { createToken, hashPassword } from "./auth";
+import { normalizarNombreGeografico } from "./normalizar";
 import type { RolUsuario } from "@prisma/client";
 
 export async function crearUsuario(rol: RolUsuario = "PARENT", email?: string, password = "TestPass123") {
@@ -137,8 +138,8 @@ export async function crearPaisCiudad() {
     });
     const ciudad = await prisma.ciudad.upsert({
         where: { nombre_paisId: { nombre: "Bogotá", paisId: pais.id } },
-        update: { lat: 4.711, lng: -74.0721 },
-        create: { nombre: "Bogotá", paisId: pais.id, lat: 4.711, lng: -74.0721 },
+        update: { lat: 4.711, lng: -74.0721, nombreNormalizado: normalizarNombreGeografico("Bogotá") },
+        create: { nombre: "Bogotá", paisId: pais.id, lat: 4.711, lng: -74.0721, nombreNormalizado: normalizarNombreGeografico("Bogotá") },
     });
     return { pais, ciudad };
 }
