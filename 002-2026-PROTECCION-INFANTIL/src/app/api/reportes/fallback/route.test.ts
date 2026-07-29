@@ -121,4 +121,28 @@ describe("POST /api/reportes/fallback", () => {
         expect(transiciones[0].estadoAnterior).toBe("PENDIENTE");
         expect(transiciones[0].estadoNuevo).toBe("REVISION_MANUAL");
     });
+
+    it("rechaza 400 un body sin reporteId (SPEC-125)", async () => {
+        const req = new Request("http://localhost:5005/api/reportes/fallback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-worker-secret": process.env.WORKER_SECRET || "worker-secret-test" },
+            body: JSON.stringify({ error: "fallo sin id" }),
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.error.message).toBe("reporteId requerido");
+    });
+
+    it("rechaza 400 un JSON malformado (antes: 500) (SPEC-125)", async () => {
+        const req = new Request("http://localhost:5005/api/reportes/fallback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-worker-secret": process.env.WORKER_SECRET || "worker-secret-test" },
+            body: "{json roto",
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.error.message).toBe("Body inválido");
+    });
 });

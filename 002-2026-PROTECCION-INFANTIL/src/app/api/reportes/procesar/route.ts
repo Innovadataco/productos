@@ -5,7 +5,8 @@ import { buscarEjemplosSimilares, type EjemploRecuperado } from "@/lib/ai/datase
 import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { esErrorTransitorio, ESTADOS_FINALES, respuestaTransitoria, respuestaErrorProcesamiento } from "./helpers/errors";
 import { registrarPaso } from "@/lib/expediente/pasos";
-import { validarWorkerSecret, parsearBody, obtenerReporte } from "./helpers/seguridad";
+import { verificarWorkerSecret } from "@/lib/worker-auth";
+import { parsearBody, obtenerReporte } from "./helpers/seguridad";
 import { guardarEmbedding } from "./helpers/embedding";
 import { detectarDuplicado } from "./helpers/duplicados";
 import { cargarParametrosClasificacion } from "./helpers/parametros";
@@ -25,7 +26,7 @@ import {
 export async function POST(request: Request) {
     let reporteId: string | undefined;
     try {
-        const secretResult = validarWorkerSecret(request);
+        const secretResult = verificarWorkerSecret(request);
         if (!secretResult.ok) return secretResult.response;
 
         const bodyResult = await parsearBody(request);
