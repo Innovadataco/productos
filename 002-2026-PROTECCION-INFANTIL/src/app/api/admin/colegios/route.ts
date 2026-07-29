@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { AppError, ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { enviarEmailBienvenidaColegio } from "@/lib/email";
 import { withValidation } from "@/lib/validation";
@@ -78,13 +79,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ colegios });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[ADMIN/COLEGIOS]");
     }
 }
 
@@ -245,15 +240,6 @@ export async function POST(request: Request) {
                 : "Colegio creado. No se pudo enviar el email; copie la contraseña temporal que se muestra arriba.",
         }, { status: 201 });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[ADMIN/COLEGIOS]");
     }
 }
