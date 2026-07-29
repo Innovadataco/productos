@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { verifyToken } from "@/lib/auth";
 import { formatPlataforma, formatPlataformasResumen } from "@/lib/plataforma";
 import { whereReporteAprobado, CATEGORIAS_NO_APROBADAS } from "@/lib/reporte-aprobado";
+import { consultaBodySchema } from "@/lib/validators";
 import { obtenerSeveridades } from "@/lib/scoring";
 import { getParametroSistema } from "@/lib/parametros";
 import type { CategoriaConducta } from "@prisma/client";
@@ -243,12 +244,8 @@ export async function GET(request: Request) {
  * Regla dura de privacidad: el identificador nunca queda en historial, logs ni caché de URLs.
  */
 export async function POST(request: Request) {
-    let identificador = "";
-    try {
-        const body = await request.json();
-        identificador = typeof body?.identificador === "string" ? body.identificador : "";
-    } catch {
-        identificador = "";
-    }
-    return resolverConsulta(request, identificador);
+    // SPEC-125: esquema tolerante — por privacidad el body NUNCA produce 400
+    // (un body inválido equivale a identificador vacío, igual que antes).
+    const body = consultaBodySchema.parse(await request.json().catch(() => undefined));
+    return resolverConsulta(request, body.identificador ?? "");
 }

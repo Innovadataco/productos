@@ -8,6 +8,7 @@ import { formatPlataforma, formatPlataformasResumen } from "@/lib/plataforma";
 import { getRiesgoConsultaParams, calcularRiesgoConsulta } from "@/lib/riesgo-consulta";
 import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categoria-grupos";
 import { whereReporteEnEstados } from "@/lib/reportes-acceso";
+import { consultaBodySchema } from "@/lib/validators";
 import type { EstadoReporte } from "@prisma/client";
 
 const consultaSchema = z.object({
@@ -187,12 +188,7 @@ export async function GET(request: Request) {
 
 /** POST /api/consulta/detalle — detalle autenticado con el identificador en el CUERPO. */
 export async function POST(request: Request) {
-    let identificador = "";
-    try {
-        const body = await request.json();
-        identificador = typeof body?.identificador === "string" ? body.identificador : "";
-    } catch {
-        identificador = "";
-    }
-    return resolverDetalle(request, identificador);
+    // SPEC-125: esquema tolerante — por privacidad el body NUNCA produce 400.
+    const body = consultaBodySchema.parse(await request.json().catch(() => undefined));
+    return resolverDetalle(request, body.identificador ?? "");
 }
