@@ -44,10 +44,6 @@ export async function getOllamaBaseUrl(): Promise<string> {
     return DEFAULT_OLLAMA_BASE_URL;
 }
 
-export function getDefaultOllamaBaseUrl(): string {
-    return DEFAULT_OLLAMA_BASE_URL;
-}
-
 export interface OllamaModelInfo {
     name: string;
     tag: string;
