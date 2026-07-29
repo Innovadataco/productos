@@ -99,17 +99,32 @@ lo cubre el test de equivalencia de la pieza central + tsc/lint.
 
 ## Estado de migración
 
-_(Se actualiza durante la implementación; objetivo: las 18.)_
+**Migradas las 18/18** (27 bloques). Commits por zona en `cierre.md`.
 
 | Zona | Archivos | Estado |
 | --- | --- | --- |
-| colegio/cursos | 4 | pendiente |
-| colegio/alumnos | 3 | pendiente |
-| colegio/alertas + identificadores | 4 | pendiente |
-| admin/colegios | 2 | pendiente |
-| admin/operadores | 2 | pendiente |
-| admin/comite/integrantes | 2 | pendiente |
-| admin/reportes-revision | 1 | pendiente |
+| colegio/cursos | 4 | migrada (tests zona 17/17) |
+| colegio/alumnos | 3 | migrada (tests zona 26/26 acum.) |
+| colegio/alertas + identificadores | 4 | migrada (tests zona 26/26 acum.) |
+| admin/colegios | 2 | migrada (tests zona 28/28) |
+| admin/operadores | 2 | migrada (tests zona 28/28) |
+| admin/comite/integrantes | 2 | migrada (tests zona 28/28) |
+| admin/reportes-revision | 1 | migrada (sin test propio; cubierta por equivalencia + tsc/lint) |
+
+**Rama por `code` deliberada conservada (no migrada)**: en
+`admin/operadores/route.ts` (POST) existe un `try/catch` ANIDADO alrededor de
+`validarExclusividadRolComite` que mapea el `AppError` `EXCLUSIVIDAD_ROL` a
+**400** con su código (`safeErrorMessage(err), code: err.code`, status 400).
+No es un colapso a 403: es una traducción explícita y acotada de un error de
+negocio conocido, cubierta por el test "rechaza crear OPERADOR con
+esComite=true". Se deja intacta y se documenta aquí.
+
+**Hallazgo colateral corregido por la migración**: en los 5 archivos sin rama
+`AppError` (`operadores`, `operadores/[id]`, `comite/integrantes`,
+`comite/integrantes/[id]`, `reportes-revision/reasignar`), un `AppError` de
+autenticación (401) o permisos (403 con su código) caía en la rama por `code`
+y salía como **403 con el código del AppError**. Tras la migración esos
+`AppError` salen con su status real (401/403 según corresponda).
 
 ## Piezas
 

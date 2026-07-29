@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-29
 
-**Status**: DESARROLLO
+**Status**: FINALIZADO (ver `cierre.md`)
 
 **Input**: Cola nocturna 002-PI-041, bloque B7 (ZEUS). Dos problemas:
 1. **R2 (sobre de error único)**: 18 rutas API colapsan cualquier error con
@@ -131,4 +131,14 @@ cambiar ninguna decisión del motor de clasificación.
 
 ## Implementación
 
-_(Se completa al cierre — ver `cierre.md`.)_
+Completada el 2026-07-29 (bloque B7, cola 002-PI-041). Pieza central
+`src/lib/api-handler.ts` (`errorToResponse`/`withErrorHandler`) con test de
+equivalencia contra la lógica legacy replicada; **18/18 rutas migradas** (0
+colapsos a 403 restantes en `src/app/api`); timeout de generación Ollama vía
+`ia.ollama.timeout_ms` (default 120 000 ms) aplicado en
+`src/lib/ai/ollama-client.ts` con test de efecto. Gate verde (tsc, lint,
+build, suite 1066/1067 — el único fallo es el índice `specs/README.md`,
+prohibido en este bloque y a cargo del coordinador). Detalle, commits,
+hallazgos (rama deliberada `EXCLUSIVIDAD_ROL` conservada; AppError de auth que
+colapsaba a 403 en 5 rutas) y deuda en `cierre.md`; tabla de migración en
+`plan.md`.
