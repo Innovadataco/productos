@@ -192,6 +192,9 @@ export async function POST(request: Request) {
                 reportesAutenticados: esAnonimo ? undefined : { increment: 1 },
                 reportesAnonimos: esAnonimo ? { increment: 1 } : undefined,
                 ultimoReporteEn: new Date(),
+                // SPEC-110: un reporte NUEVO levanta el ocultamiento decidido por el
+                // comité en una apelación aceptada (sin lista blanca permanente).
+                ocultoPorComiteEn: null,
             },
             create: {
                 identificador,

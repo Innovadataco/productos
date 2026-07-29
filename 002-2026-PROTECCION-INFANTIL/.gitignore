@@ -37,3 +37,4 @@ eval-results/
 # SPEC-107 (cola 025, B3-d): artefactos pesados fuera del índice (el historial los conserva como deuda registrada)
 .venv-presidio/
 prisma/dev.db
+storage/

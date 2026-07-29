@@ -24,7 +24,10 @@ export async function actualizarVisibilidadPublica(
         ? agregado.reportesAutenticados / agregado.totalReportes
         : 0;
 
-    const esVisible = agregado.totalReportes >= umbral && ratioAutenticados >= minRatio;
+    // SPEC-110: la marca `ocultoPorComiteEn` es la decisión humana del comité al aceptar
+    // una apelación. Mientras exista, el identificador no es visible. La levanta SOLO
+    // un reporte nuevo (upsert en POST /api/reportes): sin lista blanca permanente.
+    const esVisible = !agregado.ocultoPorComiteEn && agregado.totalReportes >= umbral && ratioAutenticados >= minRatio;
 
     await db.identificadorReportado.update({
         where: { id: agregado.id },
