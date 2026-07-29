@@ -691,6 +691,48 @@ SOLO si no existe; nunca pisa una credencial ya rotada (`create` puro, sin `upda
 
 ---
 
+## 12d. Smoke prod-safe por rol (verificación post-deploy, SPEC-120)
+
+> Runner seguro para producción: a diferencia de la suite E2E (`src/lib/e2e/`),
+> **nunca ejecuta `resetDatabase` ni borrados masivos**. Crea cuentas efímeras
+> propias (`smoke-<ts>-<rol>@test.invalid`), hace solo lecturas HTTP y borra
+> EXACTAMENTE las filas que creó (por ID, en orden FK-seguro), incluso si falla.
+> Detalle y garantías en la cabecera de `scripts/smoke-prod-safe.ts` y en
+> `specs/120-smoke-prod-safe/`.
+
+Por cada rol (padre, colegio, admin, operador, comité) comprueba: login 200 →
+endpoint principal del rol 200 → logout 200 con Set-Cookie de borrado
+(`Path=/`, `Max-Age=0`, `Secure` en la cookie `__Host-`) → endpoint 401 sin cookie.
+
+```bash
+# Plan sin tocar nada (dry-run):
+node --env-file=.env.production --import tsx scripts/smoke-prod-safe.ts --dry-run
+
+# Solo ciclo de cuentas en BD (crear/verificar/borrar, sin HTTP):
+node --env-file=.env.production --import tsx scripts/smoke-prod-safe.ts --db-only
+
+# Contra producción (URL no-loopback exige --confirm-prod):
+SMOKE_BASE_URL=https://pi.innovadataco.com \
+  node --env-file=.env.production --import tsx scripts/smoke-prod-safe.ts --confirm-prod
+```
+
+- Requiere `DATABASE_URL` de la BD del entorno objetivo (la misma que usa la app).
+- Salida: tabla PASS/FAIL por rol; exit `0` todo verde, `1` algún fallo,
+  `2` error de uso/guarda. Nunca imprime contraseñas, tokens ni cookies.
+- Frecuencia: el login tiene rate limit por IP (default 10/5 min); una corrida
+  hace 5 logins. No encadenar corridas seguidas desde la misma IP.
+- Residual conocido y aceptado: contadores de ventana de `RateLimit` por IP
+  (login), compartidos con el tráfico real y efímeros por ventana. Los contadores
+  `admin_read` de las cuentas efímeras SÍ se borran en la limpieza.
+- Limitación deliberada: NO crea reportes de prueba (encolar un job pg-boss que
+  el worker procesaría no se puede deshacer de forma FK-completa sin carrera).
+  La cobertura de escritura sigue siendo la de `scripts/smoke-e2e.ts` (solo dev/ensayo).
+- Si una corrida muere de forma abrupta (SIGKILL, corte de energía), el residuo
+  es identificable: `SELECT * FROM "Usuario" WHERE email LIKE 'smoke-%@test.invalid';`
+  (borrar esas filas y sus `PerfilOperador`/`Colegio`/`Tenant` `smoke-%` asociados).
+
+---
+
 ## 13. Contacto y escalamiento
 
 - Si reiniciar Ollama/worker/app no resuelve el problema: revisar `app.log` y `worker.log`.
