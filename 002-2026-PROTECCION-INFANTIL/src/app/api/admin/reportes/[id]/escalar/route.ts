@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
@@ -146,7 +147,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         });
 
         notificarComiteSiCorresponde().catch((err) => {
-            console.error("[ESCALAR] Error notificando al comité:", err);
+            logger.error("[ESCALAR] Error notificando al comité:", err);
         });
 
         return NextResponse.json({

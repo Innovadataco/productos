@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
         `;
         return NextResponse.json({ ciudades }, { headers: rate.headers });
     } catch (error) {
-        console.error("[Ciudades] Error en búsqueda:", error);
+        logger.error("[Ciudades] Error en búsqueda:", error);
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

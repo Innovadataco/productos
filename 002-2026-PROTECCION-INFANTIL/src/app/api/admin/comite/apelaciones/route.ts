@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
@@ -106,7 +107,7 @@ export async function GET(request: Request) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
         const msg = error instanceof Error ? error.message : String(error);
-        console.error("[ComiteApelaciones] Error listando bandeja:", msg);
+        logger.error("[ComiteApelaciones] Error listando bandeja:", msg);
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

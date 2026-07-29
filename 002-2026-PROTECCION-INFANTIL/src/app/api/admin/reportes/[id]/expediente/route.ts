@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo, puedeAccederAModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -133,7 +134,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        console.error("[Expediente] Error ensamblando expediente", {
+        logger.error("[Expediente] Error ensamblando expediente", {
             error: error instanceof Error ? error.message : String(error),
         });
         return NextResponse.json(

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -58,7 +59,7 @@ async function regenerarEmbedding(reporteId: string, texto: string) {
         }
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error("[VALIDAR-ANONIMIZACION] Embedding falló (no crítico):", msg);
+        logger.error("[VALIDAR-ANONIMIZACION] Embedding falló (no crítico):", msg);
         // No fallamos la validación; el embedding se puede regenerar después.
     }
 }

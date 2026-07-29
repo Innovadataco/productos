@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { enviarTokenRecuperacion } from "@/lib/email";
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
             } catch (err) {
                 const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
                 emailError = err instanceof Error ? err.message : String(err);
-                console.error("Failed to send recovery email to:", masked, "error:", emailError);
+                logger.error(`[RECUPERAR] Envío de email de recuperación: fallido — ${masked}: ${emailError}`);
             }
 
             const response: Record<string, unknown> = {

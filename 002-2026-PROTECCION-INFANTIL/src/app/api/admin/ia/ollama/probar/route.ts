@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
             models = await listOllamaModels(url);
         } catch (ollamaError) {
             // Degradación controlada: un cerebro inalcanzable no es una excepción no controlada.
-            console.error("[IA-OLLAMA-PROBAR] Ollama inalcanzable:", ollamaError);
+            logger.error("[IA-OLLAMA-PROBAR] Ollama inalcanzable:", ollamaError);
             return NextResponse.json(
                 { ok: false, error: { message: "Ollama inalcanzable", code: ERROR_CODES.SERVICE_UNAVAILABLE } },
                 { status: 503 }
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        console.error("[IA-OLLAMA-PROBAR] Error en sondeo de Ollama:", error);
+        logger.error("[IA-OLLAMA-PROBAR] Error en sondeo de Ollama:", error);
         return NextResponse.json(
             { error: { message: "No se pudo completar el sondeo de Ollama", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

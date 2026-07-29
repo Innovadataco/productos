@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -85,7 +86,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             pdf = await leerDocumentoDescifrado(documento.rutaArchivo);
         } catch (err) {
             if (err instanceof ApelacionStorageError && err.code === "ARCHIVO_NO_ENCONTRADO") {
-                console.error(`[ComiteApelaciones] Anomalía: documento ${documento.id} sin archivo en disco (apelacion=${apelacion.numero})`);
+                logger.error(`[ComiteApelaciones] Anomalía: documento ${documento.id} sin archivo en disco (apelacion=${apelacion.numero})`);
                 return NextResponse.json(
                     { error: { message: "El documento ya no está disponible", code: "GONE" } },
                     { status: 410 }
@@ -96,7 +97,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
         // Integridad: el PDF descifrado debe coincidir con el hash registrado al subirlo.
         if (sha256Hex(pdf) !== documento.hashSha256) {
-            console.error(`[ComiteApelaciones] Integridad inválida en documento ${documento.id} (apelacion=${apelacion.numero})`);
+            logger.error(`[ComiteApelaciones] Integridad inválida en documento ${documento.id} (apelacion=${apelacion.numero})`);
             return NextResponse.json(
                 { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
                 { status: 500 }
@@ -131,7 +132,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
         const msg = error instanceof Error ? error.message : String(error);
-        console.error("[ComiteApelaciones] Error descargando evidencia:", msg);
+        logger.error("[ComiteApelaciones] Error descargando evidencia:", msg);
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

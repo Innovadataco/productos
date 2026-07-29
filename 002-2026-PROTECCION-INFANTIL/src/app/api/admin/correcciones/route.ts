@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -201,7 +202,7 @@ export async function POST(request: Request) {
                 datasetAnonimizado = true;
             }
         } catch (err) {
-            console.error("[CORRECCION] Fallo anonimización para dataset, guardando texto sin anonimizar y encolando backfill:", err);
+            logger.error("[CORRECCION] Fallo anonimización para dataset, guardando texto sin anonimizar y encolando backfill:", err);
             textoDataset = reporte.texto;
             datasetAnonimizado = false;
             requiereBackfill = true;
@@ -222,7 +223,7 @@ export async function POST(request: Request) {
             try {
                 await publishDatasetAnonimizacionBackfill(datasetRegistro.id);
             } catch (queueErr) {
-                console.error("[CORRECCION] No se pudo encolar backfill de anonimización:", queueErr);
+                logger.error("[CORRECCION] No se pudo encolar backfill de anonimización:", queueErr);
             }
         }
 
@@ -239,11 +240,11 @@ export async function POST(request: Request) {
                 VALUES (${crypto.randomUUID()}, ${datasetRegistro.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
             `;
         } catch (embedErr) {
-            console.error("[CORRECCION] Fallo embedding para dataset, encolando backfill:", embedErr);
+            logger.error("[CORRECCION] Fallo embedding para dataset, encolando backfill:", embedErr);
             try {
                 await publishDatasetEmbeddingBackfill(datasetRegistro.id);
             } catch (queueErr) {
-                console.error("[CORRECCION] No se pudo encolar backfill de embedding:", queueErr);
+                logger.error("[CORRECCION] No se pudo encolar backfill de embedding:", queueErr);
             }
         }
 

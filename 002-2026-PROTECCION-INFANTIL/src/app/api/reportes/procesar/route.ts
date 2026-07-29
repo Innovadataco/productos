@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "@/lib/ai/dataset-retrieval";
@@ -200,7 +201,7 @@ export async function POST(request: Request) {
         const errorCode = obtenerErrorCode(error);
         const transitorio = esErrorTransitorio(error);
 
-        console.error("[PROCESAR] Error procesando reporte", {
+        logger.error("[PROCESAR] Error procesando reporte", {
             reporteId,
             errorType: error instanceof Error ? error.name : "Unknown",
             errorMessage: errMsg,

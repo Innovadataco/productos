@@ -155,7 +155,7 @@ export async function POST(request: Request) {
             rutaArchivo = await guardarDocumentoCifrado(documentoId, buffer);
         } catch (err) {
             if (err instanceof ApelacionStorageError && err.code === "CLAVE_NO_CONFIGURADA") {
-                console.error("[Apelaciones] Creación: fallida — clave de cifrado no configurada");
+                logger.error("[Apelaciones] Creación: fallida — clave de cifrado no configurada");
                 return NextResponse.json(
                     { error: { message: "Servicio no disponible", code: ERROR_CODES.SERVICE_UNAVAILABLE } },
                     { status: 503 }
@@ -245,7 +245,7 @@ export async function POST(request: Request) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
         const msg = error instanceof Error ? error.message : String(error);
-        console.error("[Apelaciones] Error en creación:", msg);
+        logger.error("[Apelaciones] Error en creación:", msg);
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

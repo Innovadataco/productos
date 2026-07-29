@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
         try {
             models = await listOllamaModels();
         } catch (ollamaError) {
-            console.error("[IA-MODELOS] Ollama inalcanzable:", ollamaError);
+            logger.error("[IA-MODELOS] Ollama inalcanzable:", ollamaError);
             return NextResponse.json(
                 { ok: false, error: { message: "Ollama inalcanzable", code: ERROR_CODES.SERVICE_UNAVAILABLE } },
                 { status: 503 }
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        console.error("[IA-MODELOS] Error listando modelos:", error);
+        logger.error("[IA-MODELOS] Error listando modelos:", error);
         return NextResponse.json(
             { error: { message: "No se pudieron listar los modelos de Ollama", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

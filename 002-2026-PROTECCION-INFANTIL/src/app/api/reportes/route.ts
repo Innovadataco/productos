@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { crearReporteSchema } from "@/lib/validators";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
@@ -148,7 +149,7 @@ export async function POST(request: Request) {
         try {
             textoOriginalCifrado = encryptParameter(texto);
         } catch (err) {
-            console.error("[REPORTES] Error cifrando texto original:", err);
+            logger.error("[REPORTES] Error cifrando texto original:", err);
             return NextResponse.json(
                 { error: { message: "Error de seguridad almacenando el reporte", code: ERROR_CODES.INTERNAL_ERROR } },
                 { status: 500 }
@@ -183,7 +184,7 @@ export async function POST(request: Request) {
             await crearFuenteReporte(reporte.id, { request, usuario: user, identificador, plataformaId: plataforma.id });
         } catch (fuenteErr) {
             const msg = fuenteErr instanceof Error ? fuenteErr.message : "Error desconocido";
-            console.error("[REPORTES] Error registrando fuente:", msg);
+            logger.error("[REPORTES] Error registrando fuente:", msg);
             // No fallamos la creación del reporte si falla el registro de fuente.
         }
 
@@ -220,7 +221,7 @@ export async function POST(request: Request) {
                 await sendReporte(reporte.id, { prioridadAlta });
             } catch (queueErr) {
                 const msg = queueErr instanceof Error ? queueErr.message : "Error desconocido";
-                console.error("[REPORTES] Error publicando en cola:", msg);
+                logger.error("[REPORTES] Error publicando en cola:", msg);
                 // No fallamos la creación del reporte si la cola falla
             }
         }

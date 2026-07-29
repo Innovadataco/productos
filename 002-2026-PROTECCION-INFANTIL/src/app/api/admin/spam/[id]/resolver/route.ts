@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -141,7 +142,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                     `;
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : String(err);
-                    console.warn(`[SPAM] No se pudo generar embedding para ejemplo spam: ${msg}`);
+                    logger.warn(`[SPAM] No se pudo generar embedding para ejemplo spam: ${msg}`);
                 }
             });
 

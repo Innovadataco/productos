@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -151,7 +152,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
         const msg = error instanceof Error ? error.message : String(error);
-        console.error("[ComiteApelaciones] Error en detalle:", msg);
+        logger.error("[ComiteApelaciones] Error en detalle:", msg);
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

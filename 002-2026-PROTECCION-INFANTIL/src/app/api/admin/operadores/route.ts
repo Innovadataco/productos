@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
@@ -197,7 +198,7 @@ export async function POST(request: Request) {
             await emailEnvio(operador.email, password);
             emailEnviado = true;
         } catch (err) {
-            console.error(`[OPERADORES] Error enviando email de bienvenida a ${rolTexto}`, err);
+            logger.error(`[OPERADORES] Error enviando email de bienvenida a ${rolTexto}`, err);
         }
 
         return NextResponse.json({

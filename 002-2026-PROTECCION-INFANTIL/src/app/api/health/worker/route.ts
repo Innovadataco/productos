@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { prisma } from "@/lib/prisma";
@@ -56,7 +57,7 @@ export async function GET() {
             { status: healthy ? 200 : 503 }
         );
     } catch (error) {
-        console.error("[HEALTH-WORKER] Error:", error);
+        logger.error("[HEALTH-WORKER] Error:", error);
         return NextResponse.json(
             { status: "error", message: safeErrorMessage(error), code: ERROR_CODES.INTERNAL_ERROR, timestamp: new Date().toISOString() },
             { status: 503 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -205,7 +206,7 @@ export async function POST(request: Request) {
             await enviarEmailBienvenidaColegio(colegio.admin.email, password);
             emailEnviado = true;
         } catch (err) {
-            console.error("[COLEGIOS] Error enviando email de bienvenida institucional", err);
+            logger.error("[COLEGIOS] Error enviando email de bienvenida institucional", err);
         }
 
         return NextResponse.json({

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -68,7 +69,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             await (esComite ? enviarEmailBienvenidaComite : enviarEmailBienvenidaOperador)(operador.email, password);
             emailEnviado = true;
         } catch (err) {
-            console.error(`[OPERADORES] Error reenviando email de bienvenida a ${esComite ? "comité" : "operador"}`, err);
+            logger.error(`[OPERADORES] Error reenviando email de bienvenida a ${esComite ? "comité" : "operador"}`, err);
         }
 
         return NextResponse.json({

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -96,7 +97,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         try {
             textoOriginalCifrado = encryptParameter(originalPlano);
         } catch (err) {
-            console.error("[ANONIMIZAR] Error cifrando texto original:", err);
+            logger.error("[ANONIMIZAR] Error cifrando texto original:", err);
             return NextResponse.json(
                 { error: { message: "Error de seguridad almacenando el original", code: ERROR_CODES.INTERNAL_ERROR } },
                 { status: 500 }
@@ -150,7 +151,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
         } catch (embedErr) {
             const msg = embedErr instanceof Error ? embedErr.message : String(embedErr);
-            console.error("[ANONIMIZAR] Embedding falló (no crítico):", msg);
+            logger.error("[ANONIMIZAR] Embedding falló (no crítico):", msg);
             // No fallamos la anonimización; el embedding se puede regenerar después
         }
 

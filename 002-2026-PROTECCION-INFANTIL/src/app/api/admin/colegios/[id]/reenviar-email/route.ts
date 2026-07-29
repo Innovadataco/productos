@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -75,7 +76,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             await enviarEmailBienvenidaColegio(colegio.admin.email, password);
             emailEnviado = true;
         } catch (err) {
-            console.error("[COLEGIOS] Error reenviando email de bienvenida al colegio", err);
+            logger.error("[COLEGIOS] Error reenviando email de bienvenida al colegio", err);
         }
 
         return NextResponse.json({

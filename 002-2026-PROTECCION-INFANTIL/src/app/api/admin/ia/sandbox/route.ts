@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
         const message = error instanceof Error ? error.message : String(error);
-        console.error("[SANDBOX] Error:", message);
+        logger.error("[SANDBOX] Error:", message);
         return NextResponse.json(
             { error: { message: "Error ejecutando sandbox", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

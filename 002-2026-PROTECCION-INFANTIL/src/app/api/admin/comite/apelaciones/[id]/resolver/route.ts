@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
@@ -217,7 +218,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 { status: 409 }
             );
         }
-        console.error("[ComiteApelaciones] Error resolviendo:", msg);
+        logger.error("[ComiteApelaciones] Error resolviendo:", msg);
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

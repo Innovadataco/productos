@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -141,7 +142,7 @@ export async function POST(request: Request) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        console.error("[IA-EXPERIMENTOS] Error creando experimento:", error);
+        logger.error("[IA-EXPERIMENTOS] Error creando experimento:", error);
         return NextResponse.json(
             { error: { message: "Error creando el experimento", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }
