@@ -1,0 +1,4 @@
+{
+  "descripcion": "SPEC-126: modelos sin relaciones entrantes ni salientes tolerados (SaaS aún sin consumidores propios). La lista solo cambia por decisión explícita de ZEUS; un huérfano nuevo fuera de esta lista pone arch:check en ROJO.",
+  "huerfanosPermitidos": ["BillingCycle", "Plan", "Subscription"]
+}
