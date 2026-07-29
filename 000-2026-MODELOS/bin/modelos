@@ -1,0 +1,3 @@
+#!/bin/zsh
+# modelos — lanza el Centro de Control de Consumo de Tokens (000-2026-MODELOS · SPEC-001)
+exec python3 "$(dirname "$0:A")/../app/servidor.py" "$@"
