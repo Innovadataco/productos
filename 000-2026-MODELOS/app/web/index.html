@@ -173,6 +173,11 @@ footer{margin-top:18px; font-size:11px; color:var(--tinta-mut); display:flex; ga
     <button data-s="fuera" class="on">Plegados</button>
     <button data-s="dentro">Visibles</button>
   </div>
+  <span class="titulo">Corte</span>
+  <div class="seg" id="f-base">
+    <button data-b="base" class="on">Línea base</button>
+    <button data-b="todo">Todo el histórico</button>
+  </div>
 </div>
 
 <div class="malla">
@@ -210,7 +215,7 @@ footer{margin-top:18px; font-size:11px; color:var(--tinta-mut); display:flex; ga
 <script>
 "use strict";
 /* Estado de la vista */
-const V = { dias:1, estado:"todas", sub:"fuera", datos:null, comparar:[] };
+const V = { dias:1, estado:"todas", sub:"fuera", base:"base", datos:null, comparar:[] };
 const $ = id => document.getElementById(id);
 const fmt = n => n.toLocaleString("en-US");
 const compacto = n => n>=1e9 ? (n/1e9).toFixed(1)+"G" : n>=1e6 ? (n/1e6).toFixed(1)+"M"
@@ -232,11 +237,12 @@ function segmento(idCont, attr, fn){
 segmento("f-rango","d", d=>{ V.dias=+d; cargar(); });
 segmento("f-estado","e", e=>{ V.estado=e; pintar(); });
 segmento("f-sub","s", s=>{ V.sub=s; pintar(); });
+segmento("f-base","b", b=>{ V.base=b; cargar(); });
 
 /* Carga de datos */
 async function cargar(){
   try{
-    const r = await fetch("/api/resumen?dias="+V.dias);
+    const r = await fetch("/api/resumen?dias="+V.dias+(V.base==="todo"?"&todo=1":""));
     V.datos = await r.json();
     V.comparar = V.comparar.filter(sid => V.datos.sesiones.some(s=>s.sid===sid));
     pintar();
@@ -250,7 +256,8 @@ document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) cargar(
 /* Pintado maestro */
 function pintar(){
   const d = V.datos; if(!d) return;
-  $("sello").textContent = d.generado + " · " + d.fecha;
+  $("sello").textContent = d.generado + " · " + d.fecha +
+    (d.linea_base ? " · desde " + d.linea_base : " · histórico completo");
   $("f-lim").textContent = fmt(d.umbral_contexto);
   $("f-salt").textContent = d.lineas_saltadas ? ("Líneas ilegibles saltadas: "+d.lineas_saltadas) : "";
 

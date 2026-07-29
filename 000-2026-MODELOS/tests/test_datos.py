@@ -157,11 +157,30 @@ class TestAlertas(Base):
         self.assertEqual(a, [])
 
 
+class TestLineaBase(Base):
+    def test_corta_lo_anterior(self):
+        # dos turnos: 08:00Z y 23:30Z; línea base a las 23:00Z → solo cuenta 1
+        self.escribir("s1", [
+            linea_uso(HOY).replace("T10:00:00", "T08:00:00"),
+            linea_uso(HOY).replace("T10:00:00", "T23:30:00"),
+        ])
+        ses, _, _ = datos.recolectar(1, AHORA, self.raiz, idx_titulos={},
+                                     desde_utc=HOY + "T23:00:00")
+        self.assertEqual(ses["s1"]["turnos"], 1)
+
+    def test_sin_base_cuenta_todo(self):
+        self.escribir("s1", [linea_uso(HOY), linea_uso(HOY)])
+        ses, _, _ = datos.recolectar(1, AHORA, self.raiz, idx_titulos={},
+                                     desde_utc=None)
+        self.assertEqual(ses["s1"]["turnos"], 2)
+
+
 class TestResumen(Base):
     def test_resumen_completo(self):
         self.escribir("s1", [linea_usuario("hola"), linea_uso(HOY, cr=90000)])
         self.escribir("agent-a9", [linea_uso(HOY, cr=1000)], hace_min=300)
-        r = datos.resumen(1, AHORA, self.raiz, idx_titulos={})
+        # ignorar_base=True: el test no depende del linea_base.json real
+        r = datos.resumen(1, AHORA, self.raiz, idx_titulos={}, ignorar_base=True)
         self.assertEqual(r["kpis"]["sesiones"], 1)      # subagente no cuenta
         self.assertEqual(len(r["sesiones"]), 2)
         self.assertEqual(r["dias"], 1)

@@ -42,7 +42,9 @@ class Manejador(BaseHTTPRequestHandler):
                 dias = max(1, min(90, int(q.get("dias", ["1"])[0])))
             except ValueError:
                 dias = 1
-            cuerpo = json.dumps(datos.resumen(dias)).encode("utf-8")
+            ignorar_base = q.get("todo", ["0"])[0] == "1"
+            cuerpo = json.dumps(
+                datos.resumen(dias, ignorar_base=ignorar_base)).encode("utf-8")
             self._responder(cuerpo, "application/json; charset=utf-8")
         else:
             self._responder(b"no encontrado", "text/plain; charset=utf-8", 404)

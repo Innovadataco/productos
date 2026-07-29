@@ -75,6 +75,24 @@ def primer_mensaje(ruta, max_len=40):
     return ""
 
 
+def linea_base(raiz_app=None):
+    """Línea base del tablero: instante UTC desde el que se cuenta.
+
+    Vive en app/linea_base.json (carpeta propia — constitución §1.5). Si no
+    existe o es ilegible, no hay corte. Devuelve (iso_utc | None, etiqueta).
+    """
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "linea_base.json")
+    try:
+        with open(ruta) as fh:
+            d = json.load(fh)
+        desde = str(d.get("desde_utc") or "")
+        if desde:
+            return desde.replace("Z", ""), str(d.get("etiqueta") or desde)
+    except (OSError, ValueError):
+        pass
+    return None, ""
+
+
 def _sesion_vacia():
     return {
         "in": 0, "out": 0, "cw": 0, "cr": 0, "turnos": 0,
@@ -82,9 +100,11 @@ def _sesion_vacia():
     }
 
 
-def recolectar(dias=1, ahora=None, raiz=None, idx_titulos=None):
+def recolectar(dias=1, ahora=None, raiz=None, idx_titulos=None, desde_utc=None):
     """Agrega las transcripciones de los últimos `dias`.
 
+    `desde_utc` (ISO, sin sufijo Z): línea base — las líneas con timestamp
+    anterior se ignoran (comparación lexicográfica, válida en ISO-8601).
     Devuelve (sesiones: dict sid->métricas, tendencia: dict fecha->tokens,
     lineas_saltadas: int).
     """
@@ -123,8 +143,11 @@ def recolectar(dias=1, ahora=None, raiz=None, idx_titulos=None):
                 except ValueError:
                     saltadas += 1
                     continue
-                ts = str(d.get("timestamp", ""))[:10]
+                ts_full = str(d.get("timestamp", "")).replace("Z", "")
+                ts = ts_full[:10]
                 if ts not in fechas:
+                    continue
+                if desde_utc and ts_full < desde_utc:
                     continue
                 u = (d.get("message") or {}).get("usage") or {}
                 if not u:
@@ -229,10 +252,15 @@ def alertas(sesiones, ahora=None):
     return lista
 
 
-def resumen(dias=1, ahora=None, raiz=None, idx_titulos=None):
-    """Ensamble JSON-serializable para la API (FR-002/FR-007)."""
+def resumen(dias=1, ahora=None, raiz=None, idx_titulos=None, ignorar_base=False):
+    """Ensamble JSON-serializable para la API (FR-002/FR-007).
+
+    Respeta la línea base de app/linea_base.json salvo `ignorar_base=True`.
+    """
     ahora = ahora or datetime.datetime.now()
-    sesiones, tendencia, saltadas = recolectar(dias, ahora, raiz, idx_titulos)
+    base_utc, base_etq = (None, "") if ignorar_base else linea_base()
+    sesiones, tendencia, saltadas = recolectar(
+        dias, ahora, raiz, idx_titulos, desde_utc=base_utc)
 
     filas, tot = [], collections.Counter()
     for sid, s in sesiones.items():
@@ -261,6 +289,7 @@ def resumen(dias=1, ahora=None, raiz=None, idx_titulos=None):
         "generado": ahora.strftime("%H:%M:%S"),
         "fecha": ahora.date().isoformat(),
         "dias": dias,
+        "linea_base": base_etq,
         "lineas_saltadas": saltadas,
         "umbral_contexto": UMBRALES["limite_contexto"],
         "kpis": {
