@@ -28,6 +28,7 @@
 | [114](114-suite-e2e-por-rol/spec.md) | Suite E2E por rol: cinco ciclos de estabilización | 🟢 Finalizada |
 | [116](116-vista-padre-sin-tecnico/spec.md) | Vista del padre sin traza técnica del motor | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
 | [120](120-smoke-prod-safe/spec.md) | Smoke prod-safe por rol (cuentas efímeras, solo lectura) | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
+| [118](118-clics-muertos-colegio/spec.md) | Clics muertos del colegio y regla D-37 generalizada | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
