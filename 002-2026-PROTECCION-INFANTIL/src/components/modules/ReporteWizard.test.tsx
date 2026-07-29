@@ -81,7 +81,10 @@ describe("ReporteWizard", () => {
                 return json({ plataformas: [{ id: "p1", clave: "whatsapp", nombre: "WhatsApp" }] });
             }
             if (url.includes("/api/paises")) return json({ paises: [{ id: "co", nombre: "Colombia" }] });
-            if (url.includes("/api/ciudades")) return json({ ciudades: [{ id: "bog", nombre: "Bogotá", paisId: "co" }] });
+            // SPEC-115: la ciudad se elige con buscador en servidor
+            if (url.includes("/api/ciudades/buscar")) {
+                return json({ ciudades: [{ id: "bog", nombre: "Bogotá", paisId: "co", departamentoId: null, departamento: null }] });
+            }
             return json({});
         });
         render(<ReporteWizard />);
@@ -92,12 +95,12 @@ describe("ReporteWizard", () => {
         fireEvent.change(screen.getByLabelText(/Plataforma/i), { target: { value: "whatsapp" } });
         fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
 
-        // Paso 2: país + ciudad
+        // Paso 2: país + ciudad (buscador con debounce en servidor)
         await screen.findByText("Detalles del incidente");
         await screen.findByRole("option", { name: "Colombia" });
         fireEvent.change(screen.getByLabelText(/País/i), { target: { value: "co" } });
-        await screen.findByRole("option", { name: "Bogotá" });
-        fireEvent.change(screen.getByLabelText(/Ciudad/i), { target: { value: "bog" } });
+        fireEvent.change(screen.getByRole("combobox", { name: /Ciudad/i }), { target: { value: "Bog" } });
+        fireEvent.click(await screen.findByRole("option", { name: /Bogotá/ }));
 
         const area = screen.getByPlaceholderText(/Describe la conducta observada/i);
         const botonSiguiente = () => screen.getByRole("button", { name: /Siguiente/i });

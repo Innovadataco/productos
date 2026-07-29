@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { calcularFinServicio } from "@/lib/colegio/periodo";
 
 type Pais = { id: string; nombre: string; codigo?: string };
 type Departamento = { id: string; nombre: string; paisId?: string };
-type Ciudad = { id: string; nombre: string; paisId?: string; departamentoId?: string | null };
 
 type TipoPeriodo = "MENSUAL" | "SEMESTRAL" | "ANUAL" | "LIBRE";
 
@@ -48,7 +48,7 @@ export default function NuevoColegioPageClient() {
     const [form, setForm] = useState<FormState>(initialForm);
     const [paises, setPaises] = useState<Pais[]>([]);
     const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
-    const [ciudades, setCiudades] = useState<Ciudad[]>([]);
+    const [ciudadSel, setCiudadSel] = useState<CiudadOpcion | null>(null);
     const [loadingPaises, setLoadingPaises] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<Mensaje>(null);
@@ -72,29 +72,26 @@ export default function NuevoColegioPageClient() {
             .catch(() => setError({ type: "error", text: "Error cargando departamentos" }));
     }, [form.paisId]);
 
-    useEffect(() => {
-        if (!form.paisId) return;
-        const params = new URLSearchParams({ paisId: form.paisId });
-        if (form.departamentoId) params.set("departamentoId", form.departamentoId);
-        fetch(`/api/ciudades?${params.toString()}`, { credentials: "include" })
-            .then((r) => r.json().catch(() => ({})))
-            .then((data) => setCiudades(data.ciudades || []))
-            .catch(() => setError({ type: "error", text: "Error cargando ciudades" }));
-    }, [form.paisId, form.departamentoId]);
-
+    // SPEC-115: la ciudad se elige con buscador en servidor (CiudadSearchSelect);
+    // ya no se descarga la lista completa de ciudades del país/departamento.
     function update<K extends keyof FormState>(field: K, value: FormState[K]) {
         setForm((prev) => ({ ...prev, [field]: value }) as FormState);
     }
 
     function onPaisChange(paisId: string) {
         setDepartamentos([]);
-        setCiudades([]);
+        setCiudadSel(null);
         setForm((prev) => ({ ...prev, paisId, departamentoId: "", ciudadId: "" }));
     }
 
     function onDepartamentoChange(departamentoId: string) {
-        setCiudades([]);
+        setCiudadSel(null);
         setForm((prev) => ({ ...prev, departamentoId, ciudadId: "" }));
+    }
+
+    function onCiudadSelect(opcion: CiudadOpcion | null) {
+        setCiudadSel(opcion);
+        setForm((prev) => ({ ...prev, ciudadId: opcion?.id ?? "" }));
     }
 
     const esPeriodoLibre = form.tipoPeriodo === "LIBRE";
@@ -174,6 +171,7 @@ export default function NuevoColegioPageClient() {
                 setSuccess({ type: "success", text: data.mensaje || "Colegio creado correctamente" });
                 setPasswordTemporal(data.passwordTemporal || null);
                 setForm(initialForm);
+                setCiudadSel(null);
             } else {
                 setError({ type: "error", text: data?.error?.message || "Error creando colegio" });
             }
@@ -279,23 +277,15 @@ export default function NuevoColegioPageClient() {
                                 </select>
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-sm font-medium text-body">
-                                    Ciudad <span className="text-red-500">*</span>
-                                </label>
-                                <select
-                                    required
-                                    value={form.ciudadId}
-                                    onChange={(e) => update("ciudadId", e.target.value)}
-                                    className="w-full rounded-xl px-4 py-3 text-sm text-body glass-input ring-accent-input"
+                                <CiudadSearchSelect
+                                    label="Ciudad *"
+                                    paisId={form.paisId}
+                                    departamentoId={form.departamentoId || undefined}
+                                    value={ciudadSel}
+                                    onSelect={onCiudadSelect}
                                     disabled={!form.paisId}
-                                >
-                                    <option value="">{form.paisId ? "Selecciona ciudad" : "Selecciona país primero"}</option>
-                                    {ciudades.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.nombre}
-                                        </option>
-                                    ))}
-                                </select>
+                                    placeholder={form.paisId ? "Escribe la ciudad" : "Selecciona país primero"}
+                                />
                             </div>
                             <Input
                                 label="Dirección"
