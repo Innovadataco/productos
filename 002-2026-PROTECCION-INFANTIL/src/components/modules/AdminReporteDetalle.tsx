@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Alerta } from "@/components/ui/Alerta";
 import { Modal } from "@/components/ui/Modal";
 import { useReporteDetalle } from "./reporte-detalle/useReporteDetalle";
 import { ReporteDetalleInfo } from "./reporte-detalle/ReporteDetalleInfo";
@@ -89,16 +90,16 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
 
     return (
         <div className="space-y-4">
-            {error && <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-red-700 dark:text-red-300">{error}</div>}
-            {success && <div className="mb-4 rounded-lg bg-green-50 dark:bg-green-950/30 p-3 text-green-700 dark:text-green-300">{success}</div>}
+            {error && <Alerta tono="error" className="mb-4">{error}</Alerta>}
+            {success && <Alerta tono="exito" role="status" className="mb-4">{success}</Alerta>}
 
             {estaEliminado && (
-                <div className="mb-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-4">
-                    <h3 className="mb-1 font-medium text-red-800 dark:text-red-300">Reporte dado de baja</h3>
+                <Alerta tono="error" className="mb-4 border border-red-200 p-4 dark:border-red-800">
+                    <h3 className="mb-1 font-medium">Reporte dado de baja</h3>
                     <p><span className="text-subtle">Motivo:</span> {reporte.motivoBaja || "No especificado"}</p>
                     {reporte.notaBaja && <p><span className="text-subtle">Nota:</span> {reporte.notaBaja}</p>}
                     {reporte.eliminadoEn && <p><span className="text-subtle">Fecha:</span> {new Date(reporte.eliminadoEn).toLocaleString()}</p>}
-                </div>
+                </Alerta>
             )}
 
             <ReporteDetalleInfo reporte={reporte} />
