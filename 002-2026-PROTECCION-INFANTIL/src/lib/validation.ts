@@ -6,7 +6,7 @@ export type ValidationErrorDetail = {
     path: string;
 };
 
-function formatZodError(error: ZodError): ValidationErrorDetail[] {
+export function formatZodError(error: ZodError): ValidationErrorDetail[] {
     return error.issues.map((issue) => ({
         message: issue.message,
         path: issue.path.join("."),
