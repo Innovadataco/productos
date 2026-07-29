@@ -4,9 +4,8 @@ import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "./dataset-retrieval";
 import { clasificarConVotos, type ClassificationResult, type VotoIndividual } from "./classifier";
 import { detectarPiiCombinado, type PiiDetectionResult } from "./pii-detector";
-import { detectarDoxing } from "./pii-patterns";
-import { detectarKeywordsRiesgo } from "./keywords-riesgo";
 import { anonimizarTexto, type AnonimizacionResult } from "./anonimizador";
+import { decidirGuardasSeguridad } from "./guardas-decision";
 import type { CategoriaConducta } from "@prisma/client";
 
 export interface SandboxOverrides {
@@ -28,6 +27,7 @@ export interface SandboxParametros {
     minScoreCategoria: number;
     ragTopK: number;
     ollamaNumParallel: number;
+    umbralSpam: number;
 }
 
 export interface SandboxVotoDistribucion {
@@ -76,6 +76,7 @@ export interface SandboxTrace {
             prioridadAlta: boolean;
             keywordsDetectadas: string[];
             estadoForzado?: string;
+            reglasAplicadas: string[];
         };
     };
     decision: {
@@ -108,6 +109,7 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
         minScoreCategoria,
         ragTopK,
         ollamaNumParallel,
+        umbralSpam,
     ] = await Promise.all([
         getParametroSistema("reportes.classification_model"),
         getParametroSistema("reportes.embedding_model"),
@@ -118,6 +120,8 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
         getParametroSistema("reportes.classification.min_score_categoria"),
         getParametroSistema("reportes.classification.rag_top_k"),
         getParametroSistema("reportes.classification.ollama_num_parallel"),
+        // Misma clave y default que producción (helpers/parametros.ts)
+        getParametroSistema("clasificacion.umbral_spam"),
     ]);
 
     return {
@@ -130,6 +134,7 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
         minScoreCategoria: overrides.min_score_categoria ?? parseFloatParam(minScoreCategoria?.valor, 0.3),
         ragTopK: overrides.rag_top_k ?? parseIntParam(ragTopK?.valor, 3),
         ollamaNumParallel: parseIntParam(ollamaNumParallel?.valor, 2),
+        umbralSpam: parseFloatParam(umbralSpam?.valor, 0.7),
     };
 }
 
@@ -145,6 +150,9 @@ function calcularDistribucion(votos: VotoIndividual[]): SandboxVotoDistribucion[
 
 function generarExplicacion(clasificacion: ClassificationResult, estadoFinal: string, prioridadAlta: boolean, guardas: { keywords: { tieneMatch: boolean }; doxing: { esDoxing: boolean } }): string {
     const base = `${clasificacion.categoria} con confianza ${(clasificacion.confianza * 100).toFixed(0)}%`;
+    if (estadoFinal === "POSIBLE_SPAM") {
+        return `${base}. Posible spam con confianza suficiente: pasa a revisión humana.`;
+    }
     if (estadoFinal === "REVISION_MANUAL") {
         if (guardas.doxing.esDoxing) return `${base}. Escalado a revisión manual por señal de DOXING.`;
         if (guardas.keywords.tieneMatch && clasificacion.categoria === "OTRO") return `${base}. Escalado a revisión manual por keyword crítica en categoría OTRO.`;
@@ -198,33 +206,30 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
         };
     }
 
-    // 6. Guardas determinísticas (R3: nunca reclasifican)
+    // 6. Guardas determinísticas: misma decisión que producción (spec 123).
+    // esRafaga=false: el sandbox procesa un solo texto; la ráfaga requiere
+    // múltiples reportes contra el mismo identificador.
     const inicioGuardas = Date.now();
-    const doxing = detectarDoxing(texto);
-    const keywords = detectarKeywordsRiesgo(texto);
+    const decision = decidirGuardasSeguridad({
+        texto,
+        clasificacion: { categoria: clasificacion.categoria, confianza: clasificacion.confianza },
+        estadoInicial: clasificacion.estado,
+        esRafaga: false,
+        umbralSpam: parametros.umbralSpam,
+    });
+    const { estadoFinal, prioridadAlta, keywordsDetectadas, doxing, keywordsRiesgo: keywords, reglasAplicadas } = decision;
 
-    let estadoFinal = clasificacion.estado;
-    let prioridadAlta = false;
-    let keywordsDetectadas: string[] = [];
+    // estadoForzado conserva la semántica anterior de la traza: qué guarda
+    // escaló a revisión manual (solo informativo, no cambia decisiones).
     let estadoForzado: string | undefined;
-
-    if (doxing.esDoxing && clasificacion.categoria !== "DOXING") {
-        estadoFinal = "REVISION_MANUAL";
-        prioridadAlta = true;
-        keywordsDetectadas = doxing.fragmentos.length > 0 ? doxing.fragmentos : ["doxing"];
+    if (reglasAplicadas.includes("doxing_no_reflejado_por_modelo")) {
         estadoForzado = "DOXING";
-    }
-
-    if (
-        keywords.tieneMatch &&
-        ((estadoFinal === "CLASIFICADO" && clasificacion.categoria === "OTRO") || estadoFinal === "REVISION_MANUAL")
+    } else if (
+        reglasAplicadas.includes("keywords_riesgo") &&
+        clasificacion.estado === "CLASIFICADO" &&
+        clasificacion.categoria === "OTRO"
     ) {
-        prioridadAlta = true;
-        keywordsDetectadas = Array.from(new Set([...keywordsDetectadas, ...keywords.keywords]));
-        if (estadoFinal === "CLASIFICADO" && clasificacion.categoria === "OTRO") {
-            estadoFinal = "REVISION_MANUAL";
-            estadoForzado = "KEYWORDS";
-        }
+        estadoForzado = "KEYWORDS";
     }
 
     const latenciaGuardas = Date.now() - inicioGuardas;
@@ -260,6 +265,7 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
                 prioridadAlta,
                 keywordsDetectadas,
                 estadoForzado,
+                reglasAplicadas,
             },
         },
         decision: {

@@ -4,8 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { clasificarConVotos } from "./classifier";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares } from "./dataset-retrieval";
-import { detectarDoxing } from "./pii-patterns";
-import { detectarKeywordsRiesgo } from "./keywords-riesgo";
+import { decidirGuardasSeguridad } from "./guardas-decision";
 import fs from "fs/promises";
 import path from "path";
 import { logger } from "@/lib/logger";
@@ -262,6 +261,10 @@ export async function runF7Eval(
 
     const results: EvalResultArm[] = [];
 
+    // Misma clave y default que producción (api/reportes/procesar/helpers/parametros.ts)
+    const paramUmbralSpam = await prisma.parametroSistema.findUnique({ where: { clave: "clasificacion.umbral_spam" } });
+    const umbralSpam = parseFloat(paramUmbralSpam?.valor || "0.7");
+
     for (let i = 0; i < examples.length; i++) {
         const ex = examples[i];
         process.stdout.write(`[F7] [${i + 1}/${examples.length}] `);
@@ -288,31 +291,21 @@ export async function runF7Eval(
             let estado = res.estado;
             let correct = predicted === ex.expected;
 
-            const doxing = detectarDoxing(ex.text);
-            const guardaDoxing = doxing.esDoxing && predicted !== "DOXING";
+            // Guardas determinísticas: misma decisión que producción (spec 123).
+            // esRafaga=false: la eval procesa casos aislados, sin ráfaga.
+            const decision = decidirGuardasSeguridad({
+                texto: ex.text,
+                clasificacion: { categoria: res.categoria, confianza: res.confianza },
+                estadoInicial: res.estado,
+                esRafaga: false,
+                umbralSpam,
+            });
+            estado = decision.estadoFinal;
+            const prioridadAlta = decision.prioridadAlta;
+            const keywordsDetectadas = decision.keywordsDetectadas;
+            const guardaDoxing = decision.reglasAplicadas.includes("doxing_no_reflejado_por_modelo");
             const guardaDoxingVerdadera = guardaDoxing && ex.expected === "DOXING";
-            if (guardaDoxing) {
-                estado = "REVISION_MANUAL";
-            }
-
-            const keywords = detectarKeywordsRiesgo(ex.text);
-            const guardaKeywords =
-                keywords.tieneMatch && ((estado === "CLASIFICADO" && predicted === "OTRO") || estado === "REVISION_MANUAL");
-            let prioridadAlta = false;
-            let keywordsDetectadas: string[] = [];
-            if (guardaKeywords) {
-                prioridadAlta = true;
-                keywordsDetectadas = keywords.keywords;
-                if (estado === "CLASIFICADO" && predicted === "OTRO") {
-                    estado = "REVISION_MANUAL";
-                }
-            }
-            if (guardaDoxing) {
-                prioridadAlta = true;
-                keywordsDetectadas = Array.from(
-                    new Set([...keywordsDetectadas, ...(doxing.fragmentos.length > 0 ? doxing.fragmentos : ["doxing"])])
-                );
-            }
+            const guardaKeywords = decision.reglasAplicadas.includes("keywords_riesgo");
 
             results.push({
                 id: ex.id,
