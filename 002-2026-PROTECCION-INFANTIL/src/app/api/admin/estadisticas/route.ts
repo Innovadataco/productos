@@ -5,6 +5,7 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getWorkerMetrics } from "@/lib/queue-metrics";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { whereReporteVigente, whereReporteEnEstado, whereReporteEnEstados } from "@/lib/reportes-acceso";
 
 function calcularPrecisionPorCategoria(
     confirmaciones: { categoriaOriginal: string; _count: { categoriaOriginal: number } }[],
@@ -77,32 +78,32 @@ export async function GET(req: Request) {
             confirmacionesPorCategoria,
             correccionesPorCategoria,
         ] = await Promise.all([
-            prisma.reporte.count({ where: { eliminado: false } }),
-            prisma.reporte.count({ where: { eliminado: false, creadoEn: { gte: hoy, lt: hoySig } } }),
-            prisma.reporte.count({ where: { eliminado: false, estado: { in: ["REVISION_MANUAL", "PROCESANDO"] } } }),
-            prisma.reporte.count({ where: { eliminado: false, estado: "REQUIERE_ANONIMIZACION" } }),
-            prisma.reporte.count({ where: { eliminado: false, esAnonimo: true } }),
-            prisma.reporte.count({ where: { eliminado: false, esAnonimo: false } }),
-            prisma.reporte.groupBy({ by: ["estado"], _count: { estado: true }, where: { eliminado: false } }),
-            prisma.clasificacionIA.groupBy({ by: ["categoria"], _count: { categoria: true }, where: { reporte: { eliminado: false } } }),
-            prisma.reporte.groupBy({ by: ["plataformaId"], _count: { plataformaId: true }, where: { eliminado: false, plataformaId: { not: "" } } }),
-            prisma.reporte.groupBy({ by: ["ciudad"], _count: { ciudad: true }, where: { eliminado: false, ciudad: { not: "" } }, take: 10, orderBy: { _count: { ciudad: "desc" } } }),
+            prisma.reporte.count({ where: whereReporteVigente() }),
+            prisma.reporte.count({ where: whereReporteVigente({ creadoEn: { gte: hoy, lt: hoySig } }) }),
+            prisma.reporte.count({ where: whereReporteEnEstados(["REVISION_MANUAL", "PROCESANDO"]) }),
+            prisma.reporte.count({ where: whereReporteEnEstado("REQUIERE_ANONIMIZACION") }),
+            prisma.reporte.count({ where: whereReporteVigente({ esAnonimo: true }) }),
+            prisma.reporte.count({ where: whereReporteVigente({ esAnonimo: false }) }),
+            prisma.reporte.groupBy({ by: ["estado"], _count: { estado: true }, where: whereReporteVigente() }),
+            prisma.clasificacionIA.groupBy({ by: ["categoria"], _count: { categoria: true }, where: { reporte: whereReporteVigente() } }),
+            prisma.reporte.groupBy({ by: ["plataformaId"], _count: { plataformaId: true }, where: whereReporteVigente({ plataformaId: { not: "" } }) }),
+            prisma.reporte.groupBy({ by: ["ciudad"], _count: { ciudad: true }, where: whereReporteVigente({ ciudad: { not: "" } }), take: 10, orderBy: { _count: { ciudad: "desc" } } }),
             prisma.reporte.groupBy({
                 by: ["creadoEn"],
                 _count: { creadoEn: true },
-                where: { eliminado: false, creadoEn: { gte: treintaDiasAtras } },
+                where: whereReporteVigente({ creadoEn: { gte: treintaDiasAtras } }),
                 orderBy: { creadoEn: "asc" },
             }),
             getWorkerMetrics(),
             prisma.correccionAdmin.groupBy({
                 by: ["categoriaOriginal"],
                 _count: { categoriaOriginal: true },
-                where: { confirmada: true, clasificacion: { reporte: { eliminado: false } } },
+                where: { confirmada: true, clasificacion: { reporte: whereReporteVigente() } },
             }),
             prisma.correccionAdmin.groupBy({
                 by: ["categoriaOriginal"],
                 _count: { categoriaOriginal: true },
-                where: { confirmada: false, clasificacion: { reporte: { eliminado: false } } },
+                where: { confirmada: false, clasificacion: { reporte: whereReporteVigente() } },
             }),
         ]);
 

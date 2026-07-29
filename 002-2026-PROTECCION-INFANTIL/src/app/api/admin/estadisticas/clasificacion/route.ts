@@ -6,6 +6,7 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol } from "@/lib/operadores/permisos";
+import { whereReporteEnEstado } from "@/lib/reportes-acceso";
 
 const querySchema = z.object({
     fechaDesde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -68,10 +69,10 @@ export async function GET(req: Request) {
         // --- Indicadores tarjeta ---
         const [sinAsignar, enGestion, atendidosHoyRaw, escaladosPendientes] = await Promise.all([
             prisma.reporte.count({
-                where: { estado: "REVISION_MANUAL", operadorId: null, eliminado: false },
+                where: whereReporteEnEstado("REVISION_MANUAL", { operadorId: null }),
             }),
             prisma.reporte.count({
-                where: { estado: "REVISION_MANUAL", operadorId: { not: null }, eliminado: false },
+                where: whereReporteEnEstado("REVISION_MANUAL", { operadorId: { not: null } }),
             }),
             prisma.auditLog.count({
                 where: {
@@ -80,7 +81,7 @@ export async function GET(req: Request) {
                 },
             }),
             prisma.reporte.count({
-                where: { estado: "REVISION_MANUAL", prioridadAlta: true, eliminado: false },
+                where: whereReporteEnEstado("REVISION_MANUAL", { prioridadAlta: true }),
             }),
         ]);
 
