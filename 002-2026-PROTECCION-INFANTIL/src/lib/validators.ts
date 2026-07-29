@@ -121,48 +121,51 @@ export const reportesRevisionQuerySchema = z.object({
 // (AuthContext.tsx y registro/page.tsx leen `error.message`): no cambiarlos.
 // ---------------------------------------------------------------------------
 
+// Nota Zod 4: un campo AUSENTE o de otro tipo produce `invalid_type` con el
+// mensaje por defecto de Zod; el `error` a nivel de campo conserva el mensaje
+// de contrato también en ese caso.
 export const loginSchema = z.object({
-    email: z.string().trim().toLowerCase().min(1, "Email y contraseña requeridos"),
-    password: z.string().min(1, "Email y contraseña requeridos"),
+    email: z.string({ error: "Email y contraseña requeridos" }).trim().toLowerCase().min(1, "Email y contraseña requeridos"),
+    password: z.string({ error: "Email y contraseña requeridos" }).min(1, "Email y contraseña requeridos"),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const verificarSolicitarSchema = z.object({
-    email: z.string().trim().toLowerCase().min(1, "Email inválido")
+    email: z.string({ error: "Email inválido" }).trim().toLowerCase().min(1, "Email inválido")
         .refine((val) => val.includes("@"), { message: "Email inválido" }),
 });
 export type VerificarSolicitarInput = z.infer<typeof verificarSolicitarSchema>;
 
 export const verificarValidarSchema = z.object({
-    email: z.string().trim().toLowerCase().min(1, "Email y código de 6 dígitos requeridos"),
-    codigo: z.string().length(6, "Email y código de 6 dígitos requeridos"),
+    email: z.string({ error: "Email y código de 6 dígitos requeridos" }).trim().toLowerCase().min(1, "Email y código de 6 dígitos requeridos"),
+    codigo: z.string({ error: "Email y código de 6 dígitos requeridos" }).length(6, "Email y código de 6 dígitos requeridos"),
 });
 export type VerificarValidarInput = z.infer<typeof verificarValidarSchema>;
 
 export const verificarCompletarSchema = z.object({
-    token: z.string().min(1, "Token y contraseña requeridos"),
-    password: z.string()
+    token: z.string({ error: "Token y contraseña requeridos" }).min(1, "Token y contraseña requeridos"),
+    password: z.string({ error: "Token y contraseña requeridos" })
         .min(1, "Token y contraseña requeridos")
         .refine((val) => val.length >= 8 && /[a-zA-Z]/.test(val) && /[0-9]/.test(val), {
             message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número",
         }),
-    nombre: z.string().optional(),
+    nombre: z.string({ error: "Token y contraseña requeridos" }).optional(),
 });
 export type VerificarCompletarInput = z.infer<typeof verificarCompletarSchema>;
 
 export const recuperarValidarQuerySchema = z.object({
-    token: z.string().min(1, "Token requerido"),
+    token: z.string({ error: "Token requerido" }).min(1, "Token requerido"),
 });
 
 // Endpoints consumidos solo por el worker (scripts/worker-reportes.mjs).
 export const procesarReporteSchema = z.object({
-    reporteId: z.string().min(1, "reporteId requerido"),
+    reporteId: z.string({ error: "reporteId requerido" }).min(1, "reporteId requerido"),
     modeloClasificacion: z.string().optional(),
 });
 export type ProcesarReporteInput = z.infer<typeof procesarReporteSchema>;
 
 export const fallbackReporteSchema = z.object({
-    reporteId: z.string().min(1, "reporteId requerido"),
+    reporteId: z.string({ error: "reporteId requerido" }).min(1, "reporteId requerido"),
     error: z.string().optional(),
     errorCode: z.string().optional(),
 });

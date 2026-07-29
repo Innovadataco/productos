@@ -39,6 +39,54 @@ function diasDesdeHoy(dias: number): Date {
     return normalizarFechaServicio(d);
 }
 
+describe("POST /api/auth/login — validación del payload (SPEC-125)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        mockToken = undefined;
+    });
+
+    function loginRaw(body: string) {
+        return POST(
+            new Request("http://localhost:5005/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body,
+            })
+        );
+    }
+
+    it("rechaza 400 sin password con el mensaje de contrato", async () => {
+        const res = await loginRaw(JSON.stringify({ email: "padre@example.com" }));
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toBe("Email y contraseña requeridos");
+        expect(json.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("rechaza 400 sin email", async () => {
+        const res = await loginRaw(JSON.stringify({ password: "TestPass123" }));
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toBe("Email y contraseña requeridos");
+    });
+
+    it("rechaza 400 un body que no es un objeto (antes: 500)", async () => {
+        const res = await loginRaw(JSON.stringify("no-soy-un-objeto"));
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("normaliza el email (trim + lowercase) como antes", async () => {
+        const padre = await crearUsuario("PARENT", "normaliza@example.com");
+        const res = await login("  NORMALIZA@example.com ", "TestPass123");
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.user.id).toBe(padre.id);
+    });
+});
+
 describe("POST /api/auth/login — vigencia del cliente (SPEC-119)", () => {
     beforeEach(async () => {
         await resetDatabase();

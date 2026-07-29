@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword, createToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { loginSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
     try {
@@ -14,15 +15,16 @@ export async function POST(request: Request) {
             );
         }
 
-        const body = (await request.json()) as { email: string; password: string };
-        const email = body.email?.toLowerCase().trim();
-
-        if (!email || !body.password) {
+        // SPEC-125: esquema Zod; el mensaje es contrato del frontend (AuthContext).
+        const bodyRaw = await request.json().catch(() => undefined);
+        const parsed = loginSchema.safeParse(bodyRaw);
+        if (!parsed.success) {
             return NextResponse.json(
-                { error: { message: "Email y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: parsed.error.issues[0]?.message || "Email y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
+        const { email, password } = parsed.data;
 
         const user = await prisma.usuario.findUnique({ where: { email } });
         if (!user) {
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const valid = await verifyPassword(body.password, user.passwordHash);
+        const valid = await verifyPassword(password, user.passwordHash);
         if (!valid) {
             const newAttempts = user.intentosFallidos + 1;
             const maxAttempts = parseInt((await prisma.parametroSistema.findUnique({
