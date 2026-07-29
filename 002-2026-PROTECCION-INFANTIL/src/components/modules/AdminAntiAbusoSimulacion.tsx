@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
+import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
+import { useFetchJson } from "@/components/ui/use-fetch-json";
 
 type NivelRiesgo = "BAJO" | "MEDIO" | "ALTO" | "CRITICO";
 
@@ -45,22 +48,10 @@ const NIVEL_COLORS: Record<NivelRiesgo, string> = {
 };
 
 export function AdminAntiAbusoSimulacion() {
-    const [data, setData] = useState<{ resumen: Resumen; detalles: SimulacionItem[] } | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
     const [page, setPage] = useState(1);
-
-    useEffect(() => {
-        setLoading(true);
-        fetch(`/api/admin/anti-abuso/simulacion-score?page=${page}`, { credentials: "include" })
-            .then(async (r) => {
-                if (!r.ok) throw new Error("Error cargando simulación");
-                return r.json();
-            })
-            .then(setData)
-            .catch(() => setError("Error cargando simulación"))
-            .finally(() => setLoading(false));
-    }, [page]);
+    const { datos: data, cargando: loading, error } = useFetchJson<{ resumen: Resumen; detalles: SimulacionItem[] }>(
+        `/api/admin/anti-abuso/simulacion-score?page=${page}`
+    );
 
     if (loading) {
         return (
@@ -97,76 +88,74 @@ export function AdminAntiAbusoSimulacion() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <MetricCard label="Identificadores analizados" value={resumen.totalItems} />
-                <MetricCard label="Subidas de nivel" value={resumen.subidas} tone="up" />
-                <MetricCard label="Bajadas de nivel" value={resumen.bajadas} tone="down" />
-                <MetricCard label="Sin cambio" value={resumen.sinCambio} />
+                <TarjetaMetrica disposicion="panel" label="Identificadores analizados" value={resumen.totalItems} />
+                <TarjetaMetrica disposicion="panel" label="Subidas de nivel" value={resumen.subidas} tone="up" />
+                <TarjetaMetrica disposicion="panel" label="Bajadas de nivel" value={resumen.bajadas} tone="down" />
+                <TarjetaMetrica disposicion="panel" label="Sin cambio" value={resumen.sinCambio} />
             </div>
 
             <div className="glass rounded-2xl p-6">
                 <h2 className="mb-4 text-lg font-semibold text-body">Comparación score actual vs. ajustado</h2>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+                <Tabla sinContenedor>
+                    <TablaHead>
+                        <tr>
+                            <th className="px-4 py-3 font-medium">Identificador</th>
+                            <th className="px-4 py-3 font-medium">Plataforma</th>
+                            <th className="px-4 py-3 font-medium">Reportes</th>
+                            <th className="px-4 py-3 font-medium">Peso anónimo</th>
+                            <th className="px-4 py-3 font-medium">Peso autenticado</th>
+                            <th className="px-4 py-3 font-medium">Score actual</th>
+                            <th className="px-4 py-3 font-medium">Score ajustado</th>
+                            <th className="px-4 py-3 font-medium">Nivel actual</th>
+                            <th className="px-4 py-3 font-medium">Nivel ajustado</th>
+                            <th className="px-4 py-3 font-medium">Cambio</th>
+                        </tr>
+                    </TablaHead>
+                    <TablaBody>
+                        {detalles.length === 0 ? (
                             <tr>
-                                <th className="px-4 py-3 font-medium">Identificador</th>
-                                <th className="px-4 py-3 font-medium">Plataforma</th>
-                                <th className="px-4 py-3 font-medium">Reportes</th>
-                                <th className="px-4 py-3 font-medium">Peso anónimo</th>
-                                <th className="px-4 py-3 font-medium">Peso autenticado</th>
-                                <th className="px-4 py-3 font-medium">Score actual</th>
-                                <th className="px-4 py-3 font-medium">Score ajustado</th>
-                                <th className="px-4 py-3 font-medium">Nivel actual</th>
-                                <th className="px-4 py-3 font-medium">Nivel ajustado</th>
-                                <th className="px-4 py-3 font-medium">Cambio</th>
+                                <td colSpan={10} className="px-4 py-2">
+                                    <EmptyState
+                                        title="No hay identificadores para simular"
+                                        description="Cuando haya reportes suficientes, podrás comparar el score actual vs. ajustado."
+                                    />
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {detalles.length === 0 ? (
-                                <tr>
-                                    <td colSpan={10} className="px-4 py-2">
-                                        <EmptyState
-                                            title="No hay identificadores para simular"
-                                            description="Cuando haya reportes suficientes, podrás comparar el score actual vs. ajustado."
-                                        />
+                        ) : (
+                            detalles.map((row) => (
+                                <tr key={`${row.identificador}-${row.plataformaNombre}`}>
+                                    <td className="px-4 py-3 font-mono text-body">{row.identificador}</td>
+                                    <td className="px-4 py-3 text-body">{row.plataformaNombre}</td>
+                                    <td className="px-4 py-3 text-body">
+                                        {row.totalReportes}
+                                        <span className="ml-2 text-xs text-muted">
+                                            ({row.reportesAnonimos}A / {row.reportesAutenticados}Auth)
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-body">{row.pesoAnonimoPromedio.toFixed(2)}</td>
+                                    <td className="px-4 py-3 text-body">{row.pesoAutenticadoPromedio.toFixed(2)}</td>
+                                    <td className="px-4 py-3 text-body">{row.score}</td>
+                                    <td className="px-4 py-3 text-body">{row.scoreAjustado}</td>
+                                    <td className="px-4 py-3">
+                                        <NivelBadge nivel={row.nivelActual} />
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <NivelBadge nivel={row.nivelAjustado} />
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {row.cambioNivel === 0 ? (
+                                            <span className="text-subtle">—</span>
+                                        ) : (
+                                            <span className={`font-semibold ${row.cambioNivel > 0 ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>
+                                                {row.cambioNivel > 0 ? `▲ ${row.cambioNivel}` : `▼ ${Math.abs(row.cambioNivel)}`}
+                                            </span>
+                                        )}
                                     </td>
                                 </tr>
-                            ) : (
-                                detalles.map((row) => (
-                                    <tr key={`${row.identificador}-${row.plataformaNombre}`}>
-                                        <td className="px-4 py-3 font-mono text-body">{row.identificador}</td>
-                                        <td className="px-4 py-3 text-body">{row.plataformaNombre}</td>
-                                        <td className="px-4 py-3 text-body">
-                                            {row.totalReportes}
-                                            <span className="ml-2 text-xs text-muted">
-                                                ({row.reportesAnonimos}A / {row.reportesAutenticados}Auth)
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-body">{row.pesoAnonimoPromedio.toFixed(2)}</td>
-                                        <td className="px-4 py-3 text-body">{row.pesoAutenticadoPromedio.toFixed(2)}</td>
-                                        <td className="px-4 py-3 text-body">{row.score}</td>
-                                        <td className="px-4 py-3 text-body">{row.scoreAjustado}</td>
-                                        <td className="px-4 py-3">
-                                            <NivelBadge nivel={row.nivelActual} />
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <NivelBadge nivel={row.nivelAjustado} />
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {row.cambioNivel === 0 ? (
-                                                <span className="text-subtle">—</span>
-                                            ) : (
-                                                <span className={`font-semibold ${row.cambioNivel > 0 ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>
-                                                    {row.cambioNivel > 0 ? `▲ ${row.cambioNivel}` : `▼ ${Math.abs(row.cambioNivel)}`}
-                                                </span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            ))
+                        )}
+                    </TablaBody>
+                </Tabla>
 
                 {resumen.totalPages > 1 && (
                     <div className="mt-4 flex items-center justify-between">
@@ -191,21 +180,6 @@ export function AdminAntiAbusoSimulacion() {
                 )}
             </div>
         </section>
-    );
-}
-
-function MetricCard({ label, value, tone }: { label: string; value: number; tone?: "up" | "down" }) {
-    const toneClass =
-        tone === "up"
-            ? "text-red-700 dark:text-red-400"
-            : tone === "down"
-            ? "text-green-700 dark:text-green-400"
-            : "text-body";
-    return (
-        <article className="glass rounded-2xl p-6 transition hover:shadow-md motion-reduce:transition-none">
-            <p className="text-sm font-medium text-muted">{label}</p>
-            <p className={`mt-2 text-3xl font-bold ${toneClass}`}>{value}</p>
-        </article>
     );
 }
 
