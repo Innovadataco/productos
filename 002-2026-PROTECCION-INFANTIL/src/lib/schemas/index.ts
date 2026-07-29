@@ -36,6 +36,11 @@ export const operadorIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
+// Admin padres (spec 117)
+export const padreIdParamsSchema = z.object({
+    id: cuidIdSchema,
+});
+
 // Configuración / parámetros
 export const parametroTipoSchema = z.enum([
     "STRING",

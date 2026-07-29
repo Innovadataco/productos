@@ -65,6 +65,16 @@ export async function POST(request: Request) {
             );
         }
 
+        // Spec 117 (I-37): una cuenta desactivada por un admin no recupera acceso con la
+        // contraseña correcta (el reseteo de lockout de más abajo la marcaría "activo").
+        // Se verifica tras la contraseña para no filtrar existencia/estado de la cuenta.
+        if (user.estado === "inactivo") {
+            return NextResponse.json(
+                { error: { message: "Cuenta desactivada. Contacta con el soporte para reactivarla.", code: ERROR_CODES.AUTH_INVALID } },
+                { status: 401 }
+            );
+        }
+
         await prisma.usuario.update({
             where: { id: user.id },
             data: { intentosFallidos: 0, estado: "activo", bloqueadoHasta: null, ultimaSesion: new Date() },

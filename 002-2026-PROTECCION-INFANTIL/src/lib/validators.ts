@@ -92,6 +92,13 @@ export const auditLogsQuerySchema = z.object({
     fechaHasta: z.string().date().optional(),
 });
 
+// Admin padres (spec 117, I-37): listado paginado con búsqueda por email/nombre
+export const padresQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(2).max(120).optional(),
+});
+
 const estadosPermitidos = Object.values(EstadoReporte) as [string, ...string[]];
 const categoriasPermitidas = Object.values(CategoriaConducta) as [string, ...string[]];
 
