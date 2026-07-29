@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/Badge";
 import { BarChart } from "@/components/modules/BarChart";
 import { DonutChart } from "@/components/modules/DonutChart";
 import { DashboardSubNav } from "../components/DashboardSubNav";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 
 const CATEGORIA_LABELS: Record<string, string> = {
     CONTACTO_INSISTENTE: "Contacto insistente",
@@ -206,11 +208,10 @@ export default function AdminEstadisticasClasificacionPage() {
                 {data?.metricasOperador.length === 0 ? (
                     <p className="py-6 text-sm text-muted">Aún no hay operación registrada.</p>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="border-b border-slate-200 dark:border-slate-800">
-                                <tr className="text-subtle">
-                                    <th className="pb-3 font-medium">Operador</th>
+                    <Tabla sinContenedor>
+                        <TablaHead variante="borde">
+                            <tr className="text-subtle">
+                                <th className="pb-3 font-medium">Operador</th>
                                     <th className="pb-3 font-medium">Atendidos</th>
                                     <th className="pb-3 font-medium">Confirmados</th>
                                     <th className="pb-3 font-medium">Corregidos</th>
@@ -218,8 +219,8 @@ export default function AdminEstadisticasClasificacionPage() {
                                     <th className="pb-3 font-medium">Escalados</th>
                                     <th className="pb-3 font-medium">Tiempo promedio</th>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        </TablaHead>
+                        <TablaBody>
                                 {(data?.metricasOperador || []).map((op) => (
                                     <tr key={op.operadorId}>
                                         <td className="py-3 pr-3 text-body">{op.nombre}</td>
@@ -233,9 +234,8 @@ export default function AdminEstadisticasClasificacionPage() {
                                         </td>
                                     </tr>
                                 ))}
-                            </tbody>
-                        </table>
-                    </div>
+                        </TablaBody>
+                    </Tabla>
                 )}
             </GlassCard>
 
@@ -281,19 +281,15 @@ export default function AdminEstadisticasClasificacionPage() {
                 </div>
 
                 {loading && !data ? (
-                    <div className="flex items-center gap-3 py-8 text-muted">
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                        Cargando...
-                    </div>
+                    <Cargando inline className="py-8" />
                 ) : data?.tabla.reportes.length === 0 ? (
                     <p className="py-6 text-sm text-muted">No hay casos que coincidan con los filtros.</p>
                 ) : (
                     <>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b border-slate-200 dark:border-slate-800">
-                                    <tr className="text-subtle">
-                                        <th className="pb-3 font-medium">Seguimiento</th>
+                        <Tabla sinContenedor>
+                            <TablaHead variante="borde">
+                                <tr className="text-subtle">
+                                    <th className="pb-3 font-medium">Seguimiento</th>
                                         <th className="pb-3 font-medium">Identificador</th>
                                         <th className="pb-3 font-medium">Estado</th>
                                         <th className="pb-3 font-medium">Operador</th>
@@ -301,8 +297,8 @@ export default function AdminEstadisticasClasificacionPage() {
                                         <th className="pb-3 font-medium">Ubicación</th>
                                         <th className="pb-3 font-medium">Creado</th>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            </TablaHead>
+                            <TablaBody>
                                     {data?.tabla.reportes.map((r) => (
                                         <tr key={r.id}>
                                             <td className="py-3 pr-3 font-mono text-xs text-muted">{r.numeroSeguimiento}</td>
@@ -329,9 +325,8 @@ export default function AdminEstadisticasClasificacionPage() {
                                             </td>
                                         </tr>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
+                            </TablaBody>
+                        </Tabla>
                         {data && data.tabla.pagination.totalPages > 1 && (
                             <div className="mt-4 flex items-center justify-between">
                                 <Button
