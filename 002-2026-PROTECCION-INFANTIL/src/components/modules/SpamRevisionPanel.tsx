@@ -7,6 +7,9 @@ import { Modal } from "@/components/ui/Modal";
 import { AdminReporteDetalle } from "./AdminReporteDetalle";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 
 const CATEGORIAS = [
     { value: "CONTACTO_INSISTENTE", label: "Contacto insistente" },
@@ -126,12 +129,10 @@ export function SpamRevisionPanel() {
                     onRetry={fetchReportes}
                 />
             )}
-            {success && <div className="rounded-xl bg-green-50 dark:bg-green-950/30 p-4 text-sm text-green-700 dark:text-green-300">{success}</div>}
+            {success && <Alerta tono="exito" role="status" className="p-4">{success}</Alerta>}
 
-            <div className="glass rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+            <Tabla>
+                <TablaHead>
                             <tr>
                                 <th className="px-4 py-3 font-medium">Identificador</th>
                                 <th className="px-4 py-3 font-medium">Plataforma</th>
@@ -140,15 +141,14 @@ export function SpamRevisionPanel() {
                                 <th className="px-4 py-3 font-medium">Recibido</th>
                                 <th className="px-4 py-3 font-medium">Acciones</th>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-subtle">
-                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                                        <p className="mt-2 text-xs">Cargando...</p>
-                                    </td>
-                                </tr>
+                </TablaHead>
+                <TablaBody>
+                    {loading ? (
+                        <tr>
+                            <td colSpan={6} className="px-4 py-2 text-center text-subtle">
+                                <Cargando tamano="sm" />
+                            </td>
+                        </tr>
                             ) : reportes.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-4 py-2">
@@ -174,10 +174,8 @@ export function SpamRevisionPanel() {
                                     </tr>
                                 ))
                             )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                </TablaBody>
+            </Tabla>
 
             {selectedId && selected && (
                 <Modal isOpen onClose={() => setSelectedId(null)} title="Revisar posible spam">
