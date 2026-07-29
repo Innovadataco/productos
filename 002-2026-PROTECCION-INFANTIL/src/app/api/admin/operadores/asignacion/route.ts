@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol } from "@/lib/operadores/permisos";
 import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
+import { whereReporteEnEstado } from "@/lib/reportes-acceso";
 
 export async function GET(req: Request) {
     try {
@@ -21,11 +22,7 @@ export async function GET(req: Request) {
 
         const [sinAsignar, operadoresRaw, distribucion, config] = await Promise.all([
             prisma.reporte.count({
-                where: {
-                    estado: "REVISION_MANUAL",
-                    operadorId: null,
-                    eliminado: false,
-                },
+                where: whereReporteEnEstado("REVISION_MANUAL", { operadorId: null }),
             }),
             prisma.usuario.findMany({
                 where: { rol: "OPERADOR", estado: "activo" },
@@ -34,11 +31,7 @@ export async function GET(req: Request) {
             }),
             prisma.reporte.groupBy({
                 by: ["operadorId"],
-                where: {
-                    estado: "REVISION_MANUAL",
-                    eliminado: false,
-                    operadorId: { not: null },
-                },
+                where: whereReporteEnEstado("REVISION_MANUAL", { operadorId: { not: null } }),
                 _count: { operadorId: true },
             }),
             obtenerConfigAsignacion(),

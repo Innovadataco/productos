@@ -6,6 +6,7 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { padresQuerySchema } from "@/lib/validators";
+import { whereReporteVigente } from "@/lib/reportes-acceso";
 
 /**
  * GET /api/admin/padres (spec 117, I-37)
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
         const conteos = ids.length
             ? await prisma.reporte.groupBy({
                   by: ["usuarioId"],
-                  where: { usuarioId: { in: ids }, eliminado: false },
+                  where: whereReporteVigente({ usuarioId: { in: ids } }),
                   _count: { _all: true },
               })
             : [];

@@ -8,6 +8,7 @@ import { ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
+import { whereReporteEnEstado } from "@/lib/reportes-acceso";
 
 const reasignarSchema = z.object({
     operadorId: z.string().min(1),
@@ -79,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         const [casosAbiertos, config] = await Promise.all([
             prisma.reporte.count({
-                where: { operadorId: operador.id, estado: "REVISION_MANUAL", eliminado: false },
+                where: whereReporteEnEstado("REVISION_MANUAL", { operadorId: operador.id }),
             }),
             obtenerConfigAsignacion(),
         ]);

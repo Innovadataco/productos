@@ -9,6 +9,7 @@ import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { enviarEmailBienvenidaOperador, enviarEmailBienvenidaComite } from "@/lib/email";
 import { validarExclusividadRolComite, normalizarEsComiteParaRol } from "@/lib/operadores/permisos";
+import { whereReporteVigente, whereReporteEnEstado } from "@/lib/reportes-acceso";
 import { randomBytes } from "crypto";
 
 const operadorSchema = z.object({
@@ -58,14 +59,14 @@ export async function GET(request: Request) {
             operadores.map(async (op) => {
                 const casosAbiertos = op.rol === "OPERADOR"
                     ? await prisma.reporte.count({
-                          where: { operadorId: op.id, estado: "REVISION_MANUAL", eliminado: false },
+                          where: whereReporteEnEstado("REVISION_MANUAL", { operadorId: op.id }),
                       })
                     : await prisma.solicitudComite.count({
                           where: { comiteId: op.id, estado: { in: ["PENDIENTE", "ASIGNADA"] } },
                       });
                 const casosTotales = op.rol === "OPERADOR"
                     ? await prisma.reporte.count({
-                          where: { operadorId: op.id, eliminado: false },
+                          where: whereReporteVigente({ operadorId: op.id }),
                       })
                     : await prisma.solicitudComite.count({
                           where: { comiteId: op.id },
