@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
 
@@ -114,12 +115,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             operadorNombre: operador.nombre,
         });
     } catch (error) {
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[ADMIN/REPORTES-REVISION]");
     }
 }
