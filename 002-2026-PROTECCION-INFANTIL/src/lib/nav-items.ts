@@ -24,6 +24,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
 
 export const COMITE_NAV_TABS: NavItem[] = [
     { href: "/dashboard/admin/comite", label: "Bandeja", modulo: "comite_bandeja" },
+    { href: "/dashboard/admin/comite/apelaciones", label: "Apelaciones", modulo: "comite_bandeja" },
     { href: "/dashboard/admin/comite/gestion", label: "Gestión", modulo: "comite" },
     { href: "/dashboard/admin/comite/auditoria", label: "Auditoría", modulo: "comite_auditoria" },
 ];

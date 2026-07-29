@@ -76,12 +76,20 @@ export function DashboardUsuarioClient() {
                         </p>
                     </div>
                     {/* I-38 (SPEC-114): el camino a la función central del producto desde el área del padre */}
-                    <Link
-                        href="/reportar"
-                        className="rounded-xl accent-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
-                    >
-                        Reportar un riesgo
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                            href="/dashboard/apelaciones"
+                            className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-body transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/60"
+                        >
+                            Apelar un identificador
+                        </Link>
+                        <Link
+                            href="/reportar"
+                            className="rounded-xl accent-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
+                        >
+                            Reportar un riesgo
+                        </Link>
+                    </div>
                 </div>
             </div>
 
