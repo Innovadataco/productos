@@ -107,6 +107,11 @@ export function ConsultaEnriquecidaClient() {
             total: u.total,
         }));
 
+    // SPEC-115: degradación honesta — contar los reportes que el mapa no puede pintar
+    const sinUbicacion = (data?.ubicaciones ?? [])
+        .filter((u) => typeof u.lat !== "number" || typeof u.lng !== "number")
+        .reduce((sum, u) => sum + u.total, 0);
+
     return (
         <div className="space-y-5">
             <form onSubmit={handleSubmit}>
@@ -221,7 +226,7 @@ export function ConsultaEnriquecidaClient() {
                             <p className="text-xs text-subtle mb-3">
                                 Ciudades con reportes. Sin direcciones exactas ni datos personales.
                             </p>
-                            <MapaUbicaciones puntos={puntosMapa} />
+                            <MapaUbicaciones puntos={puntosMapa} sinUbicacion={sinUbicacion} />
                         </GlassCard>
                     )}
                 </div>

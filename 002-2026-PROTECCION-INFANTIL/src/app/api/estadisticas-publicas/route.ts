@@ -15,6 +15,7 @@ export async function GET() {
             porPais,
             porCiudadConIds,
             categoriasRaw,
+            sinUbicacion,
         ] = await Promise.all([
             prisma.reporte.count({ where: whereReporteAprobado() }),
             prisma.identificadorReportado.count(),
@@ -44,6 +45,13 @@ export async function GET() {
                     reporte: { estado: { in: [...ESTADOS_APROBADOS] }, eliminado: false },
                 },
                 select: { categoria: true },
+            }),
+            // SPEC-115 (degradación honesta del mapa): reportes aprobados que el mapa
+            // NO puede pintar porque su ciudad carece de coordenadas (o no hay ciudad).
+            prisma.reporte.count({
+                where: whereReporteAprobado({
+                    OR: [{ ciudadId: null }, { ciudadRel: { lat: null } }, { ciudadRel: { lng: null } }],
+                }),
             }),
         ]);
 
@@ -113,6 +121,7 @@ export async function GET() {
             porCiudad,
             porCategoria,
             porGrupoCategoria,
+            sinUbicacion,
         });
     } catch (error) {
         if (error instanceof AppError) {

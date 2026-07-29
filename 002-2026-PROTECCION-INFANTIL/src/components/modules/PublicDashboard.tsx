@@ -27,6 +27,7 @@ type StatsData = {
     porCiudad: { ciudad: string; pais: string; count: number; lat: number | null; lng: number | null }[];
     porCategoria: { categoria: string; count: number }[];
     porGrupoCategoria: { clave: string; nombre: string; orden: number; total: number }[];
+    sinUbicacion?: number;
 };
 
 export function PublicDashboard() {
@@ -85,6 +86,9 @@ export function PublicDashboard() {
             total: c.count,
         }));
 
+    // SPEC-115: degradación honesta — el mapa admite cuántos reportes no puede pintar
+    const sinUbicacion = data.sinUbicacion ?? 0;
+
     return (
         <section className="space-y-6" aria-labelledby="public-dashboard-title">
             <div>
@@ -140,6 +144,7 @@ export function PublicDashboard() {
                         paises={porPais.map((p) => ({ pais: p.pais, total: p.count }))}
                         center={[4.5, -74]}
                         zoom={3}
+                        sinUbicacion={sinUbicacion}
                     />
                 )}
             </ChartCard>

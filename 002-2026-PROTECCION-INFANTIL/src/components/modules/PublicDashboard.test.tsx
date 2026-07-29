@@ -2,8 +2,13 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { PublicDashboard } from "./PublicDashboard";
 
+const mapaProps = vi.hoisted(() => ({ ultima: null as null | { sinUbicacion?: number } }));
+
 vi.mock("./MapaUbicaciones", () => ({
-    MapaUbicaciones: () => <div data-testid="mapa" />,
+    MapaUbicaciones: (props: { sinUbicacion?: number }) => {
+        mapaProps.ultima = props;
+        return <div data-testid="mapa" />;
+    },
 }));
 
 // Shape real de la API tras D-10: sin nivel de riesgo ni score promedio.
@@ -59,5 +64,13 @@ describe("PublicDashboard", () => {
         render(<PublicDashboard />);
 
         await waitFor(() => expect(screen.getByText("No pudimos cargar las estadísticas")).toBeTruthy());
+    });
+
+    it("SPEC-115: pasa al mapa el conteo de reportes sin ubicación (degradación honesta)", async () => {
+        mockFetch({ ...statsApi, sinUbicacion: 3 });
+        render(<PublicDashboard />);
+
+        await waitFor(() => expect(screen.getByText("Dashboard público")).toBeTruthy());
+        await waitFor(() => expect(mapaProps.ultima?.sinUbicacion).toBe(3));
     });
 });
