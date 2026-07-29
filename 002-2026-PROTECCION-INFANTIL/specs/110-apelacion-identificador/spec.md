@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-29
 
-**Status**: DESARROLLO
+**Status**: IMPLEMENTADO
 
 **Input**: BRIEF-SPEC-110 (cola 002-PI-041, bloque B0). Diseño CERRADO con el CEO: (1) el
 apelante se AUTENTICA; (2) desde su área declara el identificador, expone su motivo y
@@ -331,4 +331,34 @@ digest/marca (test de efecto); el job respalda el envío con tolerancia a fallos
 
 ## Implementación
 
-*(Se completa al cierre.)*
+**Estado**: IMPLEMENTADA, **SIN DESPLEGAR** (despliegue a producción lo decide el CEO en su lote).
+**Detalle completo del cierre**: ver [`cierre.md`](cierre.md).
+
+Resumen de lo entregado:
+
+- **Modelo de datos** (migración aditiva `20260729120000_apelacion_identificador`): enum
+  `EstadoApelacion`, modelos `Apelacion`, `DocumentoApelacion`, `AccesoDocumentoApelacion`,
+  `IdentificadorReportado.ocultoPorComiteEn`, `AccionAudit` += 3 valores. Índice único
+  parcial de apelación abierta (un caso abierto por usuario + identificador + plataforma).
+- **Dominio y storage**: `src/lib/apelaciones.ts` (parámetros con fallback, días hábiles,
+  plazo, N reportes, aviso) y `src/lib/apelacion-storage.ts` (AES-256-GCM binario,
+  `storage/apelaciones/` fuera de la raíz web, sha256, validación PDF, fail-closed).
+- **Visibilidad**: `ocultoPorComiteEn` respetado por la dueña única
+  (`actualizarVisibilidadPublica`); la levanta solo un reporte nuevo (upsert en `POST /api/reportes`).
+- **APIs apelante**: `POST /api/apelaciones` (multipart, PDF validado, duplicada 409,
+  cifrado, AuditLog) y `GET /api/apelaciones/mias` (solo N reportes; nunca contenido).
+- **APIs comité**: bandeja `GET /api/admin/comite/apelaciones`, detalle `[id]`, evidencia
+  `[id]/documento` (SOLO COMITE_VALIDACION, AuditLog + acceso), `[id]/tomar` y `[id]/resolver`
+  (ACEPTADA quita visibilidad y/o baja reportes por REPORTE_FALSO; RECHAZADA no cambia nada).
+- **Mantenimiento diario** (pg-boss `apelacion-mantenimiento`, 06:00 America/Bogota):
+  aviso de plazo al comité a los `apelacion.aviso_previo_dias` días hábiles y purga de
+  evidencia a los `apelacion.retencion_documento_dias` días de resuelta.
+- **UI**: área del apelante `/dashboard/apelaciones` (formulario + lista + canales oficiales
+  + textos de plazo y de qué NO verá) y bandeja del comité `/dashboard/admin/comite/apelaciones`.
+- **Enmienda constitucional** (commit propio): excepción única de evidencia documental a la
+  regla de solo texto.
+
+**Tests**: 12 (apelante) + 17 (comité) + 4 (mantenimiento) = 33 tests SPEC-110, todos en
+verde. Reglas duras cubiertas: apelar no cambia visibilidad; el apelante no ve contenido;
+resolver ACEPTADA sí la cambia (efecto real); evidencia solo comité (403 a admin/operador/
+padre) con AuditLog por acceso; parámetros con efecto (tamaño, retención, aviso, plazo).
