@@ -353,3 +353,42 @@ describe("POST /api/reportes", () => {
         expect(sendReporte).toHaveBeenCalledWith(body.reporte.id, { prioridadAlta: true });
     });
 });
+
+describe("POST /api/reportes — vigencia del padre (SPEC-119)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        await crearParametrosReportes();
+        await crearPlataforma();
+        await crearPaisCiudad();
+        if (!process.env.PARAM_ENCRYPTION_KEY) {
+            process.env.PARAM_ENCRYPTION_KEY = "a".repeat(32);
+        }
+    });
+
+    it("padre vencido recibe 403 con mensaje claro y NO se crea el reporte", async () => {
+        const user = await crearUsuario("PARENT");
+        const ayer = new Date();
+        ayer.setDate(ayer.getDate() - 1);
+        await prisma.usuario.update({ where: { id: user.id }, data: { finServicio: ayer } });
+        const token = await crearTokenUsuario(user.id, "PARENT");
+
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const res = await POST(req);
+        expect(res.status).toBe(403);
+        const body = await res.json();
+        expect(body.error.message).toMatch(/vencido/i);
+        expect(body.error.message).toMatch(/soporte/i);
+
+        const creados = await prisma.reporte.count({ where: { usuarioId: user.id } });
+        expect(creados).toBe(0);
+    });
+
+    it("padre sin vigencia definida reporta con normalidad (201)", async () => {
+        const user = await crearUsuario("PARENT");
+        const token = await crearTokenUsuario(user.id, "PARENT");
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const res = await POST(req);
+        expect(res.status).toBe(201);
+    });
+});
