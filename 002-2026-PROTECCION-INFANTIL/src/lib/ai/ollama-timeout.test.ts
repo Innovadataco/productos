@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { getOllamaTimeoutMs } from "./ollama-config";
-import { llamarOllama, llamarOllamaStructured } from "./ollama-client";
+import { llamarOllamaStructured } from "./ollama-client";
 
 const CLAVE_TIMEOUT = "ia.ollama.timeout_ms";
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -67,7 +67,7 @@ describe("timeout aplicado a los fetch de /api/generate", () => {
         const spyTimeout = vi.spyOn(AbortSignal, "timeout");
 
         await fijarTimeoutParam("45000");
-        await llamarOllama("test:1b", "hola");
+        await llamarOllamaStructured("test:1b", "hola", { type: "object" });
         expect(spyTimeout).toHaveBeenCalledWith(45000);
 
         await fijarTimeoutParam("90000");
@@ -82,7 +82,7 @@ describe("timeout aplicado a los fetch de /api/generate", () => {
         })));
         const spyTimeout = vi.spyOn(AbortSignal, "timeout");
 
-        await llamarOllama("test:1b", "hola");
+        await llamarOllamaStructured("test:1b", "hola", { type: "object" });
         expect(spyTimeout).toHaveBeenCalledWith(DEFAULT_TIMEOUT_MS);
     });
 
@@ -98,7 +98,7 @@ describe("timeout aplicado a los fetch de /api/generate", () => {
         ));
 
         const inicio = Date.now();
-        await expect(llamarOllama("test:1b", "hola")).rejects.toThrow();
+        await expect(llamarOllamaStructured("test:1b", "hola", { type: "object" })).rejects.toThrow();
         // Abortó por el timeout de 50 ms, muy por debajo de una espera infinita.
         expect(Date.now() - inicio).toBeLessThan(5000);
     });

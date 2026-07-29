@@ -38,61 +38,6 @@ export interface OllamaMetrics {
     loadDuration: number | null;
 }
 
-export async function llamarOllama(
-    modelo: string,
-    prompt: string,
-    system?: string,
-    options?: Record<string, unknown>,
-    keepAlive?: number
-): Promise<{ response: string; metrics: OllamaMetrics }> {
-    const startTime = Date.now();
-
-    const body: Record<string, unknown> = {
-        model: modelo,
-        prompt,
-        stream: false,
-        options: {
-            temperature: 0,
-            seed: 42,
-            ...options,
-        },
-    };
-    if (system) body.system = system;
-    if (keepAlive !== undefined) body.keep_alive = keepAlive;
-
-    const ollamaBaseUrl = await getOllamaBaseUrl();
-    const timeoutMs = await getOllamaTimeoutMs();
-    const response = await fetch(`${ollamaBaseUrl}/api/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
-    });
-
-    const latenciaMs = Date.now() - startTime;
-
-    if (!response.ok) {
-        const errorText = await response.text().catch(() => "unknown");
-        logger.error(`[OLLAMA] ERROR modelo=${modelo} status=${response.status} latencia=${latenciaMs}ms errorLen=${errorText.length}`);
-        throw new Error(`Ollama HTTP ${response.status}: ${errorText}`);
-    }
-
-    const data = (await response.json()) as OllamaResponse;
-
-    const metrics: OllamaMetrics = {
-        modelo,
-        latenciaMs,
-        promptTokens: data.prompt_eval_count ?? null,
-        responseTokens: data.eval_count ?? null,
-        totalDuration: nsToMs(data.total_duration),
-        loadDuration: nsToMs(data.load_duration),
-    };
-
-    logger.info(`[OLLAMA] OK modelo=${modelo} latencia=${latenciaMs}ms promptTokens=${metrics.promptTokens} responseTokens=${metrics.responseTokens}`);
-
-    return { response: data.response, metrics };
-}
-
 /**
  * Llama a Ollama con structured output nativo (JSON Schema) usando /api/generate.
  * Requiere Ollama >= 0.29.0 y un modelo que soporte `format` con schema.
