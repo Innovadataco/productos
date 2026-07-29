@@ -56,6 +56,9 @@ export async function GET(request: Request) {
                     debeCambiarPassword: true,
                     creadoEn: true,
                     ultimaSesion: true,
+                    // SPEC-119: ventana de servicio del cliente padre.
+                    inicioServicio: true,
+                    finServicio: true,
                 },
             }),
             prisma.usuario.count({ where }),

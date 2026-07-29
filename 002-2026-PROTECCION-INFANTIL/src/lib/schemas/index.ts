@@ -41,6 +41,13 @@ export const padreIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
+// Admin padres — ventana de servicio (spec 119). Campo ausente = conservar el valor
+// actual; null = limpiar (sin vigencia definida = acceso); string ISO = fijar.
+export const padreVigenciaBodySchema = z.object({
+    inicioServicio: z.string().datetime({ offset: true }).nullable().optional(),
+    finServicio: z.string().datetime({ offset: true }).nullable().optional(),
+});
+
 // Configuración / parámetros
 export const parametroTipoSchema = z.enum([
     "STRING",
