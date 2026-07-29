@@ -47,18 +47,20 @@ describe(`SPEC-114 · admin (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         }
 
         // Centro IA · modelos: depende del cerebro externo (Ollama). El CAMINO del admin
-        // debe funcionar con cerebro presente (200) o ausente (500 con error CONTROLADO,
-        // no excepción sin atrapar). En CI no hay Ollama: el contrato de cerebro-caído
-        // es la respuesta estructurada. Deuda para ZEUS: este endpoint no degrada como
-        // el sondeo de I-24 (SPEC-101) — decisión de producto, no de esta suite.
+        // debe funcionar con cerebro presente (200 + lista) o ausente (503 DEGRADADO con
+        // error estructurado, el mismo contrato del sondeo de I-24 en
+        // /api/admin/ia/ollama/probar). Cierra la deuda #2 del cierre de SPEC-114:
+        // el endpoint ya degrada como su hermano — el 500 controlado dejó de ser
+        // el contrato (cola nocturna 002-PI-041, bloque B6).
         const resModelos = await getJson("@/app/api/admin/ia/modelos/route", "http://localhost:5005/api/admin/ia/modelos");
         if (resModelos.status === 200) {
             const cuerpo = (await resModelos.json()) as { models?: unknown };
             expect(cuerpo.models, "con cerebro presente, lista modelos").toBeDefined();
         } else {
-            expect(resModelos.status, "sin cerebro, el error debe ser el controlado").toBe(500);
-            const cuerpo = (await resModelos.json()) as { error?: { message?: string; code?: string } };
-            expect(cuerpo.error?.code, "el error es estructurado, no una excepción sin atrapar").toBeTruthy();
+            expect(resModelos.status, "sin cerebro, degrada a 503 estructurado (nunca 500)").toBe(503);
+            const cuerpo = (await resModelos.json()) as { ok?: boolean; error?: { message?: string; code?: string } };
+            expect(cuerpo.ok, "la respuesta degradada declara ok:false").toBe(false);
+            expect(cuerpo.error?.code, "el error es estructurado, no una excepción sin atrapar").toBe("SERVICE_UNAVAILABLE");
         }
     });
 

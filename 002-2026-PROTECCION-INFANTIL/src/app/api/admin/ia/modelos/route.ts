@@ -19,7 +19,19 @@ export async function GET(request: Request) {
             );
         }
 
-        const models = await listOllamaModels();
+        // Degradación controlada (mismo patrón que el sondeo de I-24 en
+        // /api/admin/ia/ollama/probar): un cerebro inalcanzable no es un 500 —
+        // el Centro de Control recibe 503 con error estructurado.
+        let models;
+        try {
+            models = await listOllamaModels();
+        } catch (ollamaError) {
+            console.error("[IA-MODELOS] Ollama inalcanzable:", ollamaError);
+            return NextResponse.json(
+                { ok: false, error: { message: "Ollama inalcanzable", code: ERROR_CODES.SERVICE_UNAVAILABLE } },
+                { status: 503 }
+            );
+        }
         return NextResponse.json({ models });
     } catch (error) {
         if (error instanceof AppError) {
