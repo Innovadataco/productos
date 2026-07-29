@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Cargando } from "@/components/ui/Cargando";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 
 type BadgeVisual = "warning" | "success" | "muted";
@@ -82,8 +83,7 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
     if (loading) {
         return (
             <div className="glass rounded-2xl p-8 text-center animate-pulse">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                <p className="mt-3 text-sm text-subtle">Cargando detalle...</p>
+                <Cargando texto="Cargando detalle..." />
             </div>
         );
     }
