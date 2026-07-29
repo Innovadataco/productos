@@ -38,6 +38,9 @@ export async function otorgarTodosLosPermisos() {
 
 export async function resetDatabase() {
     // Respetar dependencias FK: hijos antes que padres.
+    await prisma.accesoDocumentoApelacion.deleteMany();
+    await prisma.documentoApelacion.deleteMany();
+    await prisma.apelacion.deleteMany();
     await prisma.simulacionReporte.deleteMany();
     await prisma.simulacionRun.deleteMany();
     await prisma.rateLimit.deleteMany();

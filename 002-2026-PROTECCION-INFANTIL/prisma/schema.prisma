@@ -63,6 +63,9 @@ enum AccionAudit {
   APELACION_RESUELTA
   APELACION_VENCIDA
   APELACION_REHABILITADA
+  APELACION_DOCUMENTO_ACCESO
+  APELACION_DOCUMENTO_PURGADO
+  APELACION_AVISO_PLAZO
   CIRCULO_CONTACT_CREATE
   CIRCULO_CONTACT_UPDATE
   CIRCULO_CONTACT_DISABLE
@@ -174,6 +177,13 @@ enum EstadoReporte {
   CORREGIDO
 }
 
+enum EstadoApelacion {
+  RECIBIDA
+  EN_REVISION
+  ACEPTADA
+  RECHAZADA
+}
+
 enum ResponsableTransicion {
   IA
   WORKER
@@ -228,6 +238,10 @@ model Usuario {
   integrantesComite            IntegranteComite[]       @relation("IntegrantesComite")
   integrantesComiteCreados     IntegranteComite[]       @relation("IntegrantesComiteCreados")
   integrantesComiteModificados IntegranteComite[]       @relation("IntegrantesComiteModificados")
+  apelaciones                  Apelacion[]              @relation("ApelacionesUsuario")
+  apelacionesAsignadas         Apelacion[]              @relation("ApelacionesAsignadasComite")
+  apelacionesResueltas         Apelacion[]              @relation("ApelacionesResueltas")
+  accesosDocumentoApelacion    AccesoDocumentoApelacion[]
 
   @@index([email])
   @@index([rol])
@@ -522,6 +536,7 @@ model Plataforma {
   alertasSuscripcion      AlertaSuscripcion[]
   identificadoresContacto IdentificadorContacto[]
   identificadoresAlumno IdentificadorAlumno[]
+  apelaciones             Apelacion[]
 
   @@index([clave])
   @@index([esActiva])
@@ -752,6 +767,7 @@ model IdentificadorReportado {
   reportesAutenticados  Int       @default(0)
   reportesAnonimos      Int       @default(0)
   esVisiblePublicamente Boolean   @default(false)
+  ocultoPorComiteEn     DateTime?
   score                 Int       @default(0)
   scoreAnonimo          Int       @default(0)
   scoreAutenticado      Int       @default(0)
@@ -767,6 +783,76 @@ model IdentificadorReportado {
   @@index([esVisiblePublicamente])
   @@index([totalReportes])
   @@index([score])
+}
+
+// SPEC-110: apelación del identificador reportado (reemplazo del módulo eliminado en SPEC-109).
+// Flujo: apelante autenticado -> bandeja del comité -> resolución humana motivada.
+// Reglas duras: apelar NO cambia visibilidad; el apelante NO ve contenido de reportes.
+model Apelacion {
+  id                   String          @id @default(cuid())
+  numero               String          @unique
+  usuarioId            String
+  identificador        String
+  plataformaId         String
+  motivo               String          @db.Text
+  esRepresentante      Boolean         @default(false)
+  acreditacion         String?         @db.Text
+  estado               EstadoApelacion @default(RECIBIDA)
+  comiteId             String?
+  asignadoEn           DateTime?
+  plazoRespuestaEn     DateTime
+  decision             String?
+  motivacionResolucion String?         @db.Text
+  quitoVisibilidad     Boolean         @default(false)
+  resueltoPorId        String?
+  resueltoEn           DateTime?
+  creadoEn             DateTime        @default(now())
+  actualizadoEn        DateTime        @updatedAt
+
+  usuario     Usuario    @relation("ApelacionesUsuario", fields: [usuarioId], references: [id])
+  plataforma  Plataforma @relation(fields: [plataformaId], references: [id])
+  comite      Usuario?   @relation("ApelacionesAsignadasComite", fields: [comiteId], references: [id])
+  resueltoPor Usuario?   @relation("ApelacionesResueltas", fields: [resueltoPorId], references: [id])
+  documentos  DocumentoApelacion[]
+
+  @@index([usuarioId])
+  @@index([estado])
+  @@index([identificador, plataformaId])
+  @@index([creadoEn])
+  @@index([resueltoEn])
+}
+
+model DocumentoApelacion {
+  id             String    @id @default(cuid())
+  apelacionId    String
+  nombreOriginal String
+  rutaArchivo    String
+  hashSha256     String
+  tamanoBytes    Int
+  mimeType       String
+  eliminadoEn    DateTime?
+  creadoEn       DateTime  @default(now())
+
+  apelacion Apelacion                  @relation(fields: [apelacionId], references: [id], onDelete: Cascade)
+  accesos   AccesoDocumentoApelacion[]
+
+  @@index([apelacionId])
+  @@index([eliminadoEn])
+}
+
+model AccesoDocumentoApelacion {
+  id          String   @id @default(cuid())
+  documentoId String
+  usuarioId   String
+  ipAddress   String
+  userAgent   String
+  accedidoEn  DateTime @default(now())
+
+  documento DocumentoApelacion @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+  usuario   Usuario            @relation(fields: [usuarioId], references: [id])
+
+  @@index([documentoId])
+  @@index([usuarioId])
 }
 
 

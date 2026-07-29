@@ -187,6 +187,39 @@ async function main() {
             esPublico: false,
             descripcion: "Límite de jobs pendientes para backpressure",
         },
+        // SPEC-110: parámetros de la apelación del identificador (ADR_004, con test de efecto)
+        {
+            clave: "apelacion.plazo_respuesta_dias_habiles",
+            valor: "15",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.LEGAL,
+            esPublico: true,
+            descripcion: "Plazo de respuesta de una apelación en días hábiles (Ley 1581)",
+        },
+        {
+            clave: "apelacion.aviso_previo_dias",
+            valor: "10",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.LEGAL,
+            esPublico: false,
+            descripcion: "Días hábiles sin resolver para avisar al comité de validación",
+        },
+        {
+            clave: "apelacion.retencion_documento_dias",
+            valor: "30",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.LEGAL,
+            esPublico: false,
+            descripcion: "Días tras la resolución para eliminar el documento de evidencia",
+        },
+        {
+            clave: "apelacion.max_tamano_documento_mb",
+            valor: "5",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.LEGAL,
+            esPublico: true,
+            descripcion: "Tamaño máximo del PDF de evidencia de una apelación (MB)",
+        },
     ];
 
     for (const p of defaults) {
