@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-29
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-042 (radica ZEUS). Los fallos aparecen ENTRE features y la
 documentación escrita a mano miente (`docs/ARCHITECTURE.md` citaba un permiso ya borrado).
@@ -183,3 +183,28 @@ CREA la línea base: `docs/architecture/` (5 artefactos generados), scripts gene
 `scripts/arch/`, `npm run arch:check`, job en el workflow de CI de la raíz, línea de impacto
 en `spec.md` futuras y regla de lectura en `AGENTS.md`. NO toca `src/` de producto salvo
 `AGENTS.md` y, si hiciera falta, el test de disciplina de specs.
+
+## Implementación (cierre)
+
+Implementada el 2026-07-29 en `feature/001-scaffolding`. Detalle completo, hashes,
+evidencia de los 5 criterios del quickstart y deuda técnica en
+[`cierre.md`](cierre.md). Puntos clave:
+
+- **D-41 aplicada** (decisión vinculante de ZEUS, cierra el hallazgo I-39): todo
+  componente de navegación pinta (módulo de BD) ∧ `esDestinoPermitidoPorRol`;
+  `ComiteSubNav`/`ColegioNav` ganan prop `rol`, los submenús fijos usan el patrón
+  de `NavHeader` (`useAuth`). NO se tocaron `seed.ts`, `proxy.ts`, `nav-items.ts`
+  ni `permisos-catalogo.ts`.
+- **5 generadores** en `scripts/arch/` → `docs/architecture/` (00, 01, 02, 03, 06),
+  deterministas (doble corrida idéntica, verificado) y con encabezado "GENERADO — no
+  editar a mano".
+- **`npm run arch:check`** con las 4 verificaciones (drift, huérfanos, aserción A con
+  sesión canónica, aserción B), cableado como paso en `.github/workflows/ci.yml` de la
+  raíz del monorepo (mismo job, `working-directory` y filtro de paths del producto).
+- **Aserción B: VERDE sin excepciones nuevas** tras la D-41 (86 hrefs). **Aserción A:
+  VERDE** (1110 combinaciones; 122 divergencias del eje anónimo documentadas como nota).
+- **Oráculo corregido con evidencia**: huérfanos reales = 4 (se documenta `RateLimit`,
+  sin FK por diseño, en `excepciones.json` — prevalece el conteo real según Assumptions).
+- **Disciplina**: `specs-discipline.test.ts` exige "Impacto en arquitectura:" en specs
+  ≥ 126 (excepciones que solo encogen) y `AGENTS.md` obliga a leer `docs/architecture/`
+  antes de tocar `src/`.

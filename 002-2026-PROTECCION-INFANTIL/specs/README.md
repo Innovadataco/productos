@@ -37,7 +37,7 @@
 | [123](123-motor-tipos-muerto-guardas/spec.md) | Motor: tipos desde Prisma, código muerto y guardas unificadas (R5) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
 | [124](124-primitivas-ui-compartidas/spec.md) | Primitivas de UI compartidas (R7) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
 | [125](125-validacion-unificada-api/spec.md) | API: una sola forma de validar (R6) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
-| [126](126-linea-base-arquitectura/spec.md) | Línea base de arquitectura generada desde el código + compuerta CI | 🔵 Planeado (spec+plan en compuerta §4) |
+| [126](126-linea-base-arquitectura/spec.md) | Línea base de arquitectura generada desde el código + compuerta CI | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
