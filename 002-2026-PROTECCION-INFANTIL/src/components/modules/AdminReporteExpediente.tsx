@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Cargando } from "@/components/ui/Cargando";
 
 /**
  * Expediente del reporte (spec 096, Fase 3): traza de solo lectura del pipeline.
@@ -285,10 +286,7 @@ export function AdminReporteExpediente({ reporteId, onClose }: AdminReporteExped
     return (
         <Modal isOpen onClose={onClose} title="Expediente del reporte" size="xl">
             {loading ? (
-                <div className="py-10 text-center text-subtle">
-                    <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                    <p className="mt-2 text-xs">Cargando expediente...</p>
-                </div>
+                <Cargando tamano="sm" texto="Cargando expediente..." className="py-10" />
             ) : error ? (
                 <div className="py-6 text-center">
                     <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
