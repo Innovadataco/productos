@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ADMIN_NAV_ITEMS } from "@/lib/nav-items";
+import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 
 type RolNav = "ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "SCHOOL_ADMIN";
 
@@ -23,7 +24,9 @@ const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element
 export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermitidos: string[] }) {
     const pathname = usePathname();
     const permitidos = new Set(modulosPermitidos);
-    const links = ADMIN_NAV_ITEMS.filter((l) => permitidos.has(l.modulo)).map((l) => ({
+    // D-41 (SPEC-126): módulo de BD ∧ predicado del proxy — la puerta tiene la
+    // última palabra sobre si se pinta (misma regla que NavHeader.tsx).
+    const links = ADMIN_NAV_ITEMS.filter((l) => permitidos.has(l.modulo) && esDestinoPermitidoPorRol(rol, l.href)).map((l) => ({
         ...l,
         icon: ICONS[l.href] ?? InboxIcon,
     }));

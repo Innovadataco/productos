@@ -62,7 +62,7 @@ export default async function ColegioLayout({ children }: { children: React.Reac
 
     return (
         <div className="theme-colegio min-h-screen bg-page">
-            <ColegioNav modulosPermitidos={[...permitidos]} />
+            <ColegioNav rol={usuario.rol} modulosPermitidos={[...permitidos]} />
             {children}
         </div>
     );

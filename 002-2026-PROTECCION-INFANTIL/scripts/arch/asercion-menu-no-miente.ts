@@ -63,20 +63,22 @@ export async function ejecutarAsercionB(): Promise<ResultadoAsercionB> {
                 muertos.push({ rol, origen: "NavHeader (logo)", href, veredicto: textoVeredicto(veredicto) });
             }
         }
-        // 3) Menús de área (nav-items): pintado si el rol alcanza el área Y tiene el módulo
-        //    según los grants por defecto del seed.
+        // 3) Menús de área y submenús (nav-items + tabs fijas). D-41 (SPEC-126):
+        //    el componente pinta (módulo de BD, si filtra por módulo) ∧ predicado
+        //    del proxy; la aserción reproduce exactamente esa regla de pintado.
         const modulosDelRol = new Set(grants[rol] ?? []);
         for (const nav of arraysNav()) {
             const veredictoArea = await veredictoProxy(rol, nav.area);
             if (!veredictoPermite(veredictoArea)) continue; // el menú del área no se pinta para este rol
             for (const item of nav.items) {
-                if (!modulosDelRol.has(item.modulo)) continue; // módulo no concedido: no se pinta
+                if (nav.filtroModulo === "seed" && !modulosDelRol.has(item.modulo)) continue; // módulo no concedido: no se pinta
+                if (!predicadoPermite(rol, item.href)) continue; // D-41: el predicado tiene la última palabra
                 evaluados++;
                 const veredicto = await veredictoProxy(rol, item.href);
                 if (!veredictoPermite(veredicto)) {
                     muertos.push({
                         rol,
-                        origen: `${nav.nombre} (módulo ${item.modulo})`,
+                        origen: nav.filtroModulo === "seed" ? `${nav.nombre} (módulo ${item.modulo})` : nav.nombre,
                         href: item.href,
                         veredicto: textoVeredicto(veredicto),
                     });

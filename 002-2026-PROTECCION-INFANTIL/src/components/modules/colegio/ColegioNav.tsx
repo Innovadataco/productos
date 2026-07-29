@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { COLEGIO_NAV_ITEMS } from "@/lib/nav-items";
+import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
 
-export function ColegioNav({ modulosPermitidos }: { modulosPermitidos: string[] }) {
+export function ColegioNav({ rol, modulosPermitidos }: { rol: string; modulosPermitidos: string[] }) {
     const pathname = usePathname();
     const permitidos = new Set(modulosPermitidos);
-    const navItems = COLEGIO_NAV_ITEMS.filter((item) => permitidos.has(item.modulo));
+    // D-41 (SPEC-126): módulo de BD ∧ predicado del proxy — la puerta tiene la
+    // última palabra sobre si se pinta (misma regla que NavHeader.tsx).
+    const navItems = COLEGIO_NAV_ITEMS.filter(
+        (item) => permitidos.has(item.modulo) && esDestinoPermitidoPorRol(rol, item.href)
+    );
 
     return (
         <nav className="border-b border-emerald-200/30 bg-emerald-50/40 dark:border-emerald-900/30 dark:bg-emerald-950/20">

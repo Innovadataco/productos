@@ -25,7 +25,7 @@ export default async function ComiteAuditoriaPage() {
                 <h1 className="text-2xl font-bold text-body">Comité de Validación</h1>
                 <p className="text-sm text-muted">Auditoría de las acciones realizadas sobre el comité de validación.</p>
             </div>
-            <ComiteSubNav modulosPermitidos={[...permitidos]} />
+            <ComiteSubNav rol={rol} modulosPermitidos={[...permitidos]} />
             <AuditLogViewer
                 title="Auditoría del comité"
                 subtitle="Registro de acciones sobre el comité y sus integrantes: creación, activación, actualización de integrantes y gestión de credenciales."

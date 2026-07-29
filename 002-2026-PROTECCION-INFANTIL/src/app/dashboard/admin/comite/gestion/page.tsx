@@ -20,7 +20,7 @@ export default async function AdminComiteGestionPage() {
 
     return (
         <div className="mx-auto max-w-6xl space-y-6">
-            <ComiteSubNav modulosPermitidos={[...permitidos]} />
+            <ComiteSubNav rol={rol} modulosPermitidos={[...permitidos]} />
             <GestionPageClient />
         </div>
     );

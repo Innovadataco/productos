@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 
 const tabs = [
     { href: "/dashboard/admin/operadores/asignar", label: "Asignar" },
@@ -12,9 +14,13 @@ const tabs = [
 
 export function OperadoresSubNav() {
     const pathname = usePathname();
+    const { user } = useAuth();
+    // D-41 (SPEC-126): también los submenús consumen el predicado del proxy
+    // (patrón de NavHeader.tsx: esDestinoPermitidoPorRol con el rol de la sesión).
+    const visibles = tabs.filter((tab) => esDestinoPermitidoPorRol(user?.rol, tab.href));
     return (
         <nav className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
-            {tabs.map((tab) => {
+            {visibles.map((tab) => {
                 const active = pathname === tab.href || pathname?.startsWith(tab.href + "/");
                 return (
                     <Link

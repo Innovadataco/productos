@@ -7,6 +7,7 @@ import { RubricaTab } from "@/components/modules/ia/RubricaTab";
 import ConfigPanel from "@/components/modules/ConfigPanel";
 import type { SandboxOverrides } from "@/lib/ai/sandbox";
 import { IA_TABS } from "@/lib/nav-items";
+import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 import { modulosPermitidosParaRol, verificarAccesoPagina } from "@/lib/permisos-modulos";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 
@@ -41,9 +42,12 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
         return <SinAccesoModulo />;
     }
 
-    // Tabs filtradas por submódulo (spec 086, corrección 3)
+    // Tabs filtradas por submódulo (spec 086, corrección 3) ∧ predicado del proxy
+    // (D-41, SPEC-126: la puerta tiene la última palabra sobre si se pinta).
     const permitidos = await modulosPermitidosParaRol(acceso.rol);
-    const tabsVisibles = IA_TABS.filter((t) => t.modulo === null || permitidos.has(t.modulo));
+    const tabsVisibles = IA_TABS.filter(
+        (t) => (t.modulo === null || permitidos.has(t.modulo)) && esDestinoPermitidoPorRol(acceso.rol, "/dashboard/admin/ia")
+    );
 
     const params = await searchParams;
     const activeTab = tabsVisibles.some((t) => t.key === params.tab) ? params.tab! : (tabsVisibles[0]?.key ?? "documentacion");

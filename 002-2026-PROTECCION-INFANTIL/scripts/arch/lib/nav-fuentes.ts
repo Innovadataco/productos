@@ -18,8 +18,8 @@ import {
     type NavItem,
 } from "../../../src/lib/nav-items";
 import { CATALOGO_MODULOS } from "../../../src/lib/permisos-catalogo";
-import { RUTA_NAV_HEADER, RUTA_SEED } from "./paths";
-import type { RolBarrido } from "./veredictos";
+import { RUTA_NAV_HEADER, RUTA_SEED, RAIZ_PRODUCTO } from "./paths";
+import { predicadoPermite, type RolBarrido } from "./veredictos";
 
 /* ---------- Header (NavHeader.tsx) ---------- */
 
@@ -112,15 +112,64 @@ export interface NavArray {
     /** Ruta del área donde vive el componente que pinta el array. */
     area: string;
     items: NavItem[];
+    /**
+     * Filtro de módulo que el componente aplica además del predicado (D-41).
+     * "seed" = grants por defecto de `clavesPorRol`; null = el componente no
+     * filtra por módulo (submenús de tabs fijas: las pinta todo rol que alcanza
+     * el área y supera el predicado).
+     */
+    filtroModulo: "seed" | null;
 }
 
-/** Arrays con hrefs del menú de área y dónde se pintan (AdminNav, ComiteSubNav, ColegioNav). */
+/**
+ * Arrays con hrefs del menú de área y dónde se pintan (AdminNav, ComiteSubNav,
+ * ColegioNav). D-41 (SPEC-126): tras la decisión de ZEUS, TODO componente de
+ * navegación pinta (módulo de BD) ∧ `esDestinoPermitidoPorRol`; el predicado se
+ * aplica en la aserción al evaluar cada item (asercion-menu-no-miente.ts).
+ */
 export function arraysNav(): NavArray[] {
     return [
-        { nombre: "ADMIN_NAV_ITEMS", area: "/dashboard/admin", items: ADMIN_NAV_ITEMS },
-        { nombre: "COMITE_NAV_TABS", area: "/dashboard/admin/comite", items: COMITE_NAV_TABS },
-        { nombre: "COLEGIO_NAV_ITEMS", area: "/dashboard/colegio", items: COLEGIO_NAV_ITEMS },
+        { nombre: "ADMIN_NAV_ITEMS", area: "/dashboard/admin", items: ADMIN_NAV_ITEMS, filtroModulo: "seed" },
+        { nombre: "COMITE_NAV_TABS", area: "/dashboard/admin/comite", items: COMITE_NAV_TABS, filtroModulo: "seed" },
+        { nombre: "COLEGIO_NAV_ITEMS", area: "/dashboard/colegio", items: COLEGIO_NAV_ITEMS, filtroModulo: "seed" },
+        ...subnavsFijos(),
     ];
+}
+
+/**
+ * Submenús de tabs fijas (OperadoresSubNav, DashboardSubNav): sus arrays `tabs`
+ * viven en el propio componente. Se extraen los hrefs literales por parseo; si
+ * el bloque cambia de forma y no se encuentra ninguno, falla ruidoso (ZEUS 2).
+ */
+function subnavsFijos(): NavArray[] {
+    const archivos: Array<{ nombre: string; ruta: string; area: string }> = [
+        {
+            nombre: "OperadoresSubNav.tabs",
+            ruta: "src/app/dashboard/admin/operadores/components/OperadoresSubNav.tsx",
+            area: "/dashboard/admin/operadores",
+        },
+        {
+            nombre: "DashboardSubNav.tabs",
+            ruta: "src/app/dashboard/admin/estadisticas/components/DashboardSubNav.tsx",
+            area: "/dashboard/admin/estadisticas",
+        },
+    ];
+    return archivos.map(({ nombre, ruta, area }) => {
+        const texto = fs.readFileSync(`${RAIZ_PRODUCTO}/${ruta}`, "utf-8");
+        const hrefs = [...texto.matchAll(/href:\s*"([^"]+)"/g)].map((m) => m[1]);
+        if (hrefs.length === 0) {
+            throw new Error(
+                `[Arch:B] no se encontraron tabs literales en ${ruta} (submenú fijo). ` +
+                    `Si el componente cambió de forma, actualizar subnavsFijos() de scripts/arch/lib/nav-fuentes.ts.`
+            );
+        }
+        return {
+            nombre,
+            area,
+            items: hrefs.map((href) => ({ href, label: href, modulo: "" })),
+            filtroModulo: null,
+        };
+    });
 }
 
 /** IA_TABS no tiene hrefs (tabs por `key` dentro de /dashboard/admin/ia): se documenta, no se salta. */
