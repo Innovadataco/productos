@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { BarChart } from "./BarChart";
 import { DonutChart } from "./DonutChart";
 import { Sparkline } from "./Sparkline";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
+import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
+import { useFetchJson } from "@/components/ui/use-fetch-json";
 
  type StatsData = {
     totales: {
@@ -63,20 +65,7 @@ function formatCategoria(categoria: string) {
 }
 
 export function AdminDashboard() {
-    const [data, setData] = useState<StatsData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-
-    useEffect(() => {
-        fetch("/api/admin/estadisticas", { credentials: "include" })
-            .then(async (r) => {
-                if (!r.ok) throw new Error("Error cargando estadísticas");
-                return r.json();
-            })
-            .then(setData)
-            .catch(() => setError("Error cargando estadísticas"))
-            .finally(() => setLoading(false));
-    }, []);
+    const { datos: data, cargando: loading, error } = useFetchJson<StatsData>("/api/admin/estadisticas");
 
     if (loading) {
         return (
@@ -104,12 +93,12 @@ export function AdminDashboard() {
             <section className="space-y-4" aria-labelledby="metrics-title">
                 <h2 id="metrics-title" className="text-lg font-semibold text-body">Métricas principales</h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <MetricCard label="Reportes registrados" value={data.totales.reportes} />
-                    <MetricCard label="Reportes registrados hoy" value={data.totales.reportesHoy} />
-                    <MetricCard label="Pendientes de revisión" value={data.totales.pendientesRevision} />
-                    <MetricCard label="Pendientes de anonimización" value={data.totales.pendientesAnonimizacion} />
-                    <MetricCard label="Reportes anónimos" value={data.totales.reportesAnonimos} />
-                    <MetricCard label="Reportes autenticados" value={data.totales.reportesAutenticados} />
+                    <TarjetaMetrica disposicion="panel" label="Reportes registrados" value={data.totales.reportes} />
+                    <TarjetaMetrica disposicion="panel" label="Reportes registrados hoy" value={data.totales.reportesHoy} />
+                    <TarjetaMetrica disposicion="panel" label="Pendientes de revisión" value={data.totales.pendientesRevision} />
+                    <TarjetaMetrica disposicion="panel" label="Pendientes de anonimización" value={data.totales.pendientesAnonimizacion} />
+                    <TarjetaMetrica disposicion="panel" label="Reportes anónimos" value={data.totales.reportesAnonimos} />
+                    <TarjetaMetrica disposicion="panel" label="Reportes autenticados" value={data.totales.reportesAutenticados} />
                 </div>
             </section>
 
@@ -160,12 +149,12 @@ export function AdminDashboard() {
                     <h2 id="worker-title" className="text-xl font-bold text-body">Cola de procesamiento</h2>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        <MetricCard label="En cola" value={data.worker.enCola} />
-                        <MetricCard label="Activos" value={data.worker.activos} />
-                        <MetricCard label="Estancados" value={data.worker.estancados} />
-                        <MetricCard label="Completados" value={data.worker.completados} />
-                        <MetricCard label="Fallidos" value={data.worker.fallidos} />
-                        <MetricCard label="Latencia promedio (ms)" value={data.worker.latenciaPromedioMs} />
+                        <TarjetaMetrica disposicion="panel" label="En cola" value={data.worker.enCola} />
+                        <TarjetaMetrica disposicion="panel" label="Activos" value={data.worker.activos} />
+                        <TarjetaMetrica disposicion="panel" label="Estancados" value={data.worker.estancados} />
+                        <TarjetaMetrica disposicion="panel" label="Completados" value={data.worker.completados} />
+                        <TarjetaMetrica disposicion="panel" label="Fallidos" value={data.worker.fallidos} />
+                        <TarjetaMetrica disposicion="panel" label="Latencia promedio (ms)" value={data.worker.latenciaPromedioMs} />
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -189,15 +178,6 @@ export function AdminDashboard() {
                 </section>
             )}
         </section>
-    );
-}
-
-function MetricCard({ label, value }: { label: string; value: number }) {
-    return (
-        <article className="glass rounded-2xl p-6 transition hover:shadow-md motion-reduce:transition-none">
-            <p className="text-sm font-medium text-muted">{label}</p>
-            <p className="mt-2 text-3xl font-bold text-body">{value}</p>
-        </article>
     );
 }
 
@@ -227,50 +207,48 @@ function PrecisionTable({
                 Esta métrica solo incluye reportes revisados por un admin (confirmados + corregidas).
                 No estima la precisión global del clasificador.
             </p>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+            <Tabla sinContenedor>
+                <TablaHead>
+                    <tr>
+                        <th className="px-4 py-3 font-medium">Categoría</th>
+                        <th className="px-4 py-3 font-medium">Confirmadas</th>
+                        <th className="px-4 py-3 font-medium">Corregidas</th>
+                        <th className="px-4 py-3 font-medium">Total revisados</th>
+                        <th className="px-4 py-3 font-medium">Precisión observada</th>
+                    </tr>
+                </TablaHead>
+                <TablaBody>
+                    {precisionPorCategoria.length === 0 ? (
                         <tr>
-                            <th className="px-4 py-3 font-medium">Categoría</th>
-                            <th className="px-4 py-3 font-medium">Confirmadas</th>
-                            <th className="px-4 py-3 font-medium">Corregidas</th>
-                            <th className="px-4 py-3 font-medium">Total revisados</th>
-                            <th className="px-4 py-3 font-medium">Precisión observada</th>
+                            <td colSpan={5} className="px-4 py-6 text-center text-subtle">
+                                Aún no hay correcciones ni confirmaciones registradas.
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {precisionPorCategoria.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="px-4 py-6 text-center text-subtle">
-                                    Aún no hay correcciones ni confirmaciones registradas.
+                    ) : (
+                        precisionPorCategoria.map((row) => (
+                            <tr key={row.categoria}>
+                                <td className="px-4 py-3 text-body">{formatCategoria(row.categoria)}</td>
+                                <td className="px-4 py-3 text-body">{row.confirmadas}</td>
+                                <td className="px-4 py-3 text-body">{row.corregidas}</td>
+                                <td className="px-4 py-3 text-body">{row.totalRevisados}</td>
+                                <td className="px-4 py-3">
+                                    {row.precisionObservada === null ? (
+                                        <span className="text-subtle">Insuficientes datos (&lt; 5)</span>
+                                    ) : (
+                                        <span
+                                            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${precisionColorClass(
+                                                row.precisionObservada
+                                            )}`}
+                                        >
+                                            {(row.precisionObservada * 100).toFixed(1)}%
+                                        </span>
+                                    )}
                                 </td>
                             </tr>
-                        ) : (
-                            precisionPorCategoria.map((row) => (
-                                <tr key={row.categoria}>
-                                    <td className="px-4 py-3 text-body">{formatCategoria(row.categoria)}</td>
-                                    <td className="px-4 py-3 text-body">{row.confirmadas}</td>
-                                    <td className="px-4 py-3 text-body">{row.corregidas}</td>
-                                    <td className="px-4 py-3 text-body">{row.totalRevisados}</td>
-                                    <td className="px-4 py-3">
-                                        {row.precisionObservada === null ? (
-                                            <span className="text-subtle">Insuficientes datos (&lt; 5)</span>
-                                        ) : (
-                                            <span
-                                                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${precisionColorClass(
-                                                    row.precisionObservada
-                                                )}`}
-                                            >
-                                                {(row.precisionObservada * 100).toFixed(1)}%
-                                            </span>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                        ))
+                    )}
+                </TablaBody>
+            </Tabla>
         </ChartCard>
     );
 }
