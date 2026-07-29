@@ -1,6 +1,6 @@
 # Spec 123 — Motor: tipos desde Prisma, código muerto y guardas unificadas
 
-- **Status**: DESARROLLO
+- **Status**: FINALIZADO
 - **Bloque**: 002-PI-041 FASE 3 / R5 — "Motor: lo seguro, y solo lo seguro"
 - **Alcance**: `src/lib/ai/**`, tipos y código muerto en `src/lib/**`. NO rutas API, NO componentes, NO motor (rúbrica, terna de modelos, umbral 60%, `ia.rubrica.enabled`).
 
@@ -87,4 +87,13 @@ evaluaciones decidan lo mismo que el pipeline real.
 
 ## Implementación
 
-(Se completa al cierre.)
+- **b)** commit 50e502b1 — `classifier.ts` usa `CategoriaConducta`/`EstadoReporte`
+  de `@prisma/client` (eran uniones idénticas al esquema, verificado).
+- **c)** commits a456256f (`getDefaultOllamaBaseUrl`) y 91dcabf2 (`llamarOllama` +
+  ajuste de su test) — podas con evidencia grep de cero importadores en los
+  mensajes. `ReporteStepUbicacion.tsx` verificado muerto pero no podado (fuera de
+  alcance) → ZEUS.
+- **d)** commit 6ecd18f2 — nuevo `src/lib/ai/guardas-decision.ts` (réplica pura de
+  producción) adoptado por `sandbox.ts` y `eval-runner.ts`; producción intacta;
+  paridad y antes/después demostrados en `guardas-decision.test.ts` (44 tests).
+- Gate y evidencia completa en `cierre.md`.
