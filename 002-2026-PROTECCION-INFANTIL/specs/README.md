@@ -26,6 +26,8 @@
 | [109](109-eliminar-modulo-apelacion/spec.md) | Eliminar el módulo de apelación actual (D-34) | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
 | [113](113-colegio-atrapado-menu-rol/spec.md) | El colegio atrapado (I-35/I-35b) y menú por rol (I-36) | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
 | [114](114-suite-e2e-por-rol/spec.md) | Suite E2E por rol: cinco ciclos de estabilización | 🟢 Finalizada |
+| [116](116-vista-padre-sin-tecnico/spec.md) | Vista del padre sin traza técnica del motor | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
+| [120](120-smoke-prod-safe/spec.md) | Smoke prod-safe por rol (cuentas efímeras, solo lectura) | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
