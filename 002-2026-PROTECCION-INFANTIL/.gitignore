@@ -38,3 +38,4 @@ eval-results/
 .venv-presidio/
 prisma/dev.db
 storage/
+scripts/.geonames-cache/
