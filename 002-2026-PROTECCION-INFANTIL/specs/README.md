@@ -33,6 +33,10 @@
 | [121](121-error-wrapper-ollama-timeout/spec.md) | Sobre de error único (R2, 18/18 rutas) y timeout de Ollama por parámetro | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
 | [115](115-catalogo-geografico-latam/spec.md) | Catálogo geográfico real LATAM y Centroamérica (GeoNames CC-BY) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
 | [119](119-vigencia-servicio-cliente/spec.md) | Vigencia del servicio por cliente (padres y colegios) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
+| [122](122-capa-datos-reportes/spec.md) | Capa de datos: predicados centrales de acceso a reportes (R4) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
+| [123](123-motor-tipos-muerto-guardas/spec.md) | Motor: tipos desde Prisma, código muerto y guardas unificadas (R5) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
+| [124](124-primitivas-ui-compartidas/spec.md) | Primitivas de UI compartidas (R7) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
+| [125](125-validacion-unificada-api/spec.md) | API: una sola forma de validar (R6) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
