@@ -5,6 +5,7 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, esOperadorRol } from "@/lib/operadores/permisos";
+import { whereReporteVigente } from "@/lib/reportes-acceso";
 import type { Prisma } from "@prisma/client";
 
 const MAX_PAGE_SIZE = 100;
@@ -34,13 +35,12 @@ export async function GET(req: Request) {
         const asignadoAMi = url.searchParams.get("asignadoAMi") === "true";
         const skip = (page - 1) * limit;
 
-        const where: Prisma.ReporteWhereInput = {
-            eliminado: false,
+        const where: Prisma.ReporteWhereInput = whereReporteVigente({
             OR: [
                 { estado: "POSIBLE_SPAM" },
                 { estado: "REVISION_MANUAL", clasificacion: { categoria: "SPAM" } },
             ],
-        };
+        });
 
         if (asignadoAMi || user.rol === "OPERADOR") {
             where.operadorId = user.id;

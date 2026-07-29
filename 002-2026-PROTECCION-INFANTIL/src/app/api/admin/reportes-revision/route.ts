@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { reportesRevisionQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
+import { whereReporteVigente } from "@/lib/reportes-acceso";
 import type { Prisma } from "@prisma/client";
 
 const MAX_PAGE_SIZE = 100;
@@ -41,10 +42,8 @@ export async function GET(req: Request) {
         const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, q } = parsedQuery.data;
         const skip = (page - 1) * pageSize;
 
-        const where: Prisma.ReporteWhereInput = {};
-        if (!incluirEliminados) {
-            where.eliminado = false;
-        }
+        // SPEC-122: la bandeja excluye bajas lógicas salvo que se pidan explícitamente.
+        const where: Prisma.ReporteWhereInput = incluirEliminados ? {} : whereReporteVigente();
 
         if (q) {
             where.OR = [

@@ -9,6 +9,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
 import { logAudit } from "@/lib/audit";
 import { darDeBajaReporte } from "@/lib/reporte-lifecycle";
+import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 
 /**
@@ -111,12 +112,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         let reportesValidos: { id: string }[] = [];
         if (decision === "ACEPTADA" && reportesABajar.length > 0) {
             reportesValidos = await prisma.reporte.findMany({
-                where: {
+                where: whereReporteVigente({
                     id: { in: reportesABajar },
                     identificador: apelacion.identificador,
                     plataformaId: apelacion.plataformaId,
-                    eliminado: false,
-                },
+                }),
                 select: { id: true },
             });
             if (reportesValidos.length !== reportesABajar.length) {
