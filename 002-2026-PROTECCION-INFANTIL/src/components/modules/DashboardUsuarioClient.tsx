@@ -8,6 +8,7 @@ import { MisReportesList } from "@/components/modules/MisReportesList";
 import { ConsultaEnriquecidaClient } from "@/components/modules/ConsultaEnriquecidaClient";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Cargando } from "@/components/ui/Cargando";
 
 type MisReporteItem = {
     id: string;
@@ -59,8 +60,7 @@ export function DashboardUsuarioClient() {
     if (authLoading || (!user && isLoading)) {
         return (
             <main className="mx-auto max-w-6xl px-4 py-12 text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                <p className="mt-3 text-sm text-subtle">Cargando...</p>
+                <Cargando />
             </main>
         );
     }
@@ -98,8 +98,7 @@ export function DashboardUsuarioClient() {
                     <h2 className="text-lg font-semibold text-body mb-3">Mis reportes</h2>
                     {isLoading ? (
                         <div className="glass rounded-2xl p-8 text-center animate-pulse">
-                            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                            <p className="mt-3 text-sm text-subtle">Cargando reportes...</p>
+                            <Cargando texto="Cargando reportes..." />
                         </div>
                     ) : error ? (
                         <ErrorState
