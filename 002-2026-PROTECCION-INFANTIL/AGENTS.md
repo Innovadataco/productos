@@ -127,6 +127,7 @@ Cada spec vive en `specs/NNN-nombre/` con el MISMO set y formato que `specs/001-
 
 ## Reglas de oro
 
+- **Antes de tocar `src/`, leer `docs/architecture/`** (línea base generada desde el código, SPEC-126; nunca editada a mano). Si el cambio altera el schema, el proxy, la navegación o el stack, regenerar los artefactos y dejar `npm run arch:check` en VERDE en el mismo PR (el CI lo exige).
 - Migraciones SIEMPRE aditivas y NO destructivas. Nunca `prisma migrate reset` ni nada que borre datos.
 - Nunca confiar en una build sin `rm -rf .next` antes (aparecen builds viejas).
 - Un solo worker a la vez (el advisory lock hace que un segundo worker termine con código 2).

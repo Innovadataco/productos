@@ -46,6 +46,15 @@ const DEUDA_HEREDADA = new Set([
     "088-pendientes-afinamiento",
 ]);
 
+/**
+ * SPEC-126 (US3, FR-008): toda spec NUEVA (numeración >= 126) DEBE declarar su
+ * "Impacto en arquitectura:" en spec.md. Las históricas (< 126) quedan fuera por
+ * número; esta lista es para excepciones explícitas dentro de las nuevas y, como
+ * DEUDA_HEREDADA, SOLO PUEDE ENCOGER (hoy está vacía y el tope duro es 0).
+ */
+const SIN_IMPACTO_HEREDADO = new Set<string>([]);
+const DESDE_SPEC_IMPACTO = 126;
+
 function carpetasSpecs(): string[] {
     return fs
         .readdirSync(SPECS_DIR, { withFileTypes: true })
@@ -121,6 +130,26 @@ describe("disciplina Spec-Kit (spec 087)", () => {
         // Consistencia: toda carpeta de la lista sigue existiendo (si se sana una spec, hay
         // que sacarla de la lista, no borrar la carpeta).
         const inexistentes = [...DEUDA_HEREDADA].filter((c) => !carpetas.includes(c));
+        expect(inexistentes, inexistentes.join("; ")).toEqual([]);
+    });
+
+    it("toda spec nueva (>= 126) declara 'Impacto en arquitectura:' (SPEC-126, FR-008)", () => {
+        const violaciones: string[] = [];
+        for (const carpeta of carpetas) {
+            const num = parseInt(carpeta.split("-")[0], 10);
+            if (Number.isNaN(num) || num < DESDE_SPEC_IMPACTO) continue;
+            if (SIN_IMPACTO_HEREDADO.has(carpeta)) continue;
+            const contenido = fs.readFileSync(path.join(SPECS_DIR, carpeta, "spec.md"), "utf-8");
+            if (!contenido.includes("Impacto en arquitectura:")) {
+                violaciones.push(`${carpeta}: falta la línea "Impacto en arquitectura:"`);
+            }
+        }
+        expect(violaciones, violaciones.join("; ")).toEqual([]);
+    });
+
+    it("SIN_IMPACTO_HEREDADO no crece (tope duro 0: eximir una spec nueva pone la suite en rojo)", () => {
+        expect(SIN_IMPACTO_HEREDADO.size).toBeLessThanOrEqual(0);
+        const inexistentes = [...SIN_IMPACTO_HEREDADO].filter((c) => !carpetas.includes(c));
         expect(inexistentes, inexistentes.join("; ")).toEqual([]);
     });
 
