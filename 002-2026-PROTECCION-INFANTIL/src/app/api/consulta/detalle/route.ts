@@ -7,6 +7,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { formatPlataforma, formatPlataformasResumen } from "@/lib/plataforma";
 import { getRiesgoConsultaParams, calcularRiesgoConsulta } from "@/lib/riesgo-consulta";
 import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categoria-grupos";
+import { whereReporteEnEstados } from "@/lib/reportes-acceso";
 import type { EstadoReporte } from "@prisma/client";
 
 const consultaSchema = z.object({
@@ -69,11 +70,7 @@ async function resolverDetalle(request: Request, identificador: string) {
         }
 
         const reportes = await prisma.reporte.findMany({
-            where: {
-                identificador: parsed.data.identificador,
-                estado: { in: ESTADOS_VISIBLES },
-                eliminado: false,
-            },
+            where: whereReporteEnEstados(ESTADOS_VISIBLES, { identificador: parsed.data.identificador }),
             select: {
                 id: true,
                 esAnonimo: true,

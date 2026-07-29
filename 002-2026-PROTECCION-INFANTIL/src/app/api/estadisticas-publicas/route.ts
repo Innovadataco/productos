@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { obtenerGruposCategoria, agruparCategorias } from "@/lib/categoria-grupos";
-import { whereReporteAprobado, ESTADOS_APROBADOS, CATEGORIAS_NO_APROBADAS } from "@/lib/reporte-aprobado";
+import {
+    whereReporteAprobado,
+    whereReporteEnEstados,
+    ESTADOS_APROBADOS,
+    CATEGORIAS_NO_APROBADAS,
+} from "@/lib/reportes-acceso";
 
 export async function GET() {
     try {
@@ -42,7 +47,7 @@ export async function GET() {
             prisma.clasificacionIA.findMany({
                 where: {
                     categoria: { notIn: [...CATEGORIAS_NO_APROBADAS] },
-                    reporte: { estado: { in: [...ESTADOS_APROBADOS] }, eliminado: false },
+                    reporte: whereReporteEnEstados(ESTADOS_APROBADOS),
                 },
                 select: { categoria: true },
             }),
