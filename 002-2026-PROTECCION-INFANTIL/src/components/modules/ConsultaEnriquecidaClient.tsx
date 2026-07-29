@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Alerta } from "@/components/ui/Alerta";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
+import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
 import { formatPlataformasResumen } from "@/lib/plataforma";
 import { CATEGORIAS_LABELS } from "@/lib/labels";
 
@@ -131,9 +134,9 @@ export function ConsultaEnriquecidaClient() {
             </form>
 
             {error && (
-                <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                <Alerta tono="error" className="p-4">
                     {error}
-                </div>
+                </Alerta>
             )}
 
             {data && !data.tieneReportes && (
@@ -166,23 +169,22 @@ export function ConsultaEnriquecidaClient() {
                     </GlassCard>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <MetricCard label="Total reportes" value={data.totalReportes ?? 0} />
-                        <MetricCard label="Último reporte" value={formatFecha(data.ultimoReporte)} />
-                        <MetricCard label="Reportes autenticados" value={data.reportesAutenticados ?? 0} />
+                        <TarjetaMetrica mono label="Total reportes" value={data.totalReportes ?? 0} />
+                        <TarjetaMetrica mono label="Último reporte" value={formatFecha(data.ultimoReporte)} />
+                        <TarjetaMetrica mono label="Reportes autenticados" value={data.reportesAutenticados ?? 0} />
                     </div>
 
                     <GlassCard>
                         <h3 className="text-base font-semibold text-body mb-4">Reportes clasificados</h3>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-100/70 text-subtle dark:bg-slate-800/60">
+                        <Tabla sinContenedor>
+                            <TablaHead>
                                     <tr>
                                         <th className="px-4 py-3 font-medium">Plataforma</th>
                                         <th className="px-4 py-3 font-medium">Fecha</th>
                                         <th className="px-4 py-3 font-medium">Clasificación</th>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            </TablaHead>
+                            <TablaBody>
                                     {(data.reportes ?? []).map((r) => (
                                         <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                                             <td className="px-4 py-3 text-body">
@@ -197,9 +199,8 @@ export function ConsultaEnriquecidaClient() {
                                             <td className="px-4 py-3 text-body">{r.categoriaGrupo}</td>
                                         </tr>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
+                            </TablaBody>
+                        </Tabla>
                     </GlassCard>
 
                     {data.timeline && data.timeline.length > 0 && (
@@ -231,15 +232,6 @@ export function ConsultaEnriquecidaClient() {
                     )}
                 </div>
             )}
-        </div>
-    );
-}
-
-function MetricCard({ label, value }: { label: string; value: string | number }) {
-    return (
-        <div className="glass rounded-2xl p-5 text-center">
-            <p className="text-2xl font-bold text-body font-mono">{value}</p>
-            <p className="mt-1 text-xs text-subtle">{label}</p>
         </div>
     );
 }
