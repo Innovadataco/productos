@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 
 const PAGE_SIZE_OPTIONS = ["10", "25", "50"];
 
@@ -129,15 +132,14 @@ export default function DatasetEntrenamientoPageClient() {
             </div>
 
             {error && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-700 dark:text-red-300">
+                <Alerta tono="error" className="p-4">
                     {error}
-                </div>
+                </Alerta>
             )}
 
             <div className="glass rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+                <Tabla sinContenedor>
+                    <TablaHead>
                             <tr>
                                 <th className="px-4 py-3 font-medium">Texto</th>
                                 <th className="px-4 py-3 font-medium">Clasificación</th>
@@ -145,15 +147,14 @@ export default function DatasetEntrenamientoPageClient() {
                                 <th className="px-4 py-3 font-medium">Anonimización</th>
                                 <th className="px-4 py-3 font-medium">Fecha</th>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-subtle">
-                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                                        <p className="mt-2 text-xs">Cargando...</p>
-                                    </td>
-                                </tr>
+                    </TablaHead>
+                    <TablaBody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan={5} className="px-4 py-2 text-center text-subtle">
+                                    <Cargando tamano="sm" />
+                                </td>
+                            </tr>
                             ) : items.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-4 py-8 text-center text-subtle">
@@ -196,9 +197,8 @@ export default function DatasetEntrenamientoPageClient() {
                                     </tr>
                                 ))
                             )}
-                        </tbody>
-                    </table>
-                </div>
+                    </TablaBody>
+                </Tabla>
 
                 {totalPages > 1 && (
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">
