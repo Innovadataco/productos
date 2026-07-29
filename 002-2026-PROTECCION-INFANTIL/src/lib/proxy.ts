@@ -39,15 +39,45 @@ const COLEGIO_ROUTES = ["/dashboard/colegio", "/api/me/colegio", "/api/colegio"]
 // de cerrar sesión a /api/auth/logout — sin ambos endpoints el colegio queda atrapado.
 const SESION_ROUTES = ["/api/me", "/cambiar-password", "/api/auth/cambiar-password", "/api/auth/logout"];
 
+// SPEC-118 (D-37, decisión ZEUS): rutas públicas de SOLO LECTURA abiertas también al
+// SCHOOL_ADMIN. El aislamiento total no aportaba seguridad (son estadísticas públicas
+// agregadas, alcanzables incluso sin sesión) y creaba clics muertos: el logo apuntaba
+// a "/" y el proxy rebotaba al panel. Se mantiene bloqueado: el área interna
+// (/dashboard/admin, /api/admin), el área de padres (/dashboard, /mis-reportes) y
+// /reportar (una cuenta institucional no reporta).
+// "/consulta" no existe como página (la consulta pública vive en el home "/"), así que
+// no hay ruta de página que abrir para ella: su superficie real es la API de abajo.
+const PUBLICAS_LECTURA_SCHOOL_ADMIN = ["/", "/dashboard-publico", "/seguimiento"];
+
+// APIs públicas de solo lectura que esas pantallas consumen (inventario SPEC-118):
+// - home "/": el formulario de consulta llama a /api/consulta (GET/POST; el POST solo
+//   evita exponer el identificador en la URL — es una consulta, no una escritura);
+// - "/dashboard-publico": GET /api/estadisticas-publicas;
+// - "/seguimiento": GET /api/reportes/seguimiento/[numero].
+// OJO: NO se abre "/api/reportes" completo — su POST crea reportes y la cuenta
+// institucional no reporta; solo el sub-árbol de seguimiento (GET, solo lectura).
+const APIS_LECTURA_SCHOOL_ADMIN = ["/api/consulta", "/api/estadisticas-publicas", "/api/reportes/seguimiento"];
+
+function matchesRoute(pathname: string, route: string): boolean {
+    // Coincidencia exacta o por prefijo de segmento. Para "/" el startsWith queda
+    // "//" y nunca casa: la raíz NO abre el árbol entero.
+    return pathname === route || pathname.startsWith(route + "/");
+}
+
 /**
  * Indica si un SCHOOL_ADMIN autenticado puede acceder a la ruta.
  * Además de las rutas del módulo Colegio, puede usar las rutas de sesión:
  * sin "/api/me" el header público no reconoce la sesión (I-25) y sin
  * "/cambiar-password" el cambio obligatorio de contraseña queda en bucle (C-9).
+ * SPEC-118 (D-37): también el área pública de solo lectura (inicio, dashboard
+ * público, seguimiento y sus APIs de consulta) — sigue sin entrar al área interna,
+ * al área de padres ni a /reportar.
  */
 export function esRutaPermitidaSchoolAdmin(pathname: string): boolean {
     if (isColegioRoute(pathname)) return true;
-    return SESION_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
+    if (PUBLICAS_LECTURA_SCHOOL_ADMIN.some((route) => matchesRoute(pathname, route))) return true;
+    if (APIS_LECTURA_SCHOOL_ADMIN.some((route) => matchesRoute(pathname, route))) return true;
+    return SESION_ROUTES.some((route) => matchesRoute(pathname, route));
 }
 
 // Rutas públicas que los roles internos no pueden usar (la cuenta institucional no reporta).
@@ -72,7 +102,7 @@ function isUserFinalRoute(pathname: string): boolean {
  * middleware (el menú del header lo consume para ofrecer solo lo permitido, sin una
  * segunda fuente de verdad de permisos). Refleja las MISMAS reglas del proxyCore:
  * - rutas de usuario final (/dashboard, /mis-reportes): solo PARENT o anónimo;
- * - SCHOOL_ADMIN: solo colegio + rutas de sesión;
+ * - SCHOOL_ADMIN: colegio + rutas de sesión + área pública de solo lectura (SPEC-118/D-37);
  * - roles internos: no usuario final ni /reportar;
  * - anónimo: área pública/usuario final.
  */
@@ -176,7 +206,7 @@ async function proxyCore(request: NextRequest) {
 
     const rol = payload.rol;
 
-    // SCHOOL_ADMIN is isolated to colegio routes plus its own session routes.
+    // SCHOOL_ADMIN: módulo colegio + sesión + área pública de solo lectura (SPEC-118/D-37).
     if (rol === "SCHOOL_ADMIN") {
         if (esRutaPermitidaSchoolAdmin(pathname)) return NextResponse.next();
         if (pathname.startsWith("/api/")) {

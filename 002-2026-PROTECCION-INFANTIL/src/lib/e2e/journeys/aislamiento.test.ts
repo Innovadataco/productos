@@ -25,11 +25,13 @@ const CASOS_BLOQUEO: Caso[] = [
     { rol: "PARENT", ruta: "/dashboard/admin", porQue: "un padre no entra al panel interno" },
     { rol: "PARENT", ruta: "/dashboard/admin/comite", porQue: "un padre no entra al comité" },
     { rol: "PARENT", ruta: "/api/admin/operadores", porQue: "un padre no alcanza la API interna" },
-    // SCHOOL_ADMIN: aislado a su módulo (I-25/I-36)
+    // SCHOOL_ADMIN: aislado a su módulo (I-25/I-36); SPEC-118 (D-37) abre SOLO el
+    // área pública de lectura — todo lo interno/padres/reportar sigue cerrado.
     { rol: "SCHOOL_ADMIN", ruta: "/dashboard/admin", porQue: "el colegio no entra al panel de plataforma" },
     { rol: "SCHOOL_ADMIN", ruta: "/dashboard", porQue: "el colegio no usa el área de padres" },
     { rol: "SCHOOL_ADMIN", ruta: "/mis-reportes", porQue: "el colegio no tiene Mis reportes (módulo de padres)" },
     { rol: "SCHOOL_ADMIN", ruta: "/reportar", porQue: "la cuenta institucional no reporta" },
+    { rol: "SCHOOL_ADMIN", ruta: "/api/reportes", porQue: "crear reportes sigue vedado: solo se abrió el seguimiento (GET)" },
     { rol: "SCHOOL_ADMIN", ruta: "/api/admin/operadores", porQue: "el colegio no alcanza la API interna" },
     // OPERADOR: sin gestión de comité ni área de usuario final
     { rol: "OPERADOR", ruta: "/dashboard/admin/comite/gestion", porQue: "el operador no gestiona el comité (admin-only)" },
@@ -88,6 +90,20 @@ describe(`SPEC-114 · aislamiento por rol (ciclo ${CICLO})`, { timeout: 30_000 }
         expect(api.status, "anónimo → API interna: 401").toBe(401);
     });
 
+    it("SPEC-118 (D-37): el colegio alcanza el área pública de SOLO LECTURA por el proxy real", async () => {
+        // Decisión de producto NUEVA y explícita (ZEUS/D-37, NO ablandamiento):
+        // el aislamiento total no aportaba seguridad (son estadísticas públicas
+        // agregadas, visibles incluso sin sesión) y creaba clics muertos.
+        const s = await sesion("SCHOOL_ADMIN");
+        const abiertas = ["/", "/dashboard-publico", "/seguimiento", "/api/consulta", "/api/estadisticas-publicas", "/api/reportes/seguimiento/RPT-E2E-000001"];
+        for (const ruta of abiertas) {
+            esperarPasoLibre(await viaProxy(s, ruta), `SCHOOL_ADMIN → ${ruta}: pública de solo lectura, debe pasar`);
+        }
+        // Y la superficie cerrada no se movió:
+        esperarBloqueo(await viaProxy(s, "/dashboard/admin"), "SCHOOL_ADMIN → /dashboard/admin sigue cerrado");
+        esperarBloqueo(await viaProxy(s, "/reportar"), "SCHOOL_ADMIN → /reportar sigue cerrado (no reporta)");
+    });
+
     it("el criterio del menú es el MISMO del proxy (sin segunda fuente de verdad)", async () => {
         // I-36: el menú se alimenta de esDestinoPermitidoPorRol; aquí se verifica que su
         // criterio coincide con lo que el proxy efectivamente deja pasar para cada rol.
@@ -100,6 +116,13 @@ describe(`SPEC-114 · aislamiento por rol (ciclo ${CICLO})`, { timeout: 30_000 }
             ["SCHOOL_ADMIN", "/dashboard", false],
             ["SCHOOL_ADMIN", "/mis-reportes", false],
             ["SCHOOL_ADMIN", "/reportar", false],
+            // SPEC-118 (D-37): el área pública de solo lectura queda ABIERTA al colegio
+            ["SCHOOL_ADMIN", "/", true],
+            ["SCHOOL_ADMIN", "/dashboard-publico", true],
+            ["SCHOOL_ADMIN", "/seguimiento", true],
+            ["SCHOOL_ADMIN", "/api/consulta", true],
+            ["SCHOOL_ADMIN", "/api/estadisticas-publicas", true],
+            ["SCHOOL_ADMIN", "/api/reportes/seguimiento/RPT-E2E-000001", true],
             ["OPERADOR", "/dashboard/admin", true],
             ["OPERADOR", "/dashboard", false],
             ["OPERADOR", "/reportar", false],
