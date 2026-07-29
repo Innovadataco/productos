@@ -138,6 +138,7 @@ async function start() {
     await ensureQueue("eval-classifier-run");
     await ensureQueue("simulacion-run");
     await ensureQueue("simulacion-lote");
+    await ensureQueue("apelacion-mantenimiento");
 
     const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
@@ -498,6 +499,24 @@ async function start() {
 
         console.log(`[WORKER] OK lote de simulación (${runIds.length} run(s))`);
         return { success: true, runIds };
+    });
+
+    // SPEC-110: mantenimiento diario de apelaciones (aviso de plazo al comité +
+    // purga de evidencia a los N días de resuelta). Programado a las 06:00
+    // America/Bogota; el supervisor mantiene vivo este worker.
+    await boss.schedule("apelacion-mantenimiento", "0 6 * * *", {}, { tz: "America/Bogota" });
+    await boss.work("apelacion-mantenimiento", async () => {
+        console.log("[WORKER] Mantenimiento de apelaciones: inicio");
+        try {
+            const { ejecutarMantenimientoApelaciones } = await import("../src/lib/apelacion-mantenimiento.ts");
+            const { avisos, purgados } = await ejecutarMantenimientoApelaciones();
+            console.log(`[WORKER] Mantenimiento de apelaciones: OK avisos=${avisos} purgados=${purgados}`);
+            return { success: true, avisos, purgados };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR mantenimiento de apelaciones: ${msg}`);
+            throw err;
+        }
     });
 }
 

@@ -115,6 +115,36 @@ export async function enviarAlertaComitePendientes(email: string, cantidad: numb
     logger.info(`[EMAIL] Alerta de comité enviada a ${email} (${cantidad} casos, resendId=${result.data?.id ?? "n/a"})`);
 }
 
+/**
+ * SPEC-110 — Aviso de plazo de apelaciones al comité de validación.
+ * Digest diario: un solo email por miembro del comité con los casos sin resolver que
+ * ya superaron apelacion.aviso_previo_dias días hábiles. Sin contenido sensible: solo
+ * el número del caso y los días hábiles transcurridos.
+ */
+export async function enviarAvisoPlazoApelaciones(
+    email: string,
+    casos: { numero: string; diasHabiles: number }[]
+): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const lineas = casos
+        .map((c) => `- ${c.numero}: ${c.diasHabiles} días hábiles sin resolver`)
+        .join("\n");
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: `${casos.length} ${casos.length === 1 ? "apelación próxima a vencer" : "apelaciones próximas a vencer"}`,
+        text: `Hay ${casos.length} ${casos.length === 1 ? "apelación" : "apelaciones"} sin resolver que se acercan al plazo de respuesta (15 días hábiles, Ley 1581):\n\n${lineas}\n\nRevisa la bandeja de apelaciones:\n${baseUrl}/dashboard/admin/comite/apelaciones`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error aviso plazo apelaciones:", result.error);
+        throw new Error("Error al enviar aviso de plazo de apelaciones");
+    }
+
+    logger.info(`[EMAIL] Aviso de plazo de apelaciones enviado a ${email} (${casos.length} casos, resendId=${result.data?.id ?? "n/a"})`);
+}
+
+
 async function getAdminEmails(): Promise<string[]> {
     const admins = await prisma.usuario.findMany({
         where: { rol: "ADMIN", estado: "activo" },
