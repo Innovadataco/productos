@@ -3,7 +3,7 @@
  * Logging explícito de cada llamada (modelo, tokens, latencia, éxito/fracaso)
  */
 
-import { getOllamaBaseUrl } from "./ollama-config";
+import { getOllamaBaseUrl, getOllamaTimeoutMs } from "./ollama-config";
 import { logger } from "@/lib/logger";
 
 // Ollama devuelve duraciones en nanosegundos; normalizamos a milisegundos
@@ -61,10 +61,12 @@ export async function llamarOllama(
     if (keepAlive !== undefined) body.keep_alive = keepAlive;
 
     const ollamaBaseUrl = await getOllamaBaseUrl();
+    const timeoutMs = await getOllamaTimeoutMs();
     const response = await fetch(`${ollamaBaseUrl}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
     });
 
     const latenciaMs = Date.now() - startTime;
@@ -124,10 +126,12 @@ export async function llamarOllamaStructured<T>(
     if (keepAlive !== undefined) body.keep_alive = keepAlive;
 
     const ollamaBaseUrl = await getOllamaBaseUrl();
+    const timeoutMs = await getOllamaTimeoutMs();
     const response = await fetch(`${ollamaBaseUrl}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
     });
 
     const latenciaMs = Date.now() - startTime;

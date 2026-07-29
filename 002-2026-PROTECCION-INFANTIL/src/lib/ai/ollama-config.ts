@@ -4,6 +4,32 @@ import { getParametroSistema } from "@/lib/parametros";
 const DEFAULT_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 
 /**
+ * Timeout por defecto para las llamadas de generación a Ollama (ms).
+ * 120 s: generoso frente a la latencia real de modelos grandes en CPU para no
+ * introducir abortos espurios; acota la espera si un modelo queda colgado.
+ * Configurable con el parámetro de sistema `ia.ollama.timeout_ms` (ADR_004).
+ */
+const DEFAULT_OLLAMA_TIMEOUT_MS = 120_000;
+
+/**
+ * Resuelve el timeout (ms) para los fetch de generación a Ollama. El parámetro
+ * `ia.ollama.timeout_ms` (entero > 0) tiene prioridad; si no existe, está
+ * vacío o es inválido, se usa el default. Fallback silencioso si la tabla de
+ * parámetros no está disponible (muy temprano en startup), igual que
+ * getOllamaBaseUrl.
+ */
+export async function getOllamaTimeoutMs(): Promise<number> {
+    try {
+        const param = await getParametroSistema("ia.ollama.timeout_ms");
+        const valor = param?.valor ? Number(param.valor) : NaN;
+        if (Number.isFinite(valor) && valor > 0) return Math.floor(valor);
+    } catch {
+        // Fallback silencioso si la tabla no está disponible
+    }
+    return DEFAULT_OLLAMA_TIMEOUT_MS;
+}
+
+/**
  * Resuelve la URL base de Ollama. El parámetro de sistema `system.ollama_base_url`
  * tiene prioridad; si no existe o está vacío, se usa la variable de entorno
  * OLLAMA_BASE_URL o el default localhost.

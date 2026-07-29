@@ -164,6 +164,14 @@ async function main() {
             descripcion: "Minutos máximos que una simulación puede estar EN_PROGRESO antes de marcarse FALLIDA",
         },
         {
+            clave: "ia.ollama.timeout_ms",
+            valor: "120000",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Timeout en ms para las llamadas de generación a Ollama (/api/generate); default 120000 si el parámetro falta o es inválido",
+        },
+        {
             clave: "worker.retry_delay_segundos",
             valor: "30",
             tipo: TipoParametro.INTEGER,
