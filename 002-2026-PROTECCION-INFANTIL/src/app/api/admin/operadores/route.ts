@@ -5,6 +5,7 @@ import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { enviarEmailBienvenidaOperador, enviarEmailBienvenidaComite } from "@/lib/email";
 import { validarExclusividadRolComite, normalizarEsComiteParaRol } from "@/lib/operadores/permisos";
@@ -95,13 +96,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ operadores: conConteo });
     } catch (error) {
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[ADMIN/OPERADORES]");
     }
 }
 
@@ -221,12 +216,6 @@ export async function POST(request: Request) {
                 : `${rolTexto.charAt(0).toUpperCase() + rolTexto.slice(1)} creado. No se pudo enviar el email; copie la contraseña temporal que se muestra arriba.`,
         }, { status: 201 });
     } catch (error) {
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[ADMIN/OPERADORES]");
     }
 }
