@@ -84,6 +84,23 @@ describe(`SPEC-114 · sesión de los 5 roles (ciclo ${CICLO})`, { timeout: 30_00
             expect(logoHref, "el logo debe existir").toBeTruthy();
             expect(logoHref, `el logo no debe ser un clic muerto (${logoHref} === ${home})`).not.toBe(home);
 
+            // 4b. D-37 (SPEC-118): por propiedad, NINGÚN enlace visible del header apunta
+            // a la página actual (botón Dashboard incluido) — para los 5 roles.
+            const enlaces = [...container.querySelectorAll("header a[href]")]
+                .map((a) => a.getAttribute("href"))
+                .filter((href): href is string => href !== null);
+            expect(enlaces.length, "el header siempre muestra al menos el logo").toBeGreaterThan(0);
+            for (const href of enlaces) {
+                expect(href, `D-37: el header no ofrece la página actual (${href} === ${home})`).not.toBe(home);
+            }
+            // ...ni un destino que el proxy vaya a bloquear para este rol
+            for (const href of enlaces) {
+                expect(
+                    esDestinoPermitidoPorRol(rol, href),
+                    `D-37: el header no ofrece destinos bloqueados (${rol} → ${href})`
+                ).toBe(true);
+            }
+
             // 5. Cierra sesión y la sesión muere de verdad (I-32/I-35b)
             await salirYExigirSesionMuerta(sesion, RUTA_PRIVADA_POR_ROL[rol]);
         });

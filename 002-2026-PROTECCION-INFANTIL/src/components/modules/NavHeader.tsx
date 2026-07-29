@@ -84,8 +84,16 @@ export function NavHeader() {
         ? "/dashboard/colegio"
         : "/dashboard";
     // I-38 (SPEC-114): el logo NUNCA es un clic muerto — si el destino es la página actual,
-    // va al home público.
+    // va al home público (destino vivo para todos los roles desde SPEC-118/D-37).
     const logoHref = logoDestino === pathname ? "/" : logoDestino;
+
+    // D-37 (SPEC-118): ningún elemento de navegación ofrece un destino que el proxy
+    // vaya a bloquear ni la página actual — una sola regla para TODOS los roles y
+    // todos los enlaces del header (botón Dashboard, menú de usuario, menú móvil).
+    // La única excepción es el logo en "/" (la marca siempre se muestra; apuntar al
+    // inicio estando en el inicio es convención universal y no hay destino alternativo).
+    const esEnlaceNavegable = (href: string) =>
+        href !== pathname && esDestinoPermitidoPorRol(user?.rol, href);
 
     return (
         <header className={`fixed top-0 left-0 right-0 z-50 glass ${headerBorderClass}`}>
@@ -101,12 +109,14 @@ export function NavHeader() {
                 <nav className="flex items-center gap-2 sm:gap-3">
                     <ThemeToggle />
 
-                    <Link
-                        href={dashboardHref}
-                        className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
-                    >
-                        Dashboard
-                    </Link>
+                    {esEnlaceNavegable(dashboardHref) && (
+                        <Link
+                            href={dashboardHref}
+                            className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
+                        >
+                            Dashboard
+                        </Link>
+                    )}
 
                     {isLoading ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
@@ -139,47 +149,59 @@ export function NavHeader() {
                                     <div className="py-1">
                                         {user.rol === "ADMIN" && (
                                             <>
-                                                <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
-                                                    Panel de administración
-                                                </NavDropdownLink>
-                                                <NavDropdownLink href="/dashboard/admin/configuracion" onClick={() => setOpen(false)}>
-                                                    Configuración
-                                                </NavDropdownLink>
+                                                {esEnlaceNavegable("/dashboard/admin") && (
+                                                    <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
+                                                        Panel de administración
+                                                    </NavDropdownLink>
+                                                )}
+                                                {esEnlaceNavegable("/dashboard/admin/configuracion") && (
+                                                    <NavDropdownLink href="/dashboard/admin/configuracion" onClick={() => setOpen(false)}>
+                                                        Configuración
+                                                    </NavDropdownLink>
+                                                )}
                                             </>
                                         )}
-                                        {user.rol === "SCHOOL_ADMIN" && (
+                                        {user.rol === "SCHOOL_ADMIN" && esEnlaceNavegable("/dashboard/colegio") && (
                                             <NavDropdownLink href="/dashboard/colegio" onClick={() => setOpen(false)}>
                                                 Mi colegio
                                             </NavDropdownLink>
                                         )}
-                                        {user.rol === "OPERADOR" && (
+                                        {user.rol === "OPERADOR" && esEnlaceNavegable("/dashboard/admin") && (
                                             <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
                                                 Mis casos
                                             </NavDropdownLink>
                                         )}
-                                        {user.rol === "COMITE_VALIDACION" && (
+                                        {user.rol === "COMITE_VALIDACION" && esEnlaceNavegable("/dashboard/admin/comite") && (
                                             <NavDropdownLink href="/dashboard/admin/comite" onClick={() => setOpen(false)}>
                                                 Mi bandeja
                                             </NavDropdownLink>
                                         )}
-                                        {!esEmpleado && esDestinoPermitidoPorRol(user.rol, "/dashboard") && (
+                                        {!esEmpleado && (
                                             <>
-                                                <NavDropdownLink href="/dashboard" onClick={() => setOpen(false)}>
-                                                    Mi panel
-                                                </NavDropdownLink>
-                                                <NavDropdownLink href="/dashboard/circulo-confianza" onClick={() => setOpen(false)}>
-                                                    Círculo de Confianza
-                                                </NavDropdownLink>
-                                                <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
-                                                    Mis reportes
-                                                </NavDropdownLink>
+                                                {esEnlaceNavegable("/dashboard") && (
+                                                    <NavDropdownLink href="/dashboard" onClick={() => setOpen(false)}>
+                                                        Mi panel
+                                                    </NavDropdownLink>
+                                                )}
+                                                {esEnlaceNavegable("/dashboard/circulo-confianza") && (
+                                                    <NavDropdownLink href="/dashboard/circulo-confianza" onClick={() => setOpen(false)}>
+                                                        Círculo de Confianza
+                                                    </NavDropdownLink>
+                                                )}
+                                                {esEnlaceNavegable("/mis-reportes") && (
+                                                    <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
+                                                        Mis reportes
+                                                    </NavDropdownLink>
+                                                )}
                                             </>
                                         )}
                                         <hr className="my-1 border-slate-100 dark:border-slate-800" />
                                         {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible para TODOS los roles */}
-                                        <NavDropdownLink href="/cambiar-password" onClick={() => setOpen(false)}>
-                                            Cambiar contraseña
-                                        </NavDropdownLink>
+                                        {esEnlaceNavegable("/cambiar-password") && (
+                                            <NavDropdownLink href="/cambiar-password" onClick={() => setOpen(false)}>
+                                                Cambiar contraseña
+                                            </NavDropdownLink>
+                                        )}
                                         <button
                                             onClick={async () => {
                                                 setOpen(false);
@@ -195,12 +217,14 @@ export function NavHeader() {
                             )}
                         </div>
                     ) : (
-                        <Link
-                            href="/login"
-                            className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
-                        >
-                            Iniciar sesión
-                        </Link>
+                        esEnlaceNavegable("/login") && (
+                            <Link
+                                href="/login"
+                                className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
+                            >
+                                Iniciar sesión
+                            </Link>
+                        )
                     )}
 
                     <Tooltip content="Menú">
@@ -218,30 +242,30 @@ export function NavHeader() {
             {mobileOpen && (
                 <div className="sm:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 shadow-lg">
                     <div className="flex flex-col gap-2">
-                        <MobileLink href="/" onClick={() => setMobileOpen(false)}>Inicio</MobileLink>
-                        <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Dashboard</MobileLink>
+                        {esEnlaceNavegable("/") && <MobileLink href="/" onClick={() => setMobileOpen(false)}>Inicio</MobileLink>}
+                        {esEnlaceNavegable("/dashboard-publico") && <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Dashboard</MobileLink>}
                         {user ? (
                             <>
-                                {!esEmpleado && esDestinoPermitidoPorRol(user.rol, "/dashboard") && (
+                                {!esEmpleado && (
                                     <>
-                                        <MobileLink href="/dashboard" onClick={() => setMobileOpen(false)}>Mi panel</MobileLink>
-                                        <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>
-                                        <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>
+                                        {esEnlaceNavegable("/dashboard") && <MobileLink href="/dashboard" onClick={() => setMobileOpen(false)}>Mi panel</MobileLink>}
+                                        {esEnlaceNavegable("/dashboard/circulo-confianza") && <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>}
+                                        {esEnlaceNavegable("/mis-reportes") && <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>}
                                     </>
                                 )}
                                 {user.rol === "ADMIN" && (
                                     <>
-                                        <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Panel admin</MobileLink>
-                                        <MobileLink href="/dashboard/admin/configuracion" onClick={() => setMobileOpen(false)}>Configuración</MobileLink>
+                                        {esEnlaceNavegable("/dashboard/admin") && <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Panel admin</MobileLink>}
+                                        {esEnlaceNavegable("/dashboard/admin/configuracion") && <MobileLink href="/dashboard/admin/configuracion" onClick={() => setMobileOpen(false)}>Configuración</MobileLink>}
                                     </>
                                 )}
-                                {user.rol === "SCHOOL_ADMIN" && (
+                                {user.rol === "SCHOOL_ADMIN" && esEnlaceNavegable("/dashboard/colegio") && (
                                     <MobileLink href="/dashboard/colegio" onClick={() => setMobileOpen(false)}>Mi colegio</MobileLink>
                                 )}
-                                {user.rol === "OPERADOR" && (
+                                {user.rol === "OPERADOR" && esEnlaceNavegable("/dashboard/admin") && (
                                     <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Mis casos</MobileLink>
                                 )}
-                                {user.rol === "COMITE_VALIDACION" && (
+                                {user.rol === "COMITE_VALIDACION" && esEnlaceNavegable("/dashboard/admin/comite") && (
                                     <MobileLink href="/dashboard/admin/comite" onClick={() => setMobileOpen(false)}>Mi bandeja</MobileLink>
                                 )}
                                 <button
@@ -256,7 +280,7 @@ export function NavHeader() {
                                 </button>
                             </>
                         ) : (
-                            <MobileLink href="/login" onClick={() => setMobileOpen(false)}>Iniciar sesión</MobileLink>
+                            esEnlaceNavegable("/login") && <MobileLink href="/login" onClick={() => setMobileOpen(false)}>Iniciar sesión</MobileLink>
                         )}
                     </div>
                 </div>

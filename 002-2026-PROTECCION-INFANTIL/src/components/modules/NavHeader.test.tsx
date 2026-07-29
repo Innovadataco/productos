@@ -98,4 +98,52 @@ describe("NavHeader", () => {
         const link = screen.getByText("Mi panel").closest("a");
         expect(link?.getAttribute("href")).toBe("/dashboard");
     });
+
+    // SPEC-118 (D-37, decisión ZEUS): ningún elemento de navegación ofrece un
+    // destino que el proxy bloquea o que es la página actual — para TODOS los roles.
+    it("D-37: el botón Dashboard NO se ofrece al colegio estando en /dashboard/colegio (clic muerto puro)", () => {
+        mockPathname = "/dashboard/colegio";
+        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
+        render(<NavHeader />);
+        expect(screen.queryByText("Dashboard")).toBeNull();
+    });
+
+    it("D-37: el botón Dashboard SÍ se ofrece al colegio fuera de su panel (destino vivo)", () => {
+        mockPathname = "/dashboard-publico";
+        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
+        render(<NavHeader />);
+        const dashboard = screen.getByText("Dashboard").closest("a");
+        expect(dashboard?.getAttribute("href")).toBe("/dashboard/colegio");
+    });
+
+    it("D-37: el botón Dashboard NO se ofrece al padre estando en /dashboard", () => {
+        mockPathname = "/dashboard";
+        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
+        render(<NavHeader />);
+        expect(screen.queryByText("Dashboard")).toBeNull();
+    });
+
+    it("D-37: el botón Dashboard NO se ofrece al anónimo estando en /dashboard-publico", () => {
+        mockPathname = "/dashboard-publico";
+        mockAuth(null);
+        render(<NavHeader />);
+        expect(screen.queryByText("Dashboard")).toBeNull();
+    });
+
+    it("D-37: el menú de usuario no ofrece la página actual (Mi colegio abierto en /dashboard/colegio)", () => {
+        mockPathname = "/dashboard/colegio";
+        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
+        const { unmount } = render(<NavHeader />);
+        const toggle = screen.getByText("Colegio").closest("button");
+        if (toggle) fireEvent.click(toggle);
+        expect(screen.queryByText("Mi colegio")).toBeNull();
+        unmount();
+
+        // ...pero sí lo ofrece fuera de esa página
+        mockPathname = "/dashboard-publico";
+        render(<NavHeader />);
+        const toggle2 = screen.getByText("Colegio").closest("button");
+        if (toggle2) fireEvent.click(toggle2);
+        expect(screen.getByText("Mi colegio").closest("a")?.getAttribute("href")).toBe("/dashboard/colegio");
+    });
 });
