@@ -9,6 +9,7 @@ import type { EstadoReporte } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { formatPlataforma } from "@/lib/plataforma";
 import { clampPageSize, clampPage } from "@/lib/pagination";
+import { whereReporteVigente } from "@/lib/reportes-acceso";
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
         const pageSize = clampPageSize(searchParams.get("pageSize"), MAX_PAGE_SIZE);
         const skip = (page - 1) * pageSize;
 
-        const baseWhere = { usuarioId: user.id, eliminado: false };
+        const baseWhere = whereReporteVigente({ usuarioId: user.id });
 
         const [items, total] = await Promise.all([
             prisma.reporte.findMany({
