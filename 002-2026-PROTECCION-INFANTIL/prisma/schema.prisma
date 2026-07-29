@@ -206,6 +206,10 @@ model Usuario {
   ultimaSesion        DateTime?
   tenantId            String?
   colegioId           String?       @unique
+  // SPEC-119: ventana de servicio del cliente padre (PARENT). null = sin vigencia
+  // definida = acceso permitido. Para SCHOOL_ADMIN la ventana es la del Colegio.
+  inicioServicio      DateTime?
+  finServicio         DateTime?
   creadoEn            DateTime      @default(now())
   actualizadoEn       DateTime      @updatedAt
 
