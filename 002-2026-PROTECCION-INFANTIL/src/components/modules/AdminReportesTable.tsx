@@ -9,6 +9,8 @@ import { AdminReporteDetalle } from "./AdminReporteDetalle";
 import { AdminReporteExpediente } from "./AdminReporteExpediente";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 
 const ESTADOS = [
     { value: "", label: "Todos los estados" },
@@ -234,9 +236,8 @@ export function AdminReportesTable() {
             )}
 
             <div className="glass rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+                <Tabla sinContenedor>
+                    <TablaHead>
                             <tr>
                                 <th className="px-4 py-3 font-medium">Seguimiento</th>
                                 <th className="px-4 py-3 font-medium">Plataforma</th>
@@ -247,15 +248,14 @@ export function AdminReportesTable() {
                                 <th className="px-4 py-3 font-medium">Origen</th>
                                 <th className="px-4 py-3 font-medium">Acciones</th>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={8} className="px-4 py-8 text-center text-subtle">
-                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                                        <p className="mt-2 text-xs">Cargando...</p>
-                                    </td>
-                                </tr>
+                    </TablaHead>
+                    <TablaBody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan={8} className="px-4 py-2 text-center text-subtle">
+                                    <Cargando tamano="sm" />
+                                </td>
+                            </tr>
                             ) : reportes.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="px-4 py-2">
@@ -318,9 +318,8 @@ export function AdminReportesTable() {
                                     </tr>
                                 ))
                             )}
-                        </tbody>
-                    </table>
-                </div>
+                    </TablaBody>
+                </Tabla>
 
                 {pagination.totalPages > 1 && (
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">
