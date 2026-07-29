@@ -90,8 +90,13 @@ describe(`SPEC-114 · cola 041 (ciclo ${CICLO})`, () => {
         expect(bogota, "Bogotá debe aparecer en la búsqueda").toBeTruthy();
         expect(bogota!.lat, "Bogotá debe tener coordenadas").not.toBeNull();
 
-        // Búsqueda sin acento encuentra igual (normalización)
-        await prisma.ciudad.create({ data: { nombre: "Monguí", paisId: pais!.id, nombreNormalizado: "mongui", lat: 5.72, lng: -72.85 } });
+        // Búsqueda sin acento encuentra igual (normalización). Upsert: las ciudades
+        // son catálogo compartido que resetDatabase no borra (pueden existir de otra corrida)
+        await prisma.ciudad.upsert({
+            where: { nombre_paisId: { nombre: "Monguí", paisId: pais!.id } },
+            update: { nombreNormalizado: "mongui", lat: 5.72, lng: -72.85 },
+            create: { nombre: "Monguí", paisId: pais!.id, nombreNormalizado: "mongui", lat: 5.72, lng: -72.85 },
+        });
         const res2 = await buscarGET(new Request(`http://localhost:5005/api/ciudades/buscar?q=mongui&paisId=${pais!.id}&limit=10`));
         expect(res2.status).toBe(200);
         const texto2 = JSON.stringify(await res2.json());
