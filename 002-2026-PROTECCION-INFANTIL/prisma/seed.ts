@@ -706,6 +706,22 @@ async function main() {
             descripcion: "Ventana de rate limiting para registro (segundos)",
         },
         {
+            clave: "ratelimit.ciudades_buscar.window_seconds",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Ventana de rate limiting para búsqueda de ciudades (segundos)",
+        },
+        {
+            clave: "ratelimit.ciudades_buscar.max_requests",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "Máximo de búsquedas de ciudades por ventana",
+        },
+        {
             clave: "ratelimit.register.max_requests",
             valor: "10",
             tipo: TipoParametro.INTEGER,

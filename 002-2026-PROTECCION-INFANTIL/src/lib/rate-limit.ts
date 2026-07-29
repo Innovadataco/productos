@@ -40,6 +40,7 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     circulo_contacto: { windowSeconds: 3600, maxRequests: 20 },
     recuperar_solicitar: { windowSeconds: 3600, maxRequests: 5 },
     verificacion_solicitar: { windowSeconds: 3600, maxRequests: 5 },
+    ciudades_buscar: { windowSeconds: 60, maxRequests: 60 },
 };
 
 function getScopeDefaults(scope: string): ScopeDefaults {
