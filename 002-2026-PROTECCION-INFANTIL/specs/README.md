@@ -30,6 +30,8 @@
 | [120](120-smoke-prod-safe/spec.md) | Smoke prod-safe por rol (cuentas efímeras, solo lectura) | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
 | [118](118-clics-muertos-colegio/spec.md) | Clics muertos del colegio y regla D-37 generalizada | 🟢 Finalizada (SIN desplegar, pendiente release+ACTA) |
 | [117](117-gestion-padres-admin/spec.md) | Gestión de credenciales de padres desde admin (I-37) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
+| [121](121-error-wrapper-ollama-timeout/spec.md) | Sobre de error único (R2, 18/18 rutas) y timeout de Ollama por parámetro | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
+| [115](115-catalogo-geografico-latam/spec.md) | Catálogo geográfico real LATAM y Centroamérica (GeoNames CC-BY) | 🟡 En desarrollo |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
