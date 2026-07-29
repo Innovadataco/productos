@@ -4,12 +4,12 @@ import { verificarVigenciaCliente } from "@/lib/colegio/vigencia";
 import { ServicioVencidoScreen } from "@/components/modules/ServicioVencidoScreen";
 
 /**
- * Layout raíz de /dashboard (SPEC-119): aplica la guarda de vigencia al área del padre
- * (/dashboard, /dashboard/mis-reportes, /dashboard/circulo-confianza, ...). Solo actúa
- * con token PARENT; SCHOOL_ADMIN y roles internos pasan a sus propios layouts anidados
- * (dashboard/colegio ya tiene su guarda de vigencia, dashboard/admin la suya de rol).
+ * Guarda de vigencia para el área del padre (SPEC-119). Solo actúa con token PARENT:
+ * el resto (anónimo, roles internos) pasa — el proxy y las páginas hacen su propio
+ * control de acceso. Un padre vencido ve la pantalla "Servicio no vigente" en vez de
+ * sus reportes; sus datos quedan intactos.
  */
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function MisReportesLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();
     const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
 
@@ -23,5 +23,5 @@ export default async function DashboardLayout({ children }: { children: React.Re
         }
     }
 
-    return <div className="min-h-screen">{children}</div>;
+    return <>{children}</>;
 }

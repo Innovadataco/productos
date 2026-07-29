@@ -38,6 +38,9 @@ function categoriasDeSecundarias(value: unknown): string[] {
 export async function GET(_request: Request, context: RouteContext) {
     try {
         const user = await verifyAuth("PARENT");
+        // SPEC-119: un padre con el servicio vencido no consulta su área (datos intactos).
+        const { assertVigenciaCliente } = await import("@/lib/colegio/vigencia");
+        await assertVigenciaCliente(user.id);
         const { id } = await context.params;
 
         const reporte = await prisma.reporte.findUnique({

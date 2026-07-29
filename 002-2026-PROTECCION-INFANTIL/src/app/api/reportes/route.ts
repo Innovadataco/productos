@@ -47,6 +47,13 @@ export async function POST(request: Request) {
         }
         const esAnonimo = !user;
 
+        // SPEC-119: un padre con el servicio vencido no puede crear reportes nuevos
+        // (los ya enviados siguen su curso; el reporte anónimo no se toca).
+        if (user) {
+            const { assertVigenciaCliente } = await import("@/lib/colegio/vigencia");
+            await assertVigenciaCliente(user.id);
+        }
+
         // Rate limiting por IP (anónimo) o por usuario autenticado
         const identifier = user?.id ?? undefined;
         const rate = await checkRateLimit(request, "report", { identifier });

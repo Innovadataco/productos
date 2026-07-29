@@ -80,10 +80,11 @@ export async function POST(request: Request) {
             data: { intentosFallidos: 0, estado: "activo", bloqueadoHasta: null, ultimaSesion: new Date() },
         });
 
-        // Verificar vigencia del servicio para cuentas institucionales
-        if (user.rol === "SCHOOL_ADMIN") {
-            const { verificarVigenciaColegio } = await import("@/lib/colegio/vigencia");
-            const vigencia = await verificarVigenciaColegio(user.id);
+        // Verificar vigencia del servicio del cliente (SPEC-119: padres y colegios,
+        // una sola función de decisión). Vencer NO borra nada: solo corta el acceso.
+        if (user.rol === "SCHOOL_ADMIN" || user.rol === "PARENT") {
+            const { verificarVigenciaCliente } = await import("@/lib/colegio/vigencia");
+            const vigencia = await verificarVigenciaCliente(user.id);
             if (!vigencia.vigente) {
                 return NextResponse.json(
                     { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },

@@ -27,6 +27,9 @@ const CATEGORIA_LABELS: Record<string, string> = {
 export async function GET(request: Request) {
     try {
         const user = await verifyAuth("PARENT");
+        // SPEC-119: un padre con el servicio vencido no consulta su área (datos intactos).
+        const { assertVigenciaCliente } = await import("@/lib/colegio/vigencia");
+        await assertVigenciaCliente(user.id);
 
         const { searchParams } = new URL(request.url);
         const page = clampPage(searchParams.get("page"));

@@ -11,9 +11,11 @@ export default function LoginPage() {
     const [error, setError] = useState("");
 
     const handleLogin = async (email: string, password: string) => {
-        const { ok, user } = await login(email, password);
+        const { ok, user, error: serverError } = await login(email, password);
         if (!ok) {
-            setError("Credenciales incorrectas. Verifica tu email y contraseña.");
+            // SPEC-119: si el servidor explica el motivo (servicio vencido, cuenta
+            // desactivada), se muestra tal cual; si no, genérico de credenciales.
+            setError(serverError || "Credenciales incorrectas. Verifica tu email y contraseña.");
             return;
         }
 

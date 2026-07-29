@@ -8,7 +8,7 @@ type AuthCtx = {
     user: User | null;
     isLoading: boolean;
     isAuthenticated: boolean;
-    login: (email: string, password: string) => Promise<{ ok: boolean; user?: User | null }>;
+    login: (email: string, password: string) => Promise<{ ok: boolean; user?: User | null; error?: string }>;
     logout: () => Promise<void>;
     checkSession: () => Promise<void>;
 };
@@ -41,14 +41,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })();
     }, [checkSession]);
 
-    const login = useCallback(async (email: string, password: string): Promise<{ ok: boolean; user?: User | null }> => {
+    const login = useCallback(async (email: string, password: string): Promise<{ ok: boolean; user?: User | null; error?: string }> => {
         const res = await fetch("/api/auth/login", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
         });
-        if (!res.ok) return { ok: false };
+        if (!res.ok) {
+            // SPEC-119: el servidor explica el motivo (p. ej. servicio vencido o cuenta
+            // desactivada); la página de login lo muestra en vez de un genérico.
+            const data = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+            return { ok: false, error: data?.error?.message };
+        }
         const data = await res.json();
         setUser(data.user);
         return { ok: true, user: data.user };
