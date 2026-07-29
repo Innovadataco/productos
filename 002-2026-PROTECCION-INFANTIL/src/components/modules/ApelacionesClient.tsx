@@ -7,6 +7,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 
 /**
@@ -144,8 +146,7 @@ export function ApelacionesClient() {
     if (authLoading || !user) {
         return (
             <main className="mx-auto max-w-4xl px-4 py-12 text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                <p className="mt-3 text-sm text-subtle">Cargando...</p>
+                <Cargando />
             </main>
         );
     }
@@ -274,15 +275,9 @@ export function ApelacionesClient() {
                     </div>
 
                     {mensaje && (
-                        <div
-                            className={`rounded-xl p-4 text-sm ${
-                                mensaje.type === "error"
-                                    ? "bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-200"
-                                    : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
-                            }`}
-                        >
+                        <Alerta tono={mensaje.type === "error" ? "error" : "exito"} className="p-4">
                             {mensaje.text}
-                        </div>
+                        </Alerta>
                     )}
 
                     <Button type="submit" isLoading={enviando} className="w-full sm:w-auto">
@@ -295,8 +290,7 @@ export function ApelacionesClient() {
                 <h2 id="mis-apelaciones-title" className="text-lg font-semibold text-body mb-3">Mis apelaciones</h2>
                 {cargando ? (
                     <div className="glass rounded-2xl p-8 text-center animate-pulse">
-                        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                        <p className="mt-3 text-sm text-subtle">Cargando apelaciones...</p>
+                        <Cargando texto="Cargando apelaciones..." />
                     </div>
                 ) : items.length === 0 ? (
                     <EmptyState
