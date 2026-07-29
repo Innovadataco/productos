@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 
 type Padre = {
     id: string;
@@ -213,19 +216,13 @@ export default function PadresPageClient() {
             </div>
 
             {message && (
-                <div
-                    className={`rounded-xl p-4 text-sm ${
-                        message.type === "error"
-                            ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                            : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
-                    }`}
-                >
+                <Alerta tono={message.type === "error" ? "error" : "exito"} className="p-4">
                     {message.text}
-                </div>
+                </Alerta>
             )}
 
             {passwordTemporal && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                <Alerta tono="advertencia" role="status" className="border border-amber-200 p-4 dark:border-amber-800">
                     <p className="font-semibold">Contraseña temporal (muéstrela una vez)</p>
                     <div className="mt-2 flex items-center gap-2">
                         <code className="rounded-lg bg-white/60 px-3 py-1.5 font-mono text-base dark:bg-slate-900/60">{passwordTemporal}</code>
@@ -241,7 +238,7 @@ export default function PadresPageClient() {
                     <p className="mt-2 text-xs opacity-80">
                         El usuario debe iniciar sesión con esta contraseña y cambiarla de inmediato. No se volverá a mostrar.
                     </p>
-                </div>
+                </Alerta>
             )}
 
             <GlassCard>
@@ -267,10 +264,7 @@ export default function PadresPageClient() {
 
             <GlassCard>
                 {loading ? (
-                    <div className="flex items-center gap-3 py-8 text-muted">
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                        Cargando cuentas...
-                    </div>
+                    <Cargando inline texto="Cargando cuentas..." className="py-8" />
                 ) : items.length === 0 ? (
                     <EmptyState
                         title={qActiva ? "Sin resultados para la búsqueda" : "No hay cuentas de padres registradas"}
@@ -282,9 +276,8 @@ export default function PadresPageClient() {
                     />
                 ) : (
                     <>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b border-slate-200 dark:border-slate-800">
+                        <Tabla sinContenedor>
+                            <TablaHead variante="borde">
                                     <tr className="text-subtle">
                                         <th className="pb-3 font-medium">Nombre</th>
                                         <th className="pb-3 font-medium">Email</th>
@@ -295,8 +288,8 @@ export default function PadresPageClient() {
                                         <th className="pb-3 font-medium">Reportes</th>
                                         <th className="pb-3 font-medium text-right">Acciones</th>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            </TablaHead>
+                            <TablaBody>
                                     {items.map((padre) => {
                                         const vigencia = estadoVigencia(padre);
                                         return (
@@ -361,9 +354,8 @@ export default function PadresPageClient() {
                                             </tr>
                                         );
                                     })}
-                                </tbody>
-                            </table>
-                        </div>
+                            </TablaBody>
+                        </Tabla>
                         <div className="mt-4 flex items-center justify-between text-sm text-muted">
                             <span>
                                 Página {paginacion.page} de {Math.max(paginacion.totalPages, 1)} · {paginacion.total} cuentas
