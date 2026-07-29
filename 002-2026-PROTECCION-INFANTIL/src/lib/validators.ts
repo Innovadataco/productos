@@ -114,3 +114,63 @@ export const reportesRevisionQuerySchema = z.object({
     operadorId: idSchema.optional(),
     q: z.string().min(3).max(120).optional(),
 });
+
+// ---------------------------------------------------------------------------
+// SPEC-125 (bloque R6): una sola forma de validar.
+// Los mensajes de estos esquemas son CONTRATO del frontend
+// (AuthContext.tsx y registro/page.tsx leen `error.message`): no cambiarlos.
+// ---------------------------------------------------------------------------
+
+export const loginSchema = z.object({
+    email: z.string().trim().toLowerCase().min(1, "Email y contraseña requeridos"),
+    password: z.string().min(1, "Email y contraseña requeridos"),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
+
+export const verificarSolicitarSchema = z.object({
+    email: z.string().trim().toLowerCase().min(1, "Email inválido")
+        .refine((val) => val.includes("@"), { message: "Email inválido" }),
+});
+export type VerificarSolicitarInput = z.infer<typeof verificarSolicitarSchema>;
+
+export const verificarValidarSchema = z.object({
+    email: z.string().trim().toLowerCase().min(1, "Email y código de 6 dígitos requeridos"),
+    codigo: z.string().length(6, "Email y código de 6 dígitos requeridos"),
+});
+export type VerificarValidarInput = z.infer<typeof verificarValidarSchema>;
+
+export const verificarCompletarSchema = z.object({
+    token: z.string().min(1, "Token y contraseña requeridos"),
+    password: z.string()
+        .min(1, "Token y contraseña requeridos")
+        .refine((val) => val.length >= 8 && /[a-zA-Z]/.test(val) && /[0-9]/.test(val), {
+            message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número",
+        }),
+    nombre: z.string().optional(),
+});
+export type VerificarCompletarInput = z.infer<typeof verificarCompletarSchema>;
+
+export const recuperarValidarQuerySchema = z.object({
+    token: z.string().min(1, "Token requerido"),
+});
+
+// Endpoints consumidos solo por el worker (scripts/worker-reportes.mjs).
+export const procesarReporteSchema = z.object({
+    reporteId: z.string().min(1, "reporteId requerido"),
+    modeloClasificacion: z.string().optional(),
+});
+export type ProcesarReporteInput = z.infer<typeof procesarReporteSchema>;
+
+export const fallbackReporteSchema = z.object({
+    reporteId: z.string().min(1, "reporteId requerido"),
+    error: z.string().optional(),
+    errorCode: z.string().optional(),
+});
+export type FallbackReporteInput = z.infer<typeof fallbackReporteSchema>;
+
+// Consulta pública (spec 091): el body NUNCA produce 400 — un body inválido
+// equivale a identificador vacío. Por eso `.catch({})` y no safeParse + 400.
+export const consultaBodySchema = z.object({
+    identificador: z.string().optional(),
+}).catch({});
+export type ConsultaBodyInput = z.infer<typeof consultaBodySchema>;
