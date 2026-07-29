@@ -7,6 +7,9 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { OperadoresSubNav } from "../components/OperadoresSubNav";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 
 type Perfil = {
     cupoMaximo: number;
@@ -233,19 +236,13 @@ export default function AdminOperadoresGestionPage() {
             <OperadoresSubNav />
 
             {message && (
-                <div
-                    className={`rounded-xl p-4 text-sm ${
-                        message.type === "error"
-                            ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                            : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
-                    }`}
-                >
+                <Alerta tono={message.type === "error" ? "error" : "exito"} className="p-4">
                     {message.text}
-                </div>
+                </Alerta>
             )}
 
             {passwordTemporal && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                <Alerta tono="advertencia" role="status" className="border border-amber-200 p-4 dark:border-amber-800">
                     <p className="font-semibold">Contraseña temporal (muéstrela una vez)</p>
                     <div className="mt-2 flex items-center gap-2">
                         <code className="rounded-lg bg-white/60 px-3 py-1.5 font-mono text-base dark:bg-slate-900/60">{passwordTemporal}</code>
@@ -259,7 +256,7 @@ export default function AdminOperadoresGestionPage() {
                         </Button>
                     </div>
                     <p className="mt-2 text-xs opacity-80">El operador debe usar esta contraseña para iniciar sesión. No se volverá a mostrar.</p>
-                </div>
+                </Alerta>
             )}
 
             <section className="space-y-4" aria-labelledby="operadores-resumen-title">
@@ -331,19 +328,16 @@ export default function AdminOperadoresGestionPage() {
                 <GlassCard>
                     <h2 id="operadores-listado-title" className="text-lg font-semibold text-body">Listado</h2>
                     {loading ? (
-                        <div className="flex items-center gap-3 py-8 text-muted">
-                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                            Cargando operadores...
-                        </div>
+                        <Cargando inline texto="Cargando operadores..." className="py-8" />
                     ) : operadores.length === 0 ? (
                         <EmptyState
                             title="No hay operadores registrados"
                             description="Crea el primer operador para que pueda atender la cola de revisión manual."
                         />
                     ) : (
-                    <div className="mt-4 overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="border-b border-slate-200 dark:border-slate-800">
+                    <div className="mt-4">
+                        <Tabla sinContenedor>
+                            <TablaHead variante="borde">
                                 <tr className="text-subtle">
                                     <th className="pb-3 font-medium">Nombre</th>
                                     <th className="pb-3 font-medium">Email</th>
@@ -354,8 +348,8 @@ export default function AdminOperadoresGestionPage() {
                                     <th className="pb-3 font-medium">Notas</th>
                                     <th className="pb-3 font-medium text-right">Acciones</th>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            </TablaHead>
+                            <TablaBody>
                                 {operadores.map((op) => (
                                     <tr key={op.id} className="align-top">
                                         {editingId === op.id ? (
@@ -392,8 +386,8 @@ export default function AdminOperadoresGestionPage() {
                                         )}
                                     </tr>
                                 ))}
-                            </tbody>
-                        </table>
+                            </TablaBody>
+                        </Tabla>
                     </div>
                 )}
             </GlassCard>

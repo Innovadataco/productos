@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/Badge";
 import { OperadoresSubNav } from "../components/OperadoresSubNav";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 
 type OperadorAsignacion = {
     id: string;
@@ -111,19 +113,16 @@ export default function AdminOperadoresAsignarPage() {
             <GlassCard>
                 <h2 className="text-lg font-semibold text-body">Operadores activos</h2>
                 {loading ? (
-                    <div className="flex items-center gap-3 py-8 text-muted">
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                        Cargando...
-                    </div>
+                    <Cargando inline className="py-8" />
                 ) : data?.operadores.length === 0 ? (
                     <EmptyState
                         title="No hay operadores activos"
                         description="Cuando haya operadores disponibles, podrás ver su carga de casos aquí."
                     />
                 ) : (
-                    <div className="mt-4 overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="border-b border-slate-200 dark:border-slate-800">
+                    <div className="mt-4">
+                        <Tabla sinContenedor>
+                            <TablaHead variante="borde">
                                 <tr className="text-subtle">
                                     <th className="pb-3 font-medium">Operador</th>
                                     <th className="pb-3 font-medium">Cupo</th>
@@ -132,8 +131,8 @@ export default function AdminOperadoresAsignarPage() {
                                     <th className="pb-3 font-medium">Apelaciones</th>
                                     <th className="pb-3 font-medium text-right">Uso</th>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            </TablaHead>
+                            <TablaBody>
                                 {data?.operadores.map((op) => {
                                     const uso = op.cupoMaximo > 0 ? op.casosAbiertos / op.cupoMaximo : 0;
                                     return (
@@ -176,8 +175,8 @@ export default function AdminOperadoresAsignarPage() {
                                         </tr>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </TablaBody>
+                        </Tabla>
                     </div>
                 )}
             </GlassCard>

@@ -5,6 +5,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { OperadoresSubNav } from "../components/OperadoresSubNav";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
 
 type ModeloAsignacion = {
     cupoMaximoDefault: number;
@@ -83,23 +85,14 @@ export default function AdminOperadoresModeloPage() {
             <OperadoresSubNav />
 
             {message && (
-                <div
-                    className={`rounded-xl p-4 text-sm ${
-                        message.type === "error"
-                            ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                            : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
-                    }`}
-                >
+                <Alerta tono={message.type === "error" ? "error" : "exito"} className="p-4">
                     {message.text}
-                </div>
+                </Alerta>
             )}
 
             <GlassCard>
                 {loading || !form ? (
-                    <div className="flex items-center gap-3 py-8 text-muted">
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                        Cargando modelo...
-                    </div>
+                    <Cargando inline texto="Cargando modelo..." className="py-8" />
                 ) : (
                     <form onSubmit={guardar} className="space-y-6">
                         <div className="grid gap-6 sm:grid-cols-2">
