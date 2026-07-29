@@ -21,7 +21,8 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "a11y:audit": "node scripts/a11y_audit.js",
-    "a11y:contrast": "node scripts/contrast_check.js"
+    "a11y:contrast": "node scripts/contrast_check.js",
+    "arch:check": "tsx scripts/arch/arch-check.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

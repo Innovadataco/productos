@@ -66,6 +66,11 @@ jobs:
       # La suite comparte una única Postgres (fileParallelism: false en vitest.config).
       # Los tests que llaman modelos van con mocks (ollama-client mockeado).
       - run: npm run test
+      # SPEC-126: compuerta de la línea base de arquitectura — regenera los 5 artefactos
+      # de docs/architecture/ y falla si difieren de lo commiteado, si hay un modelo
+      # huérfano no declarado, o si las aserciones A (puerta ≡ predicado) / B (menú
+      # honesto) detectan desalineo. No necesita BD ni servicios (lee código como texto).
+      - run: npm run arch:check
       # Placeholders SOLO de build: email.ts valida RESEND_API_KEY/EMAIL_FROM al importarse
       # y Prisma/cola pide DATABASE_URL al recolectar page data (mismo patrón del Dockerfile).
       - run: npm run build
