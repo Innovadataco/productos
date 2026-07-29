@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
 
 export default function CambiarPasswordPage() {
     const { user, isLoading } = useAuth();
@@ -70,7 +72,7 @@ export default function CambiarPasswordPage() {
     if (isLoading || !user) {
         return (
             <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
+                <Cargando texto="" />
             </main>
         );
     }
@@ -91,9 +93,9 @@ export default function CambiarPasswordPage() {
 
                 <GlassCard>
                     {success ? (
-                        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 p-4 text-center text-sm text-emerald-700 dark:text-emerald-300">
+                        <Alerta tono="exito" role="status" className="p-4 text-center">
                             Contraseña actualizada. Redirigiendo...
-                        </div>
+                        </Alerta>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <Input
@@ -121,9 +123,9 @@ export default function CambiarPasswordPage() {
                                 autoComplete="new-password"
                             />
                             {error && (
-                                <p className="rounded-xl bg-red-50 dark:bg-red-950/30 p-3 text-sm text-red-600 dark:text-red-400">
+                                <Alerta tono="error">
                                     {error}
-                                </p>
+                                </Alerta>
                             )}
                             <Button type="submit" isLoading={isSubmitting} className="w-full">
                                 Guardar contraseña

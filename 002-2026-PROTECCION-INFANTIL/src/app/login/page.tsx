@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LoginForm } from "@/components/modules/LoginForm";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Alerta } from "@/components/ui/Alerta";
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -56,9 +57,9 @@ export default function LoginPage() {
                 <GlassCard>
                     <LoginForm onLogin={handleLogin} />
                     {error && (
-                        <div className="mt-4 rounded-xl bg-red-50 dark:bg-red-950/30 p-3 text-center text-sm text-red-600 dark:text-red-400">
+                        <Alerta tono="error" className="mt-4 text-center">
                             {error}
-                        </div>
+                        </Alerta>
                     )}
                 </GlassCard>
 

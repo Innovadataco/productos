@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { RestablecerForm } from "@/components/modules/RestablecerForm";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Cargando } from "@/components/ui/Cargando";
 import { Button } from "@/components/ui/Button";
 
 export default function RecuperarTokenPage() {
@@ -42,11 +43,7 @@ export default function RecuperarTokenPage() {
             </div>
 
             <GlassCard>
-                {status === "loading" && (
-                    <div className="flex justify-center py-8">
-                        <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
-                    </div>
-                )}
+                {status === "loading" && <Cargando texto="" tamano="sm" className="py-8" />}
                 {status === "valid" && <RestablecerForm token={token} />}
                 {status === "invalid" && (
                     <div className="space-y-4 text-center">

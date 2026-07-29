@@ -7,6 +7,7 @@ import { RegistroForm } from "@/components/modules/RegistroForm";
 import { VerificacionForm } from "@/components/modules/VerificacionForm";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Alerta } from "@/components/ui/Alerta";
 
 export default function RegistroPage() {
     const { login } = useAuth();
@@ -85,9 +86,9 @@ export default function RegistroPage() {
                         <VerificacionForm email={email} onCompletar={handleCompletar} />
                     )}
                     {error && (
-                        <div className="mt-3 rounded-xl bg-red-50 dark:bg-red-950/30 p-3 text-center text-sm text-red-600 dark:text-red-400">
+                        <Alerta tono="error" className="mt-3 text-center">
                             {error}
-                        </div>
+                        </Alerta>
                     )}
                 </GlassCard>
 
