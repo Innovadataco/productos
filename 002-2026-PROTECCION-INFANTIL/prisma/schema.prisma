@@ -585,6 +585,12 @@ model Ciudad {
   lng            Float?
   esActivo       Boolean  @default(true)
   creadoEn       DateTime @default(now())
+  // SPEC-115 (catálogo geográfico GeoNames): clave estable del UPSERT y apoyo a la
+  // búsqueda en servidor. nombreNormalizado = NFD sin diacríticos, minúsculas
+  // (src/lib/normalizar.ts); poblacion ordena los resultados del buscador.
+  geonameId         Int?   @unique
+  nombreNormalizado String @default("")
+  poblacion         Int?
 
   pais         Pais          @relation(fields: [paisId], references: [id])
   departamento Departamento? @relation(fields: [departamentoId], references: [id])
@@ -595,6 +601,7 @@ model Ciudad {
   @@index([paisId])
   @@index([departamentoId])
   @@index([esActivo])
+  @@index([paisId, nombreNormalizado])
 }
 
 model Reporte {
