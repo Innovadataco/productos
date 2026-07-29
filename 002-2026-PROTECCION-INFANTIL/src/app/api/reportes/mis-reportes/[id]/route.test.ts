@@ -26,6 +26,12 @@ async function crearReporte(estado: "PENDIENTE" | "CLASIFICADO", usuarioId: stri
     });
 }
 
+/**
+ * Clasificación con su traza de rúbrica persistida: dos conductas CONFIRMADAS
+ * (principal + secundaria, ambas ya superaron el umbral en el motor) y votos
+ * de una categoría DESCARTADA (COMPARTIMIENTO_SEXUAL, cumple=false) que solo
+ * viven en la traza y NUNCA deben salir hacia el padre (spec 116).
+ */
 async function crearClasificacionConVotos(reporteId: string) {
     const clasificacion = await prisma.clasificacionIA.create({
         data: {
@@ -34,15 +40,15 @@ async function crearClasificacionConVotos(reporteId: string) {
             confianza: 1,
             modeloUsado: "rubrica:m1+m2",
             latenciaMs: 100,
-            categoriasSecundarias: [{ categoria: "CONTACTO_INSISTENTE", score: 0.5 }],
+            categoriasSecundarias: [{ categoria: "CONTACTO_INSISTENTE", score: 1 }],
         },
     });
     await prisma.clasificacionRubricaVoto.createMany({
         data: [
             { clasificacionIAId: clasificacion.id, modelo: "m1", categoria: "SOLICITUD_MATERIAL", cumple: true, preguntasJson: ["¿Alguien pide fotos?"] },
-            { clasificacionIAId: clasificacion.id, modelo: "m1", categoria: "CONTACTO_INSISTENTE", cumple: true, preguntasJson: [] },
+            { clasificacionIAId: clasificacion.id, modelo: "m1", categoria: "COMPARTIMIENTO_SEXUAL", cumple: false, preguntasJson: [] },
             { clasificacionIAId: clasificacion.id, modelo: "m2", categoria: "SOLICITUD_MATERIAL", cumple: true, preguntasJson: ["¿Alguien pide fotos?"] },
-            { clasificacionIAId: clasificacion.id, modelo: "m2", categoria: "CONTACTO_INSISTENTE", cumple: false, preguntasJson: [] },
+            { clasificacionIAId: clasificacion.id, modelo: "m2", categoria: "COMPARTIMIENTO_SEXUAL", cumple: false, preguntasJson: [] },
         ],
     });
     return clasificacion;
@@ -66,7 +72,7 @@ describe("GET /api/reportes/mis-reportes/[id]", () => {
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(parentUser);
     });
 
-    it("el dueño recibe info, matriz de rúbrica, porcentajes y análisis", async () => {
+    it("el dueño recibe SOLO las conductas confirmadas y un mensaje en lenguaje humano", async () => {
         const reporte = await crearReporte("CLASIFICADO", parentUser.id);
         await crearClasificacionConVotos(reporte.id);
 
@@ -79,27 +85,86 @@ describe("GET /api/reportes/mis-reportes/[id]", () => {
         expect(body.reporte.estadoVisual).toBe("Procesado");
         expect(body.reporte.ciudad).toBe("Bogotá");
 
-        expect(body.clasificacion.categoria).toBe("SOLICITUD_MATERIAL");
-        expect(body.clasificacion.categoriaLabel).toBe("Solicitud de material");
-        expect(body.clasificacion.categoriasSecundarias).toEqual([{ categoria: "CONTACTO_INSISTENTE", score: 0.5 }]);
+        // Conductas confirmadas (principal + secundaria), con label humano.
+        expect(body.clasificacion.conductas).toEqual([
+            { categoria: "SOLICITUD_MATERIAL", label: "Solicitud de material" },
+            { categoria: "CONTACTO_INSISTENTE", label: "Contacto insistente" },
+        ]);
 
-        expect(body.votosModelos).toHaveLength(2);
-        const m1 = body.votosModelos.find((v: { modelo: string }) => v.modelo === "m1");
-        expect(m1.categorias).toContainEqual({
-            categoria: "SOLICITUD_MATERIAL",
-            cumple: true,
-            preguntasCumplidas: ["¿Alguien pide fotos?"],
+        // Mensaje con plantilla determinista (D-23): hallazgo + recomendación.
+        expect(typeof body.clasificacion.mensaje).toBe("string");
+        expect(body.clasificacion.mensaje).toContain("posibles solicitudes de fotos o videos íntimos");
+        expect(body.clasificacion.mensaje).toContain("posible contacto insistente");
+        expect(body.clasificacion.mensaje).not.toContain("BORRADOR");
+    });
+
+    it("la respuesta NO expone la traza técnica: modelos, votos, porcentajes, scores ni categorías descartadas", async () => {
+        const reporte = await crearReporte("CLASIFICADO", parentUser.id);
+        await crearClasificacionConVotos(reporte.id);
+
+        const res = await GET(req(reporte.id), ctx(reporte.id));
+        const body = await res.json();
+
+        // Propiedades técnicas ausentes del contrato.
+        expect(body).not.toHaveProperty("votosModelos");
+        expect(body).not.toHaveProperty("porcentajes");
+        expect(body).not.toHaveProperty("analisis");
+        expect(body.clasificacion).not.toHaveProperty("confianza");
+        expect(body.clasificacion).not.toHaveProperty("categoriasSecundarias");
+        expect(body.clasificacion).not.toHaveProperty("score");
+
+        // Barrido de contenido: ni nombres de modelos, ni umbrales, ni la
+        // categoría descartada, ni lenguaje de riesgo/score.
+        const raw = JSON.stringify(body);
+        expect(raw).not.toContain("m1");
+        expect(raw).not.toContain("m2");
+        expect(raw).not.toMatch(/umbral|porcentaje|voto/i);
+        expect(raw).not.toMatch(/COMPARTIMIENTO_SEXUAL|Compartimiento/i);
+        expect(raw).not.toMatch(/riesgo|gravedad|confianza/i);
+    });
+
+    it("SPAM y OTRO nunca aparecen como conductas del padre", async () => {
+        const reporte = await crearReporte("CLASIFICADO", parentUser.id);
+        await prisma.clasificacionIA.create({
+            data: {
+                reporteId: reporte.id,
+                categoria: "SOLICITUD_MATERIAL",
+                confianza: 1,
+                modeloUsado: "rubrica:m1+m2",
+                latenciaMs: 100,
+                categoriasSecundarias: [
+                    { categoria: "SPAM", score: 1 },
+                    { categoria: "OTRO", score: 1 },
+                ],
+            },
         });
 
-        expect(body.porcentajes.SOLICITUD_MATERIAL).toBe(1);
-        expect(body.porcentajes.CONTACTO_INSISTENTE).toBe(0.5);
+        const res = await GET(req(reporte.id), ctx(reporte.id));
+        const body = await res.json();
 
-        expect(typeof body.analisis).toBe("string");
-        expect(body.analisis).toContain("SOLICITUD_MATERIAL");
-        // Nunca un "% de riesgo" global ni score de persona.
-        expect(JSON.stringify(body)).not.toContain("riesgo");
-        expect(body).not.toHaveProperty("score");
-        expect(body).not.toHaveProperty("nivelRiesgo");
+        expect(body.clasificacion.conductas).toEqual([
+            { categoria: "SOLICITUD_MATERIAL", label: "Solicitud de material" },
+        ]);
+    });
+
+    it("sin conductas confirmadas (OTRO): mensaje institucional neutro", async () => {
+        const reporte = await crearReporte("CLASIFICADO", parentUser.id);
+        await prisma.clasificacionIA.create({
+            data: {
+                reporteId: reporte.id,
+                categoria: "OTRO",
+                confianza: 0,
+                modeloUsado: "rubrica:m1+m2",
+                latenciaMs: 100,
+                categoriasSecundarias: [],
+            },
+        });
+
+        const res = await GET(req(reporte.id), ctx(reporte.id));
+        const body = await res.json();
+
+        expect(body.clasificacion.conductas).toEqual([]);
+        expect(body.clasificacion.mensaje).toContain("no encontramos conductas concretas");
     });
 
     it("otro PARENT recibe 403 (detalle privado del dueño)", async () => {
@@ -120,7 +185,7 @@ describe("GET /api/reportes/mis-reportes/[id]", () => {
         expect(res.status).toBe(401);
     });
 
-    it("reporte sin clasificación devuelve clasificacion null y votos vacíos", async () => {
+    it("reporte sin clasificación devuelve clasificacion null", async () => {
         const reporte = await crearReporte("PENDIENTE", parentUser.id);
 
         const res = await GET(req(reporte.id), ctx(reporte.id));
@@ -128,9 +193,6 @@ describe("GET /api/reportes/mis-reportes/[id]", () => {
         const body = await res.json();
 
         expect(body.clasificacion).toBeNull();
-        expect(body.votosModelos).toEqual([]);
-        expect(body.porcentajes).toEqual({});
-        expect(body.analisis).toBeNull();
         expect(body.reporte.estadoVisual).toBe("En proceso");
     });
 

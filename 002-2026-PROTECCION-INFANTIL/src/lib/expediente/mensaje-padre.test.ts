@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { construirMensajePadre, type CanalAyuda } from "./mensaje-padre";
+import { construirMensajePadre, construirExplicacionPadre, type CanalAyuda } from "./mensaje-padre";
 
 const CANALES: CanalAyuda[] = [
     { nombre: "Línea 141 ICBF", contacto: "141", descripcion: "Línea gratuita del ICBF para reportar riesgos contra niños, niñas y adolescentes" },
@@ -56,5 +56,45 @@ describe("mensaje-padre (T023) — plantillas deterministas", () => {
         const msg = construirMensajePadre({ conductas: [], canales: CANALES });
         expect(msg).toContain("no encontramos conductas concretas");
         expect(msg).toContain("Línea 141 ICBF");
+    });
+});
+
+/**
+ * Spec 116: la vista del padre reutiliza las MISMAS plantillas deterministas
+ * (D-23) pero sin el marco de "borrador" (eso es del expediente admin) y sin
+ * canales dentro del texto (en la vista los muestra <CanalesOficiales />).
+ */
+describe("construirExplicacionPadre (spec 116)", () => {
+    it("describe las conductas con las mismas plantillas deterministas y sus recomendaciones", () => {
+        const msg = construirExplicacionPadre(["SOLICITUD_MATERIAL"]);
+        expect(msg).toContain("posibles solicitudes de fotos o videos íntimos dirigidas a un menor");
+        expect(msg).toContain("No respondas a la solicitud ni envíes material íntimo");
+
+        const combinado = construirExplicacionPadre(["SOLICITUD_MATERIAL", "CONTACTO_INSISTENTE"]);
+        expect(combinado).toContain("posibles solicitudes de fotos o videos íntimos");
+        expect(combinado).toContain("posible contacto insistente que genera incomodidad");
+        expect(combinado).toContain("Bloquea el contacto en la plataforma");
+    });
+
+    it("sin marco de borrador ni canales en el texto", () => {
+        const msg = construirExplicacionPadre(["SOLICITUD_MATERIAL"]);
+        expect(msg).not.toContain("BORRADOR");
+        expect(msg).not.toContain("No se envía automáticamente");
+        expect(msg).not.toContain("canales oficiales");
+    });
+
+    it("sin score, nivel de riesgo, nombres de modelos, votos ni porcentajes", () => {
+        const msg = construirExplicacionPadre(["SOLICITUD_MATERIAL", "EXTORSION"]);
+        expect(msg).not.toMatch(/score|nivel de riesgo|puntuaci[oó]n|gravedad|umbral|modelo|voto|%/i);
+    });
+
+    it("conducta sin plantilla específica cae en el texto institucional neutro", () => {
+        const msg = construirExplicacionPadre(["CATEGORIA_INVENTADA"]);
+        expect(msg).toContain("señales de una conducta que requiere atención");
+    });
+
+    it("sin conductas confirmadas: texto institucional neutro", () => {
+        const msg = construirExplicacionPadre([]);
+        expect(msg).toContain("no encontramos conductas concretas");
     });
 });

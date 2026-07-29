@@ -1,49 +1,39 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
-import { getParametroSistemaValor } from "@/lib/parametros";
 import { mapEstadoUsuario } from "@/lib/reporte-estados-usuario";
-import { generarAnalisisRubrica, type VotoRubricaModelo, type VotoRubricaCategoria } from "@/lib/ai/rubrica";
+import { construirExplicacionPadre } from "@/lib/expediente/mensaje-padre";
 import { formatPlataforma } from "@/lib/plataforma";
 import { formatCategoria } from "@/lib/labels";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const UMBRAL_PRESENCIA_DEFAULT = 0.6;
+/** Categorías internas que NUNCA se muestran al padre (spec 093-US2). */
+const CATEGORIAS_OCULTAS = new Set(["SPAM", "OTRO"]);
 
-function asStringArray(value: unknown): string[] {
+function categoriasDeSecundarias(value: unknown): string[] {
     if (!Array.isArray(value)) return [];
-    return value.filter((v): v is string => typeof v === "string");
-}
-
-interface CategoriaSecundaria {
-    categoria: string;
-    score: number;
-}
-
-function asCategoriasSecundarias(value: unknown): CategoriaSecundaria[] {
-    if (!Array.isArray(value)) return [];
-    return value.filter(
-        (v): v is CategoriaSecundaria =>
-            typeof v === "object" &&
-            v !== null &&
-            typeof (v as { categoria?: unknown }).categoria === "string" &&
-            typeof (v as { score?: unknown }).score === "number"
-    );
-}
-
-function parseUmbral(valor: string | null): number {
-    if (!valor) return UMBRAL_PRESENCIA_DEFAULT;
-    const parsed = parseFloat(valor);
-    return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : UMBRAL_PRESENCIA_DEFAULT;
+    const cats: string[] = [];
+    for (const item of value) {
+        if (typeof item === "object" && item !== null) {
+            const cat = (item as { categoria?: unknown }).categoria;
+            if (typeof cat === "string") cats.push(cat);
+        }
+    }
+    return cats;
 }
 
 /**
- * GET /api/reportes/mis-reportes/[id] — detalle PRIVADO del reporte (spec 090, US3).
- * Solo el dueño (PARENT autenticado) puede verlo. Expone la matriz de la rúbrica
- * (votos por modelo × categoría), los porcentajes de presencia y el análisis
- * determinista. NUNCA expone un "% de riesgo" global ni scores de persona.
+ * GET /api/reportes/mis-reportes/[id] — detalle PRIVADO del reporte (spec 090, US3;
+ * contrato rehecho en spec 116). Solo el dueño (PARENT autenticado) puede verlo.
+ *
+ * El padre ve SOLO tres cosas: las conductas CONFIRMADAS (las que superaron el
+ * umbral en el motor — la traza de votos ya no se lee aquí), qué significan
+ * (plantilla determinista D-23, nunca salida cruda del modelo) y, en la UI, los
+ * canales oficiales. La traza técnica completa (modelos, votos, porcentajes,
+ * umbrales, categorías descartadas) es superficie del admin (D-22): vive en el
+ * expediente de spec 096 y NUNCA sale por este endpoint.
  */
 export async function GET(_request: Request, context: RouteContext) {
     try {
@@ -54,9 +44,7 @@ export async function GET(_request: Request, context: RouteContext) {
             where: { id },
             include: {
                 plataforma: { select: { nombre: true, clave: true } },
-                clasificacion: {
-                    include: { rubricaVotos: { orderBy: [{ modelo: "asc" }, { categoria: "asc" }] } },
-                },
+                clasificacion: true,
             },
         });
 
@@ -68,85 +56,38 @@ export async function GET(_request: Request, context: RouteContext) {
         }
 
         const estadoUsuario = mapEstadoUsuario(reporte.estado);
+        const reporteJson = {
+            id: reporte.id,
+            identificador: reporte.identificador,
+            plataforma: formatPlataforma(reporte.plataforma.nombre, reporte.otraPlataforma, reporte.plataforma.clave),
+            ciudad: reporte.ciudad,
+            pais: reporte.pais,
+            creadoEn: reporte.creadoEn.toISOString(),
+            estadoVisual: estadoUsuario.estadoVisual,
+            badge: estadoUsuario.badge,
+            enProceso: estadoUsuario.enProceso,
+        };
 
         const clasificacion = reporte.clasificacion;
         if (!clasificacion) {
-            // Reporte pendiente/procesando: sin matriz todavía (no es error).
-            return NextResponse.json({
-                reporte: {
-                    id: reporte.id,
-                    identificador: reporte.identificador,
-                    plataforma: formatPlataforma(reporte.plataforma.nombre, reporte.otraPlataforma, reporte.plataforma.clave),
-                    ciudad: reporte.ciudad,
-                    pais: reporte.pais,
-                    creadoEn: reporte.creadoEn.toISOString(),
-                    estadoVisual: estadoUsuario.estadoVisual,
-                    badge: estadoUsuario.badge,
-                    enProceso: estadoUsuario.enProceso,
-                },
-                clasificacion: null,
-                votosModelos: [],
-                porcentajes: {},
-                analisis: null,
-            });
+            // Reporte pendiente/procesando: sin conductas todavía (no es error).
+            return NextResponse.json({ reporte: reporteJson, clasificacion: null });
         }
 
-        // Matriz de la rúbrica: votos agrupados por modelo.
-        const porModelo = new Map<string, Record<string, VotoRubricaCategoria>>();
-        for (const voto of clasificacion.rubricaVotos) {
-            const actual = porModelo.get(voto.modelo) ?? {};
-            actual[voto.categoria] = { cumple: voto.cumple, preguntasCumplidas: asStringArray(voto.preguntasJson) };
-            porModelo.set(voto.modelo, actual);
-        }
-
-        const votosModelos = [...porModelo.entries()].map(([modelo, categorias]) => ({
-            modelo,
-            categorias: Object.entries(categorias).map(([categoria, v]) => ({
-                categoria,
-                cumple: v.cumple,
-                preguntasCumplidas: v.preguntasCumplidas,
-            })),
-        }));
-
-        // % por categoría = modelos que marcaron 1 / N modelos.
-        const categorias = [...new Set(clasificacion.rubricaVotos.map((v) => v.categoria))].sort();
-        const nModelos = Math.max(1, porModelo.size);
-        const porcentajes: Record<string, number> = {};
-        for (const cat of categorias) {
-            const unos = clasificacion.rubricaVotos.filter((v) => v.categoria === cat && v.cumple).length;
-            porcentajes[cat] = unos / nModelos;
-        }
-
-        const umbral = parseUmbral(await getParametroSistemaValor("ia.rubrica.umbral_presencia"));
-        const votosParaAnalisis: VotoRubricaModelo[] = [...porModelo.entries()].map(([modelo, categoriasVoto]) => ({
-            modelo,
-            categorias: categoriasVoto,
-            metrics: { modelo, latenciaMs: 0, promptTokens: null, responseTokens: null, totalDuration: null, loadDuration: null },
-            fallback: false,
-        }));
-        const analisis = generarAnalisisRubrica(votosParaAnalisis, porcentajes, umbral);
+        // Conductas CONFIRMADAS = principal + secundarias persistidas (el motor
+        // ya guarda en secundarias SOLO las que superaron el umbral de presencia;
+        // las descartadas quedan en ClasificacionRubricaVoto, que aquí no se lee).
+        const confirmadas = [
+            clasificacion.categoria,
+            ...categoriasDeSecundarias(clasificacion.categoriasSecundarias),
+        ].filter((cat, i, arr) => !CATEGORIAS_OCULTAS.has(cat) && arr.indexOf(cat) === i);
 
         return NextResponse.json({
-            reporte: {
-                id: reporte.id,
-                identificador: reporte.identificador,
-                plataforma: formatPlataforma(reporte.plataforma.nombre, reporte.otraPlataforma, reporte.plataforma.clave),
-                ciudad: reporte.ciudad,
-                pais: reporte.pais,
-                creadoEn: reporte.creadoEn.toISOString(),
-                estadoVisual: estadoUsuario.estadoVisual,
-                badge: estadoUsuario.badge,
-                enProceso: estadoUsuario.enProceso,
-            },
+            reporte: reporteJson,
             clasificacion: {
-                categoria: clasificacion.categoria,
-                categoriaLabel: formatCategoria(clasificacion.categoria),
-                confianza: clasificacion.confianza,
-                categoriasSecundarias: asCategoriasSecundarias(clasificacion.categoriasSecundarias),
+                conductas: confirmadas.map((cat) => ({ categoria: cat, label: formatCategoria(cat) })),
+                mensaje: construirExplicacionPadre(confirmadas),
             },
-            votosModelos,
-            porcentajes,
-            analisis,
         });
     } catch (error) {
         if (error instanceof AppError) {

@@ -78,9 +78,23 @@ const PLANTILLAS_CONDUCTA: Record<string, PlantillaConducta> = {
     SPAM: PLANTILLA_GENERICA,
 };
 
-export function construirMensajePadre(input: MensajePadreInput): string {    const plantillas = input.conductas.map((c) => PLANTILLAS_CONDUCTA[c] ?? PLANTILLA_GENERICA);
+/** Plantillas de las conductas dadas, deduplicadas por texto de hallazgo. */
+function plantillasUnicas(conductas: string[]): PlantillaConducta[] {
+    const plantillas = conductas.map((c) => PLANTILLAS_CONDUCTA[c] ?? PLANTILLA_GENERICA);
     // Dedup por texto de hallazgo (varias conductas pueden mapear a la genérica).
-    const unicas = plantillas.filter((p, i) => plantillas.findIndex((q) => q.hallazgo === p.hallazgo) === i);
+    return plantillas.filter((p, i) => plantillas.findIndex((q) => q.hallazgo === p.hallazgo) === i);
+}
+
+/** Une los hallazgos en una lista en español: "a", "a y b", "a, b y c". */
+function listarHallazgos(unicas: PlantillaConducta[]): string {
+    const hallazgos = unicas.map((p) => p.hallazgo);
+    return hallazgos.length === 1
+        ? hallazgos[0]
+        : `${hallazgos.slice(0, -1).join(", ")} y ${hallazgos[hallazgos.length - 1]}`;
+}
+
+export function construirMensajePadre(input: MensajePadreInput): string {
+    const unicas = plantillasUnicas(input.conductas);
 
     const lineas: string[] = [];
     lineas.push("[BORRADOR — mensaje de referencia para el acompañamiento a la familia. No se envía automáticamente.]");
@@ -90,9 +104,7 @@ export function construirMensajePadre(input: MensajePadreInput): string {    con
     if (unicas.length === 0) {
         lineas.push("Revisamos el caso y no encontramos conductas concretas que describir en este momento.");
     } else {
-        const hallazgos = unicas.map((p) => p.hallazgo);
-        const lista = hallazgos.length === 1 ? hallazgos[0] : `${hallazgos.slice(0, -1).join(", ")} y ${hallazgos[hallazgos.length - 1]}`;
-        lineas.push(`Revisamos el caso y encontramos ${lista}.`);
+        lineas.push(`Revisamos el caso y encontramos ${listarHallazgos(unicas)}.`);
         lineas.push("");
         lineas.push("Te recomendamos:");
         for (const p of unicas) {
@@ -111,6 +123,31 @@ export function construirMensajePadre(input: MensajePadreInput): string {    con
     lineas.push("");
     lineas.push("Este mensaje es un borrador orientativo: la revisión final del caso corresponde al equipo de validación.");
 
+    return lineas.join("\n");
+}
+
+/**
+ * Explicación para la VISTA del padre (spec 116): reutiliza las MISMAS
+ * plantillas deterministas de arriba (D-23, nunca salida cruda del modelo),
+ * pero sin el marco de "borrador" (eso es del expediente del admin) y sin
+ * canales dentro del texto (en la vista los muestra <CanalesOficiales />).
+ * Recibe SOLO las conductas confirmadas (las que superaron el umbral en el
+ * motor); las descartadas nunca llegan aquí.
+ */
+export function construirExplicacionPadre(conductas: string[]): string {
+    const unicas = plantillasUnicas(conductas);
+
+    if (unicas.length === 0) {
+        return "Revisamos el caso y no encontramos conductas concretas que describir en este momento.";
+    }
+
+    const lineas: string[] = [];
+    lineas.push(`Revisamos el caso y encontramos ${listarHallazgos(unicas)}.`);
+    lineas.push("");
+    lineas.push("Te recomendamos:");
+    for (const p of unicas) {
+        lineas.push(`- ${p.recomendacion}`);
+    }
     return lineas.join("\n");
 }
 
