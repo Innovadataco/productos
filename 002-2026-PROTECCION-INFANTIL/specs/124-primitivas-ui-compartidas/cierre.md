@@ -82,14 +82,21 @@ SeguimientoClient) sin modificarlos.
 
 ## Evidencia del gate (bajo candado `/tmp/pi-gate-lock`)
 
-- `npx tsc --noEmit`: sin errores en archivos propios (los errores
+- `npx tsc --noEmit`: **0 errores** en el árbol completo (los errores
   transitorios de `src/lib/ai/*` durante la noche eran de agentes paralelos
-  en vuelo; al cierre el árbol completo compila).
-- `npx eslint` sobre cada archivo migrado: 0 errores en cada commit.
+  en vuelo; al cierre compila entero).
+- `npm run lint`: **0 errores**; 1 warning preexistente en
+  `src/components/modules/ia/IaModelSelector.tsx:77` (zona IA, fuera de
+  alcance de este bloque).
 - Vitest por primitiva (21 tests) y por pantalla con test existente: verde
-  en cada paso.
-- Suite completa + build: ver sección "Gate final" más abajo (resultados
-  registrados al ejecutarse).
+  en cada paso, sin modificar ningún test existente.
+- **Suite completa**: 1196 pasados / 1198 (1 skipped normal). Único fallo:
+  `src/lib/specs-discipline.test.ts` — exige que cada carpeta `specs/NNN`
+  esté indexada en `specs/README.md` y faltan **122, 123, 124 y 125** (las
+  cuatro specs de la cola nocturna, no solo esta). La consigna del bloque
+  prohíbe tocar `specs/README.md`: queda para ZEUS/coordinador agregar las
+  4 entradas; con eso el test vuelve a verde sin tocar nada más.
+- `npm run build`: **éxito** (árbol de rutas generado sin errores).
 
 ## Reglas respetadas
 
