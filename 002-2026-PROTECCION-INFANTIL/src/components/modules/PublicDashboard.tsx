@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { BarChart } from "./BarChart";
 import { DonutChart } from "./DonutChart";
-import { MetricCard } from "./MetricCard";
+import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
 import { ChartCard } from "./ChartCard";
 import { MiniList } from "./MiniList";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -102,9 +102,9 @@ export function PublicDashboard() {
 
             {/* KPIs */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <MetricCard label="Reportes registrados" value={totales.reportes} />
-                <MetricCard label="Identificadores visibles" value={totales.identificadoresUnicos} />
-                <MetricCard
+                <TarjetaMetrica label="Reportes registrados" value={totales.reportes} />
+                <TarjetaMetrica label="Identificadores visibles" value={totales.identificadoresUnicos} />
+                <TarjetaMetrica
                     label="Reportes autenticados"
                     value={Math.round((totales.reportesAutenticados / totalOrigen) * 100)}
                     suffix="%"
