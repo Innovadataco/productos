@@ -2,30 +2,22 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createToken, verifyToken, setSessionCookie } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { verificarCompletarSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
     try {
-        const body = (await request.json()) as {
-            token: string;
-            password: string;
-            nombre?: string;
-        };
-
-        if (!body.token || !body.password) {
+        // SPEC-125: esquema Zod; los mensajes son contrato del frontend (registro/page.tsx).
+        const bodyRaw = await request.json().catch(() => undefined);
+        const parsed = verificarCompletarSchema.safeParse(bodyRaw);
+        if (!parsed.success) {
             return NextResponse.json(
-                { error: { message: "Token y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: parsed.error.issues[0]?.message || "Token y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
+        const { token, password, nombre } = parsed.data;
 
-        if (body.password.length < 8 || !/[a-zA-Z]/.test(body.password) || !/[0-9]/.test(body.password)) {
-            return NextResponse.json(
-                { error: { message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            );
-        }
-
-        const payload = await verifyToken(body.token);
+        const payload = await verifyToken(token);
         if (!payload || payload.type !== "verification" || !payload.sub) {
             return NextResponse.json(
                 { error: { message: "Token inválido o expirado", code: ERROR_CODES.AUTH_EXPIRED } },
@@ -45,8 +37,8 @@ export async function POST(request: Request) {
         const user = await prisma.usuario.create({
             data: {
                 email,
-                nombre: body.nombre || null,
-                passwordHash: await hashPassword(body.password),
+                nombre: nombre || null,
+                passwordHash: await hashPassword(password),
                 rol: "PARENT",
             },
         });

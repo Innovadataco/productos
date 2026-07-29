@@ -2,18 +2,20 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { verificarTokenHash } from "@/lib/token-recuperacion";
+import { recuperarValidarQuerySchema } from "@/lib/validators";
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const token = searchParams.get("token");
-
-        if (!token) {
+        // SPEC-125: esquema Zod también para query params.
+        const parsed = recuperarValidarQuerySchema.safeParse({ token: searchParams.get("token") });
+        if (!parsed.success) {
             return NextResponse.json(
                 { error: { message: "Token requerido", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
+        const { token } = parsed.data;
 
         const tokensActivos = await prisma.tokenRecuperacion.findMany({
             where: {

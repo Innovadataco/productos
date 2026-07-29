@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { enviarCodigoVerificacion } from "@/lib/email";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { verificarSolicitarSchema } from "@/lib/validators";
+import { logger } from "@/lib/logger";
 
 function generateCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -24,15 +26,16 @@ function buildRateLimitResponse(retryAfter: number, headers: Record<string, stri
 
 export async function POST(request: Request) {
     try {
-        const body = (await request.json()) as { email: string };
-        const email = body.email?.toLowerCase().trim();
-
-        if (!email || !email.includes("@")) {
+        // SPEC-125: esquema Zod; el mensaje es contrato del frontend (registro/page.tsx).
+        const bodyRaw = await request.json().catch(() => undefined);
+        const parsed = verificarSolicitarSchema.safeParse(bodyRaw);
+        if (!parsed.success) {
             return NextResponse.json(
                 { error: { message: "Email inválido", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
+        const email = parsed.data.email;
 
         // Rate limit por IP
         const rateIp = await checkRateLimit(request, "verificacion_solicitar");
@@ -88,7 +91,7 @@ export async function POST(request: Request) {
         } catch (err) {
             const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
             emailError = err instanceof Error ? err.message : String(err);
-            console.error("Failed to send verification email to:", masked, "error:", emailError);
+            logger.error(`[VERIFICAR] Envío de email de verificación: fallido — ${masked}: ${emailError}`);
         }
 
         const response: Record<string, unknown> = {
