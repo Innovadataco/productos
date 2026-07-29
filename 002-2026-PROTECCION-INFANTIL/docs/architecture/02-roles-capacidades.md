@@ -1,0 +1,1343 @@
+> GENERADO por `scripts/arch/generar-roles-capacidades.ts` — no editar a mano.
+> Fuentes: `src/lib/proxy.ts`, `src/lib/nav-items.ts`, `src/lib/permisos-catalogo.ts`, `src/components/modules/NavHeader.tsx`, `prisma/seed.ts`, `src/app/**`.
+> Regenerar: `npx tsx scripts/arch/generar-roles-capacidades.ts` (o `npm run arch:check` para verificar).
+
+# 02 · Roles y capacidades (puerta y permisos)
+
+Dos ejes documentados **por separado, sin reconciliar** (su reconciliación es
+decisión de ZEUS, fuera de SPEC-126):
+
+1. **Eje de rutas (la puerta)**: `proxy()` decide quién pasa; `esDestinoPermitidoPorRol`
+   es el MISMO criterio reusable fuera del middleware (lo consume toda la navegación, D-41).
+2. **Eje de módulos (la BD)**: `PermisoModulo` decide QUÉ se ofrece dentro de un área
+   (los menús filtran por módulo ∧ predicado desde la D-41).
+
+La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (usuario
+activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
+Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
+
+Inventario: 6 roles (5 autenticados + anónimo) × 185 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1110 combinaciones.
+
+Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
+
+## Matriz rol × ruta (veredicto real)
+
+### ADMIN
+
+| Ruta | Tipo | Puerta (`proxy()`) | Predicado | Alineado |
+| --- | --- | --- | --- | --- |
+| `/` | página | permitir | permite | sí |
+| `//` | página | permitir | permite | sí |
+| `/api/` | api | permitir | permite | sí |
+| `/api/admin` | api | permitir | permite | sí |
+| `/api/admin/anti-abuso/simulacion-score` | api | permitir | permite | sí |
+| `/api/admin/audit-logs` | api | permitir | permite | sí |
+| `/api/admin/colegios` | api | permitir | permite | sí |
+| `/api/admin/colegios/[id]` | api | permitir | permite | sí |
+| `/api/admin/colegios/[id]/reenviar-email` | api | permitir | permite | sí |
+| `/api/admin/colegios/[id]/regenerar-password` | api | permitir | permite | sí |
+| `/api/admin/comite/[id]/asignar` | api | permitir | permite | sí |
+| `/api/admin/comite/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/admin/comite/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]/documento` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]/tomar` | api | permitir | permite | sí |
+| `/api/admin/comite/integrantes` | api | permitir | permite | sí |
+| `/api/admin/comite/integrantes/[id]` | api | permitir | permite | sí |
+| `/api/admin/comite/mias` | api | permitir | permite | sí |
+| `/api/admin/comite/pendientes` | api | permitir | permite | sí |
+| `/api/admin/comite/solicitudes` | api | permitir | permite | sí |
+| `/api/admin/correcciones` | api | permitir | permite | sí |
+| `/api/admin/dataset-entrenamiento` | api | permitir | permite | sí |
+| `/api/admin/estadisticas` | api | permitir | permite | sí |
+| `/api/admin/estadisticas/clasificacion` | api | permitir | permite | sí |
+| `/api/admin/ia/evals` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/[id]` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/casos` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/casos/[id]/desactivar` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/historial` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/[id]` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/[id]/resultados` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/comparar` | api | permitir | permite | sí |
+| `/api/admin/ia/modelos` | api | permitir | permite | sí |
+| `/api/admin/ia/ollama/probar` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/config` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/preguntas` | api | permitir | permite | sí |
+| `/api/admin/ia/sandbox` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/analisis` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/cancelar` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/export` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/resultados` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/comparar` | api | permitir | permite | sí |
+| `/api/admin/operadores` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/reenviar-email` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/regenerar-password` | api | permitir | permite | sí |
+| `/api/admin/operadores/asignacion` | api | permitir | permite | sí |
+| `/api/admin/operadores/modelo` | api | permitir | permite | sí |
+| `/api/admin/padres` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
+| `/api/admin/permisos-modulos` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]/confirmar` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/anonimizar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/baja` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/escalar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/expediente` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/spam/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/spam/pendientes` | api | permitir | permite | sí |
+| `/api/alertas` | api | permitir | permite | sí |
+| `/api/alertas/[id]` | api | permitir | permite | sí |
+| `/api/alertas/suscribir` | api | permitir | permite | sí |
+| `/api/apelaciones` | api | permitir | permite | sí |
+| `/api/apelaciones/mias` | api | permitir | permite | sí |
+| `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/login` | api | permitir | permite | sí |
+| `/api/auth/logout` | api | permitir | permite | sí |
+| `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |
+| `/api/auth/recuperar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/recuperar/validar` | api | permitir | permite | sí |
+| `/api/auth/register` | api | permitir | permite | sí |
+| `/api/auth/verificar/completar` | api | permitir | permite | sí |
+| `/api/auth/verificar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/verificar/validar` | api | permitir | permite | sí |
+| `/api/circulo-confianza` | api | permitir | permite | sí |
+| `/api/circulo-confianza/[id]` | api | permitir | permite | sí |
+| `/api/circulo-confianza/agregado` | api | permitir | permite | sí |
+| `/api/circulo-confianza/preferencias` | api | permitir | permite | sí |
+| `/api/ciudades` | api | permitir | permite | sí |
+| `/api/ciudades/buscar` | api | permitir | permite | sí |
+| `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/alertas` | api | permitir | permite | sí |
+| `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/auditoria` | api | permitir | permite | sí |
+| `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cursos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/config/parametros` | api | permitir | permite | sí |
+| `/api/config/parametros/[clave]` | api | permitir | permite | sí |
+| `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
+| `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consulta` | api | permitir | permite | sí |
+| `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/departamentos` | api | permitir | permite | sí |
+| `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
+| `/api/health/worker` | api | permitir | permite | sí |
+| `/api/me` | api | permitir | permite | sí |
+| `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/paises` | api | permitir | permite | sí |
+| `/api/plataformas` | api | permitir | permite | sí |
+| `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/fallback` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
+| `/api/reportes/procesar` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/cambiar-password` | página | permitir | permite | sí |
+| `/consulta` | página | permitir | permite | sí |
+| `/dashboard` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard-publico` | página | permitir | permite | sí |
+| `/dashboard/admin` | página | permitir | permite | sí |
+| `/dashboard/admin/anti-abuso` | página | permitir | permite | sí |
+| `/dashboard/admin/colegios` | página | permitir | permite | sí |
+| `/dashboard/admin/colegios/nuevo` | página | permitir | permite | sí |
+| `/dashboard/admin/comite` | página | permitir | permite | sí |
+| `/dashboard/admin/comite/apelaciones` | página | permitir | permite | sí |
+| `/dashboard/admin/comite/auditoria` | página | permitir | permite | sí |
+| `/dashboard/admin/comite/gestion` | página | permitir | permite | sí |
+| `/dashboard/admin/configuracion` | página | permitir | permite | sí |
+| `/dashboard/admin/dataset-entrenamiento` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/clasificacion` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
+| `/dashboard/admin/ia` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/asignar` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/auditoria` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/gestion` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/modelo` | página | permitir | permite | sí |
+| `/dashboard/admin/padres` | página | permitir | permite | sí |
+| `/dashboard/admin/spam` | página | permitir | permite | sí |
+| `/dashboard/apelaciones` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/alertas` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/alumnos/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/auditoria` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/cursos` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/cursos/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/cursos/carga` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/cursos/nuevo` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/login` | página | permitir | permite | sí |
+| `/mis-reportes` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/offline` | página | permitir | permite | sí |
+| `/privacidad` | página | permitir | permite | sí |
+| `/recuperar` | página | permitir | permite | sí |
+| `/recuperar/[token]` | página | permitir | permite | sí |
+| `/registro` | página | permitir | permite | sí |
+| `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/seguimiento` | página | permitir | permite | sí |
+| `/terminos` | página | permitir | permite | sí |
+
+### OPERADOR
+
+| Ruta | Tipo | Puerta (`proxy()`) | Predicado | Alineado |
+| --- | --- | --- | --- | --- |
+| `/` | página | permitir | permite | sí |
+| `//` | página | permitir | permite | sí |
+| `/api/` | api | permitir | permite | sí |
+| `/api/admin` | api | permitir | permite | sí |
+| `/api/admin/anti-abuso/simulacion-score` | api | permitir | permite | sí |
+| `/api/admin/audit-logs` | api | permitir | permite | sí |
+| `/api/admin/colegios` | api | permitir | permite | sí |
+| `/api/admin/colegios/[id]` | api | permitir | permite | sí |
+| `/api/admin/colegios/[id]/reenviar-email` | api | permitir | permite | sí |
+| `/api/admin/colegios/[id]/regenerar-password` | api | permitir | permite | sí |
+| `/api/admin/comite/[id]/asignar` | api | permitir | permite | sí |
+| `/api/admin/comite/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/admin/comite/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]/documento` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]/tomar` | api | permitir | permite | sí |
+| `/api/admin/comite/integrantes` | api | permitir | permite | sí |
+| `/api/admin/comite/integrantes/[id]` | api | permitir | permite | sí |
+| `/api/admin/comite/mias` | api | permitir | permite | sí |
+| `/api/admin/comite/pendientes` | api | permitir | permite | sí |
+| `/api/admin/comite/solicitudes` | api | permitir | permite | sí |
+| `/api/admin/correcciones` | api | permitir | permite | sí |
+| `/api/admin/dataset-entrenamiento` | api | permitir | permite | sí |
+| `/api/admin/estadisticas` | api | permitir | permite | sí |
+| `/api/admin/estadisticas/clasificacion` | api | permitir | permite | sí |
+| `/api/admin/ia/evals` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/[id]` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/casos` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/casos/[id]/desactivar` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/historial` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/[id]` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/[id]/resultados` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/comparar` | api | permitir | permite | sí |
+| `/api/admin/ia/modelos` | api | permitir | permite | sí |
+| `/api/admin/ia/ollama/probar` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/config` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/preguntas` | api | permitir | permite | sí |
+| `/api/admin/ia/sandbox` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/analisis` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/cancelar` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/export` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/resultados` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/comparar` | api | permitir | permite | sí |
+| `/api/admin/operadores` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/reenviar-email` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/regenerar-password` | api | permitir | permite | sí |
+| `/api/admin/operadores/asignacion` | api | permitir | permite | sí |
+| `/api/admin/operadores/modelo` | api | permitir | permite | sí |
+| `/api/admin/padres` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
+| `/api/admin/permisos-modulos` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]/confirmar` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/anonimizar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/baja` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/escalar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/expediente` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/spam/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/spam/pendientes` | api | permitir | permite | sí |
+| `/api/alertas` | api | permitir | permite | sí |
+| `/api/alertas/[id]` | api | permitir | permite | sí |
+| `/api/alertas/suscribir` | api | permitir | permite | sí |
+| `/api/apelaciones` | api | permitir | permite | sí |
+| `/api/apelaciones/mias` | api | permitir | permite | sí |
+| `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/login` | api | permitir | permite | sí |
+| `/api/auth/logout` | api | permitir | permite | sí |
+| `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |
+| `/api/auth/recuperar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/recuperar/validar` | api | permitir | permite | sí |
+| `/api/auth/register` | api | permitir | permite | sí |
+| `/api/auth/verificar/completar` | api | permitir | permite | sí |
+| `/api/auth/verificar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/verificar/validar` | api | permitir | permite | sí |
+| `/api/circulo-confianza` | api | permitir | permite | sí |
+| `/api/circulo-confianza/[id]` | api | permitir | permite | sí |
+| `/api/circulo-confianza/agregado` | api | permitir | permite | sí |
+| `/api/circulo-confianza/preferencias` | api | permitir | permite | sí |
+| `/api/ciudades` | api | permitir | permite | sí |
+| `/api/ciudades/buscar` | api | permitir | permite | sí |
+| `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/alertas` | api | permitir | permite | sí |
+| `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/auditoria` | api | permitir | permite | sí |
+| `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cursos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/config/parametros` | api | permitir | permite | sí |
+| `/api/config/parametros/[clave]` | api | permitir | permite | sí |
+| `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
+| `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consulta` | api | permitir | permite | sí |
+| `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/departamentos` | api | permitir | permite | sí |
+| `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
+| `/api/health/worker` | api | permitir | permite | sí |
+| `/api/me` | api | permitir | permite | sí |
+| `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/paises` | api | permitir | permite | sí |
+| `/api/plataformas` | api | permitir | permite | sí |
+| `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/fallback` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
+| `/api/reportes/procesar` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/cambiar-password` | página | permitir | permite | sí |
+| `/consulta` | página | permitir | permite | sí |
+| `/dashboard` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard-publico` | página | permitir | permite | sí |
+| `/dashboard/admin` | página | permitir | permite | sí |
+| `/dashboard/admin/anti-abuso` | página | permitir | permite | sí |
+| `/dashboard/admin/colegios` | página | permitir | permite | sí |
+| `/dashboard/admin/colegios/nuevo` | página | permitir | permite | sí |
+| `/dashboard/admin/comite` | página | permitir | permite | sí |
+| `/dashboard/admin/comite/apelaciones` | página | permitir | permite | sí |
+| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/admin/configuracion` | página | permitir | permite | sí |
+| `/dashboard/admin/dataset-entrenamiento` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/clasificacion` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
+| `/dashboard/admin/ia` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/asignar` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/auditoria` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/gestion` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/modelo` | página | permitir | permite | sí |
+| `/dashboard/admin/padres` | página | permitir | permite | sí |
+| `/dashboard/admin/spam` | página | permitir | permite | sí |
+| `/dashboard/apelaciones` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/alertas` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/alumnos/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/auditoria` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/cursos` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/cursos/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/cursos/carga` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/cursos/nuevo` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/login` | página | permitir | permite | sí |
+| `/mis-reportes` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/offline` | página | permitir | permite | sí |
+| `/privacidad` | página | permitir | permite | sí |
+| `/recuperar` | página | permitir | permite | sí |
+| `/recuperar/[token]` | página | permitir | permite | sí |
+| `/registro` | página | permitir | permite | sí |
+| `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/seguimiento` | página | permitir | permite | sí |
+| `/terminos` | página | permitir | permite | sí |
+
+### COMITE_VALIDACION
+
+| Ruta | Tipo | Puerta (`proxy()`) | Predicado | Alineado |
+| --- | --- | --- | --- | --- |
+| `/` | página | permitir | permite | sí |
+| `//` | página | permitir | permite | sí |
+| `/api/` | api | permitir | permite | sí |
+| `/api/admin` | api | permitir | permite | sí |
+| `/api/admin/anti-abuso/simulacion-score` | api | permitir | permite | sí |
+| `/api/admin/audit-logs` | api | permitir | permite | sí |
+| `/api/admin/colegios` | api | permitir | permite | sí |
+| `/api/admin/colegios/[id]` | api | permitir | permite | sí |
+| `/api/admin/colegios/[id]/reenviar-email` | api | permitir | permite | sí |
+| `/api/admin/colegios/[id]/regenerar-password` | api | permitir | permite | sí |
+| `/api/admin/comite/[id]/asignar` | api | permitir | permite | sí |
+| `/api/admin/comite/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/admin/comite/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]/documento` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/comite/apelaciones/[id]/tomar` | api | permitir | permite | sí |
+| `/api/admin/comite/integrantes` | api | permitir | permite | sí |
+| `/api/admin/comite/integrantes/[id]` | api | permitir | permite | sí |
+| `/api/admin/comite/mias` | api | permitir | permite | sí |
+| `/api/admin/comite/pendientes` | api | permitir | permite | sí |
+| `/api/admin/comite/solicitudes` | api | permitir | permite | sí |
+| `/api/admin/correcciones` | api | permitir | permite | sí |
+| `/api/admin/dataset-entrenamiento` | api | permitir | permite | sí |
+| `/api/admin/estadisticas` | api | permitir | permite | sí |
+| `/api/admin/estadisticas/clasificacion` | api | permitir | permite | sí |
+| `/api/admin/ia/evals` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/[id]` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/casos` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/casos/[id]/desactivar` | api | permitir | permite | sí |
+| `/api/admin/ia/evals/historial` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/[id]` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/[id]/resultados` | api | permitir | permite | sí |
+| `/api/admin/ia/experimentos/comparar` | api | permitir | permite | sí |
+| `/api/admin/ia/modelos` | api | permitir | permite | sí |
+| `/api/admin/ia/ollama/probar` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/config` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/preguntas` | api | permitir | permite | sí |
+| `/api/admin/ia/sandbox` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/analisis` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/cancelar` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/export` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/[id]/resultados` | api | permitir | permite | sí |
+| `/api/admin/ia/simulaciones/comparar` | api | permitir | permite | sí |
+| `/api/admin/operadores` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/reenviar-email` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/regenerar-password` | api | permitir | permite | sí |
+| `/api/admin/operadores/asignacion` | api | permitir | permite | sí |
+| `/api/admin/operadores/modelo` | api | permitir | permite | sí |
+| `/api/admin/padres` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
+| `/api/admin/permisos-modulos` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]/confirmar` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/anonimizar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/baja` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/escalar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/expediente` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/spam/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/spam/pendientes` | api | permitir | permite | sí |
+| `/api/alertas` | api | permitir | permite | sí |
+| `/api/alertas/[id]` | api | permitir | permite | sí |
+| `/api/alertas/suscribir` | api | permitir | permite | sí |
+| `/api/apelaciones` | api | permitir | permite | sí |
+| `/api/apelaciones/mias` | api | permitir | permite | sí |
+| `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/login` | api | permitir | permite | sí |
+| `/api/auth/logout` | api | permitir | permite | sí |
+| `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |
+| `/api/auth/recuperar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/recuperar/validar` | api | permitir | permite | sí |
+| `/api/auth/register` | api | permitir | permite | sí |
+| `/api/auth/verificar/completar` | api | permitir | permite | sí |
+| `/api/auth/verificar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/verificar/validar` | api | permitir | permite | sí |
+| `/api/circulo-confianza` | api | permitir | permite | sí |
+| `/api/circulo-confianza/[id]` | api | permitir | permite | sí |
+| `/api/circulo-confianza/agregado` | api | permitir | permite | sí |
+| `/api/circulo-confianza/preferencias` | api | permitir | permite | sí |
+| `/api/ciudades` | api | permitir | permite | sí |
+| `/api/ciudades/buscar` | api | permitir | permite | sí |
+| `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/alertas` | api | permitir | permite | sí |
+| `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/auditoria` | api | permitir | permite | sí |
+| `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cursos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/config/parametros` | api | permitir | permite | sí |
+| `/api/config/parametros/[clave]` | api | permitir | permite | sí |
+| `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
+| `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consulta` | api | permitir | permite | sí |
+| `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/departamentos` | api | permitir | permite | sí |
+| `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
+| `/api/health/worker` | api | permitir | permite | sí |
+| `/api/me` | api | permitir | permite | sí |
+| `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/paises` | api | permitir | permite | sí |
+| `/api/plataformas` | api | permitir | permite | sí |
+| `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/fallback` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
+| `/api/reportes/procesar` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/cambiar-password` | página | permitir | permite | sí |
+| `/consulta` | página | permitir | permite | sí |
+| `/dashboard` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard-publico` | página | permitir | permite | sí |
+| `/dashboard/admin` | página | permitir | permite | sí |
+| `/dashboard/admin/anti-abuso` | página | permitir | permite | sí |
+| `/dashboard/admin/colegios` | página | permitir | permite | sí |
+| `/dashboard/admin/colegios/nuevo` | página | permitir | permite | sí |
+| `/dashboard/admin/comite` | página | permitir | permite | sí |
+| `/dashboard/admin/comite/apelaciones` | página | permitir | permite | sí |
+| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/admin/configuracion` | página | permitir | permite | sí |
+| `/dashboard/admin/dataset-entrenamiento` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/clasificacion` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
+| `/dashboard/admin/ia` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/asignar` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/auditoria` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/gestion` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/modelo` | página | permitir | permite | sí |
+| `/dashboard/admin/padres` | página | permitir | permite | sí |
+| `/dashboard/admin/spam` | página | permitir | permite | sí |
+| `/dashboard/apelaciones` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/circulo-confianza` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/alertas` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/alumnos/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/auditoria` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/cursos` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/cursos/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/cursos/carga` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/cursos/nuevo` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/login` | página | permitir | permite | sí |
+| `/mis-reportes` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/offline` | página | permitir | permite | sí |
+| `/privacidad` | página | permitir | permite | sí |
+| `/recuperar` | página | permitir | permite | sí |
+| `/recuperar/[token]` | página | permitir | permite | sí |
+| `/registro` | página | permitir | permite | sí |
+| `/reportar` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/seguimiento` | página | permitir | permite | sí |
+| `/terminos` | página | permitir | permite | sí |
+
+### SCHOOL_ADMIN
+
+| Ruta | Tipo | Puerta (`proxy()`) | Predicado | Alineado |
+| --- | --- | --- | --- | --- |
+| `/` | página | permitir | permite | sí |
+| `//` | página | permitir | permite | sí |
+| `/api/` | api | HTTP 403 | no permite | sí |
+| `/api/admin` | api | HTTP 403 | no permite | sí |
+| `/api/admin/anti-abuso/simulacion-score` | api | HTTP 403 | no permite | sí |
+| `/api/admin/audit-logs` | api | HTTP 403 | no permite | sí |
+| `/api/admin/colegios` | api | HTTP 403 | no permite | sí |
+| `/api/admin/colegios/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/colegios/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
+| `/api/admin/colegios/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/[id]/asignar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/[id]/reasignar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/[id]/resolver` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones/[id]/documento` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones/[id]/resolver` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones/[id]/tomar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/integrantes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/integrantes/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/mias` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/pendientes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/solicitudes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/correcciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/dataset-entrenamiento` | api | HTTP 403 | no permite | sí |
+| `/api/admin/estadisticas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/estadisticas/clasificacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals/casos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals/casos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals/historial` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos/[id]/resultados` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos/comparar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/modelos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/ollama/probar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/config` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/preguntas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/sandbox` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]/analisis` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]/cancelar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]/export` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/comparar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/asignacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/modelo` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
+| `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision/[id]/confirmar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision/[id]/reasignar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/anonimizar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/baja` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/escalar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/expediente` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/[id]/resolver` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/pendientes` | api | HTTP 403 | no permite | sí |
+| `/api/alertas` | api | HTTP 403 | no permite | sí |
+| `/api/alertas/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/alertas/suscribir` | api | HTTP 403 | no permite | sí |
+| `/api/apelaciones` | api | HTTP 403 | no permite | sí |
+| `/api/apelaciones/mias` | api | HTTP 403 | no permite | sí |
+| `/api/auth` | api | HTTP 403 | no permite | sí |
+| `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/login` | api | HTTP 403 | no permite | sí |
+| `/api/auth/logout` | api | permitir | permite | sí |
+| `/api/auth/recuperar/restablecer` | api | HTTP 403 | no permite | sí |
+| `/api/auth/recuperar/solicitar` | api | HTTP 403 | no permite | sí |
+| `/api/auth/recuperar/validar` | api | HTTP 403 | no permite | sí |
+| `/api/auth/register` | api | HTTP 403 | no permite | sí |
+| `/api/auth/verificar/completar` | api | HTTP 403 | no permite | sí |
+| `/api/auth/verificar/solicitar` | api | HTTP 403 | no permite | sí |
+| `/api/auth/verificar/validar` | api | HTTP 403 | no permite | sí |
+| `/api/circulo-confianza` | api | HTTP 403 | no permite | sí |
+| `/api/circulo-confianza/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/circulo-confianza/agregado` | api | HTTP 403 | no permite | sí |
+| `/api/circulo-confianza/preferencias` | api | HTTP 403 | no permite | sí |
+| `/api/ciudades` | api | HTTP 403 | no permite | sí |
+| `/api/ciudades/buscar` | api | HTTP 403 | no permite | sí |
+| `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/alertas` | api | permitir | permite | sí |
+| `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/auditoria` | api | permitir | permite | sí |
+| `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cursos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/config/parametros` | api | HTTP 403 | no permite | sí |
+| `/api/config/parametros/[clave]` | api | HTTP 403 | no permite | sí |
+| `/api/config/parametros/[clave]/revelar` | api | HTTP 403 | no permite | sí |
+| `/api/config/parametros/publicos` | api | HTTP 403 | no permite | sí |
+| `/api/consulta` | api | permitir | permite | sí |
+| `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/departamentos` | api | HTTP 403 | no permite | sí |
+| `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | HTTP 403 | no permite | sí |
+| `/api/health/worker` | api | HTTP 403 | no permite | sí |
+| `/api/me` | api | permitir | permite | sí |
+| `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/paises` | api | HTTP 403 | no permite | sí |
+| `/api/plataformas` | api | HTTP 403 | no permite | sí |
+| `/api/reportes` | api | HTTP 403 | no permite | sí |
+| `/api/reportes/fallback` | api | HTTP 403 | no permite | sí |
+| `/api/reportes/mis-reportes` | api | HTTP 403 | no permite | sí |
+| `/api/reportes/mis-reportes/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/reportes/procesar` | api | HTTP 403 | no permite | sí |
+| `/api/reportes/seguimiento` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/cambiar-password` | página | permitir | permite | sí |
+| `/consulta` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard-publico` | página | permitir | permite | sí |
+| `/dashboard/admin` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/anti-abuso` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/colegios` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/colegios/nuevo` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/comite` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/comite/apelaciones` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/configuracion` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/estadisticas` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/estadisticas/operacion` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/operadores` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/operadores/asignar` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/operadores/auditoria` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/operadores/gestion` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/operadores/modelo` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/padres` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/apelaciones` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/circulo-confianza` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/colegio` | página | permitir | permite | sí |
+| `/dashboard/colegio/alertas` | página | permitir | permite | sí |
+| `/dashboard/colegio/alumnos/[id]` | página | permitir | permite | sí |
+| `/dashboard/colegio/auditoria` | página | permitir | permite | sí |
+| `/dashboard/colegio/cursos` | página | permitir | permite | sí |
+| `/dashboard/colegio/cursos/[id]` | página | permitir | permite | sí |
+| `/dashboard/colegio/cursos/carga` | página | permitir | permite | sí |
+| `/dashboard/colegio/cursos/nuevo` | página | permitir | permite | sí |
+| `/dashboard/colegio/estadisticas` | página | permitir | permite | sí |
+| `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/login` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/mis-reportes` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/offline` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/privacidad` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/recuperar` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/recuperar/[token]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/registro` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/reportar` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/seguimiento` | página | permitir | permite | sí |
+| `/terminos` | página | redirigir→/dashboard/colegio | no permite | sí |
+
+### PARENT
+
+| Ruta | Tipo | Puerta (`proxy()`) | Predicado | Alineado |
+| --- | --- | --- | --- | --- |
+| `/` | página | permitir | permite | sí |
+| `//` | página | permitir | permite | sí |
+| `/api/` | api | permitir | permite | sí |
+| `/api/admin` | api | HTTP 403 | no permite | sí |
+| `/api/admin/anti-abuso/simulacion-score` | api | HTTP 403 | no permite | sí |
+| `/api/admin/audit-logs` | api | HTTP 403 | no permite | sí |
+| `/api/admin/colegios` | api | HTTP 403 | no permite | sí |
+| `/api/admin/colegios/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/colegios/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
+| `/api/admin/colegios/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/[id]/asignar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/[id]/reasignar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/[id]/resolver` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones/[id]/documento` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones/[id]/resolver` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/apelaciones/[id]/tomar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/integrantes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/integrantes/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/mias` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/pendientes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/comite/solicitudes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/correcciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/dataset-entrenamiento` | api | HTTP 403 | no permite | sí |
+| `/api/admin/estadisticas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/estadisticas/clasificacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals/casos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals/casos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/evals/historial` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos/[id]/resultados` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/experimentos/comparar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/modelos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/ollama/probar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/config` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/preguntas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/sandbox` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]/analisis` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]/cancelar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]/export` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/simulaciones/comparar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/asignacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/modelo` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
+| `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision/[id]/confirmar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision/[id]/reasignar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/anonimizar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/baja` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/escalar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/expediente` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/[id]/resolver` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/pendientes` | api | HTTP 403 | no permite | sí |
+| `/api/alertas` | api | permitir | permite | sí |
+| `/api/alertas/[id]` | api | permitir | permite | sí |
+| `/api/alertas/suscribir` | api | permitir | permite | sí |
+| `/api/apelaciones` | api | permitir | permite | sí |
+| `/api/apelaciones/mias` | api | permitir | permite | sí |
+| `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/login` | api | permitir | permite | sí |
+| `/api/auth/logout` | api | permitir | permite | sí |
+| `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |
+| `/api/auth/recuperar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/recuperar/validar` | api | permitir | permite | sí |
+| `/api/auth/register` | api | permitir | permite | sí |
+| `/api/auth/verificar/completar` | api | permitir | permite | sí |
+| `/api/auth/verificar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/verificar/validar` | api | permitir | permite | sí |
+| `/api/circulo-confianza` | api | permitir | permite | sí |
+| `/api/circulo-confianza/[id]` | api | permitir | permite | sí |
+| `/api/circulo-confianza/agregado` | api | permitir | permite | sí |
+| `/api/circulo-confianza/preferencias` | api | permitir | permite | sí |
+| `/api/ciudades` | api | permitir | permite | sí |
+| `/api/ciudades/buscar` | api | permitir | permite | sí |
+| `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/alertas` | api | permitir | permite | sí |
+| `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/auditoria` | api | permitir | permite | sí |
+| `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cursos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas` | api | permitir | permite | sí |
+| `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
+| `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/config/parametros` | api | permitir | permite | sí |
+| `/api/config/parametros/[clave]` | api | permitir | permite | sí |
+| `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
+| `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consulta` | api | permitir | permite | sí |
+| `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/departamentos` | api | permitir | permite | sí |
+| `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
+| `/api/health/worker` | api | permitir | permite | sí |
+| `/api/me` | api | permitir | permite | sí |
+| `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/paises` | api | permitir | permite | sí |
+| `/api/plataformas` | api | permitir | permite | sí |
+| `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/fallback` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
+| `/api/reportes/procesar` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/cambiar-password` | página | permitir | permite | sí |
+| `/consulta` | página | permitir | permite | sí |
+| `/dashboard` | página | permitir | permite | sí |
+| `/dashboard-publico` | página | permitir | permite | sí |
+| `/dashboard/admin` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/anti-abuso` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/colegios` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/colegios/nuevo` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/comite` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/comite/apelaciones` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/admin/configuracion` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/estadisticas` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/estadisticas/operacion` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/ia` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/operadores` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/operadores/asignar` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/operadores/auditoria` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/operadores/gestion` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/operadores/modelo` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/padres` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/spam` | página | redirigir→/ | no permite | sí |
+| `/dashboard/apelaciones` | página | permitir | permite | sí |
+| `/dashboard/circulo-confianza` | página | permitir | permite | sí |
+| `/dashboard/colegio` | página | permitir | permite | sí |
+| `/dashboard/colegio/alertas` | página | permitir | permite | sí |
+| `/dashboard/colegio/alumnos/[id]` | página | permitir | permite | sí |
+| `/dashboard/colegio/auditoria` | página | permitir | permite | sí |
+| `/dashboard/colegio/cursos` | página | permitir | permite | sí |
+| `/dashboard/colegio/cursos/[id]` | página | permitir | permite | sí |
+| `/dashboard/colegio/cursos/carga` | página | permitir | permite | sí |
+| `/dashboard/colegio/cursos/nuevo` | página | permitir | permite | sí |
+| `/dashboard/colegio/estadisticas` | página | permitir | permite | sí |
+| `/dashboard/mis-reportes/[id]` | página | permitir | permite | sí |
+| `/login` | página | permitir | permite | sí |
+| `/mis-reportes` | página | permitir | permite | sí |
+| `/offline` | página | permitir | permite | sí |
+| `/privacidad` | página | permitir | permite | sí |
+| `/recuperar` | página | permitir | permite | sí |
+| `/recuperar/[token]` | página | permitir | permite | sí |
+| `/registro` | página | permitir | permite | sí |
+| `/reportar` | página | permitir | permite | sí |
+| `/seguimiento` | página | permitir | permite | sí |
+| `/terminos` | página | permitir | permite | sí |
+
+### ANONIMO
+
+| Ruta | Tipo | Puerta (`proxy()`) | Predicado | Alineado |
+| --- | --- | --- | --- | --- |
+| `/` | página | permitir | permite | sí |
+| `//` | página | permitir | permite | sí |
+| `/api/` | api | HTTP 401 | permite | **NO** |
+| `/api/admin` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/anti-abuso/simulacion-score` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/audit-logs` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/colegios` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/colegios/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/colegios/[id]/reenviar-email` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/colegios/[id]/regenerar-password` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/[id]/asignar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/[id]/reasignar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/[id]/resolver` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/apelaciones` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/apelaciones/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/apelaciones/[id]/documento` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/apelaciones/[id]/resolver` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/apelaciones/[id]/tomar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/integrantes` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/integrantes/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/mias` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/pendientes` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/comite/solicitudes` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/correcciones` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/dataset-entrenamiento` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/estadisticas` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/estadisticas/clasificacion` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/evals` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/evals/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/evals/casos` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/evals/casos/[id]/desactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/evals/historial` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/experimentos` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/experimentos/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/experimentos/[id]/resultados` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/experimentos/comparar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/modelos` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/ollama/probar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/rubrica` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/rubrica/config` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/rubrica/preguntas` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/sandbox` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/simulaciones` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/simulaciones/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/simulaciones/[id]/analisis` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/simulaciones/[id]/cancelar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/simulaciones/[id]/export` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/simulaciones/comparar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores/[id]/reenviar-email` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores/asignacion` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores/modelo` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/padres` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/padres/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/padres/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/padres/[id]/restablecer-password` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/padres/[id]/vigencia` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/permisos-modulos` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes-revision` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes-revision/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes-revision/[id]/confirmar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes-revision/[id]/reasignar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/anonimizar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/baja` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/escalar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/expediente` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/revelar-original` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/transiciones` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/spam/[id]/resolver` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/spam/pendientes` | api | HTTP 401 | permite | **NO** |
+| `/api/alertas` | api | HTTP 401 | permite | **NO** |
+| `/api/alertas/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/alertas/suscribir` | api | HTTP 401 | permite | **NO** |
+| `/api/apelaciones` | api | HTTP 401 | permite | **NO** |
+| `/api/apelaciones/mias` | api | HTTP 401 | permite | **NO** |
+| `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/login` | api | permitir | permite | sí |
+| `/api/auth/logout` | api | permitir | permite | sí |
+| `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |
+| `/api/auth/recuperar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/recuperar/validar` | api | permitir | permite | sí |
+| `/api/auth/register` | api | permitir | permite | sí |
+| `/api/auth/verificar/completar` | api | permitir | permite | sí |
+| `/api/auth/verificar/solicitar` | api | permitir | permite | sí |
+| `/api/auth/verificar/validar` | api | permitir | permite | sí |
+| `/api/circulo-confianza` | api | HTTP 401 | permite | **NO** |
+| `/api/circulo-confianza/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/circulo-confianza/agregado` | api | HTTP 401 | permite | **NO** |
+| `/api/circulo-confianza/preferencias` | api | HTTP 401 | permite | **NO** |
+| `/api/ciudades` | api | permitir | permite | sí |
+| `/api/ciudades/buscar` | api | permitir | permite | sí |
+| `/api/colegio` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/alertas` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/alertas/[id]/estado` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/alumnos/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/alumnos/[id]/estado` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/alumnos/[id]/identificadores` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/auditoria` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/carga/confirmar` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/carga/plantilla` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/carga/validar` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/cursos` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/cursos/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/cursos/[id]/alumnos` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/cursos/[id]/estado` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/estadisticas` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/estadisticas/pdf` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/identificadores/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/identificadores/[id]/estado` | api | HTTP 401 | permite | **NO** |
+| `/api/config/parametros` | api | HTTP 401 | permite | **NO** |
+| `/api/config/parametros/[clave]` | api | HTTP 401 | permite | **NO** |
+| `/api/config/parametros/[clave]/revelar` | api | HTTP 401 | permite | **NO** |
+| `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consulta` | api | permitir | permite | sí |
+| `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/departamentos` | api | permitir | permite | sí |
+| `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
+| `/api/health/worker` | api | permitir | permite | sí |
+| `/api/me` | api | HTTP 401 | permite | **NO** |
+| `/api/me/colegio` | api | HTTP 401 | permite | **NO** |
+| `/api/paises` | api | permitir | permite | sí |
+| `/api/plataformas` | api | permitir | permite | sí |
+| `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/fallback` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes` | api | permitir | permite | sí |
+| `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
+| `/api/reportes/procesar` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento` | api | permitir | permite | sí |
+| `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/cambiar-password` | página | redirigir→/login | permite | **NO** |
+| `/consulta` | página | permitir | permite | sí |
+| `/dashboard` | página | redirigir→/login | permite | **NO** |
+| `/dashboard-publico` | página | permitir | permite | sí |
+| `/dashboard/admin` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/anti-abuso` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/colegios` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/colegios/nuevo` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/comite` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/comite/apelaciones` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/comite/auditoria` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/comite/gestion` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/configuracion` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/estadisticas` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/estadisticas/operacion` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/ia` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/operadores` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/operadores/asignar` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/operadores/auditoria` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/operadores/gestion` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/operadores/modelo` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/padres` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/spam` | página | redirigir→/login | no permite | sí |
+| `/dashboard/apelaciones` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/circulo-confianza` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/alertas` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/alumnos/[id]` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/auditoria` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/cursos` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/cursos/[id]` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/cursos/carga` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/cursos/nuevo` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/estadisticas` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/mis-reportes/[id]` | página | redirigir→/login | permite | **NO** |
+| `/login` | página | permitir | permite | sí |
+| `/mis-reportes` | página | redirigir→/login | permite | **NO** |
+| `/offline` | página | permitir | permite | sí |
+| `/privacidad` | página | permitir | permite | sí |
+| `/recuperar` | página | permitir | permite | sí |
+| `/recuperar/[token]` | página | permitir | permite | sí |
+| `/registro` | página | permitir | permite | sí |
+| `/reportar` | página | permitir | permite | sí |
+| `/seguimiento` | página | permitir | permite | sí |
+| `/terminos` | página | permitir | permite | sí |
+
+## Nota: divergencias del eje anónimo (NO son rojo)
+
+Sin sesión, la puerta exige login donde el predicado solo describe qué pintaría el
+menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
+
+| Ruta | Puerta (anónimo) | Predicado (anónimo) |
+| --- | --- | --- |
+| `/api/` | HTTP 401 | permite |
+| `/api/admin` | HTTP 401 | permite |
+| `/api/admin/anti-abuso/simulacion-score` | HTTP 401 | permite |
+| `/api/admin/audit-logs` | HTTP 401 | permite |
+| `/api/admin/colegios` | HTTP 401 | permite |
+| `/api/admin/colegios/[id]` | HTTP 401 | permite |
+| `/api/admin/colegios/[id]/reenviar-email` | HTTP 401 | permite |
+| `/api/admin/colegios/[id]/regenerar-password` | HTTP 401 | permite |
+| `/api/admin/comite/[id]/asignar` | HTTP 401 | permite |
+| `/api/admin/comite/[id]/reasignar` | HTTP 401 | permite |
+| `/api/admin/comite/[id]/resolver` | HTTP 401 | permite |
+| `/api/admin/comite/apelaciones` | HTTP 401 | permite |
+| `/api/admin/comite/apelaciones/[id]` | HTTP 401 | permite |
+| `/api/admin/comite/apelaciones/[id]/documento` | HTTP 401 | permite |
+| `/api/admin/comite/apelaciones/[id]/resolver` | HTTP 401 | permite |
+| `/api/admin/comite/apelaciones/[id]/tomar` | HTTP 401 | permite |
+| `/api/admin/comite/integrantes` | HTTP 401 | permite |
+| `/api/admin/comite/integrantes/[id]` | HTTP 401 | permite |
+| `/api/admin/comite/mias` | HTTP 401 | permite |
+| `/api/admin/comite/pendientes` | HTTP 401 | permite |
+| `/api/admin/comite/solicitudes` | HTTP 401 | permite |
+| `/api/admin/correcciones` | HTTP 401 | permite |
+| `/api/admin/dataset-entrenamiento` | HTTP 401 | permite |
+| `/api/admin/estadisticas` | HTTP 401 | permite |
+| `/api/admin/estadisticas/clasificacion` | HTTP 401 | permite |
+| `/api/admin/ia/evals` | HTTP 401 | permite |
+| `/api/admin/ia/evals/[id]` | HTTP 401 | permite |
+| `/api/admin/ia/evals/casos` | HTTP 401 | permite |
+| `/api/admin/ia/evals/casos/[id]/desactivar` | HTTP 401 | permite |
+| `/api/admin/ia/evals/historial` | HTTP 401 | permite |
+| `/api/admin/ia/experimentos` | HTTP 401 | permite |
+| `/api/admin/ia/experimentos/[id]` | HTTP 401 | permite |
+| `/api/admin/ia/experimentos/[id]/preparar-activacion` | HTTP 401 | permite |
+| `/api/admin/ia/experimentos/[id]/resultados` | HTTP 401 | permite |
+| `/api/admin/ia/experimentos/comparar` | HTTP 401 | permite |
+| `/api/admin/ia/modelos` | HTTP 401 | permite |
+| `/api/admin/ia/ollama/probar` | HTTP 401 | permite |
+| `/api/admin/ia/rubrica` | HTTP 401 | permite |
+| `/api/admin/ia/rubrica/config` | HTTP 401 | permite |
+| `/api/admin/ia/rubrica/preguntas` | HTTP 401 | permite |
+| `/api/admin/ia/sandbox` | HTTP 401 | permite |
+| `/api/admin/ia/simulaciones` | HTTP 401 | permite |
+| `/api/admin/ia/simulaciones/[id]` | HTTP 401 | permite |
+| `/api/admin/ia/simulaciones/[id]/analisis` | HTTP 401 | permite |
+| `/api/admin/ia/simulaciones/[id]/cancelar` | HTTP 401 | permite |
+| `/api/admin/ia/simulaciones/[id]/export` | HTTP 401 | permite |
+| `/api/admin/ia/simulaciones/[id]/resultados` | HTTP 401 | permite |
+| `/api/admin/ia/simulaciones/comparar` | HTTP 401 | permite |
+| `/api/admin/operadores` | HTTP 401 | permite |
+| `/api/admin/operadores/[id]` | HTTP 401 | permite |
+| `/api/admin/operadores/[id]/reactivar` | HTTP 401 | permite |
+| `/api/admin/operadores/[id]/reenviar-email` | HTTP 401 | permite |
+| `/api/admin/operadores/[id]/regenerar-password` | HTTP 401 | permite |
+| `/api/admin/operadores/asignacion` | HTTP 401 | permite |
+| `/api/admin/operadores/modelo` | HTTP 401 | permite |
+| `/api/admin/padres` | HTTP 401 | permite |
+| `/api/admin/padres/[id]` | HTTP 401 | permite |
+| `/api/admin/padres/[id]/reactivar` | HTTP 401 | permite |
+| `/api/admin/padres/[id]/restablecer-password` | HTTP 401 | permite |
+| `/api/admin/padres/[id]/vigencia` | HTTP 401 | permite |
+| `/api/admin/permisos-modulos` | HTTP 401 | permite |
+| `/api/admin/reportes-revision` | HTTP 401 | permite |
+| `/api/admin/reportes-revision/[id]` | HTTP 401 | permite |
+| `/api/admin/reportes-revision/[id]/confirmar` | HTTP 401 | permite |
+| `/api/admin/reportes-revision/[id]/reasignar` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/anonimizar` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/baja` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/escalar` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/expediente` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/reactivar` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/revelar-original` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/transiciones` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/validar-anonimizacion` | HTTP 401 | permite |
+| `/api/admin/spam/[id]/resolver` | HTTP 401 | permite |
+| `/api/admin/spam/pendientes` | HTTP 401 | permite |
+| `/api/alertas` | HTTP 401 | permite |
+| `/api/alertas/[id]` | HTTP 401 | permite |
+| `/api/alertas/suscribir` | HTTP 401 | permite |
+| `/api/apelaciones` | HTTP 401 | permite |
+| `/api/apelaciones/mias` | HTTP 401 | permite |
+| `/api/circulo-confianza` | HTTP 401 | permite |
+| `/api/circulo-confianza/[id]` | HTTP 401 | permite |
+| `/api/circulo-confianza/agregado` | HTTP 401 | permite |
+| `/api/circulo-confianza/preferencias` | HTTP 401 | permite |
+| `/api/colegio` | HTTP 401 | permite |
+| `/api/colegio/alertas` | HTTP 401 | permite |
+| `/api/colegio/alertas/[id]/estado` | HTTP 401 | permite |
+| `/api/colegio/alumnos/[id]` | HTTP 401 | permite |
+| `/api/colegio/alumnos/[id]/estado` | HTTP 401 | permite |
+| `/api/colegio/alumnos/[id]/identificadores` | HTTP 401 | permite |
+| `/api/colegio/auditoria` | HTTP 401 | permite |
+| `/api/colegio/carga/confirmar` | HTTP 401 | permite |
+| `/api/colegio/carga/plantilla` | HTTP 401 | permite |
+| `/api/colegio/carga/validar` | HTTP 401 | permite |
+| `/api/colegio/cursos` | HTTP 401 | permite |
+| `/api/colegio/cursos/[id]` | HTTP 401 | permite |
+| `/api/colegio/cursos/[id]/alumnos` | HTTP 401 | permite |
+| `/api/colegio/cursos/[id]/estado` | HTTP 401 | permite |
+| `/api/colegio/estadisticas` | HTTP 401 | permite |
+| `/api/colegio/estadisticas/pdf` | HTTP 401 | permite |
+| `/api/colegio/identificadores/[id]` | HTTP 401 | permite |
+| `/api/colegio/identificadores/[id]/estado` | HTTP 401 | permite |
+| `/api/config/parametros` | HTTP 401 | permite |
+| `/api/config/parametros/[clave]` | HTTP 401 | permite |
+| `/api/config/parametros/[clave]/revelar` | HTTP 401 | permite |
+| `/api/me` | HTTP 401 | permite |
+| `/api/me/colegio` | HTTP 401 | permite |
+| `/cambiar-password` | redirigir→/login | permite |
+| `/dashboard` | redirigir→/login | permite |
+| `/dashboard/apelaciones` | redirigir→/login | permite |
+| `/dashboard/circulo-confianza` | redirigir→/login | permite |
+| `/dashboard/colegio` | redirigir→/login | permite |
+| `/dashboard/colegio/alertas` | redirigir→/login | permite |
+| `/dashboard/colegio/alumnos/[id]` | redirigir→/login | permite |
+| `/dashboard/colegio/auditoria` | redirigir→/login | permite |
+| `/dashboard/colegio/cursos` | redirigir→/login | permite |
+| `/dashboard/colegio/cursos/[id]` | redirigir→/login | permite |
+| `/dashboard/colegio/cursos/carga` | redirigir→/login | permite |
+| `/dashboard/colegio/cursos/nuevo` | redirigir→/login | permite |
+| `/dashboard/colegio/estadisticas` | redirigir→/login | permite |
+| `/dashboard/mis-reportes/[id]` | redirigir→/login | permite |
+| `/mis-reportes` | redirigir→/login | permite |
+
+## Eje de módulos (BD): módulo → ruta → rol
+
+Módulos del catálogo enlazados a ítems de navegación (`nav-items.ts`) y grants por
+defecto del seed (`clavesPorRol` de `prisma/seed.ts`; los grants reales viven en BD).
+Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicado permite).
+
+| Módulo | Ruta del menú | Roles con grant por defecto |
+| --- | --- | --- |
+| anti_abuso | `/dashboard/admin/anti-abuso` | ADMIN |
+| bandeja_reportes | `/dashboard/admin` | ADMIN, OPERADOR |
+| centro_control_ia | `/dashboard/admin/ia` | ADMIN |
+| colegios | `/dashboard/colegio` | ADMIN, SCHOOL_ADMIN |
+| colegios_auditoria | `/dashboard/colegio/auditoria` | ADMIN, SCHOOL_ADMIN |
+| colegios_gestion | `/dashboard/admin/colegios` | ADMIN, SCHOOL_ADMIN |
+| colegios_gestion | `/dashboard/colegio/alertas` | ADMIN, SCHOOL_ADMIN |
+| colegios_gestion | `/dashboard/colegio/cursos` | ADMIN, SCHOOL_ADMIN |
+| colegios_gestion | `/dashboard/colegio/cursos/carga` | ADMIN, SCHOOL_ADMIN |
+| colegios_gestion | `/dashboard/colegio/estadisticas` | ADMIN, SCHOOL_ADMIN |
+| comite | `/dashboard/admin/comite/gestion` | ADMIN, COMITE_VALIDACION |
+| comite_auditoria | `/dashboard/admin/comite/auditoria` | ADMIN, COMITE_VALIDACION |
+| comite_bandeja | `/dashboard/admin/comite` | ADMIN, COMITE_VALIDACION |
+| comite_bandeja | `/dashboard/admin/comite` | ADMIN, COMITE_VALIDACION |
+| comite_bandeja | `/dashboard/admin/comite/apelaciones` | ADMIN, COMITE_VALIDACION |
+| configuracion_sistema | `/dashboard/admin/configuracion` | ADMIN |
+| dataset_entrenamiento | `/dashboard/admin/dataset-entrenamiento` | ADMIN |
+| estadisticas | `/dashboard/admin/estadisticas` | ADMIN |
+| operadores | `/dashboard/admin/operadores` | ADMIN |
+| padres | `/dashboard/admin/padres` | ADMIN |
+| revision_spam | `/dashboard/admin/spam` | ADMIN |
+
+## Hrefs del header (NavHeader.tsx)
+
+Hrefs literales con su guarda de rol (parseados del JSX; la cobertura es total: un
+href nuevo sin guarda declarada hace fallar la aserción B ruidosamente).
+
+| Href | Roles que lo ven (guarda JSX ∧ predicado) |
+| --- | --- |
+| `/` | ADMIN, OPERADOR, COMITE_VALIDACION, SCHOOL_ADMIN, PARENT, ANONIMO |
+| `/cambiar-password` | ADMIN, OPERADOR, COMITE_VALIDACION, SCHOOL_ADMIN, PARENT |
+| `/dashboard` | PARENT |
+| `/dashboard-publico` | ADMIN, OPERADOR, COMITE_VALIDACION, SCHOOL_ADMIN, PARENT, ANONIMO |
+| `/dashboard/admin` | ADMIN, OPERADOR |
+| `/dashboard/admin/comite` | COMITE_VALIDACION |
+| `/dashboard/admin/configuracion` | ADMIN |
+| `/dashboard/circulo-confianza` | PARENT |
+| `/dashboard/colegio` | SCHOOL_ADMIN |
+| `/login` | ANONIMO |
+| `/mis-reportes` | PARENT |
