@@ -88,7 +88,7 @@ curl -X PATCH http://localhost:5005/api/config/parametros/visibility.report_thre
 | `reportes.classification_model` | `STRING` | `ornith:9b` | `SECURITY` | ❌ | ✅ | Modelo de Ollama usado para clasificar conductas y anonimizar PII | 1. Cambia el modelo a otro disponible en Ollama. 2. Envía un reporte a `/api/reportes/procesar`. 3. Revisa `ClasificacionIA.modeloUsado` en BD. |
 | `reportes.embedding_model` | `STRING` | `nomic-embed-text` | `SECURITY` | ❌ | ✅ | Modelo de Ollama usado para generar embeddings de similitud | 1. Cambia el modelo. 2. Procesa un reporte. 3. Verifica `EmbeddingReporte.modeloUsado`. También se usa en `/api/admin/reportes/{id}/anonimizar`. |
 | `reportes.duplicate.similarity_threshold` | `FLOAT` | `0.92` | `SECURITY` | ❌ | ✅ | Umbral de similitud coseno para marcar reportes anónimos como duplicados | 1. Crea dos reportes anónimos con texto casi idéntico para el mismo identificador+plataforma. 2. Procesa ambos. 3. Con umbral alto (`0.99`) no deben marcarse duplicados; con umbral bajo (`0.5`) sí. |
-| `reportes.spam.min_text_length` | `INTEGER` | `20` | `SECURITY` | ✅ | ❌ | Longitud mínima de texto para no marcar como spam | **No implementado en runtime.** La heurística de spam está hardcodeada a `< 30` caracteres. |
+| `reportes.spam.min_text_length` | `INTEGER` | `20` | `SECURITY` | ✅ | ✅ | Longitud mínima del texto del reporte en la creación | El guarda real es la validación de `POST /api/reportes` (`src/app/api/reportes/route.ts`): `texto.trim().length < N` → 400 (spec 092-US5; leído vía `getParametroSistema`). El wizard lo aplica en el botón Siguiente vía `useMinTextoReporte`. 1. Cambia el valor a `30`. 2. Envía un reporte de 29 caracteres → 400; uno de 31 → 201. 3. Restaura el valor. |
 | `reportes.worker.max_retries` | `INTEGER` | `3` | `SECURITY` | ❌ | ❌ | Máximo de reintentos de procesamiento por job | **No implementado en runtime.** |
 | `reportes.worker.stalled_threshold_minutes` | `INTEGER` | `5` | `SECURITY` | ❌ | ❌ | Minutos antes de alertar cola estancada | **No implementado en runtime.** |
 | `reportes.anonymization_model` | `STRING` | `ornith:9b` | `SECURITY` | ❌ | ❌ | Modelo de Ollama para anonimización automática de PII | **No implementado en runtime.** La anonimización reutiliza `reportes.classification_model`. |
@@ -175,7 +175,6 @@ Estos parámetros gobiernan el expediente del reporte (traza del pipeline, vista
 | `security.password_min_length` | Implementar en registro/verificación o eliminar del seed |
 | `security.jwt_ttl_hours` | Usar para calcular `JWT_TTL` o eliminar del seed |
 | `system.maintenance_mode` | Implementar middleware/página o eliminar del seed |
-| `reportes.spam.min_text_length` | Unificar con la heurística hardcodeada o eliminar |
 | `reportes.worker.max_retries` | Implementar en worker o eliminar |
 | `reportes.worker.stalled_threshold_minutes` | Implementar health check de cola o eliminar |
 | `reportes.anonymization_model` | Usar en `anonimizarTexto` o eliminar |

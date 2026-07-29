@@ -81,6 +81,45 @@ describe("POST /api/reportes", () => {
         expect(body.error.code).toBe("VALIDATION_ERROR");
     });
 
+    // Test de EFECTO (I-14, ADR_004): el guarda real es la validación de creación en
+    // POST /api/reportes — con el parámetro en N, un texto de N-1 caracteres (trim)
+    // se RECHAZA con 400 y uno de N+1 se acepta.
+    it("aplica la longitud mínima desde reportes.spam.min_text_length (test de efecto)", async () => {
+        if (!process.env.PARAM_ENCRYPTION_KEY) {
+            process.env.PARAM_ENCRYPTION_KEY = "a".repeat(32);
+        }
+        await prisma.parametroSistema.upsert({
+            where: { clave: "reportes.spam.min_text_length" },
+            update: { valor: "30" },
+            create: {
+                clave: "reportes.spam.min_text_length",
+                valor: "30",
+                tipo: "INTEGER",
+                categoria: "SECURITY",
+                esPublico: true,
+            },
+        });
+
+        // N-1 = 29 caracteres → 400 con el valor del parámetro en el mensaje
+        const reqCorto = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            texto: "a".repeat(29),
+        });
+        const resCorto = await POST(reqCorto);
+        expect(resCorto.status).toBe(400);
+        const bodyCorto = await resCorto.json();
+        expect(bodyCorto.error.code).toBe("VALIDATION_ERROR");
+        expect(bodyCorto.error.message).toContain("30");
+
+        // N+1 = 31 caracteres → 201
+        const reqLargo = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            texto: "a".repeat(31),
+        });
+        const resLargo = await POST(reqLargo);
+        expect(resLargo.status).toBe(201);
+    });
+
     it("rechaza reporte con fecha futura", async () => {
         const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
             ...reporteValido,

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { crearReporteSchema } from "@/lib/validators";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { getUserFromToken } from "@/lib/auth";
+import { getParametroSistema } from "@/lib/parametros";
 import { sendReporte } from "@/lib/queue";
 import { detectarKeywordsRiesgo } from "@/lib/ai/keywords-riesgo";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
         const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima } = parsed.data;
 
         // Spec 092-US5: la longitud mínima es un parámetro (ADR_004), no un literal.
-        const paramMinTexto = await prisma.parametroSistema.findUnique({ where: { clave: "reportes.spam.min_text_length" } });
+        const paramMinTexto = await getParametroSistema("reportes.spam.min_text_length");
         const minTexto = parseInt(paramMinTexto?.valor ?? "20", 10);
         if (texto.trim().length < minTexto) {
             return NextResponse.json(

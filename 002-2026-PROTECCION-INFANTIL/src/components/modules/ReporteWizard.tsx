@@ -6,6 +6,7 @@ import { ReporteStepDetalle } from "./ReporteStepDetalle";
 import { ReporteStepConfirmar } from "./ReporteStepConfirmar";
 import { ConfirmacionReporte } from "./ConfirmacionReporte";
 import { Button } from "@/components/ui/Button";
+import { useMinTextoReporte } from "./use-min-texto-reporte";
 
 type WizardData = {
     identificador: string;
@@ -50,6 +51,9 @@ export function ReporteWizard() {
     const [resultado, setResultado] = useState<{ numeroSeguimiento: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+    // I-14: la longitud mínima del texto es un parámetro (reportes.spam.min_text_length),
+    // no un literal — el botón Siguiente obedece el mismo valor que el backend.
+    const minTexto = useMinTextoReporte();
 
     const update = (partial: Partial<WizardData>) => setData((d) => ({ ...d, ...partial }));
 
@@ -208,7 +212,7 @@ export function ReporteWizard() {
                                 (!data.paisId ||
                                     !data.ciudadId ||
                                     (data.ciudadId === "otra" && !data.ciudad) ||
-                                    data.texto.length < 20))
+                                    data.texto.length < minTexto))
                         }
                     >
                         Siguiente
