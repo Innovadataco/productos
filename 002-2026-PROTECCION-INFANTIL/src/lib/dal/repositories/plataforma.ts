@@ -20,4 +20,12 @@ export class PlataformaRepository {
     findById(id: string) {
         return this.db.plataforma.findUnique({ where: { id } });
     }
+
+    /** Nombres por ids (leyenda de agregaciones). */
+    findNombresPorIds(ids: string[]) {
+        return this.db.plataforma.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, nombre: true },
+        });
+    }
 }

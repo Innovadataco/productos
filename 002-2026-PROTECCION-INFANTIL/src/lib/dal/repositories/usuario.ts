@@ -64,4 +64,12 @@ export class UsuarioRepository {
             orderBy: { creadoEn: "asc" },
         });
     }
+
+    /** Email/nombre por ids (leyenda de métricas por operador). */
+    findInfoPorIds(ids: string[]) {
+        return this.db.usuario.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, email: true, nombre: true },
+        });
+    }
 }

@@ -1,0 +1,62 @@
+/**
+ * SPEC-053 (US3, módulo Estadísticas): repositorio de AuditLog para agregación
+ * operativa (tiempos de gestión, casos por operador). Acepta tx opcional (D2).
+ */
+import type { AccionAudit, Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import type { DbClient } from "../unit-of-work";
+
+export class AuditLogRepository {
+    private readonly db: DbClient;
+
+    constructor(tx?: Prisma.TransactionClient) {
+        this.db = tx ?? prisma;
+    }
+
+    countAcciones(acciones: AccionAudit[], rango: { gte: Date; lte: Date }) {
+        return this.db.auditLog.count({
+            where: { accion: { in: acciones }, creadoEn: rango },
+        });
+    }
+
+    /** Cierres de casos en el rango (para tiempo de gestión). */
+    findCierres(acciones: AccionAudit[], rango: { gte: Date; lte: Date }) {
+        return this.db.auditLog.findMany({
+            where: { accion: { in: acciones }, creadoEn: rango, recursoId: { not: null } },
+            select: { recursoId: true, creadoEn: true },
+        });
+    }
+
+    /** Asignaciones de un conjunto de casos (primera por recurso la deduce el servicio). */
+    findAsignaciones(recursoIds: string[], usuarioId?: string) {
+        return this.db.auditLog.findMany({
+            where: { accion: "OPERADOR_ASIGNADO", recursoId: { in: recursoIds }, ...(usuarioId ? { usuarioId } : {}) },
+            select: { recursoId: true, creadoEn: true },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
+
+    groupByUsuario(acciones: AccionAudit[], rango: { gte: Date; lte: Date }) {
+        return this.db.auditLog.groupBy({
+            by: ["usuarioId"],
+            where: { accion: { in: acciones }, creadoEn: rango },
+            _count: { usuarioId: true },
+        });
+    }
+
+    groupByAccion(acciones: AccionAudit[], rango: { gte: Date; lte: Date }) {
+        return this.db.auditLog.groupBy({
+            by: ["accion"],
+            where: { accion: { in: acciones }, creadoEn: rango },
+            _count: { accion: true },
+        });
+    }
+
+    /** Acciones de un conjunto de operadores en el rango (métricas por operador). */
+    findAccionesPorOperadores(acciones: AccionAudit[], operadoresIds: string[], rango: { gte: Date; lte: Date }) {
+        return this.db.auditLog.findMany({
+            where: { accion: { in: acciones }, creadoEn: rango, usuarioId: { in: operadoresIds } },
+            select: { usuarioId: true, accion: true, recursoId: true, creadoEn: true },
+        });
+    }
+}

@@ -154,4 +154,29 @@ export class ReporteRepository {
             _count: { operadorId: true },
         });
     }
+
+    /** Tabla operativa de clasificación (admin): items + total con el select exacto. */
+    findTablaClasificacion(where: Prisma.ReporteWhereInput, paginacion: { skip: number; take: number }) {
+        return Promise.all([
+            this.db.reporte.findMany({
+                where,
+                orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "desc" }],
+                skip: paginacion.skip,
+                take: paginacion.take,
+                select: {
+                    id: true,
+                    identificador: true,
+                    numeroSeguimiento: true,
+                    estado: true,
+                    prioridadAlta: true,
+                    creadoEn: true,
+                    ciudad: true,
+                    pais: true,
+                    operador: { select: { id: true, email: true, nombre: true } },
+                    clasificacion: { select: { categoria: true } },
+                },
+            }),
+            this.db.reporte.count({ where }),
+        ]);
+    }
 }

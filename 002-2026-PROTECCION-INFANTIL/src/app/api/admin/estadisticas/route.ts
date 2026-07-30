@@ -1,39 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getWorkerMetrics } from "@/lib/queue-metrics";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { whereReporteVigente, whereReporteEnEstado, whereReporteEnEstados } from "@/lib/reportes-acceso";
-
-function calcularPrecisionPorCategoria(
-    confirmaciones: { categoriaOriginal: string; _count: { categoriaOriginal: number } }[],
-    correcciones: { categoriaOriginal: string; _count: { categoriaOriginal: number } }[]
-) {
-    const confirmadasMap = new Map<string, number>();
-    for (const c of confirmaciones) {
-        confirmadasMap.set(c.categoriaOriginal, c._count.categoriaOriginal);
-    }
-    const corregidasMap = new Map<string, number>();
-    for (const c of correcciones) {
-        corregidasMap.set(c.categoriaOriginal, c._count.categoriaOriginal);
-    }
-
-    const categorias = new Set([...confirmadasMap.keys(), ...corregidasMap.keys()]);
-    return Array.from(categorias).map((categoria) => {
-        const confirmadas = confirmadasMap.get(categoria) || 0;
-        const corregidas = corregidasMap.get(categoria) || 0;
-        const totalRevisados = confirmadas + corregidas;
-        return {
-            categoria,
-            confirmadas,
-            corregidas,
-            totalRevisados,
-            precisionObservada: totalRevisados === 0 || totalRevisados < 5 ? null : confirmadas / totalRevisados,
-        };
-    });
-}
+import { EstadisticasService } from "@/lib/dal/services/estadisticas";
 
 export async function GET(req: Request) {
     try {
@@ -54,94 +24,9 @@ export async function GET(req: Request) {
             );
         }
 
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        const hoySig = new Date(hoy);
-        hoySig.setDate(hoySig.getDate() + 1);
-
-        const treintaDiasAtras = new Date(hoy);
-        treintaDiasAtras.setDate(treintaDiasAtras.getDate() - 30);
-
-        const [
-            totalReportes,
-            reportesHoy,
-            pendientesRevision,
-            pendientesAnonimizacion,
-            reportesAnonimos,
-            reportesAutenticados,
-            porEstado,
-            porCategoria,
-            porPlataforma,
-            porCiudad,
-            tendencia,
-            workerMetrics,
-            confirmacionesPorCategoria,
-            correccionesPorCategoria,
-        ] = await Promise.all([
-            prisma.reporte.count({ where: whereReporteVigente() }),
-            prisma.reporte.count({ where: whereReporteVigente({ creadoEn: { gte: hoy, lt: hoySig } }) }),
-            prisma.reporte.count({ where: whereReporteEnEstados(["REVISION_MANUAL", "PROCESANDO"]) }),
-            prisma.reporte.count({ where: whereReporteEnEstado("REQUIERE_ANONIMIZACION") }),
-            prisma.reporte.count({ where: whereReporteVigente({ esAnonimo: true }) }),
-            prisma.reporte.count({ where: whereReporteVigente({ esAnonimo: false }) }),
-            prisma.reporte.groupBy({ by: ["estado"], _count: { estado: true }, where: whereReporteVigente() }),
-            prisma.clasificacionIA.groupBy({ by: ["categoria"], _count: { categoria: true }, where: { reporte: whereReporteVigente() } }),
-            prisma.reporte.groupBy({ by: ["plataformaId"], _count: { plataformaId: true }, where: whereReporteVigente({ plataformaId: { not: "" } }) }),
-            prisma.reporte.groupBy({ by: ["ciudad"], _count: { ciudad: true }, where: whereReporteVigente({ ciudad: { not: "" } }), take: 10, orderBy: { _count: { ciudad: "desc" } } }),
-            prisma.reporte.groupBy({
-                by: ["creadoEn"],
-                _count: { creadoEn: true },
-                where: whereReporteVigente({ creadoEn: { gte: treintaDiasAtras } }),
-                orderBy: { creadoEn: "asc" },
-            }),
-            getWorkerMetrics(),
-            prisma.correccionAdmin.groupBy({
-                by: ["categoriaOriginal"],
-                _count: { categoriaOriginal: true },
-                where: { confirmada: true, clasificacion: { reporte: whereReporteVigente() } },
-            }),
-            prisma.correccionAdmin.groupBy({
-                by: ["categoriaOriginal"],
-                _count: { categoriaOriginal: true },
-                where: { confirmada: false, clasificacion: { reporte: whereReporteVigente() } },
-            }),
-        ]);
-
-        const plataformaIds = porPlataforma
-            .map((p) => p.plataformaId)
-            .filter((id): id is string => id !== null && id !== undefined);
-        const plataformasMap = await prisma.plataforma.findMany({
-            where: { id: { in: plataformaIds } },
-            select: { id: true, nombre: true },
-        });
-        const plataformaNombrePorId = Object.fromEntries(plataformasMap.map((p) => [p.id, p.nombre]));
-
-        const tendenciaDiaria: Record<string, number> = {};
-        for (const t of tendencia) {
-            const fecha = t.creadoEn.toISOString().split("T")[0];
-            tendenciaDiaria[fecha] = (tendenciaDiaria[fecha] || 0) + t._count.creadoEn;
-        }
-        const tendenciaArray = Object.entries(tendenciaDiaria)
-            .map(([fecha, count]) => ({ fecha, count }))
-            .sort((a, b) => a.fecha.localeCompare(b.fecha));
-
-        return NextResponse.json({
-            totales: {
-                reportes: totalReportes,
-                reportesHoy,
-                pendientesRevision,
-                pendientesAnonimizacion,
-                reportesAnonimos,
-                reportesAutenticados,
-            },
-            porEstado: porEstado.map((e) => ({ estado: e.estado, count: e._count.estado })),
-            porCategoria: porCategoria.map((c) => ({ categoria: c.categoria, count: c._count.categoria })),
-            porPlataforma: porPlataforma.map((p) => ({ plataforma: plataformaNombrePorId[p.plataformaId || ""] || "Desconocida", count: typeof p._count === "object" ? p._count.plataformaId : 0 })),
-            porCiudad: porCiudad.map((c) => ({ ciudad: c.ciudad, count: typeof c._count === "object" ? c._count.ciudad : 0 })),
-            tendencia: tendenciaArray,
-            worker: workerMetrics,
-            precisionPorCategoria: calcularPrecisionPorCategoria(confirmacionesPorCategoria, correccionesPorCategoria),
-        });
+        // SPEC-053: las agregaciones viven en el DAL; la ruta no toca prisma.
+        const resultado = await new EstadisticasService().admin();
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
