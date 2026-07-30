@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { esAdminRol } from "@/lib/operadores/permisos";
-import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
-import { whereReporteEnEstado } from "@/lib/reportes-acceso";
+import { OperadorService } from "@/lib/dal/services/operadores";
 
 export async function GET(req: Request) {
     try {
@@ -20,47 +17,10 @@ export async function GET(req: Request) {
             );
         }
 
-        const [sinAsignar, operadoresRaw, distribucion, config] = await Promise.all([
-            prisma.reporte.count({
-                where: whereReporteEnEstado("REVISION_MANUAL", { operadorId: null }),
-            }),
-            prisma.usuario.findMany({
-                where: { rol: "OPERADOR", estado: "activo" },
-                include: { perfilOperador: { select: { cupoMaximo: true, esRevisorDeApelaciones: true } } },
-                orderBy: { creadoEn: "asc" },
-            }),
-            prisma.reporte.groupBy({
-                by: ["operadorId"],
-                where: whereReporteEnEstado("REVISION_MANUAL", { operadorId: { not: null } }),
-                _count: { operadorId: true },
-            }),
-            obtenerConfigAsignacion(),
-        ]);
+        // SPEC-053: conteos, distribución y configuración viven en el DAL; la ruta no toca prisma.
+        const panel = await new OperadorService().panelAsignacion();
 
-        const casosPorOperador = new Map(distribucion.map((d) => [d.operadorId, d._count.operadorId]));
-
-        const operadores = await Promise.all(
-            operadoresRaw.map(async (op) => {
-                const casosAbiertos = casosPorOperador.get(op.id) ?? 0;
-                const cupo = op.perfilOperador?.cupoMaximo ?? config.cupoDefault;
-                return {
-                    id: op.id,
-                    email: op.email,
-                    nombre: op.nombre,
-                    esRevisorDeApelaciones: op.perfilOperador?.esRevisorDeApelaciones ?? false,
-                    casosAbiertos,
-                    cupoMaximo: cupo,
-                    libre: Math.max(0, cupo - casosAbiertos),
-                };
-            })
-        );
-
-        return NextResponse.json({
-            sinAsignar,
-            operadores,
-            estrategia: config.estrategia,
-            cupoDefault: config.cupoDefault,
-        });
+        return NextResponse.json(panel);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

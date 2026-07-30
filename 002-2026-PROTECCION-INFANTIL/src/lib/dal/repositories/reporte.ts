@@ -140,4 +140,18 @@ export class ReporteRepository {
             take: 1000,
         });
     }
+
+    /** Conteo genérico (casos por operador, sin asignar, etc.). */
+    countWhere(where: Prisma.ReporteWhereInput) {
+        return this.db.reporte.count({ where });
+    }
+
+    /** Distribución de casos en revisión manual por operador. */
+    groupByOperador(where: Prisma.ReporteWhereInput) {
+        return this.db.reporte.groupBy({
+            by: ["operadorId"],
+            where,
+            _count: { operadorId: true },
+        });
+    }
 }

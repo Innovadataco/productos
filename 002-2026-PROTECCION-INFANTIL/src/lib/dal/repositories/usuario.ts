@@ -28,4 +28,40 @@ export class UsuarioRepository {
     actualizar(id: string, data: Prisma.UsuarioUncheckedUpdateInput) {
         return this.db.usuario.update({ where: { id }, data });
     }
+
+    /** Operadores/comité con su perfil (filtro tenant opcional). */
+    findOperadores(where: Prisma.UsuarioWhereInput) {
+        return this.db.usuario.findMany({
+            where,
+            include: { perfilOperador: true },
+            orderBy: { creadoEn: "desc" },
+        });
+    }
+
+    /** Un operador o miembro del comité por id, con su perfil. */
+    findOperadorById(id: string) {
+        return this.db.usuario.findFirst({
+            where: { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } },
+            include: { perfilOperador: true },
+        });
+    }
+
+    /** Alta de operador/comité con perfil anidado. */
+    crearConPerfil(data: Prisma.UsuarioUncheckedCreateInput) {
+        return this.db.usuario.create({ data, include: { perfilOperador: true } });
+    }
+
+    /** Recarga con perfil (respuesta de PATCH). */
+    findByIdConPerfil(id: string) {
+        return this.db.usuario.findUnique({ where: { id }, include: { perfilOperador: true } });
+    }
+
+    /** Operadores activos para el panel de asignación (cupo y revisión de apelaciones). */
+    findOperadoresActivosAsignacion() {
+        return this.db.usuario.findMany({
+            where: { rol: "OPERADOR", estado: "activo" },
+            include: { perfilOperador: { select: { cupoMaximo: true, esRevisorDeApelaciones: true } } },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
 }

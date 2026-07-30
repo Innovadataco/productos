@@ -1,9 +1,9 @@
-import { whereReporteAprobado } from "./reporte-aprobado";
-import { prisma } from "./prisma";
-import { getParametroSistemaValor } from "./parametros";
-import { logAudit } from "./audit";
-import { enviarAlertaCirculoConfianza } from "./email";
-import { obtenerGruposCategoria, agruparCategorias } from "./categoria-grupos";
+import { whereReporteAprobado } from "@/lib/reporte-aprobado";
+import { prisma } from "@/lib/prisma";
+import { getParametroSistemaValor } from "@/lib/parametros";
+import { logAudit } from "@/lib/audit";
+import { enviarAlertaCirculoConfianza } from "@/lib/email";
+import { obtenerGruposCategoria, agruparCategorias } from "@/lib/categoria-grupos";
 import type { AccionAudit, EstadoReporte, Prisma } from "@prisma/client";
 import { logger } from "@/lib/logger";
 

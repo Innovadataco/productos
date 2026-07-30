@@ -1,24 +1,17 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { verifyAuth, hashPassword } from "@/lib/auth";
+import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { logAudit } from "@/lib/audit";
 import { withValidation } from "@/lib/validation";
 import { operadorIdParamsSchema } from "@/lib/schemas";
-import { randomBytes } from "crypto";
+import { OperadorService } from "@/lib/dal/services/operadores";
 
 function getClientInfo(request: Request) {
     return {
         ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
     };
-}
-
-async function getOperador(id: string) {
-    const where: Record<string, unknown> = { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } };
-    return prisma.usuario.findFirst({ where, include: { perfilOperador: true } });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -33,7 +26,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
         const { id } = withValidation.params(operadorIdParamsSchema)(await params);
-        const operador = await getOperador(id);
+
+        // SPEC-053: búsqueda, regeneración del password temporal y auditoría viven en
+        // el DAL; la ruta no toca prisma.
+        const service = new OperadorService();
+        const operador = await service.obtenerOperador(id);
         if (!operador) {
             return NextResponse.json(
                 { error: { message: "Operador no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -41,26 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const password = randomBytes(6).toString("hex");
-        const passwordHash = await hashPassword(password);
-
-        await prisma.usuario.update({
-            where: { id },
-            data: { passwordHash, debeCambiarPassword: true },
-        });
-
-        const { ipAddress, userAgent } = getClientInfo(request);
-        const accionAudit = operador.rol === "COMITE_VALIDACION" ? "COMITE_PASSWORD_REGENERADA" : "OPERADOR_PASSWORD_REGENERADA";
-        await logAudit({
-            accion: accionAudit,
-            tipoRecurso: "Usuario",
-            recursoId: id,
-            usuarioId: admin.id,
-            valorAnterior: JSON.stringify({ debeCambiarPassword: operador.debeCambiarPassword }),
-            valorNuevo: JSON.stringify({ debeCambiarPassword: true }),
-            ipAddress,
-            userAgent,
-        });
+        const { password } = await service.regenerarPassword(operador, admin.id, getClientInfo(request), "regenerar");
 
         const esComite = operador.rol === "COMITE_VALIDACION";
         return NextResponse.json({

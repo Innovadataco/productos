@@ -68,4 +68,12 @@ export class ParametroRepository {
     eliminar(clave: string) {
         return this.db.parametroSistema.delete({ where: { clave } });
     }
+
+    upsert(
+        clave: string,
+        create: Prisma.ParametroSistemaUncheckedCreateInput,
+        update: Prisma.ParametroSistemaUncheckedUpdateInput
+    ) {
+        return this.db.parametroSistema.upsert({ where: { clave }, create, update });
+    }
 }
