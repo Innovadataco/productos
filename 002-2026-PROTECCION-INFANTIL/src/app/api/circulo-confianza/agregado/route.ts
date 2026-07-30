@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { obtenerVistaAgregada } from "@/lib/circulo-confianza";
+import { obtenerVistaAgregada } from "@/lib/dal/services/circulo-confianza";
 
 export async function GET(request: Request) {
     try {

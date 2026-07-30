@@ -9,7 +9,7 @@ import {
     agregarContacto,
     obtenerTopeContactos,
     contarContactosActivos,
-} from "@/lib/circulo-confianza";
+} from "@/lib/dal/services/circulo-confianza";
 
 const createSchema = z.object({
     etiqueta: z.string().max(100).optional(),

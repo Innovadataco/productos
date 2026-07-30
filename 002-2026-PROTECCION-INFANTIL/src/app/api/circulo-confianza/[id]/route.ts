@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
-import { actualizarContacto, obtenerDetalleContacto } from "@/lib/circulo-confianza";
+import { actualizarContacto, obtenerDetalleContacto } from "@/lib/dal/services/circulo-confianza";
 
 const updateSchema = z.object({
     etiqueta: z.string().max(100).optional(),

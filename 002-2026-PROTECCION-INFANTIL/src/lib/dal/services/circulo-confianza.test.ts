@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { prisma } from "./prisma";
-import { resetDatabase } from "./test-utils";
+import { prisma } from "@/lib/prisma";
+import { resetDatabase } from "@/lib/test-utils";
 import {
     contarContactosActivos,
     agregarContacto,
@@ -18,7 +18,7 @@ import {
     crearPlataforma,
     crearPaisCiudad,
     crearParametrosReportes,
-} from "./reporte-test-utils";
+} from "@/lib/reporte-test-utils";
 import { enviarAlertaCirculoConfianza } from "@/lib/email";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
