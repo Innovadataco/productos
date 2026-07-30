@@ -1,15 +1,15 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-07-27** (cola 002-PI-014 cerrada: 098/100/101/102 finalizadas, desplegado a prod e07890a, pendiente ACTA).
+> Última actualización: **2026-07-29** (cola 002-PI-043: +127 home del padre y +128 reconciliación de grants del comité, PLANEADAS en compuerta §4).
 > Estado tomado del campo `Status`/`Estado` de cada `spec.md`.
 
 ## Resumen
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **99** |
+| **Total de specs** | **101** |
 | **Cerradas / Implementadas / Finalizadas** | **96** |
-| **Pendientes (planeadas / en desarrollo)** | **3** |
+| **Pendientes (planeadas / en desarrollo)** | **5** |
 
 ## Backlog activo (pendientes)
 
@@ -38,6 +38,8 @@
 | [124](124-primitivas-ui-compartidas/spec.md) | Primitivas de UI compartidas (R7) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
 | [125](125-validacion-unificada-api/spec.md) | API: una sola forma de validar (R6) | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
 | [126](126-linea-base-arquitectura/spec.md) | Línea base de arquitectura generada desde el código + compuerta CI | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
+| [127](127-home-padre/spec.md) | SPEC-127 — Home del padre (PARENT → /dashboard; I-40, D-42) | 🔵 Planeado (spec+plan, compuerta §4) |
+| [128](128-reconciliacion-grants-comite/spec.md) | SPEC-128 — Reconciliación de grants del comité (D-43) | 🔵 Planeado (spec+plan, compuerta §4) |
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
