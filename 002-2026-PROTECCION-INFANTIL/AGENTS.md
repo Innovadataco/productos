@@ -125,6 +125,15 @@ Cada spec vive en `specs/NNN-nombre/` con el MISMO set y formato que `specs/001-
 4. Probar con el `quickstart.md`.
 5. Documentar: `cierre.md` (en `specs/NNN/` o histórico en `docs/cierre-NNN.md`) + sección Implementación en `spec.md` + deuda técnica.
 
+## Protocolo de señales (ZEUS ↔ ODIN)
+
+Estándar de comunicación fijado en ACTA_ARQ_06. Fuente: Metodología Operativa §6 (v2.0) — repo `Metodologias` → `Desarrollo de software/METODOLOGIA-OPERATIVA-FABRICA-SOFTWARE-v1.0.md`. Esto es un resumen operativo; el texto canónico vive allá.
+
+- **Vocabulario del ciclo:** `RADICADA → REVISADA → REALIZADO → REVISO → CUMPLE/NO CUMPLE`. Cada señal es UNA línea, un verbo de acción.
+- **Al recibir un instructivo (OBLIGATORIO):** `002-PI-XXX · REVISADA · arranco` — el CEO nunca se queda sin saber si ODIN arrancó. Si algo bloquea: `002-PI-XXX · REVISADA · dudas: <…> → PARA`.
+- **Al cerrar:** `002-PI-XXX · REALIZADO · <hash> · <media línea>`, más `Nota:` SOLO si hay algo que el diff no muestra (desviación, hallazgo preexistente, riesgo asumido).
+- **Regla:** nada de tablas, listas de commits ni descripciones de lo hecho — eso vive en el repo y en `tasks.md`. La señal reporta acción, no silencio.
+
 ## Reglas de oro
 
 - **Antes de tocar `src/`, leer `docs/architecture/`** (línea base generada desde el código, SPEC-126; nunca editada a mano). Si el cambio altera el schema, el proxy, la navegación o el stack, regenerar los artefactos y dejar `npm run arch:check` en VERDE en el mismo PR (el CI lo exige).
