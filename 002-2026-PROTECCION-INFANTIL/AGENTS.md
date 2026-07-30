@@ -48,7 +48,7 @@ Definidas en `.specify/memory/constitution.md`; tienen prioridad absoluta:
 
 ## Arquitectura en runtime
 
-Cinco capas (detalle completo en `docs/ARCHITECTURE.md`):
+Cinco capas (detalle completo en `docs/architecture/00-INDICE.md`, línea base generada):
 
 1. **UI/App Router** (`src/app/**`, `src/components/**`): páginas y layouts; los layouts de admin verifican rol antes de renderizar.
 2. **API Routes** (`src/app/api/**/route.ts`): un `route.ts` por endpoint; validan entrada, autentican y delegan a servicios. Rutas de admin bajo `src/app/api/admin/**`.
@@ -75,7 +75,7 @@ scripts/            # workers, dev-restart.sh, evals de clasificador, auditoría
 tests/e2e/          # Playwright
 specs/              # Specs Spec-Kit (NNN-nombre/), una por feature
 .specify/           # Config y memoria de Spec-Kit (constitution.md, feature.json)
-docs/               # ARCHITECTURE.md, cierres, evidencia
+docs/               # architecture/ (línea base generada), cierres, evidencia
 ```
 
 ## Convenciones de código

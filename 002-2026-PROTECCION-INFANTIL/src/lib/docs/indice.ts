@@ -65,7 +65,7 @@ export const INDICE_DOCS: TemaDocs[] = [
             "Del formulario a la cola, el pipeline de IA (embedding, deduplicación, clasificación, guardas), la revisión humana y la visibilidad pública.",
         capa: 2,
         documentos: [
-            { ruta: "docs/ARCHITECTURE.md", titulo: "Arquitectura del sistema (flujo de un reporte)" },
+            { ruta: "AGENTS.md", titulo: "Arquitectura runtime y flujo de un reporte (resumen)" },
             { ruta: "specs/010-rediseño-clasificador-ia/spec.md", titulo: "Clasificador IA (SPEC-010)" },
             { ruta: "specs/015-anti-abuso/spec.md", titulo: "Anti-abuso (SPEC-015)" },
         ],
@@ -91,9 +91,9 @@ export const INDICE_DOCS: TemaDocs[] = [
             "Next.js + Prisma + PostgreSQL/pgvector + pg-boss + Ollama local: estructura del código, modelo de datos y línea base generada.",
         capa: 3,
         documentos: [
-            { ruta: "docs/ARCHITECTURE.md", titulo: "Arquitectura del sistema" },
             { ruta: "docs/architecture/00-INDICE.md", titulo: "Línea base de arquitectura (índice)" },
             { ruta: "docs/architecture/01-modelo-datos.md", titulo: "Modelo de datos (generado)" },
+            { ruta: "docs/architecture/02-roles-capacidades.md", titulo: "Roles y capacidades (generado)" },
             { ruta: "docs/architecture/06-stack.md", titulo: "Stack y despliegue (generado)" },
         ],
     },
