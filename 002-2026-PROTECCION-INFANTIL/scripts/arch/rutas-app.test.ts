@@ -1,6 +1,9 @@
 /**
  * SPEC-126 (T009): oráculos del inventario del árbol src/app/**. Sin BD.
  * Oráculo verificado 2026-07-29: 47 page.tsx.
+ * Actualizado 2026-07-30: 50 page.tsx — SPEC-017 añadió 3 páginas del visor de
+ * documentación (/docs, /docs/operar, /docs/tecnico). Cambio intencional:
+ * prevalece el conteo real (regla de oráculos de SPEC-126).
  */
 import { describe, it, expect } from "vitest";
 import { inventarioRutasApp, VALOR_MUESTRA_SEGMENTO } from "./lib/rutas-app";
@@ -9,8 +12,8 @@ import { RUTA_APP } from "./lib/paths";
 const rutas = inventarioRutasApp(RUTA_APP);
 
 describe("inventario de rutas del árbol src/app (SPEC-126)", () => {
-    it("oráculo: 47 páginas (page.tsx)", () => {
-        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(47);
+    it("oráculo: 50 páginas (page.tsx) — 47 base + 3 del visor de docs (SPEC-017)", () => {
+        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(50);
     });
 
     it("incluye APIs (route.ts) además de páginas", () => {

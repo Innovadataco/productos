@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-07-29** (cola 002-PI-043: SPEC-127 y SPEC-128 implementadas, pendientes de auditoría ZEUS).
+> Última actualización: **2026-07-30** (cola nocturna 002-PI-046: SPEC-053 DAL y SPEC-017 visor de docs implementadas, pendientes de auditoría ZEUS).
 > Estado tomado del campo `Status`/`Estado` de cada `spec.md`.
 
 ## Resumen
@@ -8,15 +8,15 @@
 | Métrica | Valor |
 |---------|-------|
 | **Total de specs** | **101** |
-| **Cerradas / Implementadas / Finalizadas** | **98** |
-| **Pendientes (planeadas / en desarrollo)** | **3** |
+| **Cerradas / Implementadas / Finalizadas** | **100** |
+| **Pendientes (planeadas / en desarrollo)** | **1** |
 
 ## Backlog activo (pendientes)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
-| [017](017-documentacion/spec.md) | Módulo de documentación navegable | 🔵 Planeado |
-| [053](053-capa-datos-servicios/spec.md) | Feature Specification: Capa de datos / servicios (DAL) | 🔵 Planeado |
+| [017](017-documentacion/spec.md) | Módulo de documentación navegable | 🟢 Implementada (pendiente auditoría ZEUS) |
+| [053](053-capa-datos-servicios/spec.md) | Capa de datos / servicios (DAL) | 🟢 Implementada (pendiente auditoría ZEUS) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 | [110](110-apelacion-identificador/spec.md) | SPEC-110 — Apelación del identificador reportado | 🟢 Implementada (SIN desplegar, pendiente release+ACTA) |
 | [106](106-logout-cookie-secure/spec.md) | Cerrar sesión de verdad (cookie __Host- y logo público) | 🟢 Finalizada (desplegada en d130e46, pendiente ACTA) |
@@ -58,7 +58,7 @@
 | [014](014-laboratorio-ia/spec.md) | Laboratorio de Experimentos IA | 🟢 Cerrada |
 | [015](015-anti-abuso/spec.md) | Defensas anti-abuso | 🟢 Cerrada |
 | [016](016-circulo-confianza/spec.md) | Círculo de Confianza | 🟢 Cerrada |
-| [017](017-documentacion/spec.md) | Módulo de documentación navegable | 🔵 Planeado |
+| [017](017-documentacion/spec.md) | Módulo de documentación navegable | 🟢 Implementada (pendiente auditoría ZEUS) |
 | [018](018-operadores-casos/spec.md) | Operadores de casos (revisión humana) | 🟢 Cerrada |
 | [019](019-permisos-modulos/spec.md) | Gestor de permisos de módulos por ROL | 🟢 Implementada |
 | [02](02-reportes-comunitarios/spec.md) | Feature Specification: Módulo de Reportes Comunitarios | 🟢 Cerrada |
@@ -94,7 +94,7 @@
 | [050](050-mejora-prompt-clasificador/spec.md) | Feature Specification: Mejora del prompt del clasificador (Spec 050) | 🟢 Cerrada |
 | [051](051-claridad-estados/spec.md) | Feature Specification: Claridad y estados | 🟢 Cerrada |
 | [052](052-dividir-archivos-grandes/spec.md) | Feature Specification: Dividir archivos grandes | 🟢 Cerrada |
-| [053](053-capa-datos-servicios/spec.md) | Feature Specification: Capa de datos / servicios (DAL) | 🔵 Planeado |
+| [053](053-capa-datos-servicios/spec.md) | Capa de datos / servicios (DAL) | 🟢 Implementada (pendiente auditoría ZEUS) |
 | [054](054-correccion-049-051-accesibilidad-ui/spec.md) | Feature Specification: Corrección post-cierre 049 y 051 — Accesibilidad y UI | 🟢 Cerrada |
 | [070](070-simulacion-carga-modelos/spec.md) | Feature Specification: Simulación de carga y comparación de modelos (Spec 070) | 🟢 Cerrada |
 | [071](071-correccion-fidelidad-simulacion-070/spec.md) | Feature Specification: Corrección de fidelidad de la simulación (Spec 071) | 🟢 Cerrada |

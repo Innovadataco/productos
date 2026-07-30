@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-20
 
-**Status**: `PLANEADO`
+**Status**: `IMPLEMENTADO`
 
 **Input**: Programa de Saneamiento. Introducir repositorios y servicios incrementales, módulo por módulo, aislando `Prisma` de las rutas API. Es la inversión estructural más grande del proyecto, por lo que se entrega primero el plan para revisión humana antes de `/speckit.implement`.
 
@@ -133,4 +133,28 @@ El equipo de desarrollo necesita una convención clara de repositorios, servicio
 
 ## Implementación
 
-*Se documentará al cerrar el spec. Esta sección permanece vacía mientras el status sea `PLANEADO`.*
+Implementada el 2026-07-30 en `feature/001-scaffolding` (cola nocturna 002-PI-046, compuerta
+abierta por ZEUS). Pendiente de auditoría de ZEUS para el cierre formal. Un commit por
+módulo, cada uno con suite completa + `tsc --noEmit` + build + `arch:check` en VERDE antes
+de seguir al siguiente (1248/1248 tests en cada gate):
+
+- **Fundación DAL** (`src/lib/dal/`): `unit-of-work.ts` (`DbClient` + `withUnitOfWork`, D2),
+  25 repositorios por agregado, DTOs de dominio por módulo.
+- **US1 Reporte** (`d88d5533`, `e89719f7`, `a4a3357d`): ReporteCreationService,
+  ReporteQueryService, ReporteProcessingService (pipeline completo con tx compartida y
+  EmbeddingRepository para pgvector, D3), ReporteLifecycleService. Cero prisma en
+  `src/app/api/reportes/**` (SC-001).
+- **US2 Consulta pública** (`6ceb9071`): ConsultaPublicaService (resumen con divulgación
+  progresiva y detalle autenticado); riesgo descriptivo delega en `src/lib/riesgo-consulta.ts`.
+  Cero prisma en `src/app/api/consulta/**` (SC-003).
+- **US3 patrón replicado en TODOS los módulos listados**: Configuración (`562edea9`),
+  Autenticación (`82b7ca92`), Alertas (`97994b17`), Círculo de confianza (`e1033cd3`),
+  Apelaciones (`03354810`), Operadores (`77b3a5c0`), Estadísticas (`198bf592`),
+  IA (`c4f5feef`) y Comité (`2a0bcc7a`) — este último con la descarga de evidencia
+  solo-comité y las resoluciones SPEC-110 con tx compartida intactas.
+- **Deuda técnica / hallazgos preservados** (a reportar a ZEUS): las rutas admin de
+  operadores (PATCH/DELETE/reactivar) devuelven el usuario completo incluido
+  `passwordHash` en el JSON — comportamiento PREEXISTENTE preservado a propósito
+  (endpoint admin-only); se propone saneado en spec futura.
+- `docs/architecture/` no requirió regeneración por el DAL (la puerta no cambió);
+  `arch:check` verde en cada gate.
