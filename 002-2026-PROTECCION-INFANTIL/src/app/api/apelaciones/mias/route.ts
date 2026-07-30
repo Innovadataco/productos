@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { contarReportesAsociados } from "@/lib/apelaciones";
+import { ApelacionService } from "@/lib/dal/services/apelaciones";
 
 /**
  * SPEC-110 — Lista de apelaciones del usuario autenticado.
@@ -41,57 +40,12 @@ export async function GET(request: Request) {
             );
         }
         const { page, pageSize } = parsedQuery.data;
-        const skip = (page - 1) * pageSize;
 
-        const where = { usuarioId: user.id };
-        const [apelaciones, total] = await Promise.all([
-            prisma.apelacion.findMany({
-                where,
-                orderBy: { creadoEn: "desc" },
-                skip,
-                take: pageSize,
-                select: {
-                    id: true,
-                    numero: true,
-                    identificador: true,
-                    estado: true,
-                    esRepresentante: true,
-                    creadoEn: true,
-                    plazoRespuestaEn: true,
-                    decision: true,
-                    motivacionResolucion: true,
-                    resueltoEn: true,
-                    plataformaId: true,
-                    plataforma: { select: { nombre: true, clave: true } },
-                    documentos: { select: { nombreOriginal: true, eliminadoEn: true } },
-                },
-            }),
-            prisma.apelacion.count({ where }),
-        ]);
+        // SPEC-053: la consulta y el mapeo (sin contenido de reportes) viven en el DAL;
+        // la ruta no toca prisma.
+        const resultado = await new ApelacionService().mias(user.id, page, pageSize);
 
-        const items = await Promise.all(
-            apelaciones.map(async (a) => ({
-                id: a.id,
-                numero: a.numero,
-                identificador: a.identificador,
-                plataforma: a.plataforma,
-                estado: a.estado,
-                esRepresentante: a.esRepresentante,
-                creadoEn: a.creadoEn,
-                plazoRespuestaEn: a.plazoRespuestaEn,
-                decision: a.decision,
-                motivacionResolucion: a.motivacionResolucion,
-                resueltoEn: a.resueltoEn,
-                numeroReportesAsociados: await contarReportesAsociados(a.identificador, a.plataformaId),
-                documentoNombre: a.documentos[0]?.nombreOriginal ?? null,
-                documentoEliminadoEn: a.documentos[0]?.eliminadoEn ?? null,
-            }))
-        );
-
-        return NextResponse.json({
-            items,
-            pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
-        });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

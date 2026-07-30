@@ -40,7 +40,7 @@ export class ApelacionRepository {
     }
 
     /** Crea la apelación con su documento de evidencia (nested create). */
-    crearConDocumento(data: Prisma.ApelacionCreateInput) {
+    crearConDocumento(data: Prisma.ApelacionUncheckedCreateInput) {
         return this.db.apelacion.create({
             data,
             select: { id: true, numero: true, estado: true, plazoRespuestaEn: true, creadoEn: true },

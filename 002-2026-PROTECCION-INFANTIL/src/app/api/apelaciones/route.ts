@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
@@ -20,6 +19,7 @@ import {
     sha256Hex,
     validarPdf,
 } from "@/lib/apelacion-storage";
+import { ApelacionService } from "@/lib/dal/services/apelaciones";
 
 /**
  * SPEC-110 — Radicación de apelaciones por el titular (o representante acreditado).
@@ -122,24 +122,21 @@ export async function POST(request: Request) {
             );
         }
 
-        const plataforma = await prisma.plataforma.findUnique({ where: { id: plataformaId } });
-        if (!plataforma) {
-            return NextResponse.json(
-                { error: { message: "Plataforma no válida", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            );
-        }
-
-        const abiertaExistente = await prisma.apelacion.findFirst({
-            where: {
-                usuarioId: user.id,
-                identificador,
-                plataformaId,
-                estado: { in: ["RECIBIDA", "EN_REVISION"] },
-            },
-            select: { id: true },
+        // SPEC-053: plataforma y apelación abierta se verifican en el DAL; la ruta no toca prisma.
+        const apelacionService = new ApelacionService();
+        const preparacion = await apelacionService.prepararRadicacion({
+            usuarioId: user.id,
+            identificador,
+            plataformaId,
         });
-        if (abiertaExistente) {
+
+        if (!preparacion.ok) {
+            if (preparacion.tipo === "plataforma_invalida") {
+                return NextResponse.json(
+                    { error: { message: "Plataforma no válida", code: ERROR_CODES.VALIDATION_ERROR } },
+                    { status: 400 }
+                );
+            }
             return NextResponse.json(
                 { error: { message: "Ya tienes una apelación abierta para este identificador", code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
@@ -170,29 +167,26 @@ export async function POST(request: Request) {
 
         let apelacion;
         try {
-            apelacion = await prisma.apelacion.create({
-                data: {
-                    numero: generarNumeroApelacion(),
-                    usuarioId: user.id,
-                    identificador,
-                    plataformaId,
-                    motivo,
-                    esRepresentante: esRep,
-                    acreditacion: esRep ? acreditacion!.trim() : null,
-                    estado: "RECIBIDA",
-                    plazoRespuestaEn,
-                    documentos: {
-                        create: {
-                            id: documentoId,
-                            nombreOriginal: (archivoFile.name || "evidencia.pdf").slice(0, 255),
-                            rutaArchivo,
-                            hashSha256: hash,
-                            tamanoBytes: buffer.length,
-                            mimeType: "application/pdf",
-                        },
+            apelacion = await apelacionService.radicar({
+                numero: generarNumeroApelacion(),
+                usuarioId: user.id,
+                identificador,
+                plataformaId,
+                motivo,
+                esRepresentante: esRep,
+                acreditacion: esRep ? acreditacion!.trim() : null,
+                estado: "RECIBIDA",
+                plazoRespuestaEn,
+                documentos: {
+                    create: {
+                        id: documentoId,
+                        nombreOriginal: (archivoFile.name || "evidencia.pdf").slice(0, 255),
+                        rutaArchivo,
+                        hashSha256: hash,
+                        tamanoBytes: buffer.length,
+                        mimeType: "application/pdf",
                     },
                 },
-                select: { id: true, numero: true, estado: true, plazoRespuestaEn: true, creadoEn: true },
             });
         } catch (err) {
             await eliminarDocumentoCifrado(rutaArchivo);

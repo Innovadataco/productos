@@ -47,7 +47,7 @@ export class ApelacionService {
      * índice único parcial de apelación abierta propaga P2002: la ruta compensa
      * borrando el archivo de evidencia y responde 409.
      */
-    radicar(data: Prisma.ApelacionCreateInput) {
+    radicar(data: Prisma.ApelacionUncheckedCreateInput) {
         return this.apelaciones.crearConDocumento(data);
     }
 
