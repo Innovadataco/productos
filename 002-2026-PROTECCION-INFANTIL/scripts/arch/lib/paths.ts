@@ -10,7 +10,7 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url));
 
 export const RAIZ_PRODUCTO = path.resolve(AQUI, "..", "..", "..");
 export const RUTA_SCHEMA = path.join(RAIZ_PRODUCTO, "prisma", "schema.prisma");
-export const RUTA_SEED = path.join(RAIZ_PRODUCTO, "prisma", "seed.ts");
+export const RUTA_SEED = path.join(RAIZ_PRODUCTO, "prisma", "seed-modulos-grants.ts"); // 002-PI-048: fuente única de módulos/grants (la comparten seed y sync)
 export const RUTA_APP = path.join(RAIZ_PRODUCTO, "src", "app");
 export const RUTA_PROXY = path.join(RAIZ_PRODUCTO, "src", "lib", "proxy.ts");
 export const RUTA_NAV_HEADER = path.join(RAIZ_PRODUCTO, "src", "components", "modules", "NavHeader.tsx");
