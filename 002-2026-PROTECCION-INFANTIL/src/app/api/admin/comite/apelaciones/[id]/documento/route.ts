@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esComiteRol } from "@/lib/operadores/permisos";
-import { logAudit } from "@/lib/audit";
-import { ApelacionStorageError, leerDocumentoDescifrado, sha256Hex } from "@/lib/apelacion-storage";
+import { ComiteApelacionesService } from "@/lib/dal/services/comite-apelaciones";
 
 /**
  * SPEC-110 — Descarga de la evidencia documental (SOLO el comité de validación).
@@ -56,73 +54,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
         const id = parsedId.data;
 
-        const apelacion = await prisma.apelacion.findUnique({
-            where: { id },
-            select: { id: true, numero: true, documentos: true },
-        });
-        if (!apelacion) {
-            return NextResponse.json(
-                { error: { message: "Apelación no encontrada", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
-
-        const documento = apelacion.documentos[0] ?? null;
-        if (!documento) {
-            return NextResponse.json(
-                { error: { message: "La apelación no tiene documento", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
-        if (documento.eliminadoEn) {
-            return NextResponse.json(
-                { error: { message: "El documento fue purgado por retención", code: "GONE" } },
-                { status: 410 }
-            );
-        }
-
-        let pdf: Buffer;
-        try {
-            pdf = await leerDocumentoDescifrado(documento.rutaArchivo);
-        } catch (err) {
-            if (err instanceof ApelacionStorageError && err.code === "ARCHIVO_NO_ENCONTRADO") {
-                logger.error(`[ComiteApelaciones] Anomalía: documento ${documento.id} sin archivo en disco (apelacion=${apelacion.numero})`);
-                return NextResponse.json(
-                    { error: { message: "El documento ya no está disponible", code: "GONE" } },
-                    { status: 410 }
-                );
-            }
-            throw err;
-        }
-
-        // Integridad: el PDF descifrado debe coincidir con el hash registrado al subirlo.
-        if (sha256Hex(pdf) !== documento.hashSha256) {
-            logger.error(`[ComiteApelaciones] Integridad inválida en documento ${documento.id} (apelacion=${apelacion.numero})`);
-            return NextResponse.json(
-                { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-                { status: 500 }
-            );
-        }
-
-        const { ipAddress, userAgent } = getClientInfo(request);
-        await prisma.accesoDocumentoApelacion.create({
-            data: { documentoId: documento.id, usuarioId: user.id, ipAddress, userAgent },
-        });
-        await logAudit({
-            accion: "APELACION_DOCUMENTO_ACCESO",
-            tipoRecurso: "DocumentoApelacion",
-            recursoId: documento.id,
-            usuarioId: user.id,
-            valorNuevo: JSON.stringify({ apelacionId: apelacion.id, numero: apelacion.numero }),
-            ipAddress,
-            userAgent,
-        });
+        // SPEC-053: guardas (404/410), descifrado en memoria, verificación de
+        // integridad, bitácora de acceso y auditoría viven en el DAL; la ruta
+        // solo streamea el PDF.
+        const { pdf, numero } = await new ComiteApelacionesService().descargarDocumento(
+            id,
+            user.id,
+            getClientInfo(request)
+        );
 
         return new Response(new Uint8Array(pdf), {
             status: 200,
             headers: {
                 "Content-Type": "application/pdf",
-                "Content-Disposition": `inline; filename="evidencia-${apelacion.numero}.pdf"`,
+                "Content-Disposition": `inline; filename="evidencia-${numero}.pdf"`,
                 "Content-Length": String(pdf.length),
                 "Cache-Control": "no-store",
             },

@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { logAudit } from "@/lib/audit";
-import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
-import { actualizarVisibilidadPublica } from "@/lib/visibility";
-import { recalcularYGuardarScore } from "@/lib/scoring";
-import type { CategoriaConducta } from "@prisma/client";
+import { ComiteBandejaService } from "@/lib/dal/services/comite-bandeja";
 
 const resolverSchema = z.object({
     categoria: z.enum([
@@ -76,111 +71,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const { categoria, resolucion } = parsed.data;
 
-        const solicitud = await prisma.solicitudComite.findUnique({
-            where: { id },
-            include: { reporte: { include: { clasificacion: true } } },
-        });
-        if (!solicitud) {
-            return NextResponse.json(
-                { error: { message: "Solicitud no encontrada", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
+        // SPEC-053: validaciones, corrección transaccional, visibilidad/score y
+        // auditoría viven en el DAL.
+        const resultado = await new ComiteBandejaService().resolver(
+            id,
+            { categoria, resolucion },
+            { id: user.id, rol: user.rol, esComite: esComiteRol(user.rol) },
+            getClientInfo(request)
+        );
 
-        if (solicitud.estado !== "ASIGNADA") {
-            return NextResponse.json(
-                { error: { message: "La solicitud debe estar asignada para resolverse", code: ERROR_CODES.CONFLICT } },
-                { status: 409 }
-            );
-        }
-
-        if (esComiteRol(user.rol) && solicitud.comiteId !== user.id) {
-            return NextResponse.json(
-                { error: { message: "Solo el miembro del comité asignado puede resolver", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
-
-        const reporte = solicitud.reporte;
-        if (!reporte.clasificacion) {
-            return NextResponse.json(
-                { error: { message: "El reporte no tiene clasificación", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            );
-        }
-
-        const estadoAnterior = reporte.estado;
-        const estadoNuevo = "CORREGIDO";
-        const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
-
-        await prisma.$transaction(async (tx) => {
-            const correccionExistente = await tx.correccionAdmin.findUnique({
-                where: { clasificacionId: reporte.clasificacion!.id },
-            });
-            if (correccionExistente) {
-                throw new AppError("Este reporte ya fue corregido", ERROR_CODES.CONFLICT, 409);
-            }
-            await tx.correccionAdmin.create({
-                data: {
-                    clasificacionId: reporte.clasificacion!.id,
-                    categoriaOriginal: reporte.clasificacion!.categoria,
-                    categoriaCorregida: categoria as CategoriaConducta,
-                    adminId: user.id,
-                    motivo: resolucion || null,
-                    confirmada: true,
-                },
-            });
-            await tx.clasificacionIA.update({
-                where: { reporteId: reporte.id },
-                data: { categoria: categoria as CategoriaConducta, confianza: 1.0 },
-            });
-
-            await registrarTransicion({
-                reporteId: reporte.id,
-                estadoAnterior,
-                estadoNuevo,
-                responsableTipo,
-                responsableId: user.id,
-                motivo: resolucion || "Caso resuelto por comité",
-                metadatos: { accion: "CASO_RESUELTO_POR_COMITE", solicitudId: id, numero: solicitud.numero },
-                tx,
-            });
-            await tx.reporte.update({
-                where: { id: reporte.id },
-                data: { estado: estadoNuevo },
-            });
-            await tx.solicitudComite.update({
-                where: { id },
-                data: { estado: "RESUELTA", resolucion: resolucion || null, resueltoEn: new Date() },
-            });
-        });
-
-        await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
-        const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
-
-        const { ipAddress, userAgent } = getClientInfo(request);
-        await logAudit({
-            accion: "CASO_RESUELTO_POR_COMITE",
-            tipoRecurso: "SolicitudComite",
-            recursoId: id,
-            usuarioId: user.id,
-            valorNuevo: JSON.stringify({ categoria, resolucion: resolucion || null, estadoNuevo }),
-            ipAddress,
-            userAgent,
-        });
-
-        return NextResponse.json({
-            solicitudId: id,
-            numero: solicitud.numero,
-            estado: "RESUELTA",
-            reporte: {
-                id: reporte.id,
-                estado: estadoNuevo,
-                categoria,
-            },
-            score: scoreResult.score,
-            nivelRiesgo: scoreResult.nivelRiesgo,
-        });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

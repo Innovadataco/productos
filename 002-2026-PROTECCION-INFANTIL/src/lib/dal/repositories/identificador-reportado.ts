@@ -62,4 +62,15 @@ export class IdentificadorReportadoRepository {
             },
         });
     }
+
+    /**
+     * Marca del comité al aceptar una apelación (SPEC-110): oculta el agregado;
+     * si no hay agregado no hay nada que ocultar (updateMany = no-op).
+     */
+    marcarOcultoPorComite(identificador: string, plataformaId: string, fecha: Date) {
+        return this.db.identificadorReportado.updateMany({
+            where: { identificador, plataformaId },
+            data: { ocultoPorComiteEn: fecha },
+        });
+    }
 }

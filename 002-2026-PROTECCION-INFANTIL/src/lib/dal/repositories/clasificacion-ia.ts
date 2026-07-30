@@ -40,4 +40,9 @@ export class ClasificacionIARepository {
             select: { reporteId: true, categoria: true, confianza: true },
         });
     }
+
+    /** Actualiza por reporteId (resolución del comité: categoría corregida, confianza 1.0). */
+    actualizarPorReporteId(reporteId: string, data: Prisma.ClasificacionIAUpdateInput) {
+        return this.db.clasificacionIA.update({ where: { reporteId }, data });
+    }
 }

@@ -187,4 +187,39 @@ export class ReporteRepository {
             select: { id: true, identificador: true, estado: true },
         });
     }
+
+    /** Reportes de un identificador + plataforma (detalle de apelación del comité, SPEC-110). */
+    findPorIdentificadorYPlataforma(identificador: string, plataformaId: string) {
+        return this.db.reporte.findMany({
+            where: { identificador, plataformaId },
+            orderBy: { creadoEn: "desc" },
+            select: {
+                id: true,
+                estado: true,
+                eliminado: true,
+                motivoBaja: true,
+                creadoEn: true,
+                ciudad: true,
+                pais: true,
+                texto: true,
+                clasificacion: { select: { categoria: true, confianza: true } },
+            },
+        });
+    }
+
+    /** Ids de reportes que cumplen el filtro (validación de reportes a bajar, SPEC-110). */
+    findIdsWhere(where: Prisma.ReporteWhereInput) {
+        return this.db.reporte.findMany({
+            where,
+            select: { id: true },
+        });
+    }
+
+    /** Asignación del caso a un miembro del comité (escalamiento). */
+    asignarComite(id: string, comiteId: string) {
+        return this.db.reporte.update({
+            where: { id },
+            data: { comiteId },
+        });
+    }
 }

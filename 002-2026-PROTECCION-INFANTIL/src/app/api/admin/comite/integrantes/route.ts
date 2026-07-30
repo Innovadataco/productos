@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
-import { logAudit } from "@/lib/audit";
-import { encryptParameter, decryptParameter } from "@/lib/param-encryption";
+import { ComiteIntegrantesService } from "@/lib/dal/services/comite-integrantes";
 
 const TIPOS_IDENTIFICACION = ["CEDULA_CIUDADANIA", "CEDULA_EXTRANJERIA", "PASAPORTE", "OTRO"] as const;
 
@@ -32,48 +30,6 @@ function getClientInfo(request: Request) {
     };
 }
 
-async function validarComite(comiteId: string) {
-    const comite = await prisma.usuario.findUnique({ where: { id: comiteId } });
-    if (!comite || comite.rol !== "COMITE_VALIDACION") {
-        return null;
-    }
-    return comite;
-}
-
-function serializarIntegrante(integrante: {
-    id: string;
-    comiteId: string;
-    nombres: string;
-    apellidos: string;
-    tipoIdentificacion: string;
-    numeroIdentificacion: string;
-    email: string;
-    fechaInicio: Date;
-    fechaFin: Date | null;
-    estado: string;
-    creadoPorId: string;
-    modificadoPorId: string | null;
-    creadoEn: Date;
-    actualizadoEn: Date;
-}) {
-    return {
-        id: integrante.id,
-        comiteId: integrante.comiteId,
-        nombres: integrante.nombres,
-        apellidos: integrante.apellidos,
-        tipoIdentificacion: integrante.tipoIdentificacion,
-        numeroIdentificacion: decryptParameter(integrante.numeroIdentificacion),
-        email: integrante.email,
-        fechaInicio: integrante.fechaInicio,
-        fechaFin: integrante.fechaFin,
-        estado: integrante.estado,
-        creadoPorId: integrante.creadoPorId,
-        modificadoPorId: integrante.modificadoPorId,
-        creadoEn: integrante.creadoEn,
-        actualizadoEn: integrante.actualizadoEn,
-    };
-}
-
 export async function GET(request: Request) {
     try {
         const admin = await verifyAuth("ADMIN");
@@ -95,20 +51,10 @@ export async function GET(request: Request) {
         }
         const { comiteId } = parsedQuery.data;
 
-        const comite = await validarComite(comiteId);
-        if (!comite) {
-            return NextResponse.json(
-                { error: { message: "Comité no encontrado", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
+        // SPEC-053: validación del comité, padrón y descifrado viven en el DAL.
+        const resultado = await new ComiteIntegrantesService().listar(comiteId);
 
-        const integrantes = await prisma.integranteComite.findMany({
-            where: { comiteId },
-            orderBy: { creadoEn: "desc" },
-        });
-
-        return NextResponse.json({ integrantes: integrantes.map(serializarIntegrante) });
+        return NextResponse.json(resultado);
     } catch (error) {
         return errorToResponse(error, "[ADMIN/COMITE/INTEGRANTES]");
     }
@@ -134,43 +80,11 @@ export async function POST(request: Request) {
             );
         }
 
-        const { comiteId, nombres, apellidos, tipoIdentificacion, numeroIdentificacion, email, fechaInicio } = parsed.data;
+        // SPEC-053: validación del comité, cifrado de la identificación, alta y
+        // auditoría viven en el DAL.
+        const resultado = await new ComiteIntegrantesService().crear(parsed.data, admin.id, getClientInfo(request));
 
-        const comite = await validarComite(comiteId);
-        if (!comite) {
-            return NextResponse.json(
-                { error: { message: "Comité no encontrado", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
-
-        const numeroIdentificacionCifrado = encryptParameter(numeroIdentificacion);
-        const { ipAddress, userAgent } = getClientInfo(request);
-
-        const integrante = await prisma.integranteComite.create({
-            data: {
-                comiteId,
-                nombres,
-                apellidos,
-                tipoIdentificacion,
-                numeroIdentificacion: numeroIdentificacionCifrado,
-                email,
-                fechaInicio: fechaInicio ? new Date(fechaInicio) : new Date(),
-                creadoPorId: admin.id,
-            },
-        });
-
-        await logAudit({
-            accion: "COMITE_INTEGRANTE_CREADO",
-            tipoRecurso: "IntegranteComite",
-            recursoId: integrante.id,
-            usuarioId: admin.id,
-            valorNuevo: JSON.stringify({ comiteId, nombres, apellidos, tipoIdentificacion, email }),
-            ipAddress,
-            userAgent,
-        });
-
-        return NextResponse.json({ integrante: serializarIntegrante(integrante) }, { status: 201 });
+        return NextResponse.json(resultado, { status: 201 });
     } catch (error) {
         return errorToResponse(error, "[ADMIN/COMITE/INTEGRANTES]");
     }

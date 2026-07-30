@@ -72,4 +72,12 @@ export class UsuarioRepository {
             select: { id: true, email: true, nombre: true },
         });
     }
+
+    /** Miembro activo del comité de validación con su flag esComite (asignar/reasignar). */
+    findMiembroComiteActivo(id: string) {
+        return this.db.usuario.findFirst({
+            where: { id, rol: "COMITE_VALIDACION", estado: "activo" },
+            include: { perfilOperador: { select: { esComite: true } } },
+        });
+    }
 }

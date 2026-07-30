@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
-import { diasHabilesTranscurridos, estaEnAvisoPrevio, getAvisoPrevioDias } from "@/lib/apelaciones";
+import { ComiteApelacionesService } from "@/lib/dal/services/comite-apelaciones";
 
 /**
  * SPEC-110 — Bandeja propia de apelaciones del comité de validación.
@@ -52,56 +51,11 @@ export async function GET(request: Request) {
             );
         }
         const { page, pageSize, estado } = parsedQuery.data;
-        const skip = (page - 1) * pageSize;
 
-        const where = estado ? { estado } : {};
-        const [apelaciones, total, avisoPrevioDias] = await Promise.all([
-            prisma.apelacion.findMany({
-                where,
-                orderBy: [{ estado: "asc" }, { creadoEn: "desc" }],
-                skip,
-                take: pageSize,
-                select: {
-                    id: true,
-                    numero: true,
-                    identificador: true,
-                    estado: true,
-                    esRepresentante: true,
-                    creadoEn: true,
-                    plazoRespuestaEn: true,
-                    resueltoEn: true,
-                    decision: true,
-                    plataforma: { select: { nombre: true, clave: true } },
-                    usuario: { select: { id: true, nombre: true, email: true } },
-                    comite: { select: { id: true, nombre: true } },
-                },
-            }),
-            prisma.apelacion.count({ where }),
-            getAvisoPrevioDias(),
-        ]);
+        // SPEC-053: bandeja, días hábiles y marca "próximo a vencer" viven en el DAL.
+        const resultado = await new ComiteApelacionesService().listarBandeja({ estado, page, pageSize });
 
-        const ahora = new Date();
-        const items = apelaciones.map((a) => ({
-            id: a.id,
-            numero: a.numero,
-            identificador: a.identificador,
-            plataforma: a.plataforma,
-            estado: a.estado,
-            esRepresentante: a.esRepresentante,
-            creadoEn: a.creadoEn,
-            plazoRespuestaEn: a.plazoRespuestaEn,
-            resueltoEn: a.resueltoEn,
-            decision: a.decision,
-            apelante: a.usuario,
-            comiteAsignado: a.comite,
-            diasHabilesTranscurridos: diasHabilesTranscurridos(a.creadoEn, ahora),
-            proximoAVencer: estaEnAvisoPrevio({ estado: a.estado, creadoEn: a.creadoEn }, avisoPrevioDias, ahora),
-        }));
-
-        return NextResponse.json({
-            items,
-            pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
-        });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

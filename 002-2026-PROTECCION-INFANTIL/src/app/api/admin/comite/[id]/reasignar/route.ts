@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { logAudit } from "@/lib/audit";
-import { esAdminRol } from "@/lib/operadores/permisos";
+import { ComiteBandejaService } from "@/lib/dal/services/comite-bandeja";
 
 const reasignarSchema = z.object({
     nuevoComiteId: idSchema,
@@ -53,64 +51,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const { nuevoComiteId } = parsed.data;
 
-        const solicitud = await prisma.solicitudComite.findUnique({
-            where: { id },
-            include: { reporte: true },
-        });
-        if (!solicitud) {
-            return NextResponse.json(
-                { error: { message: "Solicitud no encontrada", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
+        // SPEC-053: validaciones, reasignación transaccional y auditoría viven en el DAL.
+        const resultado = await new ComiteBandejaService().reasignar(id, nuevoComiteId, user.id, getClientInfo(request));
 
-        if (solicitud.estado !== "ASIGNADA") {
-            return NextResponse.json(
-                { error: { message: "Solo se pueden reasignar solicitudes asignadas", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 409 }
-            );
-        }
-
-        const nuevoComite = await prisma.usuario.findFirst({
-            where: { id: nuevoComiteId, rol: "COMITE_VALIDACION", estado: "activo" },
-            include: { perfilOperador: { select: { esComite: true } } },
-        });
-        if (!nuevoComite || !nuevoComite.perfilOperador?.esComite) {
-            return NextResponse.json(
-                { error: { message: "Nuevo miembro del comité no encontrado o inactivo", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
-
-        await prisma.$transaction([
-            prisma.solicitudComite.update({
-                where: { id },
-                data: { comiteId: nuevoComiteId },
-            }),
-            prisma.reporte.update({
-                where: { id: solicitud.reporteId },
-                data: { comiteId: nuevoComiteId },
-            }),
-        ]);
-
-        const { ipAddress, userAgent } = getClientInfo(request);
-        await logAudit({
-            accion: "CASO_REASIGNADO",
-            tipoRecurso: "SolicitudComite",
-            recursoId: id,
-            usuarioId: user.id,
-            valorAnterior: JSON.stringify({ comiteId: solicitud.comiteId }),
-            valorNuevo: JSON.stringify({ comiteId: nuevoComiteId }),
-            ipAddress,
-            userAgent,
-        });
-
-        return NextResponse.json({
-            solicitudId: id,
-            numero: solicitud.numero,
-            estado: "ASIGNADA",
-            comiteId: nuevoComiteId,
-        });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

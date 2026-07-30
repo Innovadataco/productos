@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
+import { ComiteApelacionesService } from "@/lib/dal/services/comite-apelaciones";
 
 /**
  * SPEC-110 — El comité (o ADMIN) toma un caso de apelación.
@@ -44,27 +44,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const id = parsedId.data;
 
-        const apelacion = await prisma.apelacion.findUnique({ where: { id }, select: { id: true, estado: true, comiteId: true, numero: true } });
-        if (!apelacion) {
-            return NextResponse.json(
-                { error: { message: "Apelación no encontrada", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
-        if (apelacion.estado !== "RECIBIDA") {
-            return NextResponse.json(
-                { error: { message: "El caso ya fue tomado o resuelto", code: ERROR_CODES.CONFLICT } },
-                { status: 409 }
-            );
-        }
+        // SPEC-053: guardas de estado y toma del caso viven en el DAL.
+        const resultado = await new ComiteApelacionesService().tomar(id, user.id);
 
-        const actualizada = await prisma.apelacion.update({
-            where: { id },
-            data: { estado: "EN_REVISION", comiteId: user.id, asignadoEn: new Date() },
-            select: { id: true, numero: true, estado: true, comiteId: true, asignadoEn: true },
-        });
-
-        return NextResponse.json({ apelacion: actualizada });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

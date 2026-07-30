@@ -21,4 +21,13 @@ export class CorreccionAdminRepository {
             where: { confirmada, clasificacion: { reporte: whereReporte } },
         });
     }
+
+    /** Corrección existente de una clasificación (guarda "ya fue corregido" del comité). */
+    findByClasificacionId(clasificacionId: string) {
+        return this.db.correccionAdmin.findUnique({ where: { clasificacionId } });
+    }
+
+    crear(data: Prisma.CorreccionAdminUncheckedCreateInput) {
+        return this.db.correccionAdmin.create({ data });
+    }
 }

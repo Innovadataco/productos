@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
-import { logAudit } from "@/lib/audit";
-import { darDeBajaReporte } from "@/lib/dal/services/reporte-lifecycle";
-import { whereReporteVigente } from "@/lib/reportes-acceso";
-import { actualizarVisibilidadPublica } from "@/lib/visibility";
+import { ComiteApelacionesService } from "@/lib/dal/services/comite-apelaciones";
 
 /**
  * SPEC-110 — Resolución humana y motivada de una apelación (núcleo del diseño cerrado).
@@ -86,121 +82,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const apelacion = await prisma.apelacion.findUnique({
-            where: { id },
-            select: { id: true, numero: true, identificador: true, plataformaId: true, estado: true, comiteId: true },
-        });
-        if (!apelacion) {
-            return NextResponse.json(
-                { error: { message: "Apelación no encontrada", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
-        if (apelacion.estado !== "EN_REVISION") {
-            return NextResponse.json(
-                { error: { message: "El caso debe estar en revisión para resolverse", code: ERROR_CODES.CONFLICT } },
-                { status: 409 }
-            );
-        }
-        if (esComiteRol(user.rol) && apelacion.comiteId !== user.id) {
-            return NextResponse.json(
-                { error: { message: "Solo el miembro del comité asignado puede resolver", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
+        // SPEC-053: guardas, validación de reportes, tx de resolución (marca de
+        // ocultamiento, bajas por REPORTE_FALSO, recálculo de visibilidad) y
+        // auditoría viven en el DAL.
+        const resultado = await new ComiteApelacionesService().resolver(
+            id,
+            { decision, motivacion, quitarVisibilidad, reportesABajar },
+            { id: user.id, esComite: esComiteRol(user.rol) },
+            getClientInfo(request),
+            request
+        );
 
-        // Validar que cada reporte a bajar pertenece al identificador + plataforma declarados.
-        let reportesValidos: { id: string }[] = [];
-        if (decision === "ACEPTADA" && reportesABajar.length > 0) {
-            reportesValidos = await prisma.reporte.findMany({
-                where: whereReporteVigente({
-                    id: { in: reportesABajar },
-                    identificador: apelacion.identificador,
-                    plataformaId: apelacion.plataformaId,
-                }),
-                select: { id: true },
-            });
-            if (reportesValidos.length !== reportesABajar.length) {
-                return NextResponse.json(
-                    { error: { message: "Algún reporte no pertenece al identificador declarado o ya está dado de baja", code: ERROR_CODES.VALIDATION_ERROR } },
-                    { status: 400 }
-                );
-            }
-        }
-
-        const ahora = new Date();
-        const { ipAddress, userAgent } = getClientInfo(request);
-
-        const reportesBajados = await prisma.$transaction(async (tx) => {
-            const bajados: string[] = [];
-
-            if (decision === "ACEPTADA") {
-                if (quitarVisibilidad) {
-                    // Marca del comité; si no hay agregado no hay nada que ocultar (no-op).
-                    await tx.identificadorReportado.updateMany({
-                        where: { identificador: apelacion.identificador, plataformaId: apelacion.plataformaId },
-                        data: { ocultoPorComiteEn: ahora },
-                    });
-                }
-                for (const rep of reportesValidos) {
-                    await darDeBajaReporte({
-                        reporteId: rep.id,
-                        motivo: "REPORTE_FALSO",
-                        nota: `Apelación ${apelacion.numero}: reporte declarado falso por el comité`,
-                        adminId: user.id,
-                        request,
-                        tx,
-                        accionAudit: "REPORT_DEACTIVATE",
-                    });
-                    bajados.push(rep.id);
-                }
-                // Recálculo final con la dueña única (efecto inmediato de la marca).
-                await actualizarVisibilidadPublica(apelacion.identificador, apelacion.plataformaId, tx);
-            }
-
-            await tx.apelacion.update({
-                where: { id },
-                data: {
-                    estado: decision,
-                    decision,
-                    motivacionResolucion: motivacion,
-                    quitoVisibilidad: decision === "ACEPTADA" && quitarVisibilidad,
-                    resueltoPorId: user.id,
-                    resueltoEn: ahora,
-                },
-            });
-
-            await logAudit({
-                accion: "APELACION_RESUELTA",
-                tipoRecurso: "Apelacion",
-                recursoId: id,
-                usuarioId: user.id,
-                valorNuevo: JSON.stringify({
-                    numero: apelacion.numero,
-                    decision,
-                    motivacion,
-                    quitarVisibilidad: decision === "ACEPTADA" && quitarVisibilidad,
-                    reportesBajados: bajados,
-                }),
-                ipAddress,
-                userAgent,
-                tx,
-            });
-
-            return bajados;
-        });
-
-        return NextResponse.json({
-            apelacion: {
-                id,
-                numero: apelacion.numero,
-                estado: decision,
-                decision,
-                quitoVisibilidad: decision === "ACEPTADA" && quitarVisibilidad,
-                reportesBajados,
-                resueltoEn: ahora,
-            },
-        });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
