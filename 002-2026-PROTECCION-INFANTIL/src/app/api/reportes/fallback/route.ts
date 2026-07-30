@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { ERROR_CODES } from "@/lib/errors";
 import { verificarWorkerSecret } from "@/lib/worker-auth";
 import { fallbackReporteSchema } from "@/lib/validators";
 import { logger } from "@/lib/logger";
-import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { asignarOperadorAReporte } from "@/lib/operadores/asignador";
+import { registrarFallbackWorker } from "@/lib/dal/services/reporte-processing/fallback-worker";
 
 export async function POST(request: Request) {
     try {
@@ -25,42 +24,19 @@ export async function POST(request: Request) {
         const reporteId = parsed.data.reporteId;
         const errorCode = parsed.data.errorCode ?? ERROR_CODES.INTERNAL_ERROR;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-            select: { id: true, estado: true, numeroSeguimiento: true, identificador: true },
-        });
+        // SPEC-053: la transición a REVISION_MANUAL vive en el DAL; la ruta no toca prisma.
+        const resultado = await registrarFallbackWorker(reporteId, errorCode);
 
-        if (!reporte) {
+        if (!resultado.ok) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
 
-        if (reporte.estado === "REVISION_MANUAL") {
+        if (resultado.yaEnRevision) {
             return NextResponse.json({ reporteId, estado: "REVISION_MANUAL", message: "Ya estaba en revisión manual" });
         }
-
-        const mensajeGenerico = "Reintentos agotados procesando el reporte";
-
-        await prisma.$transaction(async (tx) => {
-            await registrarTransicion({
-                reporteId,
-                estadoAnterior: reporte.estado,
-                estadoNuevo: "REVISION_MANUAL",
-                responsableTipo: "WORKER",
-                motivo: mensajeGenerico,
-                metadatos: { errorCode },
-                tx,
-            });
-            await tx.reporte.update({
-                where: { id: reporteId },
-                data: {
-                    estado: "REVISION_MANUAL",
-                    processingError: `${mensajeGenerico} (código: ${errorCode})`,
-                },
-            });
-        });
 
         asignarOperadorAReporte(reporteId).catch((err) =>
             logger.error("[FALLBACK] Asignación de operador: fallida", err)

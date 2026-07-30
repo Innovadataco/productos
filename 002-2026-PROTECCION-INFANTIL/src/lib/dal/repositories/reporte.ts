@@ -46,6 +46,14 @@ export class ReporteRepository {
         return this.db.reporte.findUnique({ where: { id }, include: INCLUDE_CON_DETALLE });
     }
 
+    /** Lectura mínima para flujos de estado (fallback del worker). */
+    findByIdBasico(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            select: { id: true, estado: true, numeroSeguimiento: true, identificador: true },
+        });
+    }
+
     findByNumeroSeguimiento(numeroSeguimiento: string): Promise<ReporteSeguimientoRow | null> {
         return this.db.reporte.findUnique({
             where: { numeroSeguimiento },

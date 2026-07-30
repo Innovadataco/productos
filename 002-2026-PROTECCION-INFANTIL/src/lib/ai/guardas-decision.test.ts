@@ -3,7 +3,7 @@ import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 import { decidirGuardasSeguridad } from "./guardas-decision";
 import { detectarDoxing } from "./pii-patterns";
 import { detectarKeywordsRiesgo } from "./keywords-riesgo";
-import { aplicarGuardasSeguridad } from "@/app/api/reportes/procesar/helpers/guardas";
+import { aplicarGuardasSeguridad } from "@/lib/dal/services/reporte-processing/guardas";
 
 // registrarPaso escribe en la trazabilidad de expediente (DB); en este test de
 // paridad solo importan las decisiones, no el side-effect.
