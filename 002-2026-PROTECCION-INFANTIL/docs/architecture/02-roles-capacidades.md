@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 6 roles (5 autenticados + anónimo) × 185 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1110 combinaciones.
+Inventario: 6 roles (5 autenticados + anónimo) × 190 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1140 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -151,6 +151,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
+| `/api/docs` | api | permitir | permite | sí |
+| `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -202,6 +204,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/nuevo` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/docs` | página | permitir | permite | sí |
+| `/docs/operar` | página | permitir | permite | sí |
+| `/docs/tecnico` | página | permitir | permite | sí |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/offline` | página | permitir | permite | sí |
@@ -341,6 +346,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
+| `/api/docs` | api | permitir | permite | sí |
+| `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -392,6 +399,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/nuevo` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/docs` | página | permitir | permite | sí |
+| `/docs/operar` | página | permitir | permite | sí |
+| `/docs/tecnico` | página | permitir | permite | sí |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/offline` | página | permitir | permite | sí |
@@ -531,6 +541,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
+| `/api/docs` | api | permitir | permite | sí |
+| `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -582,6 +594,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/nuevo` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/docs` | página | permitir | permite | sí |
+| `/docs/operar` | página | permitir | permite | sí |
+| `/docs/tecnico` | página | permitir | permite | sí |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/offline` | página | permitir | permite | sí |
@@ -721,6 +736,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/departamentos` | api | HTTP 403 | no permite | sí |
+| `/api/docs` | api | HTTP 403 | no permite | sí |
+| `/api/docs/indice` | api | HTTP 403 | no permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | HTTP 403 | no permite | sí |
 | `/api/health/worker` | api | HTTP 403 | no permite | sí |
@@ -772,6 +789,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/nuevo` | página | permitir | permite | sí |
 | `/dashboard/colegio/estadisticas` | página | permitir | permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/docs` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/docs/operar` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/docs/tecnico` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/login` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/offline` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -911,6 +931,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
+| `/api/docs` | api | permitir | permite | sí |
+| `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -962,6 +984,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/nuevo` | página | permitir | permite | sí |
 | `/dashboard/colegio/estadisticas` | página | permitir | permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | permitir | permite | sí |
+| `/docs` | página | permitir | permite | sí |
+| `/docs/operar` | página | permitir | permite | sí |
+| `/docs/tecnico` | página | permitir | permite | sí |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | permitir | permite | sí |
 | `/offline` | página | permitir | permite | sí |
@@ -1101,6 +1126,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
+| `/api/docs` | api | permitir | permite | sí |
+| `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -1152,6 +1179,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/nuevo` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/estadisticas` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/login | permite | **NO** |
+| `/docs` | página | permitir | permite | sí |
+| `/docs/operar` | página | permitir | permite | sí |
+| `/docs/tecnico` | página | permitir | permite | sí |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/login | permite | **NO** |
 | `/offline` | página | permitir | permite | sí |

@@ -24,6 +24,11 @@ const PUBLIC_ROUTES = [
     "/api/reportes",
     "/api/estadisticas-publicas",
     "/api/health",
+    // SPEC-017: el visor de documentación es semi-público; la puerta deja pasar y
+    // CADA CAPA se enforcea en su página/API (capa 1 sin login, capa 2 autenticado,
+    // capa 3 ADMIN/SCHOOL_ADMIN). La allowlist de documentos vive en lib/docs/indice.
+    "/docs",
+    "/api/docs",
 ];
 
 // Rutas de usuario final: solo PARENT (o anónimo) puede usarlas; internos no.
