@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
 import { crearReporteSchema } from "@/lib/validators";
-import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { getUserFromToken } from "@/lib/auth";
 import { getParametroSistema } from "@/lib/parametros";
 import { sendReporte } from "@/lib/queue";
@@ -10,9 +8,7 @@ import { detectarKeywordsRiesgo } from "@/lib/ai/keywords-riesgo";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
-import { encryptParameter } from "@/lib/param-encryption";
-
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
 
 export async function POST(request: Request) {
     try {
@@ -67,10 +63,11 @@ export async function POST(request: Request) {
 
         const usuarioId = user?.id ?? null;
 
+        // SPEC-053: el acceso a datos vive en el DAL; la ruta no toca prisma.
+        const creationService = new ReporteCreationService();
+
         // Verificar plataforma
-        const plataforma = await prisma.plataforma.findUnique({
-            where: { clave: plataformaClave },
-        });
+        const plataforma = await creationService.resolverPlataforma(plataformaClave);
         if (!plataforma) {
             return NextResponse.json(
                 { error: { message: "Plataforma no válida", code: ERROR_CODES.VALIDATION_ERROR } },
@@ -105,79 +102,46 @@ export async function POST(request: Request) {
         const prioridadAlta = !esAnonimo || (esAnonimo && keywordsRiesgo.tieneMatch);
         const keywordsDetectadas = keywordsRiesgo.tieneMatch ? keywordsRiesgo.keywords : [];
 
-        // Deduplicación autenticada: mismo usuario + identificador en 30 días
-        if (usuarioId) {
-            const desde = new Date(Date.now() - THIRTY_DAYS_MS);
-            const existente = await prisma.reporte.findFirst({
-                where: {
-                    usuarioId,
-                    identificador,
-                    creadoEn: { gte: desde },
-                },
-                orderBy: { creadoEn: "desc" },
-            });
-            if (existente) {
+        const resultado = await creationService.crear({
+            identificador,
+            plataformaId: plataforma.id,
+            plataformaClave,
+            texto,
+            fechaIncidente,
+            ciudad,
+            pais,
+            paisId,
+            ciudadId,
+            otraPlataforma,
+            edadVictima,
+            esAnonimo,
+            usuarioId,
+            tenantId: user?.tenantId ?? null,
+            estadoInicial,
+            prioridadAlta,
+            keywordsDetectadas,
+        });
+
+        if (!resultado.ok) {
+            if (resultado.tipo === "duplicado") {
                 return NextResponse.json(
-                    { error: { message: "Ya reportaste este identificador recientemente", code: "DUPLICATE_REPORT", reporteExistenteId: existente.id } },
+                    { error: { message: "Ya reportaste este identificador recientemente", code: "DUPLICATE_REPORT", reporteExistenteId: resultado.reporteExistenteId } },
                     { status: 429 }
                 );
             }
-        }
-
-        // Generar número de seguimiento único
-        let numeroSeguimiento: string;
-        let intentos = 0;
-        do {
-            numeroSeguimiento = generarNumeroSeguimiento();
-            const existente = await prisma.reporte.findUnique({
-                where: { numeroSeguimiento },
-            });
-            if (!existente) break;
-            intentos++;
-        } while (intentos < 10);
-
-        if (intentos >= 10) {
-            return NextResponse.json(
-                { error: { message: "Error generando número de seguimiento", code: ERROR_CODES.INTERNAL_ERROR } },
-                { status: 500 }
-            );
-        }
-
-        // Crear reporte. El texto original se cifra inmediatamente; la copia
-        // anonimizada se genera en el worker de procesamiento asíncrono.
-        let textoOriginalCifrado: string;
-        try {
-            textoOriginalCifrado = encryptParameter(texto);
-        } catch (err) {
-            logger.error("[REPORTES] Error cifrando texto original:", err);
+            if (resultado.tipo === "error_numero") {
+                return NextResponse.json(
+                    { error: { message: "Error generando número de seguimiento", code: ERROR_CODES.INTERNAL_ERROR } },
+                    { status: 500 }
+                );
+            }
             return NextResponse.json(
                 { error: { message: "Error de seguridad almacenando el reporte", code: ERROR_CODES.INTERNAL_ERROR } },
                 { status: 500 }
             );
         }
 
-        const reporte = await prisma.reporte.create({
-            data: {
-                identificador,
-                plataformaId: plataforma.id,
-                texto,
-                textoOriginal: textoOriginalCifrado,
-                fechaIncidente: new Date(fechaIncidente),
-                ciudad,
-                pais,
-                paisId: ciudadId === "otra" ? null : (paisId || null),
-                ciudadId: ciudadId === "otra" ? null : (ciudadId || null),
-                otraPlataforma: plataformaClave === "otro" ? (otraPlataforma || null) : null,
-                edadVictima: edadVictima ?? null,
-                esAnonimo,
-                usuarioId,
-                numeroSeguimiento,
-                tenantId: user?.tenantId ?? null,
-                estado: estadoInicial,
-                prioridadAlta,
-                keywordsDetectadas,
-            },
-        });
+        const { reporte } = resultado;
 
         // Registrar señal de fuente para anti-abuso (Fase A)
         try {
@@ -187,33 +151,6 @@ export async function POST(request: Request) {
             logger.error("[REPORTES] Error registrando fuente:", msg);
             // No fallamos la creación del reporte si falla el registro de fuente.
         }
-
-        // Actualizar o crear IdentificadorReportado
-        await prisma.identificadorReportado.upsert({
-            where: {
-                identificador_plataformaId: {
-                    identificador,
-                    plataformaId: plataforma.id,
-                },
-            },
-            update: {
-                totalReportes: { increment: 1 },
-                reportesAutenticados: esAnonimo ? undefined : { increment: 1 },
-                reportesAnonimos: esAnonimo ? { increment: 1 } : undefined,
-                ultimoReporteEn: new Date(),
-                // SPEC-110: un reporte NUEVO levanta el ocultamiento decidido por el
-                // comité en una apelación aceptada (sin lista blanca permanente).
-                ocultoPorComiteEn: null,
-            },
-            create: {
-                identificador,
-                plataformaId: plataforma.id,
-                totalReportes: 1,
-                reportesAutenticados: esAnonimo ? 0 : 1,
-                reportesAnonimos: esAnonimo ? 1 : 0,
-                ultimoReporteEn: new Date(),
-            },
-        });
 
         // Publicar en cola para procesamiento asíncrono (solo si queda en PENDIENTE)
         if (estadoInicial === "PENDIENTE") {
@@ -233,7 +170,7 @@ export async function POST(request: Request) {
                     numeroSeguimiento: reporte.numeroSeguimiento,
                     estado: reporte.estado,
                 },
-                mensaje: "Reporte recibido. Tu número de seguimiento es " + numeroSeguimiento + ".",
+                mensaje: "Reporte recibido. Tu número de seguimiento es " + reporte.numeroSeguimiento + ".",
             },
             { status: 201 }
         );
