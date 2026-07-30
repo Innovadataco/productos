@@ -127,11 +127,19 @@ Cada spec vive en `specs/NNN-nombre/` con el MISMO set y formato que `specs/001-
 
 ## Protocolo de señales (ZEUS ↔ ODIN)
 
-Estándar de comunicación fijado en ACTA_ARQ_06. Fuente: Metodología Operativa §6 (v2.0) — repo `Metodologias` → `Desarrollo de software/METODOLOGIA-OPERATIVA-FABRICA-SOFTWARE-v1.0.md`. Esto es un resumen operativo; el texto canónico vive allá.
+Estándar de comunicación fijado en ACTA_ARQ_06. Fuente: Metodología Operativa §6 R3 (v2.1) — repo `Metodologias` → `Desarrollo de software/METODOLOGIA-OPERATIVA-FABRICA-SOFTWARE-v1.0.md`. Esto es un resumen operativo; el texto canónico vive allá.
 
 - **Vocabulario del ciclo:** `RADICADA → REVISADA → REALIZADO → REVISO → CUMPLE/NO CUMPLE`. Cada señal es UNA línea, un verbo de acción.
 - **Al recibir un instructivo (OBLIGATORIO):** `002-PI-XXX · REVISADA · arranco` — el CEO nunca se queda sin saber si ODIN arrancó. Si algo bloquea: `002-PI-XXX · REVISADA · dudas: <…> → PARA`.
 - **Al cerrar:** `002-PI-XXX · REALIZADO · <hash> · <media línea>`, más `Nota:` SOLO si hay algo que el diff no muestra (desviación, hallazgo preexistente, riesgo asumido).
+- **Cuándo va Nota — test binario:** antes de escribir una Nota, pregúntate *"¿cambiaría el veredicto de ZEUS si no la lee?"*. No → no hay Nota.
+
+  | SÍ Nota (cambia el veredicto) | NO Nota (el diff ya lo dice) |
+  |---|---|
+  | Me desvié de lo pedido | "No toqué X" / "respeté el candado" |
+  | Hallazgo que afecta lo auditado | Estado del working tree ajeno |
+  | Riesgo asumido en este cambio | "Cumplí los checkpoints" |
+  | Supuesto que tomé para desempatar | Descripción de lo hecho |
 - **Regla:** nada de tablas, listas de commits ni descripciones de lo hecho — eso vive en el repo y en `tasks.md`. La señal reporta acción, no silencio.
 
 ## Reglas de oro
