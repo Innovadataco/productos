@@ -145,6 +145,10 @@ Los criterios 1, 2 y 4 del instructivo 002-PI-043 que aplican a esta spec se ver
 paso a paso (test de regresión, suite+tsc+build, arch:check con artefacto regenerado,
 aserciones A/B verdes).
 
+## Data Model
+
+N/A — no cambia schema ni entidades; es lógica de redirección en `homeForRole`.
+
 ## Contracts
 
 N/A — no expone endpoints ni interfaces nuevas; la "interfaz" es el destino de una

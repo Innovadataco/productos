@@ -156,6 +156,11 @@ descartó); reconciliar por la vía de abrir rutas al comité (fuga; contradice 
 Los criterios 3, 4 y 5 del instructivo 002-PI-043 que aplican a esta spec se verifican ahí
 paso a paso (BD fresca, artefactos regenerados, aserciones A/B verdes).
 
+## Data Model
+
+N/A — el modelo `PermisoModulo` no cambia; solo cambian los valores sembrados
+(`clavesPorRol.COMITE_VALIDACION`). Sin migración de schema.
+
 ## Contracts
 
 N/A — no expone endpoints; la "interfaz" es el contenido por defecto de `PermisoModulo`,
