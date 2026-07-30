@@ -14,9 +14,11 @@ describe("fuentes del menú (SPEC-126)", () => {
         expect(header.hrefsPintados("PARENT")).not.toContain("/dashboard/colegio");
     });
 
-    it("grants del seed: COMITE_VALIDACION tiene los 3 módulos de comité (base del hallazgo I-39)", () => {
+    it("grants del seed: COMITE_VALIDACION solo recibe su bandeja (D-43/SPEC-128 reconcilió el default)", () => {
         const grants = grantsSeedPorRol();
-        expect(grants.COMITE_VALIDACION).toEqual(["comite", "comite_auditoria", "comite_bandeja"]);
+        // Antes de D-43 tenía los 3 módulos de comité (base del hallazgo I-39); dos de
+        // ellos mapean a rutas ADMIN_ONLY que la puerta le niega → default contradictorio.
+        expect(grants.COMITE_VALIDACION).toEqual(["comite_bandeja"]);
         expect(grants.OPERADOR).toEqual(["bandeja_reportes"]);
         expect(grants.ADMIN?.length).toBeGreaterThan(10);
     });

@@ -41,3 +41,31 @@ describe("seed del admin — guarda anti-literal (I-31)", () => {
         expect(bloqueAdmin()).toMatch(/Admin omitido/);
     });
 });
+
+/**
+ * Guarda de regresión del default de grants del comité (SPEC-128, D-43).
+ * Falla si COMITE_VALIDACION vuelve a recibir módulos cuyas rutas la puerta le niega
+ * (comite → /dashboard/admin/comite/gestion y comite_auditoria → .../auditoria son
+ * ADMIN_ONLY en proxy.ts). El comité solo recibe su bandeja por defecto.
+ */
+function bloqueClavesPorRol(): string {
+    const src = fs.readFileSync(SEED_PATH, "utf-8");
+    const inicio = src.indexOf("const clavesPorRol");
+    const fin = src.indexOf("};", inicio);
+    if (inicio === -1 || fin === -1) {
+        throw new Error("No se encontró clavesPorRol en prisma/seed.ts (cambió la estructura; revisar este test)");
+    }
+    return src.slice(inicio, fin);
+}
+
+describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", () => {
+    it("COMITE_VALIDACION solo recibe comite_bandeja por defecto", () => {
+        const entrada = bloqueClavesPorRol().match(/COMITE_VALIDACION:\s*\[([^\]]*)\]/)?.[1] ?? "";
+        const claves = entrada.match(/"[^"]+"/g) ?? [];
+        expect(claves).toEqual(['"comite_bandeja"']);
+    });
+
+    it("ADMIN deriva sus grants del catálogo completo (conserva comite y comite_auditoria)", () => {
+        expect(bloqueClavesPorRol()).toMatch(/ADMIN:\s*modulosSeed\.map/);
+    });
+});

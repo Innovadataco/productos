@@ -1262,7 +1262,11 @@ async function main() {
         ADMIN: modulosSeed.map((m) => m.clave),
         SCHOOL_ADMIN: ["colegios", "colegios_gestion", "colegios_auditoria"],
         OPERADOR: ["bandeja_reportes"],
-        COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_auditoria"],
+        // SPEC-128 (D-43): el comité solo recibe su bandeja. "comite" y "comite_auditoria"
+        // mapean a rutas ADMIN_ONLY (proxy.ts) que la puerta le niega: el seed ya no dice
+        // SÍ donde la puerta dice NO. Los módulos siguen en el catálogo (ADMIN los usa) y
+        // las BD existentes se reconcilian con scripts/revocar-grants-comite-muertos.ts.
+        COMITE_VALIDACION: ["comite_bandeja"],
     };
     let permisosCreados = 0;
     for (const [rol, claves] of Object.entries(clavesPorRol)) {

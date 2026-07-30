@@ -69,8 +69,24 @@ git diff pre-cola-043 -- prisma/seed.ts src/lib/nav-items.ts src/lib/permisos-ca
   (y su comentario).
 - `nav-items.ts` y `permisos-catalogo.ts` DEBEN salir sin diff.
 
-## BD existentes (producción incluida)
+## BD existentes (producción incluida) — Opción A APROBADA por ZEUS
 
-Pendiente de la decisión de ZEUS en la compuerta (FR-004, Opciones A/B/C del plan).
-Hasta esa decisión: ninguna ejecución contra BD viva. El cierre de la spec documentará la
-decisión y, si aplica, la evidencia de la revocación por entorno.
+El mecanismo decidido en la compuerta es la **Opción A**: script puntual de revocación
+`scripts/revocar-grants-comite-muertos.ts` (idempotente, no destructivo: `activo=false`,
+no borra módulos ni filas). Ya probado en la BD de desarrollo (2 grants desactivados;
+segunda corrida: 0 cambios) y cubierto por `scripts/revocar-grants-comite-muertos.test.ts`
+en CI.
+
+**Paso de despliegue para el CEO (producción — NO lo corre ODIN):**
+
+```bash
+# En el VPS, con el .env de producción cargado:
+cd 002-2026-PROTECCION-INFANTIL
+node --env-file=.env --import tsx scripts/revocar-grants-comite-muertos.ts
+# Salida esperada: "Revocación: completada — 2 grants desactivados (comite, comite_auditoria)"
+# Verificación: los grants activos del comité NO incluyen comite ni comite_auditoria;
+# comite_bandeja sigue activo. Re-correrlo es seguro (idempotente).
+```
+
+Momento: junto al próximo despliegue a producción. Hasta entonces, producción conserva
+los grants muertos como dato inerte (D-41 ya oculta las tabs; la puerta ya niega las rutas).

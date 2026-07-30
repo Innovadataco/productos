@@ -935,8 +935,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/colegios/nuevo` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/comite` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/comite/apelaciones` | página | redirigir→/ | no permite | sí |
-| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard/admin | no permite | sí |
-| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard | no permite | sí |
+| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard | no permite | sí |
 | `/dashboard/admin/configuracion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/estadisticas` | página | redirigir→/ | no permite | sí |
@@ -1311,8 +1311,8 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | colegios_gestion | `/dashboard/colegio/cursos` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/cursos/carga` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/estadisticas` | ADMIN, SCHOOL_ADMIN |
-| comite | `/dashboard/admin/comite/gestion` | ADMIN, COMITE_VALIDACION |
-| comite_auditoria | `/dashboard/admin/comite/auditoria` | ADMIN, COMITE_VALIDACION |
+| comite | `/dashboard/admin/comite/gestion` | ADMIN |
+| comite_auditoria | `/dashboard/admin/comite/auditoria` | ADMIN |
 | comite_bandeja | `/dashboard/admin/comite` | ADMIN, COMITE_VALIDACION |
 | comite_bandeja | `/dashboard/admin/comite` | ADMIN, COMITE_VALIDACION |
 | comite_bandeja | `/dashboard/admin/comite/apelaciones` | ADMIN, COMITE_VALIDACION |

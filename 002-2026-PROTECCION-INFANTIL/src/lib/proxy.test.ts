@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { esRutaPermitidaSchoolAdmin } from "./proxy";
+import { SignJWT } from "jose";
+import { NextRequest } from "next/server";
+import { esRutaPermitidaSchoolAdmin, proxy } from "./proxy";
 
 describe("esRutaPermitidaSchoolAdmin", () => {
     it("permite las rutas del módulo colegio", () => {
@@ -67,5 +69,59 @@ describe("esRutaPermitidaSchoolAdmin", () => {
         // Solo se abre el sub-árbol de seguimiento (GET); /api/reportes (POST de
         // creación) y el resto de sus subrutas quedan cerradas.
         expect(esRutaPermitidaSchoolAdmin("/api/reportes")).toBe(false);
+    });
+});
+
+/**
+ * SPEC-127 (I-40, D-42) — homeForRole(PARENT) debe ser "/dashboard".
+ * Antes del fix, PARENT caía al default "/dashboard/admin", que la propia puerta le
+ * niega (esDestinoPermitidoPorRol, proxy.ts:122) → doble rebote a "/".
+ * Tokens firmados en memoria con jose (el proxy solo verifica el JWT; no toca BD).
+ */
+async function tokenParaRol(rol: string): Promise<string> {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    return new SignJWT({ sub: "test-proxy-home", rol })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setExpirationTime("1h")
+        .sign(secret);
+}
+
+function requestConSesion(pathname: string, token: string): NextRequest {
+    return new NextRequest(`http://localhost:5005${pathname}`, {
+        headers: { cookie: `token=${token}` },
+    });
+}
+
+describe("proxy — home por rol (SPEC-127, I-40/D-42)", () => {
+    it("PARENT redirigido a su home aterriza en /dashboard SIN doble rebote", async () => {
+        const token = await tokenParaRol("PARENT");
+
+        // La puerta lo redirige desde una ruta admin-only a su home...
+        const redirect = await proxy(requestConSesion("/dashboard/admin/comite/gestion", token));
+        expect(redirect.status).toBe(307);
+        const destino = new URL(redirect.headers.get("location")!).pathname;
+        expect(destino).toBe("/dashboard");
+
+        // ...y ese destino le está permitido: aterriza sin segundo rebote.
+        const aterrizaje = await proxy(requestConSesion(destino, token));
+        expect(aterrizaje.status).toBe(200);
+    });
+
+    it("cada rol tiene su home y el default interno no se mueve", async () => {
+        const casos: Array<[string, string, string]> = [
+            // [rol, ruta que provoca redirectToHome, home esperado]
+            ["COMITE_VALIDACION", "/dashboard", "/dashboard/admin/comite"],
+            ["SCHOOL_ADMIN", "/dashboard", "/dashboard/colegio"],
+            ["PARENT", "/dashboard/admin/comite/gestion", "/dashboard"],
+            ["ADMIN", "/dashboard", "/dashboard/admin"],
+            ["OPERADOR", "/dashboard", "/dashboard/admin"],
+        ];
+        for (const [rol, ruta, home] of casos) {
+            const res = await proxy(requestConSesion(ruta, await tokenParaRol(rol)));
+            expect(res.status, `${rol} en ${ruta} debería redirigir`).toBe(307);
+            const destino = new URL(res.headers.get("location")!).pathname;
+            expect(destino, `home de ${rol}`).toBe(home);
+        }
     });
 });
