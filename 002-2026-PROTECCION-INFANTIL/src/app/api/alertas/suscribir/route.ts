@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
+import { AlertaService } from "@/lib/dal/services/alertas";
 
 const suscribirSchema = z.object({
     identificador: z.string().min(3).max(100),
@@ -28,46 +28,23 @@ export async function POST(request: Request) {
 
         const { identificador, plataformaId } = parsed.data;
 
-        const plataforma = await prisma.plataforma.findUnique({
-            where: { id: plataformaId },
-        });
-        if (!plataforma) {
-            return NextResponse.json(
-                { error: { message: "Plataforma no válida", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            );
-        }
+        // SPEC-053: plataforma, visibilidad pública y upsert viven en el DAL; la ruta no toca prisma.
+        const resultado = await new AlertaService().suscribir({ usuarioId: user.id, identificador, plataformaId });
 
-        // El identificador debe existir y ser visible públicamente para suscribirse.
-        const identificadorReportado = await prisma.identificadorReportado.findUnique({
-            where: { identificador_plataformaId: { identificador, plataformaId } },
-        });
-        if (!identificadorReportado || !identificadorReportado.esVisiblePublicamente) {
+        if (!resultado.ok) {
+            if (resultado.tipo === "plataforma_invalida") {
+                return NextResponse.json(
+                    { error: { message: "Plataforma no válida", code: ERROR_CODES.VALIDATION_ERROR } },
+                    { status: 400 }
+                );
+            }
             return NextResponse.json(
                 { error: { message: "El identificador no está disponible públicamente para alertas", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
 
-        const suscripcion = await prisma.alertaSuscripcion.upsert({
-            where: {
-                usuarioId_identificador_plataformaId: {
-                    usuarioId: user.id,
-                    identificador,
-                    plataformaId,
-                },
-            },
-            update: { activa: true },
-            create: {
-                usuarioId: user.id,
-                identificador,
-                plataformaId,
-                activa: true,
-            },
-            include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
-        });
-
-        return NextResponse.json({ suscripcion }, { status: 201 });
+        return NextResponse.json({ suscripcion: resultado.suscripcion }, { status: 201 });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

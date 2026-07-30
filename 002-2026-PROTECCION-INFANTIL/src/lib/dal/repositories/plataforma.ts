@@ -16,4 +16,8 @@ export class PlataformaRepository {
     findByClave(clave: string) {
         return this.db.plataforma.findUnique({ where: { clave } });
     }
+
+    findById(id: string) {
+        return this.db.plataforma.findUnique({ where: { id } });
+    }
 }
