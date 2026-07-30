@@ -47,13 +47,17 @@ describe("seed del admin — guarda anti-literal (I-31)", () => {
  * Falla si COMITE_VALIDACION vuelve a recibir módulos cuyas rutas la puerta le niega
  * (comite → /dashboard/admin/comite/gestion y comite_auditoria → .../auditoria son
  * ADMIN_ONLY en proxy.ts). El comité solo recibe su bandeja por defecto.
+ * 002-PI-048: el bloque vive en la fuente única `prisma/seed-modulos-grants.ts`
+ * (la comparten el seed y scripts/sync-modulos-grants.ts).
  */
+const SEED_MODULOS_PATH = path.join(process.cwd(), "prisma", "seed-modulos-grants.ts");
+
 function bloqueClavesPorRol(): string {
-    const src = fs.readFileSync(SEED_PATH, "utf-8");
+    const src = fs.readFileSync(SEED_MODULOS_PATH, "utf-8");
     const inicio = src.indexOf("const clavesPorRol");
     const fin = src.indexOf("};", inicio);
     if (inicio === -1 || fin === -1) {
-        throw new Error("No se encontró clavesPorRol en prisma/seed.ts (cambió la estructura; revisar este test)");
+        throw new Error("No se encontró clavesPorRol en prisma/seed-modulos-grants.ts (cambió la estructura; revisar este test)");
     }
     return src.slice(inicio, fin);
 }

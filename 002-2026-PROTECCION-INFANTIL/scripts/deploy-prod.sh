@@ -26,6 +26,12 @@ $COMPOSE up -d
 echo "==> Migraciones (aditivas)"
 $COMPOSE exec -T app npx prisma migrate deploy
 
+# 002-PI-048: propagar módulos/grants nuevos a la BD existente (aditivo e
+# idempotente: crea faltantes, nunca revoca). Evita que un módulo nuevo quede
+# invisible por grants sembrados antes de su spec (clase I-39/D-43).
+echo "==> Sync módulos/grants (aditivo)"
+$COMPOSE exec -T app node --import tsx scripts/sync-modulos-grants.ts
+
 echo "==> Healthcheck"
 sleep 5
 curl -sf http://127.0.0.1:5005/api/health/worker && echo "  <- app+worker OK"
