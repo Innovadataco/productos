@@ -1,10 +1,10 @@
-import { prisma } from "./prisma";
-import { getParametroSistema } from "./parametros";
-import { generarEmbedding } from "./ai/embedder";
-import { recalcularYGuardarScore } from "./scoring";
-import { actualizarVisibilidadPublica } from "./visibility";
-import { logAudit } from "./audit";
-import { registrarTransicion, responsableTipoFromRol } from "./reporte-transiciones";
+import { prisma } from "@/lib/prisma";
+import { getParametroSistema } from "@/lib/parametros";
+import { generarEmbedding } from "@/lib/ai/embedder";
+import { recalcularYGuardarScore } from "@/lib/scoring";
+import { actualizarVisibilidadPublica } from "@/lib/visibility";
+import { logAudit } from "@/lib/audit";
+import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import type { MotivoBajaReporte, Prisma } from "@prisma/client";
 
 const MOTIVOS_PURGAN_DATASET: MotivoBajaReporte[] = ["REPORTE_FALSO", "ORDEN_LEGAL"];
