@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { verifyAuth, hashPassword, verifyPassword } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { getParametroSistema } from "@/lib/parametros";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 
 const schemaBase = z.object({
     passwordActual: z.string().min(1),
@@ -34,19 +34,20 @@ export async function POST(request: Request) {
             );
         }
 
-        const valid = await verifyPassword(passwordActual, user.passwordHash);
-        if (!valid) {
+        // SPEC-053: verificación y actualización del hash viven en el DAL; la ruta no toca prisma.
+        const resultado = await new AutenticacionService().cambiarPassword({
+            usuarioId: user.id,
+            passwordActual,
+            passwordNueva,
+            passwordHashActual: user.passwordHash,
+        });
+
+        if (!resultado.ok) {
             return NextResponse.json(
                 { error: { message: "Contraseña actual incorrecta", code: ERROR_CODES.AUTH_INVALID } },
                 { status: 401 }
             );
         }
-
-        const hash = await hashPassword(passwordNueva);
-        await prisma.usuario.update({
-            where: { id: user.id },
-            data: { passwordHash: hash, debeCambiarPassword: false },
-        });
 
         return NextResponse.json({ ok: true });
     } catch (error) {

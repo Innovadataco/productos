@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { hashPassword, createToken, verifyToken, setSessionCookie } from "@/lib/auth";
+import { createToken, verifyToken, setSessionCookie } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { verificarCompletarSchema } from "@/lib/validators";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 
 export async function POST(request: Request) {
     try {
@@ -26,23 +26,18 @@ export async function POST(request: Request) {
         }
 
         const email = payload.sub as string;
-        const existingUser = await prisma.usuario.findUnique({ where: { email } });
-        if (existingUser) {
+
+        // SPEC-053: unicidad y creación del usuario viven en el DAL; la ruta no toca prisma.
+        const resultado = await new AutenticacionService().completarRegistro(email, password, nombre);
+
+        if (!resultado.ok) {
             return NextResponse.json(
                 { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
             );
         }
 
-        const user = await prisma.usuario.create({
-            data: {
-                email,
-                nombre: nombre || null,
-                passwordHash: await hashPassword(password),
-                rol: "PARENT",
-            },
-        });
-
+        const { user } = resultado;
         const sessionToken = await createToken({ sub: user.id, rol: user.rol });
         await setSessionCookie(request, sessionToken);
 

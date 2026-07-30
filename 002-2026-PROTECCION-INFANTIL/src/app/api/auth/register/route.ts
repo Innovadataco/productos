@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { authRegisterSchema } from "@/lib/validators";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 
 export async function POST(request: Request) {
     try {
@@ -28,15 +27,6 @@ export async function POST(request: Request) {
         }
 
         const data = parsed.data;
-        const email = data.email.toLowerCase();
-
-        const existing = await prisma.usuario.findUnique({ where: { email } });
-        if (existing) {
-            return NextResponse.json(
-                { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
-                { status: 409 }
-            );
-        }
 
         const allowedRoles = currentUser.rol === "ADMIN"
             ? ["ADMIN", "SCHOOL_ADMIN", "PARENT"]
@@ -49,16 +39,17 @@ export async function POST(request: Request) {
             );
         }
 
-        const user = await prisma.usuario.create({
-            data: {
-                email,
-                nombre: data.nombre || null,
-                passwordHash: await hashPassword(data.password),
-                rol: data.rol as never,
-                tenantId: data.tenantId || null,
-            },
-        });
+        // SPEC-053: unicidad y creación del usuario viven en el DAL; la ruta no toca prisma.
+        const resultado = await new AutenticacionService().registrar(data);
 
+        if (!resultado.ok) {
+            return NextResponse.json(
+                { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
+                { status: 409 }
+            );
+        }
+
+        const { user } = resultado;
         return NextResponse.json(
             { user: { id: user.id, email: user.email, rol: user.rol } },
             { status: 201 }

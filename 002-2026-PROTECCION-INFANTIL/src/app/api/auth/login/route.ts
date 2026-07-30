@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { verifyPassword, createToken, setSessionCookie } from "@/lib/auth";
+import { createToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { loginSchema } from "@/lib/validators";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 
 export async function POST(request: Request) {
     try {
@@ -26,61 +26,30 @@ export async function POST(request: Request) {
         }
         const { email, password } = parsed.data;
 
-        const user = await prisma.usuario.findUnique({ where: { email } });
-        if (!user) {
-            return NextResponse.json(
-                { error: { message: "Credenciales inválidas", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 401 }
-            );
-        }
+        // SPEC-053: credenciales, lockout y actualizaciones de cuenta viven en el DAL;
+        // la ruta no toca prisma.
+        const resultado = await new AutenticacionService().login(email, password);
 
-        if (user.estado === "bloqueado" && user.bloqueadoHasta && user.bloqueadoHasta > new Date()) {
-            return NextResponse.json(
-                { error: { message: "Cuenta bloqueada temporalmente", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 401 }
-            );
-        }
-
-        const valid = await verifyPassword(password, user.passwordHash);
-        if (!valid) {
-            const newAttempts = user.intentosFallidos + 1;
-            const maxAttempts = parseInt((await prisma.parametroSistema.findUnique({
-                where: { clave: "security.max_login_attempts" },
-            }))?.valor || "5", 10);
-            const lockoutMinutes = parseInt((await prisma.parametroSistema.findUnique({
-                where: { clave: "security.lockout_duration_minutes" },
-            }))?.valor || "30", 10);
-
-            const updates: { intentosFallidos: number; estado?: never; bloqueadoHasta?: Date } = {
-                intentosFallidos: newAttempts,
-            };
-
-            if (newAttempts >= maxAttempts) {
-                (updates as Record<string, unknown>).estado = "bloqueado";
-                (updates as Record<string, unknown>).bloqueadoHasta = new Date(Date.now() + lockoutMinutes * 60 * 1000);
+        if (!resultado.ok) {
+            if (resultado.tipo === "bloqueada") {
+                return NextResponse.json(
+                    { error: { message: "Cuenta bloqueada temporalmente", code: ERROR_CODES.AUTH_INVALID } },
+                    { status: 401 }
+                );
             }
-
-            await prisma.usuario.update({ where: { id: user.id }, data: updates });
+            if (resultado.tipo === "inactiva") {
+                return NextResponse.json(
+                    { error: { message: "Cuenta desactivada. Contacta con el soporte para reactivarla.", code: ERROR_CODES.AUTH_INVALID } },
+                    { status: 401 }
+                );
+            }
             return NextResponse.json(
                 { error: { message: "Credenciales inválidas", code: ERROR_CODES.AUTH_INVALID } },
                 { status: 401 }
             );
         }
 
-        // Spec 117 (I-37): una cuenta desactivada por un admin no recupera acceso con la
-        // contraseña correcta (el reseteo de lockout de más abajo la marcaría "activo").
-        // Se verifica tras la contraseña para no filtrar existencia/estado de la cuenta.
-        if (user.estado === "inactivo") {
-            return NextResponse.json(
-                { error: { message: "Cuenta desactivada. Contacta con el soporte para reactivarla.", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 401 }
-            );
-        }
-
-        await prisma.usuario.update({
-            where: { id: user.id },
-            data: { intentosFallidos: 0, estado: "activo", bloqueadoHasta: null, ultimaSesion: new Date() },
-        });
+        const user = resultado.user;
 
         // Verificar vigencia del servicio del cliente (SPEC-119: padres y colegios,
         // una sola función de decisión). Vencer NO borra nada: solo corta el acceso.

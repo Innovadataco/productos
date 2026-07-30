@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { verificarTokenHash } from "@/lib/token-recuperacion";
 import { recuperarValidarQuerySchema } from "@/lib/validators";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 
 export async function GET(request: Request) {
     try {
@@ -15,21 +14,12 @@ export async function GET(request: Request) {
                 { status: 400 }
             );
         }
-        const { token } = parsed.data;
 
-        const tokensActivos = await prisma.tokenRecuperacion.findMany({
-            where: {
-                usado: false,
-                expiraEn: { gt: new Date() },
-            },
-            orderBy: { creadoEn: "desc" },
-            take: 50,
-        });
+        // SPEC-053: la búsqueda y comparación de tokens viven en el DAL; la ruta no toca prisma.
+        const resultado = await new AutenticacionService().validarTokenRecuperacion(parsed.data.token);
 
-        for (const tokenRecuperacion of tokensActivos) {
-            if (await verificarTokenHash(token, tokenRecuperacion.tokenHash)) {
-                return NextResponse.json({ valido: true, email: tokenRecuperacion.email });
-            }
+        if (resultado.valido) {
+            return NextResponse.json({ valido: true, email: resultado.email });
         }
 
         return NextResponse.json(
