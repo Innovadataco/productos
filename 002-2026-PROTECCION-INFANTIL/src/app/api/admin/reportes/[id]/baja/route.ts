@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { darDeBajaReporte } from "@/lib/reporte-lifecycle";
+import { darDeBajaReporte } from "@/lib/dal/services/reporte-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { MotivoBajaReporte } from "@prisma/client";

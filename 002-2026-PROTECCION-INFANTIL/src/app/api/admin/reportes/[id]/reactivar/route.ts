@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { reactivarReporte } from "@/lib/reporte-lifecycle";
+import { reactivarReporte } from "@/lib/dal/services/reporte-lifecycle";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema, reactivarReporteSchema } from "@/lib/validators";
 

@@ -9,7 +9,7 @@ import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
 import { logAudit } from "@/lib/audit";
-import { darDeBajaReporte } from "@/lib/reporte-lifecycle";
+import { darDeBajaReporte } from "@/lib/dal/services/reporte-lifecycle";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 
