@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { withValidation } from "@/lib/validation";
 import { operadorIdParamsSchema } from "@/lib/schemas";
+import { IaEvalsService } from "@/lib/dal/services/ia-evals";
 import { RolUsuario } from "@prisma/client";
-import { type ExperimentConfigSnapshot } from "@/lib/ai/eval-runner";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -25,18 +24,8 @@ export async function POST(request: Request, context: RouteContext) {
             );
         }
 
-        const run = await prisma.evalRun.findUnique({ where: { id } });
-        if (!run) {
-            throw new AppError("Experimento no encontrado", ERROR_CODES.NOT_FOUND, 404);
-        }
-        if (run.estado !== "COMPLETADA") {
-            throw new AppError("El experimento debe estar completado", ERROR_CODES.VALIDATION_ERROR, 400);
-        }
-
-        const snapshot = run.configSnapshot as unknown as ExperimentConfigSnapshot | null;
-        if (!snapshot) {
-            throw new AppError("El experimento no tiene configSnapshot", ERROR_CODES.VALIDATION_ERROR, 400);
-        }
+        // SPEC-053: validación del experimento y su snapshot viven en el DAL.
+        const snapshot = await new IaEvalsService().obtenerSnapshotActivacion(id);
 
         return NextResponse.json({
             parametros: {

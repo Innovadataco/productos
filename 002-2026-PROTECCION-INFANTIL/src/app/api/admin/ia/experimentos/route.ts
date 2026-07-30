@@ -3,10 +3,9 @@ import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
-import { logAudit } from "@/lib/audit";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
-import { RolUsuario, EvalRunEstado, type Prisma } from "@prisma/client";
+import { AppError, ERROR_CODES } from "@/lib/errors";
+import { IaEvalsService } from "@/lib/dal/services/ia-evals";
+import { RolUsuario } from "@prisma/client";
 import { getCurrentProductionConfig, type ExperimentConfigSnapshot } from "@/lib/ai/eval-runner";
 import { listOllamaModels } from "@/lib/ai/ollama-config";
 import { z } from "zod";
@@ -63,16 +62,10 @@ export async function POST(request: Request) {
             throw new AppError(first?.message || "Datos inválidos", ERROR_CODES.VALIDATION_ERROR, 400);
         }
 
-        const enProgreso = await prisma.evalRun.findFirst({
-            where: { estado: { in: [EvalRunEstado.PENDIENTE, EvalRunEstado.EN_PROGRESO] } },
-        });
-        if (enProgreso) {
-            throw new AppError(
-                `Ya hay una corrida en curso (${enProgreso.id}). Espere a que termine.`,
-                ERROR_CODES.CONFLICT,
-                409
-            );
-        }
+        // SPEC-053: acceso a datos y auditoría en el DAL; la ruta conserva la
+        // validación del modelo en Ollama y la orquestación del encolado.
+        const service = new IaEvalsService();
+        await service.assertSinCorridaEnCurso();
 
         const productionConfig = await getCurrentProductionConfig();
         const overrides = parsed.data.config || {};
@@ -92,24 +85,19 @@ export async function POST(request: Request) {
             );
         }
 
-        const examplesCount = await prisma.casoEval.count({ where: { activo: true } });
+        const examplesCount = await service.contarCasosActivos();
         if (examplesCount === 0) {
             throw new AppError("No hay casos activos para evaluar", ERROR_CODES.CONFLICT, 409);
         }
 
         const estimacionMinutos = Math.max(1, Math.ceil((examplesCount * 7) / 60));
 
-        const run = await prisma.evalRun.create({
-            data: {
-                tipo: "f7",
-                fixtureVersion: configSnapshot.fixtureVersion,
-                estado: EvalRunEstado.PENDIENTE,
-                creadoPorId: user.id,
-                nombre: parsed.data.nombre,
-                notas: parsed.data.notas || null,
-                configSnapshot: configSnapshot as unknown as Prisma.InputJsonValue,
-                progresoTotal: examplesCount,
-            },
+        const run = await service.crearExperimento({
+            nombre: parsed.data.nombre,
+            notas: parsed.data.notas,
+            configSnapshot,
+            totalCasos: examplesCount,
+            creadoPorId: user.id,
         });
 
         const boss = await getPgBoss();
@@ -117,15 +105,12 @@ export async function POST(request: Request) {
         await boss.send("eval-classifier-run", { runId: run.id, fixtureVersion: configSnapshot.fixtureVersion });
         await boss.stop();
 
-        const { ipAddress, userAgent } = getClientInfo(request);
-        await logAudit({
-            accion: "EXPERIMENT_START",
-            tipoRecurso: "EvalRun",
-            recursoId: run.id,
-            usuarioId: user.id,
-            valorNuevo: JSON.stringify({ nombre: run.nombre, configSnapshot }),
-            ipAddress,
-            userAgent,
+        await service.auditarInicioExperimento({
+            runId: run.id,
+            nombre: run.nombre,
+            configSnapshot,
+            adminId: user.id,
+            info: getClientInfo(request),
         });
 
         return NextResponse.json(
@@ -167,27 +152,15 @@ export async function GET(request: Request) {
         const estado = searchParams.get("estado") || undefined;
         const fixtureVersion = searchParams.get("fixtureVersion");
         const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-        const pageSize = 20;
 
-        const where: Record<string, unknown> = {};
-        if (estado) where.estado = estado;
-        if (fixtureVersion) where.fixtureVersion = parseInt(fixtureVersion, 10);
-
-        const [items, total] = await prisma.$transaction([
-            prisma.evalRun.findMany({
-                where,
-                orderBy: { iniciadoEn: "desc" },
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                include: { creadoPor: { select: { email: true, nombre: true } } },
-            }),
-            prisma.evalRun.count({ where }),
-        ]);
-
-        return NextResponse.json({
-            items,
-            pagination: { page, totalPages: Math.ceil(total / pageSize), total },
+        // SPEC-053: filtros y paginación viven en el DAL.
+        const resultado = await new IaEvalsService().listarExperimentos({
+            estado,
+            fixtureVersionRaw: fixtureVersion,
+            page,
         });
+
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

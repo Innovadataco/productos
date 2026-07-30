@@ -3,24 +3,16 @@ import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { isEmbeddingModel } from "@/lib/ai/ollama-config";
 import { sendSimulacionLote } from "@/lib/queue";
 import { parsearArchivoSimulacion, normalizarCategoriaEsperada } from "@/lib/simulacion/parser";
 import { CASO_MAXIMO, crearSimulacionSchema } from "@/lib/schemas/simulacion";
+import { IaSimulacionesService } from "@/lib/dal/services/ia-simulaciones";
 import { RolUsuario } from "@prisma/client";
-import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-function getClientInfo(request: Request) {
-    return {
-        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
-        userAgent: request.headers.get("user-agent") || "unknown",
-    };
-}
 
 export async function POST(request: Request) {
     try {
@@ -81,30 +73,16 @@ export async function POST(request: Request) {
             );
         }
 
-        const enProgreso = await prisma.simulacionRun.findFirst({
-            where: { estado: { in: ["PENDIENTE", "EN_PROGRESO"] } },
-        });
-        if (enProgreso) {
-            throw new AppError(
-                `Ya hay una simulación en curso (${enProgreso.id}). Espere a que termine o cancele.`,
-                ERROR_CODES.CONFLICT,
-                409
-            );
-        }
+        // SPEC-053: guarda de corrida única y creación de corridas viven en el
+        // DAL; la ruta conserva la validación del archivo y el encolado (queue).
+        const service = new IaSimulacionesService();
+        await service.assertSinSimulacionEnCurso();
 
-        const runIds: string[] = [];
-        for (const modelo of modelos) {
-            const run = await prisma.simulacionRun.create({
-                data: {
-                    modelo,
-                    totalCasos: casos.length,
-                    estado: "PENDIENTE",
-                    casosJson: casos as any,
-                    creadoPorId: user.id,
-                },
-            });
-            runIds.push(run.id);
-        }
+        const { runIds, totalCasos } = await service.crearSimulaciones({
+            modelos,
+            casos,
+            creadoPorId: user.id,
+        });
 
         await sendSimulacionLote(runIds);
 
@@ -112,7 +90,7 @@ export async function POST(request: Request) {
             {
                 runIds,
                 estado: "PENDIENTE",
-                totalCasos: casos.length,
+                totalCasos,
             },
             { status: 202 }
         );
@@ -144,23 +122,11 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const estado = searchParams.get("estado") || undefined;
         const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-        const pageSize = 20;
 
-        const where: Record<string, unknown> = {};
-        if (estado) where.estado = estado;
+        // SPEC-053: filtros y paginación viven en el DAL.
+        const resultado = await new IaSimulacionesService().listar({ estado, page });
 
-        const [items, total] = await prisma.$transaction([
-            prisma.simulacionRun.findMany({
-                where,
-                orderBy: { fechaInicio: "desc" },
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                include: { creadoPor: { select: { email: true, nombre: true } } },
-            }),
-            prisma.simulacionRun.count({ where }),
-        ]);
-
-        return NextResponse.json({ items, pagination: { page, totalPages: Math.ceil(total / pageSize), total } });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

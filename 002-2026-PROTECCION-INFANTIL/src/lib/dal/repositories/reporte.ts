@@ -179,4 +179,12 @@ export class ReporteRepository {
             this.db.reporte.count({ where }),
         ]);
     }
+
+    /** Mínimo para simulaciones (export/resultados/comparar): identificador y estado. */
+    findMinimosPorIds(ids: string[]) {
+        return this.db.reporte.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, identificador: true, estado: true },
+        });
+    }
 }

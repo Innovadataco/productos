@@ -24,4 +24,20 @@ export class ClasificacionIARepository {
     actualizar(id: string, data: Prisma.ClasificacionIAUpdateInput) {
         return this.db.clasificacionIA.update({ where: { id }, data });
     }
+
+    /** Resumen para simulaciones (export/resultados): categoría, confianza, latencia y modelo. */
+    findResumenesPorReporteIds(reporteIds: string[]) {
+        return this.db.clasificacionIA.findMany({
+            where: { reporteId: { in: reporteIds } },
+            select: { reporteId: true, categoria: true, confianza: true, latenciaMs: true, modeloUsado: true },
+        });
+    }
+
+    /** Básico para la comparación de simulaciones: categoría y confianza. */
+    findBasicosPorReporteIds(reporteIds: string[]) {
+        return this.db.clasificacionIA.findMany({
+            where: { reporteId: { in: reporteIds } },
+            select: { reporteId: true, categoria: true, confianza: true },
+        });
+    }
 }

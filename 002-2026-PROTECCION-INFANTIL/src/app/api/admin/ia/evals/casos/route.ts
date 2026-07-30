@@ -2,13 +2,10 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
-import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { RolUsuario, CasoEvalFuente, type Prisma } from "@prisma/client";
+import { IaEvalsService } from "@/lib/dal/services/ia-evals";
+import { RolUsuario } from "@prisma/client";
 import { z } from "zod";
-
-const CASOS_POR_PAGINA = 25;
 
 const CATEGORIAS = [
     "CONTACTO_INSISTENTE",
@@ -60,38 +57,10 @@ export async function GET(request: Request) {
         const activo = activoRaw === null ? undefined : activoRaw === "true";
         const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
 
-        const where: Prisma.CasoEvalWhereInput = {};
-        if (categoria) where.categoriaEsperada = categoria;
-        if (ruido !== undefined) where.ruido = ruido;
-        if (fuente) where.fuente = fuente as CasoEvalFuente;
-        if (activo !== undefined) where.activo = activo;
+        // SPEC-053: filtros, paginación y conteos por categoría viven en el DAL.
+        const resultado = await new IaEvalsService().listarCasos({ categoria, ruido, fuente, activo, page });
 
-        const [items, total, porCategoria] = await prisma.$transaction([
-            prisma.casoEval.findMany({
-                where,
-                orderBy: { creadoEn: "desc" },
-                skip: (page - 1) * CASOS_POR_PAGINA,
-                take: CASOS_POR_PAGINA,
-                include: { creadoPor: { select: { email: true, nombre: true } } },
-            }),
-            prisma.casoEval.count({ where }),
-            prisma.casoEval.groupBy({
-                by: ["categoriaEsperada"],
-                where: { activo: true },
-                orderBy: { categoriaEsperada: "asc" },
-                _count: { categoriaEsperada: true },
-            }),
-        ]);
-
-        const conteosPorCategoria = Object.fromEntries(
-            porCategoria.map((g) => [g.categoriaEsperada, (g._count as { categoriaEsperada: number }).categoriaEsperada ?? 0])
-        );
-
-        return NextResponse.json({
-            items,
-            pagination: { page, totalPages: Math.ceil(total / CASOS_POR_PAGINA), total },
-            conteosPorCategoria,
-        });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
@@ -123,40 +92,14 @@ export async function POST(request: Request) {
             throw new AppError(first?.message || "Datos inválidos", ERROR_CODES.VALIDATION_ERROR, 400);
         }
 
-        const nextVersion = await prisma.casoEval
-            .findMany({ orderBy: { fixtureVersion: "desc" }, take: 1 })
-            .then((rows) => (rows[0]?.fixtureVersion ?? 0) + 1);
+        // SPEC-053: alta + fixtureVersion + auditoría viven en el DAL.
+        const { caso, fixtureVersion } = await new IaEvalsService().crearCaso(
+            parsed.data,
+            user.id,
+            getClientInfo(request)
+        );
 
-        const creado = await prisma.casoEval.create({
-            data: {
-                texto: parsed.data.texto,
-                categoriaEsperada: parsed.data.categoriaEsperada,
-                secundariaEsperada: parsed.data.secundariaEsperada || null,
-                ruido: parsed.data.ruido,
-                fuente: CasoEvalFuente.MANUAL_ADMIN,
-                activo: true,
-                fixtureVersion: nextVersion,
-                creadoPorId: user.id,
-            },
-        });
-
-        const { ipAddress, userAgent } = getClientInfo(request);
-        await logAudit({
-            accion: "EVAL_CASE_CREATE",
-            tipoRecurso: "CasoEval",
-            recursoId: creado.id,
-            usuarioId: user.id,
-            valorNuevo: JSON.stringify({
-                categoriaEsperada: creado.categoriaEsperada,
-                secundariaEsperada: creado.secundariaEsperada,
-                ruido: creado.ruido,
-                fixtureVersion: creado.fixtureVersion,
-            }),
-            ipAddress,
-            userAgent,
-        });
-
-        return NextResponse.json({ caso: creado, fixtureVersion: nextVersion }, { status: 201 });
+        return NextResponse.json({ caso, fixtureVersion }, { status: 201 });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

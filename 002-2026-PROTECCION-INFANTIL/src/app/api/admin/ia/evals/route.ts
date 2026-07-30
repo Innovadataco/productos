@@ -3,11 +3,11 @@ import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { withValidation } from "@/lib/validation";
 import { emptyBodySchema } from "@/lib/schemas";
-import { RolUsuario, EvalRunEstado } from "@prisma/client";
+import { IaEvalsService } from "@/lib/dal/services/ia-evals";
+import { RolUsuario } from "@prisma/client";
 
 // pg-boss se importa dinámicamente para no cargarlo en el bundle edge/cliente.
 async function getPgBoss() {
@@ -32,16 +32,10 @@ export async function POST(request: Request) {
 
         await withValidation.body(emptyBodySchema)(request);
 
-        const enProgreso = await prisma.evalRun.findFirst({
-            where: { estado: { in: [EvalRunEstado.PENDIENTE, EvalRunEstado.EN_PROGRESO] } },
-        });
-        if (enProgreso) {
-            throw new AppError(
-                `Ya hay una corrida en curso (${enProgreso.id}). Espere a que termine.`,
-                ERROR_CODES.CONFLICT,
-                409
-            );
-        }
+        // SPEC-053: acceso a datos en el DAL; la ruta conserva auth, rate-limit
+        // y la orquestación del encolado (pg-boss).
+        const service = new IaEvalsService();
+        await service.assertSinCorridaEnCurso();
 
         const { examples, fixtureVersion } = await import("@/lib/ai/eval-runner").then((m) =>
             m.loadActiveEvalCases()
@@ -52,14 +46,7 @@ export async function POST(request: Request) {
 
         const estimacionMinutos = Math.max(1, Math.ceil((examples.length * 7) / 60));
 
-        const run = await prisma.evalRun.create({
-            data: {
-                tipo: "f7",
-                fixtureVersion,
-                estado: EvalRunEstado.PENDIENTE,
-                creadoPorId: user.id,
-            },
-        });
+        const run = await service.crearCorridaEval({ fixtureVersion, creadoPorId: user.id });
 
         const boss = await getPgBoss();
         await boss.start();

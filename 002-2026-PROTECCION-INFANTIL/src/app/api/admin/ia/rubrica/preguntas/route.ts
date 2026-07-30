@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { CategoriaConducta, RolUsuario } from "@prisma/client";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
-import { getParametroSistema } from "@/lib/parametros";
-import { logAudit } from "@/lib/audit";
-import { invalidateCache } from "@/lib/config-cache";
-import { RUBRICA_SEMILLA, type SetsRubrica } from "@/lib/ai/rubrica-semilla";
+import { IaRubricaService } from "@/lib/dal/services/ia-rubrica";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-
-const CLAVE_PREGUNTAS = "ia.rubrica.preguntas";
 
 const preguntasBodySchema = z.object({
     categoria: z.enum(CategoriaConducta),
@@ -49,53 +43,9 @@ export async function PUT(request: Request) {
         }
         const { categoria, preguntas } = parsed.data;
 
-        const param = await getParametroSistema(CLAVE_PREGUNTAS);
-        let sets: SetsRubrica;
-        if (param) {
-            try {
-                sets = JSON.parse(param.valor) as SetsRubrica;
-            } catch {
-                throw new AppError("El parámetro ia.rubrica.preguntas tiene JSON inválido", ERROR_CODES.INTERNAL_ERROR, 500);
-            }
-        } else {
-            sets = RUBRICA_SEMILLA;
-        }
-
-        const valorAnteriorCategoria = JSON.stringify(sets[categoria] ?? []);
-        sets = { ...sets, [categoria]: preguntas };
-        const valorNuevo = JSON.stringify(sets);
-
-        const guardado = param
-            ? await prisma.parametroSistema.update({
-                  where: { clave: CLAVE_PREGUNTAS },
-                  data: { valor: valorNuevo, actualizadoPorId: user.id },
-              })
-            : await prisma.parametroSistema.create({
-                  data: {
-                      clave: CLAVE_PREGUNTAS,
-                      valor: valorNuevo,
-                      tipo: "JSON",
-                      categoria: "SYSTEM",
-                      esPublico: false,
-                      actualizadoPorId: user.id,
-                  },
-              });
-
-        const { ipAddress, userAgent } = getClientInfo(request);
-        await logAudit({
-            accion: "PARAM_UPDATE",
-            tipoRecurso: "parametro",
-            recursoId: guardado.id,
-            parametroId: guardado.id,
-            usuarioId: user.id,
-            valorAnterior: valorAnteriorCategoria,
-            valorNuevo: JSON.stringify(preguntas),
-            metadatos: { clave: CLAVE_PREGUNTAS, categoria },
-            ipAddress,
-            userAgent,
-        });
-
-        invalidateCache("public_params");
+        // SPEC-053: lee-modifica-escribe del JSON, auditoría e invalidación de
+        // caché viven en el DAL.
+        await new IaRubricaService().actualizarPreguntas(categoria, preguntas, user.id, getClientInfo(request));
 
         return NextResponse.json({ categoria, preguntas });
     } catch (error) {

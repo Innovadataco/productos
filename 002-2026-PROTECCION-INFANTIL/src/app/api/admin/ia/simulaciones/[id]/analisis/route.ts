@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { calcularMetricasSimulacion } from "@/lib/simulacion/metricas";
+import { IaSimulacionesService } from "@/lib/dal/services/ia-simulaciones";
 import { RolUsuario } from "@prisma/client";
 import { z } from "zod";
 
@@ -31,14 +30,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const run = await prisma.simulacionRun.findUnique({ where: { id: parsedId.data } });
-        if (!run) {
-            throw new AppError("Simulación no encontrada", ERROR_CODES.NOT_FOUND, 404);
-        }
+        // SPEC-053: existencia de la corrida y métricas viven en el DAL.
+        const resultado = await new IaSimulacionesService().obtenerAnalisis(parsedId.data);
 
-        const metricas = await calcularMetricasSimulacion(run.id);
-
-        return NextResponse.json({ runId: run.id, modelo: run.modelo, metricas });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

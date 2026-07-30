@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { IaSimulacionesService } from "@/lib/dal/services/ia-simulaciones";
 import { RolUsuario } from "@prisma/client";
 import { z } from "zod";
 
@@ -30,18 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const run = await prisma.simulacionRun.findUnique({ where: { id: parsedId.data } });
-        if (!run) {
-            throw new AppError("Simulación no encontrada", ERROR_CODES.NOT_FOUND, 404);
-        }
-        if (!["PENDIENTE", "EN_PROGRESO"].includes(run.estado)) {
-            throw new AppError(`No se puede cancelar una simulación en estado ${run.estado}`, ERROR_CODES.CONFLICT, 409);
-        }
-
-        await prisma.simulacionRun.update({
-            where: { id: run.id },
-            data: { estado: "CANCELADA", fechaFin: new Date() },
-        });
+        // SPEC-053: validación de estado y cancelación viven en el DAL.
+        await new IaSimulacionesService().cancelar(parsedId.data);
 
         return NextResponse.json({ ok: true, estado: "CANCELADA" });
     } catch (error) {
