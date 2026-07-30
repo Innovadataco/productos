@@ -1,22 +1,42 @@
 # Tasks: SPEC-128 — Reconciliación de grants del comité
 
-**Estado**: PENDIENTE — compuerta §4.
+**Input**: Design documents from `specs/128-reconciliacion-grants-comite/`
+**Prerequisites**: plan.md (aprobado por ZEUS en compuerta §4, **Opción A** para BD existentes), spec.md, research.md
 
-Las tareas (`TNNN`) se generan con `/speckit.tasks` **tras la aprobación de ZEUS** del
-spec.md y plan.md de esta carpeta (instructivo 002-PI-043, cadena de comandos:
-specify → plan → PARA). Este archivo existe como marcador para la disciplina de specs
-(`src/lib/specs-discipline.test.ts` exige su presencia); no contiene tareas aún.
+## Phase 1: Setup
 
-Punto de decisión reservado a ZEUS en la compuerta: mecanismo para las BD existentes
-(FR-004, Opciones A/B/C del plan.md). Nada se implementa ni ejecuta contra BD viva sin
-esa aprobación.
+*(Sin setup: fix acotado sobre el seed y scripts existentes.)*
 
-Orden previsto por el plan (se materializará en TNNN al aprobarse):
+- [x] T001 Verificar rama verde y tag de retorno `pre-cola-043` (hecho en la fase de diseño, 002-PI-043)
 
-1. Test de verificación del seed: comité solo `comite_bandeja`, ADMIN conserva todo,
-   catálogo intacto (TDD, SC-001/002).
-2. `clavesPorRol.COMITE_VALIDACION = ["comite_bandeja"]` en `prisma/seed.ts` (FR-001/003).
-3. Regenerar `docs/architecture/02-roles-capacidades.md` (FR-006).
-4. Gate: suite completa + `tsc --noEmit` + `build` + `arch:check` (FR-007).
-5. Documentar la decisión de ZEUS sobre BD existentes y, si aplica, su ejecución (FR-004).
-6. Validación con `quickstart.md` y cierre (cierre.md + sección Implementación en spec.md).
+## Phase 2: Tests First (TDD)
+
+- [x] T002 [US1] Guarda de regresión del default en `prisma/seed-security.test.ts`:
+  `clavesPorRol.COMITE_VALIDACION` es exactamente `["comite_bandeja"]` y ADMIN deriva del
+  catálogo completo (guarda estática sobre la fuente, patrón I-31). ROJO antes del fix
+- [x] T003 [US1/US2] Test de BD del script de revocación en
+  `scripts/revocar-grants-comite-muertos.test.ts`: comité con los 3 grants viejos → queda
+  solo `comite_bandeja` activo; ADMIN intacto; catálogo intacto; segunda corrida sin
+  cambios (idempotente). ROJO antes del script
+
+## Phase 3: Core Implementation
+
+- [x] T004 [US1] `clavesPorRol.COMITE_VALIDACION = ["comite_bandeja"]` en `prisma/seed.ts`
+  (SOLO esa línea + comentario D-43, candado) (FR-001/002/003)
+- [x] T005 [US2] Script idempotente `scripts/revocar-grants-comite-muertos.ts` (Opción A
+  aprobada): `activo = false` en los `PermisoModulo` de COMITE_VALIDACION sobre `comite` y
+  `comite_auditoria`; no borra módulos ni toca otros roles; verificación antes/después
+  (FR-004)
+
+## Phase 4: Línea base y gates
+
+- [x] T006 Regenerar `docs/architecture/02-roles-capacidades.md`
+  (`npx tsx scripts/arch/generar-roles-capacidades.ts`) (FR-006)
+- [x] T007 Gate: `npm run test` + `npx tsc --noEmit` + `npm run build` + `npm run arch:check`
+  verdes; `aislamiento.test.ts` verde sin tocarse (FR-007)
+- [x] T008 Validación con `quickstart.md` (criterios 2, 3, 4, 5 del instructivo) + paso de
+  despliegue documentado para el CEO (producción NO se toca)
+
+## Phase 5: Cierre
+
+- [x] T009 Status IMPLEMENTADO en `spec.md` + sección Implementación + actualización de `specs/README.md` (cierre completo tras auditoría de ZEUS)

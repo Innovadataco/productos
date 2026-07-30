@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-29
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-043 (radica ZEUS). Decisión vinculante **D-43** (CEO,
 2026-07-29; **supersede la cláusula "no reconciliar" de D-41**): el seed concede a
@@ -156,4 +156,27 @@ en la compuerta (FR-004).
 
 ## Implementación (cierre)
 
-*(Se completa al cerrar la spec.)*
+Implementada el 2026-07-29 en `feature/001-scaffolding` (instructivo 002-PI-043, compuerta
+abierta por ZEUS; **Opción A aprobada** para las BD existentes). Pendiente de auditoría de
+ZEUS para el cierre formal. Puntos clave:
+
+- **Seed (TDD)**: guarda estática creada primero en ROJO en `prisma/seed-security.test.ts`;
+  `clavesPorRol.COMITE_VALIDACION` quedó en `["comite_bandeja"]` (`prisma/seed.ts`, SOLO
+  esa entrada + comentario D-43, candado cumplido). ADMIN sigue derivando del catálogo
+  completo; `comite` y `comite_auditoria` permanecen en `ModuloPermisible`. El test
+  `scripts/arch/nav-fuentes.test.ts` (SPEC-126) se actualizó al nuevo default: afirmaba el
+  default viejo ("base del hallazgo I-39"), que es exactamente lo que D-43 reconcilió.
+- **Script de revocación (Opción A)**: `scripts/revocar-grants-comite-muertos.ts`,
+  idempotente y no destructivo (`activo=false`; no borra módulos, filas ni toca otros
+  roles), con test de BD en ROJO→VERDE (`scripts/revocar-grants-comite-muertos.test.ts`).
+  Probado contra la BD de desarrollo: 2 grants desactivados; segunda corrida: 0 cambios.
+  **Producción NO se tocó**: el paso de despliegue para el CEO quedó documentado en
+  `quickstart.md` (ejecutar con el `.env` de producción en el próximo despliegue).
+- **Línea base**: `docs/architecture/02-roles-capacidades.md` regenerado (la tabla
+  módulo → rol lista `comite`/`comite_auditoria` solo para ADMIN). `arch:check` VERDE:
+  aserciones A y B verdes, sin allowlist ni excepciones nuevas; `aislamiento.test.ts`
+  ("el comité no se autogestiona") verde sin modificarse.
+- **Gate**: suite completa, `tsc --noEmit` y build verdes (evidencia en el reporte de la
+  cola 002-PI-043).
+- **Deuda técnica**: producción conserva los 2 grants muertos como dato inerte (D-41 los
+  oculta, la puerta los niega) hasta que el CEO ejecute el paso de despliegue documentado.

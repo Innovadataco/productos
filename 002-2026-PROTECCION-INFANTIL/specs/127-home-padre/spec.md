@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-29
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-043 (radica ZEUS). Cierra **I-40**, decisión vinculante **D-42**
 (decidida por el CEO el 2026-07-29): `homeForRole` (`src/lib/proxy.ts:169-173`) no tiene caso
@@ -109,4 +109,20 @@ transiciones) con los generadores de `scripts/arch/`. No toca schema, navegació
 
 ## Implementación (cierre)
 
-*(Se completa al cerrar la spec.)*
+Implementada el 2026-07-29 en `feature/001-scaffolding` (instructivo 002-PI-043, compuerta
+abierta por ZEUS). Pendiente de auditoría de ZEUS para el cierre formal. Puntos clave:
+
+- **Fix (TDD)**: test de regresión creado primero en ROJO en `src/lib/proxy.test.ts`
+  (PARENT → `/dashboard/admin`, el defecto exacto de I-40); tras añadir el caso
+  `PARENT → /dashboard` en `homeForRole` (`src/lib/proxy.ts`, SOLO esa función, candado
+  D-42 cumplido: diff de 3 líneas), la cadena cierra: redirect → `Location: /dashboard` →
+  aterrizaje permitido (200), sin doble rebote. Tabla home-por-rol completa como guarda
+  del default interno (ADMIN/OPERADOR intactos).
+- **Línea base**: `docs/architecture/03-pantallas.md` regenerado (home-por-rol gana la
+  fila PARENT; los redirects admin-only de PARENT ahora muestran `/dashboard`);
+  `02-roles-capacidades.md` regenerado por la misma causa (destino del redirect de PARENT
+  en rutas admin-only). `arch:check` VERDE: aserción A (1110 combinaciones) y aserción B
+  (86 hrefs) verdes, sin allowlist ni excepciones nuevas.
+- **Gate D-36**: suite completa, `tsc --noEmit` y build verdes (evidencia en el reporte
+  de la cola 002-PI-043).
+- **Deuda técnica**: ninguna nueva.
