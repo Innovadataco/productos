@@ -99,4 +99,45 @@ export class ReporteRepository {
     actualizarEstado(id: string, data: Prisma.ReporteUpdateInput) {
         return this.db.reporte.update({ where: { id }, data });
     }
+
+    /** Reportes aprobados de un identificador para la consulta pública (spec 089-US3). */
+    findAprobadosPorIdentificador(where: Prisma.ReporteWhereInput) {
+        return this.db.reporte.findMany({
+            where,
+            select: {
+                id: true,
+                ciudad: true,
+                pais: true,
+                creadoEn: true,
+                fechaIncidente: true,
+                esAnonimo: true,
+                plataforma: { select: { id: true, nombre: true, clave: true } },
+                clasificacion: { select: { categoria: true, confianza: true, categoriasSecundarias: true } },
+                ciudadRel: { select: { nombre: true, lat: true, lng: true, departamento: { select: { nombre: true } } } },
+                otraPlataforma: true,
+            },
+            orderBy: { creadoEn: "desc" },
+            take: 1000,
+        });
+    }
+
+    /** Reportes en estados visibles de un identificador para el detalle autenticado. */
+    findVisiblesPorIdentificador(where: Prisma.ReporteWhereInput) {
+        return this.db.reporte.findMany({
+            where,
+            select: {
+                id: true,
+                esAnonimo: true,
+                creadoEn: true,
+                plataforma: { select: { id: true, nombre: true, clave: true } },
+                otraPlataforma: true,
+                ciudad: true,
+                pais: true,
+                ciudadRel: { select: { lat: true, lng: true } },
+                clasificacion: { select: { categoria: true, confianza: true } },
+            },
+            orderBy: { creadoEn: "desc" },
+            take: 1000,
+        });
+    }
 }
