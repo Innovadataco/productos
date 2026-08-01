@@ -2,10 +2,16 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { verificarAccesoPagina } from "@/lib/permisos-modulos";
+import { ConsultaPublica } from "@/components/modules/ConsultaPublica";
+import { PublicDashboard } from "@/components/modules/PublicDashboard";
 
+/**
+ * SPEC-129 (C2/C3, D-b): home del colegio = consulta pública + RESUMEN de
+ * estadísticas (componente compartido con /dashboard-publico, cero duplicación).
+ * La vista ampliada (mapa/categorías) queda en la subsección Estadísticas.
+ */
 export default async function ColegioDashboardPage() {
     const acceso = await verificarAccesoPagina("colegios");
     if (!acceso.permitido) return <SinAccesoModulo volver="/dashboard/colegio" />;
@@ -28,94 +34,38 @@ export default async function ColegioDashboardPage() {
     const colegio = usuario.colegio;
 
     return (
-        <>
-            <main className="min-h-screen p-4 sm:p-6 lg:p-8">
-                <div className="mx-auto max-w-4xl space-y-6">
-                    <div className="rounded-2xl glass p-6 sm:p-8">
-                        <div className="mb-6 flex items-center gap-4">
-                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl accent-gradient text-white text-2xl shadow-lg">
-                                🏫
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-body">{colegio.nombre}</h1>
-                                <p className="text-sm text-muted">Panel institucional</p>
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="rounded-xl glass-input p-4">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Ubicación</p>
-                                <p className="mt-1 text-sm text-body">
-                                    {colegio.ciudad?.nombre}
-                                    {colegio.departamento ? `, ${colegio.departamento.nombre}` : ""}
-                                    {colegio.pais ? ` — ${colegio.pais.nombre}` : ""}
-                                </p>
-                                {colegio.direccion && <p className="mt-1 text-sm text-muted">{colegio.direccion}</p>}
-                            </div>
-
-                            <div className="rounded-xl glass-input p-4">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Representante legal</p>
-                                <p className="mt-1 text-sm text-body">{colegio.representanteLegalNombre}</p>
-                                <p className="text-sm text-muted">{colegio.representanteLegalEmail}</p>
-                            </div>
-
-                            <div className="rounded-xl glass-input p-4">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Vigencia del servicio</p>
-                                <p className="mt-1 text-sm text-body">
-                                    {new Date(colegio.inicioServicio).toLocaleDateString("es-CO")}
-                                    {" — "}
-                                    {colegio.finServicio ? new Date(colegio.finServicio).toLocaleDateString("es-CO") : "Sin fecha de fin"}
-                                </p>
-                                <p className="mt-1 text-xs text-muted uppercase">{colegio.tipoPeriodo}</p>
-                            </div>
-
-                            <div className="rounded-xl glass-input p-4">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-subtle">Administrador de acceso</p>
-                                <p className="mt-1 text-sm text-body">{usuario.nombre || usuario.email}</p>
-                                <p className="text-sm text-muted">{usuario.email}</p>
-                            </div>
-                        </div>
+        <main className="min-h-screen p-4 sm:p-6 lg:p-8">
+            <div className="mx-auto max-w-5xl space-y-8">
+                {/* Ficha compacta del colegio */}
+                <div className="flex items-center gap-4 rounded-2xl glass p-5">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl accent-gradient text-white text-xl shadow-lg">
+                        🏫
                     </div>
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <Link
-                            href="/dashboard/colegio/cursos"
-                            className="rounded-2xl glass p-6 transition hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30"
-                        >
-                            <div className="text-2xl">📚</div>
-                            <h2 className="mt-3 text-lg font-semibold text-body">Cursos</h2>
-                            <p className="mt-1 text-sm text-muted">Gestiona cursos y alumnos.</p>
-                        </Link>
-
-                        <Link
-                            href="/dashboard/colegio/cursos/carga"
-                            className="rounded-2xl glass p-6 transition hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30"
-                        >
-                            <div className="text-2xl">📥</div>
-                            <h2 className="mt-3 text-lg font-semibold text-body">Carga masiva</h2>
-                            <p className="mt-1 text-sm text-muted">Sube alumnos e identificadores desde Excel/CSV.</p>
-                        </Link>
-
-                        <Link
-                            href="/dashboard/colegio/alertas"
-                            className="rounded-2xl glass p-6 transition hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30"
-                        >
-                            <div className="text-2xl">🚨</div>
-                            <h2 className="mt-3 text-lg font-semibold text-body">Alertas</h2>
-                            <p className="mt-1 text-sm text-muted">Revisa alertas anonimizadas del colegio.</p>
-                        </Link>
-
-                        <Link
-                            href="/dashboard/colegio/estadisticas"
-                            className="rounded-2xl glass p-6 transition hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30"
-                        >
-                            <div className="text-2xl">📊</div>
-                            <h2 className="mt-3 text-lg font-semibold text-body">Estadísticas</h2>
-                            <p className="mt-1 text-sm text-muted">Resumen agregado y PDF institucional.</p>
-                        </Link>
+                    <div className="min-w-0">
+                        <h1 className="truncate text-xl font-bold text-body">{colegio.nombre}</h1>
+                        <p className="text-sm text-muted">
+                            {colegio.ciudad?.nombre}
+                            {colegio.departamento ? `, ${colegio.departamento.nombre}` : ""}
+                            {colegio.pais ? ` — ${colegio.pais.nombre}` : ""}
+                            {" · Vigencia: "}
+                            {new Date(colegio.inicioServicio).toLocaleDateString("es-CO")}
+                            {colegio.finServicio ? ` — ${new Date(colegio.finServicio).toLocaleDateString("es-CO")}` : " — Sin fecha de fin"}
+                        </p>
                     </div>
                 </div>
-            </main>
-        </>
+
+                {/* Consulta pública (componente compartido con la home pública, O-2) */}
+                <section aria-label="Consulta pública">
+                    <ConsultaPublica />
+                </section>
+
+                {/* Resumen de estadísticas (componente compartido con /dashboard-publico, D-b) */}
+                <PublicDashboard
+                    variant="resumen"
+                    titulo="Panorama de la plataforma"
+                    subtitulo="Reportes agregados y anonimizados de toda la plataforma. La vista ampliada está en Estadísticas."
+                />
+            </div>
+        </main>
     );
 }

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { PublicDashboard } from "@/components/modules/PublicDashboard";
 
 type EstadisticasCurso = {
     cursoId: string;
@@ -97,10 +98,14 @@ export default function ColegioEstadisticasPageClient() {
     return (
         <div className="min-h-screen bg-page">
             <main className="p-4 sm:p-6 lg:p-8">
-                <div className="mx-auto max-w-5xl space-y-6">
+                <div className="mx-auto max-w-5xl space-y-8">
+                    {/* SPEC-129 (D-b): vista ampliada pública (mapa/categorías) en la
+                        subsección; el componente es el MISMO del dashboard público. */}
+                    <PublicDashboard />
+
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-body">Estadísticas</h1>
+                            <h1 className="text-2xl font-bold text-body">Estadísticas del colegio</h1>
                             <p className="text-sm text-muted">
                                 Resumen agregado del colegio. No incluye datos personales ni reportes crudos.
                             </p>

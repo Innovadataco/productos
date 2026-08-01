@@ -30,7 +30,17 @@ type StatsData = {
     sinUbicacion?: number;
 };
 
-export function PublicDashboard() {
+export function PublicDashboard({
+    variant = "completo",
+    titulo = "Dashboard público",
+    subtitulo = "Panorama estratégico de reportes en la plataforma. Datos agregados y anonimizados.",
+}: {
+    /** SPEC-129 (D-b): "resumen" = KPIs + origen/países para la home del colegio;
+     *  "completo" = todo (dashboard público y vista ampliada del colegio). */
+    variant?: "completo" | "resumen";
+    titulo?: string;
+    subtitulo?: string;
+}) {
     const [data, setData] = useState<StatsData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -93,10 +103,10 @@ export function PublicDashboard() {
         <section className="space-y-6" aria-labelledby="public-dashboard-title">
             <div>
                 <h1 id="public-dashboard-title" className="text-2xl font-bold text-body">
-                    Dashboard público
+                    {titulo}
                 </h1>
                 <p className="text-sm text-muted">
-                    Panorama estratégico de reportes en la plataforma. Datos agregados y anonimizados.
+                    {subtitulo}
                 </p>
             </div>
 
@@ -131,23 +141,27 @@ export function PublicDashboard() {
                 </ChartCard>
             </div>
 
-            {/* Mapa de calor por ciudad */}
-            <ChartCard
-                title="Reportes por ciudad / departamento"
-                subtitle="Mapa de calor aproximado por ciudad. No incluye direcciones exactas ni datos personales."
-            >
-                {puntosMapa.length === 0 && porPais.length === 0 ? (
-                    <p className="text-sm text-muted">Sin datos geográficos</p>
-                ) : (
-                    <MapaUbicaciones
-                        puntos={puntosMapa}
-                        paises={porPais.map((p) => ({ pais: p.pais, total: p.count }))}
-                        center={[4.5, -74]}
-                        zoom={3}
-                        sinUbicacion={sinUbicacion}
-                    />
-                )}
-            </ChartCard>
+            {/* SPEC-129 (D-b): la vista ampliada (mapa + gráficos) solo va en "completo";
+                la home del colegio muestra el resumen de arriba. */}
+            {variant === "completo" && (
+                <>
+                    {/* Mapa de calor por ciudad */}
+                    <ChartCard
+                        title="Reportes por ciudad / departamento"
+                        subtitle="Mapa de calor aproximado por ciudad. No incluye direcciones exactas ni datos personales."
+                    >
+                        {puntosMapa.length === 0 && porPais.length === 0 ? (
+                            <p className="text-sm text-muted">Sin datos geográficos</p>
+                        ) : (
+                            <MapaUbicaciones
+                                puntos={puntosMapa}
+                                paises={porPais.map((p) => ({ pais: p.pais, total: p.count }))}
+                                center={[4.5, -74]}
+                                zoom={3}
+                                sinUbicacion={sinUbicacion}
+                            />
+                        )}
+                    </ChartCard>
 
             {/* Gráficos */}
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -173,6 +187,8 @@ export function PublicDashboard() {
                     )}
                 </ChartCard>
             </div>
+                </>
+            )}
         </section>
     );
 }
