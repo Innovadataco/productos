@@ -41,6 +41,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | @types/react | ^19.0.12 |
 | @types/react-dom | ^19.0.5 |
 | @vitejs/plugin-react | ^4.5.2 |
+| @vitest/coverage-v8 | ^3.2.7 |
 | autoprefixer | ^10.4.21 |
 | eslint | ^9.26.0 |
 | eslint-config-next | 16.2.10 |
@@ -66,6 +67,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `lint` | `eslint .` |
 | `start` | `next start -p 5005` |
 | `test` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run` |
+| `test:coverage` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --coverage.enabled` |
 | `test:e2e` | `node --env-file=.env.test ./node_modules/@playwright/test/cli.js test` |
 | `test:e2e:ui` | `node --env-file=.env.test ./node_modules/@playwright/test/cli.js test --ui` |
 | `test:watch` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs` |

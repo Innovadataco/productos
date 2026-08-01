@@ -16,6 +16,15 @@ export default defineConfig({
             provider: "v8",
             reporter: ["text", "json", "html"],
             exclude: ["node_modules/", ".next/", "prisma/"],
+            // Q-2 (002-PI-056): piso = cobertura real medida 2026-08-01 (stmts 43.8 / branch 74.1 / funcs 81.0),
+            // con 1 pt de margen en functions por jitter entre corridas (80.96–81.02).
+            // Ratchet: el umbral solo sube; bajarlo requiere decisión explícita de ZEUS.
+            thresholds: {
+                statements: 43,
+                branches: 74,
+                functions: 80,
+                lines: 43,
+            },
         },
     },
     resolve: {
