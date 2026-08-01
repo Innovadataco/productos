@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
+import { enviarEmailCredencialesPadre } from "@/lib/email";
 import { withValidation } from "@/lib/validation";
 import { padreIdParamsSchema } from "@/lib/schemas";
 import { randomBytes } from "crypto";
@@ -67,10 +69,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             userAgent,
         });
 
+        // 002-PI-051 (B3): enviar las credenciales por email (patrón colegio). La
+        // contraseña temporal solo se expone en la respuesta si el envío falla
+        // (copia manual); nunca se persiste en claro ni se loguea.
+        let emailEnviado = false;
+        try {
+            await enviarEmailCredencialesPadre(padre.email, password);
+            emailEnviado = true;
+        } catch (err) {
+            logger.error("[PADRES] Error enviando email de credenciales al padre", err);
+        }
+
         return NextResponse.json({
             padre: { ...padre, debeCambiarPassword: true },
-            passwordTemporal: password,
-            mensaje: "Contraseña temporal restablecida. Muéstrela una vez al usuario; deberá cambiarla al iniciar sesión.",
+            emailEnviado,
+            passwordTemporal: emailEnviado ? undefined : password,
+            mensaje: emailEnviado
+                ? "Contraseña temporal restablecida y enviada por email al usuario."
+                : "No se pudo enviar el email. Copie la contraseña temporal y compártala manualmente (se muestra una sola vez).",
         });
     } catch (error) {
         if (error instanceof AppError) {

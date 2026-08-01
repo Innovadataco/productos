@@ -98,6 +98,29 @@ export async function enviarEmailBienvenidaColegio(
     }
 }
 
+/**
+ * 002-PI-051 (B3) — Credenciales de un padre enviadas por el admin (alta o
+ * restablecimiento). Mismo patrón que el colegio: la temporal solo viaja por
+ * email; si el envío falla, la ruta la muestra una sola vez al admin.
+ */
+export async function enviarEmailCredencialesPadre(
+    email: string,
+    tempPassword: string
+): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "Tu cuenta en Protección Infantil",
+        text: `Hola,\n\nEl equipo de la plataforma gestionó el acceso a tu cuenta en Protección Infantil.\n\nUsuario: ${email}\nContraseña temporal: ${tempPassword}\n\nIngresa en ${baseUrl}/login y cambia tu contraseña lo antes posible.\n\nEsta contraseña temporal no se volverá a mostrar.`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error:", result.error);
+        throw new Error("Error al enviar email de credenciales al padre");
+    }
+}
+
 export async function enviarAlertaComitePendientes(email: string, cantidad: number): Promise<void> {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
     const result = await resend.emails.send({

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { authRegisterSchema } from "@/lib/validators";
+import { enviarEmailCredencialesPadre } from "@/lib/email";
 import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 
 export async function POST(request: Request) {
@@ -50,8 +52,23 @@ export async function POST(request: Request) {
         }
 
         const { user } = resultado;
+
+        // 002-PI-051 (B3): al asignar la cuenta de un padre por primera vez, enviar
+        // las credenciales por email (patrón colegio). Si falla, el admin comparte
+        // la contraseña que él mismo definió (ya la conoce).
+        let emailEnviado: boolean | undefined;
+        if (data.rol === "PARENT") {
+            emailEnviado = false;
+            try {
+                await enviarEmailCredencialesPadre(user.email, data.password);
+                emailEnviado = true;
+            } catch (err) {
+                logger.error("[REGISTER] Error enviando email de credenciales al padre", err);
+            }
+        }
+
         return NextResponse.json(
-            { user: { id: user.id, email: user.email, rol: user.rol } },
+            { user: { id: user.id, email: user.email, rol: user.rol }, ...(emailEnviado !== undefined ? { emailEnviado } : {}) },
             { status: 201 }
         );
     } catch (error) {
