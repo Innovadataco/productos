@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-07-30** (002-PI-047: regenerada leyendo el `Status`/`Estado` de las **110** `spec.md`, una por una).
+> Última actualización: **2026-07-30** (002-PI-047: regenerada leyendo el `Status`/`Estado` de las `spec.md`, una por una; 002-PI-051: +129 PLANEADO).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **110** |
+| **Total de specs** | **111** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
 | **Implementadas (IMPLEMENTADO)** | **11** |
-| **Pendientes (PLANEADO)** | **1** |
+| **Pendientes (PLANEADO)** | **2** |
 
 ## Backlog activo (no cerradas)
 
@@ -68,8 +68,9 @@
 | [126](126-linea-base-arquitectura/spec.md) | SPEC-126 — Línea base de arquitectura generada desde el código | 🟢 Implementada |
 | [127](127-home-padre/spec.md) | SPEC-127 — Home del padre (PARENT → /dashboard) | 🟢 Implementada |
 | [128](128-reconciliacion-grants-comite/spec.md) | SPEC-128 — Reconciliación de grants del comité | 🟢 Implementada |
+| [129](129-rediseno-ux-colegio/spec.md) | SPEC-129 — Rediseño de UX del panel del colegio (002-PI-051B) | 🔵 Planeado (spec+plan, compuerta §4) |
 
-## Tabla completa (110 specs)
+## Tabla completa (111 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -183,6 +184,7 @@
 | [126](126-linea-base-arquitectura/spec.md) | SPEC-126 — Línea base de arquitectura generada desde el código | 🟢 Implementada |
 | [127](127-home-padre/spec.md) | SPEC-127 — Home del padre (PARENT → /dashboard) | 🟢 Implementada |
 | [128](128-reconciliacion-grants-comite/spec.md) | SPEC-128 — Reconciliación de grants del comité | 🟢 Implementada |
+| [129](129-rediseno-ux-colegio/spec.md) | SPEC-129 — Rediseño de UX del panel del colegio (002-PI-051B) | 🔵 Planeado (spec+plan, compuerta §4) |
 
 ## Incidencias de calidad de datos
 
