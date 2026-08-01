@@ -39,13 +39,9 @@ export function ColegioNav({ rol, modulosPermitidos }: { rol: string; modulosPer
                         })}
                     </div>
                     <div className="flex items-center gap-1">
-                        {/* I-33 (SPEC-108): acceso a cambio de contraseña desde el panel del colegio */}
-                        <Link
-                            href="/cambiar-password"
-                            className="whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-900/40"
-                        >
-                            Cambiar contraseña
-                        </Link>
+                        {/* C7 (002-PI-051): "Cambiar contraseña" vive SOLO en el menú de
+                            sesión del NavHeader (dropdown, para todos los roles); aquí
+                            estaba duplicado. */}
                         <ColegioLogoutButton label="Cerrar sesión" className="whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30" />
                     </div>
                 </div>
