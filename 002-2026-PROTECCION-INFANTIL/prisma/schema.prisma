@@ -445,6 +445,7 @@ model Colegio {
   alumnos      Alumno[]
   alertas      AlertaColegio[]
   auditLogs    AuditLog[]
+  sesionesCarga CargaRosterSesion[]
 
   @@index([paisId])
   @@index([departamentoId])
@@ -1187,4 +1188,18 @@ model ClasificacionRubricaVoto {
 
   @@index([clasificacionIAId])
   @@map("clasificacion_rubrica_votos")
+}
+
+// SPEC-132 (S-4): sesión de carga masiva — el roster de alumnos vive server-side
+// con TTL; el token de confirmación firma SOLO el id de esta sesión (sin PII).
+model CargaRosterSesion {
+  id        String   @id @default(cuid())
+  colegioId String
+  filas     Json
+  creadoEn  DateTime @default(now())
+  expiraEn  DateTime
+
+  colegio Colegio @relation(fields: [colegioId], references: [id], onDelete: Cascade)
+
+  @@index([expiraEn])
 }

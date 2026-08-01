@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **47** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **48** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -198,6 +198,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | alumnos | Alumno | lista, relación |
 | alertas | AlertaColegio | lista, relación |
 | auditLogs | AuditLog | lista, relación |
+| sesionesCarga | CargaRosterSesion | lista, relación |
 
 #### `Curso`
 
@@ -463,6 +464,19 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | modeloUsado | String | — |
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
+
+### Otros (sin regla de dominio) (1)
+
+#### `CargaRosterSesion`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| filas | Json | — |
+| creadoEn | DateTime | — |
+| expiraEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
 
 ### Permisos por módulo (2)
 
@@ -898,6 +912,7 @@ erDiagram
     Colegio ||--o{ AlertaColegio : "colegio"
     Colegio ||--o{ Alumno : "colegio"
     Colegio ||--o{ AuditLog : "colegio (opcional)"
+    Colegio ||--o{ CargaRosterSesion : "colegio"
     Colegio ||--o{ Curso : "colegio"
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"

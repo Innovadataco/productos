@@ -139,6 +139,7 @@ async function start() {
     await ensureQueue("simulacion-run");
     await ensureQueue("simulacion-lote");
     await ensureQueue("apelacion-mantenimiento");
+    await ensureQueue("carga-roster-limpieza");
 
     const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
@@ -515,6 +516,24 @@ async function start() {
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[WORKER] ERROR mantenimiento de apelaciones: ${msg}`);
+            throw err;
+        }
+    });
+
+    // SPEC-132 (S-4): limpieza backstop de sesiones de carga vencidas (el roster
+    // vive server-side; single-use al confirmar, el TTL es solo el respaldo).
+    await boss.schedule("carga-roster-limpieza", "*/15 * * * *", {}, { tz: "America/Bogota" });
+    await boss.work("carga-roster-limpieza", async () => {
+        try {
+            const { purgarSesionesRosterVencidas } = await import("../src/lib/colegio/carga/sesion-roster.ts");
+            const purgadas = await purgarSesionesRosterVencidas();
+            if (purgadas > 0) {
+                console.log(`[WORKER] Sesiones de carga vencidas purgadas: ${purgadas}`);
+            }
+            return { success: true, purgadas };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR limpieza de sesiones de carga: ${msg}`);
             throw err;
         }
     });

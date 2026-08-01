@@ -1,0 +1,113 @@
+/**
+ * SPEC-132 (S-4/O-2): confirmar lee el roster por id de sesión (sin PII en el
+ * token) y lo consume single-use: la segunda confirmación no duplica.
+ */
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { POST } from "./route";
+import { prisma } from "@/lib/prisma";
+import { resetDatabase } from "@/lib/test-utils";
+import { resetRateLimitStore } from "@/lib/rate-limit";
+import {
+    crearTokenUsuario,
+    crearColegioConAdmin,
+    crearPlataforma,
+    crearParametrosReportes,
+} from "@/lib/reporte-test-utils";
+import { crearSesionRoster } from "@/lib/colegio/carga/sesion-roster";
+import { generarTokenCarga } from "@/lib/colegio/carga/token";
+import type { FilaCargaAlumno } from "@/lib/colegio/carga/parser";
+
+let mockToken: string | undefined;
+
+vi.mock("next/headers", () => ({
+    cookies: async () => ({
+        get: (name: string) =>
+            name === "token" && mockToken ? { name: "token", value: mockToken } : undefined,
+    }),
+}));
+
+function filasValidas(plataformaId: string): FilaCargaAlumno[] {
+    return [
+        {
+            fila: 2,
+            curso: { nombre: "6A", grado: "Sexto", anioLectivo: "2026" },
+            alumno: { nombre: "María Gómez" },
+            identificador: { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ALUMNO", plataformaId },
+        },
+    ];
+}
+
+function requestConfirmar(tokenConfirmacion: string, token?: string): Request {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers.cookie = `token=${token}`;
+    return new Request("http://localhost:5005/api/colegio/carga/confirmar", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ tokenConfirmacion }),
+    });
+}
+
+describe("POST /api/colegio/carga/confirmar (SPEC-132)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await crearParametrosReportes();
+        await resetRateLimitStore();
+        mockToken = undefined;
+    });
+
+    it("confirma por id de sesión, consume el roster (single-use) y no duplica (O-2)", async () => {
+        const { admin, colegio } = await crearColegioConAdmin();
+        const plat = await crearPlataforma("whatsapp", "WhatsApp");
+        mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
+
+        const sesionId = await crearSesionRoster(colegio.id, filasValidas(plat.id));
+        const token = await generarTokenCarga({ sesionId, colegioId: colegio.id });
+
+        const primera = await POST(requestConfirmar(token, mockToken));
+        expect(primera.status).toBe(201);
+
+        // La sesión quedó borrada en la misma transacción del import.
+        expect(await prisma.cargaRosterSesion.findUnique({ where: { id: sesionId } })).toBeNull();
+        const alumnosTrasPrimera = await prisma.alumno.count({ where: { colegioId: colegio.id } });
+        expect(alumnosTrasPrimera).toBe(1);
+
+        // Segunda confirmación con el MISMO token: no duplica (sesión consumida).
+        const segunda = await POST(requestConfirmar(token, mockToken));
+        expect(segunda.status).toBe(400);
+        const body = await segunda.json();
+        expect(body.error.message).toContain("vuelve a validar");
+        expect(await prisma.alumno.count({ where: { colegioId: colegio.id } })).toBe(alumnosTrasPrimera);
+    });
+
+    it("rechaza una sesión de otro colegio (aislamiento)", async () => {
+        const { admin, colegio } = await crearColegioConAdmin();
+        const plat = await crearPlataforma("whatsapp", "WhatsApp");
+        mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
+
+        const sesionId = await crearSesionRoster("otro-colegio-id", filasValidas(plat.id));
+        const token = await generarTokenCarga({ sesionId, colegioId: "otro-colegio-id" });
+
+        const res = await POST(requestConfirmar(token, mockToken));
+        expect(res.status).toBe(403);
+        expect(await prisma.alumno.count({ where: { colegioId: colegio.id } })).toBe(0);
+    });
+
+    it("rechaza un token sin sesión válida (vencida o inexistente)", async () => {
+        const { admin, colegio } = await crearColegioConAdmin();
+        const plat = await crearPlataforma("whatsapp", "WhatsApp");
+        mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
+
+        // Sesión del MISMO colegio pero vencida: pasa la guarda de tenant y cae en la de expiración.
+        const sesionId = await crearSesionRoster(colegio.id, filasValidas(plat.id));
+        await prisma.cargaRosterSesion.update({
+            where: { id: sesionId },
+            data: { expiraEn: new Date(Date.now() - 1000) },
+        });
+        const token = await generarTokenCarga({ sesionId, colegioId: colegio.id });
+
+        const res = await POST(requestConfirmar(token, mockToken));
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.error.message).toContain("vuelve a validar");
+    });
+});

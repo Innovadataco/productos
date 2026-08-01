@@ -9,6 +9,7 @@ import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
 import { confirmarCargaSchema } from "@/lib/schemas";
 import { verificarTokenCarga } from "@/lib/colegio/carga/token";
+import { obtenerSesionRosterValida, consumirSesionRoster } from "@/lib/colegio/carga/sesion-roster";
 import { importarCargaMasiva } from "@/lib/colegio/carga/importer";
 
 function getClientInfo(request: Request) {
@@ -61,7 +62,17 @@ export async function POST(request: Request) {
             );
         }
 
-        if (payload.filas.length === 0) {
+        // SPEC-132 (S-4): el roster se lee server-side por el id de sesión firmado en
+        // el token (sin PII en el JWT). Guardas: existe, no vencida, mismo colegio.
+        const sesion = await obtenerSesionRosterValida(payload.sesionId, payload.colegioId);
+        if (!sesion) {
+            return NextResponse.json(
+                { error: { message: "La validación expiró o no existe; vuelve a validar el archivo", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+
+        if (sesion.filas.length === 0) {
             return NextResponse.json(
                 { error: { message: "No hay filas para importar", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
@@ -69,7 +80,11 @@ export async function POST(request: Request) {
         }
 
         const resumen = await prisma.$transaction(async (tx) => {
-            const resultado = await importarCargaMasiva(payload.filas, payload.colegioId, tx);
+            const resultado = await importarCargaMasiva(sesion.filas, sesion.colegioId, tx);
+
+            // SPEC-132 (O-2): single-use — la sesión de roster se borra en la MISMA
+            // transacción del import (la PII de menores no espera al TTL).
+            await consumirSesionRoster(sesion.id, tx);
 
             const { ipAddress, userAgent } = getClientInfo(request);
             await logAudit({
@@ -78,8 +93,8 @@ export async function POST(request: Request) {
                 usuarioId: user.id,
                 colegioId: user.colegioId ?? undefined,
                 valorNuevo: JSON.stringify({
-                    colegioId: payload.colegioId,
-                    filas: payload.filas.length,
+                    colegioId: sesion.colegioId,
+                    filas: sesion.filas.length,
                     resultado,
                 }),
                 ipAddress,

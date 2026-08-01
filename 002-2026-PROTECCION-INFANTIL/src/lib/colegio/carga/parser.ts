@@ -1,5 +1,6 @@
+import ExcelJS from "exceljs";
 import type { EtiquetaRelacionAlumno } from "@prisma/client";
-import * as XLSX from "xlsx";
+import { getParametroSistema } from "@/lib/parametros";
 
 export type FilaCargaAlumno = {
     fila: number;
@@ -36,12 +37,16 @@ export const COLUMNAS_REQUERIDAS = [
     "plataforma",
 ];
 
+// SPEC-132 (S-3): límites explícitos de la carga (parámetros con fallback).
+const MAX_ARCHIVO_BYTES_DEFAULT = 5 * 1024 * 1024; // 5 MB
+const MAX_FILAS_DEFAULT = 2000;
+
 function normalizarHeader(header: unknown): string {
     return String(header)
         .trim()
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[̀-ͯ]/g, "")
         .replace(/\s+/g, "_");
 }
 
@@ -53,11 +58,6 @@ function celdaAString(valor: unknown): string {
 
 function filaAMatrizStrings(fila: unknown[]): string[] {
     return fila.map(celdaAString);
-}
-
-export interface ResultadoParser {
-    filas: FilaCargaAlumno[];
-    errores: ErrorFila[];
 }
 
 function parseCsvManual(text: string): string[][] {
@@ -114,14 +114,53 @@ function parseCsvManual(text: string): string[][] {
 }
 
 /**
- * Convierte un ArrayBuffer (CSV o XLSX) a una matriz de strings.
- * Valida que existan los encabezados requeridos.
+ * Valor crudo de una celda exceljs, equivalente al `raw: true` de SheetJS que usaba
+ * el parser original (SPEC-132 S-3/O-1: misma semántica para no mover fixtures).
  */
-export function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "csv" | "xlsx"): ResultadoParser {
+function valorCeldaExceljs(valor: ExcelJS.CellValue): unknown {
+    if (valor === null || valor === undefined) return "";
+    if (valor instanceof Date) return valor;
+    if (typeof valor === "object") {
+        const obj = valor as { text?: unknown; richText?: Array<{ text: string }>; result?: unknown; hyperlink?: unknown };
+        if (Array.isArray(obj.richText)) return obj.richText.map((t) => t.text).join("");
+        if (obj.text !== undefined) return obj.text;
+        if (obj.result !== undefined) return obj.result;
+        if (obj.hyperlink !== undefined && obj.text !== undefined) return obj.text;
+        return "";
+    }
+    return valor;
+}
+
+export interface ResultadoParser {
+    filas: FilaCargaAlumno[];
+    errores: ErrorFila[];
+}
+
+/**
+ * Convierte un ArrayBuffer (CSV o XLSX) a una matriz de strings.
+ * Valida límites de tamaño/filas y que existan los encabezados requeridos.
+ * SPEC-132 (S-3): XLSX se lee con exceljs (la librería xlsx tenía CVEs y se retiró).
+ */
+export async function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "csv" | "xlsx"): Promise<ResultadoParser> {
     const errores: ErrorFila[] = [];
 
     if (arrayBuffer.byteLength === 0) {
         errores.push({ fila: 0, campos: [], mensaje: "El archivo está vacío" });
+        return { filas: [], errores };
+    }
+
+    // SPEC-132 (S-3): límites explícitos (misma clave que la ruta + tope de bytes).
+    const paramMaxBytes = await getParametroSistema("carga.max_archivo_bytes");
+    const maxBytes = parseInt(paramMaxBytes?.valor ?? String(MAX_ARCHIVO_BYTES_DEFAULT), 10);
+    const paramMaxFilas = await getParametroSistema("colegio.carga.max_filas");
+    const maxFilas = parseInt(paramMaxFilas?.valor ?? String(MAX_FILAS_DEFAULT), 10);
+
+    if (arrayBuffer.byteLength > maxBytes) {
+        errores.push({
+            fila: 0,
+            campos: [],
+            mensaje: `El archivo supera el tamaño máximo permitido (${Math.round(maxBytes / (1024 * 1024))} MB)`,
+        });
         return { filas: [], errores };
     }
 
@@ -131,20 +170,18 @@ export function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "csv" | "
             const text = new TextDecoder("utf-8").decode(arrayBuffer);
             hoja = parseCsvManual(text);
         } else {
-            const libro = XLSX.read(new Uint8Array(arrayBuffer), {
-                type: "array",
-            });
-            const primeraHoja = libro.SheetNames[0];
-            if (!primeraHoja) {
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(arrayBuffer);
+            const worksheet = workbook.worksheets[0];
+            if (!worksheet) {
                 errores.push({ fila: 0, campos: [], mensaje: "El archivo no contiene hojas" });
                 return { filas: [], errores };
             }
-            hoja = XLSX.utils.sheet_to_json(libro.Sheets[primeraHoja], {
-                header: 1,
-                defval: "",
-                blankrows: false,
-                raw: true,
-            }) as unknown[][];
+            hoja = [];
+            worksheet.eachRow({ includeEmpty: false }, (row) => {
+                const valores = (row.values as unknown[]).slice(1).map((v) => valorCeldaExceljs(v as ExcelJS.CellValue));
+                hoja.push(valores);
+            });
         }
     } catch (error) {
         const msg = error instanceof Error ? error.message : "Error desconocido";
@@ -154,6 +191,16 @@ export function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "csv" | "
 
     if (hoja.length === 0) {
         errores.push({ fila: 0, campos: [], mensaje: "El archivo no contiene filas" });
+        return { filas: [], errores };
+    }
+
+    // SPEC-132 (S-3): límite de filas (el encabezado no cuenta).
+    if (hoja.length - 1 > maxFilas) {
+        errores.push({
+            fila: 0,
+            campos: [],
+            mensaje: `El archivo tiene más filas de las permitidas (máximo ${maxFilas})`,
+        });
         return { filas: [], errores };
     }
 

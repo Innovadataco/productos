@@ -68,6 +68,8 @@ export async function resetDatabase() {
     await prisma.tenant.deleteMany();
     await prisma.permisoModulo.deleteMany();
     await prisma.moduloPermisible.deleteMany();
+    // SPEC-132: sesiones de carga masiva (roster server-side).
+    await prisma.cargaRosterSesion.deleteMany();
 
     await otorgarTodosLosPermisos();
 }

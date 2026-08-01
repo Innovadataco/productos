@@ -258,7 +258,7 @@ describe("/api/colegio/carga", () => {
             expect(res.status).toBe(403);
         });
 
-        it("segunda confirmación es idempotente", async () => {
+        it("segunda confirmación es rechazada (single-use) y no duplica (SPEC-132 O-2)", async () => {
             const { colegio } = await setupSchoolAdmin();
             const reqValidar = buildMultipartRequest(
                 "http://localhost:5005/api/colegio/carga/validar",
@@ -269,18 +269,17 @@ describe("/api/colegio/carga", () => {
             const validarRes = await POSTValidar(reqValidar);
             const validarJson = await validarRes.json();
 
-            await POSTConfirmar(
+            // Primera confirmación: importa y consume la sesión de roster.
+            const res1 = await POSTConfirmar(
                 request("POST", "http://localhost:5005/api/colegio/carga/confirmar", { tokenConfirmacion: validarJson.tokenConfirmacion }, mockToken)
             );
+            expect(res1.status).toBe(201);
+
+            // Segunda con el MISMO token: la sesión ya no existe (single-use); no duplica.
             const res2 = await POSTConfirmar(
                 request("POST", "http://localhost:5005/api/colegio/carga/confirmar", { tokenConfirmacion: validarJson.tokenConfirmacion }, mockToken)
             );
-            expect(res2.status).toBe(201);
-            const json2 = await res2.json();
-            expect(json2.resumen.cursosReutilizados).toBe(1);
-            expect(json2.resumen.alumnosReutilizados).toBe(2);
-            expect(json2.resumen.identificadoresReutilizados).toBe(2);
-            expect(json2.resumen.alumnosCreados).toBe(0);
+            expect(res2.status).toBe(400);
 
             const alumnos = await prisma.alumno.findMany({ where: { colegioId: colegio.id } });
             expect(alumnos).toHaveLength(2);
