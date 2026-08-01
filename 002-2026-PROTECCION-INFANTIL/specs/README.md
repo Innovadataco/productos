@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **113** |
+| **Total de specs** | **114** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
 | **Implementadas (IMPLEMENTADO)** | **14** |
-| **Pendientes (PLANEADO)** | **1** |
+| **Pendientes (PLANEADO)** | **2** |
 
 ## Backlog activo (no cerradas)
 
@@ -71,8 +71,9 @@
 | [129](129-rediseno-ux-colegio/spec.md) | SPEC-129 — Rediseño de UX del panel del colegio (002-PI-051B) | 🟢 Implementada |
 | [130](130-cifrado-reposo-texto-reporte/spec.md) | SPEC-130 — Cifrado en reposo del texto del reporte (BL-4) | 🟢 Implementada (migración de datos en prod pendiente de BL-2) |
 | [131](131-visibilidad-solo-aprobados/spec.md) | SPEC-131 — Visibilidad pública solo por reportes aprobados (BL-5) | 🟢 Implementada |
+| [132](132-seguridad-carga-colegio/spec.md) | SPEC-132 — Seguridad de la carga masiva del colegio (S-3 exceljs + S-4 roster server-side) | 🔵 Planeado (spec+plan, compuerta §4) |
 
-## Tabla completa (113 specs)
+## Tabla completa (114 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -189,6 +190,7 @@
 | [129](129-rediseno-ux-colegio/spec.md) | SPEC-129 — Rediseño de UX del panel del colegio (002-PI-051B) | 🟢 Implementada |
 | [130](130-cifrado-reposo-texto-reporte/spec.md) | SPEC-130 — Cifrado en reposo del texto del reporte (BL-4) | 🟢 Implementada (migración de datos en prod pendiente de BL-2) |
 | [131](131-visibilidad-solo-aprobados/spec.md) | SPEC-131 — Visibilidad pública solo por reportes aprobados (BL-5) | 🟢 Implementada |
+| [132](132-seguridad-carga-colegio/spec.md) | SPEC-132 — Seguridad de la carga masiva del colegio (S-3 exceljs + S-4 roster server-side) | 🔵 Planeado (spec+plan, compuerta §4) |
 
 ## Incidencias de calidad de datos
 
