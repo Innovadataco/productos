@@ -79,10 +79,10 @@ export async function POST(request: Request) {
             emailSent,
         };
 
-        // Si no se pudo enviar el email, exponemos el token para que el usuario pueda continuar
-        // (útil en entornos sin Resend configurado o en modo desarrollo).
-        // Nunca exponemos el mensaje de error del proveedor de email.
-        if (!emailSent) {
+        // BL-3 (002-PI-052): el token de desarrollo NUNCA se expone en producción
+        // (toma de cuenta). Solo en entornos no productivos, cuando el email falla;
+        // en prod el email falla = fail-closed, sin token en el body.
+        if (!emailSent && process.env.NODE_ENV !== "production") {
             response.devToken = token;
         }
         return NextResponse.json(response, { status: 200 });

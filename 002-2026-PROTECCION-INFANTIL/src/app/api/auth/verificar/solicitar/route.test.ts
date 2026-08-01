@@ -90,4 +90,19 @@ describe("POST /api/auth/verificar/solicitar", () => {
         const data = await blocked.json();
         expect(data.error.code).toBe("RATE_LIMITED");
     });
+
+    it("en producción NUNCA expone devCode cuando el email falla (BL-3)", async () => {
+        const envOriginal = process.env.NODE_ENV;
+        (process.env as { NODE_ENV: string }).NODE_ENV = "production";
+        try {
+            const res = await POST(makeRequest({ email: "bl3-prod@example.com" }, "203.0.113.112"));
+            expect(res.status).toBe(202);
+            const data = await res.json();
+            expect(data.emailSent).toBe(false);
+            expect(data.devCode).toBeUndefined();
+            expect(data.message).toContain("intenta de nuevo más tarde");
+        } finally {
+            (process.env as { NODE_ENV: string }).NODE_ENV = envOriginal ?? "test";
+        }
+    });
 });

@@ -73,17 +73,23 @@ export async function POST(request: Request) {
             logger.error(`[VERIFICAR] Envío de email de verificación: fallido — ${masked}: ${emailError}`);
         }
 
+        // BL-3 (002-PI-052): el código de desarrollo NUNCA se expone en producción
+        // (toma de cuenta). Solo en entornos no productivos, cuando el email falla;
+        // en prod el email falla = fail-closed, sin código en el body.
+        const esProduccion = process.env.NODE_ENV === "production";
         const response: Record<string, unknown> = {
             message: emailSent
                 ? MENSAJE_EXITO
-                : "El servicio de email no está disponible; usa el código mostrado para continuar.",
+                : esProduccion
+                  ? "El servicio de email no está disponible en este momento; intenta de nuevo más tarde."
+                  : "El servicio de email no está disponible; usa el código mostrado para continuar.",
             emailSent,
         };
 
         // Si no se pudo enviar el email, exponemos el código para que el usuario pueda continuar
         // (útil en entornos sin Resend configurado o en modo desarrollo).
         // Nunca exponemos el mensaje de error del proveedor de email.
-        if (!emailSent) {
+        if (!emailSent && !esProduccion) {
             response.devCode = code;
         }
 
