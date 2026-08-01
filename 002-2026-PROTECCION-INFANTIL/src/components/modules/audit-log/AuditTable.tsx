@@ -9,6 +9,7 @@ import { Cargando } from "@/components/ui/Cargando";
 import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 import { ChevronIcon } from "./AuditFilters";
 import { formatDate, formatValorNuevo } from "./types";
+import { detalleLegible, fraseAccionLegible } from "./legible";
 import type { AuditResponse } from "./types";
 
 interface AuditTableProps {
@@ -19,9 +20,11 @@ interface AuditTableProps {
     expandedIds: Set<string>;
     onToggle: (id: string) => void;
     onPageChange: (page: number) => void;
+    /** SPEC-129 (C6): frases naturales y detalle en pares etiqueta-valor. */
+    legible?: boolean;
 }
 
-export function AuditTable({ data, loading, error, page, expandedIds, onToggle, onPageChange }: AuditTableProps) {
+export function AuditTable({ data, loading, error, page, expandedIds, onToggle, onPageChange, legible = false }: AuditTableProps) {
     if (error) {
         return <Alerta tono="error" className="p-4">{error}</Alerta>;
     }
@@ -63,9 +66,15 @@ export function AuditTable({ data, loading, error, page, expandedIds, onToggle, 
                                 <Fragment key={item.id}>
                                     <tr className="align-top transition hover:bg-slate-50 dark:hover:bg-slate-800/50">
                                         <td className="py-3 pr-3">
-                                            <Badge variant="info" className="text-[10px]">
-                                                {item.accion}
-                                            </Badge>
+                                            {legible ? (
+                                                <span className="text-sm font-medium text-body">
+                                                    {fraseAccionLegible(item.accion)}
+                                                </span>
+                                            ) : (
+                                                <Badge variant="info" className="text-[10px]">
+                                                    {item.accion}
+                                                </Badge>
+                                            )}
                                         </td>
                                         <td className="py-3 pr-3 text-muted">
                                             <div className="text-body">{item.tipoRecurso}</div>
@@ -105,10 +114,28 @@ export function AuditTable({ data, loading, error, page, expandedIds, onToggle, 
                                     {expandedIds.has(item.id) && (
                                         <tr className="bg-slate-50/50 dark:bg-slate-800/30">
                                             <td colSpan={5} className="py-3 px-3">
-                                                <p className="mb-1 text-xs font-medium text-subtle">Valor nuevo</p>
-                                                <pre className="max-h-48 overflow-auto rounded-xl bg-white p-3 text-xs text-body dark:bg-slate-900">
-                                                    {formatValorNuevo(item.valorNuevo)}
-                                                </pre>
+                                                {legible ? (
+                                                    // SPEC-129 (C6, O-4): pares etiqueta-valor, nunca JSON crudo.
+                                                    detalleLegible(item.valorNuevo).length > 0 ? (
+                                                        <dl className="grid gap-1 text-xs sm:grid-cols-2">
+                                                            {detalleLegible(item.valorNuevo).map((par, idx) => (
+                                                                <div key={idx} className="flex gap-2">
+                                                                    <dt className="font-medium text-subtle">{par.clave}:</dt>
+                                                                    <dd className="text-body">{par.valor}</dd>
+                                                                </div>
+                                                            ))}
+                                                        </dl>
+                                                    ) : (
+                                                        <p className="text-xs text-subtle">Sin detalle adicional.</p>
+                                                    )
+                                                ) : (
+                                                    <>
+                                                        <p className="mb-1 text-xs font-medium text-subtle">Valor nuevo</p>
+                                                        <pre className="max-h-48 overflow-auto rounded-xl bg-white p-3 text-xs text-body dark:bg-slate-900">
+                                                            {formatValorNuevo(item.valorNuevo)}
+                                                        </pre>
+                                                    </>
+                                                )}
                                             </td>
                                         </tr>
                                     )}
