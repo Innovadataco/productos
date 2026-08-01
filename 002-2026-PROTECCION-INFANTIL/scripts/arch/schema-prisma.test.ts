@@ -1,6 +1,8 @@
 /**
  * SPEC-126 (T009): oráculos del parser del schema. Sin BD.
  * Oráculo verificado 2026-07-29: 47 modelos; huérfanos = excepciones declaradas.
+ * Actualizado 2026-08-01: 48 modelos — SPEC-132 añadió CargaRosterSesion (cambio
+ * intencional: prevalece el conteo real, regla de oráculos de SPEC-126).
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -11,8 +13,8 @@ const modelos = parsearSchemaPrisma(RUTA_SCHEMA);
 const excepciones = JSON.parse(fs.readFileSync(RUTA_EXCEPCIONES, "utf-8")) as { huerfanosPermitidos: string[] };
 
 describe("parser schema.prisma (SPEC-126)", () => {
-    it("oráculo: 47 modelos", () => {
-        expect(modelos.length).toBe(47);
+    it("oráculo: 48 modelos (47 base + CargaRosterSesion de SPEC-132)", () => {
+        expect(modelos.length).toBe(48);
     });
 
     it("oráculo: huérfanos = lista de excepciones declarada (ni uno más, ni uno menos)", () => {

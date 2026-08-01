@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-055 (radica ZEUS). Dos puntos de seguridad en el flujo de
 carga masiva del colegio (`src/lib/colegio/carga/`): **S-3** — el parser lee el Excel de
@@ -147,4 +147,23 @@ schema de Reporte, la visibilidad ni otros flujos del colegio.
 
 ## Implementación (cierre)
 
-*(Se completa al cerrar la spec.)*
+Implementada el 2026-08-01 en `feature/001-scaffolding` (compuerta §4 APROBADA por ZEUS
+con las condiciones O-1..O-4, registradas aquí).
+
+- **S-3 (parser seguro)**: `parser.ts` migrado de `xlsx` a `exceljs` con **fidelidad
+  total** — los fixtures de `parser.test.ts` conservan sus expectativas intactas (O-1;
+  ningún fixture se tocó en silencio). Límites explícitos: `carga.max_archivo_bytes`
+  (5 MB) y `colegio.carga.max_filas` (misma clave que la ruta; backstop 2000). `xlsx`
+  fuera del árbol por completo, runtime y tests (O-3: `npm ls xlsx` vacío; los fixtures
+  XLSX ahora se construyen con exceljs). El CSV manual se conserva.
+- **S-4 (roster server-side)**: tabla ADITIVA `CargaRosterSesion` (con FK a Colegio y
+  TTL de 15 min); el token de confirmación firma SOLO `{ sesionId, colegioId }` — ningún
+  dato de menores viaja en el JWT (guarda de test: el payload nunca lleva roster).
+- **Confirmación single-use (O-2)**: lee el roster por id con guardas (vencida,
+  inexistente, de otro colegio → rechazo claro) y BORRA la sesión en la MISMA
+  transacción del import — la PII no espera al TTL; test: doble confirmación no duplica
+  (el test viejo de "idempotencia por reuso del token" se actualizó al nuevo contrato).
+  Backstop de limpieza: job del worker cada 15 min (`carga-roster-limpieza`).
+- **Gates**: 46 tests del flujo de carga verdes, `tsc --noEmit` limpio, build OK,
+  `01-modelo-datos.md` y `06-stack.md` regenerados, `arch:check` VERDE (O-4), suite
+  completa verde. Reset de la suite incluye la tabla nueva.
