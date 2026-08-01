@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-053 (radica ZEUS). La constitución §6.3 exige el texto del
 reporte CIFRADO EN REPOSO + anonimización/purga garantizada en todo camino terminal.
@@ -163,4 +163,28 @@ clasificación, ni la visibilidad pública, ni el motor de IA.
 
 ## Implementación (cierre)
 
-*(Se completa al cerrar la spec.)*
+Implementada el 2026-08-01 en `feature/001-scaffolding` (compuerta §4 APROBADA por ZEUS
+con la política terminal D4 y las condiciones O-1..O-5, registradas aquí).
+
+- **Helper único** (`src/lib/texto-reporte-cifrado.ts`, AES-256-GCM, misma clave
+  `PARAM_ENCRYPTION_KEY` — BL-2 del CEO): idempotente en lectura Y escritura (O-3, sin
+  doble cifrado), marcador constante no-identificable para la purga (O-2: las vistas lo
+  muestran tal cual; nunca se cifra ni se descifra).
+- **Cifrado en reposo**: la creación y la anonimización escriben `texto` cifrado; el
+  pipeline, resolvers (spam, correcciones), expediente y bandejas leen el plano SOLO por
+  `descifrarTextoReporte` en caminos autorizados. La clasificación NO cambió (O-5).
+- **Política D4 (decisión ZEUS)**: purga de `texto` a marcador en DUPLICADO (al cierre del
+  pipeline) y en `darDeBajaReporte` (baja y spam confirmado — resoluciones que no terminan
+  CLASIFICADO/CORREGIDO); CLASIFICADO/CORREGIDO conservan `texto` cifrado;
+  `textoOriginal` SIEMPRE cifrado y nunca purgado; `reactivarReporte` restaura la copia
+  de trabajo desde la evidencia.
+- **Guarda de frontera (O-1)**: `texto-reporte-frontera.test.ts` falla si alguna ruta
+  lee o escribe `Reporte.texto` sin pasar por el helper.
+- **Migración** (`scripts/migrar-cifrado-texto-reportes.ts`): validada en DEV — 2
+  cifrados + 2 `textoOriginal` poblados, 0 texto plano restante, segunda corrida 0
+  cambios (idempotente), integridad del contenido verificada al descifrar. **PROD NO se
+  corrió (O-4)**: queda como paso manual documentado en `quickstart.md`, pendiente de
+  que el CEO confirme BL-2 (llave respaldada).
+- Tests ajustados al nuevo contrato (descifrado conserva el contenido íntegro — no se
+  debilitó ninguno). Gates: suite completa verde, `tsc --noEmit`, build y `arch:check`
+  verdes.

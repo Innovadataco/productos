@@ -13,8 +13,8 @@
 | **Total de specs** | **112** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
-| **Implementadas (IMPLEMENTADO)** | **12** |
-| **Pendientes (PLANEADO)** | **2** |
+| **Implementadas (IMPLEMENTADO)** | **13** |
+| **Pendientes (PLANEADO)** | **1** |
 
 ## Backlog activo (no cerradas)
 
@@ -69,7 +69,7 @@
 | [127](127-home-padre/spec.md) | SPEC-127 — Home del padre (PARENT → /dashboard) | 🟢 Implementada |
 | [128](128-reconciliacion-grants-comite/spec.md) | SPEC-128 — Reconciliación de grants del comité | 🟢 Implementada |
 | [129](129-rediseno-ux-colegio/spec.md) | SPEC-129 — Rediseño de UX del panel del colegio (002-PI-051B) | 🟢 Implementada |
-| [130](130-cifrado-reposo-texto-reporte/spec.md) | SPEC-130 — Cifrado en reposo del texto del reporte (BL-4) | 🔵 Planeado (spec+plan, compuerta §4) |
+| [130](130-cifrado-reposo-texto-reporte/spec.md) | SPEC-130 — Cifrado en reposo del texto del reporte (BL-4) | 🟢 Implementada (migración de datos en prod pendiente de BL-2) |
 
 ## Tabla completa (112 specs)
 
@@ -186,7 +186,7 @@
 | [127](127-home-padre/spec.md) | SPEC-127 — Home del padre (PARENT → /dashboard) | 🟢 Implementada |
 | [128](128-reconciliacion-grants-comite/spec.md) | SPEC-128 — Reconciliación de grants del comité | 🟢 Implementada |
 | [129](129-rediseno-ux-colegio/spec.md) | SPEC-129 — Rediseño de UX del panel del colegio (002-PI-051B) | 🟢 Implementada |
-| [130](130-cifrado-reposo-texto-reporte/spec.md) | SPEC-130 — Cifrado en reposo del texto del reporte (BL-4) | 🔵 Planeado (spec+plan, compuerta §4) |
+| [130](130-cifrado-reposo-texto-reporte/spec.md) | SPEC-130 — Cifrado en reposo del texto del reporte (BL-4) | 🟢 Implementada (migración de datos en prod pendiente de BL-2) |
 
 ## Incidencias de calidad de datos
 
