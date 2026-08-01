@@ -227,7 +227,9 @@ export function ConsultaEnriquecidaClient() {
                             <p className="text-xs text-subtle mb-3">
                                 Ciudades con reportes. Sin direcciones exactas ni datos personales.
                             </p>
-                            <MapaUbicaciones puntos={puntosMapa} sinUbicacion={sinUbicacion} />
+                            {/* U1 (002-PI-051): el mapa arranca en vista general (zoom 3,
+                                sin acercar); el usuario acerca manualmente. */}
+                            <MapaUbicaciones puntos={puntosMapa} zoom={3} sinUbicacion={sinUbicacion} />
                         </GlassCard>
                     )}
                 </div>
