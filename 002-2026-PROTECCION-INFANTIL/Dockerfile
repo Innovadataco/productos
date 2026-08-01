@@ -64,6 +64,12 @@ COPY --from=builder /app/package.json /app/tsconfig.json /app/next.config.ts ./
 # Directorio compartido app↔worker para el heartbeat del healthcheck (spec 097)
 RUN mkdir -p /app/run && chown nextjs:nodejs /app/run
 
+# SPEC-110 (002-PI-051 B2): storage de evidencia de apelaciones escribible por
+# nextjs (default APELACIONES_STORAGE_DIR = <cwd>/storage/apelaciones). Sin esto
+# la radicación falla con EACCES al mkdir. Compose lo monta como volumen nombrado
+# en app y worker (el job diario de retención también borra ahí).
+RUN mkdir -p /app/storage/apelaciones && chown -R nextjs:nodejs /app/storage
+
 USER nextjs
 EXPOSE 3000
 # Next standalone honra PORT y HOSTNAME (compose los fija: 3000 / 0.0.0.0)

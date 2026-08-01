@@ -22,7 +22,7 @@ import { procesarBackfillEmbedding } from "../src/lib/ai/dataset-embedding-backf
 import { getOllamaBaseUrl } from "../src/lib/ai/ollama-config.ts";
 import { prisma } from "../src/lib/prisma.ts";
 import { logAudit } from "../src/lib/audit.ts";
-import { notificarCambioCirculoSiCorresponde } from "../src/lib/circulo-confianza.ts";
+import { notificarCambioCirculoSiCorresponde } from "../src/lib/dal/services/circulo-confianza.ts";
 import { notificarColegioSiCorresponde } from "../src/lib/colegio/alertas.ts";
 import { boss, getWorkerParams, drainPending, ensureStarted } from "../src/lib/queue.ts";
 import { guardarReintento } from "../src/lib/reporte-reintentos.ts";
