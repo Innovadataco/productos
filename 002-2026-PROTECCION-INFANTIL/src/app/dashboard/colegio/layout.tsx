@@ -4,7 +4,7 @@ import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
-import { ColegioNav } from "@/components/modules/colegio/ColegioNav";
+import { ColegioSideNav } from "@/components/modules/colegio/ColegioSideNav";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
 export default async function ColegioLayout({ children }: { children: React.ReactNode }) {
@@ -60,10 +60,11 @@ export default async function ColegioLayout({ children }: { children: React.Reac
 
     const permitidos = await modulosPermitidosParaRol("SCHOOL_ADMIN");
 
+    // SPEC-129 (C3): navegación lateral única patrón AdminNav (antes ColegioNav, tabs).
     return (
-        <div className="theme-colegio min-h-screen bg-page">
-            <ColegioNav rol={usuario.rol} modulosPermitidos={[...permitidos]} />
-            {children}
+        <div className="theme-colegio flex min-h-screen bg-page">
+            <ColegioSideNav rol={usuario.rol} modulosPermitidos={[...permitidos]} />
+            <div className="min-w-0 flex-1">{children}</div>
         </div>
     );
 }
