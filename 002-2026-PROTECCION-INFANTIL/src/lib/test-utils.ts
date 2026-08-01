@@ -41,6 +41,9 @@ export async function resetDatabase() {
     await prisma.accesoDocumentoApelacion.deleteMany();
     await prisma.documentoApelacion.deleteMany();
     await prisma.apelacion.deleteMany();
+    // SPEC-133: suscripciones de alerta y tokens de recuperación (FK a usuario/identificador).
+    await prisma.alertaSuscripcion.deleteMany();
+    await prisma.tokenRecuperacion.deleteMany();
     await prisma.simulacionReporte.deleteMany();
     await prisma.simulacionRun.deleteMany();
     await prisma.rateLimit.deleteMany();
