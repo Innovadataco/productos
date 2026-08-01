@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-054 (radica ZEUS; dirección de producto decidida por el CEO).
 `src/lib/visibility.ts:30` decide la visibilidad pública con `agregado.totalReportes`
@@ -159,4 +159,22 @@ aprobados).
 
 ## Implementación (cierre)
 
-*(Se completa al cerrar la spec.)*
+Implementada el 2026-08-01 en `feature/001-scaffolding` (compuerta §4 APROBADA por ZEUS
+con las condiciones O-1..O-4, registradas aquí).
+
+- **Agregado con contadores aprobados** (`reportesAprobados`, `autenticadosAprobados`,
+  migración ADITIVA) y **backfill SQL DENTRO de la migración (O-1)**: el flip de
+  visibilidad funciona desde el primer deploy, sin ventana de contadores en cero.
+  `scripts/backfill-aprobados-agregado.ts` queda como verificación/reparación
+  idempotente re-corrible por entorno (dev: 0/0 tras la migración).
+- **Visibilidad solo aprobada** (`visibility.ts`): umbral y ratio de autenticados sobre
+  la base aprobada; `ocultoPorComiteEn` intacto (SPEC-110). La superficie mostrada NO
+  cambió: solo CUÁNDO un identificador aparece (O-4; nunca score/riesgo al público).
+- **Escritor único (O-2)**: `recalcularYGuardarScore` escribe los contadores aprobados
+  en cada finalización/resolución/baja/reactivación; además `correcciones/route.ts`
+  ahora recalcula (hueco: la corrección puede mover la categoría hacia/desde SPAM/OTRO).
+- **Tests**: 6 nuevos en `visibility.test.ts` (solo-spam no visible, spam no empuja el
+  umbral, umbral cumplido visible, ratio sobre base aprobada, comité gana, corrección a
+  SPAM baja los contadores). `01-modelo-datos.md` regenerado; `arch:check` VERDE (O-3).
+- `totalReportes` conserva su valor para diagnóstico (semántica mixta documentada en
+  research.md); la visibilidad ya no lo lee. Desbloquea F5 (métrica del match).
