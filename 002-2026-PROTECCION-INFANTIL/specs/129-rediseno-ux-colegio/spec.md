@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-051 PARTE B (radica ZEUS; dirección aprobada por el CEO con
 mockup de ZEUS). El módulo colegio FUNCIONA pero su diseño es malo: es rediseño de UX,
@@ -213,4 +213,25 @@ la navegación, se regenera con `arch:check` VERDE.
 
 ## Implementación (cierre)
 
-*(Se completa al cerrar la spec.)*
+Implementada el 2026-08-01 en `feature/001-scaffolding` (compuerta §4 ABIERTA por ZEUS con
+decisiones D-a/D-b y condiciones O-1..O-4, registradas aquí). Un commit por frente:
+
+- **C1** (`2f0c3e58`): logo del SCHOOL_ADMIN a su panel también en zona pública
+  (**D-a aprobado**; los demás roles conservan SPEC-106). Decisión extraída a
+  `destinoLogo()` pura con test de regresión por TODOS los roles (**O-1**).
+- **C3** (`61fbfbfa`): `ColegioSideNav` patrón AdminNav (filtro D-41, estado activo)
+  reemplaza a `ColegioNav` (tabs + acciones sueltas).
+- **C2/C3** (`08bd6e70`): home = consulta pública + RESUMEN de estadísticas
+  (**D-b**): `ConsultaPublica` extraído y compartido con la home pública, y
+  `PublicDashboard` con variant resumen/completo — mismo componente, **cero fork (O-2)**;
+  la vista ampliada (mapa/categorías) queda en la subsección Estadísticas.
+- **C4** (`3a541453`): edición de curso en línea desde la lista (modal SPEC-124) y
+  "Carga masiva" como acción de encabezado. Parser xlsx intacto (**O-3**).
+- **C5** (`963c6d5e`): alertas con encabezado explicativo y empty state con CTA a
+  Alumnos; lógica SPEC-077 intacta.
+- **C6** (`75281bb2`): auditoría legible (frases naturales + pares etiqueta-valor, sin
+  JSON crudo; vista expandida colapsada por defecto, **O-4** — sin denunciante, sin
+  texto de reportes, sin otros tenants).
+- Gates: suite 1257+ tests verdes por commit y al cierre, `tsc --noEmit`, `lint`
+  (0 errores), build y `arch:check` verdes. `03-pantallas.md` no requirió regeneración
+  (sin rutas nuevas).

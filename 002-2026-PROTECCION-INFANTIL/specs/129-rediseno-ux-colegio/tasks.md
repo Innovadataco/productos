@@ -1,18 +1,42 @@
 # Tasks: SPEC-129 — Rediseño de UX del panel del colegio
 
-**Estado**: PENDIENTE — compuerta §4.
+**Input**: Design documents from `specs/129-rediseno-ux-colegio/` (aprobados por ZEUS en
+compuerta §4 con decisiones D-a/D-b y condiciones O-1..O-4)
 
-Las tareas (`TNNN`) se generan con `/speckit.tasks` **tras la aprobación de ZEUS** del
-spec.md y plan.md de esta carpeta (instructivo 002-PI-051 PARTE B). Este archivo existe
-como marcador para la disciplina de specs; no contiene tareas aún.
+## Phase 1: Fundación y navegación
 
-Orden previsto por el plan (se materializará en TNNN al aprobarse):
+- [x] T001 [C1] Test de regresión del logo por TODOS los roles (O-1): SCHOOL_ADMIN→panel;
+  demás roles → comportamiento SPEC-106 intacto. **Archivo**: `src/components/modules/nav-logo.test.ts`
+- [x] T002 [C1] Logo del SCHOOL_ADMIN a `/dashboard/colegio` también en zona pública (D-a):
+  decisión extraída a `destinoLogo()`. **Archivo**: `src/components/modules/NavHeader.tsx`
+- [x] T003 [C3] `ColegioSideNav` patrón AdminNav (filtro D-41) montado en el layout;
+  retirada `ColegioNav`. **Archivos**: `src/components/modules/colegio/ColegioSideNav.tsx`,
+  `src/app/dashboard/colegio/layout.tsx`
 
-1. C1: test de aterrizaje (TDD) + logo del SCHOOL_ADMIN a su panel en `NavHeader.tsx`.
-2. C3: `ColegioSideNav` (patrón AdminNav, filtro D-41) montado en `layout.tsx`.
-3. C2/C3: home del colegio = consulta pública + estadísticas (componentes reusados).
-4. C4: listas de cursos/alumnos con acciones en línea (modales SPEC-124).
-5. C5: alertas — encabezado, empty state con CTA y badges de estado.
-6. C6: auditoría en lenguaje natural (mapa acción→frase, sin JSON crudo).
-7. Gates: suite + tsc + lint + build + arch:check; validación con `quickstart.md`.
-8. Cierre: sección Implementación en spec.md + índice specs/README.md.
+## Phase 2: Home del colegio (D-b, O-2)
+
+- [x] T004 [C2] `ConsultaPublica` extraído y compartido con la home pública (O-2: cero fork).
+  **Archivos**: `src/components/modules/ConsultaPublica.tsx`, `src/components/modules/HomePageClient.tsx`
+- [x] T005 [C2/C3] `PublicDashboard` con variant resumen/completo; resumen en la home del
+  colegio, vista ampliada en la subsección Estadísticas (D-b). **Archivos**:
+  `src/components/modules/PublicDashboard.tsx`, `src/app/dashboard/colegio/page.tsx`,
+  `src/app/dashboard/colegio/estadisticas/ColegioEstadisticasPageClient.tsx`
+
+## Phase 3: Gestión en línea, alertas y auditoría
+
+- [x] T006 [C4] Edición de curso en línea desde la lista (modal SPEC-124) + "Carga masiva"
+  visible en el encabezado (parser xlsx intacto, O-3). **Archivo**:
+  `src/app/dashboard/colegio/cursos/CursosPageClient.tsx`
+- [x] T007 [C5] Alertas: encabezado explicativo + empty state con CTA a Alumnos (SPEC-077
+  intacto). **Archivo**: `src/app/dashboard/colegio/alertas/AlertasColegioPageClient.tsx`
+- [x] T008 [C6] Auditoría legible: frases naturales + detalle en pares etiqueta-valor
+  (O-4), modo `legible` en el visor compartido. **Archivos**:
+  `src/components/modules/audit-log/legible.ts`, `AuditTable.tsx`, `AuditLogViewer.tsx`,
+  `src/app/dashboard/colegio/auditoria/ColegioAuditoriaPageClient.tsx`
+
+## Phase 4: Gates y cierre
+
+- [x] T009 Gates por commit y al cierre: suite completa, `tsc --noEmit`, `lint` (0 errores),
+  build, `arch:check` verdes.
+- [x] T010 Status IMPLEMENTADO en `spec.md` + sección Implementación con la aprobación
+  registrada + índice `specs/README.md` actualizado.
