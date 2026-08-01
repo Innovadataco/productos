@@ -155,6 +155,9 @@ describe(`SPEC-114 · público y agregación (ciclo ${CICLO})`, { timeout: 30_00
                 totalReportes: datos.cantidadComunes,
                 reportesAutenticados: autenticados,
                 reportesAnonimos: datos.cantidadComunes - autenticados,
+                // SPEC-131 (BL-5): la visibilidad se decide con los contadores APROBADOS.
+                reportesAprobados: datos.cantidadComunes,
+                autenticadosAprobados: autenticados,
             },
         });
         await actualizarVisibilidadPublica(datos.identificadorComun, plataforma!.id);
@@ -169,6 +172,9 @@ describe(`SPEC-114 · público y agregación (ciclo ${CICLO})`, { timeout: 30_00
                 totalReportes: 1,
                 reportesAutenticados: 1,
                 reportesAnonimos: 0,
+                // SPEC-131 (BL-5): 1 aprobado < umbral → no visible.
+                reportesAprobados: 1,
+                autenticadosAprobados: 1,
             },
         });
         await actualizarVisibilidadPublica(datos.identificadorPocos, plataforma!.id);

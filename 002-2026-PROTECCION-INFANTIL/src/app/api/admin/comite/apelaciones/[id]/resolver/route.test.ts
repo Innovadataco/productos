@@ -79,6 +79,9 @@ describe("POST /api/admin/comite/apelaciones/[id]/tomar y /resolver", () => {
                 plataformaId: pid,
                 totalReportes: 5,
                 reportesAutenticados: 5,
+                // SPEC-131 (BL-5): la visibilidad se decide con los contadores APROBADOS.
+                reportesAprobados: 5,
+                autenticadosAprobados: 5,
                 esVisiblePublicamente: true,
             },
         });
