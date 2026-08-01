@@ -1,9 +1,13 @@
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
+import { requireEnv } from "@/lib/env";
 import type { Prisma, Reporte, Usuario } from "@prisma/client";
 
-const SALT = process.env.ANTI_ABUSO_SALT || "dev-salt-cambiar-en-produccion";
+// S-1 (002-PI-052): el salt del fingerprint es OBLIGATORIO y sin fallback — el
+// default "dev-salt-cambiar-en-produccion" hacía el hash de IP reversible. Si
+// falta ANTI_ABUSO_SALT, la app truena al arrancar (requireEnv, min 32 chars).
+const SALT = requireEnv("ANTI_ABUSO_SALT", 32);
 
 export interface FuentePesoParams {
     weightAnonymous: number;
