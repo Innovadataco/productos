@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "test": "node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run",
     "test:coverage": "node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --coverage.enabled",
+    "test:journeys": "node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run src/lib/e2e/journeys/",
     "test:watch": "node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs",
     "test:e2e": "node --env-file=.env.test ./node_modules/@playwright/test/cli.js test",
     "test:e2e:ui": "node --env-file=.env.test ./node_modules/@playwright/test/cli.js test --ui",
