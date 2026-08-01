@@ -13,6 +13,7 @@ import { logAudit } from "@/lib/audit";
 import { diasHabilesTranscurridos, estaEnAvisoPrevio, getAvisoPrevioDias } from "@/lib/apelaciones";
 import { ApelacionStorageError, leerDocumentoDescifrado, sha256Hex } from "@/lib/apelacion-storage";
 import { darDeBajaReporte } from "@/lib/dal/services/reporte-lifecycle";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { ApelacionRepository } from "../repositories/apelacion";
@@ -133,7 +134,9 @@ export class ComiteApelacionesService {
                 creadoEn: r.creadoEn,
                 ciudad: r.ciudad,
                 pais: r.pais,
-                texto: r.texto,
+                // SPEC-130 (BL-4, O-2): el texto sale descifrado solo por este camino
+                // autorizado del comité; purgado → marcador tal cual.
+                texto: descifrarTextoReporte(r.texto),
                 categoria: r.clasificacion?.categoria ?? null,
                 confianza: r.clasificacion?.confianza ?? null,
             })),

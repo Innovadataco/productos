@@ -5,6 +5,7 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, esOperadorRol } from "@/lib/operadores/permisos";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import type { Prisma } from "@prisma/client";
 
@@ -73,6 +74,8 @@ export async function GET(req: Request) {
         return NextResponse.json({
             reportes: reportes.map((r) => ({
                 ...r,
+                // SPEC-130 (BL-4, O-2): texto descifrado solo en este camino autorizado.
+                texto: descifrarTextoReporte(r.texto),
                 confianzaSpam: r.clasificacion?.categoria === "SPAM" ? r.clasificacion.confianza : 0,
                 asignadoA: r.operador ?? null,
             })),

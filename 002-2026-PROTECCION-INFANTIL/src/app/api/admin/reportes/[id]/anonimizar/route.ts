@@ -11,7 +11,8 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
 import { idSchema } from "@/lib/validators";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
-import { encryptParameter, decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
+import { encryptParameter } from "@/lib/param-encryption";
+import { cifrarTextoReporte, descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 
 const anonimizarSchema = z.object({
     textoAnonimizado: z.string().min(20).max(5000),
@@ -21,13 +22,6 @@ function requireAdmin(user: { rol: string }) {
     if (String(user.rol) !== "ADMIN") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
-}
-
-function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoActual: string): string {
-    if (textoOriginalCifrado && isEncryptedValue(textoOriginalCifrado)) {
-        return decryptParameter(textoOriginalCifrado);
-    }
-    return textoOriginalCifrado ?? textoActual;
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -92,7 +86,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const piiEliminada = reporte.clasificacion?.piiDetectada || [];
 
-        const originalPlano = obtenerTextoOriginalPlano(reporte.textoOriginal, reporte.texto);
+        // SPEC-130 (BL-4): el original puede venir cifrado (textoOriginal) o la copia
+        // de trabajo cifrada (texto); el plano sale SOLO por el helper único (O-3).
+        const originalPlano = reporte.textoOriginal
+            ? descifrarTextoReporte(reporte.textoOriginal)
+            : descifrarTextoReporte(reporte.texto);
         let textoOriginalCifrado: string;
         try {
             textoOriginalCifrado = encryptParameter(originalPlano);
@@ -121,7 +119,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 where: { id: reporteId },
                 data: {
                     textoOriginal: textoOriginalCifrado,
-                    texto: textoAnonimizado,
+                    // SPEC-130 (BL-4): el texto anonimizado también se guarda cifrado.
+                    texto: cifrarTextoReporte(textoAnonimizado),
                     estado: "CLASIFICADO",
                 },
             });

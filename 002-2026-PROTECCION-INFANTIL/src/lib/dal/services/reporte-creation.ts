@@ -9,6 +9,7 @@
 import type { EstadoReporte, Prisma } from "@prisma/client";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { encryptParameter } from "@/lib/param-encryption";
+import { cifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { logger } from "@/lib/logger";
 import { ReporteRepository } from "../repositories/reporte";
 import { IdentificadorReportadoRepository } from "../repositories/identificador-reportado";
@@ -105,7 +106,10 @@ export class ReporteCreationService {
         const reporte = await this.reportes.crear({
             identificador,
             plataformaId: input.plataformaId,
-            texto: input.texto,
+            // SPEC-130 (BL-4): el texto de trabajo también va cifrado en reposo
+            // (el pipeline lo descifra por la capa de datos; la evidencia íntegra
+            // sigue en textoOriginal, cifrada igual desde SPEC-110).
+            texto: cifrarTextoReporte(input.texto),
             textoOriginal: textoOriginalCifrado,
             fechaIncidente: new Date(input.fechaIncidente),
             ciudad: input.ciudad,

@@ -12,6 +12,7 @@ import {
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
 import { sendReporte } from "@/lib/queue";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 
 vi.mock("@/lib/queue", () => ({
     sendReporte: vi.fn().mockResolvedValue({ encolado: true }),
@@ -46,7 +47,10 @@ describe("POST /api/reportes", () => {
         const body = await res.json();
         const reporte = await prisma.reporte.findUnique({ where: { id: body.reporte.id } });
         expect(reporte?.textoOriginal).toMatch(/^enc:/);
-        expect(reporte?.texto).toBe(reporteValido.texto);
+        // SPEC-130 (BL-4): el texto de trabajo también va cifrado en reposo;
+        // el contenido se conserva íntegro al descifrar (la evidencia no se altera).
+        expect(reporte?.texto).toMatch(/^enc:/);
+        expect(descifrarTextoReporte(reporte!.texto)).toBe(reporteValido.texto);
     });
 
     it("crea un reporte anónimo y retorna 201 con número de seguimiento", async () => {

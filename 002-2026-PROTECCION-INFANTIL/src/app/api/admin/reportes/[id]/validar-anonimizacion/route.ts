@@ -10,6 +10,7 @@ import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { z } from "zod";
 
@@ -164,7 +165,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 });
             });
 
-            await regenerarEmbedding(reporteId, reporte.texto);
+            await regenerarEmbedding(reporteId, descifrarTextoReporte(reporte.texto));
             await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
 
             return NextResponse.json({

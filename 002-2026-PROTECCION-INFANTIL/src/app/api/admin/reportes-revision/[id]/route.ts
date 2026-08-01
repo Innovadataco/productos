@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -110,8 +111,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
+        // SPEC-130 (BL-4, O-2): el texto sale descifrado SOLO por este camino
+        // autorizado (bandeja/expediente del operador); purgado → marcador tal cual.
         return NextResponse.json({
-            reporte,
+            reporte: { ...reporte, texto: descifrarTextoReporte(reporte.texto) },
             puedeRevelarOriginal: user.rol === "ADMIN",
             puedeEscalar: (user.rol === "OPERADOR" && reporte?.operador?.id === user.id && reporte.estado === "REVISION_MANUAL") || esAdminRol(user.rol),
         });

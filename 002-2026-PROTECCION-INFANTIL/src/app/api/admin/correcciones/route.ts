@@ -9,6 +9,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { generarEmbedding } from "@/lib/ai/embedder";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { z } from "zod";
@@ -82,16 +83,18 @@ export async function POST(request: Request) {
 
         const { reporteId, categoriaCorregida, comentario } = parsed.data;
 
-        const reporte = await prisma.reporte.findUnique({
+        const reporteRow = await prisma.reporte.findUnique({
             where: { id: reporteId },
             include: { clasificacion: true },
         });
-        if (!reporte) {
+        if (!reporteRow) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
+        // SPEC-130 (BL-4): el texto va cifrado en reposo; el plano solo en memoria (O-3).
+        const reporte = { ...reporteRow, texto: descifrarTextoReporte(reporteRow.texto) };
 
         if (!puedeGestionarReporte(user, reporte)) {
             return NextResponse.json(

@@ -5,6 +5,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
 import type { CategoriaConducta } from "@prisma/client";
 import { decryptParameter } from "@/lib/param-encryption";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 
 const mockClasificar = vi.fn();
 const mockPii = vi.fn();
@@ -221,7 +222,9 @@ describe("POST /api/reportes/procesar", () => {
         expect(actualizado?.estado).toBe("CLASIFICADO");
         expect(actualizado?.textoOriginal).toMatch(/^enc:/);
         expect(decryptParameter(actualizado!.textoOriginal!)).toBe("Mi hija María del colegio San José recibió mensajes.");
-        expect(actualizado?.texto).toBe("Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.");
+        // SPEC-130 (BL-4): el texto anonimizado también queda cifrado en reposo.
+        expect(actualizado?.texto).toMatch(/^enc:/);
+        expect(descifrarTextoReporte(actualizado!.texto)).toBe("Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.");
     });
 
     it("no muta estado en errores transitorios de anonimización (reintentable)", async () => {

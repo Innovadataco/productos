@@ -5,6 +5,7 @@ import { recalcularYGuardarScore } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
+import { MARCADOR_TEXTO_PURGADO, cifrarTextoReporte, descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import type { MotivoBajaReporte, Prisma } from "@prisma/client";
 
 const MOTIVOS_PURGAN_DATASET: MotivoBajaReporte[] = ["REPORTE_FALSO", "ORDEN_LEGAL"];
@@ -104,6 +105,10 @@ export async function darDeBajaReporte(params: {
                 notaBaja: nota,
                 eliminadoEn: new Date(),
                 eliminadoPorId: adminId,
+                // SPEC-130 (D4): toda resolución que NO termina CLASIFICADO/CORREGIDO
+                // purga el texto a marcador no-identificable. La evidencia íntegra
+                // queda en textoOriginal, siempre cifrada (reactivar la restaura).
+                texto: MARCADOR_TEXTO_PURGADO,
             },
         });
 
@@ -212,7 +217,13 @@ export async function reactivarReporte(params: {
     }
 
     const modeloEmbedding = await getEmbeddingModel();
-    const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
+    // SPEC-130 (D4): tras la baja el texto quedó purgado a marcador; la copia de
+    // trabajo se restaura desde la evidencia (textoOriginal, siempre cifrada).
+    const textoParaReactivar =
+        reporte.texto === MARCADOR_TEXTO_PURGADO
+            ? descifrarTextoReporte(reporte.textoOriginal ?? "")
+            : descifrarTextoReporte(reporte.texto);
+    const vector = await generarEmbedding(modeloEmbedding, textoParaReactivar);
     const vectorStr = "[" + vector.join(",") + "]";
     const embeddingId = crypto.randomUUID();
 
@@ -223,7 +234,7 @@ export async function reactivarReporte(params: {
             throw new Error("REPORTE_NO_ELIMINADO");
         }
 
-        // 1. Desmarcar eliminado.
+        // 1. Desmarcar eliminado y restaurar la copia de trabajo (cifrada en reposo).
         await tx.reporte.update({
             where: { id: reporteId },
             data: {
@@ -232,6 +243,7 @@ export async function reactivarReporte(params: {
                 notaBaja: null,
                 eliminadoEn: null,
                 eliminadoPorId: null,
+                texto: cifrarTextoReporte(textoParaReactivar),
             },
         });
 

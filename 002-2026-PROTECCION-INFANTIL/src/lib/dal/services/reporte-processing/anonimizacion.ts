@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
+import { cifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { encryptParameter, isEncryptedValue, decryptParameter } from "@/lib/param-encryption";
 import type { EstadoReporte } from "@prisma/client";
 
@@ -31,7 +32,8 @@ export async function anonimizarReporte({
         where: { id: reporteId },
         data: {
             textoOriginal: textoOriginalCifradoNuevo,
-            texto: anonimizacion.textoAnonimizado,
+            // SPEC-130 (BL-4): el texto anonimizado también se guarda cifrado en reposo.
+            texto: cifrarTextoReporte(anonimizacion.textoAnonimizado),
         },
     });
 
