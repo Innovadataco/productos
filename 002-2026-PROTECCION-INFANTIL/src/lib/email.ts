@@ -296,17 +296,20 @@ export async function enviarAlertasSuscriptores(payload: {
     if (suscripciones.length === 0) return;
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
-    const consultaUrl = `${baseUrl}/?consulta=${encodeURIComponent(payload.identificador)}`;
 
     const enviadosIds: string[] = [];
     for (const suscripcion of suscripciones) {
         const email = suscripcion.usuario.email;
         try {
+            // S-2 (002-PI-052): el email a suscriptores NUNCA lleva el identificador
+            // (ni en el asunto ni en URLs — la consulta es por POST, spec 091) ni la
+            // palabra "score" (presunción de inocencia, §1.3). El identificador solo
+            // se usa para la query de suscripciones, nunca sale del servidor.
             const result = await resend.emails.send({
                 from: FROM,
                 to: email,
-                subject: `Nuevo reporte para ${payload.identificador}`,
-                text: `Hola,\n\nSe registró un nuevo reporte para el identificador "${payload.identificador}" en ${suscripcion.plataforma.nombre}.\n\nTotal de reportes: ${payload.totalReportes}\n\nConsulta el score y los detalles aquí:\n${consultaUrl}\n\nRecibirás como máximo un email cada 24 horas por este identificador.`,
+                subject: "Nuevo reporte en un identificador que sigues",
+                text: `Hola,\n\nSe registró un nuevo reporte para un identificador que sigues en ${suscripcion.plataforma.nombre}.\n\nTotal de reportes registrados: ${payload.totalReportes}\n\nIngresa a la plataforma para consultarlo: ${baseUrl}/\n\nRecibirás como máximo un email cada 24 horas por este identificador.`,
             });
 
             if (result.error) {

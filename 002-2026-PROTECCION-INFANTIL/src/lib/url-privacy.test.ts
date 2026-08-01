@@ -77,4 +77,22 @@ describe("privacidad URL del identificador (spec 091 fix)", () => {
         }
         expect(violaciones).toEqual([]);
     });
+
+    it("el email a suscriptores NUNCA lleva el identificador ni 'score' (S-2, 002-PI-052)", () => {
+        const fuente = fs.readFileSync(path.join(SRC, "lib", "email.ts"), "utf-8");
+        const inicio = fuente.indexOf("export async function enviarAlertasSuscriptores");
+        expect(inicio).toBeGreaterThan(-1);
+        // Solo el bloque del template (subject/text), sin comentarios del código.
+        const envio = fuente.slice(inicio);
+        const inicioTemplate = envio.indexOf("resend.emails.send({");
+        expect(inicioTemplate).toBeGreaterThan(-1);
+        const plantilla = envio.slice(inicioTemplate);
+
+        // Ni en el asunto ni en URLs (la consulta pública es por POST, spec 091).
+        expect(/subject:\s*`[^`]*identificador/.test(plantilla)).toBe(false);
+        expect(plantilla).not.toContain("consulta=");
+        expect(plantilla).not.toContain("encodeURIComponent(payload.identificador)");
+        // Presunción de inocencia (§1.3): nunca "score" de cara al usuario.
+        expect(/score/i.test(plantilla)).toBe(false);
+    });
 });
