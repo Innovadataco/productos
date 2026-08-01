@@ -19,7 +19,7 @@
  * buscador de ciudades — ver specs/115-catalogo-geografico-latam/research.md).
  */
 
-import { execFileSync } from "node:child_process";
+import * as zlib from "node:zlib";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { PrismaClient } from "@prisma/client";
@@ -79,20 +79,51 @@ type FilaGeo = {
     poblacion: number;
 };
 
-function descargar(url: string, destino: string): void {
+function descargar(url: string, destino: string): Promise<void> {
     if (!FORCE && fs.existsSync(destino) && Date.now() - fs.statSync(destino).mtimeMs < CACHE_MAX_EDAD_MS) {
-        return;
+        return Promise.resolve();
     }
     console.log(`[GeoNames] Descargando ${url}`);
-    execFileSync("curl", ["-fsSL", "-o", destino, url]);
+    // 002-PI-051 (B1): fetch nativo (la imagen prod no tiene curl).
+    return fetch(url).then(async (res) => {
+        if (!res.ok) throw new Error(`Descarga falló (${res.status}): ${url}`);
+        fs.writeFileSync(destino, Buffer.from(await res.arrayBuffer()));
+    });
 }
 
+/**
+ * Lee un .txt de un zip GeoNames SIN `unzip` (la imagen prod no lo trae, B1):
+ * parsea el directorio central del ZIP e infla con zlib nativo (método 8) o
+ * devuelve el contenido plano (método 0). Soporta un archivo por zip.
+ */
 function leerDump(zipPath: string, txtName: string): string {
-    try {
-        return execFileSync("unzip", ["-p", zipPath, txtName], { maxBuffer: 512 * 1024 * 1024 }).toString("utf8");
-    } catch {
-        throw new Error(`No se pudo leer ${txtName} de ${zipPath} (¿dump corrupto o incompleto?)`);
+    const buf = fs.readFileSync(zipPath);
+    const eocdIdx = buf.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+    if (eocdIdx === -1) throw new Error(`ZIP inválido (sin EOCD): ${zipPath}`);
+    const totalEntradas = buf.readUInt16LE(eocdIdx + 10);
+    let off = buf.readUInt32LE(eocdIdx + 16);
+
+    for (let i = 0; i < totalEntradas; i++) {
+        if (buf.readUInt32LE(off) !== 0x02014b50) break;
+        const metodo = buf.readUInt16LE(off + 10);
+        const tamComprimido = buf.readUInt32LE(off + 20);
+        const tamNombre = buf.readUInt16LE(off + 28);
+        const tamExtra = buf.readUInt16LE(off + 30);
+        const tamComentario = buf.readUInt16LE(off + 32);
+        const localOffset = buf.readUInt32LE(off + 42);
+        const nombre = buf.subarray(off + 46, off + 46 + tamNombre).toString("utf8");
+        if (nombre === txtName) {
+            const lhNombre = buf.readUInt16LE(localOffset + 26);
+            const lhExtra = buf.readUInt16LE(localOffset + 28);
+            const inicioDatos = localOffset + 30 + lhNombre + lhExtra;
+            const datos = buf.subarray(inicioDatos, inicioDatos + tamComprimido);
+            if (metodo === 8) return zlib.inflateRawSync(datos).toString("utf8");
+            if (metodo === 0) return datos.toString("utf8");
+            throw new Error(`Método de compresión no soportado (${metodo}) en ${zipPath}`);
+        }
+        off += 46 + tamNombre + tamExtra + tamComentario;
     }
+    throw new Error(`No se pudo leer ${txtName} de ${zipPath} (¿dump corrupto o incompleto?)`);
 }
 
 function parsearDump(tsv: string): FilaGeo[] {
@@ -191,7 +222,7 @@ async function importarPais(
     admin1PorCodigo: Map<string, Map<string, string>>
 ): Promise<void> {
     const zipPath = path.join(CACHE_DIR, `${pais.codigo}.zip`);
-    descargar(`https://download.geonames.org/export/dump/${pais.codigo}.zip`, zipPath);
+    await descargar(`https://download.geonames.org/export/dump/${pais.codigo}.zip`, zipPath);
     const tsv = leerDump(zipPath, `${pais.codigo}.txt`);
 
     const filas = parsearDump(tsv);
@@ -329,7 +360,7 @@ async function main() {
     fs.mkdirSync(CACHE_DIR, { recursive: true });
 
     const admin1Path = path.join(CACHE_DIR, "admin1CodesASCII.txt");
-    descargar("https://download.geonames.org/export/dump/admin1CodesASCII.txt", admin1Path);
+    await descargar("https://download.geonames.org/export/dump/admin1CodesASCII.txt", admin1Path);
     const admin1PorCodigo = new Map<string, Map<string, string>>();
     for (const linea of fs.readFileSync(admin1Path, "utf8").split("\n")) {
         if (!linea) continue;

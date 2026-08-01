@@ -32,6 +32,12 @@ $COMPOSE exec -T app npx prisma migrate deploy
 echo "==> Sync módulos/grants (aditivo)"
 $COMPOSE exec -T app node --import tsx scripts/sync-modulos-grants.ts
 
+# 002-PI-051 (B1): el buscador de ciudades filtra por nombreNormalizado; si la BD
+# es pre-SPEC-115 (campo vacío) o el catálogo es mínimo, importar GeoNames
+# (idempotente; no-op rápido cuando está sana).
+echo "==> Catálogo geográfico (importa solo si falta)"
+$COMPOSE exec -T app node --import tsx scripts/geo-import-si-falta.ts
+
 echo "==> Healthcheck"
 sleep 5
 curl -sf http://127.0.0.1:5005/api/health/worker && echo "  <- app+worker OK"
