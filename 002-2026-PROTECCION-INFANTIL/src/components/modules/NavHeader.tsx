@@ -8,6 +8,22 @@ import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 
+/**
+ * Destino del logo por rol y ubicación (extraído para test de regresión, O-1 de 002-PI-051).
+ * Zona autenticada (/dashboard/**): al panel del rol. Zona pública: "/" para todos
+ * (SPEC-106: un ADMIN debe poder navegar la app pública sin que el header lo secuestre)
+ * EXCEPTO SCHOOL_ADMIN (D-a de 002-PI-051): la cuenta institucional no reporta
+ * (proxy.ts), así que su logo SIEMPRE va a su panel, también en zona pública.
+ */
+export function destinoLogo(user: { rol: string } | null, pathname: string | null): string {
+    const enAreaAutenticada = pathname?.startsWith("/dashboard") ?? false;
+    if (user?.rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
+    if (!user || !enAreaAutenticada) return "/";
+    if (user.rol === "ADMIN" || user.rol === "OPERADOR") return "/dashboard/admin";
+    if (user.rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
+    return "/dashboard";
+}
+
 export function NavHeader() {
     const { user, isLoading, logout } = useAuth();
     const pathname = usePathname();
@@ -71,18 +87,9 @@ export function NavHeader() {
         : "/dashboard-publico";
 
     // El logo lleva al panel del rol SOLO dentro del área autenticada (/dashboard/**).
-    // En rutas públicas va al home público aunque haya sesión (SPEC-106: un ADMIN debe
-    // poder navegar la app pública y reportar anónimamente sin que el header lo secuestre).
-    const enAreaAutenticada = pathname?.startsWith("/dashboard") ?? false;
-    const logoDestino = !user || !enAreaAutenticada
-        ? "/"
-        : user.rol === "ADMIN" || user.rol === "OPERADOR"
-        ? "/dashboard/admin"
-        : user.rol === "COMITE_VALIDACION"
-        ? "/dashboard/admin/comite"
-        : user.rol === "SCHOOL_ADMIN"
-        ? "/dashboard/colegio"
-        : "/dashboard";
+    // En rutas públicas va al home público aunque haya sesión (SPEC-106), EXCEPTO
+    // SCHOOL_ADMIN, cuyo logo siempre va a su panel (D-a de 002-PI-051).
+    const logoDestino = destinoLogo(user, pathname ?? null);
     // I-38 (SPEC-114): el logo NUNCA es un clic muerto — si el destino es la página actual,
     // va al home público (destino vivo para todos los roles desde SPEC-118/D-37).
     const logoHref = logoDestino === pathname ? "/" : logoDestino;
