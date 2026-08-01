@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 1, ítem Q-1; radica ZEUS). Los journeys E2E por
 rol YA existen (`src/lib/e2e/journeys/`: admin, colegio, padre, operador-comite,
@@ -190,3 +190,36 @@ Impacto en arquitectura: NINGUNO en runtime — solo tests (`src/lib/e2e/journey
 script npm, paso de CI y docs. NO toca proxy, handlers, DAL, schema ni navegación; por
 tanto `arch:check` no debería requerir regeneración (si el script nuevo aparece en
 `06-stack.md`, se regenera en el mismo PR).
+
+## Implementación (cierre)
+
+Implementada el 2026-08-01 en `feature/001-scaffolding` (compuerta §4 APROBADA por ZEUS
+con las condiciones O-1..O-4). Cero cambios de producto (O-4 verificado: solo tests,
+script npm, CI y docs). Ningún negativo destapó un hueco real → O-1 no requirió radicar
+nada; los 6 bloques de negativos quedaron como `it` activos.
+
+- **Gate (US1)**: `npm run test:journeys` (8→9 archivos de journeys) + paso dedicado
+  `Journeys por rol` en el workflow CI + runbook §14 con la branch protection como
+  acción del CEO. `06-stack.md` regenerado.
+- **Padre (FR-003)**: apelaciones (multipart con PDF, §9 `Apelacion` RECIBIDA + documento),
+  alertas (suscribir/listar/borrar — baja lógica `activa: false`), recuperar contraseña
+  completo (§9: hash cambia, login nuevo 200 / viejo 401).
+- **Colegio (FR-004)**: carga masiva plantilla→validar→confirmar (§9: curso + alumnos +
+  identificadores; sesión de roster consumida single-use — confirma SPEC-132 en journey),
+  alertas del colegio (§9: estado + AuditLog), auditoría aislada por colegio.
+- **Operador-comité (FR-005)**: anonimización por AMBOS caminos reales de salida de
+  `REQUIERE_ANONIMIZACION` (PATCH admin `anonimizar` y POST operador
+  `validar-anonimizacion` — son alternativas, no secuencia; la spec los describía en
+  cadena y la máquina de estados real no lo permite: se cubrió con dos casos);
+  apelaciones del comité tomar→resolver (§9: ACEPTADA, visibilidad recalculada).
+- **Admin (FR-006)**: parámetros (PATCH por clave con §9 y restauración del valor),
+  spam en sus dos caminos (falso positivo → CLASIFICADO; spam real → baja con purga D4
+  y dataset `spam_revisado`), correcciones RAG (§9: `CorreccionAdmin` + dataset).
+- **Negativos (FR-007/FR-008, O-3)**: OPERADOR/COMITE → 5 superficies admin-only = 403;
+  PARENT → `/api/colegio/**` = 403; cross-parent = 403 sin filtrar datos; asignación
+  estricta (operador y comité) = 403; multi-tenant A/B: listados sin filas ajenas y
+  recursos ajenos = 404 (ni la existencia se revela).
+- **Test-infra**: `resetDatabase()` limpia ahora `AlertaSuscripcion` y
+  `TokenRecuperacion` (deuda latente detectada en fase 2).
+- **Gates**: suite completa + cobertura (piso Q-2 intacto o mejorado), `tsc --noEmit`,
+  lint y `arch:check` verdes.

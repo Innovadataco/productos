@@ -18,12 +18,13 @@ export default defineConfig({
             exclude: ["node_modules/", ".next/", "prisma/"],
             // Q-2 (002-PI-056): piso = cobertura real medida 2026-08-01 (stmts 43.8 / branch 74.1 / funcs 81.0),
             // con 1 pt de margen en functions por jitter entre corridas (80.96–81.02).
+            // 2026-08-01 (SPEC-133): los journeys por rol suben la cobertura a 44.4/74.2/81.7/44.4 — el piso sube.
             // Ratchet: el umbral solo sube; bajarlo requiere decisión explícita de ZEUS.
             thresholds: {
-                statements: 43,
+                statements: 44,
                 branches: 74,
-                functions: 80,
-                lines: 43,
+                functions: 81,
+                lines: 44,
             },
         },
     },
