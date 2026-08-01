@@ -323,6 +323,10 @@ export async function recalcularYGuardarScore(
             totalReportes: resultado.totalReportes,
             reportesAutenticados: resultado.reportesAutenticados,
             reportesAnonimos: resultado.reportesAnonimos,
+            // SPEC-131 (BL-5): contadores aprobados (escritor único de la base de
+            // visibilidad) — calcularScore ya computa sobre whereReporteAprobado.
+            reportesAprobados: resultado.totalReportes,
+            autenticadosAprobados: resultado.reportesAutenticados,
             score: resultado.score,
             scoreAnonimo: resultado.scoreAnonimo,
             scoreAutenticado: resultado.scoreAutenticado,
@@ -336,6 +340,8 @@ export async function recalcularYGuardarScore(
             totalReportes: resultado.totalReportes,
             reportesAutenticados: resultado.reportesAutenticados,
             reportesAnonimos: resultado.reportesAnonimos,
+            reportesAprobados: resultado.totalReportes,
+            autenticadosAprobados: resultado.reportesAutenticados,
             score: resultado.score,
             scoreAnonimo: resultado.scoreAnonimo,
             scoreAutenticado: resultado.scoreAutenticado,

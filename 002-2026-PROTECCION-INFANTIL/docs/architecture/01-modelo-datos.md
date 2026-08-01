@@ -580,6 +580,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | totalReportes | Int | — |
 | reportesAutenticados | Int | — |
 | reportesAnonimos | Int | — |
+| reportesAprobados | Int | — |
+| autenticadosAprobados | Int | — |
 | esVisiblePublicamente | Boolean | — |
 | ocultoPorComiteEn | DateTime | opcional |
 | score | Int | **vivo en datos, prohibido de cara al usuario (I-29)** |

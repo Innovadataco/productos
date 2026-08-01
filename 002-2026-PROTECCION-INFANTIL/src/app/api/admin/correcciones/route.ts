@@ -10,6 +10,8 @@ import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { recalcularYGuardarScore } from "@/lib/scoring";
+import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { z } from "zod";
@@ -162,6 +164,11 @@ export async function POST(request: Request) {
                 data: { estado: "CORREGIDO" },
             });
         });
+
+        // SPEC-131 (O-2): la corrección puede mover la categoría hacia/desde SPAM/OTRO
+        // y cambiar la aprobación — el escritor único recalcula contadores y visibilidad.
+        await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+        await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
 
         // Registrar auditoría (solo metadata, nunca texto)
         await auditCorreccion({

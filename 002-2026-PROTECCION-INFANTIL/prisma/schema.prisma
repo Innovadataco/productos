@@ -777,6 +777,10 @@ model IdentificadorReportado {
   totalReportes         Int       @default(0)
   reportesAutenticados  Int       @default(0)
   reportesAnonimos      Int       @default(0)
+  // SPEC-131 (BL-5): contadores APROBADOS (predicado único spec 089/D-08), base de la
+  // decisión de visibilidad pública. Escritor único: recalcularYGuardarScore.
+  reportesAprobados     Int       @default(0)
+  autenticadosAprobados Int       @default(0)
   esVisiblePublicamente Boolean   @default(false)
   ocultoPorComiteEn     DateTime?
   score                 Int       @default(0)
