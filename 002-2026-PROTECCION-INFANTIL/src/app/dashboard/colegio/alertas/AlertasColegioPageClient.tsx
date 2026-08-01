@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
@@ -32,6 +33,7 @@ const ESTADO_VARIANTS: Record<string, "default" | "warning" | "success" | "neutr
 };
 
 export default function AlertasColegioPageClient() {
+    const router = useRouter();
     const [alertas, setAlertas] = useState<Alerta[]>([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -102,8 +104,12 @@ export default function AlertasColegioPageClient() {
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h1 className="text-2xl font-bold text-body">Alertas</h1>
+                            {/* SPEC-129 (C5): encabezado que explica qué son las alertas
+                                para un rector no técnico (la lógica SPEC-077 no cambia). */}
                             <p className="text-sm text-muted">
-                                Notificaciones anonimizadas sobre identificadores registrados.
+                                Avisos que llegan cuando un identificador que registraste para un alumno
+                                (número, nick o usuario) aparece en un reporte de la comunidad.
+                                Son anonimizados: nunca muestran quién reportó ni el contenido del reporte.
                             </p>
                         </div>
                         <div className="w-full sm:w-48">
@@ -133,9 +139,14 @@ export default function AlertasColegioPageClient() {
                         </div>
                     ) : alertas.length === 0 ? (
                         <EmptyState
-                            title="No hay alertas"
-                            description="Cuando un reporte mencione un identificador registrado, aparecerá aquí."
+                            title="Aún no hay alertas"
+                            description="Aparecerán cuando un identificador que registres para un alumno salga en un reporte. Empieza registrando tus cursos y alumnos."
                             icon={<span className="text-2xl">🛡️</span>}
+                            action={
+                                <Button onClick={() => router.push("/dashboard/colegio/cursos")}>
+                                    Ir a Alumnos
+                                </Button>
+                            }
                         />
                     ) : (
                         <div className="space-y-4">
