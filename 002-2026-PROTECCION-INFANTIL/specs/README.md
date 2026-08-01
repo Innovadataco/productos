@@ -13,8 +13,8 @@
 | **Total de specs** | **113** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
-| **Implementadas (IMPLEMENTADO)** | **13** |
-| **Pendientes (PLANEADO)** | **2** |
+| **Implementadas (IMPLEMENTADO)** | **14** |
+| **Pendientes (PLANEADO)** | **1** |
 
 ## Backlog activo (no cerradas)
 
@@ -70,7 +70,7 @@
 | [128](128-reconciliacion-grants-comite/spec.md) | SPEC-128 — Reconciliación de grants del comité | 🟢 Implementada |
 | [129](129-rediseno-ux-colegio/spec.md) | SPEC-129 — Rediseño de UX del panel del colegio (002-PI-051B) | 🟢 Implementada |
 | [130](130-cifrado-reposo-texto-reporte/spec.md) | SPEC-130 — Cifrado en reposo del texto del reporte (BL-4) | 🟢 Implementada (migración de datos en prod pendiente de BL-2) |
-| [131](131-visibilidad-solo-aprobados/spec.md) | SPEC-131 — Visibilidad pública solo por reportes aprobados (BL-5) | 🔵 Planeado (spec+plan, compuerta §4) |
+| [131](131-visibilidad-solo-aprobados/spec.md) | SPEC-131 — Visibilidad pública solo por reportes aprobados (BL-5) | 🟢 Implementada |
 
 ## Tabla completa (113 specs)
 
@@ -188,7 +188,7 @@
 | [128](128-reconciliacion-grants-comite/spec.md) | SPEC-128 — Reconciliación de grants del comité | 🟢 Implementada |
 | [129](129-rediseno-ux-colegio/spec.md) | SPEC-129 — Rediseño de UX del panel del colegio (002-PI-051B) | 🟢 Implementada |
 | [130](130-cifrado-reposo-texto-reporte/spec.md) | SPEC-130 — Cifrado en reposo del texto del reporte (BL-4) | 🟢 Implementada (migración de datos en prod pendiente de BL-2) |
-| [131](131-visibilidad-solo-aprobados/spec.md) | SPEC-131 — Visibilidad pública solo por reportes aprobados (BL-5) | 🔵 Planeado (spec+plan, compuerta §4) |
+| [131](131-visibilidad-solo-aprobados/spec.md) | SPEC-131 — Visibilidad pública solo por reportes aprobados (BL-5) | 🟢 Implementada |
 
 ## Incidencias de calidad de datos
 
