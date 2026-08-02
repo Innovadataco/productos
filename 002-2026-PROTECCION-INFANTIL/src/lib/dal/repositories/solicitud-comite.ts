@@ -126,6 +126,16 @@ export class SolicitudComiteRepository {
         return this.db.solicitudComite.create({ data });
     }
 
+    /** E-8: pendientes del comité (propias o sin asignar) para la alerta por email. */
+    contarPendientesParaComite(comiteId: string) {
+        return this.db.solicitudComite.count({
+            where: {
+                estado: { in: ["PENDIENTE", "ASIGNADA"] },
+                OR: [{ comiteId }, { comiteId: null }],
+            },
+        });
+    }
+
     actualizar(id: string, data: Prisma.SolicitudComiteUncheckedUpdateInput) {
         return this.db.solicitudComite.update({ where: { id }, data });
     }

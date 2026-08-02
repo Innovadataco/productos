@@ -198,4 +198,25 @@ export class UsuarioRepository {
             include: { colegio: { include: { pais: true, departamento: true, ciudad: true } } },
         });
     }
+
+    /** E-8: operadores activos con perfil y cupo (asignador; filtro tenant opcional). */
+    findOperadoresActivosConPerfil(tenantId?: string) {
+        return this.db.usuario.findMany({
+            where: {
+                rol: "OPERADOR",
+                estado: "activo",
+                perfilOperador: { isNot: null },
+                ...(tenantId ? { tenantId } : {}),
+            },
+            include: { perfilOperador: { select: { cupoMaximo: true } } },
+        });
+    }
+
+    /** E-8: primer miembro activo del comité con su perfil completo (notificación). */
+    findPrimerComiteActivoConPerfil() {
+        return this.db.usuario.findFirst({
+            where: { rol: "COMITE_VALIDACION", estado: "activo" },
+            include: { perfilOperador: true },
+        });
+    }
 }

@@ -46,4 +46,25 @@ export class DatasetEntrenamientoRepository {
     crear(data: Prisma.DatasetEntrenamientoUncheckedCreateInput) {
         return this.db.datasetEntrenamiento.create({ data });
     }
+
+    /** E-8: registro por id (backfill de anonimización). */
+    findById(id: string) {
+        return this.db.datasetEntrenamiento.findUnique({ where: { id } });
+    }
+
+    /** E-8: registro con su embedding (backfill de embedding: guarda "ya tiene"). */
+    findByIdConEmbedding(id: string) {
+        return this.db.datasetEntrenamiento.findUnique({
+            where: { id },
+            include: { embedding: true },
+        });
+    }
+
+    /** E-8: marca el registro como anonimizado con su texto resultante. */
+    marcarAnonimizado(id: string, textoAnonimizado: string) {
+        return this.db.datasetEntrenamiento.update({
+            where: { id },
+            data: { texto: textoAnonimizado, textoAnonimizado: true },
+        });
+    }
 }

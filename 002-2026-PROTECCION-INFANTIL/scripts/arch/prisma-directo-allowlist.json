@@ -1,19 +1,4 @@
 {
   "descripcion": "Q-3 (002-PI-056): archivos con acceso directo a @/lib/prisma tolerados mientras E-8 completa la migración al DAL (src/lib/dal/). La lista SOLO SE ENCOGE: al migrar un archivo al DAL se quita de aquí en el mismo commit; añadir un archivo nuevo pone el lint y scripts/arch/dal-frontera.test.ts en ROJO.",
-  "archivos": [
-    "src/lib/ai/dataset-anonimizacion-backfill.ts",
-    "src/lib/ai/dataset-embedding-backfill.ts",
-    "src/lib/ai/dataset-retrieval.ts",
-    "src/lib/ai/eval-runner.ts",
-    "src/lib/ai/ollama-config.ts",
-    "src/lib/ai/sandbox.ts",
-    "src/lib/ai/similarity.ts",
-    "src/lib/expediente/expediente.ts",
-    "src/lib/expediente/pasos.ts",
-    "src/lib/operadores/asignador.ts",
-    "src/lib/operadores/notificacion-comite.ts",
-    "src/lib/simulacion/executor.ts",
-    "src/lib/simulacion/metricas.ts",
-    "src/lib/simulacion/progreso.ts"
-  ]
+  "archivos": []
 }

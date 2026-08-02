@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "./dataset-retrieval";

@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { MODELO_EMBEDDING_DEFAULT } from "./defaults";
 

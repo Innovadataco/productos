@@ -43,4 +43,9 @@ export class EvalResultadoRepository {
             select: { experimentoId: true, casoEvalId: true, correcto: true, esperado: true, predicho: true },
         });
     }
+
+    /** E-8: resultados de una corrida en lote (persistEvalRun, dentro de su tx). */
+    crearMuchos(data: Prisma.EvalResultadoCreateManyInput[]) {
+        return this.db.evalResultado.createMany({ data });
+    }
 }

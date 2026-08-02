@@ -70,4 +70,17 @@ export class SimulacionRunRepository {
             data: { estado: "CANCELADA", fechaFin: new Date() },
         });
     }
+
+    /** E-8: solo el estado (chequeo de cancelación entre batches del executor). */
+    findEstado(id: string) {
+        return this.db.simulacionRun.findUnique({
+            where: { id },
+            select: { estado: true },
+        });
+    }
+
+    /** E-8: actualización genérica de la corrida (arranque, cierre, métricas). */
+    actualizar(id: string, data: Prisma.SimulacionRunUncheckedUpdateInput) {
+        return this.db.simulacionRun.update({ where: { id }, data });
+    }
 }

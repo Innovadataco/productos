@@ -435,4 +435,27 @@ export class ReporteRepository {
             data: { comiteId },
         });
     }
+
+    /** E-8: reporte con todo lo que alimenta las etapas del expediente (spec 096). */
+    findParaExpediente(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            include: {
+                plataforma: { select: { nombre: true } },
+                fuente: true,
+                embedding: true,
+                clasificacion: { include: { rubricaVotos: true } },
+                transiciones: { orderBy: { creadoEn: "asc" } },
+                reintentos: { orderBy: { intento: "asc" } },
+            },
+        });
+    }
+
+    /** E-8: estados de reportes por ids (progreso de simulaciones). */
+    findEstadosPorIds(ids: string[]) {
+        return this.db.reporte.findMany({
+            where: { id: { in: ids } },
+            select: { estado: true },
+        });
+    }
 }

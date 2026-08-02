@@ -77,4 +77,71 @@ export class EmbeddingRepository {
             VALUES (${crypto.randomUUID()}, ${datasetId}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
         `;
     }
+
+    /**
+     * E-8 (D3): ejemplos del dataset cercanos al embedding (RAG del clasificador).
+     * Devuelve los candidatos con similitud >= umbral ordenados por cercanía;
+     * el filtro anti-leakage (excluirSimilitudMayorA) lo aplica el llamador.
+     */
+    buscarEjemplosSimilaresDataset(
+        embedding: number[],
+        opciones: { topK: number; umbral: number }
+    ): Promise<{ id: string; texto: string; clasificacionCorrecta: string; similitud: number }[]> {
+        const vectorStr = "[" + embedding.join(",") + "]";
+        return this.db.$queryRaw<{ id: string; texto: string; clasificacionCorrecta: string; similitud: number }[]>`
+            SELECT d.id, d.texto, d."clasificacionCorrecta", 1 - (e.vector <=> ${vectorStr}::vector) AS similitud
+            FROM "DatasetEntrenamiento" d
+            JOIN "EmbeddingDataset" e ON e."datasetId" = d.id
+            WHERE 1 - (e.vector <=> ${vectorStr}::vector) >= ${opciones.umbral}
+            ORDER BY e.vector <=> ${vectorStr}::vector ASC
+            LIMIT ${opciones.topK}
+        `;
+    }
+
+    /**
+     * E-8 (D3): reporte más similar por embedding para el mismo identificador +
+     * plataforma (deduplicación). Excluye DUPLICADO/POSIBLE_SPAM y el propio reporte.
+     */
+    async buscarReporteSimilarPorEmbedding(
+        embedding: number[],
+        filtro: { reporteId: string; identificador: string; plataformaId: string; threshold: number }
+    ): Promise<{ reporteId: string; similarity: number } | null> {
+        const vectorStr = "[" + embedding.join(",") + "]";
+        const result = await this.db.$queryRaw<{ reporteId: string; similarity: number }[]>`
+            SELECT e."reporteId", 1 - (e.vector <=> ${vectorStr}::vector) AS similarity
+            FROM "EmbeddingReporte" e
+            JOIN "Reporte" r ON r.id = e."reporteId"
+            WHERE r.identificador = ${filtro.identificador}
+              AND r."plataformaId" = ${filtro.plataformaId}
+              AND r.estado NOT IN ('DUPLICADO', 'POSIBLE_SPAM')
+              AND r.id != ${filtro.reporteId}
+              AND 1 - (e.vector <=> ${vectorStr}::vector) >= ${filtro.threshold}
+            ORDER BY similarity DESC
+            LIMIT 1
+        `;
+        return result[0] || null;
+    }
+
+    /**
+     * E-8 (D3): similitud máxima contra reportes del mismo identificador +
+     * plataforma, sin filtro de umbral (traza del expediente, spec 096).
+     */
+    async buscarSimilitudMaximaPorEmbedding(
+        embedding: number[],
+        filtro: { reporteId: string; identificador: string; plataformaId: string }
+    ): Promise<number | null> {
+        const vectorStr = "[" + embedding.join(",") + "]";
+        const result = await this.db.$queryRaw<{ similarity: number }[]>`
+            SELECT 1 - (e.vector <=> ${vectorStr}::vector) AS similarity
+            FROM "EmbeddingReporte" e
+            JOIN "Reporte" r ON r.id = e."reporteId"
+            WHERE r.identificador = ${filtro.identificador}
+              AND r."plataformaId" = ${filtro.plataformaId}
+              AND r.estado NOT IN ('DUPLICADO', 'POSIBLE_SPAM')
+              AND r.id != ${filtro.reporteId}
+            ORDER BY e.vector <=> ${vectorStr}::vector ASC
+            LIMIT 1
+        `;
+        return result[0]?.similarity ?? null;
+    }
 }

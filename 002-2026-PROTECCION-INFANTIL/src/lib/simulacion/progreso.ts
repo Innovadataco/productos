@@ -1,5 +1,8 @@
-import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { SimulacionRunRepository } from "@/lib/dal/repositories/simulacion-run";
+import { SimulacionReporteRepository } from "@/lib/dal/repositories/simulacion-reporte";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { ParametroRepository } from "@/lib/dal/repositories/parametro";
 
 const ESTADOS_FINALES = new Set(["CLASIFICADO", "REVISION_MANUAL", "POSIBLE_SPAM", "DUPLICADO", "CORREGIDO"]);
 
@@ -7,23 +10,18 @@ const TIMEOUT_PARAM_CLAVE = "ia.simulacion_timeout_minutos";
 const TIMEOUT_DEFAULT_MINUTOS = 60;
 
 export async function calcularProgresoSimulacion(runId: string): Promise<number> {
-    const relacionados = await prisma.simulacionReporte.findMany({
-        where: { simulacionRunId: runId },
-        select: { reporteId: true },
-    });
+    // E-8: las lecturas viven en los repos; la lógica no cambia.
+    const relacionados = await new SimulacionReporteRepository().findReporteIdsPorRun(runId);
     if (relacionados.length === 0) return 0;
 
-    const reportes = await prisma.reporte.findMany({
-        where: { id: { in: relacionados.map((r) => r.reporteId) } },
-        select: { estado: true },
-    });
+    const reportes = await new ReporteRepository().findEstadosPorIds(relacionados.map((r) => r.reporteId));
 
     return reportes.filter((r) => ESTADOS_FINALES.has(r.estado)).length;
 }
 
 async function obtenerTimeoutMinutos(): Promise<number> {
     try {
-        const param = await prisma.parametroSistema.findUnique({ where: { clave: TIMEOUT_PARAM_CLAVE } });
+        const param = await new ParametroRepository().findByClave(TIMEOUT_PARAM_CLAVE);
         const valor = param ? Number(param.valor) : NaN;
         return Number.isFinite(valor) && valor > 0 ? valor : TIMEOUT_DEFAULT_MINUTOS;
     } catch (err) {
@@ -45,7 +43,7 @@ export function tieneMetricasCompletas(metricasJson: unknown): boolean {
 }
 
 export async function actualizarProgresoYEstado(runId: string): Promise<{ progreso: number; estado: string }> {
-    const run = await prisma.simulacionRun.findUnique({ where: { id: runId } });
+    const run = await new SimulacionRunRepository().findById(runId);
     if (!run) throw new Error(`Run ${runId} no encontrado`);
     if (["COMPLETADA", "FALLIDA", "CANCELADA"].includes(run.estado)) {
         return { progreso: run.progreso, estado: run.estado };
@@ -74,13 +72,10 @@ export async function actualizarProgresoYEstado(runId: string): Promise<{ progre
 
     const cierra = estado === "COMPLETADA" || estado === "FALLIDA";
     if (estado !== run.estado || progreso !== run.progreso) {
-        await prisma.simulacionRun.update({
-            where: { id: runId },
-            data: {
-                progreso,
-                estado,
-                fechaFin: cierra ? new Date() : run.fechaFin,
-            },
+        await new SimulacionRunRepository().actualizar(runId, {
+            progreso,
+            estado,
+            fechaFin: cierra ? new Date() : run.fechaFin,
         });
     }
 
@@ -92,18 +87,15 @@ export async function actualizarProgresoYEstado(runId: string): Promise<{ progre
 }
 
 export async function refrescarMetricasSimulacion(runId: string): Promise<void> {
-    const run = await prisma.simulacionRun.findUnique({ where: { id: runId } });
+    const run = await new SimulacionRunRepository().findById(runId);
     if (!run || run.estado !== "COMPLETADA") return;
 
     try {
         const { calcularMetricasSimulacion } = await import("./metricas");
         const metricas = await calcularMetricasSimulacion(runId);
         const actuales = (run.metricasJson ?? {}) as Record<string, unknown>;
-        await prisma.simulacionRun.update({
-            where: { id: runId },
-            data: {
-                metricasJson: { ...metricas, casosFallidos: leerCasosFallidos(actuales) } as never,
-            },
+        await new SimulacionRunRepository().actualizar(runId, {
+            metricasJson: { ...metricas, casosFallidos: leerCasosFallidos(actuales) } as never,
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -118,7 +110,7 @@ export async function refrescarMetricasSimulacion(runId: string): Promise<void> 
  */
 export async function marcarProgresoSimulacionPorReporte(reporteId: string): Promise<void> {
     try {
-        const vinculo = await prisma.simulacionReporte.findUnique({ where: { reporteId } });
+        const vinculo = await new SimulacionReporteRepository().findPorReporteId(reporteId);
         if (!vinculo) return;
         await actualizarProgresoYEstado(vinculo.simulacionRunId);
     } catch (err) {

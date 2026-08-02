@@ -34,4 +34,38 @@ export class SimulacionReporteRepository {
             this.db.simulacionReporte.count({ where: { simulacionRunId } }),
         ]);
     }
+
+    /** E-8: alta del vínculo caso↔reporte (dentro de la tx de creación del reporte). */
+    crear(data: Prisma.SimulacionReporteUncheckedCreateInput) {
+        return this.db.simulacionReporte.create({ data });
+    }
+
+    /** E-8: índices ya creados de la corrida (reanudabilidad del batch creator). */
+    findIndicesPorRun(simulacionRunId: string) {
+        return this.db.simulacionReporte.findMany({
+            where: { simulacionRunId },
+            select: { indice: true },
+        });
+    }
+
+    /** E-8: ids de reporte de la corrida (progreso de la simulación). */
+    findReporteIdsPorRun(simulacionRunId: string) {
+        return this.db.simulacionReporte.findMany({
+            where: { simulacionRunId },
+            select: { reporteId: true },
+        });
+    }
+
+    /** E-8: vínculo por reporte (hook de progreso desde el procesamiento). */
+    findPorReporteId(reporteId: string) {
+        return this.db.simulacionReporte.findUnique({ where: { reporteId } });
+    }
+
+    /** E-8: casos con expectativas para las métricas de la corrida. */
+    findParaMetricas(simulacionRunId: string) {
+        return this.db.simulacionReporte.findMany({
+            where: { simulacionRunId },
+            select: { reporteId: true, indice: true, categoriaEsperada: true, secundariaEsperada: true },
+        });
+    }
 }

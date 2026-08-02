@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
 
 export interface EjemploRecuperado {
     datasetId: string;
@@ -26,18 +26,9 @@ export async function buscarEjemplosSimilares(
     options: RetrievalOptions = {}
 ): Promise<EjemploRecuperado[]> {
     const { topK = 3, umbral = 0.75, excluirSimilitudMayorA = 0.98 } = options;
-    const vectorStr = "[" + embedding.join(",") + "]";
 
-    const rows = await prisma.$queryRaw<
-        { id: string; texto: string; clasificacionCorrecta: string; similitud: number }[]
-    >`
-        SELECT d.id, d.texto, d."clasificacionCorrecta", 1 - (e.vector <=> ${vectorStr}::vector) AS similitud
-        FROM "DatasetEntrenamiento" d
-        JOIN "EmbeddingDataset" e ON e."datasetId" = d.id
-        WHERE 1 - (e.vector <=> ${vectorStr}::vector) >= ${umbral}
-        ORDER BY e.vector <=> ${vectorStr}::vector ASC
-        LIMIT ${topK}
-    `;
+    // E-8 (D3): la raw de pgvector vive en el adaptador EmbeddingRepository.
+    const rows = await new EmbeddingRepository().buscarEjemplosSimilaresDataset(embedding, { topK, umbral });
 
     return rows
         .filter((r) => r.similitud <= excluirSimilitudMayorA)
