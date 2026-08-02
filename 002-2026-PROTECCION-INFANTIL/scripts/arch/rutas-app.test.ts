@@ -4,6 +4,8 @@
  * Actualizado 2026-07-30: 50 page.tsx — SPEC-017 añadió 3 páginas del visor de
  * documentación (/docs, /docs/operar, /docs/tecnico). Cambio intencional:
  * prevalece el conteo real (regla de oráculos de SPEC-126).
+ * Actualizado 2026-08-02: 52 page.tsx — SPEC-141 (N-1) añadió 2 páginas de solo
+ * lectura del admin (circulo del padre, estructura del colegio).
  */
 import { describe, it, expect } from "vitest";
 import { inventarioRutasApp, VALOR_MUESTRA_SEGMENTO } from "./lib/rutas-app";
@@ -12,8 +14,8 @@ import { RUTA_APP } from "./lib/paths";
 const rutas = inventarioRutasApp(RUTA_APP);
 
 describe("inventario de rutas del árbol src/app (SPEC-126)", () => {
-    it("oráculo: 50 páginas (page.tsx) — 47 base + 3 del visor de docs (SPEC-017)", () => {
-        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(50);
+    it("oráculo: 52 páginas (page.tsx) — 50 base + 2 de N-1 solo lectura (SPEC-141)", () => {
+        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(52);
     });
 
     it("incluye APIs (route.ts) además de páginas", () => {

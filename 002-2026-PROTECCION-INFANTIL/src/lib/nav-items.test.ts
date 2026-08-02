@@ -23,6 +23,12 @@ const SIN_PANTALLA_PROPIA = new Set([
     "audit_logs",
     // Permiso de acción (spec 096): revelar texto original dentro del expediente, sin pantalla propia
     "expediente_revelar_original",
+    // SPEC-140 (F2): generar la denuncia formal es una acción dentro del expediente
+    // (botón + descarga), sin pantalla propia.
+    "denuncia_formal",
+    // SPEC-141 (N-1): las pantallas de solo lectura se abren en contexto desde las
+    // vistas de padres/colegios (enlace directo), sin ítem de menú propio.
+    "soporte_lectura",
 ]);
 
 const TODOS_LOS_ITEMS = [...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS];
