@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 2, ítem E-5; radica ZEUS). Reverificado en
 fuente 2026-08-01: `POST /api/reportes` NO es atómico. (a) `ReporteCreationService.crear()`
@@ -140,3 +140,25 @@ Impacto en arquitectura: transaccionalidad de `reporte-creation` + un job de
 mantenimiento nuevo en el worker. NO toca schema, pipeline, proxy ni rutas (salvo el
 bloque de creación de `api/reportes/route.ts`). `arch:check` no debería requerir
 regeneración.
+
+## Implementación (cierre)
+
+Implementada el 2026-08-01 en `feature/001-scaffolding` (APROBADA por ZEUS con la
+condición de carrera probada por test de concurrencia real).
+
+- **Tx (`route.ts`)**: dedup + create + upsert del identificador en UNA
+  `withUnitOfWork`; fuente anti-abuso y encolado FUERA de la tx como hoy (FR-004).
+- **Carrera cerrada con advisory lock** (`pg_advisory_xact_lock` por hash
+  usuario+identificador, vía `$executeRaw` — `$queryRaw` no deserializa `void`):
+  FOR UPDATE sobre el agregado tenía hueco estructural cuando la fila no existe
+  (primer reporte del identificador, el caso dominante). **Evidencia del test de
+  concurrencia real**: 2 POST simultáneas → `[201, 429]`, `prisma.reporte.count() = 1`;
+  sin el lock la misma prueba daba `[201, 201]`.
+- **Reconciliación**: `reencolarPendientesSinJob()` (gracia 1 min, solo PENDIENTE,
+  filtro anti-reencolado, backpressure) + job `reportes-reconciliacion` cada 15 min en
+  el worker. Tests: encola huérfanos, segunda corrida no-op, spam/revisión intactos,
+  reciente saltado por gracia.
+- **Regla 1**: cero tests existentes tocados; respuestas de la ruta idénticas. Los
+  tests nuevos purgan `pgboss.job` en beforeEach (resetDatabase no la limpia —
+  documentado).
+- **Gates**: suite 223 archivos / 1367 tests, tsc, lint, build, arch:check verdes.

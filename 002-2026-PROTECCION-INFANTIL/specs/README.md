@@ -13,8 +13,8 @@
 | **Total de specs** | **119** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
-| **Implementadas (IMPLEMENTADO)** | **19** |
-| **Pendientes (PLANEADO)** | **2** |
+| **Implementadas (IMPLEMENTADO)** | **20** |
+| **Pendientes (PLANEADO)** | **1** |
 
 ## Backlog activo (no cerradas)
 
@@ -76,7 +76,7 @@
 | [134](134-dal-colegio-tenant-obligatorio/spec.md) | SPEC-134 — DAL del módulo colegio con tenant obligatorio (E-1) | 🟢 Implementada |
 | [135](135-circulo-confianza-god-module-n1/spec.md) | SPEC-135 — circulo-confianza: romper god-module + matar N+1 (E-2) | 🟢 Implementada |
 | [136](136-tipado-estricto-casts-guards-tsconfig/spec.md) | SPEC-136 — Tipado estricto: casts, guards y tsconfig maximal viable (E-3) | 🟢 Implementada |
-| [137](137-creacion-reporte-atomica/spec.md) | SPEC-137 — Creación de reporte atómica (E-5) | 🔵 Planeada (compuerta §4) |
+| [137](137-creacion-reporte-atomica/spec.md) | SPEC-137 — Creación de reporte atómica (E-5) | 🟢 Implementada |
 
 ## Tabla completa (114 specs)
 
@@ -200,7 +200,7 @@
 | [134](134-dal-colegio-tenant-obligatorio/spec.md) | SPEC-134 — DAL del módulo colegio con tenant obligatorio (E-1) | 🟢 Implementada |
 | [135](135-circulo-confianza-god-module-n1/spec.md) | SPEC-135 — circulo-confianza: romper god-module + matar N+1 (E-2) | 🟢 Implementada |
 | [136](136-tipado-estricto-casts-guards-tsconfig/spec.md) | SPEC-136 — Tipado estricto: casts, guards y tsconfig maximal viable (E-3) | 🟢 Implementada |
-| [137](137-creacion-reporte-atomica/spec.md) | SPEC-137 — Creación de reporte atómica (E-5) | 🔵 Planeada (compuerta §4) |
+| [137](137-creacion-reporte-atomica/spec.md) | SPEC-137 — Creación de reporte atómica (E-5) | 🟢 Implementada |
 
 ## Incidencias de calidad de datos
 
