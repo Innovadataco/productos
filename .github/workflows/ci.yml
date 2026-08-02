@@ -81,10 +81,12 @@ jobs:
       # huérfano no declarado, o si las aserciones A (puerta ≡ predicado) / B (menú
       # honesto) detectan desalineo. No necesita BD ni servicios (lee código como texto).
       - run: npm run arch:check
-      # Placeholders SOLO de build: email.ts valida RESEND_API_KEY/EMAIL_FROM al importarse
-      # y Prisma/cola pide DATABASE_URL al recolectar page data (mismo patrón del Dockerfile).
+      # Placeholders SOLO de build: email.ts valida RESEND_API_KEY/EMAIL_FROM al importarse,
+      # Prisma/cola pide DATABASE_URL al recolectar page data (mismo patrón del Dockerfile)
+      # y fuente-reporte exige ANTI_ABUSO_SALT (S-1, min 32 chars) al importarse.
       - run: npm run build
         env:
           RESEND_API_KEY: build-placeholder
           EMAIL_FROM: build@ci.local
+          ANTI_ABUSO_SALT: build-placeholder-salt-min-32-chars
           DATABASE_URL: postgresql://build:build@localhost:5432/build

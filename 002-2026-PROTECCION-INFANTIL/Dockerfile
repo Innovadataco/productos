@@ -26,6 +26,7 @@ ARG APP_BUILD_SHA
 ENV RESEND_API_KEY=build-placeholder \
     EMAIL_FROM=build@placeholder.local \
     DATABASE_URL=postgresql://build:build@localhost:5432/build \
+    ANTI_ABUSO_SALT=build-placeholder-salt-min-32-chars \
     ENABLE_HTTPS_HEADERS=true \
     APP_BUILD_SHA=$APP_BUILD_SHA
 RUN npx prisma generate && npm run build
