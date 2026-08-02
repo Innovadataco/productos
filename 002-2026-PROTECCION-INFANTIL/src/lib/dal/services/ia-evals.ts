@@ -5,8 +5,10 @@
  * aquí vive el acceso a datos, la agregación y la auditoría. Acepta tx opcional (D2).
  */
 import { CasoEvalFuente, EvalRunEstado, type Prisma } from "@prisma/client";
+import { z } from "zod";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
+import { aJson } from "../json";
 import {
     getCurrentProductionConfig,
     type ExperimentConfigSnapshot,
@@ -26,6 +28,69 @@ interface RunMetrics {
     accuracy: number;
     errorSilencioso: number;
     revisionManualRate: number;
+}
+
+// SPEC-136 (E-3): el JSON de corridas lo escribe eval-runner; en la lectura se
+// valida la parte consumida con Zod en lugar de afirmarla con casts. Los tres
+// bloques consumidos son opcionales (las corridas antiguas y los baselines
+// pueden traer solo `metrics` — mismo nivel de tolerancia que el código previo).
+const runMetricsResumenSchema = z.object({
+    accuracy: z.number(),
+    errorSilencioso: z.number(),
+    revisionManualRate: z.number(),
+});
+
+const runMetricsSchema = runMetricsResumenSchema.extend({
+    precisionAutoClasificados: z.number(),
+    latencyP50Ms: z.number(),
+    latencyP95Ms: z.number(),
+    posibleAgresorParRate: z.number(),
+    recallOTRO: z.number(),
+});
+
+const f7ReportConsumidoSchema = z.object({
+    metrics: runMetricsSchema.optional(),
+    perCategory: z
+        .record(z.string(), z.object({ precision: z.number(), recall: z.number(), f1: z.number(), support: z.number() }))
+        .optional(),
+    operational: z
+        .object({
+            duracionTotalMs: z.number(),
+            casosPorMinuto: z.number(),
+            tasaFallbacks: z.number(),
+            activacionesGuardas: z.number(),
+            doxingVerdaderas: z.number(),
+            keywordsActivadas: z.number(),
+            prioridadAltaTotal: z.number(),
+        })
+        .optional(),
+});
+
+/** Guard: el JSON persistido por eval-runner tiene la forma F7Report (parte consumida). */
+function esF7Report(valor: unknown): valor is F7Report {
+    return f7ReportConsumidoSchema.safeParse(valor).success;
+}
+
+/** Guard: objeto con `metrics` del resumen usado en la comparación entre corridas. */
+function esObjetoConMetricsResumen(valor: unknown): valor is { metrics: RunMetrics } {
+    if (!valor || typeof valor !== "object") return false;
+    return runMetricsResumenSchema.safeParse((valor as Record<string, unknown>).metrics).success;
+}
+
+const experimentConfigSnapshotSchema = z.object({
+    modeloClasificacion: z.string(),
+    modeloEmbedding: z.string(),
+    umbralRevision: z.number(),
+    nVotos: z.number(),
+    temperaturaVotos: z.number(),
+    ragTopK: z.number(),
+    ollamaBaseUrl: z.string(),
+    fixtureVersion: z.number(),
+});
+
+/** Guard: el configSnapshot persistido tiene la forma ExperimentConfigSnapshot. */
+function esExperimentConfigSnapshot(valor: unknown): valor is ExperimentConfigSnapshot {
+    return experimentConfigSnapshotSchema.safeParse(valor).success;
 }
 
 export interface FiltrosCasosEval {
@@ -68,7 +133,7 @@ function getMetrics(run: {
     nombre: string | null;
     id: string;
 }) {
-    const report = run.resultadoJson as unknown as F7Report | null;
+    const report = esF7Report(run.resultadoJson) ? run.resultadoJson : null;
     return {
         id: run.id,
         nombre: run.nombre,
@@ -125,15 +190,13 @@ export class IaEvalsService {
         let comparacion = null;
         if (run.estado === "COMPLETADA" && run.resultadoJson) {
             const anterior = await this.evalRuns.findAnteriorCompletada(run.fixtureVersion, run.id);
-            if (anterior?.resultadoJson) {
-                const actual = run.resultadoJson as unknown as { metrics: RunMetrics };
-                const prev = anterior.resultadoJson as unknown as { metrics: RunMetrics };
+            if (esObjetoConMetricsResumen(run.resultadoJson) && esObjetoConMetricsResumen(anterior?.resultadoJson)) {
                 comparacion = {
-                    accuracyDelta: actual.metrics.accuracy - prev.metrics.accuracy,
-                    errorSilenciosoDelta: actual.metrics.errorSilencioso - prev.metrics.errorSilencioso,
-                    revisionManualRateDelta: actual.metrics.revisionManualRate - prev.metrics.revisionManualRate,
-                    anteriorId: anterior.id,
-                    anteriorFinalizadoEn: anterior.finalizadoEn,
+                    accuracyDelta: run.resultadoJson.metrics.accuracy - anterior.resultadoJson.metrics.accuracy,
+                    errorSilenciosoDelta: run.resultadoJson.metrics.errorSilencioso - anterior.resultadoJson.metrics.errorSilencioso,
+                    revisionManualRateDelta: run.resultadoJson.metrics.revisionManualRate - anterior.resultadoJson.metrics.revisionManualRate,
+                    anteriorId: anterior!.id,
+                    anteriorFinalizadoEn: anterior!.finalizadoEn,
                 };
             }
         }
@@ -285,7 +348,7 @@ export class IaEvalsService {
             creadoPorId: input.creadoPorId,
             nombre: input.nombre,
             notas: input.notas || null,
-            configSnapshot: input.configSnapshot as unknown as Prisma.InputJsonValue,
+            configSnapshot: aJson(input.configSnapshot),
             progresoTotal: input.totalCasos,
         });
     }
@@ -347,11 +410,13 @@ export class IaEvalsService {
             ? null
             : await this.evalRuns.findBaseline(
                   run.fixtureVersion,
-                  productionConfig as unknown as Prisma.InputJsonValue
+                  aJson(productionConfig)
               );
 
-        const resultadoJson = run.resultadoJson as unknown as F7Report | null;
+        const resultadoJson = esF7Report(run.resultadoJson) ? run.resultadoJson : null;
         const metrics = resultadoJson?.metrics || null;
+
+        const baselineReport = baseline && esF7Report(baseline.resultadoJson) ? baseline.resultadoJson : null;
 
         return {
             experimento: run,
@@ -362,7 +427,7 @@ export class IaEvalsService {
                 ? {
                       id: baseline.id,
                       nombre: baseline.nombre,
-                      metrics: (baseline.resultadoJson as unknown as F7Report | null)?.metrics || null,
+                      metrics: baselineReport?.metrics || null,
                   }
                 : null,
             baselineMissing: !baseline && run.estado === "COMPLETADA" && !isBaseline,
@@ -379,7 +444,7 @@ export class IaEvalsService {
             throw new AppError("El experimento debe estar completado", ERROR_CODES.VALIDATION_ERROR, 400);
         }
 
-        const snapshot = run.configSnapshot as unknown as ExperimentConfigSnapshot | null;
+        const snapshot = esExperimentConfigSnapshot(run.configSnapshot) ? run.configSnapshot : null;
         if (!snapshot) {
             throw new AppError("El experimento no tiene configSnapshot", ERROR_CODES.VALIDATION_ERROR, 400);
         }

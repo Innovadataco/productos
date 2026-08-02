@@ -11,8 +11,7 @@ class FixedTextEncoder extends NodeTextEncoder {
     }
 }
 
-(globalThis as unknown as { TextEncoder: typeof TextEncoder }).TextEncoder = FixedTextEncoder;
-(globalThis as unknown as { TextDecoder: typeof TextDecoder }).TextDecoder = NodeTextDecoder;
+Object.assign(globalThis, { TextEncoder: FixedTextEncoder, TextDecoder: NodeTextDecoder });
 Object.defineProperty(globalThis, "crypto", { value: webcrypto });
 
 process.env.JWT_SECRET = "test-secret-key-32-chars-long-12345678";

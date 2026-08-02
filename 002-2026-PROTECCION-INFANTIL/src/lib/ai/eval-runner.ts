@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { descifrarValorParametro } from "@/lib/parametros";
+import { aJson } from "../dal/json";
 import type { Prisma } from "@prisma/client";
 import { clasificarConVotos } from "./classifier";
 import { generarEmbedding } from "./embedder";
@@ -418,7 +419,7 @@ export async function persistEvalRun(
             data: {
                 estado: "COMPLETADA",
                 finalizadoEn: new Date(),
-                resultadoJson: report as unknown as Prisma.InputJsonValue,
+                resultadoJson: aJson(report),
                 fixtureVersion: report.metadata.fixtureVersion,
                 progresoCasos: report.metadata.totalExamples,
                 progresoTotal: report.metadata.totalExamples,

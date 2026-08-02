@@ -7,6 +7,7 @@
  */
 import type { Prisma } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { aJson } from "../json";
 import {
     actualizarProgresoYEstado,
     refrescarMetricasSimulacion,
@@ -63,7 +64,7 @@ export class IaSimulacionesService {
                 modelo,
                 totalCasos: input.casos.length,
                 estado: "PENDIENTE",
-                casosJson: input.casos as unknown as Prisma.InputJsonValue,
+                casosJson: aJson(input.casos),
                 creadoPorId: input.creadoPorId,
             });
             runIds.push(run.id);

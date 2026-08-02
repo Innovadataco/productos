@@ -1,8 +1,12 @@
 import { type KeyboardEvent } from "react";
 
-interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
+/** Activación por clic o por teclado (Enter/Espacio): mismo handler, evento sintético base compartido. */
+type EventoActivacion = React.MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>;
+
+interface GlassCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClick"> {
     children: React.ReactNode;
     className?: string;
+    onClick?: (evento: EventoActivacion) => void;
 }
 
 export function GlassCard({ children, className = "", onClick, onKeyDown, tabIndex, role, ...props }: GlassCardProps) {
@@ -11,7 +15,7 @@ export function GlassCard({ children, className = "", onClick, onKeyDown, tabInd
     function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
         if (isInteractive && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
-            onClick?.(e as unknown as React.MouseEvent<HTMLDivElement>);
+            onClick?.(e);
         }
         onKeyDown?.(e);
     }

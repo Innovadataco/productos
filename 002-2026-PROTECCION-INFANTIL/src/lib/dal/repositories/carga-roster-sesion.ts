@@ -10,12 +10,34 @@
  * del worker — borra sesiones vencidas de TODOS los colegios (igual que hoy).
  */
 import type { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { aJson } from "../json";
+import { etiquetaRelacionAlumnoSchema } from "@/lib/schemas";
 import type { DbClient } from "../unit-of-work";
 import type { FilaCargaAlumno } from "@/lib/colegio/carga/parser";
 
 const TTL_MINUTOS = 15;
+
+// SPEC-136 (E-3): el roster se lee de vuelta validándolo con Zod (la forma que
+// escribe `crear`), no con un cast que afirma el contenido sin mirarlo.
+const filaCargaAlumnoJsonSchema = z.object({
+    fila: z.number(),
+    curso: z.object({
+        nombre: z.string(),
+        grado: z.string().nullable(),
+        anioLectivo: z.string().nullable(),
+    }),
+    alumno: z.object({ nombre: z.string() }),
+    identificador: z.object({
+        tipo: z.string(),
+        valor: z.string(),
+        etiquetaRelacion: etiquetaRelacionAlumnoSchema,
+        plataformaId: z.string().nullable(),
+    }),
+});
+const filasRosterSchema = z.array(filaCargaAlumnoJsonSchema);
 
 export type SesionRoster = {
     id: string;
@@ -35,7 +57,7 @@ export class CargaRosterSesionRepository {
     async crear(colegioId: string, filas: FilaCargaAlumno[]): Promise<string> {
         const expiraEn = new Date(Date.now() + TTL_MINUTOS * 60 * 1000);
         const sesion = await this.db.cargaRosterSesion.create({
-            data: { colegioId, filas: filas as unknown as Prisma.InputJsonValue, expiraEn },
+            data: { colegioId, filas: aJson(filas), expiraEn },
         });
         return sesion.id;
     }
@@ -52,7 +74,7 @@ export class CargaRosterSesionRepository {
         return {
             id: sesion.id,
             colegioId: sesion.colegioId,
-            filas: sesion.filas as unknown as FilaCargaAlumno[],
+            filas: filasRosterSchema.parse(sesion.filas),
             expiraEn: sesion.expiraEn,
         };
     }

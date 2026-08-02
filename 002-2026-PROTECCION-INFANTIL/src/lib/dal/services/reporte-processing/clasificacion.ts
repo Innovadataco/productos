@@ -2,8 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { clasificarConVotos } from "@/lib/ai/classifier";
 import { clasificarConRubrica, cargarConfigRubrica } from "@/lib/ai/rubrica";
+import type { ResultadoRubrica } from "@/lib/ai/rubrica";
 import { detectarPiiCombinado } from "@/lib/ai/pii-detector";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
+import { aJson } from "../../json";
 import type { ParametrosClasificacion } from "./parametros";
 import type { EjemploRecuperado } from "@/lib/ai/dataset-retrieval";
 
@@ -16,6 +18,21 @@ export interface ClasificacionResult {
     metrics: { modelo: string; latenciaMs: number };
     rawResponse: unknown;
     votos: unknown[];
+    /** Solo motor legacy de votos con cascada. */
+    usoCascada?: boolean;
+    /** Solo motor legacy de votos con cascada. */
+    modeloCascada?: string;
+    /** Tokens del motor (rúbrica los reporta; legacy no). */
+    promptTokens?: number | null;
+    /** Tokens del motor (rúbrica los reporta; legacy no). */
+    responseTokens?: number | null;
+    /** Resultado completo de la rúbrica (para persistir la matriz de votos). */
+    __rubrica?: ResultadoRubrica;
+}
+
+/** Compat: la rúbrica no reporta agresor-par hoy; si el motor lo añade, se respeta. */
+function leerPosibleAgresorPar(r: ResultadoRubrica): boolean {
+    return "posibleAgresorPar" in r && typeof r.posibleAgresorPar === "boolean" ? r.posibleAgresorPar : false;
 }
 
 export async function clasificarReporte({
@@ -31,7 +48,7 @@ export async function clasificarReporte({
         "modeloClasificacion" | "modeloAnonimizacion" | "umbralRevision" | "nVotos" | "temperaturaVotos" | "minScoreCategoria" | "ollamaNumParallel" | "modeloDesempate"
     >;
     ejemplosRag: EjemploRecuperado[];
-}): Promise<{ clasificacion: ClasificacionResult; piiResult: Awaited<ReturnType<typeof detectarPiiCombinado>> }> {
+}): Promise<{ clasificacion: ClasificacionResult; piiResult: Awaited<ReturnType<typeof detectarPiiCombinado>> | undefined }> {
     const clasifExistente = await prisma.clasificacionIA.findUnique({
         where: { reporteId },
     });
@@ -47,28 +64,28 @@ export async function clasificarReporte({
             rawResponse: clasifExistente.rawResponse,
             votos: Array.isArray(clasifExistente.votos) ? clasifExistente.votos : [],
         };
-        return { clasificacion, piiResult: undefined as unknown as Awaited<ReturnType<typeof detectarPiiCombinado>> };
+        return { clasificacion, piiResult: undefined };
     }
 
     // Spec 090: motor por rúbrica multi-etiqueta/multi-modelo si está habilitado
     // (ia.rubrica.enabled); si no, motor legacy de votos del mismo modelo.
     const configRubrica = await cargarConfigRubrica();
 
-    const [clasifResult, piiResult] = await Promise.all([
+    const [clasifResult, piiResult]: [ClasificacionResult, Awaited<ReturnType<typeof detectarPiiCombinado>>] = await Promise.all([
         configRubrica.enabled
-            ? clasificarConRubrica(texto, configRubrica).then((r) => ({
+            ? clasificarConRubrica(texto, configRubrica).then((r): ClasificacionResult => ({
                   categoria: r.categoria,
                   confianza: r.confianza,
                   categoriasSecundarias: r.categoriasSecundarias,
-                  posibleAgresorPar: (r as unknown as { posibleAgresorPar?: boolean }).posibleAgresorPar ?? false,
+                  posibleAgresorPar: leerPosibleAgresorPar(r),
                   estado: r.estado,
                   metrics: { modelo: r.metrics.modelo, latenciaMs: r.metrics.latenciaMs },
                   rawResponse: r.rawResponse,
-                  votos: r.votosModelos as unknown as unknown[],
+                  votos: r.votosModelos,
                   promptTokens: r.metrics.promptTokens,
                   responseTokens: r.metrics.responseTokens,
                   usoCascada: false,
-                  modeloCascada: undefined as string | undefined,
+                  modeloCascada: undefined,
                   __rubrica: r,
               }))
             : clasificarConVotos(parametros.modeloClasificacion, texto, {
@@ -94,23 +111,21 @@ export async function clasificarReporte({
                 confianza: clasificacion.confianza,
                 contienePii: piiResult.contienePii,
                 piiDetectada: piiResult.piiDetectada,
-                categoriasSecundarias: clasificacion.categoriasSecundarias as unknown as Prisma.InputJsonValue,
-                votos: clasificacion.votos as unknown as Prisma.InputJsonValue,
+                categoriasSecundarias: aJson(clasificacion.categoriasSecundarias),
+                votos: aJson(clasificacion.votos),
                 posibleAgresorPar: clasificacion.posibleAgresorPar,
-                usoCascada: (clasificacion as unknown as Record<string, unknown>).usoCascada as boolean | undefined,
-                modeloCascada: (clasificacion as unknown as Record<string, unknown>).modeloCascada as string | undefined,
+                usoCascada: clasificacion.usoCascada,
+                modeloCascada: clasificacion.modeloCascada,
                 modeloUsado: clasificacion.metrics.modelo,
                 latenciaMs: clasificacion.metrics.latenciaMs + piiResult.metrics.latenciaMs,
-                promptTokens: (clasificacion as unknown as Record<string, unknown>).promptTokens as number | null,
-                responseTokens: (clasificacion as unknown as Record<string, unknown>).responseTokens as number | null,
+                promptTokens: clasificacion.promptTokens ?? null,
+                responseTokens: clasificacion.responseTokens ?? null,
                 rawResponse: String(clasificacion.rawResponse) as string | undefined,
             },
         });
 
         // Spec 090: persistir la matriz categoría × modelo × 0/1 (con preguntas cumplidas)
-        const rubrica = (clasifResult as Record<string, unknown>).__rubrica as
-            | { votosModelos: Array<{ modelo: string; categorias: Record<string, { cumple: boolean; preguntasCumplidas: string[] }> }> }
-            | undefined;
+        const rubrica = clasifResult.__rubrica;
         if (rubrica && Array.isArray(rubrica.votosModelos)) {
             const filas = rubrica.votosModelos.flatMap((vm) =>
                 Object.entries(vm.categorias).map(([categoria, v]) => ({
@@ -118,7 +133,7 @@ export async function clasificarReporte({
                     modelo: vm.modelo,
                     categoria,
                     cumple: v.cumple,
-                    preguntasJson: v.preguntasCumplidas as unknown as Prisma.InputJsonValue,
+                    preguntasJson: v.preguntasCumplidas,
                 }))
             );
             if (filas.length > 0) {
