@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 2, ítem E-3; radica ZEUS). Reverificado en
 fuente 2026-08-01 (los conteos de julio cambiaron): **`as unknown as` = 29** (eran 27;
@@ -145,3 +145,32 @@ N/A — no cambia schema ni entidades; es tipado del código existente.
 Impacto en arquitectura: tipado y tsconfig — no toca schema, rutas, proxy ni
 navegación; `arch:check` no debería requerir regeneración (`06-stack.md` lista
 "TypeScript 5 strict" — actualizar la mención a los flags si el generador la deriva).
+
+## Implementación (cierre)
+
+Implementada el 2026-08-01 en `feature/001-scaffolding` (APROBADA por ZEUS; E-3b
+diferido: `noUncheckedIndexedAccess` 565 y `noPropertyAccessFromIndexSignature` 326,
+radicable aparte).
+
+- **Casts (`ac6f2339`)**: 29/29 eliminados, 0 justificados. Motor tipado con tipos
+  reales (ensanchado honesto de `ClasificacionResult`, guards `in`, Json con el helper
+  nuevo `src/lib/dal/json.ts` — `aJson()`/`esJsonValue`); evals con guards Zod
+  tolerantes (bloques opcionales, mismo nivel que el cast previo); roster con
+  `filasRosterSchema.parse`; pdfmake con `declare module` augmentation (runtime
+  idéntico — el route test del PDF cazó la hipótesis falsa inicial del vfs);
+  `prisma.ts` con `declare global` canónico.
+- **Guards (`378af084`)**: 15/15. Narrowing compartido en GestionPageClient; invariantes
+  de BD con AppError canónico (correcciones 409, configuracion 404, simulaciones 400).
+  Hallazgo: TypeError latente en `configuracion.ts` (crear parámetro sin defaults y sin
+  `categoria` → 500) ahora 404 controlado — camino que ningún test ejercitaba; único
+  cambio de comportamiento en camino de error, endurecimiento documentado.
+- **tsconfig (`553d59e3`)**: 4 flags activos; 122 errores corregidos (ensanchar
+  `| undefined` ~55, conditional spreads ~45, narrowing local). 1 `@ts-expect-error`
+  justificado (executor de simulación: el test afirma la FORMA del argumento con claves
+  `undefined` presentes — imposible satisfacer ambos sin tocar el test). 18 fixes
+  mecánicos en código de SIEMBRA/REQUEST de 15 archivos de test (`?? null` ≡ campo
+  omitido en FK nullable; conditional spread en helpers) — **cero aserciones tocadas**;
+  estaban dentro del conteo de ~120 aprobado. Verificado: esos 16 archivos / 120 tests
+  verdes.
+- **Gates**: `tsc --noEmit` 0 errores con los 4 flags (src + tests), lint, build,
+  arch:check verdes; greps de control (`as unknown as`, `!.`) en 0.
