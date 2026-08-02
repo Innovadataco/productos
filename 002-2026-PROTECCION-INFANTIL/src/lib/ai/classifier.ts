@@ -1,26 +1,15 @@
 import { llamarOllamaStructured, type OllamaMetrics } from "./ollama-client";
 import { obtenerSeveridades } from "@/lib/scoring";
-import { classificationResponseSchema, type ClassificationResponse } from "./schemas";
+import { classificationResponseSchema, CATEGORIAS_VALIDAS, type ClassificationResponse } from "./schemas";
 import { logger } from "@/lib/logger";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 // Re-export para compatibilidad: la fuente de verdad es el enum de prisma/schema.prisma
 export type { CategoriaConducta };
 
-export const CATEGORIAS_VALIDAS: CategoriaConducta[] = [
-    "CONTACTO_INSISTENTE",
-    "SOLICITUD_MATERIAL",
-    "OFRECIMIENTO_REGALOS",
-    "SUPLANTACION_IDENTIDAD",
-    "SOLICITUD_ENCUENTRO",
-    "COMPARTIMIENTO_SEXUAL",
-    "EXTORSION",
-    "CONTENIDO_GENERADO_IA",
-    "DIFUSION_NO_CONSENTIDA",
-    "DOXING",
-    "SPAM",
-    "OTRO",
-];
+// E-4: la lista canónica vive en ./schemas (junto al JSON schema de Ollama);
+// se re-exporta aquí por compatibilidad con los consumidores existentes.
+export { CATEGORIAS_VALIDAS };
 
 export interface ClasificacionCategoria {
     categoria: CategoriaConducta;

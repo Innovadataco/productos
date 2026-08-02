@@ -6,6 +6,7 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { auditAnonimizacion } from "@/lib/audit";
 import { generarEmbedding } from "@/lib/ai/embedder";
+import { MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
@@ -131,7 +132,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             const paramEmbedding = await prisma.parametroSistema.findUnique({
                 where: { clave: "reportes.embedding_model" },
             });
-            const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+            const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
             const vector = await generarEmbedding(modeloEmbedding, textoAnonimizado);
 
             const vectorStr = "[" + vector.join(",") + "]";

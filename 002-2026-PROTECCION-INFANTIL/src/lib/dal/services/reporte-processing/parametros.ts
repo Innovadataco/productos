@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { MODELO_CLASIFICACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 
 export interface ParametrosClasificacion {
     modeloEmbedding: string;
@@ -20,12 +21,12 @@ export async function cargarParametrosClasificacion(override?: { modeloClasifica
     const paramEmbedding = await prisma.parametroSistema.findUnique({
         where: { clave: "reportes.embedding_model" },
     });
-    const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+    const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
 
     const paramModelo = await prisma.parametroSistema.findUnique({
         where: { clave: "reportes.classification_model" },
     });
-    const modeloClasificacion = paramModelo?.valor || "ornith:9b";
+    const modeloClasificacion = paramModelo?.valor || MODELO_CLASIFICACION_DEFAULT;
 
     const paramAnonModelo = await prisma.parametroSistema.findUnique({
         where: { clave: "reportes.anonymization_model" },

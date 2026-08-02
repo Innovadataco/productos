@@ -9,6 +9,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { generarEmbedding } from "@/lib/ai/embedder";
+import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
@@ -217,7 +218,7 @@ export async function POST(request: Request) {
                 const paramModelo = await prisma.parametroSistema.findUnique({
                     where: { clave: "reportes.classification_model" },
                 });
-                const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || "ornith:9b";
+                const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || MODELO_ANONIMIZACION_DEFAULT;
                 const resultado = await anonimizarTexto(modelo, reporte.texto);
                 textoDataset = resultado.textoAnonimizado;
                 datasetAnonimizado = true;
@@ -253,7 +254,7 @@ export async function POST(request: Request) {
             const paramEmbedding = await prisma.parametroSistema.findUnique({
                 where: { clave: "reportes.embedding_model" },
             });
-            const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+            const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
             const vector = await generarEmbedding(modeloEmbedding, datasetRegistro.texto);
             const vectorStr = "[" + vector.join(",") + "]";
             await prisma.$executeRaw`

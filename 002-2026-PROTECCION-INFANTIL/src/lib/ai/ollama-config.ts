@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
+import { MODELO_EMBEDDING_DEFAULT } from "./defaults";
 
 const DEFAULT_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 
@@ -60,7 +61,7 @@ function parseModelName(name: string): { name: string; tag: string } {
 
 export function isEmbeddingModel(name: string): boolean {
     const lower = name.toLowerCase();
-    return lower.includes("embed") || lower === "nomic-embed-text";
+    return lower.includes("embed") || lower === MODELO_EMBEDDING_DEFAULT;
 }
 
 /**

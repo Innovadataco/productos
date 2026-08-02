@@ -6,13 +6,14 @@ import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { MARCADOR_TEXTO_PURGADO, cifrarTextoReporte, descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import type { MotivoBajaReporte, Prisma } from "@prisma/client";
 
 const MOTIVOS_PURGAN_DATASET: MotivoBajaReporte[] = ["REPORTE_FALSO", "ORDEN_LEGAL"];
 
 async function getEmbeddingModel(): Promise<string> {
     const param = await getParametroSistema("reportes.embedding_model");
-    return param?.valor || "nomic-embed-text";
+    return param?.valor || MODELO_EMBEDDING_DEFAULT;
 }
 
 export interface ReporteBajaResult {

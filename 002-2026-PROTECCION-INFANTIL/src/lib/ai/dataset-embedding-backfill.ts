@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
+import { MODELO_EMBEDDING_DEFAULT } from "./defaults";
 import { logger } from "@/lib/logger";
 
 async function getEmbeddingModel(): Promise<string> {
     const param = await getParametroSistema("reportes.embedding_model");
-    return param?.valor || process.env.IA_MODEL_EMBEDDING || "nomic-embed-text";
+    return param?.valor || process.env.IA_MODEL_EMBEDDING || MODELO_EMBEDDING_DEFAULT;
 }
 
 /**

@@ -11,6 +11,7 @@ import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { esAdminRol, esOperadorRol } from "@/lib/operadores/permisos";
 import { generarEmbedding } from "@/lib/ai/embedder";
+import { MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import { z } from "zod";
 import type { CategoriaConducta } from "@prisma/client";
 
@@ -137,7 +138,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                     const paramEmbedding = await tx.parametroSistema.findUnique({
                         where: { clave: "reportes.embedding_model" },
                     });
-                    const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+                    const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
                     const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
                     const vectorStr = "[" + vector.join(",") + "]";
                     await tx.$executeRaw`

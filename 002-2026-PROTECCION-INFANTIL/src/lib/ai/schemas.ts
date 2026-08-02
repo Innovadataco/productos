@@ -4,8 +4,16 @@
  * Estos schemas se envían en el campo `format` de `/api/generate` para forzar
  * al modelo a devolver JSON válido y estructurado sin depender de parseo manual.
  */
+import type { CategoriaConducta } from "@prisma/client";
 
-const CATEGORIAS_VALIDAS = [
+/**
+ * E-4: fuente ÚNICA de las categorías válidas del motor (idénticas al enum
+ * CategoriaConducta de Prisma, que es la fuente de tipos). `classifier.ts` la
+ * re-exporta por compatibilidad. Distinta a propósito de: CATEGORIAS_EVAL
+ * (eval-runner: banco de casos, sin SPAM) y CATEGORIAS_RUBRICA (rubrica-semilla:
+ * llaves de la rúbrica de preguntas) — no son la misma cosa y NO se unifican.
+ */
+export const CATEGORIAS_VALIDAS: readonly CategoriaConducta[] = [
     "CONTACTO_INSISTENTE",
     "SOLICITUD_MATERIAL",
     "OFRECIMIENTO_REGALOS",
@@ -18,7 +26,7 @@ const CATEGORIAS_VALIDAS = [
     "DOXING",
     "SPAM",
     "OTRO",
-] as const;
+];
 
 export const classificationResponseSchema = {
     type: "object",

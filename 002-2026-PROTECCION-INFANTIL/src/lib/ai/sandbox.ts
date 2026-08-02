@@ -6,6 +6,7 @@ import { clasificarConVotos, type ClassificationResult, type VotoIndividual } fr
 import { detectarPiiCombinado, type PiiDetectionResult } from "./pii-detector";
 import { anonimizarTexto, type AnonimizacionResult } from "./anonimizador";
 import { decidirGuardasSeguridad } from "./guardas-decision";
+import { MODELO_ANONIMIZACION_DEFAULT, MODELO_CLASIFICACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
 import type { CategoriaConducta } from "@prisma/client";
 
 export interface SandboxOverrides {
@@ -125,9 +126,9 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
     ]);
 
     return {
-        modeloClasificacion: overrides.modelo_clasificacion || modeloClasificacion?.valor || "ornith:9b",
-        embeddingModel: embeddingModel?.valor || "nomic-embed-text",
-        anonymizationModel: anonymizationModel?.valor || modeloClasificacion?.valor || "ornith:9b",
+        modeloClasificacion: overrides.modelo_clasificacion || modeloClasificacion?.valor || MODELO_CLASIFICACION_DEFAULT,
+        embeddingModel: embeddingModel?.valor || MODELO_EMBEDDING_DEFAULT,
+        anonymizationModel: anonymizationModel?.valor || modeloClasificacion?.valor || MODELO_ANONIMIZACION_DEFAULT,
         umbralRevision: overrides.umbral_revision ?? parseFloatParam(umbralRevision?.valor, 1.0),
         nVotos: overrides.n_votos ?? parseIntParam(nVotos?.valor, 5),
         temperatura: overrides.temperatura_votos ?? parseFloatParam(temperatura?.valor, 0.7),

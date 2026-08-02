@@ -3,22 +3,22 @@ import { detectarKeywordsRiesgo } from "./keywords-riesgo";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 /**
- * Decisión pura de las guardas de seguridad (spec 123).
+ * FUENTE ÚNICA de la decisión de las guardas de seguridad (spec 123, E-4).
  *
- * Réplica EXACTA de la lógica de decisión de producción
- * (`src/app/api/reportes/procesar/helpers/guardas.ts` — `aplicarGuardasSeguridad`),
- * sin el side-effect `registrarPaso` (trazabilidad de expediente, solo tiene
- * sentido con un reporte persistido). Mismo orden de ramas y mismos
- * cortocircuitos `estadoFinal !== "POSIBLE_SPAM"`:
+ * La decisión (mismo orden de ramas y mismos cortocircuitos
+ * `estadoFinal !== "POSIBLE_SPAM"`):
  *
  *   1. SPAM con confianza >= umbralSpam → POSIBLE_SPAM
  *   2. Doxing determinístico no reflejado por el modelo → REVISION_MANUAL
  *   3. Keywords críticas con OTRO/REVISION_MANUAL → prioridad alta (+ REVISION_MANUAL si era CLASIFICADO)
  *   4. Ráfaga → REVISION_MANUAL con prioridad alta
  *
- * La usan los contextos no productivos (sandbox, eval-runner) para decidir lo
- * mismo que el pipeline real. Producción NO la usa: sigue con su helper, que es
- * la referencia. La paridad está demostrada en `guardas-decision.test.ts`.
+ * La usan TODOS los contextos: producción (vía el wrapper fino
+ * `aplicarGuardasSeguridad` de `reporte-processing/guardas.ts`, que añade el
+ * side-effect `registrarPaso` de expediente) y los no productivos (sandbox,
+ * eval-runner). Antes era una réplica de la lógica de producción; desde E-4
+ * ES la implementación de producción. La decisión bit a bit idéntica la
+ * afirman `guardas-decision.test.ts` y los tests del pipeline.
  */
 
 export interface GuardasClasificacion {

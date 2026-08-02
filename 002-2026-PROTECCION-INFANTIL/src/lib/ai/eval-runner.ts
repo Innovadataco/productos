@@ -6,6 +6,7 @@ import { clasificarConVotos } from "./classifier";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares } from "./dataset-retrieval";
 import { decidirGuardasSeguridad } from "./guardas-decision";
+import { MODELO_CLASIFICACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
 import fs from "fs/promises";
 import path from "path";
 import { logger } from "@/lib/logger";
@@ -216,8 +217,8 @@ export async function getCurrentProductionConfig(): Promise<ExperimentConfigSnap
     const fixtureVersion = await prisma.casoEval.aggregate({ _max: { fixtureVersion: true } }).then((r) => r._max.fixtureVersion ?? 1);
 
     return {
-        modeloClasificacion: get("reportes.classification_model", "ornith:9b"),
-        modeloEmbedding: get("reportes.embedding_model", "nomic-embed-text"),
+        modeloClasificacion: get("reportes.classification_model", MODELO_CLASIFICACION_DEFAULT),
+        modeloEmbedding: get("reportes.embedding_model", MODELO_EMBEDDING_DEFAULT),
         umbralRevision: getNum("reportes.classification.umbral_revision", 1.0),
         nVotos: getNum("reportes.classification.n_votos", 5),
         temperaturaVotos: getNum("reportes.classification.temperatura_votos", 0.7),
@@ -250,8 +251,8 @@ export async function runF7Eval(
     } = {}
 ): Promise<EvalResultArm[]> {
     const config: ExperimentConfigSnapshot = {
-        modeloClasificacion: opts.config?.modeloClasificacion || "ornith:9b",
-        modeloEmbedding: opts.config?.modeloEmbedding || "nomic-embed-text",
+        modeloClasificacion: opts.config?.modeloClasificacion || MODELO_CLASIFICACION_DEFAULT,
+        modeloEmbedding: opts.config?.modeloEmbedding || MODELO_EMBEDDING_DEFAULT,
         umbralRevision: opts.config?.umbralRevision ?? 1.0,
         nVotos: opts.config?.nVotos ?? 5,
         temperaturaVotos: opts.config?.temperaturaVotos ?? 0.7,
@@ -378,8 +379,8 @@ export function buildF7Report(
 
     return {
         metadata: {
-            modeloClasificacion: opts.modeloClasificacion || "ornith:9b",
-            modeloEmbedding: opts.modeloEmbedding || "nomic-embed-text",
+            modeloClasificacion: opts.modeloClasificacion || MODELO_CLASIFICACION_DEFAULT,
+            modeloEmbedding: opts.modeloEmbedding || MODELO_EMBEDDING_DEFAULT,
             fixture: opts.fixture,
             fixtureVersion,
             totalExamples: results.length,
