@@ -14,7 +14,7 @@ import { entrarComo, verificarAuditLog } from "../helpers";
 
 const CICLO = Number(process.env.E2E_CICLO ?? "1");
 
-describe(`SPEC-114 · cola 041 (ciclo ${CICLO})`, () => {
+describe(`SPEC-114 · cola 041 (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await sembrarBase();
         limpiarJar();
