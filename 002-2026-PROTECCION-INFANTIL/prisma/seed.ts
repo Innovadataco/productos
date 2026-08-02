@@ -1196,17 +1196,18 @@ async function main() {
                     await prisma.ciudad.upsert({
                         where: { nombre_paisId: { nombre: c, paisId: pais.id } },
                         update: {
-                            lat: coords?.lat,
-                            lng: coords?.lng,
-                            departamentoId,
+                            // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                            ...(coords?.lat !== undefined ? { lat: coords.lat } : {}),
+                            ...(coords?.lng !== undefined ? { lng: coords.lng } : {}),
+                            ...(departamentoId !== undefined ? { departamentoId } : {}),
                             nombreNormalizado: normalizarNombreGeografico(c),
                         },
                         create: {
                             nombre: c,
                             paisId: pais.id,
-                            lat: coords?.lat,
-                            lng: coords?.lng,
-                            departamentoId,
+                            ...(coords?.lat !== undefined ? { lat: coords.lat } : {}),
+                            ...(coords?.lng !== undefined ? { lng: coords.lng } : {}),
+                            ...(departamentoId !== undefined ? { departamentoId } : {}),
                             nombreNormalizado: normalizarNombreGeografico(c),
                         },
                     });

@@ -57,7 +57,7 @@ interface ResultArm {
     posibleAgresorPar: boolean;
     secundarias: Categoria[];
     secundariaCorrecta: boolean;
-    votos?: VotoIndividual[];
+    votos?: VotoIndividual[] | undefined;
     guardaDoxing: boolean;
     guardaDoxingVerdadera: boolean;
     ejemplosRecuperados: { texto: string; categoria: string; similitud: number }[];

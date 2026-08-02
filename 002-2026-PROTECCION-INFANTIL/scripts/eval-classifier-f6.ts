@@ -52,9 +52,9 @@ interface ResultArm {
     fallback: boolean;
     posibleAgresorPar: boolean;
     usoCascada: boolean;
-    modeloCascada?: string;
-    desempateLatencyMs?: number;
-    desempateLoadDuration?: number | null;
+    modeloCascada?: string | undefined;
+    desempateLatencyMs?: number | undefined;
+    desempateLoadDuration?: number | null | undefined;
 }
 
 interface RunMetrics {
