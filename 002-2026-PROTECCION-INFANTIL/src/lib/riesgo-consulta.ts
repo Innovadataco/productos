@@ -67,7 +67,11 @@ export function calcularRiesgoConsulta(
     params: Partial<RiesgoConsultaParams> = {}
 ): RiesgoConsultaResult {
     const total = reportes.length;
-    const conClasificacion = reportes.filter((r) => r.clasificacion);
+    // Invariante del where de la consulta pública: solo entran reportes CON
+    // clasificación; el predicado del filter lo hace explícito (narrowing, no `!`).
+    const conClasificacion = reportes.filter(
+        (r): r is { clasificacion: { categoria: CategoriaConducta; confianza: number } } => r.clasificacion != null
+    );
     const confianzaPromedio =
         conClasificacion.length > 0
             ? conClasificacion.reduce((sum, r) => sum + (r.clasificacion?.confianza ?? 0), 0) / conClasificacion.length
@@ -76,7 +80,7 @@ export function calcularRiesgoConsulta(
     const conteoCategorias = new Map<CategoriaConducta, number>();
     let sumaSeveridad = 0;
     for (const r of conClasificacion) {
-        const cat = r.clasificacion!.categoria;
+        const cat = r.clasificacion.categoria;
         conteoCategorias.set(cat, (conteoCategorias.get(cat) || 0) + 1);
         sumaSeveridad += SEVERIDAD_CATEGORIA[cat] ?? 50;
     }

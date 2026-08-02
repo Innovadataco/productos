@@ -174,7 +174,7 @@ export async function POST(request: Request) {
                 plataformaId,
                 motivo,
                 esRepresentante: esRep,
-                acreditacion: esRep ? acreditacion!.trim() : null,
+                acreditacion: esRep && acreditacion ? acreditacion.trim() : null,
                 estado: "RECIBIDA",
                 plazoRespuestaEn,
                 documentos: {

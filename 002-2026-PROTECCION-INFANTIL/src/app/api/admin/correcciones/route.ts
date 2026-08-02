@@ -112,10 +112,21 @@ export async function POST(request: Request) {
             );
         }
 
-        const categoriaAnterior = reporte.clasificacion?.categoria || "OTRO";
+        // Invariante de BD: solo se corrige un reporte CON clasificación (la crea el
+        // motor en el procesamiento). Sin ella no hay nada que corregir (409 canónico,
+        // nunca un TypeError por acceso a null).
+        const clasificacion = reporte.clasificacion;
+        if (!clasificacion) {
+            return NextResponse.json(
+                { error: { message: "El reporte no tiene clasificación que corregir", code: ERROR_CODES.CONFLICT } },
+                { status: 409 }
+            );
+        }
+
+        const categoriaAnterior = clasificacion.categoria;
 
         const correccionExistente = await prisma.correccionAdmin.findUnique({
-            where: { clasificacionId: reporte.clasificacion!.id },
+            where: { clasificacionId: clasificacion.id },
         });
         if (correccionExistente) {
             return NextResponse.json(
@@ -127,7 +138,7 @@ export async function POST(request: Request) {
         // Guardar corrección usando Prisma ORM
         const correccion = await prisma.correccionAdmin.create({
             data: {
-                clasificacionId: reporte.clasificacion!.id,
+                clasificacionId: clasificacion.id,
                 categoriaOriginal: categoriaAnterior,
                 categoriaCorregida: categoriaCorregida,
                 adminId: user.id,

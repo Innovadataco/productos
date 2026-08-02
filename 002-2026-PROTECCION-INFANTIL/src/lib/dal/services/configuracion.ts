@@ -139,8 +139,13 @@ export class ConfiguracionService {
 
         let param;
         if (isNew) {
-            const tipo = body.tipo ?? defaults!.tipo;
-            const categoria = body.categoria ?? defaults!.categoria;
+            const tipo = body.tipo ?? defaults?.tipo;
+            const categoria = body.categoria ?? defaults?.categoria;
+            if (!tipo || !categoria) {
+                // Parámetro nuevo sin defaults y sin tipo/categoría en el body:
+                // antes podía terminar en TypeError (500); ahora es error canónico controlado.
+                throw new AppError("Parámetro no encontrado", ERROR_CODES.NOT_FOUND, 404);
+            }
             param = await this.parametros.crear({
                 clave,
                 valor: valorParaGuardar,
@@ -161,7 +166,7 @@ export class ConfiguracionService {
             recursoId: param.id,
             parametroId: param.id,
             usuarioId,
-            valorAnterior: isNew ? undefined : existing!.valor,
+            valorAnterior: isNew ? undefined : existing?.valor,
             valorNuevo: valorParaGuardar,
             metadatos: { motivo: body.motivo, esSecreto, nuevo: isNew },
         });

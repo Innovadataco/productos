@@ -190,13 +190,13 @@ export class IaEvalsService {
         let comparacion = null;
         if (run.estado === "COMPLETADA" && run.resultadoJson) {
             const anterior = await this.evalRuns.findAnteriorCompletada(run.fixtureVersion, run.id);
-            if (esObjetoConMetricsResumen(run.resultadoJson) && esObjetoConMetricsResumen(anterior?.resultadoJson)) {
+            if (anterior && esObjetoConMetricsResumen(run.resultadoJson) && esObjetoConMetricsResumen(anterior.resultadoJson)) {
                 comparacion = {
                     accuracyDelta: run.resultadoJson.metrics.accuracy - anterior.resultadoJson.metrics.accuracy,
                     errorSilenciosoDelta: run.resultadoJson.metrics.errorSilencioso - anterior.resultadoJson.metrics.errorSilencioso,
                     revisionManualRateDelta: run.resultadoJson.metrics.revisionManualRate - anterior.resultadoJson.metrics.revisionManualRate,
-                    anteriorId: anterior!.id,
-                    anteriorFinalizadoEn: anterior!.finalizadoEn,
+                    anteriorId: anterior.id,
+                    anteriorFinalizadoEn: anterior.finalizadoEn,
                 };
             }
         }

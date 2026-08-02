@@ -60,7 +60,16 @@ export async function POST(request: Request) {
             );
         }
 
-        const casos = parseo.casos!.map((c) => ({
+        if (!parseo.casos) {
+            // Invariante del parser: ok=true siempre trae casos. Si se rompe,
+            // 400 canónico controlado (nunca un TypeError por acceso a undefined).
+            return NextResponse.json(
+                { error: { message: "Error validando el archivo", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+
+        const casos = parseo.casos.map((c) => ({
             ...c.caso,
             categoriaEsperada: normalizarCategoriaEsperada(c.caso.categoriaEsperada),
         }));

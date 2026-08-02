@@ -81,8 +81,6 @@ export default function GestionPageClient() {
     const [editingIntegranteId, setEditingIntegranteId] = useState<string | null>(null);
     const [savingIntegrante, setSavingIntegrante] = useState(false);
 
-    const hayCuenta = Boolean(cuenta);
-
     const cargarIntegrantes = useCallback(async (comiteId: string) => {
         setLoadingIntegrantes(true);
         try {
@@ -396,7 +394,7 @@ export default function GestionPageClient() {
                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
                     Cargando cuenta del comité...
                 </div>
-            ) : !hayCuenta ? (
+            ) : !cuenta ? (
                 <GlassCard>
                     <h2 className="text-lg font-semibold text-body">Cuenta de acceso del comité</h2>
                     <p className="text-sm text-muted">
@@ -426,12 +424,12 @@ export default function GestionPageClient() {
             ) : (
                 <>
                     <CuentaComiteCard
-                        cuenta={cuenta!}
-                        onRegenerarPassword={() => regenerarPassword(cuenta!.id)}
-                        onReenviarEmail={() => reenviarEmail(cuenta!.id)}
-                        onActivar={() => reactivarCuenta(cuenta!.id)}
-                        onDesactivar={() => desactivarCuenta(cuenta!.id)}
-                        onActualizarNombre={(nombre) => actualizarNombreCuenta(cuenta!.id, nombre)}
+                        cuenta={cuenta}
+                        onRegenerarPassword={() => regenerarPassword(cuenta.id)}
+                        onReenviarEmail={() => reenviarEmail(cuenta.id)}
+                        onActivar={() => reactivarCuenta(cuenta.id)}
+                        onDesactivar={() => desactivarCuenta(cuenta.id)}
+                        onActualizarNombre={(nombre) => actualizarNombreCuenta(cuenta.id, nombre)}
                     />
 
                     <section className="space-y-4" aria-labelledby="comite-resumen-title">
