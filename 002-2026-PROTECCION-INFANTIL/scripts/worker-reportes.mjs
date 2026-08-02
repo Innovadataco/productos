@@ -24,6 +24,8 @@ import { prisma } from "../src/lib/prisma.ts";
 import { logAudit } from "../src/lib/audit.ts";
 import { notificarCambioCirculoSiCorresponde } from "../src/lib/dal/services/circulo-confianza.ts";
 import { notificarColegioSiCorresponde } from "../src/lib/colegio/alertas.ts";
+import { detectarYRegistrarMatch } from "../src/lib/dal/services/evento-match.ts";
+import { agregarPatronPorReporte } from "../src/lib/colegio/patrones.ts";
 import { boss, getWorkerParams, drainPending, ensureStarted } from "../src/lib/queue.ts";
 import { guardarReintento } from "../src/lib/reporte-reintentos.ts";
 
@@ -215,8 +217,21 @@ async function start() {
                     console.error(`[WORKER] Error notificando círculo reporte=${reporteId}:`, err.message);
                 });
 
-                notificarColegioSiCorresponde(reporteId).catch((err) => {
-                    console.error(`[WORKER] Error notificando colegio reporte=${reporteId}:`, err.message);
+                notificarColegioSiCorresponde(reporteId)
+                    .catch((err) => {
+                        console.error(`[WORKER] Error notificando colegio reporte=${reporteId}:`, err.message);
+                    })
+                    .finally(() => {
+                        // SPEC-142 (F6): la agregación de patrones usa las alertas como
+                        // marcador de idempotencia — corre DESPUÉS del hook de alertas.
+                        agregarPatronPorReporte(reporteId).catch((err) => {
+                            console.error(`[WORKER] Error agregando patrón institucional reporte=${reporteId}:`, err.message);
+                        });
+                    });
+
+                // SPEC-139 (F5): post-hook aditivo del match (fail-open, FR-005).
+                detectarYRegistrarMatch(reporteId).catch((err) => {
+                    console.error(`[WORKER] Error registrando match reporte=${reporteId}:`, err.message);
                 });
 
                 // Drenar reportes pendientes cuando baja la carga

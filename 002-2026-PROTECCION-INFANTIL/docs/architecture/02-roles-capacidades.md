@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 6 roles (5 autenticados + anónimo) × 190 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1140 combinaciones.
+Inventario: 6 roles (5 autenticados + anónimo) × 192 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1152 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -77,6 +77,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/export` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | permitir | permite | sí |
+| `/api/admin/matches` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
@@ -144,6 +145,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
@@ -272,6 +274,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/export` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | permitir | permite | sí |
+| `/api/admin/matches` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
@@ -339,6 +342,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
@@ -467,6 +471,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/export` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | permitir | permite | sí |
+| `/api/admin/matches` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
@@ -534,6 +539,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
@@ -662,6 +668,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/export` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/matches` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
@@ -729,6 +736,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | HTTP 403 | no permite | sí |
@@ -857,6 +865,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/export` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/matches` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
@@ -924,6 +933,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/estadisticas/pdf` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
@@ -1052,6 +1062,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/export` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/simulaciones/comparar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/matches` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
@@ -1119,6 +1130,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/estadisticas/pdf` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/identificadores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/identificadores/[id]/estado` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/patrones` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros/[clave]` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros/[clave]/revelar` | api | HTTP 401 | permite | **NO** |
@@ -1248,6 +1260,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/ia/simulaciones/[id]/export` | HTTP 401 | permite |
 | `/api/admin/ia/simulaciones/[id]/resultados` | HTTP 401 | permite |
 | `/api/admin/ia/simulaciones/comparar` | HTTP 401 | permite |
+| `/api/admin/matches` | HTTP 401 | permite |
 | `/api/admin/operadores` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]/reactivar` | HTTP 401 | permite |
@@ -1302,6 +1315,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/estadisticas/pdf` | HTTP 401 | permite |
 | `/api/colegio/identificadores/[id]` | HTTP 401 | permite |
 | `/api/colegio/identificadores/[id]/estado` | HTTP 401 | permite |
+| `/api/colegio/patrones` | HTTP 401 | permite |
 | `/api/config/parametros` | HTTP 401 | permite |
 | `/api/config/parametros/[clave]` | HTTP 401 | permite |
 | `/api/config/parametros/[clave]/revelar` | HTTP 401 | permite |

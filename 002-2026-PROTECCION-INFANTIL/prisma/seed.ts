@@ -1043,6 +1043,22 @@ async function main() {
     }
     console.log("Parámetros del módulo de reportes creados");
 
+    // SPEC-142 (F6): umbral de k-anonimato de la vista de patrones del colegio
+    // (ZEUS D-2: k=3 en TODOS los desgloses — grado, conducta y plataforma).
+    await prisma.parametroSistema.upsert({
+        where: { clave: "colegio.patrones.k_anonimato" },
+        update: {},
+        create: {
+            clave: "colegio.patrones.k_anonimato",
+            valor: "3",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SECURITY,
+            esPublico: false,
+            descripcion: "k-anonimato de la vista de patrones institucionales (celdas con conteo < k se suprimen en lectura)",
+        },
+    });
+    console.log("Parámetro de k-anonimato de patrones (F6) listo");
+
     // Plataformas para reportes (fase 2)
     const plataformas = [
         { clave: "whatsapp", nombre: "WhatsApp", categoria: "mensajeria" },

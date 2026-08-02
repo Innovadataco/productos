@@ -23,6 +23,7 @@ import { CiudadRepository } from "../repositories/ciudad";
 import { CorreccionAdminRepository } from "../repositories/correccion-admin";
 import { AuditLogRepository } from "../repositories/audit-log";
 import { UsuarioRepository } from "../repositories/usuario";
+import { EventoMatchRepository } from "../repositories/evento-match";
 
 const ACCIONES_CIERRE: AccionAudit[] = ["CASO_CONFIRMADO", "CASO_CORREGIDO", "CASO_DADO_DE_BAJA"];
 
@@ -85,6 +86,7 @@ export class EstadisticasService {
     private readonly correcciones: CorreccionAdminRepository;
     private readonly audit: AuditLogRepository;
     private readonly usuarios: UsuarioRepository;
+    private readonly matches: EventoMatchRepository;
 
     constructor(tx?: Prisma.TransactionClient) {
         this.stats = new EstadisticasRepository(tx);
@@ -94,6 +96,7 @@ export class EstadisticasService {
         this.correcciones = new CorreccionAdminRepository(tx);
         this.audit = new AuditLogRepository(tx);
         this.usuarios = new UsuarioRepository(tx);
+        this.matches = new EventoMatchRepository(tx);
     }
 
     /** GET /api/estadisticas-publicas — agregados públicos (sin score, I-29). */
@@ -168,6 +171,9 @@ export class EstadisticasService {
                 identificadoresUnicos,
                 reportesAutenticados,
                 reportesAnonimos,
+                // SPEC-139 (F5, ZEUS D-4): el público solo ve el CONTEO agregado
+                // de identificadores con match — nunca el detalle (§1.3).
+                identificadoresConMatch: await this.matches.contarIdentificadoresConMatch(),
                 // I-29 (SPEC-108): NUNCA scorePromedio en la API pública (D-10/§1.3/§1.5).
             },
             porPlataforma: porPlataforma.map((p) => ({

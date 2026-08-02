@@ -89,4 +89,11 @@ export class IdentificadorReportadoRepository {
     contarTodos(): Promise<number> {
         return this.db.identificadorReportado.count();
     }
+
+    /** SPEC-139 (F5): agregado por clave del match (identificador + plataforma). */
+    findPorClave(identificador: string, plataformaId: string) {
+        return this.db.identificadorReportado.findUnique({
+            where: { identificador_plataformaId: { identificador, plataformaId } },
+        });
+    }
 }

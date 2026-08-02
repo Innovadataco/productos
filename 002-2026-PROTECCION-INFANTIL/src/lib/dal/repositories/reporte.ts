@@ -458,4 +458,51 @@ export class ReporteRepository {
             select: { estado: true },
         });
     }
+
+    /** SPEC-139 (F5): reporte con clasificación y huella de fuente (detección del match). */
+    findParaMatch(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                estado: true,
+                eliminado: true,
+                identificador: true,
+                plataformaId: true,
+                ciudad: true,
+                usuarioId: true,
+                clasificacion: { select: { categoria: true } },
+                fuente: { select: { ipHash: true, fingerprintHash: true } },
+            },
+        });
+    }
+
+    /** SPEC-139 (F5): aprobados vigentes (D-08) del identificador, excluido el disparador. */
+    findAprobadosParaMatch(where: Prisma.ReporteWhereInput) {
+        return this.db.reporte.findMany({
+            where,
+            select: {
+                id: true,
+                ciudad: true,
+                usuarioId: true,
+                clasificacion: { select: { categoria: true } },
+                fuente: { select: { ipHash: true, fingerprintHash: true } },
+            },
+        });
+    }
+
+    /** SPEC-142 (F6): puerta D-08 y dimensiones del reporte (agregación de patrones). */
+    findParaPatron(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                estado: true,
+                eliminado: true,
+                plataformaId: true,
+                creadoEn: true,
+                clasificacion: { select: { categoria: true } },
+            },
+        });
+    }
 }
