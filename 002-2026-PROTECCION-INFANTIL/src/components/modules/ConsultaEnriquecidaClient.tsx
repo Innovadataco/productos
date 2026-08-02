@@ -11,6 +11,7 @@ import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
 import { formatPlataformasResumen } from "@/lib/plataforma";
 import { CATEGORIAS_LABELS } from "@/lib/labels";
+import { ConsultaVaciaBloque, type ConsultaVaciaBloqueData } from "./ConsultaVaciaBloque";
 
 const MapaUbicaciones = dynamic(
     () => import("./MapaUbicaciones").then((mod) => mod.MapaUbicaciones),
@@ -52,6 +53,8 @@ type DetalleResponse = {
     identificador: string;
     tieneReportes: boolean;
     mensaje?: string;
+    // F3 (N-5): contenido curado del estado vacío (parámetros, sin IA).
+    bloqueVacia?: ConsultaVaciaBloqueData;
     actividad?: "alta" | "baja";
     totalReportes?: number;
     reportesAutenticados?: number;
@@ -140,8 +143,11 @@ export function ConsultaEnriquecidaClient() {
             )}
 
             {data && !data.tieneReportes && (
-                <div className="rounded-xl glass p-6 text-center">
-                    <p className="text-body">{data.mensaje || "Sin reportes registrados para este identificador."}</p>
+                <div className="space-y-4">
+                    <div className="rounded-xl glass p-6 text-center">
+                        <p className="text-body">{data.mensaje || "Sin reportes registrados para este identificador."}</p>
+                    </div>
+                    {data.bloqueVacia && <ConsultaVaciaBloque bloque={data.bloqueVacia} identificador={data.identificador} />}
                 </div>
             )}
 

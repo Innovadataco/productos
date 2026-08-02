@@ -19,14 +19,60 @@ import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categori
 import type { EstadoReporte } from "@prisma/client";
 import { ReporteRepository } from "../repositories/reporte";
 import { ParametroRepository } from "../repositories/parametro";
+import { logAudit } from "@/lib/audit";
 import type {
     ConsultaDetalleDto,
     ConsultaPlataformaDto,
     ConsultaResumenDto,
     ConsultaUbicacionDetalleDto,
+    ConsultaVaciaBloqueDto,
 } from "../types/consulta";
 
 const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO"] as EstadoReporte[];
+
+/**
+ * F3 (N-5): contexto de la request para el evento analítico de consulta vacía.
+ * Opcional para conservar compatibilidad con los llamadores/tests existentes.
+ */
+export interface ContextoConsulta {
+    ipAddress?: string | undefined;
+    userAgent?: string | undefined;
+}
+
+/**
+ * F3: tipo de identificador derivado SOLO del formato (privacidad: el valor
+ * consultado NUNCA se persiste en el evento analítico).
+ */
+function tipoIdentificadorDesdeFormato(identificador: string): "telefono" | "nick" | "otro" {
+    const valor = identificador.trim();
+    if (valor.startsWith("@")) return "nick";
+    if (/^\+?\d+$/.test(valor)) return "telefono";
+    return "otro";
+}
+
+/** Parsea un parámetro JSON de texto plano (string). Null si falta o es inválido. */
+function parseParamTexto(valor: string | null | undefined): string | null {
+    if (!valor) return null;
+    try {
+        const parsed: unknown = JSON.parse(valor);
+        return typeof parsed === "string" && parsed.trim() ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+/** Parsea un parámetro JSON de lista de textos (string[]). Null si falta o es inválido. */
+function parseParamListaTexto(valor: string | null | undefined): string[] | null {
+    if (!valor) return null;
+    try {
+        const parsed: unknown = JSON.parse(valor);
+        if (!Array.isArray(parsed)) return null;
+        const lista = parsed.filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+        return lista.length > 0 ? lista : null;
+    } catch {
+        return null;
+    }
+}
 
 const CATEGORIA_LABELS: Record<string, string> = {
     CONTACTO_INSISTENTE: "Contacto insistente",
@@ -75,10 +121,45 @@ export class ConsultaPublicaService {
     }
 
     /**
+     * F3 (N-5): lee el contenido curado del estado vacío desde parámetros.
+     * Omite las claves cuyo parámetro falte o sea inválido; undefined si no hay ninguna.
+     */
+    private async obtenerBloqueVacia(): Promise<ConsultaVaciaBloqueDto | undefined> {
+        const [paramDisclaimer, paramSenales, paramAcciones] = await Promise.all([
+            this.parametros.findByClave("consulta.vacia.disclaimer"),
+            this.parametros.findByClave("consulta.vacia.senales"),
+            this.parametros.findByClave("consulta.vacia.acciones"),
+        ]);
+        const disclaimer = parseParamTexto(paramDisclaimer?.valor);
+        const senales = parseParamListaTexto(paramSenales?.valor);
+        const acciones = parseParamListaTexto(paramAcciones?.valor);
+
+        const bloque: ConsultaVaciaBloqueDto = {};
+        if (disclaimer) bloque.disclaimer = disclaimer;
+        if (senales) bloque.senales = senales;
+        if (acciones) bloque.acciones = acciones;
+        return Object.keys(bloque).length > 0 ? bloque : undefined;
+    }
+
+    /**
+     * F3 (N-5): evento analítico de consulta sin resultados. Privacidad: los
+     * metadatos llevan SOLO el tipo derivado del formato, nunca el identificador.
+     */
+    private async registrarConsultaSinResultados(identificador: string, contexto?: ContextoConsulta): Promise<void> {
+        await logAudit({
+            accion: "CONSULTA_SIN_RESULTADOS",
+            tipoRecurso: "consulta_publica",
+            metadatos: { tipoIdentificador: tipoIdentificadorDesdeFormato(identificador) },
+            ipAddress: contexto?.ipAddress,
+            userAgent: contexto?.userAgent,
+        });
+    }
+
+    /**
      * GET/POST /api/consulta — resumen público con divulgación progresiva:
      * anónimo = resumen; autenticado = ciudad, timeline, plataformas completas.
      */
-    async resumen(identificador: string, autenticado: boolean): Promise<ConsultaResumenDto> {
+    async resumen(identificador: string, autenticado: boolean, contexto?: ContextoConsulta): Promise<ConsultaResumenDto> {
         // Parámetros de visibilidad (listado del dashboard; la consulta directa
         // siempre muestra detalle — spec 089-US5).
         const paramUmbral = await this.parametros.findByClave("visibility.report_threshold");
@@ -93,10 +174,13 @@ export class ConsultaPublicaService {
         );
 
         if (reportes.length === 0) {
+            await this.registrarConsultaSinResultados(identificador, contexto);
+            const bloqueVacia = await this.obtenerBloqueVacia();
             return {
                 identificador,
                 tieneReportes: false,
                 mensaje: "Sin reportes registrados para este identificador.",
+                ...(bloqueVacia ? { bloqueVacia } : {}),
             };
         }
 
@@ -206,16 +290,19 @@ export class ConsultaPublicaService {
      * GET/POST /api/consulta/detalle — detalle autenticado con riesgo descriptivo
      * (módulo `src/lib/riesgo-consulta.ts`) y mapeo a DTOs de dominio.
      */
-    async detalle(identificador: string): Promise<ConsultaDetalleDto> {
+    async detalle(identificador: string, contexto?: ContextoConsulta): Promise<ConsultaDetalleDto> {
         const reportes = await this.reportes.findVisiblesPorIdentificador(
             whereReporteEnEstados(ESTADOS_VISIBLES, { identificador })
         );
 
         if (reportes.length === 0) {
+            await this.registrarConsultaSinResultados(identificador, contexto);
+            const bloqueVacia = await this.obtenerBloqueVacia();
             return {
                 identificador,
                 tieneReportes: false,
                 mensaje: "Sin reportes registrados para este identificador.",
+                ...(bloqueVacia ? { bloqueVacia } : {}),
             };
         }
 

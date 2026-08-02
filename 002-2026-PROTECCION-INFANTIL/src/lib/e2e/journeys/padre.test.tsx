@@ -284,6 +284,20 @@ describe(`SPEC-114 · padre (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         const plataforma = (await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } }))!;
         const motivo = "Soy el titular de esta línea y los reportes registrados no corresponden.";
 
+        // N-3 (002-PI-056): apelar exige reportes asociados al identificador — se siembra uno.
+        await prisma.reporte.create({
+            data: {
+                identificador: datos.identificadorComun,
+                plataformaId: plataforma.id,
+                texto: "Reporte de la comunidad que habilita la apelación del titular.",
+                fechaIncidente: new Date("2026-07-05T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                estado: "CLASIFICADO",
+            },
+        });
+
         jar.set("token", { name: "token", value: sesion.token });
         const { POST: apelacionesPOST } = await import("@/app/api/apelaciones/route");
         const res = await apelacionesPOST(

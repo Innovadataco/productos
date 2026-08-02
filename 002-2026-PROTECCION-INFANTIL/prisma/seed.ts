@@ -1034,6 +1034,42 @@ async function main() {
     }
     console.log("Parámetros del expediente del reporte (spec 096) listos");
 
+    // F3 (N-5): contenido curado del estado vacío de la consulta pública.
+    // 100% estático (NADA de IA), revisable por legal, editable sin desplegar.
+    // Presunción de inocencia: lenguaje descriptivo, nunca "es seguro/peligroso".
+    const SENALES_ALERTA_VACIA = [
+        "Pide mantener la conversación en secreto",
+        "Solicita fotos o videos íntimos",
+        "Ofrece regalos, dinero o recargas a cambio de algo",
+        "Propone encontrarse a solas",
+        "Dice ser menor de edad pero no lo parece",
+    ];
+    const ACCIONES_VACIA = [
+        "Habla con el menor sin juzgar: escucha y cree en lo que cuenta",
+        "Guarda la evidencia: capturas de pantalla, nombres de usuario, fechas y horas",
+        "Contacta los canales oficiales: Línea 141 del ICBF, CAI Virtual de la Policía o Te Protejo",
+    ];
+    const consultaVaciaParams = [
+        { clave: "consulta.vacia.disclaimer", valor: JSON.stringify("Que este identificador no tenga reportes registrados no significa que sea seguro. Esta plataforma solo muestra lo que la comunidad ha reportado; la ausencia de reportes no es una garantía."), descripcion: "Aviso del estado vacío de la consulta pública (F3): ausencia de reportes ≠ seguridad" },
+        { clave: "consulta.vacia.senales", valor: JSON.stringify(SENALES_ALERTA_VACIA), descripcion: "Señales de alerta curadas del estado vacío de la consulta pública (F3)" },
+        { clave: "consulta.vacia.acciones", valor: JSON.stringify(ACCIONES_VACIA), descripcion: "Acciones recomendadas curadas del estado vacío de la consulta pública (F3)" },
+    ];
+    for (const cv of consultaVaciaParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: cv.clave },
+            update: {},
+            create: {
+                clave: cv.clave,
+                valor: cv.valor,
+                tipo: TipoParametro.JSON,
+                categoria: CategoriaParametro.SYSTEM,
+                esPublico: false,
+                descripcion: cv.descripcion,
+            },
+        });
+    }
+    console.log("Parámetros del estado vacío de la consulta pública (F3) listos");
+
     for (const p of reportesParams) {
         await prisma.parametroSistema.upsert({
             where: { clave: p.clave },

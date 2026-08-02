@@ -14,15 +14,19 @@ import type { MisApelacionesDto, ResultadoPreparacionRadicacion } from "../types
 export class ApelacionService {
     private readonly apelaciones: ApelacionRepository;
     private readonly plataformas: PlataformaRepository;
+    private readonly tx: Prisma.TransactionClient | undefined;
 
     constructor(tx?: Prisma.TransactionClient) {
         this.apelaciones = new ApelacionRepository(tx);
         this.plataformas = new PlataformaRepository(tx);
+        this.tx = tx;
     }
 
     /**
-     * Validaciones previas a persistir la evidencia: plataforma válida y sin
-     * apelación abierta del mismo usuario para el identificador.
+     * Validaciones previas a persistir la evidencia: plataforma válida, sin
+     * apelación abierta del mismo usuario para el identificador, y (N-3,
+     * 002-PI-056) el identificador tiene reportes asociados — sin reportes no
+     * hay nada que disputar y la apelación sería spam.
      */
     async prepararRadicacion(input: {
         usuarioId: string;
@@ -32,6 +36,11 @@ export class ApelacionService {
         const plataforma = await this.plataformas.findById(input.plataformaId);
         if (!plataforma) {
             return { ok: false, tipo: "plataforma_invalida" };
+        }
+
+        const reportes = await contarReportesAsociados(input.identificador, input.plataformaId, this.tx);
+        if (reportes === 0) {
+            return { ok: false, tipo: "sin_reportes" };
         }
 
         const abiertaExistente = await this.apelaciones.findAbierta(input.usuarioId, input.identificador, input.plataformaId);
