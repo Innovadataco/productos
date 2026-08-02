@@ -53,8 +53,12 @@ async function resolverConsulta(request: Request, identificador: string) {
         const autenticado = !!payload;
 
         // SPEC-053: la agregación y las reglas de visibilidad viven en el DAL;
-        // la ruta no toca prisma.
-        const respuesta = await new ConsultaPublicaService().resumen(parsed.data.identificador, autenticado);
+        // la ruta no toca prisma. F3: el contexto alimenta el evento analítico
+        // de consulta vacía (IP hasheada por logAudit, nunca el identificador).
+        const respuesta = await new ConsultaPublicaService().resumen(parsed.data.identificador, autenticado, {
+            ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || undefined,
+            userAgent: request.headers.get("user-agent") || undefined,
+        });
 
         return NextResponse.json(respuesta);
     } catch {

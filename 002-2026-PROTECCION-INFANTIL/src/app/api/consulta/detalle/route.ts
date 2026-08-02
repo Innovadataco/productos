@@ -44,8 +44,12 @@ async function resolverDetalle(request: Request, identificador: string) {
         }
 
         // SPEC-053: la agregación, la visibilidad y el mapeo a DTOs viven en el DAL;
-        // la ruta no toca prisma.
-        const respuesta = await new ConsultaPublicaService().detalle(parsed.data.identificador);
+        // la ruta no toca prisma. F3: el contexto alimenta el evento analítico
+        // de consulta vacía (IP hasheada por logAudit, nunca el identificador).
+        const respuesta = await new ConsultaPublicaService().detalle(parsed.data.identificador, {
+            ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || undefined,
+            userAgent: request.headers.get("user-agent") || undefined,
+        });
 
         return NextResponse.json(respuesta);
     } catch (error) {
