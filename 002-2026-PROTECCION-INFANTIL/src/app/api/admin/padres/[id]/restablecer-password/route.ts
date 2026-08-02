@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -9,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { enviarEmailCredencialesPadre } from "@/lib/email";
 import { withValidation } from "@/lib/validation";
 import { padreIdParamsSchema } from "@/lib/schemas";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { randomBytes } from "crypto";
 
 function getClientInfo(request: Request) {
@@ -36,10 +36,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
         const { id } = withValidation.params(padreIdParamsSchema)(await params);
-        const padre = await prisma.usuario.findFirst({
-            where: { id, rol: "PARENT" },
-            select: { id: true, email: true, nombre: true, estado: true, debeCambiarPassword: true },
-        });
+        // E-8: la lectura/escritura vive en el repo; la ruta no toca prisma.
+        const padre = await new UsuarioRepository().findPadreById(id);
         if (!padre) {
             return NextResponse.json(
                 { error: { message: "Cuenta de padre no encontrada", code: ERROR_CODES.NOT_FOUND } },
@@ -52,10 +50,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const password = randomBytes(6).toString("hex");
         const passwordHash = await hashPassword(password);
 
-        await prisma.usuario.update({
-            where: { id },
-            data: { passwordHash, debeCambiarPassword: true },
-        });
+        await new UsuarioRepository().actualizar(id, { passwordHash, debeCambiarPassword: true });
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({

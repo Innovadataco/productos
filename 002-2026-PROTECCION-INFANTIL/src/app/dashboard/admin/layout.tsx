@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { AdminNav } from "@/components/modules/AdminNav";
 import { AdminVersionBadge } from "@/components/modules/AdminVersionBadge";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
@@ -26,10 +26,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // Enforcement central: cualquier rol interno con contraseña temporal debe
     // cambiarla antes de usar el panel (igual que SCHOOL_ADMIN en su layout).
     if (payload?.sub) {
-        const usuario = await prisma.usuario.findUnique({
-            where: { id: payload.sub as string },
-            select: { debeCambiarPassword: true },
-        });
+        // E-8: la consulta vive en el repo; el componente no toca prisma.
+        const usuario = await new UsuarioRepository().findDebeCambiarPassword(payload.sub as string);
         if (usuario?.debeCambiarPassword) {
             redirect("/cambiar-password");
         }

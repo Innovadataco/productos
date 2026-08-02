@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -7,6 +6,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { withValidation } from "@/lib/validation";
 import { padreIdParamsSchema } from "@/lib/schemas";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 
 function getClientInfo(request: Request) {
     return {
@@ -15,11 +15,9 @@ function getClientInfo(request: Request) {
     };
 }
 
+// E-8: la lectura vive en el repo; la ruta no toca prisma.
 async function getPadre(id: string) {
-    return prisma.usuario.findFirst({
-        where: { id, rol: "PARENT" },
-        select: { id: true, email: true, nombre: true, estado: true, debeCambiarPassword: true },
-    });
+    return new UsuarioRepository().findPadreById(id);
 }
 
 /**
@@ -50,7 +48,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             return NextResponse.json({ padre });
         }
 
-        await prisma.usuario.update({ where: { id }, data: { estado: "inactivo" } });
+        await new UsuarioRepository().actualizar(id, { estado: "inactivo" });
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
             accion: "USER_UPDATE",

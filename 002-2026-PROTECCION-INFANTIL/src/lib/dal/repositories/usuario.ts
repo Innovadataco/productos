@@ -120,4 +120,82 @@ export class UsuarioRepository {
             data: { ultimaNotificacionColegioEn: fecha },
         });
     }
+
+    /** E-8: listado admin de cuentas PARENT (soporte de credenciales): items + total. */
+    findPadresPaginados(
+        where: Prisma.UsuarioWhereInput,
+        paginacion: { skip: number; take: number }
+    ) {
+        const select = {
+            id: true,
+            email: true,
+            nombre: true,
+            estado: true,
+            debeCambiarPassword: true,
+            creadoEn: true,
+            ultimaSesion: true,
+            // SPEC-119: ventana de servicio del cliente padre.
+            inicioServicio: true,
+            finServicio: true,
+        } satisfies Prisma.UsuarioSelect;
+        return Promise.all([
+            this.db.usuario.findMany({
+                where,
+                orderBy: { creadoEn: "desc" },
+                skip: paginacion.skip,
+                take: paginacion.take,
+                select,
+            }),
+            this.db.usuario.count({ where }),
+        ]);
+    }
+
+    /** E-8: cuenta PARENT para gestión admin (desactivar/reactivar/restablecer). */
+    findPadreById(id: string) {
+        return this.db.usuario.findFirst({
+            where: { id, rol: "PARENT" },
+            select: { id: true, email: true, nombre: true, estado: true, debeCambiarPassword: true },
+        });
+    }
+
+    /** E-8: ventana de servicio de una cuenta PARENT (gestión de vigencia, SPEC-119). */
+    findPadreVigencia(id: string) {
+        return this.db.usuario.findFirst({
+            where: { id, rol: "PARENT" },
+            select: { id: true, email: true, inicioServicio: true, finServicio: true },
+        });
+    }
+
+    /** E-8: fija/limpia la ventana de servicio y devuelve la cuenta actualizada. */
+    actualizarVigenciaServicio(id: string, data: { inicioServicio: Date | null; finServicio: Date | null }) {
+        return this.db.usuario.update({
+            where: { id },
+            data,
+            select: { id: true, email: true, inicioServicio: true, finServicio: true },
+        });
+    }
+
+    /** E-8: flag de contraseña temporal (layout admin — enforcement central). */
+    findDebeCambiarPassword(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            select: { debeCambiarPassword: true },
+        });
+    }
+
+    /** E-8: sesión del panel colegio (layout colegio: rol/estado/colegio/flag password). */
+    findSesionColegio(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            select: { id: true, rol: true, colegioId: true, estado: true, debeCambiarPassword: true },
+        });
+    }
+
+    /** E-8: usuario con su colegio y ubicación completa (home del panel colegio). */
+    findConColegioYUbicacion(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            include: { colegio: { include: { pais: true, departamento: true, ciudad: true } } },
+        });
+    }
 }

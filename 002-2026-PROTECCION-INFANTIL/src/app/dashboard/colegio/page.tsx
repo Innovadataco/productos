@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { redirect } from "next/navigation";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { verificarAccesoPagina } from "@/lib/permisos-modulos";
@@ -24,10 +24,8 @@ export default async function ColegioDashboardPage() {
     const payload = await verifyToken(token);
     if (!payload?.sub || payload.rol !== "SCHOOL_ADMIN") redirect("/login");
 
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: payload.sub as string },
-        include: { colegio: { include: { pais: true, departamento: true, ciudad: true } } },
-    });
+    // E-8: la consulta vive en el repo; el componente no toca prisma.
+    const usuario = await new UsuarioRepository().findConColegioYUbicacion(payload.sub as string);
 
     if (!usuario?.colegio) redirect("/login");
 

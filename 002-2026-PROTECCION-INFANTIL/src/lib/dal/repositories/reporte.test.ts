@@ -32,7 +32,7 @@ async function crearReporteDePrueba(
             numeroSeguimiento: `RPT-${TAG}-${correlativo}`,
             estado,
             prioridadAlta: opciones.prioridadAlta ?? false,
-            operadorId: opciones.operadorId,
+            operadorId: opciones.operadorId ?? null,
         },
     });
     if (opciones.conClasificacion) {
@@ -155,5 +155,20 @@ describe("ReporteRepository (E-8 LOTE 2: bandeja admin)", () => {
         expect(rows[0].clasificacion).toMatchObject({ categoria: "SPAM", confianza: 0.9 });
         expect(rows[0].plataforma).toMatchObject({ clave: "whatsapp" });
         expect(typeof rows[0].texto).toBe("string");
+    });
+
+    it("contarPorUsuarios: conteo agregado por autor, solo de los ids pedidos", async () => {
+        const repo = new ReporteRepository();
+        const a = await crearReporteDePrueba("CLASIFICADO");
+        const b = await crearReporteDePrueba("CLASIFICADO");
+        const autorA = a.usuarioId!;
+        await prisma.reporte.update({ where: { id: b.id }, data: { usuarioId: autorA } });
+        const otro = await crearReporteDePrueba("CLASIFICADO");
+
+        const conteos = await repo.contarPorUsuarios({ usuarioId: { in: [autorA] } });
+        expect(conteos).toHaveLength(1);
+        expect(conteos[0]).toMatchObject({ usuarioId: autorA });
+        expect(conteos[0]._count._all).toBe(2);
+        expect(otro.usuarioId).not.toBe(autorA);
     });
 });

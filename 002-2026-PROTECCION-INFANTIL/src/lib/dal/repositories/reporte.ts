@@ -359,6 +359,15 @@ export class ReporteRepository {
         });
     }
 
+    /** E-8: conteo agregado de reportes por autor (listado admin de padres; sin contenido). */
+    contarPorUsuarios(where: Prisma.ReporteWhereInput) {
+        return this.db.reporte.groupBy({
+            by: ["usuarioId"],
+            where,
+            _count: { _all: true },
+        });
+    }
+
     /** Tabla operativa de clasificación (admin): items + total con el select exacto. */
     findTablaClasificacion(where: Prisma.ReporteWhereInput, paginacion: { skip: number; take: number }) {
         return Promise.all([

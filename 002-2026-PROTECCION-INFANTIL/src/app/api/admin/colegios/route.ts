@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -11,6 +10,12 @@ import { enviarEmailBienvenidaColegio } from "@/lib/email";
 import { withValidation } from "@/lib/validation";
 import { colegioBodySchema } from "@/lib/schemas";
 import { calcularFinServicio, esRangoServicioValido } from "@/lib/colegio/periodo";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { ColegioRepository } from "@/lib/dal/repositories/colegio";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { PaisRepository } from "@/lib/dal/repositories/pais";
+import { CiudadRepository } from "@/lib/dal/repositories/ciudad";
+import { DepartamentoRepository } from "@/lib/dal/repositories/departamento";
 import { randomBytes } from "crypto";
 
 function tempPassword() {
@@ -29,9 +34,10 @@ async function validarUbicacion(data: {
     departamentoId?: string | undefined;
     ciudadId: string;
 }) {
+    // E-8: las lecturas del catálogo viven en los repos; la ruta no toca prisma.
     const [pais, ciudad] = await Promise.all([
-        prisma.pais.findUnique({ where: { id: data.paisId } }),
-        prisma.ciudad.findUnique({ where: { id: data.ciudadId } }),
+        new PaisRepository().findById(data.paisId),
+        new CiudadRepository().findById(data.ciudadId),
     ]);
 
     if (!pais) throw new AppError("País no encontrado", ERROR_CODES.NOT_FOUND, 404);
@@ -41,9 +47,7 @@ async function validarUbicacion(data: {
     }
 
     if (data.departamentoId) {
-        const departamento = await prisma.departamento.findUnique({
-            where: { id: data.departamentoId },
-        });
+        const departamento = await new DepartamentoRepository().findById(data.departamentoId);
         if (!departamento) throw new AppError("Departamento no encontrado", ERROR_CODES.NOT_FOUND, 404);
         if (departamento.paisId !== data.paisId) {
             throw new AppError("El departamento no pertenece al país seleccionado", ERROR_CODES.VALIDATION_ERROR, 400);
@@ -66,17 +70,7 @@ export async function GET(request: Request) {
             );
         }
 
-        const colegios = await prisma.colegio.findMany({
-            where: { estado: { not: "eliminado" } },
-            include: {
-                pais: { select: { id: true, nombre: true } },
-                departamento: { select: { id: true, nombre: true } },
-                ciudad: { select: { id: true, nombre: true } },
-                admin: { select: { id: true, email: true, nombre: true, estado: true } },
-                tenant: { select: { id: true, nombre: true } },
-            },
-            orderBy: { creadoEn: "desc" },
-        });
+        const colegios = await new ColegioRepository().listarAdminGlobal();
 
         return NextResponse.json({ colegios });
     } catch (error) {
@@ -128,7 +122,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const existingUser = await prisma.usuario.findUnique({ where: { email: adminEmail.toLowerCase() } });
+        const existingUser = await new UsuarioRepository().findByEmail(adminEmail.toLowerCase());
         if (existingUser) {
             return NextResponse.json(
                 { error: { message: "Ya existe un usuario con el email del administrador institucional", code: ERROR_CODES.CONFLICT } },
@@ -140,42 +134,37 @@ export async function POST(request: Request) {
         const passwordHash = await hashPassword(password);
         const { ipAddress, userAgent } = getClientInfo(request);
 
-        const colegio = await prisma.$transaction(async (tx) => {
-            const tenant = await tx.tenant.create({
-                data: { nombre: `Colegio: ${nombre}`, estado: "activo" },
+        // E-8: las escrituras viven en los repos dentro de la unidad de trabajo.
+        const colegio = await withUnitOfWork(async (tx) => {
+            const tenant = await new ColegioRepository(tx).crearTenantParaColegio(nombre);
+
+            const creado = await new ColegioRepository(tx).crear({
+                nombre,
+                paisId,
+                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                ...(departamentoId !== undefined ? { departamentoId } : {}),
+                ciudadId,
+                ...(direccion !== undefined ? { direccion } : {}),
+                representanteLegalNombre,
+                representanteLegalIdentificacion,
+                representanteLegalEmail,
+                ...(representanteLegalTelefono !== undefined ? { representanteLegalTelefono } : {}),
+                inicioServicio: inicio,
+                finServicio: fin,
+                tipoPeriodo,
+                estado: "activo",
+                tenantId: tenant.id,
             });
 
-            const creado = await tx.colegio.create({
-                data: {
-                    nombre,
-                    paisId,
-                    // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
-                    ...(departamentoId !== undefined ? { departamentoId } : {}),
-                    ciudadId,
-                    ...(direccion !== undefined ? { direccion } : {}),
-                    representanteLegalNombre,
-                    representanteLegalIdentificacion,
-                    representanteLegalEmail,
-                    ...(representanteLegalTelefono !== undefined ? { representanteLegalTelefono } : {}),
-                    inicioServicio: inicio,
-                    finServicio: fin,
-                    tipoPeriodo,
-                    estado: "activo",
-                    tenantId: tenant.id,
-                },
-            });
-
-            const schoolAdmin = await tx.usuario.create({
-                data: {
-                    email: adminEmail.toLowerCase(),
-                    nombre: adminNombre,
-                    passwordHash,
-                    rol: "SCHOOL_ADMIN",
-                    estado: "activo",
-                    debeCambiarPassword: true,
-                    tenantId: tenant.id,
-                    colegioId: creado.id,
-                },
+            const schoolAdmin = await new UsuarioRepository(tx).crear({
+                email: adminEmail.toLowerCase(),
+                nombre: adminNombre,
+                passwordHash,
+                rol: "SCHOOL_ADMIN",
+                estado: "activo",
+                debeCambiarPassword: true,
+                tenantId: tenant.id,
+                colegioId: creado.id,
             });
 
             return { ...creado, admin: schoolAdmin, tenant };
