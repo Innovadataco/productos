@@ -274,54 +274,54 @@ export default function AdminOperadoresGestionPage() {
                 <GlassCard>
                     <h2 id="operadores-nuevo-title" className="text-lg font-semibold text-body">Nuevo operador</h2>
                     <p className="text-sm text-muted">Se genera una contraseña temporal y se envía por email.</p>
-                <form onSubmit={crear} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <Input
-                        label="Email"
-                        type="email"
-                        required
-                        value={form.email}
-                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    />
-                    <Input
-                        label="Nombre"
-                        required
-                        value={form.nombre}
-                        onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                    />
-                    <Input
-                        label="Cupo máximo"
-                        type="number"
-                        min={1}
-                        max={200}
-                        required
-                        value={form.cupoMaximo}
-                        onChange={(e) => setForm((f) => ({ ...f, cupoMaximo: e.target.value }))}
-                    />
-                    <div className="flex items-end gap-3">
-                        <label className="flex items-center gap-2 text-sm text-body">
-                            <input
-                                type="checkbox"
-                                checked={form.esRevisorDeApelaciones}
-                                onChange={(e) => setForm((f) => ({ ...f, esRevisorDeApelaciones: e.target.checked }))}
-                                className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
-                            />
-                            Revisor de apelaciones
-                        </label>
-                    </div>
-                    <div className="sm:col-span-2 lg:col-span-3">
+                    <form onSubmit={crear} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <Input
-                            label="Notas internas"
-                            value={form.notasInternas}
-                            onChange={(e) => setForm((f) => ({ ...f, notasInternas: e.target.value }))}
+                            label="Email"
+                            type="email"
+                            required
+                            value={form.email}
+                            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                         />
-                    </div>
-                    <div className="flex items-end">
-                        <Button type="submit" isLoading={saving} className="w-full">
+                        <Input
+                            label="Nombre"
+                            required
+                            value={form.nombre}
+                            onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+                        />
+                        <Input
+                            label="Cupo máximo"
+                            type="number"
+                            min={1}
+                            max={200}
+                            required
+                            value={form.cupoMaximo}
+                            onChange={(e) => setForm((f) => ({ ...f, cupoMaximo: e.target.value }))}
+                        />
+                        <div className="flex items-end gap-3">
+                            <label className="flex items-center gap-2 text-sm text-body">
+                                <input
+                                    type="checkbox"
+                                    checked={form.esRevisorDeApelaciones}
+                                    onChange={(e) => setForm((f) => ({ ...f, esRevisorDeApelaciones: e.target.checked }))}
+                                    className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                                />
+                            Revisor de apelaciones
+                            </label>
+                        </div>
+                        <div className="sm:col-span-2 lg:col-span-3">
+                            <Input
+                                label="Notas internas"
+                                value={form.notasInternas}
+                                onChange={(e) => setForm((f) => ({ ...f, notasInternas: e.target.value }))}
+                            />
+                        </div>
+                        <div className="flex items-end">
+                            <Button type="submit" isLoading={saving} className="w-full">
                             Crear operador
-                        </Button>
-                    </div>
-                </form>
-            </GlassCard>
+                            </Button>
+                        </div>
+                    </form>
+                </GlassCard>
             </section>
 
             <section className="space-y-4" aria-labelledby="operadores-listado-title">
@@ -335,62 +335,62 @@ export default function AdminOperadoresGestionPage() {
                             description="Crea el primer operador para que pueda atender la cola de revisión manual."
                         />
                     ) : (
-                    <div className="mt-4">
-                        <Tabla sinContenedor>
-                            <TablaHead variante="borde">
-                                <tr className="text-subtle">
-                                    <th className="pb-3 font-medium">Nombre</th>
-                                    <th className="pb-3 font-medium">Email</th>
-                                    <th className="pb-3 font-medium">Estado</th>
-                                    <th className="pb-3 font-medium">Cupo</th>
-                                    <th className="pb-3 font-medium">Casos</th>
-                                    <th className="pb-3 font-medium">Apelaciones</th>
-                                    <th className="pb-3 font-medium">Notas</th>
-                                    <th className="pb-3 font-medium text-right">Acciones</th>
-                                </tr>
-                            </TablaHead>
-                            <TablaBody>
-                                {operadores.map((op) => (
-                                    <tr key={op.id} className="align-top">
-                                        {editingId === op.id ? (
-                                            <EditableRow
-                                                op={op}
-                                                values={editValues}
-                                                setValues={setEditValues}
-                                                onSave={() => guardarEdicion(op.id)}
-                                                onCancel={() => {
-                                                    setEditingId(null);
-                                                    setEditValues({});
-                                                }}
-                                                saving={saving}
-                                            />
-                                        ) : (
-                                            <ReadOnlyRow
-                                                op={op}
-                                                onEdit={() => {
-                                                    setEditingId(op.id);
-                                                    setEditValues({
-                                                        nombre: op.nombre || "",
-                                                        estado: op.estado,
-                                                        cupoMaximo: op.perfil?.cupoMaximo ?? 10,
-                                                        esRevisorDeApelaciones: op.perfil?.esRevisorDeApelaciones ?? false,
-                                                        notasInternas: op.perfil?.notasInternas || "",
-                                                    });
-                                                }}
-                                                onToggle={() =>
-                                                    op.estado === "activo" ? desactivar(op.id) : reactivar(op.id)
-                                                }
-                                                onRegenerarPassword={() => regenerarPassword(op.id)}
-                                                onReenviarEmail={() => reenviarEmail(op.id)}
-                                            />
-                                        )}
+                        <div className="mt-4">
+                            <Tabla sinContenedor>
+                                <TablaHead variante="borde">
+                                    <tr className="text-subtle">
+                                        <th className="pb-3 font-medium">Nombre</th>
+                                        <th className="pb-3 font-medium">Email</th>
+                                        <th className="pb-3 font-medium">Estado</th>
+                                        <th className="pb-3 font-medium">Cupo</th>
+                                        <th className="pb-3 font-medium">Casos</th>
+                                        <th className="pb-3 font-medium">Apelaciones</th>
+                                        <th className="pb-3 font-medium">Notas</th>
+                                        <th className="pb-3 font-medium text-right">Acciones</th>
                                     </tr>
-                                ))}
-                            </TablaBody>
-                        </Tabla>
-                    </div>
-                )}
-            </GlassCard>
+                                </TablaHead>
+                                <TablaBody>
+                                    {operadores.map((op) => (
+                                        <tr key={op.id} className="align-top">
+                                            {editingId === op.id ? (
+                                                <EditableRow
+                                                    op={op}
+                                                    values={editValues}
+                                                    setValues={setEditValues}
+                                                    onSave={() => guardarEdicion(op.id)}
+                                                    onCancel={() => {
+                                                        setEditingId(null);
+                                                        setEditValues({});
+                                                    }}
+                                                    saving={saving}
+                                                />
+                                            ) : (
+                                                <ReadOnlyRow
+                                                    op={op}
+                                                    onEdit={() => {
+                                                        setEditingId(op.id);
+                                                        setEditValues({
+                                                            nombre: op.nombre || "",
+                                                            estado: op.estado,
+                                                            cupoMaximo: op.perfil?.cupoMaximo ?? 10,
+                                                            esRevisorDeApelaciones: op.perfil?.esRevisorDeApelaciones ?? false,
+                                                            notasInternas: op.perfil?.notasInternas || "",
+                                                        });
+                                                    }}
+                                                    onToggle={() =>
+                                                        op.estado === "activo" ? desactivar(op.id) : reactivar(op.id)
+                                                    }
+                                                    onRegenerarPassword={() => regenerarPassword(op.id)}
+                                                    onReenviarEmail={() => reenviarEmail(op.id)}
+                                                />
+                                            )}
+                                        </tr>
+                                    ))}
+                                </TablaBody>
+                            </Tabla>
+                        </div>
+                    )}
+                </GlassCard>
             </section>
         </div>
     );
@@ -408,7 +408,7 @@ function ResumenCard({
     return (
         <GlassCard className="p-4">
             <p className="text-xs text-muted">{label}</p>
-            <p className={`mt-1 text-2xl font-bold text-body`}>{value}</p>
+            <p className={"mt-1 text-2xl font-bold text-body"}>{value}</p>
         </GlassCard>
     );
 }

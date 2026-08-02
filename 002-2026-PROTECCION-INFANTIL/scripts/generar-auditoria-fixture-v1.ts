@@ -114,21 +114,21 @@ async function main() {
     const allFailedRows = rows.filter((r) => r.todosFallaron === "SÍ");
     const cambiosSugeridos = rows.filter((r) => r.propuesta);
 
-    let md = `# Auditoría del fixture v1 — CasoEval\n\n`;
+    let md = "# Auditoría del fixture v1 — CasoEval\n\n";
     md += `> Generado automáticamente el ${new Date().toISOString()}\n\n`;
-    md += `## Resumen\n\n`;
+    md += "## Resumen\n\n";
     md += `- Casos activos auditados: **${rows.length}**\n`;
     md += `- Corridas consideradas: **${runs.length}** (${runs.map((r) => RUN_ALIASES[r.nombre ?? ""] || r.nombre || "sin-nombre").join(", ")})\n`;
     md += `- Casos fallados por TODAS las corridas: **${allFailedRows.length}**\n`;
     md += `- Cambios de evidencia fuerte sugeridos: **${cambiosSugeridos.length}**\n\n`;
 
-    md += `## Criterio de curación aplicado\n\n`;
-    md += `Se aplica cambio únicamente cuando:\n`;
-    md += `1. El caso fue fallado por las 4 corridas.\n`;
-    md += `2. La etiqueta propuesta es clara y está respaldada por la mayoría de predicciones y/o inconsistencias internas del fixture.\n\n`;
-    md += `Los casos dudosos quedan en la tabla para decisión del owner.\n\n`;
+    md += "## Criterio de curación aplicado\n\n";
+    md += "Se aplica cambio únicamente cuando:\n";
+    md += "1. El caso fue fallado por las 4 corridas.\n";
+    md += "2. La etiqueta propuesta es clara y está respaldada por la mayoría de predicciones y/o inconsistencias internas del fixture.\n\n";
+    md += "Los casos dudosos quedan en la tabla para decisión del owner.\n\n";
 
-    md += `## Tabla de auditoría\n\n`;
+    md += "## Tabla de auditoría\n\n";
     md += "| id | texto (truncado) | etiqueta actual | propuesta | justificación | modelos que discrepan | ¿fallaron todos? | inconsistencia |\n";
     md += "|---|---|---|---|---|---|---|---|\n";
 
@@ -136,7 +136,7 @@ async function main() {
         md += `| ${r.id} | ${r.texto} | ${r.actual} | ${r.propuesta || "-"} | ${r.justificacion} | ${r.discrepan} | ${r.todosFallaron} | ${r.inconsistencia} |\n`;
     }
 
-    md += `\n## Casos con cambio sugerido (evidencia fuerte)\n\n`;
+    md += "\n## Casos con cambio sugerido (evidencia fuerte)\n\n";
     if (cambiosSugeridos.length === 0) {
         md += "_Ninguno._\n";
     } else {
@@ -147,7 +147,7 @@ async function main() {
         }
     }
 
-    md += `\n## Casos dudosos / para decisión del owner\n\n`;
+    md += "\n## Casos dudosos / para decisión del owner\n\n";
     const dudosos = allFailedRows.filter((r) => !r.propuesta);
     if (dudosos.length === 0) {
         md += "_Ninguno._\n";

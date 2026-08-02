@@ -1,6 +1,8 @@
-import { prisma } from "@/lib/prisma";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { enviarAlertaComitePendientes } from "@/lib/email";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { SolicitudComiteRepository } from "@/lib/dal/repositories/solicitud-comite";
+import { PerfilOperadorRepository } from "@/lib/dal/repositories/perfil-operador";
 
 function horasDesde(fecha: Date): number {
     const ahora = Date.now();
@@ -16,18 +18,11 @@ export async function notificarComiteSiCorresponde(): Promise<void> {
     const frecuenciaHoras = frecuenciaHorasRaw ? parseInt(frecuenciaHorasRaw, 10) : 24;
     if (Number.isNaN(frecuenciaHoras) || frecuenciaHoras <= 0) return;
 
-    const comite = await prisma.usuario.findFirst({
-        where: { rol: "COMITE_VALIDACION", estado: "activo" },
-        include: { perfilOperador: true },
-    });
+    // E-8: las lecturas/escrituras viven en los repos; la lógica no cambia.
+    const comite = await new UsuarioRepository().findPrimerComiteActivoConPerfil();
     if (!comite) return;
 
-    const cantidad = await prisma.solicitudComite.count({
-        where: {
-            estado: { in: ["PENDIENTE", "ASIGNADA"] },
-            OR: [{ comiteId: comite.id }, { comiteId: null }],
-        },
-    });
+    const cantidad = await new SolicitudComiteRepository().contarPendientesParaComite(comite.id);
     if (cantidad === 0) return;
 
     const ultimoEmail = comite.perfilOperador?.ultimoEmailNotificacionEn;
@@ -35,8 +30,5 @@ export async function notificarComiteSiCorresponde(): Promise<void> {
 
     await enviarAlertaComitePendientes(comite.email, cantidad);
 
-    await prisma.perfilOperador.update({
-        where: { usuarioId: comite.id },
-        data: { ultimoEmailNotificacionEn: new Date() },
-    });
+    await new PerfilOperadorRepository().actualizarPorUsuarioId(comite.id, { ultimoEmailNotificacionEn: new Date() });
 }

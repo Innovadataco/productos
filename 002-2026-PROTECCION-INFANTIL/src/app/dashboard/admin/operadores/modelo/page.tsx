@@ -115,9 +115,9 @@ export default function AdminOperadoresModeloPage() {
                                         setForm((f) =>
                                             f
                                                 ? {
-                                                      ...f,
-                                                      estrategia: e.target.value as ModeloAsignacion["estrategia"],
-                                                  }
+                                                    ...f,
+                                                    estrategia: e.target.value as ModeloAsignacion["estrategia"],
+                                                }
                                                 : null
                                         )
                                     }

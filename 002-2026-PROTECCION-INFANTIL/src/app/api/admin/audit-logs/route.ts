@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { Prisma, AccionAudit } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { auditLogsQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
 
 export async function GET(req: Request) {
     try {
@@ -60,16 +60,8 @@ export async function GET(req: Request) {
             if (fechaHasta) where.creadoEn.lte = new Date(`${fechaHasta}T23:59:59.999Z`);
         }
 
-        const [items, total] = await Promise.all([
-            prisma.auditLog.findMany({
-                where,
-                orderBy: { creadoEn: "desc" },
-                skip,
-                take: pageSize,
-                include: { usuario: { select: { nombre: true, email: true } } },
-            }),
-            prisma.auditLog.count({ where }),
-        ]);
+        // E-8: las lecturas viven en los repos; la ruta no toca prisma.
+        const [items, total] = await new AuditLogRepository().findPaginadosConUsuario(where, { skip, take: pageSize });
 
         return NextResponse.json({
             items,

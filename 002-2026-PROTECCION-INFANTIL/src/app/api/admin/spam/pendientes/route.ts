@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -7,6 +6,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, esOperadorRol } from "@/lib/operadores/permisos";
 import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import type { Prisma } from "@prisma/client";
 
 const MAX_PAGE_SIZE = 100;
@@ -47,29 +47,8 @@ export async function GET(req: Request) {
             where.operadorId = user.id;
         }
 
-        const [reportes, total] = await Promise.all([
-            prisma.reporte.findMany({
-                where,
-                orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "desc" }],
-                skip,
-                take: limit,
-                select: {
-                    id: true,
-                    identificador: true,
-                    plataforma: { select: { id: true, nombre: true, clave: true } },
-                    texto: true,
-                    estado: true,
-                    creadoEn: true,
-                    prioridadAlta: true,
-                    operadorId: true,
-                    operador: { select: { id: true, nombre: true, email: true } },
-                    clasificacion: {
-                        select: { categoria: true, confianza: true },
-                    },
-                },
-            }),
-            prisma.reporte.count({ where }),
-        ]);
+        // E-8: las lecturas viven en los repos; la ruta no toca prisma.
+        const [reportes, total] = await new ReporteRepository().findBandejaSpam(where, { skip, take: limit });
 
         return NextResponse.json({
             reportes: reportes.map((r) => ({

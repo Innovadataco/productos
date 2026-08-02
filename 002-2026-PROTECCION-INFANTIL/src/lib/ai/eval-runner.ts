@@ -1,13 +1,16 @@
-import { prisma } from "@/lib/prisma";
 import { descifrarValorParametro } from "@/lib/parametros";
 import { aJson } from "../dal/json";
-import type { Prisma } from "@prisma/client";
 import { clasificarConMotorActivo, motorActivo, type MotorClasificacion } from "./motor";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares } from "./dataset-retrieval";
 import { decidirGuardasSeguridad } from "./guardas-decision";
 import { MODELO_CLASIFICACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
 import { getOllamaBaseUrl } from "./ollama-config";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { ParametroRepository } from "@/lib/dal/repositories/parametro";
+import { CasoEvalRepository } from "@/lib/dal/repositories/caso-eval";
+import { EvalRunRepository } from "@/lib/dal/repositories/eval-run";
+import { EvalResultadoRepository } from "@/lib/dal/repositories/eval-resultado";
 import fs from "fs/promises";
 import path from "path";
 import { logger } from "@/lib/logger";
@@ -195,21 +198,16 @@ export function computeOperationalMetrics(results: EvalResultArm[], duracionTota
 }
 
 export async function getCurrentProductionConfig(): Promise<ExperimentConfigSnapshot> {
-    const params = await prisma.parametroSistema.findMany({
-        where: {
-            clave: {
-                in: [
-                    "reportes.classification_model",
-                    "reportes.embedding_model",
-                    "reportes.classification.umbral_revision",
-                    "reportes.classification.n_votos",
-                    "reportes.classification.temperatura_votos",
-                    "reportes.classification.rag_top_k",
-                    "system.ollama_base_url",
-                ],
-            },
-        },
-    });
+    // E-8: las lecturas viven en los repos; la lógica del motor no cambia.
+    const params = await new ParametroRepository().findPorClaves([
+        "reportes.classification_model",
+        "reportes.embedding_model",
+        "reportes.classification.umbral_revision",
+        "reportes.classification.n_votos",
+        "reportes.classification.temperatura_votos",
+        "reportes.classification.rag_top_k",
+        "system.ollama_base_url",
+    ]);
 
     const decryptedParams = params.map(descifrarValorParametro);
 
@@ -219,7 +217,7 @@ export async function getCurrentProductionConfig(): Promise<ExperimentConfigSnap
         return v ? Number(v) : fallback;
     };
 
-    const fixtureVersion = await prisma.casoEval.aggregate({ _max: { fixtureVersion: true } }).then((r) => r._max.fixtureVersion ?? 1);
+    const fixtureVersion = await new CasoEvalRepository().maxFixtureVersion();
 
     return {
         modeloClasificacion: get("reportes.classification_model", MODELO_CLASIFICACION_DEFAULT),
@@ -234,10 +232,7 @@ export async function getCurrentProductionConfig(): Promise<ExperimentConfigSnap
 }
 
 export async function loadActiveEvalCases(): Promise<{ examples: EvalExample[]; fixtureVersion: number }> {
-    const [rows, versionAgg] = await prisma.$transaction([
-        prisma.casoEval.findMany({ where: { activo: true }, orderBy: { creadoEn: "asc" } }),
-        prisma.casoEval.aggregate({ _max: { fixtureVersion: true } }),
-    ]);
+    const [rows, fixtureVersion] = await new CasoEvalRepository().findActivosConMaxFixtureVersion();
     const examples: EvalExample[] = rows.map((r) => ({
         id: r.id,
         text: r.texto,
@@ -245,7 +240,7 @@ export async function loadActiveEvalCases(): Promise<{ examples: EvalExample[]; 
         ruido: r.ruido,
         secundariaEsperada: (r.secundariaEsperada as CategoriaEval) || undefined,
     }));
-    return { examples, fixtureVersion: versionAgg._max.fixtureVersion ?? 1 };
+    return { examples, fixtureVersion };
 }
 
 export async function runF7Eval(
@@ -271,7 +266,7 @@ export async function runF7Eval(
     const results: EvalResultArm[] = [];
 
     // Misma clave y default que producción (api/reportes/procesar/helpers/parametros.ts)
-    const paramUmbralSpam = await prisma.parametroSistema.findUnique({ where: { clave: "clasificacion.umbral_spam" } });
+    const paramUmbralSpam = await new ParametroRepository().findByClave("clasificacion.umbral_spam");
     const umbralSpam = parseFloat(paramUmbralSpam?.valor || "0.7");
 
     for (let i = 0; i < examples.length; i++) {
@@ -427,22 +422,19 @@ export async function persistEvalRun(
     report: F7Report,
     opts: { resultados?: Array<{ casoEvalId: string; result: EvalResultArm }> } = {}
 ): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-        await tx.evalRun.update({
-            where: { id: runId },
-            data: {
-                estado: "COMPLETADA",
-                finalizadoEn: new Date(),
-                resultadoJson: aJson(report),
-                fixtureVersion: report.metadata.fixtureVersion,
-                progresoCasos: report.metadata.totalExamples,
-                progresoTotal: report.metadata.totalExamples,
-            },
+    await withUnitOfWork(async (tx) => {
+        await new EvalRunRepository(tx).actualizar(runId, {
+            estado: "COMPLETADA",
+            finalizadoEn: new Date(),
+            resultadoJson: aJson(report),
+            fixtureVersion: report.metadata.fixtureVersion,
+            progresoCasos: report.metadata.totalExamples,
+            progresoTotal: report.metadata.totalExamples,
         });
 
         if (opts.resultados && opts.resultados.length > 0) {
-            await tx.evalResultado.createMany({
-                data: opts.resultados.map((r) => ({
+            await new EvalResultadoRepository(tx).crearMuchos(
+                opts.resultados.map((r) => ({
                     experimentoId: runId,
                     casoEvalId: r.casoEvalId,
                     esperado: r.result.expected,
@@ -451,22 +443,16 @@ export async function persistEvalRun(
                     estadoFinal: r.result.estado,
                     correcto: r.result.correct,
                     latenciaMs: r.result.latencyMs,
-                })),
-            });
+                }))
+            );
         }
     });
 }
 
 export async function markEvalRunFailed(runId: string, error: string): Promise<void> {
-    await prisma.evalRun.update({
-        where: { id: runId },
-        data: { estado: "FALLIDA", finalizadoEn: new Date(), error },
-    });
+    await new EvalRunRepository().actualizar(runId, { estado: "FALLIDA", finalizadoEn: new Date(), error });
 }
 
 export async function updateEvalRunProgress(runId: string, done: number, total: number): Promise<void> {
-    await prisma.evalRun.update({
-        where: { id: runId },
-        data: { progresoCasos: done, progresoTotal: total, estado: "EN_PROGRESO" },
-    });
+    await new EvalRunRepository().actualizar(runId, { progresoCasos: done, progresoTotal: total, estado: "EN_PROGRESO" });
 }

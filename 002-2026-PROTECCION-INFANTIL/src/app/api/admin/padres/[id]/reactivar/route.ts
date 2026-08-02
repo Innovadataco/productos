@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -7,6 +6,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { withValidation } from "@/lib/validation";
 import { padreIdParamsSchema } from "@/lib/schemas";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 
 function getClientInfo(request: Request) {
     return {
@@ -31,10 +31,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
         const { id } = withValidation.params(padreIdParamsSchema)(await params);
-        const padre = await prisma.usuario.findFirst({
-            where: { id, rol: "PARENT" },
-            select: { id: true, email: true, nombre: true, estado: true, debeCambiarPassword: true },
-        });
+        // E-8: la lectura/escritura vive en el repo; la ruta no toca prisma.
+        const padre = await new UsuarioRepository().findPadreById(id);
         if (!padre) {
             return NextResponse.json(
                 { error: { message: "Cuenta de padre no encontrada", code: ERROR_CODES.NOT_FOUND } },
@@ -46,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             return NextResponse.json({ padre });
         }
 
-        await prisma.usuario.update({ where: { id }, data: { estado: "activo" } });
+        await new UsuarioRepository().actualizar(id, { estado: "activo" });
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
             accion: "USER_UPDATE",

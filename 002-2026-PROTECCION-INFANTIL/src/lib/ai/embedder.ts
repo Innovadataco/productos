@@ -17,7 +17,7 @@ export async function generarEmbedding(modelo: string, texto: string): Promise<n
 
     const data = (await res.json()) as { embedding?: number[] };
     if (!Array.isArray(data.embedding) || data.embedding.length === 0) {
-        throw new Error(`[EMBED] Respuesta inválida de Ollama: embedding vacío o mal formado`);
+        throw new Error("[EMBED] Respuesta inválida de Ollama: embedding vacío o mal formado");
     }
 
     logger.info(`[EMBED] OK modelo=${modelo} dims=${data.embedding.length}`);

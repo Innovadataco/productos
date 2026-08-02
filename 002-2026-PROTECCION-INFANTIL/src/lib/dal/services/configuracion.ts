@@ -157,8 +157,8 @@ export class ConfiguracionService {
                 ...(body.descripcion !== undefined
                     ? { descripcion: body.descripcion }
                     : defaults?.descripcion !== undefined
-                      ? { descripcion: defaults.descripcion }
-                      : {}),
+                        ? { descripcion: defaults.descripcion }
+                        : {}),
                 actualizadoPorId: usuarioId,
             });
         } else {

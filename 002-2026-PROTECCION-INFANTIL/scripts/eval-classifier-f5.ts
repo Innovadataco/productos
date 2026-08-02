@@ -301,7 +301,7 @@ function reportEffectOnUnanimous(
     const aFlipped = aUnanimes.filter((r) => r.correct);
     const bFlipped = bUnanimes.filter((r) => r.correct);
 
-    console.log(`\n=== EFECTO SOBRE LOS 17 CASOS UNÁNIMES ERRÓNEOS DE F4 ===`);
+    console.log("\n=== EFECTO SOBRE LOS 17 CASOS UNÁNIMES ERRÓNEOS DE F4 ===");
     console.log(`RAG+votos volteó: ${aFlipped.length}/${aUnanimes.length}`);
     console.log(`RAG+llamada-única volteó: ${bFlipped.length}/${bUnanimes.length}`);
 
@@ -410,7 +410,7 @@ async function main() {
             ? { arm: "llamada-unica", errorSilencioso: metricsB.errorSilencioso, revisionManualRate: metricsB.revisionManualRate }
             : { arm: "votos", policy: bestPolicyA.policy, errorSilencioso: bestPolicyA.errorSilencioso, revisionManualRate: bestPolicyA.revisionManualRate };
 
-    console.log(`\n=== GANADOR A/B ===`);
+    console.log("\n=== GANADOR A/B ===");
     console.log(winner);
 
     const report = {

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -11,6 +10,9 @@ import { logAudit } from "@/lib/audit";
 import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { esAdminRol } from "@/lib/operadores/permisos";
 import { notificarComiteSiCorresponde } from "@/lib/operadores/notificacion-comite";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { SolicitudComiteRepository } from "@/lib/dal/repositories/solicitud-comite";
 import { randomBytes } from "crypto";
 
 const escalarSchema = z.object({
@@ -67,10 +69,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const { motivo } = parsed.data;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id },
-            select: { id: true, estado: true, operadorId: true, tenantId: true },
-        });
+        // E-8: las lecturas/escrituras viven en los repos; la ruta no toca prisma.
+        const reporte = await new ReporteRepository().findPermisosGestionBasico(id);
         if (!reporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -92,9 +92,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const solicitudExistente = await prisma.solicitudComite.findUnique({
-            where: { reporteId: id },
-        });
+        const solicitudes = new SolicitudComiteRepository();
+        const solicitudExistente = await solicitudes.findPorReporteId(id);
         if (solicitudExistente) {
             return NextResponse.json(
                 { error: { message: "Este caso ya fue escalado al comité", code: ERROR_CODES.CONFLICT } },
@@ -103,25 +102,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
 
         let numero = numeroSolicitud();
-        while (await prisma.solicitudComite.findUnique({ where: { numero } })) {
+        while (await solicitudes.findPorNumero(numero)) {
             numero = numeroSolicitud();
         }
 
         const estadoAnterior = reporte.estado;
-        const [solicitud] = await prisma.$transaction(async (tx) => {
-            const solicitud = await tx.solicitudComite.create({
-                data: {
-                    reporteId: id,
-                    numero,
-                    estado: "PENDIENTE",
-                    operadorId: user.id,
-                    motivo,
-                },
+        const [solicitud] = await withUnitOfWork(async (tx) => {
+            const solicitud = await new SolicitudComiteRepository(tx).crear({
+                reporteId: id,
+                numero,
+                estado: "PENDIENTE",
+                operadorId: user.id,
+                motivo,
             });
-            await tx.reporte.update({
-                where: { id },
-                data: { operadorId: null, comiteId: null },
-            });
+            await new ReporteRepository(tx).actualizarEstado(id, { operadorId: null, comiteId: null });
             await registrarTransicion({
                 reporteId: id,
                 estadoAnterior,

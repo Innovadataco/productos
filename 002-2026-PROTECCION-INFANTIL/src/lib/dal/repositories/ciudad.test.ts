@@ -81,4 +81,13 @@ describe("CiudadRepository", () => {
         const limite = await repo.buscarPorNombreNormalizado({ paisId: pais.id, qNorm: "a", limit: 1 });
         expect(limite).toHaveLength(1);
     });
+
+    it("E-8 (LOTE 3): findById devuelve la ciudad con sus FKs geográficas", async () => {
+        const { pais, departamento, otra } = await sembrarGeografia();
+        const repo = new CiudadRepository();
+
+        const row = await repo.findById(otra.id);
+        expect(row).toMatchObject({ id: otra.id, paisId: pais.id, departamentoId: departamento.id });
+        expect(await repo.findById("no-existe")).toBeNull();
+    });
 });

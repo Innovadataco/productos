@@ -136,7 +136,7 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
 async function enviarNotificacionColegio(colegioId: string, novedades: number) {
     const globalEnabled = await getParametroSistemaValor("colegio.notificaciones.enabled");
     if (globalEnabled === "false") {
-        logger.info(`[COLEGIO] Notificación omitida: colegio.notificaciones.enabled=false`);
+        logger.info("[COLEGIO] Notificación omitida: colegio.notificaciones.enabled=false");
         return;
     }
 

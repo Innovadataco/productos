@@ -96,7 +96,7 @@ describe("POST /api/admin/ia/simulaciones", () => {
 
         const req = crearRequestAutenticado("POST", "http://localhost/api/admin/ia/simulaciones", {
             modelos: ["nomic-embed-text"],
-            archivo: `texto,plataforma,identificador,fechaIncidente,ciudad,pais\n"texto de prueba suficientemente largo",instagram,usuario123,2026-01-15T10:00:00Z,Bogotá,Colombia`,
+            archivo: "texto,plataforma,identificador,fechaIncidente,ciudad,pais\n\"texto de prueba suficientemente largo\",instagram,usuario123,2026-01-15T10:00:00Z,Bogotá,Colombia",
             formato: "csv",
         });
 

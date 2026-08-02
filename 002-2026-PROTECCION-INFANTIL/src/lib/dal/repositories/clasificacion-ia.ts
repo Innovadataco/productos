@@ -45,4 +45,12 @@ export class ClasificacionIARepository {
     actualizarPorReporteId(reporteId: string, data: Prisma.ClasificacionIAUpdateInput) {
         return this.db.clasificacionIA.update({ where: { reporteId }, data });
     }
+
+    /** E-8: categoría/confianza/latencia/cascada por reportes (métricas de simulación). */
+    findParaMetricasPorReporteIds(reporteIds: string[]) {
+        return this.db.clasificacionIA.findMany({
+            where: { reporteId: { in: reporteIds } },
+            select: { reporteId: true, categoria: true, confianza: true, latenciaMs: true, usoCascada: true },
+        });
+    }
 }

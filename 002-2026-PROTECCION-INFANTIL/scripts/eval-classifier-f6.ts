@@ -327,7 +327,7 @@ async function main() {
         recommendation = `Ganador: ${winner} — menor error silencioso dentro del umbral P4, menor tasa de mal confirmados y/o mejor latencia.`;
     }
 
-    console.log(`\n=== RECOMENDACIÓN ===`);
+    console.log("\n=== RECOMENDACIÓN ===");
     console.log(recommendation);
     console.log(`Umbral P4: error_silencioso ≤ ${(P4_THRESHOLD * 100).toFixed(2)}%`);
 

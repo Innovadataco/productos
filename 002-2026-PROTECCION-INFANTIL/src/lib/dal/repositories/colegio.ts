@@ -59,4 +59,72 @@ export class ColegioRepository {
             include: INCLUDE_UBICACION,
         });
     }
+
+    // ── Funciones ADMIN globales (gestión de colegios de la plataforma) ──
+    // Excepción documentada: estas lecturas/escrituras cruzan todos los tenants
+    // porque las usa el rol ADMIN de plataforma, no un tenant.
+
+    /** E-8 (admin global): lista de colegios no eliminados con ubicación, admin y tenant. */
+    listarAdminGlobal() {
+        return this.db.colegio.findMany({
+            where: { estado: { not: "eliminado" } },
+            include: {
+                pais: { select: { id: true, nombre: true } },
+                departamento: { select: { id: true, nombre: true } },
+                ciudad: { select: { id: true, nombre: true } },
+                admin: { select: { id: true, email: true, nombre: true, estado: true } },
+                tenant: { select: { id: true, nombre: true } },
+            },
+            orderBy: { creadoEn: "desc" },
+        });
+    }
+
+    /** E-8 (admin global): colegio con email del admin (PATCH de datos/vigencia). */
+    findParaActualizar(id: string) {
+        return this.db.colegio.findUnique({
+            where: { id },
+            include: { admin: { select: { id: true, email: true } } },
+        });
+    }
+
+    /** E-8 (admin global): colegio con el id del admin (DELETE — baja en cascada). */
+    findParaEliminar(id: string) {
+        return this.db.colegio.findUnique({
+            where: { id },
+            include: { admin: { select: { id: true } } },
+        });
+    }
+
+    /** E-8 (admin global): colegio con credenciales del admin (regenerar password). */
+    findParaRegenerarPassword(id: string) {
+        return this.db.colegio.findUnique({
+            where: { id },
+            include: { admin: { select: { id: true, email: true, nombre: true, estado: true, debeCambiarPassword: true } } },
+        });
+    }
+
+    /** E-8 (admin global): colegio con el contacto del admin (reenvío de email). */
+    findParaReenviarEmail(id: string) {
+        return this.db.colegio.findUnique({
+            where: { id },
+            include: { admin: { select: { id: true, email: true, nombre: true } } },
+        });
+    }
+
+    /** E-8 (admin global): alta del tenant del colegio (misma tx que el colegio). */
+    crearTenantParaColegio(nombreColegio: string) {
+        return this.db.tenant.create({
+            data: { nombre: `Colegio: ${nombreColegio}`, estado: "activo" },
+        });
+    }
+
+    /** E-8 (admin global): alta del colegio (dentro de la tx de creación). */
+    crear(data: Prisma.ColegioUncheckedCreateInput) {
+        return this.db.colegio.create({ data });
+    }
+
+    /** E-8 (admin global): actualización de datos/vigencia/estado del colegio. */
+    actualizar(id: string, data: Prisma.ColegioUncheckedUpdateInput) {
+        return this.db.colegio.update({ where: { id }, data });
+    }
 }

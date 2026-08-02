@@ -1,6 +1,8 @@
-import { prisma } from "@/lib/prisma";
 import { obtenerSeveridades } from "@/lib/scoring";
 import { getParametroSistema } from "@/lib/parametros";
+import { SimulacionReporteRepository } from "@/lib/dal/repositories/simulacion-reporte";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { ClasificacionIARepository } from "@/lib/dal/repositories/clasificacion-ia";
 import type { CategoriaConducta } from "@prisma/client";
 
 export interface MetricaCategoria {
@@ -87,26 +89,20 @@ export function calcularEsps(
 }
 
 async function obtenerUmbralRevision(): Promise<number> {
-    const param = await getParametroSistema("reportes.classification.umbral_revision", prisma);
+    const param = await getParametroSistema("reportes.classification.umbral_revision");
     const valor = param ? parseFloat(param.valor) : NaN;
     return Number.isFinite(valor) ? valor : 1.0;
 }
 
 export async function calcularMetricasSimulacion(runId: string): Promise<MetricasSimulacion> {
-    const relacionados = await prisma.simulacionReporte.findMany({
-        where: { simulacionRunId: runId },
-        select: { reporteId: true, indice: true, categoriaEsperada: true, secundariaEsperada: true },
-    });
+    // E-8: las lecturas viven en los repos; la lógica de métricas no cambia.
+    const relacionados = await new SimulacionReporteRepository().findParaMetricas(runId);
 
-    const reportes = await prisma.reporte.findMany({
-        where: { id: { in: relacionados.map((r) => r.reporteId) } },
-        select: { id: true, identificador: true, estado: true },
-    });
+    const reportes = await new ReporteRepository().findMinimosPorIds(relacionados.map((r) => r.reporteId));
 
-    const clasificaciones = await prisma.clasificacionIA.findMany({
-        where: { reporteId: { in: relacionados.map((r) => r.reporteId) } },
-        select: { reporteId: true, categoria: true, confianza: true, latenciaMs: true, usoCascada: true },
-    });
+    const clasificaciones = await new ClasificacionIARepository().findParaMetricasPorReporteIds(
+        relacionados.map((r) => r.reporteId)
+    );
 
     // Severidad y umbral desde parámetros (ADR_004 / ADR_006: nunca duplicados en código)
     const [severidades, umbralRevision] = await Promise.all([obtenerSeveridades(), obtenerUmbralRevision()]);

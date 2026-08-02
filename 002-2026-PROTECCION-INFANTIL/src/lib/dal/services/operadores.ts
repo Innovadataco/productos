@@ -87,13 +87,13 @@ export class OperadorService {
                     tenantId: op.tenantId,
                     perfil: op.perfilOperador
                         ? {
-                              cupoMaximo: op.perfilOperador.cupoMaximo,
-                              esRevisorDeApelaciones: op.perfilOperador.esRevisorDeApelaciones,
-                              esComite: op.perfilOperador.esComite,
-                              notasInternas: op.perfilOperador.notasInternas,
-                              creadoPorId: op.perfilOperador.creadoPorId,
-                              ultimoEmailNotificacionEn: op.perfilOperador.ultimoEmailNotificacionEn,
-                          }
+                            cupoMaximo: op.perfilOperador.cupoMaximo,
+                            esRevisorDeApelaciones: op.perfilOperador.esRevisorDeApelaciones,
+                            esComite: op.perfilOperador.esComite,
+                            notasInternas: op.perfilOperador.notasInternas,
+                            creadoPorId: op.perfilOperador.creadoPorId,
+                            ultimoEmailNotificacionEn: op.perfilOperador.ultimoEmailNotificacionEn,
+                        }
                         : null,
                     casosAbiertos,
                     casosTotales,

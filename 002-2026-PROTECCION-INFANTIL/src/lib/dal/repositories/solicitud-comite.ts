@@ -107,6 +107,35 @@ export class SolicitudComiteRepository {
         });
     }
 
+    /** E-8: solicitud de un reporte (guarda "ya escalado"). */
+    findPorReporteId(reporteId: string) {
+        return this.db.solicitudComite.findUnique({
+            where: { reporteId },
+        });
+    }
+
+    /** E-8: solicitud por número público (unicidad al generar el número). */
+    findPorNumero(numero: string) {
+        return this.db.solicitudComite.findUnique({
+            where: { numero },
+        });
+    }
+
+    /** E-8: crea la solicitud (dentro de la tx de escalación). */
+    crear(data: Prisma.SolicitudComiteUncheckedCreateInput) {
+        return this.db.solicitudComite.create({ data });
+    }
+
+    /** E-8: pendientes del comité (propias o sin asignar) para la alerta por email. */
+    contarPendientesParaComite(comiteId: string) {
+        return this.db.solicitudComite.count({
+            where: {
+                estado: { in: ["PENDIENTE", "ASIGNADA"] },
+                OR: [{ comiteId }, { comiteId: null }],
+            },
+        });
+    }
+
     actualizar(id: string, data: Prisma.SolicitudComiteUncheckedUpdateInput) {
         return this.db.solicitudComite.update({ where: { id }, data });
     }

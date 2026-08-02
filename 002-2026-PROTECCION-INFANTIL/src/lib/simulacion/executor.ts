@@ -1,8 +1,12 @@
-import { prisma } from "@/lib/prisma";
 import { sendReporte } from "@/lib/queue";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { encryptParameter } from "@/lib/param-encryption";
 import { logger } from "@/lib/logger";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { SimulacionRunRepository } from "@/lib/dal/repositories/simulacion-run";
+import { SimulacionReporteRepository } from "@/lib/dal/repositories/simulacion-reporte";
+import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import type { CasoSimulacion } from "@/lib/schemas/simulacion";
 
 const BATCH_SIZE = 5;
@@ -25,50 +29,47 @@ export async function crearReporteSimulacion(
     caso: CasoSimulacion,
     modeloClasificacion: string
 ): Promise<{ reporteId: string }> {
-    const run = await prisma.simulacionRun.findUnique({ where: { id: runId } });
+    // E-8: las lecturas/escrituras viven en los repos; la lógica no cambia.
+    const run = await new SimulacionRunRepository().findById(runId);
     if (!run) throw new Error(`SimulacionRun ${runId} no encontrado`);
 
-    const plataforma = await prisma.plataforma.findUnique({ where: { clave: caso.plataforma } });
+    const plataforma = await new PlataformaRepository().findByClave(caso.plataforma);
     if (!plataforma) throw new Error(`Plataforma ${caso.plataforma} no encontrada`);
 
     const identificador = generarIdentificadorSimulacion(shortRunId(runId), indice);
     const numeroSeguimiento = generarNumeroSeguimiento();
     const textoOriginalCifrado = encryptParameter(caso.texto);
 
-    const result = await prisma.$transaction(async (tx) => {
-        const reporte = await tx.reporte.create({
-            data: {
-                identificador,
-                plataformaId: plataforma.id,
-                texto: caso.texto,
-                textoOriginal: textoOriginalCifrado,
-                fechaIncidente: new Date(caso.fechaIncidente),
-                ciudad: caso.ciudad,
-                pais: caso.pais,
-                esAnonimo: true,
-                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
-                ...(caso.edadVictima !== undefined ? { edadVictima: caso.edadVictima } : {}),
-                usuarioId: null,
-                numeroSeguimiento,
-                estado: "PENDIENTE",
-                prioridadAlta: false,
-                keywordsDetectadas: [],
-            },
+    const result = await withUnitOfWork(async (tx) => {
+        const reporte = await new ReporteRepository(tx).crear({
+            identificador,
+            plataformaId: plataforma.id,
+            texto: caso.texto,
+            textoOriginal: textoOriginalCifrado,
+            fechaIncidente: new Date(caso.fechaIncidente),
+            ciudad: caso.ciudad,
+            pais: caso.pais,
+            esAnonimo: true,
+            // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+            ...(caso.edadVictima !== undefined ? { edadVictima: caso.edadVictima } : {}),
+            usuarioId: null,
+            numeroSeguimiento,
+            estado: "PENDIENTE",
+            prioridadAlta: false,
+            keywordsDetectadas: [],
         });
 
-        await tx.simulacionReporte.create({
-            // @ts-expect-error SPEC-136 (O-2): executor.test.ts afirma las claves
-            // categoriaEsperada/secundariaEsperada PRESENTES con valor undefined en el
-            // argumento del create (contrato histórico del mock); en runtime Prisma las
-            // omite (= NULL en BD), idéntico a no enviarlas. No se puede ensanchar el
-            // tipo generado de Prisma ni tocar el test.
-            data: {
-                simulacionRunId: runId,
-                reporteId: reporte.id,
-                indice,
-                categoriaEsperada: caso.categoriaEsperada,
-                secundariaEsperada: caso.secundariaEsperada,
-            },
+        // @ts-expect-error SPEC-136 (O-2): executor.test.ts afirma las claves
+        // categoriaEsperada/secundariaEsperada PRESENTES con valor undefined en el
+        // argumento del create (contrato histórico del mock); en runtime Prisma las
+        // omite (= NULL en BD), idéntico a no enviarlas. No se puede ensanchar el
+        // tipo generado de Prisma ni tocar el test.
+        await new SimulacionReporteRepository(tx).crear({
+            simulacionRunId: runId,
+            reporteId: reporte.id,
+            indice,
+            categoriaEsperada: caso.categoriaEsperada,
+            secundariaEsperada: caso.secundariaEsperada,
         });
 
         return { reporteId: reporte.id };
@@ -79,7 +80,8 @@ export async function crearReporteSimulacion(
 }
 
 export async function runSimulacionBatchCreator(runId: string, modeloClasificacion: string): Promise<void> {
-    const run = await prisma.simulacionRun.findUnique({ where: { id: runId } });
+    const runs = new SimulacionRunRepository();
+    const run = await runs.findById(runId);
     if (!run || run.estado === "CANCELADA") {
         logger.info(`[SIMULACION] Run ${runId} cancelado o no encontrado; no se crean reportes.`);
         return;
@@ -87,32 +89,23 @@ export async function runSimulacionBatchCreator(runId: string, modeloClasificaci
 
     const casos = (run.casosJson ?? []) as CasoSimulacion[];
     if (!Array.isArray(casos) || casos.length === 0) {
-        await prisma.simulacionRun.update({
-            where: { id: runId },
-            data: { estado: "FALLIDA", fechaFin: new Date() },
-        });
+        await runs.actualizar(runId, { estado: "FALLIDA", fechaFin: new Date() });
         return;
     }
 
     // I-07: fechaInicio se fija al ARRANQUE real de la run (no en la creación
     // del lote), para que el timeout mida el procesamiento propio de cada modelo.
-    await prisma.simulacionRun.update({
-        where: { id: runId },
-        data: { estado: "EN_PROGRESO", fechaInicio: new Date() },
-    });
+    await runs.actualizar(runId, { estado: "EN_PROGRESO", fechaInicio: new Date() });
 
     // Reanudabilidad: índices ya creados (reintento del job) se saltan.
-    const existentesPrevios = await prisma.simulacionReporte.findMany({
-        where: { simulacionRunId: runId },
-        select: { indice: true },
-    });
+    const existentesPrevios = await new SimulacionReporteRepository().findIndicesPorRun(runId);
     const indicesCreados = new Set(existentesPrevios.map((r) => r.indice));
 
     let creados = 0;
     let fallidos = 0;
     for (let i = 0; i < casos.length; i += BATCH_SIZE) {
         // Verificar cancelación entre batches
-        const runActual = await prisma.simulacionRun.findUnique({ where: { id: runId }, select: { estado: true } });
+        const runActual = await runs.findEstado(runId);
         if (runActual?.estado === "CANCELADA") {
             logger.info(`[SIMULACION] Run ${runId} cancelado durante creación de reportes.`);
             return;
@@ -145,18 +138,16 @@ export async function runSimulacionBatchCreator(runId: string, modeloClasificaci
     const metricasActuales = (run.metricasJson ?? {}) as Record<string, unknown>;
 
     if (encolados === 0) {
-        await prisma.simulacionRun.update({
-            where: { id: runId },
-            data: { estado: "FALLIDA", fechaFin: new Date(), metricasJson: { ...metricasActuales, casosFallidos } },
+        await runs.actualizar(runId, {
+            estado: "FALLIDA",
+            fechaFin: new Date(),
+            metricasJson: { ...metricasActuales, casosFallidos },
         });
         logger.error(`[SIMULACION] Run ${runId}: 0/${casos.length} reportes encolados; marcada FALLIDA.`);
         return;
     }
 
-    await prisma.simulacionRun.update({
-        where: { id: runId },
-        data: { metricasJson: { ...metricasActuales, casosFallidos } },
-    });
+    await runs.actualizar(runId, { metricasJson: { ...metricasActuales, casosFallidos } });
 
     // Si todos los casos ya quedaron clasificados (p. ej. reintento tardío), cerrar ahora.
     const { actualizarProgresoYEstado } = await import("./progreso");

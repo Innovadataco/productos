@@ -84,4 +84,9 @@ export class EvalRunRepository {
             orderBy: { iniciadoEn: "desc" },
         });
     }
+
+    /** E-8: actualización genérica de la corrida (cierre, fallo, progreso). */
+    actualizar(id: string, data: Prisma.EvalRunUncheckedUpdateInput) {
+        return this.db.evalRun.update({ where: { id }, data });
+    }
 }

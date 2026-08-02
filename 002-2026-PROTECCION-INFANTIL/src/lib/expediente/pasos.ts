@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { PasoProcesamientoRepository } from "@/lib/dal/repositories/paso-procesamiento";
 
 // Claves de etapa del parámetro admin.expediente.etapas (capa 2).
 export type EtapaProcesamiento = "guardas" | "deduplicacion" | "contexto_rag" | "decision";
@@ -15,15 +15,14 @@ export async function registrarPaso(
     opciones: { veredicto?: string; detalle?: Record<string, unknown>; latenciaMs?: number } = {}
 ): Promise<void> {
     try {
-        await prisma.pasoProcesamiento.create({
-            data: {
-                reporteId,
-                etapa,
-                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
-                ...(opciones.veredicto !== undefined ? { veredicto: opciones.veredicto } : {}),
-                ...(opciones.detalle !== undefined ? { detalle: opciones.detalle as Prisma.InputJsonValue } : {}),
-                ...(opciones.latenciaMs !== undefined ? { latenciaMs: opciones.latenciaMs } : {}),
-            },
+        // E-8: la escritura vive en el repo; la política best-effort no cambia.
+        await new PasoProcesamientoRepository().crear({
+            reporteId,
+            etapa,
+            // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+            ...(opciones.veredicto !== undefined ? { veredicto: opciones.veredicto } : {}),
+            ...(opciones.detalle !== undefined ? { detalle: opciones.detalle as Prisma.InputJsonValue } : {}),
+            ...(opciones.latenciaMs !== undefined ? { latenciaMs: opciones.latenciaMs } : {}),
         });
     } catch (err) {
         console.error("[Expediente] Error registrando paso de procesamiento", {

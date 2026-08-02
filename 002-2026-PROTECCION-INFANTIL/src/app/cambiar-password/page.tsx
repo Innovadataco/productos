@@ -56,10 +56,10 @@ export default function CambiarPasswordPage() {
                 const target = user?.rol === "ADMIN"
                     ? "/dashboard/admin"
                     : user?.rol === "SCHOOL_ADMIN"
-                    ? "/dashboard/colegio"
-                    : user?.rol === "OPERADOR"
-                    ? "/dashboard/admin"
-                    : "/mis-reportes";
+                        ? "/dashboard/colegio"
+                        : user?.rol === "OPERADOR"
+                            ? "/dashboard/admin"
+                            : "/mis-reportes";
                 window.location.href = target;
             }, 1200);
         } catch {

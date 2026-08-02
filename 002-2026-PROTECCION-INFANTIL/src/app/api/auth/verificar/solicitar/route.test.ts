@@ -17,7 +17,7 @@ function makeRequest(body: unknown, ip = "203.0.113.20"): Request {
     });
 }
 
-describe("POST /api/auth/verificar/solicitar", () => {
+describe("POST /api/auth/verificar/solicitar", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();

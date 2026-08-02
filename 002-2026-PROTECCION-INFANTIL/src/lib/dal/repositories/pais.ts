@@ -21,4 +21,9 @@ export class PaisRepository {
             select: { id: true, codigo: true, nombre: true },
         });
     }
+
+    /** E-8: país por id (validación de ubicación en gestión admin de colegios). */
+    findById(id: string) {
+        return this.db.pais.findUnique({ where: { id } });
+    }
 }

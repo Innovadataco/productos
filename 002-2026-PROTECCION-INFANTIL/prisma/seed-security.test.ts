@@ -26,7 +26,7 @@ describe("seed del admin — guarda anti-literal (I-31)", () => {
         const literal = bloque.match(/password\w*\s*=\s*["'`]([^"'`]{6,})["'`]/i);
         const valor = literal?.[1] ?? "";
         expect(valor.startsWith("process.env") || valor === "" ? true : !literal, 
-            `Contraseña literal detectada en el bloque del admin del seed`).toBe(true);
+            "Contraseña literal detectada en el bloque del admin del seed").toBe(true);
     });
 
     it("el bloque del admin NO tiene update: (el seed nunca pisa credenciales)", () => {

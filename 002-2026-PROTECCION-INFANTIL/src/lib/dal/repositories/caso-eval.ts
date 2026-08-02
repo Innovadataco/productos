@@ -2,7 +2,7 @@
  * SPEC-053 (US3, módulo IA): repositorio de CasoEval (banco de casos de
  * evaluación del clasificador). Acepta un cliente transaccional opcional (D2).
  */
-import type { Prisma } from "@prisma/client";
+import type { CasoEval, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { DbClient } from "../unit-of-work";
 
@@ -67,5 +67,24 @@ export class CasoEvalRepository {
     /** Casos activos (guarda "hay casos para evaluar" de evals y experimentos). */
     countActivos() {
         return this.db.casoEval.count({ where: { activo: true } });
+    }
+
+    /** E-8: fixtureVersion máxima global del banco (snapshot de config del eval). */
+    async maxFixtureVersion(): Promise<number> {
+        const r = await this.db.casoEval.aggregate({ _max: { fixtureVersion: true } });
+        return r._max.fixtureVersion ?? 1;
+    }
+
+    /**
+     * E-8: casos activos (orden de creación) + fixtureVersion máxima en una pasada.
+     * (El eval-runner original usaba una transacción batch; son dos lecturas
+     * independientes, Promise.all es equivalente y funciona también con tx.)
+     */
+    async findActivosConMaxFixtureVersion(): Promise<[CasoEval[], number]> {
+        const [rows, versionAgg] = await Promise.all([
+            this.db.casoEval.findMany({ where: { activo: true }, orderBy: { creadoEn: "asc" } }),
+            this.db.casoEval.aggregate({ _max: { fixtureVersion: true } }),
+        ]);
+        return [rows, versionAgg._max.fixtureVersion ?? 1];
     }
 }

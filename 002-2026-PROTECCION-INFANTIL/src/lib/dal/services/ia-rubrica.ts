@@ -58,13 +58,13 @@ export class IaRubricaService {
             const guardado = existing
                 ? await this.parametros.actualizar(clave, { valor: valorStr, actualizadoPorId: usuarioId })
                 : await this.parametros.crear({
-                      clave,
-                      valor: valorStr,
-                      tipo: TIPOS[campo],
-                      categoria: "SYSTEM",
-                      esPublico: false,
-                      actualizadoPorId: usuarioId,
-                  });
+                    clave,
+                    valor: valorStr,
+                    tipo: TIPOS[campo],
+                    categoria: "SYSTEM",
+                    esPublico: false,
+                    actualizadoPorId: usuarioId,
+                });
 
             await logAudit({
                 accion: "PARAM_UPDATE",
@@ -113,13 +113,13 @@ export class IaRubricaService {
         const guardado = param
             ? await this.parametros.actualizar(CLAVE_PREGUNTAS, { valor: valorNuevo, actualizadoPorId: usuarioId })
             : await this.parametros.crear({
-                  clave: CLAVE_PREGUNTAS,
-                  valor: valorNuevo,
-                  tipo: "JSON",
-                  categoria: "SYSTEM",
-                  esPublico: false,
-                  actualizadoPorId: usuarioId,
-              });
+                clave: CLAVE_PREGUNTAS,
+                valor: valorNuevo,
+                tipo: "JSON",
+                categoria: "SYSTEM",
+                esPublico: false,
+                actualizadoPorId: usuarioId,
+            });
 
         await logAudit({
             accion: "PARAM_UPDATE",

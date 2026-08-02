@@ -4,7 +4,7 @@
  * `src/lib/reporte-transiciones.ts` (que ya acepta `tx` y centraliza la
  * escritura). Acepta un cliente transaccional opcional (D2).
  */
-import type { Prisma } from "@prisma/client";
+import type { Prisma, ResponsableTransicion } from "@prisma/client";
 import { registrarTransicion, type RegistrarTransicionParams } from "@/lib/reporte-transiciones";
 import { prisma } from "@/lib/prisma";
 import type { DbClient } from "../unit-of-work";
@@ -27,6 +27,22 @@ export class TransicionReporteRepository {
         return this.db.transicionReporte.findMany({
             where: { reporteId },
             orderBy: { creadoEn: "asc" },
+        });
+    }
+
+    /** E-8: historial del caso con el responsable (filtro opcional por tipo). */
+    findPorReporteConResponsable(reporteId: string, responsableTipo?: string) {
+        return this.db.transicionReporte.findMany({
+            where: {
+                reporteId,
+                ...(responsableTipo ? { responsableTipo: responsableTipo as ResponsableTransicion } : {}),
+            },
+            orderBy: { creadoEn: "asc" },
+            include: {
+                responsableUsuario: {
+                    select: { id: true, email: true, nombre: true, rol: true },
+                },
+            },
         });
     }
 }

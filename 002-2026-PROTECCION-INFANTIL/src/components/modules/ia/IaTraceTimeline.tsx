@@ -69,9 +69,9 @@ export function IaTraceTimeline({ trace }: IaTraceTimelineProps) {
                 <p className="text-xs text-muted">
                     {rag.ejemplos.length > 0
                         ? `Distancia media: ${(
-                              rag.ejemplos.reduce((acc, e) => acc + (1 - (e.similitud || 0)), 0) /
+                            rag.ejemplos.reduce((acc, e) => acc + (1 - (e.similitud || 0)), 0) /
                               Math.max(rag.ejemplos.length, 1)
-                          ).toFixed(3)}`
+                        ).toFixed(3)}`
                         : "Sin ejemplos similares en el dataset."}
                 </p>
             </Stage>

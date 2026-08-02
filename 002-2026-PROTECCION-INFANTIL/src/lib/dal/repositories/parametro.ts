@@ -19,6 +19,13 @@ export class ParametroRepository {
         return this.db.parametroSistema.findUnique({ where: { clave } });
     }
 
+    /** E-8: varios parámetros por clave (snapshot de configuración del eval-runner). */
+    findPorClaves(claves: string[]) {
+        return this.db.parametroSistema.findMany({
+            where: { clave: { in: claves } },
+        });
+    }
+
     /** Listado admin paginado (filtro opcional por categoría), ordenado por categoría. */
     findPaginadosConTotal(
         where: Prisma.ParametroSistemaWhereInput,

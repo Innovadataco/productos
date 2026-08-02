@@ -87,27 +87,27 @@ export default function AdminOperadoresAsignarPage() {
                     Cupo default: <span className="font-medium text-body">{data?.cupoDefault ?? "—"}</span>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <GlassCard className="p-5">
-                    <p className="text-xs text-muted">Casos sin asignar</p>
-                    <p className="mt-1 text-3xl font-bold text-body">{data?.sinAsignar ?? 0}</p>
-                </GlassCard>
-                <GlassCard className="p-5">
-                    <p className="text-xs text-muted">Operadores activos</p>
-                    <p className="mt-1 text-3xl font-bold text-body">{data?.operadores.length ?? 0}</p>
-                </GlassCard>
-                <GlassCard className="p-5">
-                    <p className="text-xs text-muted">Total casos en gestión</p>
-                    <p className="mt-1 text-3xl font-bold text-body">
-                        {data?.operadores.reduce((acc, o) => acc + o.casosAbiertos, 0) ?? 0}
-                    </p>
-                </GlassCard>
-                <GlassCard className="p-5">
-                    <p className="text-xs text-muted">Cupos libres</p>
-                    <p className="mt-1 text-3xl font-bold text-body">
-                        {data?.operadores.reduce((acc, o) => acc + o.libre, 0) ?? 0}
-                    </p>
-                </GlassCard>
-            </div>
+                    <GlassCard className="p-5">
+                        <p className="text-xs text-muted">Casos sin asignar</p>
+                        <p className="mt-1 text-3xl font-bold text-body">{data?.sinAsignar ?? 0}</p>
+                    </GlassCard>
+                    <GlassCard className="p-5">
+                        <p className="text-xs text-muted">Operadores activos</p>
+                        <p className="mt-1 text-3xl font-bold text-body">{data?.operadores.length ?? 0}</p>
+                    </GlassCard>
+                    <GlassCard className="p-5">
+                        <p className="text-xs text-muted">Total casos en gestión</p>
+                        <p className="mt-1 text-3xl font-bold text-body">
+                            {data?.operadores.reduce((acc, o) => acc + o.casosAbiertos, 0) ?? 0}
+                        </p>
+                    </GlassCard>
+                    <GlassCard className="p-5">
+                        <p className="text-xs text-muted">Cupos libres</p>
+                        <p className="mt-1 text-3xl font-bold text-body">
+                            {data?.operadores.reduce((acc, o) => acc + o.libre, 0) ?? 0}
+                        </p>
+                    </GlassCard>
+                </div>
             </section>
 
             <GlassCard>
@@ -156,8 +156,8 @@ export default function AdminOperadoresAsignarPage() {
                                                                 uso >= 1
                                                                     ? "bg-red-500"
                                                                     : uso >= 0.7
-                                                                      ? "bg-amber-500"
-                                                                      : "bg-emerald-500"
+                                                                        ? "bg-amber-500"
+                                                                        : "bg-emerald-500"
                                                             }`}
                                                             style={{ width: `${Math.min(100, uso * 100)}%` }}
                                                         />

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { padresQuerySchema } from "@/lib/validators";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 
 /**
  * GET /api/admin/padres (spec 117, I-37)
@@ -43,36 +44,16 @@ export async function GET(request: Request) {
             ];
         }
 
-        const [padres, total] = await Promise.all([
-            prisma.usuario.findMany({
-                where,
-                orderBy: { creadoEn: "desc" },
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                select: {
-                    id: true,
-                    email: true,
-                    nombre: true,
-                    estado: true,
-                    debeCambiarPassword: true,
-                    creadoEn: true,
-                    ultimaSesion: true,
-                    // SPEC-119: ventana de servicio del cliente padre.
-                    inicioServicio: true,
-                    finServicio: true,
-                },
-            }),
-            prisma.usuario.count({ where }),
-        ]);
+        // E-8: las lecturas viven en los repos; la ruta no toca prisma.
+        const [padres, total] = await new UsuarioRepository().findPadresPaginados(where, {
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+        });
 
         // Conteo agregado de reportes (sin contenido) para las cuentas de la página
         const ids = padres.map((p) => p.id);
         const conteos = ids.length
-            ? await prisma.reporte.groupBy({
-                  by: ["usuarioId"],
-                  where: whereReporteVigente({ usuarioId: { in: ids } }),
-                  _count: { _all: true },
-              })
+            ? await new ReporteRepository().contarPorUsuarios(whereReporteVigente({ usuarioId: { in: ids } }))
             : [];
         const conteoPorUsuario = new Map(conteos.map((c) => [c.usuarioId, c._count._all]));
 

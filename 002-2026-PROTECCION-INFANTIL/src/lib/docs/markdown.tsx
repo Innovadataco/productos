@@ -145,10 +145,10 @@ export function Markdown({ source }: { source: string }) {
                 nivel === 1
                     ? "mt-8 text-2xl font-bold text-body"
                     : nivel === 2
-                      ? "mt-6 text-xl font-semibold text-body"
-                      : nivel === 3
-                        ? "mt-4 text-lg font-semibold text-body"
-                        : "mt-3 text-base font-semibold text-body";
+                        ? "mt-6 text-xl font-semibold text-body"
+                        : nivel === 3
+                            ? "mt-4 text-lg font-semibold text-body"
+                            : "mt-3 text-base font-semibold text-body";
             bloques.push(
                 nivel === 1 ? (
                     <h1 key={key++} className={clases}>{contenido}</h1>

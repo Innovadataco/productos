@@ -45,7 +45,7 @@ async function main() {
         lineas.push(`- **Texto**: "${caso.texto}"`);
         lineas.push(`- **Etiqueta actual**: ${c.esperada}${c.secundaria ? ` (secundaria: ${c.secundaria})` : ""}`);
         lineas.push(`- **Motor dice (3/3)**: ${c.asignada}`);
-        lineas.push(`- **Voto por modelo**:`);
+        lineas.push("- **Voto por modelo**:");
         for (const vm of r.votosModelos) {
             const marcas = Object.entries(vm.categorias)
                 .filter(([, v]) => v.cumple)
@@ -53,8 +53,8 @@ async function main() {
                 .join(", ") || "(ninguna)";
             lineas.push(`  - ${vm.modelo}: ${marcas}`);
         }
-        lineas.push(`- **Etiqueta adjudicada**: _(vacío)_`);
-        lineas.push(`- **Razón**: _(vacío)_`);
+        lineas.push("- **Etiqueta adjudicada**: _(vacío)_");
+        lineas.push("- **Razón**: _(vacío)_");
         lineas.push("");
     }
 

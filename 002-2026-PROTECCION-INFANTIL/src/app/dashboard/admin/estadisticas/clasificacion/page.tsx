@@ -212,28 +212,28 @@ export default function AdminEstadisticasClasificacionPage() {
                         <TablaHead variante="borde">
                             <tr className="text-subtle">
                                 <th className="pb-3 font-medium">Operador</th>
-                                    <th className="pb-3 font-medium">Atendidos</th>
-                                    <th className="pb-3 font-medium">Confirmados</th>
-                                    <th className="pb-3 font-medium">Corregidos</th>
-                                    <th className="pb-3 font-medium">Dados de baja</th>
-                                    <th className="pb-3 font-medium">Escalados</th>
-                                    <th className="pb-3 font-medium">Tiempo promedio</th>
-                                </tr>
+                                <th className="pb-3 font-medium">Atendidos</th>
+                                <th className="pb-3 font-medium">Confirmados</th>
+                                <th className="pb-3 font-medium">Corregidos</th>
+                                <th className="pb-3 font-medium">Dados de baja</th>
+                                <th className="pb-3 font-medium">Escalados</th>
+                                <th className="pb-3 font-medium">Tiempo promedio</th>
+                            </tr>
                         </TablaHead>
                         <TablaBody>
-                                {(data?.metricasOperador || []).map((op) => (
-                                    <tr key={op.operadorId}>
-                                        <td className="py-3 pr-3 text-body">{op.nombre}</td>
-                                        <td className="py-3 pr-3 text-muted">{op.atendidos}</td>
-                                        <td className="py-3 pr-3 text-muted">{op.confirmados}</td>
-                                        <td className="py-3 pr-3 text-muted">{op.corregidos}</td>
-                                        <td className="py-3 pr-3 text-muted">{op.dadosDeBaja}</td>
-                                        <td className="py-3 pr-3 text-muted">{op.escalados}</td>
-                                        <td className="py-3 pr-3 text-muted">
-                                            {op.tiempoPromedioMin > 0 ? `${op.tiempoPromedioMin} min` : "—"}
-                                        </td>
-                                    </tr>
-                                ))}
+                            {(data?.metricasOperador || []).map((op) => (
+                                <tr key={op.operadorId}>
+                                    <td className="py-3 pr-3 text-body">{op.nombre}</td>
+                                    <td className="py-3 pr-3 text-muted">{op.atendidos}</td>
+                                    <td className="py-3 pr-3 text-muted">{op.confirmados}</td>
+                                    <td className="py-3 pr-3 text-muted">{op.corregidos}</td>
+                                    <td className="py-3 pr-3 text-muted">{op.dadosDeBaja}</td>
+                                    <td className="py-3 pr-3 text-muted">{op.escalados}</td>
+                                    <td className="py-3 pr-3 text-muted">
+                                        {op.tiempoPromedioMin > 0 ? `${op.tiempoPromedioMin} min` : "—"}
+                                    </td>
+                                </tr>
+                            ))}
                         </TablaBody>
                     </Tabla>
                 )}
@@ -290,41 +290,41 @@ export default function AdminEstadisticasClasificacionPage() {
                             <TablaHead variante="borde">
                                 <tr className="text-subtle">
                                     <th className="pb-3 font-medium">Seguimiento</th>
-                                        <th className="pb-3 font-medium">Identificador</th>
-                                        <th className="pb-3 font-medium">Estado</th>
-                                        <th className="pb-3 font-medium">Operador</th>
-                                        <th className="pb-3 font-medium">Categoría</th>
-                                        <th className="pb-3 font-medium">Ubicación</th>
-                                        <th className="pb-3 font-medium">Creado</th>
-                                    </tr>
+                                    <th className="pb-3 font-medium">Identificador</th>
+                                    <th className="pb-3 font-medium">Estado</th>
+                                    <th className="pb-3 font-medium">Operador</th>
+                                    <th className="pb-3 font-medium">Categoría</th>
+                                    <th className="pb-3 font-medium">Ubicación</th>
+                                    <th className="pb-3 font-medium">Creado</th>
+                                </tr>
                             </TablaHead>
                             <TablaBody>
-                                    {data?.tabla.reportes.map((r) => (
-                                        <tr key={r.id}>
-                                            <td className="py-3 pr-3 font-mono text-xs text-muted">{r.numeroSeguimiento}</td>
-                                            <td className="py-3 pr-3 text-body">{r.identificador}</td>
-                                            <td className="py-3 pr-3">
-                                                <Badge variant={r.estado === "REVISION_MANUAL" ? "warning" : "success"}>
-                                                    {ESTADO_LABELS[r.estado] || r.estado}
-                                                </Badge>
-                                                {r.prioridadAlta && (
-                                                    <Badge variant="danger" className="ml-2 text-[10px]">
+                                {data?.tabla.reportes.map((r) => (
+                                    <tr key={r.id}>
+                                        <td className="py-3 pr-3 font-mono text-xs text-muted">{r.numeroSeguimiento}</td>
+                                        <td className="py-3 pr-3 text-body">{r.identificador}</td>
+                                        <td className="py-3 pr-3">
+                                            <Badge variant={r.estado === "REVISION_MANUAL" ? "warning" : "success"}>
+                                                {ESTADO_LABELS[r.estado] || r.estado}
+                                            </Badge>
+                                            {r.prioridadAlta && (
+                                                <Badge variant="danger" className="ml-2 text-[10px]">
                                                         Escalado
-                                                    </Badge>
-                                                )}
-                                            </td>
-                                            <td className="py-3 pr-3 text-muted">{r.operador?.nombre || r.operador?.email || "Sin asignar"}</td>
-                                            <td className="py-3 pr-3 text-muted">
-                                                {r.clasificacion ? formatCategoria(r.clasificacion.categoria) : "—"}
-                                            </td>
-                                            <td className="py-3 pr-3 text-muted">
-                                                {[r.ciudad, r.pais].filter(Boolean).join(", ") || "—"}
-                                            </td>
-                                            <td className="py-3 pr-3 text-muted">
-                                                {new Date(r.creadoEn).toLocaleDateString("es-CO")}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </Badge>
+                                            )}
+                                        </td>
+                                        <td className="py-3 pr-3 text-muted">{r.operador?.nombre || r.operador?.email || "Sin asignar"}</td>
+                                        <td className="py-3 pr-3 text-muted">
+                                            {r.clasificacion ? formatCategoria(r.clasificacion.categoria) : "—"}
+                                        </td>
+                                        <td className="py-3 pr-3 text-muted">
+                                            {[r.ciudad, r.pais].filter(Boolean).join(", ") || "—"}
+                                        </td>
+                                        <td className="py-3 pr-3 text-muted">
+                                            {new Date(r.creadoEn).toLocaleDateString("es-CO")}
+                                        </td>
+                                    </tr>
+                                ))}
                             </TablaBody>
                         </Tabla>
                         {data && data.tabla.pagination.totalPages > 1 && (

@@ -95,10 +95,10 @@ export function SimulacionDashboard({ id, onBack, onRefresh }: SimulacionDashboa
         run.estado === "COMPLETADA"
             ? "success"
             : run.estado === "FALLIDA" || run.estado === "CANCELADA"
-              ? "danger"
-              : run.estado === "EN_PROGRESO"
-                ? "info"
-                : "warning";
+                ? "danger"
+                : run.estado === "EN_PROGRESO"
+                    ? "info"
+                    : "warning";
 
     return (
         <div className="space-y-6">

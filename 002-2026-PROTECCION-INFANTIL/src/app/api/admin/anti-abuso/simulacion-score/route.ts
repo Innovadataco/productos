@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { calcularScore, determinarNivelRiesgo } from "@/lib/scoring";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { IdentificadorReportadoRepository } from "@/lib/dal/repositories/identificador-reportado";
+import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import type { NivelRiesgo } from "@/lib/scoring";
 
 const PAGE_SIZE = 50;
@@ -47,21 +48,15 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
 
+        // E-8: las lecturas viven en los repos; la ruta no toca prisma.
+        const identificadoresRepo = new IdentificadorReportadoRepository();
         const [totalItems, identificadores] = await Promise.all([
-            prisma.identificadorReportado.count(),
-            prisma.identificadorReportado.findMany({
-                skip: (page - 1) * PAGE_SIZE,
-                take: PAGE_SIZE,
-                orderBy: { ultimoReporteEn: "desc" },
-                select: { id: true, identificador: true, plataformaId: true },
-            }),
+            identificadoresRepo.contarTodos(),
+            identificadoresRepo.listarParaSimulacion({ skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
         ]);
 
         const plataformaIds = [...new Set(identificadores.map((i) => i.plataformaId).filter(Boolean))];
-        const plataformas = await prisma.plataforma.findMany({
-            where: { id: { in: plataformaIds } },
-            select: { id: true, nombre: true },
-        });
+        const plataformas = await new PlataformaRepository().findNombresPorIds(plataformaIds);
         const plataformaNombrePorId = Object.fromEntries(plataformas.map((p) => [p.id, p.nombre]));
 
         const detalles: SimulacionScoreItem[] = [];

@@ -238,16 +238,16 @@ export function AdminReportesTable() {
             <div className="glass rounded-2xl overflow-hidden">
                 <Tabla sinContenedor>
                     <TablaHead>
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Seguimiento</th>
-                                <th className="px-4 py-3 font-medium">Plataforma</th>
-                                <th className="px-4 py-3 font-medium">Estado</th>
-                                <th className="px-4 py-3 font-medium">Señales</th>
-                                <th className="px-4 py-3 font-medium">Categoría</th>
-                                <th className="px-4 py-3 font-medium">Fecha</th>
-                                <th className="px-4 py-3 font-medium">Origen</th>
-                                <th className="px-4 py-3 font-medium">Acciones</th>
-                            </tr>
+                        <tr>
+                            <th className="px-4 py-3 font-medium">Seguimiento</th>
+                            <th className="px-4 py-3 font-medium">Plataforma</th>
+                            <th className="px-4 py-3 font-medium">Estado</th>
+                            <th className="px-4 py-3 font-medium">Señales</th>
+                            <th className="px-4 py-3 font-medium">Categoría</th>
+                            <th className="px-4 py-3 font-medium">Fecha</th>
+                            <th className="px-4 py-3 font-medium">Origen</th>
+                            <th className="px-4 py-3 font-medium">Acciones</th>
+                        </tr>
                     </TablaHead>
                     <TablaBody>
                         {loading ? (
@@ -256,68 +256,68 @@ export function AdminReportesTable() {
                                     <Cargando tamano="sm" />
                                 </td>
                             </tr>
-                            ) : reportes.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="px-4 py-2">
-                                        <EmptyState
-                                            title="No hay reportes que coincidan"
-                                            description="Prueba ajustar los filtros o vuelve más tarde."
-                                        />
+                        ) : reportes.length === 0 ? (
+                            <tr>
+                                <td colSpan={8} className="px-4 py-2">
+                                    <EmptyState
+                                        title="No hay reportes que coincidan"
+                                        description="Prueba ajustar los filtros o vuelve más tarde."
+                                    />
+                                </td>
+                            </tr>
+                        ) : (
+                            reportes.map((r) => (
+                                <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                    <td className="px-4 py-3 font-mono text-xs text-body">{r.numeroSeguimiento}</td>
+                                    <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-wrap gap-1">
+                                            <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-body">
+                                                {formatEstado(r.estado)}
+                                            </span>
+                                            {r.eliminado && (
+                                                <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                                                        Eliminado
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-wrap gap-1">
+                                            {r.prioridadAlta && (
+                                                <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                                                        Prioridad
+                                                </span>
+                                            )}
+                                            {r.esRafaga && (
+                                                <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                                        Ráfaga
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-body">
+                                        {r.clasificacion?.correccion
+                                            ? `${formatCategoria(r.clasificacion.correccion.categoriaCorregida)} (corregido)`
+                                            : r.clasificacion
+                                                ? formatCategoria(r.clasificacion.categoria)
+                                                : "—"}
+                                    </td>
+                                    <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString()}</td>
+                                    <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : "Autenticado"}</td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button onClick={() => setSelectedReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                                                    Ver detalle
+                                            </Button>
+                                            <Button onClick={() => setExpedienteReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                                                    Ver proceso
+                                            </Button>
+                                        </div>
                                     </td>
                                 </tr>
-                            ) : (
-                                reportes.map((r) => (
-                                    <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                        <td className="px-4 py-3 font-mono text-xs text-body">{r.numeroSeguimiento}</td>
-                                        <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-wrap gap-1">
-                                                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-body">
-                                                    {formatEstado(r.estado)}
-                                                </span>
-                                                {r.eliminado && (
-                                                    <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
-                                                        Eliminado
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-wrap gap-1">
-                                                {r.prioridadAlta && (
-                                                    <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
-                                                        Prioridad
-                                                    </span>
-                                                )}
-                                                {r.esRafaga && (
-                                                    <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                                                        Ráfaga
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-body">
-                                            {r.clasificacion?.correccion
-                                                ? `${formatCategoria(r.clasificacion.correccion.categoriaCorregida)} (corregido)`
-                                                : r.clasificacion
-                                                    ? formatCategoria(r.clasificacion.categoria)
-                                                    : "—"}
-                                        </td>
-                                        <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString()}</td>
-                                        <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : "Autenticado"}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-wrap gap-2">
-                                                <Button onClick={() => setSelectedReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
-                                                    Ver detalle
-                                                </Button>
-                                                <Button onClick={() => setExpedienteReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
-                                                    Ver proceso
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                            ))
+                        )}
                     </TablaBody>
                 </Tabla>
 

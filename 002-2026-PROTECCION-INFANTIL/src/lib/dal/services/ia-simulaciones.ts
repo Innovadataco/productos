@@ -315,8 +315,8 @@ export class IaSimulacionesService {
             mezcla
                 ? "Las corridas usan bancos de procedencia distinta; comparar resultados entre bancos no es válido."
                 : runs.some((r) => r.totalCasos !== runs[0].totalCasos)
-                  ? "Las corridas tienen diferente cantidad de casos; la comparación solo incluye índices presentes en ambas."
-                  : undefined;
+                    ? "Las corridas tienen diferente cantidad de casos; la comparación solo incluye índices presentes en ambas."
+                    : undefined;
 
         return {
             runs: resumen,

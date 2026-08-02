@@ -133,14 +133,14 @@ export function SpamRevisionPanel() {
 
             <Tabla>
                 <TablaHead>
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Identificador</th>
-                                <th className="px-4 py-3 font-medium">Plataforma</th>
-                                <th className="px-4 py-3 font-medium">Confianza SPAM</th>
-                                <th className="px-4 py-3 font-medium">Asignado a</th>
-                                <th className="px-4 py-3 font-medium">Recibido</th>
-                                <th className="px-4 py-3 font-medium">Acciones</th>
-                            </tr>
+                    <tr>
+                        <th className="px-4 py-3 font-medium">Identificador</th>
+                        <th className="px-4 py-3 font-medium">Plataforma</th>
+                        <th className="px-4 py-3 font-medium">Confianza SPAM</th>
+                        <th className="px-4 py-3 font-medium">Asignado a</th>
+                        <th className="px-4 py-3 font-medium">Recibido</th>
+                        <th className="px-4 py-3 font-medium">Acciones</th>
+                    </tr>
                 </TablaHead>
                 <TablaBody>
                     {loading ? (
@@ -149,31 +149,31 @@ export function SpamRevisionPanel() {
                                 <Cargando tamano="sm" />
                             </td>
                         </tr>
-                            ) : reportes.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-4 py-2">
-                                        <EmptyState
-                                            title="No hay reportes en revisión de spam"
-                                            description="Cuando la IA marque un reporte como posible spam, aparecerá aquí para validación humana."
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                reportes.map((r) => (
-                                    <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                        <td className="px-4 py-3 text-body">{r.identificador}</td>
-                                        <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
-                                        <td className="px-4 py-3 text-body">{(r.confianzaSpam * 100).toFixed(1)}%</td>
-                                        <td className="px-4 py-3 text-body">{r.asignadoA?.nombre || r.asignadoA?.email || "—"}</td>
-                                        <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleString()}</td>
-                                        <td className="px-4 py-3">
-                                            <Button onClick={() => setSelectedId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                    ) : reportes.length === 0 ? (
+                        <tr>
+                            <td colSpan={6} className="px-4 py-2">
+                                <EmptyState
+                                    title="No hay reportes en revisión de spam"
+                                    description="Cuando la IA marque un reporte como posible spam, aparecerá aquí para validación humana."
+                                />
+                            </td>
+                        </tr>
+                    ) : (
+                        reportes.map((r) => (
+                            <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                <td className="px-4 py-3 text-body">{r.identificador}</td>
+                                <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
+                                <td className="px-4 py-3 text-body">{(r.confianzaSpam * 100).toFixed(1)}%</td>
+                                <td className="px-4 py-3 text-body">{r.asignadoA?.nombre || r.asignadoA?.email || "—"}</td>
+                                <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleString()}</td>
+                                <td className="px-4 py-3">
+                                    <Button onClick={() => setSelectedId(r.id)} variant="outline" className="py-2 px-3 text-xs">
                                                 Revisar
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                                    </Button>
+                                </td>
+                            </tr>
+                        ))
+                    )}
                 </TablaBody>
             </Tabla>
 

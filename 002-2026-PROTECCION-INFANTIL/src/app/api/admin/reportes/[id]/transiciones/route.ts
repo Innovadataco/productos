@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { TransicionReporteRepository } from "@/lib/dal/repositories/transicion-reporte";
 import { ResponsableTransicion } from "@prisma/client";
 import { z } from "zod";
 
@@ -44,10 +45,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
         const id = parsedId.data;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id },
-            select: { id: true, estado: true, operadorId: true, tenantId: true, eliminado: true },
-        });
+        // E-8: las lecturas viven en los repos; la ruta no toca prisma.
+        const reporte = await new ReporteRepository().findPermisosGestion(id);
         if (!reporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -73,20 +72,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const transiciones = await prisma.transicionReporte.findMany({
-            where: {
-                reporteId: id,
-                ...(parsedQuery.data.responsableTipo
-                    ? { responsableTipo: parsedQuery.data.responsableTipo as ResponsableTransicion }
-                    : {}),
-            },
-            orderBy: { creadoEn: "asc" },
-            include: {
-                responsableUsuario: {
-                    select: { id: true, email: true, nombre: true, rol: true },
-                },
-            },
-        });
+        const transiciones = await new TransicionReporteRepository().findPorReporteConResponsable(
+            id,
+            parsedQuery.data.responsableTipo
+        );
 
         return NextResponse.json({ transiciones });
     } catch (error) {

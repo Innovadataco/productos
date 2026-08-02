@@ -96,7 +96,7 @@ async function main() {
     if (resultado.notasAnonimo.length > 0) {
         console.log(
             `[Arch:A] Nota (NO es rojo): ${resultado.notasAnonimo.length} divergencias del eje anónimo ` +
-                `(sin sesión; la puerta exige login donde el predicado solo describe el menú). Documentadas en 02-roles-capacidades.md.`
+                "(sin sesión; la puerta exige login donde el predicado solo describe el menú). Documentadas en 02-roles-capacidades.md."
         );
     }
     if (resultado.desalineos.length > 0) process.exitCode = 1;

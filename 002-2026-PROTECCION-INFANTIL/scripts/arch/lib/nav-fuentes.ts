@@ -86,14 +86,14 @@ export function parsearHeader(): FuentesHeader {
     if (noResolubles.length > 0) {
         throw new Error(
             `[Arch:B] href del header NO resoluble estáticamente: ${noResolubles.join(", ")} ` +
-                `(src/components/modules/NavHeader.tsx). Resolverlo en scripts/arch/lib/nav-fuentes.ts.`
+                "(src/components/modules/NavHeader.tsx). Resolverlo en scripts/arch/lib/nav-fuentes.ts."
         );
     }
     const sinGuarda = [...literales].filter((h) => !(h in GUARDAS_HEADER));
     if (sinGuarda.length > 0) {
         throw new Error(
             `[Arch:B] href literal del header SIN guarda de rol declarada: ${sinGuarda.join(", ")} ` +
-                `(src/components/modules/NavHeader.tsx). Declararla en GUARDAS_HEADER de scripts/arch/lib/nav-fuentes.ts.`
+                "(src/components/modules/NavHeader.tsx). Declararla en GUARDAS_HEADER de scripts/arch/lib/nav-fuentes.ts."
         );
     }
     const ordenados = [...literales].sort();
@@ -160,7 +160,7 @@ function subnavsFijos(): NavArray[] {
         if (hrefs.length === 0) {
             throw new Error(
                 `[Arch:B] no se encontraron tabs literales en ${ruta} (submenú fijo). ` +
-                    `Si el componente cambió de forma, actualizar subnavsFijos() de scripts/arch/lib/nav-fuentes.ts.`
+                    "Si el componente cambió de forma, actualizar subnavsFijos() de scripts/arch/lib/nav-fuentes.ts."
             );
         }
         return {

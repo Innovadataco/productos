@@ -96,12 +96,12 @@ export function calcularRiesgoConsulta(
     const scoreRaw =
         totalPesos > 0
             ? Math.round(
-                  ((confianzaPromedio * pesoConfianza +
+                ((confianzaPromedio * pesoConfianza +
                       factorCantidad(total) * pesoCantidad +
                       (severidadPromedio / 100) * pesoGravedad) /
                       totalPesos) *
                       100
-              )
+            )
             : 0;
 
     const umbralMedio = params.umbralMedio ?? 50;

@@ -31,6 +31,15 @@ describe("DepartamentoRepository", () => {
         expect(lista.map((d) => d.nombre)).toEqual([`Antioquia-${TAG}`, `Valle-${TAG}`]);
         expect(lista.some((d) => d.nombre === `Inactivo-${TAG}`), "los inactivos no se listan").toBe(false);
     });
+
+    it("E-8 (LOTE 3): findById devuelve el departamento con su paisId", async () => {
+        const { pais } = await crearPaisCiudad();
+        const depto = await prisma.departamento.create({ data: { nombre: `Boyaca-${TAG}`, paisId: pais.id, esActivo: true } });
+        const repo = new DepartamentoRepository();
+
+        expect(await repo.findById(depto.id)).toMatchObject({ id: depto.id, paisId: pais.id });
+        expect(await repo.findById("no-existe")).toBeNull();
+    });
 });
 
 describe("PaisRepository", () => {
@@ -54,5 +63,13 @@ describe("PaisRepository", () => {
         expect(nombres).not.toContain(`Zzz-${TAG}`);
         expect(nombres).toEqual([...nombres].sort());
         expect(lista.every((p) => typeof p.id === "string" && typeof p.codigo === "string")).toBe(true);
+    });
+
+    it("E-8 (LOTE 3): findById devuelve el país por id", async () => {
+        const { pais } = await crearPaisCiudad();
+        const repo = new PaisRepository();
+
+        expect(await repo.findById(pais.id)).toMatchObject({ id: pais.id, nombre: pais.nombre });
+        expect(await repo.findById("no-existe")).toBeNull();
     });
 });

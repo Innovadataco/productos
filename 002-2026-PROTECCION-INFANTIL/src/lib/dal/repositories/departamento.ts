@@ -21,4 +21,9 @@ export class DepartamentoRepository {
             select: { id: true, nombre: true, paisId: true },
         });
     }
+
+    /** E-8: departamento por id (validación de ubicación en gestión admin de colegios). */
+    findById(id: string) {
+        return this.db.departamento.findUnique({ where: { id } });
+    }
 }

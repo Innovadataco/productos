@@ -118,14 +118,14 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
         const reportesEnVentana =
             valoresCandidatos.size > 0
                 ? await prisma.reporte.findMany({
-                      where: {
-                          identificador: { in: Array.from(valoresCandidatos) },
-                          eliminado: false,
-                          estado: { in: ESTADOS_VISIBLES },
-                          creadoEn: { gte: new Date(ahora.getTime() - cooldownMs) },
-                      },
-                      select: { identificador: true, creadoEn: true },
-                  })
+                    where: {
+                        identificador: { in: Array.from(valoresCandidatos) },
+                        eliminado: false,
+                        estado: { in: ESTADOS_VISIBLES },
+                        creadoEn: { gte: new Date(ahora.getTime() - cooldownMs) },
+                    },
+                    select: { identificador: true, creadoEn: true },
+                })
                 : [];
 
         for (const [usuarioId, datos] of contactosPorUsuario.entries()) {

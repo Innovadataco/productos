@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -12,6 +11,12 @@ import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-trans
 import { esAdminRol, esOperadorRol } from "@/lib/operadores/permisos";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { CorreccionAdminRepository } from "@/lib/dal/repositories/correccion-admin";
+import { DatasetEntrenamientoRepository } from "@/lib/dal/repositories/dataset-entrenamiento";
+import { ParametroRepository } from "@/lib/dal/repositories/parametro";
+import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
 import { z } from "zod";
 import type { CategoriaConducta } from "@prisma/client";
 
@@ -74,10 +79,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const { esSpam, categoria, motivo } = parsedBody.data;
 
-        const reporteRow = await prisma.reporte.findUnique({
-            where: { id },
-            include: { clasificacion: true },
-        });
+        // E-8: las lecturas/escrituras viven en los repos; la ruta no toca prisma.
+        const reporteRow = await new ReporteRepository().findByIdConClasificacion(id);
         if (!reporteRow) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -115,7 +118,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
 
         if (esSpam) {
-            await prisma.$transaction(async (tx) => {
+            await withUnitOfWork(async (tx) => {
                 await darDeBajaReporte({
                     reporteId: id,
                     motivo: "RETIRO_LIMPIEZA",
@@ -125,26 +128,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                     accionAudit: "CASO_DADO_DE_BAJA",
                 });
 
-                const dataset = await tx.datasetEntrenamiento.create({
-                    data: {
-                        texto: reporte.texto,
-                        clasificacionCorrecta: "SPAM",
-                        fuente: "spam_revisado",
-                        textoAnonimizado: true,
-                    },
+                const dataset = await new DatasetEntrenamientoRepository(tx).crear({
+                    texto: reporte.texto,
+                    clasificacionCorrecta: "SPAM",
+                    fuente: "spam_revisado",
+                    textoAnonimizado: true,
                 });
 
                 try {
-                    const paramEmbedding = await tx.parametroSistema.findUnique({
-                        where: { clave: "reportes.embedding_model" },
-                    });
+                    const paramEmbedding = await new ParametroRepository(tx).findByClave("reportes.embedding_model");
                     const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
                     const vector = await generarEmbedding(modeloEmbedding, reporte.texto);
-                    const vectorStr = "[" + vector.join(",") + "]";
-                    await tx.$executeRaw`
-                        INSERT INTO "EmbeddingDataset" (id, "datasetId", vector, "modeloUsado", "creadoEn")
-                        VALUES (${crypto.randomUUID()}, ${dataset.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-                    `;
+                    await new EmbeddingRepository(tx).insertDatasetEmbedding(dataset.id, modeloEmbedding, vector);
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : String(err);
                     logger.warn(`[SPAM] No se pudo generar embedding para ejemplo spam: ${msg}`);
@@ -168,17 +163,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        await prisma.$transaction(async (tx) => {
+        await withUnitOfWork(async (tx) => {
             if (reporte.clasificacion) {
-                await tx.correccionAdmin.create({
-                    data: {
-                        clasificacionId: reporte.clasificacion.id,
-                        categoriaOriginal: "SPAM",
-                        categoriaCorregida: categoriaFinal as CategoriaConducta,
-                        adminId: user.id,
-                        motivo: motivo || "Reporte válido revisado como spam",
-                        confirmada: true,
-                    },
+                await new CorreccionAdminRepository(tx).crear({
+                    clasificacionId: reporte.clasificacion.id,
+                    categoriaOriginal: "SPAM",
+                    categoriaCorregida: categoriaFinal as CategoriaConducta,
+                    adminId: user.id,
+                    motivo: motivo || "Reporte válido revisado como spam",
+                    confirmada: true,
                 });
             }
 
@@ -192,10 +185,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 tx,
             });
 
-            await tx.reporte.update({
-                where: { id },
-                data: { estado: "CLASIFICADO" },
-            });
+            await new ReporteRepository(tx).actualizarEstado(id, { estado: "CLASIFICADO" });
         });
 
         return NextResponse.json({

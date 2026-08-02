@@ -21,6 +21,11 @@ export class CiudadRepository {
         });
     }
 
+    /** E-8: ciudad por id (validación de ubicación en gestión admin de colegios). */
+    findById(id: string) {
+        return this.db.ciudad.findUnique({ where: { id } });
+    }
+
     /** GET /api/ciudades: activas del país (filtro opcional por departamento), alfabéticas. */
     listarActivasPorPais(paisId: string, departamentoId?: string) {
         return this.db.ciudad.findMany({

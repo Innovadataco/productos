@@ -85,9 +85,9 @@ export function ExperimentoDashboard({ id, onBack, onRefresh }: ExperimentoDashb
 
     const chartData = perCategory
         ? Object.entries(perCategory).map(([cat, m]) => ({
-              label: cat,
-              value: Math.round((m as PerCategoryMetrics).f1 * 100),
-          }))
+            label: cat,
+            value: Math.round((m as PerCategoryMetrics).f1 * 100),
+        }))
         : [];
 
     return (

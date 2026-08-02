@@ -10,7 +10,10 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { RAIZ_PRODUCTO, relativa } from "./lib/paths";
-import allowlist from "./prisma-directo-allowlist.json";
+import allowlistJson from "./prisma-directo-allowlist.json";
+
+// E-8: con la migración completa la lista queda vacía; sin anotación, el JSON tipa `never[]`.
+const allowlist: { archivos: string[] } = allowlistJson;
 
 const RUTA_SRC = path.join(RAIZ_PRODUCTO, "src");
 const PATRON_IMPORT = /["']@\/lib\/prisma["']/;

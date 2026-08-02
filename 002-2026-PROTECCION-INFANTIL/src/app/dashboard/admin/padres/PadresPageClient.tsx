@@ -278,82 +278,82 @@ export default function PadresPageClient() {
                     <>
                         <Tabla sinContenedor>
                             <TablaHead variante="borde">
-                                    <tr className="text-subtle">
-                                        <th className="pb-3 font-medium">Nombre</th>
-                                        <th className="pb-3 font-medium">Email</th>
-                                        <th className="pb-3 font-medium">Estado</th>
-                                        <th className="pb-3 font-medium">Vigencia</th>
-                                        <th className="pb-3 font-medium">Registro</th>
-                                        <th className="pb-3 font-medium">Última sesión</th>
-                                        <th className="pb-3 font-medium">Reportes</th>
-                                        <th className="pb-3 font-medium text-right">Acciones</th>
-                                    </tr>
+                                <tr className="text-subtle">
+                                    <th className="pb-3 font-medium">Nombre</th>
+                                    <th className="pb-3 font-medium">Email</th>
+                                    <th className="pb-3 font-medium">Estado</th>
+                                    <th className="pb-3 font-medium">Vigencia</th>
+                                    <th className="pb-3 font-medium">Registro</th>
+                                    <th className="pb-3 font-medium">Última sesión</th>
+                                    <th className="pb-3 font-medium">Reportes</th>
+                                    <th className="pb-3 font-medium text-right">Acciones</th>
+                                </tr>
                             </TablaHead>
                             <TablaBody>
-                                    {items.map((padre) => {
-                                        const vigencia = estadoVigencia(padre);
-                                        return (
-                                            <tr key={padre.id} className="align-top">
-                                                <td className="py-3 pr-3 text-body">
-                                                    <div className="flex items-center gap-2">
-                                                        {padre.nombre || "—"}
-                                                        {padre.debeCambiarPassword && (
-                                                            <Badge variant="warning" className="text-[10px]">
+                                {items.map((padre) => {
+                                    const vigencia = estadoVigencia(padre);
+                                    return (
+                                        <tr key={padre.id} className="align-top">
+                                            <td className="py-3 pr-3 text-body">
+                                                <div className="flex items-center gap-2">
+                                                    {padre.nombre || "—"}
+                                                    {padre.debeCambiarPassword && (
+                                                        <Badge variant="warning" className="text-[10px]">
                                                                 Debe cambiar contraseña
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 pr-3 text-muted">{padre.email}</td>
-                                                <td className="py-3 pr-3">
-                                                    <Badge variant={padre.estado === "activo" ? "success" : "neutral"}>
-                                                        {padre.estado === "activo" ? "Activo" : "Inactivo"}
-                                                    </Badge>
-                                                </td>
-                                                <td className="py-3 pr-3">
-                                                    <div className="flex flex-col gap-1">
-                                                        <Badge variant={vigencia.variant}>{vigencia.label}</Badge>
-                                                        {(padre.inicioServicio || padre.finServicio) && (
-                                                            <span className="text-xs text-subtle">
-                                                                {fechaCorta(padre.inicioServicio)} → {fechaCorta(padre.finServicio)}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 pr-3 text-muted">{fechaCorta(padre.creadoEn)}</td>
-                                                <td className="py-3 pr-3 text-muted">{fechaCorta(padre.ultimaSesion)}</td>
-                                                <td className="py-3 pr-3 text-muted">{padre.reportes}</td>
-                                                <td className="py-3 text-right">
-                                                    <div className="flex flex-wrap justify-end gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            className="px-3 py-1.5 text-xs"
-                                                            disabled={accionEnCurso === padre.id}
-                                                            onClick={() => abrirVigencia(padre)}
-                                                        >
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 pr-3 text-muted">{padre.email}</td>
+                                            <td className="py-3 pr-3">
+                                                <Badge variant={padre.estado === "activo" ? "success" : "neutral"}>
+                                                    {padre.estado === "activo" ? "Activo" : "Inactivo"}
+                                                </Badge>
+                                            </td>
+                                            <td className="py-3 pr-3">
+                                                <div className="flex flex-col gap-1">
+                                                    <Badge variant={vigencia.variant}>{vigencia.label}</Badge>
+                                                    {(padre.inicioServicio || padre.finServicio) && (
+                                                        <span className="text-xs text-subtle">
+                                                            {fechaCorta(padre.inicioServicio)} → {fechaCorta(padre.finServicio)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 pr-3 text-muted">{fechaCorta(padre.creadoEn)}</td>
+                                            <td className="py-3 pr-3 text-muted">{fechaCorta(padre.ultimaSesion)}</td>
+                                            <td className="py-3 pr-3 text-muted">{padre.reportes}</td>
+                                            <td className="py-3 text-right">
+                                                <div className="flex flex-wrap justify-end gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        className="px-3 py-1.5 text-xs"
+                                                        disabled={accionEnCurso === padre.id}
+                                                        onClick={() => abrirVigencia(padre)}
+                                                    >
                                                             Vigencia
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            className="px-3 py-1.5 text-xs"
-                                                            disabled={accionEnCurso === padre.id}
-                                                            onClick={() => restablecerPassword(padre)}
-                                                        >
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        className="px-3 py-1.5 text-xs"
+                                                        disabled={accionEnCurso === padre.id}
+                                                        onClick={() => restablecerPassword(padre)}
+                                                    >
                                                             Restablecer contraseña
-                                                        </Button>
-                                                        <Button
-                                                            variant={padre.estado === "activo" ? "danger" : "secondary"}
-                                                            className="px-3 py-1.5 text-xs"
-                                                            disabled={accionEnCurso === padre.id}
-                                                            onClick={() => alternarEstado(padre)}
-                                                        >
-                                                            {padre.estado === "activo" ? "Desactivar" : "Reactivar"}
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                                    </Button>
+                                                    <Button
+                                                        variant={padre.estado === "activo" ? "danger" : "secondary"}
+                                                        className="px-3 py-1.5 text-xs"
+                                                        disabled={accionEnCurso === padre.id}
+                                                        onClick={() => alternarEstado(padre)}
+                                                    >
+                                                        {padre.estado === "activo" ? "Desactivar" : "Reactivar"}
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </TablaBody>
                         </Tabla>
                         <div className="mt-4 flex items-center justify-between text-sm text-muted">

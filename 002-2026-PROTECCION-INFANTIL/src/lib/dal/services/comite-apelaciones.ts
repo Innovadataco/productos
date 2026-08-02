@@ -111,20 +111,20 @@ export class ComiteApelacionesService {
             },
             documento: documento
                 ? {
-                      id: documento.id,
-                      nombreOriginal: documento.nombreOriginal,
-                      tamanoBytes: documento.tamanoBytes,
-                      hashSha256: documento.hashSha256,
-                      mimeType: documento.mimeType,
-                      eliminadoEn: documento.eliminadoEn,
-                      accesos: documento.accesos.map((acc) => ({
-                          id: acc.id,
-                          usuario: acc.usuario,
-                          accedidoEn: acc.accedidoEn,
-                          ipAddress: acc.ipAddress,
-                          userAgent: acc.userAgent,
-                      })),
-                  }
+                    id: documento.id,
+                    nombreOriginal: documento.nombreOriginal,
+                    tamanoBytes: documento.tamanoBytes,
+                    hashSha256: documento.hashSha256,
+                    mimeType: documento.mimeType,
+                    eliminadoEn: documento.eliminadoEn,
+                    accesos: documento.accesos.map((acc) => ({
+                        id: acc.id,
+                        usuario: acc.usuario,
+                        accedidoEn: acc.accedidoEn,
+                        ipAddress: acc.ipAddress,
+                        userAgent: acc.userAgent,
+                    })),
+                }
                 : null,
             reportes: reportes.map((r) => ({
                 id: r.id,

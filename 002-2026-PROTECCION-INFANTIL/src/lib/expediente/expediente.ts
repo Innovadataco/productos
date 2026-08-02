@@ -1,6 +1,7 @@
-import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { PasoProcesamientoRepository } from "@/lib/dal/repositories/paso-procesamiento";
 import type {
     ClasificacionIA,
     ClasificacionRubricaVoto,
@@ -72,22 +73,10 @@ function iso(fecha: Date | null | undefined): string | null {
 
 /** Carga el reporte con las relaciones que alimentan las etapas + sus pasos. */
 export async function cargarDatosExpediente(reporteId: string): Promise<DatosExpediente | null> {
-    const reporte = await prisma.reporte.findUnique({
-        where: { id: reporteId },
-        include: {
-            plataforma: { select: { nombre: true } },
-            fuente: true,
-            embedding: true,
-            clasificacion: { include: { rubricaVotos: true } },
-            transiciones: { orderBy: { creadoEn: "asc" } },
-            reintentos: { orderBy: { intento: "asc" } },
-        },
-    });
+    // E-8: las lecturas viven en los repos; el ensamblador no cambia.
+    const reporte = await new ReporteRepository().findParaExpediente(reporteId);
     if (!reporte) return null;
-    const pasos = await prisma.pasoProcesamiento.findMany({
-        where: { reporteId },
-        orderBy: { creadoEn: "asc" },
-    });
+    const pasos = await new PasoProcesamientoRepository().findPorReporteOrdenados(reporteId);
     return { reporte: reporte as ReporteExpediente, pasos };
 }
 
