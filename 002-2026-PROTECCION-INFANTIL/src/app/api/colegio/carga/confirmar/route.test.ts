@@ -12,6 +12,7 @@ import {
     crearColegioConAdmin,
     crearPlataforma,
     crearParametrosReportes,
+    crearPaisCiudad,
 } from "@/lib/reporte-test-utils";
 import { crearSesionRoster } from "@/lib/colegio/carga/sesion-roster";
 import { generarTokenCarga } from "@/lib/colegio/carga/token";
@@ -84,8 +85,28 @@ describe("POST /api/colegio/carga/confirmar (SPEC-132)", () => {
         const plat = await crearPlataforma("whatsapp", "WhatsApp");
         mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
 
-        const sesionId = await crearSesionRoster("otro-colegio-id", filasValidas(plat.id));
-        const token = await generarTokenCarga({ sesionId, colegioId: "otro-colegio-id" });
+        // La FK de CargaRosterSesion exige un colegio real: se crea uno segundo
+        // (la sesión ajena solo puede existir para un colegio que existe).
+        const { pais: paisB, ciudad: ciudadB } = await crearPaisCiudad();
+        const tenantB = await prisma.tenant.create({ data: { nombre: "Colegio B", estado: "activo" } });
+        const colegioB = await prisma.colegio.create({
+            data: {
+                nombre: "Colegio B",
+                paisId: paisB.id,
+                ciudadId: ciudadB.id,
+                representanteLegalNombre: "Representante B",
+                representanteLegalIdentificacion: "987654321",
+                representanteLegalEmail: "rep-b@test.com",
+                inicioServicio: new Date(),
+                finServicio: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+                tipoPeriodo: "ANUAL",
+                estado: "activo",
+                tenantId: tenantB.id,
+            },
+        });
+
+        const sesionId = await crearSesionRoster(colegioB.id, filasValidas(plat.id));
+        const token = await generarTokenCarga({ sesionId, colegioId: colegioB.id });
 
         const res = await POST(requestConfirmar(token, mockToken));
         expect(res.status).toBe(403);
