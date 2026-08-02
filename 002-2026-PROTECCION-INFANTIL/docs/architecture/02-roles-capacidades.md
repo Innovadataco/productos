@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 6 roles (5 autenticados + anónimo) × 190 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1140 combinaciones.
+Inventario: 6 roles (5 autenticados + anónimo) × 191 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1146 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -150,6 +150,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
@@ -345,6 +346,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
@@ -540,6 +542,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
@@ -735,6 +738,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/publicos` | api | HTTP 403 | no permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | HTTP 403 | no permite | sí |
 | `/api/docs` | api | HTTP 403 | no permite | sí |
 | `/api/docs/indice` | api | HTTP 403 | no permite | sí |
@@ -930,6 +934,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
@@ -1125,6 +1130,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
+| `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |

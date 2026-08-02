@@ -31,12 +31,13 @@ type SessionUser = {
 
 const ROLES_BLOQUEADOS = ["ADMIN", "OPERADOR", "SCHOOL_ADMIN"];
 
-export function ReporteWizard() {
+export function ReporteWizard({ identificadorInicial }: { identificadorInicial?: string | undefined } = {}) {
     const [step, setStep] = useState(1);
     const [user, setUser] = useState<SessionUser>(null);
     const [checkingSession, setCheckingSession] = useState(true);
     const [data, setData] = useState<WizardData>({
-        identificador: "",
+        // F3 (N-5): valor inicial desde el CTA de la consulta vacía (ya sanitizado por la página).
+        identificador: identificadorInicial ?? "",
         plataforma: "",
         otraPlataforma: "",
         ciudad: "",

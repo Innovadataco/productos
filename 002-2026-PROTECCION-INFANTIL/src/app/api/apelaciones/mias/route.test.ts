@@ -115,6 +115,8 @@ describe("GET /api/apelaciones/mias", () => {
         const user = await crearUsuario("PARENT");
         const plataformaId = await pid();
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(user);
+        // N-3 (002-PI-056): apelar exige reportes asociados al identificador.
+        await crearReporteDelIdentificador("+573009990003", plataformaId);
         const resPost = await POST(crearRequestApelacion(plataformaId, "+573009990003"));
         const creada = await resPost.json();
 
@@ -140,6 +142,8 @@ describe("GET /api/apelaciones/mias", () => {
         const plataformaId = await pid();
 
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(userA);
+        // N-3 (002-PI-056): apelar exige reportes asociados al identificador.
+        await crearReporteDelIdentificador("+573009990004", plataformaId);
         await POST(crearRequestApelacion(plataformaId, "+573009990004"));
 
         const spy = vi.spyOn(auth, "verifyAuth").mockResolvedValue(userB);

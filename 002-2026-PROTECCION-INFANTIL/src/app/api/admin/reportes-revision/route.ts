@@ -39,11 +39,21 @@ export async function GET(req: Request) {
             );
         }
 
-        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, q } = parsedQuery.data;
+        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, padre, q } = parsedQuery.data;
         const skip = (page - 1) * pageSize;
 
         // SPEC-122: la bandeja excluye bajas lógicas salvo que se pidan explícitamente.
         const where: Prisma.ReporteWhereInput = incluirEliminados ? {} : whereReporteVigente();
+
+        if (padre) {
+            // N-2 (002-PI-056): filtro por padre (email o nombre del denunciante).
+            where.usuario = {
+                OR: [
+                    { email: { contains: padre, mode: "insensitive" } },
+                    { nombre: { contains: padre, mode: "insensitive" } },
+                ],
+            };
+        }
 
         if (q) {
             where.OR = [

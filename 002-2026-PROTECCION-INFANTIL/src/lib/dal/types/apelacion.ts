@@ -38,4 +38,4 @@ export interface MisApelacionesDto {
 
 export type ResultadoPreparacionRadicacion =
     | { ok: true }
-    | { ok: false; tipo: "plataforma_invalida" | "conflicto" };
+    | { ok: false; tipo: "plataforma_invalida" | "conflicto" | "sin_reportes" };

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ConsultaForm } from "./ConsultaForm";
+import { ConsultaVaciaBloque, type ConsultaVaciaBloqueData } from "./ConsultaVaciaBloque";
 import { formatPlataformasResumen } from "@/lib/plataforma";
 import { RPT_STORAGE_KEY } from "./HomePageClient";
 
@@ -21,6 +22,8 @@ export type ResultadoConsulta = {
     plataformas?: Plataforma[];
     ubicaciones?: Ubicacion[];
     mensaje?: string;
+    // F3 (N-5): contenido curado del estado vacío (parámetros, sin IA).
+    bloqueVacia?: ConsultaVaciaBloqueData;
 };
 
 function ShieldIcon({ className }: { className?: string }) {
@@ -194,9 +197,14 @@ export function LandingHero({
                                 )}
 
                                 {!isLoading && buscado && !error && !resultado?.tieneReportes && (
-                                    <p className="text-sm text-white/90">
-                                        {resultado?.mensaje || "Sin reportes registrados para este identificador."}
-                                    </p>
+                                    <div className="space-y-4">
+                                        <p className="text-sm text-white/90">
+                                            {resultado?.mensaje || "Sin reportes registrados para este identificador."}
+                                        </p>
+                                        {resultado?.bloqueVacia && (
+                                            <ConsultaVaciaBloque bloque={resultado.bloqueVacia} identificador={resultado.identificador} />
+                                        )}
+                                    </div>
                                 )}
 
                                 {!isLoading && resultado?.tieneReportes && (

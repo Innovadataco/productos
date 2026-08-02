@@ -64,7 +64,21 @@ describe("POST /api/apelaciones", () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();
-        await crearPlataforma();
+        const plat = await crearPlataforma();
+        // N-3 (002-PI-056): apelar exige que el identificador tenga reportes asociados.
+        // Los tests de este archivo usan el identificador por defecto de crearRequestApelacion.
+        await prisma.reporte.create({
+            data: {
+                identificador: "+573009990001",
+                plataformaId: plat.id,
+                texto: "Texto de prueba del reporte que habilita la apelación.",
+                fechaIncidente: new Date("2026-07-01T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                estado: "CLASIFICADO",
+            },
+        });
     });
 
     afterAll(async () => {
@@ -118,6 +132,16 @@ describe("POST /api/apelaciones", () => {
         vi.spyOn(auth, "verifyAuth").mockRejectedValue(new AppError("No autenticado", ERROR_CODES.AUTH_INVALID, 401));
         const res = await POST(crearRequestApelacion({ plataformaId: await plataformaId() }));
         expect(res.status).toBe(401);
+        expect(await prisma.apelacion.count()).toBe(0);
+    });
+
+    it("rechaza apelar un identificador SIN reportes asociados (404, anti-spam N-3)", async () => {
+        await setupUsuario();
+        const pid = await plataformaId();
+        const res = await POST(crearRequestApelacion({ identificador: "+573000000000", plataformaId: pid }));
+        expect(res.status).toBe(404);
+        const body = await res.json();
+        expect(body.error.message).toContain("No hay reportes registrados");
         expect(await prisma.apelacion.count()).toBe(0);
     });
 
