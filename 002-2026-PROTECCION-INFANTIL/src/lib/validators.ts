@@ -112,6 +112,8 @@ export const reportesRevisionQuerySchema = z.object({
     fechaHasta: z.string().date().optional(),
     incluirEliminados: z.coerce.boolean().default(false),
     operadorId: idSchema.optional(),
+    // N-2 (002-PI-056): filtro por padre (email o nombre del usuario denunciante).
+    padre: z.string().min(3).max(120).optional(),
     q: z.string().min(3).max(120).optional(),
 });
 
