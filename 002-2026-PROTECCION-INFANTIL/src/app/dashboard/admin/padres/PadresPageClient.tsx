@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -325,6 +326,12 @@ export default function PadresPageClient() {
                                             <td className="py-3 pr-3 text-muted">{padre.reportes}</td>
                                             <td className="py-3 text-right">
                                                 <div className="flex flex-wrap justify-end gap-2">
+                                                    <Link
+                                                        href={`/dashboard/admin/padres/${padre.id}/circulo`}
+                                                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                    >
+                                                        Ver círculo
+                                                    </Link>
                                                     <Button
                                                         variant="outline"
                                                         className="px-3 py-1.5 text-xs"

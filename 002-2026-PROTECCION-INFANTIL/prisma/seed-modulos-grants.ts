@@ -50,7 +50,10 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
         // mapean a rutas ADMIN_ONLY (proxy.ts) que la puerta le niega: el seed ya no dice
         // SÍ donde la puerta dice NO. Los módulos siguen en el catálogo (ADMIN los usa) y
         // las BD existentes se reconcilian con scripts/revocar-grants-comite-muertos.ts.
-        COMITE_VALIDACION: ["comite_bandeja"],
+        // SPEC-140 (decisión ZEUS): denuncia_formal por defecto para ADMIN y
+        // COMITE_VALIDACION; como es hijo de bandeja_reportes (jerarquía AND), el comité
+        // también recibe el padre.
+        COMITE_VALIDACION: ["comite_bandeja", "bandeja_reportes", "denuncia_formal"],
     };
     let permisosCreados = 0;
     for (const [rol, claves] of Object.entries(clavesPorRol)) {

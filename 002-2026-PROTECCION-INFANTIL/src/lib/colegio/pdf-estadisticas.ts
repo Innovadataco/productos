@@ -1,34 +1,12 @@
 import type { EstadisticasColegio, EstadisticasCurso } from "./estadisticas";
-import pdfMake from "pdfmake/build/pdfmake";
-import pdfFonts from "pdfmake/build/vfs_fonts";
+import { renderPdfBuffer } from "@/lib/pdf/pdfmake-node";
 import type {
     TDocumentDefinitions,
-    TVirtualFileSystem,
-    TCreatedPdf,
     Content,
     StyleDictionary,
     TableCell,
     Alignment,
 } from "pdfmake/interfaces";
-
-/**
- * SPEC-136 (E-3): la API runtime real del build CJS de pdfmake 0.3.x en Node —
- * `createPdf` acepta la firma legacy de 4 argumentos (el 4º es el vfs) y la
- * instancia expone `vfs` mutable. Los @types/pdfmake solo declaran la firma de
- * 2 argumentos; aquí se aumenta el módulo con la forma real, sin casts.
- */
-declare module "pdfmake/build/pdfmake" {
-    let vfs: TVirtualFileSystem;
-    function createPdf(
-        documentDefinitions: TDocumentDefinitions,
-        tableLayouts: undefined,
-        fonts: undefined,
-        vfs: TVirtualFileSystem
-    ): TCreatedPdf;
-}
-
-// pdfmake requiere registrar las fuentes virtuales en Node
-pdfMake.vfs = pdfFonts;
 
 const COLOR_PRIMARIO = "#10b981"; // emerald-500
 const COLOR_TEXTO = "#1f2937"; // gray-800
@@ -182,7 +160,7 @@ export function generarPdfEstadisticas(datos: EstadisticasColegio): Promise<Buff
         pageMargins: [40, 40, 40, 40],
     };
 
-    return pdfMake.createPdf(docDefinition, undefined, undefined, pdfFonts).getBuffer();
+    return renderPdfBuffer(docDefinition);
 }
 
 function construirTablaPorCurso(cursos: EstadisticasCurso[]): Content {

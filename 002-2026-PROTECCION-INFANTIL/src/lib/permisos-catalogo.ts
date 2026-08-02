@@ -20,8 +20,15 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "ia_rubrica", nombre: "Rúbrica de clasificación", categoria: "admin", orden: 15, padre: "centro_control_ia" },
     { clave: "operadores", nombre: "Gestión de operadores", categoria: "admin", esCritico: true, orden: 20 },
     { clave: "padres", nombre: "Gestión de padres", categoria: "admin", esCritico: true, orden: 25 },
+    // SPEC-141 (N-1, decisión ZEUS): visibilidad de soporte SOLO LECTURA sobre datos
+    // sensibles (círculo de confianza de padres, cursos/alumnos de colegios).
+    // Módulo propio — NO reusar padres/colegios_gestion. Default: solo ADMIN.
+    { clave: "soporte_lectura", nombre: "Soporte: lectura de datos sensibles", categoria: "admin", esCritico: true, orden: 26 },
     { clave: "bandeja_reportes", nombre: "Bandeja de reportes", categoria: "operador", esCritico: true, orden: 30 },
     { clave: "expediente_revelar_original", nombre: "Revelar texto original", categoria: "operador", esCritico: true, orden: 31, padre: "bandeja_reportes" },
+    // SPEC-140 (F2/N-4): generar denuncia formal (PDF por plantilla) y exportar el
+    // expediente forense. Default: ADMIN + COMITE_VALIDACION.
+    { clave: "denuncia_formal", nombre: "Denuncia formal y expediente forense", categoria: "operador", esCritico: true, orden: 32, padre: "bandeja_reportes" },
     { clave: "revision_spam", nombre: "Revisión de spam", categoria: "operador", orden: 35 },
     { clave: "comite", nombre: "Comité de Validación", categoria: "comite", orden: 50 },
     { clave: "comite_bandeja", nombre: "Bandeja del comité", categoria: "comite", orden: 51, padre: "comite" },

@@ -27,6 +27,35 @@ export class AlumnoRepository {
         });
     }
 
+    /**
+     * SPEC-141 (N-1): alumnos del curso paginados con sus identificadores activos
+     * (vista de soporte ADMIN, solo lectura). Incluye alumnos de cualquier estado
+     * (soporte histórico); SIEMPRE acotado al colegio. Devuelve [items, total].
+     */
+    listarPorCursoPaginadosConIdentificadores(
+        colegioId: string,
+        cursoId: string,
+        paginacion: { skip: number; take: number }
+    ) {
+        const where = { cursoId, colegioId } satisfies Prisma.AlumnoWhereInput;
+        return Promise.all([
+            this.db.alumno.findMany({
+                where,
+                orderBy: { nombre: "asc" },
+                skip: paginacion.skip,
+                take: paginacion.take,
+                include: {
+                    identificadores: {
+                        where: { estado: "activo" },
+                        include: { plataforma: { select: { id: true, clave: true, nombre: true } } },
+                        orderBy: { createdAt: "desc" },
+                    },
+                },
+            }),
+            this.db.alumno.count({ where }),
+        ]);
+    }
+
     /** Total de alumnos del colegio (totales generales de estadísticas). */
     contarPorColegio(colegioId: string): Promise<number> {
         return this.db.alumno.count({ where: { colegioId } });

@@ -71,7 +71,20 @@ interface ExpedienteResponse {
     sintesis: { analisisInterno: string; mensajePadre: string };
     revelado: boolean;
     puedeRevelar: boolean;
+    /** SPEC-140 (F2): presentes solo cuando el usuario tiene el módulo denuncia_formal. */
+    puedeDenunciar?: boolean;
+    canalesDenuncia?: CanalOficial[];
 }
+
+/** Canal oficial de denuncia (parámetro `mensaje.padre.canales`). */
+interface CanalOficial {
+    nombre: string;
+    contacto: string;
+    descripcion: string;
+}
+
+/** SPEC-140 (FR-001): la denuncia formal exige clasificación confirmada. */
+const ESTADOS_DENUNCIABLES = new Set(["CLASIFICADO", "CORREGIDO", "REVISION_MANUAL"]);
 
 interface AdminReporteExpedienteProps {
     reporteId: string;
@@ -147,92 +160,232 @@ function EtapaTimeline({ etapa }: { etapa: EtapaExpediente }) {
     );
 }
 
-function SeccionVotacion({ clasificacion }: { clasificacion: VotacionExpediente }) {
-    const modelos = Array.from(
-        new Set(Object.values(clasificacion.matriz).flatMap((fila) => Object.keys(fila)))
-    );
+function SeccionVotacion({ clasificacion }: { clasificacion: VotacionExpediente }) {    const modelos = Array.from(
+    new Set(Object.values(clasificacion.matriz).flatMap((fila) => Object.keys(fila)))
+);
+
+return (
+    <GlassCard className="p-4">
+        <h3 className="mb-3 text-sm font-semibold text-body">Votación de la clasificación</h3>
+        <div className="mb-3 flex flex-wrap gap-2 text-xs text-body">
+            <Badge variant="info">Confianza {formatearConfianza(clasificacion.confianza)}</Badge>
+            {clasificacion.usoCascada && (
+                <Badge variant="default">
+                        Cascada{clasificacion.modeloCascada ? `: ${clasificacion.modeloCascada}` : ""}
+                </Badge>
+            )}
+            <Badge variant="neutral">{clasificacion.latenciaMs} ms</Badge>
+            {(clasificacion.promptTokens !== null || clasificacion.responseTokens !== null) && (
+                <Badge variant="neutral">
+                        Tokens: {clasificacion.promptTokens ?? "—"} prompt · {clasificacion.responseTokens ?? "—"} respuesta
+                </Badge>
+            )}
+        </div>
+
+        {modelos.length > 0 && (
+            <div className="mb-4 overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                    <thead className="text-subtle">
+                        <tr>
+                            <th className="px-2 py-1 font-medium">Categoría</th>
+                            {modelos.map((m) => (
+                                <th key={m} className="px-2 py-1 text-center font-medium">{m}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {Object.entries(clasificacion.matriz).map(([categoria, fila]) => (
+                            <tr key={categoria}>
+                                <td className="px-2 py-1 text-body">{categoria}</td>
+                                {modelos.map((m) => (
+                                    <td key={m} className="px-2 py-1 text-center">
+                                        {fila[m] === 1 ? (
+                                            <Badge variant="success">1</Badge>
+                                        ) : (
+                                            <Badge variant="neutral">0</Badge>
+                                        )}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        )}
+
+        {clasificacion.detallePorCategoria.map((detalle) => {
+            const modelosCategoria = Array.from(
+                new Set(detalle.preguntas.flatMap((p) => Object.keys(p.votosPorModelo)))
+            );
+            return (
+                <div key={detalle.categoria} className="mb-3 last:mb-0">
+                    <p className="mb-1 text-xs font-semibold text-body">{detalle.categoria}</p>
+                    <ul className="space-y-1">
+                        {detalle.preguntas.map((pregunta, indice) => (
+                            <li
+                                key={`${detalle.categoria}-${indice}`}
+                                className="rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-900"
+                            >
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant={pregunta.tipo === "decisiva" ? "danger" : "neutral"}>
+                                        {pregunta.tipo === "decisiva" ? "Decisiva" : "Contexto"}
+                                    </Badge>
+                                    <span className="text-body">{pregunta.texto}</span>
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-2">
+                                    {modelosCategoria.map((m) => (
+                                        <span key={m} className="text-muted">
+                                            {m}: <span className="font-medium text-body">{pregunta.votosPorModelo[m] ?? 0}</span>
+                                        </span>
+                                    ))}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            );
+        })}
+    </GlassCard>
+);
+}
+
+/**
+ * SPEC-140 (F2 + N-4): acciones de denuncia formal y exportación forense.
+ * Visible solo con el módulo `denuncia_formal` (lo decide el endpoint del
+ * expediente vía `puedeDenunciar`) y con clasificación confirmada. El PDF se
+ * genera por plantilla determinista y se descarga; la plataforma no lo retiene.
+ */
+function SeccionDenunciaFormal({ reporteId, canales }: { reporteId: string; canales: CanalOficial[] }) {
+    const [abierto, setAbierto] = useState(false);
+    const [canal, setCanal] = useState("");
+    const [generando, setGenerando] = useState(false);
+    const [errorDenuncia, setErrorDenuncia] = useState("");
+
+    const descargarBlob = (blob: Blob, nombre: string) => {
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = nombre;
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const generarDenuncia = async () => {
+        if (!canal) return;
+        setGenerando(true);
+        setErrorDenuncia("");
+        try {
+            const res = await fetch(`/api/admin/reportes/${reporteId}/denuncia-formal`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ canalDestino: canal }),
+            });
+            if (!res.ok) {
+                const json = await res.json().catch(() => ({}));
+                throw new Error(
+                    typeof json?.error?.message === "string" ? json.error.message : "No se pudo generar la denuncia"
+                );
+            }
+            const blob = await res.blob();
+            descargarBlob(blob, `denuncia-formal-${reporteId}.pdf`);
+            setAbierto(false);
+        } catch (e) {
+            setErrorDenuncia(e instanceof Error ? e.message : "No se pudo generar la denuncia");
+        } finally {
+            setGenerando(false);
+        }
+    };
+
+    const exportarForense = async () => {
+        setGenerando(true);
+        setErrorDenuncia("");
+        try {
+            const res = await fetch(`/api/admin/reportes/${reporteId}/forense/pdf`, { credentials: "include" });
+            if (!res.ok) {
+                const json = await res.json().catch(() => ({}));
+                throw new Error(
+                    typeof json?.error?.message === "string" ? json.error.message : "No se pudo exportar el expediente"
+                );
+            }
+            const blob = await res.blob();
+            descargarBlob(blob, `expediente-forense-${reporteId}.pdf`);
+        } catch (e) {
+            setErrorDenuncia(e instanceof Error ? e.message : "No se pudo exportar el expediente");
+        } finally {
+            setGenerando(false);
+        }
+    };
 
     return (
         <GlassCard className="p-4">
-            <h3 className="mb-3 text-sm font-semibold text-body">Votación de la clasificación</h3>
-            <div className="mb-3 flex flex-wrap gap-2 text-xs text-body">
-                <Badge variant="info">Confianza {formatearConfianza(clasificacion.confianza)}</Badge>
-                {clasificacion.usoCascada && (
-                    <Badge variant="default">
-                        Cascada{clasificacion.modeloCascada ? `: ${clasificacion.modeloCascada}` : ""}
-                    </Badge>
-                )}
-                <Badge variant="neutral">{clasificacion.latenciaMs} ms</Badge>
-                {(clasificacion.promptTokens !== null || clasificacion.responseTokens !== null) && (
-                    <Badge variant="neutral">
-                        Tokens: {clasificacion.promptTokens ?? "—"} prompt · {clasificacion.responseTokens ?? "—"} respuesta
-                    </Badge>
-                )}
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-semibold text-body">Denuncia formal ante autoridades</h3>
+                <Badge variant="neutral">Sin retención del documento</Badge>
             </div>
-
-            {modelos.length > 0 && (
-                <div className="mb-4 overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                        <thead className="text-subtle">
-                            <tr>
-                                <th className="px-2 py-1 font-medium">Categoría</th>
-                                {modelos.map((m) => (
-                                    <th key={m} className="px-2 py-1 text-center font-medium">{m}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {Object.entries(clasificacion.matriz).map(([categoria, fila]) => (
-                                <tr key={categoria}>
-                                    <td className="px-2 py-1 text-body">{categoria}</td>
-                                    {modelos.map((m) => (
-                                        <td key={m} className="px-2 py-1 text-center">
-                                            {fila[m] === 1 ? (
-                                                <Badge variant="success">1</Badge>
-                                            ) : (
-                                                <Badge variant="neutral">0</Badge>
-                                            )}
-                                        </td>
-                                    ))}
-                                </tr>
+            <p className="mb-3 text-xs text-muted">
+                Genera un documento por plantilla (sin IA) para presentar ante un canal oficial. La plataforma no
+                conserva el documento; la generación queda registrada en auditoría sin su contenido.
+            </p>
+            {!abierto ? (
+                <div className="flex flex-wrap gap-2">
+                    <Button onClick={() => setAbierto(true)} className="px-3 py-2 text-xs" disabled={generando}>
+                        Llevar a denuncia formal
+                    </Button>
+                    <Button onClick={exportarForense} variant="outline" className="px-3 py-2 text-xs" disabled={generando}>
+                        {generando ? "Generando..." : "Exportar expediente forense (PDF)"}
+                    </Button>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    <div>
+                        <label htmlFor="canal-denuncia" className="mb-1 block text-xs font-medium text-muted">
+                            Canal oficial destino
+                        </label>
+                        <select
+                            id="canal-denuncia"
+                            value={canal}
+                            onChange={(e) => setCanal(e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-body dark:border-slate-700 dark:bg-slate-900"
+                        >
+                            <option value="">Selecciona un canal...</option>
+                            {canales.map((c) => (
+                                <option key={c.nombre} value={c.nombre}>
+                                    {c.nombre} ({c.contacto})
+                                </option>
                             ))}
-                        </tbody>
-                    </table>
+                        </select>
+                        {canales.length === 0 && (
+                            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                                No hay canales oficiales configurados. Un administrador debe revisar el parámetro de canales.
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button onClick={generarDenuncia} className="px-3 py-2 text-xs" disabled={!canal || generando}>
+                            {generando ? "Generando..." : "Generar y descargar PDF"}
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setAbierto(false);
+                                setErrorDenuncia("");
+                            }}
+                            variant="outline"
+                            className="px-3 py-2 text-xs"
+                            disabled={generando}
+                        >
+                            Cancelar
+                        </Button>
+                    </div>
                 </div>
             )}
-
-            {clasificacion.detallePorCategoria.map((detalle) => {
-                const modelosCategoria = Array.from(
-                    new Set(detalle.preguntas.flatMap((p) => Object.keys(p.votosPorModelo)))
-                );
-                return (
-                    <div key={detalle.categoria} className="mb-3 last:mb-0">
-                        <p className="mb-1 text-xs font-semibold text-body">{detalle.categoria}</p>
-                        <ul className="space-y-1">
-                            {detalle.preguntas.map((pregunta, indice) => (
-                                <li
-                                    key={`${detalle.categoria}-${indice}`}
-                                    className="rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-900"
-                                >
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant={pregunta.tipo === "decisiva" ? "danger" : "neutral"}>
-                                            {pregunta.tipo === "decisiva" ? "Decisiva" : "Contexto"}
-                                        </Badge>
-                                        <span className="text-body">{pregunta.texto}</span>
-                                    </div>
-                                    <div className="mt-1 flex flex-wrap gap-2">
-                                        {modelosCategoria.map((m) => (
-                                            <span key={m} className="text-muted">
-                                                {m}: <span className="font-medium text-body">{pregunta.votosPorModelo[m] ?? 0}</span>
-                                            </span>
-                                        ))}
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                );
-            })}
+            {errorDenuncia && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
+                    {errorDenuncia}
+                </p>
+            )}
         </GlassCard>
     );
 }
@@ -323,6 +476,13 @@ export function AdminReporteExpediente({ reporteId, onClose }: AdminReporteExped
                             </p>
                         )}
                     </GlassCard>
+
+                    {expediente.puedeDenunciar === true && ESTADOS_DENUNCIABLES.has(expediente.reporte.estado) && (
+                        <SeccionDenunciaFormal
+                            reporteId={expediente.reporte.id}
+                            canales={expediente.canalesDenuncia ?? []}
+                        />
+                    )}
 
                     <div className="space-y-1">
                         {expediente.etapas.map((etapa, indice) => {

@@ -17,5 +17,7 @@ Object.defineProperty(globalThis, "crypto", { value: webcrypto });
 process.env.JWT_SECRET = "test-secret-key-32-chars-long-12345678";
 process.env.RESEND_API_KEY = "re_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 process.env.ENCRYPTION_KEY = "test-encryption-32-chars-key!!";
-process.env.DATABASE_URL = "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
+// Worktrees paralelos: respeta DATABASE_URL si ya viene cargada (--env-file=.env.test);
+// el fallback es la BD de test del repo principal.
+process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
 process.env.WORKER_SECRET = "worker-secret-test";
