@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -10,6 +9,9 @@ import { recalcularYGuardarScore } from "@/lib/scoring";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { CorreccionAdminRepository } from "@/lib/dal/repositories/correccion-admin";
 
 function requireOperadorOAdmin(user: { rol: string }) {
     if (!esAdminRol(user.rol) && user.rol !== "OPERADOR") {
@@ -48,10 +50,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const id = parsedId.data;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id },
-            include: { clasificacion: true },
-        });
+        // E-8: las lecturas/escrituras viven en los repos; la ruta no toca prisma.
+        const reporte = await new ReporteRepository().findByIdConClasificacion(id);
         if (!reporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -82,9 +82,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         const categoria = reporte.clasificacion.categoria;
 
-        const correccionExistente = await prisma.correccionAdmin.findUnique({
-            where: { clasificacionId: reporte.clasificacion.id },
-        });
+        const correcciones = new CorreccionAdminRepository();
+        const correccionExistente = await correcciones.findByClasificacionId(reporte.clasificacion.id);
         if (correccionExistente) {
             return NextResponse.json(
                 { error: { message: "Este reporte ya fue confirmado o corregido", code: ERROR_CODES.VALIDATION_ERROR } },
@@ -92,20 +91,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        await prisma.correccionAdmin.create({
-            data: {
-                clasificacionId: reporte.clasificacion.id,
-                categoriaOriginal: categoria,
-                categoriaCorregida: categoria,
-                adminId: user.id,
-                confirmada: true,
-            },
+        await correcciones.crear({
+            clasificacionId: reporte.clasificacion.id,
+            categoriaOriginal: categoria,
+            categoriaCorregida: categoria,
+            adminId: user.id,
+            confirmada: true,
         });
 
         // Al confirmar, el reporte pasa a CLASIFICADO y se activan efectos públicos.
         const estadoAnterior = reporte.estado;
         const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
-        await prisma.$transaction(async (tx) => {
+        await withUnitOfWork(async (tx) => {
             await registrarTransicion({
                 reporteId: id,
                 estadoAnterior,
@@ -115,10 +112,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 motivo: "Caso confirmado por operador/admin",
                 tx,
             });
-            await tx.reporte.update({
-                where: { id },
-                data: { estado: "CLASIFICADO" },
-            });
+            await new ReporteRepository(tx).actualizarEstado(id, { estado: "CLASIFICADO" });
         });
 
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);

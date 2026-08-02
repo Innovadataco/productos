@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -9,6 +8,8 @@ import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
 import { whereReporteEnEstado } from "@/lib/reportes-acceso";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 
 const reasignarSchema = z.object({
     operadorId: z.string().min(1),
@@ -43,10 +44,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id },
-            select: { id: true, estado: true, operadorId: true, tenantId: true },
-        });
+        // E-8: las lecturas/escrituras viven en los repos; la ruta no toca prisma.
+        const reportes = new ReporteRepository();
+        const reporte = await reportes.findPermisosGestionBasico(id);
         if (!reporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -61,15 +61,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const operadorWhere: Record<string, unknown> = {
-            id: parsed.data.operadorId,
-            rol: "OPERADOR",
-            estado: "activo",
-        };
-        const operador = await prisma.usuario.findFirst({
-            where: operadorWhere,
-            include: { perfilOperador: { select: { cupoMaximo: true } } },
-        });
+        const operador = await new UsuarioRepository().findOperadorActivoConCupo(parsed.data.operadorId);
 
         if (!operador || !operador.perfilOperador) {
             return NextResponse.json(
@@ -79,9 +71,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
 
         const [casosAbiertos, config] = await Promise.all([
-            prisma.reporte.count({
-                where: whereReporteEnEstado("REVISION_MANUAL", { operadorId: operador.id }),
-            }),
+            reportes.countWhere(whereReporteEnEstado("REVISION_MANUAL", { operadorId: operador.id })),
             obtenerConfigAsignacion(),
         ]);
         const cupoMaximo = operador.perfilOperador.cupoMaximo ?? config.cupoDefault;
@@ -92,10 +82,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        await prisma.reporte.update({
-            where: { id },
-            data: { operadorId: operador.id },
-        });
+        await reportes.actualizarEstado(id, { operadorId: operador.id });
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({

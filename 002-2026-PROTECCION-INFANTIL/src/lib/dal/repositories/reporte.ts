@@ -27,6 +27,101 @@ const SELECT_SEGUIMIENTO = {
     clasificacion: true,
 } satisfies Prisma.ReporteSelect;
 
+/** E-8: select exacto de la bandeja de revisión del admin (con corrección anidada). */
+const SELECT_BANDEJA_REVISION = {
+    id: true,
+    identificador: true,
+    numeroSeguimiento: true,
+    estado: true,
+    esAnonimo: true,
+    prioridadAlta: true,
+    keywordsDetectadas: true,
+    esRafaga: true,
+    eliminado: true,
+    motivoBaja: true,
+    notaBaja: true,
+    eliminadoEn: true,
+    creadoEn: true,
+    fechaIncidente: true,
+    ciudad: true,
+    pais: true,
+    operadorId: true,
+    comiteId: true,
+    operador: { select: { id: true, email: true, nombre: true } },
+    comite: { select: { id: true, email: true, nombre: true } },
+    plataforma: { select: { id: true, nombre: true, clave: true } },
+    clasificacion: {
+        include: {
+            correccion: {
+                select: {
+                    categoriaOriginal: true,
+                    categoriaCorregida: true,
+                    motivo: true,
+                    creadoEn: true,
+                },
+            },
+        },
+    },
+} satisfies Prisma.ReporteSelect;
+
+/** E-8: select exacto del detalle de revisión (reintentos + corrección anidada). */
+const SELECT_DETALLE_REVISION = {
+    id: true,
+    identificador: true,
+    numeroSeguimiento: true,
+    estado: true,
+    texto: true,
+    esAnonimo: true,
+    prioridadAlta: true,
+    keywordsDetectadas: true,
+    esRafaga: true,
+    eliminado: true,
+    motivoBaja: true,
+    notaBaja: true,
+    eliminadoEn: true,
+    creadoEn: true,
+    fechaIncidente: true,
+    ciudad: true,
+    pais: true,
+    edadVictima: true,
+    plataforma: { select: { id: true, nombre: true, clave: true } },
+    operador: { select: { id: true, email: true, nombre: true } },
+    comite: { select: { id: true, email: true, nombre: true } },
+    reintentos: { orderBy: { intento: "asc" as const } },
+    clasificacion: {
+        include: {
+            correccion: {
+                select: {
+                    categoriaOriginal: true,
+                    categoriaCorregida: true,
+                    motivo: true,
+                    confirmada: true,
+                    creadoEn: true,
+                },
+            },
+        },
+    },
+} satisfies Prisma.ReporteSelect;
+
+/** E-8: select exacto de la bandeja de spam pendientes. */
+const SELECT_BANDEJA_SPAM = {
+    id: true,
+    identificador: true,
+    plataforma: { select: { id: true, nombre: true, clave: true } },
+    texto: true,
+    estado: true,
+    creadoEn: true,
+    prioridadAlta: true,
+    operadorId: true,
+    operador: { select: { id: true, nombre: true, email: true } },
+    clasificacion: {
+        select: { categoria: true, confianza: true },
+    },
+} satisfies Prisma.ReporteSelect;
+
+export type ReporteBandejaRevisionRow = Prisma.ReporteGetPayload<{ select: typeof SELECT_BANDEJA_REVISION }>;
+export type ReporteBandejaSpamRow = Prisma.ReporteGetPayload<{ select: typeof SELECT_BANDEJA_SPAM }>;
+
 export type ReporteConDetalle = Prisma.ReporteGetPayload<{ include: typeof INCLUDE_CON_DETALLE }>;
 export type ReporteSeguimientoRow = Prisma.ReporteGetPayload<{ select: typeof SELECT_SEGUIMIENTO }>;
 
@@ -51,6 +146,88 @@ export class ReporteRepository {
         return this.db.reporte.findUnique({
             where: { id },
             include: { clasificacion: true },
+        });
+    }
+
+    /** E-8: lectura con clasificación y embedding (anonimizar admin) — mismo include que la ruta. */
+    findByIdConClasificacionYEmbedding(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            include: { clasificacion: true, embedding: true },
+        });
+    }
+
+    /** E-8: permisos de gestión con baja (baja/transiciones: incluye `eliminado`). */
+    findPermisosGestion(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            select: { id: true, estado: true, operadorId: true, tenantId: true, eliminado: true },
+        });
+    }
+
+    /** E-8: permisos de gestión sin baja (escalar/reasignar). */
+    findPermisosGestionBasico(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            select: { id: true, estado: true, operadorId: true, tenantId: true },
+        });
+    }
+
+    /** E-8: permisos del caso para la vista de revisión (operador/comité/tenant). */
+    findPermisosRevision(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            select: { operadorId: true, comiteId: true, tenantId: true },
+        });
+    }
+
+    /** E-8: bandeja de revisión del admin (select exacto de la ruta, con corrección). */
+    findBandejaRevision(
+        where: Prisma.ReporteWhereInput,
+        paginacion: { skip: number; take: number }
+    ): Promise<[ReporteBandejaRevisionRow[], number]> {
+        return Promise.all([
+            this.db.reporte.findMany({
+                where,
+                orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "desc" }],
+                skip: paginacion.skip,
+                take: paginacion.take,
+                select: SELECT_BANDEJA_REVISION,
+            }),
+            this.db.reporte.count({ where }),
+        ]);
+    }
+
+    /** E-8: detalle de revisión con reintentos y corrección (select exacto de la ruta). */
+    findDetalleRevision(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            select: SELECT_DETALLE_REVISION,
+        });
+    }
+
+    /** E-8: bandeja de spam pendientes (select exacto de la ruta). */
+    findBandejaSpam(
+        where: Prisma.ReporteWhereInput,
+        paginacion: { skip: number; take: number }
+    ): Promise<[ReporteBandejaSpamRow[], number]> {
+        return Promise.all([
+            this.db.reporte.findMany({
+                where,
+                orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "desc" }],
+                skip: paginacion.skip,
+                take: paginacion.take,
+                select: SELECT_BANDEJA_SPAM,
+            }),
+            this.db.reporte.count({ where }),
+        ]);
+    }
+
+    /** E-8: solo textoOriginal cifrado (revelar-original; el descifrado es de la ruta). */
+    findTextoOriginalCifrado(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            select: { textoOriginal: true },
         });
     }
 
@@ -123,7 +300,7 @@ export class ReporteRepository {
         return this.db.reporte.create({ data });
     }
 
-    actualizarEstado(id: string, data: Prisma.ReporteUpdateInput) {
+    actualizarEstado(id: string, data: Prisma.ReporteUncheckedUpdateInput) {
         return this.db.reporte.update({ where: { id }, data });
     }
 

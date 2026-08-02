@@ -73,6 +73,14 @@ export class UsuarioRepository {
         });
     }
 
+    /** E-8: operador activo con su cupo (reasignación de casos). */
+    findOperadorActivoConCupo(id: string) {
+        return this.db.usuario.findFirst({
+            where: { id, rol: "OPERADOR", estado: "activo" },
+            include: { perfilOperador: { select: { cupoMaximo: true } } },
+        });
+    }
+
     /** Miembro activo del comité de validación con su flag esComite (asignar/reasignar). */
     findMiembroComiteActivo(id: string) {
         return this.db.usuario.findFirst({

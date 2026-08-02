@@ -3,7 +3,7 @@ import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { darDeBajaReporte } from "@/lib/dal/services/reporte-lifecycle";
-import { prisma } from "@/lib/prisma";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { MotivoBajaReporte } from "@prisma/client";
 import { idSchema, darDeBajaReporteSchema } from "@/lib/validators";
@@ -39,10 +39,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
         const reporteId = parsedId.data;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-            select: { id: true, estado: true, operadorId: true, tenantId: true, eliminado: true },
-        });
+        // E-8: la lectura vive en el repo; la baja en el servicio de ciclo de vida (SPEC-130).
+        const reporte = await new ReporteRepository().findPermisosGestion(reporteId);
         if (!reporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },

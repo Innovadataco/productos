@@ -74,4 +74,19 @@ export class IdentificadorReportadoRepository {
             data: { ocultoPorComiteEn: fecha },
         });
     }
+
+    /** E-8: página de identificadores para la simulación de score anti-abuso. */
+    listarParaSimulacion(paginacion: { skip: number; take: number }) {
+        return this.db.identificadorReportado.findMany({
+            skip: paginacion.skip,
+            take: paginacion.take,
+            orderBy: { ultimoReporteEn: "desc" },
+            select: { id: true, identificador: true, plataformaId: true },
+        });
+    }
+
+    /** E-8: total de identificadores agregados (paginación de la simulación). */
+    contarTodos(): Promise<number> {
+        return this.db.identificadorReportado.count();
+    }
 }

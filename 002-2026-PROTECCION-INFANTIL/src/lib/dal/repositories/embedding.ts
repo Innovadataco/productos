@@ -41,6 +41,31 @@ export class EmbeddingRepository {
     }
 
     /**
+     * E-8 (D3): upsert del embedding del reporte — si existe, ACTUALIZA vector y
+     * modelo (regeneración tras anonimizar/validar); si no, inserta. Misma raw
+     * que las rutas hacían inline.
+     */
+    async upsertReporteEmbedding(reporteId: string, modeloEmbedding: string, vector: number[]): Promise<void> {
+        const vectorStr = "[" + vector.join(",") + "]";
+        const embeddingExistente = await this.db.embeddingReporte.findUnique({
+            where: { reporteId },
+        });
+        if (embeddingExistente) {
+            await this.db.$executeRaw`
+                UPDATE "EmbeddingReporte"
+                SET vector = ${vectorStr}::vector, "modeloUsado" = ${modeloEmbedding}
+                WHERE "reporteId" = ${reporteId}
+            `;
+        } else {
+            const embeddingId = crypto.randomUUID();
+            await this.db.$executeRaw`
+                INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
+                VALUES (${embeddingId}, ${reporteId}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+            `;
+        }
+    }
+
+    /**
      * E-8 (D3): inserta el embedding de un registro del dataset (misma raw que las
      * rutas hacían inline). Sin guarda de idempotencia: el llamador decide su
      * política de reintento (la ruta de correcciones lo envuelve en try/catch).
