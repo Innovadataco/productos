@@ -47,8 +47,8 @@ function crearRequestApelacion(opts: { identificador: string; plataformaId: stri
     pushField(parts, "motivo", opts.motivo);
     parts.push(
         `--${boundary}`,
-        `Content-Disposition: form-data; name="documento"; filename="evidencia.pdf"`,
-        `Content-Type: application/pdf`,
+        "Content-Disposition: form-data; name=\"documento\"; filename=\"evidencia.pdf\"",
+        "Content-Type: application/pdf",
         "",
         pdfString(2048),
         `--${boundary}--`,

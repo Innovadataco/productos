@@ -164,7 +164,7 @@ function detectarTelefonosNNA(texto: string): string[] {
         // el celular/teléfono/número del niño/niña/adolescente/menor
         new RegExp(`el\\s+(?:celular|tel[ée]fono|n[úu]mero)\\s+del\\s+(?:${menores})`, "gui"),
         // el celular/teléfono/número de la niña/adolescente/menor
-        new RegExp(`el\\s+(?:celular|tel[ée]fono|n[úu]mero)\\s+de\\s+la\\s+(?:niña|adolescente|menor)`, "gui"),
+        new RegExp("el\\s+(?:celular|tel[ée]fono|n[úu]mero)\\s+de\\s+la\\s+(?:niña|adolescente|menor)", "gui"),
         // el número de mi hijo/a/... (es) ...
         new RegExp(`el\\s+n[úu]mero\\s+de\\s+mi\\s+(?:${familiares})(?:\\s+es)?`, "gui"),
         // mi hijo/a/... (tiene|su) celular/teléfono/número ...

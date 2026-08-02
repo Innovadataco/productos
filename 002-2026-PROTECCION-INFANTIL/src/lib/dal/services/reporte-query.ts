@@ -104,10 +104,10 @@ export class ReporteQueryService {
                     clasificacion:
                         r.clasificacion && ESTADOS_CLASIFICACION_FINAL.includes(r.estado)
                             ? {
-                                  categoria: r.clasificacion.categoria,
-                                  categoriaLabel: formatCategoria(r.clasificacion.categoria),
-                                  categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, r.clasificacion.categoria),
-                              }
+                                categoria: r.clasificacion.categoria,
+                                categoriaLabel: formatCategoria(r.clasificacion.categoria),
+                                categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, r.clasificacion.categoria),
+                            }
                             : null,
                     ranking,
                 };
@@ -158,20 +158,20 @@ export class ReporteQueryService {
             clasificacion:
                 reporte.clasificacion && ESTADOS_CLASIFICACION_FINAL.includes(reporte.estado)
                     ? {
-                          categoria: reporte.clasificacion.categoria,
-                          categoriaLabel: formatCategoria(reporte.clasificacion.categoria),
-                          categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, reporte.clasificacion.categoria),
-                          categoriasSecundarias: categoriasDeSecundarias(reporte.clasificacion.categoriasSecundarias ?? []),
-                          contienePii: reporte.clasificacion.contienePii,
-                      }
+                        categoria: reporte.clasificacion.categoria,
+                        categoriaLabel: formatCategoria(reporte.clasificacion.categoria),
+                        categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, reporte.clasificacion.categoria),
+                        categoriasSecundarias: categoriasDeSecundarias(reporte.clasificacion.categoriasSecundarias ?? []),
+                        contienePii: reporte.clasificacion.contienePii,
+                    }
                     : null,
             actividad: ranking ? (ranking.totalReportes >= actividadAltaMin ? "alta" : "baja") : null,
             ranking: ranking
                 ? {
-                      totalReportes: ranking.totalReportes,
-                      reportesAutenticados: ranking.reportesAutenticados,
-                      reportesAnonimos: ranking.reportesAnonimos,
-                  }
+                    totalReportes: ranking.totalReportes,
+                    reportesAutenticados: ranking.reportesAutenticados,
+                    reportesAnonimos: ranking.reportesAnonimos,
+                }
                 : null,
         };
     }

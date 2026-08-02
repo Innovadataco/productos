@@ -153,14 +153,14 @@ export function ReporteWizard() {
                             className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${s <= step
                                 ? "bg-primary-600 text-white"
                                 : "bg-slate-200 text-slate-500"
-                                }`}
+                            }`}
                         >
                             {s}
                         </div>
                         {s < 3 && (
                             <div
                                 className={`mx-2 h-1 flex-1 rounded transition ${s < step ? "bg-primary-600" : "bg-slate-200"
-                                    }`}
+                                }`}
                             />
                         )}
                     </div>

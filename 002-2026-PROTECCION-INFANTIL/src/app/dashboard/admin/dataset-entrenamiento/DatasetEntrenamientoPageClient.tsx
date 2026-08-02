@@ -140,13 +140,13 @@ export default function DatasetEntrenamientoPageClient() {
             <div className="glass rounded-2xl overflow-hidden">
                 <Tabla sinContenedor>
                     <TablaHead>
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Texto</th>
-                                <th className="px-4 py-3 font-medium">Clasificación</th>
-                                <th className="px-4 py-3 font-medium">Fuente</th>
-                                <th className="px-4 py-3 font-medium">Anonimización</th>
-                                <th className="px-4 py-3 font-medium">Fecha</th>
-                            </tr>
+                        <tr>
+                            <th className="px-4 py-3 font-medium">Texto</th>
+                            <th className="px-4 py-3 font-medium">Clasificación</th>
+                            <th className="px-4 py-3 font-medium">Fuente</th>
+                            <th className="px-4 py-3 font-medium">Anonimización</th>
+                            <th className="px-4 py-3 font-medium">Fecha</th>
+                        </tr>
                     </TablaHead>
                     <TablaBody>
                         {loading ? (
@@ -155,48 +155,48 @@ export default function DatasetEntrenamientoPageClient() {
                                     <Cargando tamano="sm" />
                                 </td>
                             </tr>
-                            ) : items.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-subtle">
+                        ) : items.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="px-4 py-8 text-center text-subtle">
                                         No hay registros anonimizados en el dataset todavía. Los registros pendientes se procesan en segundo plano.
+                                </td>
+                            </tr>
+                        ) : (
+                            items.map((item) => (
+                                <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                    <td className="px-4 py-3 max-w-md">
+                                        <p className="truncate text-body" title={item.texto}>
+                                            {item.texto}
+                                        </p>
+                                    </td>
+                                    <td className="px-4 py-3 text-body">
+                                        {formatCategoria(item.clasificacionCorrecta)}
+                                        {item.correccion && (
+                                            <span className="ml-2 text-xs text-subtle">
+                                                    (corregido desde {formatCategoria(item.correccion.categoriaOriginal)})
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-subtle">{FUENTES[item.fuente] || item.fuente}</td>
+                                    <td className="px-4 py-3">
+                                        {item.textoAnonimizado ? (
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                                <ShieldCheckIcon className="h-3.5 w-3.5" />
+                                                    Anonimizado
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                                <ExclamationIcon className="h-3.5 w-3.5" />
+                                                    Sin anonimizar
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-subtle whitespace-nowrap">
+                                        {new Date(item.creadoEn).toLocaleString()}
                                     </td>
                                 </tr>
-                            ) : (
-                                items.map((item) => (
-                                    <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                        <td className="px-4 py-3 max-w-md">
-                                            <p className="truncate text-body" title={item.texto}>
-                                                {item.texto}
-                                            </p>
-                                        </td>
-                                        <td className="px-4 py-3 text-body">
-                                            {formatCategoria(item.clasificacionCorrecta)}
-                                            {item.correccion && (
-                                                <span className="ml-2 text-xs text-subtle">
-                                                    (corregido desde {formatCategoria(item.correccion.categoriaOriginal)})
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-subtle">{FUENTES[item.fuente] || item.fuente}</td>
-                                        <td className="px-4 py-3">
-                                            {item.textoAnonimizado ? (
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                                                    <ShieldCheckIcon className="h-3.5 w-3.5" />
-                                                    Anonimizado
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                                                    <ExclamationIcon className="h-3.5 w-3.5" />
-                                                    Sin anonimizar
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-subtle whitespace-nowrap">
-                                            {new Date(item.creadoEn).toLocaleString()}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                            ))
+                        )}
                     </TablaBody>
                 </Tabla>
 

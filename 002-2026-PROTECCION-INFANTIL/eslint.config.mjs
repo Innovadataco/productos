@@ -23,6 +23,36 @@ const config = [
         },
     },
     {
+        // E-8 (002-PI-056): formateo determinista + límites. `eslint --fix` deja el repo
+        // en el formato canónico (indent 4, comillas dobles, punto y coma).
+        name: "proteccion-infantil/formato-limites",
+        rules: {
+            semi: ["error", "always"],
+            quotes: ["error", "double", { avoidEscape: true }],
+            indent: ["error", 4, { SwitchCase: 1 }],
+            // 36 funciones sobre 20 al activar (2026-08-02): ratchet visible hasta
+            // bajarlas; subir este número rompe el gate cuando se convierta en error.
+            complexity: ["warn", 20],
+        },
+    },
+    {
+        // E-8: techo de tamaño. Los 5 ofensores heredados quedan exentos con ratchet
+        // (la lista solo se encoge; un archivo nuevo sobre 500 líneas rompe el gate).
+        name: "proteccion-infantil/max-lines",
+        files: ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,mjs}"],
+        ignores: [
+            "**/*.test.*",
+            "src/app/dashboard/admin/colegios/ColegiosPageClient.tsx",
+            "src/app/dashboard/admin/comite/gestion/GestionPageClient.tsx",
+            "src/app/dashboard/admin/operadores/gestion/page.tsx",
+            "src/app/dashboard/circulo-confianza/page.tsx",
+            "src/components/modules/ia/IaModelSelector.tsx",
+        ],
+        rules: {
+            "max-lines": ["error", { max: 500, skipBlankLines: true, skipComments: true }],
+        },
+    },
+    {
         // Frontera del DAL (Q-3): @/lib/prisma solo se importa dentro de src/lib/dal/.
         // Tests y e2e siembran la BD directamente por diseño; los heredados viven en la allowlist (solo se encoge).
         name: "proteccion-infantil/dal-frontera",

@@ -109,7 +109,7 @@ describe("GET /api/admin/reportes-revision", () => {
         activeToken = await crearTokenUsuario(admin.id, "ADMIN");
 
         const req = new Request(
-            `http://localhost:5005/api/admin/reportes-revision?q=ab`,
+            "http://localhost:5005/api/admin/reportes-revision?q=ab",
             { method: "GET", headers: { cookie: `token=${activeToken}` } }
         );
         const res = await GET(req);

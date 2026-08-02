@@ -117,8 +117,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const accionAudit = body.estado === "inactivo"
             ? "COLEGIO_DESACTIVADO"
             : body.estado === "activo"
-            ? "COLEGIO_REACTIVADO"
-            : "COLEGIO_ACTUALIZADO";
+                ? "COLEGIO_REACTIVADO"
+                : "COLEGIO_ACTUALIZADO";
 
         await logAudit({
             accion: accionAudit,

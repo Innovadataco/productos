@@ -62,7 +62,7 @@ test.describe("Consulta pública de identificador", () => {
         await page.getByPlaceholder("Ej: +573001234567").fill(identificador);
         await page.getByRole("button", { name: "Buscar" }).click();
 
-        await expect(page.getByText(`En los últimos`)).toBeVisible();
+        await expect(page.getByText("En los últimos")).toBeVisible();
         await expect(page.getByTestId("total-reportes").getByText("3")).toBeVisible();
         await expect(page.getByTestId("reportes-autenticados").getByText("2")).toBeVisible();
         await expect(page.getByTestId("reportes-anonimos").getByText("1")).toBeVisible();

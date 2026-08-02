@@ -105,41 +105,41 @@ export function AdminDashboard() {
             <section className="space-y-4" aria-labelledby="charts-title">
                 <h2 id="charts-title" className="text-lg font-semibold text-body">Distribución</h2>
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <ChartCard title="Distribución por estado">
-                    <BarChart
-                        ariaLabel="Distribución de reportes por estado"
-                        data={data.porEstado.map((e) => ({ label: formatEstado(e.estado), value: e.count }))}
+                    <ChartCard title="Distribución por estado">
+                        <BarChart
+                            ariaLabel="Distribución de reportes por estado"
+                            data={data.porEstado.map((e) => ({ label: formatEstado(e.estado), value: e.count }))}
+                        />
+                    </ChartCard>
+
+                    <ChartCard title="Distribución por categoría de conducta">
+                        <DonutChart
+                            ariaLabel="Distribución de reportes por categoría de conducta"
+                            data={data.porCategoria.map((c) => ({ label: formatCategoria(c.categoria), value: c.count }))}
+                        />
+                    </ChartCard>
+
+                    <ChartCard title="Distribución por plataforma">
+                        <BarChart
+                            ariaLabel="Distribución de reportes por plataforma"
+                            data={data.porPlataforma.map((p) => ({ label: p.plataforma, value: p.count }))}
+                        />
+                    </ChartCard>
+
+                    <ChartCard title="Principales ciudades">
+                        <BarChart
+                            ariaLabel="Principales ciudades con reportes"
+                            data={data.porCiudad.map((c) => ({ label: c.ciudad, value: c.count }))}
+                        />
+                    </ChartCard>
+                </div>
+
+                <ChartCard title="Tendencia de reportes registrados (últimos 30 días)">
+                    <Sparkline
+                        ariaLabel="Tendencia de reportes registrados en los últimos 30 días"
+                        data={data.tendencia.map((t) => ({ label: t.fecha, value: t.count }))}
                     />
                 </ChartCard>
-
-                <ChartCard title="Distribución por categoría de conducta">
-                    <DonutChart
-                        ariaLabel="Distribución de reportes por categoría de conducta"
-                        data={data.porCategoria.map((c) => ({ label: formatCategoria(c.categoria), value: c.count }))}
-                    />
-                </ChartCard>
-
-                <ChartCard title="Distribución por plataforma">
-                    <BarChart
-                        ariaLabel="Distribución de reportes por plataforma"
-                        data={data.porPlataforma.map((p) => ({ label: p.plataforma, value: p.count }))}
-                    />
-                </ChartCard>
-
-                <ChartCard title="Principales ciudades">
-                    <BarChart
-                        ariaLabel="Principales ciudades con reportes"
-                        data={data.porCiudad.map((c) => ({ label: c.ciudad, value: c.count }))}
-                    />
-                </ChartCard>
-            </div>
-
-            <ChartCard title="Tendencia de reportes registrados (últimos 30 días)">
-                <Sparkline
-                    ariaLabel="Tendencia de reportes registrados en los últimos 30 días"
-                    data={data.tendencia.map((t) => ({ label: t.fecha, value: t.count }))}
-                />
-            </ChartCard>
             </section>
 
             <PrecisionTable precisionPorCategoria={data.precisionPorCategoria} />

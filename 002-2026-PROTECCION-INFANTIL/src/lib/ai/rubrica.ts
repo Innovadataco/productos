@@ -370,11 +370,11 @@ export async function clasificarConRubrica(texto: string, config?: Partial<Confi
     const sev = (cat: string): number => severidades[cat as CategoriaConducta] ?? 0;
     const categoriaFinal = (presentes.length > 0
         ? [...presentes].sort(
-              (a, b) =>
-                  sev(b) - sev(a) ||
+            (a, b) =>
+                sev(b) - sev(a) ||
                   (porcentajes[b] ?? 0) - (porcentajes[a] ?? 0) ||
                   a.localeCompare(b)
-          )[0]
+        )[0]
         : "OTRO") as CategoriaConducta;
     const estado: EstadoReporte = presentes.length === 0 ? "REVISION_MANUAL" : "CLASIFICADO";
     const confianza = presentes.length > 0 ? (porcentajes[categoriaFinal] ?? 0) : 0;

@@ -163,30 +163,30 @@ export function PublicDashboard({
                         )}
                     </ChartCard>
 
-            {/* Gráficos */}
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                <ChartCard title="Plataformas más reportadas" subtitle="Distribución por plataforma">
-                    {porPlataforma.length === 0 ? (
-                        <p className="text-sm text-muted">Sin datos</p>
-                    ) : (
-                        <BarChart
-                            ariaLabel="Distribución de reportes por plataforma"
-                            data={porPlataforma.map((p) => ({ label: p.plataforma, value: p.count }))}
-                        />
-                    )}
-                </ChartCard>
+                    {/* Gráficos */}
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        <ChartCard title="Plataformas más reportadas" subtitle="Distribución por plataforma">
+                            {porPlataforma.length === 0 ? (
+                                <p className="text-sm text-muted">Sin datos</p>
+                            ) : (
+                                <BarChart
+                                    ariaLabel="Distribución de reportes por plataforma"
+                                    data={porPlataforma.map((p) => ({ label: p.plataforma, value: p.count }))}
+                                />
+                            )}
+                        </ChartCard>
 
-                <ChartCard title="Categorías de conducta" subtitle="Categorías más frecuentes">
-                    {porGrupoCategoria.length === 0 ? (
-                        <p className="text-sm text-muted">Sin datos</p>
-                    ) : (
-                        <DonutChart
-                            ariaLabel="Distribución de reportes por categoría"
-                            data={porGrupoCategoria.map((g) => ({ label: g.nombre, value: g.total }))}
-                        />
-                    )}
-                </ChartCard>
-            </div>
+                        <ChartCard title="Categorías de conducta" subtitle="Categorías más frecuentes">
+                            {porGrupoCategoria.length === 0 ? (
+                                <p className="text-sm text-muted">Sin datos</p>
+                            ) : (
+                                <DonutChart
+                                    ariaLabel="Distribución de reportes por categoría"
+                                    data={porGrupoCategoria.map((g) => ({ label: g.nombre, value: g.total }))}
+                                />
+                            )}
+                        </ChartCard>
+                    </div>
                 </>
             )}
         </section>

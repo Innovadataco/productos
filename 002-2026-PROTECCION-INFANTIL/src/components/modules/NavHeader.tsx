@@ -59,32 +59,32 @@ export function NavHeader() {
     const headerBorderClass = user?.rol === "ADMIN"
         ? "border-b-amber-500/40 dark:border-b-amber-400/30"
         : user?.rol === "OPERADOR"
-        ? "border-b-violet-500/40 dark:border-b-violet-400/30"
-        : user?.rol === "COMITE_VALIDACION"
-        ? "border-b-emerald-500/40 dark:border-b-emerald-400/30"
-        : "border-b-white/40 dark:border-b-white/10";
+            ? "border-b-violet-500/40 dark:border-b-violet-400/30"
+            : user?.rol === "COMITE_VALIDACION"
+                ? "border-b-emerald-500/40 dark:border-b-emerald-400/30"
+                : "border-b-white/40 dark:border-b-white/10";
 
     const avatarClass = user?.rol === "ADMIN"
         ? "bg-amber-500"
         : user?.rol === "OPERADOR"
-        ? "bg-violet-500"
-        : user?.rol === "COMITE_VALIDACION"
-        ? "bg-emerald-500"
-        : "accent-gradient";
+            ? "bg-violet-500"
+            : user?.rol === "COMITE_VALIDACION"
+                ? "bg-emerald-500"
+                : "accent-gradient";
 
     const rolBadgeClass = user?.rol === "ADMIN"
         ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
         : user?.rol === "OPERADOR"
-        ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
-        : user?.rol === "COMITE_VALIDACION"
-        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+            ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
+            : user?.rol === "COMITE_VALIDACION"
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
 
     const dashboardHref = user?.rol === "SCHOOL_ADMIN"
         ? "/dashboard/colegio"
         : user?.rol === "PARENT"
-        ? "/dashboard"
-        : "/dashboard-publico";
+            ? "/dashboard"
+            : "/dashboard-publico";
 
     // El logo lleva al panel del rol SOLO dentro del área autenticada (/dashboard/**).
     // En rutas públicas va al home público aunque haya sesión (SPEC-106), EXCEPTO

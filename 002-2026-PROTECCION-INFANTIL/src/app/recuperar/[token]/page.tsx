@@ -37,8 +37,8 @@ export default function RecuperarTokenPage() {
                     {status === "valid"
                         ? "Ingresa tu nueva contraseña."
                         : status === "invalid"
-                        ? "El enlace no es válido o ha expirado."
-                        : "Verificando enlace..."}
+                            ? "El enlace no es válido o ha expirado."
+                            : "Verificando enlace..."}
                 </p>
             </div>
 

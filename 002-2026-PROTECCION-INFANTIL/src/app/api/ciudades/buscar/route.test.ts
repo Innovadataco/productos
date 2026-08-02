@@ -130,7 +130,7 @@ describe("GET /api/ciudades/buscar (SPEC-115)", () => {
 
     it("rechaza parámetros inválidos con 400", async () => {
         expect((await llamar(`q=m&paisId=${paisId}`)).status).toBe(400);
-        expect((await llamar(`q=medellin`)).status).toBe(400);
+        expect((await llamar("q=medellin")).status).toBe(400);
         expect((await llamar(`q=medellin&paisId=${paisId}&limit=999`)).status).toBe(400);
     });
 

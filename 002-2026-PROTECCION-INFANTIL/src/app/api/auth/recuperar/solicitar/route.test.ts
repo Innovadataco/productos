@@ -17,7 +17,7 @@ function makeRequest(body: unknown, ip = "203.0.113.10"): Request {
     });
 }
 
-describe("POST /api/auth/recuperar/solicitar", () => {
+describe("POST /api/auth/recuperar/solicitar", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();

@@ -58,10 +58,10 @@ export async function procesarReporte(request: Request): Promise<NextResponse> {
                 estado: reporte.estado,
                 clasificacion: clasif
                     ? {
-                          categoria: clasif.categoria,
-                          confianza: clasif.confianza,
-                          posibleAgresorPar: clasif.posibleAgresorPar,
-                      }
+                        categoria: clasif.categoria,
+                        confianza: clasif.confianza,
+                        posibleAgresorPar: clasif.posibleAgresorPar,
+                    }
                     : null,
                 latenciaMs: 0,
             });

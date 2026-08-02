@@ -82,7 +82,7 @@ export function ConsultaEnriquecidaClient() {
         setError("");
         setData(null);
         try {
-            const res = await fetch(`/api/consulta/detalle`, {
+            const res = await fetch("/api/consulta/detalle", {
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
@@ -178,27 +178,27 @@ export function ConsultaEnriquecidaClient() {
                         <h3 className="text-base font-semibold text-body mb-4">Reportes clasificados</h3>
                         <Tabla sinContenedor>
                             <TablaHead>
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">Plataforma</th>
-                                        <th className="px-4 py-3 font-medium">Fecha</th>
-                                        <th className="px-4 py-3 font-medium">Clasificación</th>
-                                    </tr>
+                                <tr>
+                                    <th className="px-4 py-3 font-medium">Plataforma</th>
+                                    <th className="px-4 py-3 font-medium">Fecha</th>
+                                    <th className="px-4 py-3 font-medium">Clasificación</th>
+                                </tr>
                             </TablaHead>
                             <TablaBody>
-                                    {(data.reportes ?? []).map((r) => (
-                                        <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                                            <td className="px-4 py-3 text-body">
-                                                {r.plataforma}
-                                                {r.esAnonimo && (
-                                                    <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-muted dark:bg-slate-800">
+                                {(data.reportes ?? []).map((r) => (
+                                    <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                                        <td className="px-4 py-3 text-body">
+                                            {r.plataforma}
+                                            {r.esAnonimo && (
+                                                <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-muted dark:bg-slate-800">
                                                         Anónimo
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-body">{formatFecha(r.fecha)}</td>
-                                            <td className="px-4 py-3 text-body">{r.categoriaGrupo}</td>
-                                        </tr>
-                                    ))}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-body">{formatFecha(r.fecha)}</td>
+                                        <td className="px-4 py-3 text-body">{r.categoriaGrupo}</td>
+                                    </tr>
+                                ))}
                             </TablaBody>
                         </Tabla>
                     </GlassCard>

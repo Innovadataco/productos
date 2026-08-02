@@ -81,8 +81,8 @@ export async function POST(request: Request) {
             message: emailSent
                 ? MENSAJE_EXITO
                 : esProduccion
-                  ? "El servicio de email no está disponible en este momento; intenta de nuevo más tarde."
-                  : "El servicio de email no está disponible; usa el código mostrado para continuar.",
+                    ? "El servicio de email no está disponible en este momento; intenta de nuevo más tarde."
+                    : "El servicio de email no está disponible; usa el código mostrado para continuar.",
             emailSent,
         };
 

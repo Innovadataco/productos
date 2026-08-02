@@ -372,9 +372,9 @@ export async function clasificarConVotos(
         },
         cascada: usoCascada
             ? {
-                  modelo: modeloCascada,
-                  rawResponse: cascadaRawResponse,
-              }
+                modelo: modeloCascada,
+                rawResponse: cascadaRawResponse,
+            }
             : undefined,
     });
 

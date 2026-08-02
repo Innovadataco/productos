@@ -29,7 +29,7 @@ async function main() {
     const config = await getCurrentProductionConfig();
     const { examples, fixtureVersion } = await loadActiveEvalCases();
 
-    console.log(`[BASELINE V2] Config producción:`);
+    console.log("[BASELINE V2] Config producción:");
     console.log(`  modelo=${config.modeloClasificacion}`);
     console.log(`  umbralRevision=${config.umbralRevision}`);
     console.log(`  nVotos=${config.nVotos}`);

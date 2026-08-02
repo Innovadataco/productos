@@ -228,12 +228,12 @@ export class IaEvalsService {
             metricas:
                 r.estado === "COMPLETADA" && r.resultadoJson
                     ? {
-                          accuracy: (r.resultadoJson as { metrics: { accuracy: number } }).metrics.accuracy,
-                          errorSilencioso: (r.resultadoJson as { metrics: { errorSilencioso: number } }).metrics
-                              .errorSilencioso,
-                          revisionManualRate: (r.resultadoJson as { metrics: { revisionManualRate: number } }).metrics
-                              .revisionManualRate,
-                      }
+                        accuracy: (r.resultadoJson as { metrics: { accuracy: number } }).metrics.accuracy,
+                        errorSilencioso: (r.resultadoJson as { metrics: { errorSilencioso: number } }).metrics
+                            .errorSilencioso,
+                        revisionManualRate: (r.resultadoJson as { metrics: { revisionManualRate: number } }).metrics
+                            .revisionManualRate,
+                    }
                     : null,
             creadoPor: r.creadoPor,
         }));
@@ -411,9 +411,9 @@ export class IaEvalsService {
         const baseline = isBaseline
             ? null
             : await this.evalRuns.findBaseline(
-                  run.fixtureVersion,
-                  aJson(productionConfig)
-              );
+                run.fixtureVersion,
+                aJson(productionConfig)
+            );
 
         const resultadoJson = esF7Report(run.resultadoJson) ? run.resultadoJson : null;
         const metrics = resultadoJson?.metrics || null;
@@ -427,10 +427,10 @@ export class IaEvalsService {
             operational: resultadoJson?.operational || null,
             baseline: baseline
                 ? {
-                      id: baseline.id,
-                      nombre: baseline.nombre,
-                      metrics: baselineReport?.metrics || null,
-                  }
+                    id: baseline.id,
+                    nombre: baseline.nombre,
+                    metrics: baselineReport?.metrics || null,
+                }
                 : null,
             baselineMissing: !baseline && run.estado === "COMPLETADA" && !isBaseline,
         };

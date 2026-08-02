@@ -171,7 +171,7 @@ async function main() {
         return cats.size === 1 && d.votos[0].categoria !== d.expected;
     });
 
-    console.log(`\n=== TECHO IRREDUCIBLE ===`);
+    console.log("\n=== TECHO IRREDUCIBLE ===");
     console.log(`Casos 5/5 unánimes e incorrectos: ${unanimesErroneos.length} / ${report.details.length}`);
     console.log(`Eso es un piso de error_silencioso de ~${((unanimesErroneos.length / report.details.length) * 100).toFixed(1)}% si todos los demás fueran perfectos.`);
 
@@ -194,13 +194,13 @@ async function main() {
     // posibleAgresorPar: OR vs mayoritario
     const orCount = report.details.filter((d) => d.posibleAgresorPar).length;
     const mayoritarioCount = report.details.filter((d) => d.posibleAgresorParMayoritario).length;
-    console.log(`\n=== posibleAgresorPar ===`);
+    console.log("\n=== posibleAgresorPar ===");
     console.log(`Tasa OR-de-5: ${((orCount / report.details.length) * 100).toFixed(1)}%`);
     console.log(`Tasa voto mayoritario: ${((mayoritarioCount / report.details.length) * 100).toFixed(1)}%`);
 
     // Casos con votos no unánimes (donde secundarias tienen sentido)
     const noUnanimous = report.details.filter((d) => new Set(d.votos.map((v) => v.categoria)).size > 1);
-    console.log(`\n=== Contexto para recall de secundarias ===`);
+    console.log("\n=== Contexto para recall de secundarias ===");
     console.log(`Casos con votos no unánimes: ${noUnanimous.length} / ${report.details.length}`);
     if (noUnanimous.length > 0) {
         const secOk = noUnanimous.filter((d) => d.secundariaCorrecta).length;

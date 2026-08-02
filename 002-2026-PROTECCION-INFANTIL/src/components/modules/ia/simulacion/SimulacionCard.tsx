@@ -15,10 +15,10 @@ export function SimulacionCard({ run, onClick }: { run: SimulacionRun; onClick: 
         run.estado === "COMPLETADA"
             ? "success"
             : run.estado === "FALLIDA" || run.estado === "CANCELADA"
-              ? "danger"
-              : run.estado === "EN_PROGRESO"
-                ? "info"
-                : "warning";
+                ? "danger"
+                : run.estado === "EN_PROGRESO"
+                    ? "info"
+                    : "warning";
 
     return (
         <GlassCard className="p-5 cursor-pointer hover:shadow-md transition" onClick={onClick}>

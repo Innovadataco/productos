@@ -221,7 +221,7 @@ async function start() {
 
                 // Drenar reportes pendientes cuando baja la carga
                 drainPending().catch((err) => {
-                    console.error(`[WORKER] Error drenando pendientes:`, err.message);
+                    console.error("[WORKER] Error drenando pendientes:", err.message);
                 });
 
                 return { success: true, estado: data.estado };

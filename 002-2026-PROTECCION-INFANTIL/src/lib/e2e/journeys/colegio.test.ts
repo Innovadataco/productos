@@ -23,8 +23,8 @@ function crearRequestCargaCsv(csv: string): Request {
     const boundary = `----cargae2e${Math.random().toString(36).slice(2)}`;
     const body = [
         `--${boundary}`,
-        `Content-Disposition: form-data; name="archivo"; filename="carga-e2e.csv"`,
-        `Content-Type: text/csv`,
+        "Content-Disposition: form-data; name=\"archivo\"; filename=\"carga-e2e.csv\"",
+        "Content-Type: text/csv",
         "",
         csv,
         `--${boundary}--`,

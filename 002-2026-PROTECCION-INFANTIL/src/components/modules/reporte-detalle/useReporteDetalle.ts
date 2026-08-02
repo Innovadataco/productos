@@ -135,7 +135,7 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
         setError("");
         setSuccess("");
         try {
-            const res = await fetch(`/api/admin/correcciones`, {
+            const res = await fetch("/api/admin/correcciones", {
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },

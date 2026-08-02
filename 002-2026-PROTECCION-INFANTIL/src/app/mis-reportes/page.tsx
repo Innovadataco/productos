@@ -44,8 +44,8 @@ export default function MisReportesPage() {
                 user.rol === "COMITE_VALIDACION"
                     ? "/dashboard/admin/comite"
                     : user.rol === "OPERADOR"
-                      ? "/dashboard/admin/operadores"
-                      : "/dashboard/admin";
+                        ? "/dashboard/admin/operadores"
+                        : "/dashboard/admin";
             router.push(target);
             return;
         }

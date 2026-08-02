@@ -20,12 +20,13 @@ export default defineConfig({
             // con 1 pt de margen en functions por jitter entre corridas (80.96–81.02).
             // 2026-08-01 (SPEC-133): los journeys por rol suben la cobertura a 44.4/74.2/81.7/44.4 — el piso sube.
             // 2026-08-01 (SPEC-134): los repos DAL del colegio suben functions a 82.3 — el piso sube a 82.
+            // 2026-08-02 (E-8): la migración DAL completa sube la cobertura a 45.3/75.2/83.2/45.3 — el piso sube.
             // Ratchet: el umbral solo sube; bajarlo requiere decisión explícita de ZEUS.
             thresholds: {
-                statements: 44,
-                branches: 74,
-                functions: 82,
-                lines: 44,
+                statements: 45,
+                branches: 75,
+                functions: 83,
+                lines: 45,
             },
         },
     },
