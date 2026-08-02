@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
-import { prisma } from "@/lib/prisma";
-import { getParametroSistema } from "@/lib/parametros";
+import { FuenteReporteRepository } from "@/lib/dal/repositories/fuente-reporte";
+import { ParametroRepository } from "@/lib/dal/repositories/parametro";
 import { requireEnv } from "@/lib/env";
 import type { Prisma, Reporte, Usuario } from "@prisma/client";
 
@@ -22,9 +22,10 @@ export interface FuentePesoParams {
 }
 
 export async function getFuentePesoParams(tx?: Prisma.TransactionClient): Promise<FuentePesoParams> {
-    const db = tx ?? prisma;
+    // E-8: los parámetros se leen por el repo (no secretos → valor directo = descifrado).
+    const parametros = new ParametroRepository(tx);
     const get = async (clave: string, fallback: string) => {
-        const p = await getParametroSistema(clave, db);
+        const p = await parametros.findByClave(clave);
         return p?.valor ?? fallback;
     };
 
@@ -100,10 +101,12 @@ export async function contarHistorialFuente(
     const baseWhere: Prisma.ReporteWhereInput = { OR: whereOR, eliminado: false };
     if (opts.excluirReporteId) baseWhere.id = { not: opts.excluirReporteId };
 
+    // E-8: los conteos viven en el repo; el módulo conserva la lógica del where.
+    const fuentes = new FuenteReporteRepository(tx);
     const [previos, confirmados, descartados] = await Promise.all([
-        db.reporte.count({ where: baseWhere }),
-        db.reporte.count({ where: { ...baseWhere, estado: "CORREGIDO" } }),
-        db.reporte.count({ where: { ...baseWhere, estado: "POSIBLE_SPAM" } }),
+        fuentes.contarPorWhere(baseWhere),
+        fuentes.contarPorWhere({ ...baseWhere, estado: "CORREGIDO" }),
+        fuentes.contarPorWhere({ ...baseWhere, estado: "POSIBLE_SPAM" }),
     ]);
 
     return { previos, confirmados, descartados };
@@ -134,16 +137,14 @@ export async function detectarRafagaFuente(
     if (opts.fingerprintHash) whereOR.push({ fuente: { fingerprintHash: opts.fingerprintHash } });
     if (whereOR.length === 0) return false;
 
-    const count = await db.reporte.count({
-        where: {
-            identificador: opts.identificador,
-            plataformaId: opts.plataformaId,
-            creadoEn: { gte: desde },
-            eliminado: false,
-            OR: whereOR,
-            // undefined explícito ≡ omitir el filtro (exactOptionalPropertyTypes)
-            ...(opts.excluirReporteId ? { id: { not: opts.excluirReporteId } } : {}),
-        },
+    const count = await new FuenteReporteRepository(tx).contarPorWhere({
+        identificador: opts.identificador,
+        plataformaId: opts.plataformaId,
+        creadoEn: { gte: desde },
+        eliminado: false,
+        OR: whereOR,
+        // undefined explícito ≡ omitir el filtro (exactOptionalPropertyTypes)
+        ...(opts.excluirReporteId ? { id: { not: opts.excluirReporteId } } : {}),
     });
 
     return count >= params.burstMaxReports;
@@ -217,7 +218,8 @@ export async function crearFuenteReporte(
     );
 
     const params = await getFuentePesoParams(tx);
-    const reporte = await db.reporte.findUniqueOrThrow({ where: { id: reporteId } });
+    const fuentes = new FuenteReporteRepository(tx);
+    const reporte = await fuentes.obtenerReporteOFallo(reporteId);
 
     const peso = calcularPesoFuente(
         reporte,
@@ -232,35 +234,30 @@ export async function crearFuenteReporte(
     );
 
     const diasAntiguedad = calcularDiasAntiguedad(opts.usuario);
-    await db.fuenteReporte.create({
-        data: {
-            reporteId,
-            ipHash,
-            fingerprintHash,
-            // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
-            ...(diasAntiguedad !== undefined ? { cuentaDiasAntiguedad: diasAntiguedad } : {}),
-            reportesPrevios: historial.previos,
-            reportesConfirmados: historial.confirmados,
-            reportesDescartados: historial.descartados,
-            pesoAplicado: peso,
-        },
+    await new FuenteReporteRepository(tx).crear({
+        reporteId,
+        ipHash,
+        fingerprintHash,
+        // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+        ...(diasAntiguedad !== undefined ? { cuentaDiasAntiguedad: diasAntiguedad } : {}),
+        reportesPrevios: historial.previos,
+        reportesConfirmados: historial.confirmados,
+        reportesDescartados: historial.descartados,
+        pesoAplicado: peso,
     });
 
-    await db.reporte.update({ where: { id: reporteId }, data: { fuenteConfianza: peso } });
+    await new FuenteReporteRepository(tx).actualizarFuenteConfianza(reporteId, peso);
 }
 
 export async function limpiarFuenteReporteAntiguas(
     dias?: number,
     tx?: Prisma.TransactionClient
 ): Promise<number> {
-    const db = tx ?? prisma;
-    const param = await getParametroSistema("anti_abuso.retencion_fuente_dias", db);
+    const param = await new ParametroRepository(tx).findByClave("anti_abuso.retencion_fuente_dias");
     const retencionDias = dias ?? parseInt(param?.valor ?? "90", 10);
     const limite = new Date(Date.now() - retencionDias * 24 * 60 * 60 * 1000);
 
-    const result = await db.fuenteReporte.deleteMany({
-        where: { creadoEn: { lt: limite } },
-    });
+    const result = await new FuenteReporteRepository(tx).purgarAntiguas(limite);
 
-    return result.count;
+    return result;
 }

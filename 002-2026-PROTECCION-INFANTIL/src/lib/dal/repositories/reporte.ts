@@ -46,6 +46,14 @@ export class ReporteRepository {
         return this.db.reporte.findUnique({ where: { id }, include: INCLUDE_CON_DETALLE });
     }
 
+    /** E-8: lectura con la clasificación (corrección admin) — mismo include que la ruta. */
+    findByIdConClasificacion(id: string) {
+        return this.db.reporte.findUnique({
+            where: { id },
+            include: { clasificacion: true },
+        });
+    }
+
     /** Lectura mínima para flujos de estado (fallback del worker). */
     findByIdBasico(id: string) {
         return this.db.reporte.findUnique({

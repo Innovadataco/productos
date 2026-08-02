@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { PaisRepository } from "@/lib/dal/repositories/pais";
 
 export async function GET() {
-    const paises = await prisma.pais.findMany({
-        where: { esActivo: true },
-        orderBy: { nombre: "asc" },
-        select: { id: true, codigo: true, nombre: true },
-    });
+    // E-8: la consulta vive en el repo; la ruta no toca prisma.
+    const paises = await new PaisRepository().listarActivos();
 
     return NextResponse.json({ paises });
 }

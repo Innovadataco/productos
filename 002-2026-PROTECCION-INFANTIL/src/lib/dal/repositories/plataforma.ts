@@ -36,4 +36,13 @@ export class PlataformaRepository {
             select: { id: true, nombre: true },
         });
     }
+
+    /** E-8: GET /api/plataformas — activas con clave y categoría (el orden "otro al final" es de la ruta). */
+    listarActivasConCategoria() {
+        return this.db.plataforma.findMany({
+            where: { esActiva: true },
+            orderBy: { nombre: "asc" },
+            select: { id: true, clave: true, nombre: true, categoria: true },
+        });
+    }
 }

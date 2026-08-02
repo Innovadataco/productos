@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { prisma } from "@/lib/prisma";
 import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { verificarConexionDb } from "@/lib/dal/adapters/health";
 
 // Spec 097: en contenedores (app y worker separados) el PID no es visible entre
 // procesos; el heartbeat en volumen compartido (WORKER_RUN_DIR) es la fuente de verdad.
@@ -36,14 +36,8 @@ export async function GET() {
             }
         }
 
-        // 2. Verificar conexión a base de datos
-        let dbOk = false;
-        try {
-            await prisma.$queryRaw`SELECT 1`;
-            dbOk = true;
-        } catch {
-            dbOk = false;
-        }
+        // 2. Verificar conexión a base de datos (E-8: el chequeo vive en el adaptador D3)
+        const dbOk = await verificarConexionDb();
 
         const healthy = workerAlive && dbOk;
 

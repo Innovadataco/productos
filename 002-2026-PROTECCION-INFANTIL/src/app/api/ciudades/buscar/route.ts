@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { normalizarNombreGeografico } from "@/lib/normalizar";
+import { CiudadRepository } from "@/lib/dal/repositories/ciudad";
 
 const buscarSchema = z.object({
     q: z.string().min(2).max(100),
@@ -13,16 +12,6 @@ const buscarSchema = z.object({
     departamentoId: z.string().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(50).default(20),
 });
-
-type CiudadBusqueda = {
-    id: string;
-    nombre: string;
-    paisId: string;
-    departamentoId: string | null;
-    departamento: string | null;
-    lat: number | null;
-    lng: number | null;
-};
 
 /**
  * GET /api/ciudades/buscar?q=...&paisId=...&departamentoId=...&limit=20
@@ -67,24 +56,15 @@ export async function GET(request: Request) {
     if (qNorm.length < 2) {
         return NextResponse.json({ ciudades: [] });
     }
-    const contiene = `%${qNorm}%`;
-    const prefijo = `${qNorm}%`;
 
     try {
-        const ciudades = await prisma.$queryRaw<CiudadBusqueda[]>`
-            SELECT c.id, c.nombre, c."paisId", c."departamentoId",
-                   d.nombre AS departamento, c.lat, c.lng
-            FROM "Ciudad" c
-            LEFT JOIN "Departamento" d ON d.id = c."departamentoId"
-            WHERE c."paisId" = ${paisId}
-              AND c."esActivo" = true
-              AND c."nombreNormalizado" ILIKE ${contiene}
-              ${departamentoId ? Prisma.sql`AND c."departamentoId" = ${departamentoId}` : Prisma.empty}
-            ORDER BY (c."nombreNormalizado" LIKE ${prefijo}) DESC,
-                     c.poblacion DESC NULLS LAST,
-                     c.nombre ASC
-            LIMIT ${limit}
-        `;
+        // E-8 (D3): la búsqueda (raw con join) vive en el repo; la ruta no toca prisma.
+        const ciudades = await new CiudadRepository().buscarPorNombreNormalizado({
+            paisId,
+            qNorm,
+            departamentoId,
+            limit,
+        });
         return NextResponse.json({ ciudades }, { headers: rate.headers });
     } catch (error) {
         logger.error("[Ciudades] Error en búsqueda:", error);

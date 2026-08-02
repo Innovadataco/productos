@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { DepartamentoRepository } from "@/lib/dal/repositories/departamento";
 
 export async function GET(request: Request) {
     try {
@@ -14,11 +14,8 @@ export async function GET(request: Request) {
             );
         }
 
-        const departamentos = await prisma.departamento.findMany({
-            where: { paisId, esActivo: true },
-            orderBy: { nombre: "asc" },
-            select: { id: true, nombre: true, paisId: true },
-        });
+        // E-8: la consulta vive en el repo; la ruta no toca prisma.
+        const departamentos = await new DepartamentoRepository().listarActivosPorPais(paisId);
 
         return NextResponse.json({ departamentos });
     } catch (error) {

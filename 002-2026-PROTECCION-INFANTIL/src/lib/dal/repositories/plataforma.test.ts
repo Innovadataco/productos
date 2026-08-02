@@ -28,4 +28,20 @@ describe("PlataformaRepository", () => {
         const idsInactivos = (await prisma.plataforma.findMany({ where: { esActiva: false }, select: { id: true } })).map((p) => p.id);
         expect(activas.some((p) => idsInactivos.includes(p.id)), "ninguna inactiva en el resultado").toBe(false);
     });
+
+    it("E-8: listarActivasConCategoria incluye clave y categoría (el orden 'otro al final' es de la ruta)", async () => {
+        await crearPlataforma();
+        await crearPlataforma("otro", "Otra", "otro");
+        const telegram = await crearPlataforma("telegram", "Telegram", "mensajeria");
+        await prisma.plataforma.update({ where: { id: telegram.id }, data: { esActiva: false } });
+        const repo = new PlataformaRepository();
+
+        const lista = await repo.listarActivasConCategoria();
+        const claves = lista.map((p) => p.clave);
+        expect(claves).toContain("whatsapp");
+        expect(claves).toContain("otro");
+        expect(claves).not.toContain("telegram");
+        expect(lista.every((p) => typeof p.categoria === "string")).toBe(true);
+        expect(lista.map((p) => p.nombre)).toEqual([...lista.map((p) => p.nombre)].sort());
+    });
 });

@@ -39,4 +39,17 @@ export class EmbeddingRepository {
             }
         }
     }
+
+    /**
+     * E-8 (D3): inserta el embedding de un registro del dataset (misma raw que las
+     * rutas hacían inline). Sin guarda de idempotencia: el llamador decide su
+     * política de reintento (la ruta de correcciones lo envuelve en try/catch).
+     */
+    async insertDatasetEmbedding(datasetId: string, modeloEmbedding: string, vector: number[]): Promise<void> {
+        const vectorStr = "[" + vector.join(",") + "]";
+        await this.db.$executeRaw`
+            INSERT INTO "EmbeddingDataset" (id, "datasetId", vector, "modeloUsado", "creadoEn")
+            VALUES (${crypto.randomUUID()}, ${datasetId}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
+        `;
+    }
 }

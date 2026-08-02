@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { rolesConocidos, obtenerRolesProtegidos } from "@/lib/permisos-modulos";
+import { PermisoModuloRepository } from "@/lib/dal/repositories/permiso-modulo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -47,16 +47,12 @@ export async function GET(request: Request) {
             );
         }
 
+        // E-8: las consultas viven en el repo; la ruta no toca prisma.
+        const repo = new PermisoModuloRepository();
         const [roles, modulos, permisos, rolesProtegidos] = await Promise.all([
             rolesConocidos(),
-            prisma.moduloPermisible.findMany({
-                where: { padreId: null },
-                include: { submodulos: { orderBy: { orden: "asc" } } },
-                orderBy: { orden: "asc" },
-            }),
-            prisma.permisoModulo.findMany({
-                select: { rol: true, moduloId: true, activo: true },
-            }),
+            repo.listarArbolModulos(),
+            repo.listarTodos(),
             obtenerRolesProtegidos(),
         ]);
 
@@ -112,8 +108,10 @@ export async function PATCH(request: Request) {
         }
 
         // Validar módulos
+        // E-8: las consultas y la aplicación transaccional viven en el repo.
+        const repo = new PermisoModuloRepository();
         const moduloIds = [...new Set(cambios.map((c) => c.moduloId))];
-        const modulos = await prisma.moduloPermisible.findMany({ where: { id: { in: moduloIds } } });
+        const modulos = await repo.listarModulosPorIds(moduloIds);
         if (modulos.length !== moduloIds.length) {
             throw new AppError("Uno o más módulos no existen", ERROR_CODES.VALIDATION_ERROR, 400);
         }
@@ -121,10 +119,8 @@ export async function PATCH(request: Request) {
         // Anti-lockout: simular el estado final y exigir que cada módulo crítico
         // conserve al menos un rol protegido activo.
         const rolesProtegidos = await obtenerRolesProtegidos();
-        const criticos = await prisma.moduloPermisible.findMany({ where: { esCritico: true } });
-        const permisosActuales = await prisma.permisoModulo.findMany({
-            where: { rol: { in: rolesProtegidos }, moduloId: { in: criticos.map((m) => m.id) } },
-        });
+        const criticos = await repo.listarCriticos();
+        const permisosActuales = await repo.listarPermisosPorRolesYModulos(rolesProtegidos, criticos.map((m) => m.id));
         const estadoFinal = new Map(permisosActuales.map((p) => [`${p.rol}:${p.moduloId}`, p.activo]));
         for (const cambio of cambios) {
             estadoFinal.set(`${cambio.rol}:${cambio.moduloId}`, cambio.activo);
@@ -141,20 +137,9 @@ export async function PATCH(request: Request) {
         }
 
         // Snapshot para auditoría
-        const anteriores = await prisma.permisoModulo.findMany({
-            where: { OR: cambios.map((c) => ({ rol: c.rol, moduloId: c.moduloId })) },
-            select: { rol: true, moduloId: true, activo: true },
-        });
+        const anteriores = await repo.snapshotDe(cambios);
 
-        await prisma.$transaction(
-            cambios.map((c) =>
-                prisma.permisoModulo.upsert({
-                    where: { rol_moduloId: { rol: c.rol, moduloId: c.moduloId } },
-                    update: { activo: c.activo, actualizadoPorId: admin.id },
-                    create: { rol: c.rol, moduloId: c.moduloId, activo: c.activo, actualizadoPorId: admin.id },
-                })
-            )
-        );
+        await repo.aplicarCambios(cambios, admin.id);
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({

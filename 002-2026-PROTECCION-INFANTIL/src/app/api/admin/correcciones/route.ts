@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -15,6 +14,13 @@ import { recalcularYGuardarScore } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { CorreccionAdminRepository } from "@/lib/dal/repositories/correccion-admin";
+import { ClasificacionIARepository } from "@/lib/dal/repositories/clasificacion-ia";
+import { DatasetEntrenamientoRepository } from "@/lib/dal/repositories/dataset-entrenamiento";
+import { ParametroRepository } from "@/lib/dal/repositories/parametro";
+import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
 import { z } from "zod";
 
 type CategoriaConducta =
@@ -86,10 +92,8 @@ export async function POST(request: Request) {
 
         const { reporteId, categoriaCorregida, comentario } = parsed.data;
 
-        const reporteRow = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-            include: { clasificacion: true },
-        });
+        // E-8: las consultas viven en los repos del DAL; la ruta no toca prisma.
+        const reporteRow = await new ReporteRepository().findByIdConClasificacion(reporteId);
         if (!reporteRow) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -126,9 +130,7 @@ export async function POST(request: Request) {
 
         const categoriaAnterior = clasificacion.categoria;
 
-        const correccionExistente = await prisma.correccionAdmin.findUnique({
-            where: { clasificacionId: clasificacion.id },
-        });
+        const correccionExistente = await new CorreccionAdminRepository().findByClasificacionId(clasificacion.id);
         if (correccionExistente) {
             return NextResponse.json(
                 { error: { message: "Este reporte ya fue confirmado o corregido", code: ERROR_CODES.CONFLICT } },
@@ -137,31 +139,26 @@ export async function POST(request: Request) {
         }
 
         // Guardar corrección usando Prisma ORM
-        const correccion = await prisma.correccionAdmin.create({
-            data: {
-                clasificacionId: clasificacion.id,
-                categoriaOriginal: categoriaAnterior,
-                categoriaCorregida: categoriaCorregida,
-                adminId: user.id,
-                motivo: comentario || null,
-            },
+        const correccion = await new CorreccionAdminRepository().crear({
+            clasificacionId: clasificacion.id,
+            categoriaOriginal: categoriaAnterior,
+            categoriaCorregida: categoriaCorregida,
+            adminId: user.id,
+            motivo: comentario || null,
         });
 
         // Actualizar clasificación con la corrección
         if (reporte.clasificacion) {
-            await prisma.clasificacionIA.update({
-                where: { reporteId },
-                data: {
-                    categoria: categoriaCorregida,
-                    confianza: 1.0,
-                },
+            await new ClasificacionIARepository().actualizarPorReporteId(reporteId, {
+                categoria: categoriaCorregida,
+                confianza: 1.0,
             });
         }
 
         // Actualizar estado del reporte y registrar transición atómicamente
         const estadoAnterior = reporte.estado;
         const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
-        await prisma.$transaction(async (tx) => {
+        await withUnitOfWork(async (tx) => {
             await registrarTransicion({
                 reporteId,
                 estadoAnterior,
@@ -171,10 +168,7 @@ export async function POST(request: Request) {
                 motivo: comentario || "Caso corregido por operador/admin",
                 tx,
             });
-            await tx.reporte.update({
-                where: { id: reporteId },
-                data: { estado: "CORREGIDO" },
-            });
+            await new ReporteRepository(tx).actualizarEstado(reporteId, { estado: "CORREGIDO" });
         });
 
         // SPEC-131 (O-2): la corrección puede mover la categoría hacia/desde SPAM/OTRO
@@ -215,9 +209,7 @@ export async function POST(request: Request) {
                 textoDataset = reporte.texto;
                 datasetAnonimizado = true;
             } else if (reporte.clasificacion?.contienePii) {
-                const paramModelo = await prisma.parametroSistema.findUnique({
-                    where: { clave: "reportes.classification_model" },
-                });
+                const paramModelo = await new ParametroRepository().findByClave("reportes.classification_model");
                 const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || MODELO_ANONIMIZACION_DEFAULT;
                 const resultado = await anonimizarTexto(modelo, reporte.texto);
                 textoDataset = resultado.textoAnonimizado;
@@ -231,14 +223,12 @@ export async function POST(request: Request) {
         }
 
         // Guardar en dataset de entrenamiento
-        const datasetRegistro = await prisma.datasetEntrenamiento.create({
-            data: {
-                texto: textoDataset,
-                clasificacionCorrecta: categoriaCorregida,
-                fuente: "correccion_admin",
-                correccionId: correccion.id,
-                textoAnonimizado: datasetAnonimizado,
-            },
+        const datasetRegistro = await new DatasetEntrenamientoRepository().crear({
+            texto: textoDataset,
+            clasificacionCorrecta: categoriaCorregida,
+            fuente: "correccion_admin",
+            correccionId: correccion.id,
+            textoAnonimizado: datasetAnonimizado,
         });
 
         if (requiereBackfill) {
@@ -251,16 +241,11 @@ export async function POST(request: Request) {
 
         // Generar embedding para RAG (F5). Si falla, no bloquear la corrección.
         try {
-            const paramEmbedding = await prisma.parametroSistema.findUnique({
-                where: { clave: "reportes.embedding_model" },
-            });
+            const paramEmbedding = await new ParametroRepository().findByClave("reportes.embedding_model");
             const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
             const vector = await generarEmbedding(modeloEmbedding, datasetRegistro.texto);
-            const vectorStr = "[" + vector.join(",") + "]";
-            await prisma.$executeRaw`
-                INSERT INTO "EmbeddingDataset" (id, "datasetId", vector, "modeloUsado", "creadoEn")
-                VALUES (${crypto.randomUUID()}, ${datasetRegistro.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-            `;
+            // E-8 (D3): la raw de inserción vive en el adaptador EmbeddingRepository.
+            await new EmbeddingRepository().insertDatasetEmbedding(datasetRegistro.id, modeloEmbedding, vector);
         } catch (embedErr) {
             logger.error("[CORRECCION] Fallo embedding para dataset, encolando backfill:", embedErr);
             try {
