@@ -5,21 +5,20 @@ EXISTENTES de la rúbrica, conservador, sin preguntas nuevas, decisión de condu
 
 ## Fase 1 — Selector de motor unificado (FR-001/FR-002)
 
-- [ ] T001 Extraer el selector de `clasificacion.ts` a función compartida
+- [x] T001 Extraer el selector de `clasificacion.ts` a función compartida
       (`clasificarConMotorActivo` o equivalente en `src/lib/ai/`)
-- [ ] T002 `sandbox.ts` y `eval-runner.ts` usan el selector (legacy intacto con flag off)
-- [ ] T003 Corridas nuevas registran `motorUsado` (lectura tolerante de históricos)
-- [ ] T004 Tests del selector: flag on → rúbrica; flag off → legacy (ambos contextos)
+- [x] T002 `sandbox.ts` y `eval-runner.ts` usan el selector (legacy intacto con flag off)
+- [x] T003 Corridas nuevas registran `motorUsado` (lectura tolerante de históricos)
+- [x] T004 Tests del selector: flag on → rúbrica; flag off → legacy (ambos contextos)
 
 ## Fase 2 — `posibleAgresorPar` calculado (FR-003/FR-004)
 
-- [ ] T005 Regla de derivación conservadora sobre respuestas existentes de vínculo
-      (adulto/desconocido → false; no-adulto explícito → true; sin evidencia → false, §1.3)
-- [ ] T006 `ResultadoRubrica.posibleAgresorPar` + propagación (`leerPosibleAgresorPar`)
-- [ ] T007 `eval-runner.ts:349` deja el hardcodeo: usa el valor real (`posibleAgresorParRate`)
-- [ ] T008 Tests unitarios de la regla (adulto / par / sin evidencia)
+- [x] T005 Regla de derivación: NO CALCULABLE conservadoramente (preguntas solo en positivo) → NEEDS CLARIFICATION → ZEUS decide (c): queda false documentado
+- [x] T006 `leerPosibleAgresorPar` tolerante en `motor.ts` (false documentado; legacy propaga el real)
+- [x] T007 eval-runner conserva false en la rama sin evidencia (§1.3); el legacy reporta el valor real
+- [x] T008 Tests del selector y del guard tolerante (motor.test.ts, 5/5)
 
 ## Fase 3 — Gates y cierre
 
-- [ ] T009 Suite completa + tsc + lint + build + arch:check verdes; decisión de conducta intacta
-- [ ] T010 Cierre documental: spec.md (Status + §Implementación), checklist, specs/README.md
+- [x] T009 Suite completa + tsc + lint + build + arch:check verdes; decisión de conducta intacta
+- [x] T010 Cierre documental: spec.md (Status + §Implementación), checklist, specs/README.md

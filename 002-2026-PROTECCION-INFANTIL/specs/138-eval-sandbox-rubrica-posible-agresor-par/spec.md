@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 2, ítem E-7; radica ZEUS). Reverificado en
 fuente 2026-08-01: (a) **desalineo** — producción clasifica con la rúbrica cuando
@@ -138,3 +138,27 @@ la rúbrica; la señal viaja en el mismo payload).
 Impacto en arquitectura: selector de motor unificado en sandbox/eval + señal aditiva en
 la rúbrica. NO toca schema, umbrales, visibilidad ni la decisión de clasificación.
 `arch:check` no debería requerir regeneración.
+
+## Implementación (cierre)
+
+Implementada el 2026-08-02 en `feature/001-scaffolding` (APROBADA por ZEUS con CI
+verde; F2 resuelta por ZEUS 2026-08-02: la señal queda en `false` documentado — opción
+(c) del NEEDS CLARIFICATION).
+
+- **F1 — Selector unificado (`2585f49e`)**: `src/lib/ai/motor.ts` es la fuente única del
+  switch (`ia.rubrica.enabled` → rúbrica : legacy). Producción
+  (`reporte-processing/clasificacion.ts`), `sandbox.ts` y `eval-runner.ts` lo usan;
+  overrides de modelo/params aplican solo al legacy (como antes); cada corrida de
+  eval/simulación registra `motorUsado` (lectura tolerante de históricos). Legacy
+  intacto con el flag off (196 tests del área + 5 nuevos del selector).
+- **F2 — `posibleAgresorPar`: NEEDS CLARIFICATION resuelta (queda `false`)**. La
+  derivación NO es calculable de forma fiable y conservadora con las preguntas
+  existentes: la rúbrica solo registra preguntas CUMPLIDAS formuladas en positivo
+  ("¿es un adulto o un desconocido?"); una pregunta de vínculo no cumplida es ambigua
+  (par real vs. sin evidencia). La regla §1.3-strict daría siempre `false` (inútil) y
+  la regla usable violaría §1.3. ZEUS decidió (c): la señal queda en `false`
+  documentado (`leerPosibleAgresorPar` tolerante en `motor.ts`, con el comentario de la
+  decisión); el legacy sí la produce y se propaga intacta. Reactivación: requiere una
+  pregunta de vínculo formulada en negativo, que solo ZEUS puede aprobar añadir a la
+  semilla.
+- **Gates**: suite 225 archivos / 1376 tests, tsc, lint, build, arch:check y CI verdes.
