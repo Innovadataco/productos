@@ -121,4 +121,50 @@ export class AlertaColegioRepository {
         `;
         return new Map(resultados.map((r) => [r.cursoId, Number(r.total)]));
     }
+
+    /**
+     * SPEC-142 (F6) — EXCEPCIÓN cross-tenant (como buscarActivosPorValor): las
+     * alertas de UN reporte con su vínculo y el grado del curso, más antiguas
+     * primero (dedupe determinístico por colegio y snapshot del grado).
+     */
+    findPorReporteConVinculoYGrado(reporteId: string) {
+        return this.db.alertaColegio.findMany({
+            where: { reporteId },
+            orderBy: { creadoEn: "asc" },
+            select: {
+                id: true,
+                colegioId: true,
+                patronInstitucionalId: true,
+                identificadorAlumno: {
+                    select: {
+                        alumno: { select: { colegioId: true, curso: { select: { grado: true } } } },
+                    },
+                },
+            },
+        });
+    }
+
+    /** SPEC-142 (F6): marca la fila agregada que aportó esta alerta (idempotencia). */
+    marcarPatron(id: string, patronInstitucionalId: string) {
+        return this.db.alertaColegio.update({
+            where: { id },
+            data: { patronInstitucionalId },
+        });
+    }
+
+    /** SPEC-142 (F6): alertas del reporte con aporte al agregado (reversa en baja). */
+    findPorReporteConPatron(reporteId: string) {
+        return this.db.alertaColegio.findMany({
+            where: { reporteId, patronInstitucionalId: { not: null } },
+            select: { id: true, patronInstitucionalId: true },
+        });
+    }
+
+    /** SPEC-142 (F6): limpia el marcador tras revertir (re-baja no re-decrementa). */
+    desmarcarPatron(id: string) {
+        return this.db.alertaColegio.update({
+            where: { id },
+            data: { patronInstitucionalId: null },
+        });
+    }
 }

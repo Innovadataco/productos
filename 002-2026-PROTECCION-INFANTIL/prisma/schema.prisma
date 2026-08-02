@@ -121,6 +121,7 @@ enum AccionAudit {
   // SPEC-141 (N-1): acceso de soporte admin (solo lectura) a datos sensibles.
   CIRCULO_CONFIANZA_ACCESO_ADMIN
   COLEGIO_ROSTER_ACCESO_ADMIN
+  MATCH_DETECTADO
   CONSULTA_SIN_RESULTADOS
   CONSULTA_VACIA_CTA_REPORTAR
 }
@@ -452,6 +453,7 @@ model Colegio {
   cursos       Curso[]
   alumnos      Alumno[]
   alertas      AlertaColegio[]
+  patrones     PatronInstitucional[]
   auditLogs    AuditLog[]
   sesionesCarga CargaRosterSesion[]
 
@@ -520,16 +522,44 @@ model AlertaColegio {
   reporteId             String
   identificadorAlumnoId String
   estado                String   @default("nueva") // nueva | vista | gestionada
+  // SPEC-142 (F6): fila agregada que ESTA alerta aportó (idempotencia + reversa
+  // exacta en baja). Nullable: las alertas previas a F6 no aportan al agregado.
+  patronInstitucionalId String?
   creadoEn              DateTime @default(now())
   actualizadoEn         DateTime @updatedAt
 
   colegio             Colegio            @relation(fields: [colegioId], references: [id])
   reporte             Reporte            @relation(fields: [reporteId], references: [id])
   identificadorAlumno IdentificadorAlumno @relation(fields: [identificadorAlumnoId], references: [id])
+  patronInstitucional PatronInstitucional? @relation(fields: [patronInstitucionalId], references: [id])
 
   @@unique([colegioId, reporteId, identificadorAlumnoId])
   @@index([colegioId, estado])
   @@index([reporteId])
+}
+
+// SPEC-142 (F6): patrón institucional agregado por (colegio, grado, conducta,
+// plataforma, trimestre). SIN PII por construcción (FR-002): nunca identificador,
+// reporteId, alumnoId, nombres ni textos — solo conteos por dimensiones.
+// El k-anonimato (k=3) se aplica en LECTURA, no aquí.
+model PatronInstitucional {
+  id            String            @id @default(cuid())
+  colegioId     String
+  periodo       String // trimestre calendario de Reporte.creadoEn: "2026-Q3"
+  grado         String // snapshot de Curso.grado; sentinel "Sin grado registrado"
+  conducta      CategoriaConducta
+  plataformaId  String
+  conteo        Int               @default(0)
+  creadoEn      DateTime          @default(now())
+  actualizadoEn DateTime          @updatedAt
+
+  colegio    Colegio         @relation(fields: [colegioId], references: [id])
+  plataforma Plataforma      @relation(fields: [plataformaId], references: [id])
+  alertas    AlertaColegio[]
+
+  @@unique([colegioId, periodo, grado, conducta, plataformaId])
+  @@index([colegioId, periodo])
+  @@map("patrones_institucionales")
 }
 
 // ============================================
@@ -550,6 +580,7 @@ model Plataforma {
   identificadoresContacto IdentificadorContacto[]
   identificadoresAlumno IdentificadorAlumno[]
   apelaciones             Apelacion[]
+  patronesInstitucionales PatronInstitucional[]
 
   @@index([clave])
   @@index([esActiva])
@@ -672,6 +703,7 @@ model Reporte {
   pasosProcesamiento       PasoProcesamiento[]
   solicitudComite          SolicitudComite?
   alertasColegio           AlertaColegio[]
+  eventoMatchDisparado     EventoMatch?
 
   @@index([identificador, plataformaId])
   @@index([estado])
@@ -802,11 +834,35 @@ model IdentificadorReportado {
   actualizadoEn         DateTime  @updatedAt
 
   plataforma  Plataforma               @relation(fields: [plataformaId], references: [id])
+  eventosMatch EventoMatch[]
 
   @@unique([identificador, plataformaId])
   @@index([esVisiblePublicamente])
   @@index([totalReportes])
   @@index([score])
+}
+
+// SPEC-139 (F5): evento de match — un reporte APROBADO (D-08) sobre un identificador
+// que ya tenía ≥1 aprobado de OTRO denunciante (huella S-1 o usuarioId).
+// Solo metadatos agregados: NUNCA usuarioId, huellas ni textos (FR-009).
+// Entidad global (sin tenant): el match cruza tenants como la consulta pública.
+model EventoMatch {
+  id                    String   @id @default(cuid())
+  identificadorId       String
+  reporteNuevoId        String   @unique
+  conteoAcumulado       Int
+  ciudades              String[]
+  conductasCoincidentes String[]
+  interCiudad           Boolean  @default(false)
+  creadoEn              DateTime @default(now())
+
+  identificador IdentificadorReportado @relation(fields: [identificadorId], references: [id])
+  reporteNuevo  Reporte                @relation(fields: [reporteNuevoId], references: [id])
+
+  @@index([identificadorId])
+  @@index([interCiudad])
+  @@index([creadoEn])
+  @@map("eventos_match")
 }
 
 // SPEC-110: apelación del identificador reportado (reemplazo del módulo eliminado en SPEC-109).

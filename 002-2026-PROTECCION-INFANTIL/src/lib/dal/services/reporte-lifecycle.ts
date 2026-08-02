@@ -6,6 +6,7 @@ import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { MARCADOR_TEXTO_PURGADO, cifrarTextoReporte, descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { revertirPatronPorReporte } from "@/lib/colegio/patrones";
 import { MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import type { MotivoBajaReporte, Prisma } from "@prisma/client";
 
@@ -112,6 +113,10 @@ export async function darDeBajaReporte(params: {
                 texto: MARCADOR_TEXTO_PURGADO,
             },
         });
+
+        // SPEC-142 (F6, FR-004): reversa exacta del aporte al patrón institucional
+        // (decremento con piso 0 vía marcador de la alerta), dentro de la misma tx.
+        await revertirPatronPorReporte(reporteId, tx);
 
         // Registrar baja en expediente (no cambia de estado, se documenta el cambio de flag eliminado).
         const admin = await tx.usuario.findUnique({ where: { id: adminId }, select: { rol: true } });

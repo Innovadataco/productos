@@ -55,8 +55,10 @@ export async function resetDatabase() {
     await prisma.correccionAdmin.deleteMany();
     await prisma.clasificacionIA.deleteMany();
     await prisma.embeddingReporte.deleteMany();
+    await prisma.eventoMatch.deleteMany();
     await prisma.identificadorReportado.deleteMany();
     await prisma.alertaColegio.deleteMany();
+    await prisma.patronInstitucional.deleteMany();
     await prisma.reporte.deleteMany();
     await prisma.codigoVerificacion.deleteMany();
     await prisma.integranteComite.deleteMany();
