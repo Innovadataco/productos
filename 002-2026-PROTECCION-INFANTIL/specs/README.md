@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **120** |
+| **Total de specs** | **124** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
 | **Implementadas (IMPLEMENTADO)** | **21** |
-| **Pendientes (PLANEADO)** | **1** |
+| **Pendientes (PLANEADO)** | **5** |
 
 ## Backlog activo (no cerradas)
 
@@ -78,6 +78,10 @@
 | [136](136-tipado-estricto-casts-guards-tsconfig/spec.md) | SPEC-136 — Tipado estricto: casts, guards y tsconfig maximal viable (E-3) | 🟢 Implementada |
 | [137](137-creacion-reporte-atomica/spec.md) | SPEC-137 — Creación de reporte atómica (E-5) | 🟢 Implementada |
 | [138](138-eval-sandbox-rubrica-posible-agresor-par/spec.md) | SPEC-138 — Eval/sandbox alineados con la rúbrica + posibleAgresorPar (E-7) | 🟢 Implementada |
+| [139](139-evento-match/spec.md) | SPEC-139 — Métrica del match: segundo reporte independiente (F5) | 🔵 Planeada (compuerta §4) |
+| [140](140-denuncia-formal/spec.md) | SPEC-140 — Denuncia formal: PDF determinista + panel forense (F2+N-4) | 🔵 Planeada (compuerta §4) |
+| [141](141-admin-solo-lectura-padres-colegios/spec.md) | SPEC-141 — Admin solo lectura: círculo de padres + cursos/alumnos (N-1) | 🔵 Planeada (compuerta §4) |
+| [142](142-patrones-institucionales/spec.md) | SPEC-142 — Patrones institucionales con k-anonimato k=3 (F6) | 🔵 Planeada (compuerta §4) |
 
 ## Tabla completa (114 specs)
 
@@ -203,6 +207,10 @@
 | [136](136-tipado-estricto-casts-guards-tsconfig/spec.md) | SPEC-136 — Tipado estricto: casts, guards y tsconfig maximal viable (E-3) | 🟢 Implementada |
 | [137](137-creacion-reporte-atomica/spec.md) | SPEC-137 — Creación de reporte atómica (E-5) | 🟢 Implementada |
 | [138](138-eval-sandbox-rubrica-posible-agresor-par/spec.md) | SPEC-138 — Eval/sandbox alineados con la rúbrica + posibleAgresorPar (E-7) | 🟢 Implementada |
+| [139](139-evento-match/spec.md) | SPEC-139 — Métrica del match: segundo reporte independiente (F5) | 🔵 Planeada (compuerta §4) |
+| [140](140-denuncia-formal/spec.md) | SPEC-140 — Denuncia formal: PDF determinista + panel forense (F2+N-4) | 🔵 Planeada (compuerta §4) |
+| [141](141-admin-solo-lectura-padres-colegios/spec.md) | SPEC-141 — Admin solo lectura: círculo de padres + cursos/alumnos (N-1) | 🔵 Planeada (compuerta §4) |
+| [142](142-patrones-institucionales/spec.md) | SPEC-142 — Patrones institucionales con k-anonimato k=3 (F6) | 🔵 Planeada (compuerta §4) |
 
 ## Incidencias de calidad de datos
 
