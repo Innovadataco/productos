@@ -94,6 +94,17 @@ export class ReporteRepository {
         });
     }
 
+    /**
+     * SPEC-137 (E-5): advisory lock de PostgreSQL por (usuario, identificador),
+     * tomado DENTRO de la transacción de creación. Cierra la carrera de la
+     * deduplicación con read-committed: la 2ª request concurrente espera en el
+     * lock hasta el commit de la 1ª y su chequeo dedup posterior ya ve el reporte.
+     * Fuera de una tx explícita es inofensivo (el lock vive solo el statement).
+     */
+    async tomarLockDedup(usuarioId: string, identificador: string): Promise<void> {
+        await this.db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${usuarioId + "|" + identificador}))`;
+    }
+
     existeNumeroSeguimiento(numeroSeguimiento: string): Promise<boolean> {
         return this.db.reporte
             .findUnique({ where: { numeroSeguimiento }, select: { id: true } })

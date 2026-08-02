@@ -140,6 +140,7 @@ async function start() {
     await ensureQueue("simulacion-lote");
     await ensureQueue("apelacion-mantenimiento");
     await ensureQueue("carga-roster-limpieza");
+    await ensureQueue("reportes-reconciliacion");
 
     const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
@@ -534,6 +535,24 @@ async function start() {
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[WORKER] ERROR limpieza de sesiones de carga: ${msg}`);
+            throw err;
+        }
+    });
+
+    // SPEC-137 (E-5, FR-003): reconciliación del encolado — re-encola reportes
+    // PENDIENTE sin job (huérfanos de un fallo transitorio de la cola al crear).
+    await boss.schedule("reportes-reconciliacion", "*/15 * * * *", {}, { tz: "America/Bogota" });
+    await boss.work("reportes-reconciliacion", async () => {
+        try {
+            const { reencolarPendientesSinJob } = await import("../src/lib/queue.ts");
+            const { encontrados, encolados, saltados } = await reencolarPendientesSinJob();
+            if (encolados > 0) {
+                console.log(`[WORKER] Reconciliación: ${encolados} reportes re-encolados (${encontrados} encontrados, ${saltados} saltados por backpressure)`);
+            }
+            return { success: true, encontrados, encolados, saltados };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR reconciliación de reportes: ${msg}`);
             throw err;
         }
     });

@@ -9,6 +9,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
 import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 
 export async function POST(request: Request) {
     try {
@@ -102,25 +103,31 @@ export async function POST(request: Request) {
         const prioridadAlta = !esAnonimo || (esAnonimo && keywordsRiesgo.tieneMatch);
         const keywordsDetectadas = keywordsRiesgo.tieneMatch ? keywordsRiesgo.keywords : [];
 
-        const resultado = await creationService.crear({
-            identificador,
-            plataformaId: plataforma.id,
-            plataformaClave,
-            texto,
-            fechaIncidente,
-            ciudad,
-            pais,
-            paisId,
-            ciudadId,
-            otraPlataforma,
-            edadVictima,
-            esAnonimo,
-            usuarioId,
-            tenantId: user?.tenantId ?? null,
-            estadoInicial,
-            prioridadAlta,
-            keywordsDetectadas,
-        });
+        // SPEC-137 (E-5): dedup + create + upsert del identificador en UNA
+        // transacción (con advisory lock por usuario+identificador dentro — cierra
+        // la carrera de deduplicación). La fuente anti-abuso y el encolado quedan
+        // FUERA, como hasta ahora (FR-004).
+        const resultado = await withUnitOfWork((tx) =>
+            new ReporteCreationService(tx).crear({
+                identificador,
+                plataformaId: plataforma.id,
+                plataformaClave,
+                texto,
+                fechaIncidente,
+                ciudad,
+                pais,
+                paisId,
+                ciudadId,
+                otraPlataforma,
+                edadVictima,
+                esAnonimo,
+                usuarioId,
+                tenantId: user?.tenantId ?? null,
+                estadoInicial,
+                prioridadAlta,
+                keywordsDetectadas,
+            })
+        );
 
         if (!resultado.ok) {
             if (resultado.tipo === "duplicado") {

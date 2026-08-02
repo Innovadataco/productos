@@ -136,6 +136,60 @@ export async function drainPending(): Promise<{ encolados: number }> {
 }
 
 /**
+ * SPEC-137 (E-5, FR-003): reconciliación del encolado. La tx de Prisma y pg-boss
+ * son pools distintos (no hay outbox transaccional): si la request creó el
+ * reporte pero el `sendReporte` falló (cola caída en ese instante), el reporte
+ * queda PENDIENTE sin job. Esta función re-encola esos huérfanos.
+ * Gracia de 1 minuto para no competir con la request en curso.
+ * Devuelve conteos { encontrados, encolados, saltados }.
+ */
+export async function reencolarPendientesSinJob(): Promise<{ encontrados: number; encolados: number; saltados: number }> {
+    const { maxPendientes } = await getWorkerParams();
+    const stats = await getQueueStats();
+    const cupo = maxPendientes - stats.pendientes;
+    if (cupo <= 0) {
+        return { encontrados: 0, encolados: 0, saltados: 0 };
+    }
+
+    // Mismo filtro anti-reencolado que drainPending: nunca duplicar un job activo.
+    const enCola = (await prisma.$queryRaw`
+        SELECT DISTINCT data->>'reporteId' AS "reporteId"
+        FROM pgboss.job
+        WHERE name = 'reporte-procesamiento'
+          AND state IN ('created', 'retry', 'active')
+    `) as { reporteId: string }[];
+    const idsEnCola = enCola.map((r) => r.reporteId);
+
+    const gracia = new Date(Date.now() - 60_000);
+    const pendientes = await prisma.reporte.findMany({
+        where: {
+            estado: "PENDIENTE",
+            creadoEn: { lt: gracia },
+            id: { notIn: idsEnCola },
+        },
+        orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "asc" }],
+        take: cupo,
+        select: { id: true, prioridadAlta: true },
+    });
+
+    let encolados = 0;
+    let saltados = 0;
+    for (const reporte of pendientes) {
+        const result = await sendReporte(reporte.id, { prioridadAlta: reporte.prioridadAlta });
+        if (result.encolado) {
+            encolados++;
+        } else {
+            saltados++;
+        }
+    }
+
+    if (encolados > 0) {
+        logger.info(`[QUEUE] Reconciliación: ${encolados} reportes huérfanos re-encolados (${pendientes.length} encontrados, ${saltados} saltados por backpressure)`);
+    }
+    return { encontrados: pendientes.length, encolados, saltados };
+}
+
+/**
  * @deprecated Use `sendReporte` instead.
  */
 export async function publishReporte(reporteId: string) {

@@ -73,6 +73,10 @@ export class ReporteCreationService {
 
         // Deduplicación autenticada: mismo usuario + identificador en 30 días.
         if (usuarioId) {
+            // SPEC-137 (E-5): advisory lock por (usuario, identificador) ANTES del
+            // chequeo — la 2ª request concurrente espera aquí hasta el commit de la
+            // 1ª y su dedup posterior ya la ve (cierre de carrera con read-committed).
+            await this.reportes.tomarLockDedup(usuarioId, identificador);
             const desde = new Date(Date.now() - THIRTY_DAYS_MS);
             const existente = await this.reportes.findDuplicadoReciente(usuarioId, identificador, desde);
             if (existente) {
