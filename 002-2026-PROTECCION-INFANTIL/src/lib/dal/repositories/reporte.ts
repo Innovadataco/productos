@@ -47,8 +47,11 @@ const SELECT_BANDEJA_REVISION = {
     pais: true,
     operadorId: true,
     comiteId: true,
+    usuarioId: true,
     operador: { select: { id: true, email: true, nombre: true } },
     comite: { select: { id: true, email: true, nombre: true } },
+    // N-2 (002-PI-056): el admin ve qué padre reportó (filtro y columna de la bandeja).
+    usuario: { select: { id: true, email: true, nombre: true } },
     plataforma: { select: { id: true, nombre: true, clave: true } },
     clasificacion: {
         include: {

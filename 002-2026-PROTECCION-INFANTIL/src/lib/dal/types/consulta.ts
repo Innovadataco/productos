@@ -38,11 +38,22 @@ export interface ConsultaTimelineDto {
     total: number;
 }
 
+/**
+ * F3 (N-5): contenido curado del estado vacío de la consulta pública.
+ * Cada clave se omite si su parámetro falta o es inválido (degradación limpia).
+ */
+export interface ConsultaVaciaBloqueDto {
+    disclaimer?: string;
+    senales?: string[];
+    acciones?: string[];
+}
+
 /** Resumen público; los campos de detalle solo van si `autenticado` (US5/US7). */
 export interface ConsultaResumenDto {
     identificador: string;
     tieneReportes: boolean;
     mensaje?: string;
+    bloqueVacia?: ConsultaVaciaBloqueDto;
     visibleEnDashboard?: boolean;
     actividad?: "alta" | "baja";
     totalReportes?: number;
@@ -74,6 +85,7 @@ export interface ConsultaDetalleDto {
     identificador: string;
     tieneReportes: boolean;
     mensaje?: string;
+    bloqueVacia?: ConsultaVaciaBloqueDto;
     nivelRiesgo?: string;
     totalReportes?: number;
     reportesAutenticados?: number;

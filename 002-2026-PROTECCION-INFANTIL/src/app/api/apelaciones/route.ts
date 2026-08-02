@@ -137,6 +137,13 @@ export async function POST(request: Request) {
                     { status: 400 }
                 );
             }
+            if (preparacion.tipo === "sin_reportes") {
+                // N-3 (002-PI-056): anti-spam — no se apela un identificador sin reportes.
+                return NextResponse.json(
+                    { error: { message: "No hay reportes registrados para este identificador", code: ERROR_CODES.NOT_FOUND } },
+                    { status: 404 }
+                );
+            }
             return NextResponse.json(
                 { error: { message: "Ya tienes una apelación abierta para este identificador", code: ERROR_CODES.CONFLICT } },
                 { status: 409 }

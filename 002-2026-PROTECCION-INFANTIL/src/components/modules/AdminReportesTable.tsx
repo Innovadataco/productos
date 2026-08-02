@@ -56,6 +56,7 @@ type ReporteListItem = {
     ciudad: string;
     pais: string;
     plataforma: { id: string; nombre: string; clave: string };
+    usuario?: { id: string; email: string; nombre: string | null } | null;
     clasificacion: {
         categoria: string;
         confianza: number;
@@ -94,6 +95,7 @@ export function AdminReportesTable() {
     const [incluirEliminados, setIncluirEliminados] = useState(searchParams.get("incluirEliminados") === "true");
     const [pageSize, setPageSize] = useState(searchParams.get("pageSize") || "25");
     const [q, setQ] = useState(searchParams.get("q") || "");
+    const [padre, setPadre] = useState(searchParams.get("padre") || "");
 
     const page = Math.max(1, Number(searchParams.get("page") || "1"));
 
@@ -114,6 +116,7 @@ export function AdminReportesTable() {
             if (fechaHasta) params.set("fechaHasta", fechaHasta);
             if (incluirEliminados) params.set("incluirEliminados", "true");
             if (q.trim()) params.set("q", q.trim());
+            if (padre.trim()) params.set("padre", padre.trim());
             params.set("pageSize", pageSize);
             params.set("page", String(page));
             Object.entries(override).forEach(([k, v]) => {
@@ -122,7 +125,7 @@ export function AdminReportesTable() {
             });
             return params.toString();
         },
-        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page, q]
+        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page, q, padre]
     );
 
     const fetchReportes = useCallback(async () => {
@@ -187,6 +190,18 @@ export function AdminReportesTable() {
                         />
                     </div>
                     <Select label="Estado" options={ESTADOS} value={estado} onChange={(e) => setEstado(e.target.value)} />
+                    <Input
+                        label="Padre"
+                        type="text"
+                        placeholder="email o nombre del denunciante"
+                        value={padre}
+                        onChange={(e) => setPadre(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                applyFilters();
+                            }
+                        }}
+                    />
                     <Select label="Plataforma" options={plataformaOptions} value={plataformaId} onChange={(e) => setPlataformaId(e.target.value)} />
                     <Select label="Categoría" options={CATEGORIAS} value={categoria} onChange={(e) => setCategoria(e.target.value)} />
                     <div>
@@ -304,7 +319,7 @@ export function AdminReportesTable() {
                                                 : "—"}
                                     </td>
                                     <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString()}</td>
-                                    <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : "Autenticado"}</td>
+                                    <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : (r.usuario?.email ?? "Autenticado")}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex flex-wrap gap-2">
                                             <Button onClick={() => setSelectedReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">

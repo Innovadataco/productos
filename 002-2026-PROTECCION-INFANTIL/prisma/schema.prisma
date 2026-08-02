@@ -121,6 +121,8 @@ enum AccionAudit {
   // SPEC-141 (N-1): acceso de soporte admin (solo lectura) a datos sensibles.
   CIRCULO_CONFIANZA_ACCESO_ADMIN
   COLEGIO_ROSTER_ACCESO_ADMIN
+  CONSULTA_SIN_RESULTADOS
+  CONSULTA_VACIA_CTA_REPORTAR
 }
 
 enum TipoPeriodoServicio {
