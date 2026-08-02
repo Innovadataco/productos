@@ -52,12 +52,17 @@ jobs:
           cat > .env.test <<'EOF'
           DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
           PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
-          ANTI_ABUSO_SALT=test-anti-abuso-salt
+          ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
           NEXT_PUBLIC_APP_URL=http://localhost:5005
           OLLAMA_BASE_URL=http://localhost:11434
           EMAIL_FROM=test@ci.local
           EOF
       - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # FIX-CI (002-PI-056): migrate no crea el schema pgboss (lo crea pg-boss en su
+      # primer start); sin él los tests de cola/reconciliación fallan con 42P01.
+      - run: node scripts/ensure-pgboss.mjs
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
       - run: npx prisma generate
