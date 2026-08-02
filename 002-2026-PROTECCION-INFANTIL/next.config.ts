@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
             cspDirectives.push("upgrade-insecure-requests");
         }
 
-        const headers = [
+        const headersSeguridad = [
             {
                 key: "X-Frame-Options",
                 value: "DENY",
@@ -52,14 +52,10 @@ const nextConfig: NextConfig = {
                 key: "Permissions-Policy",
                 value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()",
             },
-            {
-                key: "Content-Security-Policy",
-                value: cspDirectives.join("; "),
-            },
         ];
 
         if (enableHttpsHeaders) {
-            headers.push({
+            headersSeguridad.push({
                 key: "Strict-Transport-Security",
                 value: "max-age=63072000; includeSubDomains; preload",
             });
@@ -67,8 +63,21 @@ const nextConfig: NextConfig = {
 
         return [
             {
+                // Headers de seguridad para todo (HSTS incluido si está activo).
                 source: "/:path*",
-                headers,
+                headers: headersSeguridad,
+            },
+            {
+                // E-6 P4c: el CSP estático NO aplica a /dashboard/** — esa área lo
+                // sirve el middleware (src/proxy.ts) con nonce por request (prod).
+                // Si ambos emitieran el mismo header habría duplicado/conflicto.
+                source: "/((?!dashboard).*)",
+                headers: [
+                    {
+                        key: "Content-Security-Policy",
+                        value: cspDirectives.join("; "),
+                    },
+                ],
             },
         ];
     },
