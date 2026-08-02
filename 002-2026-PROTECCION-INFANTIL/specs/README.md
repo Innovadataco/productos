@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **119** |
+| **Total de specs** | **120** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
 | **Implementadas (IMPLEMENTADO)** | **20** |
-| **Pendientes (PLANEADO)** | **1** |
+| **Pendientes (PLANEADO)** | **2** |
 
 ## Backlog activo (no cerradas)
 
@@ -77,6 +77,7 @@
 | [135](135-circulo-confianza-god-module-n1/spec.md) | SPEC-135 — circulo-confianza: romper god-module + matar N+1 (E-2) | 🟢 Implementada |
 | [136](136-tipado-estricto-casts-guards-tsconfig/spec.md) | SPEC-136 — Tipado estricto: casts, guards y tsconfig maximal viable (E-3) | 🟢 Implementada |
 | [137](137-creacion-reporte-atomica/spec.md) | SPEC-137 — Creación de reporte atómica (E-5) | 🟢 Implementada |
+| [138](138-eval-sandbox-rubrica-posible-agresor-par/spec.md) | SPEC-138 — Eval/sandbox alineados con la rúbrica + posibleAgresorPar (E-7) | 🔵 Planeada (compuerta §4) |
 
 ## Tabla completa (114 specs)
 
@@ -201,6 +202,7 @@
 | [135](135-circulo-confianza-god-module-n1/spec.md) | SPEC-135 — circulo-confianza: romper god-module + matar N+1 (E-2) | 🟢 Implementada |
 | [136](136-tipado-estricto-casts-guards-tsconfig/spec.md) | SPEC-136 — Tipado estricto: casts, guards y tsconfig maximal viable (E-3) | 🟢 Implementada |
 | [137](137-creacion-reporte-atomica/spec.md) | SPEC-137 — Creación de reporte atómica (E-5) | 🟢 Implementada |
+| [138](138-eval-sandbox-rubrica-posible-agresor-par/spec.md) | SPEC-138 — Eval/sandbox alineados con la rúbrica + posibleAgresorPar (E-7) | 🔵 Planeada (compuerta §4) |
 
 ## Incidencias de calidad de datos
 
