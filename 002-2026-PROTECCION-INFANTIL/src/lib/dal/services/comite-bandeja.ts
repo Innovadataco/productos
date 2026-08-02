@@ -17,7 +17,10 @@ import { ReporteRepository } from "../repositories/reporte";
 import { UsuarioRepository } from "../repositories/usuario";
 import { CorreccionAdminRepository } from "../repositories/correccion-admin";
 import { ClasificacionIARepository } from "../repositories/clasificacion-ia";
+import { EventoMatchRepository } from "../repositories/evento-match";
 import { withUnitOfWork } from "../unit-of-work";
+import { detectarYRegistrarMatch } from "./evento-match";
+import { agregarPatronPorReporte } from "@/lib/colegio/patrones";
 import type { InfoClienteDto } from "../types/operador";
 import type { ResolverSolicitudInput } from "../types/comite";
 
@@ -90,10 +93,23 @@ export class ComiteBandejaService {
             };
         }
 
-        const [solicitudes, total] = await this.solicitudes.findBandeja(where, {
-            skip,
-            take: paginacion.limit,
+        // SPEC-139 (F5, ZEUS D-3): etiqueta + orden prioritario en la bandeja
+        // actual (NO sección nueva): los casos cuyo identificador tiene un match
+        // inter-ciudad van al tope con el distintivo `matchInterCiudad`. El orden
+        // es estable: dentro de cada grupo se conserva creadoEn desc.
+        const solicitudesTodas = await this.solicitudes.findBandejaCompletaConReporte(where);
+        const paresConMatch = await new EventoMatchRepository().findInterCiudadPorPares(
+            solicitudesTodas.map((s) => s.reporte)
+        );
+        const clavesConMatch = new Set(paresConMatch.map((p) => `${p.identificador}|${p.plataformaId}`));
+        const anotadas = solicitudesTodas.map((s) => {
+            const { reporte, ...resto } = s;
+            return { ...resto, matchInterCiudad: clavesConMatch.has(`${reporte.identificador}|${reporte.plataformaId}`) };
         });
+        anotadas.sort((a, b) => Number(b.matchInterCiudad) - Number(a.matchInterCiudad));
+
+        const total = anotadas.length;
+        const solicitudes = anotadas.slice(skip, skip + paginacion.limit);
         return {
             solicitudes,
             paginacion: {
@@ -253,6 +269,16 @@ export class ComiteBandejaService {
 
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
         const scoreResult = await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+
+        // SPEC-139/142 (ZEUS D-1): la resolución del comité pasa el reporte a
+        // APROBADO (CORREGIDO) — dispara match y agregación de patrones.
+        // Await + catch: fail-open (nunca rompe la resolución ya persistida).
+        await detectarYRegistrarMatch(reporte.id).catch((err) => {
+            console.error(`[COMITE] Error registrando match reporte=${reporte.id}:`, err);
+        });
+        await agregarPatronPorReporte(reporte.id).catch((err) => {
+            console.error(`[COMITE] Error agregando patrón institucional reporte=${reporte.id}:`, err);
+        });
 
         await logAudit({
             accion: "CASO_RESUELTO_POR_COMITE",

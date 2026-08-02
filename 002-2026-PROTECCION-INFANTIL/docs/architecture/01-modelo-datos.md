@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **48** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **50** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -89,6 +89,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadoresContacto | IdentificadorContacto | lista, relación |
 | identificadoresAlumno | IdentificadorAlumno | lista, relación |
 | apelaciones | Apelacion | lista, relación |
+| patronesInstitucionales | PatronInstitucional | lista, relación |
 
 ### Círculo de confianza y alertas (3)
 
@@ -147,11 +148,13 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reporteId | String | — |
 | identificadorAlumnoId | String | — |
 | estado | String | — |
+| patronInstitucionalId | String | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
 | reporte | Reporte | relación (FK) |
 | identificadorAlumno | IdentificadorAlumno | relación (FK) |
+| patronInstitucional | PatronInstitucional | opcional, relación (FK) |
 
 #### `Alumno`
 
@@ -197,6 +200,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | cursos | Curso | lista, relación |
 | alumnos | Alumno | lista, relación |
 | alertas | AlertaColegio | lista, relación |
+| patrones | PatronInstitucional | lista, relación |
 | auditLogs | AuditLog | lista, relación |
 | sesionesCarga | CargaRosterSesion | lista, relación |
 
@@ -465,7 +469,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (1)
+### Otros (sin regla de dominio) (3)
 
 #### `CargaRosterSesion`
 
@@ -477,6 +481,38 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | expiraEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
+
+#### `EventoMatch`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| identificadorId | String | — |
+| reporteNuevoId | String | único |
+| conteoAcumulado | Int | — |
+| ciudades | String | lista |
+| conductasCoincidentes | String | lista |
+| interCiudad | Boolean | — |
+| creadoEn | DateTime | — |
+| identificador | IdentificadorReportado | relación (FK) |
+| reporteNuevo | Reporte | relación (FK) |
+
+#### `PatronInstitucional`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| periodo | String | — |
+| grado | String | — |
+| conducta | CategoriaConducta | — |
+| plataformaId | String | — |
+| conteo | Int | — |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
+| plataforma | Plataforma | relación (FK) |
+| alertas | AlertaColegio | lista, relación |
 
 ### Permisos por módulo (2)
 
@@ -607,6 +643,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | plataforma | Plataforma | relación (FK) |
+| eventosMatch | EventoMatch | lista, relación |
 
 #### `PasoProcesamiento`
 
@@ -690,6 +727,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | pasosProcesamiento | PasoProcesamiento | lista, relación |
 | solicitudComite | SolicitudComite | opcional, relación |
 | alertasColegio | AlertaColegio | lista, relación |
+| eventoMatchDisparado | EventoMatch | opcional, relación |
 
 #### `SolicitudComite`
 
@@ -914,6 +952,7 @@ erDiagram
     Colegio ||--o{ AuditLog : "colegio (opcional)"
     Colegio ||--o{ CargaRosterSesion : "colegio"
     Colegio ||--o{ Curso : "colegio"
+    Colegio ||--o{ PatronInstitucional : "colegio"
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"
     CorreccionAdmin ||--o{ DatasetEntrenamiento : "correccion (opcional)"
@@ -924,21 +963,25 @@ erDiagram
     DocumentoApelacion ||--o{ AccesoDocumentoApelacion : "documento"
     EvalRun ||--o{ EvalResultado : "experimento"
     IdentificadorAlumno ||--o{ AlertaColegio : "identificadorAlumno"
+    IdentificadorReportado ||--o{ EventoMatch : "identificador"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"
     Pais ||--o{ Ciudad : "pais"
     Pais ||--o{ Colegio : "pais"
     Pais ||--o{ Departamento : "pais"
     Pais ||--o{ Reporte : "paisRel (opcional)"
     ParametroSistema ||--o{ AuditLog : "parametro (opcional)"
+    PatronInstitucional ||--o{ AlertaColegio : "patronInstitucional (opcional)"
     Plataforma ||--o{ AlertaSuscripcion : "plataforma"
     Plataforma ||--o{ Apelacion : "plataforma"
     Plataforma ||--o{ IdentificadorAlumno : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorContacto : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorReportado : "plataforma"
+    Plataforma ||--o{ PatronInstitucional : "plataforma"
     Plataforma ||--o{ Reporte : "plataforma"
     Reporte ||--o{ AlertaColegio : "reporte"
     Reporte ||--o{ ClasificacionIA : "reporte"
     Reporte ||--o{ EmbeddingReporte : "reporte"
+    Reporte ||--o{ EventoMatch : "reporteNuevo"
     Reporte ||--o{ FuenteReporte : "reporte"
     Reporte ||--o{ PasoProcesamiento : "reporte"
     Reporte ||--o{ ReintentoReporte : "reporte"

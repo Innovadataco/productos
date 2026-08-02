@@ -91,6 +91,22 @@ export class SolicitudComiteRepository {
         ]);
     }
 
+    /**
+     * SPEC-139 (F5, ZEUS D-3): bandeja COMPLETA con la clave del identificador
+     * (prioridad inter-ciudad: el orden se aplica en el servicio antes de paginar;
+     * el select sigue siendo ligero — sin textos ni denunciantes).
+     */
+    findBandejaCompletaConReporte(where: Prisma.SolicitudComiteWhereInput) {
+        return this.db.solicitudComite.findMany({
+            where,
+            orderBy: { creadoEn: "desc" },
+            select: {
+                ...SELECT_BANDEJA_CON_COMITE,
+                reporte: { select: { identificador: true, plataformaId: true } },
+            },
+        });
+    }
+
     /** Solicitud con su reporte (asignar/reasignar). */
     findByIdConReporte(id: string) {
         return this.db.solicitudComite.findUnique({

@@ -2,7 +2,8 @@ import { Prisma } from "@prisma/client";
 import { PasoProcesamientoRepository } from "@/lib/dal/repositories/paso-procesamiento";
 
 // Claves de etapa del parámetro admin.expediente.etapas (capa 2).
-export type EtapaProcesamiento = "guardas" | "deduplicacion" | "contexto_rag" | "decision";
+// "match_detectado" (SPEC-139, F5): traza del evento de match (solo metadatos).
+export type EtapaProcesamiento = "guardas" | "deduplicacion" | "contexto_rag" | "decision" | "match_detectado";
 
 /**
  * Registra un paso del pipeline de procesamiento (spec 096-US3).

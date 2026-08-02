@@ -21,6 +21,8 @@ import { ClasificacionIARepository } from "@/lib/dal/repositories/clasificacion-
 import { DatasetEntrenamientoRepository } from "@/lib/dal/repositories/dataset-entrenamiento";
 import { ParametroRepository } from "@/lib/dal/repositories/parametro";
 import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
+import { detectarYRegistrarMatch } from "@/lib/dal/services/evento-match";
+import { agregarPatronPorReporte } from "@/lib/colegio/patrones";
 import { z } from "zod";
 
 type CategoriaConducta =
@@ -175,6 +177,16 @@ export async function POST(request: Request) {
         // y cambiar la aprobación — el escritor único recalcula contadores y visibilidad.
         await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
         await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
+
+        // SPEC-139/142 (ZEUS D-1): el paso a APROBADO por corrección humana dispara
+        // el match y la agregación de patrones. Await + catch: fail-open (un error
+        // aquí NUNCA rompe la corrección ya persistida).
+        await detectarYRegistrarMatch(reporteId).catch((err) => {
+            logger.error(`[CORRECCIONES] Error registrando match reporte=${reporteId}:`, err);
+        });
+        await agregarPatronPorReporte(reporteId).catch((err) => {
+            logger.error(`[CORRECCIONES] Error agregando patrón institucional reporte=${reporteId}:`, err);
+        });
 
         // Registrar auditoría (solo metadata, nunca texto)
         await auditCorreccion({

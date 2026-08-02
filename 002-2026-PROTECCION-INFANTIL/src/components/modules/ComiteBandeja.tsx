@@ -15,6 +15,8 @@ type Solicitud = {
     motivo: string;
     creadoEn: string;
     comiteId?: string | null;
+    // SPEC-139 (F5, ZEUS D-3): distintivo de reincidencia inter-ciudad (match).
+    matchInterCiudad?: boolean;
 };
 
 type Paginacion = {
@@ -158,7 +160,17 @@ export function ComiteBandeja() {
                                         <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
                                             <td className="px-4 py-3 font-mono text-xs text-body">{s.numero}</td>
                                             <td className="px-4 py-3">
-                                                <span className={estadoBadge(s.estado)}>{s.estado}</span>
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <span className={estadoBadge(s.estado)}>{s.estado}</span>
+                                                    {s.matchInterCiudad && (
+                                                        <span
+                                                            className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                                                            title="El identificador tiene reportes de fuentes independientes desde 2 o más ciudades"
+                                                        >
+                                                            Reincidencia inter-ciudad
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 text-body max-w-xs truncate">{s.motivo}</td>
                                             <td className="px-4 py-3 text-subtle">{new Date(s.creadoEn).toLocaleString()}</td>
