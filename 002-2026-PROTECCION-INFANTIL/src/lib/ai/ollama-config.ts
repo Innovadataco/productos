@@ -2,7 +2,25 @@ import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { MODELO_EMBEDDING_DEFAULT } from "./defaults";
 
-const DEFAULT_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+const FALLBACK_OLLAMA_BASE_URL = "http://localhost:11434";
+
+/**
+ * E-6: validación fail-fast de la URL base de Ollama. Antes una URL malformada
+ * se descubría tarde, como un fetch opaco contra un destino inválido; ahora el
+ * error es claro y sale en el punto de uso.
+ */
+function validarUrlOllama(valor: string, origen: string): string {
+    let url: URL;
+    try {
+        url = new URL(valor);
+    } catch {
+        throw new Error(`[Ollama] URL base inválida (${origen}): "${valor}" — se espera http(s)://host[:puerto]`);
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+        throw new Error(`[Ollama] URL base con protocolo no soportado (${origen}): "${valor}" — solo http/https`);
+    }
+    return valor;
+}
 
 /**
  * Timeout por defecto para las llamadas de generación a Ollama (ms).
@@ -33,16 +51,20 @@ export async function getOllamaTimeoutMs(): Promise<number> {
 /**
  * Resuelve la URL base de Ollama. El parámetro de sistema `system.ollama_base_url`
  * tiene prioridad; si no existe o está vacío, se usa la variable de entorno
- * OLLAMA_BASE_URL o el default localhost.
+ * OLLAMA_BASE_URL o el default localhost. E-6: el env se lee EN CADA llamada (un
+ * cambio no exige reinicio) y la URL se valida siempre (fail-fast con error claro
+ * si es inválida, tanto del parámetro como del env).
  */
 export async function getOllamaBaseUrl(): Promise<string> {
+    let paramValor: string | null = null;
     try {
         const param = await getParametroSistema("system.ollama_base_url");
-        if (param?.valor) return param.valor.trim();
+        paramValor = param?.valor?.trim() || null;
     } catch {
         // Fallback silencioso si la tabla no está disponible (muy temprano en startup)
     }
-    return DEFAULT_OLLAMA_BASE_URL;
+    if (paramValor) return validarUrlOllama(paramValor, "parametro system.ollama_base_url");
+    return validarUrlOllama(process.env.OLLAMA_BASE_URL || FALLBACK_OLLAMA_BASE_URL, "OLLAMA_BASE_URL");
 }
 
 export interface OllamaModelInfo {

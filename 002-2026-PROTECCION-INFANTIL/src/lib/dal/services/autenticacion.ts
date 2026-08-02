@@ -6,6 +6,7 @@
  * email queda en su adaptador (`src/lib/email.ts`). Acepta tx opcional (D2).
  */
 import type { Prisma } from "@prisma/client";
+import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { verifyPassword, hashPassword } from "@/lib/auth";
 import { generarTokenRecuperacion, hashToken, verificarTokenHash } from "@/lib/token-recuperacion";
@@ -32,7 +33,9 @@ const EXPIRACION_CODIGO_MS = 15 * 60 * 1000;
 const MAX_INTENTOS_CODIGO = 5;
 
 function generateCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    // E-6: CSPRNG — el código de verificación es un token de seguridad.
+    // randomInt(100000, 1000000) ≡ [100000, 999999] uniforme (misma distribución).
+    return randomInt(100000, 1000000).toString();
 }
 
 export class AutenticacionService {

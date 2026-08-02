@@ -1,5 +1,19 @@
 import { prisma } from "./prisma";
+import { hashConSalt } from "./anti-abuso/fuente-reporte";
 import type { AccionAudit, CategoriaConducta, EstadoReporte, Prisma } from "@prisma/client";
+
+/**
+ * E-6 (ADITIVO): la IP en AuditLog deja de guardarse en claro — se persiste
+ * `sha256:` + HMAC-SHA256 con ANTI_ABUSO_SALT (el mismo helper del fingerprint
+ * anti-abuso: misma IP → mismo hash, correlación preservada sin reversibilidad).
+ * Las filas existentes NO se reescriben (el prefijo distingue nuevas de viejas);
+ * "unknown"/"worker"/"job" (no son IPs) y valores ya hasheados quedan iguales.
+ */
+function protegerIp(ipAddress: string): string {
+    if (ipAddress === "unknown" || ipAddress === "worker" || ipAddress === "job") return ipAddress;
+    if (ipAddress.startsWith("sha256:")) return ipAddress;
+    return `sha256:${hashConSalt(ipAddress)}`;
+}
 
 export async function logAudit(params: {
     accion: AccionAudit;
@@ -26,7 +40,7 @@ export async function logAudit(params: {
             colegioId: params.colegioId ?? null,
             valorAnterior: params.valorAnterior ?? null,
             valorNuevo: params.valorNuevo ?? null,
-            ipAddress: params.ipAddress ?? "unknown",
+            ipAddress: protegerIp(params.ipAddress ?? "unknown"),
             userAgent: params.userAgent ?? "unknown",
             // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
             ...(params.metadatos ? { metadatos: params.metadatos as never } : {}),

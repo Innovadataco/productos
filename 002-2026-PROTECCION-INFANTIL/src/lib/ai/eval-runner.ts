@@ -7,6 +7,7 @@ import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares } from "./dataset-retrieval";
 import { decidirGuardasSeguridad } from "./guardas-decision";
 import { MODELO_CLASIFICACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
+import { getOllamaBaseUrl } from "./ollama-config";
 import fs from "fs/promises";
 import path from "path";
 import { logger } from "@/lib/logger";
@@ -223,7 +224,7 @@ export async function getCurrentProductionConfig(): Promise<ExperimentConfigSnap
         nVotos: getNum("reportes.classification.n_votos", 5),
         temperaturaVotos: getNum("reportes.classification.temperatura_votos", 0.7),
         ragTopK: getNum("reportes.classification.rag_top_k", 3),
-        ollamaBaseUrl: get("system.ollama_base_url", process.env.OLLAMA_BASE_URL || "http://localhost:11434"),
+        ollamaBaseUrl: await getOllamaBaseUrl(),
         fixtureVersion,
     };
 }
