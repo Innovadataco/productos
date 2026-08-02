@@ -26,4 +26,4 @@
 
 ## Pendiente (compuerta)
 
-- [ ] Veredicto de ZEUS (APROBADO / ajustes) antes de /speckit.tasks.
+- [x] Veredicto de ZEUS: APROBADO 2026-08-02 (con CI verde); F2 resuelta: señal queda false documentado (opción c).
