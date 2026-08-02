@@ -1,5 +1,12 @@
-import { prisma } from "@/lib/prisma";
+/**
+ * SPEC-134 (E-1): el acceso a datos de la carga masiva vive en los repos del DAL
+ * (tenant obligatorio). La lógica de upsert (caché por clave, contadores de
+ * creados/reutilizados) queda intacta; los repos se inyectan con la tx (D2).
+ */
 import type { Prisma } from "@prisma/client";
+import { CursoRepository } from "@/lib/dal/repositories/curso";
+import { AlumnoRepository } from "@/lib/dal/repositories/alumno";
+import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
 import type { FilaCargaAlumno } from "./parser";
 
 export type ResumenImportacion = {
@@ -30,8 +37,12 @@ function claveIdentificador(alumnoId: string, tipo: string, valor: string, plata
 export async function importarCargaMasiva(
     filas: FilaCargaAlumno[],
     colegioId: string,
-    tx: Prisma.TransactionClient = prisma
+    tx?: Prisma.TransactionClient
 ): Promise<ResumenImportacion> {
+    const cursos = new CursoRepository(tx);
+    const alumnos = new AlumnoRepository(tx);
+    const identificadores = new IdentificadorAlumnoRepository(tx);
+
     const resumen: ResumenImportacion = {
         cursosCreados: 0,
         cursosReutilizados: 0,
@@ -50,26 +61,19 @@ export async function importarCargaMasiva(
         const cursoKey = claveCurso(fila.curso.nombre, fila.curso.grado, fila.curso.anioLectivo);
         let curso = cursosPorClave.get(cursoKey);
         if (!curso) {
-            const existente = await tx.curso.findFirst({
-                where: {
-                    colegioId,
-                    nombre: fila.curso.nombre,
-                    grado: fila.curso.grado ?? null,
-                    anioLectivo: fila.curso.anioLectivo ?? null,
-                },
+            const existente = await cursos.buscarPorDatos(colegioId, {
+                nombre: fila.curso.nombre,
+                grado: fila.curso.grado ?? null,
+                anioLectivo: fila.curso.anioLectivo ?? null,
             });
             if (existente) {
                 curso = { id: existente.id, creado: false };
                 resumen.cursosReutilizados++;
             } else {
-                const nuevo = await tx.curso.create({
-                    data: {
-                        colegioId,
-                        nombre: fila.curso.nombre,
-                        grado: fila.curso.grado,
-                        anioLectivo: fila.curso.anioLectivo,
-                        estado: "activo",
-                    },
+                const nuevo = await cursos.crear(colegioId, {
+                    nombre: fila.curso.nombre,
+                    grado: fila.curso.grado,
+                    anioLectivo: fila.curso.anioLectivo,
                 });
                 curso = { id: nuevo.id, creado: true };
                 resumen.cursosCreados++;
@@ -80,26 +84,12 @@ export async function importarCargaMasiva(
         const alumnoKey = claveAlumno(fila.alumno.nombre, curso.id);
         let alumno = alumnosPorClave.get(alumnoKey);
         if (!alumno) {
-            const existente = await tx.alumno.findFirst({
-                where: {
-                    cursoId: curso.id,
-                    colegioId,
-                    nombre: fila.alumno.nombre,
-                    estado: "activo",
-                },
-            });
+            const existente = await alumnos.buscarPorNombreEnCurso(colegioId, curso.id, fila.alumno.nombre);
             if (existente) {
                 alumno = { id: existente.id, creado: false };
                 resumen.alumnosReutilizados++;
             } else {
-                const nuevo = await tx.alumno.create({
-                    data: {
-                        cursoId: curso.id,
-                        colegioId,
-                        nombre: fila.alumno.nombre,
-                        estado: "activo",
-                    },
-                });
+                const nuevo = await alumnos.crear(colegioId, { cursoId: curso.id, nombre: fila.alumno.nombre });
                 alumno = { id: nuevo.id, creado: true };
                 resumen.alumnosCreados++;
             }
@@ -114,34 +104,23 @@ export async function importarCargaMasiva(
         );
         let identificador = identificadoresPorClave.get(identificadorKey);
         if (!identificador) {
-            const existente = await tx.identificadorAlumno.findFirst({
-                where: {
-                    alumnoId: alumno.id,
-                    valor: fila.identificador.valor,
-                    tipo: fila.identificador.tipo,
-                    plataformaId: fila.identificador.plataformaId ?? null,
-                },
+            const existente = await identificadores.buscarDuplicado(colegioId, {
+                alumnoId: alumno.id,
+                tipo: fila.identificador.tipo,
+                valor: fila.identificador.valor,
+                plataformaId: fila.identificador.plataformaId ?? null,
             });
             if (existente) {
-                await tx.identificadorAlumno.update({
-                    where: { id: existente.id },
-                    data: {
-                        estado: "activo",
-                        etiquetaRelacion: fila.identificador.etiquetaRelacion,
-                    },
-                });
+                await identificadores.reactivar(colegioId, existente.id, fila.identificador.etiquetaRelacion);
                 identificador = { id: existente.id, creado: false };
                 resumen.identificadoresReutilizados++;
             } else {
-                const nuevo = await tx.identificadorAlumno.create({
-                    data: {
-                        alumnoId: alumno.id,
-                        tipo: fila.identificador.tipo,
-                        valor: fila.identificador.valor,
-                        plataformaId: fila.identificador.plataformaId ?? null,
-                        etiquetaRelacion: fila.identificador.etiquetaRelacion,
-                        estado: "activo",
-                    },
+                const nuevo = await identificadores.crear(colegioId, {
+                    alumnoId: alumno.id,
+                    tipo: fila.identificador.tipo,
+                    valor: fila.identificador.valor,
+                    plataformaId: fila.identificador.plataformaId ?? null,
+                    etiquetaRelacion: fila.identificador.etiquetaRelacion,
                 });
                 identificador = { id: nuevo.id, creado: true };
                 resumen.identificadoresCreados++;

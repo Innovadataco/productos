@@ -80,4 +80,36 @@ export class UsuarioRepository {
             include: { perfilOperador: { select: { esComite: true } } },
         });
     }
+
+    /** SPEC-134 (E-1): rol + colegio + ventana propia (vigencia de clientes, SPEC-119). */
+    findVigenciaCliente(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            select: { rol: true, colegioId: true, inicioServicio: true, finServicio: true },
+        });
+    }
+
+    /** SPEC-134 (E-1): solo el colegioId (verificación de propiedad del módulo colegio). */
+    findColegioId(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            select: { colegioId: true },
+        });
+    }
+
+    /** SPEC-134 (E-1): SCHOOL_ADMIN activo del colegio para la notificación ciega de alertas. */
+    findAdminColegioParaNotificacion(colegioId: string) {
+        return this.db.usuario.findFirst({
+            where: { colegioId, rol: "SCHOOL_ADMIN", estado: "activo" },
+            select: { id: true, email: true, ultimaNotificacionColegioEn: true },
+        });
+    }
+
+    /** SPEC-134 (E-1): marca el cooldown de la notificación ciega de alertas del colegio. */
+    marcarNotificacionColegioEn(id: string, fecha: Date) {
+        return this.db.usuario.update({
+            where: { id },
+            data: { ultimaNotificacionColegioEn: fecha },
+        });
+    }
 }

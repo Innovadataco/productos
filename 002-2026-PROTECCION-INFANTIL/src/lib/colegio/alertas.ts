@@ -1,10 +1,13 @@
-import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { enviarAlertaColegio } from "@/lib/email";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { logger } from "@/lib/logger";
+import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
+import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { verificarVigenciaPorColegioId } from "./vigencia";
-import type { AccionAudit, EstadoReporte, Prisma } from "@prisma/client";
+import type { AccionAudit, EstadoReporte } from "@prisma/client";
 
 const ESTADOS_VISIBLES: EstadoReporte[] = [
     "CLASIFICADO",
@@ -14,7 +17,10 @@ const ESTADOS_VISIBLES: EstadoReporte[] = [
     "REQUIERE_ANONIMIZACION",
 ];
 
-export type EstadoAlertaColegio = "nueva" | "vista" | "gestionada";
+// SPEC-134 (E-1): el acceso a datos vive en los repos del DAL (tenant obligatorio);
+// la lógica de negocio (dedupe, cooldown, mapeo a campos no sensibles) queda aquí.
+export type { EstadoAlertaColegio } from "@/lib/dal/repositories/alerta-colegio";
+import type { EstadoAlertaColegio } from "@/lib/dal/repositories/alerta-colegio";
 
 export interface AlertaColegioListado {
     id: string;
@@ -24,10 +30,6 @@ export interface AlertaColegioListado {
     estadoReporte: string;
     estadoAlerta: string;
     creadoEn: string;
-}
-
-function getClient(client?: Prisma.TransactionClient): Prisma.TransactionClient | typeof prisma {
-    return client || prisma;
 }
 
 /**
@@ -47,15 +49,7 @@ async function colegioEstaVigente(colegioId: string): Promise<boolean> {
  */
 export async function notificarColegioSiCorresponde(reporteId: string) {
     try {
-        const reporte = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-            select: {
-                id: true,
-                identificador: true,
-                estado: true,
-                eliminado: true,
-            },
-        });
+        const reporte = await new ReporteRepository().findEstadoParaNotificacion(reporteId);
         if (!reporte || reporte.eliminado) {
             logger.info(`[COLEGIO] Notificación omitida: reporte ${reporteId} no existe o está eliminado`);
             return;
@@ -67,22 +61,16 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
 
         const identificadorNormalizado = reporte.identificador.trim().toLowerCase();
 
-        const identificadores = await prisma.identificadorAlumno.findMany({
-            where: {
-                estado: "activo",
-                valor: { equals: identificadorNormalizado, mode: "insensitive" },
-            },
-            include: {
-                alumno: {
-                    select: { colegioId: true },
-                },
-            },
-        });
+        // Búsqueda cross-tenant a propósito (excepción documentada en el repo):
+        // hay que avisar a CADA colegio que registró el identificador.
+        const identificadores = await new IdentificadorAlumnoRepository().buscarActivosPorValor(identificadorNormalizado);
 
         if (identificadores.length === 0) {
             logger.info(`[COLEGIO] Notificación omitida: sin identificadores activos para ${reporte.identificador}`);
             return;
         }
+
+        const alertas = new AlertaColegioRepository();
 
         // Agrupar por colegio para enviar una sola notificación por colegio
         const alertasCreadasPorColegio = new Map<string, number>();
@@ -96,27 +84,16 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
             }
 
             try {
-                const existente = await prisma.alertaColegio.findUnique({
-                    where: {
-                        colegioId_reporteId_identificadorAlumnoId: {
-                            colegioId,
-                            reporteId: reporte.id,
-                            identificadorAlumnoId: identificador.id,
-                        },
-                    },
-                });
+                const existente = await alertas.buscarExistente(colegioId, reporte.id, identificador.id);
 
                 if (existente) {
                     continue;
                 }
 
-                const alerta = await prisma.alertaColegio.create({
-                    data: {
-                        colegioId,
-                        reporteId: reporte.id,
-                        identificadorAlumnoId: identificador.id,
-                        estado: "nueva",
-                    },
+                const alerta = await alertas.crear({
+                    colegioId,
+                    reporteId: reporte.id,
+                    identificadorAlumnoId: identificador.id,
                 });
 
                 await logAudit({
@@ -163,10 +140,8 @@ async function enviarNotificacionColegio(colegioId: string, novedades: number) {
         return;
     }
 
-    const admin = await prisma.usuario.findFirst({
-        where: { colegioId, rol: "SCHOOL_ADMIN", estado: "activo" },
-        select: { id: true, email: true, ultimaNotificacionColegioEn: true },
-    });
+    const usuarios = new UsuarioRepository();
+    const admin = await usuarios.findAdminColegioParaNotificacion(colegioId);
     if (!admin || !admin.email) {
         logger.info(`[COLEGIO] Notificación omitida: admin no encontrado o sin email para colegio ${colegioId}`);
         return;
@@ -186,10 +161,7 @@ async function enviarNotificacionColegio(colegioId: string, novedades: number) {
 
     logger.info(`[COLEGIO] Enviando alerta ciega a ${admin.email} (${novedades} novedades)`);
     await enviarAlertaColegio(admin.email, novedades);
-    await prisma.usuario.update({
-        where: { id: admin.id },
-        data: { ultimaNotificacionColegioEn: ahora },
-    });
+    await usuarios.marcarNotificacionColegioEn(admin.id, ahora);
 }
 
 /**
@@ -201,34 +173,7 @@ export async function listarAlertasColegio(
     colegioId: string,
     estado?: EstadoAlertaColegio
 ): Promise<AlertaColegioListado[]> {
-    const alertas = await prisma.alertaColegio.findMany({
-        where: {
-            colegioId,
-            ...(estado ? { estado } : {}),
-            reporte: {
-                eliminado: false,
-            },
-        },
-        include: {
-            identificadorAlumno: {
-                select: {
-                    valor: true,
-                    etiquetaRelacion: true,
-                },
-            },
-            reporte: {
-                select: {
-                    estado: true,
-                    clasificacion: {
-                        select: {
-                            categoria: true,
-                        },
-                    },
-                },
-            },
-        },
-        orderBy: { creadoEn: "desc" },
-    });
+    const alertas = await new AlertaColegioRepository().listarPorColegio(colegioId, { estado });
 
     return alertas.map((alerta) => ({
         id: alerta.id,
@@ -251,9 +196,8 @@ export async function cambiarEstadoAlerta(
     estado: EstadoAlertaColegio,
     request?: Request
 ) {
-    const alerta = await prisma.alertaColegio.findFirst({
-        where: { id: alertaId, colegioId },
-    });
+    const alertas = new AlertaColegioRepository();
+    const alerta = await alertas.obtenerPorId(colegioId, alertaId);
     if (!alerta) {
         throw new Error("Alerta no encontrada");
     }
@@ -261,10 +205,7 @@ export async function cambiarEstadoAlerta(
         return alerta;
     }
 
-    const actualizada = await prisma.alertaColegio.update({
-        where: { id: alertaId },
-        data: { estado },
-    });
+    const actualizada = await alertas.cambiarEstado(colegioId, alertaId, estado);
 
     const ipAddress = request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown";
     const userAgent = request?.headers.get("user-agent") || "unknown";

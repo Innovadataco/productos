@@ -57,6 +57,14 @@ export class CargaRosterSesionRepository {
         };
     }
 
+    /** Lectura mínima por id (resolver el tenant antes del consumo single-use). */
+    obtenerPorId(sesionId: string) {
+        return this.db.cargaRosterSesion.findUnique({
+            where: { id: sesionId },
+            select: { id: true, colegioId: true },
+        });
+    }
+
     /**
      * Borra la sesión (single-use, O-2) acotada al tenant. Debe correr dentro de
      * la tx del import (inyectar el repo con la tx). 404 si no existe o es ajena.

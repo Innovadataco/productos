@@ -1,5 +1,9 @@
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { ColegioRepository } from "@/lib/dal/repositories/colegio";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+
+// SPEC-134 (E-1): el acceso a datos vive en los repos del DAL; la lógica de
+// vigencia (ventanas, mensajes, estados) queda intacta en este módulo.
 
 export type EstadoVigencia = "vigente" | "no_iniciado" | "vencido" | "inactivo" | "sin_colegio";
 
@@ -24,10 +28,7 @@ const VIGENTE: ResultadoVigencia = { vigente: true, estado: "vigente", mensaje: 
  * GET /api/reportes/mis-reportes(/[id])).
  */
 export async function verificarVigenciaCliente(usuarioId: string): Promise<ResultadoVigencia> {
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: usuarioId },
-        select: { rol: true, colegioId: true, inicioServicio: true, finServicio: true },
-    });
+    const usuario = await new UsuarioRepository().findVigenciaCliente(usuarioId);
 
     if (!usuario) {
         return { ...VIGENTE };
@@ -96,10 +97,7 @@ function verificarVentanaServicioPadre(inicio: Date | null, fin: Date | null): R
 }
 
 export async function verificarVigenciaPorColegioId(colegioId: string): Promise<ResultadoVigencia> {
-    const colegio = await prisma.colegio.findUnique({
-        where: { id: colegioId },
-        select: { id: true, estado: true, inicioServicio: true, finServicio: true },
-    });
+    const colegio = await new ColegioRepository().obtenerVigencia(colegioId);
 
     if (!colegio) {
         return {

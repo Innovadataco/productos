@@ -1,4 +1,13 @@
-import { prisma } from "@/lib/prisma";
+/**
+ * SPEC-134 (E-1): la verificación de propiedad del módulo colegio consulta los
+ * repos del DAL (tenant obligatorio por construcción). Las firmas públicas y los
+ * mensajes de error quedan intactos (los usan las rutas y este módulo se importa
+ * desde layouts/páginas).
+ */
+import { AlumnoRepository } from "@/lib/dal/repositories/alumno";
+import { CursoRepository } from "@/lib/dal/repositories/curso";
+import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import type { EtiquetaRelacionAlumno } from "@prisma/client";
 
 export interface CursoPropiedad {
@@ -32,17 +41,12 @@ export async function verificarPropiedadCurso(
     usuarioId: string,
     cursoId: string
 ): Promise<CursoPropiedad> {
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: usuarioId },
-        select: { colegioId: true },
-    });
+    const usuario = await new UsuarioRepository().findColegioId(usuarioId);
     if (!usuario?.colegioId) {
         throw new Error("Curso no encontrado");
     }
 
-    const curso = await prisma.curso.findFirst({
-        where: { id: cursoId, colegioId: usuario.colegioId },
-    });
+    const curso = await new CursoRepository().obtenerPorId(usuario.colegioId, cursoId);
     if (!curso) {
         throw new Error("Curso no encontrado");
     }
@@ -54,17 +58,12 @@ export async function verificarPropiedadAlumno(
     usuarioId: string,
     alumnoId: string
 ): Promise<AlumnoPropiedad> {
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: usuarioId },
-        select: { colegioId: true },
-    });
+    const usuario = await new UsuarioRepository().findColegioId(usuarioId);
     if (!usuario?.colegioId) {
         throw new Error("Alumno no encontrado");
     }
 
-    const alumno = await prisma.alumno.findFirst({
-        where: { id: alumnoId, colegioId: usuario.colegioId },
-    });
+    const alumno = await new AlumnoRepository().obtenerPorId(usuario.colegioId, alumnoId);
     if (!alumno) {
         throw new Error("Alumno no encontrado");
     }
@@ -76,20 +75,12 @@ export async function verificarPropiedadIdentificador(
     usuarioId: string,
     identificadorId: string
 ): Promise<IdentificadorPropiedad> {
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: usuarioId },
-        select: { colegioId: true },
-    });
+    const usuario = await new UsuarioRepository().findColegioId(usuarioId);
     if (!usuario?.colegioId) {
         throw new Error("Identificador no encontrado");
     }
 
-    const identificador = await prisma.identificadorAlumno.findFirst({
-        where: {
-            id: identificadorId,
-            alumno: { colegioId: usuario.colegioId },
-        },
-    });
+    const identificador = await new IdentificadorAlumnoRepository().obtenerPorId(usuario.colegioId, identificadorId);
     if (!identificador) {
         throw new Error("Identificador no encontrado");
     }
