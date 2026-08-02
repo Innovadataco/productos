@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 2, ítem E-2; radica ZEUS). Reverificado en
 fuente 2026-08-01: `src/lib/dal/services/circulo-confianza.ts` sigue teniendo **864
@@ -123,3 +123,26 @@ N/A — no cambia schema ni entidades (`ContactoConfianza`, `IdentificadorContac
 Impacto en arquitectura: reorganización interna de `src/lib/dal/services/` (un archivo
 → carpeta con barrel) + reducción de queries en `listarContactos`. NO toca schema,
 rutas, proxy, navegación ni stack; `arch:check` no debería requerir regeneración.
+
+## Implementación (cierre)
+
+Implementada el 2026-08-01 en `feature/001-scaffolding` (APROBADA por ZEUS en el prompt
+único de BANDA 2, reglas 1-7).
+
+- **Split (FR-001/FR-002)**: 864 L → carpeta `circulo-confianza/` con `tipos.ts` (43),
+  `estado.ts` (98), `contactos.ts` (167), `contactos-mutaciones.ts` (247 — desviación
+  menor del plan: juntar mutaciones con lecturas daba ~390 L; se separaron para
+  respetar el límite), `agregado.ts` (209), `preferencias.ts` (21), `notificaciones.ts`
+  (173) + `index.ts` barrel (14 exports). Consumidores y test existente sin tocar una
+  línea (el import resuelve al barrel).
+- **N+1 (FR-003/FR-004)**: TRES N+1 reales eliminados y candados con tests de conteo
+  (`circulo-confianza-n1.test.ts`, 4 tests, Proxy transparente sobre el client):
+  `listarContactos` 2+2N → 2 queries; `notificarCambioCirculoSiCorresponde` 1 query de
+  novedades por usuario → 1 global (el loop restante son envíos de email + timestamp,
+  documentado — no es N+1 de lectura); `obtenerDetalleContacto` 2+N → 3 constantes
+  (estado por identificador derivado del mismo arreglo, misma equivalencia por
+  construcción). `obtenerVistaAgregada` no tenía N+1 (verificado).
+- **Regla 1**: cero tests existentes tocados; 16 del módulo + 8 route tests + journeys
+  verdes. **Regla 2**: el N+1 de `obtenerDetalleContacto` se reportó y se confirmó en
+  alcance (FR-004 cubre "cualquier otro N+1 real en el módulo").
+- **Gates**: suite completa + cobertura, tsc, lint, build y arch:check verdes.
