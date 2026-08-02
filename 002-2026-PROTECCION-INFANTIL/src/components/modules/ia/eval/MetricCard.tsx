@@ -6,9 +6,9 @@ import { formatPct } from "./format";
 interface MetricCardProps {
     label: string;
     value: number;
-    baseline?: number;
-    invert?: boolean;
-    formato?: "pct" | "numero";
+    baseline?: number | undefined;
+    invert?: boolean | undefined;
+    formato?: "pct" | "numero" | undefined;
 }
 
 export function MetricCard({ label, value, baseline, invert, formato = "pct" }: MetricCardProps) {

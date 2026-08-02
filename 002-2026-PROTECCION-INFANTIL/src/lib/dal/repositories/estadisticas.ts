@@ -3,7 +3,7 @@
  * de agregaciones. Las raw queries ($queryRaw) viven AQUÍ, nunca en rutas ni
  * en servicios genéricos. Acepta un cliente transaccional opcional (D2).
  */
-import type { Prisma } from "@prisma/client";
+import type { Prisma, CategoriaConducta } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { DbClient } from "../unit-of-work";
 
@@ -72,7 +72,7 @@ export class EstadisticasRepository {
     findCategoriasAprobadas(categoriasNoAprobadas: readonly string[], whereReporte: Prisma.ReporteWhereInput) {
         return this.db.clasificacionIA.findMany({
             where: {
-                categoria: { notIn: [...categoriasNoAprobadas] as Prisma.EnumCategoriaConductaFilter["notIn"] },
+                categoria: { notIn: [...categoriasNoAprobadas] as CategoriaConducta[] },
                 reporte: whereReporte,
             },
             select: { categoria: true },

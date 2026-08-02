@@ -48,10 +48,10 @@ export interface ClassificationResult {
     metrics: OllamaMetrics;
     fallback: boolean;
     votos: VotoIndividual[];
-    usoCascada?: boolean;
-    modeloCascada?: string;
-    desempateLatencyMs?: number;
-    desempateLoadDuration?: number | null;
+    usoCascada?: boolean | undefined;
+    modeloCascada?: string | undefined;
+    desempateLatencyMs?: number | undefined;
+    desempateLoadDuration?: number | null | undefined;
 }
 
 export interface VotingConfig {

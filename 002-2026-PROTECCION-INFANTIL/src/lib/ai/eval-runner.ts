@@ -27,15 +27,15 @@ export const CATEGORIAS_EVAL = [
 export type CategoriaEval = (typeof CATEGORIAS_EVAL)[number];
 
 export interface EvalExample {
-    id?: string;
+    id?: string | undefined;
     text: string;
     expected: CategoriaEval;
     ruido: boolean;
-    secundariaEsperada?: CategoriaEval;
+    secundariaEsperada?: CategoriaEval | undefined;
 }
 
 export interface EvalResultArm {
-    id?: string;
+    id?: string | undefined;
     text: string;
     expected: CategoriaEval;
     predicted: CategoriaEval;
@@ -96,7 +96,7 @@ export interface F7Report {
     metadata: {
         modeloClasificacion: string;
         modeloEmbedding: string;
-        fixture?: string;
+        fixture?: string | undefined;
         fixtureVersion: number;
         totalExamples: number;
         timestamp: string;

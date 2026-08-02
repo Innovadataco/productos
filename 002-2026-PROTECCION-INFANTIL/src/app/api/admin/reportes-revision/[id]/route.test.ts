@@ -37,7 +37,7 @@ async function crearReporteDePrueba({ operadorId }: { operadorId?: string } = {}
             esAnonimo: false,
             estado: "REQUIERE_ANONIMIZACION",
             numeroSeguimiento: `RPT-${Date.now()}`,
-            operadorId,
+            operadorId: operadorId ?? null,
         },
     });
 }

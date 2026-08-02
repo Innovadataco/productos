@@ -33,7 +33,7 @@ export function CiudadSearchSelect({
 }: {
     label?: string;
     paisId: string;
-    departamentoId?: string;
+    departamentoId?: string | undefined;
     /** Opción actualmente seleccionada (null = ninguna). */
     value: CiudadOpcion | null;
     onSelect: (opcion: CiudadOpcion | null) => void;

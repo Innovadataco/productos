@@ -33,7 +33,8 @@ export function crearRequestAutenticado(
     return new Request(url, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        // Sin body cuando no hay (undefined explícito ≡ omitir en RequestInit).
+        ...(body ? { body: JSON.stringify(body) } : {}),
     });
 }
 

@@ -28,10 +28,10 @@ export interface CrearReporteInput {
     fechaIncidente: string;
     ciudad: string;
     pais: string;
-    paisId?: string;
-    ciudadId?: string;
-    otraPlataforma?: string;
-    edadVictima?: number;
+    paisId?: string | undefined;
+    ciudadId?: string | undefined;
+    otraPlataforma?: string | undefined;
+    edadVictima?: number | undefined;
     esAnonimo: boolean;
     usuarioId: string | null;
     tenantId: string | null;

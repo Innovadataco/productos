@@ -19,9 +19,9 @@ function getClientInfo(request: Request) {
 
 async function validarUbicacionActualizada(
     data: {
-        paisId?: string;
-        departamentoId?: string | null;
-        ciudadId?: string;
+        paisId?: string | undefined;
+        departamentoId?: string | null | undefined;
+        ciudadId?: string | undefined;
     },
     colegio: { paisId: string; departamentoId?: string | null; ciudadId: string }
 ) {

@@ -19,9 +19,10 @@ export async function registrarPaso(
             data: {
                 reporteId,
                 etapa,
-                veredicto: opciones.veredicto,
-                detalle: opciones.detalle as Prisma.InputJsonValue | undefined,
-                latenciaMs: opciones.latenciaMs,
+                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                ...(opciones.veredicto !== undefined ? { veredicto: opciones.veredicto } : {}),
+                ...(opciones.detalle !== undefined ? { detalle: opciones.detalle as Prisma.InputJsonValue } : {}),
+                ...(opciones.latenciaMs !== undefined ? { latenciaMs: opciones.latenciaMs } : {}),
             },
         });
     } catch (err) {

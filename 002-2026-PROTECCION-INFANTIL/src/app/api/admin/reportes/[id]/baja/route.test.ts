@@ -27,7 +27,7 @@ async function crearReporteVisible(numeroSeguimiento: string, identificador: str
             esAnonimo: false,
             usuarioId: usuario.id,
             numeroSeguimiento,
-            estado: estado as Parameters<typeof prisma.reporte.create>[0]["data"]["estado"],
+            estado: estado as NonNullable<Parameters<typeof prisma.reporte.create>[0]["data"]["estado"]>,
         },
     });
     await prisma.clasificacionIA.create({

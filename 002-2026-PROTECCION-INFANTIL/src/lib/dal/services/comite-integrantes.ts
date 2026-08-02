@@ -131,7 +131,13 @@ export class ComiteIntegrantesService {
     ) {
         const id = integrante.id;
         const { numeroIdentificacion, fechaInicio, fechaFin, estado, ...resto } = input;
-        const data: Prisma.IntegranteComiteUncheckedUpdateInput = { ...resto };
+        // Campo ausente ≡ no tocarlo (undefined nunca llega a Prisma).
+        const data: Prisma.IntegranteComiteUncheckedUpdateInput = {
+            ...(resto.nombres !== undefined ? { nombres: resto.nombres } : {}),
+            ...(resto.apellidos !== undefined ? { apellidos: resto.apellidos } : {}),
+            ...(resto.tipoIdentificacion !== undefined ? { tipoIdentificacion: resto.tipoIdentificacion } : {}),
+            ...(resto.email !== undefined ? { email: resto.email } : {}),
+        };
         if (numeroIdentificacion) {
             data.numeroIdentificacion = encryptParameter(numeroIdentificacion);
         }

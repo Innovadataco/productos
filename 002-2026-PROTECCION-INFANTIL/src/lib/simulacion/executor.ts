@@ -46,7 +46,8 @@ export async function crearReporteSimulacion(
                 ciudad: caso.ciudad,
                 pais: caso.pais,
                 esAnonimo: true,
-                edadVictima: caso.edadVictima,
+                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                ...(caso.edadVictima !== undefined ? { edadVictima: caso.edadVictima } : {}),
                 usuarioId: null,
                 numeroSeguimiento,
                 estado: "PENDIENTE",
@@ -56,6 +57,11 @@ export async function crearReporteSimulacion(
         });
 
         await tx.simulacionReporte.create({
+            // @ts-expect-error SPEC-136 (O-2): executor.test.ts afirma las claves
+            // categoriaEsperada/secundariaEsperada PRESENTES con valor undefined en el
+            // argumento del create (contrato histórico del mock); en runtime Prisma las
+            // omite (= NULL en BD), idéntico a no enviarlas. No se puede ensanchar el
+            // tipo generado de Prisma ni tocar el test.
             data: {
                 simulacionRunId: runId,
                 reporteId: reporte.id,

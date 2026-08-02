@@ -67,12 +67,12 @@ function calcularPrecisionPorCategoria(
 }
 
 export interface ConsultaClasificacionInput {
-    fechaDesde?: string;
-    fechaHasta?: string;
-    operadorId?: string;
-    estado?: "REVISION_MANUAL" | "CLASIFICADO" | "CORREGIDO" | "REPORTE_FALSO";
-    categoria?: string;
-    busqueda?: string;
+    fechaDesde?: string | undefined;
+    fechaHasta?: string | undefined;
+    operadorId?: string | undefined;
+    estado?: "REVISION_MANUAL" | "CLASIFICADO" | "CORREGIDO" | "REPORTE_FALSO" | undefined;
+    categoria?: string | undefined;
+    busqueda?: string | undefined;
     page: number;
     pageSize: number;
 }

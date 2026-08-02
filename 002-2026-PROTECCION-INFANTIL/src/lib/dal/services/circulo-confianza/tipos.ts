@@ -9,10 +9,10 @@ import type { EstadoReporte, Prisma } from "@prisma/client";
 export type EstadoContacto = "sinReportes" | "enRevision" | "clasificado";
 
 export type IdentificadorInput = {
-    id?: string;
+    id?: string | undefined;
     valor: string;
-    tipo?: string;
-    plataformaId?: string;
+    tipo?: string | undefined;
+    plataformaId?: string | undefined;
 };
 
 export const ESTADOS_CLASIFICADOS: EstadoReporte[] = ["CLASIFICADO", "CORREGIDO"];

@@ -22,7 +22,7 @@ function request(method: string, url: string, body: unknown, token?: string): Re
     return new Request(url, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        ...(body ? { body: JSON.stringify(body) } : {}),
     });
 }
 

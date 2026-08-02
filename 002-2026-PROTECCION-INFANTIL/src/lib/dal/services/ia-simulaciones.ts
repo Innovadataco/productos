@@ -73,7 +73,7 @@ export class IaSimulacionesService {
     }
 
     /** GET /api/admin/ia/simulaciones — listado paginado de corridas. */
-    async listar(filtros: { estado?: string; page: number }) {
+    async listar(filtros: { estado?: string | undefined; page: number }) {
         const where: Prisma.SimulacionRunWhereInput = {};
         if (filtros.estado) where.estado = filtros.estado;
 

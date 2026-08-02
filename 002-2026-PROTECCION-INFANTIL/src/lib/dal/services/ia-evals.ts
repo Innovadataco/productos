@@ -94,17 +94,17 @@ function esExperimentConfigSnapshot(valor: unknown): valor is ExperimentConfigSn
 }
 
 export interface FiltrosCasosEval {
-    categoria?: string;
-    ruido?: boolean;
-    fuente?: string;
-    activo?: boolean;
+    categoria?: string | undefined;
+    ruido?: boolean | undefined;
+    fuente?: string | undefined;
+    activo?: boolean | undefined;
     page: number;
 }
 
 export interface CrearCasoEvalInput {
     texto: string;
     categoriaEsperada: string;
-    secundariaEsperada?: string;
+    secundariaEsperada?: string | undefined;
     ruido: boolean;
 }
 
@@ -336,7 +336,7 @@ export class IaEvalsService {
     /** POST /api/admin/ia/experimentos — crea el experimento PENDIENTE con su snapshot. */
     crearExperimento(input: {
         nombre: string;
-        notas?: string;
+        notas?: string | undefined;
         configSnapshot: ExperimentConfigSnapshot;
         totalCasos: number;
         creadoPorId: string;
@@ -373,7 +373,7 @@ export class IaEvalsService {
     }
 
     /** GET /api/admin/ia/experimentos — listado paginado de experimentos. */
-    async listarExperimentos(filtros: { estado?: string; fixtureVersionRaw: string | null; page: number }) {
+    async listarExperimentos(filtros: { estado?: string | undefined; fixtureVersionRaw: string | null; page: number }) {
         const where: Prisma.EvalRunWhereInput = {};
         if (filtros.estado) where.estado = filtros.estado as EvalRunEstado;
         if (filtros.fixtureVersionRaw) where.fixtureVersion = parseInt(filtros.fixtureVersionRaw, 10);
@@ -454,7 +454,7 @@ export class IaEvalsService {
     /** GET .../experimentos/[id]/resultados — resultados paginados por caso. */
     async listarResultadosExperimento(
         id: string,
-        filtros: { categoria?: string; correcto?: boolean; page: number }
+        filtros: { categoria?: string | undefined; correcto?: boolean | undefined; page: number }
     ) {
         const run = await this.evalRuns.findById(id);
         if (!run) {

@@ -60,7 +60,7 @@ export async function getQueueStats(): Promise<{ pendientes: number }> {
 
 export interface SendReporteResult {
     encolado: boolean;
-    jobId?: string;
+    jobId?: string | undefined;
 }
 
 export async function sendReporte(

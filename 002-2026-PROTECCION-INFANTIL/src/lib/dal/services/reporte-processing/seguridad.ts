@@ -4,7 +4,7 @@ import { ERROR_CODES } from "@/lib/errors";
 import { procesarReporteSchema } from "@/lib/validators";
 import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 
-export async function parsearBody(request: Request): Promise<{ ok: true; reporteId: string; modeloClasificacion?: string } | { ok: false; response: NextResponse }> {
+export async function parsearBody(request: Request): Promise<{ ok: true; reporteId: string; modeloClasificacion?: string | undefined } | { ok: false; response: NextResponse }> {
     // SPEC-125: esquema Zod compartido (validators.ts); los mensajes son el
     // contrato del worker (scripts/worker-reportes.mjs).
     const bodyRaw = await request.json().catch(() => undefined);

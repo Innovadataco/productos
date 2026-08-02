@@ -4,16 +4,16 @@ import type { AccionAudit, CategoriaConducta, EstadoReporte, Prisma } from "@pri
 export async function logAudit(params: {
     accion: AccionAudit;
     tipoRecurso: string;
-    recursoId?: string;
-    parametroId?: string;
-    usuarioId?: string;
-    colegioId?: string;
-    valorAnterior?: string;
-    valorNuevo?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    metadatos?: Record<string, unknown>;
-    tx?: Prisma.TransactionClient;
+    recursoId?: string | undefined;
+    parametroId?: string | undefined;
+    usuarioId?: string | undefined;
+    colegioId?: string | undefined;
+    valorAnterior?: string | undefined;
+    valorNuevo?: string | undefined;
+    ipAddress?: string | undefined;
+    userAgent?: string | undefined;
+    metadatos?: Record<string, unknown> | undefined;
+    tx?: Prisma.TransactionClient | undefined;
 }): Promise<void> {
     const db = params.tx ?? prisma;
     await db.auditLog.create({
@@ -28,7 +28,8 @@ export async function logAudit(params: {
             valorNuevo: params.valorNuevo ?? null,
             ipAddress: params.ipAddress ?? "unknown",
             userAgent: params.userAgent ?? "unknown",
-            metadatos: params.metadatos ? (params.metadatos as never) : undefined,
+            // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+            ...(params.metadatos ? { metadatos: params.metadatos as never } : {}),
         },
     });
 }

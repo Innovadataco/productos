@@ -43,7 +43,7 @@ export class AlertaColegioRepository {
     }
 
     /** Alertas del colegio (reporte no eliminado), filtro de estado tipado. */
-    listarPorColegio(colegioId: string, filtros: { estado?: EstadoAlertaColegio } = {}): Promise<AlertaColegioListadoRow[]> {
+    listarPorColegio(colegioId: string, filtros: { estado?: EstadoAlertaColegio | undefined } = {}): Promise<AlertaColegioListadoRow[]> {
         return this.db.alertaColegio.findMany({
             where: {
                 colegioId,

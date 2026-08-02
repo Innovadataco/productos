@@ -52,8 +52,8 @@ function normalizarIdentificadores(identificadores: IdentificadorInput[]) {
 export async function agregarContacto(
     usuarioId: string,
     data: {
-        etiqueta?: string;
-        nota?: string;
+        etiqueta?: string | undefined;
+        nota?: string | undefined;
         identificadores: IdentificadorInput[];
     },
     request?: Request
@@ -76,13 +76,15 @@ export async function agregarContacto(
         const contacto = await tx.contactoConfianza.create({
             data: {
                 usuarioId,
-                etiqueta: data.etiqueta?.slice(0, 100),
-                nota: data.nota?.slice(0, 1000),
+                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                ...(data.etiqueta !== undefined ? { etiqueta: data.etiqueta.slice(0, 100) } : {}),
+                ...(data.nota !== undefined ? { nota: data.nota.slice(0, 1000) } : {}),
                 activo: true,
                 identificadores: {
                     create: identificadores.map((i) => ({
                         valor: i.valor,
-                        tipo: i.tipo?.slice(0, 50),
+                        // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                        ...(i.tipo !== undefined ? { tipo: i.tipo.slice(0, 50) } : {}),
                         plataformaId: i.plataformaId || null,
                         activo: true,
                     })),
@@ -128,10 +130,10 @@ export async function actualizarContacto(
     id: string,
     usuarioId: string,
     data: {
-        etiqueta?: string;
-        nota?: string;
-        activo?: boolean;
-        identificadores?: IdentificadorInput[];
+        etiqueta?: string | undefined;
+        nota?: string | undefined;
+        activo?: boolean | undefined;
+        identificadores?: IdentificadorInput[] | undefined;
     },
     request?: Request
 ) {
@@ -191,24 +193,23 @@ export async function actualizarContacto(
 
             // Crear o actualizar identificadores enviados
             for (const i of proveidos) {
+                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                const datosIdentificador = {
+                    valor: i.valor,
+                    ...(i.tipo !== undefined ? { tipo: i.tipo.slice(0, 50) } : {}),
+                    plataformaId: i.plataformaId || null,
+                    activo: nuevoActivo,
+                };
                 if (i.id && idsExistentes.has(i.id)) {
                     await tx.identificadorContacto.update({
                         where: { id: i.id },
-                        data: {
-                            valor: i.valor,
-                            tipo: i.tipo?.slice(0, 50),
-                            plataformaId: i.plataformaId || null,
-                            activo: nuevoActivo,
-                        },
+                        data: datosIdentificador,
                     });
                 } else {
                     await tx.identificadorContacto.create({
                         data: {
                             contactoId: id,
-                            valor: i.valor,
-                            tipo: i.tipo?.slice(0, 50),
-                            plataformaId: i.plataformaId || null,
-                            activo: nuevoActivo,
+                            ...datosIdentificador,
                         },
                     });
                 }

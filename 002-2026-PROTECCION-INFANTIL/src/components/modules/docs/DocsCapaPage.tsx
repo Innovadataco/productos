@@ -29,7 +29,7 @@ export async function DocsCapaPage({
 }: {
     capa: CapaDocs;
     rol: string | null;
-    docRuta?: string;
+    docRuta?: string | undefined;
 }) {
     const temas = INDICE_DOCS.filter((t) => t.capa === capa);
     const visibles = capasVisibles(rol);

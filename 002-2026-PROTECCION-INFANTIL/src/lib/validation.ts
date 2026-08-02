@@ -22,7 +22,7 @@ export class ValidationError extends AppError {
         Object.setPrototypeOf(this, ValidationError.prototype);
     }
 
-    toJSON() {
+    override toJSON() {
         return {
             error: {
                 message: this.message,

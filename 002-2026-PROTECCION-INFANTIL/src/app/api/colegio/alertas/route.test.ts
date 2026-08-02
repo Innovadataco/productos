@@ -36,7 +36,7 @@ function request(method: string, url: string, body: unknown, token?: string): Re
     return new Request(url, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        ...(body ? { body: JSON.stringify(body) } : {}),
     });
 }
 
@@ -64,8 +64,8 @@ async function crearReporte(
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
             ciudad: "Bogotá",
             pais: "Colombia",
-            paisId: ciudad?.paisId,
-            ciudadId: ciudad?.id,
+            paisId: ciudad?.paisId ?? null,
+            ciudadId: ciudad?.id ?? null,
             esAnonimo: true,
             edadVictima: 12,
             estado,

@@ -153,7 +153,12 @@ export class ConfiguracionService {
                 categoria,
                 esPublico: body.esPublico ?? defaults?.esPublico ?? false,
                 esSecreto,
-                descripcion: body.descripcion ?? defaults?.descripcion ?? undefined,
+                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                ...(body.descripcion !== undefined
+                    ? { descripcion: body.descripcion }
+                    : defaults?.descripcion !== undefined
+                      ? { descripcion: defaults.descripcion }
+                      : {}),
                 actualizadoPorId: usuarioId,
             });
         } else {

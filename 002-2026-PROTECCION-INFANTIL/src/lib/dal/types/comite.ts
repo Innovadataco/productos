@@ -6,7 +6,7 @@
 /** Input de resolución de una solicitud del comité (corrección de categoría). */
 export interface ResolverSolicitudInput {
     categoria: string;
-    resolucion?: string;
+    resolucion?: string | undefined;
 }
 
 /** Input de resolución de una apelación (SPEC-110). */
@@ -25,17 +25,17 @@ export interface CrearIntegranteInput {
     tipoIdentificacion: "CEDULA_CIUDADANIA" | "CEDULA_EXTRANJERIA" | "PASAPORTE" | "OTRO";
     numeroIdentificacion: string;
     email: string;
-    fechaInicio?: string;
+    fechaInicio?: string | undefined;
 }
 
 /** Input de edición de integrante (campos opcionales). */
 export interface ActualizarIntegranteInput {
-    nombres?: string;
-    apellidos?: string;
-    tipoIdentificacion?: "CEDULA_CIUDADANIA" | "CEDULA_EXTRANJERIA" | "PASAPORTE" | "OTRO";
-    numeroIdentificacion?: string;
-    email?: string;
-    fechaInicio?: string;
-    fechaFin?: string;
-    estado?: "ACTIVO" | "INACTIVO";
+    nombres?: string | undefined;
+    apellidos?: string | undefined;
+    tipoIdentificacion?: "CEDULA_CIUDADANIA" | "CEDULA_EXTRANJERIA" | "PASAPORTE" | "OTRO" | undefined;
+    numeroIdentificacion?: string | undefined;
+    email?: string | undefined;
+    fechaInicio?: string | undefined;
+    fechaFin?: string | undefined;
+    estado?: "ACTIVO" | "INACTIVO" | undefined;
 }

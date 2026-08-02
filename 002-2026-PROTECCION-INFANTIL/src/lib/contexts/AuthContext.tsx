@@ -8,7 +8,7 @@ type AuthCtx = {
     user: User | null;
     isLoading: boolean;
     isAuthenticated: boolean;
-    login: (email: string, password: string) => Promise<{ ok: boolean; user?: User | null; error?: string }>;
+    login: (email: string, password: string) => Promise<{ ok: boolean; user?: User | null; error?: string | undefined }>;
     logout: () => Promise<void>;
     checkSession: () => Promise<void>;
 };
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })();
     }, [checkSession]);
 
-    const login = useCallback(async (email: string, password: string): Promise<{ ok: boolean; user?: User | null; error?: string }> => {
+    const login = useCallback(async (email: string, password: string): Promise<{ ok: boolean; user?: User | null; error?: string | undefined }> => {
         const res = await fetch("/api/auth/login", {
             method: "POST",
             credentials: "include",

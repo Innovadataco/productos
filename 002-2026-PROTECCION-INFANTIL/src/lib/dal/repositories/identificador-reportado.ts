@@ -47,8 +47,9 @@ export class IdentificadorReportadoRepository {
             where: { identificador_plataformaId: { identificador, plataformaId } },
             update: {
                 totalReportes: { increment: 1 },
-                reportesAutenticados: esAnonimo ? undefined : { increment: 1 },
-                reportesAnonimos: esAnonimo ? { increment: 1 } : undefined,
+                // undefined explícito ≡ omitir el incremento (exactOptionalPropertyTypes)
+                ...(esAnonimo ? {} : { reportesAutenticados: { increment: 1 } }),
+                ...(esAnonimo ? { reportesAnonimos: { increment: 1 } } : {}),
                 ultimoReporteEn: new Date(),
                 ocultoPorComiteEn: null,
             },

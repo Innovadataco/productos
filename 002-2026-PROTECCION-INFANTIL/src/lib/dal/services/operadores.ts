@@ -41,10 +41,10 @@ export interface CrearOperadorInput {
     email: string;
     nombre: string;
     rol: "OPERADOR" | "COMITE_VALIDACION";
-    cupoMaximo?: number;
-    esRevisorDeApelaciones?: boolean;
+    cupoMaximo?: number | undefined;
+    esRevisorDeApelaciones?: boolean | undefined;
     esComite: boolean;
-    notasInternas?: string;
+    notasInternas?: string | undefined;
 }
 
 export class OperadorService {
@@ -132,7 +132,8 @@ export class OperadorService {
                     cupoMaximo: input.cupoMaximo ?? 10,
                     esRevisorDeApelaciones: input.esRevisorDeApelaciones ?? false,
                     esComite: input.esComite,
-                    notasInternas: input.notasInternas,
+                    // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                    ...(input.notasInternas !== undefined ? { notasInternas: input.notasInternas } : {}),
                     creadoPorId: admin.id,
                 },
             },
@@ -182,11 +183,11 @@ export class OperadorService {
     async actualizar(
         operador: OperadorConPerfil,
         cambios: {
-            nombre?: string;
-            cupoMaximo?: number;
-            esRevisorDeApelaciones?: boolean;
-            notasInternas?: string;
-            estado?: "activo" | "inactivo";
+            nombre?: string | undefined;
+            cupoMaximo?: number | undefined;
+            esRevisorDeApelaciones?: boolean | undefined;
+            notasInternas?: string | undefined;
+            estado?: "activo" | "inactivo" | undefined;
         },
         adminId: string,
         info: InfoClienteDto
@@ -215,7 +216,12 @@ export class OperadorService {
         }
 
         if (operador.perfilOperador && Object.keys(perfilData).length > 0) {
-            await this.perfiles.actualizarPorUsuarioId(operador.id, perfilData);
+            // Campo ausente ≡ no tocarlo (undefined nunca llega a Prisma).
+            await this.perfiles.actualizarPorUsuarioId(operador.id, {
+                ...(perfilData.cupoMaximo !== undefined ? { cupoMaximo: perfilData.cupoMaximo } : {}),
+                ...(perfilData.esRevisorDeApelaciones !== undefined ? { esRevisorDeApelaciones: perfilData.esRevisorDeApelaciones } : {}),
+                ...(perfilData.notasInternas !== undefined ? { notasInternas: perfilData.notasInternas } : {}),
+            });
         }
 
         return this.usuarios.findByIdConPerfil(operador.id);
@@ -302,7 +308,7 @@ export class OperadorService {
 
     /** PATCH /api/admin/operadores/modelo — upsert de parámetros + auditoría. */
     async actualizarModelo(
-        cambios: { cupoMaximoDefault?: number; estrategia?: EstrategiaAsignacion },
+        cambios: { cupoMaximoDefault?: number | undefined; estrategia?: EstrategiaAsignacion | undefined },
         usuarioId: string
     ): Promise<{ anterior: ModeloAsignacionDto; nuevo: ModeloAsignacionDto }> {
         const anterior = await this.obtenerModelo();

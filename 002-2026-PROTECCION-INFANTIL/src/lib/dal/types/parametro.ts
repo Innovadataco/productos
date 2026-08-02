@@ -46,10 +46,10 @@ export interface ParametroPublicoValorDto {
 
 export interface ParametroPatchInput {
     valor: string;
-    tipo?: TipoParametroDto;
-    categoria?: CategoriaParametroDto;
-    esPublico?: boolean;
-    esSecreto?: boolean;
-    descripcion?: string;
-    motivo?: string;
+    tipo?: TipoParametroDto | undefined;
+    categoria?: CategoriaParametroDto | undefined;
+    esPublico?: boolean | undefined;
+    esSecreto?: boolean | undefined;
+    descripcion?: string | undefined;
+    motivo?: string | undefined;
 }

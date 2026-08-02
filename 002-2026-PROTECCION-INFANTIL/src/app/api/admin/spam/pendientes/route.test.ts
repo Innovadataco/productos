@@ -43,7 +43,7 @@ describe("GET /api/admin/spam/pendientes", () => {
                 esAnonimo: true,
                 numeroSeguimiento: "RPT-SPAM-PEND",
                 estado: "POSIBLE_SPAM",
-                operadorId: asignadoA,
+                operadorId: asignadoA ?? null,
             },
         });
         await prisma.clasificacionIA.create({

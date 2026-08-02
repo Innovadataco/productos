@@ -30,10 +30,10 @@ const TIPOS = {
 } as const;
 
 export interface CambiosConfigRubrica {
-    modelos?: string[];
-    temperatura?: number;
-    umbralPresencia?: number;
-    modeloEmbudo?: string;
+    modelos?: string[] | undefined;
+    temperatura?: number | undefined;
+    umbralPresencia?: number | undefined;
+    modeloEmbudo?: string | undefined;
 }
 
 export class IaRubricaService {

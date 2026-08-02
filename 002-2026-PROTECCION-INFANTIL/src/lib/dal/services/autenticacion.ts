@@ -116,10 +116,10 @@ export class AutenticacionService {
     /** POST /api/auth/register — alta por un admin (rol ya validado en la ruta). */
     async registrar(input: {
         email: string;
-        nombre?: string;
+        nombre?: string | undefined;
         password: string;
         rol: string;
-        tenantId?: string;
+        tenantId?: string | undefined;
     }): Promise<ResultadoRegistro> {
         const email = input.email.toLowerCase();
         const existing = await this.usuarios.findByEmail(email);

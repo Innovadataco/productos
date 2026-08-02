@@ -8,7 +8,7 @@ import { vi } from "vitest";
 interface JarEntry {
     name: string;
     value: string;
-    options?: Record<string, unknown>;
+    options?: Record<string, unknown> | undefined;
 }
 
 export const jar: Map<string, JarEntry> = new Map();

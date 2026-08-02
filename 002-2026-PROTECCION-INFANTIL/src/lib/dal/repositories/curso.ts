@@ -14,8 +14,8 @@ export type EstadoActivo = "activo" | "inactivo";
 
 export interface DatosCurso {
     nombre: string;
-    grado: string | null;
-    anioLectivo: string | null;
+    grado: string | null | undefined;
+    anioLectivo: string | null | undefined;
 }
 
 const SELECT_PARA_ESTADISTICAS = {
@@ -92,7 +92,7 @@ export class CursoRepository {
     }
 
     /** Crea el curso del colegio (alta manual y carga masiva, ambas con estado activo). */
-    crear(colegioId: string, datos: { nombre: string; grado?: string | null; anioLectivo?: string | null }) {
+    crear(colegioId: string, datos: { nombre: string; grado?: string | null | undefined; anioLectivo?: string | null | undefined }) {
         return this.db.curso.create({
             data: {
                 colegioId,
@@ -105,10 +105,15 @@ export class CursoRepository {
     }
 
     /** Actualiza datos del curso. 404 si el id no existe o es de OTRO colegio. */
-    async actualizar(colegioId: string, id: string, datos: { nombre?: string; grado?: string | null; anioLectivo?: string | null }) {
+    async actualizar(colegioId: string, id: string, datos: { nombre?: string | undefined; grado?: string | null | undefined; anioLectivo?: string | null | undefined }) {
         const { count } = await this.db.curso.updateMany({
             where: { id, colegioId },
-            data: datos,
+            // Campo ausente ≡ no tocarlo (undefined nunca llega a Prisma).
+            data: {
+                ...(datos.nombre !== undefined ? { nombre: datos.nombre } : {}),
+                ...(datos.grado !== undefined ? { grado: datos.grado } : {}),
+                ...(datos.anioLectivo !== undefined ? { anioLectivo: datos.anioLectivo } : {}),
+            },
         });
         if (count === 0) {
             throw new AppError("Curso no encontrado", ERROR_CODES.NOT_FOUND, 404);

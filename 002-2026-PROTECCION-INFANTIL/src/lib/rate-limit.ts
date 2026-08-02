@@ -13,12 +13,12 @@ export interface RateLimitResult {
      * configurado pero la operación sigue permitida; el llamador debe decidir
      * cómo tratar el exceso (por ejemplo, marcar para revisión manual).
      */
-    softExceeded?: boolean;
+    softExceeded?: boolean | undefined;
     /**
      * Solo para scopes suaves. Sugiere marcar el recurso como POSIBLE_SPAM
      * porque el contador superó el umbral de spam configurado.
      */
-    markAsSpam?: boolean;
+    markAsSpam?: boolean | undefined;
 }
 
 interface ScopeDefaults {
@@ -91,7 +91,7 @@ export function getClientIp(request: Request): string {
 export async function checkRateLimit(
     request: Request,
     scope: string,
-    options?: { identifier?: string; soft?: boolean }
+    options?: { identifier?: string | undefined; soft?: boolean | undefined }
 ): Promise<RateLimitResult> {
     if (process.env.DISABLE_RATE_LIMIT === "true") {
         return {

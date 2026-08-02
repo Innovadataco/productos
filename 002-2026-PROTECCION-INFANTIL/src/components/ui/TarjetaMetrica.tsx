@@ -11,13 +11,13 @@
 type TarjetaMetricaProps = {
     label: string;
     value: string | number;
-    suffix?: string;
-    sub?: string;
+    suffix?: string | undefined;
+    sub?: string | undefined;
     /** "up" = rojo (sube riesgo), "down" = verde (baja riesgo). */
-    tone?: "up" | "down";
-    disposicion?: "centrada" | "panel";
-    mono?: boolean;
-    className?: string;
+    tone?: "up" | "down" | undefined;
+    disposicion?: "centrada" | "panel" | undefined;
+    mono?: boolean | undefined;
+    className?: string | undefined;
 };
 
 function toneClass(tone?: "up" | "down"): string {

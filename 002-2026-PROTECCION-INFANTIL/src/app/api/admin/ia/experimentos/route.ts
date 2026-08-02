@@ -69,9 +69,17 @@ export async function POST(request: Request) {
 
         const productionConfig = await getCurrentProductionConfig();
         const overrides = parsed.data.config || {};
+        // Los overrides nunca traen valores undefined (JSON no los tiene y zod omite
+        // las claves ausentes): el merge explícito es idéntico al spread anterior.
         const configSnapshot: ExperimentConfigSnapshot = {
-            ...productionConfig,
-            ...overrides,
+            modeloClasificacion: overrides.modeloClasificacion ?? productionConfig.modeloClasificacion,
+            modeloEmbedding: overrides.modeloEmbedding ?? productionConfig.modeloEmbedding,
+            umbralRevision: overrides.umbralRevision ?? productionConfig.umbralRevision,
+            nVotos: overrides.nVotos ?? productionConfig.nVotos,
+            temperaturaVotos: overrides.temperaturaVotos ?? productionConfig.temperaturaVotos,
+            ragTopK: overrides.ragTopK ?? productionConfig.ragTopK,
+            ollamaBaseUrl: productionConfig.ollamaBaseUrl,
+            fixtureVersion: productionConfig.fixtureVersion,
         };
 
         // Validar modelo contra modelos instalados.

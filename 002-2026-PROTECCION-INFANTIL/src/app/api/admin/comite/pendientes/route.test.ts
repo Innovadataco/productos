@@ -40,7 +40,7 @@ async function crearReporteDePrueba({ operadorId }: { operadorId?: string } = {}
             esAnonimo: false,
             estado: "REVISION_MANUAL",
             numeroSeguimiento: `RPT-${Date.now()}`,
-            operadorId,
+            operadorId: operadorId ?? null,
         },
     });
     await prisma.clasificacionIA.create({

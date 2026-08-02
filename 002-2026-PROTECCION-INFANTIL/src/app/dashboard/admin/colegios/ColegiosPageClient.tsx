@@ -35,16 +35,16 @@ type Colegio = {
 };
 
 type ColegioFormEdit = {
-    nombre?: string;
-    paisId?: string;
-    ciudadId?: string;
-    representanteLegalNombre?: string;
-    representanteLegalEmail?: string;
-    representanteLegalTelefono?: string;
-    inicioServicio?: string;
-    finServicio?: string;
-    tipoPeriodo?: "MENSUAL" | "SEMESTRAL" | "ANUAL" | "LIBRE";
-    estado?: "activo" | "inactivo";
+    nombre?: string | undefined;
+    paisId?: string | undefined;
+    ciudadId?: string | undefined;
+    representanteLegalNombre?: string | undefined;
+    representanteLegalEmail?: string | undefined;
+    representanteLegalTelefono?: string | undefined;
+    inicioServicio?: string | undefined;
+    finServicio?: string | undefined;
+    tipoPeriodo?: "MENSUAL" | "SEMESTRAL" | "ANUAL" | "LIBRE" | undefined;
+    estado?: "activo" | "inactivo" | undefined;
 };
 
 type Mensaje = { type: "success" | "error"; text: string } | null;

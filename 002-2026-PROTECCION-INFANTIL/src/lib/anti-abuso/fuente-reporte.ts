@@ -82,10 +82,10 @@ export function calcularFingerprintServerSide(request?: Request): string {
 
 export async function contarHistorialFuente(
     opts: {
-        usuarioId?: string | null;
-        ipHash?: string;
-        fingerprintHash?: string;
-        excluirReporteId?: string;
+        usuarioId?: string | null | undefined;
+        ipHash?: string | undefined;
+        fingerprintHash?: string | undefined;
+        excluirReporteId?: string | undefined;
     },
     tx?: Prisma.TransactionClient
 ): Promise<{ previos: number; confirmados: number; descartados: number }> {
@@ -141,7 +141,8 @@ export async function detectarRafagaFuente(
             creadoEn: { gte: desde },
             eliminado: false,
             OR: whereOR,
-            id: opts.excluirReporteId ? { not: opts.excluirReporteId } : undefined,
+            // undefined explícito ≡ omitir el filtro (exactOptionalPropertyTypes)
+            ...(opts.excluirReporteId ? { id: { not: opts.excluirReporteId } } : {}),
         },
     });
 
@@ -151,7 +152,7 @@ export async function detectarRafagaFuente(
 export function calcularPesoFuente(
     reporte: Pick<Reporte, "esAnonimo">,
     fuente: {
-        cuentaDiasAntiguedad?: number | null;
+        cuentaDiasAntiguedad?: number | null | undefined;
         reportesPrevios: number;
         reportesConfirmados: number;
         reportesDescartados: number;
@@ -230,12 +231,14 @@ export async function crearFuenteReporte(
         params
     );
 
+    const diasAntiguedad = calcularDiasAntiguedad(opts.usuario);
     await db.fuenteReporte.create({
         data: {
             reporteId,
             ipHash,
             fingerprintHash,
-            cuentaDiasAntiguedad: calcularDiasAntiguedad(opts.usuario),
+            // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+            ...(diasAntiguedad !== undefined ? { cuentaDiasAntiguedad: diasAntiguedad } : {}),
             reportesPrevios: historial.previos,
             reportesConfirmados: historial.confirmados,
             reportesDescartados: historial.descartados,

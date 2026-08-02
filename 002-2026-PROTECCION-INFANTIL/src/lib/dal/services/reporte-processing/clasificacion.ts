@@ -19,15 +19,15 @@ export interface ClasificacionResult {
     rawResponse: unknown;
     votos: unknown[];
     /** Solo motor legacy de votos con cascada. */
-    usoCascada?: boolean;
+    usoCascada?: boolean | undefined;
     /** Solo motor legacy de votos con cascada. */
-    modeloCascada?: string;
+    modeloCascada?: string | undefined;
     /** Tokens del motor (rúbrica los reporta; legacy no). */
-    promptTokens?: number | null;
+    promptTokens?: number | null | undefined;
     /** Tokens del motor (rúbrica los reporta; legacy no). */
-    responseTokens?: number | null;
+    responseTokens?: number | null | undefined;
     /** Resultado completo de la rúbrica (para persistir la matriz de votos). */
-    __rubrica?: ResultadoRubrica;
+    __rubrica?: ResultadoRubrica | undefined;
 }
 
 /** Compat: la rúbrica no reporta agresor-par hoy; si el motor lo añade, se respeta. */
@@ -95,7 +95,7 @@ export async function clasificarReporte({
                   umbralRevision: parametros.umbralRevision,
                   ollamaNumParallel: parametros.ollamaNumParallel,
                   ejemplos: ejemplosRag,
-                  modeloDesempate: parametros.modeloDesempate,
+                  ...(parametros.modeloDesempate !== undefined ? { modeloDesempate: parametros.modeloDesempate } : {}),
                   keepAliveDesempate: 0,
               }),
         detectarPiiCombinado(parametros.modeloAnonimizacion, texto),
@@ -114,13 +114,14 @@ export async function clasificarReporte({
                 categoriasSecundarias: aJson(clasificacion.categoriasSecundarias),
                 votos: aJson(clasificacion.votos),
                 posibleAgresorPar: clasificacion.posibleAgresorPar,
-                usoCascada: clasificacion.usoCascada,
-                modeloCascada: clasificacion.modeloCascada,
+                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                ...(clasificacion.usoCascada !== undefined ? { usoCascada: clasificacion.usoCascada } : {}),
+                ...(clasificacion.modeloCascada !== undefined ? { modeloCascada: clasificacion.modeloCascada } : {}),
                 modeloUsado: clasificacion.metrics.modelo,
                 latenciaMs: clasificacion.metrics.latenciaMs + piiResult.metrics.latenciaMs,
                 promptTokens: clasificacion.promptTokens ?? null,
                 responseTokens: clasificacion.responseTokens ?? null,
-                rawResponse: String(clasificacion.rawResponse) as string | undefined,
+                rawResponse: String(clasificacion.rawResponse),
             },
         });
 

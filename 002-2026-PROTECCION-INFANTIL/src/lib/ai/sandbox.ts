@@ -9,12 +9,12 @@ import { decidirGuardasSeguridad } from "./guardas-decision";
 import type { CategoriaConducta } from "@prisma/client";
 
 export interface SandboxOverrides {
-    umbral_revision?: number;
-    n_votos?: number;
-    temperatura_votos?: number;
-    min_score_categoria?: number;
-    rag_top_k?: number;
-    modelo_clasificacion?: string;
+    umbral_revision?: number | undefined;
+    n_votos?: number | undefined;
+    temperatura_votos?: number | undefined;
+    min_score_categoria?: number | undefined;
+    rag_top_k?: number | undefined;
+    modelo_clasificacion?: string | undefined;
 }
 
 export interface SandboxParametros {
@@ -67,7 +67,7 @@ export interface SandboxTrace {
             latenciaMs: number;
             textoAnonimizado: string;
             piiDetectada: string[];
-        };
+        } | undefined;
         guardas: {
             latenciaMs: number;
             doxing: { esDoxing: boolean; fragmentos: string[] };
@@ -75,7 +75,7 @@ export interface SandboxTrace {
             rafaga: { esRafaga: false; razon: string };
             prioridadAlta: boolean;
             keywordsDetectadas: string[];
-            estadoForzado?: string;
+            estadoForzado?: string | undefined;
             reglasAplicadas: string[];
         };
     };

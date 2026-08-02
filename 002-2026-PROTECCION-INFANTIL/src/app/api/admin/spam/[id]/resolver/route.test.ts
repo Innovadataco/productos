@@ -47,7 +47,7 @@ describe("POST /api/admin/spam/[id]/resolver", () => {
                 esAnonimo: true,
                 numeroSeguimiento: "RPT-SPAM-RES",
                 estado: "POSIBLE_SPAM",
-                operadorId,
+                operadorId: operadorId ?? null,
             },
         });
         await prisma.clasificacionIA.create({

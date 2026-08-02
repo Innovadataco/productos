@@ -26,7 +26,7 @@ function getClientInfo(request: Request) {
 
 async function validarUbicacion(data: {
     paisId: string;
-    departamentoId?: string;
+    departamentoId?: string | undefined;
     ciudadId: string;
 }) {
     const [pais, ciudad] = await Promise.all([
@@ -149,13 +149,14 @@ export async function POST(request: Request) {
                 data: {
                     nombre,
                     paisId,
-                    departamentoId,
+                    // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                    ...(departamentoId !== undefined ? { departamentoId } : {}),
                     ciudadId,
-                    direccion,
+                    ...(direccion !== undefined ? { direccion } : {}),
                     representanteLegalNombre,
                     representanteLegalIdentificacion,
                     representanteLegalEmail,
-                    representanteLegalTelefono,
+                    ...(representanteLegalTelefono !== undefined ? { representanteLegalTelefono } : {}),
                     inicioServicio: inicio,
                     finServicio: fin,
                     tipoPeriodo,

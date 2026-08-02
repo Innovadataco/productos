@@ -34,7 +34,7 @@ export class ComiteApelacionesService {
     }
 
     /** GET /api/admin/comite/apelaciones — bandeja con días hábiles y marca "próximo a vencer". */
-    async listarBandeja(filtros: { estado?: "RECIBIDA" | "EN_REVISION" | "ACEPTADA" | "RECHAZADA"; page: number; pageSize: number }) {
+    async listarBandeja(filtros: { estado?: "RECIBIDA" | "EN_REVISION" | "ACEPTADA" | "RECHAZADA" | undefined; page: number; pageSize: number }) {
         const skip = (filtros.page - 1) * filtros.pageSize;
         const where: Prisma.ApelacionWhereInput = filtros.estado ? { estado: filtros.estado } : {};
 

@@ -11,7 +11,7 @@ import type { DbClient } from "../unit-of-work";
 
 export class TransicionReporteRepository {
     private readonly db: DbClient;
-    private readonly tx?: Prisma.TransactionClient;
+    private readonly tx: Prisma.TransactionClient | undefined;
 
     constructor(tx?: Prisma.TransactionClient) {
         this.tx = tx;
