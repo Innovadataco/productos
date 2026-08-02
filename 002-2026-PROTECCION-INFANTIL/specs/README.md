@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **116** |
+| **Total de specs** | **117** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
 | **Implementadas (IMPLEMENTADO)** | **17** |
-| **Pendientes (PLANEADO)** | **1** |
+| **Pendientes (PLANEADO)** | **2** |
 
 ## Backlog activo (no cerradas)
 
@@ -74,6 +74,7 @@
 | [132](132-seguridad-carga-colegio/spec.md) | SPEC-132 — Seguridad de la carga masiva del colegio (S-3 exceljs + S-4 roster server-side) | 🟢 Implementada |
 | [133](133-journeys-e2e-gate-cobertura-roles/spec.md) | SPEC-133 — Journeys E2E por rol: gate de merge + cobertura completa (Q-1) | 🟢 Implementada |
 | [134](134-dal-colegio-tenant-obligatorio/spec.md) | SPEC-134 — DAL del módulo colegio con tenant obligatorio (E-1) | 🟢 Implementada |
+| [135](135-circulo-confianza-god-module-n1/spec.md) | SPEC-135 — circulo-confianza: romper god-module + matar N+1 (E-2) | 🔵 Planeada (compuerta §4) |
 
 ## Tabla completa (114 specs)
 
@@ -195,6 +196,7 @@
 | [132](132-seguridad-carga-colegio/spec.md) | SPEC-132 — Seguridad de la carga masiva del colegio (S-3 exceljs + S-4 roster server-side) | 🟢 Implementada |
 | [133](133-journeys-e2e-gate-cobertura-roles/spec.md) | SPEC-133 — Journeys E2E por rol: gate de merge + cobertura completa (Q-1) | 🟢 Implementada |
 | [134](134-dal-colegio-tenant-obligatorio/spec.md) | SPEC-134 — DAL del módulo colegio con tenant obligatorio (E-1) | 🟢 Implementada |
+| [135](135-circulo-confianza-god-module-n1/spec.md) | SPEC-135 — circulo-confianza: romper god-module + matar N+1 (E-2) | 🔵 Planeada (compuerta §4) |
 
 ## Incidencias de calidad de datos
 
