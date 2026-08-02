@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -113,10 +113,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const plataformas = await prisma.plataforma.findMany({
-            where: { esActiva: true },
-            select: { id: true, nombre: true },
-        });
+        const plataformas = await new PlataformaRepository().findActivas();
         const plataformasMap = new Map(plataformas.map((p) => [p.nombre.toLowerCase(), p.id]));
 
         const validacion = validarFilasCarga(parseado.filas, plataformasMap);

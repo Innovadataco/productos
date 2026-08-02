@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
@@ -41,10 +41,8 @@ export async function GET(request: Request) {
             return NextResponse.json({ cursos: [] });
         }
 
-        const cursos = await prisma.curso.findMany({
-            where: { colegioId: user.colegioId ?? undefined, estado: "activo" },
-            orderBy: { nombre: "asc" },
-        });
+        // SPEC-134 (E-1): la consulta vive en el repo (tenant obligatorio); la ruta no toca prisma.
+        const cursos = await new CursoRepository().listarActivos(user.colegioId);
 
         return NextResponse.json({ cursos });
     } catch (error) {
@@ -82,13 +80,12 @@ export async function POST(request: Request) {
         const body = await withValidation.body(cursoBodySchema)(request);
         const { nombre, grado, anioLectivo } = body;
 
-        const existente = await prisma.curso.findFirst({
-            where: {
-                colegioId: user.colegioId ?? undefined,
-                nombre,
-                grado: grado ?? null,
-                anioLectivo: anioLectivo ?? null,
-            },
+        // SPEC-134 (E-1): duplicado y creación viven en el repo (tenant obligatorio).
+        const cursos = new CursoRepository();
+        const existente = await cursos.buscarPorDatos(user.colegioId, {
+            nombre,
+            grado: grado ?? null,
+            anioLectivo: anioLectivo ?? null,
         });
         if (existente) {
             return NextResponse.json(
@@ -97,15 +94,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const curso = await prisma.curso.create({
-            data: {
-                colegioId: user.colegioId ?? undefined,
-                nombre,
-                grado,
-                anioLectivo,
-                estado: "activo",
-            },
-        });
+        const curso = await cursos.crear(user.colegioId, { nombre, grado, anioLectivo });
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({

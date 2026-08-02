@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
+import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
@@ -50,9 +51,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const plataformaId = "plataformaId" in body ? body.plataformaId : identificador.plataformaId;
 
         if (body.plataformaId) {
-            const plataforma = await prisma.plataforma.findUnique({
-                where: { id: body.plataformaId },
-            });
+            const plataforma = await new PlataformaRepository().findById(body.plataformaId);
             if (!plataforma) {
                 return NextResponse.json(
                     { error: { message: "Plataforma no encontrada", code: ERROR_CODES.NOT_FOUND } },
@@ -61,16 +60,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
         }
 
+        // verificarPropiedadIdentificador ya garantizó usuario vinculado a un colegio.
+        const colegioId = user.colegioId!;
+        // SPEC-134 (E-1): duplicado y actualización viven en el repo (tenant vía la relación alumno).
+        const identificadores = new IdentificadorAlumnoRepository();
         if (body.tipo !== undefined || body.valor !== undefined || body.plataformaId !== undefined) {
-            const duplicado = await prisma.identificadorAlumno.findFirst({
-                where: {
-                    id: { not: id },
-                    alumnoId: identificador.alumnoId,
-                    tipo,
-                    valor,
-                    plataformaId: plataformaId ?? null,
-                },
-            });
+            const duplicado = await identificadores.buscarDuplicado(
+                colegioId,
+                { alumnoId: identificador.alumnoId, tipo, valor, plataformaId: plataformaId ?? null },
+                id
+            );
             if (duplicado) {
                 return NextResponse.json(
                     { error: { message: "Identificador duplicado para este alumno", code: ERROR_CODES.CONFLICT } },
@@ -79,15 +78,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
         }
 
-        const actualizado = await prisma.identificadorAlumno.update({
-            where: { id },
-            data: {
-                tipo: body.tipo ?? identificador.tipo,
-                valor,
-                plataformaId: plataformaId ?? null,
-                etiquetaRelacion: (body.etiquetaRelacion ?? identificador.etiquetaRelacion) as EtiquetaRelacionAlumno,
-            },
-            include: { plataforma: { select: { id: true, clave: true, nombre: true } } },
+        const actualizado = await identificadores.actualizar(colegioId, id, {
+            tipo: body.tipo ?? identificador.tipo,
+            valor,
+            plataformaId: plataformaId ?? null,
+            etiquetaRelacion: (body.etiquetaRelacion ?? identificador.etiquetaRelacion) as EtiquetaRelacionAlumno,
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);

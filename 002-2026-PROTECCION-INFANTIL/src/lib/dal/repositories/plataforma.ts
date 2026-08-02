@@ -28,4 +28,12 @@ export class PlataformaRepository {
             select: { id: true, nombre: true },
         });
     }
+
+    /** SPEC-134 (E-1): plataformas activas del catálogo (validación de carga masiva). */
+    findActivas() {
+        return this.db.plataforma.findMany({
+            where: { esActiva: true },
+            select: { id: true, nombre: true },
+        });
+    }
 }

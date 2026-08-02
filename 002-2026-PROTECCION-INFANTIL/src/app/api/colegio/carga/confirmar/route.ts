@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -11,6 +10,7 @@ import { confirmarCargaSchema } from "@/lib/schemas";
 import { verificarTokenCarga } from "@/lib/colegio/carga/token";
 import { obtenerSesionRosterValida, consumirSesionRoster } from "@/lib/colegio/carga/sesion-roster";
 import { importarCargaMasiva } from "@/lib/colegio/carga/importer";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 
 function getClientInfo(request: Request) {
     return {
@@ -79,7 +79,8 @@ export async function POST(request: Request) {
             );
         }
 
-        const resumen = await prisma.$transaction(async (tx) => {
+        // SPEC-134 (E-1): UNA unidad de trabajo del DAL (misma tx para import + consumo single-use).
+        const resumen = await withUnitOfWork(async (tx) => {
             const resultado = await importarCargaMasiva(sesion.filas, sesion.colegioId, tx);
 
             // SPEC-132 (O-2): single-use — la sesión de roster se borra en la MISMA

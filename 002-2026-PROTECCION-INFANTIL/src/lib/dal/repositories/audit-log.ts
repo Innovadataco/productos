@@ -59,4 +59,25 @@ export class AuditLogRepository {
             select: { usuarioId: true, accion: true, recursoId: true, creadoEn: true },
         });
     }
+
+    /**
+     * SPEC-134 (E-1): listado paginado con el actor (nombre/email) para la auditoría
+     * del colegio — el `where` lo construye el llamador SIEMPRE con su tenant
+     * (`colegioId`). Devuelve [items, total] en una pasada.
+     */
+    findPaginadosConUsuario(
+        where: Prisma.AuditLogWhereInput,
+        paginacion: { skip: number; take: number }
+    ): Promise<[Prisma.AuditLogGetPayload<{ include: { usuario: { select: { nombre: true; email: true } } } }>[], number]> {
+        return Promise.all([
+            this.db.auditLog.findMany({
+                where,
+                orderBy: { creadoEn: "desc" },
+                skip: paginacion.skip,
+                take: paginacion.take,
+                include: { usuario: { select: { nombre: true, email: true } } },
+            }),
+            this.db.auditLog.count({ where }),
+        ]);
+    }
 }

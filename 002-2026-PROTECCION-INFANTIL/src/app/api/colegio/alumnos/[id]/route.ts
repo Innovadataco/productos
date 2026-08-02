@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { AlumnoRepository } from "@/lib/dal/repositories/alumno";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
@@ -78,15 +78,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const alumno = await verificarPropiedadAlumno(user.id, id);
 
+        // SPEC-134 (E-1): duplicado y actualización viven en el repo (tenant obligatorio).
+        const alumnos = new AlumnoRepository();
         if (body.nombre) {
-            const duplicado = await prisma.alumno.findFirst({
-                where: {
-                    id: { not: id },
-                    cursoId: alumno.cursoId,
-                    nombre: body.nombre,
-                    estado: "activo",
-                },
-            });
+            const duplicado = await alumnos.buscarDuplicadoEnCurso(alumno.colegioId, alumno.cursoId, body.nombre, id);
             if (duplicado) {
                 return NextResponse.json(
                     { error: { message: "Ya existe un alumno con ese nombre en este curso", code: ERROR_CODES.CONFLICT } },
@@ -95,10 +90,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
         }
 
-        const actualizado = await prisma.alumno.update({
-            where: { id },
-            data: { nombre: body.nombre ?? alumno.nombre },
-        });
+        const actualizado = await alumnos.actualizar(alumno.colegioId, id, { nombre: body.nombre ?? alumno.nombre });
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
@@ -82,16 +82,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const grado = "grado" in body ? body.grado : curso.grado;
         const anioLectivo = "anioLectivo" in body ? body.anioLectivo : curso.anioLectivo;
 
+        // SPEC-134 (E-1): duplicado y actualización viven en el repo (tenant obligatorio).
+        const cursos = new CursoRepository();
         if (body.nombre !== undefined || body.grado !== undefined || body.anioLectivo !== undefined) {
-            const duplicado = await prisma.curso.findFirst({
-                where: {
-                    id: { not: id },
-                    colegioId: curso.colegioId,
-                    nombre,
-                    grado: grado ?? null,
-                    anioLectivo: anioLectivo ?? null,
-                },
-            });
+            const duplicado = await cursos.buscarDuplicado(
+                curso.colegioId,
+                { nombre, grado: grado ?? null, anioLectivo: anioLectivo ?? null },
+                id
+            );
             if (duplicado) {
                 return NextResponse.json(
                     { error: { message: "Ya existe un curso con ese nombre", code: ERROR_CODES.CONFLICT } },
@@ -100,13 +98,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
         }
 
-        const actualizado = await prisma.curso.update({
-            where: { id },
-            data: {
-                nombre: body.nombre ?? curso.nombre,
-                grado: "grado" in body ? body.grado : curso.grado,
-                anioLectivo: "anioLectivo" in body ? body.anioLectivo : curso.anioLectivo,
-            },
+        const actualizado = await cursos.actualizar(curso.colegioId, id, {
+            nombre: body.nombre ?? curso.nombre,
+            grado: "grado" in body ? body.grado : curso.grado,
+            anioLectivo: "anioLectivo" in body ? body.anioLectivo : curso.anioLectivo,
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);

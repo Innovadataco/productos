@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { AlumnoRepository } from "@/lib/dal/repositories/alumno";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
@@ -39,12 +39,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
 
         const { id } = withValidation.params(cursoIdParamsSchema)(await params);
-        await verificarPropiedadCurso(user.id, id);
+        const curso = await verificarPropiedadCurso(user.id, id);
 
-        const alumnos = await prisma.alumno.findMany({
-            where: { cursoId: id, estado: "activo" },
-            orderBy: { nombre: "asc" },
-        });
+        // SPEC-134 (E-1): la consulta vive en el repo (SIEMPRE con tenant).
+        const alumnos = await new AlumnoRepository().listarPorCurso(curso.colegioId, id);
 
         return NextResponse.json({ alumnos });
     } catch (error) {
@@ -83,9 +81,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         const curso = await verificarPropiedadCurso(user.id, id);
 
-        const duplicado = await prisma.alumno.findFirst({
-            where: { cursoId: id, nombre: body.nombre, estado: "activo" },
-        });
+        // SPEC-134 (E-1): duplicado y creación viven en el repo (SIEMPRE con tenant).
+        const alumnos = new AlumnoRepository();
+        const duplicado = await alumnos.buscarPorNombreEnCurso(curso.colegioId, id, body.nombre);
         if (duplicado) {
             return NextResponse.json(
                 { error: { message: "Ya existe un alumno con ese nombre en este curso", code: ERROR_CODES.CONFLICT } },
@@ -93,14 +91,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const alumno = await prisma.alumno.create({
-            data: {
-                cursoId: id,
-                colegioId: curso.colegioId,
-                nombre: body.nombre,
-                estado: "activo",
-            },
-        });
+        const alumno = await alumnos.crear(curso.colegioId, { cursoId: id, nombre: body.nombre });
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({

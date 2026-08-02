@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
@@ -49,11 +49,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const actualizado = await prisma.identificadorAlumno.update({
-            where: { id },
-            data: { estado: body },
-            include: { plataforma: { select: { id: true, clave: true, nombre: true } } },
-        });
+        const actualizado = await new IdentificadorAlumnoRepository().cambiarEstado(
+            // verificarPropiedadIdentificador ya garantizó usuario vinculado a un colegio.
+            user.colegioId!,
+            id,
+            body
+        );
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({

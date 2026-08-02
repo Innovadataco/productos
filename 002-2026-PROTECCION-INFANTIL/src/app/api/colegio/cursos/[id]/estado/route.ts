@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
@@ -49,10 +49,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const actualizado = await prisma.curso.update({
-            where: { id },
-            data: { estado: body },
-        });
+        const actualizado = await new CursoRepository().cambiarEstado(curso.colegioId, id, body);
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
