@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { descifrarValorParametro } from "@/lib/parametros";
 import { aJson } from "../dal/json";
 import type { Prisma } from "@prisma/client";
-import { clasificarConVotos } from "./classifier";
+import { clasificarConMotorActivo, motorActivo, type MotorClasificacion } from "./motor";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares } from "./dataset-retrieval";
 import { decidirGuardasSeguridad } from "./guardas-decision";
@@ -92,12 +92,16 @@ export interface ExperimentConfigSnapshot {
     ragTopK: number;
     ollamaBaseUrl: string;
     fixtureVersion: number;
+    /** SPEC-138 (E-7): motor de la corrida (lectura tolerante: históricos sin el campo = legacy). */
+    motorUsado?: MotorClasificacion | undefined;
 }
 
 export interface F7Report {
     metadata: {
         modeloClasificacion: string;
         modeloEmbedding: string;
+        /** SPEC-138 (E-7): motor de la corrida (ausente en históricos = legacy). */
+        motorUsado?: MotorClasificacion | undefined;
         fixture?: string | undefined;
         fixtureVersion: number;
         totalExamples: number;
@@ -260,6 +264,8 @@ export async function runF7Eval(
         ragTopK: opts.config?.ragTopK ?? 3,
         ollamaBaseUrl: opts.config?.ollamaBaseUrl || "",
         fixtureVersion: opts.config?.fixtureVersion ?? 1,
+        // SPEC-138 (E-7): la corrida registra el motor que la ejercitó (selector unificado).
+        motorUsado: opts.config?.motorUsado ?? (await motorActivo()),
     };
 
     const results: EvalResultArm[] = [];
@@ -280,14 +286,17 @@ export async function runF7Eval(
                 excluirSimilitudMayorA: 0.98,
             });
 
-            const res = await clasificarConVotos(config.modeloClasificacion, ex.text, {
-                nVotos: config.nVotos,
-                temperatura: config.temperaturaVotos,
-                seeds: [42, 123, 456, 789, 1024],
-                minScoreCategoria: 0.3,
-                umbralRevision: config.umbralRevision,
-                ollamaNumParallel: 2,
-                ejemplos,
+            const res = await clasificarConMotorActivo(ex.text, {
+                modeloClasificacionLegacy: config.modeloClasificacion,
+                voting: {
+                    nVotos: config.nVotos,
+                    temperatura: config.temperaturaVotos,
+                    seeds: [42, 123, 456, 789, 1024],
+                    minScoreCategoria: 0.3,
+                    umbralRevision: config.umbralRevision,
+                    ollamaNumParallel: 2,
+                    ejemplos,
+                },
             });
             const latencyMs = Date.now() - start;
             let predicted = res.categoria as CategoriaEval;
@@ -370,6 +379,8 @@ export function buildF7Report(
         modeloEmbedding?: string;
         fixture?: string;
         duracionTotalMs?: number;
+        /** SPEC-138 (E-7): motor que ejercitó la corrida (selector unificado). */
+        motorUsado?: MotorClasificacion | undefined;
     } = {}
 ): F7Report {
     const metrics = computeMetrics(results);
@@ -382,6 +393,7 @@ export function buildF7Report(
         metadata: {
             modeloClasificacion: opts.modeloClasificacion || MODELO_CLASIFICACION_DEFAULT,
             modeloEmbedding: opts.modeloEmbedding || MODELO_EMBEDDING_DEFAULT,
+            motorUsado: opts.motorUsado,
             fixture: opts.fixture,
             fixtureVersion,
             totalExamples: results.length,

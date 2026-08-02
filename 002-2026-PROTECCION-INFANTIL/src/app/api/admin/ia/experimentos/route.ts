@@ -7,6 +7,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { IaEvalsService } from "@/lib/dal/services/ia-evals";
 import { RolUsuario } from "@prisma/client";
 import { getCurrentProductionConfig, type ExperimentConfigSnapshot } from "@/lib/ai/eval-runner";
+import { motorActivo } from "@/lib/ai/motor";
 import { listOllamaModels } from "@/lib/ai/ollama-config";
 import { z } from "zod";
 
@@ -80,6 +81,8 @@ export async function POST(request: Request) {
             ragTopK: overrides.ragTopK ?? productionConfig.ragTopK,
             ollamaBaseUrl: productionConfig.ollamaBaseUrl,
             fixtureVersion: productionConfig.fixtureVersion,
+            // SPEC-138 (E-7): la corrida registra el motor que la ejercitará.
+            motorUsado: await motorActivo(),
         };
 
         // Validar modelo contra modelos instalados.

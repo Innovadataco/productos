@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { clasificarConVotos } from "@/lib/ai/classifier";
-import { clasificarConRubrica, cargarConfigRubrica } from "@/lib/ai/rubrica";
+import { clasificarConMotorActivo } from "@/lib/ai/motor";
 import type { ResultadoRubrica } from "@/lib/ai/rubrica";
 import { detectarPiiCombinado } from "@/lib/ai/pii-detector";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
@@ -31,9 +30,6 @@ export interface ClasificacionResult {
 }
 
 /** Compat: la rúbrica no reporta agresor-par hoy; si el motor lo añade, se respeta. */
-function leerPosibleAgresorPar(r: ResultadoRubrica): boolean {
-    return "posibleAgresorPar" in r && typeof r.posibleAgresorPar === "boolean" ? r.posibleAgresorPar : false;
-}
 
 export async function clasificarReporte({
     reporteId,
@@ -67,41 +63,41 @@ export async function clasificarReporte({
         return { clasificacion, piiResult: undefined };
     }
 
-    // Spec 090: motor por rúbrica multi-etiqueta/multi-modelo si está habilitado
-    // (ia.rubrica.enabled); si no, motor legacy de votos del mismo modelo.
-    const configRubrica = await cargarConfigRubrica();
-
-    const [clasifResult, piiResult]: [ClasificacionResult, Awaited<ReturnType<typeof detectarPiiCombinado>>] = await Promise.all([
-        configRubrica.enabled
-            ? clasificarConRubrica(texto, configRubrica).then((r): ClasificacionResult => ({
-                  categoria: r.categoria,
-                  confianza: r.confianza,
-                  categoriasSecundarias: r.categoriasSecundarias,
-                  posibleAgresorPar: leerPosibleAgresorPar(r),
-                  estado: r.estado,
-                  metrics: { modelo: r.metrics.modelo, latenciaMs: r.metrics.latenciaMs },
-                  rawResponse: r.rawResponse,
-                  votos: r.votosModelos,
-                  promptTokens: r.metrics.promptTokens,
-                  responseTokens: r.metrics.responseTokens,
-                  usoCascada: false,
-                  modeloCascada: undefined,
-                  __rubrica: r,
-              }))
-            : clasificarConVotos(parametros.modeloClasificacion, texto, {
-                  nVotos: parametros.nVotos,
-                  temperatura: parametros.temperaturaVotos,
-                  minScoreCategoria: parametros.minScoreCategoria,
-                  umbralRevision: parametros.umbralRevision,
-                  ollamaNumParallel: parametros.ollamaNumParallel,
-                  ejemplos: ejemplosRag,
-                  ...(parametros.modeloDesempate !== undefined ? { modeloDesempate: parametros.modeloDesempate } : {}),
-                  keepAliveDesempate: 0,
-              }),
+    // SPEC-138 (E-7): el switch del motor (rúbrica si ia.rubrica.enabled, legacy
+    // si no) vive en el selector unificado src/lib/ai/motor.ts — el MISMO que
+    // ejercitan sandbox y eval-runner.
+    const [resultado, piiResult] = await Promise.all([
+        clasificarConMotorActivo(texto, {
+            modeloClasificacionLegacy: parametros.modeloClasificacion,
+            voting: {
+                nVotos: parametros.nVotos,
+                temperatura: parametros.temperaturaVotos,
+                minScoreCategoria: parametros.minScoreCategoria,
+                umbralRevision: parametros.umbralRevision,
+                ollamaNumParallel: parametros.ollamaNumParallel,
+                ejemplos: ejemplosRag,
+                ...(parametros.modeloDesempate !== undefined ? { modeloDesempate: parametros.modeloDesempate } : {}),
+                keepAliveDesempate: 0,
+            },
+        }),
         detectarPiiCombinado(parametros.modeloAnonimizacion, texto),
     ]);
 
-    const clasificacion: ClasificacionResult = { ...clasifResult };
+    const clasificacion: ClasificacionResult = {
+        categoria: resultado.categoria,
+        confianza: resultado.confianza,
+        categoriasSecundarias: resultado.categoriasSecundarias,
+        posibleAgresorPar: resultado.posibleAgresorPar,
+        estado: resultado.estado,
+        metrics: { modelo: resultado.metrics.modelo, latenciaMs: resultado.metrics.latenciaMs },
+        rawResponse: resultado.rawResponse,
+        votos: resultado.votos,
+        promptTokens: resultado.metrics.promptTokens ?? null,
+        responseTokens: resultado.metrics.responseTokens ?? null,
+        usoCascada: resultado.usoCascada,
+        modeloCascada: resultado.modeloCascada,
+        __rubrica: resultado.rubrica,
+    };
 
     try {
         const clasificacionCreada = await prisma.clasificacionIA.create({
@@ -126,7 +122,7 @@ export async function clasificarReporte({
         });
 
         // Spec 090: persistir la matriz categoría × modelo × 0/1 (con preguntas cumplidas)
-        const rubrica = clasifResult.__rubrica;
+        const rubrica = clasificacion.__rubrica;
         if (rubrica && Array.isArray(rubrica.votosModelos)) {
             const filas = rubrica.votosModelos.flatMap((vm) =>
                 Object.entries(vm.categorias).map(([categoria, v]) => ({

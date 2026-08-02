@@ -86,6 +86,8 @@ const experimentConfigSnapshotSchema = z.object({
     ragTopK: z.number(),
     ollamaBaseUrl: z.string(),
     fixtureVersion: z.number(),
+    // SPEC-138 (E-7): aditivo y tolerante — históricos sin el campo pasan igual.
+    motorUsado: z.enum(["rubrica", "legacy"]).optional(),
 });
 
 /** Guard: el configSnapshot persistido tiene la forma ExperimentConfigSnapshot. */

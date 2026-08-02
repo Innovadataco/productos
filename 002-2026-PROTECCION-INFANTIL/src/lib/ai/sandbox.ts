@@ -2,7 +2,18 @@ import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "./dataset-retrieval";
-import { clasificarConVotos, type ClassificationResult, type VotoIndividual } from "./classifier";
+import { clasificarConMotorActivo, type MotorClasificacion, type ResultadoMotor } from "./motor";
+import type { ClasificacionCategoria, VotoIndividual } from "./classifier";
+
+/** Guard: voto individual del motor legacy (categoría + confianza + señal de par). */
+function esVotoIndividual(v: unknown): v is VotoIndividual {
+    return typeof v === "object" && v !== null && "categoria" in v && "confianza" in v && "posibleAgresorPar" in v;
+}
+
+/** Guard: categoría secundaria en la forma legacy ({ categoria, score }). */
+function esSecundariaLegacy(v: unknown): v is ClasificacionCategoria {
+    return typeof v === "object" && v !== null && "categoria" in v && "score" in v;
+}
 import { detectarPiiCombinado, type PiiDetectionResult } from "./pii-detector";
 import { anonimizarTexto, type AnonimizacionResult } from "./anonimizador";
 import { decidirGuardasSeguridad } from "./guardas-decision";
@@ -39,6 +50,8 @@ export interface SandboxVotoDistribucion {
 export interface SandboxTrace {
     texto: string;
     parametrosEfectivos: SandboxParametros;
+    /** SPEC-138 (E-7): motor que ejercitó la corrida (selector unificado). */
+    motorUsado?: MotorClasificacion | undefined;
     etapas: {
         embedding: {
             latenciaMs: number;
@@ -149,7 +162,7 @@ function calcularDistribucion(votos: VotoIndividual[]): SandboxVotoDistribucion[
         .sort((a, b) => b.count - a.count);
 }
 
-function generarExplicacion(clasificacion: ClassificationResult, estadoFinal: string, prioridadAlta: boolean, guardas: { keywords: { tieneMatch: boolean }; doxing: { esDoxing: boolean } }): string {
+function generarExplicacion(clasificacion: ResultadoMotor, estadoFinal: string, prioridadAlta: boolean, guardas: { keywords: { tieneMatch: boolean }; doxing: { esDoxing: boolean } }): string {
     const base = `${clasificacion.categoria} con confianza ${(clasificacion.confianza * 100).toFixed(0)}%`;
     if (estadoFinal === "POSIBLE_SPAM") {
         return `${base}. Posible spam con confianza suficiente: pasa a revisión humana.`;
@@ -178,15 +191,19 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
     const ejemplos = await buscarEjemplosSimilares(vector, { topK: parametros.ragTopK });
     const latenciaRag = Date.now() - inicioRag;
 
-    // 3. Clasificación con votos
+    // 3. Clasificación — SPEC-138 (E-7): el MISMO selector que producción
+    // (rúbrica si ia.rubrica.enabled; los overrides del sandbox aplican al legacy).
     const inicioVotacion = Date.now();
-    const clasificacion = await clasificarConVotos(parametros.modeloClasificacion, texto, {
-        nVotos: parametros.nVotos,
-        temperatura: parametros.temperatura,
-        minScoreCategoria: parametros.minScoreCategoria,
-        umbralRevision: parametros.umbralRevision,
-        ollamaNumParallel: parametros.ollamaNumParallel,
-        ejemplos,
+    const clasificacion = await clasificarConMotorActivo(texto, {
+        modeloClasificacionLegacy: parametros.modeloClasificacion,
+        voting: {
+            nVotos: parametros.nVotos,
+            temperatura: parametros.temperatura,
+            minScoreCategoria: parametros.minScoreCategoria,
+            umbralRevision: parametros.umbralRevision,
+            ollamaNumParallel: parametros.ollamaNumParallel,
+            ejemplos,
+        },
     });
     const latenciaVotacion = Date.now() - inicioVotacion;
 
@@ -236,19 +253,27 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
     const latenciaGuardas = Date.now() - inicioGuardas;
     const latenciaTotal = Date.now() - inicioTotal;
 
+    // SPEC-138 (E-7): la traza de votación expone la forma del motor LEGACY
+    // (votos individuales). Con la rúbrica, los votos vienen por modelo
+    // (VotoRubricaModelo): se filtran con guards (sin casts) — quedan vacíos y la
+    // distribución es 0s, el equivalente honesto a "esta corrida no fue por votos".
+    const votosLegacy = clasificacion.votos.filter(esVotoIndividual);
+    const secundariasLegacy = clasificacion.categoriasSecundarias.filter(esSecundariaLegacy);
+
     return {
         texto,
         parametrosEfectivos: parametros,
+        motorUsado: clasificacion.motor,
         etapas: {
             embedding: { latenciaMs: latenciaEmbedding, modelo: parametros.embeddingModel },
             rag: { latenciaMs: latenciaRag, topK: parametros.ragTopK, ejemplos },
             votacion: {
                 latenciaMs: latenciaVotacion,
-                votos: clasificacion.votos,
-                distribucion: calcularDistribucion(clasificacion.votos),
+                votos: votosLegacy,
+                distribucion: calcularDistribucion(votosLegacy),
                 categoria: clasificacion.categoria,
                 confianza: clasificacion.confianza,
-                categoriasSecundarias: clasificacion.categoriasSecundarias,
+                categoriasSecundarias: secundariasLegacy,
                 posibleAgresorPar: clasificacion.posibleAgresorPar,
                 estado: clasificacion.estado,
             },
