@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-01
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 2, ítem E-1; radica ZEUS). `api/colegio/**`
 maneja PII de menores (nombres de alumnos, identificadores) y hoy habla con Prisma
@@ -141,3 +141,29 @@ Impacto en arquitectura: DAL puro — añade repos en `src/lib/dal/repositories/
 imports en `api/colegio/**` + `src/lib/colegio/**`. NO toca schema, proxy, navegación ni
 stack; `arch:check` no debería requerir regeneración (la frontera Q-3 ya contempla la
 allowlist encogiendo; `06-stack.md` no lista repos individuales).
+
+## Implementación (cierre)
+
+Implementada el 2026-08-01 en `feature/001-scaffolding` (compuerta §4 APROBADA por ZEUS
+con las condiciones O-1..O-4). O-1 no disparó: el inventario de ~40 queries no encontró
+ninguna sin filtro de tenant donde debiera (las que no lo llevaban explícito eran
+transitivamente seguras por `verificarPropiedad*`; los repos las endurecen con resultado
+idéntico). O-2 cumplida: cero tests existentes tocados en las tres fases.
+
+- **Fase 1 (`33f51136`)**: 6 repos tenant-first (`colegio`, `curso`, `alumno`,
+  `identificador-alumno`, `alerta-colegio`, `carga-roster-sesion`) + 39 tests del guard
+  (O-4: escritura por id de otro colegio = 0 filas → 404 y fila ajena intacta; lecturas
+  con 2 tenants sembrados; guardas de padre en creates; excepciones cross-tenant
+  documentadas: alertas a todos los colegios, purga global del roster).
+- **Fase 2 (`0186d252`)**: los 6 módulos de `src/lib/colegio/` consumen los repos
+  (firmas públicas intactas; `sesion-roster.ts` queda como fachada fina para no tocar
+  tests — O-2; single-use en la tx del import preservado). Allowlist 70 → 64.
+- **Fase 3 (`f61af642`)**: las 14 rutas migradas (grupos A-D); `confirmar` usa
+  `withUnitOfWork` (import + consumo en la misma tx). Funciones añadidas a repos
+  existentes con su test: `PlataformaRepository.findActivas`,
+  `AuditLogRepository.findPaginadosConUsuario`. Allowlist 70 → **50**.
+- **SC-001**: `grep "@/lib/prisma"` en `api/colegio`, `api/me`, `lib/colegio` = vacío
+  (fuera de tests). Los 6 restantes con "colegio" en la allowlist son dominio admin
+  (`api/admin/colegios`) y páginas dashboard — fuera de alcance E-1, los toma E-8.
+- **Gates**: suite completa + cobertura (piso Q-2 revisado), `tsc --noEmit`, lint,
+  build y `arch:check` verdes; ratchet `dal-frontera` en verde en cada fase.

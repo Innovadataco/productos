@@ -13,8 +13,8 @@
 | **Total de specs** | **116** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
-| **Implementadas (IMPLEMENTADO)** | **16** |
-| **Pendientes (PLANEADO)** | **2** |
+| **Implementadas (IMPLEMENTADO)** | **17** |
+| **Pendientes (PLANEADO)** | **1** |
 
 ## Backlog activo (no cerradas)
 
@@ -73,7 +73,7 @@
 | [131](131-visibilidad-solo-aprobados/spec.md) | SPEC-131 — Visibilidad pública solo por reportes aprobados (BL-5) | 🟢 Implementada |
 | [132](132-seguridad-carga-colegio/spec.md) | SPEC-132 — Seguridad de la carga masiva del colegio (S-3 exceljs + S-4 roster server-side) | 🟢 Implementada |
 | [133](133-journeys-e2e-gate-cobertura-roles/spec.md) | SPEC-133 — Journeys E2E por rol: gate de merge + cobertura completa (Q-1) | 🟢 Implementada |
-| [134](134-dal-colegio-tenant-obligatorio/spec.md) | SPEC-134 — DAL del módulo colegio con tenant obligatorio (E-1) | 🔵 Planeada (compuerta §4) |
+| [134](134-dal-colegio-tenant-obligatorio/spec.md) | SPEC-134 — DAL del módulo colegio con tenant obligatorio (E-1) | 🟢 Implementada |
 
 ## Tabla completa (114 specs)
 
@@ -194,7 +194,7 @@
 | [131](131-visibilidad-solo-aprobados/spec.md) | SPEC-131 — Visibilidad pública solo por reportes aprobados (BL-5) | 🟢 Implementada |
 | [132](132-seguridad-carga-colegio/spec.md) | SPEC-132 — Seguridad de la carga masiva del colegio (S-3 exceljs + S-4 roster server-side) | 🟢 Implementada |
 | [133](133-journeys-e2e-gate-cobertura-roles/spec.md) | SPEC-133 — Journeys E2E por rol: gate de merge + cobertura completa (Q-1) | 🟢 Implementada |
-| [134](134-dal-colegio-tenant-obligatorio/spec.md) | SPEC-134 — DAL del módulo colegio con tenant obligatorio (E-1) | 🔵 Planeada (compuerta §4) |
+| [134](134-dal-colegio-tenant-obligatorio/spec.md) | SPEC-134 — DAL del módulo colegio con tenant obligatorio (E-1) | 🟢 Implementada |
 
 ## Incidencias de calidad de datos
 

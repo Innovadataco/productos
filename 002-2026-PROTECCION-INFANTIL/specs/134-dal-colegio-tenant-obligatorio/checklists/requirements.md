@@ -23,4 +23,4 @@
 
 ## Pendiente (compuerta)
 
-- [ ] Veredicto de ZEUS (APROBADO / ajustes) antes de /speckit.tasks.
+- [x] Veredicto de ZEUS: APROBADO 2026-08-01 (condiciones O-1..O-4 registradas en tasks.md).
