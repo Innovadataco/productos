@@ -27,8 +27,9 @@ interface HomeRector {
     sinRedes: number;           // personas (hueco vigilancia)
     sinContacto: number;        // personas (hueco reacción)
   };
-  semaforo: { alertasNuevas: number; alertas7d: number };  // → resolverEstado (D1)
-  ultimaSenal: Date | null;     // max(AlertaColegio.creadoEn) — D3
+  semaforo: { alertasNuevas: number; alertas72h: number };  // → resolverEstado (D1: ámbar = 72 h)
+  ultimaSenal: Date | null;        // max(AlertaColegio.creadoEn) — D3(a), por colegio
+  latidoSistema: Date | null;      // heartbeat del worker (worker.heartbeat) — D3(b), global
   tendencia: {
     semanal: Array<{ periodo: string; reportes: number }>;   // 12 semanas
     mensual: Array<{ periodo: string; reportes: number }>;   // 12 meses
