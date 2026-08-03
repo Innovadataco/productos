@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-03
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (cola ux-rector-primero, SPEC-143…156; radica ZEUS).
 Fuentes VINCULANTES: BRIEF-DISEÑO-UX-RECTOR v2.0 (§3 terminología que gobierna también
@@ -253,6 +253,12 @@ Impacto en arquitectura: **modifica el modelo de datos** — rename `Alumno →
 Estudiante` / `IdentificadorAlumno → IdentificadorEstudiante` / enum
 `EtiquetaRelacionAlumno → EtiquetaRelacionEstudiante` (todo con `@@map`/`@map`, cero
 cambio físico destructivo) + columnas aditivas (`apellidos`, `documentoTipo`,
-`documentoNumero`) + posible modelo nuevo `AcudienteEstudiante` (pendiente D1).
+`documentoNumero`) + modelo nuevo `AcudienteEstudiante` (D1, aprobado).
 Obliga a regenerar `docs/architecture/01-modelo-datos.md` y pasar `arch:check` en el
 mismo PR. No toca proxy, navegación ni stack.
+
+## Implementación
+
+Implementada 2026-08-03 (PR #15 `32d35abd` docs + PR #16 `4d12b179` código, ambos con
+`gate` verde y auto-merge). Evidencia completa, hallazgos (flake `m1/m2`, drift
+índices migrations↔schema preexistente) y deuda técnica en [cierre.md](./cierre.md).
