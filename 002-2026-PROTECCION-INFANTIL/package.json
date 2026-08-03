@@ -24,6 +24,7 @@
     "db:studio": "prisma studio",
     "a11y:audit": "node scripts/a11y_audit.js",
     "a11y:contrast": "node scripts/contrast_check.js",
+    "tokens:check": "tsx scripts/tokens-check.ts",
     "arch:check": "tsx scripts/arch/arch-check.ts"
   },
   "dependencies": {

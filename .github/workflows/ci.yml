@@ -68,6 +68,9 @@ jobs:
       - run: npx prisma generate
       - run: npx tsc --noEmit
       - run: npm run lint
+      # SPEC-157 (D2): ratchet anti color crudo — falla si el conteo en src/**
+      # productivo SUBE del piso sembrado (el piso solo baja; ver scripts/tokens-check.ts).
+      - run: npm run tokens:check
       # La suite comparte una única Postgres (fileParallelism: false en vitest.config).
       # Los tests que llaman modelos van con mocks (ollama-client mockeado).
       # Q-2 (002-PI-056): corre con cobertura y umbrales — bajar del piso rompe el gate.

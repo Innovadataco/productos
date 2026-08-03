@@ -1,20 +1,45 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, DM_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { NavHeader } from "@/components/modules/NavHeader";
 import { ServiceWorkerRegister } from "@/components/modules/ServiceWorkerRegister";
 
-const inter = Inter({
-    subsets: ["latin"],
-    variable: "--font-inter",
+// SPEC-157 (D1/D3): un solo mecanismo — next/font/local con woff2 vendoreados en
+// public/fonts (latin + latin-ext, SIL OFL). Cero descargas de Google en build/runtime.
+// El fallback por carácter entre caras de la misma familia cubre latin-ext.
+const instrumentSans = localFont({
+    src: [
+        { path: "../../public/fonts/instrument-sans-latin.woff2", weight: "400 700", style: "normal" },
+        { path: "../../public/fonts/instrument-sans-latin-ext.woff2", weight: "400 700", style: "normal" },
+        { path: "../../public/fonts/instrument-sans-italic-latin.woff2", weight: "400 700", style: "italic" },
+        { path: "../../public/fonts/instrument-sans-italic-latin-ext.woff2", weight: "400 700", style: "italic" },
+    ],
+    variable: "--font-instrument-sans",
     display: "swap",
 });
 
-const dmMono = DM_Mono({
-    subsets: ["latin"],
-    weight: ["400", "500"],
+const instrumentSerif = localFont({
+    src: [
+        { path: "../../public/fonts/instrument-serif-latin.woff2", weight: "400", style: "normal" },
+        { path: "../../public/fonts/instrument-serif-latin-ext.woff2", weight: "400", style: "normal" },
+        { path: "../../public/fonts/instrument-serif-italic-latin.woff2", weight: "400", style: "italic" },
+        { path: "../../public/fonts/instrument-serif-italic-latin-ext.woff2", weight: "400", style: "italic" },
+    ],
+    variable: "--font-instrument-serif",
+    display: "swap",
+});
+
+const dmMono = localFont({
+    src: [
+        { path: "../../public/fonts/dm-mono-400-latin.woff2", weight: "400", style: "normal" },
+        { path: "../../public/fonts/dm-mono-400-latin-ext.woff2", weight: "400", style: "normal" },
+        { path: "../../public/fonts/dm-mono-500-latin.woff2", weight: "500", style: "normal" },
+        { path: "../../public/fonts/dm-mono-500-latin-ext.woff2", weight: "500", style: "normal" },
+        { path: "../../public/fonts/dm-mono-italic-400-latin.woff2", weight: "400", style: "italic" },
+        { path: "../../public/fonts/dm-mono-italic-400-latin-ext.woff2", weight: "400", style: "italic" },
+    ],
     variable: "--font-dm-mono",
     display: "swap",
 });
@@ -63,7 +88,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-    themeColor: "#0ea5e9",
+    themeColor: "#0b6e5a", /* token pino (§4.2) */
     width: "device-width",
     initialScale: 1,
 };
@@ -74,7 +99,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="es" className={`${inter.variable} ${dmMono.variable}`} suppressHydrationWarning>
+        <html lang="es" className={`${instrumentSans.variable} ${instrumentSerif.variable} ${dmMono.variable}`} suppressHydrationWarning>
             <body className="min-h-screen pt-14">
                 <ThemeProvider>
                     <AuthProvider>
