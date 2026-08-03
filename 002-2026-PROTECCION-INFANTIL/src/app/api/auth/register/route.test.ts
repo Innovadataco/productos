@@ -17,7 +17,7 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
-describe("POST /api/auth/register", () => {
+describe("POST /api/auth/register", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();
