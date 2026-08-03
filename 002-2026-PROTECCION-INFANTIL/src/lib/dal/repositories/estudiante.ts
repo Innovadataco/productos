@@ -140,16 +140,16 @@ export class EstudianteRepository {
                 estado: "activo",
                 ...(datos.acudientes && datos.acudientes.length > 0
                     ? {
-                          acudientes: {
-                              create: datos.acudientes.map((a) => ({
-                                  orden: a.orden,
-                                  nombre: a.nombre,
-                                  relacion: a.relacion,
-                                  telefono: a.telefono ?? null,
-                                  email: a.email ?? null,
-                              })),
-                          },
-                      }
+                        acudientes: {
+                            create: datos.acudientes.map((a) => ({
+                                orden: a.orden,
+                                nombre: a.nombre,
+                                relacion: a.relacion,
+                                telefono: a.telefono ?? null,
+                                email: a.email ?? null,
+                            })),
+                        },
+                    }
                     : {}),
             },
             include: { acudientes: true },
