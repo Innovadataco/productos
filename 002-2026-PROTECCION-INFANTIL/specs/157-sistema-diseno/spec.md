@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-03
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (SPEC-157, va primera y bloquea a las demás; radica
 ZEUS). Fuente VINCULANTE: BRIEF-DISEÑO-UX-RECTOR v3.0 §4 (sistema de diseño de
@@ -258,3 +258,10 @@ Impacto en arquitectura: **ninguno estructural** — no modifica modelo de datos
 proxy, navegación ni stack. Añade tokens CSS en `globals.css` + `tailwind.config.ts`,
 fuentes locales vendoreadas y 4 primitivos en `src/components/ui/` (con tests). No
 obliga a regenerar línea base más allá de lo que `arch:check` verifique.
+
+## Implementación
+
+Implementada 2026-08-03 (PR #18 `badf23de` docs + PR #19 `54e601ec` código, ambos con
+`gate` verde y auto-merge). Evidencia completa, comando exacto de medición del piso
+del ratchet (1166), desviaciones (`--ambar-ink`, subtle 62%, `pulseSlow` re-apuntado)
+y deuda técnica en [cierre.md](./cierre.md).

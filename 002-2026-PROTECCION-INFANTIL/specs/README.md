@@ -13,8 +13,8 @@
 | **Total de specs** | **126** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
-| **Implementadas (IMPLEMENTADO)** | **26** |
-| **Pendientes (PLANEADO)** | **2** |
+| **Implementadas (IMPLEMENTADO)** | **27** |
+| **Pendientes (PLANEADO)** | **1** |
 
 ## Backlog activo (no cerradas)
 
@@ -83,7 +83,7 @@
 | [141](141-admin-solo-lectura-padres-colegios/spec.md) | SPEC-141 — Admin solo lectura: círculo de padres + cursos/alumnos (N-1) | 🟢 Implementada |
 | [142](142-patrones-institucionales/spec.md) | SPEC-142 — Patrones institucionales con k-anonimato k=3 (F6) | 🟢 Implementada |
 | [144](144-modelo-estudiante/spec.md) | SPEC-144 — Modelo Estudiante expandido (rename desde Alumno) (002-PI-058) | 🟢 Implementada (ver cierre.md) |
-| [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🔵 Planeado (spec+plan en compuerta §4) |
+| [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 
 ## Tabla completa (115 specs)
 
@@ -214,7 +214,7 @@
 | [141](141-admin-solo-lectura-padres-colegios/spec.md) | SPEC-141 — Admin solo lectura: círculo de padres + cursos/alumnos (N-1) | 🟢 Implementada |
 | [142](142-patrones-institucionales/spec.md) | SPEC-142 — Patrones institucionales con k-anonimato k=3 (F6) | 🟢 Implementada |
 | [144](144-modelo-estudiante/spec.md) | SPEC-144 — Modelo Estudiante expandido (rename desde Alumno) (002-PI-058) | 🟢 Implementada (ver cierre.md) |
-| [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🔵 Planeado (spec+plan en compuerta §4) |
+| [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 
 ## Incidencias de calidad de datos
 
