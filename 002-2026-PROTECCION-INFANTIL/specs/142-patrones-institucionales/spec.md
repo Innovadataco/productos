@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-02
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 3; radica ZEUS). Fuentes:
 PROPUESTA-FUNCIONALIDADES-ESTRATEGICAS §F6 (patrones institucionales: post-hook del
@@ -237,3 +237,20 @@ Impacto en arquitectura: entidad NUEVA `PatronInstitucional` (+ columna aditiva 
 en el panel del colegio y post-hook de agregación en el worker. NO toca el motor de
 clasificación, la visibilidad pública ni el proxy. Al implementar: regenerar
 `docs/architecture/` y dejar `npm run arch:check` en VERDE en el mismo PR (SPEC-126).
+
+## Implementación (cierre)
+
+Implementada el 2026-08-02 en `feature/001-scaffolding` vía PR #9 (CI verde).
+
+- **Entidad**: tabla `patrones_institucionales` (aditiva: colegioId, grado, conducta,
+  plataformaOrigen, período trimestral, conteo — SIN PII) + columna aditiva
+  `AlertaColegio.patronInstitucionalId` (FK SET NULL) para la reversa exacta.
+- **3 puntos de disparo + reversa (decisión ZEUS 5)**: worker (encadenado tras alertas),
+  correcciones admin, resolver del comité; reversa en `darDeBajaReporte` dentro de la tx.
+- **k-anonimato k=3 en TODOS los desgloses (decisión ZEUS 2)**: grado, conducta y
+  plataforma — celda con <3 se suprime, solo agregado (parámetro
+  `colegio.patrones.k_anonimato`, default 3).
+- **Superficie**: `GET /api/colegio/patrones` (guardas de estadísticas; aislamiento
+  cross-tenant probado). Deuda declarada: PDF del informe (US3, P3) y la página visual
+  (el endpoint entrega el payload completo).
+- **Tests**: 10/10 lib + 4/4 endpoint.

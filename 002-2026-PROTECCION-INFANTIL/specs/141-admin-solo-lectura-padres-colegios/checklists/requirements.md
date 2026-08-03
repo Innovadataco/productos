@@ -37,4 +37,4 @@
 
 ## Pendiente (compuerta)
 
-- [ ] Veredicto de ZEUS.
+- [x] Veredicto de ZEUS: APROBADO 2026-08-02 (BLOQUE B, 5 decisiones registradas en tasks/plan).
