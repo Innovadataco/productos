@@ -37,7 +37,7 @@
 
 ## Pendiente (compuerta)
 
-- [ ] Veredicto de ZEUS: PENDIENTE. Puntos sometidos a decisión: (1) disparo del
+- [x] Veredicto de ZEUS: APROBADO 2026-08-02 (BLOQUE B, 5 decisiones registradas en tasks/plan).
       match también desde la corrección humana (Edge Cases) o solo post-hook del
       worker; (2) forma del distintivo inter-ciudad en la bandeja del comité
       (sección propia vs. etiqueta); (3) endpoint admin propio

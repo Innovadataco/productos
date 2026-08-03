@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-02
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 3; radica ZEUS). Fuentes: HALLAZGOS N1
 (`HALLAZGOS-VALIDACION-2026-07-30.md`: "Ver (**solo lectura**) el círculo de
@@ -218,3 +218,20 @@ admin de solo lectura (navegación nueva) + enum `AccionAudit` ampliado (migraci
 aditiva). NO toca schema de negocio, proxy (las rutas admin ya están cubiertas
 por rol), workers ni stack. `arch:check` requerirá regenerar la línea base en el
 mismo PR (rutas y navegación nuevas).
+
+## Implementación (cierre)
+
+Implementada el 2026-08-02 en `feature/001-scaffolding` vía PR #10 (CI verde).
+
+- **Permiso separado (decisión ZEUS 3)**: módulo `soporte_lectura` (esCritico, default
+  SOLO ADMIN — NO reuso de padres/colegios_gestion).
+- **3 GETs (cero escritura, probado que no exportan verbos de escritura)**:
+  `GET /api/admin/padres/[id]/circulo-confianza` (reuso de `listarContactos` del DAL;
+  audita `CIRCULO_CONFIANZA_ACCESO_ADMIN` con metadatos sin valores),
+  `GET /api/admin/colegios/[id]/cursos`, `GET /api/admin/colegios/[id]/cursos/[cursoId]/alumnos`
+  (paginado; 404 cross-tenant; audita `COLEGIO_ROSTER_ACCESO_ADMIN`).
+- **UI**: páginas de solo lectura (badge, sin formularios) enlazadas en contexto desde
+  las vistas de padres/colegios; módulo justificado en la whitelist de nav (sin ítem
+  propio, acceso contextual).
+- **Tests**: cero escritura, audit de acceso sin PII, no-auditoría en 403/404, 404
+  cross-tenant; regresión verde.

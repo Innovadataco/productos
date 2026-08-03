@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-02
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 3; radica ZEUS). Fuentes:
 PROPUESTA-FUNCIONALIDADES-ESTRATEGICAS §F5 (línea 357) + PLAN-DE-TRABAJO-READINESS
@@ -243,3 +243,22 @@ servicio DAL nuevos (`evento-match`) + post-hook aditivo en
 admin/comité). Altera el schema → regenerar `docs/architecture` y dejar
 `arch:check` verde en el mismo PR (el CI lo exige). NO toca clasificación,
 visibilidad, scoring ni dedup.
+
+## Implementación (cierre)
+
+Implementada el 2026-08-02 en `feature/001-scaffolding` vía PR #9 (CI verde).
+
+- **Detección (ambos caminos, decisión ZEUS 1)**: `EventoMatchService.detectarYRegistrarMatch`
+  con puerta `esReporteAprobado` (D-08) y "denunciante distinto" = `usuarioId` ∨ huella
+  S-1 (históricos sin huella NO cuentan — regla conservadora). Disparo en el post-hook
+  del worker (fire-and-forget, fail-open) Y en la corrección humana (correcciones admin
+  y resolver del comité, nunca rompen la corrección persistida).
+- **Entidad**: tabla `eventos_match` (aditiva) con idempotencia por `reporteNuevoId
+  @unique` + carrera P2002; AuditLog `MATCH_DETECTADO` (valor aditivo del enum).
+- **Superficies**: `GET /api/admin/matches` (ADMIN + módulo estadisticas; items +
+  tendencia); estadísticas públicas += conteo `identificadoresConMatch` (sin detalle,
+  §1.3); bandeja del comité con matches al tope y badge "Reincidencia inter-ciudad"
+  (etiqueta + orden, NO sección nueva — decisión ZEUS 4).
+- **Alerta al círculo**: por el mecanismo existente (`notificarCambioCirculoSiCorresponde`),
+  sin canal nuevo.
+- **Tests**: 9/9 servicio + 7/7 endpoints; regresión 329/329 en las áreas tocadas.

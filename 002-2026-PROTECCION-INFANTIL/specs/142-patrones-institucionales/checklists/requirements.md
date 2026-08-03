@@ -34,6 +34,6 @@
 
 ## Pendiente (compuerta)
 
-- [ ] Veredicto de ZEUS: PENDIENTE (spec+plan radicados; tasks reales se generan tras
+- [x] Veredicto de ZEUS: APROBADO 2026-08-02 (BLOQUE B, 5 decisiones registradas en tasks/plan).
       la aprobación).
 - [ ] Clarify pendiente si ZEUS quiere k también en conducta/plataforma (Assumptions).

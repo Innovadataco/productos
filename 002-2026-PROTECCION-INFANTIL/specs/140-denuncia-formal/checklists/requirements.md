@@ -35,4 +35,4 @@
 
 ## Pendiente (compuerta)
 
-- [ ] Veredicto de ZEUS (APROBADO / ajustes) antes de /speckit.tasks.
+- [x] Veredicto de ZEUS: APROBADO 2026-08-02 (BLOQUE B, 5 decisiones registradas en tasks/plan).

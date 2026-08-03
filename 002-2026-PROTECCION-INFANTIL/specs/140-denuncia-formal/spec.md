@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-02
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-056 (BANDA 3; radica ZEUS). Fuentes:
 PROPUESTA-FUNCIONALIDADES-ESTRATEGICAS §F2 (línea 99) y PLAN-DE-TRABAJO-READINESS
@@ -224,3 +224,24 @@ aditivos en el enum `AccionAudit`. NO toca el motor de clasificación, la visibi
 pública ni el flujo del reporte. Al añadir rutas API, hay que REGENERAR los artefactos
 de `docs/architecture/` y dejar `npm run arch:check` en VERDE en el mismo PR (regla de
 oro).
+
+## Implementación (cierre)
+
+Implementada el 2026-08-02 en `feature/001-scaffolding` vía PR #10 (CI verde).
+
+- **PDF determinista (D-23)**: `PLANTILLAS_DENUNCIA` por conducta con fallback genérico
+  (pdfmake, `info.creationDate` fija → byte-idéntico con mismos datos, testeado).
+  NUNCA IA. La plataforma NO retiene el PDF (descarga directa).
+- **Evento sin contenido**: `AccionAudit` += `DENUNCIA_FORMAL_GENERADA` /
+  `EXPEDIENTE_FORENSE_EXPORTADO` (aditivos); metadatos `{reporteId, canalDestino,
+  usuarioId, fecha}`. Nota de integración: escritas vía SQL crudo
+  (`audit-nuevas-acciones.ts`, TODO migrar a `logAudit`) porque el cliente Prisma se
+  regeneró después; con el cliente actualizado el listado audit-logs lee todo.
+- **Panel forense (N-4)**: `armarExpedienteForense` por WHITELIST cerrada (nunca
+  usuarioId/IP/huella/texto/tenant); vista JSON + exportación PDF auditada.
+- **Permiso**: módulo `denuncia_formal` (hijo de bandeja_reportes, esCritico; default
+  ADMIN + COMITE_VALIDACION — los guard-tests del seed se actualizaron por decisión ZEUS,
+  sin reabrir D-43). Botón en el expediente compartido solo con el módulo y estados
+  CLASIFICADO/CORREGIDO/REVISION_MANUAL.
+- **Tests**: 52 nuevos (PDF determinista, no-persistencia, AuditLog sin contenido,
+  guards, whitelist sin identidad); regresión 189/189 + 78/78.
