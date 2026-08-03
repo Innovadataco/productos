@@ -1,7 +1,7 @@
 /**
  * SPEC-134 (E-1): repositorio de AlertaColegio — tenant obligatorio por construcción.
  * Toda firma exige `colegioId` y todo `where` lo incluye (la PK compuesta
- * colegioId+reporteId+identificadorAlumnoId ya lo hace estructural en la única).
+ * colegioId+reporteId+identificadorEstudianteId ya lo hace estructural en la única).
  * Escrituras por id = `updateMany({ id, colegioId })` con count → 404.
  * Acepta un cliente transaccional opcional (D2).
  */
@@ -15,7 +15,7 @@ import type { DbClient } from "../unit-of-work";
 export type EstadoAlertaColegio = "nueva" | "vista" | "gestionada";
 
 const INCLUDE_LISTADO = {
-    identificadorAlumno: {
+    identificadorEstudiante: {
         select: {
             valor: true,
             etiquetaRelacion: true,
@@ -63,16 +63,16 @@ export class AlertaColegioRepository {
     }
 
     /** Alerta existente para la combinación exacta (dedupe de notificarColegioSiCorresponde). */
-    buscarExistente(colegioId: string, reporteId: string, identificadorAlumnoId: string) {
+    buscarExistente(colegioId: string, reporteId: string, identificadorEstudianteId: string) {
         return this.db.alertaColegio.findUnique({
             where: {
-                colegioId_reporteId_identificadorAlumnoId: { colegioId, reporteId, identificadorAlumnoId },
+                colegioId_reporteId_identificadorEstudianteId: { colegioId, reporteId, identificadorEstudianteId },
             },
         });
     }
 
     /** Crea la alerta del colegio en estado "nueva" (el tenant es columna del modelo). */
-    crear(datos: { colegioId: string; reporteId: string; identificadorAlumnoId: string }) {
+    crear(datos: { colegioId: string; reporteId: string; identificadorEstudianteId: string }) {
         return this.db.alertaColegio.create({
             data: { ...datos, estado: "nueva" },
         });
@@ -135,9 +135,9 @@ export class AlertaColegioRepository {
                 id: true,
                 colegioId: true,
                 patronInstitucionalId: true,
-                identificadorAlumno: {
+                identificadorEstudiante: {
                     select: {
-                        alumno: { select: { colegioId: true, curso: { select: { grado: true } } } },
+                        estudiante: { select: { colegioId: true, curso: { select: { grado: true } } } },
                     },
                 },
             },

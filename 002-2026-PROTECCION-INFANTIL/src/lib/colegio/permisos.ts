@@ -4,11 +4,11 @@
  * mensajes de error quedan intactos (los usan las rutas y este módulo se importa
  * desde layouts/páginas).
  */
-import { AlumnoRepository } from "@/lib/dal/repositories/alumno";
+import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
-import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
-import type { EtiquetaRelacionAlumno } from "@prisma/client";
+import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
 export interface CursoPropiedad {
     id: string;
@@ -19,21 +19,22 @@ export interface CursoPropiedad {
     estado: string;
 }
 
-export interface AlumnoPropiedad {
+export interface EstudiantePropiedad {
     id: string;
     cursoId: string;
     colegioId: string;
     nombre: string;
+    apellidos: string;
     estado: string;
 }
 
 export interface IdentificadorPropiedad {
     id: string;
-    alumnoId: string;
+    estudianteId: string;
     tipo: string;
     valor: string;
     plataformaId: string | null;
-    etiquetaRelacion: EtiquetaRelacionAlumno;
+    etiquetaRelacion: EtiquetaRelacionEstudiante;
     estado: string;
 }
 
@@ -54,21 +55,21 @@ export async function verificarPropiedadCurso(
     return curso;
 }
 
-export async function verificarPropiedadAlumno(
+export async function verificarPropiedadEstudiante(
     usuarioId: string,
-    alumnoId: string
-): Promise<AlumnoPropiedad> {
+    estudianteId: string
+): Promise<EstudiantePropiedad> {
     const usuario = await new UsuarioRepository().findColegioId(usuarioId);
     if (!usuario?.colegioId) {
         throw new Error("Alumno no encontrado");
     }
 
-    const alumno = await new AlumnoRepository().obtenerPorId(usuario.colegioId, alumnoId);
-    if (!alumno) {
+    const estudiante = await new EstudianteRepository().obtenerPorId(usuario.colegioId, estudianteId);
+    if (!estudiante) {
         throw new Error("Alumno no encontrado");
     }
 
-    return alumno;
+    return estudiante;
 }
 
 export async function verificarPropiedadIdentificador(
@@ -80,7 +81,7 @@ export async function verificarPropiedadIdentificador(
         throw new Error("Identificador no encontrado");
     }
 
-    const identificador = await new IdentificadorAlumnoRepository().obtenerPorId(usuario.colegioId, identificadorId);
+    const identificador = await new IdentificadorEstudianteRepository().obtenerPorId(usuario.colegioId, identificadorId);
     if (!identificador) {
         throw new Error("Identificador no encontrado");
     }

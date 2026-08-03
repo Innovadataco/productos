@@ -3,7 +3,7 @@ import { enviarAlertaColegio } from "@/lib/email";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { logger } from "@/lib/logger";
 import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
-import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { verificarVigenciaPorColegioId } from "./vigencia";
@@ -63,7 +63,7 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
 
         // Búsqueda cross-tenant a propósito (excepción documentada en el repo):
         // hay que avisar a CADA colegio que registró el identificador.
-        const identificadores = await new IdentificadorAlumnoRepository().buscarActivosPorValor(identificadorNormalizado);
+        const identificadores = await new IdentificadorEstudianteRepository().buscarActivosPorValor(identificadorNormalizado);
 
         if (identificadores.length === 0) {
             logger.info(`[COLEGIO] Notificación omitida: sin identificadores activos para ${reporte.identificador}`);
@@ -76,7 +76,7 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
         const alertasCreadasPorColegio = new Map<string, number>();
 
         for (const identificador of identificadores) {
-            const colegioId = identificador.alumno.colegioId;
+            const colegioId = identificador.estudiante.colegioId;
             const vigente = await colegioEstaVigente(colegioId);
             if (!vigente) {
                 logger.info(`[COLEGIO] Notificación omitida: colegio ${colegioId} no está vigente`);
@@ -93,7 +93,7 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                 const alerta = await alertas.crear({
                     colegioId,
                     reporteId: reporte.id,
-                    identificadorAlumnoId: identificador.id,
+                    identificadorEstudianteId: identificador.id,
                 });
 
                 await logAudit({
@@ -105,7 +105,7 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                     valorNuevo: JSON.stringify({
                         colegioId,
                         reporteId: reporte.id,
-                        identificadorAlumnoId: identificador.id,
+                        identificadorEstudianteId: identificador.id,
                         estado: alerta.estado,
                     }),
                     ipAddress: "worker",
@@ -177,8 +177,8 @@ export async function listarAlertasColegio(
 
     return alertas.map((alerta) => ({
         id: alerta.id,
-        identificador: alerta.identificadorAlumno.valor,
-        relacion: alerta.identificadorAlumno.etiquetaRelacion,
+        identificador: alerta.identificadorEstudiante.valor,
+        relacion: alerta.identificadorEstudiante.etiquetaRelacion,
         categoria: alerta.reporte.clasificacion?.categoria ?? null,
         estadoReporte: alerta.reporte.estado,
         estadoAlerta: alerta.estado,

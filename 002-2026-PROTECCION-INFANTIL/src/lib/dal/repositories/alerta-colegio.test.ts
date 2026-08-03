@@ -12,9 +12,9 @@ const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO", "REVISION_MANUAL", "POSIBL
 
 async function sembrarAlerta(colegioId: string, plataformaId: string, tag: string, opts: { estadoAlerta?: string; estadoReporte?: "CLASIFICADO" | "PENDIENTE"; eliminado?: boolean } = {}) {
     const curso = await crearCurso(colegioId, { nombre: `Curso ${tag}` });
-    const alumno = await prisma.alumno.create({ data: { cursoId: curso.id, colegioId, nombre: `Alumno ${tag}` } });
-    const identificador = await prisma.identificadorAlumno.create({
-        data: { alumnoId: alumno.id, tipo: "telefono", valor: `+57300${tag.replace(/\D/g, "").padEnd(7, "0")}`, plataformaId, etiquetaRelacion: "ALUMNO" },
+    const alumno = await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId, nombre: `Alumno ${tag}` } });
+    const identificador = await prisma.identificadorEstudiante.create({
+        data: { estudianteId: alumno.id, tipo: "telefono", valor: `+57300${tag.replace(/\D/g, "").padEnd(7, "0")}`, plataformaId, etiquetaRelacion: "ESTUDIANTE" },
     });
     const reporte = await prisma.reporte.create({
         data: {
@@ -43,7 +43,7 @@ async function sembrarAlerta(colegioId: string, plataformaId: string, tag: strin
         },
     });
     const alerta = await prisma.alertaColegio.create({
-        data: { colegioId, reporteId: reporte.id, identificadorAlumnoId: identificador.id, estado: opts.estadoAlerta ?? "nueva" },
+        data: { colegioId, reporteId: reporte.id, identificadorEstudianteId: identificador.id, estado: opts.estadoAlerta ?? "nueva" },
     });
     return { curso, alumno, identificador, reporte, alerta };
 }
@@ -68,7 +68,7 @@ describe("AlertaColegioRepository", () => {
             [nueva.alerta.id, (await repo.listarPorColegio(a.id, { estado: "vista" }))[0].id].sort()
         );
         expect(todasA.some((x) => x.id === deB.alerta.id), "la alerta de B no se cuela").toBe(false);
-        expect(todasA[0].identificadorAlumno.valor, "incluye el identificador").toBeTruthy();
+        expect(todasA[0].identificadorEstudiante.valor, "incluye el identificador").toBeTruthy();
         expect(todasA[0].reporte.clasificacion?.categoria, "incluye la categoría").toBe("CONTACTO_INSISTENTE");
 
         const soloNuevas = await repo.listarPorColegio(a.id, { estado: "nueva" });
@@ -95,13 +95,13 @@ describe("AlertaColegioRepository", () => {
         const { colegio: a } = await crearColegioConAdmin();
         const base = await sembrarAlerta(a.id, plataforma.id, "A1");
         const curso2 = await crearCurso(a.id, { nombre: "Curso A9" });
-        const alumno2 = await prisma.alumno.create({ data: { cursoId: curso2.id, colegioId: a.id, nombre: "Alumno A9" } });
-        const ident2 = await prisma.identificadorAlumno.create({
-            data: { alumnoId: alumno2.id, tipo: "telefono", valor: "+573009999999", plataformaId: plataforma.id, etiquetaRelacion: "ALUMNO" },
+        const alumno2 = await prisma.estudiante.create({ data: { cursoId: curso2.id, colegioId: a.id, nombre: "Alumno A9" } });
+        const ident2 = await prisma.identificadorEstudiante.create({
+            data: { estudianteId: alumno2.id, tipo: "telefono", valor: "+573009999999", plataformaId: plataforma.id, etiquetaRelacion: "ESTUDIANTE" },
         });
         const repo = new AlertaColegioRepository();
 
-        const creada = await repo.crear({ colegioId: a.id, reporteId: base.reporte.id, identificadorAlumnoId: ident2.id });
+        const creada = await repo.crear({ colegioId: a.id, reporteId: base.reporte.id, identificadorEstudianteId: ident2.id });
         expect(creada.estado).toBe("nueva");
         expect(creada.colegioId).toBe(a.id);
     });

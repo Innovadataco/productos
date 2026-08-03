@@ -14,9 +14,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { aJson } from "../json";
-import { etiquetaRelacionAlumnoSchema } from "@/lib/schemas";
+import { etiquetaRelacionEstudianteSchema } from "@/lib/schemas";
 import type { DbClient } from "../unit-of-work";
-import type { FilaCargaAlumno } from "@/lib/colegio/carga/parser";
+import type { FilaCargaEstudiante } from "@/lib/colegio/carga/parser";
 
 const TTL_MINUTOS = 15;
 
@@ -29,11 +29,11 @@ const filaCargaAlumnoJsonSchema = z.object({
         grado: z.string().nullable(),
         anioLectivo: z.string().nullable(),
     }),
-    alumno: z.object({ nombre: z.string() }),
+    alumno: z.object({ nombre: z.string(), apellidos: z.string() }),
     identificador: z.object({
         tipo: z.string(),
         valor: z.string(),
-        etiquetaRelacion: etiquetaRelacionAlumnoSchema,
+        etiquetaRelacion: etiquetaRelacionEstudianteSchema,
         plataformaId: z.string().nullable(),
     }),
 });
@@ -42,7 +42,7 @@ const filasRosterSchema = z.array(filaCargaAlumnoJsonSchema);
 export type SesionRoster = {
     id: string;
     colegioId: string;
-    filas: FilaCargaAlumno[];
+    filas: FilaCargaEstudiante[];
     expiraEn: Date;
 };
 
@@ -54,7 +54,7 @@ export class CargaRosterSesionRepository {
     }
 
     /** Persiste el roster validado y devuelve el id de sesión (expira en 15 min). */
-    async crear(colegioId: string, filas: FilaCargaAlumno[]): Promise<string> {
+    async crear(colegioId: string, filas: FilaCargaEstudiante[]): Promise<string> {
         const expiraEn = new Date(Date.now() + TTL_MINUTOS * 60 * 1000);
         const sesion = await this.db.cargaRosterSesion.create({
             data: { colegioId, filas: aJson(filas), expiraEn },

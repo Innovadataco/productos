@@ -150,26 +150,26 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
 
         // Agregar un alumno al curso
         const { POST: alumnosPOST, GET: alumnosGET } = await import("@/app/api/colegio/cursos/[id]/alumnos/route");
-        const resAlumno = await alumnosPOST(
+        const resEstudiante = await alumnosPOST(
             new Request(`http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nombre: `Alumno E2E Ciclo ${CICLO}` }),
+                body: JSON.stringify({ nombre: `Alumno E2E Ciclo ${CICLO}`, apellidos: "E2E" }),
             }),
             { params: Promise.resolve({ id: curso.id }) }
         );
-        expect(resAlumno.status, "el colegio debe poder agregar un alumno").toBe(201);
-        const { alumno } = (await resAlumno.json()) as { alumno: { id: string } };
+        expect(resEstudiante.status, "el colegio debe poder agregar un alumno").toBe(201);
+        const { alumno } = (await resEstudiante.json()) as { alumno: { id: string } };
         await verificarAuditLog("COLEGIO_ALUMNO_CREADO", alumno.id);
 
         // El curso y el alumno se listan de vuelta
         const listaCursos = await cursosGET(new Request("http://localhost:5005/api/colegio/cursos"));
         expect(listaCursos.status).toBe(200);
-        const listaAlumnos = await alumnosGET(new Request(`http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`), {
+        const listaEstudiantes = await alumnosGET(new Request(`http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`), {
             params: Promise.resolve({ id: curso.id }),
         });
-        expect(listaAlumnos.status).toBe(200);
-        const { alumnos } = (await listaAlumnos.json()) as { alumnos: { id: string }[] };
+        expect(listaEstudiantes.status).toBe(200);
+        const { alumnos } = (await listaEstudiantes.json()) as { alumnos: { id: string }[] };
         expect(alumnos.some((a) => a.id === alumno.id)).toBe(true);
 
         // Estadísticas del colegio cargan
@@ -195,9 +195,9 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
 
         // 2) Validar un CSV real (dos alumnos en un curso nuevo)
         const csv = [
-            "nombre_curso,grado,anio_lectivo,nombre_alumno,tipo_identificador,valor_identificador,etiqueta_relacion,plataforma",
-            `E2E Grupo ${CICLO}-A,Sexto,2026,Alumno Uno E2E C${CICLO},telefono,+5731055500${CICLO}1,ALUMNO,WhatsApp`,
-            `E2E Grupo ${CICLO}-A,Sexto,2026,Alumno Dos E2E C${CICLO},email,alumno-dos-e2e-c${CICLO}@test.local,PADRE,`,
+            "nombre_curso,grado,anio_lectivo,nombre_alumno,apellidos_alumno,tipo_identificador,valor_identificador,etiqueta_relacion,plataforma",
+            `E2E Grupo ${CICLO}-A,Sexto,2026,Alumno Uno,E2E C${CICLO},telefono,+5731055500${CICLO}1,ESTUDIANTE,WhatsApp`,
+            `E2E Grupo ${CICLO}-A,Sexto,2026,Alumno Dos,E2E C${CICLO},email,alumno-dos-e2e-c${CICLO}@test.local,PADRE,`,
         ].join("\n");
         const { POST: validarPOST } = await import("@/app/api/colegio/carga/validar/route");
         const resValidar = await validarPOST(crearRequestCargaCsv(csv));
@@ -229,7 +229,7 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         // §9: curso + alumnos + identificadores ligados al colegio; sesión consumida (single-use); auditoría
         const cursos = await prisma.curso.findMany({ where: { colegioId } });
         expect(cursos, "§9: la carga crea el curso").toHaveLength(1);
-        const alumnos = await prisma.alumno.findMany({ where: { colegioId }, include: { identificadores: true } });
+        const alumnos = await prisma.estudiante.findMany({ where: { colegioId }, include: { identificadores: true } });
         expect(alumnos, "§9: la carga crea los dos alumnos").toHaveLength(2);
         expect(alumnos.every((a) => a.cursoId === cursos[0].id), "§9: los alumnos quedan en el curso creado").toBe(true);
         expect(alumnos.flatMap((a) => a.identificadores), "§9: cada alumno conserva su identificador").toHaveLength(2);
@@ -252,16 +252,16 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         const curso = await prisma.curso.create({
             data: { colegioId, nombre: `Alertas ${CICLO}-A`, grado: "5", anioLectivo: "2026" },
         });
-        const alumno = await prisma.alumno.create({
+        const alumno = await prisma.estudiante.create({
             data: { cursoId: curso.id, colegioId, nombre: `Alumno Alerta E2E C${CICLO}` },
         });
-        const identificador = await prisma.identificadorAlumno.create({
+        const identificador = await prisma.identificadorEstudiante.create({
             data: {
-                alumnoId: alumno.id,
+                estudianteId: alumno.id,
                 tipo: "telefono",
                 valor: `+5732077700${CICLO}1`,
                 plataformaId: plataforma.id,
-                etiquetaRelacion: "ALUMNO",
+                etiquetaRelacion: "ESTUDIANTE",
             },
         });
         const reporte = await prisma.reporte.create({
@@ -278,7 +278,7 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
             },
         });
         const alerta = await prisma.alertaColegio.create({
-            data: { colegioId, reporteId: reporte.id, identificadorAlumnoId: identificador.id, estado: "nueva" },
+            data: { colegioId, reporteId: reporte.id, identificadorEstudianteId: identificador.id, estado: "nueva" },
         });
 
         // El listado muestra la alerta con sus campos no sensibles

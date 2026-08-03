@@ -1,9 +1,9 @@
 import type { EstadoReporte } from "@prisma/client";
 import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
-import { AlumnoRepository } from "@/lib/dal/repositories/alumno";
+import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
-import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 
 const ESTADOS_VISIBLES: EstadoReporte[] = [
     "CLASIFICADO",
@@ -57,8 +57,8 @@ export async function calcularEstadisticasColegio(colegioId: string): Promise<Es
     const cursoIds = cursos.map((c) => c.id);
 
     const [alumnosPorCurso, identificadoresPorCurso, alertasPorCurso] = await Promise.all([
-        new AlumnoRepository().contarPorCursoIds(colegioId, cursoIds),
-        new IdentificadorAlumnoRepository().contarPorCursoIds(colegioId, cursoIds),
+        new EstudianteRepository().contarPorCursoIds(colegioId, cursoIds),
+        new IdentificadorEstudianteRepository().contarPorCursoIds(colegioId, cursoIds),
         new AlertaColegioRepository().contarVisiblesPorCursoIds(colegioId, cursoIds, ESTADOS_VISIBLES),
     ]);
 
@@ -83,8 +83,8 @@ export async function calcularEstadisticasColegio(colegioId: string): Promise<Es
 async function calcularTotalesGenerales(colegioId: string) {
     const [cursos, alumnos, identificadores, alertas] = await Promise.all([
         new CursoRepository().contarPorColegio(colegioId),
-        new AlumnoRepository().contarPorColegio(colegioId),
-        new IdentificadorAlumnoRepository().contarPorColegio(colegioId),
+        new EstudianteRepository().contarPorColegio(colegioId),
+        new IdentificadorEstudianteRepository().contarPorColegio(colegioId),
         new AlertaColegioRepository().contarVisiblesPorColegio(colegioId, ESTADOS_VISIBLES),
     ]);
 
