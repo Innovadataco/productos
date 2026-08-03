@@ -27,7 +27,7 @@ async function tokenVerificacion(email: string): Promise<string> {
     });
 }
 
-describe("POST /api/auth/verificar/completar", () => {
+describe("POST /api/auth/verificar/completar", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
     });

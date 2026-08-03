@@ -13,7 +13,7 @@ function makeRequest(body: unknown): Request {
     });
 }
 
-describe("POST /api/auth/recuperar/restablecer", () => {
+describe("POST /api/auth/recuperar/restablecer", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
     });

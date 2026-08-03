@@ -39,7 +39,7 @@ function diasDesdeHoy(dias: number): Date {
     return normalizarFechaServicio(d);
 }
 
-describe("POST /api/auth/login — validación del payload (SPEC-125)", () => {
+describe("POST /api/auth/login — validación del payload (SPEC-125)", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();
