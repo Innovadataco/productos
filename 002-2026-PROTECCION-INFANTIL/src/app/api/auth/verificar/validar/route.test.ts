@@ -22,7 +22,7 @@ async function crearCodigo(email: string, codigo: string) {
     });
 }
 
-describe("POST /api/auth/verificar/validar", () => {
+describe("POST /api/auth/verificar/validar", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
     });

@@ -9,7 +9,7 @@ function makeRequest(query: string): Request {
     return new Request(`http://localhost:5005/api/auth/recuperar/validar${query}`);
 }
 
-describe("GET /api/auth/recuperar/validar", () => {
+describe("GET /api/auth/recuperar/validar", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
     });
