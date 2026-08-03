@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
 
-type Alumno = {
+type Estudiante = {
     id: string;
     nombre: string;
     estado: string;
@@ -38,7 +38,7 @@ type Plataforma = { id: string; clave: string; nombre: string };
 type Mensaje = { type: "success" | "error"; text: string } | null;
 
 const etiquetaOptions = [
-    { value: "ALUMNO", label: "Alumno" },
+    { value: "ESTUDIANTE", label: "Alumno" },
     { value: "MADRE", label: "Madre" },
     { value: "PADRE", label: "Padre" },
     { value: "PRIMO", label: "Primo" },
@@ -48,8 +48,8 @@ const etiquetaOptions = [
 
 export default function AlumnoDetallePageClient({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
-    const [alumnoId, setAlumnoId] = useState<string | null>(null);
-    const [alumno, setAlumno] = useState<Alumno | null>(null);
+    const [estudianteId, setEstudianteId] = useState<string | null>(null);
+    const [estudiante, setEstudiante] = useState<Estudiante | null>(null);
     const [curso, setCurso] = useState<Curso | null>(null);
     const [identificadores, setIdentificadores] = useState<Identificador[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
@@ -58,11 +58,11 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
     const [message, setMessage] = useState<Mensaje>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [nuevo, setNuevo] = useState({ valor: "", plataformaId: "", etiquetaRelacion: "ALUMNO" });
+    const [nuevo, setNuevo] = useState({ valor: "", plataformaId: "", etiquetaRelacion: "ESTUDIANTE" });
 
     useEffect(() => {
         params.then((p) => {
-            setAlumnoId(p.id);
+            setEstudianteId(p.id);
             cargar(p.id);
         });
         fetch("/api/plataformas", { credentials: "include" })
@@ -75,22 +75,22 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
         setLoading(true);
         setError("");
         try {
-            const [resAlumno, resIdentificadores] = await Promise.all([
+            const [resEstudiante, resIdentificadores] = await Promise.all([
                 fetch(`/api/colegio/alumnos/${id}`, { credentials: "include" }),
                 fetch(`/api/colegio/alumnos/${id}/identificadores`, { credentials: "include" }),
             ]);
-            const dataAlumno = await resAlumno.json().catch(() => ({}));
+            const dataEstudiante = await resEstudiante.json().catch(() => ({}));
             const dataIdentificadores = await resIdentificadores.json().catch(() => ({}));
 
-            if (resAlumno.ok && dataAlumno.alumno) {
-                setAlumno(dataAlumno.alumno);
-                const resCurso = await fetch(`/api/colegio/cursos/${dataAlumno.alumno.cursoId}`, { credentials: "include" });
+            if (resEstudiante.ok && dataEstudiante.alumno) {
+                setEstudiante(dataEstudiante.alumno);
+                const resCurso = await fetch(`/api/colegio/cursos/${dataEstudiante.alumno.cursoId}`, { credentials: "include" });
                 const dataCurso = await resCurso.json().catch(() => ({}));
                 if (resCurso.ok && dataCurso.curso) {
                     setCurso(dataCurso.curso);
                 }
-            } else if (resAlumno.status === 404 || resAlumno.status === 403) {
-                setError(dataAlumno?.error?.message || "No tienes acceso a este alumno");
+            } else if (resEstudiante.status === 404 || resEstudiante.status === 403) {
+                setError(dataEstudiante?.error?.message || "No tienes acceso a este alumno");
                 setLoading(false);
                 return;
             }
@@ -106,7 +106,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
     }
 
     async function agregarIdentificador() {
-        if (!alumnoId || !nuevo.valor.trim()) return;
+        if (!estudianteId || !nuevo.valor.trim()) return;
         setSaving(true);
         setMessage(null);
         try {
@@ -116,7 +116,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
             };
             if (nuevo.plataformaId) payload.plataformaId = nuevo.plataformaId;
 
-            const res = await fetch(`/api/colegio/alumnos/${alumnoId}/identificadores`, {
+            const res = await fetch(`/api/colegio/alumnos/${estudianteId}/identificadores`, {
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
@@ -125,9 +125,9 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setModalOpen(false);
-                setNuevo({ valor: "", plataformaId: "", etiquetaRelacion: "ALUMNO" });
+                setNuevo({ valor: "", plataformaId: "", etiquetaRelacion: "ESTUDIANTE" });
                 setMessage({ type: "success", text: "Identificador agregado" });
-                if (alumnoId) await cargar(alumnoId);
+                if (estudianteId) await cargar(estudianteId);
             } else {
                 setMessage({ type: "error", text: data?.error?.message || "Error agregando identificador" });
             }
@@ -150,7 +150,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setMessage({ type: "success", text: `Identificador ${nuevoEstado === "activo" ? "activado" : "desactivado"}` });
-                if (alumnoId) await cargar(alumnoId);
+                if (estudianteId) await cargar(estudianteId);
             } else {
                 setMessage({ type: "error", text: data?.error?.message || "Error cambiando estado" });
             }
@@ -167,12 +167,12 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                         <div>
                             <Button
                                 variant="outline"
-                                onClick={() => router.push(`/dashboard/colegio/cursos/${alumno?.cursoId || ""}`)}
+                                onClick={() => router.push(`/dashboard/colegio/cursos/${estudiante?.cursoId || ""}`)}
                                 className="mb-2"
                             >
                                 ← Volver al curso
                             </Button>
-                            <h1 className="text-2xl font-bold text-body">{alumno?.nombre || "Alumno"}</h1>
+                            <h1 className="text-2xl font-bold text-body">{estudiante?.nombre || "Alumno"}</h1>
                             {curso && <p className="text-sm text-muted">{curso.nombre}</p>}
                         </div>
                         <Button onClick={() => setModalOpen(true)}>Nuevo identificador</Button>
@@ -196,8 +196,8 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                             Cargando...
                         </div>
                     ) : error ? (
-                        <ErrorState title="No pudimos cargar el alumno" description={error} onRetry={() => alumnoId && cargar(alumnoId)} />
-                    ) : alumno ? (
+                        <ErrorState title="No pudimos cargar el alumno" description={error} onRetry={() => estudianteId && cargar(estudianteId)} />
+                    ) : estudiante ? (
                         <GlassCard>
                             <h2 className="text-lg font-semibold text-body">Identificadores</h2>
                             {identificadores.length === 0 ? (

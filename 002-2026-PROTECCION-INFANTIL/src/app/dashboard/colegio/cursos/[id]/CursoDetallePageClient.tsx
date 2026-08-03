@@ -20,7 +20,7 @@ type Curso = {
     estado: string;
 };
 
-type Alumno = {
+type Estudiante = {
     id: string;
     nombre: string;
     estado: string;
@@ -32,7 +32,7 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
     const router = useRouter();
     const [cursoId, setCursoId] = useState<string | null>(null);
     const [curso, setCurso] = useState<Curso | null>(null);
-    const [alumnos, setAlumnos] = useState<Alumno[]>([]);
+    const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [message, setMessage] = useState<Mensaje>(null);
@@ -40,7 +40,7 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
-    const [nuevoAlumno, setNuevoAlumno] = useState("");
+    const [nuevoEstudiante, setNuevoEstudiante] = useState("");
 
     useEffect(() => {
         params.then((p) => {
@@ -53,12 +53,12 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
         setLoading(true);
         setError("");
         try {
-            const [resCurso, resAlumnos] = await Promise.all([
+            const [resCurso, resEstudiantes] = await Promise.all([
                 fetch(`/api/colegio/cursos/${id}`, { credentials: "include" }),
                 fetch(`/api/colegio/cursos/${id}/alumnos`, { credentials: "include" }),
             ]);
             const dataCurso = await resCurso.json().catch(() => ({}));
-            const dataAlumnos = await resAlumnos.json().catch(() => ({}));
+            const dataEstudiantes = await resEstudiantes.json().catch(() => ({}));
 
             if (resCurso.ok && dataCurso.curso) {
                 setCurso(dataCurso.curso);
@@ -69,8 +69,8 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
                 return;
             }
 
-            if (resAlumnos.ok) {
-                setAlumnos(dataAlumnos.alumnos || []);
+            if (resEstudiantes.ok) {
+                setEstudiantes(dataEstudiantes.alumnos || []);
             }
         } catch {
             setError("Error de red cargando el curso");
@@ -109,8 +109,8 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
         }
     }
 
-    async function agregarAlumno() {
-        if (!cursoId || !nuevoAlumno.trim()) return;
+    async function agregarEstudiante() {
+        if (!cursoId || !nuevoEstudiante.trim()) return;
         setSaving(true);
         setMessage(null);
         try {
@@ -118,12 +118,12 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nombre: nuevoAlumno.trim() }),
+                body: JSON.stringify({ nombre: nuevoEstudiante.trim() }),
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setModalOpen(false);
-                setNuevoAlumno("");
+                setNuevoEstudiante("");
                 setMessage({ type: "success", text: "Alumno agregado" });
                 if (cursoId) await cargar(cursoId);
             } else {
@@ -136,7 +136,7 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
         }
     }
 
-    async function toggleEstadoAlumno(alumno: Alumno) {
+    async function toggleEstadoEstudiante(alumno: Estudiante) {
         const nuevoEstado = alumno.estado === "activo" ? "inactivo" : "activo";
         try {
             const res = await fetch(`/api/colegio/alumnos/${alumno.id}/estado`, {
@@ -253,7 +253,7 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
 
                             <GlassCard>
                                 <h2 className="text-lg font-semibold text-body">Alumnos</h2>
-                                {alumnos.length === 0 ? (
+                                {estudiantes.length === 0 ? (
                                     <EmptyState
                                         title="No hay alumnos en este curso"
                                         description="Agrega el primer alumno para comenzar."
@@ -272,7 +272,7 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                                {alumnos.map((alumno) => (
+                                                {estudiantes.map((alumno) => (
                                                     <tr key={alumno.id} className="align-top">
                                                         <td className="py-3 pr-3 font-medium text-body">
                                                             <button
@@ -300,7 +300,7 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
                                                                 <Button
                                                                     variant={alumno.estado === "activo" ? "danger" : "secondary"}
                                                                     className="px-3 py-1.5 text-xs"
-                                                                    onClick={() => toggleEstadoAlumno(alumno)}
+                                                                    onClick={() => toggleEstadoEstudiante(alumno)}
                                                                 >
                                                                     {alumno.estado === "activo" ? "Desactivar" : "Activar"}
                                                                 </Button>
@@ -325,12 +325,12 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
                         required
                         minLength={2}
                         maxLength={150}
-                        value={nuevoAlumno}
-                        onChange={(e) => setNuevoAlumno(e.target.value)}
+                        value={nuevoEstudiante}
+                        onChange={(e) => setNuevoEstudiante(e.target.value)}
                         placeholder="Ej. María Gómez"
                     />
                     <div className="flex items-center gap-3">
-                        <Button onClick={agregarAlumno} isLoading={saving}>
+                        <Button onClick={agregarEstudiante} isLoading={saving}>
                             Agregar
                         </Button>
                         <Button variant="outline" onClick={() => setModalOpen(false)}>
