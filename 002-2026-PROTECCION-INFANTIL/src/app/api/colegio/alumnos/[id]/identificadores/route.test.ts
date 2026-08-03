@@ -9,9 +9,9 @@ import {
     crearTokenUsuario,
     crearColegioConAdmin,
     crearCurso,
-    crearAlumno,
+    crearEstudiante,
     crearPlataforma,
-    crearIdentificadorAlumno,
+    crearIdentificadorEstudiante,
 } from "@/lib/reporte-test-utils";
 
 let mockToken: string | undefined;
@@ -49,13 +49,13 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
     it("SCHOOL_ADMIN agrega y lista identificadores de un alumno propio", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+        const alumno = await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María Gómez" });
 
         const postRes = await POST(
             request(
                 "POST",
                 `http://localhost:5005/api/colegio/alumnos/${alumno.id}/identificadores`,
-                { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ALUMNO" },
+                { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ESTUDIANTE" },
                 mockToken
             ),
             { params: Promise.resolve({ id: alumno.id }) }
@@ -76,13 +76,13 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
     it("infiere el tipo cuando el formulario no lo envía (C-4)", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+        const alumno = await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María Gómez" });
 
         const res = await POST(
             request(
                 "POST",
                 `http://localhost:5005/api/colegio/alumnos/${alumno.id}/identificadores`,
-                { valor: "+573001234567", etiquetaRelacion: "ALUMNO" },
+                { valor: "+573001234567", etiquetaRelacion: "ESTUDIANTE" },
                 mockToken
             ),
             { params: Promise.resolve({ id: alumno.id }) }
@@ -96,7 +96,7 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
     it("normaliza identificadores a minúsculas y sin espacios", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+        const alumno = await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María Gómez" });
 
         const res = await POST(
             request(
@@ -117,7 +117,7 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
     it("rechaza identificador duplicado para el mismo alumno", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+        const alumno = await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María Gómez" });
         await POST(
             request(
                 "POST",
@@ -144,7 +144,7 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
     it("valida que la plataforma exista (rechaza CUID inválido)", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+        const alumno = await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María Gómez" });
 
         const res = await POST(
             request(
@@ -162,8 +162,8 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
     it("SCHOOL_ADMIN edita un identificador propio", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
-        const identificador = await crearIdentificadorAlumno(alumno.id, { tipo: "telefono", valor: "+573001234567" });
+        const alumno = await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+        const identificador = await crearIdentificadorEstudiante(alumno.id, { tipo: "telefono", valor: "+573001234567" });
 
         const res = await PATCHIdentificador(
             request(
@@ -189,8 +189,8 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
     it("SCHOOL_ADMIN desactiva un identificador propio", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
-        const identificador = await crearIdentificadorAlumno(alumno.id, { tipo: "telefono", valor: "+573001234567" });
+        const alumno = await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+        const identificador = await crearIdentificadorEstudiante(alumno.id, { tipo: "telefono", valor: "+573001234567" });
 
         const res = await PATCHEstadoIdentificador(
             request(
@@ -211,7 +211,7 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
         await setupSchoolAdmin();
         const { admin: admin2, colegio: colegio2 } = await crearColegioConAdmin();
         const curso2 = await crearCurso(colegio2.id, { nombre: "Curso Ajeno" });
-        const alumno2 = await crearAlumno(curso2.id, colegio2.id, { nombre: "Alumno Ajeno" });
+        const alumno2 = await crearEstudiante(curso2.id, colegio2.id, { nombre: "Alumno Ajeno" });
 
         const res = await POST(
             request(
@@ -229,8 +229,8 @@ describe("/api/colegio/alumnos/[id]/identificadores", () => {
     it("SCHOOL_ADMIN de otro colegio no edita identificador ajeno", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
-        const identificador = await crearIdentificadorAlumno(alumno.id, { tipo: "telefono", valor: "+573001234567" });
+        const alumno = await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+        const identificador = await crearIdentificadorEstudiante(alumno.id, { tipo: "telefono", valor: "+573001234567" });
 
         const { admin: admin2 } = await crearColegioConAdmin();
         mockToken = await crearTokenUsuario(admin2.id, "SCHOOL_ADMIN");

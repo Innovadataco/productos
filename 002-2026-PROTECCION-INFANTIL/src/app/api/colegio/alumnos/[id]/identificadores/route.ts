@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
-import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -9,10 +9,10 @@ import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { alumnoIdParamsSchema, identificadorAlumnoBodySchema } from "@/lib/schemas";
-import { verificarPropiedadAlumno } from "@/lib/colegio/permisos";
+import { estudianteIdParamsSchema, identificadorEstudianteBodySchema } from "@/lib/schemas";
+import { verificarPropiedadEstudiante } from "@/lib/colegio/permisos";
 import { normalizarIdentificador, inferirTipoIdentificador } from "@/lib/colegio/normalizacion";
-import type { EtiquetaRelacionAlumno } from "@prisma/client";
+import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
 function getClientInfo(request: Request) {
     return {
@@ -41,11 +41,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const { id } = withValidation.params(alumnoIdParamsSchema)(await params);
-        const alumno = await verificarPropiedadAlumno(user.id, id);
+        const { id } = withValidation.params(estudianteIdParamsSchema)(await params);
+        const estudiante = await verificarPropiedadEstudiante(user.id, id);
 
-        // SPEC-134 (E-1): la consulta vive en el repo (tenant vía la relación alumno).
-        const identificadores = await new IdentificadorAlumnoRepository().listarPorAlumno(alumno.colegioId, id);
+        // SPEC-134 (E-1): la consulta vive en el repo (tenant vía la relación estudiante).
+        const identificadores = await new IdentificadorEstudianteRepository().listarPorEstudiante(estudiante.colegioId, id);
 
         return NextResponse.json({ identificadores });
     } catch (error) {
@@ -79,10 +79,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const { id } = withValidation.params(alumnoIdParamsSchema)(await params);
-        const body = await withValidation.body(identificadorAlumnoBodySchema)(request);
+        const { id } = withValidation.params(estudianteIdParamsSchema)(await params);
+        const body = await withValidation.body(identificadorEstudianteBodySchema)(request);
 
-        const alumno = await verificarPropiedadAlumno(user.id, id);
+        const estudiante = await verificarPropiedadEstudiante(user.id, id);
 
         // El tipo ya no se pide en el formulario: si no viene, se infiere del valor.
         const tipo = body.tipo?.trim() || inferirTipoIdentificador(body.valor);
@@ -98,27 +98,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             }
         }
 
-        // SPEC-134 (E-1): duplicado y creación viven en el repo (tenant vía la relación alumno).
-        const identificadores = new IdentificadorAlumnoRepository();
-        const duplicado = await identificadores.buscarDuplicado(alumno.colegioId, {
-            alumnoId: id,
+        // SPEC-134 (E-1): duplicado y creación viven en el repo (tenant vía la relación estudiante).
+        const identificadores = new IdentificadorEstudianteRepository();
+        const duplicado = await identificadores.buscarDuplicado(estudiante.colegioId, {
+            estudianteId: id,
             tipo,
             valor: valorNormalizado,
             plataformaId: body.plataformaId ?? null,
         });
         if (duplicado) {
             return NextResponse.json(
-                { error: { message: "Identificador duplicado para este alumno", code: ERROR_CODES.CONFLICT } },
+                { error: { message: "Identificador duplicado para este estudiante", code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
             );
         }
 
-        const identificador = await identificadores.crear(alumno.colegioId, {
-            alumnoId: id,
+        const identificador = await identificadores.crear(estudiante.colegioId, {
+            estudianteId: id,
             tipo,
             valor: valorNormalizado,
             plataformaId: body.plataformaId ?? null,
-            etiquetaRelacion: (body.etiquetaRelacion ?? "ALUMNO") as EtiquetaRelacionAlumno,
+            etiquetaRelacion: (body.etiquetaRelacion ?? "ESTUDIANTE") as EtiquetaRelacionEstudiante,
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);
@@ -129,11 +129,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             usuarioId: user.id,
             colegioId: user.colegioId ?? undefined,
             valorNuevo: JSON.stringify({
-                alumnoId: id,
+                estudianteId: id,
                 tipo,
                 valor: valorNormalizado,
                 plataformaId: body.plataformaId ?? null,
-                etiquetaRelacion: body.etiquetaRelacion ?? "ALUMNO",
+                etiquetaRelacion: body.etiquetaRelacion ?? "ESTUDIANTE",
             }),
             ipAddress,
             userAgent,

@@ -25,7 +25,7 @@ type Curso = {
     alumnos: number;
 };
 
-type IdentificadorAlumno = {
+type IdentificadorEstudiante = {
     id: string;
     tipo: string;
     valor: string;
@@ -33,11 +33,11 @@ type IdentificadorAlumno = {
     etiquetaRelacion: string;
 };
 
-type Alumno = {
+type Estudiante = {
     id: string;
     nombre: string;
     estado: string;
-    identificadores: IdentificadorAlumno[];
+    identificadores: IdentificadorEstudiante[];
 };
 
 type Paginacion = { page: number; pageSize: number; total: number; totalPages: number };
@@ -47,9 +47,9 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
     const [loadingCursos, setLoadingCursos] = useState(true);
     const [error, setError] = useState("");
     const [cursoAbierto, setCursoAbierto] = useState<string | null>(null);
-    const [alumnos, setAlumnos] = useState<Alumno[]>([]);
+    const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
     const [paginacion, setPaginacion] = useState<Paginacion>({ page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 0 });
-    const [loadingAlumnos, setLoadingAlumnos] = useState(false);
+    const [loadingEstudiantes, setLoadingEstudiantes] = useState(false);
 
     const cargarCursos = useCallback(async () => {
         setLoadingCursos(true);
@@ -74,9 +74,9 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
         cargarCursos();
     }, [cargarCursos]);
 
-    const cargarAlumnos = useCallback(
+    const cargarEstudiantes = useCallback(
         async (cursoId: string, page: number) => {
-            setLoadingAlumnos(true);
+            setLoadingEstudiantes(true);
             try {
                 const res = await fetch(
                     `/api/admin/colegios/${colegioId}/cursos/${cursoId}/alumnos?page=${page}&pageSize=${PAGE_SIZE}`,
@@ -88,12 +88,12 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
                         typeof json?.error?.message === "string" ? json.error.message : "No se pudieron cargar los alumnos"
                     );
                 }
-                setAlumnos(json.items ?? []);
+                setEstudiantes(json.items ?? []);
                 setPaginacion(json.pagination ?? { page, pageSize: PAGE_SIZE, total: 0, totalPages: 0 });
             } catch (e) {
                 setError(e instanceof Error ? e.message : "No se pudieron cargar los alumnos");
             } finally {
-                setLoadingAlumnos(false);
+                setLoadingEstudiantes(false);
             }
         },
         [colegioId]
@@ -102,11 +102,11 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
     const alternarCurso = (cursoId: string) => {
         if (cursoAbierto === cursoId) {
             setCursoAbierto(null);
-            setAlumnos([]);
+            setEstudiantes([]);
             return;
         }
         setCursoAbierto(cursoId);
-        cargarAlumnos(cursoId, 1);
+        cargarEstudiantes(cursoId, 1);
     };
 
     return (
@@ -163,14 +163,14 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
 
                             {cursoAbierto === curso.id && (
                                 <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
-                                    {loadingAlumnos ? (
+                                    {loadingEstudiantes ? (
                                         <Cargando inline texto="Cargando alumnos..." className="py-4" />
-                                    ) : alumnos.length === 0 ? (
+                                    ) : estudiantes.length === 0 ? (
                                         <p className="text-sm text-muted">El curso no tiene alumnos registrados.</p>
                                     ) : (
                                         <>
                                             <ul className="space-y-2">
-                                                {alumnos.map((alumno) => (
+                                                {estudiantes.map((alumno) => (
                                                     <li key={alumno.id} className="text-sm text-body">
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <span>{alumno.nombre}</span>
@@ -204,16 +204,16 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
                                                     <Button
                                                         variant="outline"
                                                         className="px-3 py-1.5 text-xs"
-                                                        disabled={paginacion.page <= 1 || loadingAlumnos}
-                                                        onClick={() => cargarAlumnos(curso.id, paginacion.page - 1)}
+                                                        disabled={paginacion.page <= 1 || loadingEstudiantes}
+                                                        onClick={() => cargarEstudiantes(curso.id, paginacion.page - 1)}
                                                     >
                                                         Anterior
                                                     </Button>
                                                     <Button
                                                         variant="outline"
                                                         className="px-3 py-1.5 text-xs"
-                                                        disabled={paginacion.page >= paginacion.totalPages || loadingAlumnos}
-                                                        onClick={() => cargarAlumnos(curso.id, paginacion.page + 1)}
+                                                        disabled={paginacion.page >= paginacion.totalPages || loadingEstudiantes}
+                                                        onClick={() => cargarEstudiantes(curso.id, paginacion.page + 1)}
                                                     >
                                                         Siguiente
                                                     </Button>

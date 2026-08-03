@@ -1,21 +1,25 @@
 import ExcelJS from "exceljs";
-import type { EtiquetaRelacionAlumno } from "@prisma/client";
+import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 import { getParametroSistema } from "@/lib/parametros";
 
-export type FilaCargaAlumno = {
+export type FilaCargaEstudiante = {
     fila: number;
     curso: {
         nombre: string;
         grado: string | null;
         anioLectivo: string | null;
     };
+    // SPEC-144 (D4): la clave `alumno` del payload del roster se CONSERVA (wire
+    // server-side entre validar y confirmar); `apellidos` es nuevo y requerido —
+    // la fila sin apellidos se marca como "fila con problema" y NO se crea.
     alumno: {
         nombre: string;
+        apellidos: string;
     };
     identificador: {
         tipo: string;
         valor: string;
-        etiquetaRelacion: EtiquetaRelacionAlumno;
+        etiquetaRelacion: EtiquetaRelacionEstudiante;
         plataformaId: string | null;
     };
 };
@@ -36,6 +40,11 @@ export const COLUMNAS_REQUERIDAS = [
     "etiqueta_relacion",
     "plataforma",
 ];
+
+// SPEC-144 (D4): columna OPCIONAL del archivo (las plantillas viejas no la traen);
+// la fila sin apellidos se marca como "fila con problema", el archivo NUNCA se
+// rechaza entero. La plantilla descargable sí la incluye.
+export const COLUMNA_OPCIONAL_APELLIDOS = "apellidos_alumno";
 
 // SPEC-132 (S-3): límites explícitos de la carga (parámetros con fallback).
 const MAX_ARCHIVO_BYTES_DEFAULT = 5 * 1024 * 1024; // 5 MB
@@ -132,7 +141,7 @@ function valorCeldaExceljs(valor: ExcelJS.CellValue): unknown {
 }
 
 export interface ResultadoParser {
-    filas: FilaCargaAlumno[];
+    filas: FilaCargaEstudiante[];
     errores: ErrorFila[];
 }
 
@@ -220,7 +229,8 @@ export async function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "cs
         return { filas: [], errores };
     }
 
-    const filas: FilaCargaAlumno[] = [];
+    const filas: FilaCargaEstudiante[] = [];
+    const idxApellidos = headers.indexOf(COLUMNA_OPCIONAL_APELLIDOS);
 
     for (let i = 1; i < hoja.length; i++) {
         const raw = hoja[i] ?? [];
@@ -231,13 +241,17 @@ export async function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "cs
         const nombreCurso = fila[indices.get("nombre_curso")!]?.trim() ?? "";
         const grado = fila[indices.get("grado")!]?.trim() ?? "";
         const anioLectivo = fila[indices.get("anio_lectivo")!]?.trim() ?? "";
-        const nombreAlumno = fila[indices.get("nombre_alumno")!]?.trim() ?? "";
+        const nombreEstudiante = fila[indices.get("nombre_alumno")!]?.trim() ?? "";
+        const apellidosEstudiante = idxApellidos >= 0 ? (fila[idxApellidos]?.trim() ?? "") : "";
         const tipoIdentificador = fila[indices.get("tipo_identificador")!]?.trim() ?? "";
         const valorIdentificador = fila[indices.get("valor_identificador")!]?.trim() ?? "";
         const etiquetaRelacion = fila[indices.get("etiqueta_relacion")!]?.trim() ?? "";
         const plataforma = fila[indices.get("plataforma")!]?.trim() ?? "";
 
-        const etiquetaNormalizada = (etiquetaRelacion.toUpperCase() || "ALUMNO") as EtiquetaRelacionAlumno;
+        // SPEC-144 (FR-003): el enum nuevo usa ESTUDIANTE; se acepta "ALUMNO" legado
+        // (plantillas viejas) y se normaliza — el valor físico en BD no cambia.
+        const etiquetaUpper = etiquetaRelacion.toUpperCase();
+        const etiquetaNormalizada = (etiquetaUpper === "ALUMNO" || etiquetaUpper === "" ? "ESTUDIANTE" : etiquetaUpper) as EtiquetaRelacionEstudiante;
 
         filas.push({
             fila: i + 1, // número de fila en el archivo (1-based, fila 1 = encabezado)
@@ -247,7 +261,8 @@ export async function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "cs
                 anioLectivo: anioLectivo || null,
             },
             alumno: {
-                nombre: nombreAlumno,
+                nombre: nombreEstudiante,
+                apellidos: apellidosEstudiante,
             },
             identificador: {
                 tipo: tipoIdentificador,

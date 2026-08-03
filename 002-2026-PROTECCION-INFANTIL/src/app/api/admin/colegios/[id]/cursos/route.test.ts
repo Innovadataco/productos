@@ -9,7 +9,7 @@ import {
     crearTokenUsuario,
     crearColegioConAdmin,
     crearCurso,
-    crearAlumno,
+    crearEstudiante,
 } from "@/lib/reporte-test-utils";
 import type { RolUsuario } from "@prisma/client";
 
@@ -81,8 +81,8 @@ describe("GET /api/admin/colegios/[id]/cursos (SPEC-141, N-1)", () => {
         const { colegio } = await crearColegioConAdmin();
         const cursoA = await crearCurso(colegio.id, { nombre: "Séptimo A", grado: "7", anioLectivo: "2026" });
         await crearCurso(colegio.id, { nombre: "Octavo B", grado: "8" });
-        await crearAlumno(cursoA.id, colegio.id, { nombre: "Alumno Uno" });
-        await crearAlumno(cursoA.id, colegio.id, { nombre: "Alumno Dos" });
+        await crearEstudiante(cursoA.id, colegio.id, { nombre: "Alumno Uno" });
+        await crearEstudiante(cursoA.id, colegio.id, { nombre: "Alumno Dos" });
         activeToken = await crearTokenUsuario(admin.id, "ADMIN");
 
         const res = await getCursos(colegio.id);

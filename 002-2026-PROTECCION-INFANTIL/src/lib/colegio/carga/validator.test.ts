@@ -1,18 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { validarFilasCarga } from "./validator";
-import type { FilaCargaAlumno } from "./parser";
+import type { FilaCargaEstudiante } from "./parser";
 
 function filaBase(override: {
     fila?: number;
     nombre?: string;
     grado?: string | null;
     anioLectivo?: string | null;
-    nombreAlumno?: string;
+    nombreEstudiante?: string;
+    apellidosEstudiante?: string;
     tipo?: string;
     valor?: string;
     etiquetaRelacion?: string;
     plataformaId?: string | null;
-} = {}): FilaCargaAlumno {
+} = {}): FilaCargaEstudiante {
     return {
         fila: override.fila ?? 2,
         curso: {
@@ -21,12 +22,13 @@ function filaBase(override: {
             anioLectivo: override.anioLectivo ?? "2026",
         },
         alumno: {
-            nombre: override.nombreAlumno ?? "María Gómez",
+            nombre: override.nombreEstudiante ?? "María",
+            apellidos: override.apellidosEstudiante ?? "Gómez",
         },
         identificador: {
             tipo: override.tipo ?? "telefono",
             valor: override.valor ?? "+573001234567",
-            etiquetaRelacion: (override.etiquetaRelacion ?? "ALUMNO") as FilaCargaAlumno["identificador"]["etiquetaRelacion"],
+            etiquetaRelacion: (override.etiquetaRelacion ?? "ESTUDIANTE") as FilaCargaEstudiante["identificador"]["etiquetaRelacion"],
             plataformaId: override.plataformaId ?? null,
         },
     };
@@ -51,9 +53,22 @@ describe("validarFilasCarga", () => {
     });
 
     it("detecta alumno inválido", () => {
-        const resultado = validarFilasCarga([filaBase({ nombreAlumno: "A" })], new Map());
+        const resultado = validarFilasCarga([filaBase({ nombreEstudiante: "A" })], new Map());
         expect(resultado.filasValidas).toHaveLength(0);
         expect(resultado.errores.some((e) => e.campos.includes("nombre_alumno"))).toBe(true);
+    });
+
+    it("SPEC-144 (D4): la fila sin apellidos se marca como problema con mensaje humano y NO se crea", () => {
+        const resultado = validarFilasCarga(
+            [filaBase({ fila: 2, apellidosEstudiante: "" }), filaBase({ fila: 3 })],
+            new Map()
+        );
+        // El archivo NUNCA se rechaza entero: la fila buena sigue válida.
+        expect(resultado.filasValidas).toHaveLength(1);
+        expect(resultado.errores).toHaveLength(1);
+        expect(resultado.errores[0].fila).toBe(2);
+        expect(resultado.errores[0].campos).toContain("apellidos_alumno");
+        expect(resultado.errores[0].mensaje).toContain("Falta el apellido del estudiante");
     });
 
     it("detecta identificador vacío", () => {

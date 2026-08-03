@@ -7,15 +7,15 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearColegioConAdmin } from "@/lib/reporte-test-utils";
 import { CargaRosterSesionRepository } from "./carga-roster-sesion";
-import type { FilaCargaAlumno } from "@/lib/colegio/carga/parser";
+import type { FilaCargaEstudiante } from "@/lib/colegio/carga/parser";
 
-function filasPrueba(): FilaCargaAlumno[] {
+function filasPrueba(): FilaCargaEstudiante[] {
     return [
         {
             fila: 2,
             curso: { nombre: "6A", grado: "Sexto", anioLectivo: "2026" },
-            alumno: { nombre: "María Gómez" },
-            identificador: { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ALUMNO", plataformaId: null },
+            alumno: { nombre: "María", apellidos: "Gómez" },
+            identificador: { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ESTUDIANTE", plataformaId: null },
         },
     ];
 }

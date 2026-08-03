@@ -5,7 +5,7 @@
  * único `esReporteAprobado`, D-08 — NUNCA ESTADOS_VISIBLES, FR-005) cuyo
  * identificador tiene alerta en un colegio incrementa el agregado por
  * (colegio, grado, conducta, plataforma, trimestre) — sin persistir jamás
- * identificador, reporteId, alumnoId ni textos en `PatronInstitucional` (FR-002).
+ * identificador, reporteId, estudianteId ni textos en `PatronInstitucional` (FR-002).
  *
  * Disparos (FR-001/FR-004): post-hook del worker (tras las alertas), corrección
  * admin → CORREGIDO, comité resolver → CORREGIDO. Reversa exacta en baja vía
@@ -74,7 +74,7 @@ export async function agregarPatronPorReporte(reporteId: string): Promise<void> 
         const vigencia = await verificarVigenciaPorColegioId(colegioId);
         if (!vigencia.vigente) continue; // colegio no vigente: no acumula (regla de alertas)
 
-        const grado = alerta.identificadorAlumno.alumno.curso?.grado ?? SIN_GRADO_REGISTRADO;
+        const grado = alerta.identificadorEstudiante.estudiante.curso?.grado ?? SIN_GRADO_REGISTRADO;
         try {
             await withUnitOfWork(async (tx) => {
                 const patron = await new PatronInstitucionalRepository(tx).upsertIncrementar(colegioId, {

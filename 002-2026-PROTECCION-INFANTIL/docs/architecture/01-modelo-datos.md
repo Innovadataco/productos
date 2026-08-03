@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **50** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **51** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -87,7 +87,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadores | IdentificadorReportado | lista, relación |
 | alertasSuscripcion | AlertaSuscripcion | lista, relación |
 | identificadoresContacto | IdentificadorContacto | lista, relación |
-| identificadoresAlumno | IdentificadorAlumno | lista, relación |
+| identificadoresEstudiante | IdentificadorEstudiante | lista, relación |
 | apelaciones | Apelacion | lista, relación |
 | patronesInstitucionales | PatronInstitucional | lista, relación |
 
@@ -137,7 +137,22 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | contacto | ContactoConfianza | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 
-### Colegios (multi-tenant) (5)
+### Colegios (multi-tenant) (6)
+
+#### `AcudienteEstudiante`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| estudianteId | String | — |
+| orden | Int | — |
+| nombre | String | — |
+| relacion | String | — |
+| telefono | String | opcional |
+| email | String | opcional |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| estudiante | Estudiante | relación (FK) |
 
 #### `AlertaColegio`
 
@@ -146,30 +161,15 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | id | String | id |
 | colegioId | String | — |
 | reporteId | String | — |
-| identificadorAlumnoId | String | — |
+| identificadorEstudianteId | String | — |
 | estado | String | — |
 | patronInstitucionalId | String | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
 | reporte | Reporte | relación (FK) |
-| identificadorAlumno | IdentificadorAlumno | relación (FK) |
+| identificadorEstudiante | IdentificadorEstudiante | relación (FK) |
 | patronInstitucional | PatronInstitucional | opcional, relación (FK) |
-
-#### `Alumno`
-
-| Campo | Tipo | Atributos |
-| --- | --- | --- |
-| id | String | id |
-| cursoId | String | — |
-| colegioId | String | — |
-| nombre | String | — |
-| estado | String | — |
-| createdAt | DateTime | — |
-| updatedAt | DateTime | — |
-| curso | Curso | relación (FK) |
-| colegio | Colegio | relación (FK) |
-| identificadores | IdentificadorAlumno | lista, relación |
 
 #### `Colegio`
 
@@ -198,7 +198,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | tenant | Tenant | relación (FK) |
 | admin | Usuario | opcional, relación |
 | cursos | Curso | lista, relación |
-| alumnos | Alumno | lista, relación |
+| estudiantes | Estudiante | lista, relación |
 | alertas | AlertaColegio | lista, relación |
 | patrones | PatronInstitucional | lista, relación |
 | auditLogs | AuditLog | lista, relación |
@@ -217,22 +217,41 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
 | colegio | Colegio | relación (FK) |
-| alumnos | Alumno | lista, relación |
+| estudiantes | Estudiante | lista, relación |
 
-#### `IdentificadorAlumno`
+#### `Estudiante`
 
 | Campo | Tipo | Atributos |
 | --- | --- | --- |
 | id | String | id |
-| alumnoId | String | — |
-| tipo | String | — |
-| valor | String | — |
-| plataformaId | String | opcional |
-| etiquetaRelacion | EtiquetaRelacionAlumno | — |
+| cursoId | String | — |
+| colegioId | String | — |
+| nombre | String | — |
+| apellidos | String | — |
+| documentoTipo | String | opcional |
+| documentoNumero | String | opcional |
 | estado | String | — |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
-| alumno | Alumno | relación (FK) |
+| curso | Curso | relación (FK) |
+| colegio | Colegio | relación (FK) |
+| identificadores | IdentificadorEstudiante | lista, relación |
+| acudientes | AcudienteEstudiante | lista, relación |
+
+#### `IdentificadorEstudiante`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| estudianteId | String | — |
+| tipo | String | — |
+| valor | String | — |
+| plataformaId | String | opcional |
+| etiquetaRelacion | EtiquetaRelacionEstudiante | — |
+| estado | String | — |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| estudiante | Estudiante | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 | alertas | AlertaColegio | lista, relación |
 
@@ -940,7 +959,6 @@ Derivado de las FK (`@relation(fields: ...)`); cardinalidad 1:1 si la FK es úni
 
 ```mermaid
 erDiagram
-    Alumno ||--o{ IdentificadorAlumno : "alumno"
     Apelacion ||--o{ DocumentoApelacion : "apelacion"
     CasoEval ||--o{ EvalResultado : "casoEval"
     Ciudad ||--o{ Colegio : "ciudad"
@@ -948,21 +966,23 @@ erDiagram
     ClasificacionIA ||--o{ ClasificacionRubricaVoto : "clasificacionIA"
     ClasificacionIA ||--o{ CorreccionAdmin : "clasificacion"
     Colegio ||--o{ AlertaColegio : "colegio"
-    Colegio ||--o{ Alumno : "colegio"
     Colegio ||--o{ AuditLog : "colegio (opcional)"
     Colegio ||--o{ CargaRosterSesion : "colegio"
     Colegio ||--o{ Curso : "colegio"
+    Colegio ||--o{ Estudiante : "colegio"
     Colegio ||--o{ PatronInstitucional : "colegio"
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"
     CorreccionAdmin ||--o{ DatasetEntrenamiento : "correccion (opcional)"
-    Curso ||--o{ Alumno : "curso"
+    Curso ||--o{ Estudiante : "curso"
     DatasetEntrenamiento ||--o{ EmbeddingDataset : "dataset"
     Departamento ||--o{ Ciudad : "departamento (opcional)"
     Departamento ||--o{ Colegio : "departamento (opcional)"
     DocumentoApelacion ||--o{ AccesoDocumentoApelacion : "documento"
+    Estudiante ||--o{ AcudienteEstudiante : "estudiante"
+    Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
     EvalRun ||--o{ EvalResultado : "experimento"
-    IdentificadorAlumno ||--o{ AlertaColegio : "identificadorAlumno"
+    IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante"
     IdentificadorReportado ||--o{ EventoMatch : "identificador"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"
     Pais ||--o{ Ciudad : "pais"
@@ -973,8 +993,8 @@ erDiagram
     PatronInstitucional ||--o{ AlertaColegio : "patronInstitucional (opcional)"
     Plataforma ||--o{ AlertaSuscripcion : "plataforma"
     Plataforma ||--o{ Apelacion : "plataforma"
-    Plataforma ||--o{ IdentificadorAlumno : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorContacto : "plataforma (opcional)"
+    Plataforma ||--o{ IdentificadorEstudiante : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorReportado : "plataforma"
     Plataforma ||--o{ PatronInstitucional : "plataforma"
     Plataforma ||--o{ Reporte : "plataforma"

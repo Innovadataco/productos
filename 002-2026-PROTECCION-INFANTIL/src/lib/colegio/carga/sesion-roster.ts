@@ -11,12 +11,12 @@
 import type { Prisma } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { CargaRosterSesionRepository } from "@/lib/dal/repositories/carga-roster-sesion";
-import type { FilaCargaAlumno } from "./parser";
+import type { FilaCargaEstudiante } from "./parser";
 
 export type { SesionRoster } from "@/lib/dal/repositories/carga-roster-sesion";
 
 /** Persiste el roster validado y devuelve el id de sesión (expira en 15 min). */
-export function crearSesionRoster(colegioId: string, filas: FilaCargaAlumno[]): Promise<string> {
+export function crearSesionRoster(colegioId: string, filas: FilaCargaEstudiante[]): Promise<string> {
     return new CargaRosterSesionRepository().crear(colegioId, filas);
 }
 

@@ -66,7 +66,7 @@ describe("GET /api/colegio/patrones (SPEC-142, F6)", () => {
         expect(body.total).not.toBe(8);
         expect(JSON.stringify(body)).not.toContain("DOXING");
         // Sin PII en el payload.
-        expect(JSON.stringify(body)).not.toContain("identificadorAlumno");
+        expect(JSON.stringify(body)).not.toContain("identificadorEstudiante");
     });
 
     it("rechaza a PARENT (403) y anónimo (401)", async () => {

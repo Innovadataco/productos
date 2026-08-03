@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
-import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
@@ -8,7 +8,7 @@ import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { identificadorAlumnoIdParamsSchema, estadoActivoSchema } from "@/lib/schemas";
+import { identificadorEstudianteIdParamsSchema, estadoActivoSchema } from "@/lib/schemas";
 import { verificarPropiedadIdentificador } from "@/lib/colegio/permisos";
 
 function getClientInfo(request: Request) {
@@ -38,7 +38,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const { id } = withValidation.params(identificadorAlumnoIdParamsSchema)(await params);
+        const { id } = withValidation.params(identificadorEstudianteIdParamsSchema)(await params);
         const body = await withValidation.body(estadoActivoSchema)(request);
 
         const identificador = await verificarPropiedadIdentificador(user.id, id);
@@ -49,7 +49,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const actualizado = await new IdentificadorAlumnoRepository().cambiarEstado(
+        const actualizado = await new IdentificadorEstudianteRepository().cambiarEstado(
             // verificarPropiedadIdentificador ya garantizó usuario vinculado a un colegio.
             user.colegioId!,
             id,

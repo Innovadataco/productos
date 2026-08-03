@@ -6,7 +6,7 @@ import { GET as GETAlumnos, POST as POSTAlumno } from "./[id]/alumnos/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
-import { crearTokenUsuario, crearColegioConAdmin, crearUsuario, crearCurso, crearAlumno } from "@/lib/reporte-test-utils";
+import { crearTokenUsuario, crearColegioConAdmin, crearUsuario, crearCurso, crearEstudiante } from "@/lib/reporte-test-utils";
 
 let mockToken: string | undefined;
 
@@ -172,12 +172,13 @@ describe("/api/colegio/cursos/[id]/alumnos", () => {
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
 
         const postRes = await POSTAlumno(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María Gómez" }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María", apellidos: "Gómez" }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(postRes.status).toBe(201);
         const postJson = await postRes.json();
-        expect(postJson.alumno.nombre).toBe("María Gómez");
+        expect(postJson.alumno.nombre).toBe("María");
+        expect(postJson.alumno.apellidos).toBe("Gómez");
         expect(postJson.alumno.colegioId).toBe(admin.colegioId);
 
         const getRes = await GETAlumnos(
@@ -194,21 +195,28 @@ describe("/api/colegio/cursos/[id]/alumnos", () => {
         const otroCurso = await crearCurso(otroColegio.id, { nombre: "Curso Ajeno" });
 
         const res = await POSTAlumno(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${otroCurso.id}/alumnos`, { nombre: "Intruso" }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${otroCurso.id}/alumnos`, { nombre: "Intruso", apellidos: "X" }, mockToken),
             { params: Promise.resolve({ id: otroCurso.id }) }
         );
         expect(res.status).toBe(404);
     });
 
-    it("rechaza crear alumno con nombre duplicado en el curso", async () => {
+    it("rechaza crear alumno con nombre + apellidos duplicados en el curso (SPEC-144)", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
-        await crearAlumno(curso.id, admin.colegioId!, { nombre: "María Gómez" });
+        await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María", apellidos: "Gómez" });
 
         const res = await POSTAlumno(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María Gómez" }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María", apellidos: "Gómez" }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(res.status).toBe(409);
+
+        // Mismo nombre con apellidos distintos NO es duplicado (SPEC-144).
+        const resOk = await POSTAlumno(
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María", apellidos: "Torres" }, mockToken),
+            { params: Promise.resolve({ id: curso.id }) }
+        );
+        expect(resOk.status).toBe(201);
     });
 });

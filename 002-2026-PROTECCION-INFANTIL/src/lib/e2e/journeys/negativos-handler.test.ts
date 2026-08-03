@@ -338,16 +338,16 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
         const cursoB = await prisma.curso.create({
             data: { colegioId: colegioBId, nombre: `Curso B E2E C${CICLO}`, grado: "5", anioLectivo: "2026" },
         });
-        const alumnoB = await prisma.alumno.create({
+        const estudianteB = await prisma.estudiante.create({
             data: { cursoId: cursoB.id, colegioId: colegioBId, nombre: `Alumno B E2E C${CICLO}` },
         });
-        const identificadorB = await prisma.identificadorAlumno.create({
+        const identificadorB = await prisma.identificadorEstudiante.create({
             data: {
-                alumnoId: alumnoB.id,
+                estudianteId: estudianteB.id,
                 tipo: "telefono",
                 valor: `+5732088800${CICLO}1`,
                 plataformaId: plataforma.id,
-                etiquetaRelacion: "ALUMNO",
+                etiquetaRelacion: "ESTUDIANTE",
             },
         });
         const reporteB = await prisma.reporte.create({
@@ -364,7 +364,7 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
             },
         });
         const alertaB = await prisma.alertaColegio.create({
-            data: { colegioId: colegioBId, reporteId: reporteB.id, identificadorAlumnoId: identificadorB.id, estado: "nueva" },
+            data: { colegioId: colegioBId, reporteId: reporteB.id, identificadorEstudianteId: identificadorB.id, estado: "nueva" },
         });
 
         // Todo lo que sigue es la sesión del colegio A
@@ -418,18 +418,18 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
         );
         expect(resCursoEstado.status, "PATCH estado del curso de B → 404").toBe(404);
 
-        const { GET: alumnoGET, PATCH: alumnoPATCH } = await import("@/app/api/colegio/alumnos/[id]/route");
-        const resAlumnoAjeno = await alumnoGET(new Request(`http://localhost:5005/api/colegio/alumnos/${alumnoB.id}`), {
-            params: Promise.resolve({ id: alumnoB.id }),
+        const { GET: estudianteGET, PATCH: estudiantePATCH } = await import("@/app/api/colegio/alumnos/[id]/route");
+        const resAlumnoAjeno = await estudianteGET(new Request(`http://localhost:5005/api/colegio/alumnos/${estudianteB.id}`), {
+            params: Promise.resolve({ id: estudianteB.id }),
         });
         expect(resAlumnoAjeno.status, "GET alumno de B → 404").toBe(404);
-        const resAlumnoPatch = await alumnoPATCH(
-            new Request(`http://localhost:5005/api/colegio/alumnos/${alumnoB.id}`, {
+        const resAlumnoPatch = await estudiantePATCH(
+            new Request(`http://localhost:5005/api/colegio/alumnos/${estudianteB.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nombre: "Alumno secuestrado" }),
+                body: JSON.stringify({ nombre: "Alumno secuestrado", apellidos: "X" }),
             }),
-            { params: Promise.resolve({ id: alumnoB.id }) }
+            { params: Promise.resolve({ id: estudianteB.id }) }
         );
         expect(resAlumnoPatch.status, "PATCH alumno de B → 404").toBe(404);
 
@@ -448,8 +448,8 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
         const cursoBTras = (await prisma.curso.findUnique({ where: { id: cursoB.id } }))!;
         expect(cursoBTras.nombre, "§9: el curso de B no fue modificado").toBe(cursoB.nombre);
         expect(cursoBTras.estado, "§9: el curso de B sigue activo").toBe("activo");
-        const alumnoBTras = (await prisma.alumno.findUnique({ where: { id: alumnoB.id } }))!;
-        expect(alumnoBTras.nombre, "§9: el alumno de B no fue modificado").toBe(alumnoB.nombre);
+        const estudianteBTras = (await prisma.estudiante.findUnique({ where: { id: estudianteB.id } }))!;
+        expect(estudianteBTras.nombre, "§9: el alumno de B no fue modificado").toBe(estudianteB.nombre);
         const alertaBTras = (await prisma.alertaColegio.findUnique({ where: { id: alertaB.id } }))!;
         expect(alertaBTras.estado, "§9: la alerta de B sigue nueva").toBe("nueva");
     });

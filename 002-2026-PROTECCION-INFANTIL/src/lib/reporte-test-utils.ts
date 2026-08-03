@@ -100,32 +100,33 @@ export async function crearCurso(
     });
 }
 
-export async function crearAlumno(
+export async function crearEstudiante(
     cursoId: string,
     colegioId: string,
-    data: { nombre?: string; estado?: string } = {}
+    data: { nombre?: string; apellidos?: string; estado?: string } = {}
 ) {
-    return prisma.alumno.create({
+    return prisma.estudiante.create({
         data: {
             cursoId,
             colegioId,
-            nombre: data.nombre ?? `Alumno ${Date.now()}`,
+            nombre: data.nombre ?? `Estudiante ${Date.now()}`,
+            apellidos: data.apellidos ?? "De Prueba",
             estado: data.estado ?? "activo",
         },
     });
 }
 
-export async function crearIdentificadorAlumno(
-    alumnoId: string,
+export async function crearIdentificadorEstudiante(
+    estudianteId: string,
     data: { tipo?: string; valor?: string; plataformaId?: string | null; etiquetaRelacion?: string; estado?: string } = {}
 ) {
-    return prisma.identificadorAlumno.create({
+    return prisma.identificadorEstudiante.create({
         data: {
-            alumnoId,
+            estudianteId,
             tipo: data.tipo ?? "telefono",
             valor: data.valor ?? `+57${Date.now()}`,
             plataformaId: data.plataformaId ?? null,
-            etiquetaRelacion: (data.etiquetaRelacion as never) ?? "ALUMNO",
+            etiquetaRelacion: (data.etiquetaRelacion as never) ?? "ESTUDIANTE",
             estado: data.estado ?? "activo",
         },
     });

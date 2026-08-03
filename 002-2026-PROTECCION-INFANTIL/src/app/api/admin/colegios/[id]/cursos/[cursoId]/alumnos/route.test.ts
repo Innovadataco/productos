@@ -9,8 +9,8 @@ import {
     crearTokenUsuario,
     crearColegioConAdmin,
     crearCurso,
-    crearAlumno,
-    crearIdentificadorAlumno,
+    crearEstudiante,
+    crearIdentificadorEstudiante,
     crearPlataforma,
 } from "@/lib/reporte-test-utils";
 import { findAuditNuevaAccion, ACCION_COLEGIO_ROSTER_ACCESO_ADMIN } from "@/lib/audit-nuevas-acciones";
@@ -25,7 +25,7 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
-function getAlumnos(colegioId: string, cursoId: string, query = ""): Promise<Response> {
+function getEstudiantes(colegioId: string, cursoId: string, query = ""): Promise<Response> {
     const headers: Record<string, string> = {};
     if (activeToken) headers.cookie = `token=${activeToken}`;
     return GET(
@@ -48,15 +48,15 @@ describe("GET /api/admin/colegios/[id]/cursos/[cursoId]/alumnos (SPEC-141, N-1)"
     it("401 sin token; 403 para SCHOOL_ADMIN de OTRO colegio y para OPERADOR", async () => {
         const { colegio } = await crearColegioConAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "Séptimo A" });
-        expect((await getAlumnos(colegio.id, curso.id)).status).toBe(401);
+        expect((await getEstudiantes(colegio.id, curso.id)).status).toBe(401);
 
         const otro = await crearColegioConAdmin();
         activeToken = await crearTokenUsuario(otro.admin.id, "SCHOOL_ADMIN");
-        expect((await getAlumnos(colegio.id, curso.id)).status).toBe(403);
+        expect((await getEstudiantes(colegio.id, curso.id)).status).toBe(403);
 
         const operador = await crearUsuario("OPERADOR");
         activeToken = await crearTokenUsuario(operador.id, "OPERADOR");
-        expect((await getAlumnos(colegio.id, curso.id)).status).toBe(403);
+        expect((await getEstudiantes(colegio.id, curso.id)).status).toBe(403);
     });
 
     it("200: alumnos con identificadores (tipo, valor, plataforma, etiqueta) + UNA fila de auditoría sin PII", async () => {
@@ -64,16 +64,16 @@ describe("GET /api/admin/colegios/[id]/cursos/[cursoId]/alumnos (SPEC-141, N-1)"
         const plataforma = await crearPlataforma();
         const { colegio } = await crearColegioConAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "Séptimo A" });
-        const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "Alumno Roster" });
-        await crearIdentificadorAlumno(alumno.id, {
+        const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "Alumno Roster" });
+        await crearIdentificadorEstudiante(alumno.id, {
             tipo: "telefono",
             valor: "+573007654321",
             plataformaId: plataforma.id,
-            etiquetaRelacion: "ALUMNO",
+            etiquetaRelacion: "ESTUDIANTE",
         });
         activeToken = await crearTokenUsuario(admin.id, "ADMIN");
 
-        const res = await getAlumnos(colegio.id, curso.id);
+        const res = await getEstudiantes(colegio.id, curso.id);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.items).toHaveLength(1);
@@ -82,7 +82,7 @@ describe("GET /api/admin/colegios/[id]/cursos/[cursoId]/alumnos (SPEC-141, N-1)"
         expect(body.items[0].identificadores[0]).toMatchObject({
             tipo: "telefono",
             valor: "+573007654321",
-            etiquetaRelacion: "ALUMNO",
+            etiquetaRelacion: "ESTUDIANTE",
         });
         expect(body.items[0].identificadores[0].plataforma.nombre).toBe("WhatsApp");
         expect(body.pagination).toMatchObject({ page: 1, pageSize: 25, total: 1, totalPages: 1 });
@@ -102,15 +102,15 @@ describe("GET /api/admin/colegios/[id]/cursos/[cursoId]/alumnos (SPEC-141, N-1)"
         const { colegio } = await crearColegioConAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "Séptimo A" });
         for (let i = 1; i <= 3; i++) {
-            await crearAlumno(curso.id, colegio.id, { nombre: `Alumno ${String(i).padStart(2, "0")}` });
+            await crearEstudiante(curso.id, colegio.id, { nombre: `Alumno ${String(i).padStart(2, "0")}` });
         }
         activeToken = await crearTokenUsuario(admin.id, "ADMIN");
 
-        const pagina2 = await (await getAlumnos(colegio.id, curso.id, "?page=2&pageSize=2")).json();
+        const pagina2 = await (await getEstudiantes(colegio.id, curso.id, "?page=2&pageSize=2")).json();
         expect(pagina2.items).toHaveLength(1);
         expect(pagina2.pagination).toMatchObject({ page: 2, pageSize: 2, total: 3, totalPages: 2 });
 
-        expect((await getAlumnos(colegio.id, curso.id, "?pageSize=101")).status).toBe(400);
+        expect((await getEstudiantes(colegio.id, curso.id, "?pageSize=101")).status).toBe(400);
     });
 
     it("404 si el curso no pertenece al colegio de la ruta (no oráculo entre tenants) y NO audita", async () => {
@@ -120,9 +120,9 @@ describe("GET /api/admin/colegios/[id]/cursos/[cursoId]/alumnos (SPEC-141, N-1)"
         const cursoAjeno = await crearCurso(otro.colegio.id, { nombre: "Curso Ajeno" });
         activeToken = await crearTokenUsuario(admin.id, "ADMIN");
 
-        expect((await getAlumnos(colegio.id, cursoAjeno.id)).status).toBe(404);
-        expect((await getAlumnos(colegio.id, "c".padEnd(25, "1"))).status).toBe(404);
-        expect((await getAlumnos("c".padEnd(25, "1"), cursoAjeno.id)).status).toBe(404);
+        expect((await getEstudiantes(colegio.id, cursoAjeno.id)).status).toBe(404);
+        expect((await getEstudiantes(colegio.id, "c".padEnd(25, "1"))).status).toBe(404);
+        expect((await getEstudiantes("c".padEnd(25, "1"), cursoAjeno.id)).status).toBe(404);
 
         const eventos = await findAuditNuevaAccion(ACCION_COLEGIO_ROSTER_ACCESO_ADMIN);
         expect(eventos).toHaveLength(0);

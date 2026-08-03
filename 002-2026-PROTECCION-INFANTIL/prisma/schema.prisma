@@ -133,13 +133,15 @@ enum TipoPeriodoServicio {
   LIBRE
 }
 
-enum EtiquetaRelacionAlumno {
-  ALUMNO
+enum EtiquetaRelacionEstudiante {
+  ESTUDIANTE @map("ALUMNO")
   MADRE
   PADRE
   PRIMO
   TUTOR
   OTRO
+
+  @@map("EtiquetaRelacionAlumno")
 }
 
 enum TipoIdentificacionIntegrante {
@@ -451,7 +453,7 @@ model Colegio {
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
   admin        Usuario?
   cursos       Curso[]
-  alumnos      Alumno[]
+  estudiantes  Estudiante[]
   alertas      AlertaColegio[]
   patrones     PatronInstitucional[]
   auditLogs    AuditLog[]
@@ -473,67 +475,96 @@ model Curso {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  colegio Colegio  @relation(fields: [colegioId], references: [id])
-  alumnos Alumno[]
+  colegio     Colegio      @relation(fields: [colegioId], references: [id])
+  estudiantes Estudiante[]
 
   @@index([colegioId, estado])
   @@unique([colegioId, nombre, grado, anioLectivo])
 }
 
-model Alumno {
-  id        String   @id @default(cuid())
-  cursoId   String
-  colegioId String
-  nombre    String
-  estado    String   @default("activo")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// SPEC-144: modelo Estudiante (antes Alumno; tabla física "Alumno" conservada).
+// Obligatorios al alta (validación API, no BD): nombre + apellidos. El default ""
+// de apellidos existe SOLO para el backfill de históricos (D4).
+model Estudiante {
+  id              String   @id @default(cuid())
+  cursoId         String
+  colegioId       String
+  nombre          String
+  apellidos       String   @default("")
+  documentoTipo   String? // set cerrado en Zod (D3): RC|TI|CC|CE|PASAPORTE|OTRO
+  documentoNumero String?
+  estado          String   @default("activo")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  curso           Curso               @relation(fields: [cursoId], references: [id])
-  colegio         Colegio             @relation(fields: [colegioId], references: [id])
-  identificadores IdentificadorAlumno[]
+  curso           Curso                     @relation(fields: [cursoId], references: [id])
+  colegio         Colegio                   @relation(fields: [colegioId], references: [id])
+  identificadores IdentificadorEstudiante[]
+  acudientes      AcudienteEstudiante[]
 
   @@index([cursoId, estado])
   @@index([colegioId, estado])
+  @@map("Alumno")
 }
 
-model IdentificadorAlumno {
-  id               String                  @id @default(cuid())
-  alumnoId         String
+// SPEC-144 (D1): acudiente del estudiante — tabla hija, máximo 2 por estudiante
+// (orden 1|2). PII de un tercero: NUNCA se consulta por id suelto; siempre a
+// través del estudiante ya acotado por colegioId (patrón E-1/SPEC-134).
+model AcudienteEstudiante {
+  id           String   @id @default(cuid())
+  estudianteId String
+  orden        Int // 1 = principal, 2 = secundario
+  nombre       String
+  relacion     String // "madre" | "padre" | "tía" | … (texto libre corto)
+  telefono     String?
+  email        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+
+  @@unique([estudianteId, orden])
+  @@index([estudianteId])
+}
+
+model IdentificadorEstudiante {
+  id               String                     @id @default(cuid())
+  estudianteId     String                     @map("alumnoId")
   tipo             String
   valor            String
   plataformaId     String?
-  etiquetaRelacion EtiquetaRelacionAlumno @default(ALUMNO)
-  estado           String                  @default("activo")
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
+  etiquetaRelacion EtiquetaRelacionEstudiante @default(ESTUDIANTE)
+  estado           String                     @default("activo")
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
 
-  alumno     Alumno      @relation(fields: [alumnoId], references: [id])
+  estudiante Estudiante  @relation(fields: [estudianteId], references: [id])
   plataforma Plataforma? @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
-  @@unique([alumnoId, valor, tipo, plataformaId])
-  @@index([alumnoId, estado])
+  @@unique([estudianteId, valor, tipo, plataformaId])
+  @@index([estudianteId, estado])
+  @@map("IdentificadorAlumno")
 }
 
 model AlertaColegio {
-  id                    String   @id @default(cuid())
-  colegioId             String
-  reporteId             String
-  identificadorAlumnoId String
-  estado                String   @default("nueva") // nueva | vista | gestionada
+  id                        String   @id @default(cuid())
+  colegioId                 String
+  reporteId                 String
+  identificadorEstudianteId String   @map("identificadorAlumnoId")
+  estado                    String   @default("nueva") // nueva | vista | gestionada
   // SPEC-142 (F6): fila agregada que ESTA alerta aportó (idempotencia + reversa
   // exacta en baja). Nullable: las alertas previas a F6 no aportan al agregado.
   patronInstitucionalId String?
   creadoEn              DateTime @default(now())
   actualizadoEn         DateTime @updatedAt
 
-  colegio             Colegio            @relation(fields: [colegioId], references: [id])
-  reporte             Reporte            @relation(fields: [reporteId], references: [id])
-  identificadorAlumno IdentificadorAlumno @relation(fields: [identificadorAlumnoId], references: [id])
-  patronInstitucional PatronInstitucional? @relation(fields: [patronInstitucionalId], references: [id])
+  colegio                 Colegio                  @relation(fields: [colegioId], references: [id])
+  reporte                 Reporte                  @relation(fields: [reporteId], references: [id])
+  identificadorEstudiante IdentificadorEstudiante  @relation(fields: [identificadorEstudianteId], references: [id])
+  patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
 
-  @@unique([colegioId, reporteId, identificadorAlumnoId])
+  @@unique([colegioId, reporteId, identificadorEstudianteId])
   @@index([colegioId, estado])
   @@index([reporteId])
 }
@@ -577,8 +608,8 @@ model Plataforma {
   reportes                Reporte[]
   identificadores         IdentificadorReportado[]
   alertasSuscripcion      AlertaSuscripcion[]
-  identificadoresContacto IdentificadorContacto[]
-  identificadoresAlumno IdentificadorAlumno[]
+  identificadoresContacto  IdentificadorContacto[]
+  identificadoresEstudiante IdentificadorEstudiante[]
   apelaciones             Apelacion[]
   patronesInstitucionales PatronInstitucional[]
 

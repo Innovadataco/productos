@@ -63,8 +63,10 @@ export async function resetDatabase() {
     await prisma.codigoVerificacion.deleteMany();
     await prisma.integranteComite.deleteMany();
     await prisma.auditLog.deleteMany();
-    await prisma.identificadorAlumno.deleteMany();
-    await prisma.alumno.deleteMany();
+    await prisma.identificadorEstudiante.deleteMany();
+    // SPEC-144 (D1): hijos antes que el estudiante (FK RESTRICT).
+    await prisma.acudienteEstudiante.deleteMany();
+    await prisma.estudiante.deleteMany();
     await prisma.curso.deleteMany();
     await prisma.parametroSistema.deleteMany();
     await prisma.perfilOperador.deleteMany();

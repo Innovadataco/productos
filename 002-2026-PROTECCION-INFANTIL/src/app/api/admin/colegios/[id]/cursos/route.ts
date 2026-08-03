@@ -7,7 +7,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
-import { AlumnoRepository } from "@/lib/dal/repositories/alumno";
+import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,7 +55,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
 
         const cursos = await new CursoRepository().listarActivos(colegioId);
-        const conteos = await new AlumnoRepository().contarPorCursoIds(
+        const conteos = await new EstudianteRepository().contarPorCursoIds(
             colegioId,
             cursos.map((c) => c.id)
         );

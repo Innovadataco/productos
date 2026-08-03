@@ -14,18 +14,18 @@ import {
     purgarSesionesRosterVencidas,
 } from "./sesion-roster";
 import { generarTokenCarga, verificarTokenCarga } from "./token";
-import type { FilaCargaAlumno } from "./parser";
+import type { FilaCargaEstudiante } from "./parser";
 
 let COLEGIO_A: string;
 let COLEGIO_B: string;
 
-function filasDePrueba(): FilaCargaAlumno[] {
+function filasDePrueba(): FilaCargaEstudiante[] {
     return [
         {
             fila: 2,
             curso: { nombre: "6A", grado: "Sexto", anioLectivo: "2026" },
-            alumno: { nombre: "María Gómez" },
-            identificador: { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ALUMNO", plataformaId: "WhatsApp" },
+            alumno: { nombre: "María", apellidos: "Gómez" },
+            identificador: { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ESTUDIANTE", plataformaId: "WhatsApp" },
         },
     ];
 }
@@ -71,7 +71,8 @@ describe("sesión de roster server-side (SPEC-132 S-4)", () => {
         const valida = await obtenerSesionRosterValida(sesionId, COLEGIO_A);
         expect(valida).not.toBeNull();
         expect(valida!.filas).toHaveLength(1);
-        expect(valida!.filas[0].alumno.nombre).toBe("María Gómez");
+        expect(valida!.filas[0].alumno.nombre).toBe("María");
+        expect(valida!.filas[0].alumno.apellidos).toBe("Gómez");
 
         // Otro colegio: la sesión no existe para él (aislamiento).
         expect(await obtenerSesionRosterValida(sesionId, COLEGIO_B)).toBeNull();
