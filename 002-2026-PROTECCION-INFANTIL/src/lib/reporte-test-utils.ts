@@ -87,7 +87,7 @@ export async function crearColegioConAdmin() {
 
 export async function crearCurso(
     colegioId: string,
-    data: { nombre?: string; grado?: string; anioLectivo?: string; estado?: string } = {}
+    data: { nombre?: string; grado?: string; anioLectivo?: string; estado?: string; profesorTitularId?: string | null } = {}
 ) {
     return prisma.curso.create({
         data: {
@@ -95,6 +95,24 @@ export async function crearCurso(
             nombre: data.nombre ?? `Curso ${Date.now()}`,
             grado: data.grado ?? null,
             anioLectivo: data.anioLectivo ?? null,
+            estado: data.estado ?? "activo",
+            profesorTitularId: data.profesorTitularId ?? null,
+        },
+    });
+}
+
+// SPEC-145: fixture de profesor del colegio (mínimo: nombre + apellidos).
+export async function crearProfesor(
+    colegioId: string,
+    data: { nombre?: string; apellidos?: string; email?: string; telefono?: string; estado?: string } = {}
+) {
+    return prisma.profesor.create({
+        data: {
+            colegioId,
+            nombre: data.nombre ?? `Profesor ${Date.now()}`,
+            apellidos: data.apellidos ?? "De Prueba",
+            email: data.email ?? null,
+            telefono: data.telefono ?? null,
             estado: data.estado ?? "activo",
         },
     });

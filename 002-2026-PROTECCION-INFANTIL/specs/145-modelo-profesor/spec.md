@@ -116,8 +116,10 @@ motion); `mis-reportes/[id]/route.test.ts` usa fixture `rubrica:M1+M2` y asserta
   aplica así.
 - **Curso con profesorTitularId de OTRO colegio**: la asignación (D1) valida que el
   profesor pertenece al mismo colegio → 400/404, nunca cross-tenant.
-- **Profesor dado de baja con cursos asignados**: la relación se conserva (histórico);
-  los selectores de titular (SPEC-146) solo ofrecen activos.
+- **Profesor dado de baja con cursos asignados (CONDICIÓN 2, decidido)**: la baja
+  suave CONSERVA la asignación — `profesorTitularId` no se anula ni se bloquea la
+  baja (el titular histórico es información forense); las pantallas (147/148) lo
+  muestran como titular inactivo y los selectores (146) solo ofrecen activos.
 - **Enum AccionAudit**: `ALTER TYPE … ADD VALUE` es aditivo y seguro en PG16
   (precedente: `MATCH_DETECTADO`, `CONSULTA_*` en migraciones recientes).
 
@@ -146,9 +148,16 @@ motion); `mis-reportes/[id]/route.test.ts` usa fixture `rubrica:M1+M2` y asserta
 - **FR-007**: Duplicado exacto `nombre + apellidos` activo en el mismo colegio → 409.
 - **FR-008**: Toda mutación DEBE registrar `AuditLog` con las acciones de FR-004
   (metadatos solamente).
-- **FR-009**: (D1) Los endpoints de curso DEBEN aceptar `profesorTitularId?`
-  validando que el profesor es del mismo colegio (400/404 si no) — o queda diferido a
-  SPEC-146 si ZEUS decide D1=b.
+- **FR-009**: (D1=A) Los endpoints de curso (`POST` y `PATCH`) DEBEN aceptar
+  `profesorTitularId?` (`null` desasigna) validando que el profesor es del mismo
+  colegio (400/404 si no). El caso NEGATIVO cross-tenant es test explícito del A/B
+  (CONDICIÓN 1): asignar a un curso de A un profesor de B DEBE fallar, nunca tener
+  éxito.
+- **FR-014** (CONDICIÓN 2): La baja suave de un profesor que es titular de un curso
+  CONSERVA la asignación: `profesorTitularId` NO se anula y la baja NO se bloquea —
+  el titular histórico es información forense. El curso conserva el titular inactivo
+  y las pantallas (SPEC-147/148) lo mostrarán como tal. Caso de prueba obligatorio:
+  bajar al titular → la relación sigue intacta.
 - **FR-010** (O-2): `LuzAmbiental` DEBE tener su test (render, token por estado,
   aria-hidden, reduced-motion).
 - **FR-011** (O-1): el fixture antitrace DEBE usar `M1`/`M2` en mayúscula y las
@@ -165,12 +174,21 @@ motion); `mis-reportes/[id]/route.test.ts` usa fixture `rubrica:M1+M2` y asserta
 - **Curso** (extensión): `profesorTitularId?` → el profesor titular del curso
   (opcional, sin retro-asignación).
 
-## Decisión pendiente de ZEUS (compuerta §4)
+## Decisión de ZEUS (compuerta §4, 2026-08-03 — REVISO `acb02777` → CUMPLE)
 
-- **D1 — Asignación curso↔profesor.** (a) Los endpoints de curso (`POST` y `PATCH`)
-  aceptan `profesorTitularId?` YA, con validación same-tenant (**recomendada**: la
-  relación queda ejercitable de punta a punta y testeada A/B; el wizard de 146 la
-  consume sin tocar API); (b) el campo queda en schema pero sin API hasta SPEC-146.
+- **D1 = A**: los endpoints de curso aceptan `profesorTitularId?` YA, con validación
+  same-tenant. Razón de ZEUS: un campo que no se puede asignar no se puede probar, y
+  un `profesorTitularId` apuntando al profesor de OTRO colegio es una fuga
+  cross-tenant — la validación es una propiedad de seguridad, no una comodidad.
+  - **CONDICIÓN 1**: el test clave es el NEGATIVO explícito: asignar a un curso del
+    colegio A un profesor del colegio B DEBE fallar (404/400), nunca tener éxito —
+    en el A/B, no solo el camino feliz.
+  - **CONDICIÓN 2**: la baja suave de un profesor que ES titular CONSERVA la
+    asignación (FR-014): no se anula `profesorTitularId` ni se bloquea la baja —
+    saber quién era el titular cuando ocurrió un reporte es información forense.
+- **Cuidado ADD VALUE**: el valor nuevo del enum NO se puede usar en la misma
+  migración que lo crea; si un backfill/seed lo necesitara, va en migración aparte
+  (no es el caso: el seed no usa los valores nuevos).
 
 ## Success Criteria *(mandatory)*
 
@@ -180,7 +198,9 @@ motion); `mis-reportes/[id]/route.test.ts` usa fixture `rubrica:M1+M2` y asserta
   `ADD COLUMN "profesorTitularId"`, índices/FK y `ALTER TYPE "AccionAudit" ADD VALUE`;
   **cero `DROP INDEX`** (verificado línea a línea antes de aplicar).
 - **SC-002**: Tests A/B verdes en los 4 verbos (GET lista, POST, GET id, PATCH) +
-  400 sin apellidos + 400 email inválido + 409 duplicado + baja suave conserva fila.
+  400 sin apellidos + 400 email inválido + 409 duplicado + baja suave conserva fila
+  + **negativo cross-tenant de asignación (profesor de B a curso de A falla)** +
+  **baja del titular conserva `profesorTitularId`**.
 - **SC-003**: `LuzAmbiental.test.tsx` verde; los 4 primitivos del sistema tienen test
   (cierra O-2 / SC-004 de SPEC-157).
 - **SC-004**: `mis-reportes/[id]` con fixture `M1`/`M2` mayúscula y barrido amplio

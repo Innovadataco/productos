@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
-import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES } from "@/lib/errors";
+import { ERROR_CODES, AppError } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
-import { withValidation } from "@/lib/validation";
-import { cursoBodySchema } from "@/lib/schemas";
+import { withValidation, ValidationError } from "@/lib/validation";
+import { profesorBodySchema, profesoresQuerySchema } from "@/lib/schemas";
 
 function getClientInfo(request: Request) {
     return {
@@ -39,15 +38,36 @@ export async function GET(request: Request) {
         }
 
         if (!user.colegioId) {
-            return NextResponse.json({ cursos: [] });
+            return NextResponse.json(
+                { error: { message: "Usuario no vinculado a un colegio", code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
         }
 
-        // SPEC-134 (E-1): la consulta vive en el repo (tenant obligatorio); la ruta no toca prisma.
-        const cursos = await new CursoRepository().listarActivos(user.colegioId);
+        const url = new URL(request.url);
+        const parsedQuery = profesoresQuerySchema.safeParse(Object.fromEntries(url.searchParams.entries()));
+        if (!parsedQuery.success) {
+            return NextResponse.json(
+                { error: { message: "Parámetros de consulta inválidos", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
 
-        return NextResponse.json({ cursos });
+        const { page, pageSize, estado } = parsedQuery.data;
+
+        // SPEC-145 (E-1): la consulta paginada vive en el repo (SIEMPRE con tenant).
+        const [items, total] = await new ProfesorRepository().listarPaginados(user.colegioId, {
+            estado,
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+        });
+
+        return NextResponse.json({
+            items,
+            pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+        });
     } catch (error) {
-        return errorToResponse(error, "[COLEGIO/CURSOS]");
+        return errorToResponse(error, "[COLEGIO/PROFESORES]");
     }
 }
 
@@ -78,51 +98,47 @@ export async function POST(request: Request) {
             );
         }
 
-        const body = await withValidation.body(cursoBodySchema)(request);
-        const { nombre, grado, anioLectivo, profesorTitularId } = body;
-
-        // SPEC-145 (D1=A, COND-1): el titular debe existir y ser del MISMO colegio
-        // (propiedad de seguridad cross-tenant — un profesor de OTRO colegio → 404).
-        if (profesorTitularId) {
-            const titular = await new ProfesorRepository().obtenerPorId(user.colegioId, profesorTitularId);
-            if (!titular) {
-                return NextResponse.json(
-                    { error: { message: "Profesor no encontrado", code: ERROR_CODES.NOT_FOUND } },
-                    { status: 404 }
-                );
+        // SPEC-145 (FR-005): obligatorios solo nombre + apellidos; el 400 lleva el
+        // mensaje humano de la primera issue ("Falta el apellido del profesor", …).
+        const body = await withValidation.body(profesorBodySchema)(request).catch((error: unknown) => {
+            if (error instanceof ValidationError) {
+                throw new AppError(error.details[0]?.message ?? "Datos inválidos", ERROR_CODES.VALIDATION_ERROR, 400);
             }
-        }
-
-        // SPEC-134 (E-1): duplicado y creación viven en el repo (tenant obligatorio).
-        const cursos = new CursoRepository();
-        const existente = await cursos.buscarPorDatos(user.colegioId, {
-            nombre,
-            grado: grado ?? null,
-            anioLectivo: anioLectivo ?? null,
+            throw error;
         });
-        if (existente) {
+
+        // SPEC-145 (E-1): duplicado y creación viven en el repo (SIEMPRE con tenant).
+        // FR-007: duplicado nombre + apellidos ACTIVO en el mismo colegio → 409.
+        const profesores = new ProfesorRepository();
+        const duplicado = await profesores.buscarPorNombreApellidosEnColegio(user.colegioId, body.nombre, body.apellidos);
+        if (duplicado) {
             return NextResponse.json(
-                { error: { message: "Ya existe un curso con ese nombre", code: ERROR_CODES.CONFLICT } },
+                { error: { message: "Ya existe un profesor con ese nombre y apellidos", code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
             );
         }
 
-        const curso = await cursos.crear(user.colegioId, { nombre, grado, anioLectivo, profesorTitularId });
+        const profesor = await profesores.crear(user.colegioId, {
+            nombre: body.nombre,
+            apellidos: body.apellidos,
+            email: body.email,
+            telefono: body.telefono,
+        });
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
-            accion: "COLEGIO_CURSO_CREADO",
-            tipoRecurso: "Curso",
-            recursoId: curso.id,
+            accion: "COLEGIO_PROFESOR_CREADO",
+            tipoRecurso: "Profesor",
+            recursoId: profesor.id,
             usuarioId: user.id,
             colegioId: user.colegioId ?? undefined,
-            valorNuevo: JSON.stringify({ nombre, grado, anioLectivo, profesorTitularId: profesorTitularId ?? null, colegioId: user.colegioId }),
+            valorNuevo: JSON.stringify({ nombre: body.nombre, apellidos: body.apellidos, colegioId: user.colegioId }),
             ipAddress,
             userAgent,
         });
 
-        return NextResponse.json({ curso }, { status: 201 });
+        return NextResponse.json({ profesor }, { status: 201 });
     } catch (error) {
-        return errorToResponse(error, "[COLEGIO/CURSOS]");
+        return errorToResponse(error, "[COLEGIO/PROFESORES]");
     }
 }

@@ -59,8 +59,10 @@ Query: `page` (default 1), `pageSize` (default 25, máx 100), `estado` (`activo`
 
 `valorNuevo` con metadatos solamente (nunca payload completo sensible).
 
-## Asignación curso↔profesor (D1=a)
+## Asignación curso↔profesor (D1 = A, aprobado)
 
 `POST /api/colegio/cursos` y `PATCH /api/colegio/cursos/[id]` aceptan
-`profesorTitularId?` (nullable: `null` desasigna). Si el profesor no existe o es de
-otro colegio → 400/404. Si D1=b, este apartado se difiere a SPEC-146.
+`profesorTitularId?` (nullable: `null` desasigna explícitamente). Si el profesor no
+existe o es de otro colegio → 400/404 (propiedad de seguridad cross-tenant, con test
+negativo explícito). **La baja suave del titular CONSERVA la asignación** (CONDICIÓN
+2): `profesorTitularId` no se anula ni la baja se bloquea.

@@ -20,7 +20,7 @@ import { aristasER, modelosHuerfanos, parsearSchemaPrisma, type ModeloInfo } fro
  */
 const REGLAS_DOMINIO: Array<{ dominio: string; coincide: RegExp }> = [
     { dominio: "SaaS y facturación", coincide: /^(Tenant|Plan|Subscription|BillingCycle)$/ },
-    { dominio: "Colegios (multi-tenant)", coincide: /^(Colegio|Curso|Estudiante|AcudienteEstudiante|IdentificadorEstudiante|AlertaColegio)/ },
+    { dominio: "Colegios (multi-tenant)", coincide: /^(Colegio|Curso|Estudiante|AcudienteEstudiante|IdentificadorEstudiante|Profesor|AlertaColegio)/ },
     { dominio: "Geografía", coincide: /^(Pais|Departamento|Ciudad)$/ },
     { dominio: "Catálogos", coincide: /^Plataforma$/ },
     {

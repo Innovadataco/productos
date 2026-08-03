@@ -17,6 +17,7 @@ export interface CursoPropiedad {
     grado: string | null;
     anioLectivo: string | null;
     estado: string;
+    profesorTitularId: string | null; // SPEC-145 (D1=A)
 }
 
 export interface EstudiantePropiedad {

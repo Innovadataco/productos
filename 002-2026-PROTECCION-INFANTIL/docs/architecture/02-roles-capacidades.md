@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 6 roles (5 autenticados + anónimo) × 202 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1212 combinaciones.
+Inventario: 6 roles (5 autenticados + anónimo) × 204 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1224 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -153,6 +153,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
+| `/api/colegio/profesores` | api | permitir | permite | sí |
+| `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
@@ -360,6 +362,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
+| `/api/colegio/profesores` | api | permitir | permite | sí |
+| `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
@@ -567,6 +571,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
+| `/api/colegio/profesores` | api | permitir | permite | sí |
+| `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
@@ -774,6 +780,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
+| `/api/colegio/profesores` | api | permitir | permite | sí |
+| `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | HTTP 403 | no permite | sí |
@@ -981,6 +989,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/identificadores/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
+| `/api/colegio/profesores` | api | permitir | permite | sí |
+| `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
@@ -1188,6 +1198,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/identificadores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/identificadores/[id]/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/patrones` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/profesores` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/profesores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros/[clave]` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros/[clave]/revelar` | api | HTTP 401 | permite | **NO** |
@@ -1383,6 +1395,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/identificadores/[id]` | HTTP 401 | permite |
 | `/api/colegio/identificadores/[id]/estado` | HTTP 401 | permite |
 | `/api/colegio/patrones` | HTTP 401 | permite |
+| `/api/colegio/profesores` | HTTP 401 | permite |
+| `/api/colegio/profesores/[id]` | HTTP 401 | permite |
 | `/api/config/parametros` | HTTP 401 | permite |
 | `/api/config/parametros/[clave]` | HTTP 401 | permite |
 | `/api/config/parametros/[clave]/revelar` | HTTP 401 | permite |

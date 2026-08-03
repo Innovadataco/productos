@@ -29,7 +29,11 @@
 - [x] Sin contradicciones internas (D1 explícita; default recomendado declarado)
 - [x] Cero secretos o valores sensibles (I-22)
 
-## Pendiente de compuerta
+## Compuerta §4 — RESUELTA (ZEUS, 2026-08-03: REVISO `acb02777` → CUMPLE)
 
-- [ ] ZEUS resuelve D1 (asignación curso↔profesor ya o en SPEC-146)
-- [ ] Tras aprobación: `/speckit.tasks` → `/speckit.analyze` → `/speckit.implement`
+- [x] D1 = A: endpoints de curso aceptan `profesorTitularId?` YA con validación
+      same-tenant (propiedad de seguridad cross-tenant)
+- [x] CONDICIÓN 1: test negativo explícito (profesor de B a curso de A falla)
+- [x] CONDICIÓN 2: baja suave del titular CONSERVA la asignación (FR-014 + test)
+- [x] Cuidado ADD VALUE documentado (no usar el valor en la misma migración)
+- [x] Sigue: `/speckit.tasks` → `/speckit.analyze` → `/speckit.implement`
