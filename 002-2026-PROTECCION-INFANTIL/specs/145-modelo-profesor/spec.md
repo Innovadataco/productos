@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-03
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (orden 2 del brief §10; radica ZEUS, luz verde tras
 CUMPLE de SPEC-157). Fuente VINCULANTE: BRIEF-DISEÑO-UX-RECTOR v3.0 §7.2 (`Profesor`
@@ -230,3 +230,11 @@ Impacto en arquitectura: **modifica el modelo de datos** — entidad NUEVA `Prof
 regenerar `docs/architecture/01-modelo-datos.md` y pasar `arch:check` en el mismo PR
 (oráculo 51→52 modelos). Añade rutas `/api/colegio/profesores*` (quedan cubiertas
 por las aserciones A/B de la línea base). No toca proxy, navegación ni stack.
+
+## Implementación
+
+Implementada 2026-08-03 (PR #21 `f5dee755` docs + PR #22 `7a698e6c` código, ambos con
+`gate` verde y auto-merge). **I-49 se materializó**: el diff crudo traía 4 `DROP
+INDEX` + 1 `RENAME` del drift de índices — saneados a mano, nada destructivo
+aplicado; la mina está ACTIVA para toda migración futura (candidata a radicación).
+Evidencia completa y deuda técnica en [cierre.md](./cierre.md).
