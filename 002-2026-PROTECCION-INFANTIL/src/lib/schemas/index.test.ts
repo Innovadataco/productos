@@ -10,6 +10,11 @@ import {
     operadorIdParamsSchema,
     parametroClaveParamsSchema,
     parametroPatchBodySchema,
+    profesorBodySchema,
+    profesorPatchSchema,
+    profesoresQuerySchema,
+    cursoBodySchema,
+    cursoUpdateBodySchema,
 } from "./index";
 
 describe("schemas/index", () => {
@@ -120,5 +125,62 @@ describe("schemas/index", () => {
         expect(() =>
             parametroPatchBodySchema.parse({ valor: "x", motivo: "a".repeat(501) })
         ).toThrow();
+    });
+});
+
+// SPEC-145 (FR-005): schemas del CRUD de profesores y titular de curso (D1=A).
+describe("schemas profesor (SPEC-145)", () => {
+    it("profesorBodySchema acepta el mínimo (nombre + apellidos)", () => {
+        const parsed = profesorBodySchema.parse({ nombre: "María", apellidos: "López" });
+        expect(parsed.email).toBeUndefined();
+        expect(parsed.telefono).toBeUndefined();
+    });
+
+    it("profesorBodySchema acepta email y teléfono opcionales", () => {
+        expect(() =>
+            profesorBodySchema.parse({ nombre: "María", apellidos: "López", email: "maria@colegio.edu.co", telefono: "+573001112233" })
+        ).not.toThrow();
+    });
+
+    it("profesorBodySchema rechaza sin apellidos con mensaje humano", () => {
+        const result = profesorBodySchema.safeParse({ nombre: "María" });
+        expect(result.success).toBe(false);
+        expect(result.error?.issues[0]?.message).toBe("Falta el apellido del profesor");
+    });
+
+    it("profesorBodySchema rechaza email mal formado", () => {
+        expect(() => profesorBodySchema.parse({ nombre: "María", apellidos: "López", email: "no-es-email" })).toThrow();
+    });
+
+    it("profesorPatchSchema acepta cualquier subconjunto incluido estado", () => {
+        expect(() => profesorPatchSchema.parse({ estado: "inactivo" })).not.toThrow();
+        expect(() => profesorPatchSchema.parse({ telefono: "+573009998877" })).not.toThrow();
+        expect(() => profesorPatchSchema.parse({ email: null })).not.toThrow();
+    });
+
+    it("profesorPatchSchema rechaza estado fuera de activo|inactivo", () => {
+        expect(() => profesorPatchSchema.parse({ estado: "suspendido" })).toThrow();
+    });
+
+    it("profesorPatchSchema rechaza el body vacío", () => {
+        expect(() => profesorPatchSchema.parse({})).toThrow();
+    });
+
+    it("profesoresQuerySchema aplica defaults y cota pageSize", () => {
+        const parsed = profesoresQuerySchema.parse({});
+        expect(parsed).toEqual({ page: 1, pageSize: 25, estado: "activo" });
+        expect(profesoresQuerySchema.parse({ page: "2", pageSize: "50", estado: "todos" })).toEqual({ page: 2, pageSize: 50, estado: "todos" });
+        expect(() => profesoresQuerySchema.parse({ pageSize: "101" })).toThrow();
+        expect(() => profesoresQuerySchema.parse({ estado: "suspendido" })).toThrow();
+    });
+
+    it("cursoBodySchema y cursoUpdateBodySchema aceptan profesorTitularId (D1=A), null y ausente", () => {
+        const cuid = "cm0k5example12345678901234567890";
+        expect(() => cursoBodySchema.parse({ nombre: "6A", profesorTitularId: cuid })).not.toThrow();
+        expect(() => cursoBodySchema.parse({ nombre: "6A", profesorTitularId: null })).not.toThrow();
+        expect(() => cursoBodySchema.parse({ nombre: "6A" })).not.toThrow();
+        expect(() => cursoBodySchema.parse({ nombre: "6A", profesorTitularId: "no-es-cuid" })).toThrow();
+        expect(() => cursoUpdateBodySchema.parse({ profesorTitularId: cuid })).not.toThrow();
+        expect(() => cursoUpdateBodySchema.parse({ profesorTitularId: null })).not.toThrow();
     });
 });

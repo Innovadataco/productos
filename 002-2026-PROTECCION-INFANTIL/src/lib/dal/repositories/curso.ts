@@ -92,7 +92,7 @@ export class CursoRepository {
     }
 
     /** Crea el curso del colegio (alta manual y carga masiva, ambas con estado activo). */
-    crear(colegioId: string, datos: { nombre: string; grado?: string | null | undefined; anioLectivo?: string | null | undefined }) {
+    crear(colegioId: string, datos: { nombre: string; grado?: string | null | undefined; anioLectivo?: string | null | undefined; profesorTitularId?: string | null | undefined }) {
         return this.db.curso.create({
             data: {
                 colegioId,
@@ -100,19 +100,23 @@ export class CursoRepository {
                 grado: datos.grado ?? null,
                 anioLectivo: datos.anioLectivo ?? null,
                 estado: "activo",
+                // SPEC-145 (D1=A): la ruta ya validó que el profesor es del mismo colegio.
+                profesorTitularId: datos.profesorTitularId ?? null,
             },
         });
     }
 
     /** Actualiza datos del curso. 404 si el id no existe o es de OTRO colegio. */
-    async actualizar(colegioId: string, id: string, datos: { nombre?: string | undefined; grado?: string | null | undefined; anioLectivo?: string | null | undefined }) {
+    async actualizar(colegioId: string, id: string, datos: { nombre?: string | undefined; grado?: string | null | undefined; anioLectivo?: string | null | undefined; profesorTitularId?: string | null | undefined }) {
         const { count } = await this.db.curso.updateMany({
             where: { id, colegioId },
             // Campo ausente ≡ no tocarlo (undefined nunca llega a Prisma).
+            // SPEC-145 (D1=A): profesorTitularId null desasigna explícitamente.
             data: {
                 ...(datos.nombre !== undefined ? { nombre: datos.nombre } : {}),
                 ...(datos.grado !== undefined ? { grado: datos.grado } : {}),
                 ...(datos.anioLectivo !== undefined ? { anioLectivo: datos.anioLectivo } : {}),
+                ...(datos.profesorTitularId !== undefined ? { profesorTitularId: datos.profesorTitularId } : {}),
             },
         });
         if (count === 0) {

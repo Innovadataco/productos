@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
+import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
@@ -78,6 +79,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const curso = await verificarPropiedadCurso(user.id, id);
 
+        // SPEC-145 (D1=A, COND-1): el titular debe existir y ser del MISMO colegio
+        // (propiedad de seguridad cross-tenant — un profesor de OTRO colegio → 404).
+        // `null` desasigna explícitamente; ausente ≡ no tocarlo.
+        if ("profesorTitularId" in body && body.profesorTitularId) {
+            const titular = await new ProfesorRepository().obtenerPorId(curso.colegioId, body.profesorTitularId);
+            if (!titular) {
+                return NextResponse.json(
+                    { error: { message: "Profesor no encontrado", code: ERROR_CODES.NOT_FOUND } },
+                    { status: 404 }
+                );
+            }
+        }
+
         const nombre = body.nombre ?? curso.nombre;
         const grado = "grado" in body ? body.grado : curso.grado;
         const anioLectivo = "anioLectivo" in body ? body.anioLectivo : curso.anioLectivo;
@@ -102,6 +116,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             nombre: body.nombre ?? curso.nombre,
             grado: "grado" in body ? body.grado : curso.grado,
             anioLectivo: "anioLectivo" in body ? body.anioLectivo : curso.anioLectivo,
+            profesorTitularId: "profesorTitularId" in body ? (body.profesorTitularId ?? null) : undefined,
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);
@@ -111,8 +126,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             recursoId: id,
             usuarioId: user.id,
             colegioId: user.colegioId ?? undefined,
-            valorAnterior: JSON.stringify({ nombre: curso.nombre, grado: curso.grado, anioLectivo: curso.anioLectivo }),
-            valorNuevo: JSON.stringify({ nombre: actualizado.nombre, grado: actualizado.grado, anioLectivo: actualizado.anioLectivo }),
+            valorAnterior: JSON.stringify({ nombre: curso.nombre, grado: curso.grado, anioLectivo: curso.anioLectivo, profesorTitularId: curso.profesorTitularId }),
+            valorNuevo: JSON.stringify({ nombre: actualizado.nombre, grado: actualizado.grado, anioLectivo: actualizado.anioLectivo, profesorTitularId: actualizado.profesorTitularId }),
             ipAddress,
             userAgent,
         });

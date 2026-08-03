@@ -126,12 +126,16 @@ export const cursoBodySchema = z.object({
     nombre: z.string().min(2).max(150),
     grado: z.string().max(100).optional(),
     anioLectivo: z.string().max(20).optional(),
+    // SPEC-145 (D1=A): titular opcional; `null` ≡ sin titular. La ruta valida same-tenant.
+    profesorTitularId: cuidIdSchema.optional().nullable(),
 });
 
 export const cursoUpdateBodySchema = z.object({
     nombre: z.string().min(2).max(150).optional(),
     grado: z.string().max(100).optional().nullable(),
     anioLectivo: z.string().max(20).optional().nullable(),
+    // SPEC-145 (D1=A): `null` desasigna explícitamente; ausente ≡ no tocarlo.
+    profesorTitularId: cuidIdSchema.optional().nullable(),
 }).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
 
 export const cursoIdParamsSchema = z.object({
@@ -167,6 +171,33 @@ export const estudianteUpdateBodySchema = z.object({
 
 export const estudianteIdParamsSchema = z.object({
     id: cuidIdSchema,
+});
+
+// SPEC-145 (FR-005): alta de profesor — obligatorios solo nombre + apellidos;
+// email/teléfono opcionales y NUNCA bloquean el alta. Baja = estado "inactivo".
+export const profesorBodySchema = z.object({
+    nombre: z.string().min(2).max(150),
+    apellidos: z.string({ message: "Falta el apellido del profesor" }).min(1, "Falta el apellido del profesor").max(150),
+    email: emailSchema.optional(),
+    telefono: z.string().max(50).optional(),
+});
+
+export const profesorPatchSchema = z.object({
+    nombre: z.string().min(2).max(150).optional(),
+    apellidos: z.string().min(1).max(150).optional(),
+    email: emailSchema.optional().nullable(),
+    telefono: z.string().max(50).optional().nullable(),
+    estado: estadoActivoSchema.optional(),
+}).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+
+export const profesorIdParamsSchema = z.object({
+    id: cuidIdSchema,
+});
+
+export const profesoresQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    estado: z.enum(["activo", "inactivo", "todos"]).default("activo"),
 });
 
 // SPEC-144 (FR-003): el valor físico en BD sigue siendo 'ALUMNO' (@map); en código

@@ -67,6 +67,8 @@ export async function resetDatabase() {
     // SPEC-144 (D1): hijos antes que el estudiante (FK RESTRICT).
     await prisma.acudienteEstudiante.deleteMany();
     await prisma.estudiante.deleteMany();
+    // SPEC-145: profesores antes que el colegio (FK RESTRICT); el titular del curso es SET NULL.
+    await prisma.profesor.deleteMany();
     await prisma.curso.deleteMany();
     await prisma.parametroSistema.deleteMany();
     await prisma.perfilOperador.deleteMany();
