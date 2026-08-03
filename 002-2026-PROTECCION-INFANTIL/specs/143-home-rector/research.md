@@ -15,7 +15,8 @@
 | Anillo reacción | `Estudiante.count({ colegioId, estado, acudientes: { some: {} } })` — vía estudiante acotado (D1 SPEC-144) | nuevo |
 | Tendencia (3 series) | groupBy semana/mes/año sobre `AlertaColegio.creadoEn` | nuevo (en repo, no en cliente) |
 | Cursos que merecen mirada | `AlertaColegioRepository.contarVisiblesPorCursoIds` (raw, tenant en ambos lados) | extender con `creadoEn >= 30d` + top N + `Curso.profesorTitular` en el select |
-| Última señal | `AlertaColegio` `max(creadoEn)` / `findFirst desc` | nuevo (D3) |
+| Última señal (colegio) | `AlertaColegio` `max(creadoEn)` — D3(a), puede no existir nunca → copy "sin señales aún" | nuevo |
+| Última revisión del sistema | heartbeat del worker: archivo `worker.heartbeat` en `WORKER_RUN_DIR` (misma fuente de `src/app/api/health/worker/route.ts`) — D3(b), global y verdadero | nuevo helper `leerHeartbeatWorker()` en `src/lib` (la ruta health se refactoriza para usarlo, mismo comportamiento) |
 | Semáforo | conteo de alertas `estado: "nueva"` + alertas 7d | nuevo, función pura |
 | Canales oficiales | `src/components/modules/CanalesOficiales.tsx` | reusar tal cual |
 
@@ -32,15 +33,18 @@ gradiente sutil bajo la línea, un color por serie (`stroke` desde token cielo/p
 grid mínimo, sin leyenda (una serie), tooltip con copy humano. Accesibilidad:
 resumen `sr-only` con los totales del periodo (el SVG de recharts no es navegable).
 
-## D-R3 · Semáforo (propuesta D1)
+## D-R3 · Semáforo (D1 aprobada con ajuste: ámbar = 72 h)
 
-Función pura `resolverEstado({ alertasNuevas, alertas7d }): EstadoSistema` —
-rubí si `alertasNuevas > 0` · ámbar si `alertas7d > 0` · pino si no. Determinista,
+Función pura `resolverEstado({ alertasNuevas, alertas72h }): EstadoSistema` —
+rubí si `alertasNuevas > 0` · ámbar si `alertas72h > 0` · pino si no. Determinista,
 explicable en una frase al rector, y alineada con "cada pantalla termina en un
-verbo" (rubí = "tienes alertas sin gestionar → ver alertas").
+verbo" (rubí = "tienes alertas sin gestionar → ver alertas"). ZEUS: 72 h (no 7
+días) para que el estado decaiga solo y no haya fatiga de alarma.
 
 Palabras de la declaración (§4.1): pino → *tranquilos* · ámbar → *algo* (que mirar) ·
-rubí → *necesita que actúes hoy*.
+rubí → *necesita que actúes hoy*. **CONDICIÓN DE COPY (ZEUS)**: en ámbar el texto
+dice explícitamente que ya está atendido ("hubo algo y ya lo atendiste") — el ámbar
+nunca se lee como trabajo pendiente cuando no lo hay.
 
 ## D-R4 · Dependencias nuevas
 

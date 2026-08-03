@@ -35,8 +35,12 @@
       métrica que el KPI)
 - [x] Cero secretos o valores sensibles (I-22)
 
-## Pendiente de compuerta
+## Compuerta §4 — RESUELTA (ZEUS, 2026-08-03: REVISO `262721f7` → CUMPLE)
 
-- [ ] ZEUS resuelve D1 (regla del semáforo), D2 (métrica "reportes recibidos"),
-      D3 ("última señal")
-- [ ] Tras aprobación: `/speckit.tasks` → `/speckit.analyze` → `/speckit.implement`
+- [x] D1 = aceptada con ajuste: ámbar = **72 h** + CONDICIÓN DE COPY (en ámbar el
+      texto dice que ya está atendido)
+- [x] D2 = `COUNT(DISTINCT reporteId)` (KPI y tendencia con la misma métrica)
+- [x] D3 = DOS hechos: última señal del colegio (`max(AlertaColegio.creadoEn)`,
+      "sin señales aún" si nunca) + última revisión del sistema (heartbeat del
+      worker, global y verdadero). Regla de la franja: SOLO VERDADES
+- [x] Sigue: `/speckit.tasks` → `/speckit.analyze` → `/speckit.implement`

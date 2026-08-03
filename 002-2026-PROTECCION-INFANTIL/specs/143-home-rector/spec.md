@@ -47,10 +47,11 @@ datos de A); la declaración cambia de palabra/color con el estado.
 
 **Acceptance Scenarios**:
 
-1. **Given** un colegio sin alertas nuevas ni en los últimos 7 días, **When** abre la
+1. **Given** un colegio sin alertas nuevas ni en las últimas 72 horas, **When** abre la
    home, **Then** la declaración dice que todo está *tranquilo* (cursiva serif en
-   pino), la luz ambiental es pino y la franja muestra la última señal registrada
-   (D3) y los reportes de la semana con su delta vs la anterior.
+   pino), la luz ambiental es pino y la franja muestra los DOS hechos de D3 (última
+   señal del colegio — o "sin señales aún" — y última revisión del sistema por
+   heartbeat del worker) y los reportes de la semana con su delta vs la anterior.
 2. **Given** ≥1 alerta en estado "nueva" (sin gestionar), **When** abre la home,
    **Then** el estado es el de máxima urgencia definido en D1 — la declaración, la
    luz ambiental y el punto de estado (pulso 3,4 s) cambian a rubí.
@@ -185,10 +186,12 @@ y bloque de canales oficiales al final.
   profesores (métodos nuevos o variantes con filtro de estado — NO se cambia la
   semántica de los `contarPorColegio` existentes) y reportes del periodo (D2) con
   delta vs periodo anterior.
-- **FR-004**: El estado del semáforo DEBE seguir la regla de D1 (propuesta: rubí =
-  ≥1 alerta "nueva" sin gestionar; ámbar = 0 nuevas pero ≥1 alerta en los últimos 7
-  días; pino = resto) y pintar `Declaracion` (palabra en cursiva serif + color),
-  `LuzAmbiental` y el punto de estado con pulso 3,4 s.
+- **FR-004**: El estado del semáforo DEBE seguir la regla de D1 (aprobada: rubí =
+  ≥1 alerta "nueva" sin gestionar; ámbar = 0 nuevas pero ≥1 alerta en las últimas
+  **72 horas**; pino = el resto) y pintar `Declaracion` (palabra en cursiva serif +
+  color), `LuzAmbiental` y el punto de estado con pulso 3,4 s. En ámbar el copy DEBE
+  decir explícitamente que ya está atendido ("hubo algo y ya lo atendiste") —
+  CONDICIÓN DE COPY de ZEUS.
 - **FR-005**: Los anillos DEBEN usar el primitivo `Anillo` con vigilancia (%
   estudiantes activos con ≥1 identificador activo) y reacción (% con ≥1 acudiente,
   accedido solo vía estudiante acotado por colegio), centro con escudo+número y
@@ -200,9 +203,13 @@ y bloque de canales oficiales al final.
 - **FR-007**: "Cursos que merecen mirada" DEBE mostrar hasta 3 cursos por alertas de
   los últimos 30 días con nombre de curso y profesor titular, enlace al curso y copy
   positivo cuando no hay actividad.
-- **FR-008**: La franja de vigilancia DEBE mostrar la última señal (D3) y los
-  reportes de la semana con delta vs la anterior, en copy positivo (§4.0.1: la calma
-  se muestra como trabajo, nunca como vacío).
+- **FR-008**: La franja de vigilancia DEBE mostrar SOLO VERDADES (regla de ZEUS):
+  los DOS hechos de D3 — (a) "última señal sobre tu colegio"
+  (`max(AlertaColegio.creadoEn)`, o "sin señales aún" si nunca hubo) y (b) "última
+  revisión del sistema" (heartbeat del worker, `worker.heartbeat` en
+  `WORKER_RUN_DIR`, misma fuente de `api/health/worker`) — y los reportes de la
+  semana con delta vs la anterior. Si una cifra no tiene fuente honesta, NO se
+  muestra (se quita o se sustituye por un dato real). Copy positivo (§4.0.1).
 - **FR-009**: El empty state (0 cursos) DEBE seguir el mockup §5.2 con CTAs a rutas
   existentes; las acciones rápidas y `CanalesOficiales` cierran la home con datos.
 - **FR-010**: Dependencias nuevas: `recharts` y `lucide-react` (brief §4.4/§4.1) —
@@ -224,25 +231,35 @@ y bloque de canales oficiales al final.
 
 - **HomeRector (DTO)**: salida única de `ColegioResumenRepository.homeRector` —
   colegio (nombre, vigencia), KPIs, cobertura (vigilancia/reacción + huecos),
-  alertas por periodo + series temporales, top cursos con titular, última señal,
+  alertas por periodo + series temporales, top cursos con titular, última señal del
+  colegio, latido del sistema (heartbeat del worker),
   contadores para el semáforo.
 - **AlertaColegio** (existente): el vínculo reporte↔colegio; fuente de "reportes
   recibidos" (métrica D2), del semáforo y de la tendencia.
 
-## Decisiones pendientes de ZEUS (compuerta §4)
+## Decisiones de ZEUS (compuerta §4, 2026-08-03 — REVISO `262721f7` → CUMPLE)
 
-- **D1 — Regla del semáforo.** Propuesta: **rubí** = ≥1 alerta en estado "nueva" (sin
-  gestionar) · **ámbar** = 0 nuevas pero ≥1 alerta en los últimos 7 días · **pino** =
-  el resto. (La regla debe ser simple de explicar al rector; alternativa: ámbar solo
-  si alertas nuevas 0 pero gestionadas pendientes de seguimiento.)
-- **D2 — Métrica "reportes recibidos".** (a) **Reportes DISTINTOS** con alerta en el
-  periodo (`COUNT(DISTINCT reporteId)` — recomendada: es como piensa el rector, "2
-  reportes"); (b) filas `AlertaColegio` (matches; infla si un reporte toca varios
-  identificadores). La tendencia usa la MISMA métrica.
-- **D3 — "Última revisión/señal" de la franja.** (a) `max(AlertaColegio.creadoEn)`
-  del colegio (**recomendada**; si nunca hubo, copy "sin señales aún — la vigilancia
-  está activa"); (b) timestamp de actividad del worker — no existe por colegio y
-  fabricarlo sería mentir.
+- **D1 = aceptada con ajuste: ámbar = 72 HORAS** (no 7 días — con 7 días un colegio
+  con una alerta semanal vive en ámbar permanente: fatiga de alarma; a 72 h el
+  estado decae solo). Regla final: **rubí** = ≥1 alerta en estado "nueva" (sin
+  gestionar) · **ámbar** = 0 nuevas pero ≥1 alerta en las últimas **72 h** ·
+  **pino** = el resto. **CONDICIÓN DE COPY**: en ámbar el texto DEBE decir
+  explícitamente que ya está atendido ("esta semana hubo algo y ya lo atendiste") —
+  si el ámbar se lee como trabajo pendiente cuando no lo hay, el semáforo entero se
+  pierde.
+- **D2 = aceptada**: `COUNT(DISTINCT reporteId)` — un reporte que toca a 3
+  estudiantes es UN reporte. La tendencia usa la misma métrica.
+- **D3 = ninguna de las dos: son DOS hechos distintos y se muestran los DOS**:
+  (a) **"Última señal sobre tu colegio"** = `max(AlertaColegio.creadoEn)` — por
+  colegio, puede no existir nunca → copy honesto "sin señales aún"; (b) **"Última
+  revisión del sistema"** = el **heartbeat del worker** (`worker.heartbeat` en
+  `WORKER_RUN_DIR`, fuente de `src/app/api/health/worker/route.ts`) — global, y da
+  igual: "el sistema revisó hace N minutos" es una afirmación VERDADERA para todos
+  los colegios. Cada uno con su etiqueta correcta.
+- **Regla de la franja (nueva, vinculante)**: SOLO VERDADES — cada cifra de la
+  franja tiene fuente real calculable; si una no tiene fuente honesta por colegio,
+  se quita o se sustituye por un dato real ("la forma es el dato": si no hay dato,
+  no hay forma). Tres cifras verdaderas > cuatro con una inventada.
 
 ## Success Criteria *(mandatory)*
 
