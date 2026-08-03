@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **127** |
+| **Total de specs** | **128** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
 | **Implementadas (IMPLEMENTADO)** | **28** |
-| **Pendientes (PLANEADO)** | **1** |
+| **Pendientes (PLANEADO)** | **2** |
 
 ## Backlog activo (no cerradas)
 
@@ -82,6 +82,7 @@
 | [140](140-denuncia-formal/spec.md) | SPEC-140 — Denuncia formal: PDF determinista + panel forense (F2+N-4) | 🟢 Implementada |
 | [141](141-admin-solo-lectura-padres-colegios/spec.md) | SPEC-141 — Admin solo lectura: círculo de padres + cursos/alumnos (N-1) | 🟢 Implementada |
 | [142](142-patrones-institucionales/spec.md) | SPEC-142 — Patrones institucionales con k-anonimato k=3 (F6) | 🟢 Implementada |
+| [143](143-home-rector/spec.md) | SPEC-143 — Home operativo del rector (002-PI-058) | 🔵 Planeado (spec+plan en compuerta §4) |
 | [144](144-modelo-estudiante/spec.md) | SPEC-144 — Modelo Estudiante expandido (rename desde Alumno) (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [145](145-modelo-profesor/spec.md) | SPEC-145 — Modelo Profesor mínimo (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
@@ -214,6 +215,7 @@
 | [140](140-denuncia-formal/spec.md) | SPEC-140 — Denuncia formal: PDF determinista + panel forense (F2+N-4) | 🟢 Implementada |
 | [141](141-admin-solo-lectura-padres-colegios/spec.md) | SPEC-141 — Admin solo lectura: círculo de padres + cursos/alumnos (N-1) | 🟢 Implementada |
 | [142](142-patrones-institucionales/spec.md) | SPEC-142 — Patrones institucionales con k-anonimato k=3 (F6) | 🟢 Implementada |
+| [143](143-home-rector/spec.md) | SPEC-143 — Home operativo del rector (002-PI-058) | 🔵 Planeado (spec+plan en compuerta §4) |
 | [144](144-modelo-estudiante/spec.md) | SPEC-144 — Modelo Estudiante expandido (rename desde Alumno) (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [145](145-modelo-profesor/spec.md) | SPEC-145 — Modelo Profesor mínimo (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
