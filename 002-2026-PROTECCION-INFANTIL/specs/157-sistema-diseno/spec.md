@@ -160,9 +160,10 @@ cobertura de test por primitivo (render, props, accesibilidad).
   scrollbars, fallback de focus) DEBE reescribirse sobre tokens SIN cambiar nombres ni
   romper usos; `theme-colegio` se conserva re-mapeado a tokens.
 - **FR-003**: Inter DEBE desaparecer de `src/` y del config; Instrument Serif
-  (regular + cursiva) e Instrument Sans (variable 400-700) DEBEN servirse con
-  `next/font/local` desde archivos del repo (SIL OFL, licencia incluida); DM Mono se
-  conserva para códigos. Ninguna fuente se resuelve contra Google en runtime.
+  (regular + cursiva) e Instrument Sans (variable 400-700) y DM Mono DEBEN servirse
+  con `next/font/local` desde archivos woff2 del repo (latin + latin-ext, SIL OFL,
+  licencia incluida) — D1/D3: un solo mecanismo, builds deterministas, ninguna fuente
+  se resuelve contra Google ni en runtime ni en build.
 - **FR-004**: La escala tipográfica §4.1 DEBE existir como utilidades del sistema
   (titular de estado, H1, título de sección, cuerpo, microetiqueta) y TODA utilidad
   de cifra DEBE aplicar `tabular-nums`.
@@ -175,7 +176,10 @@ cobertura de test por primitivo (render, props, accesibilidad).
   escalonadas (translateY 16px + opacidad, retardo 60-80 ms);
   `prefers-reduced-motion` DEBE apagar TODA animación del sistema.
 - **FR-007**: En código nuevo queda PROHIBIDO el color crudo de Tailwind: solo tokens
-  (candado del radicado). El mecanismo de enforcement se decide en D2.
+  (candado del radicado). Enforcement OBLIGATORIO (D2): script `tokens:check` en el
+  gate de CI que falla si el conteo de color crudo en `src/**` productivo (sin
+  tests) SUBE del piso sembrado (medición ODIN 2026-08-03, número con comentario de
+  fecha y spec en el config del script).
 - **FR-008**: Los dos temas DEBEN ser el mismo HTML con distintos valores de token;
   `prefers-color-scheme` se respeta y el cambio manual se permite (ThemeProvider
   existente).
@@ -191,21 +195,26 @@ cobertura de test por primitivo (render, props, accesibilidad).
 - **Primitivo del sistema**: componente `ui/` tokenizado (`Anillo`, `PanelVidrio`,
   `LuzAmbiental`, `Declaracion`) que codifica datos reales, nunca decora (§4.0.2).
 
-## Decisiones pendientes de ZEUS (compuerta §4)
+## Decisiones de ZEUS (compuerta §4, 2026-08-03 — REVISO `e6c10fab` → CUMPLE)
 
-- **D1 — DM Mono.** (a) Se conserva vía `next/font/google` (**recomendada**: Next la
-  descarga en BUILD y la auto-aloja — cero llamadas a Google en runtime, cumple
-  BL-1; el brief dice "ya en el proyecto, se queda"); (b) se vendorea también local
-  por uniformidad.
-- **D2 — Enforcement de "solo tokens" (FR-007).** (a) Script ratchet
-  `npm run tokens:check` que cuenta ocurrencias de color crudo en `src/` y falla si el
-  conteo SUBE (**recomendada**: mismo patrón que los ratchets de max-lines/complexity;
-  las pantallas viejas pueden quedar, el número solo baja); (b) solo disciplina de
-  revisión, sin gate.
-- **D3 — Archivos de fuente.** (a) Vendorear los TTF oficiales de `google/fonts`
-  (Instrument Sans variable + Instrument Serif regular/cursiva, SIL OFL) en
-  `public/fonts/` + `OFL.txt` (**recomendada**); (b) convertir a woff2 para peso
-  (añade tooling; next/font/local sirve ttf sin problema).
+- **D1 — DM Mono: VENDORÍZALA TAMBIÉN, local.** Razón de ZEUS: `next/font/google`
+  descarga en tiempo de BUILD — insumo no determinista y dependencia externa; este
+  proyecto exige builds reproducibles byte a byte (D-33). Un solo mecanismo para
+  todas las fuentes: `next/font/local`.
+- **D2 — Ratchet `tokens:check`: SÍ, y en el gate de CI** (no solo local), mismo
+  patrón que el ratchet del DAL. Requisitos vinculantes: falla si el conteo de color
+  crudo SUBE (el piso solo baja) · cuenta solo `src/**` productivo (EXCLUYE tests) ·
+  se siembra con el número medido por ODIN (manda la medición propia; el comando
+  exacto se declara en `cierre.md`) · el número vive en el config del script con
+  comentario de fecha y spec (patrón `vitest.config.ts`).
+- **D3 — WOFF2 descargado directo de `fonts.gstatic.com`** (Google ya sirve woff2;
+  nada que convertir ni tooling). Los DOS subconjuntos (latin + latin-ext) de cada
+  familia + `OFL.txt`. Referencia medida por ZEUS en la maqueta: Instrument Sans
+  latin 29,9 KB + latin-ext 11,1 KB · Instrument Serif latin 15,0 KB + latin-ext
+  7,8 KB (~64 KB las dos familias). DM Mono igual: woff2 local (D1).
+- **Candado de auditoría (nuevo)**: SC-001 se audita con `git diff --stat` — ninguna
+  pantalla existente modificada salvo `src/app/layout.tsx`. Una pantalla tocada =
+  NO CUMPLE aunque se vea bien.
 
 ## Success Criteria *(mandatory)*
 
@@ -213,10 +222,12 @@ cobertura de test por primitivo (render, props, accesibilidad).
 
 - **SC-001**: Los conteos de la capa semántica no bajan tras la reescritura
   (`glass` ≥ 109, `text-body` ≥ 457, `text-muted` ≥ 375, `text-subtle` ≥ 165) y
-  ninguna pantalla existente se modifica en el PR (salvo `layout.tsx`).
+  **ninguna pantalla existente se modifica en el PR salvo `src/app/layout.tsx`**
+  (candado de auditoría ZEUS: se verifica con `git diff --stat`; una pantalla tocada
+  = NO CUMPLE).
 - **SC-002**: `grep -ri "inter" src/ tailwind.config.ts` = 0 referencias a la fuente
   Inter; el HTML servido no contiene `fonts.googleapis.com` ni `fonts.gstatic.com`;
-  las fuentes se sirven desde la propia app.
+  las tres familias se sirven desde la propia app (woff2 local, latin + latin-ext).
 - **SC-003**: Los pares texto/fondo derivados de tokens (body, muted, subtle sobre
   papel; pino/ambar/rubí como texto de estado sobre fondos del sistema) cumplen
   contraste ≥ 4.5:1 en ambos temas, verificado con script (`npm run a11y:contrast` o

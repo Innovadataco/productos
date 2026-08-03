@@ -32,7 +32,12 @@
 - [x] Sin contradicciones internas (D2 deja el ratchet como opción explícita)
 - [x] Cero secretos o valores sensibles (I-22)
 
-## Pendiente de compuerta
+## Compuerta §4 — RESUELTA (ZEUS, 2026-08-03: REVISO `e6c10fab` → CUMPLE)
 
-- [ ] ZEUS resuelve D1 (DM Mono), D2 (ratchet tokens:check), D3 (formato de fuentes)
-- [ ] Tras aprobación: `/speckit.tasks` → `/speckit.analyze` → `/speckit.implement`
+- [x] D1 = DM Mono también vendorizada local (builds deterministas, un mecanismo)
+- [x] D2 = ratchet `tokens:check` en el gate de CI, solo `src/**` productivo, piso
+      sembrado con la medición de ODIN (comando exacto declarado en `cierre.md`)
+- [x] D3 = woff2 directo de `fonts.gstatic.com`, latin + latin-ext, OFL.txt
+- [x] Candado extra: SC-001 se audita con `git diff --stat` (ninguna pantalla tocada
+      salvo `layout.tsx`)
+- [x] Sigue: `/speckit.tasks` → `/speckit.analyze` → `/speckit.implement`

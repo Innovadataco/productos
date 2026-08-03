@@ -49,16 +49,18 @@ soportado por la sintaxis de Tailwind 3.4 y más verboso.
 Los 9 usos de `primary-*`/`accent-*` del config: `primary` se mapea a `cielo` y
 `accent` a `pino` (mismas clases, valores por token) — nadie queda roto.
 
-## D-R3 · Fuentes (D1/D3 pendientes de ZEUS; recomendaciones)
+## D-R3 · Fuentes (RESUELTO — D1/D3, ZEUS 2026-08-03)
 
-- **Instrument Sans**: TTF variable oficial (`InstrumentSans[wght].ttf`,
-  `InstrumentSans-Italic[wght].ttf`) del repo `google/fonts` (SIL OFL) →
-  `next/font/local` con `variable: "--font-instrument-sans"`.
-- **Instrument Serif**: TTF estáticos Regular + Italic → `--font-instrument-serif`.
-- **DM Mono**: se conserva como está (`next/font/google` — Next la descarga en BUILD
-  y la sirve auto-alojada; cero llamadas a Google en runtime, cumple BL-1). D1
-  documenta la decisión.
-- Licencia: `public/fonts/OFL.txt` con el texto SIL OFL (obligación de la licencia).
+- **Un solo mecanismo: `next/font/local` con woff2 descargados directo de
+  `fonts.gstatic.com`** (Google ya sirve woff2; sin conversión ni tooling). Se
+  descargan con UA de navegador moderno contra `fonts.googleapis.com/css2` y se
+  toman las URLs woff2 de los bloques `latin` y `latin-ext`.
+- **Familias**: Instrument Sans (variable 400-700, normal + cursiva) · Instrument
+  Serif (regular + cursiva) · DM Mono (400/500, se vendoriza también — D1: builds
+  deterministas, cero descarga en build). Los DOS subconjuntos (latin + latin-ext)
+  de cada una. Referencia de peso medida por ZEUS: ~64 KB las dos familias
+  Instrument (latin 29,9+15,0 KB, latin-ext 11,1+7,8 KB).
+- Licencia: `public/fonts/OFL.txt` (SIL OFL).
 - Tailwind: `fontFamily.sans = var(--font-instrument-sans)`,
   `serif = var(--font-instrument-serif)`, `mono = var(--font-dm-mono)`.
 
@@ -86,13 +88,16 @@ Reglas: cada arco codifica un número real (§4.0.2); la leyenda nombra el hueco
 personas; color solo por token; animación con la curva única; mudos con
 reduced-motion.
 
-## D-R6 · Ratchet anti color crudo (si D2=a)
+## D-R6 · Ratchet anti color crudo (RESUELTO — D2 = SÍ, en el gate de CI)
 
-Script `scripts/tokens-check.ts`: cuenta ocurrencias del patrón
-`(text|bg|border|ring|from|to|via)-(slate|sky|cyan|emerald|…)-<escala>` en `src/`;
-guarda el conteo de referencia en el propio script y FALLA si sube (mismo patrón que
-los ratchets de max-lines/complexity del repo). Conteo base medido 2026-08-03:
-~1.119 ocurrencias en ~104 archivos — solo puede bajar.
+Script `scripts/tokens-check.ts` + paso en el job `gate` del CI (no solo local).
+Reglas vinculantes: cuenta SOLO `src/**` productivo (excluye `*.test.ts(x)`) · falla
+si el conteo SUBE del piso sembrado (el piso solo baja) · la constante del piso vive
+en el propio script con comentario de fecha y spec (patrón `vitest.config.ts`) · la
+semilla es la medición propia de ODIN con su regex (no la del radicado) y el comando
+exacto se declara en `cierre.md`. Patrón base medido 2026-08-03 sobre `src/`
+(incluyendo tests): ~1.119 ocurrencias en ~104 archivos; la semilla definitiva se
+re-mide excluyendo tests al implementar.
 
 ## D-R7 · Lo que NO se hace
 
