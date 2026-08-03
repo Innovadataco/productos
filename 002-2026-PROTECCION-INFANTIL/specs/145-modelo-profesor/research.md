@@ -29,6 +29,8 @@ aditivo en PostgreSQL 16 — precedente en el repo: `MATCH_DETECTADO`,
 `CONSULTA_SIN_RESULTADOS`, `CONSULTA_VACIA_CTA_REPORTAR` se añadieron así en
 migraciones recientes. Prisma no envuelve migraciones de postgres en transacción, así
 que la restricción "ADD VALUE no va en bloque transaccional" (PG < 12) no aplica.
+**Cuidado (ZEUS)**: el valor nuevo NO se puede USAR en la misma migración que lo
+crea; un backfill/seed que lo necesitara iría en migración aparte (no es el caso).
 
 ## D-R3 · Patrón CRUD (espejo de cursos/estudiantes)
 
@@ -42,12 +44,13 @@ recurso/tenant, 409 duplicado, 429 rate limit.
 Duplicado: `buscarPorNombreEnCurso` de estudiantes es el patrón →
 `buscarPorNombreApellidosEnColegio` para profesores (409 si duplicado activo).
 
-## D-R4 · Sin UI ni asignación wizard
+## D-R4 · Asignación curso↔profesor (RESUELTO — D1 = A, ZEUS 2026-08-03)
 
-La pantalla de profesores es SPEC-148 y la asignación titular en el wizard es
-SPEC-146 (mapa §10). Esta SPEC expone solo API. D1 decide si los endpoints de curso
-aceptan `profesorTitularId?` ya (recomendado: relación ejercitable end-to-end con
-validación same-tenant) o se difiere.
+Los endpoints de curso aceptan `profesorTitularId?` YA con validación same-tenant.
+CONDICIÓN 1: test negativo explícito (profesor de B a curso de A → 404/400, nunca
+éxito). CONDICIÓN 2: la baja suave del titular CONSERVA la asignación (FR-014) — el
+titular histórico es información forense; `null` desasigna solo por acción explícita
+del colegio.
 
 ## D-R5 · Cargas O-1 / O-2 (cambios de test solamente)
 
