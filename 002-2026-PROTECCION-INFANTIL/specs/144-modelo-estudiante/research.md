@@ -37,8 +37,9 @@ construcción, no por disciplina de script.
 
 ## D-R3 · `documentoTipo`: String + Zod, no enum de BD
 
-**Decisión (recomendación D3)**: `documentoTipo String?` con set cerrado validado en
-la capa API (`TI`, `CC`, `CE`, `PASAPORTE`, `OTRO`).
+**Decisión (D3, ZEUS 2026-08-03)**: `documentoTipo String?` con set cerrado validado
+en la capa API: **RC, TI, CC, CE, PASAPORTE, OTRO** (RC = registro civil, documento
+de los menores de 7 años — corrección de ZEUS al set propuesto).
 
 **Por qué**: el enum existente `TipoIdentificacionIntegrante`
 (`CEDULA_CIUDADANIA`, `CEDULA_EXTRANJERIA`, `PASAPORTE`, `OTRO`) pertenece al módulo
@@ -47,20 +48,14 @@ Colombia. Crear un enum de BD nuevo para un catálogo que puede crecer (registro
 NES) añade fricción migratoria sin beneficio: la validación vive en Zod (constitución
 §3.6, objetivo Zod ya adoptado).
 
-## D-R4 · Acudientes: tabla hija vs columnas planas (pendiente D1 de ZEUS)
+## D-R4 · Acudientes: tabla hija (RESUELTO — D1 = A, ZEUS 2026-08-03)
 
-**Recomendación**: modelo hijo `AcudienteEstudiante` con `@@unique([estudianteId,
-orden])`, `orden` ∈ {1, 2}.
-
-| Criterio | Tabla hija (A) | Planas ×2 (B) |
-|---|---|---|
-| Tope de 2 acudientes | constraint de BD | validación manual |
-| Lectura en vista de curso (SPEC-147) | `include` en la misma query (sin N+1) | nada que unir |
-| Columnas en `"Alumno"` | 0 nuevas | 8 nuevas |
-| Soft delete/auditoría futura (Ley 1581) | natural | incómodo |
-| Fidelidad al brief §7.1 ("campos del acudiente principal") | requiere interpretación | literal |
-
-El brief nombra los campos pero no fija el modelado → decisión de ZEUS en compuerta.
+**Decisión**: modelo hijo `AcudienteEstudiante` con `@@unique([estudianteId, orden])`,
+`orden` ∈ {1, 2}. **Condición vinculante de ZEUS**: el acudiente NUNCA se consulta
+por su id suelto; siempre a través del estudiante ya acotado por `colegioId`
+(E-1/SPEC-134). Es PII de un tercero: aislarla facilita la purga y la auditoría de
+BL-1. No existe repositorio con `findById` de acudiente: solo lectura/escritura
+anidada desde `EstudianteRepository` (o include en la query del estudiante).
 
 ## D-R5 · Alcance de la cascada de código
 

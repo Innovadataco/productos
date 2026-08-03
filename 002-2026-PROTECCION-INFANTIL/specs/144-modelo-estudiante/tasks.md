@@ -1,38 +1,92 @@
-# Tasks: SPEC-144 — Modelo `Estudiante` expandido
+# Tasks: SPEC-144 — Modelo `Estudiante` expandido (rename desde `Alumno`)
 
-**Spec**: [spec.md](./spec.md) · **Plan**: [plan.md](./plan.md)
+**Spec**: [spec.md](./spec.md) · **Plan**: [plan.md](./plan.md) · **Data model**:
+[data-model.md](./data-model.md) · **Contracts**: [contracts/altas-estudiante.md](./contracts/altas-estudiante.md)
 
-> **STUB — compuerta §4.** Se detalla con `/speckit.tasks` después de que ZEUS apruebe
-> spec+plan y resuelva D1–D4. Orden previsto (dependencias):
+Compuerta §4 superada (ZEUS 2026-08-03, CUMPLE): D1=tabla hija con acceso solo vía
+estudiante acotado · D2=paths conservados · D3=set Zod RC|TI|CC|CE|PASAPORTE|OTRO ·
+D4=fila marcada, archivo nunca rechazado.
+
+Reglas: TDD donde aplique (test primero en repos y validación) · un cambio lógico =
+un commit (mensajes en español, imperativo) · cero tests debilitados · gate completo
+antes de push.
 
 ## Fase 1 — Schema y migración (US1, US2)
 
-- [ ] T001 Rename `Alumno → Estudiante` + `@@map`/`@map` en `prisma/schema.prisma`
-- [ ] T002 Rename `IdentificadorAlumno → IdentificadorEstudiante` + enum
-      `EtiquetaRelacionEstudiante` + relaciones (`Colegio`, `Curso`, `AlertaColegio`,
-      `Plataforma`)
-- [ ] T003 Campos nuevos (`apellidos`, `documentoTipo`, `documentoNumero`) + modelo
-      `AcudienteEstudiante` (si D1=A) + migración aditiva
-- [ ] T004 Verificar `migrate reset && migrate deploy && db seed` en BD de test
+- [ ] T001 Renombrar en `prisma/schema.prisma`: `model Alumno → Estudiante` con
+  `@@map("Alumno")`; enum `EtiquetaRelacionAlumno → EtiquetaRelacionEstudiante` con
+  `@@map("EtiquetaRelacionAlumno")` y valor `ESTUDIANTE @map("ALUMNO")`
+- [ ] T002 `model IdentificadorAlumno → IdentificadorEstudiante` con
+  `@@map("IdentificadorAlumno")`, campo `estudianteId String @map("alumnoId")`;
+  relaciones: `Colegio.estudiantes`, `Curso.estudiantes`,
+  `AlertaColegio.identificadorEstudianteId @map("identificadorAlumnoId")` +
+  `identificadorEstudiante`, `Plataforma.identificadoresEstudiante`
+- [ ] T003 Campos nuevos en `Estudiante`: `apellidos String @default("")`,
+  `documentoTipo String?`, `documentoNumero String?`; modelo nuevo
+  `AcudienteEstudiante` (orden 1|2, `@@unique([estudianteId, orden])`,
+  `@@index([estudianteId])`)
+- [ ] T004 Generar migración aditiva (`prisma migrate dev`) y VERIFICAR el SQL: solo
+  `ADD COLUMN` + `CREATE TABLE "AcudienteEstudiante"` + índices; cero
+  `DROP`/`RENAME`/`ALTER TYPE`. Aplicar a BD test y comprobar `migrate reset &&
+  migrate deploy && db seed` (quickstart §1)
+- [ ] T005 Test de humo del backfill: existentes con `apellidos = ''`, resto NULL;
+  re-deploy = no-op (quickstart §3)
 
 ## Fase 2 — Cascada DAL y lib (US1)
 
-- [ ] T005 [P] Repos: `estudiante.ts`, `identificador-estudiante.ts`,
-      `alerta-colegio.ts` (+ tests)
-- [ ] T006 [P] Lib colegio: `alertas.ts`, `patrones.ts`, `permisos.ts`
-- [ ] T007 Carga: `parser/validator/importer/sesion-roster` + columna `apellidos` (D4)
+- [ ] T006 [P] Renombrar `src/lib/dal/repositories/alumno.ts → estudiante.ts`
+  (`EstudianteRepository`): tipos `Prisma.Estudiante*`, `prisma.estudiante`; método
+  `crear` acepta `apellidos` + `acudientes` anidados (create atómico; máx 2 por
+  Zod, nunca por id suelto — D1)
+- [ ] T007 [P] Renombrar `identificador-alumno.ts → identificador-estudiante.ts` +
+  `alerta-colegio.ts` (relaciones nuevas); actualizar
+  `src/lib/dal/repositories/{alumno,identificador-alumno,alerta-colegio}.test.ts`
+  (renombrar a estudiante/identificador-estudiante, assertions intactas o
+  fortalecidas)
+- [ ] T008 [P] `src/lib/colegio/alertas.ts`, `src/lib/colegio/patrones.ts`,
+  `src/lib/colegio/permisos.ts`: relaciones/tipos renombrados, cero cambio de lógica
+- [ ] T009 [P] Test utils: `src/lib/reporte-test-utils.ts`, `src/lib/test-utils.ts`,
+  `src/lib/e2e/journeys/*` (factories crean con `apellidos`)
 
-## Fase 3 — Rutas API + validación de alta (US3)
+## Fase 3 — Validación de alta y carga (US3)
 
-- [ ] T008 `estudianteBodySchema` en `src/lib/schemas` (apellidos requerido, set
-      `documentoTipo`, máx 2 acudientes)
-- [ ] T009 [P] Endpoints colegio + tests A/B tenant actualizados (fortalecer, no
-      debilitar)
-- [ ] T010 Endpoints admin colegios + tests
+- [ ] T010 `src/lib/schemas`: `alumnoBodySchema → estudianteBodySchema` con
+  `apellidos` requerido, `documentoTipo` enum Zod `RC|TI|CC|CE|PASAPORTE|OTRO`,
+  `documentoNumero` opcional, `acudientes` array máx 2 (`nombre`, `relacion`,
+  `telefono?`, `email?`) — con tests de schema primero
+- [ ] T011 `POST /api/colegio/cursos/[id]/alumnos`: exige `apellidos` (400 humano),
+  persiste acudientes anidados, duplicado por `nombre + apellidos` en curso (409);
+  conserva acción de auditoría `COLEGIO_ALUMNO_CREADO` y `tipoRecurso "Alumno"`
+  (histórico inmutable, contracts)
+- [ ] T012 Carga masiva (`src/lib/colegio/carga/{parser,validator,importer,
+  sesion-roster}.ts`): columna `apellidos_alumno` en parser y plantilla descargable
+  (`src/app/api/colegio/carga/plantilla/route.ts`); fila sin apellidos → "fila con
+  problema" (D4: archivo nunca rechazado; esas filas no se crean al confirmar)
+- [ ] T013 Tests A/B tenant (dos colegios) en cada verbo tocado: GET/POST
+  `cursos/[id]/alumnos`, `alumnos/[id]` (GET/PATCH), `alumnos/[id]/estado`,
+  `alumnos/[id]/identificadores`, `identificadores/[id]( /estado)`, carga
+  (validar/confirmar), admin `colegios/[id]/cursos/**`
 
-## Fase 4 — Componentes, arch y cierre
+## Fase 4 — Rutas, componentes, arch y cierre
 
-- [ ] T011 [P] Componentes/páginas: tipos y props renombrados
-- [ ] T012 Regenerar `docs/architecture/01-modelo-datos.md` + `arch:check` verde
-- [ ] T013 Quickstart completo + gate (tsc/lint/test:coverage/build/arch:check) +
-      `dev-restart.sh`
+- [ ] T014 [P] Rutas API colegio restantes (`alumnos/[id]/*`,
+  `identificadores/[id]/*`): código interno renombrado (paths intactos, D2)
+- [ ] T015 [P] Componentes: `AlumnoDetallePageClient.tsx`,
+  `CursoDetallePageClient.tsx`, `EstructuraColegioClient.tsx` — solo tipos/props
+  (SPEC-146 reemplaza los archivos)
+- [ ] T016 `scripts/arch/generar-modelo-datos.ts` (referencia al modelo) + regenerar
+  `docs/architecture/01-modelo-datos.md`; `npm run arch:check` VERDE
+- [ ] T017 Verificación global: `grep -rn "Alumno" src/` = solo strings de mapeo y
+  docstrings (SC-003); suite completa verde con tests ≥ antes (SC-002)
+- [ ] T018 Quickstart completo (`quickstart.md`) + gate (tsc && lint &&
+  test:coverage && build && arch:check) + `./scripts/dev-restart.sh` + PR con
+  auto-merge + CI del HEAD post-merge success
+
+## Analyze (speckit.analyze, 2026-08-03)
+
+- Cobertura: US1→T001-T009+T014-T017 · US2→T003-T006,T011 · US3→T010-T013. Toda FR
+  tiene tarea (FR-001/002/003/004→T001/T002 · FR-005/007→T003/T006 · FR-006→T004/T005
+  · FR-008→T006-T015,T017 · FR-009→T013 · FR-010→T010-T012 · FR-011→T016 ·
+  FR-012→sin tarea: invariante verificado en T017/gate).
+- Consistencia: D1-D4 reflejadas en spec/plan/research/data-model/contracts/tasks.
+  Sin ambigüedades abiertas. Sin duplicados.

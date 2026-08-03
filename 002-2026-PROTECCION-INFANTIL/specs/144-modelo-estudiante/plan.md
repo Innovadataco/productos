@@ -121,9 +121,10 @@ Decisiones tomadas:
 2. **Backfill = la propia migración**: `apellidos String @default("")` materializa el
    backfill de forma idempotente (metadata-only en PG16, sin rewrite); no hace falta
    script aparte.
-3. **`documentoTipo` como `String?` + set cerrado en Zod** (incluye `TI`, ausente del
-   enum de comité) — pendiente de D3.
-4. **Acudientes**: modelo hijo `AcudienteEstudiante` recomendado — pendiente de D1.
+3. **`documentoTipo` como `String?` + set cerrado en Zod** (RC, TI, CC, CE,
+   PASAPORTE, OTRO — D3 resuelto, RC añadido por ZEUS).
+4. **Acudientes**: tabla hija `AcudienteEstudiante`, nunca consultada por id suelto
+   (D1 resuelto con condición E-1).
 
 ## Fase 1 — Diseño (ver data-model.md, contracts/, quickstart.md)
 

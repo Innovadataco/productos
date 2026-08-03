@@ -105,7 +105,7 @@ model Estudiante {
   colegioId       String
   nombre          String
   apellidos       String   @default("")              // NUEVO — obligatorio al alta (API)
-  documentoTipo   String?                            // NUEVO — set Zod: TI|CC|CE|PASAPORTE|OTRO (D3)
+  documentoTipo   String?                            // NUEVO — set Zod: RC|TI|CC|CE|PASAPORTE|OTRO (D3)
   documentoNumero String?                            // NUEVO
   estado          String   @default("activo")
   createdAt       DateTime @default(now())
@@ -114,15 +114,15 @@ model Estudiante {
   curso           Curso                     @relation(fields: [cursoId], references: [id])
   colegio         Colegio                   @relation(fields: [colegioId], references: [id])
   identificadores IdentificadorEstudiante[]
-  acudientes      AcudienteEstudiante[]                // NUEVO — según D1 (opción A)
+  acudientes      AcudienteEstudiante[]                // NUEVO — tabla hija (D1)
 
   @@index([cursoId, estado])
   @@index([colegioId, estado])
   @@map("Alumno")
 }
 
-// NUEVO — solo si D1 = A (recomendada). Si D1 = B, se reemplaza por 8 columnas
-// planas acudiente*/acudiente2* en Estudiante.
+// NUEVO (D1 = tabla hija, aprobado por ZEUS). El acudiente NUNCA se consulta por
+// su id suelto: siempre a través del estudiante ya acotado por colegioId (E-1).
 model AcudienteEstudiante {
   id           String   @id @default(cuid())
   estudianteId String                                // tabla nueva: sin @map (nada que conservar)
@@ -177,7 +177,7 @@ model IdentificadorEstudiante {
 ALTER TABLE "Alumno" ADD COLUMN "apellidos" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "Alumno" ADD COLUMN "documentoTipo" TEXT;
 ALTER TABLE "Alumno" ADD COLUMN "documentoNumero" TEXT;
--- + si D1 = A: CREATE TABLE "AcudienteEstudiante" (…) con FK e índices.
+-- + CREATE TABLE "AcudienteEstudiante" (…) con FK, @@unique y @@index (D1).
 ```
 
 - Metadata-only en PG16 (default constante, sin rewrite) → sin lock apreciable.
@@ -192,7 +192,9 @@ ALTER TABLE "Alumno" ADD COLUMN "documentoNumero" TEXT;
   apellidos).
 - **Acudientes**: máximo 2 por estudiante (`orden` 1|2 + unique). Teléfono/email
   opcionales; si no hay NINGÚN dato de contacto, las pantallas mostrarán badge
-  ámbar "Sin contactos" (SPEC-147).
+  ámbar "Sin contactos" (SPEC-147). El acudiente NUNCA se consulta por id suelto:
+  solo a través del estudiante ya acotado por `colegioId` (condición D1) — es PII de
+  un tercero; aislarla facilita purga y auditoría (BL-1).
 - **Multi-tenant §2.3**: `Estudiante` y `AcudienteEstudiante` se leen/escriben SIEMPRE
   con `colegioId` de sesión (patrón E-1/SPEC-134); `AcudienteEstudiante` hereda el
   tenant a través de `estudiante.colegioId` (verificación por join/include, nunca por

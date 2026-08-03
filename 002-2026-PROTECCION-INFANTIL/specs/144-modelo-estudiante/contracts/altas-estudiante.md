@@ -17,9 +17,9 @@ Rol: `SCHOOL_ADMIN` (módulo `colegios_gestion`, vigencia, rate limit `admin_wri
 {
   "nombre": "Ana",                    // requerido (sin cambio)
   "apellidos": "Pérez Torres",        // REQUERIDO (nuevo — FR-010)
-  "documentoTipo": "TI",              // opcional — set Zod: TI|CC|CE|PASAPORTE|OTRO (D3)
+  "documentoTipo": "TI",              // opcional — set Zod: RC|TI|CC|CE|PASAPORTE|OTRO (D3)
   "documentoNumero": "1020…",         // opcional
-  "acudientes": [                     // opcional — máx 2 (FR-007; shape según D1)
+  "acudientes": [                     // opcional — máx 2 (FR-007; tabla hija, D1)
     { "orden": 1, "nombre": "Marta Torres", "relacion": "madre",
       "telefono": "+573001112233", "email": "marta@example.com" }
   ]
@@ -43,16 +43,19 @@ Rol: `SCHOOL_ADMIN` (módulo `colegios_gestion`, vigencia, rate limit `admin_wri
   CONSERVAN — el audit log es histórico e inmutable; renombrar sus valores rompería
   consultas y reportes de auditoría. La terminología nueva aplica a código y modelo,
   no a valores históricos persistidos. (`valorNuevo` pasa a incluir `apellidos`).
-- **Escritura multi-entidad**: si D1 = A (tabla hija), crear estudiante + acudientes
-  es UNA escritura atómica con `withUnitOfWork` (patrón SPEC-137, candado §7.4).
+- **Escritura multi-entidad**: crear estudiante + acudientes (tabla hija, D1) es UNA
+  escritura atómica (`create` anidado o `withUnitOfWork`, patrón SPEC-137, candado
+  §7.4). El acudiente nunca se crea ni consulta por id suelto (condición D1).
 
-## Flujo de carga masiva (`POST /api/colegio/carga/*`)
+## Flujo de carga masiva (`POST /api/colegio/carga/*`) — D4
 
-- La plantilla Excel gana la columna `apellidos_alumno` (y, según D1/D4, columnas de
-  acudiente en SPEC-146 — en 144 solo apellidos).
-- Filas sin `apellidos`: comportamiento pendiente de **D4** (rechazo de fila con el
-  flujo §5.4 del brief, o aceptación con `apellidos = ""` + completitud posterior).
-  Recomendación ODIN: **(b) aceptar** — máxima adopción, no bloquea.
+- La plantilla Excel descargable (la genera la plataforma) ya trae la columna
+  `apellidos_alumno`.
+- **Fila sin `apellidos` → marcada en "filas con problemas"** (flujo §5.4 del brief:
+  "Fila 22 — falta el apellido del estudiante") y NO se crea; el archivo NUNCA se
+  rechaza entero: el rector puede "guardar solo las correctas". `apellidos = ""`
+  queda reservado al backfill histórico — la carga no crea estudiantes sin
+  apellidos (consistente con FR-010/SC-005).
 - El resto del pipeline (parser → sesión roster → confirmar) mantiene su contrato y
   seguridad de SPEC-132.
 

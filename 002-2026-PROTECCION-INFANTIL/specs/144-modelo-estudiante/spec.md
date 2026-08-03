@@ -121,8 +121,11 @@ con mensaje humano; con `apellidos` → 201; con campos opcionales ausentes → 
 - **Estudiante preexistente sin apellidos**: tras el backfill queda `apellidos = ""`;
   las pantallas de completitud (specs posteriores) lo tratarán como "por completar".
   Ninguna consulta actual revienta por el string vacío.
-- **Plantilla Excel vieja** (sin columna de apellidos) en la carga masiva: ver
-  [NEEDS CLARIFICATION D4] — no se decide en esta spec sin ZEUS.
+- **Plantilla Excel vieja** (sin columna de apellidos) en la carga masiva: **D4
+  resuelto** — la fila se marca en "filas con problemas" (flujo §5.4 del brief) y el
+  archivo NUNCA se rechaza entero; el rector guarda solo las correctas. La carga no
+  crea estudiantes sin apellidos: `apellidos = ""` es exclusivo del backfill
+  histórico.
 - **Locks en migración**: las columnas nuevas son `NULL` o `DEFAULT ''` constante →
   en PostgreSQL 16 son cambios de metadata (sin reescritura de tabla); la migración es
   segura sobre datos en caliente.
@@ -151,13 +154,16 @@ con mensaje humano; con `apellidos` → 201; con campos opcionales ausentes → 
   `@map("identificadorAlumnoId")`, `Plataforma.identificadoresAlumno →
   identificadoresEstudiante`) conservando los nombres físicos de columnas e índices.
 - **FR-005**: El sistema DEBE agregar a `Estudiante`, de forma ADITIVA: `apellidos
-  String @default("")`, `documentoTipo String?`, `documentoNumero String?` y el
-  soporte de acudientes (según decisión D1), todo nullable o con default — cero
+  String @default("")`, `documentoTipo String?`, `documentoNumero String?` y la
+  relación `acudientes` (tabla hija nueva, D1), todo nullable o con default — cero
   columnas obligatorias sin default.
 - **FR-006**: El backfill de existentes DEBE ser idempotente (segunda corrida =
   no-op) y reversible: `migrate reset && migrate deploy` recrea el schema completo.
-- **FR-007**: El sistema DEBE soportar HASTA 2 acudientes por estudiante, cada uno con
-  `nombre`, `relacion`, `telefono?`, `email?` (brief §7.1); nunca un tercero.
+- **FR-007**: El sistema DEBE soportar HASTA 2 acudientes por estudiante en la tabla
+  hija `AcudienteEstudiante` (`orden` 1|2, `@@unique([estudianteId, orden])`), cada
+  uno con `nombre`, `relacion`, `telefono?`, `email?` (brief §7.1); nunca un tercero.
+  El acudiente NUNCA se consulta por su id suelto: siempre a través del estudiante ya
+  acotado por `colegioId` (condición D1, patrón E-1/SPEC-134).
 - **FR-008**: La cascada de código DEBE cubrir repositorios DAL, rutas API, lib
   (`colegio/alertas.ts`, `colegio/patrones.ts`, `colegio/carga/*`), componentes,
   `scripts/arch/generar-modelo-datos.ts` y tests: cero identificadores con el nombre
@@ -165,10 +171,11 @@ con mensaje humano; con `apellidos` → 201; con campos opcionales ausentes → 
 - **FR-009**: Toda query que toque `Estudiante`/`IdentificadorEstudiante`/acudientes
   DEBE mantener el patrón tenant-first E-1/SPEC-134 (`where { id, colegioId }` +
   conteo → 404 si 0 filas), con test A/B de dos colegios en cada verbo tocado.
-- **FR-010**: Los endpoints de alta de estudiante (`POST
-  /api/colegio/cursos/[id]/alumnos` y el flujo de carga masiva) DEBEN exigir `nombre`
-  + `apellidos` y aceptar el resto como opcional; los errores responden 400 con
-  mensaje humano (tono del brief §4.6).
+- **FR-010**: El alta manual (`POST /api/colegio/cursos/[id]/alumnos`) DEBE exigir
+  `nombre` + `apellidos` y aceptar el resto como opcional; los errores responden 400
+  con mensaje humano (tono del brief §4.6). En la carga masiva (D4), la fila sin
+  `apellidos` se marca en "filas con problemas" (el archivo nunca se rechaza entero)
+  y NO se crea; `apellidos = ""` es exclusivo del backfill histórico.
 - **FR-011**: Todo cambio de schema DEBE regenerar `docs/architecture/01-modelo-datos.md`
   y dejar `npm run arch:check` en VERDE en el mismo PR.
 - **FR-012**: Esta SPEC NO cambia ninguna pantalla visible ni expone dato nuevo al
@@ -183,37 +190,29 @@ con mensaje humano; con `apellidos` → 201; con campos opcionales ausentes → 
 - **IdentificadorEstudiante** (hoy `IdentificadorAlumno`, tabla física
   `"IdentificadorAlumno"`): identificador digital (nick, gamer tag, teléfono) de un
   estudiante, con `etiquetaRelacion` (`ESTUDIANTE` | familiar).
-- **Acudiente del estudiante** (modelado pendiente de decisión D1): hasta 2 contactos
-  por estudiante con nombre, relación, teléfono y email.
+- **Acudiente del estudiante** (`AcudienteEstudiante`, tabla hija — D1): hasta 2
+  contactos por estudiante (`orden` 1|2) con nombre, relación, teléfono y email. PII
+  de un tercero: acceso solo vía estudiante acotado por `colegioId`.
 
-## Decisiones pendientes de ZEUS (compuerta §4)
+## Decisiones de ZEUS (compuerta §4, 2026-08-03 — REVISO `683494cb` → CUMPLE)
 
-> Lo que el brief no fija, ODIN no lo inventa. Cada punto lleva recomendación; ZEUS
-> resuelve en la compuerta y la spec se ajusta antes de `/speckit.tasks`.
-
-- **D1 — Modelado de los 2 acudientes.** El brief §7.1 lista campos de "acudiente
-  principal" y exige "hasta 2 acudientes/padres", pero no dice si van planos en la
-  tabla o en tabla hija.
-  - **A (recomendada)**: modelo hijo nuevo `AcudienteEstudiante` (`estudianteId`,
-    `nombre`, `relacion`, `telefono?`, `email?`, `orden` 1|2, `@@unique([estudianteId,
-    orden])`) — normalizado, el tope de 2 es un constraint, y SPEC-147 lo lee con un
-    `include` en la misma query (sin N+1).
-  - **B**: 8 columnas planas (`acudienteNombre…` + `acudiente2Nombre…`) en `"Alumno"`
-    — cero joins, pero duplica columnas y el tope de 2 se valida a mano.
-- **D2 — Paths de URL.** Mantener `/api/colegio/alumnos/*` y
-  `/dashboard/colegio/alumnos/*` en esta SPEC (**recomendado**: el brief solo exige el
-  rename en código/modelo; las pantallas y rutas viejas las reemplazan SPEC-146/147
-  con redirects) — o renombrar paths ahora (rompe clientes/E2E por cero beneficio de
-  usuario).
-- **D3 — `documentoTipo`.** String libre validado por Zod con set cerrado
-  (`TI`, `CC`, `CE`, `PASAPORTE`, `OTRO`) (**recomendado**: el enum existente
-  `TipoIdentificacionIntegrante` NO tiene TI —tarjeta de identidad, el documento
-  típico del menor— y es del módulo comité) — o enum nuevo en BD.
-- **D4 — Plantilla Excel vieja sin columna `apellidos`.** (a) Rechazar filas sin
-  apellidos con el flujo de "filas con problemas" del brief §5.4 (**consistente con
-  "obligatorio al alta"**, pero exige nueva plantilla); (b) aceptarlas con
-  `apellidos = ""` y banner de completitud (**recomendada**: máxima adopción, no
-  bloquea; la completitud se resuelve después).
+- **D1 — Acudientes: tabla hija `AcudienteEstudiante`** con `@@unique([estudianteId,
+  orden])`. **CONDICIÓN VINCULANTE**: el acudiente NUNCA se consulta por su id suelto;
+  siempre se alcanza a través del estudiante ya acotado por `colegioId` (patrón
+  E-1/SPEC-134). Es PII de un tercero: aislarla facilita la purga y la auditoría de
+  BL-1.
+- **D2 — Paths conservados**: `/api/colegio/alumnos/*` y
+  `/dashboard/colegio/alumnos/*` NO cambian en esta SPEC. Las rutas `/estudiantes/*`
+  con redirects llegan en SPEC-146/147 (brief §10).
+- **D3 — `documentoTipo`: String + set cerrado en Zod** (no enum de BD). Set final:
+  **RC, TI, CC, CE, PASAPORTE, OTRO** (RC = registro civil, documento de los menores
+  de 7 años en Colombia).
+- **D4 — Excel sin columna `apellidos`: fila marcada, archivo NUNCA rechazado.** Las
+  filas sin apellidos salen en "filas con problemas" (flujo §5.4 del brief) y el
+  rector puede "guardar solo las correctas". La plantilla descargable la genera la
+  plataforma y ya trae la columna. `apellidos = ""` queda RESERVADO al backfill
+  histórico — la carga no crea estudiantes sin apellidos (consistente con
+  FR-010/SC-005).
 
 ## Success Criteria *(mandatory)*
 
@@ -242,7 +241,7 @@ con mensaje humano; con `apellidos` → 201; con campos opcionales ausentes → 
   `alertas.ts`/`patrones.ts` es solo de nombres, sin cambio de comportamiento.
 - Las migraciones históricas (`prisma/migrations/**`) NO se editan: el rename se
   expresa en el schema con `@@map`/`@map` y una migración nueva aditiva.
-- Los paths de URL actuales se conservan (salvo que D2 decida lo contrario).
+- Los paths de URL actuales se conservan (D2, decidido en compuerta).
 - El seed (`prisma/seed.ts`) y los helpers de test (`reporte-test-utils.ts`,
   `test-utils.ts`) se actualizan dentro de la cascada para reflejar el modelo nuevo.
 - SPEC-134 (repositorio tenant-first) y SPEC-137 (`withUnitOfWork`) son los patrones

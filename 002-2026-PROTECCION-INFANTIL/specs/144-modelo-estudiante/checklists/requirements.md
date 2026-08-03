@@ -29,8 +29,12 @@
 - [x] Sin detalles de implementación en spec.md más allá de lo vinculante del brief
 - [x] Cero secretos o valores sensibles (I-22)
 
-## Pendiente de compuerta
+## Compuerta §4 — RESUELTA (ZEUS, 2026-08-03: REVISO `683494cb` → CUMPLE)
 
-- [ ] ZEUS resuelve D1 (modelado acudientes), D2 (paths), D3 (documentoTipo),
-      D4 (plantilla vieja)
-- [ ] Tras aprobación: `/speckit.tasks` → `/speckit.analyze` → `/speckit.implement`
+- [x] D1 = tabla hija `AcudienteEstudiante` (condición: nunca por id suelto, siempre
+      vía estudiante acotado por `colegioId`)
+- [x] D2 = paths conservados; `/estudiantes/*` con redirects llega en SPEC-146/147
+- [x] D3 = String + set Zod **RC, TI, CC, CE, PASAPORTE, OTRO** (RC añadido por ZEUS)
+- [x] D4 = fila marcada en "filas con problemas", archivo nunca rechazado;
+      `apellidos = ""` solo para backfill histórico
+- [x] Sigue: `/speckit.tasks` → `/speckit.analyze` → `/speckit.implement`
