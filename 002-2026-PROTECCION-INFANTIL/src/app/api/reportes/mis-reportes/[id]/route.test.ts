@@ -38,17 +38,17 @@ async function crearClasificacionConVotos(reporteId: string) {
             reporteId,
             categoria: "SOLICITUD_MATERIAL",
             confianza: 1,
-            modeloUsado: "rubrica:m1+m2",
+            modeloUsado: "rubrica:M1+M2",
             latenciaMs: 100,
             categoriasSecundarias: [{ categoria: "CONTACTO_INSISTENTE", score: 1 }],
         },
     });
     await prisma.clasificacionRubricaVoto.createMany({
         data: [
-            { clasificacionIAId: clasificacion.id, modelo: "m1", categoria: "SOLICITUD_MATERIAL", cumple: true, preguntasJson: ["¿Alguien pide fotos?"] },
-            { clasificacionIAId: clasificacion.id, modelo: "m1", categoria: "COMPARTIMIENTO_SEXUAL", cumple: false, preguntasJson: [] },
-            { clasificacionIAId: clasificacion.id, modelo: "m2", categoria: "SOLICITUD_MATERIAL", cumple: true, preguntasJson: ["¿Alguien pide fotos?"] },
-            { clasificacionIAId: clasificacion.id, modelo: "m2", categoria: "COMPARTIMIENTO_SEXUAL", cumple: false, preguntasJson: [] },
+            { clasificacionIAId: clasificacion.id, modelo: "M1", categoria: "SOLICITUD_MATERIAL", cumple: true, preguntasJson: ["¿Alguien pide fotos?"] },
+            { clasificacionIAId: clasificacion.id, modelo: "M1", categoria: "COMPARTIMIENTO_SEXUAL", cumple: false, preguntasJson: [] },
+            { clasificacionIAId: clasificacion.id, modelo: "M2", categoria: "SOLICITUD_MATERIAL", cumple: true, preguntasJson: ["¿Alguien pide fotos?"] },
+            { clasificacionIAId: clasificacion.id, modelo: "M2", categoria: "COMPARTIMIENTO_SEXUAL", cumple: false, preguntasJson: [] },
         ],
     });
     return clasificacion;
@@ -115,14 +115,15 @@ describe("GET /api/reportes/mis-reportes/[id]", () => {
 
         // Barrido de contenido: ni nombres de modelos, ni umbrales, ni la
         // categoría descartada, ni lenguaje de riesgo/score.
-        // Nota (002-PI-058, flake preexistente): los ids cuid de la respuesta son
-        // aleatorios y podían contener "m1"/"m2" como subcadena → falso positivo.
-        // Se assertan los marcadores técnicos exactos (misma garantía, determinista).
+        // O-1 (002-PI-058, restaurado en SPEC-145): el fixture usa M1/M2 en
+        // MAYÚSCULA; los cuid son alfanuméricos en minúscula, así que el barrido
+        // amplio not.toContain("M1")/("M2") es determinista e imposible de
+        // falsear por ids aleatorios.
         const raw = JSON.stringify(body);
         expect(raw).not.toContain("modeloUsado");
         expect(raw).not.toContain("rubrica:");
-        expect(raw).not.toContain('"m1"');
-        expect(raw).not.toContain('"m2"');
+        expect(raw).not.toContain("M1");
+        expect(raw).not.toContain("M2");
         expect(raw).not.toMatch(/umbral|porcentaje|voto/i);
         expect(raw).not.toMatch(/COMPARTIMIENTO_SEXUAL|Compartimiento/i);
         expect(raw).not.toMatch(/riesgo|gravedad|confianza/i);
@@ -135,7 +136,7 @@ describe("GET /api/reportes/mis-reportes/[id]", () => {
                 reporteId: reporte.id,
                 categoria: "SOLICITUD_MATERIAL",
                 confianza: 1,
-                modeloUsado: "rubrica:m1+m2",
+                modeloUsado: "rubrica:M1+M2",
                 latenciaMs: 100,
                 categoriasSecundarias: [
                     { categoria: "SPAM", score: 1 },
@@ -159,7 +160,7 @@ describe("GET /api/reportes/mis-reportes/[id]", () => {
                 reporteId: reporte.id,
                 categoria: "OTRO",
                 confianza: 0,
-                modeloUsado: "rubrica:m1+m2",
+                modeloUsado: "rubrica:M1+M2",
                 latenciaMs: 100,
                 categoriasSecundarias: [],
             },
