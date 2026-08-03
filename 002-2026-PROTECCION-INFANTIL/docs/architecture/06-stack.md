@@ -72,6 +72,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `test:e2e:ui` | `node --env-file=.env.test ./node_modules/@playwright/test/cli.js test --ui` |
 | `test:journeys` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run src/lib/e2e/journeys/` |
 | `test:watch` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs` |
+| `tokens:check` | `tsx scripts/tokens-check.ts` |
 | `worker` | `node scripts/worker-supervisor.mjs` |
 
 ## Imagen de producción (Dockerfile)
