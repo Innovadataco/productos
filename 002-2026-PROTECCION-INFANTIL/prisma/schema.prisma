@@ -124,6 +124,10 @@ enum AccionAudit {
   MATCH_DETECTADO
   CONSULTA_SIN_RESULTADOS
   CONSULTA_VACIA_CTA_REPORTAR
+  // SPEC-145: CRUD de profesores del colegio.
+  COLEGIO_PROFESOR_CREADO
+  COLEGIO_PROFESOR_EDITADO
+  COLEGIO_PROFESOR_DESACTIVADO
 }
 
 enum TipoPeriodoServicio {
@@ -454,6 +458,7 @@ model Colegio {
   admin        Usuario?
   cursos       Curso[]
   estudiantes  Estudiante[]
+  profesores   Profesor[]
   alertas      AlertaColegio[]
   patrones     PatronInstitucional[]
   auditLogs    AuditLog[]
@@ -466,20 +471,41 @@ model Colegio {
 }
 
 model Curso {
-  id          String   @id @default(cuid())
-  colegioId   String
-  nombre      String
-  grado       String?
-  anioLectivo String?
-  estado      String   @default("activo")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  colegioId         String
+  nombre            String
+  grado             String?
+  anioLectivo       String?
+  estado            String   @default("activo")
+  profesorTitularId String? // SPEC-145: aditivo; existentes quedan NULL (no se retro-asigna)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  colegio     Colegio      @relation(fields: [colegioId], references: [id])
-  estudiantes Estudiante[]
+  colegio         Colegio      @relation(fields: [colegioId], references: [id])
+  profesorTitular Profesor?    @relation(fields: [profesorTitularId], references: [id])
+  estudiantes     Estudiante[]
 
   @@index([colegioId, estado])
   @@unique([colegioId, nombre, grado, anioLectivo])
+}
+
+// SPEC-145 (brief §7.2): modelo Profesor mínimo — nombre, apellidos, email?,
+// teléfono?, estado. Baja = soft delete (estado "inactivo"), nunca borrado físico.
+model Profesor {
+  id        String   @id @default(cuid())
+  colegioId String
+  nombre    String
+  apellidos String
+  email     String?
+  telefono  String?
+  estado    String   @default("activo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+  cursos  Curso[]
+
+  @@index([colegioId, estado])
 }
 
 // SPEC-144: modelo Estudiante (antes Alumno; tabla física "Alumno" conservada).
