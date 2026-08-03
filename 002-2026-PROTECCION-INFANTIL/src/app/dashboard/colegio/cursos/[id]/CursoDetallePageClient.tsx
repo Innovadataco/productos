@@ -41,6 +41,7 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
     const [saving, setSaving] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [nuevoEstudiante, setNuevoEstudiante] = useState("");
+    const [nuevosApellidos, setNuevosApellidos] = useState("");
 
     useEffect(() => {
         params.then((p) => {
@@ -110,7 +111,7 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
     }
 
     async function agregarEstudiante() {
-        if (!cursoId || !nuevoEstudiante.trim()) return;
+        if (!cursoId || !nuevoEstudiante.trim() || !nuevosApellidos.trim()) return;
         setSaving(true);
         setMessage(null);
         try {
@@ -118,12 +119,13 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nombre: nuevoEstudiante.trim() }),
+                body: JSON.stringify({ nombre: nuevoEstudiante.trim(), apellidos: nuevosApellidos.trim() }),
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setModalOpen(false);
                 setNuevoEstudiante("");
+                setNuevosApellidos("");
                 setMessage({ type: "success", text: "Alumno agregado" });
                 if (cursoId) await cargar(cursoId);
             } else {
@@ -327,7 +329,16 @@ export default function CursoDetallePageClient({ params }: { params: Promise<{ i
                         maxLength={150}
                         value={nuevoEstudiante}
                         onChange={(e) => setNuevoEstudiante(e.target.value)}
-                        placeholder="Ej. María Gómez"
+                        placeholder="Ej. María"
+                    />
+                    <Input
+                        label="Apellidos"
+                        required
+                        minLength={2}
+                        maxLength={150}
+                        value={nuevosApellidos}
+                        onChange={(e) => setNuevosApellidos(e.target.value)}
+                        placeholder="Ej. Gómez Torres"
                     />
                     <div className="flex items-center gap-3">
                         <Button onClick={agregarEstudiante} isLoading={saving}>
