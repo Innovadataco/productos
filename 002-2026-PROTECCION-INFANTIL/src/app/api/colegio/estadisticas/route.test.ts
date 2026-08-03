@@ -9,8 +9,8 @@ import {
     crearUsuario,
     crearColegioConAdmin,
     crearCurso,
-    crearAlumno,
-    crearIdentificadorAlumno,
+    crearEstudiante,
+    crearIdentificadorEstudiante,
     crearPlataforma,
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
@@ -115,12 +115,12 @@ describe("/api/colegio/estadisticas", () => {
         it("SCHOOL_ADMIN ve estadísticas de su colegio con totales y desglose por curso", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "5A", grado: "Quinto" });
-            const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "Ana Pérez" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "Ana Pérez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, {
+            await crearIdentificadorEstudiante(alumno.id, {
                 valor: "+57300EST1",
                 plataformaId: plataforma!.id,
-                etiquetaRelacion: "ALUMNO",
+                etiquetaRelacion: "ESTUDIANTE",
             });
 
             const reporte = await crearReporte("+57300EST1", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
@@ -148,7 +148,7 @@ describe("/api/colegio/estadisticas", () => {
         it("SCHOOL_ADMIN de otro colegio ve totales en cero", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "5A" });
-            await crearAlumno(curso.id, colegio.id, { nombre: "Ana Pérez" });
+            await crearEstudiante(curso.id, colegio.id, { nombre: "Ana Pérez" });
 
             const { admin: admin2 } = await crearColegioConAdmin();
             mockToken = await crearTokenUsuario(admin2.id, "SCHOOL_ADMIN");
@@ -174,12 +174,12 @@ describe("/api/colegio/estadisticas", () => {
         it("No cuenta alertas de reportes dados de baja", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "5A" });
-            const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "Ana Pérez" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "Ana Pérez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, {
+            await crearIdentificadorEstudiante(alumno.id, {
                 valor: "+57300BAJA",
                 plataformaId: plataforma!.id,
-                etiquetaRelacion: "ALUMNO",
+                etiquetaRelacion: "ESTUDIANTE",
             });
 
             const reporte = await crearReporte("+57300BAJA", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS", true);
@@ -196,12 +196,12 @@ describe("/api/colegio/estadisticas", () => {
         it("No expone PII en la respuesta", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "5A" });
-            const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "Ana Pérez" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "Ana Pérez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, {
+            await crearIdentificadorEstudiante(alumno.id, {
                 valor: "+57300PII",
                 plataformaId: plataforma!.id,
-                etiquetaRelacion: "ALUMNO",
+                etiquetaRelacion: "ESTUDIANTE",
             });
 
             const reporte = await crearReporte("+57300PII", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
@@ -226,7 +226,7 @@ describe("/api/colegio/estadisticas", () => {
         it("SCHOOL_ADMIN descarga un PDF no vacío", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "5A" });
-            await crearAlumno(curso.id, colegio.id, { nombre: "Ana Pérez" });
+            await crearEstudiante(curso.id, colegio.id, { nombre: "Ana Pérez" });
 
             const res = await getPdf(
                 request("GET", "http://localhost:5005/api/colegio/estadisticas/pdf", undefined, mockToken)

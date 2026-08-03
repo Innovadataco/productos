@@ -5,9 +5,9 @@
  */
 import type { Prisma } from "@prisma/client";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
-import { AlumnoRepository } from "@/lib/dal/repositories/alumno";
-import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
-import type { FilaCargaAlumno } from "./parser";
+import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
+import type { FilaCargaEstudiante } from "./parser";
 
 export type ResumenImportacion = {
     cursosCreados: number;
@@ -22,12 +22,12 @@ function claveCurso(nombre: string, grado: string | null, anioLectivo: string | 
     return [nombre.toLowerCase(), grado?.toLowerCase() ?? "", anioLectivo?.toLowerCase() ?? ""].join("|");
 }
 
-function claveAlumno(nombre: string, cursoId: string): string {
-    return `${nombre.toLowerCase()}|${cursoId}`;
+function claveEstudiante(nombre: string, apellidos: string, cursoId: string): string {
+    return `${nombre.toLowerCase()}|${apellidos.toLowerCase()}|${cursoId}`;
 }
 
-function claveIdentificador(alumnoId: string, tipo: string, valor: string, plataformaId: string | null): string {
-    return `${alumnoId}|${tipo.toLowerCase()}|${valor}|${plataformaId ?? ""}`;
+function claveIdentificador(estudianteId: string, tipo: string, valor: string, plataformaId: string | null): string {
+    return `${estudianteId}|${tipo.toLowerCase()}|${valor}|${plataformaId ?? ""}`;
 }
 
 /**
@@ -35,13 +35,13 @@ function claveIdentificador(alumnoId: string, tipo: string, valor: string, plata
  * Hace upsert de curso, alumno e identificador dentro del colegio indicado.
  */
 export async function importarCargaMasiva(
-    filas: FilaCargaAlumno[],
+    filas: FilaCargaEstudiante[],
     colegioId: string,
     tx?: Prisma.TransactionClient
 ): Promise<ResumenImportacion> {
     const cursos = new CursoRepository(tx);
-    const alumnos = new AlumnoRepository(tx);
-    const identificadores = new IdentificadorAlumnoRepository(tx);
+    const estudiantes = new EstudianteRepository(tx);
+    const identificadores = new IdentificadorEstudianteRepository(tx);
 
     const resumen: ResumenImportacion = {
         cursosCreados: 0,
@@ -54,7 +54,7 @@ export async function importarCargaMasiva(
 
     // Caché en memoria para evitar queries repetidas dentro de la transacción.
     const cursosPorClave = new Map<string, { id: string; creado: boolean }>();
-    const alumnosPorClave = new Map<string, { id: string; creado: boolean }>();
+    const estudiantesPorClave = new Map<string, { id: string; creado: boolean }>();
     const identificadoresPorClave = new Map<string, { id: string; creado: boolean }>();
 
     for (const fila of filas) {
@@ -81,23 +81,27 @@ export async function importarCargaMasiva(
             cursosPorClave.set(cursoKey, curso);
         }
 
-        const alumnoKey = claveAlumno(fila.alumno.nombre, curso.id);
-        let alumno = alumnosPorClave.get(alumnoKey);
-        if (!alumno) {
-            const existente = await alumnos.buscarPorNombreEnCurso(colegioId, curso.id, fila.alumno.nombre);
+        const estudianteKey = claveEstudiante(fila.alumno.nombre, fila.alumno.apellidos, curso.id);
+        let estudiante = estudiantesPorClave.get(estudianteKey);
+        if (!estudiante) {
+            const existente = await estudiantes.buscarPorNombreEnCurso(colegioId, curso.id, fila.alumno.nombre, fila.alumno.apellidos);
             if (existente) {
-                alumno = { id: existente.id, creado: false };
+                estudiante = { id: existente.id, creado: false };
                 resumen.alumnosReutilizados++;
             } else {
-                const nuevo = await alumnos.crear(colegioId, { cursoId: curso.id, nombre: fila.alumno.nombre });
-                alumno = { id: nuevo.id, creado: true };
+                const nuevo = await estudiantes.crear(colegioId, {
+                    cursoId: curso.id,
+                    nombre: fila.alumno.nombre,
+                    apellidos: fila.alumno.apellidos,
+                });
+                estudiante = { id: nuevo.id, creado: true };
                 resumen.alumnosCreados++;
             }
-            alumnosPorClave.set(alumnoKey, alumno);
+            estudiantesPorClave.set(estudianteKey, estudiante);
         }
 
         const identificadorKey = claveIdentificador(
-            alumno.id,
+            estudiante.id,
             fila.identificador.tipo,
             fila.identificador.valor,
             fila.identificador.plataformaId
@@ -105,7 +109,7 @@ export async function importarCargaMasiva(
         let identificador = identificadoresPorClave.get(identificadorKey);
         if (!identificador) {
             const existente = await identificadores.buscarDuplicado(colegioId, {
-                alumnoId: alumno.id,
+                estudianteId: estudiante.id,
                 tipo: fila.identificador.tipo,
                 valor: fila.identificador.valor,
                 plataformaId: fila.identificador.plataformaId ?? null,
@@ -116,7 +120,7 @@ export async function importarCargaMasiva(
                 resumen.identificadoresReutilizados++;
             } else {
                 const nuevo = await identificadores.crear(colegioId, {
-                    alumnoId: alumno.id,
+                    estudianteId: estudiante.id,
                     tipo: fila.identificador.tipo,
                     valor: fila.identificador.valor,
                     plataformaId: fila.identificador.plataformaId ?? null,

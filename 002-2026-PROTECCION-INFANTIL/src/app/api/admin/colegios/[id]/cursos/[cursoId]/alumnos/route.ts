@@ -8,7 +8,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
-import { AlumnoRepository } from "@/lib/dal/repositories/alumno";
+import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { logAuditNuevaAccion, ACCION_COLEGIO_ROSTER_ACCESO_ADMIN } from "@/lib/audit-nuevas-acciones";
 
 export const runtime = "nodejs";
@@ -87,7 +87,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const [alumnos, total] = await new AlumnoRepository().listarPorCursoPaginadosConIdentificadores(
+        const [alumnos, total] = await new EstudianteRepository().listarPorCursoPaginadosConIdentificadores(
             colegioId,
             cursoId,
             { skip: (page - 1) * pageSize, take: pageSize }

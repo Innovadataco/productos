@@ -16,7 +16,7 @@ import {
 } from "@/lib/reporte-test-utils";
 import { crearSesionRoster } from "@/lib/colegio/carga/sesion-roster";
 import { generarTokenCarga } from "@/lib/colegio/carga/token";
-import type { FilaCargaAlumno } from "@/lib/colegio/carga/parser";
+import type { FilaCargaEstudiante } from "@/lib/colegio/carga/parser";
 
 let mockToken: string | undefined;
 
@@ -27,13 +27,13 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
-function filasValidas(plataformaId: string): FilaCargaAlumno[] {
+function filasValidas(plataformaId: string): FilaCargaEstudiante[] {
     return [
         {
             fila: 2,
             curso: { nombre: "6A", grado: "Sexto", anioLectivo: "2026" },
-            alumno: { nombre: "María Gómez" },
-            identificador: { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ALUMNO", plataformaId },
+            alumno: { nombre: "María", apellidos: "Gómez" },
+            identificador: { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ESTUDIANTE", plataformaId },
         },
     ];
 }
@@ -69,7 +69,7 @@ describe("POST /api/colegio/carga/confirmar (SPEC-132)", () => {
 
         // La sesión quedó borrada en la misma transacción del import.
         expect(await prisma.cargaRosterSesion.findUnique({ where: { id: sesionId } })).toBeNull();
-        const alumnosTrasPrimera = await prisma.alumno.count({ where: { colegioId: colegio.id } });
+        const alumnosTrasPrimera = await prisma.estudiante.count({ where: { colegioId: colegio.id } });
         expect(alumnosTrasPrimera).toBe(1);
 
         // Segunda confirmación con el MISMO token: no duplica (sesión consumida).
@@ -77,7 +77,7 @@ describe("POST /api/colegio/carga/confirmar (SPEC-132)", () => {
         expect(segunda.status).toBe(400);
         const body = await segunda.json();
         expect(body.error.message).toContain("vuelve a validar");
-        expect(await prisma.alumno.count({ where: { colegioId: colegio.id } })).toBe(alumnosTrasPrimera);
+        expect(await prisma.estudiante.count({ where: { colegioId: colegio.id } })).toBe(alumnosTrasPrimera);
     });
 
     it("rechaza una sesión de otro colegio (aislamiento)", async () => {
@@ -110,7 +110,7 @@ describe("POST /api/colegio/carga/confirmar (SPEC-132)", () => {
 
         const res = await POST(requestConfirmar(token, mockToken));
         expect(res.status).toBe(403);
-        expect(await prisma.alumno.count({ where: { colegioId: colegio.id } })).toBe(0);
+        expect(await prisma.estudiante.count({ where: { colegioId: colegio.id } })).toBe(0);
     });
 
     it("rechaza un token sin sesión válida (vencida o inexistente)", async () => {

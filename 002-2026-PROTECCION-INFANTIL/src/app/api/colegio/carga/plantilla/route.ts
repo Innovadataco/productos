@@ -4,20 +4,29 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
-import { COLUMNAS_REQUERIDAS } from "@/lib/colegio/carga/parser";
+import { COLUMNAS_REQUERIDAS, COLUMNA_OPCIONAL_APELLIDOS } from "@/lib/colegio/carga/parser";
+
+// SPEC-144 (D4): la plantilla generada por la plataforma ya trae la columna de
+// apellidos (opcional en el parser para no rechazar plantillas viejas).
+const COLUMNAS_PLANTILLA = [
+    ...COLUMNAS_REQUERIDAS.slice(0, 4),
+    COLUMNA_OPCIONAL_APELLIDOS,
+    ...COLUMNAS_REQUERIDAS.slice(4),
+];
 
 const FILA_EJEMPLO = [
     "6A - Matemáticas",
     "Sexto",
     "2026",
-    "María Gómez",
+    "María",
+    "Gómez Pérez",
     "telefono",
     "+573001234567",
-    "ALUMNO",
+    "ESTUDIANTE",
     "WhatsApp",
 ].join(",");
 
-const CSV_PLANTILLA = [COLUMNAS_REQUERIDAS.join(","), FILA_EJEMPLO].join("\n");
+const CSV_PLANTILLA = [COLUMNAS_PLANTILLA.join(","), FILA_EJEMPLO].join("\n");
 
 export async function GET(request: Request) {
     try {

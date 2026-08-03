@@ -1,10 +1,10 @@
-import { cursoBodySchema, alumnoBodySchema, etiquetaRelacionAlumnoSchema } from "@/lib/schemas";
+import { cursoBodySchema, estudianteBodySchema, etiquetaRelacionEstudianteSchema } from "@/lib/schemas";
 import { normalizarIdentificador } from "@/lib/colegio/normalizacion";
-import type { FilaCargaAlumno, ErrorFila } from "./parser";
-import type { EtiquetaRelacionAlumno } from "@prisma/client";
+import type { FilaCargaEstudiante, ErrorFila } from "./parser";
+import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
 export type ResultadoValidacion = {
-    filasValidas: FilaCargaAlumno[];
+    filasValidas: FilaCargaEstudiante[];
     errores: ErrorFila[];
     resumen: {
         cursos: number;
@@ -13,37 +13,38 @@ export type ResultadoValidacion = {
     };
 };
 
-function validarEtiquetaRelacion(valor: string): { valido: boolean; normalizado?: EtiquetaRelacionAlumno; mensaje?: string } {
-    const parsed = etiquetaRelacionAlumnoSchema.safeParse(valor.toUpperCase());
+function validarEtiquetaRelacion(valor: string): { valido: boolean; normalizado?: EtiquetaRelacionEstudiante; mensaje?: string } {
+    const parsed = etiquetaRelacionEstudianteSchema.safeParse(valor.toUpperCase());
     if (!parsed.success) {
         return {
             valido: false,
-            mensaje: `Etiqueta de relación inválida. Valores permitidos: ${etiquetaRelacionAlumnoSchema.options.join(", ")}`,
+            mensaje: `Etiqueta de relación inválida. Valores permitidos: ${etiquetaRelacionEstudianteSchema.options.join(", ")}`,
         };
     }
     return { valido: true, normalizado: parsed.data };
 }
 
-function claveAlumno(fila: FilaCargaAlumno): string {
+function claveEstudiante(fila: FilaCargaEstudiante): string {
     return [
         fila.curso.nombre.toLowerCase(),
         fila.curso.grado?.toLowerCase() ?? "",
         fila.curso.anioLectivo?.toLowerCase() ?? "",
         fila.alumno.nombre.toLowerCase(),
+        fila.alumno.apellidos.toLowerCase(),
     ].join("|");
 }
 
-function claveIdentificador(fila: FilaCargaAlumno, plataformaId: string | null): string {
+function claveIdentificador(fila: FilaCargaEstudiante, plataformaId: string | null): string {
     const valorNormalizado = normalizarIdentificador(fila.identificador.valor, fila.identificador.tipo);
     return [
-        claveAlumno(fila),
+        claveEstudiante(fila),
         fila.identificador.tipo.toLowerCase(),
         valorNormalizado,
         plataformaId ?? "",
     ].join("|");
 }
 
-function claveCurso(fila: FilaCargaAlumno): string {
+function claveCurso(fila: FilaCargaEstudiante): string {
     return [
         fila.curso.nombre.toLowerCase(),
         fila.curso.grado?.toLowerCase() ?? "",
@@ -58,12 +59,12 @@ function claveCurso(fila: FilaCargaAlumno): string {
  * @param plataformas - Mapa de nombre de plataforma (minúsculas) a su id.
  */
 export function validarFilasCarga(
-    filas: FilaCargaAlumno[],
+    filas: FilaCargaEstudiante[],
     plataformas: Map<string, string>
 ): ResultadoValidacion {
     const errores: ErrorFila[] = [];
-    const filasValidas: FilaCargaAlumno[] = [];
-    const vistosAlumno = new Set<string>();
+    const filasValidas: FilaCargaEstudiante[] = [];
+    const vistosEstudiante = new Set<string>();
     const vistosIdentificador = new Set<string>();
     const cursosVistos = new Set<string>();
     const alumnosVistos = new Set<string>();
@@ -78,10 +79,16 @@ export function validarFilasCarga(
             mensajes.push(cursoParsed.error.issues.map((i) => i.message).join("; "));
         }
 
-        const alumnoParsed = alumnoBodySchema.safeParse(fila.alumno);
-        if (!alumnoParsed.success) {
-            campos.push("nombre_alumno");
-            mensajes.push(alumnoParsed.error.issues.map((i) => i.message).join("; "));
+        // SPEC-144 (D4/FR-010): el alta exige nombre + apellidos; la fila sin
+        // apellidos queda marcada como "fila con problema" y NO se crea (el
+        // archivo nunca se rechaza entero). `apellidos = ""` es solo del backfill.
+        const estudianteParsed = estudianteBodySchema.safeParse(fila.alumno);
+        if (!estudianteParsed.success) {
+            for (const issue of estudianteParsed.error.issues) {
+                const campo = issue.path[0] === "apellidos" ? "apellidos_alumno" : "nombre_alumno";
+                campos.push(campo);
+                mensajes.push(issue.message);
+            }
         }
 
         if (!fila.identificador.tipo) {
@@ -128,7 +135,7 @@ export function validarFilasCarga(
         }
 
         // Detectar duplicados internos de identificador (mismo alumno + mismo identificador).
-        const keyAlumno = claveAlumno(fila);
+        const keyEstudiante = claveEstudiante(fila);
         const keyIdentificador = claveIdentificador(fila, plataformaId);
         if (vistosIdentificador.has(keyIdentificador)) {
             errores.push({
@@ -142,11 +149,11 @@ export function validarFilasCarga(
         // Detectar alumno con distintos datos? No aplica: el parser permite un alumno repetido
         // con varios identificadores, eso es válido.
 
-        vistosAlumno.add(keyAlumno);
+        vistosEstudiante.add(keyEstudiante);
         vistosIdentificador.add(keyIdentificador);
 
         // Normalizar fila validada con plataforma resuelta y valor normalizado.
-        const filaValidada: FilaCargaAlumno = {
+        const filaValidada: FilaCargaEstudiante = {
             ...fila,
             identificador: {
                 ...fila.identificador,
@@ -159,7 +166,7 @@ export function validarFilasCarga(
         filasValidas.push(filaValidada);
 
         cursosVistos.add(claveCurso(filaValidada));
-        alumnosVistos.add(claveAlumno(filaValidada));
+        alumnosVistos.add(claveEstudiante(filaValidada));
     }
 
     return {

@@ -3,17 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearColegioConAdmin, crearCurso, crearPlataforma } from "@/lib/reporte-test-utils";
 import { importarCargaMasiva } from "./importer";
-import type { FilaCargaAlumno } from "./parser";
+import type { FilaCargaEstudiante } from "./parser";
 
-function fila(nombreCurso: string, nombreAlumno: string, tipo: string, valor: string, plataformaId: string | null = null): FilaCargaAlumno {
+function fila(nombreCurso: string, nombreEstudiante: string, tipo: string, valor: string, plataformaId: string | null = null, apellidosEstudiante = "Gómez"): FilaCargaEstudiante {
     return {
         fila: 2,
         curso: { nombre: nombreCurso, grado: "Sexto", anioLectivo: "2026" },
-        alumno: { nombre: nombreAlumno },
+        alumno: { nombre: nombreEstudiante, apellidos: apellidosEstudiante },
         identificador: {
             tipo,
             valor,
-            etiquetaRelacion: "ALUMNO",
+            etiquetaRelacion: "ESTUDIANTE",
             plataformaId,
         },
     };
@@ -36,10 +36,10 @@ describe("importarCargaMasiva", () => {
         expect(cursos).toHaveLength(1);
         expect(cursos[0].nombre).toBe("6A");
 
-        const alumnos = await prisma.alumno.findMany({ where: { colegioId: colegio.id } });
+        const alumnos = await prisma.estudiante.findMany({ where: { colegioId: colegio.id } });
         expect(alumnos).toHaveLength(1);
 
-        const identificadores = await prisma.identificadorAlumno.findMany({ where: { alumnoId: alumnos[0].id } });
+        const identificadores = await prisma.identificadorEstudiante.findMany({ where: { estudianteId: alumnos[0].id } });
         expect(identificadores).toHaveLength(1);
     });
 
@@ -56,8 +56,8 @@ describe("importarCargaMasiva", () => {
     it("reutiliza alumno existente y agrega identificador", async () => {
         const { admin, colegio } = await crearColegioConAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "6A", grado: "Sexto", anioLectivo: "2026" });
-        await prisma.alumno.create({
-            data: { cursoId: curso.id, colegioId: colegio.id, nombre: "María Gómez", estado: "activo" },
+        await prisma.estudiante.create({
+            data: { cursoId: curso.id, colegioId: colegio.id, nombre: "María Gómez", apellidos: "Gómez", estado: "activo" },
         });
 
         const resumen = await importarCargaMasiva([fila("6A", "María Gómez", "email", "maria@example.com")], colegio.id);
@@ -67,9 +67,9 @@ describe("importarCargaMasiva", () => {
         expect(resumen.alumnosCreados).toBe(0);
         expect(resumen.identificadoresCreados).toBe(1);
 
-        const alumnos = await prisma.alumno.findMany({ where: { colegioId: colegio.id } });
+        const alumnos = await prisma.estudiante.findMany({ where: { colegioId: colegio.id } });
         expect(alumnos).toHaveLength(1);
-        const identificadores = await prisma.identificadorAlumno.findMany({ where: { alumnoId: alumnos[0].id } });
+        const identificadores = await prisma.identificadorEstudiante.findMany({ where: { estudianteId: alumnos[0].id } });
         expect(identificadores).toHaveLength(1);
     });
 
@@ -87,7 +87,7 @@ describe("importarCargaMasiva", () => {
         expect(resumen2.alumnosCreados).toBe(0);
         expect(resumen2.identificadoresCreados).toBe(0);
 
-        const alumnos = await prisma.alumno.findMany({ where: { colegioId: colegio.id } });
+        const alumnos = await prisma.estudiante.findMany({ where: { colegioId: colegio.id } });
         expect(alumnos).toHaveLength(1);
     });
 
@@ -101,7 +101,7 @@ describe("importarCargaMasiva", () => {
         );
 
         expect(resumen.identificadoresCreados).toBe(1);
-        const identificadores = await prisma.identificadorAlumno.findMany({ include: { plataforma: true } });
+        const identificadores = await prisma.identificadorEstudiante.findMany({ include: { plataforma: true } });
         expect(identificadores[0].plataforma?.id).toBe(plataforma.id);
     });
 });

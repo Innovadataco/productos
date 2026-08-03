@@ -138,35 +138,57 @@ export const cursoIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
-export const alumnoBodySchema = z.object({
-    nombre: z.string().min(2).max(150),
+// SPEC-144 (FR-010, D3): alta de estudiante — obligatorios solo nombre + apellidos;
+// el resto es opcional y NUNCA bloquea el alta. Acudientes: máx 2 (D1, tabla hija).
+export const documentoTipoEstudianteSchema = z.enum(["RC", "TI", "CC", "CE", "PASAPORTE", "OTRO"], {
+    message: "Tipo de documento inválido. Valores aceptados: RC, TI, CC, CE, PASAPORTE, OTRO",
 });
 
-export const alumnoUpdateBodySchema = z.object({
+export const acudienteEstudianteBodySchema = z.object({
+    orden: z.union([z.literal(1), z.literal(2)]),
+    nombre: z.string().min(2).max(150),
+    relacion: z.string().min(1).max(50),
+    telefono: z.string().max(50).optional(),
+    email: emailSchema.optional(),
+});
+
+export const estudianteBodySchema = z.object({
+    nombre: z.string().min(2).max(150),
+    apellidos: z.string({ message: "Falta el apellido del estudiante" }).min(1, "Falta el apellido del estudiante").max(150),
+    documentoTipo: documentoTipoEstudianteSchema.optional(),
+    documentoNumero: z.string().max(50).optional(),
+    acudientes: z.array(acudienteEstudianteBodySchema).max(2, "Máximo 2 acudientes por estudiante").optional(),
+});
+
+export const estudianteUpdateBodySchema = z.object({
     nombre: z.string().min(2).max(150).optional(),
+    apellidos: z.string().min(1).max(150).optional(),
 }).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
 
-export const alumnoIdParamsSchema = z.object({
+export const estudianteIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
-export const etiquetaRelacionAlumnoSchema = z.enum(["ALUMNO", "MADRE", "PADRE", "PRIMO", "TUTOR", "OTRO"]);
+// SPEC-144 (FR-003): el valor físico en BD sigue siendo 'ALUMNO' (@map); en código
+// y en el wire el valor es ESTUDIANTE. El parser de carga acepta "ALUMNO" legado
+// y lo normaliza a ESTUDIANTE (compatibilidad con plantillas viejas).
+export const etiquetaRelacionEstudianteSchema = z.enum(["ESTUDIANTE", "MADRE", "PADRE", "PRIMO", "TUTOR", "OTRO"]);
 
-export const identificadorAlumnoBodySchema = z.object({
+export const identificadorEstudianteBodySchema = z.object({
     tipo: z.string().min(1).max(50).optional(),
     valor: z.string().min(1).max(255),
     plataformaId: cuidIdSchema.optional(),
-    etiquetaRelacion: etiquetaRelacionAlumnoSchema.optional(),
+    etiquetaRelacion: etiquetaRelacionEstudianteSchema.optional(),
 });
 
-export const identificadorAlumnoUpdateBodySchema = z.object({
+export const identificadorEstudianteUpdateBodySchema = z.object({
     tipo: z.string().min(1).max(50).optional(),
     valor: z.string().min(1).max(255).optional(),
     plataformaId: cuidIdSchema.optional().nullable(),
-    etiquetaRelacion: etiquetaRelacionAlumnoSchema.optional(),
+    etiquetaRelacion: etiquetaRelacionEstudianteSchema.optional(),
 }).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
 
-export const identificadorAlumnoIdParamsSchema = z.object({
+export const identificadorEstudianteIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 

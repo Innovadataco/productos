@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
-import { IdentificadorAlumnoRepository } from "@/lib/dal/repositories/identificador-alumno";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -9,10 +9,10 @@ import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { identificadorAlumnoIdParamsSchema, identificadorAlumnoUpdateBodySchema } from "@/lib/schemas";
+import { identificadorEstudianteIdParamsSchema, identificadorEstudianteUpdateBodySchema } from "@/lib/schemas";
 import { verificarPropiedadIdentificador } from "@/lib/colegio/permisos";
 import { normalizarIdentificador } from "@/lib/colegio/normalizacion";
-import type { EtiquetaRelacionAlumno } from "@prisma/client";
+import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
 function getClientInfo(request: Request) {
     return {
@@ -41,8 +41,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const { id } = withValidation.params(identificadorAlumnoIdParamsSchema)(await params);
-        const body = await withValidation.body(identificadorAlumnoUpdateBodySchema)(request);
+        const { id } = withValidation.params(identificadorEstudianteIdParamsSchema)(await params);
+        const body = await withValidation.body(identificadorEstudianteUpdateBodySchema)(request);
 
         const identificador = await verificarPropiedadIdentificador(user.id, id);
 
@@ -62,17 +62,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         // verificarPropiedadIdentificador ya garantizó usuario vinculado a un colegio.
         const colegioId = user.colegioId!;
-        // SPEC-134 (E-1): duplicado y actualización viven en el repo (tenant vía la relación alumno).
-        const identificadores = new IdentificadorAlumnoRepository();
+        // SPEC-134 (E-1): duplicado y actualización viven en el repo (tenant vía la relación estudiante).
+        const identificadores = new IdentificadorEstudianteRepository();
         if (body.tipo !== undefined || body.valor !== undefined || body.plataformaId !== undefined) {
             const duplicado = await identificadores.buscarDuplicado(
                 colegioId,
-                { alumnoId: identificador.alumnoId, tipo, valor, plataformaId: plataformaId ?? null },
+                { estudianteId: identificador.estudianteId, tipo, valor, plataformaId: plataformaId ?? null },
                 id
             );
             if (duplicado) {
                 return NextResponse.json(
-                    { error: { message: "Identificador duplicado para este alumno", code: ERROR_CODES.CONFLICT } },
+                    { error: { message: "Identificador duplicado para este estudiante", code: ERROR_CODES.CONFLICT } },
                     { status: 409 }
                 );
             }
@@ -82,7 +82,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             tipo: body.tipo ?? identificador.tipo,
             valor,
             plataformaId: plataformaId ?? null,
-            etiquetaRelacion: (body.etiquetaRelacion ?? identificador.etiquetaRelacion) as EtiquetaRelacionAlumno,
+            etiquetaRelacion: (body.etiquetaRelacion ?? identificador.etiquetaRelacion) as EtiquetaRelacionEstudiante,
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);

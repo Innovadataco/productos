@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import ExcelJS from "exceljs";
-import { parseArchivoCarga, COLUMNAS_REQUERIDAS } from "./parser";
+import { parseArchivoCarga, COLUMNAS_REQUERIDAS, COLUMNA_OPCIONAL_APELLIDOS } from "./parser";
 
 function csvToBuffer(csv: string): ArrayBuffer {
     return new TextEncoder().encode(csv).buffer as ArrayBuffer;
@@ -20,10 +20,17 @@ async function buildXlsxBuffer(rows: unknown[][]): Promise<ArrayBuffer> {
     return buf as ArrayBuffer;
 }
 
+// SPEC-144 (D4): la plantilla nueva inserta `apellidos_alumno` tras `nombre_alumno`.
+const COLUMNAS_CON_APELLIDOS = [
+    ...COLUMNAS_REQUERIDAS.slice(0, 4),
+    COLUMNA_OPCIONAL_APELLIDOS,
+    ...COLUMNAS_REQUERIDAS.slice(4),
+];
+
 const CSV_VALIDO = [
-    COLUMNAS_REQUERIDAS.join(","),
-    "6A,Sexto,2026,María Gómez,telefono,+573001234567,ALUMNO,WhatsApp",
-    "6A,Sexto,2026,Carlos Ruiz,email,carlos@example.com,PADRE,",
+    COLUMNAS_CON_APELLIDOS.join(","),
+    "6A,Sexto,2026,María,Gómez Pérez,telefono,+573001234567,ESTUDIANTE,WhatsApp",
+    "6A,Sexto,2026,Carlos,Ruiz,email,carlos@example.com,PADRE,",
 ].join("\n");
 
 describe("parser", () => {
@@ -32,10 +39,24 @@ describe("parser", () => {
         expect(resultado.errores).toHaveLength(0);
         expect(resultado.filas).toHaveLength(2);
         expect(resultado.filas[0].curso.nombre).toBe("6A");
-        expect(resultado.filas[0].alumno.nombre).toBe("María Gómez");
+        expect(resultado.filas[0].alumno.nombre).toBe("María");
+        expect(resultado.filas[0].alumno.apellidos).toBe("Gómez Pérez");
+        expect(resultado.filas[1].alumno.apellidos).toBe("Ruiz");
         expect(resultado.filas[0].identificador.valor).toBe("+573001234567");
-        expect(resultado.filas[0].identificador.etiquetaRelacion).toBe("ALUMNO");
+        expect(resultado.filas[0].identificador.etiquetaRelacion).toBe("ESTUDIANTE");
         expect(resultado.filas[0].identificador.plataformaId).toBe("WhatsApp");
+    });
+
+    it("normaliza la etiqueta legada ALUMNO a ESTUDIANTE y deja apellidos vacío sin la columna (D4)", async () => {
+        const csv = [
+            COLUMNAS_REQUERIDAS.join(","),
+            "6A,Sexto,2026,María Gómez,telefono,+573001234567,ALUMNO,WhatsApp",
+        ].join("\n");
+        const resultado = await parseArchivoCarga(csvToBuffer(csv), "csv");
+        expect(resultado.errores).toHaveLength(0);
+        expect(resultado.filas).toHaveLength(1);
+        expect(resultado.filas[0].alumno.apellidos).toBe("");
+        expect(resultado.filas[0].identificador.etiquetaRelacion).toBe("ESTUDIANTE");
     });
 
     it("parsea XLSX válido a filas", async () => {
