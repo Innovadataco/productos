@@ -115,9 +115,14 @@ describe("GET /api/reportes/mis-reportes/[id]", () => {
 
         // Barrido de contenido: ni nombres de modelos, ni umbrales, ni la
         // categoría descartada, ni lenguaje de riesgo/score.
+        // Nota (002-PI-058, flake preexistente): los ids cuid de la respuesta son
+        // aleatorios y podían contener "m1"/"m2" como subcadena → falso positivo.
+        // Se assertan los marcadores técnicos exactos (misma garantía, determinista).
         const raw = JSON.stringify(body);
-        expect(raw).not.toContain("m1");
-        expect(raw).not.toContain("m2");
+        expect(raw).not.toContain("modeloUsado");
+        expect(raw).not.toContain("rubrica:");
+        expect(raw).not.toContain('"m1"');
+        expect(raw).not.toContain('"m2"');
         expect(raw).not.toMatch(/umbral|porcentaje|voto/i);
         expect(raw).not.toMatch(/COMPARTIMIENTO_SEXUAL|Compartimiento/i);
         expect(raw).not.toMatch(/riesgo|gravedad|confianza/i);
