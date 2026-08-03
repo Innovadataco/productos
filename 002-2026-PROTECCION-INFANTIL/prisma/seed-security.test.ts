@@ -63,10 +63,13 @@ function bloqueClavesPorRol(): string {
 }
 
 describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", () => {
-    it("COMITE_VALIDACION solo recibe comite_bandeja por defecto", () => {
+    it("COMITE_VALIDACION recibe su bandeja + denuncia formal (002-PI-056, decisión ZEUS)", () => {
         const entrada = bloqueClavesPorRol().match(/COMITE_VALIDACION:\s*\[([^\]]*)\]/)?.[1] ?? "";
         const claves = entrada.match(/"[^"]+"/g) ?? [];
-        expect(claves).toEqual(['"comite_bandeja"']);
+        // SPEC-128 (D-43): solo comite_bandeja. 002-PI-056 (F2, decisión ZEUS): el comité
+        // genera denuncias formales → denuncia_formal, que es hijo de bandeja_reportes
+        // (jerarquía AND) y exige el padre. No reabre D-43: esas rutas no son ADMIN_ONLY.
+        expect(claves).toEqual(['"comite_bandeja"', '"bandeja_reportes"', '"denuncia_formal"']);
     });
 
     it("ADMIN deriva sus grants del catálogo completo (conserva comite y comite_auditoria)", () => {

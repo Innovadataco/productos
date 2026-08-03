@@ -14,11 +14,14 @@ describe("fuentes del menú (SPEC-126)", () => {
         expect(header.hrefsPintados("PARENT")).not.toContain("/dashboard/colegio");
     });
 
-    it("grants del seed: COMITE_VALIDACION solo recibe su bandeja (D-43/SPEC-128 reconcilió el default)", () => {
+    it("grants del seed: COMITE_VALIDACION recibe su bandeja + denuncia formal (D-43 + 002-PI-056)", () => {
         const grants = grantsSeedPorRol();
         // Antes de D-43 tenía los 3 módulos de comité (base del hallazgo I-39); dos de
         // ellos mapean a rutas ADMIN_ONLY que la puerta le niega → default contradictorio.
-        expect(grants.COMITE_VALIDACION).toEqual(["comite_bandeja"]);
+        // 002-PI-056 (F2, decisión ZEUS): el comité genera denuncias formales →
+        // denuncia_formal (hija de bandeja_reportes, jerarquía AND). No reabre D-43:
+        // esas rutas no son ADMIN_ONLY.
+        expect(grants.COMITE_VALIDACION).toEqual(["bandeja_reportes", "comite_bandeja", "denuncia_formal"]);
         expect(grants.OPERADOR).toEqual(["bandeja_reportes"]);
         expect(grants.ADMIN?.length).toBeGreaterThan(10);
     });

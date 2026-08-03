@@ -24,6 +24,12 @@ import { construirMensajePadre, cargarCanalesPadre } from "@/lib/expediente/mens
  * Query `revelar=true`: incluye campos gated solo con el módulo
  * `expediente_revelar_original` y registra AuditLog TEXTO_ORIGINAL_REVELADO.
  */
+
+/** SPEC-140 (F2, FR-001): acceso a la denuncia formal para la vista del expediente. */
+async function resolverAccesoDenuncia(rol: string, canales: Awaited<ReturnType<typeof cargarCanalesPadre>>) {
+    const puedeDenunciar = await puedeAccederAModulo(rol, "denuncia_formal");
+    return { puedeDenunciar, canalesDenuncia: puedeDenunciar ? canales : [] };
+}
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
@@ -83,6 +89,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         const clasificacion = c ? armarVotacion(c, preguntas) : null;
 
         const [severidades, canales] = await Promise.all([obtenerSeveridades(), cargarCanalesPadre()]);
+        // SPEC-140 (F2, FR-001): el botón "Llevar a denuncia formal" se muestra solo
+        // con el módulo denuncia_formal; los canales del selector son los oficiales.
+        const accesoDenuncia = await resolverAccesoDenuncia(user.rol, canales);
         const votosInternos: VotoInterno[] = (c?.rubricaVotos ?? []).map((v) => ({
             modelo: v.modelo,
             categoria: v.categoria,
@@ -129,6 +138,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             sintesis,
             revelado: revelar,
             puedeRevelar,
+            ...accesoDenuncia,
         });
     } catch (error) {
         if (error instanceof AppError) {

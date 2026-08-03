@@ -4,7 +4,7 @@
 
 # 03 · Pantallas por rol y transiciones
 
-50 páginas (`page.tsx`) clasificadas por quién las alcanza según la
+52 páginas (`page.tsx`) clasificadas por quién las alcanza según la
 puerta real (`proxy()` ejecutado con la sesión canónica; segmentos `[x]` evaluados
 con un valor muestra fijo — al proxy solo le importa el prefijo).
 
@@ -30,6 +30,7 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/admin` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/anti-abuso` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/colegios` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/admin/colegios/[id]/estructura` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/colegios/nuevo` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/comite` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/comite/apelaciones` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
@@ -47,6 +48,7 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/admin/operadores/gestion` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/operadores/modelo` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/padres` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/admin/padres/[id]/circulo` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/spam` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/apelaciones` | PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/circulo-confianza` | PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>ANONIMO (redirigir→/login) |

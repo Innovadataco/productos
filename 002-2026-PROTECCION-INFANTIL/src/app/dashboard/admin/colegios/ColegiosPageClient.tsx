@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -421,6 +422,12 @@ export default function ColegiosPageClient() {
                                                 </td>
                                                 <td className="py-3 text-right">
                                                     <div className="flex flex-wrap justify-end gap-2">
+                                                        <Link
+                                                            href={`/dashboard/admin/colegios/${colegio.id}/estructura`}
+                                                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                        >
+                                                            Ver estructura
+                                                        </Link>
                                                         <Button
                                                             variant="outline"
                                                             className="px-3 py-1.5 text-xs"
