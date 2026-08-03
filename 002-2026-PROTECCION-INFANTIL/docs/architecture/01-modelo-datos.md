@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **51** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **52** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -137,7 +137,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | contacto | ContactoConfianza | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 
-### Colegios (multi-tenant) (6)
+### Colegios (multi-tenant) (7)
 
 #### `AcudienteEstudiante`
 
@@ -199,6 +199,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | admin | Usuario | opcional, relación |
 | cursos | Curso | lista, relación |
 | estudiantes | Estudiante | lista, relación |
+| profesores | Profesor | lista, relación |
 | alertas | AlertaColegio | lista, relación |
 | patrones | PatronInstitucional | lista, relación |
 | auditLogs | AuditLog | lista, relación |
@@ -214,9 +215,11 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | grado | String | opcional |
 | anioLectivo | String | opcional |
 | estado | String | — |
+| profesorTitularId | String | opcional |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
 | colegio | Colegio | relación (FK) |
+| profesorTitular | Profesor | opcional, relación (FK) |
 | estudiantes | Estudiante | lista, relación |
 
 #### `Estudiante`
@@ -254,6 +257,22 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | estudiante | Estudiante | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 | alertas | AlertaColegio | lista, relación |
+
+#### `Profesor`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| nombre | String | — |
+| apellidos | String | — |
+| email | String | opcional |
+| telefono | String | opcional |
+| estado | String | — |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| colegio | Colegio | relación (FK) |
+| cursos | Curso | lista, relación |
 
 ### Evaluación del clasificador (5)
 
@@ -971,6 +990,7 @@ erDiagram
     Colegio ||--o{ Curso : "colegio"
     Colegio ||--o{ Estudiante : "colegio"
     Colegio ||--o{ PatronInstitucional : "colegio"
+    Colegio ||--o{ Profesor : "colegio"
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"
     CorreccionAdmin ||--o{ DatasetEntrenamiento : "correccion (opcional)"
@@ -998,6 +1018,7 @@ erDiagram
     Plataforma ||--o{ IdentificadorReportado : "plataforma"
     Plataforma ||--o{ PatronInstitucional : "plataforma"
     Plataforma ||--o{ Reporte : "plataforma"
+    Profesor ||--o{ Curso : "profesorTitular (opcional)"
     Reporte ||--o{ AlertaColegio : "reporte"
     Reporte ||--o{ ClasificacionIA : "reporte"
     Reporte ||--o{ EmbeddingReporte : "reporte"
