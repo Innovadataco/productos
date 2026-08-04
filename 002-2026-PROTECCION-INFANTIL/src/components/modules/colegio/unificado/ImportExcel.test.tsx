@@ -45,7 +45,7 @@ describe("ImportExcel", () => {
 
     it("vista previa §5.4: N listos, M con problemas (motivo por fila) y 'Guardar solo los N correctos'", async () => {
         const onAceptar = vi.fn();
-        const fetchMock = vi.fn(async () => jsonResponse(RESULTADO_DRY_RUN));
+        const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => jsonResponse(RESULTADO_DRY_RUN));
         vi.stubGlobal("fetch", fetchMock);
         const { container } = render(<ImportExcel onAceptar={onAceptar} />);
 
@@ -58,7 +58,7 @@ describe("ImportExcel", () => {
         // El dry-run fue multipart con el archivo, sin persistir nada.
         const llamada = fetchMock.mock.calls[0];
         expect(String(llamada[0])).toBe("/api/colegio/cursos/unificado/validar");
-        expect((llamada[1] as RequestInit).body).toBeInstanceOf(FormData);
+        expect((llamada[1] as unknown as RequestInit).body).toBeInstanceOf(FormData);
 
         fireEvent.click(screen.getByRole("button", { name: "Guardar solo los 4 correctos" }));
         expect(onAceptar).toHaveBeenCalledWith(RESULTADO_DRY_RUN.filasValidas);

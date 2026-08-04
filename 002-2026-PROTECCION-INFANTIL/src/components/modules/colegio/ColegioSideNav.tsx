@@ -56,7 +56,7 @@ export function ColegioSideNav({ rol, modulosPermitidos }: { rol: string; modulo
 const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element> = {
     "/dashboard/colegio": InicioIcon,
     "/dashboard/colegio/cursos": CursosIcon,
-    "/dashboard/colegio/cursos/carga": CargaIcon,
+    "/dashboard/colegio/cursos/unificado": CargaIcon,
     "/dashboard/colegio/alertas": AlertasIcon,
     "/dashboard/colegio/estadisticas": EstadisticasIcon,
     "/dashboard/colegio/auditoria": AuditoriaIcon,

@@ -19,10 +19,10 @@ describe("EmptyStateColegio", () => {
     it("CTA gigante al primer curso y vía alternativa de Excel", () => {
         render(<EmptyStateColegio colegioNombre="X" />);
         const cta = screen.getByRole("link", { name: /Crear primer curso/ });
-        expect(cta.getAttribute("href")).toBe("/dashboard/colegio/cursos/nuevo");
+        expect(cta.getAttribute("href")).toBe("/dashboard/colegio/cursos/unificado");
         expect(cta.className).toContain("min-h-12");
         const excel = screen.getByRole("link", { name: /Subirla y creamos todo por ti/ });
-        expect(excel.getAttribute("href")).toBe("/dashboard/colegio/cursos/carga");
+        expect(excel.getAttribute("href")).toBe("/dashboard/colegio/cursos/unificado?modo=excel");
         expect(screen.getByText(/¿Ya tienes tu lista en Excel\?/)).toBeTruthy();
     });
 });

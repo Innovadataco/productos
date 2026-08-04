@@ -33,6 +33,6 @@ describe("AnillosProteccion", () => {
         expect(screen.queryByRole("img")).toBeNull();
         expect(screen.getByText(/Aún no hay estudiantes para dibujar/)).toBeTruthy();
         const cta = screen.getByRole("link", { name: /Crear primer curso/ });
-        expect(cta.getAttribute("href")).toBe("/dashboard/colegio/cursos/nuevo");
+        expect(cta.getAttribute("href")).toBe("/dashboard/colegio/cursos/unificado");
     });
 });

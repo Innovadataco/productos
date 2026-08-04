@@ -60,7 +60,7 @@ export function EmptyStateColegio({ colegioNombre, className = "" }: EmptyStateC
                 </p>
 
                 <Link
-                    href="/dashboard/colegio/cursos/nuevo"
+                    href="/dashboard/colegio/cursos/unificado"
                     className="anim-entrada mt-8 inline-flex min-h-12 items-center justify-center rounded-2xl accent-gradient px-10 py-4 text-base font-semibold text-white shadow-lg transition hover:opacity-90"
                     style={{ "--anim-retardo": "210ms" } as React.CSSProperties}
                 >
@@ -71,7 +71,7 @@ export function EmptyStateColegio({ colegioNombre, className = "" }: EmptyStateC
                     ¿Ya tienes tu lista en Excel?
                 </p>
                 <Link
-                    href="/dashboard/colegio/cursos/carga"
+                    href="/dashboard/colegio/cursos/unificado?modo=excel"
                     className="anim-entrada mt-2 inline-flex min-h-12 items-center rounded-xl px-4 py-2 text-sm font-semibold text-accent transition hover:underline"
                     style={{ "--anim-retardo": "280ms" } as React.CSSProperties}
                 >

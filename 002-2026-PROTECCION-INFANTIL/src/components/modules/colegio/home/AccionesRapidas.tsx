@@ -12,13 +12,13 @@ import { CirclePlus, Upload, GraduationCap, Users } from "lucide-react";
 
 const ACCIONES = [
     {
-        href: "/dashboard/colegio/cursos/nuevo",
+        href: "/dashboard/colegio/cursos/unificado",
         titulo: "Crear curso y estudiantes",
         detalle: "Un curso nuevo con su lista",
         Icono: CirclePlus,
     },
     {
-        href: "/dashboard/colegio/cursos/carga",
+        href: "/dashboard/colegio/cursos/unificado?modo=excel",
         titulo: "Subir lista en Excel",
         detalle: "Creamos los cursos por ti",
         Icono: Upload,

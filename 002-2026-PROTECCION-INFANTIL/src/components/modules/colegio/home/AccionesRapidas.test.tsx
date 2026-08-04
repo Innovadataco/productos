@@ -11,8 +11,8 @@ describe("AccionesRapidas", () => {
     it("ofrece las 4 acciones con sus rutas existentes", () => {
         render(<AccionesRapidas />);
         const esperadas: [RegExp, string][] = [
-            [/Crear curso y estudiantes/, "/dashboard/colegio/cursos/nuevo"],
-            [/Subir lista en Excel/, "/dashboard/colegio/cursos/carga"],
+            [/Crear curso y estudiantes/, "/dashboard/colegio/cursos/unificado"],
+            [/Subir lista en Excel/, "/dashboard/colegio/cursos/unificado?modo=excel"],
             // Profesores apunta a cursos hasta que SPEC-148 cree su ruta (documentado).
             [/Profesores/, "/dashboard/colegio/cursos"],
             [/Ver estudiantes/, "/dashboard/colegio/cursos"],

@@ -124,11 +124,11 @@ export default function CursosPageClient() {
                             <h1 className="text-2xl font-bold text-body">Cursos</h1>
                             <p className="text-sm text-muted">Gestiona los cursos de tu colegio.</p>
                         </div>
-                        <Button onClick={() => router.push("/dashboard/colegio/cursos/nuevo")}>
+                        <Button onClick={() => router.push("/dashboard/colegio/cursos/unificado")}>
                             Nuevo curso
                         </Button>
-                        <Button variant="outline" onClick={() => router.push("/dashboard/colegio/cursos/carga")}>
-                            Carga masiva
+                        <Button variant="outline" onClick={() => router.push("/dashboard/colegio/cursos/unificado?modo=excel")}>
+                            Subir lista
                         </Button>
                     </div>
 
@@ -157,7 +157,7 @@ export default function CursosPageClient() {
                                 title="No hay cursos registrados"
                                 description="Crea el primer curso para comenzar a gestionar alumnos."
                                 action={
-                                    <Button onClick={() => router.push("/dashboard/colegio/cursos/nuevo")}>
+                                    <Button onClick={() => router.push("/dashboard/colegio/cursos/unificado")}>
                                         Crear curso
                                     </Button>
                                 }

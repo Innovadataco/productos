@@ -26,7 +26,7 @@ function buildMultipartRequest(url: string, csv: string | null, token?: string):
     const lines: string[] = [];
     if (csv !== null) {
         lines.push(`--${boundary}`);
-        lines.push(`Content-Disposition: form-data; name="archivo"; filename="lista.csv"`);
+        lines.push('Content-Disposition: form-data; name="archivo"; filename="lista.csv"');
         lines.push("Content-Type: text/csv");
         lines.push("");
         lines.push(csv);

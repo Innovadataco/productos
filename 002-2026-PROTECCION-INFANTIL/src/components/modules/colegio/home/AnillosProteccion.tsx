@@ -39,7 +39,7 @@ export function AnillosProteccion({
                     mostrarán a cuántos puedes ver y a cuántos puedes llamar.
                 </p>
                 <Link
-                    href="/dashboard/colegio/cursos/nuevo"
+                    href="/dashboard/colegio/cursos/unificado"
                     className="mt-5 inline-flex min-h-12 items-center justify-center rounded-2xl accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
                 >
                     Crear primer curso →

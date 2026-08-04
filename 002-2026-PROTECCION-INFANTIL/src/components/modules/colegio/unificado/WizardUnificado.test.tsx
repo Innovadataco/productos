@@ -20,7 +20,7 @@ function jsonResponse(data: unknown, status = 200): Response {
 }
 
 function fetchBase() {
-    return vi.fn(async (input: RequestInfo | URL) => {
+    return vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
         const url = String(input);
         if (url.includes("/api/colegio/profesores")) return jsonResponse({ items: [] });
         if (url.includes("/api/plataformas")) return jsonResponse({ plataformas: [] });
@@ -100,7 +100,7 @@ describe("WizardUnificado", () => {
 
         const llamada = fetchMock.mock.calls.find(([url]) => String(url) === "/api/colegio/cursos/unificado");
         expect(llamada).toBeTruthy();
-        const cuerpo = JSON.parse(String((llamada![1] as RequestInit).body));
+        const cuerpo = JSON.parse(String((llamada![1] as unknown as RequestInit).body));
         expect(cuerpo.curso).toEqual({ nombre: "8° B" });
         expect(cuerpo.estudiantes).toEqual([{ nombre: "María", apellidos: "Gómez" }]);
         expect(cuerpo.identificadores).toEqual([]);

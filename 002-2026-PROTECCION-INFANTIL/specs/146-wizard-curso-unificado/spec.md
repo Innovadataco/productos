@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-03
 
-**Status**: DESARROLLO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (lote D-51, orden 146→147→158; radica ZEUS). Fuentes
 VINCULANTES: BRIEF-DISEÑO-UX-RECTOR v3.0 — §5.3 (mockup wizard), §5.4 (import Excel
@@ -231,3 +231,52 @@ Impacto en arquitectura: **añade rutas** (`/dashboard/colegio/cursos/unificado`
 cambia un label de nav ("Subir lista") ⇒ las aserciones A/B de `arch:check` deben
 quedar VERDES (rutas nuevas cubiertas por la puerta del proxy). No modifica el
 modelo de datos ni el stack.
+
+## Implementación
+
+Cerrada 2026-08-04 en `work/002-pi-058` (commits `525a3170` datos+endpoints,
+`40c5e19e` UI wizard, y el de redirects+nav+docs). Detalle y evidencia en
+[cierre.md](./cierre.md).
+
+- **T001**: `payloadUnificadoSchema` en `src/lib/schemas/index.ts` (reusa
+  `cursoBodySchema`, `estudianteBodySchema`, `identificadorEstudianteBodySchema`;
+  `estudianteIndex` validado contra la lista; profesor existente XOR nuevo) +
+  `src/lib/schemas/unificado.test.ts` (11 tests).
+- **T002**: `POST /api/colegio/cursos/unificado` — `withUnitOfWork` todo-o-nada,
+  profesor same-tenant (404) o nuevo inline (409 con sugerencia), duplicados 409
+  humanos, tipo de identificador inferido, audit `COLEGIO_CURSO_CREADO` con
+  metadatos del resumen. 16 tests (A/B tenant, atomicidad con fallo provocado en
+  la última entidad ⇒ 0 filas, 400 humanos, 409).
+- **T003**: `POST .../unificado/validar` (dry-run stateless: reuso de
+  `parseArchivoCarga` + `validarFilasCarga` vía `validarFilasUnificado`, sin
+  persistir ni sesión roster; identificador opcional) + `GET .../unificado/
+  plantilla` con las 4 columnas de acudiente. 9 tests (dry-run no persiste).
+- **T004**: `src/components/ui/Accordion.tsx` + test a11y (8 tests).
+- **T005**: wizard en `src/components/modules/colegio/unificado/` (21 tests).
+- **T006**: página + redirects permanentes (308) de `nuevo/` y `carga/`
+  (`?modo=excel`), nav "Subir lista", CTAs de home y de la lista de cursos al
+  wizard. PageClients viejos eliminados.
+- **T007**: tsc/lint/tokens:check (piso baja a 1135 por los archivos eliminados)/
+  arch:check VERDES + tests del área verdes (incluye oráculo de páginas 52→53,
+  actualización intencional documentada).
+
+Decisiones tomadas al implementar (no cambian los FR):
+
+1. **Identificadores por estudiante en el estado del wizard**: la UI los anida
+   por estudiante y `construirPayload` los aplana a `estudianteIndex` al
+   guardar — la forma del wire es la del DTO de la spec.
+2. **Filas sin identificador en la dry-run**: el validator viejo las marca como
+   problema (su `validator.test.ts` lo fija y no se toca); el wrapper
+   `validarFilasUnificado` delega en él SOLO las filas con identificador y
+   valida las demás con los mismos schemas Zod (en el wizard el identificador
+   es opcional — sección 3).
+3. **Plantilla del wizard**: conserva las columnas base de la plantilla de
+   carga (los archivos que la secretaría ya tiene sirven tal cual) y añade las
+   4 de acudiente; el parser las lee de forma aditiva (cero cambio para
+   plantillas viejas).
+4. **`tokens:check`**: el piso baja de 1166 a 1135 (los dos PageClients
+   eliminados tenían 31 ocurrencias de color crudo) — ratchet documentado en
+   `scripts/tokens-check.ts`.
+
+Deuda técnica: ninguna nueva. `cursos/[id]` y `alumnos/[id]` siguen sobre los
+endpoints viejos hasta SPEC-147 (decisión de alcance del encabezado).
