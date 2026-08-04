@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-03
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (orden 3 del brief §10; radica ZEUS, luz verde tras
 CUMPLE de SPEC-145). Fuentes VINCULANTES: BRIEF-DISEÑO-UX-RECTOR v3.0 — §4 sistema de
