@@ -22,6 +22,14 @@ export type FilaCargaEstudiante = {
         etiquetaRelacion: EtiquetaRelacionEstudiante;
         plataformaId: string | null;
     };
+    // SPEC-146 (FR-003): acudiente opcional leído SOLO cuando la plantilla trae
+    // las columnas de acudiente (wizard unificado). Ausente en plantillas viejas.
+    acudiente?: {
+        nombre: string;
+        relacion: string;
+        telefono: string;
+        email: string;
+    };
 };
 
 export type ErrorFila = {
@@ -45,6 +53,16 @@ export const COLUMNAS_REQUERIDAS = [
 // la fila sin apellidos se marca como "fila con problema", el archivo NUNCA se
 // rechaza entero. La plantilla descargable sí la incluye.
 export const COLUMNA_OPCIONAL_APELLIDOS = "apellidos_alumno";
+
+// SPEC-146 (FR-003): columnas OPCIONALES de acudiente — las trae la plantilla del
+// wizard unificado; el pipeline de carga viejo las ignora (solo se leen cuando el
+// encabezado existe, cero cambio para las plantillas anteriores).
+export const COLUMNAS_OPCIONALES_ACUDIENTE = [
+    "acudiente_nombre",
+    "acudiente_relacion",
+    "acudiente_telefono",
+    "acudiente_email",
+];
 
 // SPEC-132 (S-3): límites explícitos de la carga (parámetros con fallback).
 const MAX_ARCHIVO_BYTES_DEFAULT = 5 * 1024 * 1024; // 5 MB
@@ -231,6 +249,12 @@ export async function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "cs
 
     const filas: FilaCargaEstudiante[] = [];
     const idxApellidos = headers.indexOf(COLUMNA_OPCIONAL_APELLIDOS);
+    // SPEC-146: índices de las columnas opcionales de acudiente (-1 si la
+    // plantilla no las trae — en ese caso la fila no lleva la clave `acudiente`).
+    const idxAcudiente = new Map(
+        COLUMNAS_OPCIONALES_ACUDIENTE.map((columna) => [columna, headers.indexOf(columna)] as const)
+    );
+    const hayColumnasAcudiente = [...idxAcudiente.values()].some((idx) => idx >= 0);
 
     for (let i = 1; i < hoja.length; i++) {
         const raw = hoja[i] ?? [];
@@ -243,6 +267,8 @@ export async function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "cs
         const anioLectivo = fila[indices.get("anio_lectivo")!]?.trim() ?? "";
         const nombreEstudiante = fila[indices.get("nombre_alumno")!]?.trim() ?? "";
         const apellidosEstudiante = idxApellidos >= 0 ? (fila[idxApellidos]?.trim() ?? "") : "";
+        // Lectura segura de una columna opcional (-1 = la plantilla no la trae).
+        const leer = (idx: number): string => (idx >= 0 ? (fila[idx]?.trim() ?? "") : "");
         const tipoIdentificador = fila[indices.get("tipo_identificador")!]?.trim() ?? "";
         const valorIdentificador = fila[indices.get("valor_identificador")!]?.trim() ?? "";
         const etiquetaRelacion = fila[indices.get("etiqueta_relacion")!]?.trim() ?? "";
@@ -270,6 +296,16 @@ export async function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "cs
                 etiquetaRelacion: etiquetaNormalizada,
                 plataformaId: plataforma || null,
             },
+            ...(hayColumnasAcudiente
+                ? {
+                    acudiente: {
+                        nombre: leer(idxAcudiente.get("acudiente_nombre")!),
+                        relacion: leer(idxAcudiente.get("acudiente_relacion")!),
+                        telefono: leer(idxAcudiente.get("acudiente_telefono")!),
+                        email: leer(idxAcudiente.get("acudiente_email")!),
+                    },
+                }
+                : {}),
         });
     }
 

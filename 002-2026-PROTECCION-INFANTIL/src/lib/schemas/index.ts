@@ -223,6 +223,38 @@ export const identificadorEstudianteIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
+// SPEC-146 (FR-002): payload del wizard unificado — curso + estudiantes +
+// identificadores en UNA escritura atómica. Reusa los schemas de alta ya
+// existentes (curso, estudiante con acudientes, identificador); el tipo del
+// identificador es opcional (se infiere del valor en la ruta).
+export const profesorNuevoSchema = profesorBodySchema.pick({ nombre: true, apellidos: true });
+
+export const identificadorUnificadoSchema = identificadorEstudianteBodySchema.extend({
+    // Índice (0-based) del estudiante dentro de `estudiantes` al que pertenece.
+    estudianteIndex: z.number().int().min(0),
+});
+
+export const payloadUnificadoSchema = z
+    .object({
+        curso: cursoBodySchema,
+        profesorNuevo: profesorNuevoSchema.optional(),
+        // El wizard permite guardar el curso solo (estudiantes = 0) — "lo puedes
+        // completar después" (spec, Edge Cases). Topes defensivos acordes al
+        // límite de filas del pipeline de carga.
+        estudiantes: z.array(estudianteBodySchema).max(500),
+        identificadores: z.array(identificadorUnificadoSchema).max(2000),
+    })
+    .refine((data) => data.identificadores.every((i) => i.estudianteIndex < data.estudiantes.length), {
+        message: "Un identificador apunta a un estudiante que no está en la lista",
+        path: ["identificadores"],
+    })
+    .refine((data) => !(data.curso.profesorTitularId && data.profesorNuevo), {
+        message: "Elige un profesor de la lista o crea uno nuevo, no ambos",
+        path: ["profesorNuevo"],
+    });
+
+export type PayloadUnificado = z.infer<typeof payloadUnificadoSchema>;
+
 export const confirmarCargaSchema = z.object({
     tokenConfirmacion: z.string(),
 });
