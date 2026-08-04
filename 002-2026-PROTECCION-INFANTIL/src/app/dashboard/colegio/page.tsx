@@ -1,69 +1,39 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
-import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { redirect } from "next/navigation";
-import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
-import { verificarAccesoPagina } from "@/lib/permisos-modulos";
-import { ConsultaPublica } from "@/components/modules/ConsultaPublica";
-import { PublicDashboard } from "@/components/modules/PublicDashboard";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { ColegioResumenRepository } from "@/lib/dal/repositories/colegio-resumen";
+import { HomeRectorPage } from "@/components/modules/colegio/home/HomeRectorPage";
+import { EmptyStateColegio } from "@/components/modules/colegio/home/EmptyStateColegio";
 
 /**
- * SPEC-129 (C2/C3, D-b): home del colegio = consulta pública + RESUMEN de
- * estadísticas (componente compartido con /dashboard-publico, cero duplicación).
- * La vista ampliada (mapa/categorías) queda en la subsección Estadísticas.
+ * SPEC-143 (FR-001/FR-002) — Home operativa del rector.
+ * REEMPLAZA la home anterior (ficha + consulta pública + estadísticas PÚBLICAS de
+ * plataforma): la decisión C2/C3 de SPEC-129 queda SUPERADA (documentado en el
+ * cierre de SPEC-143). ConsultaPublica/PublicDashboard siguen en la landing `/`.
+ *
+ * La auth (rol, vigencia, cambio de contraseña) la hace el `layout.tsx`: aquí solo
+ * se lee la identidad de sesión para el saludo y el `colegioId`. TODOS los datos
+ * propios salen de UNA llamada a `ColegioResumenRepository.homeRector(colegioId)`.
  */
 export default async function ColegioDashboardPage() {
-    const acceso = await verificarAccesoPagina("colegios");
-    if (!acceso.permitido) return <SinAccesoModulo volver="/dashboard/colegio" />;
-
     const cookieStore = await cookies();
     const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
 
     if (!token) redirect("/login");
 
     const payload = await verifyToken(token);
-    if (!payload?.sub || payload.rol !== "SCHOOL_ADMIN") redirect("/login");
+    if (!payload?.sub) redirect("/login");
 
-    // E-8: la consulta vive en el repo; el componente no toca prisma.
-    const usuario = await new UsuarioRepository().findConColegioYUbicacion(payload.sub as string);
+    const usuario = await new UsuarioRepository().findSesionColegio(payload.sub as string);
+    if (!usuario?.colegioId) redirect("/login");
 
-    if (!usuario?.colegio) redirect("/login");
+    const datos = await new ColegioResumenRepository().homeRector(usuario.colegioId);
 
-    const colegio = usuario.colegio;
+    // US4: colegio sin cursos → empty state del mockup §5.2 (no un tablero de ceros).
+    if (datos.kpis.cursos === 0) {
+        return <EmptyStateColegio colegioNombre={datos.colegio.nombre} />;
+    }
 
-    return (
-        <main className="min-h-screen p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto max-w-5xl space-y-8">
-                {/* Ficha compacta del colegio */}
-                <div className="flex items-center gap-4 rounded-2xl glass p-5">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl accent-gradient text-white text-xl shadow-lg">
-                        🏫
-                    </div>
-                    <div className="min-w-0">
-                        <h1 className="truncate text-xl font-bold text-body">{colegio.nombre}</h1>
-                        <p className="text-sm text-muted">
-                            {colegio.ciudad?.nombre}
-                            {colegio.departamento ? `, ${colegio.departamento.nombre}` : ""}
-                            {colegio.pais ? ` — ${colegio.pais.nombre}` : ""}
-                            {" · Vigencia: "}
-                            {new Date(colegio.inicioServicio).toLocaleDateString("es-CO")}
-                            {colegio.finServicio ? ` — ${new Date(colegio.finServicio).toLocaleDateString("es-CO")}` : " — Sin fecha de fin"}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Consulta pública (componente compartido con la home pública, O-2) */}
-                <section aria-label="Consulta pública">
-                    <ConsultaPublica />
-                </section>
-
-                {/* Resumen de estadísticas (componente compartido con /dashboard-publico, D-b) */}
-                <PublicDashboard
-                    variant="resumen"
-                    titulo="Panorama de la plataforma"
-                    subtitulo="Reportes agregados y anonimizados de toda la plataforma. La vista ampliada está en Estadísticas."
-                />
-            </div>
-        </main>
-    );
+    return <HomeRectorPage nombreUsuario={usuario.nombre?.trim() ?? ""} datos={datos} />;
 }

@@ -1,0 +1,68 @@
+import Link from "next/link";
+import { CirclePlus, Upload, GraduationCap, Users } from "lucide-react";
+
+/**
+ * SPEC-143 (US4, FR-009) — Acciones rápidas: cada pantalla termina en un verbo.
+ * Todas apuntan a rutas EXISTENTES. La acción "Profesores" apunta a la vista de
+ * cursos (donde hoy se asigna el titular) HASTA que SPEC-148 cree su ruta propia —
+ * decisión documentada, no se fabrica una ruta muerta.
+ * Terminología §3: "subir lista" (nunca "carga masiva"), verbos activos.
+ * Tap targets ≥ 48px; íconos Lucide strokeWidth 1.5, tamaño 24 (§4.4).
+ */
+
+const ACCIONES = [
+    {
+        href: "/dashboard/colegio/cursos/nuevo",
+        titulo: "Crear curso y estudiantes",
+        detalle: "Un curso nuevo con su lista",
+        Icono: CirclePlus,
+    },
+    {
+        href: "/dashboard/colegio/cursos/carga",
+        titulo: "Subir lista en Excel",
+        detalle: "Creamos los cursos por ti",
+        Icono: Upload,
+    },
+    {
+        // SPEC-148: cuando exista la ruta propia de profesores, apuntar allí.
+        href: "/dashboard/colegio/cursos",
+        titulo: "Profesores",
+        detalle: "Asigna el titular de cada curso",
+        Icono: GraduationCap,
+    },
+    {
+        href: "/dashboard/colegio/cursos",
+        titulo: "Ver estudiantes",
+        detalle: "Entra a cada curso",
+        Icono: Users,
+    },
+] as const;
+
+interface AccionesRapidasProps {
+    className?: string;
+}
+
+export function AccionesRapidas({ className = "" }: AccionesRapidasProps) {
+    return (
+        <section aria-label="Acciones" className={className}>
+            <h2 className="microetiqueta">Acciones</h2>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {ACCIONES.map(({ href, titulo, detalle, Icono }) => (
+                    <Link
+                        key={titulo}
+                        href={href}
+                        className="glass group flex min-h-12 items-center gap-3 rounded-[var(--radio-card)] p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                    >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-tinta/5 text-accent transition group-hover:bg-tinta/10">
+                            <Icono size={24} strokeWidth={1.5} aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-body">{titulo}</span>
+                            <span className="block text-xs text-subtle">{detalle}</span>
+                        </span>
+                    </Link>
+                ))}
+            </div>
+        </section>
+    );
+}
