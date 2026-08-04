@@ -74,6 +74,29 @@ export class EstudianteRepository {
         return this.db.estudiante.count({ where: { colegioId } });
     }
 
+    /** SPEC-143: estudiantes ACTIVOS del colegio (KPI de la home — variante aditiva). */
+    contarActivos(colegioId: string): Promise<number> {
+        return this.db.estudiante.count({ where: { colegioId, estado: "activo" } });
+    }
+
+    /**
+     * SPEC-143 (anillos de protección): cobertura del colegio en UNA llamada —
+     * activos, cuántos tienen ≥1 identificador activo (vigilancia) y cuántos ≥1
+     * acudiente (reacción). El acudiente se cuenta SOLO vía estudiante acotado por
+     * colegioId (D1 de SPEC-144). Tres counts agregados, cero N+1.
+     */
+    contarCobertura(colegioId: string): Promise<{ activos: number; conIdentificadores: number; conAcudientes: number }> {
+        const base = { colegioId, estado: "activo" } satisfies Prisma.EstudianteWhereInput;
+        const [activos, conIdentificadores, conAcudientes] = [
+            this.db.estudiante.count({ where: base }),
+            this.db.estudiante.count({ where: { ...base, identificadores: { some: { estado: "activo" } } } }),
+            this.db.estudiante.count({ where: { ...base, acudientes: { some: {} } } }),
+        ];
+        return Promise.all([activos, conIdentificadores, conAcudientes]).then(
+            ([a, i, c]) => ({ activos: a, conIdentificadores: i, conAcudientes: c })
+        );
+    }
+
     /** Conteo de estudiantes agrupado por curso (estadísticas por curso). */
     async contarPorCursoIds(colegioId: string, cursoIds: string[]): Promise<Map<string, number>> {
         if (cursoIds.length === 0) return new Map();

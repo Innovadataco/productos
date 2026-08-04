@@ -187,7 +187,8 @@ export class UsuarioRepository {
     findSesionColegio(id: string) {
         return this.db.usuario.findUnique({
             where: { id },
-            select: { id: true, rol: true, colegioId: true, estado: true, debeCambiarPassword: true },
+            // SPEC-143: + nombre (aditivo) para el saludo de la home del rector.
+            select: { id: true, nombre: true, rol: true, colegioId: true, estado: true, debeCambiarPassword: true },
         });
     }
 

@@ -123,6 +123,102 @@ export class AlertaColegioRepository {
     }
 
     /**
+     * SPEC-143 (D2): reportes DISTINTOS del colegio en una ventana sobre
+     * `creadoEn` — COUNT(DISTINCT reporteId): un reporte que toca a N
+     * estudiantes del colegio cuenta UNA vez. Reportes eliminados no cuentan.
+     */
+    async contarReportesDistintos(colegioId: string, desde: Date, hasta?: Date): Promise<number> {
+        const filas: { total: number }[] = hasta
+            ? await this.db.$queryRaw`
+                SELECT COUNT(DISTINCT ac."reporteId")::int AS total
+                FROM "AlertaColegio" ac
+                JOIN "Reporte" r ON r.id = ac."reporteId"
+                WHERE ac."colegioId" = ${colegioId}
+                  AND r.eliminado = false
+                  AND ac."creadoEn" >= ${desde}
+                  AND ac."creadoEn" < ${hasta}
+            `
+            : await this.db.$queryRaw`
+                SELECT COUNT(DISTINCT ac."reporteId")::int AS total
+                FROM "AlertaColegio" ac
+                JOIN "Reporte" r ON r.id = ac."reporteId"
+                WHERE ac."colegioId" = ${colegioId}
+                  AND r.eliminado = false
+                  AND ac."creadoEn" >= ${desde}
+            `;
+        return filas[0]?.total ?? 0;
+    }
+
+    /** SPEC-143 (D1): contadores del semáforo — nuevas sin gestionar + últimas 72 h. */
+    async conteosSemaforo(colegioId: string): Promise<{ alertasNuevas: number; alertas72h: number }> {
+        const desde72h = new Date(Date.now() - 72 * 60 * 60 * 1000);
+        const [alertasNuevas, alertas72h] = await Promise.all([
+            this.db.alertaColegio.count({
+                where: { colegioId, estado: "nueva", reporte: { eliminado: false } },
+            }),
+            this.db.alertaColegio.count({
+                where: { colegioId, creadoEn: { gte: desde72h }, reporte: { eliminado: false } },
+            }),
+        ]);
+        return { alertasNuevas, alertas72h };
+    }
+
+    /** SPEC-143 (D3-a): última señal sobre el colegio — max(creadoEn); null si nunca hubo. */
+    async ultimaSenal(colegioId: string): Promise<Date | null> {
+        const resultado = await this.db.alertaColegio.aggregate({
+            where: { colegioId },
+            _max: { creadoEn: true },
+        });
+        return resultado._max.creadoEn;
+    }
+
+    /**
+     * SPEC-143 (D2): serie temporal de reportes DISTINTOS por periodo sobre
+     * `creadoEn` (date_trunc en SQL, tenant en el where). Solo los periodos con
+     * actividad; el relleno de huecos con ceros es responsabilidad del consumidor.
+     */
+    async serieReportesPorPeriodo(
+        colegioId: string,
+        granularidad: "week" | "month" | "year",
+        desde: Date
+    ): Promise<{ periodo: Date; reportes: number }[]> {
+        const filas: { periodo: Date; reportes: number }[] = await this.db.$queryRaw`
+            SELECT date_trunc(${granularidad}, ac."creadoEn") AS periodo,
+                   COUNT(DISTINCT ac."reporteId")::int AS reportes
+            FROM "AlertaColegio" ac
+            JOIN "Reporte" r ON r.id = ac."reporteId"
+            WHERE ac."colegioId" = ${colegioId}
+              AND r.eliminado = false
+              AND ac."creadoEn" >= ${desde}
+            GROUP BY 1
+            ORDER BY 1 ASC
+        `;
+        return filas;
+    }
+
+    /**
+     * SPEC-143: top de cursos por reportes DISTINTOS recibidos desde `desde`
+     * (home: últimos 30 días), join al curso del estudiante con tenant en ambos
+     * lados (mismo patrón que contarVisiblesPorCursoIds).
+     */
+    async topCursosPorReportes(colegioId: string, desde: Date, limite = 3): Promise<{ cursoId: string; total: number }[]> {
+        return this.db.$queryRaw`
+            SELECT a."cursoId" AS "cursoId", COUNT(DISTINCT ac."reporteId")::int AS total
+            FROM "AlertaColegio" ac
+            JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+            JOIN "Alumno" a ON a.id = i."alumnoId"
+            JOIN "Reporte" r ON r.id = ac."reporteId"
+            WHERE a."colegioId" = ${colegioId}
+              AND ac."colegioId" = a."colegioId"
+              AND r.eliminado = false
+              AND ac."creadoEn" >= ${desde}
+            GROUP BY a."cursoId"
+            ORDER BY total DESC
+            LIMIT ${limite}
+        `;
+    }
+
+    /**
      * SPEC-142 (F6) — EXCEPCIÓN cross-tenant (como buscarActivosPorValor): las
      * alertas de UN reporte con su vínculo y el grado del curso, más antiguas
      * primero (dedupe determinístico por colegio y snapshot del grado).
