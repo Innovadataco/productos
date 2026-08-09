@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **52** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **54** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -202,6 +202,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | profesores | Profesor | lista, relación |
 | alertas | AlertaColegio | lista, relación |
 | patrones | PatronInstitucional | lista, relación |
+| preferenciasAvisos | PreferenciaAlertaColegio | lista, relación |
+| registrosAvisos | RegistroAvisoColegio | lista, relación |
 | auditLogs | AuditLog | lista, relación |
 | sesionesCarga | CargaRosterSesion | lista, relación |
 
@@ -507,7 +509,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (3)
+### Otros (sin regla de dominio) (5)
 
 #### `CargaRosterSesion`
 
@@ -551,6 +553,36 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | plataforma | Plataforma | relación (FK) |
 | alertas | AlertaColegio | lista, relación |
+
+#### `PreferenciaAlertaColegio`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| tipoEvento | String | — |
+| habilitado | Boolean | — |
+| emailDestino | String | opcional |
+| umbral | Int | opcional |
+| ventanaDias | Int | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
+
+#### `RegistroAvisoColegio`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| tipoEvento | String | — |
+| entidadId | String | — |
+| dia | DateTime | — |
+| estado | String | — |
+| detalle | String | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
 
 ### Permisos por módulo (2)
 
@@ -990,7 +1022,9 @@ erDiagram
     Colegio ||--o{ Curso : "colegio"
     Colegio ||--o{ Estudiante : "colegio"
     Colegio ||--o{ PatronInstitucional : "colegio"
+    Colegio ||--o{ PreferenciaAlertaColegio : "colegio"
     Colegio ||--o{ Profesor : "colegio"
+    Colegio ||--o{ RegistroAvisoColegio : "colegio"
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"
     CorreccionAdmin ||--o{ DatasetEntrenamiento : "correccion (opcional)"
