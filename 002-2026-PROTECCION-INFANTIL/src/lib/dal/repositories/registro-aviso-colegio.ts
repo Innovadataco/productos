@@ -105,4 +105,17 @@ export class RegistroAvisoColegioRepository {
             data: { estado: "ENVIADO", detalle },
         });
     }
+
+    /**
+     * SPEC-159 (FR-003): registros de aviso de UNA entidad del colegio (p. ej.
+     * el reporte de una alerta) — fuente del hito "avisado" de la línea de
+     * tiempo: ENVIADO es la verdad del envío; OMITIDO / PENDIENTE_DIGEST /
+     * FALLIDO se muestran con su estado honesto, nunca un check falso.
+     */
+    porEntidad(colegioId: string, entidadId: string) {
+        return this.db.registroAvisoColegio.findMany({
+            where: { colegioId, entidadId },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
 }

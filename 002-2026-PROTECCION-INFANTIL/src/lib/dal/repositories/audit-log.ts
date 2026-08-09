@@ -36,6 +36,20 @@ export class AuditLogRepository {
         });
     }
 
+    /**
+     * SPEC-159 (FR-003): hitos de un recurso (p. ej. COLEGIO_ALERTA_ESTADO de
+     * una alerta) con su fecha real y valor nuevo, asc — fuente de los hitos
+     * "vista"/"gestionada" de la línea de tiempo del caso. Solo verdades: un
+     * hito sin fila de audit queda pendiente, nunca inventado.
+     */
+    hitosPorRecurso(acciones: AccionAudit[], recursoId: string) {
+        return this.db.auditLog.findMany({
+            where: { accion: { in: acciones }, recursoId },
+            select: { accion: true, creadoEn: true, valorNuevo: true },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
+
     groupByUsuario(acciones: AccionAudit[], rango: { gte: Date; lte: Date }) {
         return this.db.auditLog.groupBy({
             by: ["usuarioId"],

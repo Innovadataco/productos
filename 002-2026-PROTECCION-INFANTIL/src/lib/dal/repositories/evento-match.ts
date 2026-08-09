@@ -37,6 +37,19 @@ export class EventoMatchRepository {
         return this.db.eventoMatch.findUnique({ where: { reporteNuevoId } });
     }
 
+    /**
+     * SPEC-159 (FR-003/FR-009): match del reporte de una alerta, SOLO agregados
+     * (conteoAcumulado, interCiudad, fecha) — fuente del hito "corroborado" de
+     * la línea de tiempo del colegio. Cero denunciantes, textos, ciudades ni
+     * conductas: el rector ve el mínimo necesario.
+     */
+    porReporteIdAgregado(reporteId: string) {
+        return this.db.eventoMatch.findUnique({
+            where: { reporteNuevoId: reporteId },
+            select: { conteoAcumulado: true, interCiudad: true, creadoEn: true },
+        });
+    }
+
     /** Conteo público agregado (FR-008): identificadores distintos con match. */
     async contarIdentificadoresConMatch(): Promise<number> {
         const grupos = await this.db.eventoMatch.groupBy({ by: ["identificadorId"] });

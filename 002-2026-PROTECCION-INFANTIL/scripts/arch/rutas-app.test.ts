@@ -16,6 +16,8 @@
  * el conteo real (regla de oráculos de SPEC-126).
  * Actualizado 2026-08-09: 56 page.tsx — SPEC-149 añade la configuración de
  * avisos del colegio (/dashboard/colegio/configuracion). Misma regla.
+ * Actualizado 2026-08-09 (2): 57 page.tsx — SPEC-159 añade el seguimiento del
+ * caso (/dashboard/colegio/alertas/[id]). Misma regla.
  */
 import { describe, it, expect } from "vitest";
 import { inventarioRutasApp, VALOR_MUESTRA_SEGMENTO } from "./lib/rutas-app";
@@ -24,8 +26,8 @@ import { RUTA_APP } from "./lib/paths";
 const rutas = inventarioRutasApp(RUTA_APP);
 
 describe("inventario de rutas del árbol src/app (SPEC-126)", () => {
-    it("oráculo: 56 páginas (page.tsx) — 55 + 1 de configuración de avisos (SPEC-149)", () => {
-        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(56);
+    it("oráculo: 57 páginas (page.tsx) — 56 + 1 de seguimiento del caso (SPEC-159)", () => {
+        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(57);
     });
 
     it("incluye APIs (route.ts) además de páginas", () => {

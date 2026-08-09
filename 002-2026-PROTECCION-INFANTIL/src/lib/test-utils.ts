@@ -57,6 +57,10 @@ export async function resetDatabase() {
     await prisma.embeddingReporte.deleteMany();
     await prisma.eventoMatch.deleteMany();
     await prisma.identificadorReportado.deleteMany();
+    // SPEC-159: bitácora del caso (notas antes que el seguimiento, FK RESTRICT;
+    // el seguimiento antes que la alerta).
+    await prisma.notaSeguimiento.deleteMany();
+    await prisma.seguimientoCaso.deleteMany();
     await prisma.alertaColegio.deleteMany();
     await prisma.patronInstitucional.deleteMany();
     // SPEC-149: avisos del colegio (hijos de Colegio, FK RESTRICT).

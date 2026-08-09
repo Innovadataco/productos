@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **54** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **56** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -170,6 +170,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reporte | Reporte | relación (FK) |
 | identificadorEstudiante | IdentificadorEstudiante | relación (FK) |
 | patronInstitucional | PatronInstitucional | opcional, relación (FK) |
+| seguimiento | SeguimientoCaso | opcional, relación |
 
 #### `Colegio`
 
@@ -204,6 +205,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | patrones | PatronInstitucional | lista, relación |
 | preferenciasAvisos | PreferenciaAlertaColegio | lista, relación |
 | registrosAvisos | RegistroAvisoColegio | lista, relación |
+| seguimientosCaso | SeguimientoCaso | lista, relación |
+| notasSeguimiento | NotaSeguimiento | lista, relación |
 | auditLogs | AuditLog | lista, relación |
 | sesionesCarga | CargaRosterSesion | lista, relación |
 
@@ -509,7 +512,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (5)
+### Otros (sin regla de dominio) (7)
 
 #### `CargaRosterSesion`
 
@@ -536,6 +539,20 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | identificador | IdentificadorReportado | relación (FK) |
 | reporteNuevo | Reporte | relación (FK) |
+
+#### `NotaSeguimiento`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| seguimientoId | String | — |
+| colegioId | String | — |
+| texto | String | — |
+| autorId | String | — |
+| creadoEn | DateTime | — |
+| seguimiento | SeguimientoCaso | relación (FK) |
+| colegio | Colegio | relación (FK) |
+| autor | Usuario | relación (FK) |
 
 #### `PatronInstitucional`
 
@@ -583,6 +600,20 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
+
+#### `SeguimientoCaso`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| alertaId | String | único |
+| estado | String | — |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
+| alerta | AlertaColegio | relación (FK) |
+| notas | NotaSeguimiento | lista, relación |
 
 ### Permisos por módulo (2)
 
@@ -996,6 +1027,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | transicionesReporte | TransicionReporte | lista, relación |
 | solicitudesComite | SolicitudComite | lista, relación |
 | solicitudesEscaladas | SolicitudComite | lista, relación |
+| notasSeguimiento | NotaSeguimiento | lista, relación |
 | integrantesComite | IntegranteComite | lista, relación |
 | integrantesComiteCreados | IntegranteComite | lista, relación |
 | integrantesComiteModificados | IntegranteComite | lista, relación |
@@ -1010,6 +1042,7 @@ Derivado de las FK (`@relation(fields: ...)`); cardinalidad 1:1 si la FK es úni
 
 ```mermaid
 erDiagram
+    AlertaColegio ||--o{ SeguimientoCaso : "alerta"
     Apelacion ||--o{ DocumentoApelacion : "apelacion"
     CasoEval ||--o{ EvalResultado : "casoEval"
     Ciudad ||--o{ Colegio : "ciudad"
@@ -1021,10 +1054,12 @@ erDiagram
     Colegio ||--o{ CargaRosterSesion : "colegio"
     Colegio ||--o{ Curso : "colegio"
     Colegio ||--o{ Estudiante : "colegio"
+    Colegio ||--o{ NotaSeguimiento : "colegio"
     Colegio ||--o{ PatronInstitucional : "colegio"
     Colegio ||--o{ PreferenciaAlertaColegio : "colegio"
     Colegio ||--o{ Profesor : "colegio"
     Colegio ||--o{ RegistroAvisoColegio : "colegio"
+    Colegio ||--o{ SeguimientoCaso : "colegio"
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"
     CorreccionAdmin ||--o{ DatasetEntrenamiento : "correccion (opcional)"
@@ -1062,6 +1097,7 @@ erDiagram
     Reporte ||--o{ ReintentoReporte : "reporte"
     Reporte ||--o{ SolicitudComite : "reporte"
     Reporte ||--o{ TransicionReporte : "reporte"
+    SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
     Tenant ||--o{ Colegio : "tenant"
     Tenant ||--o{ Reporte : "tenant (opcional)"
@@ -1077,6 +1113,7 @@ erDiagram
     Usuario ||--o{ IntegranteComite : "comite"
     Usuario ||--o{ IntegranteComite : "creadoPor"
     Usuario ||--o{ IntegranteComite : "modificadoPor (opcional)"
+    Usuario ||--o{ NotaSeguimiento : "autor"
     Usuario ||--o{ ParametroSistema : "actualizadoPor (opcional)"
     Usuario ||--o{ PerfilOperador : "creadoPor"
     Usuario ||--o{ PerfilOperador : "usuario"

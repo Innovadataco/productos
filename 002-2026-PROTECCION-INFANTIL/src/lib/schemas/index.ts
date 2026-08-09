@@ -271,6 +271,16 @@ export const alertaQuerySchema = z.object({
     estado: z.enum(["nueva", "vista", "gestionada"]).optional(),
 });
 
+// SPEC-159 (FR-004): nota de la bitácora del caso — texto plano 1..1000
+// (el cliente también valida; React escapa al renderizar).
+export const notaSeguimientoSchema = z.object({
+    texto: z
+        .string()
+        .trim()
+        .min(1, "Escribe lo que hiciste antes de registrarlo")
+        .max(1000, "La nota no puede superar 1000 caracteres"),
+});
+
 // SPEC-149 (FR-007): PATCH de preferencias de avisos del colegio. Upsert por
 // tipo (tenant lo pone la sesión). Umbrales 1-100, ventanas 1-90 días; null en
 // umbral/ventanaDias/emailDestino = volver al default. Mensajes humanos (§4.6).
