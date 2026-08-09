@@ -143,6 +143,8 @@ async function start() {
     await ensureQueue("apelacion-mantenimiento");
     await ensureQueue("carga-roster-limpieza");
     await ensureQueue("reportes-reconciliacion");
+    await ensureQueue("colegio-aviso");
+    await ensureQueue("colegio-resumen-semanal");
 
     const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
@@ -570,6 +572,27 @@ async function start() {
             console.error(`[WORKER] ERROR reconciliación de reportes: ${msg}`);
             throw err;
         }
+    });
+
+    // SPEC-149 (FR-002): avisos del colegio encolados por el hook de alertas
+    // (el retry lo da pg-boss; un fallo NO consume la idempotencia).
+    await boss.work("colegio-aviso", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        if (!job || !job.data) return;
+        const { procesarEnvioAviso } = await import("../src/lib/colegio/avisos.ts");
+        const resultado = await procesarEnvioAviso(job.data);
+        console.log(`[WORKER] Aviso colegio ${job.data.tipoEvento} colegio=${job.data.colegioId} enviado=${resultado.enviado} motivo=${resultado.motivo}`);
+        return { success: true, ...resultado };
+    });
+
+    // SPEC-149 (FR-005): resumen del lunes 07:00 America/Bogota (molde
+    // apelacion-mantenimiento; idempotente por semana vía RegistroAvisoColegio).
+    await boss.schedule("colegio-resumen-semanal", "0 7 * * 1", {}, { tz: "America/Bogota" });
+    await boss.work("colegio-resumen-semanal", async () => {
+        const { enviarResumenesSemanales } = await import("../src/lib/colegio/avisos-resumen.ts");
+        const resumen = await enviarResumenesSemanales();
+        console.log(`[WORKER] Resumen semanal de colegios: OK ${JSON.stringify(resumen)}`);
+        return { success: true, ...resumen };
     });
 }
 

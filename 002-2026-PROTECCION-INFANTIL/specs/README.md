@@ -10,10 +10,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **132** |
+| **Total de specs** | **133** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
-| **Implementadas (IMPLEMENTADO)** | **33** |
+| **Implementadas (IMPLEMENTADO)** | **34** |
 | **Pendientes (PLANEADO)** | **1** |
 
 ## Backlog activo (no cerradas)
@@ -88,6 +88,7 @@
 | [146](146-wizard-curso-unificado/spec.md) | SPEC-146 — Wizard unificado curso + estudiantes + identificadores (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [147](147-vista-curso/spec.md) | SPEC-147 — Vista de curso: escritorio con acudientes clicables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [148](148-profesores-buscador/spec.md) | SPEC-148 — Profesores + buscador global ⌘K (002-PI-058) | 🟢 Implementada (ver cierre.md) |
+| [149](149-avisos-email/spec.md) | SPEC-149 — Avisos por email configurables del colegio (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 
@@ -225,6 +226,7 @@
 | [146](146-wizard-curso-unificado/spec.md) | SPEC-146 — Wizard unificado curso + estudiantes + identificadores (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [147](147-vista-curso/spec.md) | SPEC-147 — Vista de curso: escritorio con acudientes clicables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [148](148-profesores-buscador/spec.md) | SPEC-148 — Profesores + buscador global ⌘K (002-PI-058) | 🟢 Implementada (ver cierre.md) |
+| [149](149-avisos-email/spec.md) | SPEC-149 — Avisos por email configurables del colegio (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 

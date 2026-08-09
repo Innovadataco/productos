@@ -9,6 +9,8 @@
  * AcudienteEstudiante (tabla hija D1; rename Alumno→Estudiante es @@map, no suma).
  * Actualizado 2026-08-03: 52 modelos — SPEC-145 (002-PI-058) añadió Profesor
  * (mínimo §7.2; Curso.profesorTitularId es columna, no suma).
+ * Actualizado 2026-08-09: 54 modelos — SPEC-149 añadió PreferenciaAlertaColegio
+ * y RegistroAvisoColegio (avisos por email del colegio; misma regla).
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -19,8 +21,8 @@ const modelos = parsearSchemaPrisma(RUTA_SCHEMA);
 const excepciones = JSON.parse(fs.readFileSync(RUTA_EXCEPCIONES, "utf-8")) as { huerfanosPermitidos: string[] };
 
 describe("parser schema.prisma (SPEC-126)", () => {
-    it("oráculo: 52 modelos (51 + Profesor de SPEC-145)", () => {
-        expect(modelos.length).toBe(52);
+    it("oráculo: 54 modelos (52 + PreferenciaAlertaColegio y RegistroAvisoColegio de SPEC-149)", () => {
+        expect(modelos.length).toBe(54);
     });
 
     it("oráculo: huérfanos = lista de excepciones declarada (ni uno más, ni uno menos)", () => {

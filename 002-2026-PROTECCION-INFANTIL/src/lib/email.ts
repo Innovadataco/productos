@@ -253,6 +253,120 @@ export async function enviarAlertaCirculoConfianza(email: string, cantidad: numb
     logger.info(`[EMAIL] Alerta Círculo de Confianza enviada a ${email} (${novedadTexto}, resendId=${result.data?.id ?? "n/a"})`);
 }
 
+/**
+ * SPEC-149 (FR-006) — Avisos del colegio. Copy ciego humano en español con la
+ * terminología §3 ("aviso"/"te avisamos", jamás "notificación"). CERO PII:
+ * nunca texto del reporte, identificadores, nombres de estudiantes ni scores
+ * (I-28/I-29) — el detalle se revisa en el panel. Las puertas (preferencias,
+ * idempotencia, tope diario) viven en `src/lib/colegio/avisos.ts`; estas
+ * funciones solo envían y lanzan error si el proveedor falla (retry pg-boss).
+ */
+export async function enviarAvisoReporteNuevoColegio(email: string): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "Te avisamos: tienes un reporte nuevo para revisar",
+        text: `Hola,\n\nTe avisamos que llegó un reporte nuevo relacionado con tu colegio. Ingresa a tu panel para revisarlo:\n\n${baseUrl}/dashboard/colegio/alertas\n\nEste aviso no incluye datos del reporte; toda la información está en tu panel.`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error aviso reporte nuevo colegio:", result.error);
+        throw new Error("Error al enviar aviso de reporte nuevo al colegio");
+    }
+
+    logger.info(`[EMAIL] Aviso de reporte nuevo enviado a ${email} (resendId=${result.data?.id ?? "n/a"})`);
+}
+
+export async function enviarAvisoUmbralCursoColegio(
+    email: string,
+    params: { reportes: number; dias: number }
+): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "Te avisamos: un curso de tu colegio acumula reportes",
+        text: `Hola,\n\nTe avisamos que un curso de tu colegio acumula ${params.reportes} reportes en los últimos ${params.dias} días. Ingresa a tu panel para ver el panorama completo:\n\n${baseUrl}/dashboard/colegio/tablero\n\nEste aviso no incluye nombres ni datos de los reportes; toda la información está en tu panel.`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error aviso umbral curso:", result.error);
+        throw new Error("Error al enviar aviso de umbral por curso al colegio");
+    }
+
+    logger.info(`[EMAIL] Aviso de umbral por curso enviado a ${email} (resendId=${result.data?.id ?? "n/a"})`);
+}
+
+export async function enviarAvisoEstudianteRepetidoColegio(
+    email: string,
+    params: { reportes: number; dias: number }
+): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "Te avisamos: un estudiante de tu colegio acumula reportes",
+        text: `Hola,\n\nTe avisamos que un estudiante de tu colegio acumula ${params.reportes} reportes en los últimos ${params.dias} días. Ingresa a tu panel para revisar el caso:\n\n${baseUrl}/dashboard/colegio/alertas\n\nEste aviso no incluye el nombre del estudiante ni datos de los reportes; toda la información está en tu panel.`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error aviso estudiante repetido:", result.error);
+        throw new Error("Error al enviar aviso de estudiante repetido al colegio");
+    }
+
+    logger.info(`[EMAIL] Aviso de estudiante repetido enviado a ${email} (resendId=${result.data?.id ?? "n/a"})`);
+}
+
+/**
+ * Resumen del lunes (§4.0.1: la calma se muestra como trabajo). En semana sin
+ * actividad el copy es positivo ("semana tranquila — la vigilancia siguió
+ * activa"). Solo conteos agregados del propio colegio; cero PII.
+ */
+export async function enviarResumenSemanalColegio(
+    email: string,
+    params: { reportesSemana: number; teEsperan: number; pendientesDigest: number }
+): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
+    const { reportesSemana, teEsperan, pendientesDigest } = params;
+    const semanaTranquila = reportesSemana === 0 && teEsperan === 0 && pendientesDigest === 0;
+
+    const lineas: string[] = [];
+    if (semanaTranquila) {
+        lineas.push("Semana tranquila: no llegaron reportes nuevos sobre tu colegio y la vigilancia siguió activa todos los días.");
+    } else {
+        lineas.push(
+            reportesSemana === 1
+                ? "Esta semana llegó 1 reporte nuevo sobre tu colegio."
+                : `Esta semana llegaron ${reportesSemana} reportes nuevos sobre tu colegio.`
+        );
+        if (teEsperan > 0) {
+            lineas.push(teEsperan === 1 ? "Hay 1 reporte que te espera para revisar." : `Hay ${teEsperan} reportes que te esperan para revisar.`);
+        }
+        if (pendientesDigest > 0) {
+            lineas.push(
+                pendientesDigest === 1
+                    ? "Además, 1 aviso quedó guardado para este resumen."
+                    : `Además, ${pendientesDigest} avisos quedaron guardados para este resumen.`
+            );
+        }
+    }
+
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "Tu resumen de la semana",
+        text: `Hola,\n\n${lineas.join("\n")}\n\nIngresa a tu panel para ver el detalle:\n\n${baseUrl}/dashboard/colegio\n\nEste resumen solo muestra conteos; toda la información está en tu panel.`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error resumen semanal colegio:", result.error);
+        throw new Error("Error al enviar resumen semanal al colegio");
+    }
+
+    logger.info(`[EMAIL] Resumen semanal enviado a ${email} (semana=${reportesSemana}, teEsperan=${teEsperan}, digest=${pendientesDigest}, resendId=${result.data?.id ?? "n/a"})`);
+}
+
 const COOLDOWN_ALERTA_MS = 24 * 60 * 60 * 1000;
 
 export async function enviarAlertaColegio(email: string, cantidad: number): Promise<void> {

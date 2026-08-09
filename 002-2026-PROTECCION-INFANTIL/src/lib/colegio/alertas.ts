@@ -1,11 +1,9 @@
 import { logAudit } from "@/lib/audit";
-import { enviarAlertaColegio } from "@/lib/email";
-import { getParametroSistemaValor } from "@/lib/parametros";
 import { logger } from "@/lib/logger";
 import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
-import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { registrarEventoAviso, evaluarUmbralesPorAlerta } from "./avisos";
 import { verificarVigenciaPorColegioId } from "./vigencia";
 import type { AccionAudit, EstadoReporte } from "@prisma/client";
 
@@ -72,8 +70,8 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
 
         const alertas = new AlertaColegioRepository();
 
-        // Agrupar por colegio para enviar una sola notificación por colegio
-        const alertasCreadasPorColegio = new Map<string, number>();
+        // SPEC-149: alertas creadas (id + colegio) para el pipeline de avisos.
+        const alertasCreadas: { id: string; colegioId: string }[] = [];
 
         for (const identificador of identificadores) {
             const colegioId = identificador.estudiante.colegioId;
@@ -112,56 +110,33 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                     userAgent: "worker",
                 });
 
-                alertasCreadasPorColegio.set(colegioId, (alertasCreadasPorColegio.get(colegioId) || 0) + 1);
+                alertasCreadas.push({ id: alerta.id, colegioId });
             } catch (error) {
                 logger.error(`[COLEGIO] Error creando alerta para colegio ${colegioId}:`, error);
             }
         }
 
-        // Enviar notificaciones ciegas por colegio
-        for (const [colegioId, cantidad] of alertasCreadasPorColegio.entries()) {
-            await enviarNotificacionColegio(colegioId, cantidad).catch((err) => {
-                logger.error(`[COLEGIO] Error enviando notificación a colegio ${colegioId}:`, err);
+        // SPEC-149 (FR-002): el email genérico inline viejo (enviarNotificacionColegio,
+        // cooldown 24 h) queda SUPERADO por el pipeline de avisos encolado — cero
+        // doble email por construcción: aquí solo se ENCOLA (nunca se envía inline)
+        // y la idempotencia real vive en la constraint de RegistroAvisoColegio.
+        // REPORTE_NUEVO se avisa UNA vez por (colegio, reporte, día) aunque el
+        // reporte toque a varios estudiantes del colegio (misma entidadId).
+        for (const alerta of alertasCreadas) {
+            await registrarEventoAviso({
+                colegioId: alerta.colegioId,
+                tipoEvento: "REPORTE_NUEVO",
+                entidadId: reporte.id,
+            }).catch((err) => {
+                logger.error(`[COLEGIO] Error registrando aviso REPORTE_NUEVO para colegio ${alerta.colegioId}:`, err);
+            });
+            await evaluarUmbralesPorAlerta(alerta.id).catch((err) => {
+                logger.error(`[COLEGIO] Error evaluando umbrales de aviso para alerta ${alerta.id}:`, err);
             });
         }
     } catch (error) {
         logger.error("[COLEGIO] Error en notificación de colegio:", error);
     }
-}
-
-/**
- * Envía un email genérico al SCHOOL_ADMIN del colegio si las notificaciones están
- * habilitadas y no hay cooldown activo. Nunca incluye datos del reporte.
- */
-async function enviarNotificacionColegio(colegioId: string, novedades: number) {
-    const globalEnabled = await getParametroSistemaValor("colegio.notificaciones.enabled");
-    if (globalEnabled === "false") {
-        logger.info("[COLEGIO] Notificación omitida: colegio.notificaciones.enabled=false");
-        return;
-    }
-
-    const usuarios = new UsuarioRepository();
-    const admin = await usuarios.findAdminColegioParaNotificacion(colegioId);
-    if (!admin || !admin.email) {
-        logger.info(`[COLEGIO] Notificación omitida: admin no encontrado o sin email para colegio ${colegioId}`);
-        return;
-    }
-
-    const cooldownHoras = parseInt(
-        (await getParametroSistemaValor("colegio.notificaciones.cooldown_horas")) || "24",
-        10
-    );
-    const cooldownMs = (Number.isNaN(cooldownHoras) ? 24 : cooldownHoras) * 60 * 60 * 1000;
-    const ahora = new Date();
-
-    if (admin.ultimaNotificacionColegioEn && ahora.getTime() - admin.ultimaNotificacionColegioEn.getTime() < cooldownMs) {
-        logger.info(`[COLEGIO] Notificación omitida: admin ${admin.id} en cooldown`);
-        return;
-    }
-
-    logger.info(`[COLEGIO] Enviando alerta ciega a ${admin.email} (${novedades} novedades)`);
-    await enviarAlertaColegio(admin.email, novedades);
-    await usuarios.marcarNotificacionColegioEn(admin.id, ahora);
 }
 
 /**

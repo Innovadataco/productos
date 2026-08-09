@@ -185,6 +185,26 @@ export class AlertaColegioRepository {
         return filas[0]?.total ?? 0;
     }
 
+    /**
+     * SPEC-149 (FR-003): reportes DISTINTOS sobre identificadores del MISMO
+     * estudiante en una ventana sobre `creadoEn` — aunque sean nicks distintos
+     * (join alerta→identificador→estudiante, tenant en el where). Reportes
+     * eliminados no cuentan.
+     */
+    async contarReportesDistintosPorEstudiante(colegioId: string, estudianteId: string, desde: Date): Promise<number> {
+        const filas: { total: number }[] = await this.db.$queryRaw`
+            SELECT COUNT(DISTINCT ac."reporteId")::int AS total
+            FROM "AlertaColegio" ac
+            JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+            JOIN "Reporte" r ON r.id = ac."reporteId"
+            WHERE ac."colegioId" = ${colegioId}
+              AND i."alumnoId" = ${estudianteId}
+              AND r.eliminado = false
+              AND ac."creadoEn" >= ${desde}
+        `;
+        return filas[0]?.total ?? 0;
+    }
+
     /** SPEC-143 (D1): contadores del semáforo — nuevas sin gestionar + últimas 72 h. */
     async conteosSemaforo(colegioId: string): Promise<{ alertasNuevas: number; alertas72h: number }> {
         const desde72h = new Date(Date.now() - 72 * 60 * 60 * 1000);
@@ -360,6 +380,22 @@ export class AlertaColegioRepository {
         return this.db.alertaColegio.findMany({
             where: { reporteId, patronInstitucionalId: { not: null } },
             select: { id: true, patronInstitucionalId: true },
+        });
+    }
+
+    /**
+     * SPEC-149 (FR-003): colegio + estudiante + curso destino de la alerta
+     * (evaluador de umbrales, contexto worker — la alerta ya nació tenant-first).
+     */
+    obtenerDestinoUmbrales(alertaId: string) {
+        return this.db.alertaColegio.findUnique({
+            where: { id: alertaId },
+            select: {
+                colegioId: true,
+                identificadorEstudiante: {
+                    select: { estudiante: { select: { id: true, cursoId: true } } },
+                },
+            },
         });
     }
 

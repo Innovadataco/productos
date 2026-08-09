@@ -67,6 +67,21 @@ export class ColegioRepository {
         });
     }
 
+    /**
+     * SPEC-149 (FR-005): ids de los colegios activos y vigentes en `ahora`
+     * (destinatarios del resumen semanal). Excepción cross-tenant documentada:
+     * el schedule corre para TODOS los colegios (como listarAdminGlobal).
+     */
+    listarIdsActivosVigentes(ahora: Date): Promise<{ id: string }[]> {
+        return this.db.colegio.findMany({
+            where: {
+                estado: "activo",
+                OR: [{ finServicio: null }, { finServicio: { gt: ahora } }],
+            },
+            select: { id: true },
+        });
+    }
+
     /** Colegio con su ubicación (GET /api/me/colegio). Null si no existe. */
     obtenerConUbicacion(colegioId: string): Promise<ColegioConUbicacion | null> {
         return this.db.colegio.findUnique({

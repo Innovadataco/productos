@@ -128,6 +128,9 @@ enum AccionAudit {
   COLEGIO_PROFESOR_CREADO
   COLEGIO_PROFESOR_EDITADO
   COLEGIO_PROFESOR_DESACTIVADO
+  // SPEC-149: avisos por email del colegio (envío + cambio de preferencias).
+  COLEGIO_AVISO_ENVIADO
+  COLEGIO_AVISO_PREFERENCIA_ACTUALIZADA
 }
 
 enum TipoPeriodoServicio {
@@ -461,6 +464,8 @@ model Colegio {
   profesores   Profesor[]
   alertas      AlertaColegio[]
   patrones     PatronInstitucional[]
+  preferenciasAvisos PreferenciaAlertaColegio[]
+  registrosAvisos    RegistroAvisoColegio[]
   auditLogs    AuditLog[]
   sesionesCarga CargaRosterSesion[]
 
@@ -617,6 +622,54 @@ model PatronInstitucional {
   @@unique([colegioId, periodo, grado, conducta, plataformaId])
   @@index([colegioId, periodo])
   @@map("patrones_institucionales")
+}
+
+// SPEC-149 (FR-001): preferencias de avisos por email del colegio. UNA fila por
+// (colegio, tipoEvento); sin fila rigen los defaults del pipeline (todo
+// habilitado, destino = email del SCHOOL_ADMIN, N=3/7d curso, M=2/30d
+// estudiante, resumen habilitado). tipoEvento es String con valores cerrados
+// (mismo patrón que AlertaColegio.estado): REPORTE_NUEVO | UMBRAL_CURSO |
+// ESTUDIANTE_REPETIDO | RESUMEN_SEMANAL. `umbral` y `ventanaDias` solo aplican
+// a UMBRAL_CURSO y ESTUDIANTE_REPETIDO.
+model PreferenciaAlertaColegio {
+  id            String   @id @default(cuid())
+  colegioId     String
+  tipoEvento    String // REPORTE_NUEVO | UMBRAL_CURSO | ESTUDIANTE_REPETIDO | RESUMEN_SEMANAL
+  habilitado    Boolean  @default(true)
+  emailDestino  String?
+  umbral        Int?
+  ventanaDias   Int?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@unique([colegioId, tipoEvento])
+}
+
+// SPEC-149 (FR-001): bitácora de avisos del colegio — LA idempotencia por
+// constraint: @@unique([colegioId, tipoEvento, entidadId, dia]). Un mismo
+// evento/entidad/día = UNA fila = UN email como máximo; el duplicado es no-op.
+// ENVIADO solo se marca tras el 200 del proveedor (un FALLIDO no consume la
+// idempotencia y pg-boss puede reintentar). estado es String con valores
+// cerrados: ENVIADO | OMITIDO | PENDIENTE_DIGEST | FALLIDO. `entidadId` es el
+// id de la entidad del evento (reporteId, cursoId, estudianteId) o "semanal"
+// para el resumen. `dia` es la fecha del evento en día calendario (DATE).
+model RegistroAvisoColegio {
+  id            String   @id @default(cuid())
+  colegioId     String
+  tipoEvento    String // REPORTE_NUEVO | UMBRAL_CURSO | ESTUDIANTE_REPETIDO | RESUMEN_SEMANAL
+  entidadId     String
+  dia           DateTime @db.Date
+  estado        String // ENVIADO | OMITIDO | PENDIENTE_DIGEST | FALLIDO
+  detalle       String?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@unique([colegioId, tipoEvento, entidadId, dia])
+  @@index([colegioId, estado])
 }
 
 // ============================================

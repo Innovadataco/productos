@@ -755,6 +755,35 @@ async function main() {
             descripcion: "Enviar alertas por email a usuarios suscritos a identificadores",
         },
         {
+            // SPEC-149 (FR-008): interruptor global del canal de avisos del colegio.
+            clave: "colegio.notificaciones.enabled",
+            valor: "true",
+            tipo: TipoParametro.BOOLEAN,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "Enviar avisos por email a los colegios",
+        },
+        {
+            // SPEC-149 (FR-008): legado del email inline viejo (superado por el
+            // pipeline de avisos); se seedea porque los tests lo referencian.
+            clave: "colegio.notificaciones.cooldown_horas",
+            valor: "24",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "Horas de cooldown entre avisos al colegio (legado)",
+        },
+        {
+            // SPEC-149 (FR-004/FR-008): tope diario de emails de aviso por colegio;
+            // al superarlo los eventos quedan para el resumen del lunes.
+            clave: "colegio.avisos.tope_diario",
+            valor: "5",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "Máximo de emails de aviso por colegio y día (el resto va al resumen del lunes)",
+        },
+        {
             clave: "ratelimit.admin_read.window_seconds",
             valor: "60",
             tipo: TipoParametro.INTEGER,
