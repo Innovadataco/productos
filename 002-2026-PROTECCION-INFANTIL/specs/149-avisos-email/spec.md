@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-08
 
-**Status**: DESARROLLO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (continuación D-51; orden ZEUS: 148✓ → 149 → 159 →
 …). Fuentes VINCULANTES: BRIEF-DISEÑO-UX-RECTOR v3.0 — §10 fila 8 ("sin aviso el
@@ -242,3 +242,35 @@ Impacto en arquitectura: **modifica el modelo de datos** (2 entidades nuevas +
 página (`/dashboard/colegio/configuracion`, oráculo de páginas 55→56), endpoint
 (`/api/colegio/preferencias-avisos`), cola pg-boss (`colegio-aviso`) y schedule
 semanal en el worker. No modifica proxy ni stack.
+
+## Implementación (2026-08-09)
+
+- Rama `work/002-pi-058`, commits: schema+repos (9ea8fca3) · pipeline+cola+
+  emails+worker (19ac4aee) · api+página+seeds (0576eca0) · arch+oráculos
+  (dd2a4575) · DAL Q-3+lint worker (495eea3c) · docs de spec.
+- Migración `20260809060000_avisos_colegio` 100% aditiva: 2 ALTER TYPE + 2 CREATE
+  TABLE + 3 CREATE INDEX + 2 FK. I-49: el diff crudo traía los DROP INDEX del
+  drift conocido (AlertaColegio_patronInstitucionalId_idx, Ciudad trgm,
+  EmbeddingDataset/Reporte vector), un RENAME INDEX en patrones_institucionales
+  y un CREATE EXTENSION vector — NINGUNO se aplica (misma convención de SPEC-145).
+  `migrate reset --force && deploy && seed` verde en `proteccion_infantil_test3`.
+- Idempotencia real por constraint probada a nivel BD (segunda corrida = no-op,
+  UNA fila, UN email). FALLIDO no consume: el retry de pg-boss actualiza la
+  misma fila a ENVIADO.
+- Cero doble email: `enviarNotificacionColegio` (email inline viejo) eliminado
+  del hook; los tests de `alertas.test.ts` ahora verifican encolado + bitácora
+  y que NO existen registros ENVIADO inline (fortalecidos, no debilitados).
+- Tests nuevos: repos A/B + idempotencia; pipeline (preferencia, tope diario con
+  PENDIENTE_DIGEST, FALLIDO/retry, umbrales que cruzan solo al llegar a N/M,
+  ventana móvil); resumen semanal (KPIs D2, "te espera", digest entregado,
+  idempotencia por semana, semana tranquila, colegio vencido/fallido); emails
+  (copy ciego §3, cero PII); ruta A/B; página (§3, cero jerga).
+- Checks: tsc 0 · lint 0 · tokens:check 1122/1135 VERDE · arch:check VERDE ·
+  build limpia (rm -rf .next) OK.
+- Desviaciones: (1) `tipoEvento`/`estado` como String con valores cerrados
+  (patrón AlertaColegio.estado) para que la migración quede EXACTAMENTE en lo
+  que exige I-49 (CREATE TYPE habría sumado SQL no listado). (2) Tests corridos
+  contra `proteccion_infantil_test3` (override de DATABASE_URL por la contención
+  FK fantasma de la BD compartida, indicado en el instructivo).
+- Pendiente de cierre (ZEUS): deploy limpio con `scripts/dev-restart.sh` +
+  quickstart + `cierre.md`.
