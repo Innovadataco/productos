@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-09
 
-**Status**: DESARROLLO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (continuación D-51; orden ZEUS: …149✓ → 159 →
 150 → …). Fuentes VINCULANTES: BRIEF-DISEÑO-UX-RECTOR v3.0 — §10 fila 9 ("Línea de
@@ -195,3 +195,8 @@ valor enum, migración aditiva I-49 ⇒ regenerar `01-modelo-datos.md`, oráculo
 54→56) y **añade** página (`/dashboard/colegio/alertas/[id]`, oráculo 56→57) +
 endpoint (`GET/POST /api/colegio/alertas/[id](\/notas)`). No modifica proxy ni
 stack.
+
+## Implementación
+
+Implementada 2026-08-09 en `work/002-pi-058` (lote D-51: `b60a73d9` + `894730bd` +
+`60ad9e10` + `65466ed6`). Evidencia y deuda en [cierre.md](./cierre.md).
