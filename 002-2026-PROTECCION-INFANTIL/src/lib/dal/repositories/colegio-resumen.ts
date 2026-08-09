@@ -18,7 +18,9 @@ import { leerHeartbeatWorker } from "@/lib/worker-heartbeat";
 import type { DbClient } from "../unit-of-work";
 import { ColegioRepository } from "./colegio";
 import { CursoRepository } from "./curso";
+import type { CursoConTitularRow } from "./curso";
 import { EstudianteRepository } from "./estudiante";
+import type { EstudianteConDetalleRow } from "./estudiante";
 import { ProfesorRepository } from "./profesor";
 import { AlertaColegioRepository } from "./alerta-colegio";
 
@@ -35,6 +37,24 @@ export interface CursoMirada {
     profesorTitular: string | null;
     /** Reportes DISTINTOS (D2) de los últimos 30 días. */
     alertas30d: number;
+}
+
+/** SPEC-147 (FR-002, Key Entities): DTO del escritorio del curso. */
+export interface CursoDetalle {
+    /** Ficha del curso con su titular (incluye `estado`, COND-2 de SPEC-145). */
+    curso: CursoConTitularRow;
+    /** Titular con su estado; null → la UI muestra "sin titular asignado". */
+    titular: { nombre: string; apellidos: string; estado: string } | null;
+    /** Estudiantes ACTIVOS del curso con acudientes (orden asc) e identificadores activos. */
+    estudiantes: EstudianteConDetalleRow[];
+    /** Cobertura del CURSO (misma fórmula que la home): vigilancia / reacción / huecos. */
+    cobertura: { vigilancia: number; reaccion: number; sinRedes: number; sinContacto: number };
+    /** Reportes DISTINTOS (D2) del curso en los últimos 30 días. */
+    alertas30d: number;
+    /** Delta vs los 30 días anteriores (positivo = más reportes). */
+    delta30d: number;
+    /** Total de identificadores activos del curso (tarjeta "Identificadores"). */
+    identificadoresActivos: number;
 }
 
 export interface HomeRector {
@@ -210,6 +230,53 @@ export class ColegioResumenRepository {
                 anual: rellenarSerie(serieAnual, anios),
             },
             cursosMirada,
+        };
+    }
+
+    /**
+     * SPEC-147 (FR-002, SC-001): TODOS los datos del escritorio del curso en UNA
+     * llamada (consultas en paralelo, cero N+1). 404 si el curso no existe o es
+     * de OTRO colegio (tenant-first E-1). I-29: solo conteos, cero scores.
+     */
+    async cursoDetalle(colegioId: string, cursoId: string): Promise<CursoDetalle> {
+        const ahora = new Date();
+        const hace30d = new Date(ahora.getTime() - 30 * DIA_MS);
+        const hace60d = new Date(ahora.getTime() - 60 * DIA_MS);
+
+        const tx = this.tx();
+        const cursoRepo = new CursoRepository(tx);
+        const estudianteRepo = new EstudianteRepository(tx);
+        const alertaRepo = new AlertaColegioRepository(tx);
+
+        const [cursos, estudiantes, coberturaConteos, alertas30d, alertas30dPrevias] = await Promise.all([
+            cursoRepo.obtenerConTitularPorIds(colegioId, [cursoId]),
+            estudianteRepo.listarPorCursoConDetalle(colegioId, cursoId),
+            estudianteRepo.contarCobertura(colegioId, cursoId),
+            alertaRepo.contarReportesDistintosPorCurso(colegioId, cursoId, hace30d),
+            alertaRepo.contarReportesDistintosPorCurso(colegioId, cursoId, hace60d, hace30d),
+        ]);
+
+        const curso = cursos[0];
+        if (!curso) {
+            throw new AppError("Curso no encontrado", ERROR_CODES.NOT_FOUND, 404);
+        }
+
+        const activos = coberturaConteos.activos;
+
+        return {
+            curso,
+            titular: curso.profesorTitular,
+            estudiantes,
+            cobertura: {
+                vigilancia: activos > 0 ? coberturaConteos.conIdentificadores / activos : 0,
+                reaccion: activos > 0 ? coberturaConteos.conAcudientes / activos : 0,
+                sinRedes: activos - coberturaConteos.conIdentificadores,
+                sinContacto: activos - coberturaConteos.conAcudientes,
+            },
+            alertas30d,
+            delta30d: alertas30d - alertas30dPrevias,
+            // Sin query extra: los identificadores activos ya vienen en el include.
+            identificadoresActivos: estudiantes.reduce((total, e) => total + e.identificadores.length, 0),
         };
     }
 }

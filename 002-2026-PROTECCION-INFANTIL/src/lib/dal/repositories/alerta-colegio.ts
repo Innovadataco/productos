@@ -149,6 +149,42 @@ export class AlertaColegioRepository {
         return filas[0]?.total ?? 0;
     }
 
+    /**
+     * SPEC-147 (T002): reportes DISTINTOS (D2) de UN curso en una ventana sobre
+     * `creadoEn` — join al estudiante del identificador con tenant en ambos lados
+     * (nombres FÍSICOS: "Alumno"/"IdentificadorAlumno"/"alumnoId"). Reportes
+     * eliminados no cuentan. `hasta` exclusivo para la ventana anterior (delta).
+     */
+    async contarReportesDistintosPorCurso(colegioId: string, cursoId: string, desde: Date, hasta?: Date): Promise<number> {
+        const filas: { total: number }[] = hasta
+            ? await this.db.$queryRaw`
+                SELECT COUNT(DISTINCT ac."reporteId")::int AS total
+                FROM "AlertaColegio" ac
+                JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+                JOIN "Alumno" a ON a.id = i."alumnoId"
+                JOIN "Reporte" r ON r.id = ac."reporteId"
+                WHERE a."colegioId" = ${colegioId}
+                  AND ac."colegioId" = a."colegioId"
+                  AND a."cursoId" = ${cursoId}
+                  AND r.eliminado = false
+                  AND ac."creadoEn" >= ${desde}
+                  AND ac."creadoEn" < ${hasta}
+            `
+            : await this.db.$queryRaw`
+                SELECT COUNT(DISTINCT ac."reporteId")::int AS total
+                FROM "AlertaColegio" ac
+                JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+                JOIN "Alumno" a ON a.id = i."alumnoId"
+                JOIN "Reporte" r ON r.id = ac."reporteId"
+                WHERE a."colegioId" = ${colegioId}
+                  AND ac."colegioId" = a."colegioId"
+                  AND a."cursoId" = ${cursoId}
+                  AND r.eliminado = false
+                  AND ac."creadoEn" >= ${desde}
+            `;
+        return filas[0]?.total ?? 0;
+    }
+
     /** SPEC-143 (D1): contadores del semáforo — nuevas sin gestionar + últimas 72 h. */
     async conteosSemaforo(colegioId: string): Promise<{ alertasNuevas: number; alertas72h: number }> {
         const desde72h = new Date(Date.now() - 72 * 60 * 60 * 1000);

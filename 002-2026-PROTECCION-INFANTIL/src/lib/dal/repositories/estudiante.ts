@@ -16,6 +16,11 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import type { DbClient } from "../unit-of-work";
 import type { EstadoActivo } from "./curso";
 
+/** SPEC-147: fila del escritorio del curso — estudiante con acudientes e identificadores. */
+export type EstudianteConDetalleRow = Prisma.EstudianteGetPayload<{
+    include: { acudientes: true; identificadores: true };
+}>;
+
 /** Datos de un acudiente para el alta anidada (D1: orden 1|2, máx 2 por Zod). */
 export interface DatosAcudiente {
     orden: 1 | 2;
@@ -37,6 +42,23 @@ export class EstudianteRepository {
         return this.db.estudiante.findMany({
             where: { cursoId, colegioId, estado: "activo" },
             orderBy: { nombre: "asc" },
+        });
+    }
+
+    /**
+     * SPEC-147 (T001): estudiantes ACTIVOS del curso con sus acudientes (orden asc)
+     * e identificadores ACTIVOS en UN findMany (cero N+1 por construcción),
+     * SIEMPRE acotado al colegio. El acudiente se lee SOLO vía include del
+     * estudiante ya acotado (D1 de SPEC-144). Orden del listado: apellidos, nombre.
+     */
+    listarPorCursoConDetalle(colegioId: string, cursoId: string): Promise<EstudianteConDetalleRow[]> {
+        return this.db.estudiante.findMany({
+            where: { cursoId, colegioId, estado: "activo" },
+            orderBy: [{ apellidos: "asc" }, { nombre: "asc" }],
+            include: {
+                acudientes: { orderBy: { orden: "asc" } },
+                identificadores: { where: { estado: "activo" } },
+            },
         });
     }
 
@@ -84,9 +106,11 @@ export class EstudianteRepository {
      * activos, cuántos tienen ≥1 identificador activo (vigilancia) y cuántos ≥1
      * acudiente (reacción). El acudiente se cuenta SOLO vía estudiante acotado por
      * colegioId (D1 de SPEC-144). Tres counts agregados, cero N+1.
+     * SPEC-147 (T001): `cursoId` opcional ADITIVO acota la cobertura a UN curso
+     * (escritorio del curso); sin él, el conteo del colegio queda idéntico.
      */
-    contarCobertura(colegioId: string): Promise<{ activos: number; conIdentificadores: number; conAcudientes: number }> {
-        const base = { colegioId, estado: "activo" } satisfies Prisma.EstudianteWhereInput;
+    contarCobertura(colegioId: string, cursoId?: string): Promise<{ activos: number; conIdentificadores: number; conAcudientes: number }> {
+        const base = { colegioId, estado: "activo", ...(cursoId ? { cursoId } : {}) } satisfies Prisma.EstudianteWhereInput;
         const [activos, conIdentificadores, conAcudientes] = [
             this.db.estudiante.count({ where: base }),
             this.db.estudiante.count({ where: { ...base, identificadores: { some: { estado: "activo" } } } }),

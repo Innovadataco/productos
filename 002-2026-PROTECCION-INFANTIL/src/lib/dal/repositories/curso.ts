@@ -31,7 +31,14 @@ const SELECT_PARA_ESTADISTICAS = {
 const SELECT_CON_TITULAR = {
     id: true,
     nombre: true,
-    profesorTitular: { select: { nombre: true, apellidos: true } },
+    // SPEC-147 (T003): el escritorio del curso necesita la ficha completa y el
+    // ESTADO del titular (COND-2 de SPEC-145: titular inactivo se muestra marcado).
+    // Aditivo: los consumidores previos (home, cursosMirada) ignoran los campos nuevos.
+    grado: true,
+    anioLectivo: true,
+    estado: true,
+    profesorTitularId: true,
+    profesorTitular: { select: { nombre: true, apellidos: true, estado: true } },
 } satisfies Prisma.CursoSelect;
 
 export type CursoParaEstadisticasRow = Prisma.CursoGetPayload<{ select: typeof SELECT_PARA_ESTADISTICAS }>;
