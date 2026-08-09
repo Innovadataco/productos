@@ -57,6 +57,31 @@ export interface CursoDetalle {
     identificadoresActivos: number;
 }
 
+/** SPEC-158 (FR-003, Key Entities): embudo por reporte DISTINTO, sin solapes. */
+export interface EmbudoTablero {
+    recibidos: number;
+    cerrados: number;
+    enRevision: number;
+    teEsperan: number;
+}
+
+/** SPEC-158 (Key Entities): barra por curso (30 días, métrica D2, con nombre). */
+export interface BarraCurso {
+    cursoId: string;
+    nombre: string;
+    reportes30d: number;
+}
+
+/** SPEC-158 (Key Entities): DTO del tablero de control del colegio. I-29: solo conteos. */
+export interface TableroColegio {
+    embudo: EmbudoTablero;
+    /** Reportes DISTINTOS por hora del día (America/Bogota), 24 posiciones con ceros. */
+    reloj24h: number[];
+    /** Serie mensual reusada de la home: últimos 12 meses, huecos en cero. */
+    ritmoMensual: PuntoTendencia[];
+    barrasCurso: BarraCurso[];
+}
+
 export interface HomeRector {
     colegio: { nombre: string; vigenciaFin: Date | null };
     kpis: {
@@ -230,6 +255,49 @@ export class ColegioResumenRepository {
                 anual: rellenarSerie(serieAnual, anios),
             },
             cursosMirada,
+        };
+    }
+
+    /**
+     * SPEC-158 (FR-002, SC-003): TODOS los datos del tablero de control en UNA
+     * llamada (Promise.all de agregados, cero N+1, tenant en cada query). Reusa
+     * la serie mensual (12 puntos) y el top por curso (30 días, límite alto) de
+     * la home con la MISMA métrica D2; el embudo y el reloj son agregados
+     * propios de `AlertaColegioRepository`. I-29: solo conteos agregados.
+     */
+    async tableroColegio(colegioId: string): Promise<TableroColegio> {
+        const ahora = new Date();
+        const hace30d = new Date(ahora.getTime() - 30 * DIA_MS);
+        const meses = iniciosMensuales(ahora);
+
+        const tx = this.tx();
+        const alertaRepo = new AlertaColegioRepository(tx);
+        const cursoRepo = new CursoRepository(tx);
+
+        const [embudo, reloj24h, serieMensual, topCursos] = await Promise.all([
+            alertaRepo.embudoPorReporte(colegioId),
+            alertaRepo.reloj24h(colegioId),
+            alertaRepo.serieReportesPorPeriodo(colegioId, "month", meses[0]!),
+            // Límite alto (10): las barras caben en pantalla sin paginar.
+            alertaRepo.topCursosPorReportes(colegioId, hace30d, 10),
+        ]);
+
+        const cursosInfo = await cursoRepo.obtenerConTitularPorIds(
+            colegioId,
+            topCursos.map((t) => t.cursoId)
+        );
+        const infoPorId = new Map(cursosInfo.map((c) => [c.id, c]));
+
+        const barrasCurso: BarraCurso[] = topCursos.flatMap((t) => {
+            const info = infoPorId.get(t.cursoId);
+            return info ? [{ cursoId: t.cursoId, nombre: info.nombre, reportes30d: t.total }] : [];
+        });
+
+        return {
+            embudo,
+            reloj24h,
+            ritmoMensual: rellenarSerie(serieMensual, meses),
+            barrasCurso,
         };
     }
 
