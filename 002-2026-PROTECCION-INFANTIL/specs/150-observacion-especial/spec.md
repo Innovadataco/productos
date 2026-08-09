@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-09
 
-**Status**: DESARROLLO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (continuación D-51; orden ZEUS: …159 → 150 → 151 →
 …). Fuentes VINCULANTES: BRIEF-DISEÑO-UX-RECTOR v3.0 — §10 fila 10 ("Observación

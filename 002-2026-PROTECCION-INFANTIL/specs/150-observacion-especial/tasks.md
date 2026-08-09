@@ -2,19 +2,19 @@
 
 **Spec**: [spec.md](./spec.md) · **Plan**: [plan.md](./plan.md)
 
-- [ ] T001 Schema: `EstudianteObservacion` + `AccionAudit` ×2 + migración aditiva
+- [x] T001 Schema: `EstudianteObservacion` + `AccionAudit` ×2 + migración aditiva
       (diff+shadow, **I-49: cero DROP INDEX**) + reset/deploy/seed en test
-- [ ] T002 [P] Repo `estudiante-observacion.ts` (marcar idempotente, desmarcar soft
+- [x] T002 [P] Repo `estudiante-observacion.ts` (marcar idempotente, desmarcar soft
       delete, activaPorEstudiantes, historial) + tests A/B
-- [ ] T003 `POST/DELETE /api/colegio/alumnos/[id]/observacion` (tenant-first, Zod
+- [x] T003 `POST/DELETE /api/colegio/alumnos/[id]/observacion` (tenant-first, Zod
       motivo ≤500, audit ambas) + route.test.ts (A/B, idempotencia, histórico)
-- [ ] T004 Sensibilidad en `avisos.ts`: umbral efectivo 1 si observación activa
+- [x] T004 Sensibilidad en `avisos.ts`: umbral efectivo 1 si observación activa
       (detalle "observación especial") + test (observado → 1er reporte;
       desmarcado → umbral estándar; idempotencia por día)
-- [ ] T005 [P] UI: flag `observado` en `cursoDetalle` + `Star` toggle en
+- [x] T005 [P] UI: flag `observado` en `cursoDetalle` + `Star` toggle en
       `TablaEstudiantes` (aria-label, tap ≥48px) + estado/historial en
       `AlumnoDetallePageClient` + tests
-- [ ] T006 Arch: regenerar 01 + oráculo modelos 56→57 + `arch:check` VERDE
+- [x] T006 Arch: regenerar 01 + oráculo modelos 56→57 + `arch:check` VERDE
 - [ ] T007 Checks de día: tsc + lint + tokens:check (≤1122) + arch:check + tests
       del área + push (sin pipes con tail; verificar ls-remote)
 
