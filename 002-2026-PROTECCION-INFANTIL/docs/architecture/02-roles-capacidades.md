@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 6 roles (5 autenticados + anónimo) × 216 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1296 combinaciones.
+Inventario: 6 roles (5 autenticados + anónimo) × 217 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1302 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -142,6 +142,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
@@ -363,6 +364,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
@@ -584,6 +586,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
@@ -805,6 +808,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
@@ -1026,6 +1030,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
@@ -1247,6 +1252,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/alumnos/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alumnos/[id]/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alumnos/[id]/identificadores` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/alumnos/[id]/observacion` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/auditoria` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/buscar` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/carga/confirmar` | api | HTTP 401 | permite | **NO** |
@@ -1456,6 +1462,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/alumnos/[id]` | HTTP 401 | permite |
 | `/api/colegio/alumnos/[id]/estado` | HTTP 401 | permite |
 | `/api/colegio/alumnos/[id]/identificadores` | HTTP 401 | permite |
+| `/api/colegio/alumnos/[id]/observacion` | HTTP 401 | permite |
 | `/api/colegio/auditoria` | HTTP 401 | permite |
 | `/api/colegio/buscar` | HTTP 401 | permite |
 | `/api/colegio/carga/confirmar` | HTTP 401 | permite |
