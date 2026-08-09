@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -193,6 +194,13 @@ export default function AlertasColegioPageClient() {
                                         </div>
 
                                         <div className="flex flex-wrap gap-2 sm:flex-col sm:items-end">
+                                            {/* SPEC-159 (US1): la lista enlaza al seguimiento del caso. */}
+                                            <Link
+                                                href={`/dashboard/colegio/alertas/${alerta.id}`}
+                                                className="inline-flex min-h-12 items-center rounded-xl px-3 text-sm font-semibold text-accent transition hover:underline"
+                                            >
+                                                Ver seguimiento →
+                                            </Link>
                                             {alerta.estadoAlerta === "nueva" && (
                                                 <Button
                                                     variant="secondary"
