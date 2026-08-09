@@ -15,7 +15,7 @@
       `TablaEstudiantes` (aria-label, tap ≥48px) + estado/historial en
       `AlumnoDetallePageClient` + tests
 - [x] T006 Arch: regenerar 01 + oráculo modelos 56→57 + `arch:check` VERDE
-- [ ] T007 Checks de día: tsc + lint + tokens:check (≤1122) + arch:check + tests
+- [x] T007 Checks de día: tsc + lint + tokens:check (≤1122) + arch:check + tests
       del área + push (sin pipes con tail; verificar ls-remote)
 
 ## Analyze (2026-08-09)
