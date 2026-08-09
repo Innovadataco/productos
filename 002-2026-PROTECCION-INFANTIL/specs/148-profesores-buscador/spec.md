@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-08
 
-**Status**: DESARROLLO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (continuación lote D-51; orden ZEUS: 148 → 149 →
 159 → …). Fuentes VINCULANTES: BRIEF-DISEÑO-UX-RECTOR v3.0 — §10 fila 7
@@ -160,3 +160,8 @@ Enter y cierra con Esc (test a11y).
 Impacto en arquitectura: **añade una página** (`/dashboard/colegio/profesores/`),
 **un endpoint** (`/api/colegio/buscar`) y un ítem de nav ⇒ aserciones A/B de
 `arch:check` VERDES y oráculo de páginas 54→55. No modifica schema ni stack.
+
+## Implementación
+
+Implementada 2026-08-08 en `work/002-pi-058` (lote D-51: `9923fddb` + `e65e8ca5` +
+`91321dd0` + `99ca4442`). Evidencia y deuda en [cierre.md](./cierre.md).

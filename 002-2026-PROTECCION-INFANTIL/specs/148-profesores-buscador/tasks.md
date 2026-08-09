@@ -2,20 +2,20 @@
 
 **Spec**: [spec.md](./spec.md) · **Plan**: [plan.md](./plan.md)
 
-- [ ] T001 `busqueda-colegio.ts` (ilike nombre+apellidos/nombre, solo activos,
+- [x] T001 `busqueda-colegio.ts` (ilike nombre+apellidos/nombre, solo activos,
       tenant, top N por grupo + restantes, prefijo primero) + test (A/B, 500
       registros < 200 ms, mínimo 2 caracteres)
-- [ ] T002 `GET /api/colegio/buscar` (patrón rutas colegio, rate limit admin_read)
+- [x] T002 `GET /api/colegio/buscar` (patrón rutas colegio, rate limit admin_read)
       + route.test.ts A/B
-- [ ] T003 [P] `CommandPalette` (portal, focus trap, combobox/listbox aria, ↑↓
+- [x] T003 [P] `CommandPalette` (portal, focus trap, combobox/listbox aria, ↑↓
       Enter Esc, restauración foco) + test a11y
-- [ ] T004 [P] `BuscadorGlobal` (⌘K/Ctrl+K, debounce 250-300 ms, resultados
+- [x] T004 [P] `BuscadorGlobal` (⌘K/Ctrl+K, debounce 250-300 ms, resultados
       agrupados con contexto, empty honesto) montado en layout del colegio + test
-- [ ] T005 [P] Página `/dashboard/colegio/profesores/` (tabla, filtro
+- [x] T005 [P] Página `/dashboard/colegio/profesores/` (tabla, filtro
       activos/inactivos, buscador, formulario, baja suave + reactivar) + tests
-- [ ] T006 Nav "Profesores" + placeholder home → pantalla nueva + oráculo páginas
+- [x] T006 Nav "Profesores" + placeholder home → pantalla nueva + oráculo páginas
       54→55 + arch:check VERDE
-- [ ] T007 Checks de día: tsc + lint + tokens:check (≤1122) + arch:check + tests
+- [x] T007 Checks de día: tsc + lint + tokens:check (≤1122) + arch:check + tests
       del área (nuevos + SPEC-145 intactos) + push
 
 ## Analyze (2026-08-08)
