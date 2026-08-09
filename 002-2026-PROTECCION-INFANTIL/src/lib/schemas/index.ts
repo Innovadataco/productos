@@ -270,3 +270,16 @@ export const alertaIdParamsSchema = z.object({
 export const alertaQuerySchema = z.object({
     estado: z.enum(["nueva", "vista", "gestionada"]).optional(),
 });
+
+// SPEC-149 (FR-007): PATCH de preferencias de avisos del colegio. Upsert por
+// tipo (tenant lo pone la sesión). Umbrales 1-100, ventanas 1-90 días; null en
+// umbral/ventanaDias/emailDestino = volver al default. Mensajes humanos (§4.6).
+export const tipoEventoAvisoSchema = z.enum(["REPORTE_NUEVO", "UMBRAL_CURSO", "ESTUDIANTE_REPETIDO", "RESUMEN_SEMANAL"]);
+
+export const preferenciaAvisoBodySchema = z.object({
+    tipoEvento: tipoEventoAvisoSchema,
+    habilitado: z.boolean().optional(),
+    emailDestino: emailSchema.nullable().optional(),
+    umbral: z.number().int().min(1, "El umbral mínimo es 1").max(100, "El umbral máximo es 100").nullable().optional(),
+    ventanaDias: z.number().int().min(1, "La ventana mínima es 1 día").max(90, "La ventana máxima es 90 días").nullable().optional(),
+});

@@ -38,6 +38,7 @@ export const COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio/cursos/unificado", label: "Subir lista", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/alertas", label: "Alertas", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/estadisticas", label: "Estadísticas", modulo: "colegios_gestion" },
+    { href: "/dashboard/colegio/configuracion", label: "Configuración", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/auditoria", label: "Auditoría", modulo: "colegios_auditoria" },
 ];
 
