@@ -59,6 +59,9 @@ export async function resetDatabase() {
     await prisma.identificadorReportado.deleteMany();
     await prisma.alertaColegio.deleteMany();
     await prisma.patronInstitucional.deleteMany();
+    // SPEC-149: avisos del colegio (hijos de Colegio, FK RESTRICT).
+    await prisma.registroAvisoColegio.deleteMany();
+    await prisma.preferenciaAlertaColegio.deleteMany();
     await prisma.reporte.deleteMany();
     await prisma.codigoVerificacion.deleteMany();
     await prisma.integranteComite.deleteMany();
