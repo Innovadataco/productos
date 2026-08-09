@@ -44,6 +44,7 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
     const [editando, setEditando] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const [togglingId, setTogglingId] = useState<string | null>(null);
+    const [togglingObservacionId, setTogglingObservacionId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ nombre: "", grado: "", anioLectivo: "", profesorTitularId: "" });
     const [profesores, setProfesores] = useState<ProfesorOpcion[]>([]);
     const [cargandoProfesores, setCargandoProfesores] = useState(false);
@@ -142,6 +143,37 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
         }
     }
 
+    // SPEC-150 (US3): estrella de observación especial — POST marca, DELETE
+    // desmarca (soft delete); tras cada cambio, refresh recarga el flag.
+    async function toggleObservacion(estudiante: EstudianteFila) {
+        setTogglingObservacionId(estudiante.id);
+        setAviso(null);
+        try {
+            const res = await fetch(`/api/colegio/alumnos/${estudiante.id}/observacion`, {
+                method: estudiante.observado ? "DELETE" : "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                ...(estudiante.observado ? {} : { body: JSON.stringify({}) }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setAviso({
+                    tipo: "exito",
+                    mensaje: estudiante.observado
+                        ? "Observación especial retirada."
+                        : "Estudiante marcado en observación especial: te avisaremos al primer reporte.",
+                });
+                router.refresh();
+            } else {
+                setAviso({ tipo: "error", mensaje: data?.error?.message || "No pudimos cambiar la observación." });
+            }
+        } catch {
+            setAviso({ tipo: "error", mensaje: "Error de red cambiando la observación." });
+        } finally {
+            setTogglingObservacionId(null);
+        }
+    }
+
     // El titular inactivo no viene en la lista de activos: se ofrece marcado
     // para no perder la asignación vigente al editar (COND-2 de SPEC-145).
     const opcionesTitular = [
@@ -216,6 +248,8 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
                                 estudiantes={datos.estudiantes}
                                 onToggleEstado={toggleEstadoEstudiante}
                                 togglingId={togglingId}
+                                onToggleObservacion={toggleObservacion}
+                                togglingObservacionId={togglingObservacionId}
                             />
                         </div>
                     </section>

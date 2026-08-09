@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -15,6 +16,11 @@ import type { AcudienteVista } from "./AcudienteContacto";
  * contacto clicable (AcudienteContacto), badge de estado y acciones "Ver" (ficha
  * del estudiante) y activar/desactivar (endpoint existente, lo dispara el padre).
  * El orden alfabético (apellidos, nombre) viene del servidor; el filtro es local.
+ *
+ * SPEC-150 (US3, FR-004): estrella de observación especial junto al nombre —
+ * llena (ámbar del sistema) cuando el estudiante está observado; el toggle lo
+ * dispara el padre contra POST/DELETE del endpoint de observación. Botón
+ * accesible: aria-label/aria-pressed, tap ≥ 48px, sin animación.
  */
 
 export interface EstudianteFila {
@@ -24,6 +30,8 @@ export interface EstudianteFila {
     estado: string;
     identificadores: { id: string }[];
     acudientes: AcudienteVista[];
+    /** SPEC-150: observación especial activa (estrella llena). Ausente ≡ no observado. */
+    observado?: boolean;
 }
 
 interface TablaEstudiantesProps {
@@ -31,11 +39,21 @@ interface TablaEstudiantesProps {
     onToggleEstado: (estudiante: EstudianteFila) => void;
     /** Id del estudiante con cambio de estado en curso (botón en loading). */
     togglingId?: string | null;
+    /** SPEC-150: toggle de observación especial (POST/DELETE lo hace el padre). */
+    onToggleObservacion?: (estudiante: EstudianteFila) => void;
+    /** Id del estudiante con toggle de observación en curso (estrella deshabilitada). */
+    togglingObservacionId?: string | null;
 }
 
 const DEBOUNCE_MS = 280;
 
-export function TablaEstudiantes({ estudiantes, onToggleEstado, togglingId = null }: TablaEstudiantesProps) {
+export function TablaEstudiantes({
+    estudiantes,
+    onToggleEstado,
+    togglingId = null,
+    onToggleObservacion,
+    togglingObservacionId = null,
+}: TablaEstudiantesProps) {
     const [texto, setTexto] = useState("");
     const [filtro, setFiltro] = useState("");
 
@@ -81,15 +99,41 @@ export function TablaEstudiantes({ estudiantes, onToggleEstado, togglingId = nul
                         filtrados.map((estudiante) => (
                             <tr key={estudiante.id} className="align-top">
                                 <td className="py-3 pr-3">
-                                    <Link
-                                        href={`/dashboard/colegio/alumnos/${estudiante.id}`}
-                                        className="font-medium text-body hover:text-accent hover:underline"
-                                    >
-                                        {estudiante.nombre} {estudiante.apellidos}
-                                    </Link>
-                                    <span className="block text-xs text-subtle">
-                                        {estudiante.identificadores.length}{" "}
-                                        {estudiante.identificadores.length === 1 ? "identificador" : "identificadores"}
+                                    <span className="flex items-start gap-1">
+                                        <span>
+                                            <Link
+                                                href={`/dashboard/colegio/alumnos/${estudiante.id}`}
+                                                className="font-medium text-body hover:text-accent hover:underline"
+                                            >
+                                                {estudiante.nombre} {estudiante.apellidos}
+                                            </Link>
+                                            <span className="block text-xs text-subtle">
+                                                {estudiante.identificadores.length}{" "}
+                                                {estudiante.identificadores.length === 1 ? "identificador" : "identificadores"}
+                                            </span>
+                                        </span>
+                                        {onToggleObservacion ? (
+                                            <button
+                                                type="button"
+                                                aria-label={
+                                                    estudiante.observado
+                                                        ? `Quitar a ${estudiante.nombre} ${estudiante.apellidos} de observación especial`
+                                                        : `Marcar a ${estudiante.nombre} ${estudiante.apellidos} en observación especial`
+                                                }
+                                                aria-pressed={estudiante.observado ?? false}
+                                                disabled={togglingObservacionId === estudiante.id}
+                                                onClick={() => onToggleObservacion(estudiante)}
+                                                className={`inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50 ${
+                                                    estudiante.observado ? "text-estado-ambar" : "text-subtle hover:text-estado-ambar"
+                                                }`}
+                                            >
+                                                <Star
+                                                    aria-hidden="true"
+                                                    className="h-5 w-5"
+                                                    fill={estudiante.observado ? "currentColor" : "none"}
+                                                />
+                                            </button>
+                                        ) : null}
                                     </span>
                                 </td>
                                 <td className="py-3 pr-3">

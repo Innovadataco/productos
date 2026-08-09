@@ -296,7 +296,7 @@ export async function evaluarUmbralesPorAlerta(alertaId: string): Promise<void> 
                 colegioId,
                 tipoEvento: "ESTUDIANTE_REPETIDO",
                 entidadId: estudiante.id,
-                detalle: observacionActiva ? "observación especial: aviso al primer reporte" : undefined,
+                ...(observacionActiva ? { detalle: "observación especial: aviso al primer reporte" } : {}),
             });
         }
     }
