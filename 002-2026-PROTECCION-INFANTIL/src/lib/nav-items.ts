@@ -32,6 +32,7 @@ export const COMITE_NAV_TABS: NavItem[] = [
 
 export const COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio", label: "Inicio", modulo: "colegios" },
+    { href: "/dashboard/colegio/tablero", label: "Tablero", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/cursos", label: "Cursos", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/cursos/unificado", label: "Subir lista", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/alertas", label: "Alertas", modulo: "colegios_gestion" },
