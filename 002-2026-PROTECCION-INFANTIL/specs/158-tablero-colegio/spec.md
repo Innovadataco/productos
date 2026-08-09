@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-03
 
-**Status**: DESARROLLO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (lote D-51, 146→147→158; radica ZEUS). Fuentes
 VINCULANTES: BRIEF-DISEÑO-UX-RECTOR v3.0 — §10 fila 6 ("Embudo de estado (recibidos
@@ -195,3 +195,9 @@ Impacto en arquitectura: **añade una ruta de página** (`/dashboard/colegio/tab
 y un ítem de navegación ⇒ aserciones A/B de `arch:check` deben quedar VERDES (la
 puerta del proxy ya cubre `/dashboard/colegio/*` para SCHOOL_ADMIN). No modifica
 schema ni stack.
+
+## Implementación
+
+Implementada 2026-08-03 en `work/002-pi-058` (lote D-51: `09b01ede` + `f0a9a9cc` +
+`fb28e1f4`). Evidencia, decisiones de implementación y deuda en
+[cierre.md](./cierre.md).

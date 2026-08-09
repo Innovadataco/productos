@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-03
 
-**Status**: DESARROLLO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058 (lote D-51, 146→147→158; radica ZEUS). Fuentes
 VINCULANTES: BRIEF-DISEÑO-UX-RECTOR v3.0 — §5.5 (mockup vista de curso), §4.3
@@ -194,3 +194,9 @@ fila aparece con su acudiente; editar el titular del curso (selector same-tenant
 Impacto en arquitectura: **ninguno estructural** — reemplaza una página existente
 (misma ruta), extiende repos del DAL de forma aditiva. No modifica schema, proxy,
 navegación ni stack.
+
+## Implementación
+
+Implementada 2026-08-03 en `work/002-pi-058` (lote D-51: `acec9c14` + `06df8a20` +
+`88bdcaa0`; fix de flake propio `eb4c2107`). Evidencia, desviaciones y deuda en
+[cierre.md](./cierre.md).

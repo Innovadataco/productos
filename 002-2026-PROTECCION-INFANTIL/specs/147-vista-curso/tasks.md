@@ -2,21 +2,21 @@
 
 **Spec**: [spec.md](./spec.md) · **Plan**: [plan.md](./plan.md)
 
-- [ ] T001 `estudiante.listarPorCursoConDetalle` (include acudientes +
+- [x] T001 `estudiante.listarPorCursoConDetalle` (include acudientes +
       identificadores activos, tenant) + `contarCobertura` parametrizada por curso
       (aditivo) + tests
-- [ ] T002 [P] `alerta-colegio`: conteos DISTINCT reporteId 30d/60d para UN curso
+- [x] T002 [P] `alerta-colegio`: conteos DISTINCT reporteId 30d/60d para UN curso
       (raw con nombres físicos, tenant en ambos lados) + tests
-- [ ] T003 `colegio-resumen.cursoDetalle(colegioId, cursoId)` (Promise.all, DTO,
+- [x] T003 `colegio-resumen.cursoDetalle(colegioId, cursoId)` (Promise.all, DTO,
       404 si 0 filas) + test A/B + conteo de queries
-- [ ] T004 [P] `AcudienteContacto` (tel:/mailto: condicional, badge ámbar, segundo
+- [x] T004 [P] `AcudienteContacto` (tel:/mailto: condicional, badge ámbar, segundo
       acudiente visible) + test por caso (solo tel, solo email, ambos, ninguno)
-- [ ] T005 [P] `TablaEstudiantes` (ui/Tabla + buscador debounce + empty state) +
+- [x] T005 [P] `TablaEstudiantes` (ui/Tabla + buscador debounce + empty state) +
       `AnilloCurso` + `TarjetasCurso` + `CursoHeader` + tests
-- [ ] T006 `CursoEscritorioClient` + `page.tsx` (server, una llamada) +
+- [x] T006 `CursoEscritorioClient` + `page.tsx` (server, una llamada) +
       `FormAgregarEstudiante` (acudiente opcional) + edición con titular — endpoints
       existentes intactos
-- [ ] T007 Checks de día: tsc + lint + tokens:check (≤1135) + arch:check + tests
+- [x] T007 Checks de día: tsc + lint + tokens:check (≤1135) + arch:check + tests
       del área (nuevos + existentes cursos/alumnos/journeys verdes)
 
 ## Analyze (2026-08-03)

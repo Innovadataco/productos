@@ -280,3 +280,8 @@ Decisiones tomadas al implementar (no cambian los FR):
 
 Deuda técnica: ninguna nueva. `cursos/[id]` y `alumnos/[id]` siguen sobre los
 endpoints viejos hasta SPEC-147 (decisión de alcance del encabezado).
+
+## Implementación
+
+Implementada 2026-08-03 en `work/002-pi-058` (lote D-51: `525a3170` + `40c5e19e` +
+`f82d6676`). Evidencia, desviaciones y deuda en [cierre.md](./cierre.md).
