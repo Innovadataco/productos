@@ -6,6 +6,11 @@
  * prevalece el conteo real (regla de oráculos de SPEC-126).
  * Actualizado 2026-08-02: 52 page.tsx — SPEC-141 (N-1) añadió 2 páginas de solo
  * lectura del admin (circulo del padre, estructura del colegio).
+ * Actualizado 2026-08-04: 53 page.tsx — SPEC-146 añade el wizard unificado
+ * (/dashboard/colegio/cursos/unificado); nuevo/ y carga/ quedan como redirects
+ * (siguen siendo page.tsx, por eso no restan).
+ * Actualizado 2026-08-08: 54 page.tsx — SPEC-158 añade el tablero de control
+ * (/dashboard/colegio/tablero).
  */
 import { describe, it, expect } from "vitest";
 import { inventarioRutasApp, VALOR_MUESTRA_SEGMENTO } from "./lib/rutas-app";
@@ -14,8 +19,8 @@ import { RUTA_APP } from "./lib/paths";
 const rutas = inventarioRutasApp(RUTA_APP);
 
 describe("inventario de rutas del árbol src/app (SPEC-126)", () => {
-    it("oráculo: 52 páginas (page.tsx) — 50 base + 2 de N-1 solo lectura (SPEC-141)", () => {
-        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(52);
+    it("oráculo: 54 páginas (page.tsx) — 53 + 1 del tablero (SPEC-158)", () => {
+        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(54);
     });
 
     it("incluye APIs (route.ts) además de páginas", () => {

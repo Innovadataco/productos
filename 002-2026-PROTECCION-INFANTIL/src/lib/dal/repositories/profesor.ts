@@ -48,6 +48,11 @@ export class ProfesorRepository {
         });
     }
 
+    /** SPEC-143: profesores del colegio por estado (KPI de la home: "activo"). */
+    contar(colegioId: string, estado: EstadoActivo = "activo"): Promise<number> {
+        return this.db.profesor.count({ where: { colegioId, estado } });
+    }
+
     /** Profesor activo con ese nombre + apellidos en el colegio (duplicado de alta → 409). */
     buscarPorNombreApellidosEnColegio(colegioId: string, nombre: string, apellidos: string) {
         return this.db.profesor.findFirst({

@@ -55,8 +55,9 @@ export function ColegioSideNav({ rol, modulosPermitidos }: { rol: string; modulo
 
 const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element> = {
     "/dashboard/colegio": InicioIcon,
+    "/dashboard/colegio/tablero": TableroIcon,
     "/dashboard/colegio/cursos": CursosIcon,
-    "/dashboard/colegio/cursos/carga": CargaIcon,
+    "/dashboard/colegio/cursos/unificado": CargaIcon,
     "/dashboard/colegio/alertas": AlertasIcon,
     "/dashboard/colegio/estadisticas": EstadisticasIcon,
     "/dashboard/colegio/auditoria": AuditoriaIcon,
@@ -66,6 +67,14 @@ function InicioIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.125 1.125 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75" />
+        </svg>
+    );
+}
+
+function TableroIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-13.5v4.5l3 3" />
         </svg>
     );
 }

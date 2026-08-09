@@ -16,6 +16,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | exceljs | ^4.4.0 |
 | jose | ^6.0.10 |
 | leaflet | ^1.9.4 |
+| lucide-react | 1.28.0 |
 | next | 16.2.10 |
 | pdfmake | ^0.3.11 |
 | pg-boss | ^12.26.0 |
@@ -23,6 +24,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | react | 19.2.4 |
 | react-dom | 19.2.4 |
 | react-leaflet | ^5.0.0 |
+| recharts | 3.10.1 |
 | resend | ^4.5.0 |
 | tailwindcss | ^3.4.17 |
 | tsx | ^4.19.4 |

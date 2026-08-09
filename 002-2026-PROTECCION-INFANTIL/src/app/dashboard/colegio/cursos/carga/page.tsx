@@ -1,9 +1,9 @@
-import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
-import { verificarAccesoPagina } from "@/lib/permisos-modulos";
-import CargaMasivaPageClient from "./CargaMasivaPageClient";
+import { permanentRedirect } from "next/navigation";
 
-export default async function CargaMasivaPage() {
-    const acceso = await verificarAccesoPagina("colegios_gestion");
-    if (!acceso.permitido) return <SinAccesoModulo volver="/dashboard/colegio" />;
-    return <CargaMasivaPageClient />;
+/**
+ * SPEC-146 (FR-005): subir la lista en Excel vive en la sección 2 del wizard
+ * unificado — redirect permanente en modo Excel (el acceso lo valida el wizard).
+ */
+export default function CargaMasivaPage() {
+    permanentRedirect("/dashboard/colegio/cursos/unificado?modo=excel");
 }

@@ -19,6 +19,12 @@ const SELECT_RESUMEN = {
     nombre: true,
 } satisfies Prisma.ColegioSelect;
 
+const SELECT_FICHA_HOME = {
+    id: true,
+    nombre: true,
+    finServicio: true,
+} satisfies Prisma.ColegioSelect;
+
 const INCLUDE_UBICACION = {
     pais: { select: { id: true, nombre: true } },
     departamento: { select: { id: true, nombre: true } },
@@ -27,6 +33,7 @@ const INCLUDE_UBICACION = {
 
 export type ColegioVigenciaRow = Prisma.ColegioGetPayload<{ select: typeof SELECT_VIGENCIA }>;
 export type ColegioResumenRow = Prisma.ColegioGetPayload<{ select: typeof SELECT_RESUMEN }>;
+export type ColegioFichaHomeRow = Prisma.ColegioGetPayload<{ select: typeof SELECT_FICHA_HOME }>;
 export type ColegioConUbicacion = Prisma.ColegioGetPayload<{ include: typeof INCLUDE_UBICACION }>;
 
 export class ColegioRepository {
@@ -49,6 +56,14 @@ export class ColegioRepository {
         return this.db.colegio.findUnique({
             where: { id: colegioId },
             select: SELECT_RESUMEN,
+        });
+    }
+
+    /** SPEC-143: ficha de la home del rector (nombre + fin de vigencia). Null si no existe. */
+    obtenerFichaHome(colegioId: string): Promise<ColegioFichaHomeRow | null> {
+        return this.db.colegio.findUnique({
+            where: { id: colegioId },
+            select: SELECT_FICHA_HOME,
         });
     }
 

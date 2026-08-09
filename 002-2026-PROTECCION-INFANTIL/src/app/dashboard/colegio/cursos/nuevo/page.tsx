@@ -1,9 +1,9 @@
-import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
-import { verificarAccesoPagina } from "@/lib/permisos-modulos";
-import NuevoCursoPageClient from "./NuevoCursoPageClient";
+import { permanentRedirect } from "next/navigation";
 
-export default async function NuevoCursoPage() {
-    const acceso = await verificarAccesoPagina("colegios_gestion");
-    if (!acceso.permitido) return <SinAccesoModulo volver="/dashboard/colegio" />;
-    return <NuevoCursoPageClient />;
+/**
+ * SPEC-146 (FR-005): la creación de cursos vive en el wizard unificado —
+ * esta ruta queda como redirect permanente (el acceso lo valida el wizard).
+ */
+export default function NuevoCursoPage() {
+    permanentRedirect("/dashboard/colegio/cursos/unificado");
 }

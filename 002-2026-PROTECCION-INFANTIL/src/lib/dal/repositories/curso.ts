@@ -23,9 +23,26 @@ const SELECT_PARA_ESTADISTICAS = {
     nombre: true,
     grado: true,
     anioLectivo: true,
+    // SPEC-143 (T002): titular disponible para las vistas del colegio (aditivo; los
+    // consumidores existentes de CursoParaEstadisticasRow lo ignoran).
+    profesorTitular: { select: { nombre: true, apellidos: true } },
+} satisfies Prisma.CursoSelect;
+
+const SELECT_CON_TITULAR = {
+    id: true,
+    nombre: true,
+    // SPEC-147 (T003): el escritorio del curso necesita la ficha completa y el
+    // ESTADO del titular (COND-2 de SPEC-145: titular inactivo se muestra marcado).
+    // Aditivo: los consumidores previos (home, cursosMirada) ignoran los campos nuevos.
+    grado: true,
+    anioLectivo: true,
+    estado: true,
+    profesorTitularId: true,
+    profesorTitular: { select: { nombre: true, apellidos: true, estado: true } },
 } satisfies Prisma.CursoSelect;
 
 export type CursoParaEstadisticasRow = Prisma.CursoGetPayload<{ select: typeof SELECT_PARA_ESTADISTICAS }>;
+export type CursoConTitularRow = Prisma.CursoGetPayload<{ select: typeof SELECT_CON_TITULAR }>;
 
 export class CursoRepository {
     private readonly db: DbClient;
@@ -54,6 +71,20 @@ export class CursoRepository {
     /** Total de cursos del colegio (totales generales de estadísticas). */
     contarPorColegio(colegioId: string): Promise<number> {
         return this.db.curso.count({ where: { colegioId } });
+    }
+
+    /** SPEC-143: cursos ACTIVOS del colegio (KPI de la home — variante aditiva). */
+    contarActivos(colegioId: string): Promise<number> {
+        return this.db.curso.count({ where: { colegioId, estado: "activo" } });
+    }
+
+    /** SPEC-143: cursos del colegio por ids con su profesor titular ("cursos que merecen mirada"). */
+    obtenerConTitularPorIds(colegioId: string, ids: string[]): Promise<CursoConTitularRow[]> {
+        if (ids.length === 0) return Promise.resolve([]);
+        return this.db.curso.findMany({
+            where: { colegioId, id: { in: ids } },
+            select: SELECT_CON_TITULAR,
+        });
     }
 
     /** Curso por id, SIEMPRE filtrado por tenant. Null si no existe o es ajeno. */
