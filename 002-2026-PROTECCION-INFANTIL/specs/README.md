@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **134** |
+| **Total de specs** | **135** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
 | **Implementadas (IMPLEMENTADO)** | **35** |
-| **Pendientes (PLANEADO)** | **1** |
+| **Pendientes (PLANEADO)** | **2** |
 
 ## Backlog activo (no cerradas)
 
@@ -89,6 +89,7 @@
 | [147](147-vista-curso/spec.md) | SPEC-147 — Vista de curso: escritorio con acudientes clicables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [148](148-profesores-buscador/spec.md) | SPEC-148 — Profesores + buscador global ⌘K (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [149](149-avisos-email/spec.md) | SPEC-149 — Avisos por email configurables del colegio (002-PI-058) | 🟢 Implementada (ver cierre.md) |
+| [150](150-observacion-especial/spec.md) | SPEC-150 — Observación especial de estudiantes (002-PI-058) | 🔵 Planeado (spec+plan listos; implementación en curso) |
 | [159](159-seguimiento-caso/spec.md) | SPEC-159 — Seguimiento del caso con bitácora: línea de tiempo, pendientes y notas inmutables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
@@ -228,6 +229,7 @@
 | [147](147-vista-curso/spec.md) | SPEC-147 — Vista de curso: escritorio con acudientes clicables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [148](148-profesores-buscador/spec.md) | SPEC-148 — Profesores + buscador global ⌘K (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [149](149-avisos-email/spec.md) | SPEC-149 — Avisos por email configurables del colegio (002-PI-058) | 🟢 Implementada (ver cierre.md) |
+| [150](150-observacion-especial/spec.md) | SPEC-150 — Observación especial de estudiantes (002-PI-058) | 🔵 Planeado (spec+plan listos; implementación en curso) |
 | [159](159-seguimiento-caso/spec.md) | SPEC-159 — Seguimiento del caso con bitácora: línea de tiempo, pendientes y notas inmutables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
