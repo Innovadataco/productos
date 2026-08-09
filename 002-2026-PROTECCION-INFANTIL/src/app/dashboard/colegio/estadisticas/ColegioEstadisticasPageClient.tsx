@@ -36,11 +36,24 @@ const TARJETAS = [
     { key: "alertas", label: "Alertas", icon: "🚨" },
 ] as const;
 
+function mesAnteriorDefault(): string {
+    const hoy = new Date();
+    let anio = hoy.getFullYear();
+    let mes = hoy.getMonth();
+    if (mes === 0) {
+        anio -= 1;
+        mes = 12;
+    }
+    return `${anio}-${String(mes).padStart(2, "0")}`;
+}
+
 export default function ColegioEstadisticasPageClient() {
     const [estadisticas, setEstadisticas] = useState<Estadisticas | null>(null);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [descargando, setDescargando] = useState(false);
+    const [mesInforme, setMesInforme] = useState(mesAnteriorDefault);
+    const [descargandoInforme, setDescargandoInforme] = useState(false);
 
     const cargar = useCallback(async () => {
         setCargando(true);
@@ -95,6 +108,33 @@ export default function ColegioEstadisticasPageClient() {
         }
     };
 
+    const descargarInformeMensual = async () => {
+        setDescargandoInforme(true);
+        try {
+            const res = await fetch(`/api/colegio/reportes/pdf?mes=${mesInforme}`, { credentials: "include" });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                setError(data?.error?.message || "Error generando informe mensual");
+                return;
+            }
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const header = res.headers.get("content-disposition") || "";
+            const match = header.match(/filename="([^"]+)"/);
+            a.href = url;
+            a.download = match ? match[1] : `informe-mensual-${mesInforme}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            setError("Error de red descargando informe mensual");
+        } finally {
+            setDescargandoInforme(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-page">
             <main className="p-4 sm:p-6 lg:p-8">
@@ -119,6 +159,34 @@ export default function ColegioEstadisticasPageClient() {
                             📄 Descargar PDF
                         </Button>
                     </div>
+
+                    <GlassCard>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <h2 className="text-lg font-semibold text-body">Informe mensual</h2>
+                                <p className="text-sm text-muted">
+                                    Descarga el resumen agregado de un mes específico.
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <input
+                                    type="month"
+                                    value={mesInforme}
+                                    onChange={(e) => setMesInforme(e.target.value)}
+                                    disabled={descargandoInforme}
+                                    className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-body focus:border-emerald-500 focus:outline-none dark:border-emerald-900 dark:bg-emerald-950/30"
+                                />
+                                <Button
+                                    onClick={descargarInformeMensual}
+                                    isLoading={descargandoInforme}
+                                    disabled={!mesInforme}
+                                    variant="outline"
+                                >
+                                    📊 Descargar informe
+                                </Button>
+                            </div>
+                        </div>
+                    </GlassCard>
 
                     {error && (
                         <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">

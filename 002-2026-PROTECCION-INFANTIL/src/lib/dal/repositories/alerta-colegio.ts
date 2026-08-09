@@ -408,6 +408,91 @@ export class AlertaColegioRepository {
     }
 
     /**
+     * SPEC-151 (FR-004): resumen mensual del colegio — reportes distintos, alertas
+     * totales y cursos afectados en el rango [inicioMes, finioMes) sobre
+     * `AlertaColegio.creadoEn`. Solo reportes no eliminados.
+     */
+    async resumenMensual(
+        colegioId: string,
+        inicioMes: Date,
+        finMes: Date
+    ): Promise<{ reportesDistintos: number; alertasTotales: number; cursosAfectados: number }> {
+        const filas: { reportesDistintos: number; alertasTotales: number; cursosAfectados: number }[] = await this.db.$queryRaw`
+            SELECT
+                COUNT(DISTINCT ac."reporteId")::int AS "reportesDistintos",
+                COUNT(*)::int AS "alertasTotales",
+                COUNT(DISTINCT a."cursoId")::int AS "cursosAfectados"
+            FROM "AlertaColegio" ac
+            JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+            JOIN "Alumno" a ON a.id = i."alumnoId"
+            JOIN "Reporte" r ON r.id = ac."reporteId"
+            WHERE ac."colegioId" = ${colegioId}
+              AND a."colegioId" = ${colegioId}
+              AND ac."creadoEn" >= ${inicioMes}
+              AND ac."creadoEn" < ${finMes}
+              AND r.eliminado = false
+        `;
+        return filas[0] ?? { reportesDistintos: 0, alertasTotales: 0, cursosAfectados: 0 };
+    }
+
+    /**
+     * SPEC-151 (FR-004): desglose mensual por curso — reportes distintos y alertas
+     * totales por curso en el rango. Solo cursos con actividad en el mes.
+     */
+    async porCursoMensual(
+        colegioId: string,
+        inicioMes: Date,
+        finMes: Date
+    ): Promise<{ cursoId: string; nombre: string; reportesDistintos: number; alertasTotales: number }[]> {
+        return this.db.$queryRaw`
+            SELECT
+                a."cursoId" AS "cursoId",
+                c.nombre AS nombre,
+                COUNT(DISTINCT ac."reporteId")::int AS "reportesDistintos",
+                COUNT(*)::int AS "alertasTotales"
+            FROM "AlertaColegio" ac
+            JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+            JOIN "Alumno" a ON a.id = i."alumnoId"
+            JOIN "Curso" c ON c.id = a."cursoId"
+            JOIN "Reporte" r ON r.id = ac."reporteId"
+            WHERE ac."colegioId" = ${colegioId}
+              AND a."colegioId" = ${colegioId}
+              AND c."colegioId" = ${colegioId}
+              AND ac."creadoEn" >= ${inicioMes}
+              AND ac."creadoEn" < ${finMes}
+              AND r.eliminado = false
+            GROUP BY a."cursoId", c.nombre
+            ORDER BY "reportesDistintos" DESC, c.nombre ASC
+        `;
+    }
+
+    /**
+     * SPEC-151 (FR-004): desglose mensual por categoría de conducta — reportes
+     * distintos y alertas totales. Categorías sin actividad se omiten.
+     */
+    async porCategoriaMensual(
+        colegioId: string,
+        inicioMes: Date,
+        finMes: Date
+    ): Promise<{ categoria: string; reportesDistintos: number; alertasTotales: number }[]> {
+        return this.db.$queryRaw`
+            SELECT
+                cl.categoria::text AS categoria,
+                COUNT(DISTINCT ac."reporteId")::int AS "reportesDistintos",
+                COUNT(*)::int AS "alertasTotales"
+            FROM "AlertaColegio" ac
+            JOIN "Reporte" r ON r.id = ac."reporteId"
+            JOIN "ClasificacionIA" cl ON cl."reporteId" = r.id
+            WHERE ac."colegioId" = ${colegioId}
+              AND ac."creadoEn" >= ${inicioMes}
+              AND ac."creadoEn" < ${finMes}
+              AND r.eliminado = false
+            GROUP BY cl.categoria
+            ORDER BY "reportesDistintos" DESC, cl.categoria ASC
+        `;
+    }
+
+    /**
      * SPEC-159 (FR-002): detalle del caso para el colegio — SIEMPRE filtrado por
      * tenant (null si no existe o es ajeno). Resumen visible: estudiante
      * (nombre+apellidos), curso, plataforma y TIPO de identificador — NUNCA el

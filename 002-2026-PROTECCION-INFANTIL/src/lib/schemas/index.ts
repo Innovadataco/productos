@@ -299,3 +299,19 @@ export const preferenciaAvisoBodySchema = z.object({
     umbral: z.number().int().min(1, "El umbral mínimo es 1").max(100, "El umbral máximo es 100").nullable().optional(),
     ventanaDias: z.number().int().min(1, "La ventana mínima es 1 día").max(90, "La ventana máxima es 90 días").nullable().optional(),
 });
+
+// SPEC-151 (FR-002): parámetro ?mes=YYYY-MM para el informe PDF mensual.
+// No futuro, no más de 12 meses atrás; mes actual permitido.
+export const informeMensualQuerySchema = z.object({
+    mes: z
+        .string()
+        .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "El mes debe tener formato YYYY-MM")
+        .refine((v) => {
+            const [anio, mes] = v.split("-").map(Number);
+            const ahora = new Date();
+            const inicioMes = new Date(Date.UTC(anio, mes - 1, 1, 5, 0, 0, 0));
+            const hace12Meses = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() - 11, 1, 5, 0, 0, 0));
+            const finMesActual = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1, 5, 0, 0, 0));
+            return inicioMes >= hace12Meses && inicioMes < finMesActual;
+        }, "El mes debe estar entre los últimos 12 meses y no puede ser futuro"),
+});

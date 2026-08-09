@@ -12,6 +12,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | Dependencia | Versión |
 | --- | --- |
 | @prisma/client | 5.22.0 |
+| @react-pdf/renderer | ^4.6.0 |
 | bcryptjs | ^3.0.2 |
 | exceljs | ^4.4.0 |
 | jose | ^6.0.10 |

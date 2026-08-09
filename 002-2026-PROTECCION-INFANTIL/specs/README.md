@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-09** (002-PI-058: SPEC-150 implementada — modelo, endpoints, pipeline y UI).
+> Última actualización: **2026-08-09** (002-PI-058: SPEC-151 implementada; pendientes 152-156).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -10,10 +10,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **135** |
+| **Total de specs** | **136** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
-| **Implementadas (IMPLEMENTADO)** | **36** |
+| **Implementadas (IMPLEMENTADO)** | **37** |
 | **Pendientes (PLANEADO)** | **1** |
 
 ## Backlog activo (no cerradas)
@@ -90,11 +90,12 @@
 | [148](148-profesores-buscador/spec.md) | SPEC-148 — Profesores + buscador global ⌘K (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [149](149-avisos-email/spec.md) | SPEC-149 — Avisos por email configurables del colegio (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [150](150-observacion-especial/spec.md) | SPEC-150 — Observación especial de estudiantes (002-PI-058) | 🟢 Implementada (002-PI-058; ver cierre.md) |
+| [151](151-informe-pdf-mensual/spec.md) | SPEC-151 — Informe PDF mensual determinístico (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [159](159-seguimiento-caso/spec.md) | SPEC-159 — Seguimiento del caso con bitácora: línea de tiempo, pendientes y notas inmutables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 
-## Tabla completa (115 specs)
+## Tabla completa (116 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -230,6 +231,7 @@
 | [148](148-profesores-buscador/spec.md) | SPEC-148 — Profesores + buscador global ⌘K (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [149](149-avisos-email/spec.md) | SPEC-149 — Avisos por email configurables del colegio (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [150](150-observacion-especial/spec.md) | SPEC-150 — Observación especial de estudiantes (002-PI-058) | 🟢 Implementada (002-PI-058; ver cierre.md) |
+| [151](151-informe-pdf-mensual/spec.md) | SPEC-151 — Informe PDF mensual determinístico (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [159](159-seguimiento-caso/spec.md) | SPEC-159 — Seguimiento del caso con bitácora: línea de tiempo, pendientes y notas inmutables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |

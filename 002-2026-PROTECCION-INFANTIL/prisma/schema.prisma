@@ -136,6 +136,8 @@ enum AccionAudit {
   // SPEC-150: observación especial del estudiante (marca auditable, Ley 1581).
   COLEGIO_OBSERVACION_MARCADA
   COLEGIO_OBSERVACION_DESMARCADA
+  // SPEC-151: informe PDF mensual determinístico del colegio.
+  COLEGIO_INFORME_MENSUAL_PDF_DESCARGADO
 }
 
 enum TipoPeriodoServicio {
