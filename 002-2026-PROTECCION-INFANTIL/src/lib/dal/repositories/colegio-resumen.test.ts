@@ -170,10 +170,19 @@ describe("ColegioResumenRepository.homeRector", () => {
         expect(homeA.tendencia.anual).toHaveLength(3);
         const totalSemanas = homeA.tendencia.semanal.reduce((s, p) => s + p.reportes, 0);
         expect(totalSemanas).toBe(4); // 12 semanas (~84 días) cubren los 4 reportes distintos de A
-        // hoy+2d caen en los dos últimos buckets semanales (si hoy es lunes, "2d"
-        // pertenece a la semana anterior del bucket — ambos casos cubiertos).
+        // Los "dos últimos buckets semanales" son fecha-dependientes (en fin de
+        // semana el reporte de 10d puede entrar al penúltimo bucket): se contrasta
+        // con la MISMA frontera de date_trunc('week') calculada aquí (determinista).
+        const lunesUtc = (d: Date) => {
+            const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+            t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7));
+            return t;
+        };
+        const fronteraPenultimoBucket = lunesUtc(ahora).getTime() - 7 * DIA_MS;
+        const esperadoUltimosDos = [ahora.getTime(), ahora.getTime() - 2 * DIA_MS, ahora.getTime() - 10 * DIA_MS, ahora.getTime() - 40 * DIA_MS]
+            .filter((ts) => ts >= fronteraPenultimoBucket).length;
         const ultimosDosBuckets = homeA.tendencia.semanal.slice(-2).reduce((s, p) => s + p.reportes, 0);
-        expect(ultimosDosBuckets).toBe(2);
+        expect(ultimosDosBuckets).toBe(esperadoUltimosDos);
         expect(homeA.tendencia.semanal.at(-1)!.reportes).toBeGreaterThanOrEqual(1);
         const totalAnios = homeA.tendencia.anual.reduce((s, p) => s + p.reportes, 0);
         expect(totalAnios).toBe(4); // los 4 reportes distintos de A caen en los últimos 3 años
