@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alerta } from "@/components/ui/Alerta";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -202,16 +203,9 @@ export default function ProfesoresPageClient() {
                     </div>
 
                     {message && (
-                        <div
-                            role="status"
-                            className={`rounded-xl p-4 text-sm ${
-                                message.type === "error"
-                                    ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                                    : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
-                            }`}
-                        >
+                        <Alerta tono={message.type === "error" ? "error" : "exito"} role="status" className="p-4">
                             {message.text}
-                        </div>
+                        </Alerta>
                     )}
 
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -236,7 +230,7 @@ export default function ProfesoresPageClient() {
                     {loading ? (
                         <div className="glass rounded-2xl p-8">
                             <div className="flex items-center gap-3 text-muted">
-                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-accent" />
                                 Cargando profesores...
                             </div>
                         </div>
@@ -328,11 +322,7 @@ export default function ProfesoresPageClient() {
                 title={modal?.modo === "editar" ? "Editar profesor" : "Agregar profesor"}
             >
                 <div className="space-y-4">
-                    {formError && (
-                        <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
-                            {formError}
-                        </p>
-                    )}
+                    {formError && <Alerta tono="error">{formError}</Alerta>}
                     <Input
                         label="Nombre"
                         required

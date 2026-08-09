@@ -194,7 +194,7 @@ export function CommandPalette({
                 className="w-full max-w-xl overflow-hidden rounded-2xl glass-strong shadow-xl"
                 onKeyDown={manejarTeclas}
             >
-                <div className="border-b border-slate-200 p-3 dark:border-slate-800">
+                <div className="border-b border-tinta/10 p-3">
                     <input
                         ref={inputRef}
                         type="text"
@@ -238,9 +238,7 @@ export function CommandPalette({
                                                 onMouseEnter={() => setIndiceActivo(indice)}
                                                 onClick={() => onSeleccionar(opcion)}
                                                 className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2 ${
-                                                    indice === activo
-                                                        ? "bg-slate-100 dark:bg-slate-800/60"
-                                                        : ""
+                                                    indice === activo ? "bg-pino/10" : ""
                                                 }`}
                                             >
                                                 <span className="min-w-0">
