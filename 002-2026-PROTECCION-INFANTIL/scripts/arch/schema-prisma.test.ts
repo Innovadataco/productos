@@ -13,6 +13,8 @@
  * y RegistroAvisoColegio (avisos por email del colegio; misma regla).
  * Actualizado 2026-08-09 (2): 56 modelos — SPEC-159 añadió SeguimientoCaso y
  * NotaSeguimiento (bitácora del caso del colegio; misma regla).
+ * Actualizado 2026-08-09 (3): 57 modelos — SPEC-150 añadió EstudianteObservacion
+ * (observación especial del estudiante; misma regla).
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -23,8 +25,8 @@ const modelos = parsearSchemaPrisma(RUTA_SCHEMA);
 const excepciones = JSON.parse(fs.readFileSync(RUTA_EXCEPCIONES, "utf-8")) as { huerfanosPermitidos: string[] };
 
 describe("parser schema.prisma (SPEC-126)", () => {
-    it("oráculo: 56 modelos (54 + SeguimientoCaso y NotaSeguimiento de SPEC-159)", () => {
-        expect(modelos.length).toBe(56);
+    it("oráculo: 57 modelos (56 + EstudianteObservacion de SPEC-150)", () => {
+        expect(modelos.length).toBe(57);
     });
 
     it("oráculo: huérfanos = lista de excepciones declarada (ni uno más, ni uno menos)", () => {

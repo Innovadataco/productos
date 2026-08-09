@@ -21,6 +21,7 @@ import { CursoRepository } from "./curso";
 import type { CursoConTitularRow } from "./curso";
 import { EstudianteRepository } from "./estudiante";
 import type { EstudianteConDetalleRow } from "./estudiante";
+import { EstudianteObservacionRepository } from "./estudiante-observacion";
 import { ProfesorRepository } from "./profesor";
 import { AlertaColegioRepository } from "./alerta-colegio";
 
@@ -39,6 +40,9 @@ export interface CursoMirada {
     alertas30d: number;
 }
 
+/** SPEC-150 (FR-004): fila del escritorio del curso + flag de observación especial (aditivo). */
+export type EstudianteDetalleCurso = EstudianteConDetalleRow & { observado: boolean };
+
 /** SPEC-147 (FR-002, Key Entities): DTO del escritorio del curso. */
 export interface CursoDetalle {
     /** Ficha del curso con su titular (incluye `estado`, COND-2 de SPEC-145). */
@@ -46,7 +50,7 @@ export interface CursoDetalle {
     /** Titular con su estado; null → la UI muestra "sin titular asignado". */
     titular: { nombre: string; apellidos: string; estado: string } | null;
     /** Estudiantes ACTIVOS del curso con acudientes (orden asc) e identificadores activos. */
-    estudiantes: EstudianteConDetalleRow[];
+    estudiantes: EstudianteDetalleCurso[];
     /** Cobertura del CURSO (misma fórmula que la home): vigilancia / reacción / huecos. */
     cobertura: { vigilancia: number; reaccion: number; sinRedes: number; sinContacto: number };
     /** Reportes DISTINTOS (D2) del curso en los últimos 30 días. */
@@ -315,13 +319,16 @@ export class ColegioResumenRepository {
         const cursoRepo = new CursoRepository(tx);
         const estudianteRepo = new EstudianteRepository(tx);
         const alertaRepo = new AlertaColegioRepository(tx);
+        const observacionRepo = new EstudianteObservacionRepository(tx);
 
-        const [cursos, estudiantes, coberturaConteos, alertas30d, alertas30dPrevias] = await Promise.all([
+        const [cursos, estudiantesBase, coberturaConteos, alertas30d, alertas30dPrevias, observados] = await Promise.all([
             cursoRepo.obtenerConTitularPorIds(colegioId, [cursoId]),
             estudianteRepo.listarPorCursoConDetalle(colegioId, cursoId),
             estudianteRepo.contarCobertura(colegioId, cursoId),
             alertaRepo.contarReportesDistintosPorCurso(colegioId, cursoId, hace30d),
             alertaRepo.contarReportesDistintosPorCurso(colegioId, cursoId, hace60d, hace30d),
+            // SPEC-150 (FR-004): ids con observación especial ACTIVA (flag aditivo).
+            observacionRepo.activasPorColegio(colegioId),
         ]);
 
         const curso = cursos[0];
@@ -330,6 +337,10 @@ export class ColegioResumenRepository {
         }
 
         const activos = coberturaConteos.activos;
+        const estudiantes: EstudianteDetalleCurso[] = estudiantesBase.map((e) => ({
+            ...e,
+            observado: observados.has(e.id),
+        }));
 
         return {
             curso,

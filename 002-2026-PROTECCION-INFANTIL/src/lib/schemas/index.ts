@@ -281,6 +281,12 @@ export const notaSeguimientoSchema = z.object({
         .max(1000, "La nota no puede superar 1000 caracteres"),
 });
 
+// SPEC-150 (FR-002): marca de observación especial — motivo opcional, texto
+// plano ≤ 500 (solo visible para el colegio; React escapa al renderizar).
+export const observacionBodySchema = z.object({
+    motivo: z.string().trim().max(500, "El motivo no puede superar 500 caracteres").optional(),
+});
+
 // SPEC-149 (FR-007): PATCH de preferencias de avisos del colegio. Upsert por
 // tipo (tenant lo pone la sesión). Umbrales 1-100, ventanas 1-90 días; null en
 // umbral/ventanaDias/emailDestino = volver al default. Mensajes humanos (§4.6).

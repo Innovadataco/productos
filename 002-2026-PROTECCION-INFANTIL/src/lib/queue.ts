@@ -242,6 +242,8 @@ export interface AvisoColegioJob {
     tipoEvento: string;
     entidadId: string;
     dia: string;
+    /** SPEC-150: nota auditable del registro (p. ej. "observación especial"). */
+    detalle?: string;
 }
 
 export async function sendAvisoColegio(job: AvisoColegioJob): Promise<string | undefined> {

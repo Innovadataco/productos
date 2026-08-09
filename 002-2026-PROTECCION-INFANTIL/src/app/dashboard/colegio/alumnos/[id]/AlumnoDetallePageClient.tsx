@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Star } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
+import { relativoHumano } from "@/lib/colegio/fechas-humano";
 
 type Estudiante = {
     id: string;
@@ -35,6 +37,19 @@ type Identificador = {
 
 type Plataforma = { id: string; clave: string; nombre: string };
 
+/** SPEC-150 (US3): marca de observación especial con actores legibles (ficha). */
+type ObservacionVista = {
+    id: string;
+    activa: boolean;
+    motivo: string | null;
+    creadaPor: string;
+    createdAt: string;
+    desactivadaEn: string | null;
+    desactivadaPor: string | null;
+};
+
+type EstadoObservacion = { activa: ObservacionVista | null; historial: ObservacionVista[] };
+
 type Mensaje = { type: "success" | "error"; text: string } | null;
 
 const etiquetaOptions = [
@@ -52,6 +67,8 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
     const [estudiante, setEstudiante] = useState<Estudiante | null>(null);
     const [curso, setCurso] = useState<Curso | null>(null);
     const [identificadores, setIdentificadores] = useState<Identificador[]>([]);
+    const [observacion, setObservacion] = useState<EstadoObservacion | null>(null);
+    const [togglingObservacion, setTogglingObservacion] = useState(false);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -75,12 +92,14 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
         setLoading(true);
         setError("");
         try {
-            const [resEstudiante, resIdentificadores] = await Promise.all([
+            const [resEstudiante, resIdentificadores, resObservacion] = await Promise.all([
                 fetch(`/api/colegio/alumnos/${id}`, { credentials: "include" }),
                 fetch(`/api/colegio/alumnos/${id}/identificadores`, { credentials: "include" }),
+                fetch(`/api/colegio/alumnos/${id}/observacion`, { credentials: "include" }),
             ]);
             const dataEstudiante = await resEstudiante.json().catch(() => ({}));
             const dataIdentificadores = await resIdentificadores.json().catch(() => ({}));
+            const dataObservacion = await resObservacion.json().catch(() => ({}));
 
             if (resEstudiante.ok && dataEstudiante.alumno) {
                 setEstudiante(dataEstudiante.alumno);
@@ -97,6 +116,10 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
 
             if (resIdentificadores.ok) {
                 setIdentificadores(dataIdentificadores.identificadores || []);
+            }
+
+            if (resObservacion.ok && dataObservacion.observacion) {
+                setObservacion(dataObservacion.observacion);
             }
         } catch {
             setError("Error de red cargando el alumno");
@@ -135,6 +158,39 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
             setMessage({ type: "error", text: "Error de red agregando identificador" });
         } finally {
             setSaving(false);
+        }
+    }
+
+    // SPEC-150 (US3): estrella de observación especial — POST marca (idempotente),
+    // DELETE desmarca (soft delete: la fila y el historial se conservan).
+    async function toggleObservacion() {
+        if (!estudianteId || !observacion) return;
+        setTogglingObservacion(true);
+        setMessage(null);
+        const activa = observacion.activa;
+        try {
+            const res = await fetch(`/api/colegio/alumnos/${estudianteId}/observacion`, {
+                method: activa ? "DELETE" : "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                ...(activa ? {} : { body: JSON.stringify({}) }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setMessage({
+                    type: "success",
+                    text: activa
+                        ? "Observación especial retirada"
+                        : "Alumno marcado en observación especial: te avisaremos al primer reporte",
+                });
+                if (estudianteId) await cargar(estudianteId);
+            } else {
+                setMessage({ type: "error", text: data?.error?.message || "Error cambiando la observación" });
+            }
+        } catch {
+            setMessage({ type: "error", text: "Error de red cambiando la observación" });
+        } finally {
+            setTogglingObservacion(false);
         }
     }
 
@@ -198,59 +254,129 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                     ) : error ? (
                         <ErrorState title="No pudimos cargar el alumno" description={error} onRetry={() => estudianteId && cargar(estudianteId)} />
                     ) : estudiante ? (
-                        <GlassCard>
-                            <h2 className="text-lg font-semibold text-body">Identificadores</h2>
-                            {identificadores.length === 0 ? (
-                                <EmptyState
-                                    title="No hay identificadores"
-                                    description="Agrega un identificador para usar en futuras alertas."
-                                    action={
-                                        <Button onClick={() => setModalOpen(true)}>Agregar identificador</Button>
-                                    }
-                                />
-                            ) : (
-                                <div className="mt-4 overflow-x-auto">
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="border-b border-slate-200 dark:border-slate-800">
-                                            <tr className="text-subtle">
-                                                <th className="pb-3 font-medium">Valor</th>
-                                                <th className="pb-3 font-medium">Tipo</th>
-                                                <th className="pb-3 font-medium">Plataforma</th>
-                                                <th className="pb-3 font-medium">Relación</th>
-                                                <th className="pb-3 font-medium">Estado</th>
-                                                <th className="pb-3 font-medium text-right">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                            {identificadores.map((identificador) => (
-                                                <tr key={identificador.id} className="align-top">
-                                                    <td className="py-3 pr-3 font-medium text-body">{identificador.valor}</td>
-                                                    <td className="py-3 pr-3 text-muted">{identificador.tipo}</td>
-                                                    <td className="py-3 pr-3 text-muted">{identificador.plataforma?.nombre || "—"}</td>
-                                                    <td className="py-3 pr-3 text-muted">
-                                                        {etiquetaOptions.find((e) => e.value === identificador.etiquetaRelacion)?.label || identificador.etiquetaRelacion}
-                                                    </td>
-                                                    <td className="py-3 pr-3">
-                                                        <Badge variant={identificador.estado === "activo" ? "success" : "neutral"}>
-                                                            {identificador.estado === "activo" ? "Activo" : "Inactivo"}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="py-3 text-right">
-                                                        <Button
-                                                            variant={identificador.estado === "activo" ? "danger" : "secondary"}
-                                                            className="px-3 py-1.5 text-xs"
-                                                            onClick={() => toggleEstadoIdentificador(identificador)}
-                                                        >
-                                                            {identificador.estado === "activo" ? "Desactivar" : "Activar"}
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                        <div className="space-y-6">
+                            {/* SPEC-150 (US3): observación especial — estado (desde
+                                cuándo y por quién), historial visible y el mismo toggle
+                                de la tabla del curso. */}
+                            <GlassCard>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-body">Observación especial</h2>
+                                        <p className="mt-1 text-sm text-muted">
+                                            Los alumnos en observación especial generan aviso al primer reporte.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        aria-label={
+                                            observacion?.activa
+                                                ? "Quitar de observación especial"
+                                                : "Marcar en observación especial"
+                                        }
+                                        aria-pressed={Boolean(observacion?.activa)}
+                                        disabled={togglingObservacion || !observacion}
+                                        onClick={toggleObservacion}
+                                        className={`inline-flex min-h-12 min-w-12 items-center justify-center self-start rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50 sm:self-auto ${
+                                            observacion?.activa ? "text-estado-ambar" : "text-subtle hover:text-estado-ambar"
+                                        }`}
+                                    >
+                                        <Star
+                                            aria-hidden="true"
+                                            className="h-6 w-6"
+                                            fill={observacion?.activa ? "currentColor" : "none"}
+                                        />
+                                    </button>
                                 </div>
-                            )}
-                        </GlassCard>
+
+                                {observacion?.activa ? (
+                                    <div className="mt-4">
+                                        <Badge variant="warning">En observación especial</Badge>
+                                        <p className="mt-2 text-sm text-body">
+                                            Marcada {relativoHumano(new Date(observacion.activa.createdAt))} por{" "}
+                                            {observacion.activa.creadaPor}.
+                                        </p>
+                                        {observacion.activa.motivo ? (
+                                            <p className="mt-1 text-sm text-muted">Motivo: {observacion.activa.motivo}</p>
+                                        ) : null}
+                                    </div>
+                                ) : (
+                                    <p className="mt-4 text-sm text-muted">Sin observación especial activa.</p>
+                                )}
+
+                                {observacion && observacion.historial.some((o) => !o.activa) ? (
+                                    <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+                                        <h3 className="text-sm font-semibold text-body">Historial</h3>
+                                        <ul className="mt-2 space-y-2">
+                                            {observacion.historial
+                                                .filter((o) => !o.activa)
+                                                .map((o) => (
+                                                    <li key={o.id} className="text-sm text-muted">
+                                                        Marcada {relativoHumano(new Date(o.createdAt))} por {o.creadaPor}
+                                                        {o.desactivadaEn
+                                                            ? `; retirada ${relativoHumano(new Date(o.desactivadaEn))} por ${o.desactivadaPor ?? "usuario no disponible"}`
+                                                            : ""}
+                                                        .{o.motivo ? ` Motivo: ${o.motivo}` : ""}
+                                                    </li>
+                                                ))}
+                                        </ul>
+                                    </div>
+                                ) : null}
+                            </GlassCard>
+
+                            <GlassCard>
+                                <h2 className="text-lg font-semibold text-body">Identificadores</h2>
+                                {identificadores.length === 0 ? (
+                                    <EmptyState
+                                        title="No hay identificadores"
+                                        description="Agrega un identificador para usar en futuras alertas."
+                                        action={
+                                            <Button onClick={() => setModalOpen(true)}>Agregar identificador</Button>
+                                        }
+                                    />
+                                ) : (
+                                    <div className="mt-4 overflow-x-auto">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="border-b border-slate-200 dark:border-slate-800">
+                                                <tr className="text-subtle">
+                                                    <th className="pb-3 font-medium">Valor</th>
+                                                    <th className="pb-3 font-medium">Tipo</th>
+                                                    <th className="pb-3 font-medium">Plataforma</th>
+                                                    <th className="pb-3 font-medium">Relación</th>
+                                                    <th className="pb-3 font-medium">Estado</th>
+                                                    <th className="pb-3 font-medium text-right">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                {identificadores.map((identificador) => (
+                                                    <tr key={identificador.id} className="align-top">
+                                                        <td className="py-3 pr-3 font-medium text-body">{identificador.valor}</td>
+                                                        <td className="py-3 pr-3 text-muted">{identificador.tipo}</td>
+                                                        <td className="py-3 pr-3 text-muted">{identificador.plataforma?.nombre || "—"}</td>
+                                                        <td className="py-3 pr-3 text-muted">
+                                                            {etiquetaOptions.find((e) => e.value === identificador.etiquetaRelacion)?.label || identificador.etiquetaRelacion}
+                                                        </td>
+                                                        <td className="py-3 pr-3">
+                                                            <Badge variant={identificador.estado === "activo" ? "success" : "neutral"}>
+                                                                {identificador.estado === "activo" ? "Activo" : "Inactivo"}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="py-3 text-right">
+                                                            <Button
+                                                                variant={identificador.estado === "activo" ? "danger" : "secondary"}
+                                                                className="px-3 py-1.5 text-xs"
+                                                                onClick={() => toggleEstadoIdentificador(identificador)}
+                                                            >
+                                                                {identificador.estado === "activo" ? "Desactivar" : "Activar"}
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </GlassCard>
+                        </div>
                     ) : null}
                 </div>
             </main>

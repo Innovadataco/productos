@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **56** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **57** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -137,7 +137,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | contacto | ContactoConfianza | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 
-### Colegios (multi-tenant) (7)
+### Colegios (multi-tenant) (8)
 
 #### `AcudienteEstudiante`
 
@@ -245,6 +245,23 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | identificadores | IdentificadorEstudiante | lista, relación |
 | acudientes | AcudienteEstudiante | lista, relación |
+| observaciones | EstudianteObservacion | lista, relación |
+
+#### `EstudianteObservacion`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| estudianteId | String | — |
+| colegioId | String | — |
+| activa | Boolean | — |
+| motivo | String | opcional |
+| creadaPorId | String | — |
+| desactivadaEn | DateTime | opcional |
+| desactivadaPorId | String | opcional |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| estudiante | Estudiante | relación (FK) |
 
 #### `IdentificadorEstudiante`
 
@@ -1069,6 +1086,7 @@ erDiagram
     Departamento ||--o{ Colegio : "departamento (opcional)"
     DocumentoApelacion ||--o{ AccesoDocumentoApelacion : "documento"
     Estudiante ||--o{ AcudienteEstudiante : "estudiante"
+    Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
     EvalRun ||--o{ EvalResultado : "experimento"
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante"
