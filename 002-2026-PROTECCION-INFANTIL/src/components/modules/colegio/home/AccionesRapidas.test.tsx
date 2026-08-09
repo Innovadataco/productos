@@ -13,8 +13,8 @@ describe("AccionesRapidas", () => {
         const esperadas: [RegExp, string][] = [
             [/Crear curso y estudiantes/, "/dashboard/colegio/cursos/unificado"],
             [/Subir lista en Excel/, "/dashboard/colegio/cursos/unificado?modo=excel"],
-            // Profesores apunta a cursos hasta que SPEC-148 cree su ruta (documentado).
-            [/Profesores/, "/dashboard/colegio/cursos"],
+            // SPEC-148: Profesores apunta a su pantalla propia.
+            [/Profesores/, "/dashboard/colegio/profesores"],
             [/Ver estudiantes/, "/dashboard/colegio/cursos"],
         ];
         for (const [nombre, href] of esperadas) {
