@@ -133,6 +133,9 @@ enum AccionAudit {
   COLEGIO_AVISO_PREFERENCIA_ACTUALIZADA
   // SPEC-159: bitácora del caso del colegio (nota de seguimiento agregada).
   COLEGIO_CASO_NOTA_AGREGADA
+  // SPEC-150: observación especial del estudiante (marca auditable, Ley 1581).
+  COLEGIO_OBSERVACION_MARCADA
+  COLEGIO_OBSERVACION_DESMARCADA
 }
 
 enum TipoPeriodoServicio {
@@ -537,6 +540,7 @@ model Estudiante {
   colegio         Colegio                   @relation(fields: [colegioId], references: [id])
   identificadores IdentificadorEstudiante[]
   acudientes      AcudienteEstudiante[]
+  observaciones   EstudianteObservacion[]
 
   @@index([cursoId, estado])
   @@index([colegioId, estado])
@@ -561,6 +565,29 @@ model AcudienteEstudiante {
 
   @@unique([estudianteId, orden])
   @@index([estudianteId])
+}
+
+// SPEC-150 (FR-001): observación especial del estudiante — la marca auditable
+// (Ley 1581). Soft delete estilo Reporte: desmarcar CONSERVA la fila con
+// quién/cuándo (activa=false + desactivadaEn/desactivadaPorId), nunca borra el
+// histórico. colegioId denormalizado para acotar SIEMPRE por tenant (patrón
+// E-1/SPEC-134); creadaPorId/desactivadaPorId son ids de Usuario sin FK (el
+// actor puede desactivarse después sin romper el respaldo).
+model EstudianteObservacion {
+  id               String    @id @default(cuid())
+  estudianteId     String
+  colegioId        String
+  activa           Boolean   @default(true)
+  motivo           String?
+  creadaPorId      String
+  desactivadaEn    DateTime?
+  desactivadaPorId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+
+  @@index([estudianteId, activa])
 }
 
 model IdentificadorEstudiante {
