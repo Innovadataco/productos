@@ -11,6 +11,9 @@
  * (siguen siendo page.tsx, por eso no restan).
  * Actualizado 2026-08-08: 54 page.tsx — SPEC-158 añade el tablero de control
  * (/dashboard/colegio/tablero).
+ * Actualizado 2026-08-08 (2): 55 page.tsx — SPEC-148 añade la pantalla de
+ * profesores (/dashboard/colegio/profesores). Cambio intencional: prevalece
+ * el conteo real (regla de oráculos de SPEC-126).
  */
 import { describe, it, expect } from "vitest";
 import { inventarioRutasApp, VALOR_MUESTRA_SEGMENTO } from "./lib/rutas-app";
@@ -19,8 +22,8 @@ import { RUTA_APP } from "./lib/paths";
 const rutas = inventarioRutasApp(RUTA_APP);
 
 describe("inventario de rutas del árbol src/app (SPEC-126)", () => {
-    it("oráculo: 54 páginas (page.tsx) — 53 + 1 del tablero (SPEC-158)", () => {
-        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(54);
+    it("oráculo: 55 páginas (page.tsx) — 54 + 1 de profesores (SPEC-148)", () => {
+        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(55);
     });
 
     it("incluye APIs (route.ts) además de páginas", () => {

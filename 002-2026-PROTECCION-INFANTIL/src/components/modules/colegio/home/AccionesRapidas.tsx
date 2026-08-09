@@ -3,9 +3,8 @@ import { CirclePlus, Upload, GraduationCap, Users } from "lucide-react";
 
 /**
  * SPEC-143 (US4, FR-009) — Acciones rápidas: cada pantalla termina en un verbo.
- * Todas apuntan a rutas EXISTENTES. La acción "Profesores" apunta a la vista de
- * cursos (donde hoy se asigna el titular) HASTA que SPEC-148 cree su ruta propia —
- * decisión documentada, no se fabrica una ruta muerta.
+ * Todas apuntan a rutas EXISTENTES. SPEC-148: "Profesores" ya apunta a su
+ * pantalla propia (antes placeholder a cursos).
  * Terminología §3: "subir lista" (nunca "carga masiva"), verbos activos.
  * Tap targets ≥ 48px; íconos Lucide strokeWidth 1.5, tamaño 24 (§4.4).
  */
@@ -24,10 +23,10 @@ const ACCIONES = [
         Icono: Upload,
     },
     {
-        // SPEC-148: cuando exista la ruta propia de profesores, apuntar allí.
-        href: "/dashboard/colegio/cursos",
+        // SPEC-148: pantalla propia de profesores (reemplaza el placeholder a cursos).
+        href: "/dashboard/colegio/profesores",
         titulo: "Profesores",
-        detalle: "Asigna el titular de cada curso",
+        detalle: "Agrega y organiza el directorio",
         Icono: GraduationCap,
     },
     {

@@ -5,6 +5,7 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
 import { ColegioSideNav } from "@/components/modules/colegio/ColegioSideNav";
+import { BuscadorGlobal } from "@/components/modules/colegio/BuscadorGlobal";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
 export default async function ColegioLayout({ children }: { children: React.ReactNode }) {
@@ -59,9 +60,11 @@ export default async function ColegioLayout({ children }: { children: React.Reac
     const permitidos = await modulosPermitidosParaRol("SCHOOL_ADMIN");
 
     // SPEC-129 (C3): navegación lateral única patrón AdminNav (antes ColegioNav, tabs).
+    // SPEC-148 (US2): buscador global ⌘K montado UNA vez para toda el área.
     return (
         <div className="theme-colegio flex min-h-screen bg-page">
             <ColegioSideNav rol={usuario.rol} modulosPermitidos={[...permitidos]} />
+            <BuscadorGlobal />
             <div className="min-w-0 flex-1">{children}</div>
         </div>
     );
