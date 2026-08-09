@@ -2,14 +2,14 @@
 
 **Spec**: [spec.md](./spec.md) · **Plan**: [plan.md](./plan.md)
 
-- [ ] T001 Schema: valor `COLEGIO_INFORME_MENSUAL_PDF_DESCARGADO` en `AccionAudit` + migración aditiva.
-- [ ] T002 Instalar `@react-pdf/renderer` y verificar build en Node runtime.
-- [ ] T003 DTO + cálculo mensual en `src/lib/colegio/informe-mensual.ts` (reportes distintos, alertas, cursos, categorías) + tests determinismo.
-- [ ] T004 [P] Repo `AlertaColegioRepository`: agregados por mes (`contarReportesDistintosPorMes`, `contarPorCursoMes`, `contarPorCategoriaMes`).
-- [ ] T005 Componente `@react-pdf/renderer` en `src/lib/colegio/pdf-informe-mensual.tsx` (sin PII, estilo institucional).
-- [ ] T006 Endpoint `GET /api/colegio/reportes/pdf` (Zod `mes`, tenant-first, audit) + `route.test.ts` (200, 400, A/B, determinismo).
-- [ ] T007 UI: botón de descarga en `/dashboard/colegio/estadisticas` o `/dashboard/colegio/tablero`.
-- [ ] T008 README spec 151 + arch:check verde + checks de día + push + PR.
+- [x] T001 Schema: valor `COLEGIO_INFORME_MENSUAL_PDF_DESCARGADO` en `AccionAudit` + migración aditiva.
+- [x] T002 Instalar `@react-pdf/renderer` y verificar build en Node runtime.
+- [x] T003 DTO + cálculo mensual en `src/lib/colegio/informe-mensual.ts` (reportes distintos, alertas, cursos, categorías) + tests determinismo.
+- [x] T004 [P] Repo `AlertaColegioRepository`: agregados por mes (`contarReportesDistintosPorMes`, `contarPorCursoMes`, `contarPorCategoriaMes`).
+- [x] T005 Componente `@react-pdf/renderer` en `src/lib/colegio/pdf-informe-mensual.tsx` (sin PII, estilo institucional).
+- [x] T006 Endpoint `GET /api/colegio/reportes/pdf` (Zod `mes`, tenant-first, audit) + `route.test.ts` (200, 400, A/B, determinismo).
+- [x] T007 UI: botón de descarga en `/dashboard/colegio/estadisticas`.
+- [x] T008 README spec 151 + arch:check verde + checks de día + push + PR.
 
 ## Analyze
 

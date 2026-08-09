@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-09
 
-**Status**: DESARROLLO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058, brief §10 fila 11. El rector necesita un informe mensual descargable de actividad del colegio: reportes distintos, alertas, cursos afectados y desglose por curso y categoría de conducta. Debe ser determinístico (mismo mes = mismo contenido), generarse con `@react-pdf/renderer` en el servidor (sin headless/browser) y no exponer PII.
 
@@ -102,6 +102,16 @@ Como rector, quiero estar seguro de que el informe no filtra datos personales ni
 - `@react-pdf/renderer` se instala como dependencia de producción.
 - La UI de descarga se agrega en `/dashboard/colegio/estadisticas` (botón adicional) o en `/dashboard/colegio/tablero`; se decide en implementación según diseño.
 
-## Impacto en arquitectura
+## Impacto en arquitectura:
 
 Añade endpoint (`/api/colegio/reportes/pdf`) y componente React-PDF en servidor. No modifica modelo de datos (salvo posible valor enum `AccionAudit`). No modifica proxy, navegación ni stack.
+
+## Implementación
+
+- Migración aditiva `20260809160000_informe_mensual_pdf_audit` añade valor enum `COLEGIO_INFORME_MENSUAL_PDF_DESCARGADO`.
+- Repositorio `AlertaColegioRepository` expone `resumenMensual`, `porCursoMensual`, `porCategoriaMensual` filtrados por tenant y rango `[inicioMes, inicioMesSiguiente)`.
+- DTO `InformeMensualColegio` en `src/lib/colegio/informe-mensual.ts` centraliza el cálculo y formato de agregados.
+- PDF con `@react-pdf/renderer`: `pdf-informe-mensual.tsx` (componente) + `render-informe-mensual.tsx` (renderizado server-side a `Buffer`).
+- Endpoint `GET /api/colegio/reportes/pdf?mes=YYYY-MM` en `src/app/api/colegio/reportes/pdf/route.ts`: validación Zod, tenant-first, Content-Disposition attachment, audit `COLEGIO_INFORME_MENSUAL_PDF_DESCARGADO`.
+- Tests de integración: 200 con PDF, 400 formato/mes futuro, A/B tenant, determinismo.
+- UI: selector de mes + botón descargar en `/dashboard/colegio/estadisticas`.
