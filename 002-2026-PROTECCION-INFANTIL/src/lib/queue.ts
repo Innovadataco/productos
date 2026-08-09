@@ -231,3 +231,25 @@ export async function sendSimulacionLote(runIds: string[]) {
         retryBackoff: true,
     });
 }
+
+/**
+ * SPEC-149 (FR-002): cola `colegio-aviso` — el hook de alerta nueva ENCOLA el
+ * evento y responde sin bloquear; el worker consume y envía con retry. El
+ * payload NO lleva datos sensibles: solo ids y el día (YYYY-MM-DD Bogotá).
+ */
+export interface AvisoColegioJob {
+    colegioId: string;
+    tipoEvento: string;
+    entidadId: string;
+    dia: string;
+}
+
+export async function sendAvisoColegio(job: AvisoColegioJob): Promise<string | undefined> {
+    await ensureQueue("colegio-aviso");
+    const jobId = await boss.send("colegio-aviso", job, {
+        retryLimit: 5,
+        retryDelay: 60,
+        retryBackoff: true,
+    });
+    return jobId ?? undefined;
+}

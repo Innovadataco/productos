@@ -143,6 +143,8 @@ async function start() {
     await ensureQueue("apelacion-mantenimiento");
     await ensureQueue("carga-roster-limpieza");
     await ensureQueue("reportes-reconciliacion");
+    await ensureQueue("colegio-aviso");
+    await ensureQueue("colegio-resumen-semanal");
 
     const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
@@ -568,6 +570,47 @@ async function start() {
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[WORKER] ERROR reconciliación de reportes: ${msg}`);
+            throw err;
+        }
+    });
+
+    // SPEC-149 (FR-002): envío de avisos del colegio encolados por el hook de
+    // alertas (reporte nuevo, umbral por curso, estudiante repetido). El retry
+    // con backoff lo da pg-boss; un fallo NO consume la idempotencia.
+    await boss.work("colegio-aviso", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        if (!job || !job.data) {
+            console.error("[WORKER] Job de aviso inválido:", JSON.stringify(jobs));
+            return;
+        }
+        const { colegioId, tipoEvento, entidadId, dia } = job.data;
+        const retryCount = job.retryCount || 0;
+        console.log(`[WORKER] Aviso colegio ${tipoEvento} colegio=${colegioId} entidad=${entidadId} dia=${dia} (job ${job.id}, intento ${retryCount + 1})`);
+        try {
+            const { procesarEnvioAviso } = await import("../src/lib/colegio/avisos.ts");
+            const resultado = await procesarEnvioAviso({ colegioId, tipoEvento, entidadId, dia });
+            console.log(`[WORKER] OK aviso colegio ${tipoEvento} colegio=${colegioId} enviado=${resultado.enviado} motivo=${resultado.motivo}`);
+            return { success: true, ...resultado };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR aviso colegio ${tipoEvento} colegio=${colegioId} intento=${retryCount + 1} error=${msg}`);
+            throw err;
+        }
+    });
+
+    // SPEC-149 (FR-005): resumen del lunes 07:00 America/Bogota (molde
+    // apelacion-mantenimiento). Idempotente por semana vía RegistroAvisoColegio.
+    await boss.schedule("colegio-resumen-semanal", "0 7 * * 1", {}, { tz: "America/Bogota" });
+    await boss.work("colegio-resumen-semanal", async () => {
+        console.log("[WORKER] Resumen semanal de colegios: inicio");
+        try {
+            const { enviarResumenesSemanales } = await import("../src/lib/colegio/avisos-resumen.ts");
+            const { enviados, omitidos, fallidos } = await enviarResumenesSemanales();
+            console.log(`[WORKER] Resumen semanal de colegios: OK enviados=${enviados} omitidos=${omitidos} fallidos=${fallidos}`);
+            return { success: true, enviados, omitidos, fallidos };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR resumen semanal de colegios: ${msg}`);
             throw err;
         }
     });

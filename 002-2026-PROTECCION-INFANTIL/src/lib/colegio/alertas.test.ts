@@ -14,11 +14,15 @@ import {
     crearEstudiante,
     crearIdentificadorEstudiante,
 } from "@/lib/reporte-test-utils";
-import { enviarAlertaColegio } from "@/lib/email";
+import { sendAvisoColegio } from "@/lib/queue";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
 
-vi.mock("@/lib/email", () => ({
-    enviarAlertaColegio: vi.fn().mockResolvedValue(undefined),
+// SPEC-149: el email genérico inline viejo quedó SUPERADO por el pipeline de
+// avisos encolado (cero doble email). El hook ahora ENCOLA vía queue.ts — se
+// mockea la cola (nunca pg-boss real) y se verifica el encolado + la bitácora
+// en lugar del email inline.
+vi.mock("@/lib/queue", () => ({
+    sendAvisoColegio: vi.fn().mockResolvedValue("job-aviso-1"),
 }));
 
 async function crearReporte(
@@ -82,12 +86,12 @@ describe("src/lib/colegio/alertas", () => {
         await crearParametrosReportes();
         await crearParametrosColegio();
         await crearPlataforma("whatsapp", "WhatsApp", "mensajeria");
-        vi.mocked(enviarAlertaColegio).mockClear();
+        vi.mocked(sendAvisoColegio).mockClear();
     });
 
     describe("notificarColegioSiCorresponde", () => {
-        it("crea una alerta cuando un reporte visible menciona un identificador del colegio", async () => {
-            const { colegio, admin } = await crearColegioConAdmin();
+        it("crea una alerta cuando un reporte visible menciona un identificador del colegio y ENCOLA el aviso (nunca envía inline)", async () => {
+            const { colegio } = await crearColegioConAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "6A" });
             const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "María Gómez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
@@ -111,7 +115,19 @@ describe("src/lib/colegio/alertas", () => {
             });
             expect(audit).not.toBeNull();
 
-            expect(enviarAlertaColegio).toHaveBeenCalledWith(admin.email, 1);
+            // SPEC-149: aviso REPORTE_NUEVO encolado (una vez por colegio+reporte+día)...
+            expect(sendAvisoColegio).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    colegioId: colegio.id,
+                    tipoEvento: "REPORTE_NUEVO",
+                    entidadId: reporte.id,
+                })
+            );
+            // ...y CERO envío inline: ningún registro ENVIADO puede existir aquí.
+            const enviados = await prisma.registroAvisoColegio.count({
+                where: { colegioId: colegio.id, estado: "ENVIADO" },
+            });
+            expect(enviados).toBe(0);
         });
 
         it("crea una alerta por cada colegio que tenga el identificador registrado", async () => {
@@ -234,7 +250,7 @@ describe("src/lib/colegio/alertas", () => {
             expect(alertas).toHaveLength(1);
         });
 
-        it("no envía email cuando las notificaciones están deshabilitadas", async () => {
+        it("no encola el aviso cuando las notificaciones están deshabilitadas y lo deja registrado como OMITIDO", async () => {
             await prisma.parametroSistema.update({
                 where: { clave: "colegio.notificaciones.enabled" },
                 data: { valor: "false" },
@@ -249,7 +265,15 @@ describe("src/lib/colegio/alertas", () => {
             const reporte = await crearReporte("+57300NOMAIL", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
             await notificarColegioSiCorresponde(reporte.id);
 
-            expect(enviarAlertaColegio).not.toHaveBeenCalled();
+            // La alerta se crea igual (la bandeja del rector no depende del email)...
+            const alertas = await prisma.alertaColegio.findMany({ where: { colegioId: colegio.id } });
+            expect(alertas).toHaveLength(1);
+            // ...pero el aviso NO se encola y la omisión queda auditada en la bitácora.
+            expect(sendAvisoColegio).not.toHaveBeenCalled();
+            const omitido = await prisma.registroAvisoColegio.findFirst({
+                where: { colegioId: colegio.id, tipoEvento: "REPORTE_NUEVO", estado: "OMITIDO" },
+            });
+            expect(omitido).not.toBeNull();
         });
     });
 
