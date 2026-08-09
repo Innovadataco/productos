@@ -113,11 +113,11 @@ export async function PATCH(request: Request) {
             colegioId: acceso.colegioId,
             valorAnterior: anterior
                 ? JSON.stringify({
-                      habilitado: anterior.habilitado,
-                      emailDestino: anterior.emailDestino,
-                      umbral: anterior.umbral,
-                      ventanaDias: anterior.ventanaDias,
-                  })
+                    habilitado: anterior.habilitado,
+                    emailDestino: anterior.emailDestino,
+                    umbral: anterior.umbral,
+                    ventanaDias: anterior.ventanaDias,
+                })
                 : undefined,
             valorNuevo: JSON.stringify({
                 tipoEvento: body.tipoEvento,

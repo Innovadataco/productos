@@ -207,6 +207,7 @@ export class AlertaColegioRepository {
 
     /** SPEC-143 (D1): contadores del semáforo — nuevas sin gestionar + últimas 72 h. */
     async conteosSemaforo(colegioId: string): Promise<{ alertasNuevas: number; alertas72h: number }> {
+        const desde72h = new Date(Date.now() - 72 * 60 * 60 * 1000);
         const [alertasNuevas, alertas72h] = await Promise.all([
             this.db.alertaColegio.count({
                 where: { colegioId, estado: "nueva", reporte: { eliminado: false } },
@@ -379,6 +380,22 @@ export class AlertaColegioRepository {
         return this.db.alertaColegio.findMany({
             where: { reporteId, patronInstitucionalId: { not: null } },
             select: { id: true, patronInstitucionalId: true },
+        });
+    }
+
+    /**
+     * SPEC-149 (FR-003): colegio + estudiante + curso destino de la alerta
+     * (evaluador de umbrales, contexto worker — la alerta ya nació tenant-first).
+     */
+    obtenerDestinoUmbrales(alertaId: string) {
+        return this.db.alertaColegio.findUnique({
+            where: { id: alertaId },
+            select: {
+                colegioId: true,
+                identificadorEstudiante: {
+                    select: { estudiante: { select: { id: true, cursoId: true } } },
+                },
+            },
         });
     }
 

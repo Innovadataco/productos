@@ -17,7 +17,6 @@
  * Cero PII: los emails (email.ts) llevan solo conteos; nada de esto incluye
  * texto del reporte, identificadores, nombres ni scores (I-28/I-29).
  */
-import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { getParametroSistemaValor } from "@/lib/parametros";
@@ -28,6 +27,7 @@ import {
     enviarAvisoEstudianteRepetidoColegio,
 } from "@/lib/email";
 import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PreferenciaAlertaColegioRepository } from "@/lib/dal/repositories/preferencia-alerta-colegio";
 import type { TipoEventoAvisoColegio } from "@/lib/dal/repositories/preferencia-alerta-colegio";
 import { RegistroAvisoColegioRepository } from "@/lib/dal/repositories/registro-aviso-colegio";
@@ -99,10 +99,7 @@ export async function obtenerTopeDiario(): Promise<number> {
 /** Destino del aviso: emailDestino de la preferencia o, por default, el SCHOOL_ADMIN. */
 export async function resolverEmailDestino(colegioId: string, emailDestinoPref: string | null): Promise<string | null> {
     if (emailDestinoPref) return emailDestinoPref;
-    const admin = await prisma.usuario.findFirst({
-        where: { colegioId, rol: "SCHOOL_ADMIN", estado: "activo" },
-        select: { email: true },
-    });
+    const admin = await new UsuarioRepository().findAdminColegioParaNotificacion(colegioId);
     return admin?.email ?? null;
 }
 
@@ -262,15 +259,7 @@ export async function procesarEnvioAviso(job: {
  * por día y entidad evita re-avisar por cada reporte del mismo día.
  */
 export async function evaluarUmbralesPorAlerta(alertaId: string): Promise<void> {
-    const alerta = await prisma.alertaColegio.findUnique({
-        where: { id: alertaId },
-        select: {
-            colegioId: true,
-            identificadorEstudiante: {
-                select: { estudiante: { select: { id: true, cursoId: true } } },
-            },
-        },
-    });
+    const alerta = await new AlertaColegioRepository().obtenerDestinoUmbrales(alertaId);
     const estudiante = alerta?.identificadorEstudiante.estudiante;
     if (!alerta || !estudiante) return;
 

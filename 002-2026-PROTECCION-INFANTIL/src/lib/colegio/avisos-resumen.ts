@@ -11,11 +11,11 @@
  * cae y pg-boss reintenta, la segunda corrida es no-op.
  * Cero PII: solo conteos agregados del propio colegio (I-29).
  */
-import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { enviarResumenSemanalColegio } from "@/lib/email";
 import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
+import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { RegistroAvisoColegioRepository } from "@/lib/dal/repositories/registro-aviso-colegio";
 import { obtenerPreferenciaEfectiva, resolverEmailDestino, inicioSemanaBogota, diaBogota } from "./avisos";
 
@@ -119,13 +119,7 @@ export async function enviarResumenSemanalDeColegio(colegioId: string, ahora: Da
  * fallo de un colegio NO detiene a los demás (molde apelacion-mantenimiento).
  */
 export async function enviarResumenesSemanales(ahora: Date = new Date()): Promise<{ enviados: number; omitidos: number; fallidos: number }> {
-    const colegios = await prisma.colegio.findMany({
-        where: {
-            estado: "activo",
-            OR: [{ finServicio: null }, { finServicio: { gt: ahora } }],
-        },
-        select: { id: true },
-    });
+    const colegios = await new ColegioRepository().listarIdsActivosVigentes(ahora);
 
     let enviados = 0;
     let omitidos = 0;
