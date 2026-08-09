@@ -406,4 +406,42 @@ export class AlertaColegioRepository {
             data: { patronInstitucionalId: null },
         });
     }
+
+    /**
+     * SPEC-159 (FR-002): detalle del caso para el colegio — SIEMPRE filtrado por
+     * tenant (null si no existe o es ajeno). Resumen visible: estudiante
+     * (nombre+apellidos), curso, plataforma y TIPO de identificador — NUNCA el
+     * valor del identificador ni el texto del reporte ni scores (I-28/I-29).
+     */
+    obtenerDetalleConCurso(colegioId: string, id: string) {
+        return this.db.alertaColegio.findFirst({
+            where: { id, colegioId },
+            select: {
+                id: true,
+                colegioId: true,
+                reporteId: true,
+                estado: true,
+                creadoEn: true,
+                reporte: {
+                    select: {
+                        estado: true,
+                        clasificacion: { select: { categoria: true } },
+                    },
+                },
+                identificadorEstudiante: {
+                    select: {
+                        tipo: true,
+                        plataforma: { select: { nombre: true } },
+                        estudiante: {
+                            select: {
+                                nombre: true,
+                                apellidos: true,
+                                curso: { select: { nombre: true, grado: true } },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
 }

@@ -131,6 +131,8 @@ enum AccionAudit {
   // SPEC-149: avisos por email del colegio (envío + cambio de preferencias).
   COLEGIO_AVISO_ENVIADO
   COLEGIO_AVISO_PREFERENCIA_ACTUALIZADA
+  // SPEC-159: bitácora del caso del colegio (nota de seguimiento agregada).
+  COLEGIO_CASO_NOTA_AGREGADA
 }
 
 enum TipoPeriodoServicio {
@@ -257,6 +259,7 @@ model Usuario {
   transicionesReporte          TransicionReporte[]
   solicitudesComite            SolicitudComite[]        @relation("SolicitudesComite")
   solicitudesEscaladas         SolicitudComite[]        @relation("SolicitudesEscaladas")
+  notasSeguimiento             NotaSeguimiento[]
   integrantesComite            IntegranteComite[]       @relation("IntegrantesComite")
   integrantesComiteCreados     IntegranteComite[]       @relation("IntegrantesComiteCreados")
   integrantesComiteModificados IntegranteComite[]       @relation("IntegrantesComiteModificados")
@@ -466,6 +469,8 @@ model Colegio {
   patrones     PatronInstitucional[]
   preferenciasAvisos PreferenciaAlertaColegio[]
   registrosAvisos    RegistroAvisoColegio[]
+  seguimientosCaso SeguimientoCaso[]
+  notasSeguimiento NotaSeguimiento[]
   auditLogs    AuditLog[]
   sesionesCarga CargaRosterSesion[]
 
@@ -594,6 +599,7 @@ model AlertaColegio {
   reporte                 Reporte                  @relation(fields: [reporteId], references: [id])
   identificadorEstudiante IdentificadorEstudiante  @relation(fields: [identificadorEstudianteId], references: [id])
   patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
+  seguimiento             SeguimientoCaso?
 
   @@unique([colegioId, reporteId, identificadorEstudianteId])
   @@index([colegioId, estado])
@@ -670,6 +676,46 @@ model RegistroAvisoColegio {
 
   @@unique([colegioId, tipoEvento, entidadId, dia])
   @@index([colegioId, estado])
+}
+
+// SPEC-159 (FR-001): seguimiento del caso del colegio — 1:1 con la alerta
+// (alertaId único), nace LAZY con la primera nota de la bitácora (spec,
+// Assumptions). estado es String con valores cerrados (mismo patrón que
+// AlertaColegio.estado): en_seguimiento | cerrado. En esta versión no hay
+// flujo de cierre manual: queda derivado de la alerta gestionada.
+model SeguimientoCaso {
+  id            String   @id @default(cuid())
+  colegioId     String
+  alertaId      String   @unique
+  estado        String   @default("en_seguimiento") // en_seguimiento | cerrado
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio Colegio           @relation(fields: [colegioId], references: [id])
+  alerta  AlertaColegio     @relation(fields: [alertaId], references: [id])
+  notas   NotaSeguimiento[]
+
+  @@index([colegioId, estado])
+}
+
+// SPEC-159 (FR-001): nota de la bitácora — "lo actuado", INMUTABLE por
+// construcción (no existe PATCH ni DELETE: respaldo forense, Ley 1581). Texto
+// plano 1..1000 chars (Zod en el endpoint; React escapa al renderizar).
+// colegioId denormalizado del seguimiento: tenant obligatorio por
+// construcción (E-1) sin pasar por el join.
+model NotaSeguimiento {
+  id            String   @id @default(cuid())
+  seguimientoId String
+  colegioId     String
+  texto         String
+  autorId       String
+  creadoEn      DateTime @default(now())
+
+  seguimiento SeguimientoCaso @relation(fields: [seguimientoId], references: [id])
+  colegio     Colegio         @relation(fields: [colegioId], references: [id])
+  autor       Usuario         @relation(fields: [autorId], references: [id])
+
+  @@index([seguimientoId, creadoEn])
 }
 
 // ============================================
