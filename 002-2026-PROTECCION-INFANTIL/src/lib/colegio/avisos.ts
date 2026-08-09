@@ -31,6 +31,7 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PreferenciaAlertaColegioRepository } from "@/lib/dal/repositories/preferencia-alerta-colegio";
 import type { TipoEventoAvisoColegio } from "@/lib/dal/repositories/preferencia-alerta-colegio";
 import { RegistroAvisoColegioRepository } from "@/lib/dal/repositories/registro-aviso-colegio";
+import { EstudianteObservacionRepository } from "@/lib/dal/repositories/estudiante-observacion";
 
 /** Defaults cuando el colegio no tiene fila de preferencia (spec: todo habilitado). */
 export const DEFAULTS_AVISO = {
@@ -118,6 +119,8 @@ export async function registrarEventoAviso(params: {
     tipoEvento: TipoEventoAvisoColegio;
     entidadId: string;
     ahora?: Date;
+    /** SPEC-150: nota auditable que queda en el registro (p. ej. "observación especial"). */
+    detalle?: string;
 }): Promise<ResultadoRegistroEvento> {
     const { colegioId, tipoEvento, entidadId } = params;
     const ahora = params.ahora ?? new Date();
@@ -157,6 +160,7 @@ export async function registrarEventoAviso(params: {
         tipoEvento,
         entidadId,
         dia: dia.toISOString().slice(0, 10),
+        ...(params.detalle ? { detalle: params.detalle } : {}),
     });
     logger.info(`[COLEGIO/AVISOS] Evento ${tipoEvento} encolado para colegio ${colegioId} (entidad=${entidadId}, job=${jobId ?? "n/a"})`);
     return { encolado: true, motivo: "encolado" };
@@ -174,6 +178,8 @@ export async function procesarEnvioAviso(job: {
     tipoEvento: TipoEventoAvisoColegio;
     entidadId: string;
     dia: string;
+    /** SPEC-150: nota auditable que queda en el registro ENVIADO. */
+    detalle?: string;
 }): Promise<{ enviado: boolean; motivo: string }> {
     const { colegioId, tipoEvento, entidadId } = job;
     const dia = new Date(`${job.dia}T00:00:00.000Z`);
@@ -235,11 +241,12 @@ export async function procesarEnvioAviso(job: {
     }
 
     // ENVIADO solo tras el éxito del proveedor. Si la fila existía FALLIDO, se
-    // actualiza (misma clave: la idempotencia no se duplica).
+    // actualiza (misma clave: la idempotencia no se duplica). El detalle del
+    // job (SPEC-150: "observación especial") queda en el registro.
     if (existente) {
-        await registros.actualizarEstado(existente.id, "ENVIADO");
+        await registros.actualizarEstado(existente.id, "ENVIADO", job.detalle);
     } else {
-        await registros.registrarSiAusente(clave, "ENVIADO");
+        await registros.registrarSiAusente(clave, "ENVIADO", job.detalle);
     }
 
     await logAudit({
@@ -279,8 +286,18 @@ export async function evaluarUmbralesPorAlerta(alertaId: string): Promise<void> 
     if (prefEstudiante.habilitado) {
         const desde = new Date(Date.now() - prefEstudiante.ventanaDias * DIA_MS);
         const reportesEstudiante = await alertas.contarReportesDistintosPorEstudiante(colegioId, estudiante.id, desde);
-        if (reportesEstudiante >= prefEstudiante.umbral) {
-            await registrarEventoAviso({ colegioId, tipoEvento: "ESTUDIANTE_REPETIDO", entidadId: estudiante.id });
+        // SPEC-150 (FR-003): observación especial ACTIVA ⇒ umbral efectivo 1
+        // (aviso al PRIMER reporte); sin ella rige el umbral del colegio. La
+        // idempotencia por día y entidad es la misma de siempre.
+        const observacionActiva = await new EstudianteObservacionRepository().obtenerActiva(colegioId, estudiante.id);
+        const umbralEfectivo = observacionActiva ? 1 : prefEstudiante.umbral;
+        if (reportesEstudiante >= umbralEfectivo) {
+            await registrarEventoAviso({
+                colegioId,
+                tipoEvento: "ESTUDIANTE_REPETIDO",
+                entidadId: estudiante.id,
+                detalle: observacionActiva ? "observación especial: aviso al primer reporte" : undefined,
+            });
         }
     }
 }
