@@ -33,6 +33,6 @@ Se entrega el panel de monitoreo del worker para ADMIN en `/dashboard/admin/moni
 ## Evidencia de integración
 
 - Rama: `work/002-pi-058`
-- PR: #TODO
-- Hash de merge: #TODO
-- CI-PUSH: #TODO
+- PR: #37
+- Hash de merge: `ef446d8a`
+- CI-PUSH: `31368586175` ✅
