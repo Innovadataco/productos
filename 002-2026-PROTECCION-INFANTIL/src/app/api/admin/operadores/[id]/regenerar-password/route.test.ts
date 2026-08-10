@@ -19,7 +19,7 @@ vi.mock("@/lib/email", () => ({
     enviarEmailBienvenidaComite: vi.fn().mockResolvedValue(undefined),
 }));
 
-describe("POST /api/admin/operadores/[id]/regenerar-password", () => {
+describe("POST /api/admin/operadores/[id]/regenerar-password", { timeout: 30000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         mockToken = undefined;

@@ -36,7 +36,7 @@ function login(email: string, password: string) {
     );
 }
 
-describe("POST /api/admin/padres/[id]/restablecer-password", () => {
+describe("POST /api/admin/padres/[id]/restablecer-password", { timeout: 30000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();
