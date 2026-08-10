@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-10
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058, brief §10. El ADMIN necesita una pantalla de monitoreo del worker que muestre su estado de salud sin permitir acciones destructivas.
 
@@ -51,3 +51,12 @@ Como ADMIN, quiero ver si el worker está vivo y cuándo fue su último heartbea
 ## Impacto en arquitectura:
 
 Añade página y entrada en catálogo de permisos. No modifica modelo de datos ni worker. No toca el motor de IA.
+
+## Implementación
+
+- Módulo `monitoreo_worker` registrado en `src/lib/permisos-catalogo.ts` con acceso solo para `ADMIN`.
+- Ítem de navegación añadido en `src/lib/nav-items.ts` bajo el área de administración.
+- Página server `src/app/dashboard/admin/monitoreo/worker/page.tsx` con guard `verificarAccesoPagina`.
+- Componente cliente `src/components/modules/MonitoreoWorkerClient.tsx` consume `GET /api/health/worker` cada 30 s; solo lectura, sin acciones destructivas.
+- Tests de permisos y proxy actualizados (`src/lib/permisos-modulos.test.ts`, `src/lib/proxy.test.ts`).
+- Artefactos de arquitectura regenerados (`docs/architecture/02-roles-capacidades.md`, `03-pantallas.md`) y oráculo de rutas ajustado a 60 páginas.

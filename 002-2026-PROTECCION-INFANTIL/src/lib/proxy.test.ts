@@ -124,4 +124,17 @@ describe("proxy — home por rol (SPEC-127, I-40/D-42)", () => {
             expect(destino, `home de ${rol}`).toBe(home);
         }
     });
+
+    it("monitoreo worker: ADMIN accede, roles no internos redirigen a su home", async () => {
+        const admin = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", await tokenParaRol("ADMIN")));
+        expect(admin.status).toBe(200);
+
+        const parent = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", await tokenParaRol("PARENT")));
+        expect(parent.status).toBe(307);
+        expect(new URL(parent.headers.get("location")!).pathname).toBe("/");
+
+        const schoolAdmin = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", await tokenParaRol("SCHOOL_ADMIN")));
+        expect(schoolAdmin.status).toBe(307);
+        expect(new URL(schoolAdmin.headers.get("location")!).pathname).toBe("/dashboard/colegio");
+    });
 });
