@@ -138,6 +138,8 @@ enum AccionAudit {
   COLEGIO_OBSERVACION_DESMARCADA
   // SPEC-151: informe PDF mensual determinístico del colegio.
   COLEGIO_INFORME_MENSUAL_PDF_DESCARGADO
+  // SPEC-152: duplicar curso al año siguiente.
+  COLEGIO_CURSO_DUPLICADO
 }
 
 enum TipoPeriodoServicio {
