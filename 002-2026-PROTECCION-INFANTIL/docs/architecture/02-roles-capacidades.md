@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 6 roles (5 autenticados + anónimo) × 218 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1308 combinaciones.
+Inventario: 6 roles (5 autenticados + anónimo) × 219 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1314 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -151,6 +151,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cursos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
@@ -374,6 +375,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cursos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
@@ -597,6 +599,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cursos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
@@ -820,6 +823,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cursos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
@@ -1043,6 +1047,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cursos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
@@ -1266,6 +1271,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cursos` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/[id]/alumnos` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/cursos/[id]/duplicar` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/[id]/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/unificado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/unificado/plantilla` | api | HTTP 401 | permite | **NO** |
@@ -1477,6 +1483,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/cursos` | HTTP 401 | permite |
 | `/api/colegio/cursos/[id]` | HTTP 401 | permite |
 | `/api/colegio/cursos/[id]/alumnos` | HTTP 401 | permite |
+| `/api/colegio/cursos/[id]/duplicar` | HTTP 401 | permite |
 | `/api/colegio/cursos/[id]/estado` | HTTP 401 | permite |
 | `/api/colegio/cursos/unificado` | HTTP 401 | permite |
 | `/api/colegio/cursos/unificado/plantilla` | HTTP 401 | permite |

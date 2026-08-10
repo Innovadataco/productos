@@ -16,6 +16,16 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
+// Evita llamadas HTTP reales a Resend en CI; el endpoint maneja el fallo y expone
+// la contraseña temporal exactamente una vez (I-37 / 002-PI-051 B3).
+vi.mock("resend", () => ({
+    Resend: vi.fn().mockImplementation(() => ({
+        emails: {
+            send: vi.fn().mockResolvedValue({ error: { message: "mock email failure" } }),
+        },
+    })),
+}));
+
 function llamar(padreId: string) {
     return POST(
         new Request(`http://localhost:5005/api/admin/padres/${padreId}/restablecer-password`, {
