@@ -48,6 +48,8 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
     const [editForm, setEditForm] = useState({ nombre: "", grado: "", anioLectivo: "", profesorTitularId: "" });
     const [profesores, setProfesores] = useState<ProfesorOpcion[]>([]);
     const [cargandoProfesores, setCargandoProfesores] = useState(false);
+    const [confirmandoDuplicar, setConfirmandoDuplicar] = useState(false);
+    const [duplicando, setDuplicando] = useState(false);
 
     const { curso } = datos;
     const totalEstudiantes = datos.estudiantes.length;
@@ -82,6 +84,29 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
             cancelado = true;
         };
     }, [editando]);
+
+    async function duplicarCurso() {
+        setDuplicando(true);
+        setAviso(null);
+        try {
+            const res = await fetch(`/api/colegio/cursos/${curso.id}/duplicar`, {
+                method: "POST",
+                credentials: "include",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.curso?.id) {
+                setConfirmandoDuplicar(false);
+                setAviso({ tipo: "exito", mensaje: `Curso duplicado: ${data.curso.nombre} (${data.curso.anioLectivo}).` });
+                router.push(`/dashboard/colegio/cursos/${data.curso.id}`);
+            } else {
+                setAviso({ tipo: "error", mensaje: data?.error?.message || "No pudimos duplicar el curso." });
+            }
+        } catch {
+            setAviso({ tipo: "error", mensaje: "Error de red duplicando el curso." });
+        } finally {
+            setDuplicando(false);
+        }
+    }
 
     async function guardarEdicion() {
         if (!editForm.nombre.trim()) return;
@@ -193,6 +218,16 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
                     titular={datos.titular}
                     totalEstudiantes={totalEstudiantes}
                     onEditar={abrirEdicion}
+                    accionExtra={
+                        <Button
+                            variant="outline"
+                            className="min-h-12"
+                            onClick={() => setConfirmandoDuplicar(true)}
+                            disabled={duplicando}
+                        >
+                            Duplicar al año siguiente
+                        </Button>
+                    }
                 />
 
                 {aviso ? (
@@ -265,6 +300,23 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
                     router.refresh();
                 }}
             />
+
+            <Modal isOpen={confirmandoDuplicar} onClose={() => setConfirmandoDuplicar(false)} title="Duplicar curso">
+                <div className="space-y-4">
+                    <p className="text-body">
+                        Se creará una copia de <strong>{curso.nombre}</strong> con todos sus estudiantes e identificadores activos para el año siguiente.
+                    </p>
+                    <p className="text-sm text-muted">El curso original no se modificará.</p>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Button onClick={duplicarCurso} isLoading={duplicando} className="min-h-12">
+                            Duplicar
+                        </Button>
+                        <Button variant="outline" className="min-h-12" onClick={() => setConfirmandoDuplicar(false)}>
+                            Cancelar
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             <Modal isOpen={editando} onClose={() => setEditando(false)} title="Editar curso">
                 <div className="space-y-4">

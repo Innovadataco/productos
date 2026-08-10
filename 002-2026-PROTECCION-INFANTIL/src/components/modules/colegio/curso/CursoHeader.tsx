@@ -22,9 +22,10 @@ interface CursoHeaderProps {
     titular: TitularVista | null;
     totalEstudiantes: number;
     onEditar: () => void;
+    accionExtra?: React.ReactNode;
 }
 
-export function CursoHeader({ nombre, estadoCurso, titular, totalEstudiantes, onEditar }: CursoHeaderProps) {
+export function CursoHeader({ nombre, estadoCurso, titular, totalEstudiantes, onEditar, accionExtra }: CursoHeaderProps) {
     return (
         <header>
             <Link
@@ -52,9 +53,12 @@ export function CursoHeader({ nombre, estadoCurso, titular, totalEstudiantes, on
                         {totalEstudiantes} {totalEstudiantes === 1 ? "estudiante" : "estudiantes"}
                     </p>
                 </div>
-                <Button variant="outline" className="min-h-12" onClick={onEditar}>
-                    Editar curso
-                </Button>
+                <div className="flex flex-wrap items-center gap-3">
+                    {accionExtra}
+                    <Button variant="outline" className="min-h-12" onClick={onEditar}>
+                        Editar curso
+                    </Button>
+                </div>
             </div>
         </header>
     );
