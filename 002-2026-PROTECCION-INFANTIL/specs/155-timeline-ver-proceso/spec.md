@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-10
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058, brief §10. El ADMIN necesita una línea de tiempo interna que muestre el ciclo de vida de un reporte (transiciones de estado y reintentos de procesamiento) para diagnóstico operativo.
 
@@ -52,3 +52,11 @@ Como ADMIN, quiero ver el historial de transiciones y reintentos de un reporte e
 ## Impacto en arquitectura:
 
 Añade endpoint, servicio y pestaña/modal de timeline interno para ADMIN. No modifica el modelo de datos. No toca el motor de IA.
+
+## Implementación
+
+- **Servicio**: `src/lib/reportes/timeline-proceso.ts` combina `TransicionReporte` y `ReintentoReporte`, normaliza eventos y los ordena cronológicamente sin PII.
+- **Endpoint**: `GET /api/admin/reportes/[id]/proceso` en `src/app/api/admin/reportes/[id]/proceso/route.ts`; solo `ADMIN`, rate-limit `admin_read`, validación de ID.
+- **UI**: pestaña **Proceso** dentro del modal de expediente (`AdminReporteExpediente`) usando el componente `AdminReporteProceso`; renderiza timeline con transiciones y reintentos.
+- **Tests**: `src/app/api/admin/reportes/[id]/proceso/route.test.ts` cubre orden cronológico, 403 para OPERADOR/PARENT, 404 y no exposición de texto original.
+- **Arquitectura**: `docs/architecture/02-roles-capacidades.md` regenerado para reflejar la nueva ruta API (227 rutas).

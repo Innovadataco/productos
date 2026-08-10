@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-10** (002-PI-058: SPEC-154 implementada; SPEC-155/156 planeadas; pendientes 155-156).
+> Última actualización: **2026-08-10** (002-PI-058: SPEC-154/155 implementadas; SPEC-156 planeada; pendiente 156).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -94,7 +94,7 @@
 | [152](152-duplicar-curso/spec.md) | SPEC-152 — Duplicar curso al año siguiente (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [153](153-comparativa-cursos/spec.md) | SPEC-153 — Comparativa entre cursos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [154](154-confianza-transparencia/spec.md) | SPEC-154 — Confianza: transparencia, protocolo e historial (002-PI-058) | 🟢 Implementada (ver cierre.md) |
-| [155](155-timeline-ver-proceso/spec.md) | SPEC-155 — Timeline "Ver proceso" para ADMIN (002-PI-058) | 🔵 Planeada |
+| [155](155-timeline-ver-proceso/spec.md) | SPEC-155 — Timeline "Ver proceso" para ADMIN (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [156](156-panel-monitoreo-worker/spec.md) | SPEC-156 — Panel de monitoreo del worker para ADMIN (002-PI-058) | 🔵 Planeada |
 | [159](159-seguimiento-caso/spec.md) | SPEC-159 — Seguimiento del caso con bitácora: línea de tiempo, pendientes y notas inmutables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
@@ -240,7 +240,7 @@
 | [152](152-duplicar-curso/spec.md) | SPEC-152 — Duplicar curso al año siguiente (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [153](153-comparativa-cursos/spec.md) | SPEC-153 — Comparativa entre cursos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [154](154-confianza-transparencia/spec.md) | SPEC-154 — Confianza: transparencia, protocolo e historial (002-PI-058) | 🟢 Implementada (ver cierre.md) |
-| [155](155-timeline-ver-proceso/spec.md) | SPEC-155 — Timeline "Ver proceso" para ADMIN (002-PI-058) | 🔵 Planeada |
+| [155](155-timeline-ver-proceso/spec.md) | SPEC-155 — Timeline "Ver proceso" para ADMIN (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [156](156-panel-monitoreo-worker/spec.md) | SPEC-156 — Panel de monitoreo del worker para ADMIN (002-PI-058) | 🔵 Planeada |
 | [159](159-seguimiento-caso/spec.md) | SPEC-159 — Seguimiento del caso con bitácora: línea de tiempo, pendientes y notas inmutables (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
