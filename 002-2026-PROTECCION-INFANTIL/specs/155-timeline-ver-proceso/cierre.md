@@ -29,10 +29,10 @@ Se implementó el timeline interno de proceso de un reporte para ADMIN, combinan
 ## Evidencia de integración
 
 - Rama: `work/002-pi-058`
-- Hash local previo al push: #TODO
-- PR a `feature/001-scaffolding`: #TODO
-- Hash de merge en `feature/001-scaffolding`: #TODO
-- CI-PUSH verde: #TODO
+- Hash local previo al push: `74a3c470`
+- PR a `feature/001-scaffolding`: #36
+- Hash de merge en `feature/001-scaffolding`: `667764e6`
+- CI-PUSH verde: `31364132971`
 
 ## Notas
 
