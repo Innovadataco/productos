@@ -95,7 +95,7 @@ Como CEO, quiero una hoja de credenciales demo para acceder con cada rol sin usa
 - PostgreSQL de producción permite ejecutar transacciones largas para seed/purga.
 - El seed puede escribir directamente `creadoEn` y timestamps derivados porque Prisma/PostgreSQL aceptan valores históricos en campos `@default(now())` al crearse explícitamente.
 
-## Impacto en arquitectura
+## Impacto en arquitectura:
 
 - Posible migración aditiva para agregar campo `esDemo` (o similar) a entidades de negocio que aún no lo tengan, o uso de una tabla de marcado central `DemoMarcado` (tabla, id, entidad, entidadId, creadoEn).
 - Nuevos scripts en `scripts/demo-prod/`:

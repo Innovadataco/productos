@@ -1456,3 +1456,19 @@ model CargaRosterSesion {
 
   @@index([expiraEn])
 }
+
+// SPEC-160 (002-PI-059): marcado quirúrgico de entidades demo para purga idempotente.
+// La purga borra EXCLUSIVAMENTE por registros de esta tabla (por id); los prefijos
+// DEMO-/RPT-DEMO- y los emails @innovadataco.com son defensa en profundidad.
+model DemoMarcado {
+  id        String   @id @default(cuid())
+  entidad   String // nombre de la tabla Prisma/BD: Colegio, Curso, Estudiante, Usuario, Reporte, AuditLog, ...
+  entidadId String
+  metadata  Json? // { corrida: string, script: string, notas?: string }
+  creadoEn  DateTime @default(now())
+
+  @@unique([entidad, entidadId])
+  @@index([entidad])
+  @@index([entidadId])
+  @@map("demo_marcado")
+}

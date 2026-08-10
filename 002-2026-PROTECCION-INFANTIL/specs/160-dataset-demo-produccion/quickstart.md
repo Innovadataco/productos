@@ -20,7 +20,7 @@ ADMIN_EMAIL="soporte@innovadataco.com"
 ADMIN_PASSWORD="..."           # o usar ADMIN_API_TOKEN si se implementa
 WORKER_SECRET="..."
 DEMO_EMAIL_DOMAIN="innovadataco.com"
-DEMO_PASSWORD="DemoSeguro2026!" # contraseña común para todos los usuarios demo
+DEMO_PASSWORD="change-me"        # contraseña común; definirla en .env, nunca en el repo
 ```
 
 ## Seed demo
