@@ -34,10 +34,10 @@ Se implementó la sección de confianza institucional para `SCHOOL_ADMIN`, con d
 ## Evidencia de integración
 
 - Rama: `work/002-pi-058`
-- Hash local previo al push: #TODO
-- PR a `feature/001-scaffolding`: #TODO
-- Hash de merge en `feature/001-scaffolding`: #TODO
-- CI-PUSH verde: #TODO
+- Hash local previo al push: `2c03050c`
+- PR a `feature/001-scaffolding`: #35
+- Hash de merge en `feature/001-scaffolding`: `4492abae`
+- CI-PUSH verde: `31359884583`
 
 ## Notas
 
