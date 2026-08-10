@@ -11,7 +11,8 @@ docs
 design
 design-system
 tests
-scripts/simulacion
+scripts/simulacion/*
+!scripts/simulacion/simulacion-200-antes-curaduria.json
 *.md
 !README.md
 .DS_Store
