@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **57** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **58** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -529,7 +529,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (7)
+### Otros (sin regla de dominio) (8)
 
 #### `CargaRosterSesion`
 
@@ -541,6 +541,15 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | expiraEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
+
+#### `DemoMarcado`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| entidad | String | — |
+| entidadId | String | — |
+| metadata | Json | opcional |
 
 #### `EventoMatch`
 
@@ -1157,6 +1166,7 @@ por ningún otro modelo. La lista de excepciones declarada vive en
 | Modelo | ¿En excepciones declaradas? |
 | --- | --- |
 | BillingCycle | sí |
+| DemoMarcado | sí |
 | Plan | sí |
 | RateLimit | sí |
 | Subscription | sí |
