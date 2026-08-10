@@ -97,15 +97,15 @@ export default function ComparativaCursosPage() {
         }
     };
 
-    if (cargando) return <Cargando mensaje="Cargando comparativa..." />;
-    if (error) return <ErrorState titulo="No pudimos cargar la comparativa" mensaje={error} onRetry={cargar} />;
+    if (cargando) return <Cargando texto="Cargando comparativa..." />;
+    if (error) return <ErrorState title="No pudimos cargar la comparativa" description={error} onRetry={cargar} />;
     if (!comparativa || comparativa.grupos.length === 0) {
         return (
             <div className="space-y-6">
                 <h1 className="text-2xl font-bold text-body">Comparativa entre cursos</h1>
                 <EmptyState
-                    titulo="Sin datos para comparar"
-                    mensaje="No hay cursos activos en el colegio todavía. Crea cursos y vuelve a consultar."
+                    title="Sin datos para comparar"
+                    description="No hay cursos activos en el colegio todavía. Crea cursos y vuelve a consultar."
                 />
             </div>
         );

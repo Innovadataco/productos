@@ -73,7 +73,7 @@ export async function GET(request: Request) {
         });
 
         const filename = `comparativa-cursos-${slugify(datos.colegioNombre)}-${queryParse.data.agruparPor}.xlsx`;
-        return new NextResponse(buffer, {
+        return new NextResponse(new Uint8Array(buffer), {
             status: 200,
             headers: {
                 "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

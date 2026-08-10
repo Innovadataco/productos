@@ -68,6 +68,11 @@ export async function calcularComparativaCursos(
         colegioNombre: estadisticas.colegioNombre,
         agruparPor,
         grupos,
-        totales: estadisticas.totales,
+        totales: {
+            cursos: estadisticas.totales.cursos,
+            estudiantes: estadisticas.totales.alumnos,
+            identificadores: estadisticas.totales.identificadores,
+            alertas: estadisticas.totales.alertas,
+        },
     };
 }
