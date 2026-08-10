@@ -30,8 +30,8 @@ Se implementó la duplicación atómica de un curso propio al periodo siguiente.
 
 - Rama: `work/002-pi-058`
 - PR a `feature/001-scaffolding`: #32
-- Hash de merge en `feature/001-scaffolding`: #TODO (actualizar tras merge)
-- CI-PUSH verde: #TODO (actualizar tras merge)
+- Hash de merge en `feature/001-scaffolding`: `5e4541795b5a153e4bcbc597647d851ea4d1f4eb`
+- CI-PUSH verde: `31349792577`
 
 ## Notas
 
