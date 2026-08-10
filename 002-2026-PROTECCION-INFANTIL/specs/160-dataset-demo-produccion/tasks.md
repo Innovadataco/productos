@@ -4,13 +4,14 @@
 
 ## Fase 0 — Preparación segura
 
-### T001 [P] Decidir estrategia de marcado con ZEUS
-- Archivo: `specs/160-dataset-demo-produccion/data-model.md`.
-- Documentar opciones A/B/C y la decisión final.
+### T001 [P] Documentar decisiones D1-D4 aprobadas por ZEUS
+- Archivo: `specs/160-dataset-demo-produccion/plan.md`.
+- Incluir DemoMarcado, backdating, supresión de avisos históricos, purga de AuditLog, purga solo por id.
 
-### T002 [P] Diseñar tabla `DemoMarcado` (si aplica Opción A)
-- Archivo: `prisma/schema.prisma`.
-- Migración aditiva con `npx prisma migrate dev --name demo_marcado`.
+### T002 [P] Crear migración aditiva `DemoMarcado`
+- Archivo: `prisma/schema.prisma` + `prisma/migrations/..._demo_marcado`.
+- Solo `CREATE TABLE` + índices; sin `DROP` (candado I-49).
+- Verificar supervivencia de índices.
 
 ### T003 [P] Crear estructura de scripts demo-prod
 - Directorio: `scripts/demo-prod/`.
@@ -87,29 +88,42 @@
 - Reusa `scripts/simulacion/simulacion-200-antes-curaduria.json` y añade variaciones controladas.
 - Cada entrada: texto, categoría esperada, gravedad sugerida.
 
-### T051 [P] Sembrar reportes
+### T051 [P] Sembrar reportes con ventana temporal
 - Archivo: `scripts/demo-prod/sembrar-reportes.ts`.
-- Fechas escalonadas en 6 meses.
+- Fechas escalonadas en 6 meses terminando hoy (≈ 2026-02-10 … 2026-08-10).
 - Mezcla anónimo/autenticado.
 - Asociar a identificadores de estudiantes.
-- Estados iniciales `PENDIENTE`.
 - Registrar reportes en `DemoMarcado`.
 
 ### T052 [P] Sembrar reportes del círculo de confianza
 - Archivo: `scripts/demo-prod/sembrar-reportes.ts`.
 - Algunos reportes usan identificadores del círculo de padres.
 
+### T053 [P] Sembrar reportes históricos en estado final sin avisos
+- Archivo: `scripts/demo-prod/sembrar-reportes.ts`.
+- Reportes > 7 días de antigüedad se insertan con estados finales (`CLASIFICADO`, `REVISION_MANUAL`, etc.) y `creadoEn` histórico.
+- No se encolan avisos por email para estos reportes.
+
+### T054 [P] Suprimir avisos de reportes históricos
+- Archivo: `scripts/demo-prod/sembrar-reportes.ts`.
+- Validar que solo reportes ≤ 7 días disparen `AlertaColegio` y emails.
+
 ## Fase 6 — Procesamiento
 
 ### T060 [P] Procesar reportes con motor real
 - Archivo: `scripts/demo-prod/procesar-reportes-demo.ts` (reusa `reanudar-demo.ts`).
-- Llamadas a `/api/reportes/procesar` con `WORKER_SECRET`.
+- Procesar reportes frescos (≤ 7 días) con `/api/reportes/procesar` y `WORKER_SECRET`.
 - Resumible, con reintentos y timeout.
 
 ### T061 [P] Asignar reportes manuales
 - Archivo: `scripts/demo-prod/asignar-reportes-demo.ts`.
 - Para reportes en `REVISION_MANUAL`, asignar a operadores según lógica real.
 - Ejercer escalamiento a comité para un subconjunto.
+
+### T062 [P] Backdatear entidades derivadas
+- Archivo: `scripts/demo-prod/procesar-reportes-demo.ts`.
+- Ajustar `creadoEn` de `AlertaColegio`, `TransicionReporte`, `ClasificacionIA`, `PasoProcesamiento`, `ReintentoReporte`, `EventoMatch` a la fecha histórica del reporte.
+- Validar que dashboards no muestren pico en fecha de seed.
 
 ## Fase 7 — Entrega
 
@@ -120,9 +134,10 @@
 
 ## Fase 8 — Purga
 
-### T080 [P] Implementar purga quirúrgica
+### T080 [P] Implementar purga quirúrgica por DemoMarcado
 - Archivo: `scripts/demo-prod/purgar-demo.ts`.
-- Lee `DemoMarcado`; borra en orden inverso.
+- Lee `DemoMarcado` por `id`; borra en orden inverso.
+- Nunca usa prefijos, nombres ni heurísticas como llave de borrado.
 - Recalcula/borra `IdentificadorReportado` afectados.
 - Limpia cola pg-boss de jobs demo.
 - Idempotente.
@@ -135,6 +150,11 @@
 - Archivo: `scripts/demo-prod/verificar-purga.ts`.
 - Antes y después: conteos de todas las entidades demo.
 - Gate: todo demo a cero; datos reales intactos.
+
+### T083 [P] Marcar y purgar AuditLog demo
+- Archivo: `scripts/demo-prod/sembrar-demo.ts` y `scripts/demo-prod/purgar-demo.ts`.
+- Cada mutación demo genera `AuditLog` marcado en `DemoMarcado`.
+- La purga borra `AuditLog` demo como parte del árbol.
 
 ## Documentación
 

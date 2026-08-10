@@ -28,7 +28,10 @@ Como CEO, quiero ver 5 colegios operando con cursos, profesores, alumnos, padres
 4. **Given** el dataset, **When** se listan usuarios, **Then** existen ≥10 OPERADOR, 1 COMITE_VALIDACION y ≥50 PARENT.
 5. **Given** algunos padres, **When** se revisa su cuenta, **Then** tienen círculo de confianza con identificadores y reportes asociados a esos identificadores.
 6. **Given** los reportes sembrados, **When** se procesan con el motor real, **Then** alcanzan estados finales (`CLASIFICADO`, `REVISION_MANUAL`, `POSIBLE_SPAM`, `CORREGIDO`, etc.) y los casos manuales quedan asignados a operadores.
-7. **Given** el comando de purga, **When** se ejecuta, **Then** la BD queda idéntica a antes del seed (conteos a cero en todo lo sembrado) y no se borra ningún dato real.
+7. **Given** los reportes históricos (> 7 días antes de hoy), **When** se siembran, **Then** se insertan en estado final con `creadoEn` histórico y **no** disparan avisos por email.
+8. **Given** los reportes frescos (≤ 7 días), **When** se siembran, **Then** pueden disparar avisos por email a `soporte+…@innovadataco.com`.
+9. **Given** las entidades derivadas de un reporte (`AlertaColegio`, `TransicionReporte`, `ClasificacionIA`, `PasoProcesamiento`), **When** se siembran o generan, **Then** sus timestamps (`creadoEn`) reflejan la fecha histórica del caso, no la fecha de ejecución del seed.
+10. **Given** el comando de purga, **When** se ejecuta, **Then** la BD queda idéntica a antes del seed, incluyendo `AuditLog`, y no se borra ningún dato real.
 
 ### User Story 2 — Equipo de soporte recibe credenciales (P1)
 
@@ -47,6 +50,8 @@ Como CEO, quiero una hoja de credenciales demo para acceder con cada rol sin usa
 - **Motor caído**: los reportes quedan `PENDIENTE` y se reanudan cuando Ollama vuelva.
 - **Purga parcial**: si falla a mitad, debe poder re-ejecutarse sin dejar huérfanos.
 - **Datos reales coexisten**: la purga debe distinguir demo de real sin depender únicamente de nombres arbitrarios.
+- **Backdating inconsistente**: si una entidad derivada no recibe el timestamp histórico, los dashboards mostrarían picos en la fecha de seed; se valida con `verificar-purga.ts` y pruebas visuales.
+- **Purga por heurística**: nunca se borra por prefijos o nombres; la fuente de verdad es `DemoMarcado`.
 
 ## Requirements
 
@@ -69,6 +74,10 @@ Como CEO, quiero una hoja de credenciales demo para acceder con cada rol sin usa
 - **FR-017**: Correos de aviso solo a direcciones `soporte+…@innovadataco.com`; nunca a dominios externos.
 - **FR-018**: No tocar `src/lib/ai/**`, Gesmovil ni configuración real.
 - **FR-019**: Reutilizar `prisma/seed.ts`, `scripts/generar-reportes-demo.ts`, `scripts/reanudar-demo.ts`, `scripts/simulacion/` y `prisma/seed-modulos-grants.ts`.
+- **FR-020**: Distribuir los reportes en una ventana temporal realista de 6 meses terminando en la fecha de ejecución; los reportes históricos (> 7 días) se siembran en estado final sin disparar avisos por email.
+- **FR-021**: Backdatear los timestamps de entidades derivadas (`AlertaColegio`, `TransicionReporte`, `ClasificacionIA`, `PasoProcesamiento`) a la fecha histórica del reporte correspondiente.
+- **FR-022**: Incluir `AuditLog` demo en `DemoMarcado` y purgarlo como parte del comando de purga.
+- **FR-023**: El comando de purga borra **exclusivamente** por registros de `DemoMarcado` (por `id`); los prefijos `DEMO-`/`RPT-DEMO-` son defensa en profundidad, nunca la llave de borrado.
 
 ## Success Criteria
 
@@ -84,6 +93,7 @@ Como CEO, quiero una hoja de credenciales demo para acceder con cada rol sin usa
 - Ollama está accesible por Tailscale para clasificación real.
 - El banco curado (`scripts/simulacion/simulacion-200-antes-curaduria.json` y archivos relacionados) contiene textos suficientes y aprobados por el equipo.
 - PostgreSQL de producción permite ejecutar transacciones largas para seed/purga.
+- El seed puede escribir directamente `creadoEn` y timestamps derivados porque Prisma/PostgreSQL aceptan valores históricos en campos `@default(now())` al crearse explícitamente.
 
 ## Impacto en arquitectura
 

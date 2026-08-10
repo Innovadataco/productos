@@ -39,7 +39,7 @@ Todas las entidades del árbol demo deben ser marcables y purgables:
 | `RegistroAvisoColegio` | por alertas | `DemoMarcado` | Manual |
 | `PreferenciaAlertaColegio` | por colegio | `DemoMarcado` | Manual |
 | `CargaRosterSesion` | por carga | `DemoMarcado` | Manual |
-| `AuditLog` | por mutaciones | `DemoMarcado` opcional | Opcional: conservar o purgar |
+| `AuditLog` | por mutaciones | `DemoMarcado` | Purga obligatoria; "idéntica a antes" incluye logs |
 
 ## Propuesta de schema: `DemoMarcado` (Opción A)
 
@@ -70,6 +70,28 @@ model DemoMarcado {
 
 Dado que las relaciones actuales no usan cascade masivo, la purga en TypeScript permite control total del orden sin modificar el schema, excepto quizás el `Usuario.colegioId`.
 
+## Regla de oro de la purga
+
+- La purga borra **solamente** entidades cuyo `id` esté registrado en `DemoMarcado`.
+- Los prefijos `DEMO-` / `RPT-DEMO-` y los emails `soporte+*@innovadataco.com` son **defensa en profundidad** y se usan únicamente para:
+  - Validación cruzada antes de ejecutar un `DELETE`.
+  - Auditoría humana.
+  - Prevención de creación accidental de usuarios demo con dominios externos.
+- Ningún `DELETE` utiliza `LIKE 'DEMO-%'` ni ninguna heurística de texto como predicado principal.
+
+## Backdating de entidades derivadas
+
+Las siguientes tablas reciben `creadoEn` histórico igual al momento del caso simulado:
+- `Reporte.creadoEn`
+- `AlertaColegio.creadoEn`
+- `TransicionReporte.creadoEn`
+- `ClasificacionIA.creadoEn`
+- `PasoProcesamiento.creadoEn`
+- `ReintentoReporte.creadoEn`
+- `EventoMatch.creadoEn`
+
+Esto garantiza que dashboards de ritmo, embudo y reloj 24h no muestren un pico artificial en la fecha de ejecución del seed.
+
 ## Alternativa: convención por email
 
-Como defensa en profundidad, todos los usuarios demo tendrán email `soporte+*@innovadataco.com`. La purga puede usar esto como validación cruzada contra `DemoMarcado`.
+Como defensa en profundidad, todos los usuarios demo tendrán email `soporte+*@innovadataco.com`.

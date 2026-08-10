@@ -27,6 +27,10 @@
 - [ ] FR-017: avisos solo a `soporte+…@innovadataco.com`.
 - [ ] FR-018: sin tocar motor, Gesmovil ni config real.
 - [ ] FR-019: reutilizar scripts y seed existentes.
+- [ ] FR-020: reportes distribuidos en ventana de 6 meses; históricos sin avisos.
+- [ ] FR-021: backdating de entidades derivadas a fecha histórica.
+- [ ] FR-022: AuditLog demo marcado y purgado.
+- [ ] FR-023: purga solo por `DemoMarcado.id`; prefijos son defensa en profundidad.
 
 ## Gate de calidad
 

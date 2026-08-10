@@ -32,6 +32,13 @@ node --env-file=.env --import tsx scripts/demo-prod/sembrar-demo.ts
 
 El script es idempotente y resumible. Si falla, re-correrlo continúa desde donde quedó.
 
+### Notas sobre la ventana temporal
+
+- Los reportes se distribuyen en los **últimos 6 meses** terminando hoy.
+- Los reportes históricos (> 7 días) se siembran en estado final con `creadoEn` histórico y **no** envían avisos.
+- Los reportes frescos (≤ 7 días) se procesan con el motor real y sí pueden enviar avisos a `soporte+…`.
+- Las entidades derivadas (`AlertaColegio`, `TransicionReporte`, `ClasificacionIA`, `PasoProcesamiento`) se backdatean a la fecha del caso.
+
 ## Procesar reportes con motor real
 
 ```bash

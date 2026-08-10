@@ -4,45 +4,52 @@
 
 No implementar hasta el **GO de ZEUS en la compuerta §4**. Este plan describe cómo sembrar un dataset demo realista en `pi.innovadataco.com`, con marcado inequívoco y purga quirúrgica, reutilizando scripts existentes.
 
-## Decisiones de diseño pendientes de aprobación de ZEUS
+## Decisiones de diseño aprobadas por ZEUS
 
 ### D1. Estrategia de marcado de demo
 
-**Opción A (recomendada): tabla central `DemoMarcado`**
-- Nueva tabla: `id`, `entidad` (enum/string), `entidadId`, `creadoEn`.
+**Aprobada: Opción A — tabla central `DemoMarcado`**
+- Nueva tabla aditiva: `id`, `entidad`, `entidadId`, `metadata`, `creadoEn`.
 - Cada entidad demo se registra al crearse.
 - La purga lee `DemoMarcado` y borra en orden inverso respetando FK.
-- **Pros**: no toca schema de entidades existentes; marcado inequívoco; fácil auditar.
-- **Cons**: requiere mantener sincronización; borrado manual ordenado.
-
-**Opción B: campo `esDemo` en cada tabla**
-- Migraciones aditivas en `Colegio`, `Curso`, `Estudiante`, `Profesor`, `AcudienteEstudiante`, `Usuario`, `ContactoConfianza`, `Reporte`, etc.
-- **Pros**: purga con DELETE simples.
-- **Cons**: muchas migraciones; relaciones sin cascade complican el orden de borrado.
-
-**Opción C: convención por datos + whitelist**
-- Emails `@innovadataco.com`, nombres prefijo `DEMO`, `numeroSeguimiento` `RPT-DEMO-`.
-- **Pros**: sin cambios de schema.
-- **Cons**: frágil; riesgo de borrar datos reales si alguien usa esas convenciones; purga compleja.
-
-**Recomendación**: Opción A + convención de emails como defensa en profundidad.
+- Los prefijos `DEMO-` / `RPT-DEMO-` y los emails `@innovadataco.com` son **defensa en profundidad**, no la llave de borrado.
 
 ### D2. Modo de ejecución del seed
 
-- Script `scripts/demo-prod/sembrar-demo.ts` corre localmente (desde la Mac de desarrollo) con `DATABASE_URL` y `API_BASE` apuntando a producción.
-- Usa `PrismaClient` para inserciones masivas y llama a endpoints internos (`/api/reportes`, `/api/reportes/procesar`) para ejercer flujos reales.
-- Requiere `ADMIN_API_TOKEN` o login previo del admin de producción.
+- Script `scripts/demo-prod/sembrar-demo.ts` corre localmente con `DATABASE_URL` y `API_BASE` apuntando a producción.
+- Usa `PrismaClient` para inserciones masivas y llama a endpoints internos para ejercer flujos reales.
+- Requiere credenciales de admin de producción.
 
 ### D3. Modo de ejecución de la purga
 
-- Script `scripts/demo-prod/purgar-demo.ts` (TypeScript) ejecuta borrados en orden determinístico dentro de transacciones, usando la tabla `DemoMarcado`.
-- También se entrega SQL equivalente como respaldo.
-- Antes de purgar: `verificar-purga.ts` imprime conteos; después los vuelve a imprimir para confirmar cero.
+- Script `scripts/demo-prod/purgar-demo.ts` ejecuta borrados **exclusivamente** por `DemoMarcado.id`.
+- SQL equivalente como respaldo.
+- `verificar-purga.ts` antes/después.
 
 ### D4. Asignación a operadores
 
-- Reutilizar la lógica existente de asignación (cuando un reporte queda en `REVISION_MANUAL`, el worker/endpoint lo asigna según cupo y disponibilidad).
-- Si el sistema no asigna automáticamente en todos los casos, el script de seed invocará el endpoint de asignación manual para los reportes que lo requieran.
+- Reutilizar lógica real del sistema; si no asigna automáticamente, el seed invoca asignación manual.
+
+### D5. Ventana temporal y backdating (condición ZEUS D1)
+
+- Los reportes se distribuyen en una ventana de **6 meses terminando hoy** (≈ 2026-02-10 … 2026-08-10).
+- Las entidades derivadas (`AlertaColegio`, `TransicionReporte`, `ClasificacionIA`, `PasoProcesamiento`) reciben `creadoEn` igual a la fecha histórica del reporte.
+- Esto evita picos artificiales en dashboards (ritmo mensual, reloj 24h, embudo, franja "última señal").
+
+### D6. Supresión de avisos históricos (condición ZEUS D2)
+
+- Reportes con fecha histórica > 7 días antes de hoy se siembran en estado final **sin disparar avisos por email**.
+- Solo los reportes "frescos" (≤ 7 días) pueden generar avisos reales a `soporte+…@innovadataco.com`.
+
+### D7. Purga de AuditLog (condición ZEUS D3)
+
+- `AuditLog` demo se marca en `DemoMarcado` y se purga.
+- "Idéntica a antes del seed" incluye logs de auditoría.
+
+### D8. Migración aditiva DemoMarcado (condición ZEUS D4)
+
+- Migración `prisma/migrations/..._demo_marcado`: solo `CREATE TABLE` + índices.
+- Sin `DROP`; candado I-49: verificar supervivencia de índices.
 
 ## Fases
 
@@ -72,13 +79,17 @@ No implementar hasta el **GO de ZEUS en la compuerta §4**. Este plan describe c
    - Algunos identificadores coinciden con identificadores de estudiantes para generar reportes del círculo.
 
 6. **Fase 5 — Sembrar reportes**
-   - Generar reportes con fechas escalonadas en 6 meses.
+   - Generar reportes con fechas escalonadas en la ventana de 6 meses terminando hoy.
    - Mezcla anónimo/autenticado.
    - Usar banco curado + variaciones controladas.
    - Asociar reportes a identificadores de estudiantes.
+   - Reportes históricos (> 7 días) se insertan en estado final sin enviar avisos.
+   - Reportes frescos (≤ 7 días) se procesan con el flujo real y pueden enviar avisos.
 
-7. **Fase 6 — Procesar con motor real**
-   - Encolar/procesar reportes resumiblemente (`reanudar-demo.ts`).
+7. **Fase 6 — Procesar con motor real y backdatear derivados**
+   - Procesar reportes frescos resumiblemente (`reanudar-demo.ts`).
+   - Para reportes históricos, insertar directamente estados finales y entidades derivadas con `creadoEn` histórico.
+   - Backdatear `AlertaColegio`, `TransicionReporte`, `ClasificacionIA`, `PasoProcesamiento` a la fecha del caso.
    - Revisar estados y asignar manuales.
 
 8. **Fase 7 — Credenciales y entrega**
