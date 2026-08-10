@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 6 roles (5 autenticados + anónimo) × 227 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1362 combinaciones.
+Inventario: 6 roles (5 autenticados + anónimo) × 228 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1368 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -214,6 +214,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/clasificacion` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
+| `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | permitir | permite | sí |
@@ -446,6 +447,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/clasificacion` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
+| `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | permitir | permite | sí |
@@ -678,6 +680,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/clasificacion` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
+| `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | permitir | permite | sí |
@@ -910,6 +913,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/monitoreo/worker` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1142,6 +1146,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/monitoreo/worker` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | redirigir→/ | no permite | sí |
@@ -1374,6 +1379,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/monitoreo/worker` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | redirigir→/login | no permite | sí |
@@ -1608,6 +1614,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | configuracion_sistema | `/dashboard/admin/configuracion` | ADMIN |
 | dataset_entrenamiento | `/dashboard/admin/dataset-entrenamiento` | ADMIN |
 | estadisticas | `/dashboard/admin/estadisticas` | ADMIN |
+| monitoreo_worker | `/dashboard/admin/monitoreo/worker` | ADMIN |
 | operadores | `/dashboard/admin/operadores` | ADMIN |
 | padres | `/dashboard/admin/padres` | ADMIN |
 | revision_spam | `/dashboard/admin/spam` | ADMIN |

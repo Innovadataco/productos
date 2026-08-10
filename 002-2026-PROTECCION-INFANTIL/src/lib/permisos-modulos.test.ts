@@ -53,6 +53,15 @@ describe("permisos-modulos", () => {
         expect(await puedeAccederAModulo("ADMIN", "padre")).toBe(true);
     });
 
+    it("monitoreo_worker: ADMIN sí, OPERADOR no (módulo exclusivo de admin)", async () => {
+        const modulo = await prisma.moduloPermisible.findUnique({ where: { clave: "monitoreo_worker" } });
+        expect(modulo).not.toBeNull();
+        await setPermiso("ADMIN", modulo!.id, true);
+        await setPermiso("OPERADOR", modulo!.id, false);
+        expect(await puedeAccederAModulo("ADMIN", "monitoreo_worker")).toBe(true);
+        expect(await puedeAccederAModulo("OPERADOR", "monitoreo_worker")).toBe(false);
+    });
+
     it("clave desconocida → false", async () => {
         expect(await puedeAccederAModulo("ADMIN", "no_existe")).toBe(false);
     });

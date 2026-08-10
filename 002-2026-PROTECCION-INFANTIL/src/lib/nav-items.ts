@@ -19,6 +19,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/admin/padres", label: "Padres", modulo: "padres" },
     { href: "/dashboard/admin/colegios", label: "Colegios", modulo: "colegios_gestion" },
     { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", modulo: "anti_abuso" },
+    { href: "/dashboard/admin/monitoreo/worker", label: "Monitoreo worker", modulo: "monitoreo_worker" },
     { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", modulo: "dataset_entrenamiento" },
     { href: "/dashboard/admin/configuracion", label: "Configuración", modulo: "configuracion_sistema" },
 ];

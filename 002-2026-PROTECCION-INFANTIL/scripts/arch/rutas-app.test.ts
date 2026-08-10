@@ -22,6 +22,8 @@
  * cursos (/dashboard/colegio/analisis/comparativa). Misma regla.
  * Actualizado 2026-08-10 (2): 59 page.tsx — SPEC-154 añade la página de
  * confianza institucional (/dashboard/colegio/confianza). Misma regla.
+ * Actualizado 2026-08-10 (3): 60 page.tsx — SPEC-156 añade el panel de
+ * monitoreo del worker (/dashboard/admin/monitoreo/worker). Misma regla.
  */
 import { describe, it, expect } from "vitest";
 import { inventarioRutasApp, VALOR_MUESTRA_SEGMENTO } from "./lib/rutas-app";
@@ -30,8 +32,8 @@ import { RUTA_APP } from "./lib/paths";
 const rutas = inventarioRutasApp(RUTA_APP);
 
 describe("inventario de rutas del árbol src/app (SPEC-126)", () => {
-    it("oráculo: 59 páginas (page.tsx) — 58 + 1 de confianza institucional (SPEC-154)", () => {
-        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(59);
+    it("oráculo: 60 páginas (page.tsx) — 59 + 1 de monitoreo del worker (SPEC-156)", () => {
+        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(60);
     });
 
     it("incluye APIs (route.ts) además de páginas", () => {

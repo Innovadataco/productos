@@ -4,7 +4,7 @@
 
 # 03 · Pantallas por rol y transiciones
 
-59 páginas (`page.tsx`) clasificadas por quién las alcanza según la
+60 páginas (`page.tsx`) clasificadas por quién las alcanza según la
 puerta real (`proxy()` ejecutado con la sesión canónica; segmentos `[x]` evaluados
 con un valor muestra fijo — al proxy solo le importa el prefijo).
 
@@ -42,6 +42,7 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/admin/estadisticas/clasificacion` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/estadisticas/operacion` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/ia` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/admin/monitoreo/worker` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/operadores` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/operadores/asignar` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/operadores/auditoria` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
