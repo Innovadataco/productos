@@ -48,6 +48,6 @@ Como ADMIN, quiero ver si el worker está vivo y cuándo fue su último heartbea
 - `GET /api/health/worker` ya existe y no requiere auth (o se ajusta a ADMIN).
 - El layout de admin verifica rol antes de renderizar.
 
-## Impacto en arquitectura
+## Impacto en arquitectura:
 
-Añade página y entrada en catálogo de permisos. No modifica modelo de datos ni worker.
+Añade página y entrada en catálogo de permisos. No modifica modelo de datos ni worker. No toca el motor de IA.

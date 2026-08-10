@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-10
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058, brief §10. El rector necesita una sección de confianza que centralice la transparencia institucional (documentos de protocolo), el compromiso de buen uso y el historial de auditoría reciente del colegio, sin exponer PII.
 
@@ -106,4 +106,11 @@ Añade página `/dashboard/colegio/confianza`, endpoints `/api/colegio/confianza
 
 ## Implementación
 
-Por completar al cerrar la spec.
+- **Documentos**: `docs/rector/transparencia.md`, `docs/rector/protocolo.md` y `docs/rector/compromiso.md`.
+- **Servicios**: `src/lib/colegio/confianza-documentos.ts` (allowlist cerrada), `src/lib/colegio/confianza-auditoria.ts` (usa `AuditLogRepository`), `src/lib/colegio/pdf-protocolo.tsx` + `render-protocolo-pdf.ts`.
+- **Schemas**: `src/lib/schemas/confianza.ts` valida `dias`/`page`/`pageSize`.
+- **Endpoints**: `GET /api/colegio/confianza/documentos`, `GET /api/colegio/confianza/auditoria`, `GET /api/colegio/confianza/protocolo/pdf`.
+- **UI**: `src/app/dashboard/colegio/confianza/page.tsx` + `ConfianzaPageClient.tsx` con selector de documento, renderizado Markdown y tabla de auditoría.
+- **Tests**: `src/app/api/colegio/confianza/documentos/route.test.ts`, `auditoria/route.test.ts`, `protocolo/pdf/route.test.ts`.
+- **Arquitectura**: regenerados `docs/architecture/02-roles-capacidades.md` y `03-pantallas.md`.
+- **No se tocó** `src/lib/ai/**`.

@@ -49,6 +49,6 @@ Como ADMIN, quiero ver el historial de transiciones y reintentos de un reporte e
 - `TransicionReporte` y `ReintentoReporte` ya existen y tienen índices por `reporteId`.
 - El ADMIN ya accede al expediente del reporte (SPEC-096); este timeline es una pestaña adicional.
 
-## Impacto en arquitectura
+## Impacto en arquitectura:
 
-Añade endpoint, servicio y pestaña/modal de timeline. No modifica el modelo de datos.
+Añade endpoint, servicio y pestaña/modal de timeline interno para ADMIN. No modifica el modelo de datos. No toca el motor de IA.
