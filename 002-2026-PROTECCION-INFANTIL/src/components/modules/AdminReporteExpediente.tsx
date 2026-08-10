@@ -6,6 +6,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Cargando } from "@/components/ui/Cargando";
+import { AdminReporteProceso } from "./AdminReporteProceso";
 
 /**
  * Expediente del reporte (spec 096, Fase 3): traza de solo lectura del pipeline.
@@ -390,11 +391,14 @@ function SeccionDenunciaFormal({ reporteId, canales }: { reporteId: string; cana
     );
 }
 
+type PestañaExpediente = "pipeline" | "proceso";
+
 export function AdminReporteExpediente({ reporteId, onClose }: AdminReporteExpedienteProps) {
     const [expediente, setExpediente] = useState<ExpedienteResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [revelando, setRevelando] = useState(false);
     const [error, setError] = useState("");
+    const [pestaña, setPestaña] = useState<PestañaExpediente>("pipeline");
 
     const cargarExpediente = useCallback(
         async (revelar: boolean) => {
@@ -477,47 +481,70 @@ export function AdminReporteExpediente({ reporteId, onClose }: AdminReporteExped
                         )}
                     </GlassCard>
 
-                    {expediente.puedeDenunciar === true && ESTADOS_DENUNCIABLES.has(expediente.reporte.estado) && (
-                        <SeccionDenunciaFormal
-                            reporteId={expediente.reporte.id}
-                            canales={expediente.canalesDenuncia ?? []}
-                        />
-                    )}
-
-                    <div className="space-y-1">
-                        {expediente.etapas.map((etapa, indice) => {
-                            const iniciaFase = indice === 0 || expediente.etapas[indice - 1].fase !== etapa.fase;
-                            return (
-                                <div key={etapa.clave}>
-                                    {iniciaFase && (
-                                        <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
-                                            Fase {etapa.fase} — {etapa.faseNombre}
-                                        </h3>
-                                    )}
-                                    <EtapaTimeline etapa={etapa} />
-                                </div>
-                            );
-                        })}
+                    <div className="flex gap-2 border-b border-slate-200 pb-2 dark:border-slate-700">
+                        <Button
+                            onClick={() => setPestaña("pipeline")}
+                            variant={pestaña === "pipeline" ? "primary" : "outline"}
+                            className="px-3 py-2 text-xs"
+                        >
+                            Pipeline
+                        </Button>
+                        <Button
+                            onClick={() => setPestaña("proceso")}
+                            variant={pestaña === "proceso" ? "primary" : "outline"}
+                            className="px-3 py-2 text-xs"
+                        >
+                            Proceso
+                        </Button>
                     </div>
 
-                    {expediente.clasificacion && <SeccionVotacion clasificacion={expediente.clasificacion} />}
+                    {pestaña === "pipeline" && (
+                        <>
+                            {expediente.puedeDenunciar === true && ESTADOS_DENUNCIABLES.has(expediente.reporte.estado) && (
+                                <SeccionDenunciaFormal
+                                    reporteId={expediente.reporte.id}
+                                    canales={expediente.canalesDenuncia ?? []}
+                                />
+                            )}
 
-                    <GlassCard className="p-4">
-                        <h3 className="mb-1 text-sm font-semibold text-body">Análisis interno</h3>
-                        <p className="mb-2 text-xs text-muted">Uso interno del equipo de revisión. No se muestra al público.</p>
-                        <p className="whitespace-pre-line text-sm text-body">{expediente.sintesis.analisisInterno}</p>
-                    </GlassCard>
+                            <div className="space-y-1">
+                                {expediente.etapas.map((etapa, indice) => {
+                                    const iniciaFase = indice === 0 || expediente.etapas[indice - 1].fase !== etapa.fase;
+                                    return (
+                                        <div key={etapa.clave}>
+                                            {iniciaFase && (
+                                                <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
+                                                    Fase {etapa.fase} — {etapa.faseNombre}
+                                                </h3>
+                                            )}
+                                            <EtapaTimeline etapa={etapa} />
+                                        </div>
+                                    );
+                                })}
+                            </div>
 
-                    <GlassCard className="p-4">
-                        <div className="mb-1 flex flex-wrap items-center gap-2">
-                            <h3 className="text-sm font-semibold text-body">Mensaje al padre</h3>
-                            <Badge variant="warning">Borrador de revisión</Badge>
-                        </div>
-                        <p className="mb-2 text-xs text-muted">
-                            Texto preliminar pendiente de revisión humana. No existe acción de envío ni publicación.
-                        </p>
-                        <p className="whitespace-pre-line text-sm text-body">{expediente.sintesis.mensajePadre}</p>
-                    </GlassCard>
+                            {expediente.clasificacion && <SeccionVotacion clasificacion={expediente.clasificacion} />}
+
+                            <GlassCard className="p-4">
+                                <h3 className="mb-1 text-sm font-semibold text-body">Análisis interno</h3>
+                                <p className="mb-2 text-xs text-muted">Uso interno del equipo de revisión. No se muestra al público.</p>
+                                <p className="whitespace-pre-line text-sm text-body">{expediente.sintesis.analisisInterno}</p>
+                            </GlassCard>
+
+                            <GlassCard className="p-4">
+                                <div className="mb-1 flex flex-wrap items-center gap-2">
+                                    <h3 className="text-sm font-semibold text-body">Mensaje al padre</h3>
+                                    <Badge variant="warning">Borrador de revisión</Badge>
+                                </div>
+                                <p className="mb-2 text-xs text-muted">
+                                    Texto preliminar pendiente de revisión humana. No existe acción de envío ni publicación.
+                                </p>
+                                <p className="whitespace-pre-line text-sm text-body">{expediente.sintesis.mensajePadre}</p>
+                            </GlassCard>
+                        </>
+                    )}
+
+                    {pestaña === "proceso" && <AdminReporteProceso reporteId={reporteId} />}
                 </div>
             ) : null}
         </Modal>

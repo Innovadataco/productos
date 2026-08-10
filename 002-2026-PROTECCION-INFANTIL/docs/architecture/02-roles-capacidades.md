@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 6 roles (5 autenticados + anónimo) × 226 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1356 combinaciones.
+Inventario: 6 roles (5 autenticados + anónimo) × 227 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1362 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -106,6 +106,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/expediente` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/forense` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/forense/pdf` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/proceso` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
@@ -337,6 +338,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/expediente` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/forense` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/forense/pdf` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/proceso` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
@@ -568,6 +570,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/expediente` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/forense` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/forense/pdf` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/proceso` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
@@ -799,6 +802,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/expediente` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/forense` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/forense/pdf` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/proceso` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
@@ -1030,6 +1034,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/expediente` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/forense` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/forense/pdf` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/proceso` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
@@ -1261,6 +1266,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/expediente` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/forense` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/forense/pdf` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/proceso` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 401 | permite | **NO** |
@@ -1493,6 +1499,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/reportes/[id]/expediente` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/forense` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/forense/pdf` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/proceso` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/reactivar` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/revelar-original` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/transiciones` | HTTP 401 | permite |
