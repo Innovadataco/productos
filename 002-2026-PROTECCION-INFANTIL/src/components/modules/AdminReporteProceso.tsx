@@ -49,10 +49,10 @@ function formatearEstado(estado: string): string {
 function Stage({ titulo, children, icono }: { titulo: string; children: React.ReactNode; icono: React.ReactNode }) {
     return (
         <div className="relative pl-6">
-            <span className="absolute left-0 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[10px] text-white ring-4 ring-sky-100 dark:bg-cyan-400 dark:ring-sky-900">
+            <span className="absolute left-0 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-cielo text-[10px] text-white ring-4 ring-cielo/20">
                 {icono}
             </span>
-            <div className="absolute left-[9px] top-8 h-[calc(100%-20px)] w-0.5 bg-slate-200 dark:bg-slate-700" />
+            <div className="absolute left-[9px] top-8 h-[calc(100%-20px)] w-0.5 bg-tinta/10" />
             <GlassCard className="mb-4 p-4">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <h4 className="text-sm font-semibold text-body">{titulo}</h4>
@@ -98,7 +98,7 @@ function EventoReintentoCard({ evento }: { evento: EventoReintento }) {
             {evento.error && (
                 <div>
                     <p className="text-xs font-medium text-muted">Error</p>
-                    <p className="text-sm text-red-600 dark:text-red-400">{evento.error}</p>
+                    <p className="text-sm text-rubi">{evento.error}</p>
                 </div>
             )}
         </Stage>
@@ -146,7 +146,7 @@ export function AdminReporteProceso({ reporteId }: AdminReporteProcesoProps) {
     if (error) {
         return (
             <div className="py-6 text-center">
-                <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
+                <p className="text-sm text-rubi" role="alert">{error}</p>
                 <Button onClick={cargar} variant="outline" className="mt-4">
                     Reintentar
                 </Button>
