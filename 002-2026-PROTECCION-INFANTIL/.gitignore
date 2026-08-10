@@ -27,6 +27,9 @@ worker.heartbeat
 # Backups de migraciones de secretos (contienen texto plano)
 backups/
 
+# Demo credentials (generado localmente por sembrar-demo.ts; nunca en repo)
+scripts/demo-prod/.demo-credenciales.json
+
 # Archivos generados durante ensayos de despliegue
 .env.ensayo
 cookies.txt
