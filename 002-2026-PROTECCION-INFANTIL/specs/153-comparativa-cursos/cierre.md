@@ -33,6 +33,7 @@ Se implementó la comparativa agregada de cursos para el rol SCHOOL_ADMIN, con a
 ## Evidencia de integración
 
 - Rama: `work/002-pi-058`
+- Hash local previo al push: `c4692d14`
 - PR a `feature/001-scaffolding`: #TODO
 - Hash de merge en `feature/001-scaffolding`: #TODO
 - CI-PUSH verde: #TODO
