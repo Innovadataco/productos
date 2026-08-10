@@ -140,6 +140,8 @@ enum AccionAudit {
   COLEGIO_INFORME_MENSUAL_PDF_DESCARGADO
   // SPEC-152: duplicar curso al año siguiente.
   COLEGIO_CURSO_DUPLICADO
+  // SPEC-153: descarga de comparativa entre cursos en Excel.
+  COLEGIO_COMPARATIVA_EXCEL_DESCARGADO
 }
 
 enum TipoPeriodoServicio {
