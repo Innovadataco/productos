@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-10
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-058, brief §10. El rector necesita comparar cursos de su colegio (por grado o año lectivo) para identificar concentraciones de riesgo y tomar decisiones institucionales con datos agregados, sin exponer PII.
 
@@ -108,4 +108,10 @@ Añade dos endpoints (`/api/colegio/analisis/comparativa` y `/excel`), servicio 
 
 ## Implementación
 
-Por completar al cerrar la spec.
+- **Backend**: `src/lib/colegio/comparativa.ts` calcula la comparativa agrupada por `grado` o `anioLectivo` reutilizando `calcularEstadisticasColegio`. `src/lib/schemas/comparativa.ts` valida el criterio con Zod. Endpoints: `GET /api/colegio/analisis/comparativa` (JSON) y `GET /api/colegio/analisis/comparativa/excel` (descarga Excel vía `exceljs`).
+- **Excel**: `src/lib/colegio/export-comparativa-excel.ts` genera un `.xlsx` determinista, sin fórmulas ni macros, con columnas: Grupo, Cursos, Estudiantes, Identificadores, Alertas, Promedio estudiantes/curso.
+- **Audit**: la descarga de Excel registra `COLEGIO_COMPARATIVA_EXCEL_DESCARGADO` en `AuditLog`.
+- **UI**: `src/app/dashboard/colegio/analisis/comparativa/page.tsx` expone selector de criterio, tabla resumen, totales y botón de exportación.
+- **Tests**: `src/app/api/colegio/analisis/comparativa/route.test.ts` y `src/app/api/colegio/analisis/comparativa/excel/route.test.ts` cubren agrupación, cambio de criterio, PII, 403 para ADMIN y 400 por criterio inválido.
+- **Arquitectura**: se regeneraron `docs/architecture/02-roles-capacidades.md` y `docs/architecture/03-pantallas.md` para reflejar la nueva ruta y capacidad.
+- **No se tocó** `src/lib/ai/**`.

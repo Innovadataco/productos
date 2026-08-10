@@ -10,7 +10,16 @@ Se implementó la comparativa agregada de cursos para el rol SCHOOL_ADMIN, con a
 
 ## Cambios entregados
 
-Por completar tras la integración.
+- `prisma/schema.prisma` + `prisma/migrations/20260809220835_add_comparativa_excel_audit/`: añade `COLEGIO_COMPARATIVA_EXCEL_DESCARGADO` a `AccionAudit`.
+- `src/lib/colegio/comparativa.ts`: servicio de agrupación tenant-first.
+- `src/lib/colegio/export-comparativa-excel.ts`: generador determinista del archivo Excel.
+- `src/lib/schemas/comparativa.ts`: schema Zod del criterio de agrupación.
+- `src/app/api/colegio/analisis/comparativa/route.ts`: endpoint JSON.
+- `src/app/api/colegio/analisis/comparativa/route.test.ts`: tests de integración del JSON.
+- `src/app/api/colegio/analisis/comparativa/excel/route.ts`: endpoint de descarga Excel.
+- `src/app/api/colegio/analisis/comparativa/excel/route.test.ts`: tests de integración del Excel.
+- `src/app/dashboard/colegio/analisis/comparativa/page.tsx`: página de la UI.
+- `docs/architecture/02-roles-capacidades.md` y `docs/architecture/03-pantallas.md`: regenerados para reflejar la nueva ruta.
 
 ## Gate de calidad
 
