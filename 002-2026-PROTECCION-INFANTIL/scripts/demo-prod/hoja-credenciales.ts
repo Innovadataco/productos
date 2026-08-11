@@ -40,8 +40,13 @@ function escaparCelda(valor: string): string {
     return valor.replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
 
+function obtenerRutaCredenciales(): string {
+    const runDir = process.env.RUN_DIR || (fs.existsSync("/app/run") ? "/app/run" : path.resolve(import.meta.dirname ?? "."));
+    return path.resolve(runDir, ".demo-credenciales.json");
+}
+
 function main() {
-    const ruta = path.resolve(import.meta.dirname ?? ".", ".demo-credenciales.json");
+    const ruta = obtenerRutaCredenciales();
     if (!fs.existsSync(ruta)) {
         console.error(`[hoja-credenciales] No existe ${ruta}. Ejecute sembrar-demo.ts primero.`);
         process.exit(1);

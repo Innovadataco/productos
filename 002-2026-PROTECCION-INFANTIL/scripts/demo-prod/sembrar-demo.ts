@@ -535,7 +535,8 @@ async function main() {
     // ------------------------------------------------------------------
     await auditarDemo("EXPERIMENT_COMPLETE", undefined, admin.id, undefined, { corrida: CORRIDA, fase: "fin" });
 
-    const credencialesPath = path.resolve(import.meta.dirname ?? ".", ".demo-credenciales.json");
+    const runDir = process.env.RUN_DIR || (fs.existsSync("/app/run") ? "/app/run" : path.resolve(import.meta.dirname ?? "."));
+    const credencialesPath = path.resolve(runDir, ".demo-credenciales.json");
     const credenciales = {
         corrida: CORRIDA,
         password,
