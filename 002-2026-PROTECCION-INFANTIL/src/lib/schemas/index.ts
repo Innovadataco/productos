@@ -155,6 +155,21 @@ export const materiaIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
+// SPEC-162: vínculo Curso × Materia × Profesor.
+export const cursoMateriaParamsSchema = z.object({
+    cursoId: cuidIdSchema,
+});
+
+export const cursoMateriaBodySchema = z.object({
+    materiaId: cuidIdSchema,
+    profesorId: cuidIdSchema.optional().nullable(),
+});
+
+export const cursoMateriaIdParamsSchema = z.object({
+    cursoId: cuidIdSchema,
+    id: cuidIdSchema,
+});
+
 // SPEC-144 (FR-010, D3): alta de estudiante — obligatorios solo nombre + apellidos;
 // el resto es opcional y NUNCA bloquea el alta. Acudientes: máx 2 (D1, tabla hija).
 export const documentoTipoEstudianteSchema = z.enum(["RC", "TI", "CC", "CE", "PASAPORTE", "OTRO"], {
