@@ -153,7 +153,7 @@ Como rector, quiero filtrar y ver el tipo de sujeto en la bandeja de alertas, pa
 ## Implementación
 
 **Branch**: `work/002-pi-062`  
-**Merge**: `feature/001-scaffolding` (hash y CI-PUSH en `cierre.md`)  
+**Merge**: `feature/001-scaffolding` @ `3456ca49`  
 **Fecha**: 2026-08-12
 
 ### Cambios realizados

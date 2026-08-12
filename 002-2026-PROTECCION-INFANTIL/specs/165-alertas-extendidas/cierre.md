@@ -4,8 +4,8 @@
 **Fecha de cierre**: 2026-08-12  
 **Rama de trabajo**: `work/002-pi-062`  
 **PR**: #48 → `feature/001-scaffolding`  
-**Hash de merge**: POR_COMPLETAR  
-**CI-PUSH**: POR_COMPLETAR
+**Hash de merge**: `3456ca49`  
+**CI-PUSH**: `31622011644` — success
 
 ---
 
