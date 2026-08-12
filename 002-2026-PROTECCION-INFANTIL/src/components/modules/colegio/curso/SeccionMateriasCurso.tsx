@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
@@ -40,7 +40,7 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
     const [profesorId, setProfesorId] = useState("");
     const [asignando, setAsignando] = useState(false);
 
-    async function cargar() {
+    const cargar = useCallback(async () => {
         setLoading(true);
         try {
             const res = await fetch(`/api/colegio/cursos/${cursoId}/materias`, { credentials: "include" });
@@ -51,9 +51,9 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
         } finally {
             setLoading(false);
         }
-    }
+    }, [cursoId, onAviso]);
 
-    async function cargarCatalogos() {
+    const cargarCatalogos = useCallback(async () => {
         try {
             const [resMaterias, resProfesores] = await Promise.all([
                 fetch("/api/colegio/materias", { credentials: "include" }),
@@ -66,12 +66,12 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
         } catch {
             onAviso("Error cargando catálogos", "error");
         }
-    }
+    }, [onAviso]);
 
     useEffect(() => {
         cargar();
         cargarCatalogos();
-    }, [cursoId]);
+    }, [cursoId, cargar, cargarCatalogos]);
 
     async function asignar() {
         if (!materiaId) return;
