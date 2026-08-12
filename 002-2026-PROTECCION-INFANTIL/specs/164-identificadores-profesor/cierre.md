@@ -6,8 +6,9 @@
 
 - **Rama de trabajo**: `work/002-pi-062`.
 - **Commits en `work/002-pi-062`**: `ff0f4a0a` implementación de Fase B · `ead8f8f9` cierre.
-- **PR #47 a `feature/001-scaffolding`**: pendiente de apertura/merge.
-- **CI PR #47 / gate**: pendiente.
+- **PR #47 a `feature/001-scaffolding`**: mergeado en `872e36d0`.
+- **CI PR #47 / gate**: run `31597622205` — success.
+- **CI PUSH `feature/001-scaffolding`**: run `31599374167` — en progreso.
 - **Gate local** (verificado previo al push):
   - `npx tsc --noEmit` ✅
   - `npm run lint` ✅ (0 errores, warnings preexistentes)
