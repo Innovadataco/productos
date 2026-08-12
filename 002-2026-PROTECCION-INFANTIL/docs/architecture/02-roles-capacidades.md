@@ -155,12 +155,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | permitir | permite | sí |
 | `/api/colegio/cursos` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias/[materiaId]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/validar` | api | permitir | permite | sí |
@@ -394,12 +394,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | permitir | permite | sí |
 | `/api/colegio/cursos` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias/[materiaId]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/validar` | api | permitir | permite | sí |
@@ -633,12 +633,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | permitir | permite | sí |
 | `/api/colegio/cursos` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias/[materiaId]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/validar` | api | permitir | permite | sí |
@@ -872,12 +872,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | permitir | permite | sí |
 | `/api/colegio/cursos` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias/[materiaId]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/validar` | api | permitir | permite | sí |
@@ -1111,12 +1111,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
 | `/api/colegio/confianza/protocolo/pdf` | api | permitir | permite | sí |
 | `/api/colegio/cursos` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias` | api | permitir | permite | sí |
-| `/api/colegio/cursos/[cursoId]/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/alumnos` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/duplicar` | api | permitir | permite | sí |
 | `/api/colegio/cursos/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias` | api | permitir | permite | sí |
+| `/api/colegio/cursos/[id]/materias/[materiaId]` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/cursos/unificado/validar` | api | permitir | permite | sí |
@@ -1350,12 +1350,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/confianza/documentos` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/confianza/protocolo/pdf` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos` | api | HTTP 401 | permite | **NO** |
-| `/api/colegio/cursos/[cursoId]/materias` | api | HTTP 401 | permite | **NO** |
-| `/api/colegio/cursos/[cursoId]/materias/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/[id]/alumnos` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/[id]/duplicar` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/[id]/estado` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/cursos/[id]/materias` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/cursos/[id]/materias/[materiaId]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/unificado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/unificado/plantilla` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cursos/unificado/validar` | api | HTTP 401 | permite | **NO** |
@@ -1577,12 +1577,12 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/confianza/documentos` | HTTP 401 | permite |
 | `/api/colegio/confianza/protocolo/pdf` | HTTP 401 | permite |
 | `/api/colegio/cursos` | HTTP 401 | permite |
-| `/api/colegio/cursos/[cursoId]/materias` | HTTP 401 | permite |
-| `/api/colegio/cursos/[cursoId]/materias/[id]` | HTTP 401 | permite |
 | `/api/colegio/cursos/[id]` | HTTP 401 | permite |
 | `/api/colegio/cursos/[id]/alumnos` | HTTP 401 | permite |
 | `/api/colegio/cursos/[id]/duplicar` | HTTP 401 | permite |
 | `/api/colegio/cursos/[id]/estado` | HTTP 401 | permite |
+| `/api/colegio/cursos/[id]/materias` | HTTP 401 | permite |
+| `/api/colegio/cursos/[id]/materias/[materiaId]` | HTTP 401 | permite |
 | `/api/colegio/cursos/unificado` | HTTP 401 | permite |
 | `/api/colegio/cursos/unificado/plantilla` | HTTP 401 | permite |
 | `/api/colegio/cursos/unificado/validar` | HTTP 401 | permite |
