@@ -8,6 +8,11 @@
 
 **Input**: [BRIEF-MODULO-COLEGIO](../../../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-MODULO-COLEGIO.md) §7 (Alertas = centro de mando "nivel dios"), §4.2 (reglas de generación de alerta), §5 (ciclo del caso), §10 (accesibilidad y rendimiento). Dependencias: SPEC-139 (`EventoMatch`), SPEC-159 (`SeguimientoCaso` / bitácora), Fase C "Alertas extendidas" (tipo de sujeto en `AlertaColegio`).
 
+## Impacto en arquitectura:
+
+- **API**: nuevo endpoint `/api/colegio/alertas` con ordenamiento por prioridad/novedad/SLA y filtros; respeta aislamiento `colegioId`.
+- **UI**: nueva pantalla `/dashboard/colegio/alertas` (bandeja "nivel dios") y actualización de notificaciones in-app / avisos por email.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*

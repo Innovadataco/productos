@@ -10,6 +10,11 @@
 
 **Aclaración terminológica**: sigue el patrón de `IdentificadorEstudiante`: un profesor puede tener N identificadores (teléfono, email, nick, usuario en plataforma), pero cada fila de `IdentificadorProfesor` pertenece a un único profesor. La relación "N:M" del brief se refiere a que un profesor puede tener muchos identificadores y, a futuro (Fase C), un mismo identificador puede generar alertas para el colegio.
 
+## Impacto en arquitectura:
+
+- **Modelo de datos**: migración aditiva que añade la tabla `IdentificadorProfesor` (FK a `Profesor`, `Colegio` y `Plataforma`), siguiendo el patrón de `IdentificadorEstudiante`.
+- **API/UI**: endpoints REST y ficha de profesor para gestionar identificadores; KPIs de Inicio y Estadísticas incluyen cobertura de profesores.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*

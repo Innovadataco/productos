@@ -14,6 +14,11 @@
 - **Rector**: rol técnico `SCHOOL_ADMIN`; administra la cuenta y los integrantes del comité.
 - **Caso**: la alerta del colegio (`AlertaColegio`) y su seguimiento (`SeguimientoCaso`/`NotaSeguimiento`).
 
+## Impacto en arquitectura:
+
+- **Modelo/Auth**: se reutiliza el patrón del Comité de Validación (cuenta compartida por colegio) con rol `COMITE_CONVIVENCIA`; los integrantes se documentan en una tabla hija sin login individual.
+- **UI/API**: endpoints y pantallas para gestión de la cuenta e integrantes; vinculación con `SeguimientoCaso` para escalamiento y revisión.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*

@@ -13,6 +13,11 @@
 - **Cobertura** = porcentaje de sujetos activos que tienen al menos un identificador activo registrado.
 - **Onboarding** = flujo "Activa tu protección" que guía al rector a completar los pasos previos para que el sistema pueda generar alertas.
 
+## Impacto en arquitectura:
+
+- **UI**: componente `OnboardingColegio` en `/dashboard/colegio` que condensa el progreso de sujetos, identificadores, profesores y acudientes; notificaciones in-app con `RegistroAvisoColegio`.
+- **Datos**: agregados de cobertura reutilizan conteos de `IdentificadorEstudiante`, `IdentificadorProfesor` e `IdentificadorAcudiente` sin nuevas tablas.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*

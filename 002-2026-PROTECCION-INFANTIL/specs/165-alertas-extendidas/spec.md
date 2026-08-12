@@ -13,6 +13,11 @@
 - Fase B — Identificadores de profesor: existe `IdentificadorProfesor` con patrón `IdentificadorEstudiante`.
 - SPEC-162 — Materia configurable: ya implementada; `Curso` y `Estudiante.cursoId` no se tocan.
 
+## Impacto en arquitectura:
+
+- **Modelo de datos**: la tabla `AlertaColegio` añade el campo `sujetoTipo` para distinguir estudiante/profesor/acudiente; no se borran alertas históricas.
+- **Motor/Worker**: `notificarColegioSiCorresponde` consulta `IdentificadorEstudiante`, `IdentificadorProfesor` e `IdentificadorAcudiente` para generar alertas ampliadas.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*

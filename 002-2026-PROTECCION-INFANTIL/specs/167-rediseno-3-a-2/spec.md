@@ -10,6 +10,11 @@
 
 **Resumen ejecutivo**: consolidar las tres pantallas del módulo Colegio en dos. `/dashboard/colegio` pasa a ser el **radar operativo** del rector: semáforo héroe, "te esperan a ti (N)" prominente, KPIs, anillos de protección, cursos que merecen mirada y acciones rápidas. `/dashboard/colegio/estadisticas` pasa a ser la **inteligencia del colegio**: tendencia, desglose por curso, patrones institucionales, comparativa, reloj 24 h y conteo de profesores. `/dashboard/colegio/tablero` se elimina, sus componentes se reubican y su URL redirige a Inicio.
 
+## Impacto en arquitectura:
+
+- **UI/Navegación**: se consolidan tres pantallas en dos (`/dashboard/colegio` y `/dashboard/colegio/estadisticas`); se actualiza `nav-items.ts` y se redirige `/tablero`.
+- **Datos**: reutiliza agregados existentes (`colegio-resumen`, `alerta-colegio-tablero`) sin cambios de schema; se eliminan componentes huérfanos del Tablero.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
