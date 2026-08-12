@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **60** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **61** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -88,6 +88,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | alertasSuscripcion | AlertaSuscripcion | lista, relación |
 | identificadoresContacto | IdentificadorContacto | lista, relación |
 | identificadoresEstudiante | IdentificadorEstudiante | lista, relación |
+| identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 | apelaciones | Apelacion | lista, relación |
 | patronesInstitucionales | PatronInstitucional | lista, relación |
 
@@ -150,9 +151,11 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | relacion | String | — |
 | telefono | String | opcional |
 | email | String | opcional |
+| estado | String | — |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
 | estudiante | Estudiante | relación (FK) |
+| identificadores | IdentificadorAcudiente | lista, relación |
 
 #### `AlertaColegio`
 
@@ -211,6 +214,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | sesionesCarga | CargaRosterSesion | lista, relación |
 | Materia | Materia | lista, relación |
 | CursoMateria | CursoMateria | lista, relación |
+| identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 
 #### `Curso`
 
@@ -550,7 +554,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (9)
+### Otros (sin regla de dominio) (10)
 
 #### `CargaRosterSesion`
 
@@ -586,6 +590,23 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | identificador | IdentificadorReportado | relación (FK) |
 | reporteNuevo | Reporte | relación (FK) |
+
+#### `IdentificadorAcudiente`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| acudienteId | String | — |
+| colegioId | String | — |
+| tipo | String | — |
+| valor | String | — |
+| plataformaId | String | opcional |
+| estado | String | — |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| acudiente | AcudienteEstudiante | relación (FK) |
+| colegio | Colegio | relación (FK) |
+| plataforma | Plataforma | opcional, relación (FK) |
 
 #### `Materia`
 
@@ -1102,6 +1123,7 @@ Derivado de las FK (`@relation(fields: ...)`); cardinalidad 1:1 si la FK es úni
 
 ```mermaid
 erDiagram
+    AcudienteEstudiante ||--o{ IdentificadorAcudiente : "acudiente"
     AlertaColegio ||--o{ SeguimientoCaso : "alerta"
     Apelacion ||--o{ DocumentoApelacion : "apelacion"
     CasoEval ||--o{ EvalResultado : "casoEval"
@@ -1115,6 +1137,7 @@ erDiagram
     Colegio ||--o{ Curso : "colegio"
     Colegio ||--o{ CursoMateria : "colegio"
     Colegio ||--o{ Estudiante : "colegio"
+    Colegio ||--o{ IdentificadorAcudiente : "colegio"
     Colegio ||--o{ Materia : "colegio"
     Colegio ||--o{ NotaSeguimiento : "colegio"
     Colegio ||--o{ PatronInstitucional : "colegio"
@@ -1147,6 +1170,7 @@ erDiagram
     PatronInstitucional ||--o{ AlertaColegio : "patronInstitucional (opcional)"
     Plataforma ||--o{ AlertaSuscripcion : "plataforma"
     Plataforma ||--o{ Apelacion : "plataforma"
+    Plataforma ||--o{ IdentificadorAcudiente : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorContacto : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorEstudiante : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorReportado : "plataforma"

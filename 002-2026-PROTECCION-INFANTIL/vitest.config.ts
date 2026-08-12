@@ -12,6 +12,9 @@ export default defineConfig({
         // Tests de integración comparten una única base de datos PostgreSQL.
         // Ejecutarlos secuencialmente evita race conditions entre archivos.
         fileParallelism: false,
+        // Los tests dentro de un mismo archivo también comparten la BD;
+        // forzamos ejecución serial para evitar interferencias entre beforeEach.
+        sequence: { concurrent: false },
         coverage: {
             provider: "v8",
             reporter: ["text", "json", "html"],

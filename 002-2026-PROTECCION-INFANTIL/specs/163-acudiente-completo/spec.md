@@ -4,13 +4,19 @@
 
 **Created**: 2026-08-12
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: FASE A|163|acudiente-completo del [BRIEF-MODULO-COLEGIO](../../../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-MODULO-COLEGIO.md) §4.1 (eje acudiente), §4.2 (alertas extendidas, impacto en Fase C) y §11 (mapa de fases). Cierra el caso `300DEMOACU005820`. Fuentes vinculantes: SPEC-134 (tenant-first / DAL E-1), SPEC-144 (modelo Estudiante/AcudienteEstudiante), SPEC-145 (modelo Profesor), SPEC-146/147 (wizard y ficha del estudiante).
 
 **Base actual**: `AcudienteEstudiante` es tabla hija de `Estudiante`, máximo 2 filas por estudiante (`orden` 1|2), con `telefono?`/`email?` de contacto. Hoy solo se puede dar de alta en el alta o carga masiva del estudiante; no admite edición ni inactivación posterior, ni lleva identificadores propios para alertas.
 
 **Objetivo de esta fase**: convertir al acudiente en un sujeto completo del modelo de riesgo: gestión post-alta, identificadores tipados para matching futuro y conteos propios en los KPIs del colegio, sin tocar `Curso` ni `Estudiante.cursoId`.
+
+## Impacto en arquitectura:
+
+- **Modelo de datos**: migración aditiva que añade `estado` a `AcudienteEstudiante` y la tabla `IdentificadorAcudiente` (FK a `AcudienteEstudiante`, `Colegio` y `Plataforma`). No se altera `Curso` ni `Estudiante.cursoId`.
+- **API**: endpoints REST bajo `/api/colegio/alumnos/[id]/acudientes` y `/api/colegio/acudientes/[id]/identificadores`, validados con Zod y gobernados por permisos de colegio.
+- **UI**: sección `SeccionAcudientes` en la ficha del estudiante; conteos de acudientes en KPIs de Inicio y curso.
 
 ---
 
@@ -152,4 +158,13 @@ Como rector quiero saber cuántos acudientes tiene mi colegio y cuántos estudia
 
 ## Implementación
 
-*Por completar al cerrar la fase. Ver `tasks.md` para el plan de trabajo.*
+- Migración aditiva `20260812051055_spec_163_acudiente_completo`: añade `estado` a `AcudienteEstudiante`, crea `IdentificadorAcudiente` y actualiza índices.
+- Schema: relaciones `IdentificadorAcudiente` → `AcudienteEstudiante`, `Colegio`, `Plataforma`; `AcudienteEstudiante` → `IdentificadorAcudiente[]`.
+- Repositorios DAL tenant-first: `src/lib/dal/repositories/acudiente-estudiante.ts` e `identificador-acudiente.ts` con tests.
+- Endpoints: `src/app/api/colegio/alumnos/[id]/acudientes/**` y `src/app/api/colegio/acudientes/[id]/identificadores/**` con tests.
+- UI: `src/app/dashboard/colegio/alumnos/[id]/SeccionAcudientes.tsx` integrada en `AlumnoDetallePageClient.tsx`; conteos de acudientes en `HomeRectorPage`, `CursoEscritorioClient` y `TarjetasCurso`.
+- KPIs: `src/lib/dal/repositories/estudiante.ts` y `colegio-resumen.ts` actualizados para contar acudientes activos por colegio/curso.
+- Auditoría: acciones `COLEGIO_ACUDIENTE_*` e `COLEGIO_IDENTIFICADOR_ACUDIENTE_*` registradas en mutaciones.
+- Infraestructura de tests: `src/lib/test-utils.ts` ajustado para el orden de limpieza de identificadores/acudientes; `vitest.config.ts` fuerza secuencia serial dentro de cada archivo para evitar race conditions sobre la BD compartida.
+- Línea base regenerada (`docs/architecture/01-modelo-datos.md`, `02-roles-capacidades.md`); oráculo de modelos actualizado a 61.
+- Ver evidencia completa en `cierre.md`.

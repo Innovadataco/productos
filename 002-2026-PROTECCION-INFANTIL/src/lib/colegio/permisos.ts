@@ -7,6 +7,7 @@
 import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
+import { AcudienteEstudianteRepository } from "@/lib/dal/repositories/acudiente-estudiante";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
@@ -36,6 +37,17 @@ export interface IdentificadorPropiedad {
     valor: string;
     plataformaId: string | null;
     etiquetaRelacion: EtiquetaRelacionEstudiante;
+    estado: string;
+}
+
+export interface AcudientePropiedad {
+    id: string;
+    estudianteId: string;
+    colegioId: string;
+    nombre: string;
+    relacion: string;
+    telefono: string | null;
+    email: string | null;
     estado: string;
 }
 
@@ -88,4 +100,35 @@ export async function verificarPropiedadIdentificador(
     }
 
     return identificador;
+}
+
+export async function verificarPropiedadAcudiente(
+    usuarioId: string,
+    acudienteId: string,
+    estudianteId?: string
+): Promise<AcudientePropiedad> {
+    const usuario = await new UsuarioRepository().findColegioId(usuarioId);
+    if (!usuario?.colegioId) {
+        throw new Error("Acudiente no encontrado");
+    }
+
+    const acudiente = await new AcudienteEstudianteRepository().obtenerPorId(usuario.colegioId, acudienteId);
+    if (!acudiente) {
+        throw new Error("Acudiente no encontrado");
+    }
+
+    if (estudianteId !== undefined && acudiente.estudianteId !== estudianteId) {
+        throw new Error("Acudiente no encontrado");
+    }
+
+    return {
+        id: acudiente.id,
+        estudianteId: acudiente.estudianteId,
+        colegioId: usuario.colegioId,
+        nombre: acudiente.nombre,
+        relacion: acudiente.relacion,
+        telefono: acudiente.telefono,
+        email: acudiente.email,
+        estado: acudiente.estado,
+    };
 }

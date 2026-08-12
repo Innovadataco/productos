@@ -24,6 +24,7 @@ import type { EstudianteConDetalleRow } from "./estudiante";
 import { EstudianteObservacionRepository } from "./estudiante-observacion";
 import { ProfesorRepository } from "./profesor";
 import { AlertaColegioRepository } from "./alerta-colegio";
+import { AcudienteEstudianteRepository } from "./acudiente-estudiante";
 
 export interface PuntoTendencia {
     /** Fecha ISO de inicio del periodo (lunes / día 1 / 1 de enero, en UTC). */
@@ -59,6 +60,8 @@ export interface CursoDetalle {
     delta30d: number;
     /** Total de identificadores activos del curso (tarjeta "Identificadores"). */
     identificadoresActivos: number;
+    /** SPEC-163: total de acudientes activos del curso (tarjeta "Acudientes"). */
+    acudientesActivos: number;
 }
 
 /** SPEC-158 (FR-003, Key Entities): embudo por reporte DISTINTO, sin solapes. */
@@ -95,6 +98,8 @@ export interface HomeRector {
         reportesMes: number;
         reportesSemana: number;
         deltaSemana: number;
+        /** SPEC-163: total de acudientes activos de estudiantes activos del colegio. */
+        acudientes: number;
     };
     cobertura: {
         vigilancia: number;
@@ -182,12 +187,14 @@ export class ColegioResumenRepository {
         const cursoRepo = new CursoRepository(tx);
         const profesorRepo = new ProfesorRepository(tx);
         const alertaRepo = new AlertaColegioRepository(tx);
+        const acudienteRepo = new AcudienteEstudianteRepository(tx);
 
         const [
             colegio,
             coberturaConteos,
             cursosActivos,
             profesoresActivos,
+            acudientesActivos,
             reportesMes,
             reportesSemana,
             reportesSemanaAnterior,
@@ -202,6 +209,7 @@ export class ColegioResumenRepository {
             estudianteRepo.contarCobertura(colegioId),
             cursoRepo.contarActivos(colegioId),
             profesorRepo.contar(colegioId),
+            acudienteRepo.contarActivosPorColegio(colegioId),
             alertaRepo.contarReportesDistintos(colegioId, inicioMes),
             alertaRepo.contarReportesDistintos(colegioId, hace7d),
             alertaRepo.contarReportesDistintos(colegioId, hace14d, hace7d),
@@ -240,6 +248,7 @@ export class ColegioResumenRepository {
                 estudiantes: estudiantesActivos,
                 cursos: cursosActivos,
                 profesores: profesoresActivos,
+                acudientes: acudientesActivos,
                 reportesMes,
                 reportesSemana,
                 deltaSemana: reportesSemana - reportesSemanaAnterior,
@@ -354,8 +363,9 @@ export class ColegioResumenRepository {
             },
             alertas30d,
             delta30d: alertas30d - alertas30dPrevias,
-            // Sin query extra: los identificadores activos ya vienen en el include.
+            // Sin query extra: los identificadores y acudientes activos ya vienen en el include.
             identificadoresActivos: estudiantes.reduce((total, e) => total + e.identificadores.length, 0),
+            acudientesActivos: estudiantes.reduce((total, e) => total + e.acudientes.length, 0),
         };
     }
 }

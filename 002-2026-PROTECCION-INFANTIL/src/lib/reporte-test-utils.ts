@@ -150,6 +150,42 @@ export async function crearIdentificadorEstudiante(
     });
 }
 
+// SPEC-163: fixture de acudiente del estudiante.
+export async function crearAcudienteEstudiante(
+    estudianteId: string,
+    data: { orden?: 1 | 2; nombre?: string; relacion?: string; telefono?: string | null; email?: string | null; estado?: string } = {}
+) {
+    return prisma.acudienteEstudiante.create({
+        data: {
+            estudianteId,
+            orden: data.orden ?? 1,
+            nombre: data.nombre ?? `Acudiente ${Date.now()}`,
+            relacion: data.relacion ?? "madre",
+            telefono: data.telefono ?? null,
+            email: data.email ?? null,
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
+// SPEC-163: fixture de identificador de acudiente (colegioId denormalizado).
+export async function crearIdentificadorAcudiente(
+    acudienteId: string,
+    colegioId: string,
+    data: { tipo?: string; valor?: string; plataformaId?: string | null; estado?: string } = {}
+) {
+    return prisma.identificadorAcudiente.create({
+        data: {
+            acudienteId,
+            colegioId,
+            tipo: data.tipo ?? "telefono",
+            valor: data.valor ?? `+57${Date.now()}`,
+            plataformaId: data.plataformaId ?? null,
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
 export async function crearPaisCiudad() {
     const pais = await prisma.pais.upsert({
         where: { codigo: "CO" },

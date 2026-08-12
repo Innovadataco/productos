@@ -21,7 +21,7 @@ beforeAll(() => {
 function fixture(parcial: Partial<HomeRector> = {}): HomeRector {
     return {
         colegio: { nombre: "Colegio San José", vigenciaFin: null },
-        kpis: { estudiantes: 10, cursos: 2, profesores: 1, reportesMes: 4, reportesSemana: 2, deltaSemana: 1 },
+        kpis: { estudiantes: 10, cursos: 2, profesores: 1, acudientes: 5, reportesMes: 4, reportesSemana: 2, deltaSemana: 1 },
         cobertura: { vigilancia: 0.7, reaccion: 0.5, sinRedes: 3, sinContacto: 5 },
         semaforo: { alertasNuevas: 0, alertas72h: 0 },
         ultimaSenal: new Date(),

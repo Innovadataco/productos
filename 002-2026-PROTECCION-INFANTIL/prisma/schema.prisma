@@ -135,6 +135,15 @@ enum AccionAudit {
   COLEGIO_PROFESOR_CREADO
   COLEGIO_PROFESOR_EDITADO
   COLEGIO_PROFESOR_DESACTIVADO
+  // SPEC-163: gestión completa de acudientes e identificadores de acudiente.
+  COLEGIO_ACUDIENTE_CREADO
+  COLEGIO_ACUDIENTE_EDITADO
+  COLEGIO_ACUDIENTE_DESACTIVADO
+  COLEGIO_ACUDIENTE_REACTIVADO
+  COLEGIO_IDENTIFICADOR_ACUDIENTE_CREADO
+  COLEGIO_IDENTIFICADOR_ACUDIENTE_EDITADO
+  COLEGIO_IDENTIFICADOR_ACUDIENTE_DESACTIVADO
+  COLEGIO_IDENTIFICADOR_ACUDIENTE_REACTIVADO
   // SPEC-149: avisos por email del colegio (envío + cambio de preferencias).
   COLEGIO_AVISO_ENVIADO
   COLEGIO_AVISO_PREFERENCIA_ACTUALIZADA
@@ -489,8 +498,9 @@ model Colegio {
   notasSeguimiento   NotaSeguimiento[]
   auditLogs          AuditLog[]
   sesionesCarga      CargaRosterSesion[]
-  Materia            Materia[]
-  CursoMateria       CursoMateria[]
+  Materia                 Materia[]
+  CursoMateria            CursoMateria[]
+  identificadoresAcudiente IdentificadorAcudiente[]
 
   @@index([paisId])
   @@index([departamentoId])
@@ -603,9 +613,10 @@ model Estudiante {
   @@map("Alumno")
 }
 
-// SPEC-144 (D1): acudiente del estudiante — tabla hija, máximo 2 por estudiante
-// (orden 1|2). PII de un tercero: NUNCA se consulta por id suelto; siempre a
-// través del estudiante ya acotado por colegioId (patrón E-1/SPEC-134).
+// SPEC-144 (D1) / SPEC-163: acudiente del estudiante — tabla hija, máximo 2 por
+// estudiante (orden 1|2). PII de un tercero: NUNCA se consulta por id suelto;
+// siempre a través del estudiante ya acotado por colegioId (patrón E-1/SPEC-134).
+// SPEC-163: estado (activo/inactivo) como baja lógica aditiva.
 model AcudienteEstudiante {
   id           String   @id @default(cuid())
   estudianteId String
@@ -614,13 +625,39 @@ model AcudienteEstudiante {
   relacion     String // "madre" | "padre" | "tía" | … (texto libre corto)
   telefono     String?
   email        String?
+  estado       String   @default("activo") // activo | inactivo
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+  estudiante    Estudiante              @relation(fields: [estudianteId], references: [id])
+  identificadores IdentificadorAcudiente[]
 
-  @@unique([estudianteId, orden])
-  @@index([estudianteId])
+  @@unique([estudianteId, orden, estado])
+  @@index([estudianteId, estado])
+}
+
+// SPEC-163 (FR-001): identificadores tipados de un acudiente para matching de
+// alertas (Fase C). colegioId denormalizado para validación de tenant y queries
+// rápidas (patrón E-1/SPEC-134). Baja lógica por estado.
+model IdentificadorAcudiente {
+  id           String   @id @default(cuid())
+  acudienteId  String
+  colegioId    String
+  tipo         String
+  valor        String
+  plataformaId String?
+  estado       String   @default("activo") // activo | inactivo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  acudiente  AcudienteEstudiante @relation(fields: [acudienteId], references: [id])
+  colegio    Colegio             @relation(fields: [colegioId], references: [id])
+  plataforma Plataforma?         @relation(fields: [plataformaId], references: [id])
+
+  @@unique([acudienteId, tipo, valor, plataformaId])
+  @@index([colegioId, estado])
+  @@index([acudienteId, estado])
+  @@index([valor])
 }
 
 // SPEC-150 (FR-001): observación especial del estudiante — la marca auditable
@@ -818,6 +855,7 @@ model Plataforma {
   alertasSuscripcion        AlertaSuscripcion[]
   identificadoresContacto   IdentificadorContacto[]
   identificadoresEstudiante IdentificadorEstudiante[]
+  identificadoresAcudiente  IdentificadorAcudiente[]
   apelaciones               Apelacion[]
   patronesInstitucionales   PatronInstitucional[]
 
