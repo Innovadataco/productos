@@ -5,7 +5,7 @@
 ## Evidencia
 
 - **Rama de trabajo**: `work/002-pi-062`.
-- **Commits en `work/002-pi-062`**: `ff0f4a0a` implementación de Fase B · `98b9b8eb` cierre.
+- **Commits en `work/002-pi-062`**: `ff0f4a0a` implementación de Fase B · `ead8f8f9` cierre.
 - **PR #47 a `feature/001-scaffolding`**: pendiente de apertura/merge.
 - **CI PR #47 / gate**: pendiente.
 - **Gate local** (verificado previo al push):
