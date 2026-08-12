@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-12
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-061. Fuentes vinculantes: [BRIEF-MODULO-COLEGIO](../../../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-MODULO-COLEGIO.md) §3 (terminología) y §4.5 (Materia configurable). Patrones: SPEC-134 (tenant-first / DAL E-1), SPEC-137 (`withUnitOfWork`), SPEC-145 (soft delete), SPEC-146 (wizard unificado).
 
@@ -141,4 +141,15 @@ Como rector quiero ver en la ficha del curso qué materias se dictan y quién la
 
 ## Implementación
 
-*Pendiente. Se documentará tras el cierre de la feature.*
+- **Commits en `work/002-pi-061`**: `57d8095d` especificación · `74d9d0ad` corrección tras compuerta ZEUS · `824388ea` schema+migración · `04e75c33` seed · `d564614c` `MateriaRepository` · `6164c5ea` endpoints materias · `86d056b1` `CursoMateriaRepository` · `56de7f81` endpoints curso-materia · `18c01ca8` frontend · `d0b1a400` arquitectura · `9f118e8a`+`c4c5fd6a` oráculos/README/tokens.
+- **Merge a `feature/001-scaffolding`**: commit `6a83090d`.
+- **Gate verde**: `npx tsc --noEmit` · `npm run lint` · `npm run tokens:check` · `npm run arch:check` · `npm run test` (1967 passed, 1 skipped) · `npm run build`.
+- **I-49 / migración aditiva**: se crean `Materia` y `CursoMateria`; `Curso` y `Estudiante.cursoId` no se alteran. Sin `DROP`, `RENAME` ni cambios destructivos.
+- **FR → evidencia**:
+  - FR-001/002: `MateriaRepository` + endpoints `/api/colegio/materias` + seed `src/lib/colegio/materias-seed.ts`.
+  - FR-003: `Curso` y `Estudiante.cursoId` intactos; unique constraint de `Curso` sin cambios.
+  - FR-004/005/006/007: `CursoMateriaRepository` + endpoints `/api/colegio/cursos/[cursoId]/materias`; validación de duplicados `(cursoId, materiaId)`, cross-tenant y materia activa.
+  - FR-008/009: endpoints REST entregados con Zod + rate limiting.
+  - FR-010: página `/dashboard/colegio/materias` y sección `SeccionMateriasCurso` en ficha del curso.
+  - FR-011: acciones `COLEGIO_MATERIA_CREADA`, `COLEGIO_MATERIA_ACTUALIZADA`, `COLEGIO_MATERIA_ESTADO_CAMBIADO`, `COLEGIO_CURSO_MATERIA_CREADA`, `COLEGIO_CURSO_MATERIA_ACTUALIZADA`, `COLEGIO_CURSO_MATERIA_ESTADO_CAMBIADO`.
+- **Nota**: los oráculos de arquitectura se ajustaron a 60 modelos y 61 páginas; tokens de UI quedan dentro del piso.
