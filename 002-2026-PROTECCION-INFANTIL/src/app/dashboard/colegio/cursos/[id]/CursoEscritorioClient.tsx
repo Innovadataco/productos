@@ -250,6 +250,7 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
                         delta30d={datos.delta30d}
                         identificadoresActivos={datos.identificadoresActivos}
                         coberturaPct={coberturaPct}
+                        acudientesActivos={datos.acudientesActivos}
                     />
                     <section
                         aria-label="Anillos de protección del curso"

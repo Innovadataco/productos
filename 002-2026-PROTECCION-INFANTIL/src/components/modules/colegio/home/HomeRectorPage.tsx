@@ -66,12 +66,18 @@ export function HomeRectorPage({ nombreUsuario, datos }: HomeRectorPageProps) {
 
                 <section
                     aria-label="Cifras de tu colegio"
-                    className="anim-entrada grid grid-cols-2 gap-3 lg:grid-cols-4"
+                    className="anim-entrada grid grid-cols-2 gap-3 lg:grid-cols-5"
                     style={retardo(210)}
                 >
                     <TarjetaMetrica disposicion="panel" label="Estudiantes" value={kpis.estudiantes} sub="activos" />
                     <TarjetaMetrica disposicion="panel" label="Cursos" value={kpis.cursos} sub="activos" />
                     <TarjetaMetrica disposicion="panel" label="Profesores" value={kpis.profesores} sub="activos" />
+                    <TarjetaMetrica
+                        disposicion="panel"
+                        label="Acudientes"
+                        value={kpis.acudientes}
+                        sub="activos"
+                    />
                     <TarjetaMetrica
                         disposicion="panel"
                         label="Reportes este mes"

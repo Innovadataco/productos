@@ -56,7 +56,7 @@ export class EstudianteRepository {
             where: { cursoId, colegioId, estado: "activo" },
             orderBy: [{ apellidos: "asc" }, { nombre: "asc" }],
             include: {
-                acudientes: { orderBy: { orden: "asc" } },
+                acudientes: { where: { estado: "activo" }, orderBy: { orden: "asc" } },
                 identificadores: { where: { estado: "activo" } },
             },
         });
@@ -114,7 +114,7 @@ export class EstudianteRepository {
         const [activos, conIdentificadores, conAcudientes] = [
             this.db.estudiante.count({ where: base }),
             this.db.estudiante.count({ where: { ...base, identificadores: { some: { estado: "activo" } } } }),
-            this.db.estudiante.count({ where: { ...base, acudientes: { some: {} } } }),
+            this.db.estudiante.count({ where: { ...base, acudientes: { some: { estado: "activo" } } } }),
         ];
         return Promise.all([activos, conIdentificadores, conAcudientes]).then(
             ([a, i, c]) => ({ activos: a, conIdentificadores: i, conAcudientes: c })

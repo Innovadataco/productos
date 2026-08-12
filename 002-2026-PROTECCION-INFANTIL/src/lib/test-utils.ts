@@ -71,24 +71,30 @@ export async function resetDatabase() {
     await prisma.integranteComite.deleteMany();
     await prisma.auditLog.deleteMany();
     await prisma.identificadorEstudiante.deleteMany();
+    // SPEC-163: identificadores de acudiente antes que el acudiente (FK RESTRICT).
+    await prisma.identificadorAcudiente.deleteMany();
     // SPEC-144 (D1): hijos antes que el estudiante (FK RESTRICT).
     await prisma.acudienteEstudiante.deleteMany();
     // SPEC-150: observaciones antes que el estudiante (FK RESTRICT).
     await prisma.estudianteObservacion.deleteMany();
     await prisma.estudiante.deleteMany();
-    // SPEC-145: profesores antes que el colegio (FK RESTRICT); el titular del curso es SET NULL.
+    // SPEC-145: profesores antes que el curso (FK RESTRICT); el titular del curso es SET NULL.
     // SPEC-162: vínculos y catálogo de materias antes que Curso/Profesor/Colegio.
     await prisma.cursoMateria.deleteMany();
     await prisma.materia.deleteMany();
     await prisma.profesor.deleteMany();
     await prisma.curso.deleteMany();
     await prisma.parametroSistema.deleteMany();
+    // Usuario referencia Colegio y Tenant con Restrict: borrar antes que ambos.
+    // PerfilOperador referencia Usuario: borrar antes que Usuario.
     await prisma.perfilOperador.deleteMany();
     await prisma.usuario.deleteMany();
     await prisma.colegio.deleteMany();
     await prisma.tenant.deleteMany();
+    // Permisos antes que módulos; módulos hijos antes que padres (Restrict).
     await prisma.permisoModulo.deleteMany();
-    await prisma.moduloPermisible.deleteMany();
+    await prisma.moduloPermisible.deleteMany({ where: { padreId: { not: null } } });
+    await prisma.moduloPermisible.deleteMany({ where: { padreId: null } });
     // SPEC-132: sesiones de carga masiva (roster server-side).
     await prisma.cargaRosterSesion.deleteMany();
 

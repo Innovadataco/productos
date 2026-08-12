@@ -155,6 +155,45 @@ export const materiaIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
+// SPEC-163: acudiente de un estudiante (gestión post-alta).
+export const acudienteParamsSchema = z.object({
+    id: cuidIdSchema,
+});
+
+export const acudienteIdParamsSchema = z.object({
+    id: cuidIdSchema,
+    acudienteId: cuidIdSchema,
+});
+
+export const acudienteUpdateBodySchema = z
+    .object({
+        nombre: z.string().min(2).max(150).optional(),
+        relacion: z.string().min(1).max(50).optional(),
+        telefono: z.string().max(50).optional().nullable(),
+        email: emailSchema.optional().nullable(),
+    })
+    .refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+
+// SPEC-163: identificador de un acudiente (matching de alertas Fase C).
+export const identificadorAcudienteBodySchema = z.object({
+    tipo: z.string().min(1).max(50).optional(),
+    valor: z.string().min(1).max(255),
+    plataformaId: cuidIdSchema.optional(),
+});
+
+export const identificadorAcudienteUpdateBodySchema = z
+    .object({
+        tipo: z.string().min(1).max(50).optional(),
+        valor: z.string().min(1).max(255).optional(),
+        plataformaId: cuidIdSchema.optional().nullable(),
+    })
+    .refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+
+export const identificadorAcudienteIdParamsSchema = z.object({
+    id: cuidIdSchema,
+    identificadorId: cuidIdSchema,
+});
+
 // SPEC-162: vínculo Curso × Materia × Profesor.
 // El segmento dinámico del curso se llama [id] para no colisionar con otras
 // carpetas bajo cursos/; en este contexto `id` es el identificador del curso.

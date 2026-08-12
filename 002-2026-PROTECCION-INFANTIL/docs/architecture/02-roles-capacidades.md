@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 6 roles (5 autenticados + anónimo) × 234 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1404 combinaciones.
+Inventario: 6 roles (5 autenticados + anónimo) × 240 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1440 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -136,11 +136,17 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/ciudades` | api | permitir | permite | sí |
 | `/api/ciudades/buscar` | api | permitir | permite | sí |
 | `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/notas` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
@@ -375,11 +381,17 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/ciudades` | api | permitir | permite | sí |
 | `/api/ciudades/buscar` | api | permitir | permite | sí |
 | `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/notas` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
@@ -614,11 +626,17 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/ciudades` | api | permitir | permite | sí |
 | `/api/ciudades/buscar` | api | permitir | permite | sí |
 | `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/notas` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
@@ -853,11 +871,17 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/ciudades` | api | HTTP 403 | no permite | sí |
 | `/api/ciudades/buscar` | api | HTTP 403 | no permite | sí |
 | `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/notas` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
@@ -1092,11 +1116,17 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/ciudades` | api | permitir | permite | sí |
 | `/api/ciudades/buscar` | api | permitir | permite | sí |
 | `/api/colegio` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]` | api | permitir | permite | sí |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alertas/[id]/notas` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]` | api | permitir | permite | sí |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/alumnos/[id]/observacion` | api | permitir | permite | sí |
@@ -1331,11 +1361,17 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/ciudades` | api | permitir | permite | sí |
 | `/api/ciudades/buscar` | api | permitir | permite | sí |
 | `/api/colegio` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/acudientes/[id]/identificadores` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alertas` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alertas/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alertas/[id]/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alertas/[id]/notas` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alumnos/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/alumnos/[id]/acudientes` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alumnos/[id]/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alumnos/[id]/identificadores` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/alumnos/[id]/observacion` | api | HTTP 401 | permite | **NO** |
@@ -1558,11 +1594,17 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/circulo-confianza/agregado` | HTTP 401 | permite |
 | `/api/circulo-confianza/preferencias` | HTTP 401 | permite |
 | `/api/colegio` | HTTP 401 | permite |
+| `/api/colegio/acudientes/[id]/identificadores` | HTTP 401 | permite |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]` | HTTP 401 | permite |
+| `/api/colegio/acudientes/[id]/identificadores/[identificadorId]/estado` | HTTP 401 | permite |
 | `/api/colegio/alertas` | HTTP 401 | permite |
 | `/api/colegio/alertas/[id]` | HTTP 401 | permite |
 | `/api/colegio/alertas/[id]/estado` | HTTP 401 | permite |
 | `/api/colegio/alertas/[id]/notas` | HTTP 401 | permite |
 | `/api/colegio/alumnos/[id]` | HTTP 401 | permite |
+| `/api/colegio/alumnos/[id]/acudientes` | HTTP 401 | permite |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]` | HTTP 401 | permite |
+| `/api/colegio/alumnos/[id]/acudientes/[acudienteId]/estado` | HTTP 401 | permite |
 | `/api/colegio/alumnos/[id]/estado` | HTTP 401 | permite |
 | `/api/colegio/alumnos/[id]/identificadores` | HTTP 401 | permite |
 | `/api/colegio/alumnos/[id]/observacion` | HTTP 401 | permite |

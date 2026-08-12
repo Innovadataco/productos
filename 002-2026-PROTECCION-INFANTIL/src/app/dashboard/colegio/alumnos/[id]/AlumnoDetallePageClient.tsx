@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
 import { relativoHumano } from "@/lib/colegio/fechas-humano";
+import SeccionAcudientes from "./SeccionAcudientes";
 
 type Estudiante = {
     id: string;
@@ -238,8 +239,8 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                         <div
                             className={`rounded-xl p-4 text-sm ${
                                 message.type === "error"
-                                    ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                                    : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
+                                    ? "bg-rubi/10 text-estado-rubi dark:bg-rubi/20"
+                                    : "bg-pino/10 text-estado-pino dark:bg-pino/20"
                             }`}
                         >
                             {message.text}
@@ -248,7 +249,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
 
                     {loading ? (
                         <div className="flex items-center gap-3 py-8 text-muted">
-                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-pino" />
                             Cargando...
                         </div>
                     ) : error ? (
@@ -276,7 +277,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                                         aria-pressed={Boolean(observacion?.activa)}
                                         disabled={togglingObservacion || !observacion}
                                         onClick={toggleObservacion}
-                                        className={`inline-flex min-h-12 min-w-12 items-center justify-center self-start rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50 sm:self-auto ${
+                                        className={`inline-flex min-h-12 min-w-12 items-center justify-center self-start rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pino disabled:opacity-50 sm:self-auto ${
                                             observacion?.activa ? "text-estado-ambar" : "text-subtle hover:text-estado-ambar"
                                         }`}
                                     >
@@ -304,7 +305,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                                 )}
 
                                 {observacion && observacion.historial.some((o) => !o.activa) ? (
-                                    <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+                                    <div className="mt-4 border-t border-tinta/15 pt-4">
                                         <h3 className="text-sm font-semibold text-body">Historial</h3>
                                         <ul className="mt-2 space-y-2">
                                             {observacion.historial
@@ -336,7 +337,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                                 ) : (
                                     <div className="mt-4 overflow-x-auto">
                                         <table className="w-full text-left text-sm">
-                                            <thead className="border-b border-slate-200 dark:border-slate-800">
+                                            <thead className="border-b border-tinta/15">
                                                 <tr className="text-subtle">
                                                     <th className="pb-3 font-medium">Valor</th>
                                                     <th className="pb-3 font-medium">Tipo</th>
@@ -346,7 +347,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                                                     <th className="pb-3 font-medium text-right">Acciones</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            <tbody className="divide-y divide-tinta/10">
                                                 {identificadores.map((identificador) => (
                                                     <tr key={identificador.id} className="align-top">
                                                         <td className="py-3 pr-3 font-medium text-body">{identificador.valor}</td>
@@ -376,6 +377,8 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                                     </div>
                                 )}
                             </GlassCard>
+
+                            <SeccionAcudientes estudianteId={estudianteId!} />
                         </div>
                     ) : null}
                 </div>

@@ -13,6 +13,8 @@ interface TarjetasCursoProps {
     identificadoresActivos: number;
     /** Cobertura de identificadores en porcentaje entero (0-100). */
     coberturaPct: number;
+    /** SPEC-163: total de acudientes activos del curso. */
+    acudientesActivos: number;
     className?: string;
 }
 
@@ -22,7 +24,14 @@ export function textoDelta(delta: number): string {
     return "sin cambio vs mes previo";
 }
 
-export function TarjetasCurso({ alertas30d, delta30d, identificadoresActivos, coberturaPct, className = "" }: TarjetasCursoProps) {
+export function TarjetasCurso({
+    alertas30d,
+    delta30d,
+    identificadoresActivos,
+    coberturaPct,
+    acudientesActivos,
+    className = "",
+}: TarjetasCursoProps) {
     return (
         <section aria-label="Estado del curso" className={`grid grid-cols-2 gap-3 ${className}`}>
             <TarjetaMetrica disposicion="panel" label="Reportes 30d" value={alertas30d} sub={textoDelta(delta30d)} />
@@ -32,6 +41,7 @@ export function TarjetasCurso({ alertas30d, delta30d, identificadoresActivos, co
                 value={identificadoresActivos}
                 sub={`Cobertura ${coberturaPct}%`}
             />
+            <TarjetaMetrica disposicion="panel" label="Acudientes" value={acudientesActivos} sub="activos" />
         </section>
     );
 }
