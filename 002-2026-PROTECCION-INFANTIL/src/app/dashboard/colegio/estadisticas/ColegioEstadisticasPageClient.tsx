@@ -22,6 +22,7 @@ type Estadisticas = {
     colegioNombre: string;
     totales: {
         cursos: number;
+        profesores: number;
         alumnos: number;
         identificadores: number;
         alertas: number;
@@ -31,6 +32,7 @@ type Estadisticas = {
 
 const TARJETAS = [
     { key: "cursos", label: "Cursos", icon: "📚" },
+    { key: "profesores", label: "Profesores", icon: "👨‍🏫" },
     { key: "alumnos", label: "Alumnos", icon: "🎓" },
     { key: "identificadores", label: "Identificadores", icon: "🆔" },
     { key: "alertas", label: "Alertas", icon: "🚨" },
@@ -207,7 +209,7 @@ export default function ColegioEstadisticasPageClient() {
                         />
                     ) : (
                         <>
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                                 {TARJETAS.map((tarjeta) => (
                                     <GlassCard
                                         key={tarjeta.key}

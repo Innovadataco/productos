@@ -4,6 +4,7 @@ import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
+import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
 
 const ESTADOS_VISIBLES: EstadoReporte[] = [
     "CLASIFICADO",
@@ -28,6 +29,7 @@ export interface EstadisticasColegio {
     colegioNombre: string;
     totales: {
         cursos: number;
+        profesores: number;
         alumnos: number;
         identificadores: number;
         alertas: number;
@@ -81,12 +83,13 @@ export async function calcularEstadisticasColegio(colegioId: string): Promise<Es
 }
 
 async function calcularTotalesGenerales(colegioId: string) {
-    const [cursos, alumnos, identificadores, alertas] = await Promise.all([
+    const [cursos, profesores, alumnos, identificadores, alertas] = await Promise.all([
         new CursoRepository().contarPorColegio(colegioId),
+        new ProfesorRepository().contar(colegioId, "activo"),
         new EstudianteRepository().contarPorColegio(colegioId),
         new IdentificadorEstudianteRepository().contarPorColegio(colegioId),
         new AlertaColegioRepository().contarVisiblesPorColegio(colegioId, ESTADOS_VISIBLES),
     ]);
 
-    return { cursos, alumnos, identificadores, alertas };
+    return { cursos, profesores, alumnos, identificadores, alertas };
 }

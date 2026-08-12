@@ -21,6 +21,8 @@
  * (catálogo de materias configurable y vínculo curso-materia; misma regla).
  * Actualizado 2026-08-12 (2): 61 modelos — SPEC-163 añadió IdentificadorAcudiente
  * (identificadores tipados del acudiente; misma regla).
+ * Actualizado 2026-08-12 (3): 62 modelos — SPEC-164 añadió IdentificadorProfesor
+ * (identificadores tipados del profesor; misma regla).
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -31,8 +33,8 @@ const modelos = parsearSchemaPrisma(RUTA_SCHEMA);
 const excepciones = JSON.parse(fs.readFileSync(RUTA_EXCEPCIONES, "utf-8")) as { huerfanosPermitidos: string[] };
 
 describe("parser schema.prisma (SPEC-126)", () => {
-    it("oráculo: 61 modelos (60 + IdentificadorAcudiente de SPEC-163)", () => {
-        expect(modelos.length).toBe(61);
+    it("oráculo: 62 modelos (61 + IdentificadorProfesor de SPEC-164)", () => {
+        expect(modelos.length).toBe(62);
     });
 
     it("oráculo: huérfanos = lista de excepciones declarada (ni uno más, ni uno menos)", () => {
