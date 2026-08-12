@@ -15,7 +15,7 @@
 - **FR-001**: CRUD de `Materia` en `src/lib/dal/repositories/materia.ts` + endpoints `/api/colegio/materias` (GET/POST/PATCH/estado) + tests.
 - **FR-002**: seed inicial de 15 materias en `src/lib/colegio/materias-seed.ts`, invocado al crear colegio.
 - **FR-003**: `Curso` no se modificó; `Estudiante.cursoId` intacto; unique constraint de `Curso` sin cambios.
-- **FR-004/005/006/007**: `CursoMateria` en schema + `CursoMateriaRepository` + endpoints `/api/colegio/cursos/[cursoId]/materias`; validación de duplicados `(cursoId, materiaId)`, cross-tenant y materia activa.
+- **FR-004/005/006/007**: `CursoMateria` en schema + `CursoMateriaRepository` + endpoints `/api/colegio/cursos/[id]/materias`; validación de duplicados `(cursoId, materiaId)`, cross-tenant y materia activa.
 - **FR-008/009**: endpoints REST con Zod + rate limiting.
 - **FR-010**: página `/dashboard/colegio/materias` (`MateriasPageClient.tsx`) y sección `SeccionMateriasCurso` en ficha del curso; navegación actualizada en `ColegioSideNav` y `nav-items.ts`.
 - **FR-011**: seis acciones de auditoría en `AccionAudit`: `COLEGIO_MATERIA_CREADA`, `COLEGIO_MATERIA_ACTUALIZADA`, `COLEGIO_MATERIA_ESTADO_CAMBIADO`, `COLEGIO_CURSO_MATERIA_CREADA`, `COLEGIO_CURSO_MATERIA_ACTUALIZADA`, `COLEGIO_CURSO_MATERIA_ESTADO_CAMBIADO`.
@@ -24,6 +24,13 @@
 
 - Ninguna desviación funcional. El modelo final respetó la compuerta de ZEUS: `CursoMateria` como vínculo N:M, sin alterar `Curso` ni `Estudiante.cursoId`.
 - I-49: migración 100% aditiva; sin `DROP`, `RENAME` ni cambios destructivos.
+
+## Hotfix post-deploy
+
+- **Síntoma**: producción cayó con 500 por `unhandledRejection` tras el deploy de SPEC-162.
+- **Causa**: coexistían dos segmentos dinámicos distintos bajo `src/app/api/colegio/cursos/` (`[id]` y `[cursoId]`); Next.js lo detecta en runtime de producción como colisión de rutas.
+- **Fix**: se movió `src/app/api/colegio/cursos/[cursoId]/materias/**` a `src/app/api/colegio/cursos/[id]/materias/**`; el segmento `[materiaId]` reemplaza a `[id]` para el vínculo. Se ajustaron `params` en handlers/tests y los schemas `cursoMateriaParamsSchema` / `cursoMateriaIdParamsSchema`. Se regeneró `docs/architecture/02-roles-capacidades.md`.
+- **Verificación local**: `tsc --noEmit` ✅ · test del área (7 tests) ✅ · `lint` ✅ (0 errores) · `arch:check` ✅ · `tokens:check` ✅ · `build` ✅ · arranque `next start` responde HTTP 503 en `/api/health/worker` sin crash (worker no saludable por entorno local, esperado).
 
 ## Deuda técnica
 

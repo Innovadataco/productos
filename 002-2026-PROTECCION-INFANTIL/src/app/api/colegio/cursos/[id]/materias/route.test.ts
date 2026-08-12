@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { GET, POST } from "./route";
-import { DELETE as DELETEVinculo } from "./[id]/route";
+import { DELETE as DELETEVinculo } from "./[materiaId]/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
@@ -33,7 +33,7 @@ async function setupSchoolAdmin() {
     return { admin, colegio };
 }
 
-describe("/api/colegio/cursos/[cursoId]/materias", () => {
+describe("/api/colegio/cursos/[id]/materias", () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();
@@ -48,14 +48,14 @@ describe("/api/colegio/cursos/[cursoId]/materias", () => {
 
         const getRes = await GET(
             request("GET", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, undefined, mockToken),
-            { params: Promise.resolve({ cursoId: curso.id }) }
+            { params: Promise.resolve({ id: curso.id }) }
         );
         expect(getRes.status).toBe(200);
         expect((await getRes.json()).materias).toHaveLength(0);
 
         const postRes = await POST(
             request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materia.id, profesorId: profesor.id }, mockToken),
-            { params: Promise.resolve({ cursoId: curso.id }) }
+            { params: Promise.resolve({ id: curso.id }) }
         );
         expect(postRes.status).toBe(201);
         const postJson = await postRes.json();
@@ -64,7 +64,7 @@ describe("/api/colegio/cursos/[cursoId]/materias", () => {
 
         const getRes2 = await GET(
             request("GET", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, undefined, mockToken),
-            { params: Promise.resolve({ cursoId: curso.id }) }
+            { params: Promise.resolve({ id: curso.id }) }
         );
         expect((await getRes2.json()).materias).toHaveLength(1);
 
@@ -82,7 +82,7 @@ describe("/api/colegio/cursos/[cursoId]/materias", () => {
 
         const res = await POST(
             request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materia.id }, mockToken),
-            { params: Promise.resolve({ cursoId: curso.id }) }
+            { params: Promise.resolve({ id: curso.id }) }
         );
         expect(res.status).toBe(409);
     });
@@ -95,7 +95,7 @@ describe("/api/colegio/cursos/[cursoId]/materias", () => {
 
         const res = await POST(
             request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materiaAjena.id }, mockToken),
-            { params: Promise.resolve({ cursoId: curso.id }) }
+            { params: Promise.resolve({ id: curso.id }) }
         );
         expect(res.status).toBe(404);
     });
@@ -109,7 +109,7 @@ describe("/api/colegio/cursos/[cursoId]/materias", () => {
 
         const res = await POST(
             request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materia.id, profesorId: profesorAjeno.id }, mockToken),
-            { params: Promise.resolve({ cursoId: curso.id }) }
+            { params: Promise.resolve({ id: curso.id }) }
         );
         expect(res.status).toBe(404);
     });
@@ -122,7 +122,7 @@ describe("/api/colegio/cursos/[cursoId]/materias", () => {
 
         const res = await DELETEVinculo(
             request("DELETE", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias/${vinculo.id}`, undefined, mockToken),
-            { params: Promise.resolve({ cursoId: curso.id, id: vinculo.id }) }
+            { params: Promise.resolve({ id: curso.id, materiaId: vinculo.id }) }
         );
         expect(res.status).toBe(200);
         expect((await res.json()).vinculo.estado).toBe("inactivo");
@@ -142,13 +142,13 @@ describe("/api/colegio/cursos/[cursoId]/materias", () => {
 
         const getRes = await GET(
             request("GET", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, undefined, mockToken),
-            { params: Promise.resolve({ cursoId: curso.id }) }
+            { params: Promise.resolve({ id: curso.id }) }
         );
         expect(getRes.status).toBe(404);
 
         const postRes = await POST(
             request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: "cm0000000000000000000000" }, mockToken),
-            { params: Promise.resolve({ cursoId: curso.id }) }
+            { params: Promise.resolve({ id: curso.id }) }
         );
         expect(postRes.status).toBe(404);
     });
@@ -162,7 +162,7 @@ describe("/api/colegio/cursos/[cursoId]/materias", () => {
             mockToken = await crearTokenUsuario(u.id, rol);
             const res = await GET(
                 request("GET", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, undefined, mockToken),
-                { params: Promise.resolve({ cursoId: curso.id }) }
+                { params: Promise.resolve({ id: curso.id }) }
             );
             expect(res.status).toBe(403);
         }

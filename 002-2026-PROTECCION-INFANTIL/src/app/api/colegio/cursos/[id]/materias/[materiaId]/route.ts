@@ -1,6 +1,7 @@
 /**
  * SPEC-162: desasigna una materia de un curso (soft delete).
- * DELETE /api/colegio/cursos/[cursoId]/materias/[id]
+ * DELETE /api/colegio/cursos/[id]/materias/[materiaId]
+ * `id` es el curso; `materiaId` es el vínculo CursoMateria.
  */
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
@@ -22,7 +23,7 @@ function getClientInfo(request: Request) {
     };
 }
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ cursoId: string; id: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string; materiaId: string }> }) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
@@ -42,11 +43,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
             );
         }
 
-        const { cursoId, id } = withValidation.params(cursoMateriaIdParamsSchema)(await params);
+        const { id: cursoId, materiaId } = withValidation.params(cursoMateriaIdParamsSchema)(await params);
         const curso = await verificarPropiedadCurso(user.id, cursoId);
 
         const repo = new CursoMateriaRepository();
-        const actual = await repo.obtenerPorId(curso.colegioId, id);
+        const actual = await repo.obtenerPorId(curso.colegioId, materiaId);
         if (!actual || actual.cursoId !== cursoId) {
             return NextResponse.json(
                 { error: { message: "Vínculo no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -54,13 +55,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
             );
         }
 
-        const desactivado = await repo.cambiarEstado(curso.colegioId, id, "inactivo");
+        const desactivado = await repo.cambiarEstado(curso.colegioId, materiaId, "inactivo");
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
             accion: "COLEGIO_CURSO_MATERIA_DESACTIVADA",
             tipoRecurso: "CursoMateria",
-            recursoId: id,
+            recursoId: materiaId,
             usuarioId: user.id,
             colegioId: user.colegioId ?? undefined,
             valorAnterior: JSON.stringify({ estado: actual.estado }),

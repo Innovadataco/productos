@@ -1,7 +1,8 @@
 /**
  * SPEC-162: materias asignadas a un curso.
- * GET /api/colegio/cursos/[cursoId]/materias — lista activas.
- * POST /api/colegio/cursos/[cursoId]/materias — asigna una materia al curso.
+ * GET /api/colegio/cursos/[id]/materias — lista activas.
+ * POST /api/colegio/cursos/[id]/materias — asigna una materia al curso.
+ * El segmento [id] es el identificador del curso.
  */
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
@@ -23,7 +24,7 @@ function getClientInfo(request: Request) {
     };
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ cursoId: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
@@ -43,7 +44,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ curs
             );
         }
 
-        const { cursoId } = withValidation.params(cursoMateriaParamsSchema)(await params);
+        const { id: cursoId } = withValidation.params(cursoMateriaParamsSchema)(await params);
         const curso = await verificarPropiedadCurso(user.id, cursoId);
 
         const vinculos = await new CursoMateriaRepository().listarPorCurso(curso.colegioId, cursoId);
@@ -59,7 +60,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ curs
     }
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ cursoId: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
@@ -79,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cur
             );
         }
 
-        const { cursoId } = withValidation.params(cursoMateriaParamsSchema)(await params);
+        const { id: cursoId } = withValidation.params(cursoMateriaParamsSchema)(await params);
         const body = await withValidation.body(cursoMateriaBodySchema)(request);
         const curso = await verificarPropiedadCurso(user.id, cursoId);
 

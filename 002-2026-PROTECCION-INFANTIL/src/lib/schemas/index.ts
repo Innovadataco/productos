@@ -156,8 +156,10 @@ export const materiaIdParamsSchema = z.object({
 });
 
 // SPEC-162: vínculo Curso × Materia × Profesor.
+// El segmento dinámico del curso se llama [id] para no colisionar con otras
+// carpetas bajo cursos/; en este contexto `id` es el identificador del curso.
 export const cursoMateriaParamsSchema = z.object({
-    cursoId: cuidIdSchema,
+    id: cuidIdSchema,
 });
 
 export const cursoMateriaBodySchema = z.object({
@@ -166,8 +168,8 @@ export const cursoMateriaBodySchema = z.object({
 });
 
 export const cursoMateriaIdParamsSchema = z.object({
-    cursoId: cuidIdSchema,
     id: cuidIdSchema,
+    materiaId: cuidIdSchema,
 });
 
 // SPEC-144 (FR-010, D3): alta de estudiante — obligatorios solo nombre + apellidos;
