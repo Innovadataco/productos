@@ -5,8 +5,9 @@
 ## Evidencia
 
 - **Rama de trabajo**: `work/002-pi-062`.
-- **Commits en `work/002-pi-062`**: `45804760` implementación de Fase A · `aeb1fe8e` ajustes de disciplina Spec-Kit en fases B-G.
-- **PR a `feature/001-scaffolding`**: pendiente.
+- **Commits en `work/002-pi-062`**: `45804760` implementación de Fase A · `aeb1fe8e` ajustes de disciplina Spec-Kit en fases B-G · `ea122c88` cierre.
+- **PR #46 a `feature/001-scaffolding`**: mergeado en `ab1ec7f1`.
+- **CI PR #46 / gate**: run `31591319909` — pass en 23m14s.
 - **Gate local** (verificado previo al push):
   - `npx tsc --noEmit` ✅
   - `npm run lint` ✅ (0 errores, warnings preexistentes)
