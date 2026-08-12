@@ -43,9 +43,10 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const query = withValidation.params(alertaQuerySchema)({
             estado: searchParams.get("estado") ?? undefined,
+            tipoSujeto: searchParams.get("tipoSujeto") ?? undefined,
         });
 
-        const alertas = await listarAlertasColegio(user.colegioId, query.estado);
+        const alertas = await listarAlertasColegio(user.colegioId, query.estado, query.tipoSujeto);
 
         return NextResponse.json({ alertas });
     } catch (error) {

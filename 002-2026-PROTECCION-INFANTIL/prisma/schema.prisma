@@ -660,6 +660,7 @@ model IdentificadorAcudiente {
   acudiente  AcudienteEstudiante @relation(fields: [acudienteId], references: [id])
   colegio    Colegio             @relation(fields: [colegioId], references: [id])
   plataforma Plataforma?         @relation(fields: [plataformaId], references: [id])
+  alertas    AlertaColegio[]
 
   @@unique([acudienteId, tipo, valor, plataformaId])
   @@index([colegioId, estado])
@@ -683,6 +684,7 @@ model IdentificadorProfesor {
   profesor   Profesor    @relation(fields: [profesorId], references: [id])
   colegio    Colegio     @relation(fields: [colegioId], references: [id])
   plataforma Plataforma? @relation(fields: [plataformaId], references: [id])
+  alertas    AlertaColegio[]
 
   @@unique([profesorId, tipo, valor, plataformaId])
   @@index([colegioId, estado])
@@ -733,27 +735,37 @@ model IdentificadorEstudiante {
   @@map("IdentificadorAlumno")
 }
 
+// SPEC-165: alerta extendida a estudiante/profesor/acudiente. Una sola FK
+// poblada según tipoSujeto; constraint única por tipo evita duplicados.
 model AlertaColegio {
-  id                        String   @id @default(cuid())
+  id                        String    @id @default(cuid())
   colegioId                 String
   reporteId                 String
-  identificadorEstudianteId String   @map("identificadorAlumnoId")
-  estado                    String   @default("nueva") // nueva | vista | gestionada
+  identificadorEstudianteId String?   @map("identificadorAlumnoId")
+  identificadorProfesorId   String?
+  identificadorAcudienteId  String?
+  tipoSujeto                String    @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE
+  estado                    String    @default("nueva") // nueva | vista | gestionada
   // SPEC-142 (F6): fila agregada que ESTA alerta aportó (idempotencia + reversa
   // exacta en baja). Nullable: las alertas previas a F6 no aportan al agregado.
   patronInstitucionalId     String?
-  creadoEn                  DateTime @default(now())
-  actualizadoEn             DateTime @updatedAt
+  creadoEn                  DateTime  @default(now())
+  actualizadoEn             DateTime  @updatedAt
 
   colegio                 Colegio                 @relation(fields: [colegioId], references: [id])
   reporte                 Reporte                 @relation(fields: [reporteId], references: [id])
-  identificadorEstudiante IdentificadorEstudiante @relation(fields: [identificadorEstudianteId], references: [id])
-  patronInstitucional     PatronInstitucional?    @relation(fields: [patronInstitucionalId], references: [id])
+  identificadorEstudiante IdentificadorEstudiante? @relation(fields: [identificadorEstudianteId], references: [id])
+  identificadorProfesor   IdentificadorProfesor?   @relation(fields: [identificadorProfesorId], references: [id])
+  identificadorAcudiente  IdentificadorAcudiente?  @relation(fields: [identificadorAcudienteId], references: [id])
+  patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
   seguimiento             SeguimientoCaso?
 
   @@unique([colegioId, reporteId, identificadorEstudianteId])
+  @@unique([colegioId, reporteId, identificadorProfesorId])
+  @@unique([colegioId, reporteId, identificadorAcudienteId])
   @@index([colegioId, estado])
   @@index([reporteId])
+  @@index([tipoSujeto])
 }
 
 // SPEC-142 (F6): patrón institucional agregado por (colegio, grado, conducta,

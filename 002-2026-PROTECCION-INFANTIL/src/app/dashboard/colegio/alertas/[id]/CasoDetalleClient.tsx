@@ -31,9 +31,14 @@ interface CasoDetalleClientProps {
     caso: DetalleCaso;
 }
 
+const TIPO_SUJETO_LABELS: Record<string, string> = {
+    ESTUDIANTE: "Estudiante",
+    PROFESOR: "Profesor",
+    ACUDIENTE: "Acudiente",
+};
+
 export default function CasoDetalleClient({ caso }: CasoDetalleClientProps) {
     const { alerta } = caso;
-    const estudiante = `${alerta.estudiante.nombre} ${alerta.estudiante.apellidos}`.trim();
 
     return (
         <div className="min-h-screen bg-page">
@@ -58,16 +63,30 @@ export default function CasoDetalleClient({ caso }: CasoDetalleClientProps) {
                         <h2 className="titular-seccion text-body">Resumen del caso</h2>
                         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                             <div>
-                                <dt className="microetiqueta">Estudiante</dt>
-                                <dd className="mt-0.5 text-body">{estudiante}</dd>
+                                <dt className="microetiqueta">Tipo de sujeto</dt>
+                                <dd className="mt-0.5 text-body">{TIPO_SUJETO_LABELS[alerta.tipoSujeto] ?? alerta.tipoSujeto}</dd>
                             </div>
                             <div>
-                                <dt className="microetiqueta">Curso</dt>
-                                <dd className="mt-0.5 text-body">
-                                    {alerta.curso.nombre}
-                                    {alerta.curso.grado ? ` (${alerta.curso.grado})` : ""}
-                                </dd>
+                                <dt className="microetiqueta">{alerta.tipoSujeto === "ESTUDIANTE" ? "Estudiante" : "Nombre"}</dt>
+                                <dd className="mt-0.5 text-body">{alerta.sujetoNombre}</dd>
                             </div>
+                            {alerta.curso && (
+                                <div>
+                                    <dt className="microetiqueta">Curso</dt>
+                                    <dd className="mt-0.5 text-body">
+                                        {alerta.curso.nombre}
+                                        {alerta.curso.grado ? ` (${alerta.curso.grado})` : ""}
+                                    </dd>
+                                </div>
+                            )}
+                            {alerta.sujetoRelacion && (
+                                <div>
+                                    <dt className="microetiqueta">
+                                        {alerta.tipoSujeto === "ESTUDIANTE" ? "Relación" : "Rol / parentesco"}
+                                    </dt>
+                                    <dd className="mt-0.5 text-body capitalize">{alerta.sujetoRelacion.toLowerCase()}</dd>
+                                </div>
+                            )}
                             <div>
                                 <dt className="microetiqueta">Plataforma</dt>
                                 <dd className="mt-0.5 text-body">{alerta.plataforma ?? "Sin plataforma registrada"}</dd>

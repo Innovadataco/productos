@@ -3,7 +3,7 @@
  * colegio. Solo agregados; cero PII. El rango del mes se fija en hora local de
  * Colombia (America/Bogota) para que el informe sea reproducible día a día.
  */
-import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
+import { AlertaColegioMensualRepository } from "@/lib/dal/repositories/alerta-colegio-mensual";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 
 export interface CursoInformeMensual {
@@ -56,7 +56,7 @@ export async function calcularInformeMensual(colegioId: string, mes: string): Pr
     }
 
     const { inicio, fin } = parseMesBogota(mes);
-    const alertas = new AlertaColegioRepository();
+    const alertas = new AlertaColegioMensualRepository();
 
     const [resumen, porCurso, porCategoria] = await Promise.all([
         alertas.resumenMensual(colegioId, inicio, fin),

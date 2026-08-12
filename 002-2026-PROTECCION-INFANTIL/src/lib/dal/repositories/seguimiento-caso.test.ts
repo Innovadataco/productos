@@ -45,6 +45,7 @@ async function fixtureAlerta(identificadorValor: string) {
     const alerta = await new AlertaColegioRepository().crear({
         colegioId: colegio.id,
         reporteId: reporte.id,
+        tipoSujeto: "ESTUDIANTE",
         identificadorEstudianteId: identificador.id,
     });
     return { admin, colegio, reporte, alerta };
@@ -106,11 +107,11 @@ describe("AlertaColegioRepository.obtenerDetalleConCurso", () => {
         const detalle = await new AlertaColegioRepository().obtenerDetalleConCurso(colegio.id, alerta.id);
 
         expect(detalle).not.toBeNull();
-        expect(detalle!.identificadorEstudiante.estudiante.nombre).toBe("María");
-        expect(detalle!.identificadorEstudiante.estudiante.apellidos).toBe("Gómez");
-        expect(detalle!.identificadorEstudiante.estudiante.curso.nombre).toBe("6A");
-        expect(detalle!.identificadorEstudiante.plataforma?.nombre).toBe("WhatsApp");
-        expect(detalle!.identificadorEstudiante.tipo).toBeDefined();
+        expect(detalle!.identificadorEstudiante?.estudiante.nombre).toBe("María");
+        expect(detalle!.identificadorEstudiante?.estudiante.apellidos).toBe("Gómez");
+        expect(detalle!.identificadorEstudiante?.estudiante.curso.nombre).toBe("6A");
+        expect(detalle!.identificadorEstudiante?.plataforma?.nombre).toBe("WhatsApp");
+        expect(detalle!.identificadorEstudiante?.tipo).toBeDefined();
 
         const serializado = JSON.stringify(detalle);
         expect(serializado).not.toContain("+57300SECRETO");

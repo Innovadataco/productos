@@ -11,8 +11,10 @@ import { Select } from "@/components/ui/Select";
 
 type Alerta = {
     id: string;
-    identificador: string;
-    relacion: string;
+    tipoSujeto: "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE";
+    identificador: string | null;
+    relacion: string | null;
+    sujetoNombre: string | null;
     categoria: string | null;
     estadoReporte: string;
     estadoAlerta: string;
@@ -20,6 +22,7 @@ type Alerta = {
 };
 
 type FiltroEstado = "todas" | "nueva" | "vista" | "gestionada";
+type FiltroTipoSujeto = "todos" | "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE";
 
 const ESTADO_LABELS: Record<string, string> = {
     nueva: "Nueva",
@@ -33,12 +36,26 @@ const ESTADO_VARIANTS: Record<string, "default" | "warning" | "success" | "neutr
     gestionada: "success",
 };
 
+const TIPO_SUJETO_LABELS: Record<FiltroTipoSujeto, string> = {
+    todos: "Todos los sujetos",
+    ESTUDIANTE: "Estudiante",
+    PROFESOR: "Profesor",
+    ACUDIENTE: "Acudiente",
+};
+
+const TIPO_SUJETO_VARIANTS: Record<string, "default" | "info" | "warning" | "neutral"> = {
+    ESTUDIANTE: "default",
+    PROFESOR: "info",
+    ACUDIENTE: "warning",
+};
+
 export default function AlertasColegioPageClient() {
     const router = useRouter();
     const [alertas, setAlertas] = useState<Alerta[]>([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filtro, setFiltro] = useState<FiltroEstado>("todas");
+    const [filtroTipoSujeto, setFiltroTipoSujeto] = useState<FiltroTipoSujeto>("todos");
     const [accionando, setAccionando] = useState<Set<string>>(new Set());
 
     const cargar = useCallback(async () => {
@@ -48,6 +65,9 @@ export default function AlertasColegioPageClient() {
             const url = new URL("/api/colegio/alertas", window.location.origin);
             if (filtro !== "todas") {
                 url.searchParams.set("estado", filtro);
+            }
+            if (filtroTipoSujeto !== "todos") {
+                url.searchParams.set("tipoSujeto", filtroTipoSujeto);
             }
             const res = await fetch(url.toString(), { credentials: "include" });
             const data = await res.json().catch(() => ({}));
@@ -63,7 +83,7 @@ export default function AlertasColegioPageClient() {
         } finally {
             setCargando(false);
         }
-    }, [filtro]);
+    }, [filtro, filtroTipoSujeto]);
 
     useEffect(() => {
         cargar();
@@ -105,26 +125,41 @@ export default function AlertasColegioPageClient() {
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h1 className="text-2xl font-bold text-body">Alertas</h1>
-                            {/* SPEC-129 (C5): encabezado que explica qué son las alertas
-                                para un rector no técnico (la lógica SPEC-077 no cambia). */}
+                            {/* SPEC-129 (C5) / SPEC-165: encabezado que explica qué son las alertas
+                                para un rector no técnico. Ahora incluyen estudiante, profesor y acudiente. */}
                             <p className="text-sm text-muted">
-                                Avisos que llegan cuando un identificador que registraste para un alumno
-                                (número, nick o usuario) aparece en un reporte de la comunidad.
+                                Avisos que llegan cuando un identificador que registraste para un alumno,
+                                profesor o acudiente (número, nick o usuario) aparece en un reporte de la comunidad.
                                 Son anonimizados: nunca muestran quién reportó ni el contenido del reporte.
                             </p>
                         </div>
-                        <div className="w-full sm:w-48">
-                            <Select
-                                label="Filtrar por estado"
-                                value={filtro}
-                                onChange={(e) => setFiltro(e.target.value as FiltroEstado)}
-                                options={[
-                                    { value: "todas", label: "Todas" },
-                                    { value: "nueva", label: "Nueva" },
-                                    { value: "vista", label: "Vista" },
-                                    { value: "gestionada", label: "Gestionada" },
-                                ]}
-                            />
+                        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                            <div className="w-full sm:w-48">
+                                <Select
+                                    label="Filtrar por tipo"
+                                    value={filtroTipoSujeto}
+                                    onChange={(e) => setFiltroTipoSujeto(e.target.value as FiltroTipoSujeto)}
+                                    options={[
+                                        { value: "todos", label: "Todos los sujetos" },
+                                        { value: "ESTUDIANTE", label: "Estudiante" },
+                                        { value: "PROFESOR", label: "Profesor" },
+                                        { value: "ACUDIENTE", label: "Acudiente" },
+                                    ]}
+                                />
+                            </div>
+                            <div className="w-full sm:w-48">
+                                <Select
+                                    label="Filtrar por estado"
+                                    value={filtro}
+                                    onChange={(e) => setFiltro(e.target.value as FiltroEstado)}
+                                    options={[
+                                        { value: "todas", label: "Todas" },
+                                        { value: "nueva", label: "Nueva" },
+                                        { value: "vista", label: "Vista" },
+                                        { value: "gestionada", label: "Gestionada" },
+                                    ]}
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -156,24 +191,31 @@ export default function AlertasColegioPageClient() {
                                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                         <div className="flex-1 space-y-2">
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <span className="text-sm font-medium text-body">
-                                                    Identificador:
-                                                </span>
-                                                <span className="font-mono text-sm text-emerald-700 dark:text-emerald-300">
-                                                    {alerta.identificador}
-                                                </span>
+                                                <Badge variant={TIPO_SUJETO_VARIANTS[alerta.tipoSujeto] || "neutral"}>
+                                                    {TIPO_SUJETO_LABELS[alerta.tipoSujeto] || alerta.tipoSujeto}
+                                                </Badge>
                                                 <Badge variant={ESTADO_VARIANTS[alerta.estadoAlerta] || "neutral"}>
                                                     {ESTADO_LABELS[alerta.estadoAlerta] || alerta.estadoAlerta}
                                                 </Badge>
                                             </div>
 
+                                            <div className="text-sm">
+                                                <span className="text-subtle">Sujeto:</span>{" "}
+                                                <span className="font-medium text-body">
+                                                    {alerta.sujetoNombre ?? "Sin nombre"}
+                                                </span>
+                                                {alerta.relacion && (
+                                                    <span className="text-muted"> · {alerta.relacion}</span>
+                                                )}
+                                            </div>
+
                                             <div className="grid gap-2 text-sm sm:grid-cols-3">
-                                                <div>
-                                                    <span className="text-subtle">Relación:</span>{" "}
-                                                    <span className="text-body capitalize">
-                                                        {alerta.relacion.toLowerCase()}
-                                                    </span>
-                                                </div>
+                                                {alerta.identificador && (
+                                                    <div>
+                                                        <span className="text-subtle">Identificador:</span>{" "}
+                                                        <span className="font-mono text-body">{alerta.identificador}</span>
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <span className="text-subtle">Categoría:</span>{" "}
                                                     <span className="text-body">{alerta.categoria || "Sin clasificar"}</span>

@@ -14,11 +14,31 @@ import type { DbClient } from "../unit-of-work";
 /** Estados de la alerta (columna String con valores cerrados, como en lib/colegio/alertas). */
 export type EstadoAlertaColegio = "nueva" | "vista" | "gestionada";
 
+/** Tipo de sujeto al que apunta la alerta (SPEC-165). */
+export type TipoSujeto = "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE";
+
+/** Input discriminated para crear una alerta sobre un sujeto específico. */
+export type CrearAlertaInput =
+    | { tipoSujeto: "ESTUDIANTE"; identificadorEstudianteId: string }
+    | { tipoSujeto: "PROFESOR"; identificadorProfesorId: string }
+    | { tipoSujeto: "ACUDIENTE"; identificadorAcudienteId: string };
+
 const INCLUDE_LISTADO = {
     identificadorEstudiante: {
         select: {
             valor: true,
             etiquetaRelacion: true,
+            estudiante: { select: { nombre: true, apellidos: true } },
+        },
+    },
+    identificadorProfesor: {
+        select: {
+            profesor: { select: { nombre: true, apellidos: true } },
+        },
+    },
+    identificadorAcudiente: {
+        select: {
+            acudiente: { select: { nombre: true, relacion: true } },
         },
     },
     reporte: {
@@ -42,12 +62,16 @@ export class AlertaColegioRepository {
         this.db = tx ?? prisma;
     }
 
-    /** Alertas del colegio (reporte no eliminado), filtro de estado tipado. */
-    listarPorColegio(colegioId: string, filtros: { estado?: EstadoAlertaColegio | undefined } = {}): Promise<AlertaColegioListadoRow[]> {
+    /** Alertas del colegio (reporte no eliminado), filtro de estado y tipo de sujeto. */
+    listarPorColegio(
+        colegioId: string,
+        filtros: { estado?: EstadoAlertaColegio | undefined; tipoSujeto?: TipoSujeto | undefined } = {}
+    ): Promise<AlertaColegioListadoRow[]> {
         return this.db.alertaColegio.findMany({
             where: {
                 colegioId,
                 ...(filtros.estado ? { estado: filtros.estado } : {}),
+                ...(filtros.tipoSujeto ? { tipoSujeto: filtros.tipoSujeto } : {}),
                 reporte: { eliminado: false },
             },
             include: INCLUDE_LISTADO,
@@ -62,19 +86,71 @@ export class AlertaColegioRepository {
         });
     }
 
-    /** Alerta existente para la combinación exacta (dedupe de notificarColegioSiCorresponde). */
-    buscarExistente(colegioId: string, reporteId: string, identificadorEstudianteId: string) {
+    /**
+     * Alerta existente para la combinación exacta (dedupe de notificarColegioSiCorresponde).
+     * Elige el índice único según el tipo de sujeto.
+     */
+    buscarExistente(colegioId: string, reporteId: string, input: CrearAlertaInput) {
+        if (input.tipoSujeto === "ESTUDIANTE") {
+            return this.db.alertaColegio.findUnique({
+                where: {
+                    colegioId_reporteId_identificadorEstudianteId: {
+                        colegioId,
+                        reporteId,
+                        identificadorEstudianteId: input.identificadorEstudianteId,
+                    },
+                },
+            });
+        }
+        if (input.tipoSujeto === "PROFESOR") {
+            return this.db.alertaColegio.findUnique({
+                where: {
+                    colegioId_reporteId_identificadorProfesorId: {
+                        colegioId,
+                        reporteId,
+                        identificadorProfesorId: input.identificadorProfesorId,
+                    },
+                },
+            });
+        }
         return this.db.alertaColegio.findUnique({
             where: {
-                colegioId_reporteId_identificadorEstudianteId: { colegioId, reporteId, identificadorEstudianteId },
+                colegioId_reporteId_identificadorAcudienteId: {
+                    colegioId,
+                    reporteId,
+                    identificadorAcudienteId: input.identificadorAcudienteId,
+                },
             },
         });
     }
 
-    /** Crea la alerta del colegio en estado "nueva" (el tenant es columna del modelo). */
-    crear(datos: { colegioId: string; reporteId: string; identificadorEstudianteId: string }) {
+    /** Crea la alerta del colegio en estado "nueva" para el sujeto indicado. */
+    crear(datos: { colegioId: string; reporteId: string } & CrearAlertaInput) {
+        const base = { colegioId: datos.colegioId, reporteId: datos.reporteId, estado: "nueva" as const };
+        if (datos.tipoSujeto === "ESTUDIANTE") {
+            return this.db.alertaColegio.create({
+                data: {
+                    ...base,
+                    tipoSujeto: "ESTUDIANTE",
+                    identificadorEstudianteId: datos.identificadorEstudianteId,
+                },
+            });
+        }
+        if (datos.tipoSujeto === "PROFESOR") {
+            return this.db.alertaColegio.create({
+                data: {
+                    ...base,
+                    tipoSujeto: "PROFESOR",
+                    identificadorProfesorId: datos.identificadorProfesorId,
+                },
+            });
+        }
         return this.db.alertaColegio.create({
-            data: { ...datos, estado: "nueva" },
+            data: {
+                ...base,
+                tipoSujeto: "ACUDIENTE",
+                identificadorAcudienteId: datos.identificadorAcudienteId,
+            },
         });
     }
 
@@ -115,6 +191,7 @@ export class AlertaColegioRepository {
             WHERE a."colegioId" = ${colegioId}
               AND a."cursoId" IN (${Prisma.join(cursoIds)})
               AND ac."colegioId" = a."colegioId"
+              AND ac."tipoSujeto" = 'ESTUDIANTE'
               AND r.eliminado = false
               AND r.estado::text IN (${Prisma.join(estadosVisibles)})
             GROUP BY a."cursoId"
@@ -122,75 +199,42 @@ export class AlertaColegioRepository {
         return new Map(resultados.map((r) => [r.cursoId, Number(r.total)]));
     }
 
-    /**
-     * SPEC-143 (D2): reportes DISTINTOS del colegio en una ventana sobre
-     * `creadoEn` — COUNT(DISTINCT reporteId): un reporte que toca a N
-     * estudiantes del colegio cuenta UNA vez. Reportes eliminados no cuentan.
-     */
+    /** SPEC-143 (D2): reportes DISTINTOS del colegio en ventana sobre `creadoEn`. */
     async contarReportesDistintos(colegioId: string, desde: Date, hasta?: Date): Promise<number> {
-        const filas: { total: number }[] = hasta
-            ? await this.db.$queryRaw`
-                SELECT COUNT(DISTINCT ac."reporteId")::int AS total
-                FROM "AlertaColegio" ac
-                JOIN "Reporte" r ON r.id = ac."reporteId"
-                WHERE ac."colegioId" = ${colegioId}
-                  AND r.eliminado = false
-                  AND ac."creadoEn" >= ${desde}
-                  AND ac."creadoEn" < ${hasta}
-            `
-            : await this.db.$queryRaw`
-                SELECT COUNT(DISTINCT ac."reporteId")::int AS total
-                FROM "AlertaColegio" ac
-                JOIN "Reporte" r ON r.id = ac."reporteId"
-                WHERE ac."colegioId" = ${colegioId}
-                  AND r.eliminado = false
-                  AND ac."creadoEn" >= ${desde}
-            `;
+        const hastaSql = hasta ? Prisma.sql`AND ac."creadoEn" < ${hasta}` : Prisma.sql``;
+        const filas: { total: number }[] = await this.db.$queryRaw(Prisma.sql`
+            SELECT COUNT(DISTINCT ac."reporteId")::int AS total
+            FROM "AlertaColegio" ac
+            JOIN "Reporte" r ON r.id = ac."reporteId"
+            WHERE ac."colegioId" = ${colegioId}
+              AND r.eliminado = false
+              AND ac."creadoEn" >= ${desde}
+              ${hastaSql}
+        `);
         return filas[0]?.total ?? 0;
     }
 
-    /**
-     * SPEC-147 (T002): reportes DISTINTOS (D2) de UN curso en una ventana sobre
-     * `creadoEn` — join al estudiante del identificador con tenant en ambos lados
-     * (nombres FÍSICOS: "Alumno"/"IdentificadorAlumno"/"alumnoId"). Reportes
-     * eliminados no cuentan. `hasta` exclusivo para la ventana anterior (delta).
-     */
+    /** SPEC-147 (T002): reportes DISTINTOS (D2) de UN curso en ventana sobre `creadoEn`. */
     async contarReportesDistintosPorCurso(colegioId: string, cursoId: string, desde: Date, hasta?: Date): Promise<number> {
-        const filas: { total: number }[] = hasta
-            ? await this.db.$queryRaw`
-                SELECT COUNT(DISTINCT ac."reporteId")::int AS total
-                FROM "AlertaColegio" ac
-                JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
-                JOIN "Alumno" a ON a.id = i."alumnoId"
-                JOIN "Reporte" r ON r.id = ac."reporteId"
-                WHERE a."colegioId" = ${colegioId}
-                  AND ac."colegioId" = a."colegioId"
-                  AND a."cursoId" = ${cursoId}
-                  AND r.eliminado = false
-                  AND ac."creadoEn" >= ${desde}
-                  AND ac."creadoEn" < ${hasta}
-            `
-            : await this.db.$queryRaw`
-                SELECT COUNT(DISTINCT ac."reporteId")::int AS total
-                FROM "AlertaColegio" ac
-                JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
-                JOIN "Alumno" a ON a.id = i."alumnoId"
-                JOIN "Reporte" r ON r.id = ac."reporteId"
-                WHERE a."colegioId" = ${colegioId}
-                  AND ac."colegioId" = a."colegioId"
-                  AND a."cursoId" = ${cursoId}
-                  AND r.eliminado = false
-                  AND ac."creadoEn" >= ${desde}
-            `;
+        const hastaSql = hasta ? Prisma.sql`AND ac."creadoEn" < ${hasta}` : Prisma.sql``;
+        const filas: { total: number }[] = await this.db.$queryRaw(Prisma.sql`
+            SELECT COUNT(DISTINCT ac."reporteId")::int AS total
+            FROM "AlertaColegio" ac
+            JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+            JOIN "Alumno" a ON a.id = i."alumnoId"
+            JOIN "Reporte" r ON r.id = ac."reporteId"
+            WHERE a."colegioId" = ${colegioId}
+              AND ac."colegioId" = a."colegioId"
+              AND a."cursoId" = ${cursoId}
+              AND ac."tipoSujeto" = 'ESTUDIANTE'
+              AND r.eliminado = false
+              AND ac."creadoEn" >= ${desde}
+              ${hastaSql}
+        `);
         return filas[0]?.total ?? 0;
     }
 
-    /**
-     * SPEC-149 (FR-003): reportes DISTINTOS sobre identificadores del MISMO
-     * estudiante en una ventana sobre `creadoEn` — aunque sean nicks distintos
-     * (join alerta→identificador→estudiante, tenant en el where). Reportes
-     * eliminados no cuentan.
-     */
+    /** SPEC-149 (FR-003): reportes DISTINTOS sobre identificadores del MISMO estudiante. */
     async contarReportesDistintosPorEstudiante(colegioId: string, estudianteId: string, desde: Date): Promise<number> {
         const filas: { total: number }[] = await this.db.$queryRaw`
             SELECT COUNT(DISTINCT ac."reporteId")::int AS total
@@ -199,6 +243,7 @@ export class AlertaColegioRepository {
             JOIN "Reporte" r ON r.id = ac."reporteId"
             WHERE ac."colegioId" = ${colegioId}
               AND i."alumnoId" = ${estudianteId}
+              AND ac."tipoSujeto" = 'ESTUDIANTE'
               AND r.eliminado = false
               AND ac."creadoEn" >= ${desde}
         `;
@@ -228,11 +273,7 @@ export class AlertaColegioRepository {
         return resultado._max.creadoEn;
     }
 
-    /**
-     * SPEC-143 (D2): serie temporal de reportes DISTINTOS por periodo sobre
-     * `creadoEn` (date_trunc en SQL, tenant en el where). Solo los periodos con
-     * actividad; el relleno de huecos con ceros es responsabilidad del consumidor.
-     */
+    /** SPEC-143 (D2): serie temporal de reportes DISTINTOS por periodo sobre `creadoEn`. */
     async serieReportesPorPeriodo(
         colegioId: string,
         granularidad: "week" | "month" | "year",
@@ -252,11 +293,7 @@ export class AlertaColegioRepository {
         return filas;
     }
 
-    /**
-     * SPEC-143: top de cursos por reportes DISTINTOS recibidos desde `desde`
-     * (home: últimos 30 días), join al curso del estudiante con tenant en ambos
-     * lados (mismo patrón que contarVisiblesPorCursoIds).
-     */
+    /** SPEC-143: top de cursos por reportes DISTINTOS recibidos desde `desde`. */
     async topCursosPorReportes(colegioId: string, desde: Date, limite = 3): Promise<{ cursoId: string; total: number }[]> {
         return this.db.$queryRaw`
             SELECT a."cursoId" AS "cursoId", COUNT(DISTINCT ac."reporteId")::int AS total
@@ -266,6 +303,7 @@ export class AlertaColegioRepository {
             JOIN "Reporte" r ON r.id = ac."reporteId"
             WHERE a."colegioId" = ${colegioId}
               AND ac."colegioId" = a."colegioId"
+              AND ac."tipoSujeto" = 'ESTUDIANTE'
               AND r.eliminado = false
               AND ac."creadoEn" >= ${desde}
             GROUP BY a."cursoId"
@@ -275,12 +313,8 @@ export class AlertaColegioRepository {
     }
 
     /**
-     * SPEC-158 (T001, FR-003): embudo de estado por reporte DISTINTO (D2), sin
-     * solapes — cada reporte cae en UN bucket según el estado más pendiente de
-     * sus alertas (nueva > vista > gestionada): "te esperan a ti" si tiene ≥1
-     * nueva; si no, "en revisión" si tiene ≥1 vista; si no, "cerrados".
-     * recibidos = cerrados + enRevision + teEsperan. Sin ventana temporal: el
-     * embudo es el estado actual del colegio. Reportes eliminados no cuentan.
+     * SPEC-158 (T001, FR-003): embudo de estado por reporte DISTINTO (D2).
+     * Bucket: nueva > vista > gestionada. recibidos = suma de los tres.
      */
     async embudoPorReporte(colegioId: string): Promise<{ recibidos: number; cerrados: number; enRevision: number; teEsperan: number }> {
         const filas: { bucket: string; total: number }[] = await this.db.$queryRaw`
@@ -308,13 +342,8 @@ export class AlertaColegioRepository {
     }
 
     /**
-     * SPEC-158 (T002, FR-004): reportes DISTINTOS (D2) por hora del día en hora
-     * de Colombia (`America/Bogota`, UTC-5 sin DST), todo el histórico — el
-     * patrón nocturno es estructural, no del mes. `creadoEn` es TIMESTAMP naive
-     * en UTC: primero se reinterpreta como UTC (`AT TIME ZONE 'UTC'`) y luego
-     * se convierte a Bogotá. Si la tz no existe en la BD (contenedor sin
-     * tzdata), cae a UTC-5 fijo documentado — NUNCA a la hora del servidor.
-     * Devuelve exactamente 24 posiciones (0-23) con ceros rellenos.
+     * SPEC-158 (T002, FR-004): reportes DISTINTOS (D2) por hora del día en hora de Colombia.
+     * Fallback a UTC-5 fijo si la tz no existe en la BD.
      */
     async reloj24h(colegioId: string): Promise<number[]> {
         let filas: { hora: number; reportes: number }[];
@@ -352,7 +381,7 @@ export class AlertaColegioRepository {
      */
     findPorReporteConVinculoYGrado(reporteId: string) {
         return this.db.alertaColegio.findMany({
-            where: { reporteId },
+            where: { reporteId, tipoSujeto: "ESTUDIANTE" },
             orderBy: { creadoEn: "asc" },
             select: {
                 id: true,
@@ -392,6 +421,7 @@ export class AlertaColegioRepository {
             where: { id: alertaId },
             select: {
                 colegioId: true,
+                tipoSujeto: true,
                 identificadorEstudiante: {
                     select: { estudiante: { select: { id: true, cursoId: true } } },
                 },
@@ -408,91 +438,6 @@ export class AlertaColegioRepository {
     }
 
     /**
-     * SPEC-151 (FR-004): resumen mensual del colegio — reportes distintos, alertas
-     * totales y cursos afectados en el rango [inicioMes, finioMes) sobre
-     * `AlertaColegio.creadoEn`. Solo reportes no eliminados.
-     */
-    async resumenMensual(
-        colegioId: string,
-        inicioMes: Date,
-        finMes: Date
-    ): Promise<{ reportesDistintos: number; alertasTotales: number; cursosAfectados: number }> {
-        const filas: { reportesDistintos: number; alertasTotales: number; cursosAfectados: number }[] = await this.db.$queryRaw`
-            SELECT
-                COUNT(DISTINCT ac."reporteId")::int AS "reportesDistintos",
-                COUNT(*)::int AS "alertasTotales",
-                COUNT(DISTINCT a."cursoId")::int AS "cursosAfectados"
-            FROM "AlertaColegio" ac
-            JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
-            JOIN "Alumno" a ON a.id = i."alumnoId"
-            JOIN "Reporte" r ON r.id = ac."reporteId"
-            WHERE ac."colegioId" = ${colegioId}
-              AND a."colegioId" = ${colegioId}
-              AND ac."creadoEn" >= ${inicioMes}
-              AND ac."creadoEn" < ${finMes}
-              AND r.eliminado = false
-        `;
-        return filas[0] ?? { reportesDistintos: 0, alertasTotales: 0, cursosAfectados: 0 };
-    }
-
-    /**
-     * SPEC-151 (FR-004): desglose mensual por curso — reportes distintos y alertas
-     * totales por curso en el rango. Solo cursos con actividad en el mes.
-     */
-    async porCursoMensual(
-        colegioId: string,
-        inicioMes: Date,
-        finMes: Date
-    ): Promise<{ cursoId: string; nombre: string; reportesDistintos: number; alertasTotales: number }[]> {
-        return this.db.$queryRaw`
-            SELECT
-                a."cursoId" AS "cursoId",
-                c.nombre AS nombre,
-                COUNT(DISTINCT ac."reporteId")::int AS "reportesDistintos",
-                COUNT(*)::int AS "alertasTotales"
-            FROM "AlertaColegio" ac
-            JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
-            JOIN "Alumno" a ON a.id = i."alumnoId"
-            JOIN "Curso" c ON c.id = a."cursoId"
-            JOIN "Reporte" r ON r.id = ac."reporteId"
-            WHERE ac."colegioId" = ${colegioId}
-              AND a."colegioId" = ${colegioId}
-              AND c."colegioId" = ${colegioId}
-              AND ac."creadoEn" >= ${inicioMes}
-              AND ac."creadoEn" < ${finMes}
-              AND r.eliminado = false
-            GROUP BY a."cursoId", c.nombre
-            ORDER BY "reportesDistintos" DESC, c.nombre ASC
-        `;
-    }
-
-    /**
-     * SPEC-151 (FR-004): desglose mensual por categoría de conducta — reportes
-     * distintos y alertas totales. Categorías sin actividad se omiten.
-     */
-    async porCategoriaMensual(
-        colegioId: string,
-        inicioMes: Date,
-        finMes: Date
-    ): Promise<{ categoria: string; reportesDistintos: number; alertasTotales: number }[]> {
-        return this.db.$queryRaw`
-            SELECT
-                cl.categoria::text AS categoria,
-                COUNT(DISTINCT ac."reporteId")::int AS "reportesDistintos",
-                COUNT(*)::int AS "alertasTotales"
-            FROM "AlertaColegio" ac
-            JOIN "Reporte" r ON r.id = ac."reporteId"
-            JOIN "ClasificacionIA" cl ON cl."reporteId" = r.id
-            WHERE ac."colegioId" = ${colegioId}
-              AND ac."creadoEn" >= ${inicioMes}
-              AND ac."creadoEn" < ${finMes}
-              AND r.eliminado = false
-            GROUP BY cl.categoria
-            ORDER BY "reportesDistintos" DESC, cl.categoria ASC
-        `;
-    }
-
-    /**
      * SPEC-159 (FR-002): detalle del caso para el colegio — SIEMPRE filtrado por
      * tenant (null si no existe o es ajeno). Resumen visible: estudiante
      * (nombre+apellidos), curso, plataforma y TIPO de identificador — NUNCA el
@@ -506,6 +451,7 @@ export class AlertaColegioRepository {
                 colegioId: true,
                 reporteId: true,
                 estado: true,
+                tipoSujeto: true,
                 creadoEn: true,
                 reporte: {
                     select: {
@@ -516,6 +462,7 @@ export class AlertaColegioRepository {
                 identificadorEstudiante: {
                     select: {
                         tipo: true,
+                        etiquetaRelacion: true,
                         plataforma: { select: { nombre: true } },
                         estudiante: {
                             select: {
@@ -524,6 +471,20 @@ export class AlertaColegioRepository {
                                 curso: { select: { nombre: true, grado: true } },
                             },
                         },
+                    },
+                },
+                identificadorProfesor: {
+                    select: {
+                        tipo: true,
+                        plataforma: { select: { nombre: true } },
+                        profesor: { select: { nombre: true, apellidos: true } },
+                    },
+                },
+                identificadorAcudiente: {
+                    select: {
+                        tipo: true,
+                        plataforma: { select: { nombre: true } },
+                        acudiente: { select: { nombre: true, relacion: true } },
                     },
                 },
             },

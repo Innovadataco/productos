@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-12** (002-PI-062: SPEC-164 Fase B implementada; fases C-G siguen PLANEADAS).
+> Última actualización: **2026-08-12** (002-PI-062: SPEC-165 Fase C implementada; fases D-G siguen PLANEADAS).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -50,7 +50,7 @@
 | [107](107-gate-antirrecaidas/spec.md) | SPEC-107 — El gate que evita recaídas | 🟢 Finalizada |
 | [108](108-higiene-seguridad-ux/spec.md) | SPEC-108 — Higiene de seguridad y UX | 🟢 Finalizada |
 | [109](109-eliminar-modulo-apelacion/spec.md) | SPEC-109 — Eliminar el módulo de apelación actual (D-34) | 🟢 Finalizada (SIN desplegar, pendiente release + ACTA) |
-| [110](110-apelacion-identificador/spec.md) | SPEC-110 — Apelación del identificador reportado | 🟢 Implementada |
+| [110](110-apelacion-identificador/spec.md) | Spec 110 — Apelación del identificador reportado | 🟢 Implementada |
 | [111](111-motor-rubrica-default/spec.md) | SPEC-111 — D-28: el motor de rúbrica pasa a ser el predeterminado | 🟢 Finalizada (SIN desplegar, pendiente release + ACTA) |
 | [113](113-colegio-atrapado-menu-rol/spec.md) | SPEC-113 — El colegio atrapado (I-35/I-35b) y menú por rol (I-36) | 🟢 Finalizada (SIN desplegar, pendiente release + ACTA) |
 | [114](114-suite-e2e-por-rol/spec.md) | SPEC-114 — Suite E2E por rol y estabilización por ciclos | 🟢 Finalizada (6 ciclos verdes; ver cierre.md y docs/ciclos-estabilizacion-114.md) |
@@ -103,7 +103,7 @@
 | [162](162-materia-configurable/spec.md) | SPEC-162 — Materia configurable en cursos (002-PI-061) | 🟢 Implementada |
 | [163](163-acudiente-completo/spec.md) | SPEC-163 — Acudiente completo: identificadores + edición post-alta (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [164](164-identificadores-profesor/spec.md) | SPEC-164 — Identificadores de profesor + estadísticas (002-PI-062) | 🟢 Implementada (ver cierre.md) |
-| [165](165-alertas-extendidas/spec.md) | SPEC-165 — Alertas extendidas: profesor/acudiente (002-PI-062) | 🔵 Planeada |
+| [165](165-alertas-extendidas/spec.md) | SPEC-165 — Alertas extendidas: profesor/acudiente (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [166](166-alertas-nivel-dios/spec.md) | SPEC-166 — Alertas nivel dios: bandeja de prioridad (002-PI-062) | 🔵 Planeada |
 | [167](167-rediseno-3-a-2/spec.md) | SPEC-167 — Rediseño 3→2: Inicio + Estadísticas (002-PI-062) | 🔵 Planeada |
 | [168](168-comite-convivencia/spec.md) | SPEC-168 — Comité de Convivencia por colegio (002-PI-062) | 🔵 Planeada |
@@ -205,7 +205,7 @@
 | [107](107-gate-antirrecaidas/spec.md) | SPEC-107 — El gate que evita recaídas | 🟢 Finalizada |
 | [108](108-higiene-seguridad-ux/spec.md) | SPEC-108 — Higiene de seguridad y UX | 🟢 Finalizada |
 | [109](109-eliminar-modulo-apelacion/spec.md) | SPEC-109 — Eliminar el módulo de apelación actual (D-34) | 🟢 Finalizada (SIN desplegar, pendiente release + ACTA) |
-| [110](110-apelacion-identificador/spec.md) | SPEC-110 — Apelación del identificador reportado | 🟢 Implementada |
+| [110](110-apelacion-identificador/spec.md) | Spec 110 — Apelación del identificador reportado | 🟢 Implementada |
 | [111](111-motor-rubrica-default/spec.md) | SPEC-111 — D-28: el motor de rúbrica pasa a ser el predeterminado | 🟢 Finalizada (SIN desplegar, pendiente release + ACTA) |
 | [113](113-colegio-atrapado-menu-rol/spec.md) | SPEC-113 — El colegio atrapado (I-35/I-35b) y menú por rol (I-36) | 🟢 Finalizada (SIN desplegar, pendiente release + ACTA) |
 | [114](114-suite-e2e-por-rol/spec.md) | SPEC-114 — Suite E2E por rol y estabilización por ciclos | 🟢 Finalizada (6 ciclos verdes; ver cierre.md y docs/ciclos-estabilizacion-114.md) |
@@ -258,7 +258,7 @@
 | [162](162-materia-configurable/spec.md) | SPEC-162 — Materia configurable en cursos (002-PI-061) | 🟢 Implementada |
 | [163](163-acudiente-completo/spec.md) | SPEC-163 — Acudiente completo: identificadores + edición post-alta (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [164](164-identificadores-profesor/spec.md) | SPEC-164 — Identificadores de profesor + estadísticas (002-PI-062) | 🟢 Implementada (ver cierre.md) |
-| [165](165-alertas-extendidas/spec.md) | SPEC-165 — Alertas extendidas: profesor/acudiente (002-PI-062) | 🔵 Planeada |
+| [165](165-alertas-extendidas/spec.md) | SPEC-165 — Alertas extendidas: profesor/acudiente (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [166](166-alertas-nivel-dios/spec.md) | SPEC-166 — Alertas nivel dios: bandeja de prioridad (002-PI-062) | 🔵 Planeada |
 | [167](167-rediseno-3-a-2/spec.md) | SPEC-167 — Rediseño 3→2: Inicio + Estadísticas (002-PI-062) | 🔵 Planeada |
 | [168](168-comite-convivencia/spec.md) | SPEC-168 — Comité de Convivencia por colegio (002-PI-062) | 🔵 Planeada |
