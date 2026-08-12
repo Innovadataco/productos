@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **58** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **60** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -137,7 +137,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | contacto | ContactoConfianza | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 
-### Colegios (multi-tenant) (8)
+### Colegios (multi-tenant) (9)
 
 #### `AcudienteEstudiante`
 
@@ -209,6 +209,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | notasSeguimiento | NotaSeguimiento | lista, relación |
 | auditLogs | AuditLog | lista, relación |
 | sesionesCarga | CargaRosterSesion | lista, relación |
+| Materia | Materia | lista, relación |
+| CursoMateria | CursoMateria | lista, relación |
 
 #### `Curso`
 
@@ -226,6 +228,24 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | profesorTitular | Profesor | opcional, relación (FK) |
 | estudiantes | Estudiante | lista, relación |
+| CursoMateria | CursoMateria | lista, relación |
+
+#### `CursoMateria`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| cursoId | String | — |
+| materiaId | String | — |
+| profesorId | String | opcional |
+| estado | String | — |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
+| curso | Curso | relación (FK) |
+| materia | Materia | relación (FK) |
+| profesor | Profesor | opcional, relación (FK) |
 
 #### `Estudiante`
 
@@ -295,6 +315,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | updatedAt | DateTime | — |
 | colegio | Colegio | relación (FK) |
 | cursos | Curso | lista, relación |
+| CursoMateria | CursoMateria | lista, relación |
 
 ### Evaluación del clasificador (5)
 
@@ -529,7 +550,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (8)
+### Otros (sin regla de dominio) (9)
 
 #### `CargaRosterSesion`
 
@@ -565,6 +586,19 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | identificador | IdentificadorReportado | relación (FK) |
 | reporteNuevo | Reporte | relación (FK) |
+
+#### `Materia`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| nombre | String | — |
+| estado | String | — |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
+| CursoMateria | CursoMateria | lista, relación |
 
 #### `NotaSeguimiento`
 
@@ -1079,7 +1113,9 @@ erDiagram
     Colegio ||--o{ AuditLog : "colegio (opcional)"
     Colegio ||--o{ CargaRosterSesion : "colegio"
     Colegio ||--o{ Curso : "colegio"
+    Colegio ||--o{ CursoMateria : "colegio"
     Colegio ||--o{ Estudiante : "colegio"
+    Colegio ||--o{ Materia : "colegio"
     Colegio ||--o{ NotaSeguimiento : "colegio"
     Colegio ||--o{ PatronInstitucional : "colegio"
     Colegio ||--o{ PreferenciaAlertaColegio : "colegio"
@@ -1089,6 +1125,7 @@ erDiagram
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"
     CorreccionAdmin ||--o{ DatasetEntrenamiento : "correccion (opcional)"
+    Curso ||--o{ CursoMateria : "curso"
     Curso ||--o{ Estudiante : "curso"
     DatasetEntrenamiento ||--o{ EmbeddingDataset : "dataset"
     Departamento ||--o{ Ciudad : "departamento (opcional)"
@@ -1100,6 +1137,7 @@ erDiagram
     EvalRun ||--o{ EvalResultado : "experimento"
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante"
     IdentificadorReportado ||--o{ EventoMatch : "identificador"
+    Materia ||--o{ CursoMateria : "materia"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"
     Pais ||--o{ Ciudad : "pais"
     Pais ||--o{ Colegio : "pais"
@@ -1115,6 +1153,7 @@ erDiagram
     Plataforma ||--o{ PatronInstitucional : "plataforma"
     Plataforma ||--o{ Reporte : "plataforma"
     Profesor ||--o{ Curso : "profesorTitular (opcional)"
+    Profesor ||--o{ CursoMateria : "profesor (opcional)"
     Reporte ||--o{ AlertaColegio : "reporte"
     Reporte ||--o{ ClasificacionIA : "reporte"
     Reporte ||--o{ EmbeddingReporte : "reporte"
