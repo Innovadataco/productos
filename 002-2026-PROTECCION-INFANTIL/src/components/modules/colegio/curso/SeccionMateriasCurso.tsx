@@ -157,7 +157,7 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
 
             {loading ? (
                 <div className="mt-6 flex items-center gap-3 text-muted">
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-accent" />
                     Cargando materias...
                 </div>
             ) : vinculos.length === 0 ? (
@@ -170,7 +170,7 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
             ) : (
                 <div className="mt-6 overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="border-b border-slate-200 dark:border-slate-800">
+                        <thead className="border-b border-tinta/15">
                             <tr className="text-subtle">
                                 <th className="pb-3 font-medium">Materia</th>
                                 <th className="pb-3 font-medium">Profesor</th>

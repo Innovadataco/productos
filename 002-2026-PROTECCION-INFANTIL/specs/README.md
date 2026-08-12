@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-10** (002-PI-058 cerrado; 002-PI-059: SPEC-160 planeada).
+> Última actualización: **2026-08-12** (002-PI-061: SPEC-162 implementada).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -10,10 +10,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **139** |
+| **Total de specs** | **140** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
-| **Implementadas (IMPLEMENTADO)** | **39** |
+| **Implementadas (IMPLEMENTADO)** | **40** |
 | **Pendientes (PLANEADO)** | **2** |
 
 ## Backlog activo (no cerradas)
@@ -100,8 +100,9 @@
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [160](160-dataset-demo-produccion/spec.md) | SPEC-160 — Dataset demo de producción (002-PI-059) | 🔵 Planeada |
+| [162](162-materia-configurable/spec.md) | SPEC-162 — Materia configurable en cursos (002-PI-061) | 🟢 Implementada |
 
-## Tabla completa (117 specs)
+## Tabla completa (118 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -247,6 +248,7 @@
 | [158](158-tablero-colegio/spec.md) | SPEC-158 — Tablero de control del colegio: embudo, reloj 24h, ritmo y barras (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [157](157-sistema-diseno/spec.md) | SPEC-157 — Sistema de diseño de Protección Infantil: tokens, tipografía y primitivos (002-PI-058) | 🟢 Implementada (ver cierre.md) |
 | [160](160-dataset-demo-produccion/spec.md) | SPEC-160 — Dataset demo de producción (002-PI-059) | 🔵 Planeada |
+| [162](162-materia-configurable/spec.md) | SPEC-162 — Materia configurable en cursos (002-PI-061) | 🟢 Implementada |
 
 ## Incidencias de calidad de datos
 

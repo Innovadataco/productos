@@ -146,8 +146,8 @@ export default function MateriasPageClient() {
                         <div
                             className={`rounded-xl p-4 text-sm ${
                                 message.type === "error"
-                                    ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                                    : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
+                                    ? "bg-rubi/10 text-estado-rubi ring-1 ring-rubi/30"
+                                    : "bg-pino/10 text-estado-pino ring-1 ring-pino/30"
                             }`}
                         >
                             {message.text}
@@ -157,7 +157,7 @@ export default function MateriasPageClient() {
                     <GlassCard>
                         {loading ? (
                             <div className="flex items-center gap-3 py-8 text-muted">
-                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-accent" />
                                 Cargando materias...
                             </div>
                         ) : error ? (
@@ -171,7 +171,7 @@ export default function MateriasPageClient() {
                         ) : (
                             <div className="mt-4 overflow-x-auto">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="border-b border-slate-200 dark:border-slate-800">
+                                    <thead className="border-b border-tinta/15">
                                         <tr className="text-subtle">
                                             <th className="pb-3 font-medium">Nombre</th>
                                             <th className="pb-3 font-medium">Estado</th>

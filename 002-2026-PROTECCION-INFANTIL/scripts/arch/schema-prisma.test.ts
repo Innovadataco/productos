@@ -17,6 +17,8 @@
  * (observación especial del estudiante; misma regla).
  * Actualizado 2026-08-10: 58 modelos — SPEC-160 añadió DemoMarcado (tabla de
  * marcado quirúrgico para datos demo en producción; misma regla).
+ * Actualizado 2026-08-12: 60 modelos — SPEC-162 añadió Materia y CursoMateria
+ * (catálogo de materias configurable y vínculo curso-materia; misma regla).
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -27,8 +29,8 @@ const modelos = parsearSchemaPrisma(RUTA_SCHEMA);
 const excepciones = JSON.parse(fs.readFileSync(RUTA_EXCEPCIONES, "utf-8")) as { huerfanosPermitidos: string[] };
 
 describe("parser schema.prisma (SPEC-126)", () => {
-    it("oráculo: 58 modelos (57 + DemoMarcado de SPEC-160)", () => {
-        expect(modelos.length).toBe(58);
+    it("oráculo: 60 modelos (58 + Materia + CursoMateria de SPEC-162)", () => {
+        expect(modelos.length).toBe(60);
     });
 
     it("oráculo: huérfanos = lista de excepciones declarada (ni uno más, ni uno menos)", () => {

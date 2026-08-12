@@ -118,6 +118,17 @@ Como rector quiero ver en la ficha del curso qué materias se dictan y quién la
 
 ---
 
+## Impacto en arquitectura:
+
+- **Modelo de datos**: se añaden las tablas `Materia` y `CursoMateria` con migración aditiva; `Curso` y `Estudiante` no se alteran.
+- **DAL**: nuevos repositorios `MateriaRepository` y `CursoMateriaRepository` (patrón tenant-first SPEC-134).
+- **API**: endpoints bajo `/api/colegio/materias` y `/api/colegio/cursos/[cursoId]/materias`, con validación Zod y rate limiting.
+- **UI**: nueva página `/dashboard/colegio/materias` y sección en la ficha del curso; se actualiza `ColegioSideNav` y `nav-items.ts`.
+- **Auditoría**: acciones `COLEGIO_MATERIA_*` y `COLEGIO_CURSO_MATERIA_*` en `AccionAudit`.
+- **Arquitectura**: la línea base generada (`docs/architecture/`) se regenera para reflejar tablas, rutas y pantallas nuevas.
+
+---
+
 ## Assumptions
 
 - `Curso` y `Estudiante.cursoId` no cambian en esta fase.
