@@ -28,6 +28,8 @@
  * (/dashboard/colegio/materias). Misma regla.
  * Actualizado 2026-08-12 (2): 62 page.tsx — SPEC-164 añade la ficha del profesor
  * (/dashboard/colegio/profesores/[id]). Misma regla.
+ * Actualizado 2026-08-12 (3): 65 page.tsx — SPEC-168 añade las 3 páginas del
+ * Comité de Convivencia (/dashboard/colegio/comite y casos/[id]). Misma regla.
  */
 import { describe, it, expect } from "vitest";
 import { inventarioRutasApp, VALOR_MUESTRA_SEGMENTO } from "./lib/rutas-app";
@@ -36,8 +38,8 @@ import { RUTA_APP } from "./lib/paths";
 const rutas = inventarioRutasApp(RUTA_APP);
 
 describe("inventario de rutas del árbol src/app (SPEC-126)", () => {
-    it("oráculo: 62 páginas (page.tsx) — 61 + 1 de ficha del profesor (SPEC-164)", () => {
-        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(62);
+    it("oráculo: 65 páginas (page.tsx) — 62 + 3 del Comité de Convivencia (SPEC-168)", () => {
+        expect(rutas.filter((r) => r.tipo === "pagina").length).toBe(65);
     });
 
     it("incluye APIs (route.ts) además de páginas", () => {
