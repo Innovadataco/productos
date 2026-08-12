@@ -145,7 +145,11 @@ describe("enviarResumenesSemanales (handler del schedule del lunes)", () => {
 
     it("colegio vencido no recibe resumen; fallo de email en un colegio no detiene a los demás", async () => {
         const { colegio: vencido } = await crearColegioConAdmin();
-        const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        // FIX-CI-5: la vigencia se compara contra el `ahora` que recibe el
+        // schedule (LUNES_07H), no contra la fecha real del runner. El fin de
+        // servicio debe quedar ANTES de ese `ahora` para que el colegio sea
+        // efectivamente vencido de forma determinista.
+        const ayer = new Date(LUNES_07H.getTime() - 24 * 60 * 60 * 1000);
         await prisma.colegio.update({ where: { id: vencido.id }, data: { finServicio: ayer } });
 
         const { colegio: sano } = await crearColegioConAdmin();

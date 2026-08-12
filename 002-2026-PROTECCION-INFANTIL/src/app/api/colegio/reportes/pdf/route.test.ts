@@ -181,6 +181,13 @@ describe("GET /api/colegio/reportes/pdf", () => {
     });
 
     it("dos requests del mismo mes generan PDFs idénticos (determinismo)", async () => {
+        // FIX-CI-4: congelar el reloj ANTES de crear el colegio para que la
+        // vigencia (inicioServicio/finServicio) sea relativa al reloj falso,
+        // no a la fecha real del runner. Así el test es determinístico sin
+        // depender del día en que corra el CI.
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-08-09T12:00:00Z"));
+
         const { colegio } = await setupSchoolAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "5A", grado: "Quinto" });
         const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "Ana Pérez" });
@@ -191,9 +198,6 @@ describe("GET /api/colegio/reportes/pdf", () => {
             etiquetaRelacion: "ESTUDIANTE",
         });
         await crearReporteMensual("+57300000003", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
-
-        vi.useFakeTimers();
-        vi.setSystemTime(new Date("2026-08-09T12:00:00Z"));
 
         const res1 = await getPdf(
             request("GET", "http://localhost:5005/api/colegio/reportes/pdf?mes=2026-07", mockToken)
