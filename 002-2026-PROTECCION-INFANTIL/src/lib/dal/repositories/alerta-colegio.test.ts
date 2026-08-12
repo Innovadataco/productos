@@ -5,7 +5,16 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { crearColegioConAdmin, crearCurso, crearPlataforma } from "@/lib/reporte-test-utils";
+import {
+    crearColegioConAdmin,
+    crearCurso,
+    crearPlataforma,
+    crearProfesor,
+    crearIdentificadorProfesor,
+    crearEstudiante,
+    crearAcudienteEstudiante,
+    crearIdentificadorAcudiente,
+} from "@/lib/reporte-test-utils";
 import { AlertaColegioRepository } from "./alerta-colegio";
 
 const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO", "REVISION_MANUAL", "POSIBLE_SPAM", "REQUIERE_ANONIMIZACION"] as const;
@@ -68,7 +77,7 @@ describe("AlertaColegioRepository", () => {
             [nueva.alerta.id, (await repo.listarPorColegio(a.id, { estado: "vista" }))[0].id].sort()
         );
         expect(todasA.some((x) => x.id === deB.alerta.id), "la alerta de B no se cuela").toBe(false);
-        expect(todasA[0].identificadorEstudiante.valor, "incluye el identificador").toBeTruthy();
+        expect(todasA[0].identificadorEstudiante?.valor, "incluye el identificador").toBeTruthy();
         expect(todasA[0].reporte.clasificacion?.categoria, "incluye la categoría").toBe("CONTACTO_INSISTENTE");
 
         const soloNuevas = await repo.listarPorColegio(a.id, { estado: "nueva" });
@@ -85,9 +94,18 @@ describe("AlertaColegioRepository", () => {
         expect(await repo.obtenerPorId(b.id, deB.alerta.id)).not.toBeNull();
         expect(await repo.obtenerPorId(a.id, deB.alerta.id), "el id ajeno no es visible").toBeNull();
 
-        const existente = await repo.buscarExistente(b.id, deB.reporte.id, deB.identificador.id);
+        const existente = await repo.buscarExistente(b.id, deB.reporte.id, {
+            tipoSujeto: "ESTUDIANTE",
+            identificadorEstudianteId: deB.identificador.id,
+        });
         expect(existente!.id).toBe(deB.alerta.id);
-        expect(await repo.buscarExistente(a.id, deB.reporte.id, deB.identificador.id), "otra combinación = null").toBeNull();
+        expect(
+            await repo.buscarExistente(a.id, deB.reporte.id, {
+                tipoSujeto: "ESTUDIANTE",
+                identificadorEstudianteId: deB.identificador.id,
+            }),
+            "otra combinación = null"
+        ).toBeNull();
     });
 
     it("crear persiste la alerta en estado nueva", async () => {
@@ -101,9 +119,64 @@ describe("AlertaColegioRepository", () => {
         });
         const repo = new AlertaColegioRepository();
 
-        const creada = await repo.crear({ colegioId: a.id, reporteId: base.reporte.id, identificadorEstudianteId: ident2.id });
+        const creada = await repo.crear({
+            colegioId: a.id,
+            reporteId: base.reporte.id,
+            tipoSujeto: "ESTUDIANTE",
+            identificadorEstudianteId: ident2.id,
+        });
         expect(creada.estado).toBe("nueva");
         expect(creada.colegioId).toBe(a.id);
+        expect(creada.tipoSujeto).toBe("ESTUDIANTE");
+    });
+
+    it("crea alertas de profesor y acudiente con sus FKs", async () => {
+        const plataforma = await crearPlataforma();
+        const { colegio: a } = await crearColegioConAdmin();
+        const profesor = await crearProfesor(a.id, { nombre: "Carlos", apellidos: "López" });
+        const identProf = await crearIdentificadorProfesor(profesor.id, a.id, {
+            valor: "+57300PROF",
+            plataformaId: plataforma.id,
+        });
+        const curso = await crearCurso(a.id, { nombre: "6A" });
+        const alumno = await crearEstudiante(curso.id, a.id, { nombre: "Ana" });
+        const acudiente = await crearAcudienteEstudiante(alumno.id, { nombre: "Lucía Pérez", relacion: "madre" });
+        const identAcu = await crearIdentificadorAcudiente(acudiente.id, a.id, {
+            valor: "+57300ACU",
+            plataformaId: plataforma.id,
+        });
+        const reporte = await prisma.reporte.create({
+            data: {
+                identificador: "+57300BASE",
+                plataformaId: plataforma.id,
+                texto: "Reporte base",
+                fechaIncidente: new Date("2026-07-20T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: "RPT-BASE",
+                estado: "CLASIFICADO",
+            },
+        });
+        const repo = new AlertaColegioRepository();
+
+        const alertaProf = await repo.crear({
+            colegioId: a.id,
+            reporteId: reporte.id,
+            tipoSujeto: "PROFESOR",
+            identificadorProfesorId: identProf.id,
+        });
+        expect(alertaProf.tipoSujeto).toBe("PROFESOR");
+        expect(alertaProf.identificadorProfesorId).toBe(identProf.id);
+
+        const alertaAcu = await repo.crear({
+            colegioId: a.id,
+            reporteId: reporte.id,
+            tipoSujeto: "ACUDIENTE",
+            identificadorAcudienteId: identAcu.id,
+        });
+        expect(alertaAcu.tipoSujeto).toBe("ACUDIENTE");
+        expect(alertaAcu.identificadorAcudienteId).toBe(identAcu.id);
     });
 
     it("O-4: cambiarEstado por id de OTRO colegio lanza 404 y la fila ajena queda intacta", async () => {

@@ -66,6 +66,7 @@ async function fixtureAlerta(identificadorValor: string) {
     const alerta = await new AlertaColegioRepository().crear({
         colegioId: colegio.id,
         reporteId: reporte.id,
+        tipoSujeto: "ESTUDIANTE",
         identificadorEstudianteId: identificador.id,
     });
     return { admin, colegio, alerta };

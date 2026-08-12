@@ -13,6 +13,10 @@ import {
     crearIdentificadorEstudiante,
     crearPlataforma,
     crearParametrosReportes,
+    crearProfesor,
+    crearIdentificadorProfesor,
+    crearAcudienteEstudiante,
+    crearIdentificadorAcudiente,
 } from "@/lib/reporte-test-utils";
 import { notificarColegioSiCorresponde } from "@/lib/colegio/alertas";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
@@ -256,6 +260,35 @@ describe("/api/colegio/alertas", () => {
             const json = await res.json();
             expect(json.alertas).toHaveLength(1);
             expect(json.alertas[0].estadoAlerta).toBe("vista");
+        });
+
+        it("filtra por tipo de sujeto", async () => {
+            const { colegio } = await setupSchoolAdmin();
+            const curso = await crearCurso(colegio.id, { nombre: "6A" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "Ana" });
+            const profesor = await crearProfesor(colegio.id, { nombre: "Carlos", apellidos: "López" });
+            const acudiente = await crearAcudienteEstudiante(alumno.id, { nombre: "Lucía Pérez", relacion: "madre" });
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+
+            await crearIdentificadorEstudiante(alumno.id, { valor: "+57300EST", plataformaId: plataforma!.id });
+            await crearIdentificadorProfesor(profesor.id, colegio.id, { valor: "+57300PROF", plataformaId: plataforma!.id });
+            await crearIdentificadorAcudiente(acudiente.id, colegio.id, { valor: "+57300ACU", plataformaId: plataforma!.id });
+
+            const reporteEst = await crearReporte("+57300EST", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
+            const reporteProf = await crearReporte("+57300PROF", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
+            const reporteAcu = await crearReporte("+57300ACU", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
+
+            await notificarColegioSiCorresponde(reporteEst.id);
+            await notificarColegioSiCorresponde(reporteProf.id);
+            await notificarColegioSiCorresponde(reporteAcu.id);
+
+            const resProf = await GET(
+                request("GET", "http://localhost:5005/api/colegio/alertas?tipoSujeto=PROFESOR", undefined, mockToken)
+            );
+            const jsonProf = await resProf.json();
+            expect(jsonProf.alertas).toHaveLength(1);
+            expect(jsonProf.alertas[0].tipoSujeto).toBe("PROFESOR");
+            expect(jsonProf.alertas[0].sujetoNombre).toBe("Carlos López");
         });
     });
 

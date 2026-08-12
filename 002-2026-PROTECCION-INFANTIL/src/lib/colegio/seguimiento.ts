@@ -21,6 +21,7 @@ import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
 import { RegistroAvisoColegioRepository } from "@/lib/dal/repositories/registro-aviso-colegio";
 import { EventoMatchRepository } from "@/lib/dal/repositories/evento-match";
 import { SeguimientoCasoRepository } from "@/lib/dal/repositories/seguimiento-caso";
+import type { TipoSujeto } from "@/lib/dal/repositories/alerta-colegio";
 
 export type TipoHitoCaso = "detectado" | "corroborado" | "vista" | "gestionada" | "avisado";
 
@@ -180,8 +181,10 @@ export interface DetalleCaso {
         estadoReporte: string;
         categoria: string | null;
         creadoEn: string;
-        estudiante: { nombre: string; apellidos: string };
-        curso: { nombre: string; grado: string | null };
+        tipoSujeto: TipoSujeto;
+        sujetoNombre: string;
+        sujetoRelacion: string | null;
+        curso: { nombre: string; grado: string | null } | null;
         plataforma: string | null;
         tipoIdentificador: string;
     };
@@ -215,6 +218,35 @@ export async function obtenerDetalleCaso(colegioId: string, alertaId: string): P
         creadoEn: n.creadoEn.toISOString(),
     }));
 
+    let sujetoNombre: string;
+    let sujetoRelacion: string | null = null;
+    let curso: { nombre: string; grado: string | null } | null = null;
+    let plataforma: string | null = null;
+    let tipoIdentificador: string;
+
+    if (alerta.tipoSujeto === "ESTUDIANTE" && alerta.identificadorEstudiante) {
+        const est = alerta.identificadorEstudiante.estudiante;
+        sujetoNombre = `${est.nombre} ${est.apellidos}`.trim();
+        sujetoRelacion = alerta.identificadorEstudiante.etiquetaRelacion;
+        curso = { nombre: est.curso.nombre, grado: est.curso.grado };
+        plataforma = alerta.identificadorEstudiante.plataforma?.nombre ?? null;
+        tipoIdentificador = alerta.identificadorEstudiante.tipo;
+    } else if (alerta.tipoSujeto === "PROFESOR" && alerta.identificadorProfesor) {
+        const prof = alerta.identificadorProfesor.profesor;
+        sujetoNombre = `${prof.nombre} ${prof.apellidos}`.trim();
+        sujetoRelacion = "PROFESOR";
+        plataforma = alerta.identificadorProfesor.plataforma?.nombre ?? null;
+        tipoIdentificador = alerta.identificadorProfesor.tipo;
+    } else if (alerta.tipoSujeto === "ACUDIENTE" && alerta.identificadorAcudiente) {
+        const acu = alerta.identificadorAcudiente.acudiente;
+        sujetoNombre = acu.nombre;
+        sujetoRelacion = acu.relacion;
+        plataforma = alerta.identificadorAcudiente.plataforma?.nombre ?? null;
+        tipoIdentificador = alerta.identificadorAcudiente.tipo;
+    } else {
+        throw new AppError("Alerta con sujeto incompleto", ERROR_CODES.INTERNAL_ERROR, 500);
+    }
+
     return {
         alerta: {
             id: alerta.id,
@@ -222,16 +254,12 @@ export async function obtenerDetalleCaso(colegioId: string, alertaId: string): P
             estadoReporte: alerta.reporte.estado,
             categoria: alerta.reporte.clasificacion?.categoria ?? null,
             creadoEn: alerta.creadoEn.toISOString(),
-            estudiante: {
-                nombre: alerta.identificadorEstudiante.estudiante.nombre,
-                apellidos: alerta.identificadorEstudiante.estudiante.apellidos,
-            },
-            curso: {
-                nombre: alerta.identificadorEstudiante.estudiante.curso.nombre,
-                grado: alerta.identificadorEstudiante.estudiante.curso.grado,
-            },
-            plataforma: alerta.identificadorEstudiante.plataforma?.nombre ?? null,
-            tipoIdentificador: alerta.identificadorEstudiante.tipo,
+            tipoSujeto: alerta.tipoSujeto as TipoSujeto,
+            sujetoNombre,
+            sujetoRelacion,
+            curso,
+            plataforma,
+            tipoIdentificador,
         },
         timeline: armarTimeline({
             alertaCreadoEn: alerta.creadoEn,

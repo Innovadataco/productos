@@ -357,6 +357,7 @@ export const alertaIdParamsSchema = z.object({
 
 export const alertaQuerySchema = z.object({
     estado: z.enum(["nueva", "vista", "gestionada"]).optional(),
+    tipoSujeto: z.enum(["ESTUDIANTE", "PROFESOR", "ACUDIENTE"]).optional(),
 });
 
 // SPEC-159 (FR-004): nota de la bitácora del caso — texto plano 1..1000

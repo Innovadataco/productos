@@ -165,14 +165,19 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | id | String | id |
 | colegioId | String | — |
 | reporteId | String | — |
-| identificadorEstudianteId | String | — |
+| identificadorEstudianteId | String | opcional |
+| identificadorProfesorId | String | opcional |
+| identificadorAcudienteId | String | opcional |
+| tipoSujeto | String | — |
 | estado | String | — |
 | patronInstitucionalId | String | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
 | reporte | Reporte | relación (FK) |
-| identificadorEstudiante | IdentificadorEstudiante | relación (FK) |
+| identificadorEstudiante | IdentificadorEstudiante | opcional, relación (FK) |
+| identificadorProfesor | IdentificadorProfesor | opcional, relación (FK) |
+| identificadorAcudiente | IdentificadorAcudiente | opcional, relación (FK) |
 | patronInstitucional | PatronInstitucional | opcional, relación (FK) |
 | seguimiento | SeguimientoCaso | opcional, relación |
 
@@ -610,6 +615,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | acudiente | AcudienteEstudiante | relación (FK) |
 | colegio | Colegio | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
+| alertas | AlertaColegio | lista, relación |
 
 #### `IdentificadorProfesor`
 
@@ -627,6 +633,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | profesor | Profesor | relación (FK) |
 | colegio | Colegio | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
+| alertas | AlertaColegio | lista, relación |
 
 #### `Materia`
 
@@ -1179,7 +1186,9 @@ erDiagram
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
     EvalRun ||--o{ EvalResultado : "experimento"
-    IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante"
+    IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
+    IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante (opcional)"
+    IdentificadorProfesor ||--o{ AlertaColegio : "identificadorProfesor (opcional)"
     IdentificadorReportado ||--o{ EventoMatch : "identificador"
     Materia ||--o{ CursoMateria : "materia"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"

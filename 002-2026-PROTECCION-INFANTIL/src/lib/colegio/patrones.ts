@@ -74,7 +74,7 @@ export async function agregarPatronPorReporte(reporteId: string): Promise<void> 
         const vigencia = await verificarVigenciaPorColegioId(colegioId);
         if (!vigencia.vigente) continue; // colegio no vigente: no acumula (regla de alertas)
 
-        const grado = alerta.identificadorEstudiante.estudiante.curso?.grado ?? SIN_GRADO_REGISTRADO;
+        const grado = alerta.identificadorEstudiante?.estudiante.curso?.grado ?? SIN_GRADO_REGISTRADO;
         try {
             await withUnitOfWork(async (tx) => {
                 const patron = await new PatronInstitucionalRepository(tx).upsertIncrementar(colegioId, {

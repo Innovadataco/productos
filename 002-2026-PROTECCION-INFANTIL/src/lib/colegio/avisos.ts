@@ -267,8 +267,10 @@ export async function procesarEnvioAviso(job: {
  */
 export async function evaluarUmbralesPorAlerta(alertaId: string): Promise<void> {
     const alerta = await new AlertaColegioRepository().obtenerDestinoUmbrales(alertaId);
-    const estudiante = alerta?.identificadorEstudiante.estudiante;
-    if (!alerta || !estudiante) return;
+    // SPEC-165: los umbrales por curso/estudiante solo aplican a alertas de estudiante.
+    if (!alerta || alerta.tipoSujeto !== "ESTUDIANTE") return;
+    const estudiante = alerta.identificadorEstudiante?.estudiante;
+    if (!estudiante) return;
 
     const colegioId = alerta.colegioId;
     const alertas = new AlertaColegioRepository();

@@ -2,6 +2,8 @@ import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
+import { IdentificadorProfesorRepository } from "@/lib/dal/repositories/identificador-profesor";
+import { IdentificadorAcudienteRepository } from "@/lib/dal/repositories/identificador-acudiente";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { registrarEventoAviso, evaluarUmbralesPorAlerta } from "./avisos";
 import { verificarVigenciaPorColegioId } from "./vigencia";
@@ -17,13 +19,15 @@ const ESTADOS_VISIBLES: EstadoReporte[] = [
 
 // SPEC-134 (E-1): el acceso a datos vive en los repos del DAL (tenant obligatorio);
 // la lógica de negocio (dedupe, cooldown, mapeo a campos no sensibles) queda aquí.
-export type { EstadoAlertaColegio } from "@/lib/dal/repositories/alerta-colegio";
-import type { EstadoAlertaColegio } from "@/lib/dal/repositories/alerta-colegio";
+export type { EstadoAlertaColegio, TipoSujeto } from "@/lib/dal/repositories/alerta-colegio";
+import type { EstadoAlertaColegio, TipoSujeto, CrearAlertaInput } from "@/lib/dal/repositories/alerta-colegio";
 
 export interface AlertaColegioListado {
     id: string;
-    identificador: string;
-    relacion: string;
+    tipoSujeto: TipoSujeto;
+    identificador: string | null;
+    relacion: string | null;
+    sujetoNombre: string | null;
     categoria: string | null;
     estadoReporte: string;
     estadoAlerta: string;
@@ -59,11 +63,28 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
 
         const identificadorNormalizado = reporte.identificador.trim().toLowerCase();
 
-        // Búsqueda cross-tenant a propósito (excepción documentada en el repo):
-        // hay que avisar a CADA colegio que registró el identificador.
-        const identificadores = await new IdentificadorEstudianteRepository().buscarActivosPorValor(identificadorNormalizado);
+        // SPEC-165: búsqueda cross-tenant a propósito en los tres tipos de sujeto.
+        // Cada repo documenta la excepción; fallo en uno no impide los otros.
+        const [identificadoresEstudiante, identificadoresProfesor, identificadoresAcudiente] = await Promise.all([
+            new IdentificadorEstudianteRepository().buscarActivosPorValor(identificadorNormalizado).catch((err) => {
+                logger.error("[COLEGIO] Error buscando identificadores de estudiante:", err);
+                return [];
+            }),
+            new IdentificadorProfesorRepository().buscarActivosPorValor(identificadorNormalizado).catch((err) => {
+                logger.error("[COLEGIO] Error buscando identificadores de profesor:", err);
+                return [];
+            }),
+            new IdentificadorAcudienteRepository().buscarActivosPorValor(identificadorNormalizado).catch((err) => {
+                logger.error("[COLEGIO] Error buscando identificadores de acudiente:", err);
+                return [];
+            }),
+        ]);
 
-        if (identificadores.length === 0) {
+        if (
+            identificadoresEstudiante.length === 0 &&
+            identificadoresProfesor.length === 0 &&
+            identificadoresAcudiente.length === 0
+        ) {
             logger.info(`[COLEGIO] Notificación omitida: sin identificadores activos para ${reporte.identificador}`);
             return;
         }
@@ -73,8 +94,31 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
         // SPEC-149: alertas creadas (id + colegio) para el pipeline de avisos.
         const alertasCreadas: { id: string; colegioId: string }[] = [];
 
-        for (const identificador of identificadores) {
-            const colegioId = identificador.estudiante.colegioId;
+        // SPEC-165: candidatos de alerta normalizados (colegioId + input de creación).
+        const candidatos: { colegioId: string; input: CrearAlertaInput }[] = [];
+
+        for (const identificador of identificadoresEstudiante) {
+            candidatos.push({
+                colegioId: identificador.estudiante.colegioId,
+                input: { tipoSujeto: "ESTUDIANTE", identificadorEstudianteId: identificador.id },
+            });
+        }
+        for (const identificador of identificadoresProfesor) {
+            candidatos.push({
+                colegioId: identificador.profesor.colegioId,
+                input: { tipoSujeto: "PROFESOR", identificadorProfesorId: identificador.id },
+            });
+        }
+        for (const identificador of identificadoresAcudiente) {
+            const colegioId = identificador.acudiente.estudiante.colegioId;
+            candidatos.push({
+                colegioId,
+                input: { tipoSujeto: "ACUDIENTE", identificadorAcudienteId: identificador.id },
+            });
+        }
+
+        for (const candidato of candidatos) {
+            const { colegioId, input } = candidato;
             const vigente = await colegioEstaVigente(colegioId);
             if (!vigente) {
                 logger.info(`[COLEGIO] Notificación omitida: colegio ${colegioId} no está vigente`);
@@ -82,17 +126,12 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
             }
 
             try {
-                const existente = await alertas.buscarExistente(colegioId, reporte.id, identificador.id);
-
+                const existente = await alertas.buscarExistente(colegioId, reporte.id, input);
                 if (existente) {
                     continue;
                 }
 
-                const alerta = await alertas.crear({
-                    colegioId,
-                    reporteId: reporte.id,
-                    identificadorEstudianteId: identificador.id,
-                });
+                const alerta = await alertas.crear({ colegioId, reporteId: reporte.id, ...input });
 
                 await logAudit({
                     accion: "COLEGIO_ALERTA_CREADA" as AccionAudit,
@@ -103,7 +142,12 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                     valorNuevo: JSON.stringify({
                         colegioId,
                         reporteId: reporte.id,
-                        identificadorEstudianteId: identificador.id,
+                        tipoSujeto: alerta.tipoSujeto,
+                        identificadorEstudianteId:
+                            alerta.tipoSujeto === "ESTUDIANTE" ? alerta.identificadorEstudianteId : null,
+                        identificadorProfesorId: alerta.tipoSujeto === "PROFESOR" ? alerta.identificadorProfesorId : null,
+                        identificadorAcudienteId:
+                            alerta.tipoSujeto === "ACUDIENTE" ? alerta.identificadorAcudienteId : null,
                         estado: alerta.estado,
                     }),
                     ipAddress: "worker",
@@ -121,7 +165,7 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
         // doble email por construcción: aquí solo se ENCOLA (nunca se envía inline)
         // y la idempotencia real vive en la constraint de RegistroAvisoColegio.
         // REPORTE_NUEVO se avisa UNA vez por (colegio, reporte, día) aunque el
-        // reporte toque a varios estudiantes del colegio (misma entidadId).
+        // reporte toque a varios sujetos del colegio (misma entidadId).
         for (const alerta of alertasCreadas) {
             await registrarEventoAviso({
                 colegioId: alerta.colegioId,
@@ -141,24 +185,46 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
 
 /**
  * Lista las alertas de un colegio. Solo expone campos no sensibles:
- * identificador, relación, categoría del reporte, estado del reporte,
- * estado de la alerta y fecha de creación.
+ * tipo de sujeto, identificador (solo estudiante), nombre del sujeto,
+ * relación, categoría del reporte, estado del reporte, estado de la alerta
+ * y fecha de creación.
  */
 export async function listarAlertasColegio(
     colegioId: string,
-    estado?: EstadoAlertaColegio
+    estado?: EstadoAlertaColegio,
+    tipoSujeto?: TipoSujeto
 ): Promise<AlertaColegioListado[]> {
-    const alertas = await new AlertaColegioRepository().listarPorColegio(colegioId, { estado });
+    const alertas = await new AlertaColegioRepository().listarPorColegio(colegioId, { estado, tipoSujeto });
 
-    return alertas.map((alerta) => ({
-        id: alerta.id,
-        identificador: alerta.identificadorEstudiante.valor,
-        relacion: alerta.identificadorEstudiante.etiquetaRelacion,
-        categoria: alerta.reporte.clasificacion?.categoria ?? null,
-        estadoReporte: alerta.reporte.estado,
-        estadoAlerta: alerta.estado,
-        creadoEn: alerta.creadoEn.toISOString(),
-    }));
+    return alertas.map((alerta) => {
+        let identificador: string | null = null;
+        let relacion: string | null = null;
+        let sujetoNombre: string | null = null;
+
+        if (alerta.tipoSujeto === "ESTUDIANTE" && alerta.identificadorEstudiante) {
+            identificador = alerta.identificadorEstudiante.valor;
+            relacion = alerta.identificadorEstudiante.etiquetaRelacion;
+            sujetoNombre = `${alerta.identificadorEstudiante.estudiante.nombre} ${alerta.identificadorEstudiante.estudiante.apellidos}`.trim();
+        } else if (alerta.tipoSujeto === "PROFESOR" && alerta.identificadorProfesor) {
+            relacion = "PROFESOR";
+            sujetoNombre = `${alerta.identificadorProfesor.profesor.nombre} ${alerta.identificadorProfesor.profesor.apellidos}`.trim();
+        } else if (alerta.tipoSujeto === "ACUDIENTE" && alerta.identificadorAcudiente) {
+            relacion = alerta.identificadorAcudiente.acudiente.relacion;
+            sujetoNombre = alerta.identificadorAcudiente.acudiente.nombre;
+        }
+
+        return {
+            id: alerta.id,
+            tipoSujeto: alerta.tipoSujeto as TipoSujeto,
+            identificador,
+            relacion,
+            sujetoNombre,
+            categoria: alerta.reporte.clasificacion?.categoria ?? null,
+            estadoReporte: alerta.reporte.estado,
+            estadoAlerta: alerta.estado,
+            creadoEn: alerta.creadoEn.toISOString(),
+        };
+    });
 }
 
 /**
@@ -190,8 +256,8 @@ export async function cambiarEstadoAlerta(
         tipoRecurso: "AlertaColegio",
         recursoId: alertaId,
         colegioId: alerta.colegioId,
-        valorAnterior: JSON.stringify({ estado: alerta.estado }),
-        valorNuevo: JSON.stringify({ estado }),
+        valorAnterior: JSON.stringify({ estado: alerta.estado, tipoSujeto: alerta.tipoSujeto }),
+        valorNuevo: JSON.stringify({ estado, tipoSujeto: alerta.tipoSujeto }),
         ipAddress,
         userAgent,
     });

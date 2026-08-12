@@ -1,10 +1,10 @@
 # Feature Specification: SPEC-165 — Alertas extendidas: matching sobre profesor/acudiente + tipo de sujeto
 
-**Feature Branch**: `work/002-pi-XXX`
+**Feature Branch**: `work/002-pi-062`
 
 **Created**: 2026-08-12
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: [BRIEF-MODULO-COLEGIO](../../../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-MODULO-COLEGIO.md) §4.2 (reglas de generación de alerta) y §11 Fase C. Fuentes vinculantes: SPEC-077/139 (alertas por identificador registrado), SPEC-134 (tenant-first / DAL E-1), SPEC-145 (modelo `Profesor`), SPEC-149 (pipeline de avisos), SPEC-159 (seguimiento del caso).
 
@@ -15,7 +15,7 @@
 
 ## Impacto en arquitectura:
 
-- **Modelo de datos**: la tabla `AlertaColegio` añade el campo `sujetoTipo` para distinguir estudiante/profesor/acudiente; no se borran alertas históricas.
+- **Modelo de datos**: la tabla `AlertaColegio` añade el campo `tipoSujeto` para distinguir estudiante/profesor/acudiente; no se borran alertas históricas.
 - **Motor/Worker**: `notificarColegioSiCorresponde` consulta `IdentificadorEstudiante`, `IdentificadorProfesor` e `IdentificadorAcudiente` para generar alertas ampliadas.
 
 ---
@@ -152,4 +152,32 @@ Como rector, quiero filtrar y ver el tipo de sujeto en la bandeja de alertas, pa
 
 ## Implementación
 
-*Por completar al cerrar la fase.*
+**Branch**: `work/002-pi-062`  
+**Merge**: `feature/001-scaffolding` (hash y CI-PUSH en `cierre.md`)  
+**Fecha**: 2026-08-12
+
+### Cambios realizados
+
+- **Schema + migración**: `AlertaColegio` añade `tipoSujeto`, `identificadorProfesorId` e `identificadorAcudienteId`; `identificadorEstudianteId` pasa a opcional; relaciones y constraints por tipo; backfill de alertas históricas a `ESTUDIANTE`.
+- **DAL**: `AlertaColegioRepository` soporta creación/búsqueda/listado por tipo de sujeto; agregaciones con join a `Alumno`/`Curso` filtran por `ESTUDIANTE`; `obtenerDetalleConCurso` devuelve los tres vínculos. Las agregaciones mensuales se extrajeron a `AlertaColegioMensualRepository` para respetar el límite de líneas por archivo.
+- **Servicio**: `notificarColegioSiCorresponde` consulta `IdentificadorEstudiante`, `IdentificadorProfesor` e `IdentificadorAcudiente`; crea alertas por tipo con idempotencia y fail-open por tipo.
+- **Avisos/Patrones**: `evaluarUmbralesPorAlerta` solo evalúa alertas de estudiante; `agregarPatronPorReporte` usa optional chaining en el vínculo estudiante.
+- **API/UI**: listado de alertas expone `tipoSujeto` y filtro; detalle del caso se adapta a estudiante/profesor/acudiente, ocultando curso cuando no aplica.
+- **Auditoría**: `COLEGIO_ALERTA_CREADA` y `COLEGIO_ALERTA_ESTADO` incluyen `tipoSujeto` en metadatos.
+- **Tests**: nuevos tests de matching triple, dedupe por tipo, filtro por `tipoSujeto` y regresión del DTO de detalle.
+- **Arquitectura**: regenerado `docs/architecture/01-modelo-datos.md`.
+
+### Gate de calidad
+
+- `npx tsc --noEmit`: ✅
+- `npm run lint`: ✅ (0 errores; warnings preexistentes)
+- `npm run test`: ✅
+- `npm run tokens:check`: ✅
+- `npm run arch:check`: ✅
+- `npm run build`: ✅
+
+### Deuda técnica / notas
+
+- No se tocó `src/lib/ai/**`.
+- No se modificó `Curso` ni `Estudiante.cursoId`.
+- El matching sigue siendo cross-tenant a propósito.

@@ -72,6 +72,7 @@ async function fixtureAlerta(identificadorValor: string) {
     const alerta = await new AlertaColegioRepository().crear({
         colegioId: colegio.id,
         reporteId: reporte.id,
+        tipoSujeto: "ESTUDIANTE",
         identificadorEstudianteId: identificador.id,
     });
     return { admin, colegio, plataforma: plataforma!, reporte, alerta };
@@ -101,7 +102,9 @@ describe("GET /api/colegio/alertas/[id] (SPEC-159)", () => {
 
         expect(caso.alerta.id).toBe(alerta.id);
         expect(caso.alerta.estado).toBe("nueva");
-        expect(caso.alerta.estudiante).toEqual({ nombre: "María", apellidos: "Gómez" });
+        expect(caso.alerta.tipoSujeto).toBe("ESTUDIANTE");
+        expect(caso.alerta.sujetoNombre).toBe("María Gómez");
+        expect(caso.alerta.sujetoRelacion).toBe("ESTUDIANTE");
         expect(caso.alerta.curso.nombre).toBe("6A");
         expect(caso.alerta.plataforma).toBe("WhatsApp");
         expect(caso.alerta.tipoIdentificador).toBe("telefono");
