@@ -1,10 +1,10 @@
 # Feature Specification: SPEC-164 — Identificadores de profesor + profesores en estadísticas
 
-**Feature Branch**: `work/002-pi-0XX` (por definir en radicación de Fase B)
+**Feature Branch**: `work/002-pi-062`
 
 **Created**: 2026-08-12
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: [BRIEF-MODULO-COLEGIO](../../../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-MODULO-COLEGIO.md) §4.1 (eje profesor con identificadores) y §6 (KPIs/profesores en Inicio y Estadísticas). Fuentes vinculantes: SPEC-145 (modelo Profesor), SPEC-134 (tenant-first / DAL E-1), SPEC-077/139 (matching de alertas, preparación para Fase C).
 
@@ -146,4 +146,17 @@ Como rector quiero ver cuántos profesores activos tiene mi colegio tanto en la 
 
 ## Implementación
 
-*Por completar al cerrar la fase. Sección reservada para evidencia de commits, gates y mapeo FR → código.*
+- **Modelo de datos**: migración aditiva `prisma/migrations/20260812113000_spec_164_identificador_profesor/` crea `IdentificadorProfesor` con FKs a `Profesor`, `Colegio` y `Plataforma`; se añaden valores de `AccionAudit` para operaciones de identificador de profesor.
+- **DAL**: `src/lib/dal/repositories/identificador-profesor.ts` con CRUD tenant-first, duplicados, validación de profesor activo y búsqueda cross-tenant (`buscarActivosPorValor`); tests en `identificador-profesor.test.ts`.
+- **Permisos**: `src/lib/colegio/permisos.ts` añade `verificarPropiedadProfesor` e `verificarPropiedadIdentificadorProfesor`.
+- **API**:
+  - `GET/POST /api/colegio/profesores/[id]/identificadores` con validación Zod, normalización/inferencia de tipo, duplicados y auditoría.
+  - `PATCH /api/colegio/identificadores-profesor/[id]` y `PATCH /api/colegio/identificadores-profesor/[id]/estado` con propiedad por tenant y auditoría.
+  - Tests en `src/app/api/colegio/profesores/[id]/identificadores/route.test.ts`.
+- **UI**:
+  - `src/app/dashboard/colegio/profesores/[id]/page.tsx` + `ProfesorDetallePageClient.tsx`: ficha del profesor con alta, edición y activación/desactivación de identificadores.
+  - Enlace a la ficha desde `src/app/dashboard/colegio/profesores/ProfesoresPageClient.tsx`.
+- **Estadísticas**: `src/lib/colegio/estadisticas.ts` incluye conteo de profesores activos en `totales`; `ColegioEstadisticasPageClient.tsx` muestra tarjeta de profesores.
+- **Línea base**: regenerados `docs/architecture/01-modelo-datos.md`, `02-roles-capacidades.md`, `03-pantallas.md`; oráculo de modelos actualizado a 62.
+- **Infraestructura de tests**: fixture `crearIdentificadorProfesor` en `src/lib/reporte-test-utils.ts`; orden de limpieza en `src/lib/test-utils.ts`.
+- **Gate**: `npx tsc --noEmit`, `npm run lint` (0 errores), `npm run tokens:check`, `npm run arch:check`, `npm run test`, `npm run build` verdes.
