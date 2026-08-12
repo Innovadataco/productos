@@ -6,7 +6,7 @@
 
 ## Summary
 
-Introducir el catálogo colegio-scoped `Materia`, hacer que `Curso` referencie una materia y que `Curso.nombre` represente el grupo. La migración es aditiva: `materiaId` nullable, backfill con una materia por defecto por colegio, y actualización progresiva de la UI/API sin romper cursos existentes.
+Introducir el catálogo colegio-scoped `Materia` y una nueva entidad `CursoMateria` que vincula `Curso` × `Materia` × `Profesor` sin modificar `Curso` ni `Estudiante.cursoId`. Esto resuelve la asignatura configurable y, de paso, el profesor multi-curso (§4.4) mediante múltiples filas de `CursoMateria`.
 
 ---
 
@@ -30,12 +30,12 @@ Introducir el catálogo colegio-scoped `Materia`, hacer que `Curso` referencie u
 | §1.2 Solo texto | ✅ Pass | Catálogo y relaciones son texto |
 | §1.3 Presunción de inocencia | ✅ Pass | No afecta consulta pública |
 | §2.1 Stack heredado | ✅ Pass | Next.js + Prisma + JWT manual |
-| §2.4 Modelo SaaS | ✅ Pass | Tabla `Materia` es colegio-scoped |
+| §2.4 Modelo SaaS | ✅ Pass | `Materia` y `CursoMateria` son colegio-scoped |
 | §3.1 TypeScript strict | ✅ Pass | Sin `any`; tipos de Prisma |
-| §3.5 Logs y auditoría | ✅ Pass | FR-010: audit en materias y cambios de materia en curso |
+| §3.5 Logs y auditoría | ✅ Pass | FR-011: audit en materias y curso-materia |
 | §4.1 Singletons | ✅ Pass | Reusa `prisma` singleton |
 | §4.2 Rutas API individuales | ✅ Pass | Un `route.ts` por método/endpoint |
-| I-49 Migraciones aditivas | ✅ Pass | `materiaId` nullable + backfill, sin DROP destructivo |
+| I-49 Migraciones aditivas | ✅ Pass | Solo crea tablas; `Curso` y `Estudiante` no se tocan |
 
 ---
 
@@ -49,7 +49,7 @@ specs/162-materia-configurable/
 ├── plan.md
 ├── data-model.md
 ├── tasks.md
-├── research.md          # (breve) decisiones del brief y análisis de impacto
+├── research.md
 └── checklists/
     └── requirements.md
 ```
@@ -58,16 +58,17 @@ specs/162-materia-configurable/
 
 ```text
 prisma/
-├── schema.prisma                       # + model Materia, + Curso.materiaId
-└── migrations/                         # migración aditiva + backfill
+├── schema.prisma                       # + model Materia, + model CursoMateria
+└── migrations/                         # migración aditiva + seed de materias
 src/
 ├── lib/
 │   ├── dal/
 │   │   └── repositories/
 │   │       ├── materia.ts              # NUEVO: CRUD tenant-first + test
 │   │       ├── materia.test.ts         # NUEVO
-│   │       └── curso.ts                # + materiaId, + joins, actualizar tests
-│   ├── schemas/index.ts                # + materiaBodySchema, cursoBodySchema v2
+│   │       ├── curso-materia.ts        # NUEVO: CRUD tenant-first + test
+│   │       └── curso-materia.test.ts   # NUEVO
+│   ├── schemas/index.ts                # + materiaBodySchema, cursoMateriaBodySchema
 │   └── colegio/
 │       └── materias-seed.ts            # NUEVO: catálogo por defecto por colegio
 ├── app/
@@ -78,24 +79,22 @@ src/
 │   │   │       ├── route.ts            # PATCH
 │   │   │       └── estado/
 │   │   │           └── route.ts        # PATCH estado
-│   │   ├── cursos/
-│   │   │   ├── route.ts                # + materiaId en POST
-│   │   │   └── [id]/
-│   │   │       └── route.ts            # + materiaId en PATCH
-│   │   └── cursos/unificado/
-│   │       └── route.ts                # + materiaId en curso
+│   │   └── cursos/
+│   │       └── [cursoId]/
+│   │           └── materias/
+│   │               ├── route.ts        # GET/POST
+│   │               └── [id]/
+│   │                   ├── route.ts    # PATCH
+│   │                   └── estado/
+│   │                       └── route.ts # PATCH estado
 │   └── dashboard/colegio/
 │       ├── materias/                   # NUEVA página: catálogo
 │       │   └── page.tsx
-│       ├── cursos/
-│       │   ├── CursosPageClient.tsx    # + columna materia, editar materia/grupo
-│       │   ├── [id]/CursoEscritorioClient.tsx  # + materia en header
-│       │   ├── nuevo/page.tsx          # + selector de materia
-│       │   └── unificado/page.tsx      # wizard + materia
-│       └── components/modules/colegio/unificado/
-│           └── SeccionCurso.tsx        # + selector materia + label "Grupo"
+│       └── cursos/
+│           └── [id]/
+│               └── MateriasCursoClient.tsx  # NUEVO: gestión materias del curso
 └── components/modules/colegio/curso/
-    └── CursoHeader.tsx                 # + materia
+    └── CursoHeader.tsx                 # + conteo de materias del curso (opcional)
 ```
 
 ---
@@ -103,30 +102,32 @@ src/
 ## Fases
 
 1. **Schema + migración + seed**
-   - Añadir `Materia`, `Curso.materiaId`, reemplazar unique constraint.
-   - Backfill materia por defecto por colegio.
-   - Seed inicial en alta de colegio (`src/app/api/admin/colegios/route.ts`).
+   - Añadir `model Materia` y `model CursoMateria`.
+   - Migración aditiva: crear ambas tablas; no modificar `Curso` ni `Estudiante`.
+   - Seed inicial de materias al crear colegio (`src/app/api/admin/colegios/route.ts`).
 
 2. **Backend: repositorio y endpoints de materias**
    - `MateriaRepository` con A/B y soft delete.
    - `GET /api/colegio/materias`, `POST /api/colegio/materias`, `PATCH /api/colegio/materias/[id]`, `PATCH /api/colegio/materias/[id]/estado`.
    - Tests A/B y de estado.
 
-3. **Backend: cursos con materia**
-   - Actualizar `CursoRepository` para incluir `materiaId` y validar materia same-tenant/activa.
-   - Actualizar `POST /api/colegio/cursos`, `PATCH /api/colegio/cursos/[id]`, `POST /api/colegio/cursos/unificado`.
-   - Actualizar schemas Zod (`cursoBodySchema`, `cursoUpdateBodySchema`, `payloadUnificadoSchema`).
-   - Actualizar tests existentes de cursos.
+3. **Backend: repositorio y endpoints de CursoMateria**
+   - `CursoMateriaRepository` con validaciones de same-tenant, materia activa, profesor activo.
+   - `GET /api/colegio/cursos/[cursoId]/materias`, `POST ...`, `PATCH .../[id]`, `PATCH .../[id]/estado`.
+   - Tests A/B, duplicados, validaciones de profesor/materia.
 
 4. **Frontend**
    - Página `/dashboard/colegio/materias` para gestionar catálogo.
-   - Actualizar listado, edición, alta y wizard de cursos para materia + grupo.
-   - Ajustar componentes que muestran `curso.nombre` a mostrar `materia + grupo`.
+   - Sección en la ficha del curso para listar/asignar/editar/inactivar materias con profesor.
 
-5. **Integración + arquitectura**
+5. **Auditoría y arquitectura**
+   - Añadir acciones de audit `COLEGIO_MATERIA_CREADA`, `COLEGIO_MATERIA_ACTUALIZADA`, `COLEGIO_MATERIA_ESTADO_CAMBIADO`, `COLEGIO_CURSO_MATERIA_CREADA`, `COLEGIO_CURSO_MATERIA_ACTUALIZADA`, `COLEGIO_CURSO_MATERIA_ESTADO_CAMBIADO`.
    - Regenerar artefactos de arquitectura (`npm run arch:check` en verde).
+
+6. **Integración**
    - Gate completo: `tsc`, `lint`, `tokens:check`, `arch:check`, `test:coverage`, `build`.
    - Commit, push a `work/002-pi-061`, PR a `feature/001-scaffolding`.
+   - CI-PUSH verde.
 
 ---
 
@@ -134,10 +135,10 @@ src/
 
 | Decision | Rationale | Risk / Mitigation |
 |----------|-----------|-------------------|
-| Grupo = atributo string de `Curso`, no entidad aparte | Mínima complejidad; compatible con datos actuales; suficiente para materia × grupo × grado × año. | Si el CEO define profesor multi-curso N:M, el grupo ya existe como dimensión; solo faltaría la relación. |
-| `Curso.nombre` se reinterpreta como grupo, no se renombra columna | Evita migración destructiva y reescritura de queries existentes. | Deuda semántica menor; se documenta en spec y se migra en fase futura si se decide. |
-| `materiaId` nullable | Permite cursos existentes sin materia real; el backfill las apunta a "Otra". | Los cursos nuevos exigen materia en API/UI; se degrada a nullable solo en BD. |
-| Materia por defecto "Otra" | Garantiza que el backfill no falle y que todos los cursos existentes tengan una materia válida. | El rector debe reclasificar manualmente; se muestra "Otra" en UI para incentivar la edición. |
+| `Curso` no se toca; `CursoMateria` es entidad de vínculo | Preserva roster, estudiantes, unique constraint y toda la lógica existente. | Cero riesgo de romper cursos/estudiantes/alertas. |
+| `profesorId` opcional en `CursoMateria` | Permite asignar materia sin definir profesor todavía. | Validar que, si se envía, el profesor sea del mismo colegio y esté activo. |
+| `colegioId` denormalizado en `CursoMateria` | Facilita validaciones de tenant y queries sin joins innecesarios. | Mantener sincronizado: siempre se copia `colegioId` del `Curso`. |
+| Soft delete por `estado` | Consistencia con `Profesor`, `Curso`, `Estudiante` y requisito de historial. | Ninguno; el patrón ya está establecido. |
 | Seed inicial al crear colegio | El rector ya tiene catálogo funcional sin pasos extra. | Lista fija; se permite editar/inactivar. |
 
 ---
@@ -147,8 +148,9 @@ src/
 | FR | Tests principales |
 |----|-------------------|
 | FR-001 / FR-002 | `src/lib/dal/repositories/materia.test.ts`, `src/app/api/colegio/materias/route.test.ts` |
-| FR-003 / FR-004 / FR-005 | `src/lib/dal/repositories/curso.test.ts`, `src/app/api/colegio/cursos/route.test.ts` |
-| FR-006 / FR-008 | `src/app/api/colegio/cursos/route.test.ts`, `src/app/api/colegio/cursos/unificado/route.test.ts` |
-| FR-007 | `src/app/api/colegio/materias/route.test.ts` |
-| FR-009 | Tests de componente de `CursosPageClient`, `CursoEscritorioClient`, `SeccionCurso` |
-| FR-010 | Tests de auditoría en repositorio y API |
+| FR-003 | Tests de regresión de `Curso` y `Estudiante` (no deben cambiar) |
+| FR-004 / FR-005 / FR-006 / FR-007 | `src/lib/dal/repositories/curso-materia.test.ts`, `src/app/api/colegio/cursos/[cursoId]/materias/route.test.ts` |
+| FR-008 | `src/app/api/colegio/materias/route.test.ts` |
+| FR-009 | `src/app/api/colegio/cursos/[cursoId]/materias/route.test.ts` |
+| FR-010 | Tests de componente `MateriasCursoClient` |
+| FR-011 | Tests de auditoría en repositorios y APIs |

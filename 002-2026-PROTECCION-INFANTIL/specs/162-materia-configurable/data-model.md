@@ -9,7 +9,7 @@
 
 ### `Materia`
 
-Catálogo colegio-scoped de materias. Baja lógica por `estado`; nunca se borra físicamente.
+Catálogo colegio-scoped de asignaturas. Baja lógica por `estado`; nunca se borra físicamente.
 
 | Field | Type | Constraints | Notes |
 |-------|------|-------------|-------|
@@ -36,32 +36,60 @@ inactivo → activo (reactivación)
 
 ---
 
-### `Curso` (cambios respecto al estado actual)
+### `CursoMateria` (nuevo)
 
-Se añade `materiaId` (nullable en la migración aditiva) y se reinterpreta `nombre` como el **grupo**.
+Vínculo entre un curso (grupo) y una materia. Un curso puede tener muchas materias; una materia puede estar en muchos cursos. Opcionalmente indica quién la dicta.
 
 | Field | Type | Constraints | Notes |
 |-------|------|-------------|-------|
 | `id` | String | `@id @default(cuid())` | |
-| `colegioId` | String | FK → `Colegio.id` | |
-| `materiaId` | String? | FK → `Materia.id`, nullable | Nullable para compatibilidad con cursos existentes |
-| `nombre` | String | max 150 | Ahora representa el **grupo** (ej. "6A", "B") |
-| `grado` | String? | max 100 | |
-| `anioLectivo` | String? | max 20 | |
-| `estado` | String | `@default("activo")` | |
-| `profesorTitularId` | String? | FK → `Profesor.id` | Sin cambio (SPEC-145) |
-| `createdAt` | DateTime | `@default(now())` | |
-| `updatedAt` | DateTime | `@updatedAt` | |
+| `colegioId` | String | FK → `Colegio.id` | Denormalizado para validación de tenant y queries rápidas |
+| `cursoId` | String | FK → `Curso.id` | |
+| `materiaId` | String | FK → `Materia.id` | |
+| `profesorId` | String? | FK → `Profesor.id`, nullable | Profesor que dicta la materia en ese curso |
+| `estado` | String | `@default("activo")` | `activo` \| `inactivo` |
+| `creadoEn` | DateTime | `@default(now())` | |
+| `actualizadoEn` | DateTime | `@updatedAt` | |
 
 **Constraints**:
-- `@@unique([colegioId, materiaId, nombre, grado, anioLectivo])` — un curso por combinación materia × grupo × grado × año.
-- Se elimina la constraint anterior `@@unique([colegioId, nombre, grado, anioLectivo])` en la misma migración aditiva (Prisma la reemplaza).
+- `@@unique([cursoId, materiaId])` — una sola asignación de materia por curso.
+- `@@index([colegioId, estado])` — listados filtrados por colegio.
+- `@@index([cursoId, estado])` — materias de un curso.
+- `@@index([profesorId])` — cursos/materias de un profesor (futuro profesor multi-curso).
 
 **Validation Rules**:
-- `materiaId` obligatorio para cursos **nuevos**.
-- `materiaId` opcional en PATCH para permitir compatibilidad con cursos existentes.
-- La materia debe pertenecer al mismo `colegioId` y estar `activa`.
-- El grupo (`nombre`) puede estar vacío, pero si está presente debe tener ≤ 150 caracteres.
+- `cursoId`, `materiaId` y `profesorId` (si se envía) deben pertenecer al mismo `colegioId`.
+- `materiaId` debe estar activa al crear un vínculo.
+- `profesorId` debe estar activo al crear un vínculo (si se envía).
+- No se permite eliminar físicamente; la baja es cambio de `estado` a `inactivo`.
+
+**State Transitions**:
+```
+activo → inactivo (baja lógica del vínculo)
+inactivo → activo (reactivación)
+```
+
+---
+
+## Unchanged Entities
+
+### `Curso`
+
+**NO se modifica**. Atributos, relaciones y unique constraint actuales se conservan:
+
+```text
+@@unique([colegioId, nombre, grado, anioLectivo])
+```
+
+`Curso.nombre` sigue representando el grupo (ej. "6°A"). `Estudiante.cursoId` se mantiene intacto.
+
+### `Estudiante`
+
+**NO se modifica**. Los estudiantes siguen colgando directamente de `Curso`.
+
+### `Profesor`
+
+**NO se modifica**. `Profesor` se referencia opcionalmente desde `CursoMateria.profesorId`.
 
 ---
 
@@ -70,18 +98,25 @@ Se añade `materiaId` (nullable en la migración aditiva) y se reinterpreta `nom
 ```text
 Colegio 1──< Materia
 Colegio 1──< Curso
-Materia 1──< Curso
-Profesor 1──< Curso (titular, opcional)
+Colegio 1──< CursoMateria
+Colegio 1──< Profesor
+Colegio 1──< Estudiante
+
 Curso 1──< Estudiante
+Curso 1──< CursoMateria
+
+Materia 1──< CursoMateria
+Profesor 1──< CursoMateria
 ```
+
+---
 
 ## Migration Strategy (I-49 — aditiva y compatible)
 
 1. Crear tabla `Materia` con índice unique `(colegioId, nombre)`.
-2. Añadir columna `materiaId` a `Curso` como nullable.
-3. Añadir FK `Curso.materiaId → Materia.id`.
-4. Reemplazar unique constraint de `Curso` por `(colegioId, materiaId, nombre, grado, anioLectivo)`.
-5. Backfill: por cada `Colegio` existente, crear una materia por defecto `"Otra"` (o `"General"`) en estado `activo` y asignarla a todos sus cursos existentes (deja `nombre` como grupo).
-6. Seed inicial: al crear un nuevo colegio, insertar el catálogo por defecto de materias junto con el colegio (dentro de la misma transacción `withUnitOfWork`).
+2. Crear tabla `CursoMateria` con FKs a `Colegio`, `Curso`, `Materia` y `Profesor`, unique `(cursoId, materiaId)` e índices por `colegioId` y `cursoId`.
+3. **No se toca** la tabla `Curso`: ni columnas nuevas, ni cambio de unique constraint, ni relación con `Estudiante`.
+4. Backfill: por cada `Colegio` existente, crear el catálogo inicial de materias. No se crean vínculos `CursoMateria` automáticamente para cursos existentes (el rector los asignará manualmente).
+5. Seed inicial: al crear un nuevo colegio, insertar el catálogo por defecto de materias dentro de la transacción de alta.
 
-> **Nota sobre compatibilidad**: los cursos existentes quedan con `materiaId` apuntando a la materia por defecto; el rector puede editarlos posteriormente para asignar la materia real. No se renombra la columna `nombre` para evitar reescritura masiva de queries y componentes en esta fase.
+> **Nota sobre compatibilidad**: la migración es puramente aditiva. Los cursos y estudiantes existentes no se ven afectados; la asignación de materias a cursos es opt-in por el rector.

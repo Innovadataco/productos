@@ -4,9 +4,9 @@
 
 ## T001 — Schema y migración aditiva
 - [ ] Añadir `model Materia` en `prisma/schema.prisma`.
-- [ ] Añadir `materiaId` nullable a `Curso` y relación.
-- [ ] Reemplazar unique constraint de `Curso`.
-- [ ] Generar migración aditiva con backfill de materia por defecto `"Otra"`.
+- [ ] Añadir `model CursoMateria` con FKs a `Colegio`, `Curso`, `Materia`, `Profesor`.
+- [ ] Asegurar que `Curso` y `Estudiante` NO se modifican.
+- [ ] Generar migración aditiva con seed de materias por defecto para colegios existentes.
 - [ ] Ejecutar `npx prisma migrate dev` y `npx prisma generate`.
 
 ## T002 — Seed inicial de materias
@@ -26,24 +26,30 @@
 - [ ] `PATCH /api/colegio/materias/[id]/estado`.
 - [ ] Tests de API con A/B y validaciones.
 
-## T005 — Curso con materia (backend)
-- [ ] Actualizar `CursoRepository` para incluir `materiaId` y validar materia.
-- [ ] Actualizar schemas `cursoBodySchema`, `cursoUpdateBodySchema`, `payloadUnificadoSchema`.
-- [ ] Actualizar `POST /api/colegio/cursos`, `PATCH /api/colegio/cursos/[id]`, `POST /api/colegio/cursos/unificado`.
-- [ ] Actualizar tests existentes de cursos.
+## T005 — Repositorio CursoMateria
+- [ ] Crear `src/lib/dal/repositories/curso-materia.ts`.
+- [ ] Validar same-tenant (`cursoId`, `materiaId`, `profesorId` del mismo colegio).
+- [ ] Validar materia activa y profesor activo (si aplica).
+- [ ] Test `src/lib/dal/repositories/curso-materia.test.ts`: CRUD + A/B + duplicados + validaciones.
 
-## T006 — Frontend de materias
+## T006 — Endpoints de CursoMateria
+- [ ] `GET /api/colegio/cursos/[cursoId]/materias`.
+- [ ] `POST /api/colegio/cursos/[cursoId]/materias`.
+- [ ] `PATCH /api/colegio/cursos/[cursoId]/materias/[id]`.
+- [ ] `PATCH /api/colegio/cursos/[cursoId]/materias/[id]/estado`.
+- [ ] Tests de API con A/B y validaciones.
+
+## T007 — Frontend
 - [ ] Crear página `/dashboard/colegio/materias` (lista + alta + edición + inactivar).
-- [ ] Actualizar `CursosPageClient` para mostrar materia + grupo y editar ambos.
-- [ ] Actualizar `nuevo/page.tsx` y `SeccionCurso` del wizard.
-- [ ] Actualizar `CursoEscritorioClient` y `CursoHeader`.
+- [ ] Crear `MateriasCursoClient` en ficha del curso para gestionar materias asignadas.
+- [ ] Opcional: mostrar conteo de materias en `CursoHeader`.
 
-## T007 — Auditoría y arquitectura
-- [ ] Añadir acciones de audit `COLEGIO_MATERIA_CREADA`, `COLEGIO_MATERIA_ACTUALIZADA`, `COLEGIO_MATERIA_ESTADO_CAMBIADO`.
-- [ ] Auditar cambio de `materiaId` en curso.
+## T008 — Auditoría y arquitectura
+- [ ] Añadir acciones de audit para `Materia` y `CursoMateria`.
+- [ ] Auditar mutaciones en endpoints y repositorios.
 - [ ] Regenerar artefactos de arquitectura y dejar `npm run arch:check` verde.
 
-## T008 — Gate y cierre
+## T009 — Gate y cierre
 - [ ] `tsc --noEmit`, `lint`, `tokens:check`, `arch:check`, `test:coverage`, `build` verdes.
 - [ ] Actualizar `specs/README.md` (ambas tablas).
 - [ ] Commit, push a `work/002-pi-061`, PR a `feature/001-scaffolding`.

@@ -13,21 +13,28 @@
 
 ## Hallazgos
 
-- `Curso.nombre` hoy es texto libre y en la UI se presenta como "Nombre" con placeholder "Ej. 8° B", es decir, ya se usa como grupo.
-- La unique constraint actual es `(colegioId, nombre, grado, anioLectivo)`.
+- `Curso.nombre` hoy es texto libre y en la UI se presenta como "Nombre" con placeholder "Ej. 8° B", es decir, representa el grupo (curso en terminología colombiana).
+- `Estudiante.cursoId` vive directamente en `Curso`; cualquier intento de convertir `Curso` en materia × grupo duplicaría estudiantes y rompería el roster.
 - No existe ninguna entidad `Materia` ni referencia en el schema.
-- El wizard unificado (`SeccionCurso`) y el endpoint `POST /api/colegio/cursos/unificado` reutilizan `cursoBodySchema`.
-- El alta de colegio usa `withUnitOfWork` y es el punto natural para seedear el catálogo inicial.
+- El wizard unificado (`SeccionCurso`) y el endpoint `POST /api/colegio/cursos/unificado` crean cursos (grupos), no materias.
+- El alta de colegio usa `withUnitOfWork` y es el punto natural para seedear el catálogo inicial de materias.
 - El repositorio `CursoRepository` ya sigue el patrón tenant-first (SPEC-134) y acepta cliente transaccional.
 
-## Decisión de diseño propuesta
+## Corrección tras compuerta ZEUS (2026-08-12)
 
-- **Grupo = atributo string de `Curso`** (`Curso.nombre`, sin renombrar columna por compatibilidad).
-- **`Curso = Materia × grupo × grado × añoLectivo`**.
-- **`Materia`** es un catálogo colegio-scoped con soft delete por `estado`.
-- **Migración aditiva**: `materiaId` nullable + backfill a materia por defecto `"Otra"`.
+La primera versión de la spec proponía `Curso = Materia × grupo`, lo que rompía el roster. ZEUS corrigió:
 
-## Pregunta para la compuerta
+- **Curso** = grado/grupo (sin cambios).
+- **Materia** = asignatura (catálogo colegio-scoped).
+- **CursoMateria** = vínculo N:M entre `Curso` y `Materia`, con `profesorId` opcional.
 
-- ¿ZEUS confirma que grupo es atributo string y no entidad aparte en esta fase?
-- ¿El catálogo inicial propuesto (12 materías) es correcto o se ajusta?
+Esta corrección:
+- No toca `Curso` ni `Estudiante.cursoId`.
+- Permite que un curso tenga varias materias sin duplicar estudiantes.
+- Resuelve gratis el profesor multi-curso (§4.4), ya que un profesor puede aparecer en múltiples filas de `CursoMateria`.
+
+## Decisión de diseño actual
+
+- `Materia`: catálogo colegio-scoped con soft delete.
+- `CursoMateria`: entidad de vínculo con `colegioId` denormalizado, FKs a `Curso`, `Materia`, `Profesor` y unique `(cursoId, materiaId)`.
+- Migración puramente aditiva: crea `Materia` y `CursoMateria`; no modifica `Curso` ni `Estudiante`.
