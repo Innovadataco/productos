@@ -242,39 +242,39 @@ model Usuario {
   creadoEn            DateTime      @default(now())
   actualizadoEn       DateTime      @updatedAt
 
-  tenant                       Tenant?                  @relation(fields: [tenantId], references: [id])
-  colegio                      Colegio?                 @relation(fields: [colegioId], references: [id])
+  tenant                       Tenant?                    @relation(fields: [tenantId], references: [id])
+  colegio                      Colegio?                   @relation(fields: [colegioId], references: [id])
   parametros                   ParametroSistema[]
   auditLogs                    AuditLog[]
   permisosModuloActualizados   PermisoModulo[]
   codigos                      CodigoVerificacion[]
   tokensRecuperacion           TokenRecuperacion[]
   reportes                     Reporte[]
-  reportesDadosDeBaja          Reporte[]                @relation("ReportesDadosDeBaja")
+  reportesDadosDeBaja          Reporte[]                  @relation("ReportesDadosDeBaja")
   correcciones                 CorreccionAdmin[]
   alertasSuscripcion           AlertaSuscripcion[]
   casosEval                    CasoEval[]
   evalRuns                     EvalRun[]
   simulaciones                 SimulacionRun[]
-  casosAsignados               Reporte[]                @relation("CasosOperador")
-  casosComiteAsignados         Reporte[]                @relation("CasosComite")
-  anonimizacionesValidadas     Reporte[]                @relation("AnonimizacionesValidadas")
+  casosAsignados               Reporte[]                  @relation("CasosOperador")
+  casosComiteAsignados         Reporte[]                  @relation("CasosComite")
+  anonimizacionesValidadas     Reporte[]                  @relation("AnonimizacionesValidadas")
   perfilOperador               PerfilOperador?
-  operadoresCreados            PerfilOperador[]         @relation("OperadoresCreados")
+  operadoresCreados            PerfilOperador[]           @relation("OperadoresCreados")
   contactosConfianza           ContactoConfianza[]
-  notificacionesCirculo        Boolean                  @default(true)
-  ultimaNotificacionCirculoEn    DateTime?
-  ultimaNotificacionColegioEn    DateTime?
+  notificacionesCirculo        Boolean                    @default(true)
+  ultimaNotificacionCirculoEn  DateTime?
+  ultimaNotificacionColegioEn  DateTime?
   transicionesReporte          TransicionReporte[]
-  solicitudesComite            SolicitudComite[]        @relation("SolicitudesComite")
-  solicitudesEscaladas         SolicitudComite[]        @relation("SolicitudesEscaladas")
+  solicitudesComite            SolicitudComite[]          @relation("SolicitudesComite")
+  solicitudesEscaladas         SolicitudComite[]          @relation("SolicitudesEscaladas")
   notasSeguimiento             NotaSeguimiento[]
-  integrantesComite            IntegranteComite[]       @relation("IntegrantesComite")
-  integrantesComiteCreados     IntegranteComite[]       @relation("IntegrantesComiteCreados")
-  integrantesComiteModificados IntegranteComite[]       @relation("IntegrantesComiteModificados")
-  apelaciones                  Apelacion[]              @relation("ApelacionesUsuario")
-  apelacionesAsignadas         Apelacion[]              @relation("ApelacionesAsignadasComite")
-  apelacionesResueltas         Apelacion[]              @relation("ApelacionesResueltas")
+  integrantesComite            IntegranteComite[]         @relation("IntegrantesComite")
+  integrantesComiteCreados     IntegranteComite[]         @relation("IntegrantesComiteCreados")
+  integrantesComiteModificados IntegranteComite[]         @relation("IntegrantesComiteModificados")
+  apelaciones                  Apelacion[]                @relation("ApelacionesUsuario")
+  apelacionesAsignadas         Apelacion[]                @relation("ApelacionesAsignadasComite")
+  apelacionesResueltas         Apelacion[]                @relation("ApelacionesResueltas")
   accesosDocumentoApelacion    AccesoDocumentoApelacion[]
 
   @@index([email])
@@ -466,22 +466,24 @@ model Colegio {
   creadoEn                         DateTime            @default(now())
   actualizadoEn                    DateTime            @updatedAt
 
-  pais         Pais          @relation(fields: [paisId], references: [id])
-  departamento Departamento? @relation(fields: [departamentoId], references: [id])
-  ciudad       Ciudad        @relation(fields: [ciudadId], references: [id])
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  admin        Usuario?
-  cursos       Curso[]
-  estudiantes  Estudiante[]
-  profesores   Profesor[]
-  alertas      AlertaColegio[]
-  patrones     PatronInstitucional[]
+  pais               Pais                       @relation(fields: [paisId], references: [id])
+  departamento       Departamento?              @relation(fields: [departamentoId], references: [id])
+  ciudad             Ciudad                     @relation(fields: [ciudadId], references: [id])
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id])
+  admin              Usuario?
+  cursos             Curso[]
+  estudiantes        Estudiante[]
+  profesores         Profesor[]
+  alertas            AlertaColegio[]
+  patrones           PatronInstitucional[]
   preferenciasAvisos PreferenciaAlertaColegio[]
   registrosAvisos    RegistroAvisoColegio[]
-  seguimientosCaso SeguimientoCaso[]
-  notasSeguimiento NotaSeguimiento[]
-  auditLogs    AuditLog[]
-  sesionesCarga CargaRosterSesion[]
+  seguimientosCaso   SeguimientoCaso[]
+  notasSeguimiento   NotaSeguimiento[]
+  auditLogs          AuditLog[]
+  sesionesCarga      CargaRosterSesion[]
+  Materia            Materia[]
+  CursoMateria       CursoMateria[]
 
   @@index([paisId])
   @@index([departamentoId])
@@ -500,12 +502,13 @@ model Curso {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  colegio         Colegio      @relation(fields: [colegioId], references: [id])
-  profesorTitular Profesor?    @relation(fields: [profesorTitularId], references: [id])
+  colegio         Colegio        @relation(fields: [colegioId], references: [id])
+  profesorTitular Profesor?      @relation(fields: [profesorTitularId], references: [id])
   estudiantes     Estudiante[]
+  CursoMateria    CursoMateria[]
 
-  @@index([colegioId, estado])
   @@unique([colegioId, nombre, grado, anioLectivo])
+  @@index([colegioId, estado])
 }
 
 // SPEC-145 (brief §7.2): modelo Profesor mínimo — nombre, apellidos, email?,
@@ -521,10 +524,50 @@ model Profesor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  colegio Colegio @relation(fields: [colegioId], references: [id])
-  cursos  Curso[]
+  colegio      Colegio        @relation(fields: [colegioId], references: [id])
+  cursos       Curso[]
+  CursoMateria CursoMateria[]
 
   @@index([colegioId, estado])
+}
+
+// SPEC-162: catálogo de materias configurable por colegio.
+model Materia {
+  id            String   @id @default(cuid())
+  colegioId     String
+  nombre        String
+  estado        String   @default("activo")
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio      Colegio        @relation(fields: [colegioId], references: [id])
+  CursoMateria CursoMateria[]
+
+  @@unique([colegioId, nombre])
+  @@index([colegioId, estado])
+}
+
+// SPEC-162: vínculo Curso × Materia × Profesor. Resuelve materia configurable
+// y profesor multi-curso sin tocar Curso ni Estudiante.cursoId.
+model CursoMateria {
+  id            String   @id @default(cuid())
+  colegioId     String
+  cursoId       String
+  materiaId     String
+  profesorId    String?
+  estado        String   @default("activo")
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio  Colegio   @relation(fields: [colegioId], references: [id])
+  curso    Curso     @relation(fields: [cursoId], references: [id])
+  materia  Materia   @relation(fields: [materiaId], references: [id])
+  profesor Profesor? @relation(fields: [profesorId], references: [id])
+
+  @@unique([cursoId, materiaId])
+  @@index([colegioId, estado])
+  @@index([cursoId, estado])
+  @@index([profesorId])
 }
 
 // SPEC-144: modelo Estudiante (antes Alumno; tabla física "Alumno" conservada).
@@ -607,8 +650,8 @@ model IdentificadorEstudiante {
   createdAt        DateTime                   @default(now())
   updatedAt        DateTime                   @updatedAt
 
-  estudiante Estudiante  @relation(fields: [estudianteId], references: [id])
-  plataforma Plataforma? @relation(fields: [plataformaId], references: [id])
+  estudiante Estudiante      @relation(fields: [estudianteId], references: [id])
+  plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
   @@unique([estudianteId, valor, tipo, plataformaId])
@@ -624,14 +667,14 @@ model AlertaColegio {
   estado                    String   @default("nueva") // nueva | vista | gestionada
   // SPEC-142 (F6): fila agregada que ESTA alerta aportó (idempotencia + reversa
   // exacta en baja). Nullable: las alertas previas a F6 no aportan al agregado.
-  patronInstitucionalId String?
-  creadoEn              DateTime @default(now())
-  actualizadoEn         DateTime @updatedAt
+  patronInstitucionalId     String?
+  creadoEn                  DateTime @default(now())
+  actualizadoEn             DateTime @updatedAt
 
-  colegio                 Colegio                  @relation(fields: [colegioId], references: [id])
-  reporte                 Reporte                  @relation(fields: [reporteId], references: [id])
-  identificadorEstudiante IdentificadorEstudiante  @relation(fields: [identificadorEstudianteId], references: [id])
-  patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
+  colegio                 Colegio                 @relation(fields: [colegioId], references: [id])
+  reporte                 Reporte                 @relation(fields: [reporteId], references: [id])
+  identificadorEstudiante IdentificadorEstudiante @relation(fields: [identificadorEstudianteId], references: [id])
+  patronInstitucional     PatronInstitucional?    @relation(fields: [patronInstitucionalId], references: [id])
   seguimiento             SeguimientoCaso?
 
   @@unique([colegioId, reporteId, identificadorEstudianteId])
@@ -763,13 +806,13 @@ model Plataforma {
   esActiva  Boolean  @default(true)
   creadoEn  DateTime @default(now())
 
-  reportes                Reporte[]
-  identificadores         IdentificadorReportado[]
-  alertasSuscripcion      AlertaSuscripcion[]
-  identificadoresContacto  IdentificadorContacto[]
+  reportes                  Reporte[]
+  identificadores           IdentificadorReportado[]
+  alertasSuscripcion        AlertaSuscripcion[]
+  identificadoresContacto   IdentificadorContacto[]
   identificadoresEstudiante IdentificadorEstudiante[]
-  apelaciones             Apelacion[]
-  patronesInstitucionales PatronInstitucional[]
+  apelaciones               Apelacion[]
+  patronesInstitucionales   PatronInstitucional[]
 
   @@index([clave])
   @@index([esActiva])
@@ -810,19 +853,19 @@ model Departamento {
 }
 
 model Ciudad {
-  id             String   @id @default(cuid())
-  nombre         String
-  paisId         String
-  departamentoId String?
-  lat            Float?
-  lng            Float?
-  esActivo       Boolean  @default(true)
-  creadoEn       DateTime @default(now())
+  id                String   @id @default(cuid())
+  nombre            String
+  paisId            String
+  departamentoId    String?
+  lat               Float?
+  lng               Float?
+  esActivo          Boolean  @default(true)
+  creadoEn          DateTime @default(now())
   // SPEC-115 (catálogo geográfico GeoNames): clave estable del UPSERT y apoyo a la
   // búsqueda en servidor. nombreNormalizado = NFD sin diacríticos, minúsculas
   // (src/lib/normalizar.ts); poblacion ordena los resultados del buscador.
-  geonameId         Int?   @unique
-  nombreNormalizado String @default("")
+  geonameId         Int?     @unique
+  nombreNormalizado String   @default("")
   poblacion         Int?
 
   pais         Pais          @relation(fields: [paisId], references: [id])
@@ -1022,7 +1065,7 @@ model IdentificadorReportado {
   creadoEn              DateTime  @default(now())
   actualizadoEn         DateTime  @updatedAt
 
-  plataforma  Plataforma               @relation(fields: [plataformaId], references: [id])
+  plataforma   Plataforma    @relation(fields: [plataformaId], references: [id])
   eventosMatch EventoMatch[]
 
   @@unique([identificador, plataformaId])
@@ -1078,10 +1121,10 @@ model Apelacion {
   creadoEn             DateTime        @default(now())
   actualizadoEn        DateTime        @updatedAt
 
-  usuario     Usuario    @relation("ApelacionesUsuario", fields: [usuarioId], references: [id])
-  plataforma  Plataforma @relation(fields: [plataformaId], references: [id])
-  comite      Usuario?   @relation("ApelacionesAsignadasComite", fields: [comiteId], references: [id])
-  resueltoPor Usuario?   @relation("ApelacionesResueltas", fields: [resueltoPorId], references: [id])
+  usuario     Usuario              @relation("ApelacionesUsuario", fields: [usuarioId], references: [id])
+  plataforma  Plataforma           @relation(fields: [plataformaId], references: [id])
+  comite      Usuario?             @relation("ApelacionesAsignadasComite", fields: [comiteId], references: [id])
+  resueltoPor Usuario?             @relation("ApelacionesResueltas", fields: [resueltoPorId], references: [id])
   documentos  DocumentoApelacion[]
 
   @@index([usuarioId])
@@ -1123,7 +1166,6 @@ model AccesoDocumentoApelacion {
   @@index([documentoId])
   @@index([usuarioId])
 }
-
 
 model ContactoConfianza {
   id            String   @id @default(cuid())
@@ -1198,8 +1240,8 @@ model ClasificacionIA {
   posibleAgresorPar     Boolean           @default(false)
   creadoEn              DateTime          @default(now())
 
-  reporte    Reporte          @relation(fields: [reporteId], references: [id], onDelete: Cascade)
-  correccion CorreccionAdmin?
+  reporte      Reporte                    @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  correccion   CorreccionAdmin?
   rubricaVotos ClasificacionRubricaVoto[]
 
   @@index([categoria])
@@ -1379,14 +1421,14 @@ model SimulacionRun {
 }
 
 model SimulacionReporte {
-  id                String        @id @default(cuid())
-  simulacionRunId   String
-  simulacionRun     SimulacionRun @relation(fields: [simulacionRunId], references: [id], onDelete: Cascade)
-  reporteId         String        @unique
-  indice            Int
-  categoriaEsperada String?
+  id                 String        @id @default(cuid())
+  simulacionRunId    String
+  simulacionRun      SimulacionRun @relation(fields: [simulacionRunId], references: [id], onDelete: Cascade)
+  reporteId          String        @unique
+  indice             Int
+  categoriaEsperada  String?
   secundariaEsperada String?
-  createdAt         DateTime      @default(now())
+  createdAt          DateTime      @default(now())
 
   @@index([simulacionRunId])
   @@index([indice])
@@ -1430,14 +1472,14 @@ model PermisoModulo {
 }
 
 model ClasificacionRubricaVoto {
-  id                String   @id @default(cuid())
+  id                String          @id @default(cuid())
   clasificacionIAId String
   clasificacionIA   ClasificacionIA @relation(fields: [clasificacionIAId], references: [id], onDelete: Cascade)
   modelo            String
   categoria         String
   cumple            Boolean
   preguntasJson     Json
-  creadoEn          DateTime @default(now())
+  creadoEn          DateTime        @default(now())
 
   @@index([clasificacionIAId])
   @@map("clasificacion_rubrica_votos")
