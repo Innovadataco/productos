@@ -26,6 +26,7 @@ import { predicadoPermite, type RolBarrido } from "./veredictos";
 /** `dashboardHref` del header (NavHeader.tsx:67-71). */
 export function dashboardHrefPorRol(rol: RolBarrido): string {
     if (rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
+    if (rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite/casos";
     if (rol === "PARENT") return "/dashboard";
     return "/dashboard-publico";
 }
@@ -39,6 +40,8 @@ export function hrefsLogoPorRol(rol: RolBarrido): string[] {
     if (rol === "ANONIMO") return ["/"];
     if (rol === "ADMIN" || rol === "OPERADOR") return ["/", "/dashboard/admin"];
     if (rol === "COMITE_VALIDACION") return ["/", "/dashboard/admin/comite"];
+    // SPEC-168: el comité de convivencia no navega a áreas públicas con sesión activa.
+    if (rol === "COMITE_CONVIVENCIA") return ["/dashboard/colegio/comite/casos"];
     if (rol === "SCHOOL_ADMIN") return ["/", "/dashboard/colegio"];
     return ["/", "/dashboard"];
 }
@@ -60,6 +63,9 @@ const GUARDAS_HEADER: Record<string, (rol: RolBarrido) => boolean> = {
     "/dashboard/admin/configuracion": (rol) => rol === "ADMIN",
     "/dashboard/admin/comite": (rol) => rol === "COMITE_VALIDACION",
     "/dashboard/colegio": (rol) => rol === "SCHOOL_ADMIN",
+    // SPEC-168: menú del Comité de Convivencia.
+    "/dashboard/colegio/comite": (rol) => rol === "SCHOOL_ADMIN",
+    "/dashboard/colegio/comite/casos": (rol) => rol === "COMITE_CONVIVENCIA" || rol === "SCHOOL_ADMIN",
 };
 
 /** href={x} que sabemos resolver estáticamente; cualquier otro falla ruidoso (ZEUS 2).

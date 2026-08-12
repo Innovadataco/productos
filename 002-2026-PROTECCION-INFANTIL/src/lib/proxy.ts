@@ -37,6 +37,9 @@ const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes"];
 // Rutas exclusivas del módulo Colegio.
 const COLEGIO_ROUTES = ["/dashboard/colegio", "/api/me/colegio", "/api/colegio"];
 
+// SPEC-168: rutas exclusivas del Comité de Convivencia (rol COMITE_CONVIVENCIA).
+const COMITE_CONVIVENCIA_ROUTES = ["/dashboard/colegio/comite", "/api/colegio/comite"];
+
 // Rutas de sesión propias de cualquier rol autenticado: datos del usuario actual
 // (el header las consulta para reconocer la sesión), el cambio de contraseña
 // (obligatorio cuando debeCambiarPassword=true) y el cierre de sesión.
@@ -85,6 +88,20 @@ export function esRutaPermitidaSchoolAdmin(pathname: string): boolean {
     return SESION_ROUTES.some((route) => matchesRoute(pathname, route));
 }
 
+function isComiteConvivenciaRoute(pathname: string): boolean {
+    return COMITE_CONVIVENCIA_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
+}
+
+/**
+ * SPEC-168: el Comité de Convivencia solo puede usar sus propias rutas y las de
+ * sesión (cambiar contraseña, /api/me, logout). No accede al resto del módulo
+ * colegio ni al área de usuario final.
+ */
+function esRutaPermitidaComiteConvivencia(pathname: string): boolean {
+    if (isComiteConvivenciaRoute(pathname)) return true;
+    return SESION_ROUTES.some((route) => matchesRoute(pathname, route));
+}
+
 // Rutas públicas que los roles internos no pueden usar (la cuenta institucional no reporta).
 const REPORTAR_ROUTE = "/reportar";
 
@@ -114,6 +131,7 @@ function isUserFinalRoute(pathname: string): boolean {
 export function esDestinoPermitidoPorRol(rol: string | null | undefined, pathname: string): boolean {
     if (!rol) return !pathname.startsWith("/dashboard/admin");
     if (rol === "SCHOOL_ADMIN") return esRutaPermitidaSchoolAdmin(pathname);
+    if (rol === "COMITE_CONVIVENCIA") return esRutaPermitidaComiteConvivencia(pathname);
     if (esRolInterno(rol)) {
         // Mismo orden que proxyCore: admin-only primero, luego el área interna, y solo
         // después usuario-final/reportar. Sin esto, "/dashboard/admin" caía en el
@@ -173,6 +191,8 @@ function esRutaAdminOnly(pathname: string) {
 
 function homeForRole(rol: string) {
     if (rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
+    // SPEC-168: el Comité de Convivencia aterriza en su bandeja de casos.
+    if (rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite/casos";
     if (rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
     // SPEC-127 (I-40, D-42): el padre va a su área de usuario final. Sin este caso caía
     // al default "/dashboard/admin", que la propia puerta le niega → doble rebote a "/".
@@ -217,6 +237,15 @@ async function proxyCore(request: NextRequest) {
     // SCHOOL_ADMIN: módulo colegio + sesión + área pública de solo lectura (SPEC-118/D-37).
     if (rol === "SCHOOL_ADMIN") {
         if (esRutaPermitidaSchoolAdmin(pathname)) return NextResponse.next();
+        if (pathname.startsWith("/api/")) {
+            return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
+        }
+        return redirectToHome(request, rol);
+    }
+
+    // SPEC-168: Comité de Convivencia — rutas propias + sesión, nada más.
+    if (rol === "COMITE_CONVIVENCIA") {
+        if (esRutaPermitidaComiteConvivencia(pathname)) return NextResponse.next();
         if (pathname.startsWith("/api/")) {
             return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
         }

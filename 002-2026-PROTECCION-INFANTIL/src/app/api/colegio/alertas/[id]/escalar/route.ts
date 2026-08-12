@@ -2,21 +2,35 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES } from "@/lib/errors";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { alertaIdParamsSchema } from "@/lib/schemas";
-import { escalarAlerta } from "@/lib/colegio/alertas";
+import { alertaIdParamsSchema, escalarAlertaSchema } from "@/lib/schemas";
+import { ComiteConvivenciaBandejaService } from "@/lib/dal/services/comite-convivencia-bandeja";
+import type { InfoClienteDto } from "@/lib/dal/types/comite-convivencia";
+
+function getClientInfo(request: Request): InfoClienteDto {
+    return {
+        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
+    };
+}
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
-        await assertModulo(user, "colegios_gestion");
+        await assertModulo(user, "colegios_comite");
         const vigencia = await verificarVigenciaColegio(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(
                 { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
+        if (!user.colegioId) {
+            return NextResponse.json(
+                { error: { message: "Usuario no vinculado a un colegio", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
             );
         }
@@ -29,18 +43,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        if (!user.colegioId) {
-            return NextResponse.json(
-                { error: { message: "Usuario no vinculado a un colegio", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
-
         const { id } = withValidation.params(alertaIdParamsSchema)(await params);
-        const alerta = await escalarAlerta(user.colegioId, id, user.id, request);
+        const body = await withValidation.body(escalarAlertaSchema)(request);
 
-        return NextResponse.json({ alerta: { id: alerta.id, estado: alerta.estado } });
+        const resultado = await new ComiteConvivenciaBandejaService().escalarAlerta(
+            user.colegioId,
+            id,
+            body,
+            user.id,
+            getClientInfo(request)
+        );
+
+        return NextResponse.json(resultado, { status: 201 });
     } catch (error) {
-        return errorToResponse(error, "[COLEGIO/ALERTAS/ESCALAR]");
+        if (error instanceof AppError) {
+            return NextResponse.json(error.toJSON(), { status: error.statusCode });
+        }
+        return errorToResponse(error, "[COLEGIO/ALERTAS/[ID]/ESCALAR]");
     }
 }

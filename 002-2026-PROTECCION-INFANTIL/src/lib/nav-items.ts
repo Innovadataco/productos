@@ -38,6 +38,9 @@ export const COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio/materias", label: "Materias", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/cursos/unificado", label: "Subir lista", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/alertas", label: "Alertas", modulo: "colegios_gestion" },
+    // SPEC-168 (Fase F): gestión del comité (rector) y bandeja de casos (rector/comité).
+    { href: "/dashboard/colegio/comite", label: "Comité de Convivencia", modulo: "colegios_comite" },
+    { href: "/dashboard/colegio/comite/casos", label: "Casos del comité", modulo: "colegios_comite_bandeja" },
     { href: "/dashboard/colegio/estadisticas", label: "Estadísticas", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/configuracion", label: "Configuración", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/auditoria", label: "Auditoría", modulo: "colegios_auditoria" },

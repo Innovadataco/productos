@@ -18,6 +18,8 @@ import { Tooltip } from "@/components/ui/Tooltip";
 export function destinoLogo(user: { rol: string } | null, pathname: string | null): string {
     const enAreaAutenticada = pathname?.startsWith("/dashboard") ?? false;
     if (user?.rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
+    // SPEC-168: el comité de convivencia siempre va a su bandeja (su única área).
+    if (user?.rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite/casos";
     if (!user || !enAreaAutenticada) return "/";
     if (user.rol === "ADMIN" || user.rol === "OPERADOR") return "/dashboard/admin";
     if (user.rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
@@ -82,9 +84,11 @@ export function NavHeader() {
 
     const dashboardHref = user?.rol === "SCHOOL_ADMIN"
         ? "/dashboard/colegio"
-        : user?.rol === "PARENT"
-            ? "/dashboard"
-            : "/dashboard-publico";
+        : user?.rol === "COMITE_CONVIVENCIA"
+            ? "/dashboard/colegio/comite/casos"
+            : user?.rol === "PARENT"
+                ? "/dashboard"
+                : "/dashboard-publico";
 
     // El logo lleva al panel del rol SOLO dentro del área autenticada (/dashboard/**).
     // En rutas públicas va al home público aunque haya sesión (SPEC-106), EXCEPTO
@@ -183,6 +187,11 @@ export function NavHeader() {
                                                 Mi bandeja
                                             </NavDropdownLink>
                                         )}
+                                        {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
+                                            <NavDropdownLink href="/dashboard/colegio/comite/casos" onClick={() => setOpen(false)}>
+                                                Mi bandeja
+                                            </NavDropdownLink>
+                                        )}
                                         {!esEmpleado && (
                                             <>
                                                 {esEnlaceNavegable("/dashboard") && (
@@ -274,6 +283,9 @@ export function NavHeader() {
                                 )}
                                 {user.rol === "COMITE_VALIDACION" && esEnlaceNavegable("/dashboard/admin/comite") && (
                                     <MobileLink href="/dashboard/admin/comite" onClick={() => setMobileOpen(false)}>Mi bandeja</MobileLink>
+                                )}
+                                {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
+                                    <MobileLink href="/dashboard/colegio/comite/casos" onClick={() => setMobileOpen(false)}>Mi bandeja</MobileLink>
                                 )}
                                 <button
                                     onClick={async () => {

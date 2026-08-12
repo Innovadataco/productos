@@ -9,6 +9,7 @@ import type { Prisma } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { encryptParameter, decryptParameter } from "@/lib/param-encryption";
+import { hashIdentificacion } from "@/lib/hash-identificacion";
 import { IntegranteComiteRepository, type IntegranteComiteConComite } from "../repositories/integrante-comite";
 import { UsuarioRepository } from "../repositories/usuario";
 import type { InfoClienteDto } from "../types/operador";
@@ -88,6 +89,7 @@ export class ComiteIntegrantesService {
             apellidos,
             tipoIdentificacion,
             numeroIdentificacion: numeroIdentificacionCifrado,
+            hashIdentificacion: hashIdentificacion(numeroIdentificacion),
             email,
             fechaInicio: fechaInicio ? new Date(fechaInicio) : new Date(),
             creadoPorId: adminId,
@@ -140,6 +142,7 @@ export class ComiteIntegrantesService {
         };
         if (numeroIdentificacion) {
             data.numeroIdentificacion = encryptParameter(numeroIdentificacion);
+            data.hashIdentificacion = hashIdentificacion(numeroIdentificacion);
         }
         if (fechaInicio) {
             data.fechaInicio = new Date(fechaInicio);

@@ -51,9 +51,9 @@ export async function POST(request: Request) {
 
         const user = resultado.user;
 
-        // Verificar vigencia del servicio del cliente (SPEC-119: padres y colegios,
-        // una sola función de decisión). Vencer NO borra nada: solo corta el acceso.
-        if (user.rol === "SCHOOL_ADMIN" || user.rol === "PARENT") {
+        // Verificar vigencia del servicio del cliente (SPEC-119: padres y colegios;
+        // SPEC-168: también el Comité de Convivencia). Vencer NO borra nada: solo corta el acceso.
+        if (user.rol === "SCHOOL_ADMIN" || user.rol === "PARENT" || user.rol === "COMITE_CONVIVENCIA") {
             const { verificarVigenciaCliente } = await import("@/lib/colegio/vigencia");
             const vigencia = await verificarVigenciaCliente(user.id);
             if (!vigencia.vigente) {

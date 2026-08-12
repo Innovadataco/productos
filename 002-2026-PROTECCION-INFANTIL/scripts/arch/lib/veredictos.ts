@@ -14,7 +14,7 @@ import { SignJWT } from "jose";
 import { proxy, esDestinoPermitidoPorRol } from "../../../src/lib/proxy";
 import { RUTA_PROXY } from "./paths";
 
-export const ROLES_AUTENTICADOS = ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "SCHOOL_ADMIN", "PARENT"] as const;
+export const ROLES_AUTENTICADOS = ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "SCHOOL_ADMIN", "COMITE_CONVIVENCIA", "PARENT"] as const;
 export type RolAutenticado = (typeof ROLES_AUTENTICADOS)[number];
 export type RolBarrido = RolAutenticado | "ANONIMO";
 export const ROLES_BARRIDO: RolBarrido[] = [...ROLES_AUTENTICADOS, "ANONIMO"];

@@ -10,6 +10,7 @@ import { prisma } from "./lib/prisma";
 import { marcarDemo } from "./lib/marcar";
 import { auditarDemo } from "./lib/auditar";
 import { hashDemoPassword, getDemoPassword } from "./lib/password";
+import { hashIdentificacion } from "@/lib/hash-identificacion";
 import { CORRIDA, NUM_COLEGIOS, CURSOS_POR_COLEGIO, ESTUDIANTES_POR_CURSO, NUM_OPERADORES, NUM_PADRES, PADRES_CON_CIRCULO, NUM_REPORTES, FRACCION_ANONIMOS } from "./lib/config";
 import {
     nombreColegio,
@@ -360,13 +361,15 @@ async function main() {
     await marcarDemo("Usuario", comite.id, { corrida: CORRIDA, script: "sembrar-demo", notas: "COMITE_VALIDACION" });
     resumen.comites++;
 
+    const demoDoc = `DEMOCOMITE${String(1).padStart(5, "0")}`;
     const integrante = await prisma.integranteComite.create({
         data: {
             comiteId: comite.id,
             nombres: nomComite,
             apellidos: apeComite,
             tipoIdentificacion: "CEDULA_CIUDADANIA",
-            numeroIdentificacion: `DEMOCOMITE${String(1).padStart(5, "0")}`,
+            numeroIdentificacion: demoDoc,
+            hashIdentificacion: hashIdentificacion(demoDoc),
             email: comiteEmail,
             estado: "ACTIVO",
             creadoPorId: admin.id,
