@@ -77,6 +77,9 @@ export async function resetDatabase() {
     await prisma.estudianteObservacion.deleteMany();
     await prisma.estudiante.deleteMany();
     // SPEC-145: profesores antes que el colegio (FK RESTRICT); el titular del curso es SET NULL.
+    // SPEC-162: vínculos y catálogo de materias antes que Curso/Profesor/Colegio.
+    await prisma.cursoMateria.deleteMany();
+    await prisma.materia.deleteMany();
     await prisma.profesor.deleteMany();
     await prisma.curso.deleteMany();
     await prisma.parametroSistema.deleteMany();

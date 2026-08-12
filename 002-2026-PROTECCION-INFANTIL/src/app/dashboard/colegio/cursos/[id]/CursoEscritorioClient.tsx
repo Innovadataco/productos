@@ -15,6 +15,7 @@ import { AnilloCurso } from "@/components/modules/colegio/curso/AnilloCurso";
 import { TablaEstudiantes } from "@/components/modules/colegio/curso/TablaEstudiantes";
 import type { EstudianteFila } from "@/components/modules/colegio/curso/TablaEstudiantes";
 import { FormAgregarEstudiante } from "@/components/modules/colegio/curso/FormAgregarEstudiante";
+import SeccionMateriasCurso from "@/components/modules/colegio/curso/SeccionMateriasCurso";
 
 /**
  * SPEC-147 (FR-001/FR-005) — Escritorio del curso (mockup §5.5). REEMPLAZA
@@ -54,6 +55,10 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
     const { curso } = datos;
     const totalEstudiantes = datos.estudiantes.length;
     const coberturaPct = Math.round(datos.cobertura.vigilancia * 100);
+
+    function manejarAviso(mensaje: string, tipo: "exito" | "error" = "exito") {
+        setAviso({ tipo, mensaje });
+    }
 
     function abrirEdicion() {
         setEditForm({
@@ -289,6 +294,8 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
                         </div>
                     </section>
                 )}
+
+                <SeccionMateriasCurso cursoId={curso.id} onAviso={manejarAviso} />
             </div>
 
             <FormAgregarEstudiante

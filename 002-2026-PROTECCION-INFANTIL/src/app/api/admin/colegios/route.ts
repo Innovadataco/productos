@@ -11,6 +11,7 @@ import { withValidation } from "@/lib/validation";
 import { colegioBodySchema } from "@/lib/schemas";
 import { calcularFinServicio, esRangoServicioValido } from "@/lib/colegio/periodo";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { seedMateriasPorDefecto } from "@/lib/colegio/materias-seed";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PaisRepository } from "@/lib/dal/repositories/pais";
@@ -155,6 +156,9 @@ export async function POST(request: Request) {
                 estado: "activo",
                 tenantId: tenant.id,
             });
+
+            // SPEC-162: catálogo inicial de materias para el colegio.
+            await seedMateriasPorDefecto(tx, creado.id);
 
             const schoolAdmin = await new UsuarioRepository(tx).crear({
                 email: adminEmail.toLowerCase(),
