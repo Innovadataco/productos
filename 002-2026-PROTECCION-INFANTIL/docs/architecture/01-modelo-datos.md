@@ -635,6 +635,23 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | plataforma | Plataforma | opcional, relación (FK) |
 | alertas | AlertaColegio | lista, relación |
 
+#### `IdentificadorProfesor`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| profesorId | String | — |
+| colegioId | String | — |
+| tipo | String | — |
+| valor | String | — |
+| plataformaId | String | opcional |
+| estado | String | — |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| profesor | Profesor | relación (FK) |
+| colegio | Colegio | relación (FK) |
+| plataforma | Plataforma | opcional, relación (FK) |
+
 #### `Materia`
 
 | Campo | Tipo | Atributos |
