@@ -1739,7 +1739,6 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | colegios_gestion | `/dashboard/colegio/estadisticas` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/materias` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/profesores` | ADMIN, SCHOOL_ADMIN |
-| colegios_gestion | `/dashboard/colegio/tablero` | ADMIN, SCHOOL_ADMIN |
 | comite | `/dashboard/admin/comite/gestion` | ADMIN |
 | comite_auditoria | `/dashboard/admin/comite/auditoria` | ADMIN |
 | comite_bandeja | `/dashboard/admin/comite` | ADMIN, COMITE_VALIDACION |

@@ -32,6 +32,7 @@ function fixture(parcial: Partial<HomeRector> = {}): HomeRector {
             anual: [{ periodo: "2026-01-01T00:00:00.000Z", reportes: 4 }],
         },
         cursosMirada: [{ cursoId: "c1", nombre: "8-B", profesorTitular: "María López", alertas30d: 2 }],
+        embudo: { recibidos: 4, cerrados: 1, enRevision: 2, teEsperan: 1 },
         ...parcial,
     };
 }
@@ -64,7 +65,9 @@ describe("HomeRectorPage", () => {
     it("estado rubí (≥1 nueva): declaración de urgencia con CTA", () => {
         render(<HomeRectorPage nombreUsuario="X" datos={fixture({ semaforo: { alertasNuevas: 2, alertas72h: 2 } })} />);
         expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("necesita que actúes hoy");
-        expect(screen.getByRole("link", { name: /Ver avisos nuevos/ })).toBeTruthy();
+        const ctas = screen.getAllByRole("link", { name: /Ver avisos nuevos/ });
+        expect(ctas.length).toBeGreaterThanOrEqual(1);
+        for (const cta of ctas) expect(cta.getAttribute("href")).toBe("/dashboard/colegio/alertas");
     });
 
     it("estado ámbar (72 h sin nuevas): el copy dice que ya está atendido", () => {

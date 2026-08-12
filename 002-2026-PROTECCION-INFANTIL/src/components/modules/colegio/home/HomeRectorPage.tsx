@@ -10,6 +10,7 @@ import { AnillosProteccion } from "./AnillosProteccion";
 import { TendenciaReportes } from "./TendenciaReportes";
 import { CursosQueMerecenMirada } from "./CursosQueMerecenMirada";
 import { AccionesRapidas } from "./AccionesRapidas";
+import { EmbudoEstado } from "./EmbudoEstado";
 
 /**
  * SPEC-143 (FR-001) — Composición de la home operativa del rector (mockup §5.1):
@@ -53,6 +54,10 @@ export function HomeRectorPage({ nombreUsuario, datos }: HomeRectorPageProps) {
 
                 <div className="anim-entrada" style={retardo(70)}>
                     <HeroEstado estado={estado} />
+                </div>
+
+                <div className="anim-entrada" style={retardo(105)}>
+                    <EmbudoEstado embudo={datos.embudo} />
                 </div>
 
                 <div className="anim-entrada" style={retardo(140)}>

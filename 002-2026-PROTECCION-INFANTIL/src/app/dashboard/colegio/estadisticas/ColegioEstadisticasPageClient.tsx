@@ -6,34 +6,22 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PublicDashboard } from "@/components/modules/PublicDashboard";
+import { TendenciaReportes } from "@/components/modules/colegio/home/TendenciaReportes";
+import { RelojActividad } from "@/components/modules/colegio/estadisticas/RelojActividad";
+import { RitmoMensual } from "@/components/modules/colegio/estadisticas/RitmoMensual";
+import { BarrasPorCurso } from "@/components/modules/colegio/estadisticas/BarrasPorCurso";
+import { SeccionPatrones } from "@/components/modules/colegio/estadisticas/SeccionPatrones";
+import { SeccionComparativa } from "@/components/modules/colegio/estadisticas/SeccionComparativa";
+import { TablaDesgloseCursos } from "@/components/modules/colegio/estadisticas/TablaDesgloseCursos";
+import type { EstadisticasInteligenciaColegio } from "@/lib/colegio/inteligencia";
+import type { ComparativaCursos } from "@/lib/colegio/comparativa";
 
-type EstadisticasCurso = {
-    cursoId: string;
-    nombre: string;
-    grado: string | null;
-    anioLectivo: string | null;
-    alumnos: number;
-    identificadores: number;
-    alertas: number;
-};
-
-type Estadisticas = {
-    colegioId: string;
-    colegioNombre: string;
-    totales: {
-        cursos: number;
-        profesores: number;
-        alumnos: number;
-        identificadores: number;
-        alertas: number;
-    };
-    porCurso: EstadisticasCurso[];
-};
+type Estadisticas = EstadisticasInteligenciaColegio;
 
 const TARJETAS = [
     { key: "cursos", label: "Cursos", icon: "📚" },
     { key: "profesores", label: "Profesores", icon: "👨‍🏫" },
-    { key: "alumnos", label: "Alumnos", icon: "🎓" },
+    { key: "estudiantes", label: "Estudiantes", icon: "🎓" },
     { key: "identificadores", label: "Identificadores", icon: "🆔" },
     { key: "alertas", label: "Alertas", icon: "🚨" },
 ] as const;
@@ -49,37 +37,39 @@ function mesAnteriorDefault(): string {
     return `${anio}-${String(mes).padStart(2, "0")}`;
 }
 
-export default function ColegioEstadisticasPageClient() {
-    const [estadisticas, setEstadisticas] = useState<Estadisticas | null>(null);
-    const [cargando, setCargando] = useState(true);
+interface ColegioEstadisticasPageClientProps {
+    datos: Estadisticas;
+}
+
+export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadisticasPageClientProps) {
+    const [estadisticas, setEstadisticas] = useState<Estadisticas>(datos);
+    const [cargandoComparativa, setCargandoComparativa] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [descargando, setDescargando] = useState(false);
     const [mesInforme, setMesInforme] = useState(mesAnteriorDefault);
     const [descargandoInforme, setDescargandoInforme] = useState(false);
 
-    const cargar = useCallback(async () => {
-        setCargando(true);
+    useEffect(() => {
+        setEstadisticas(datos);
+    }, [datos]);
+
+    const cargarComparativa = useCallback(async (criterio: "grado" | "anioLectivo") => {
+        setCargandoComparativa(true);
         setError(null);
         try {
-            const res = await fetch("/api/colegio/estadisticas", { credentials: "include" });
+            const res = await fetch(`/api/colegio/analisis/comparativa?agruparPor=${criterio}`, { credentials: "include" });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-                setError(data?.error?.message || "Error cargando estadísticas");
-                setEstadisticas(null);
+                setError(data?.error?.message || "Error cargando comparativa");
                 return;
             }
-            setEstadisticas(data);
+            setEstadisticas((prev) => ({ ...prev, comparativa: data as ComparativaCursos }));
         } catch {
-            setError("Error de red cargando estadísticas");
-            setEstadisticas(null);
+            setError("Error de red cargando comparativa");
         } finally {
-            setCargando(false);
+            setCargandoComparativa(false);
         }
     }, []);
-
-    useEffect(() => {
-        cargar();
-    }, [cargar]);
 
     const descargarPdf = async () => {
         setDescargando(true);
@@ -94,7 +84,7 @@ export default function ColegioEstadisticasPageClient() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             const fecha = new Date().toISOString().slice(0, 10);
-            const nombre = estadisticas?.colegioNombre
+            const nombre = estadisticas.colegioNombre
                 ? `estadisticas-${estadisticas.colegioNombre.toLowerCase().replace(/\s+/g, "-")}-${fecha}.pdf`
                 : `estadisticas-${fecha}.pdf`;
             a.href = url;
@@ -140,24 +130,15 @@ export default function ColegioEstadisticasPageClient() {
     return (
         <div className="min-h-screen bg-page">
             <main className="p-4 sm:p-6 lg:p-8">
-                <div className="mx-auto max-w-5xl space-y-8">
-                    {/* SPEC-129 (D-b): vista ampliada pública (mapa/categorías) en la
-                        subsección; el componente es el MISMO del dashboard público. */}
-                    <PublicDashboard />
-
+                <div className="mx-auto max-w-6xl space-y-8">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-body">Estadísticas del colegio</h1>
+                            <h1 className="text-2xl font-bold text-body">Inteligencia del colegio</h1>
                             <p className="text-sm text-muted">
-                                Resumen agregado del colegio. No incluye datos personales ni reportes crudos.
+                                {estadisticas.colegioNombre} — datos agregados sin información personal.
                             </p>
                         </div>
-                        <Button
-                            onClick={descargarPdf}
-                            isLoading={descargando}
-                            disabled={cargando || !estadisticas}
-                            className="accent-gradient"
-                        >
+                        <Button onClick={descargarPdf} isLoading={descargando} disabled={!estadisticas} className="accent-gradient">
                             📄 Descargar PDF
                         </Button>
                     </div>
@@ -166,9 +147,7 @@ export default function ColegioEstadisticasPageClient() {
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                             <div>
                                 <h2 className="text-lg font-semibold text-body">Informe mensual</h2>
-                                <p className="text-sm text-muted">
-                                    Descarga el resumen agregado de un mes específico.
-                                </p>
+                                <p className="text-sm text-muted">Descarga el resumen agregado de un mes específico.</p>
                             </div>
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                                 <input
@@ -196,76 +175,53 @@ export default function ColegioEstadisticasPageClient() {
                         </div>
                     )}
 
-                    {cargando ? (
-                        <div className="flex justify-center py-12">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                        {TARJETAS.map((tarjeta) => (
+                            <GlassCard key={tarjeta.key} className="border-l-4 border-l-emerald-500 text-center">
+                                <div className="text-2xl">{tarjeta.icon}</div>
+                                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-subtle">{tarjeta.label}</p>
+                                <p className="mt-1 text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+                                    {estadisticas.totales[tarjeta.key]}
+                                </p>
+                            </GlassCard>
+                        ))}
+                    </div>
+
+                    <div className="grid gap-5 sm:gap-6 lg:grid-cols-2">
+                        <TendenciaReportes
+                            semanal={estadisticas.tendencia.semanal}
+                            mensual={estadisticas.tendencia.mensual}
+                            anual={estadisticas.tendencia.anual}
+                        />
+                        <RelojActividad horas={estadisticas.reloj24h} />
+                    </div>
+
+                    <div className="grid gap-5 sm:gap-6 lg:grid-cols-2">
+                        <RitmoMensual puntos={estadisticas.tendencia.mensual} />
+                        <BarrasPorCurso cursos={estadisticas.porCurso.map((c) => ({ cursoId: c.cursoId, nombre: c.nombre, reportes30d: c.alertas }))} />
+                    </div>
+
+                    <TablaDesgloseCursos cursos={estadisticas.porCurso} />
+
+                    <SeccionPatrones patrones={estadisticas.patrones} />
+
+                    <SeccionComparativa
+                        comparativa={estadisticas.comparativa}
+                        onCambiarCriterio={cargarComparativa}
+                    />
+                    {cargandoComparativa && (
+                        <div className="flex justify-center py-4">
                             <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
                         </div>
-                    ) : !estadisticas ? (
-                        // Si la carga falla el botón de PDF queda inhabilitado; se ofrece reintento sin recargar la página.
-                        <ErrorState
-                            title="No se pudieron cargar las estadísticas"
-                            description={error || "Intenta recargar la página."}
-                            onRetry={cargar}
-                        />
-                    ) : (
-                        <>
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                                {TARJETAS.map((tarjeta) => (
-                                    <GlassCard
-                                        key={tarjeta.key}
-                                        className="border-l-4 border-l-emerald-500 text-center"
-                                    >
-                                        <div className="text-2xl">{tarjeta.icon}</div>
-                                        <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-subtle">
-                                            {tarjeta.label}
-                                        </p>
-                                        <p className="mt-1 text-3xl font-bold text-emerald-700 dark:text-emerald-300">
-                                            {estadisticas.totales[tarjeta.key]}
-                                        </p>
-                                    </GlassCard>
-                                ))}
-                            </div>
-
-                            <GlassCard>
-                                <h2 className="mb-4 text-lg font-semibold text-body">Desglose por curso</h2>
-                                {estadisticas.porCurso.length === 0 ? (
-                                    <EmptyState
-                                        title="No hay cursos registrados"
-                                        description="Crea cursos y alumnos para ver el desglose."
-                                        icon={<span className="text-2xl">📚</span>}
-                                    />
-                                ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead>
-                                                <tr className="border-b border-emerald-100 dark:border-emerald-900/30">
-                                                    <th className="py-3 pr-4 font-semibold text-subtle">Curso</th>
-                                                    <th className="py-3 pr-4 font-semibold text-subtle">Grado</th>
-                                                    <th className="py-3 pr-4 text-right font-semibold text-subtle">Alumnos</th>
-                                                    <th className="py-3 pr-4 text-right font-semibold text-subtle">Identificadores</th>
-                                                    <th className="py-3 text-right font-semibold text-subtle">Alertas</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {estadisticas.porCurso.map((curso) => (
-                                                    <tr
-                                                        key={curso.cursoId}
-                                                        className="border-b border-emerald-50 dark:border-emerald-950/20 last:border-b-0"
-                                                    >
-                                                        <td className="py-3 pr-4 text-body">{curso.nombre}</td>
-                                                        <td className="py-3 pr-4 text-muted">{curso.grado ?? "—"}</td>
-                                                        <td className="py-3 pr-4 text-right text-body">{curso.alumnos}</td>
-                                                        <td className="py-3 pr-4 text-right text-body">{curso.identificadores}</td>
-                                                        <td className="py-3 text-right text-body">{curso.alertas}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </GlassCard>
-                        </>
                     )}
+
+                    <section aria-labelledby="titulo-mapa-publico" className="space-y-4">
+                        <h2 id="titulo-mapa-publico" className="titular-seccion text-body">
+                            Mapa de reportes a nivel país
+                        </h2>
+                        <p className="text-sm text-muted">Contexto nacional, separado de las estadísticas de tu colegio.</p>
+                        <PublicDashboard />
+                    </section>
                 </div>
             </main>
         </div>

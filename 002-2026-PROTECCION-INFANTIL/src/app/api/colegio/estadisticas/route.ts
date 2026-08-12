@@ -3,7 +3,7 @@ import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
-import { calcularEstadisticasColegio } from "@/lib/colegio/estadisticas";
+import { calcularInteligenciaColegio } from "@/lib/colegio/inteligencia";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
             );
         }
 
-        const estadisticas = await calcularEstadisticasColegio(user.colegioId);
+        const estadisticas = await calcularInteligenciaColegio(user.colegioId);
         return NextResponse.json(estadisticas);
     } catch (error) {
         if (error instanceof AppError) {
