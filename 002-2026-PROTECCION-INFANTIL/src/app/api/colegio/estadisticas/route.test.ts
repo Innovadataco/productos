@@ -134,7 +134,7 @@ describe("/api/colegio/estadisticas", () => {
 
             expect(json.colegioId).toBe(colegio.id);
             expect(json.colegioNombre).toBe(colegio.nombre);
-            expect(json.totales).toEqual({ cursos: 1, alumnos: 1, identificadores: 1, alertas: 1 });
+            expect(json.totales).toEqual({ cursos: 1, profesores: 0, alumnos: 1, identificadores: 1, alertas: 1 });
             expect(json.porCurso).toHaveLength(1);
             expect(json.porCurso[0]).toMatchObject({
                 nombre: "5A",
@@ -158,7 +158,7 @@ describe("/api/colegio/estadisticas", () => {
             );
             expect(res.status).toBe(200);
             const json = await res.json();
-            expect(json.totales).toEqual({ cursos: 0, alumnos: 0, identificadores: 0, alertas: 0 });
+            expect(json.totales).toEqual({ cursos: 0, profesores: 0, alumnos: 0, identificadores: 0, alertas: 0 });
             expect(json.porCurso).toHaveLength(0);
         });
 

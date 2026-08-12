@@ -144,6 +144,11 @@ enum AccionAudit {
   COLEGIO_IDENTIFICADOR_ACUDIENTE_EDITADO
   COLEGIO_IDENTIFICADOR_ACUDIENTE_DESACTIVADO
   COLEGIO_IDENTIFICADOR_ACUDIENTE_REACTIVADO
+  // SPEC-164: identificadores de profesor para alertas futuras (Fase C).
+  COLEGIO_IDENTIFICADOR_PROFESOR_CREADO
+  COLEGIO_IDENTIFICADOR_PROFESOR_EDITADO
+  COLEGIO_IDENTIFICADOR_PROFESOR_DESACTIVADO
+  COLEGIO_IDENTIFICADOR_PROFESOR_REACTIVADO
   // SPEC-149: avisos por email del colegio (envío + cambio de preferencias).
   COLEGIO_AVISO_ENVIADO
   COLEGIO_AVISO_PREFERENCIA_ACTUALIZADA
@@ -501,6 +506,7 @@ model Colegio {
   Materia                 Materia[]
   CursoMateria            CursoMateria[]
   identificadoresAcudiente IdentificadorAcudiente[]
+  identificadoresProfesor  IdentificadorProfesor[]
 
   @@index([paisId])
   @@index([departamentoId])
@@ -541,9 +547,10 @@ model Profesor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  colegio      Colegio        @relation(fields: [colegioId], references: [id])
-  cursos       Curso[]
-  CursoMateria CursoMateria[]
+  colegio             Colegio              @relation(fields: [colegioId], references: [id])
+  cursos              Curso[]
+  CursoMateria        CursoMateria[]
+  identificadoresProf IdentificadorProfesor[]
 
   @@index([colegioId, estado])
 }
@@ -657,6 +664,29 @@ model IdentificadorAcudiente {
   @@unique([acudienteId, tipo, valor, plataformaId])
   @@index([colegioId, estado])
   @@index([acudienteId, estado])
+  @@index([valor])
+}
+
+// SPEC-164: identificadores tipados de un profesor (teléfono, email, nick/usuario
+// en plataforma). Soft delete por estado; no borrado físico.
+model IdentificadorProfesor {
+  id           String   @id @default(cuid())
+  profesorId   String
+  colegioId    String
+  tipo         String
+  valor        String
+  plataformaId String?
+  estado       String   @default("activo") // activo | inactivo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profesor   Profesor    @relation(fields: [profesorId], references: [id])
+  colegio    Colegio     @relation(fields: [colegioId], references: [id])
+  plataforma Plataforma? @relation(fields: [plataformaId], references: [id])
+
+  @@unique([profesorId, tipo, valor, plataformaId])
+  @@index([colegioId, estado])
+  @@index([profesorId, estado])
   @@index([valor])
 }
 
@@ -856,6 +886,7 @@ model Plataforma {
   identificadoresContacto   IdentificadorContacto[]
   identificadoresEstudiante IdentificadorEstudiante[]
   identificadoresAcudiente  IdentificadorAcudiente[]
+  identificadoresProfesor   IdentificadorProfesor[]
   apelaciones               Apelacion[]
   patronesInstitucionales   PatronInstitucional[]
 

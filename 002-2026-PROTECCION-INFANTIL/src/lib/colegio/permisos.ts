@@ -8,6 +8,8 @@ import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { AcudienteEstudianteRepository } from "@/lib/dal/repositories/acudiente-estudiante";
+import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
+import { IdentificadorProfesorRepository } from "@/lib/dal/repositories/identificador-profesor";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
@@ -48,6 +50,24 @@ export interface AcudientePropiedad {
     relacion: string;
     telefono: string | null;
     email: string | null;
+    estado: string;
+}
+
+export interface ProfesorPropiedad {
+    id: string;
+    colegioId: string;
+    nombre: string;
+    apellidos: string;
+    estado: string;
+}
+
+export interface IdentificadorProfesorPropiedad {
+    id: string;
+    profesorId: string;
+    colegioId: string;
+    tipo: string;
+    valor: string;
+    plataformaId: string | null;
     estado: string;
 }
 
@@ -130,5 +150,58 @@ export async function verificarPropiedadAcudiente(
         telefono: acudiente.telefono,
         email: acudiente.email,
         estado: acudiente.estado,
+    };
+}
+
+export async function verificarPropiedadProfesor(
+    usuarioId: string,
+    profesorId: string
+): Promise<ProfesorPropiedad> {
+    const usuario = await new UsuarioRepository().findColegioId(usuarioId);
+    if (!usuario?.colegioId) {
+        throw new Error("Profesor no encontrado");
+    }
+
+    const profesor = await new ProfesorRepository().obtenerPorId(usuario.colegioId, profesorId);
+    if (!profesor) {
+        throw new Error("Profesor no encontrado");
+    }
+
+    return {
+        id: profesor.id,
+        colegioId: usuario.colegioId,
+        nombre: profesor.nombre,
+        apellidos: profesor.apellidos,
+        estado: profesor.estado,
+    };
+}
+
+export async function verificarPropiedadIdentificadorProfesor(
+    usuarioId: string,
+    identificadorId: string,
+    profesorId?: string
+): Promise<IdentificadorProfesorPropiedad> {
+    const usuario = await new UsuarioRepository().findColegioId(usuarioId);
+    if (!usuario?.colegioId) {
+        throw new Error("Identificador no encontrado");
+    }
+
+    const identificador = await new IdentificadorProfesorRepository().obtenerPorId(usuario.colegioId, identificadorId);
+    if (!identificador) {
+        throw new Error("Identificador no encontrado");
+    }
+
+    if (profesorId !== undefined && identificador.profesorId !== profesorId) {
+        throw new Error("Identificador no encontrado");
+    }
+
+    return {
+        id: identificador.id,
+        profesorId: identificador.profesorId,
+        colegioId: usuario.colegioId,
+        tipo: identificador.tipo,
+        valor: identificador.valor,
+        plataformaId: identificador.plataformaId,
+        estado: identificador.estado,
     };
 }

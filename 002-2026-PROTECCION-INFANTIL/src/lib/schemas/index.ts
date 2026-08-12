@@ -194,6 +194,25 @@ export const identificadorAcudienteIdParamsSchema = z.object({
     identificadorId: cuidIdSchema,
 });
 
+// SPEC-164: identificador de un profesor (matching de alertas Fase C).
+export const identificadorProfesorBodySchema = z.object({
+    tipo: z.string().min(1).max(50).optional(),
+    valor: z.string().min(1).max(255),
+    plataformaId: cuidIdSchema.optional(),
+});
+
+export const identificadorProfesorUpdateBodySchema = z
+    .object({
+        tipo: z.string().min(1).max(50).optional(),
+        valor: z.string().min(1).max(255).optional(),
+        plataformaId: cuidIdSchema.optional().nullable(),
+    })
+    .refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+
+export const identificadorProfesorIdParamsSchema = z.object({
+    id: cuidIdSchema,
+});
+
 // SPEC-162: vínculo Curso × Materia × Profesor.
 // El segmento dinámico del curso se llama [id] para no colisionar con otras
 // carpetas bajo cursos/; en este contexto `id` es el identificador del curso.

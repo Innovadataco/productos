@@ -186,6 +186,24 @@ export async function crearIdentificadorAcudiente(
     });
 }
 
+// SPEC-164: fixture de identificador de profesor (colegioId denormalizado).
+export async function crearIdentificadorProfesor(
+    profesorId: string,
+    colegioId: string,
+    data: { tipo?: string; valor?: string; plataformaId?: string | null; estado?: string } = {}
+) {
+    return prisma.identificadorProfesor.create({
+        data: {
+            profesorId,
+            colegioId,
+            tipo: data.tipo ?? "telefono",
+            valor: data.valor ?? `+57${Date.now()}`,
+            plataformaId: data.plataformaId ?? null,
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
 export async function crearPaisCiudad() {
     const pais = await prisma.pais.upsert({
         where: { codigo: "CO" },
