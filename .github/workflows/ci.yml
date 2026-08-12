@@ -11,9 +11,11 @@ on:
     branches: [feature/001-scaffolding]
     paths:
       - "002-2026-PROTECCION-INFANTIL/**"
+      - ".github/workflows/ci.yml"
   pull_request:
     paths:
       - "002-2026-PROTECCION-INFANTIL/**"
+      - ".github/workflows/ci.yml"
   workflow_dispatch:
 
 jobs:
