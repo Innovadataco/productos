@@ -73,6 +73,8 @@ async function sembrarAlerta(
             identificadorEstudianteId: identificadorId,
             estado: opts.estado ?? "vista",
             creadoEn: opts.creadoEn ?? new Date(),
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),
         },
     });
 }

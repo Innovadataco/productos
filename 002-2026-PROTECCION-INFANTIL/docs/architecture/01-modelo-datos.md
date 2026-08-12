@@ -170,6 +170,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadorAcudienteId | String | opcional |
 | tipoSujeto | String | — |
 | estado | String | — |
+| prioridad | String | — |
+| vencimientoSla | DateTime | — |
+| asignadoAId | String | opcional |
 | patronInstitucionalId | String | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
@@ -179,6 +182,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadorProfesor | IdentificadorProfesor | opcional, relación (FK) |
 | identificadorAcudiente | IdentificadorAcudiente | opcional, relación (FK) |
 | patronInstitucional | PatronInstitucional | opcional, relación (FK) |
+| asignadoA | Usuario | opcional, relación (FK) |
 | seguimiento | SeguimientoCaso | opcional, relación |
 
 #### `Colegio`
@@ -1143,6 +1147,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | apelacionesAsignadas | Apelacion | lista, relación |
 | apelacionesResueltas | Apelacion | lista, relación |
 | accesosDocumentoApelacion | AccesoDocumentoApelacion | lista, relación |
+| alertasAsignadas | AlertaColegio | lista, relación |
 
 ## Diagrama ER (Mermaid)
 
@@ -1225,6 +1230,7 @@ erDiagram
     Tenant ||--o{ Reporte : "tenant (opcional)"
     Tenant ||--o{ Usuario : "tenant (opcional)"
     Usuario ||--o{ AccesoDocumentoApelacion : "usuario"
+    Usuario ||--o{ AlertaColegio : "asignadoA (opcional)"
     Usuario ||--o{ AlertaSuscripcion : "usuario"
     Usuario ||--o{ AuditLog : "usuario (opcional)"
     Usuario ||--o{ CasoEval : "creadoPor (opcional)"

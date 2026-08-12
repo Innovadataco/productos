@@ -12,7 +12,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import type { DbClient } from "../unit-of-work";
 
 /** Estados de la alerta (columna String con valores cerrados, como en lib/colegio/alertas). */
-export type EstadoAlertaColegio = "nueva" | "vista" | "gestionada";
+export type EstadoAlertaColegio = "nueva" | "vista" | "gestionada" | "escalada" | "cerrada";
 
 /** Tipo de sujeto al que apunta la alerta (SPEC-165). */
 export type TipoSujeto = "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE";
@@ -41,6 +41,7 @@ const INCLUDE_LISTADO = {
             acudiente: { select: { nombre: true, relacion: true } },
         },
     },
+    asignadoA: { select: { id: true, nombre: true, email: true } },
     reporte: {
         select: {
             estado: true,
@@ -125,32 +126,29 @@ export class AlertaColegioRepository {
     }
 
     /** Crea la alerta del colegio en estado "nueva" para el sujeto indicado. */
-    crear(datos: { colegioId: string; reporteId: string } & CrearAlertaInput) {
-        const base = { colegioId: datos.colegioId, reporteId: datos.reporteId, estado: "nueva" as const };
+    crear(
+        datos: { colegioId: string; reporteId: string; prioridad?: "alta" | "media" | "baja"; vencimientoSla?: Date } & CrearAlertaInput
+    ) {
+        const ahora = new Date();
+        const base = {
+            colegioId: datos.colegioId,
+            reporteId: datos.reporteId,
+            estado: "nueva" as const,
+            prioridad: datos.prioridad ?? ("media" as const),
+            vencimientoSla: datos.vencimientoSla ?? new Date(ahora.getTime() + 48 * 60 * 60 * 1000),
+        };
         if (datos.tipoSujeto === "ESTUDIANTE") {
             return this.db.alertaColegio.create({
-                data: {
-                    ...base,
-                    tipoSujeto: "ESTUDIANTE",
-                    identificadorEstudianteId: datos.identificadorEstudianteId,
-                },
+                data: { ...base, tipoSujeto: "ESTUDIANTE", identificadorEstudianteId: datos.identificadorEstudianteId },
             });
         }
         if (datos.tipoSujeto === "PROFESOR") {
             return this.db.alertaColegio.create({
-                data: {
-                    ...base,
-                    tipoSujeto: "PROFESOR",
-                    identificadorProfesorId: datos.identificadorProfesorId,
-                },
+                data: { ...base, tipoSujeto: "PROFESOR", identificadorProfesorId: datos.identificadorProfesorId },
             });
         }
         return this.db.alertaColegio.create({
-            data: {
-                ...base,
-                tipoSujeto: "ACUDIENTE",
-                identificadorAcudienteId: datos.identificadorAcudienteId,
-            },
+            data: { ...base, tipoSujeto: "ACUDIENTE", identificadorAcudienteId: datos.identificadorAcudienteId },
         });
     }
 

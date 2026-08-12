@@ -52,7 +52,14 @@ async function sembrarAlerta(colegioId: string, plataformaId: string, tag: strin
         },
     });
     const alerta = await prisma.alertaColegio.create({
-        data: { colegioId, reporteId: reporte.id, identificadorEstudianteId: identificador.id, estado: opts.estadoAlerta ?? "nueva" },
+        data: {
+            colegioId,
+            reporteId: reporte.id,
+            identificadorEstudianteId: identificador.id,
+            estado: opts.estadoAlerta ?? "nueva",
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        },
     });
     return { curso, alumno, identificador, reporte, alerta };
 }

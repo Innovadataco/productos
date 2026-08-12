@@ -242,11 +242,24 @@ export class ReporteRepository {
         });
     }
 
-    /** SPEC-134 (E-1): estado/identificador/eliminado para notificar alertas a colegios. */
+    /** SPEC-134/166 (E-1): estado/identificador/eliminado/clasificación para notificar alertas a colegios. */
     findEstadoParaNotificacion(id: string) {
         return this.db.reporte.findUnique({
             where: { id },
-            select: { id: true, identificador: true, estado: true, eliminado: true },
+            select: {
+                id: true,
+                identificador: true,
+                estado: true,
+                eliminado: true,
+                creadoEn: true,
+                clasificacion: {
+                    select: {
+                        categoria: true,
+                        confianza: true,
+                        posibleAgresorPar: true,
+                    },
+                },
+            },
         });
     }
 

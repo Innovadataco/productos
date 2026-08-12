@@ -104,7 +104,14 @@ async function escenarioBase(valorIdentificador = "+573001234567") {
 
 async function crearAlerta(colegioId: string, reporteId: string, identificadorEstudianteId: string, creadoEn?: Date) {
     const alerta = await prisma.alertaColegio.create({
-        data: { colegioId, reporteId, identificadorEstudianteId, estado: "nueva" },
+        data: {
+            colegioId,
+            reporteId,
+            identificadorEstudianteId,
+            estado: "nueva",
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        },
     });
     if (creadoEn) {
         await prisma.alertaColegio.update({ where: { id: alerta.id }, data: { creadoEn } });

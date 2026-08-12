@@ -348,7 +348,17 @@ export const confirmarCargaSchema = z.object({
 });
 
 export const alertaEstadoSchema = z.object({
-    estado: z.enum(["nueva", "vista", "gestionada"]),
+    estado: z.enum(["nueva", "vista", "gestionada", "escalada", "cerrada"]),
+});
+
+export const alertaAsignarSchema = z.object({
+    asignadoAId: z.union([cuidIdSchema, z.literal("")]).optional(),
+});
+
+export const alertaBatchSchema = z.object({
+    ids: z.array(cuidIdSchema).min(1, "Selecciona al menos una alerta"),
+    accion: z.enum(["vista", "gestionada", "escalada", "cerrada", "asignar", "desasignar"]),
+    asignadoAId: cuidIdSchema.optional(),
 });
 
 export const alertaIdParamsSchema = z.object({
@@ -356,8 +366,13 @@ export const alertaIdParamsSchema = z.object({
 });
 
 export const alertaQuerySchema = z.object({
-    estado: z.enum(["nueva", "vista", "gestionada"]).optional(),
+    estado: z.enum(["nueva", "vista", "gestionada", "escalada", "cerrada"]).optional(),
     tipoSujeto: z.enum(["ESTUDIANTE", "PROFESOR", "ACUDIENTE"]).optional(),
+    prioridad: z.enum(["alta", "media", "baja"]).optional(),
+    cursoId: cuidIdSchema.optional(),
+    categoria: z.string().trim().optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 
 // SPEC-159 (FR-004): nota de la bitácora del caso — texto plano 1..1000

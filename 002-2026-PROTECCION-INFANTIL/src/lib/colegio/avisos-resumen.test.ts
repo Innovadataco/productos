@@ -69,8 +69,8 @@ describe("enviarResumenesSemanales (handler del schedule del lunes)", () => {
         // 2 reportes esta semana, uno con alerta "nueva" (te espera).
         const r1 = await crearReporteVisible("+573001234567", plataforma.id);
         const r2 = await crearReporteVisible("+573001234567", plataforma.id);
-        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: r1.id, identificadorEstudianteId: identificador.id, estado: "nueva" } });
-        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: r2.id, identificadorEstudianteId: identificador.id, estado: "gestionada" } });
+        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: r1.id, identificadorEstudianteId: identificador.id, estado: "nueva", prioridad: "media", vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000) } });
+        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: r2.id, identificadorEstudianteId: identificador.id, estado: "gestionada", prioridad: "media", vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000) } });
 
         // 2 eventos que el tope diario mandó al digest durante la semana.
         const registros = new RegistroAvisoColegioRepository();

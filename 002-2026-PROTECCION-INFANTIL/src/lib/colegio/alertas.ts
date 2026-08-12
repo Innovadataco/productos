@@ -1,12 +1,15 @@
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { IdentificadorProfesorRepository } from "@/lib/dal/repositories/identificador-profesor";
 import { IdentificadorAcudienteRepository } from "@/lib/dal/repositories/identificador-acudiente";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { EventoMatchRepository } from "@/lib/dal/repositories/evento-match";
 import { registrarEventoAviso, evaluarUmbralesPorAlerta } from "./avisos";
 import { verificarVigenciaPorColegioId } from "./vigencia";
+import { calcularPrioridadYSLA } from "./alertas-prioridad";
 import type { AccionAudit, EstadoReporte } from "@prisma/client";
 
 const ESTADOS_VISIBLES: EstadoReporte[] = [
@@ -31,6 +34,9 @@ export interface AlertaColegioListado {
     categoria: string | null;
     estadoReporte: string;
     estadoAlerta: string;
+    prioridad: string;
+    vencimientoSla: string;
+    asignadoA: { id: string; nombre: string | null; email: string } | null;
     creadoEn: string;
 }
 
@@ -62,6 +68,20 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
         }
 
         const identificadorNormalizado = reporte.identificador.trim().toLowerCase();
+
+        // SPEC-166: cálculo determinista de prioridad/SLA a partir de clasificación y match.
+        const eventoMatch = await new EventoMatchRepository().porReporteIdAgregado(reporte.id);
+        const { prioridad, vencimientoSla } = calcularPrioridadYSLA(
+            reporte.creadoEn,
+            reporte.clasificacion
+                ? {
+                    categoria: reporte.clasificacion.categoria,
+                    confianza: reporte.clasificacion.confianza,
+                    posibleAgresorPar: reporte.clasificacion.posibleAgresorPar,
+                }
+                : null,
+            eventoMatch ? { conteoAcumulado: eventoMatch.conteoAcumulado, interCiudad: eventoMatch.interCiudad } : null
+        );
 
         // SPEC-165: búsqueda cross-tenant a propósito en los tres tipos de sujeto.
         // Cada repo documenta la excepción; fallo en uno no impide los otros.
@@ -131,7 +151,13 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                     continue;
                 }
 
-                const alerta = await alertas.crear({ colegioId, reporteId: reporte.id, ...input });
+                const alerta = await alertas.crear({
+                    colegioId,
+                    reporteId: reporte.id,
+                    prioridad,
+                    vencimientoSla,
+                    ...input,
+                });
 
                 await logAudit({
                     accion: "COLEGIO_ALERTA_CREADA" as AccionAudit,
@@ -222,6 +248,11 @@ export async function listarAlertasColegio(
             categoria: alerta.reporte.clasificacion?.categoria ?? null,
             estadoReporte: alerta.reporte.estado,
             estadoAlerta: alerta.estado,
+            prioridad: alerta.prioridad,
+            vencimientoSla: alerta.vencimientoSla.toISOString(),
+            asignadoA: alerta.asignadoA
+                ? { id: alerta.asignadoA.id, nombre: alerta.asignadoA.nombre, email: alerta.asignadoA.email }
+                : null,
             creadoEn: alerta.creadoEn.toISOString(),
         };
     });
@@ -263,4 +294,174 @@ export async function cambiarEstadoAlerta(
     });
 
     return actualizada;
+}
+
+import {
+    AlertaColegioBandejaRepository,
+    type FiltrosBandeja,
+    type Paginacion,
+} from "@/lib/dal/repositories/alerta-colegio-bandeja";
+
+export type { FiltrosBandeja, Paginacion } from "@/lib/dal/repositories/alerta-colegio-bandeja";
+
+/** SPEC-166: listado de bandeja "nivel dios" para el colegio. */
+export async function listarBandejaAlertasColegio(
+    colegioId: string,
+    filtros: FiltrosBandeja = {},
+    paginacion: Paginacion = { page: 1, pageSize: 25 }
+) {
+    const repo = new AlertaColegioBandejaRepository();
+    const resultado = await repo.listarBandeja(colegioId, filtros, paginacion);
+
+    const items: AlertaColegioListado[] = resultado.items.map((alerta) => {
+        let identificador: string | null = null;
+        let relacion: string | null = null;
+        let sujetoNombre: string | null = null;
+
+        if (alerta.tipoSujeto === "ESTUDIANTE" && alerta.identificadorEstudiante) {
+            identificador = alerta.identificadorEstudiante.valor;
+            relacion = alerta.identificadorEstudiante.etiquetaRelacion;
+            sujetoNombre = `${alerta.identificadorEstudiante.estudiante.nombre} ${alerta.identificadorEstudiante.estudiante.apellidos}`.trim();
+        } else if (alerta.tipoSujeto === "PROFESOR" && alerta.identificadorProfesor) {
+            relacion = "PROFESOR";
+            sujetoNombre = `${alerta.identificadorProfesor.profesor.nombre} ${alerta.identificadorProfesor.profesor.apellidos}`.trim();
+        } else if (alerta.tipoSujeto === "ACUDIENTE" && alerta.identificadorAcudiente) {
+            relacion = alerta.identificadorAcudiente.acudiente.relacion;
+            sujetoNombre = alerta.identificadorAcudiente.acudiente.nombre;
+        }
+
+        return {
+            id: alerta.id,
+            tipoSujeto: alerta.tipoSujeto as TipoSujeto,
+            identificador,
+            relacion,
+            sujetoNombre,
+            categoria: alerta.reporte.clasificacion?.categoria ?? null,
+            estadoReporte: alerta.reporte.estado,
+            estadoAlerta: alerta.estado,
+            prioridad: alerta.prioridad,
+            vencimientoSla: alerta.vencimientoSla.toISOString(),
+            asignadoA: alerta.asignadoA
+                ? { id: alerta.asignadoA.id, nombre: alerta.asignadoA.nombre, email: alerta.asignadoA.email }
+                : null,
+            creadoEn: alerta.creadoEn.toISOString(),
+        };
+    });
+
+    return { items, total: resultado.total, page: resultado.page, pageSize: resultado.pageSize };
+}
+
+/** SPEC-166: asigna (o desasigna) una alerta a un usuario del colegio. */
+export async function asignarAlerta(
+    colegioId: string,
+    alertaId: string,
+    asignadoAId: string | null,
+    actorId: string,
+    request?: Request
+) {
+    const repo = new AlertaColegioBandejaRepository();
+    const alerta = await repo.asignar(colegioId, alertaId, asignadoAId);
+
+    const ipAddress = request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown";
+    const userAgent = request?.headers.get("user-agent") || "unknown";
+
+    await logAudit({
+        accion: "COLEGIO_ALERTA_ASIGNADA" as AccionAudit,
+        tipoRecurso: "AlertaColegio",
+        recursoId: alertaId,
+        usuarioId: actorId,
+        colegioId,
+        valorAnterior: JSON.stringify({ asignadoAId: alerta.asignadoAId }),
+        valorNuevo: JSON.stringify({ asignadoAId }),
+        ipAddress,
+        userAgent,
+    });
+
+    return alerta;
+}
+
+/** SPEC-166: escala una alerta a estado "escalada". */
+export async function escalarAlerta(colegioId: string, alertaId: string, actorId: string, request?: Request) {
+    const repoAlertas = new AlertaColegioRepository();
+    const alerta = await repoAlertas.obtenerPorId(colegioId, alertaId);
+    if (!alerta) {
+        throw new AppError("Alerta no encontrada", ERROR_CODES.NOT_FOUND, 404);
+    }
+    if (alerta.estado === "escalada") {
+        return alerta;
+    }
+
+    const actualizada = await repoAlertas.cambiarEstado(colegioId, alertaId, "escalada");
+
+    const ipAddress = request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown";
+    const userAgent = request?.headers.get("user-agent") || "unknown";
+
+    await logAudit({
+        accion: "COLEGIO_ALERTA_ESCALADA" as AccionAudit,
+        tipoRecurso: "AlertaColegio",
+        recursoId: alertaId,
+        usuarioId: actorId,
+        colegioId,
+        valorAnterior: JSON.stringify({ estado: alerta.estado }),
+        valorNuevo: JSON.stringify({ estado: "escalada" }),
+        ipAddress,
+        userAgent,
+    });
+
+    return actualizada;
+}
+
+export type AccionLote = "vista" | "gestionada" | "escalada" | "cerrada" | "asignar" | "desasignar";
+
+/** SPEC-166: aplica una acción a un lote de alertas del colegio. */
+export async function aplicarAccionEnLote(
+    colegioId: string,
+    ids: string[],
+    accion: AccionLote,
+    actorId: string,
+    payload: { asignadoAId?: string } = {},
+    request?: Request
+) {
+    if (ids.length === 0) {
+        return { afectadas: 0, accion };
+    }
+
+    const repoBandeja = new AlertaColegioBandejaRepository();
+    const repoAlertas = new AlertaColegioRepository();
+    const alertas = await repoBandeja.listarPorIds(colegioId, ids);
+    const idsValidos = new Set(alertas.map((a) => a.id));
+
+    let afectadas = 0;
+    const ipAddress = request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown";
+    const userAgent = request?.headers.get("user-agent") || "unknown";
+
+    if (accion === "asignar") {
+        for (const id of idsValidos) {
+            await repoBandeja.asignar(colegioId, id, payload.asignadoAId ?? null);
+            afectadas += 1;
+        }
+    } else if (accion === "desasignar") {
+        for (const id of idsValidos) {
+            await repoBandeja.asignar(colegioId, id, null);
+            afectadas += 1;
+        }
+    } else {
+        for (const id of idsValidos) {
+            await repoAlertas.cambiarEstado(colegioId, id, accion as EstadoAlertaColegio);
+            afectadas += 1;
+        }
+    }
+
+    await logAudit({
+        accion: `COLEGIO_ALERTA_LOTE_${accion.toUpperCase()}` as AccionAudit,
+        tipoRecurso: "AlertaColegio",
+        recursoId: Array.from(idsValidos).join(","),
+        usuarioId: actorId,
+        colegioId,
+        valorNuevo: JSON.stringify({ accion, ids: Array.from(idsValidos), asignadoAId: payload.asignadoAId }),
+        ipAddress,
+        userAgent,
+    });
+
+    return { afectadas, accion };
 }
