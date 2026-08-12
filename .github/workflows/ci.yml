@@ -3,6 +3,7 @@
 # Fix 002-PI-027 (§3.1 auditoría): .env.test generado en CI (no está en git),
 # placeholders de build (email.ts/Prisma los exige en page-data) y `prisma generate`
 # explícito antes de tsc.
+# 002-PI-063: jobs paralelos (verificaciones, test, journeys, build) + gate agregador.
 name: ci-002-proteccion-infantil
 
 on:
@@ -13,11 +14,31 @@ on:
   pull_request:
     paths:
       - "002-2026-PROTECCION-INFANTIL/**"
-  # Permite disparar el gate a mano (p.ej. tras un fix del propio CI, cuyo paths no cubre la raíz)
   workflow_dispatch:
 
 jobs:
-  gate:
+  verificaciones:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      # SPEC-157 (D2): ratchet anti color crudo.
+      - run: npm run tokens:check
+      # SPEC-126: compuerta de la línea base de arquitectura.
+      - run: npm run arch:check
+
+  test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -26,7 +47,6 @@ jobs:
       db:
         image: pgvector/pgvector:pg16
         env:
-          # Mismas credenciales dummy que test-setup.ts y docker-compose.yml (dev, no secretos)
           POSTGRES_USER: proteccion
           POSTGRES_PASSWORD: proteccion_dev
           POSTGRES_DB: proteccion_infantil_test
@@ -45,51 +65,139 @@ jobs:
           cache: npm
           cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
       - run: npm ci
-      # .env.test no está en git: se genera con valores DUMMY (test-setup.ts sobreescribe
-      # los sensibles). Node 22 aborta con --env-file si el archivo no existe.
       - name: Generar .env.test (dummy, solo CI)
         run: |
-          cat > .env.test <<'EOF'
+          cat > .env.test <<'ENV_EOF'
           DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
           PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
           ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
           NEXT_PUBLIC_APP_URL=http://localhost:5005
           OLLAMA_BASE_URL=http://localhost:11434
           EMAIL_FROM=test@ci.local
-          EOF
+          ENV_EOF
       - run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
-      # FIX-CI (002-PI-056): migrate no crea el schema pgboss (lo crea pg-boss en su
-      # primer start); sin él los tests de cola/reconciliación fallan con 42P01.
       - run: node scripts/ensure-pgboss.mjs
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
       - run: npx prisma generate
-      - run: npx tsc --noEmit
-      - run: npm run lint
-      # SPEC-157 (D2): ratchet anti color crudo — falla si el conteo en src/**
-      # productivo SUBE del piso sembrado (el piso solo baja; ver scripts/tokens-check.ts).
-      - run: npm run tokens:check
-      # La suite comparte una única Postgres (fileParallelism: false en vitest.config).
-      # Los tests que llaman modelos van con mocks (ollama-client mockeado).
-      # Q-2 (002-PI-056): corre con cobertura y umbrales — bajar del piso rompe el gate.
+      # Q-2 (002-PI-056): corre con cobertura y umbrales.
       - run: npm run test:coverage
-      # SPEC-133 (Q-1): los journeys por rol corren como paso propio para atribución
-      # inmediata del fallo (además de ir dentro de la suite completa).
-      - name: Journeys por rol
-        run: npm run test:journeys
-      # SPEC-126: compuerta de la línea base de arquitectura — regenera los 5 artefactos
-      # de docs/architecture/ y falla si difieren de lo commiteado, si hay un modelo
-      # huérfano no declarado, o si las aserciones A (puerta ≡ predicado) / B (menú
-      # honesto) detectan desalineo. No necesita BD ni servicios (lee código como texto).
-      - run: npm run arch:check
-      # Placeholders SOLO de build: email.ts valida RESEND_API_KEY/EMAIL_FROM al importarse,
-      # Prisma/cola pide DATABASE_URL al recolectar page data (mismo patrón del Dockerfile)
-      # y fuente-reporte exige ANTI_ABUSO_SALT (S-1, min 32 chars) al importarse.
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+
+  journeys:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: proteccion
+          POSTGRES_PASSWORD: proteccion_dev
+          POSTGRES_DB: proteccion_infantil_test
+        ports:
+          - "5433:5432"
+        options: >-
+          --health-cmd "pg_isready -U proteccion"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - name: Generar .env.test (dummy, solo CI)
+        run: |
+          cat > .env.test <<'ENV_EOF'
+          DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
+          NEXT_PUBLIC_APP_URL=http://localhost:5005
+          OLLAMA_BASE_URL=http://localhost:11434
+          EMAIL_FROM=test@ci.local
+          ENV_EOF
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: node scripts/ensure-pgboss.mjs
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: npx prisma generate
+      # SPEC-133 (Q-1): journeys por rol como paso propio.
+      - run: npm run test:journeys
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: proteccion
+          POSTGRES_PASSWORD: proteccion_dev
+          POSTGRES_DB: proteccion_infantil_test
+        ports:
+          - "5433:5432"
+        options: >-
+          --health-cmd "pg_isready -U proteccion"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - name: Cache .next
+        uses: actions/cache@v4
+        with:
+          path: 002-2026-PROTECCION-INFANTIL/.next/cache
+          key: ${{ runner.os }}-next-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-next-
+      - run: npm ci
+      - name: Generar .env.test (dummy, solo CI)
+        run: |
+          cat > .env.test <<'ENV_EOF'
+          DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
+          NEXT_PUBLIC_APP_URL=http://localhost:5005
+          OLLAMA_BASE_URL=http://localhost:11434
+          EMAIL_FROM=test@ci.local
+          ENV_EOF
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: node scripts/ensure-pgboss.mjs
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: npx prisma generate
+      # Placeholders SOLO de build.
       - run: npm run build
         env:
           RESEND_API_KEY: build-placeholder
           EMAIL_FROM: build@ci.local
           ANTI_ABUSO_SALT: build-placeholder-salt-min-32-chars
           DATABASE_URL: postgresql://build:build@localhost:5432/build
+
+  gate:
+    runs-on: ubuntu-latest
+    needs: [verificaciones, test, journeys, build]
+    steps:
+      - name: Gate passed
+        run: echo "All checks passed"
