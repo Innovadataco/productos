@@ -133,9 +133,9 @@ describe("/api/colegio/alertas", () => {
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas", undefined, mockToken));
             expect(res.status).toBe(200);
             const json = await res.json();
-            expect(json.alertas).toHaveLength(1);
+            expect(json.items).toHaveLength(1);
 
-            const alerta = json.alertas[0];
+            const alerta = json.items[0];
             expect(alerta.identificador).toBe("+573001234567");
             expect(alerta.relacion).toBe("ESTUDIANTE");
             expect(alerta.categoria).toBe("OFRECIMIENTO_REGALOS");
@@ -160,7 +160,7 @@ describe("/api/colegio/alertas", () => {
 
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas", undefined, mockToken));
             const json = await res.json();
-            const alerta = json.alertas[0];
+            const alerta = json.items[0];
 
             const respuesta = JSON.stringify(json);
             expect(respuesta).not.toContain(reporte.texto);
@@ -194,7 +194,7 @@ describe("/api/colegio/alertas", () => {
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas", undefined, mockToken));
             expect(res.status).toBe(200);
             const json = await res.json();
-            expect(json.alertas).toHaveLength(0);
+            expect(json.items).toHaveLength(0);
         });
 
         it("ADMIN recibe 403", async () => {
@@ -238,7 +238,7 @@ describe("/api/colegio/alertas", () => {
 
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas", undefined, mockToken));
             const json = await res.json();
-            expect(json.alertas).toHaveLength(0);
+            expect(json.items).toHaveLength(0);
         });
 
         it("filtra por estado de alerta", async () => {
@@ -258,8 +258,8 @@ describe("/api/colegio/alertas", () => {
 
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas?estado=vista", undefined, mockToken));
             const json = await res.json();
-            expect(json.alertas).toHaveLength(1);
-            expect(json.alertas[0].estadoAlerta).toBe("vista");
+            expect(json.items).toHaveLength(1);
+            expect(json.items[0].estadoAlerta).toBe("vista");
         });
 
         it("filtra por tipo de sujeto", async () => {
@@ -286,9 +286,9 @@ describe("/api/colegio/alertas", () => {
                 request("GET", "http://localhost:5005/api/colegio/alertas?tipoSujeto=PROFESOR", undefined, mockToken)
             );
             const jsonProf = await resProf.json();
-            expect(jsonProf.alertas).toHaveLength(1);
-            expect(jsonProf.alertas[0].tipoSujeto).toBe("PROFESOR");
-            expect(jsonProf.alertas[0].sujetoNombre).toBe("Carlos López");
+            expect(jsonProf.items).toHaveLength(1);
+            expect(jsonProf.items[0].tipoSujeto).toBe("PROFESOR");
+            expect(jsonProf.items[0].sujetoNombre).toBe("Carlos López");
         });
     });
 

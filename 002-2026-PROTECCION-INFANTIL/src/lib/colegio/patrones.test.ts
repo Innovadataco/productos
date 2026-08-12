@@ -91,7 +91,9 @@ describe("agregarPatronPorReporte (SPEC-142, F6)", () => {
         const { colegio, vinculo } = await sembrarColegioConVinculo("7", `+57331${TAG}`);
         const reporte = await crearReportePara(`+57331${TAG}`, plataforma.id);
         const alerta = await prisma.alertaColegio.create({
-            data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id },
+            data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id,
+                prioridad: "media",
+                vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),},
         });
 
         await agregarPatronPorReporte(reporte.id);
@@ -123,7 +125,9 @@ describe("agregarPatronPorReporte (SPEC-142, F6)", () => {
         ].entries()) {
             const reporte = await crearReportePara(`+57332${TAG}`, plataforma.id, caso);
             await prisma.alertaColegio.create({
-                data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id },
+                data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id,
+                    prioridad: "media",
+                    vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),},
             });
             await agregarPatronPorReporte(reporte.id);
             expect(await patronesDe(colegio.id), `caso ${idx} no debe agregar`).toHaveLength(0);
@@ -135,7 +139,9 @@ describe("agregarPatronPorReporte (SPEC-142, F6)", () => {
         const { colegio, vinculo } = await sembrarColegioConVinculo("7", `+57333${TAG}`);
         const reporte = await crearReportePara(`+57333${TAG}`, plataforma.id);
         await prisma.alertaColegio.create({
-            data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id },
+            data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id,
+                prioridad: "media",
+                vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),},
         });
 
         await agregarPatronPorReporte(reporte.id);
@@ -152,8 +158,12 @@ describe("agregarPatronPorReporte (SPEC-142, F6)", () => {
         const a = await sembrarColegioConVinculo("7", valor);
         const b = await sembrarColegioConVinculo("9", valor);
         const reporte = await crearReportePara(valor, plataforma.id);
-        await prisma.alertaColegio.create({ data: { colegioId: a.colegio.id, reporteId: reporte.id, identificadorEstudianteId: a.vinculo.id } });
-        await prisma.alertaColegio.create({ data: { colegioId: b.colegio.id, reporteId: reporte.id, identificadorEstudianteId: b.vinculo.id } });
+        await prisma.alertaColegio.create({ data: { colegioId: a.colegio.id, reporteId: reporte.id, identificadorEstudianteId: a.vinculo.id,
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),} });
+        await prisma.alertaColegio.create({ data: { colegioId: b.colegio.id, reporteId: reporte.id, identificadorEstudianteId: b.vinculo.id,
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),} });
 
         await agregarPatronPorReporte(reporte.id);
 
@@ -173,8 +183,12 @@ describe("agregarPatronPorReporte (SPEC-142, F6)", () => {
         const v2 = await crearIdentificadorEstudiante(alumno2.id, { valor });
         const reporte = await crearReportePara(valor, plataforma.id);
         // v1 es el vínculo más antiguo (su alerta se crea primero).
-        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: v1.id } });
-        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: v2.id } });
+        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: v1.id,
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),} });
+        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: v2.id,
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),} });
 
         await agregarPatronPorReporte(reporte.id);
 
@@ -188,7 +202,9 @@ describe("agregarPatronPorReporte (SPEC-142, F6)", () => {
         const plataforma = await crearPlataforma();
         const { colegio, vinculo } = await sembrarColegioConVinculo(null, `+57336${TAG}`);
         const reporte = await crearReportePara(`+57336${TAG}`, plataforma.id);
-        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id } });
+        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id,
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),} });
 
         await agregarPatronPorReporte(reporte.id);
 
@@ -200,7 +216,9 @@ describe("agregarPatronPorReporte (SPEC-142, F6)", () => {
         const { colegio, vinculo } = await sembrarColegioConVinculo("7", `+57337${TAG}`);
         const reporte = await crearReportePara(`+57337${TAG}`, plataforma.id);
         const alerta = await prisma.alertaColegio.create({
-            data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id },
+            data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id,
+                prioridad: "media",
+                vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),},
         });
         await agregarPatronPorReporte(reporte.id);
         expect((await patronesDe(colegio.id))[0].conteo).toBe(1);
@@ -219,7 +237,9 @@ describe("agregarPatronPorReporte (SPEC-142, F6)", () => {
         const admin = await crearUsuario("ADMIN");
         const { colegio, vinculo } = await sembrarColegioConVinculo("7", `+57338${TAG}`);
         const reporte = await crearReportePara(`+57338${TAG}`, plataforma.id);
-        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id } });
+        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: vinculo.id,
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),} });
         await agregarPatronPorReporte(reporte.id);
         expect((await patronesDe(colegio.id))[0].conteo).toBe(1);
 

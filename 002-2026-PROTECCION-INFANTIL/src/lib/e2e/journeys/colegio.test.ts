@@ -278,17 +278,24 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
             },
         });
         const alerta = await prisma.alertaColegio.create({
-            data: { colegioId, reporteId: reporte.id, identificadorEstudianteId: identificador.id, estado: "nueva" },
+            data: {
+                colegioId,
+                reporteId: reporte.id,
+                identificadorEstudianteId: identificador.id,
+                estado: "nueva",
+                prioridad: "media",
+                vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),
+            },
         });
 
         // El listado muestra la alerta con sus campos no sensibles
         const { GET: alertasGET } = await import("@/app/api/colegio/alertas/route");
         const resLista = await alertasGET(new Request("http://localhost:5005/api/colegio/alertas"));
         expect(resLista.status, "el colegio debe poder listar sus alertas").toBe(200);
-        const { alertas } = (await resLista.json()) as {
-            alertas: { id: string; identificador: string; estadoAlerta: string }[];
+        const { items } = (await resLista.json()) as {
+            items: { id: string; identificador: string; estadoAlerta: string }[];
         };
-        const listada = alertas.find((a) => a.id === alerta.id);
+        const listada = items.find((a) => a.id === alerta.id);
         expect(listada, "la alerta sembrada debe aparecer en el listado").toBeTruthy();
         expect(listada!.estadoAlerta).toBe("nueva");
         expect(listada!.identificador).toBe(identificador.valor);

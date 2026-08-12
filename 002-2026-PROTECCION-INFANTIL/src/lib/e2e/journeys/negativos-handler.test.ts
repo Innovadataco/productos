@@ -364,7 +364,14 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
             },
         });
         const alertaB = await prisma.alertaColegio.create({
-            data: { colegioId: colegioBId, reporteId: reporteB.id, identificadorEstudianteId: identificadorB.id, estado: "nueva" },
+            data: {
+                colegioId: colegioBId,
+                reporteId: reporteB.id,
+                identificadorEstudianteId: identificadorB.id,
+                estado: "nueva",
+                prioridad: "media",
+                vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),
+            },
         });
 
         // Todo lo que sigue es la sesión del colegio A
@@ -380,8 +387,8 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
         const { GET: alertasGET } = await import("@/app/api/colegio/alertas/route");
         const resAlertas = await alertasGET(new Request("http://localhost:5005/api/colegio/alertas"));
         expect(resAlertas.status).toBe(200);
-        const { alertas } = (await resAlertas.json()) as { alertas: { id: string }[] };
-        expect(alertas.some((a) => a.id === alertaB.id), "la alerta de B no debe aparecer en el listado de A").toBe(false);
+        const { items } = (await resAlertas.json()) as { items: { id: string }[] };
+        expect(items.some((a) => a.id === alertaB.id), "la alerta de B no debe aparecer en el listado de A").toBe(false);
 
         const { GET: estadisticasGET } = await import("@/app/api/colegio/estadisticas/route");
         const resStats = await estadisticasGET(new Request("http://localhost:5005/api/colegio/estadisticas"));

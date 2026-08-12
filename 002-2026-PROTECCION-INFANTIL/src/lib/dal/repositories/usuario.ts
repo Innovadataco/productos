@@ -105,6 +105,19 @@ export class UsuarioRepository {
         });
     }
 
+    /** SPEC-166: usuarios asignables dentro del colegio (SCHOOL_ADMIN / OPERADOR activos). */
+    findAsignablesPorColegio(colegioId: string) {
+        return this.db.usuario.findMany({
+            where: {
+                colegioId,
+                rol: { in: ["SCHOOL_ADMIN", "OPERADOR"] },
+                estado: "activo",
+            },
+            select: { id: true, nombre: true, email: true, rol: true },
+            orderBy: { nombre: "asc" },
+        });
+    }
+
     /** SPEC-134 (E-1): SCHOOL_ADMIN activo del colegio para la notificación ciega de alertas. */
     findAdminColegioParaNotificacion(colegioId: string) {
         return this.db.usuario.findFirst({

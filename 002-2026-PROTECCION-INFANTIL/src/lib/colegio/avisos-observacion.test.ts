@@ -77,7 +77,14 @@ async function crearAlertaNueva(colegioId: string, identificadorValor: string, p
         },
     });
     return prisma.alertaColegio.create({
-        data: { colegioId, reporteId: reporte.id, identificadorEstudianteId: identificadorId, estado: "nueva" },
+        data: {
+            colegioId,
+            reporteId: reporte.id,
+            identificadorEstudianteId: identificadorId,
+            estado: "nueva",
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        },
     });
 }
 

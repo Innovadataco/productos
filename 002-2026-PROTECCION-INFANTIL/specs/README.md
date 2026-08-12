@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-12** (002-PI-062: SPEC-165 Fase C implementada; fases D-G siguen PLANEADAS).
+> Última actualización: **2026-08-12** (002-PI-062: SPEC-166 Fase D implementada; fases E-G siguen PLANEADAS).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -104,7 +104,7 @@
 | [163](163-acudiente-completo/spec.md) | SPEC-163 — Acudiente completo: identificadores + edición post-alta (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [164](164-identificadores-profesor/spec.md) | SPEC-164 — Identificadores de profesor + estadísticas (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [165](165-alertas-extendidas/spec.md) | SPEC-165 — Alertas extendidas: profesor/acudiente (002-PI-062) | 🟢 Implementada (ver cierre.md) |
-| [166](166-alertas-nivel-dios/spec.md) | SPEC-166 — Alertas nivel dios: bandeja de prioridad (002-PI-062) | 🔵 Planeada |
+| [166](166-alertas-nivel-dios/spec.md) | SPEC-166 — Alertas nivel dios: bandeja de prioridad (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [167](167-rediseno-3-a-2/spec.md) | SPEC-167 — Rediseño 3→2: Inicio + Estadísticas (002-PI-062) | 🔵 Planeada |
 | [168](168-comite-convivencia/spec.md) | SPEC-168 — Comité de Convivencia por colegio (002-PI-062) | 🔵 Planeada |
 | [169](169-onboarding-cobertura/spec.md) | SPEC-169 — Onboarding + cobertura + notificaciones in-app (002-PI-062) | 🔵 Planeada |
@@ -259,7 +259,7 @@
 | [163](163-acudiente-completo/spec.md) | SPEC-163 — Acudiente completo: identificadores + edición post-alta (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [164](164-identificadores-profesor/spec.md) | SPEC-164 — Identificadores de profesor + estadísticas (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [165](165-alertas-extendidas/spec.md) | SPEC-165 — Alertas extendidas: profesor/acudiente (002-PI-062) | 🟢 Implementada (ver cierre.md) |
-| [166](166-alertas-nivel-dios/spec.md) | SPEC-166 — Alertas nivel dios: bandeja de prioridad (002-PI-062) | 🔵 Planeada |
+| [166](166-alertas-nivel-dios/spec.md) | SPEC-166 — Alertas nivel dios: bandeja de prioridad (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [167](167-rediseno-3-a-2/spec.md) | SPEC-167 — Rediseño 3→2: Inicio + Estadísticas (002-PI-062) | 🔵 Planeada |
 | [168](168-comite-convivencia/spec.md) | SPEC-168 — Comité de Convivencia por colegio (002-PI-062) | 🔵 Planeada |
 | [169](169-onboarding-cobertura/spec.md) | SPEC-169 — Onboarding + cobertura + notificaciones in-app (002-PI-062) | 🔵 Planeada |

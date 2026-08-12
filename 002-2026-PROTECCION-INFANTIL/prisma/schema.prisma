@@ -297,6 +297,7 @@ model Usuario {
   apelacionesAsignadas         Apelacion[]                @relation("ApelacionesAsignadasComite")
   apelacionesResueltas         Apelacion[]                @relation("ApelacionesResueltas")
   accesosDocumentoApelacion    AccesoDocumentoApelacion[]
+  alertasAsignadas             AlertaColegio[]
 
   @@index([email])
   @@index([rol])
@@ -745,7 +746,10 @@ model AlertaColegio {
   identificadorProfesorId   String?
   identificadorAcudienteId  String?
   tipoSujeto                String    @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE
-  estado                    String    @default("nueva") // nueva | vista | gestionada
+  estado                    String    @default("nueva") // nueva | vista | gestionada | escalada | cerrada
+  prioridad                 String    @default("media") // alta | media | baja
+  vencimientoSla            DateTime
+  asignadoAId               String?
   // SPEC-142 (F6): fila agregada que ESTA alerta aportó (idempotencia + reversa
   // exacta en baja). Nullable: las alertas previas a F6 no aportan al agregado.
   patronInstitucionalId     String?
@@ -758,12 +762,15 @@ model AlertaColegio {
   identificadorProfesor   IdentificadorProfesor?   @relation(fields: [identificadorProfesorId], references: [id])
   identificadorAcudiente  IdentificadorAcudiente?  @relation(fields: [identificadorAcudienteId], references: [id])
   patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
+  asignadoA               Usuario?                 @relation(fields: [asignadoAId], references: [id])
   seguimiento             SeguimientoCaso?
 
   @@unique([colegioId, reporteId, identificadorEstudianteId])
   @@unique([colegioId, reporteId, identificadorProfesorId])
   @@unique([colegioId, reporteId, identificadorAcudienteId])
   @@index([colegioId, estado])
+  @@index([colegioId, prioridad, vencimientoSla])
+  @@index([colegioId, asignadoAId])
   @@index([reporteId])
   @@index([tipoSujeto])
 }

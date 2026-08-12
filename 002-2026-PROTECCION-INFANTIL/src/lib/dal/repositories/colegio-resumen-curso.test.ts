@@ -111,6 +111,8 @@ async function sembrarAlerta(colegioId: string, identificadorId: string, reporte
             identificadorEstudianteId: identificadorId,
             estado: "vista",
             creadoEn: creadoEn ?? new Date(),
+            prioridad: "media",
+            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),
         },
     });
 }
