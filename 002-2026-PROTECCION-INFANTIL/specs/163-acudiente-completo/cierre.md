@@ -5,7 +5,7 @@
 ## Evidencia
 
 - **Rama de trabajo**: `work/002-pi-062`.
-- **Commits**: pendientes de anotar tras el push (ver `git log work/002-pi-062` en el PR).
+- **Commits en `work/002-pi-062`**: `45804760` implementación de Fase A · `aeb1fe8e` ajustes de disciplina Spec-Kit en fases B-G.
 - **PR a `feature/001-scaffolding`**: pendiente.
 - **Gate local** (verificado previo al push):
   - `npx tsc --noEmit` ✅
