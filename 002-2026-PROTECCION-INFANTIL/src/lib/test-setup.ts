@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { TextEncoder as NodeTextEncoder, TextDecoder as NodeTextDecoder } from "util";
 import { webcrypto } from "node:crypto";
+import { cleanup } from "@testing-library/react";
+import { prisma } from "./prisma";
 
 // Wrapper que garantiza que encode() devuelva una Uint8Array pura,
 // evitando problemas con jose/webapi en entornos de test.
@@ -17,21 +19,18 @@ Object.defineProperty(globalThis, "crypto", { value: webcrypto });
 process.env.JWT_SECRET = "test-secret-key-32-chars-long-12345678";
 process.env.RESEND_API_KEY = "re_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 process.env.ENCRYPTION_KEY = "test-encryption-32-chars-key!!";
-// Worktrees paralelos: respeta DATABASE_URL si ya viene cargada (--env-file=.env.test);
-// el fallback es la BD de test del repo principal.
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
 process.env.WORKER_SECRET = "worker-secret-test";
 
 // Aislamiento de BD: vitest 3.2.x ejecuta hooks/tests concurrentemente a
 // pesar de fileParallelism:false + sequence.concurrent:false. Serializamos
-// cada test con un mutex en PostgreSQL (tabla TestMutex), que funciona
-// independientemente del pool/hilos/procesos de vitest.
-import { prisma } from "./prisma";
-import { cleanup } from "@testing-library/react";
-
+// cada test con un mutex en PostgreSQL (tabla TestMutex) usando el reloj de
+// la BD para detectar locks huérfanos. Si no se adquiere en el tiempo
+// configurado, liberamos forzosamente cualquier lock antiguo y reintentamos.
 const MUTEX_ID = "singleton";
 const POLL_MS = 50;
-const LOCK_TIMEOUT_MS = 30_000;
+const LOCK_TIMEOUT_MS = 30_000; // un test legítimo nunca debería durar más
+const ACQUIRE_TIMEOUT_MS = 60_000;
 
 async function ensureTestMutexTable() {
     await prisma.$executeRaw`
@@ -41,7 +40,6 @@ async function ensureTestMutexTable() {
             "lockedAt" TIMESTAMPTZ
         )
     `;
-    // Migración aditiva para entornos que ya tienen la tabla sin lockedAt.
     await prisma.$executeRaw`
         ALTER TABLE "TestMutex" ADD COLUMN IF NOT EXISTS "lockedAt" TIMESTAMPTZ
     `;
@@ -63,12 +61,16 @@ async function tryAcquireTestLock() {
 }
 
 async function isLockOrphaned() {
-    const rows = await prisma.$queryRaw<{ lockedAt: Date | null }[]>`
-        SELECT "lockedAt" FROM "TestMutex" WHERE id = ${MUTEX_ID}
+    // Usamos el reloj de la BD para evitar desincronización entre el reloj del
+    // cliente (runner de CI) y el reloj del servidor Postgres (contenedor).
+    const rows = await prisma.$queryRaw<{ segundos: number }[]>`
+        SELECT EXTRACT(EPOCH FROM (NOW() - "lockedAt"))::int AS segundos
+        FROM "TestMutex"
+        WHERE id = ${MUTEX_ID}
     `;
-    const lockedAt = rows[0]?.lockedAt;
-    if (!lockedAt) return true;
-    return Date.now() - new Date(lockedAt).getTime() > LOCK_TIMEOUT_MS;
+    const segundos = rows[0]?.segundos;
+    if (segundos == null) return true;
+    return segundos > LOCK_TIMEOUT_MS / 1000;
 }
 
 async function forceReleaseTestLock() {
@@ -81,9 +83,13 @@ async function acquireTestLock() {
     const startedAt = Date.now();
     while (true) {
         if (await tryAcquireTestLock()) return;
+        const elapsed = Date.now() - startedAt;
+        if (elapsed > ACQUIRE_TIMEOUT_MS) {
+            throw new Error(`[TEST SETUP] No se pudo adquirir el mutex de test en ${ACQUIRE_TIMEOUT_MS}ms`);
+        }
         // Si el lock lleva mucho tiempo, asumimos que el test anterior no lo
         // liberó (crash / hook abortado) y lo liberamos forzosamente.
-        if (Date.now() - startedAt > LOCK_TIMEOUT_MS && (await isLockOrphaned())) {
+        if (elapsed > LOCK_TIMEOUT_MS && (await isLockOrphaned())) {
             console.warn("[TEST SETUP] Liberando lock huérfano de TestMutex");
             await forceReleaseTestLock();
             if (await tryAcquireTestLock()) return;
@@ -108,7 +114,6 @@ afterEach(async () => {
         cleanup();
     } catch (e) {
         console.warn("[TEST SETUP] cleanup() falló:", e);
-    } finally {
-        await releaseTestLock();
     }
+    await releaseTestLock();
 });
