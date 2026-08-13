@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **62** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **64** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -229,6 +229,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | CursoMateria | CursoMateria | lista, relación |
 | identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 | identificadoresProfesor | IdentificadorProfesor | lista, relación |
+| onboarding | OnboardingColegio | opcional, relación |
+| notificacionesInApp | NotificacionInApp | lista, relación |
 
 #### `Curso`
 
@@ -569,7 +571,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (11)
+### Otros (sin regla de dominio) (13)
 
 #### `CargaRosterSesion`
 
@@ -668,6 +670,37 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | seguimiento | SeguimientoCaso | relación (FK) |
 | colegio | Colegio | relación (FK) |
 | autor | Usuario | relación (FK) |
+
+#### `NotificacionInApp`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| usuarioId | String | — |
+| tipo | String | — |
+| titulo | String | — |
+| mensaje | String | — |
+| entidadId | String | opcional |
+| leidaEn | DateTime | opcional |
+| archivadaEn | DateTime | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
+| usuario | Usuario | relación (FK) |
+
+#### `OnboardingColegio`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | único |
+| estado | String | — |
+| pasoActual | Int | — |
+| completadoEn | DateTime | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
 
 #### `PatronInstitucional`
 
@@ -1162,6 +1195,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | apelacionesResueltas | Apelacion | lista, relación |
 | accesosDocumentoApelacion | AccesoDocumentoApelacion | lista, relación |
 | alertasAsignadas | AlertaColegio | lista, relación |
+| notificacionesInApp | NotificacionInApp | lista, relación |
 
 ## Diagrama ER (Mermaid)
 
@@ -1188,6 +1222,8 @@ erDiagram
     Colegio ||--o{ IdentificadorProfesor : "colegio"
     Colegio ||--o{ Materia : "colegio"
     Colegio ||--o{ NotaSeguimiento : "colegio"
+    Colegio ||--o{ NotificacionInApp : "colegio"
+    Colegio ||--o{ OnboardingColegio : "colegio"
     Colegio ||--o{ PatronInstitucional : "colegio"
     Colegio ||--o{ PreferenciaAlertaColegio : "colegio"
     Colegio ||--o{ Profesor : "colegio"
@@ -1258,6 +1294,7 @@ erDiagram
     Usuario ||--o{ IntegranteComite : "creadoPor"
     Usuario ||--o{ IntegranteComite : "modificadoPor (opcional)"
     Usuario ||--o{ NotaSeguimiento : "autor"
+    Usuario ||--o{ NotificacionInApp : "usuario"
     Usuario ||--o{ ParametroSistema : "actualizadoPor (opcional)"
     Usuario ||--o{ PerfilOperador : "creadoPor"
     Usuario ||--o{ PerfilOperador : "usuario"

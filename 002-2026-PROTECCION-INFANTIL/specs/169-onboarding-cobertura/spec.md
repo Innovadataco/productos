@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-12
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo 002-PI-061-G. Fuentes vinculantes: [BRIEF-MODULO-COLEGIO](../../../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-MODULO-COLEGIO.md) §9 (onboarding + cobertura + notificaciones in-app), §6 (Inicio como radar operativo) y §3 (terminología). Patrones: SPEC-134 (tenant-first / DAL E-1), SPEC-149 (avisos por email), SPEC-162 (migración aditiva).
 
@@ -165,3 +165,24 @@ Como rector quiero recibir avisos dentro de la plataforma cuando hay alertas nue
 - El home del colegio ya existe (SPEC-129/SPEC-143) y dispone de un punto de montaje para los anillos.
 - Las alertas del colegio ya se generan en un servicio centralizado que puede extenderse para crear notificaciones in-app.
 - No se requiere envío push al navegador; el centro de notificaciones es in-app únicamente.
+
+---
+
+## Implementación *(cerrado 002-PI-062)*
+
+**Rama**: `work/002-pi-062` → PR sobre `feature/001-scaffolding`.
+
+**Cambios principales**:
+- Modelo: migración aditiva `20260812230823_add_onboarding_notificaciones_fase_g` con tablas `OnboardingColegio`, `NotificacionInApp` y valores de `AccionAudit` asociados.
+- DAL/Servicios: repositorios `OnboardingColegioRepository`, `OnboardingRequisitosRepository`, `CoberturaRepository`, `NotificacionInAppRepository`; servicios `src/lib/colegio/onboarding.ts`, `src/lib/colegio/cobertura.ts`, `src/lib/colegio/notificaciones.ts`.
+- API: `GET|PATCH /api/colegio/onboarding`, `GET /api/colegio/cobertura`, `GET /api/colegio/notificaciones`, `GET /api/colegio/notificaciones/resumen`, `PATCH /api/colegio/notificaciones/marcar-leidas`, `PATCH|DELETE /api/colegio/notificaciones/[id]`.
+- UI: `OnboardingModal`, `AnillosCobertura`, `CentroNotificaciones`, páginas `/dashboard/colegio/onboarding` y actualización de `/dashboard/colegio`.
+- Integración: `src/lib/colegio/alertas.ts` crea notificaciones in-app junto con alertas de colegio; `src/app/api/admin/colegios/route.ts` inicializa `OnboardingColegio` en `activo` al dar de alta un colegio.
+- Permisos: módulos `colegios_onboarding`, `colegios_cobertura`, `colegios_notificaciones` en catálogo y seed.
+- Tests unitarios/integración para repositorios, API y servicios.
+- Arquitectura: regenerada línea base (`npm run arch:check` verde).
+- Estabilidad del gate: se ajustó `src/lib/test-utils.ts` para usar `upsert` en permisos y `TRUNCATE CASCADE` robusto; `src/lib/test-setup.ts` incluye `cleanup()` de Testing Library.
+
+**Deuda técnica / notas**:
+- El badge de notificaciones se actualiza al cargar el layout; no hay WebSocket/push en esta fase.
+- La cobertura de acudientes requiere que existan identificadores de acudiente (fases A/B previas).

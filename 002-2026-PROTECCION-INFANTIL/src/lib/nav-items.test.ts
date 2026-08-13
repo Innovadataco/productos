@@ -29,6 +29,9 @@ const SIN_PANTALLA_PROPIA = new Set([
     // SPEC-141 (N-1): las pantallas de solo lectura se abren en contexto desde las
     // vistas de padres/colegios (enlace directo), sin ítem de menú propio.
     "soporte_lectura",
+    // SPEC-169 (Fase G): las notificaciones in-app se consumen desde el centro de
+    // notificaciones en el header; no tienen ítem de menú lateral propio.
+    "colegios_notificaciones",
 ]);
 
 const TODOS_LOS_ITEMS = [...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS];

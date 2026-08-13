@@ -4,7 +4,7 @@
 
 # 03 · Pantallas por rol y transiciones
 
-65 páginas (`page.tsx`) clasificadas por quién las alcanza según la
+66 páginas (`page.tsx`) clasificadas por quién las alcanza según la
 puerta real (`proxy()` ejecutado con la sesión canónica; segmentos `[x]` evaluados
 con un valor muestra fijo — al proxy solo le importa el prefijo).
 
@@ -72,6 +72,7 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/colegio/cursos/unificado` | SCHOOL_ADMIN, PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite/casos)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/estadisticas` | SCHOOL_ADMIN, PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite/casos)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/materias` | SCHOOL_ADMIN, PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite/casos)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/colegio/onboarding` | SCHOOL_ADMIN, PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite/casos)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/profesores` | SCHOOL_ADMIN, PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite/casos)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/profesores/[id]` | SCHOOL_ADMIN, PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite/casos)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio/tablero` | SCHOOL_ADMIN, PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite/casos)<br>ANONIMO (redirigir→/login) |

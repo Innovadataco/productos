@@ -416,6 +416,17 @@ export const resolverSolicitudSchema = z.object({
     resolucion: z.string().trim().min(1, "Escribe la decisión del comité").max(4000),
 });
 
+// SPEC-169 (Fase G): onboarding, cobertura y notificaciones in-app del colegio.
+export const onboardingPatchSchema = z.object({
+    estado: z.enum(["activo", "omitido"]),
+});
+
+export const notificacionFiltroSchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    soloNoLeidas: z.coerce.boolean().optional(),
+});
+
 // SPEC-149 (FR-007): PATCH de preferencias de avisos del colegio. Upsert por
 // tipo (tenant lo pone la sesión). Umbrales 1-100, ventanas 1-90 días; null en
 // umbral/ventanaDias/emailDestino = volver al default. Mensajes humanos (§4.6).

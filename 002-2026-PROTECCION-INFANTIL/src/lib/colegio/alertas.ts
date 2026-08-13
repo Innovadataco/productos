@@ -10,6 +10,7 @@ import { EventoMatchRepository } from "@/lib/dal/repositories/evento-match";
 import { registrarEventoAviso, evaluarUmbralesPorAlerta } from "./avisos";
 import { verificarVigenciaPorColegioId } from "./vigencia";
 import { calcularPrioridadYSLA } from "./alertas-prioridad";
+import { crearNotificacionDesdeAlerta } from "./notificaciones";
 import type { AccionAudit, EstadoReporte } from "@prisma/client";
 
 const ESTADOS_VISIBLES: EstadoReporte[] = [
@@ -181,6 +182,11 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                 });
 
                 alertasCreadas.push({ id: alerta.id, colegioId });
+
+                // SPEC-169: notificación in-app independiente del email (nunca bloquea).
+                crearNotificacionDesdeAlerta(colegioId, alerta.id, "ALERTA_NUEVA").catch((err) => {
+                    logger.error(`[COLEGIO] Error creando notificación in-app para alerta ${alerta.id}:`, err);
+                });
             } catch (error) {
                 logger.error(`[COLEGIO] Error creando alerta para colegio ${colegioId}:`, error);
             }
@@ -292,6 +298,14 @@ export async function cambiarEstadoAlerta(
         ipAddress,
         userAgent,
     });
+
+    // SPEC-169: notificación in-app cuando la alerta pasa a gestionada o escalada.
+    if (estado === "gestionada" || estado === "escalada") {
+        const tipoNotificacion = estado === "gestionada" ? "ALERTA_GESTIONADA" : "ALERTA_ESCALADA";
+        crearNotificacionDesdeAlerta(alerta.colegioId, alertaId, tipoNotificacion).catch((err) => {
+            logger.error(`[COLEGIO] Error creando notificación in-app por cambio de estado ${estado}:`, err);
+        });
+    }
 
     return actualizada;
 }

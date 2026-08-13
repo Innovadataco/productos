@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 260 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1820 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 267 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1869 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -159,6 +159,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
@@ -191,6 +192,11 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/materias` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/marcar-leidas` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/colegio/onboarding` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/colegio/preferencias-avisos` | api | permitir | permite | sí |
 | `/api/colegio/profesores` | api | permitir | permite | sí |
@@ -270,6 +276,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/unificado` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/materias` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/onboarding` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/profesores` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/tablero` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -424,6 +431,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
@@ -456,6 +464,11 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/materias` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/marcar-leidas` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/colegio/onboarding` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/colegio/preferencias-avisos` | api | permitir | permite | sí |
 | `/api/colegio/profesores` | api | permitir | permite | sí |
@@ -535,6 +548,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/unificado` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/materias` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/onboarding` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/profesores` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/tablero` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -689,6 +703,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
@@ -721,6 +736,11 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/materias` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/marcar-leidas` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/colegio/onboarding` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/colegio/preferencias-avisos` | api | permitir | permite | sí |
 | `/api/colegio/profesores` | api | permitir | permite | sí |
@@ -800,6 +820,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/unificado` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/materias` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/onboarding` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/profesores` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/tablero` | página | redirigir→/dashboard/admin/comite | no permite | sí |
@@ -954,6 +975,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
@@ -986,6 +1008,11 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/materias` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/marcar-leidas` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/colegio/onboarding` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/colegio/preferencias-avisos` | api | permitir | permite | sí |
 | `/api/colegio/profesores` | api | permitir | permite | sí |
@@ -1065,6 +1092,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/unificado` | página | permitir | permite | sí |
 | `/dashboard/colegio/estadisticas` | página | permitir | permite | sí |
 | `/dashboard/colegio/materias` | página | permitir | permite | sí |
+| `/dashboard/colegio/onboarding` | página | permitir | permite | sí |
 | `/dashboard/colegio/profesores` | página | permitir | permite | sí |
 | `/dashboard/colegio/profesores/[id]` | página | permitir | permite | sí |
 | `/dashboard/colegio/tablero` | página | permitir | permite | sí |
@@ -1219,6 +1247,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/carga/plantilla` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/carga/validar` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/cobertura` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
@@ -1251,6 +1280,11 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/materias` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/materias/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/materias/[id]/estado` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/notificaciones` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/notificaciones/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/notificaciones/marcar-leidas` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/notificaciones/resumen` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/onboarding` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/patrones` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/preferencias-avisos` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/profesores` | api | HTTP 403 | no permite | sí |
@@ -1330,6 +1364,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/unificado` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
 | `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
 | `/dashboard/colegio/materias` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
+| `/dashboard/colegio/onboarding` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
 | `/dashboard/colegio/profesores` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
 | `/dashboard/colegio/tablero` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
@@ -1484,6 +1519,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
@@ -1516,6 +1552,11 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/materias` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]` | api | permitir | permite | sí |
 | `/api/colegio/materias/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/marcar-leidas` | api | permitir | permite | sí |
+| `/api/colegio/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/colegio/onboarding` | api | permitir | permite | sí |
 | `/api/colegio/patrones` | api | permitir | permite | sí |
 | `/api/colegio/preferencias-avisos` | api | permitir | permite | sí |
 | `/api/colegio/profesores` | api | permitir | permite | sí |
@@ -1595,6 +1636,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/unificado` | página | permitir | permite | sí |
 | `/dashboard/colegio/estadisticas` | página | permitir | permite | sí |
 | `/dashboard/colegio/materias` | página | permitir | permite | sí |
+| `/dashboard/colegio/onboarding` | página | permitir | permite | sí |
 | `/dashboard/colegio/profesores` | página | permitir | permite | sí |
 | `/dashboard/colegio/profesores/[id]` | página | permitir | permite | sí |
 | `/dashboard/colegio/tablero` | página | permitir | permite | sí |
@@ -1749,6 +1791,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/carga/plantilla` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/carga/validar` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/cobertura` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/cuenta` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | HTTP 401 | permite | **NO** |
@@ -1781,6 +1824,11 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/materias` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/materias/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/materias/[id]/estado` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/notificaciones` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/notificaciones/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/notificaciones/marcar-leidas` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/notificaciones/resumen` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/onboarding` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/patrones` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/preferencias-avisos` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/profesores` | api | HTTP 401 | permite | **NO** |
@@ -1860,6 +1908,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/cursos/unificado` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/estadisticas` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/materias` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/onboarding` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/profesores` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/tablero` | página | redirigir→/login | permite | **NO** |
@@ -2002,6 +2051,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/carga/confirmar` | HTTP 401 | permite |
 | `/api/colegio/carga/plantilla` | HTTP 401 | permite |
 | `/api/colegio/carga/validar` | HTTP 401 | permite |
+| `/api/colegio/cobertura` | HTTP 401 | permite |
 | `/api/colegio/comite` | HTTP 401 | permite |
 | `/api/colegio/comite/cuenta` | HTTP 401 | permite |
 | `/api/colegio/comite/cuenta/regenerar-password` | HTTP 401 | permite |
@@ -2034,6 +2084,11 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/materias` | HTTP 401 | permite |
 | `/api/colegio/materias/[id]` | HTTP 401 | permite |
 | `/api/colegio/materias/[id]/estado` | HTTP 401 | permite |
+| `/api/colegio/notificaciones` | HTTP 401 | permite |
+| `/api/colegio/notificaciones/[id]` | HTTP 401 | permite |
+| `/api/colegio/notificaciones/marcar-leidas` | HTTP 401 | permite |
+| `/api/colegio/notificaciones/resumen` | HTTP 401 | permite |
+| `/api/colegio/onboarding` | HTTP 401 | permite |
 | `/api/colegio/patrones` | HTTP 401 | permite |
 | `/api/colegio/preferencias-avisos` | HTTP 401 | permite |
 | `/api/colegio/profesores` | HTTP 401 | permite |
@@ -2068,6 +2123,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/colegio/cursos/unificado` | redirigir→/login | permite |
 | `/dashboard/colegio/estadisticas` | redirigir→/login | permite |
 | `/dashboard/colegio/materias` | redirigir→/login | permite |
+| `/dashboard/colegio/onboarding` | redirigir→/login | permite |
 | `/dashboard/colegio/profesores` | redirigir→/login | permite |
 | `/dashboard/colegio/profesores/[id]` | redirigir→/login | permite |
 | `/dashboard/colegio/tablero` | redirigir→/login | permite |
@@ -2097,6 +2153,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | colegios_gestion | `/dashboard/colegio/estadisticas` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/materias` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/profesores` | ADMIN, SCHOOL_ADMIN |
+| colegios_onboarding | `/dashboard/colegio/onboarding` | ADMIN, SCHOOL_ADMIN |
 | comite | `/dashboard/admin/comite/gestion` | ADMIN |
 | comite_auditoria | `/dashboard/admin/comite/auditoria` | ADMIN |
 | comite_bandeja | `/dashboard/admin/comite` | ADMIN, COMITE_VALIDACION |

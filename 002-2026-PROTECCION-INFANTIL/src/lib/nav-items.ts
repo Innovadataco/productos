@@ -33,6 +33,8 @@ export const COMITE_NAV_TABS: NavItem[] = [
 
 export const COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio", label: "Inicio", modulo: "colegios" },
+    // SPEC-169 (Fase G): onboarding accesible desde el menú para reactivarlo.
+    { href: "/dashboard/colegio/onboarding", label: "Onboarding", modulo: "colegios_onboarding" },
     { href: "/dashboard/colegio/cursos", label: "Cursos", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/profesores", label: "Profesores", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/materias", label: "Materias", modulo: "colegios_gestion" },

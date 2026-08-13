@@ -11,94 +11,81 @@ import { RolUsuario } from "@prisma/client";
 export async function otorgarTodosLosPermisos() {
     const moduloIds = new Map<string, string>();
     for (const m of CATALOGO_MODULOS.filter((x) => !x.padre)) {
-        const row = await prisma.moduloPermisible.create({
-            data: { clave: m.clave, nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden },
+        const row = await prisma.moduloPermisible.upsert({
+            where: { clave: m.clave },
+            update: { nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden },
+            create: { clave: m.clave, nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden },
         });
         moduloIds.set(m.clave, row.id);
     }
     for (const m of CATALOGO_MODULOS.filter((x) => x.padre)) {
-        const row = await prisma.moduloPermisible.create({
-            data: {
-                clave: m.clave,
-                nombre: m.nombre,
-                categoria: m.categoria,
-                esCritico: m.esCritico ?? false,
-                orden: m.orden,
-                padreId: moduloIds.get(m.padre!)!,
-            },
+        const padreId = moduloIds.get(m.padre!)!;
+        const row = await prisma.moduloPermisible.upsert({
+            where: { clave: m.clave },
+            update: { nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden, padreId },
+            create: { clave: m.clave, nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden, padreId },
         });
         moduloIds.set(m.clave, row.id);
     }
     for (const rol of Object.values(RolUsuario)) {
         for (const moduloId of moduloIds.values()) {
-            await prisma.permisoModulo.create({ data: { rol, moduloId, activo: true } });
+            await prisma.permisoModulo.upsert({
+                where: { rol_moduloId: { rol, moduloId } },
+                update: { activo: true },
+                create: { rol, moduloId, activo: true },
+            });
         }
     }
 }
 
-export async function resetDatabase() {
-    // Respetar dependencias FK: hijos antes que padres.
-    await prisma.accesoDocumentoApelacion.deleteMany();
-    await prisma.documentoApelacion.deleteMany();
-    await prisma.apelacion.deleteMany();
-    // SPEC-133: suscripciones de alerta y tokens de recuperación (FK a usuario/identificador).
-    await prisma.alertaSuscripcion.deleteMany();
-    await prisma.tokenRecuperacion.deleteMany();
-    await prisma.simulacionReporte.deleteMany();
-    await prisma.simulacionRun.deleteMany();
-    await prisma.rateLimit.deleteMany();
-    await prisma.casoEval.deleteMany();
-    await prisma.evalRun.deleteMany();
-    await prisma.reintentoReporte.deleteMany();
-    await prisma.transicionReporte.deleteMany();
-    await prisma.datasetEntrenamiento.deleteMany();
-    await prisma.correccionAdmin.deleteMany();
-    await prisma.clasificacionIA.deleteMany();
-    await prisma.embeddingReporte.deleteMany();
-    await prisma.eventoMatch.deleteMany();
-    await prisma.identificadorReportado.deleteMany();
-    // SPEC-159: bitácora del caso (notas antes que el seguimiento, FK RESTRICT;
-    // el seguimiento antes que la alerta).
-    await prisma.notaSeguimiento.deleteMany();
-    await prisma.seguimientoCaso.deleteMany();
-    await prisma.alertaColegio.deleteMany();
-    await prisma.patronInstitucional.deleteMany();
-    // SPEC-149: avisos del colegio (hijos de Colegio, FK RESTRICT).
-    await prisma.registroAvisoColegio.deleteMany();
-    await prisma.preferenciaAlertaColegio.deleteMany();
-    await prisma.reporte.deleteMany();
-    await prisma.codigoVerificacion.deleteMany();
-    await prisma.integranteComite.deleteMany();
-    await prisma.auditLog.deleteMany();
-    await prisma.identificadorEstudiante.deleteMany();
-    // SPEC-163: identificadores de acudiente antes que el acudiente (FK RESTRICT).
-    await prisma.identificadorAcudiente.deleteMany();
-    // SPEC-144 (D1): hijos antes que el estudiante (FK RESTRICT).
-    await prisma.acudienteEstudiante.deleteMany();
-    // SPEC-150: observaciones antes que el estudiante (FK RESTRICT).
-    await prisma.estudianteObservacion.deleteMany();
-    await prisma.estudiante.deleteMany();
-    // SPEC-145: profesores antes que el curso (FK RESTRICT); el titular del curso es SET NULL.
-    // SPEC-162: vínculos y catálogo de materias antes que Curso/Profesor/Colegio.
-    // SPEC-164: identificadores de profesor antes que el profesor (FK RESTRICT).
-    await prisma.identificadorProfesor.deleteMany();
-    await prisma.cursoMateria.deleteMany();
-    await prisma.materia.deleteMany();
-    await prisma.profesor.deleteMany();
-    await prisma.curso.deleteMany();
-    await prisma.parametroSistema.deleteMany();
-    // Usuario referencia Colegio y Tenant con Restrict: borrar antes que ambos.
-    // PerfilOperador referencia Usuario: borrar antes que Usuario.
-    await prisma.perfilOperador.deleteMany();
-    await prisma.usuario.deleteMany();
-    await prisma.colegio.deleteMany();
-    await prisma.tenant.deleteMany();
-    // Permisos antes que módulos; módulos hijos antes que padres (Restrict).
-    await prisma.permisoModulo.deleteMany();
-    await prisma.moduloPermisible.deleteMany({ where: { padreId: { not: null } } });
-    await prisma.moduloPermisible.deleteMany({ where: { padreId: null } });
-    // SPEC-132: sesiones de carga masiva (roster server-side).
-    await prisma.cargaRosterSesion.deleteMany();
+const EXCLUDED_TABLES = new Set([
+    "_prisma_migrations",
+    "TestMutex",
+    // Catálogos estáticos sembrados por prisma/seed.ts; truncarlos rompe tests
+    // que los dan por sentado (ej. asignador.test.ts busca plataforma "whatsapp").
+    "Pais",
+    "Departamento",
+    "Ciudad",
+    "Plataforma",
+]);
 
+async function asegurarPlataformas() {
+    const plataformas = [
+        { clave: "whatsapp", nombre: "WhatsApp", categoria: "mensajeria" },
+        { clave: "instagram", nombre: "Instagram", categoria: "red_social" },
+        { clave: "tiktok", nombre: "TikTok", categoria: "red_social" },
+        { clave: "facebook", nombre: "Facebook", categoria: "red_social" },
+        { clave: "minecraft", nombre: "Minecraft", categoria: "juego" },
+        { clave: "telegram", nombre: "Telegram", categoria: "mensajeria" },
+        { clave: "snapchat", nombre: "Snapchat", categoria: "red_social" },
+        { clave: "otro", nombre: "Otra plataforma", categoria: "otro" },
+    ];
+    for (const pl of plataformas) {
+        await prisma.plataforma.upsert({
+            where: { clave: pl.clave },
+            update: {},
+            create: pl,
+        });
+    }
+}
+
+export async function resetDatabase() {
+    // El aislamiento real lo proporciona test-setup.ts con un mutex en BD;
+    // este reset solo limpia y re-seedea de forma atómica con TRUNCATE CASCADE.
+    const rows: { tablename: string }[] = await prisma.$queryRaw`
+        SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+    `;
+    const tables = rows
+        .map((r) => r.tablename)
+        .filter((t) => !EXCLUDED_TABLES.has(t))
+        .map((t) => `"${t}"`)
+        .join(", ");
+    if (tables) {
+        await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables} CASCADE`);
+    }
     await otorgarTodosLosPermisos();
+    // Algunos tests dan por sentado que ciertos catálogos estáticos existen
+    // (ej. plataforma "whatsapp" en asignador.test.ts). Se aseguran aquí para
+    // que la suite sea autocontenida aunque la BD de test no haya corrido seed.
+    await asegurarPlataformas();
 }

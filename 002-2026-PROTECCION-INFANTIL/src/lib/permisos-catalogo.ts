@@ -39,6 +39,9 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // SPEC-168 (Fase F): Comité de Convivencia por colegio.
     { clave: "colegios_comite", nombre: "Comité de Convivencia", categoria: "colegio", orden: 63, padre: "colegios" },
     { clave: "colegios_comite_bandeja", nombre: "Bandeja del comité", categoria: "colegio", orden: 64, padre: "colegios" },
+    // SPEC-169 (Fase G): onboarding, cobertura y notificaciones in-app del colegio.
+    { clave: "colegios_onboarding", nombre: "Onboarding del colegio", categoria: "colegio", orden: 65, padre: "colegios" },
+    { clave: "colegios_notificaciones", nombre: "Notificaciones in-app del colegio", categoria: "colegio", orden: 66, padre: "colegios" },
     { clave: "configuracion_sistema", nombre: "Configuración del sistema", categoria: "admin", esCritico: true, orden: 70 },
     { clave: "configuracion_permisos", nombre: "Permisos por rol", categoria: "admin", orden: 71, padre: "configuracion_sistema" },
     { clave: "audit_logs", nombre: "Logs de auditoría", categoria: "admin", esCritico: true, orden: 80 },

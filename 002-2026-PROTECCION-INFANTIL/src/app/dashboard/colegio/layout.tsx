@@ -6,6 +6,7 @@ import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
 import { ColegioSideNav } from "@/components/modules/colegio/ColegioSideNav";
 import { BuscadorGlobal } from "@/components/modules/colegio/BuscadorGlobal";
+import { CentroNotificaciones } from "@/components/modules/colegio/CentroNotificaciones";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
 const ROLES_COLEGIO = new Set(["SCHOOL_ADMIN", "COMITE_CONVIVENCIA"]);
@@ -71,7 +72,12 @@ export default async function ColegioLayout({ children }: { children: React.Reac
         <div className="theme-colegio flex min-h-screen bg-page">
             <ColegioSideNav rol={usuario.rol} modulosPermitidos={[...permitidos]} />
             <BuscadorGlobal />
-            <div className="min-w-0 flex-1">{children}</div>
+            <div className="flex min-w-0 flex-1 flex-col">
+                <header className="flex items-center justify-end gap-3 border-b border-tinta/10 px-4 py-3 sm:px-6">
+                    <CentroNotificaciones />
+                </header>
+                <main className="min-w-0 flex-1">{children}</main>
+            </div>
         </div>
     );
 }

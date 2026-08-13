@@ -7,6 +7,7 @@ import type { HomeRector } from "@/lib/dal/repositories/colegio-resumen";
 import { HeroEstado } from "./HeroEstado";
 import { FranjaVigilancia } from "./FranjaVigilancia";
 import { AnillosProteccion } from "./AnillosProteccion";
+import { AnillosCobertura, type CoberturaPorSujeto } from "../AnillosCobertura";
 import { TendenciaReportes } from "./TendenciaReportes";
 import { CursosQueMerecenMirada } from "./CursosQueMerecenMirada";
 import { AccionesRapidas } from "./AccionesRapidas";
@@ -34,9 +35,10 @@ function retardo(ms: number): CSSProperties {
 interface HomeRectorPageProps {
     nombreUsuario: string;
     datos: HomeRector;
+    cobertura?: CoberturaPorSujeto;
 }
 
-export function HomeRectorPage({ nombreUsuario, datos }: HomeRectorPageProps) {
+export function HomeRectorPage({ nombreUsuario, datos, cobertura }: HomeRectorPageProps) {
     const estado = resolverEstado(datos.semaforo);
     const ahora = new Date();
     const { kpis } = datos;
@@ -92,14 +94,18 @@ export function HomeRectorPage({ nombreUsuario, datos }: HomeRectorPageProps) {
                 </section>
 
                 <div className="anim-entrada grid gap-5 sm:gap-6 lg:grid-cols-2" style={retardo(280)}>
-                    <AnillosProteccion
-                        vigilancia={datos.cobertura.vigilancia}
-                        reaccion={datos.cobertura.reaccion}
-                        estudiantes={kpis.estudiantes}
-                        sinRedes={datos.cobertura.sinRedes}
-                        sinContacto={datos.cobertura.sinContacto}
-                        estado={estado}
-                    />
+                    {cobertura ? (
+                        <AnillosCobertura cobertura={cobertura} />
+                    ) : (
+                        <AnillosProteccion
+                            vigilancia={datos.cobertura.vigilancia}
+                            reaccion={datos.cobertura.reaccion}
+                            estudiantes={kpis.estudiantes}
+                            sinRedes={datos.cobertura.sinRedes}
+                            sinContacto={datos.cobertura.sinContacto}
+                            estado={estado}
+                        />
+                    )}
                     <TendenciaReportes
                         semanal={datos.tendencia.semanal}
                         mensual={datos.tendencia.mensual}

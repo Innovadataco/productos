@@ -172,6 +172,13 @@ enum AccionAudit {
   COLEGIO_CURSO_DUPLICADO
   // SPEC-153: descarga de comparativa entre cursos en Excel.
   COLEGIO_COMPARATIVA_EXCEL_DESCARGADO
+  // SPEC-169 (Fase G): onboarding, cobertura y notificaciones in-app del colegio.
+  COLEGIO_ONBOARDING_OMITIDO
+  COLEGIO_ONBOARDING_REACTIVADO
+  COLEGIO_ONBOARDING_COMPLETADO
+  COLEGIO_NOTIFICACION_CREADA
+  COLEGIO_NOTIFICACION_LEIDA
+  COLEGIO_NOTIFICACION_ARCHIVADA
 }
 
 enum TipoPeriodoServicio {
@@ -311,6 +318,7 @@ model Usuario {
   apelacionesResueltas         Apelacion[]                @relation("ApelacionesResueltas")
   accesosDocumentoApelacion    AccesoDocumentoApelacion[]
   alertasAsignadas             AlertaColegio[]
+  notificacionesInApp          NotificacionInApp[]
 
   @@index([email])
   @@index([rol])
@@ -526,11 +534,53 @@ model Colegio {
   CursoMateria            CursoMateria[]
   identificadoresAcudiente IdentificadorAcudiente[]
   identificadoresProfesor  IdentificadorProfesor[]
+  onboarding               OnboardingColegio?
+  notificacionesInApp      NotificacionInApp[]
 
   @@index([paisId])
   @@index([departamentoId])
   @@index([ciudadId])
   @@index([estado])
+}
+
+// SPEC-169 (Fase G): onboarding "Activa tu protección" — fila única por colegio.
+// El progreso real se calcula sobre cursos, estudiantes, profesores, acudientes e
+// identificadores activos; aquí solo se guarda estado, paso visible y timestamp.
+model OnboardingColegio {
+  id            String    @id @default(cuid())
+  colegioId     String    @unique
+  estado        String    @default("activo") // activo | omitido | completado
+  pasoActual    Int       @default(1)
+  completadoEn  DateTime?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@index([estado])
+}
+
+// SPEC-169 (Fase G): notificaciones in-app dirigidas al SCHOOL_ADMIN del colegio.
+// Estados implícitos por leidaEn / archivadaEn; nunca almacena texto del reporte.
+model NotificacionInApp {
+  id            String    @id @default(cuid())
+  colegioId     String
+  usuarioId     String
+  tipo          String // ALERTA_NUEVA | ALERTA_GESTIONADA | ALERTA_ESCALADA | SISTEMA
+  titulo        String
+  mensaje       String
+  entidadId     String?
+  leidaEn       DateTime?
+  archivadaEn   DateTime?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([colegioId, usuarioId, archivadaEn, leidaEn, creadoEn])
+  @@index([colegioId, usuarioId, archivadaEn, creadoEn])
+  @@index([colegioId, entidadId, tipo])
 }
 
 model Curso {

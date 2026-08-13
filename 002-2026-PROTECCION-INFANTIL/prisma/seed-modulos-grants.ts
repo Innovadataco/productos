@@ -44,7 +44,7 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
     // Backfill: reproduce el acceso implícito actual por rol (denegar por defecto al resto).
     const clavesPorRol: Record<string, string[]> = {
         ADMIN: modulosSeed.map((m) => m.clave),
-        SCHOOL_ADMIN: ["colegios", "colegios_gestion", "colegios_auditoria", "colegios_comite", "colegios_comite_bandeja"],
+        SCHOOL_ADMIN: ["colegios", "colegios_gestion", "colegios_auditoria", "colegios_comite", "colegios_comite_bandeja", "colegios_onboarding", "colegios_notificaciones"],
         // SPEC-168 (Fase F): el Comité de Convivencia accede solo a su bandeja de casos.
         COMITE_CONVIVENCIA: ["colegios_comite_bandeja"],
         OPERADOR: ["bandeja_reportes"],
