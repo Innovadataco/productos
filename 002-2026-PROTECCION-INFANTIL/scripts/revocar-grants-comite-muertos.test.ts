@@ -63,6 +63,7 @@ describe("revocar-grants-comite-muertos (SPEC-128, D-43 Opción A)", () => {
     });
 
     it("es idempotente: la segunda corrida no revoca nada más", async () => {
+        await revocarGrantsComiteMuertos();
         const segunda = await revocarGrantsComiteMuertos();
         expect(segunda.revocados).toBe(0);
         expect(segunda.yaInactivos).toBe(2);

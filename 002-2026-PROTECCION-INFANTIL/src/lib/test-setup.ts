@@ -122,7 +122,6 @@ afterEach(async () => {
     // Limpiamos calls con clearAllMocks() y dejamos que cada test restaure sus
     // propios spyOn si es necesario.
     vi.useRealTimers();
-    vi.clearAllMocks();
     vi.unstubAllGlobals();
 
     try {
