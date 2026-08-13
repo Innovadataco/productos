@@ -110,6 +110,21 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+    // Restaurar estado global de JS antes de soltar el lock de BD. Un test que
+    // deje fake timers, mocks o globals stubs (fetch, etc.) contamina a todos
+    // los siguientes en el mismo fork (singleFork:true). Esto causa flakes
+    // order-dependent, especialmente en librerías con WASM como
+    // @react-pdf/renderer/yoga-layout (HALLAZGO 002-PI-062).
+    //
+    // Nota: NO usamos vi.restoreAllMocks() porque Vitest lo aplica también a
+    // los mocks creados con vi.mock(), reseteándolos a vi.fn() sin
+    // implementación y rompiendo tests que dependen de la factory del módulo.
+    // Limpiamos calls con clearAllMocks() y dejamos que cada test restaure sus
+    // propios spyOn si es necesario.
+    vi.useRealTimers();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+
     try {
         cleanup();
     } catch (e) {
