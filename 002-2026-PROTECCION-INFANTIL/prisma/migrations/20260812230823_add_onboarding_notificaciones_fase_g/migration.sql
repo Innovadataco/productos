@@ -17,16 +17,12 @@ ALTER TYPE "AccionAudit" ADD VALUE 'COLEGIO_NOTIFICACION_ARCHIVADA';
 ALTER TABLE "AlertaColegio" DROP CONSTRAINT "AlertaColegio_identificadorAlumnoId_fkey";
 
 -- DropIndex
-DROP INDEX "AlertaColegio_patronInstitucionalId_idx";
 
 -- DropIndex
-DROP INDEX "Ciudad_nombreNormalizado_trgm_idx";
 
 -- DropIndex
-DROP INDEX "EmbeddingDataset_vector_idx";
 
 -- DropIndex
-DROP INDEX "EmbeddingReporte_vector_idx";
 
 -- AlterTable
 ALTER TABLE "IntegranteComite" ALTER COLUMN "hashIdentificacion" DROP DEFAULT;
