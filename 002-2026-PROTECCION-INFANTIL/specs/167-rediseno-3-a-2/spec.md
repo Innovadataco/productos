@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-12
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: [BRIEF-MODULO-COLEGIO](../../../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-MODULO-COLEGIO.md) §6 (rediseño de 3 → 2 pantallas). Fuentes vinculantes: SPEC-143 (home operativa del rector), SPEC-158 (tablero de control), SPEC-142 (patrones institucionales), SPEC-153 (comparativa entre cursos), SPEC-162 (materia configurable), SPEC-129 (rediseño UX colegio), SPEC-078 (estadísticas e informe PDF). Patrones: SPEC-134 (tenant-first / DAL E-1), SPEC-157 (sistema de diseño, tokens).
 
