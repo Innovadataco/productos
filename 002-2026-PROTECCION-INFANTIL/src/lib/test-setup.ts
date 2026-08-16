@@ -22,36 +22,68 @@ process.env.ENCRYPTION_KEY = "test-encryption-32-chars-key!!";
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
 process.env.WORKER_SECRET = "worker-secret-test";
 
-// Snapshot de los métodos reales de Prisma antes de que ningún test los toque.
 // Algunos tests usan vi.mock del módulo prisma con factories parciales; bajo
-// singleFork esas funciones de fábrica pueden quedar registradas como spies
-// y vi.restoreAllMocks() de un test posterior las deja como undefined en el
-// singleton real. Guardamos el snapshot en globalThis para que sobreviva a las
-// recargas del setup file (Vitest ejecuta setupFiles por archivo de test) y
-// restauramos cualquier método que haya perdido su función.
+// singleFork esas funciones de fábrica pueden filtrar a tests posteriores y
+// dejar métodos del singleton como undefined (HALLAZGO 002-PI-066). Para
+// recuperarnos sin depender del orden de carga, mantenemos una referencia a
+// un cliente real en globalThis y restauramos métodos perdidos copiándolos
+// desde él. Los métodos de Prisma están ligados a su instancia, por lo que
+// copiarlos a un delegate vacío sigue funcionando.
 const globalStore = globalThis as unknown as {
     __prismaMethodSnapshot?: Map<string, Record<string, unknown>>;
+    __testPrismaClient?: unknown;
 };
 
-if (!globalStore.__prismaMethodSnapshot) {
+function looksLikeRealPrisma(client: unknown): boolean {
+    if (!client || typeof client !== "object") return false;
+    const delegate = (client as Record<string, unknown>).parametroSistema;
+    if (!delegate || typeof delegate !== "object") return false;
+    return typeof (delegate as Record<string, unknown>).findUnique === "function";
+}
+
+function snapshotPrismaMethods(client: unknown): Map<string, Record<string, unknown>> {
     const snapshot = new Map<string, Record<string, unknown>>();
-    for (const key of Object.keys(prisma)) {
-        const delegate = (prisma as Record<string, unknown>)[key];
+    for (const key of Object.keys(client as Record<string, unknown>)) {
+        const delegate = (client as Record<string, unknown>)[key];
         if (!delegate || typeof delegate !== "object") continue;
         const methods: Record<string, unknown> = {};
-        for (const method of Object.keys(delegate)) {
+        for (const method of Object.keys(delegate as Record<string, unknown>)) {
             const fn = (delegate as Record<string, unknown>)[method];
             if (typeof fn === "function") methods[method] = fn;
         }
         if (Object.keys(methods).length > 0) snapshot.set(key, methods);
     }
-    globalStore.__prismaMethodSnapshot = snapshot;
+    return snapshot;
 }
 
-const prismaMethodSnapshot = globalStore.__prismaMethodSnapshot;
+async function ensureRealPrismaClient() {
+    if (looksLikeRealPrisma(globalStore.__testPrismaClient)) {
+        return globalStore.__testPrismaClient;
+    }
+    if (looksLikeRealPrisma(globalThis.prisma)) {
+        globalStore.__testPrismaClient = globalThis.prisma;
+        return globalThis.prisma;
+    }
+    // Último recurso: instanciar un cliente real. Esto solo pasa si el primer
+    // archivo de test fue un mocker y globalThis.prisma nunca se pobló.
+    const { PrismaClient } = await import("@prisma/client");
+    const fresh = new PrismaClient();
+    globalStore.__testPrismaClient = fresh;
+    if (process.env.NODE_ENV !== "production") globalThis.prisma = fresh;
+    return fresh;
+}
 
-function restorePrismaMethods() {
-    for (const [key, methods] of prismaMethodSnapshot) {
+async function getPrismaMethodSnapshot() {
+    if (!globalStore.__prismaMethodSnapshot) {
+        const realClient = await ensureRealPrismaClient();
+        globalStore.__prismaMethodSnapshot = snapshotPrismaMethods(realClient);
+    }
+    return globalStore.__prismaMethodSnapshot;
+}
+
+async function restorePrismaMethods() {
+    const snapshot = await getPrismaMethodSnapshot();
+    for (const [key, methods] of snapshot) {
         const delegate = (prisma as Record<string, unknown>)[key];
         if (!delegate || typeof delegate !== "object") continue;
         for (const [method, originalFn] of Object.entries(methods)) {
@@ -71,30 +103,35 @@ function restorePrismaMethods() {
     }
 }
 
-restorePrismaMethods();
-
 // Aislamiento de BD: vitest 3.2.x ejecuta hooks/tests concurrentemente a
 // pesar de fileParallelism:false + sequence.concurrent:false. Serializamos
 // cada test con un mutex en PostgreSQL (tabla TestMutex) usando el reloj de
 // la BD para detectar locks huérfanos. Si no se adquiere en el tiempo
 // configurado, liberamos forzosamente cualquier lock antiguo y reintentamos.
+// Usamos el cliente real global para no depender del singleton posiblemente
+// envenenado por un mock parcial.
 const MUTEX_ID = "singleton";
 const POLL_MS = 50;
 const LOCK_TIMEOUT_MS = 30_000; // un test legítimo nunca debería durar más
 const ACQUIRE_TIMEOUT_MS = 60_000;
 
+async function getMutexClient() {
+    return ensureRealPrismaClient();
+}
+
 async function ensureTestMutexTable() {
-    await prisma.$executeRaw`
+    const client = await getMutexClient();
+    await client.$executeRaw`
         CREATE TABLE IF NOT EXISTS "TestMutex" (
             id TEXT PRIMARY KEY,
             locked BOOLEAN NOT NULL DEFAULT false,
             "lockedAt" TIMESTAMPTZ
         )
     `;
-    await prisma.$executeRaw`
+    await client.$executeRaw`
         ALTER TABLE "TestMutex" ADD COLUMN IF NOT EXISTS "lockedAt" TIMESTAMPTZ
     `;
-    await prisma.$executeRaw`
+    await client.$executeRaw`
         INSERT INTO "TestMutex" (id, locked)
         VALUES (${MUTEX_ID}, false)
         ON CONFLICT (id) DO NOTHING
@@ -102,7 +139,8 @@ async function ensureTestMutexTable() {
 }
 
 async function tryAcquireTestLock() {
-    const result = await prisma.$queryRaw<{ id: string }[]>`
+    const client = await getMutexClient();
+    const result = await client.$queryRaw<{ id: string }[]>`
         UPDATE "TestMutex"
         SET locked = true, "lockedAt" = NOW()
         WHERE id = ${MUTEX_ID} AND locked = false
@@ -112,9 +150,8 @@ async function tryAcquireTestLock() {
 }
 
 async function isLockOrphaned() {
-    // Usamos el reloj de la BD para evitar desincronización entre el reloj del
-    // cliente (runner de CI) y el reloj del servidor Postgres (contenedor).
-    const rows = await prisma.$queryRaw<{ segundos: number }[]>`
+    const client = await getMutexClient();
+    const rows = await client.$queryRaw<{ segundos: number }[]>`
         SELECT EXTRACT(EPOCH FROM (NOW() - "lockedAt"))::int AS segundos
         FROM "TestMutex"
         WHERE id = ${MUTEX_ID}
@@ -125,7 +162,8 @@ async function isLockOrphaned() {
 }
 
 async function forceReleaseTestLock() {
-    await prisma.$executeRaw`
+    const client = await getMutexClient();
+    await client.$executeRaw`
         UPDATE "TestMutex" SET locked = false, "lockedAt" = NULL WHERE id = ${MUTEX_ID}
     `;
 }
@@ -150,17 +188,18 @@ async function acquireTestLock() {
 }
 
 async function releaseTestLock() {
-    await prisma.$executeRaw`
+    const client = await getMutexClient();
+    await client.$executeRaw`
         UPDATE "TestMutex" SET locked = false, "lockedAt" = NULL WHERE id = ${MUTEX_ID}
     `;
 }
 
-beforeAll(() => {
-    restorePrismaMethods();
+beforeAll(async () => {
+    await restorePrismaMethods();
 });
 
 beforeEach(async () => {
-    restorePrismaMethods();
+    await restorePrismaMethods();
     await ensureTestMutexTable();
     await acquireTestLock();
 });
@@ -180,7 +219,7 @@ afterEach(async () => {
     vi.useRealTimers();
     vi.clearAllMocks();
     vi.unstubAllGlobals();
-    restorePrismaMethods();
+    await restorePrismaMethods();
 
     try {
         cleanup();

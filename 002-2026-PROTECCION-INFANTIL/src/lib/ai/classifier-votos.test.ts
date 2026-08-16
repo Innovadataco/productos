@@ -17,7 +17,7 @@ vi.mock("@/lib/prisma", () => ({
     },
 }));
 
-afterAll(() => unmockPrisma());
+afterAll(async () => await unmockPrisma());
 
 function voto(categoria: string, confianza: number) {
     return {

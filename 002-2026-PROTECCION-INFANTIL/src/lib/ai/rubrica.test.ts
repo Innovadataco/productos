@@ -26,7 +26,7 @@ vi.mock("@/lib/prisma", () => ({
     },
 }));
 
-afterAll(() => unmockPrisma());
+afterAll(async () => await unmockPrisma());
 
 const CONFIG_TEST = {
     enabled: true,

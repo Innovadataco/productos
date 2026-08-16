@@ -12,7 +12,7 @@ vi.mock("@/lib/prisma", () => ({
     },
 }));
 
-afterAll(() => unmockPrisma());
+afterAll(async () => await unmockPrisma());
 
 describe("cargarConfigRubrica — default seguro D-19 (spec 095-US1)", () => {
     beforeEach(() => {

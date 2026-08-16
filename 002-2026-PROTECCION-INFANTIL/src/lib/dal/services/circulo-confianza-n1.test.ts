@@ -48,7 +48,7 @@ vi.mock("@/lib/email", () => ({
     enviarAlertaCirculoConfianza: vi.fn().mockResolvedValue(undefined),
 }));
 
-afterAll(() => unmockPrisma());
+afterAll(async () => await unmockPrisma());
 
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";

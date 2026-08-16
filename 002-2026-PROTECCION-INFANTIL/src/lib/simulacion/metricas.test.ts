@@ -23,7 +23,7 @@ vi.mock("@/lib/prisma", () => ({
     },
 }));
 
-afterAll(() => unmockPrisma());
+afterAll(async () => await unmockPrisma());
 
 import { calcularMetricasSimulacion } from "./metricas";
 

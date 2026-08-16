@@ -41,7 +41,7 @@ vi.mock("@/lib/logger", () => ({
     },
 }));
 
-afterAll(() => unmockPrisma());
+afterAll(async () => await unmockPrisma());
 
 import { actualizarProgresoYEstado, tieneMetricasCompletas, marcarProgresoSimulacionPorReporte } from "./progreso";
 

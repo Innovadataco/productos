@@ -36,7 +36,7 @@ vi.mock("./parametros", () => ({
 
 import { sendReporte, getQueueStats, drainPending, getWorkerParams } from "./queue";
 
-afterAll(() => unmockPrisma());
+afterAll(async () => await unmockPrisma());
 
 describe("queue.ts", () => {
     beforeEach(async () => {
