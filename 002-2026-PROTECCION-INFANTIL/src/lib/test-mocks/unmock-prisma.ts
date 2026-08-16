@@ -13,6 +13,10 @@ export async function unmockPrisma() {
     vi.doUnmock("@/" + "lib/prisma");
     vi.doUnmock("./prisma");
     vi.resetModules();
+    // El singleton de prisma vive en globalThis.prisma. Cuando un test mockea
+    // el módulo, el objeto mock se graba en globalThis.prisma y sobrevive al
+    // resetModules. Lo borramos para forzar la creación de un cliente real.
+    delete (globalThis as Record<string, unknown>).prisma;
     // Carga forzada del módulo real para asegurar que el registro de Vitest
     // queda poblado con la implementación real antes del siguiente archivo.
     await import("../prisma");
