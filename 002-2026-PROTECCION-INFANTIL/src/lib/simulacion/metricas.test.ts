@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterAll } from "vitest";
+import { unmockPrisma } from "@/lib/test-mocks/unmock-prisma";
 
 const mockSimRepFindMany = vi.hoisted(() => vi.fn());
 const mockReporteFindMany = vi.hoisted(() => vi.fn());
@@ -21,6 +22,8 @@ vi.mock("@/lib/prisma", () => ({
         },
     },
 }));
+
+afterAll(() => unmockPrisma());
 
 import { calcularMetricasSimulacion } from "./metricas";
 

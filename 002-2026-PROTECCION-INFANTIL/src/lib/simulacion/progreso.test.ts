@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterAll } from "vitest";
+import { unmockPrisma } from "@/lib/test-mocks/unmock-prisma";
 
 const mockRunFindUnique = vi.hoisted(() => vi.fn());
 const mockRunUpdate = vi.hoisted(() => vi.fn());
@@ -39,6 +40,8 @@ vi.mock("@/lib/logger", () => ({
         error: (...args: unknown[]) => mockLoggerError(...args),
     },
 }));
+
+afterAll(() => unmockPrisma());
 
 import { actualizarProgresoYEstado, tieneMetricasCompletas, marcarProgresoSimulacionPorReporte } from "./progreso";
 

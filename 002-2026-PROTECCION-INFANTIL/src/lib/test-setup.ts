@@ -22,6 +22,57 @@ process.env.ENCRYPTION_KEY = "test-encryption-32-chars-key!!";
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
 process.env.WORKER_SECRET = "worker-secret-test";
 
+// Snapshot de los métodos reales de Prisma antes de que ningún test los toque.
+// Algunos tests usan vi.mock del módulo prisma con factories parciales; bajo
+// singleFork esas funciones de fábrica pueden quedar registradas como spies
+// y vi.restoreAllMocks() de un test posterior las deja como undefined en el
+// singleton real. Guardamos el snapshot en globalThis para que sobreviva a las
+// recargas del setup file (Vitest ejecuta setupFiles por archivo de test) y
+// restauramos cualquier método que haya perdido su función.
+const globalStore = globalThis as unknown as {
+    __prismaMethodSnapshot?: Map<string, Record<string, unknown>>;
+};
+
+if (!globalStore.__prismaMethodSnapshot) {
+    const snapshot = new Map<string, Record<string, unknown>>();
+    for (const key of Object.keys(prisma)) {
+        const delegate = (prisma as Record<string, unknown>)[key];
+        if (!delegate || typeof delegate !== "object") continue;
+        const methods: Record<string, unknown> = {};
+        for (const method of Object.keys(delegate)) {
+            const fn = (delegate as Record<string, unknown>)[method];
+            if (typeof fn === "function") methods[method] = fn;
+        }
+        if (Object.keys(methods).length > 0) snapshot.set(key, methods);
+    }
+    globalStore.__prismaMethodSnapshot = snapshot;
+}
+
+const prismaMethodSnapshot = globalStore.__prismaMethodSnapshot;
+
+function restorePrismaMethods() {
+    for (const [key, methods] of prismaMethodSnapshot) {
+        const delegate = (prisma as Record<string, unknown>)[key];
+        if (!delegate || typeof delegate !== "object") continue;
+        for (const [method, originalFn] of Object.entries(methods)) {
+            if (typeof (delegate as Record<string, unknown>)[method] !== "function") {
+                try {
+                    Object.defineProperty(delegate, method, {
+                        value: originalFn,
+                        writable: true,
+                        enumerable: true,
+                        configurable: true,
+                    });
+                } catch {
+                    // Ignorar propiedades de solo lectura (no debería pasar).
+                }
+            }
+        }
+    }
+}
+
+restorePrismaMethods();
+
 // Aislamiento de BD: vitest 3.2.x ejecuta hooks/tests concurrentemente a
 // pesar de fileParallelism:false + sequence.concurrent:false. Serializamos
 // cada test con un mutex en PostgreSQL (tabla TestMutex) usando el reloj de
@@ -104,7 +155,12 @@ async function releaseTestLock() {
     `;
 }
 
+beforeAll(() => {
+    restorePrismaMethods();
+});
+
 beforeEach(async () => {
+    restorePrismaMethods();
     await ensureTestMutexTable();
     await acquireTestLock();
 });
@@ -122,7 +178,9 @@ afterEach(async () => {
     // Limpiamos calls con clearAllMocks() y dejamos que cada test restaure sus
     // propios spyOn si es necesario.
     vi.useRealTimers();
+    vi.clearAllMocks();
     vi.unstubAllGlobals();
+    restorePrismaMethods();
 
     try {
         cleanup();

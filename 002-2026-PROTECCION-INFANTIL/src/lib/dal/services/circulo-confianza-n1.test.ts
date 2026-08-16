@@ -10,7 +10,8 @@
  * tras getters y no soportan `vi.spyOn`; el Proxy envuelve cada acceso).
  * El contador se reinicia tras la siembra: solo cuentan las queries del SUT.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterAll } from "vitest";
+import { unmockPrisma } from "@/lib/test-mocks/unmock-prisma";
 
 const conteo = vi.hoisted(() => ({
     contactoConfianzaFindMany: 0,
@@ -46,6 +47,8 @@ vi.mock("@/lib/prisma", async (importOriginal) => {
 vi.mock("@/lib/email", () => ({
     enviarAlertaCirculoConfianza: vi.fn().mockResolvedValue(undefined),
 }));
+
+afterAll(() => unmockPrisma());
 
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
