@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-12
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: BRIEF-MODULO-COLEGIO §4.3 y §5 (ciclo del caso + Comité). Fuentes vinculantes: BRIEF-MODULO-COLEGIO §2 (invariante de privacidad), §3 (terminología), §4.3 (Comité de Convivencia), §5 (identificar → gestionar → escalar → revisar → cerrar). Patrones: SPEC-024 (Comité de Validación: cuenta única + integrantes documentados), SPEC-053 (servicios de operadores/comité), SPEC-128 (grants del comité), SPEC-134 (tenant-first / DAL E-1), SPEC-159 (seguimiento del caso y bitácora).
 
@@ -226,4 +226,57 @@ Como comité quiero documentar la decisión tomada y cerrar el caso, para dejar 
 
 ## Implementación
 
-*Sección reservada para el cierre. Se completará tras la implementación con commits, gates y evidencia.*
+*Cierre documentado en `cierre.md`. A continuación, resumen de lo entregado.*
+
+### Backend
+
+- `prisma/schema.prisma`:
+  - `RolUsuario` añade `COMITE_CONVIVENCIA`.
+  - `Usuario` añade `comiteColegioId` (FK única a `Colegio.id`) para la cuenta compartida.
+  - `IntegranteComite` añade `cargo` (String?) y `hashIdentificacion` (String, NOT NULL) con `@@unique([comiteId, hashIdentificacion])` para detectar duplicados sin exponer el documento en claro.
+  - `SolicitudComite` añade `colegioId` y `alertaColegioId` (único), manteniendo `reporteId` existente.
+  - `AccionAudit` añade `COLEGIO_COMITE_CREADO`, `COLEGIO_COMITE_PASSWORD_REGENERADA`, `COLEGIO_COMITE_INTEGRANTE_CREADO`, `COLEGIO_COMITE_INTEGRANTE_ACTUALIZADO`, `COLEGIO_COMITE_INTEGRANTE_INACTIVADO`, `COLEGIO_CASO_ESCALADO_A_COMITE` y `COLEGIO_CASO_RESUELTO_POR_COMITE`.
+- Migraciones aditivas: `20260812211500_add_comite_convivencia_fase_f` y `20260812171022_add_hash_identificacion_integrante_comite`.
+- `src/lib/dal/services/comite-convivencia.ts`: creación, consulta y regeneración de contraseña de la cuenta compartida, con validación de duplicados por colegio y por email.
+- `src/lib/dal/services/comite-convivencia-integrantes.ts`: alta, edición, inactivación/reactivación de integrantes, cifrado/descifrado AES-256-GCM y hash determinístico para duplicados.
+- `src/lib/dal/services/comite-convivencia-bandeja.ts`: escalamiento de alertas, listado de solicitudes, detalle de caso, resolución y notas, todo colegio-scoped.
+- `src/lib/dal/repositories/comite-convivencia.ts`, `comite-convivencia-integrantes.ts`, `comite-convivencia-solicitudes.ts`: repositorios acotados por `colegioId`.
+- `src/lib/dal/services/comite-integrantes.ts` (comité de validación): ajustado para computar y mantener `hashIdentificacion` en altas y ediciones.
+- `src/lib/hash-identificacion.ts`: utilidad compartida de HMAC-SHA256 sobre `PARAM_ENCRYPTION_KEY`.
+- `src/lib/colegio/vigencia.ts`, `src/lib/proxy.ts`, `src/app/dashboard/colegio/layout.tsx`, `src/components/modules/NavHeader.tsx`, `src/lib/nav-items.ts`: soporte del rol `COMITE_CONVIVENCIA`, home `/dashboard/colegio/comite/casos`, vigencia de servicio y navegación condicional.
+- `src/lib/permisos-catalogo.ts` y `prisma/seed-modulos-grants.ts`: módulos `colegios_comite` y `colegios_comite_bandeja` con grants por defecto.
+- `src/lib/schemas/index.ts`: esquemas Zod para cuenta, integrantes, escalamiento y resolución.
+
+### API
+
+- `src/app/api/colegio/comite/cuenta/route.ts`: GET/POST cuenta del comité.
+- `src/app/api/colegio/comite/cuenta/regenerar-password/route.ts`: POST regeneración de contraseña.
+- `src/app/api/colegio/comite/integrantes/route.ts`: GET/POST integrantes.
+- `src/app/api/colegio/comite/integrantes/[id]/route.ts`: PATCH integrante.
+- `src/app/api/colegio/comite/integrantes/[id]/estado/route.ts`: PATCH estado (activar/inactivar).
+- `src/app/api/colegio/alertas/[id]/escalar/route.ts`: POST escalamiento al comité.
+- `src/app/api/colegio/comite/solicitudes/route.ts`: GET bandeja del comité.
+- `src/app/api/colegio/comite/solicitudes/[id]/route.ts`: GET detalle.
+- `src/app/api/colegio/comite/solicitudes/[id]/resolver/route.ts`: POST resolución.
+- `src/app/api/colegio/comite/solicitudes/[id]/notas/route.ts`: POST notas.
+
+### Frontend
+
+- `src/app/dashboard/colegio/comite/page.tsx`: gestión de cuenta e integrantes (rector).
+- `src/app/dashboard/colegio/comite/casos/page.tsx`: bandeja de casos (rector/comité).
+- `src/app/dashboard/colegio/comite/casos/[id]/page.tsx`: detalle de caso.
+- `src/components/modules/colegio/comite/ComiteCuentaCard.tsx`, `IntegrantesList.tsx`, `SolicitudesBandeja.tsx`, `CasoDetalle.tsx`.
+
+### Tests
+
+- `src/app/api/colegio/comite/cuenta/route.test.ts` y `cuenta/regenerar-password/route.test.ts`.
+- `src/app/api/colegio/comite/integrantes/route.test.ts`.
+- `src/app/api/colegio/comite/solicitudes/**/route.test.ts`.
+- `src/app/api/colegio/alertas/[id]/escalar/route.test.ts`.
+- `src/app/api/admin/comite/integrantes/route.test.ts` ajustado al campo `hashIdentificacion`.
+- `src/lib/comite-test-utils.ts`: helpers de test.
+
+### Deuda técnica
+
+- `hashIdentificacion` se introdujo con un default `gen_random_uuid()::text` para permitir la migración aditiva; las filas previas de comité de validación en la base de datos de desarrollo quedarán con hashes placeholder. En ambientes limpios (tests/prod) no hay impacto.
+- `SolicitudComite.reporteId` conserva su `@unique` original; el escalamiento colegio-scoped se acota por `alertaColegioId @unique`, pero una colisión global con una solicitud de comité de validación del mismo `reporteId` requerirá una evolución del schema en Fase G.

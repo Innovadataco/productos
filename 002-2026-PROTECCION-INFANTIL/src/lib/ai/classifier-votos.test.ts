@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { unmockPrisma } from "@/lib/test-mocks/unmock-prisma";
 import { clasificarConVotos } from "./classifier";
 
 const mockLlamar = vi.fn();
@@ -15,6 +16,8 @@ vi.mock("@/lib/prisma", () => ({
         },
     },
 }));
+
+afterAll(async () => await unmockPrisma());
 
 function voto(categoria: string, confianza: number) {
     return {

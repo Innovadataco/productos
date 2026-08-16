@@ -116,6 +116,8 @@ export interface HomeRector {
         anual: PuntoTendencia[];
     };
     cursosMirada: CursoMirada[];
+    /** SPEC-167 (FR-002): embudo por reporte distinto — el radar operativo del rector. */
+    embudo: EmbudoTablero;
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -204,6 +206,7 @@ export class ColegioResumenRepository {
             serieMensual,
             serieAnual,
             topCursos,
+            embudo,
         ] = await Promise.all([
             colegioRepo.obtenerFichaHome(colegioId),
             estudianteRepo.contarCobertura(colegioId),
@@ -219,6 +222,7 @@ export class ColegioResumenRepository {
             alertaRepo.serieReportesPorPeriodo(colegioId, "month", meses[0]!),
             alertaRepo.serieReportesPorPeriodo(colegioId, "year", anios[0]!),
             alertaRepo.topCursosPorReportes(colegioId, hace30d, 3),
+            alertaRepo.embudoPorReporte(colegioId),
         ]);
 
         if (!colegio) {
@@ -268,6 +272,7 @@ export class ColegioResumenRepository {
                 anual: rellenarSerie(serieAnual, anios),
             },
             cursosMirada,
+            embudo,
         };
     }
 

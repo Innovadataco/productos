@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterAll } from "vitest";
+import { unmockPrisma } from "@/lib/test-mocks/unmock-prisma";
 import { cargarConfigRubrica } from "./rubrica";
 
 const mockParametroFindUnique = vi.hoisted(() => vi.fn());
@@ -10,6 +11,8 @@ vi.mock("@/lib/prisma", () => ({
         },
     },
 }));
+
+afterAll(async () => await unmockPrisma());
 
 describe("cargarConfigRubrica — default seguro D-19 (spec 095-US1)", () => {
     beforeEach(() => {

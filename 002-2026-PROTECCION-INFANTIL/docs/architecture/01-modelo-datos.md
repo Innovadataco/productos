@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **62** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **64** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -184,6 +184,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | patronInstitucional | PatronInstitucional | opcional, relación (FK) |
 | asignadoA | Usuario | opcional, relación (FK) |
 | seguimiento | SeguimientoCaso | opcional, relación |
+| solicitudComite | SolicitudComite | opcional, relación |
 
 #### `Colegio`
 
@@ -211,10 +212,12 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ciudad | Ciudad | relación (FK) |
 | tenant | Tenant | relación (FK) |
 | admin | Usuario | opcional, relación |
+| comiteConvivencia | Usuario | opcional, relación |
 | cursos | Curso | lista, relación |
 | estudiantes | Estudiante | lista, relación |
 | profesores | Profesor | lista, relación |
 | alertas | AlertaColegio | lista, relación |
+| solicitudesComite | SolicitudComite | lista, relación |
 | patrones | PatronInstitucional | lista, relación |
 | preferenciasAvisos | PreferenciaAlertaColegio | lista, relación |
 | registrosAvisos | RegistroAvisoColegio | lista, relación |
@@ -226,6 +229,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | CursoMateria | CursoMateria | lista, relación |
 | identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 | identificadoresProfesor | IdentificadorProfesor | lista, relación |
+| onboarding | OnboardingColegio | opcional, relación |
+| notificacionesInApp | NotificacionInApp | lista, relación |
 
 #### `Curso`
 
@@ -566,7 +571,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (11)
+### Otros (sin regla de dominio) (13)
 
 #### `CargaRosterSesion`
 
@@ -665,6 +670,37 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | seguimiento | SeguimientoCaso | relación (FK) |
 | colegio | Colegio | relación (FK) |
 | autor | Usuario | relación (FK) |
+
+#### `NotificacionInApp`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | — |
+| usuarioId | String | — |
+| tipo | String | — |
+| titulo | String | — |
+| mensaje | String | — |
+| entidadId | String | opcional |
+| leidaEn | DateTime | opcional |
+| archivadaEn | DateTime | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
+| usuario | Usuario | relación (FK) |
+
+#### `OnboardingColegio`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| colegioId | String | único |
+| estado | String | — |
+| pasoActual | Int | — |
+| completadoEn | DateTime | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| colegio | Colegio | relación (FK) |
 
 #### `PatronInstitucional`
 
@@ -952,6 +988,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | estado | String | — |
 | comiteId | String | opcional |
 | operadorId | String | opcional |
+| colegioId | String | opcional |
+| alertaColegioId | String | único, opcional |
+| creadoPorId | String | opcional |
 | motivo | String | — |
 | resolucion | String | opcional |
 | creadoEn | DateTime | — |
@@ -959,6 +998,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reporte | Reporte | relación (FK) |
 | comite | Usuario | opcional, relación (FK) |
 | operador | Usuario | opcional, relación (FK) |
+| colegio | Colegio | opcional, relación (FK) |
+| alerta | AlertaColegio | opcional, relación (FK) |
+| creadoPor | Usuario | opcional, relación (FK) |
 
 #### `TransicionReporte`
 
@@ -1050,7 +1092,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | apellidos | String | — |
 | tipoIdentificacion | TipoIdentificacionIntegrante | — |
 | numeroIdentificacion | String | — |
+| hashIdentificacion | String | — |
 | email | String | — |
+| cargo | String | opcional |
 | fechaInicio | DateTime | — |
 | fechaFin | DateTime | opcional |
 | estado | EstadoIntegranteComite | — |
@@ -1109,12 +1153,14 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ultimaSesion | DateTime | opcional |
 | tenantId | String | opcional |
 | colegioId | String | único, opcional |
+| comiteColegioId | String | único, opcional |
 | inicioServicio | DateTime | opcional |
 | finServicio | DateTime | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | tenant | Tenant | opcional, relación (FK) |
 | colegio | Colegio | opcional, relación (FK) |
+| comiteConvivenciaColegio | Colegio | opcional, relación |
 | parametros | ParametroSistema | lista, relación |
 | auditLogs | AuditLog | lista, relación |
 | permisosModuloActualizados | PermisoModulo | lista, relación |
@@ -1139,6 +1185,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | transicionesReporte | TransicionReporte | lista, relación |
 | solicitudesComite | SolicitudComite | lista, relación |
 | solicitudesEscaladas | SolicitudComite | lista, relación |
+| solicitudesComiteCreadas | SolicitudComite | lista, relación |
 | notasSeguimiento | NotaSeguimiento | lista, relación |
 | integrantesComite | IntegranteComite | lista, relación |
 | integrantesComiteCreados | IntegranteComite | lista, relación |
@@ -1148,6 +1195,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | apelacionesResueltas | Apelacion | lista, relación |
 | accesosDocumentoApelacion | AccesoDocumentoApelacion | lista, relación |
 | alertasAsignadas | AlertaColegio | lista, relación |
+| notificacionesInApp | NotificacionInApp | lista, relación |
 
 ## Diagrama ER (Mermaid)
 
@@ -1157,6 +1205,7 @@ Derivado de las FK (`@relation(fields: ...)`); cardinalidad 1:1 si la FK es úni
 erDiagram
     AcudienteEstudiante ||--o{ IdentificadorAcudiente : "acudiente"
     AlertaColegio ||--o{ SeguimientoCaso : "alerta"
+    AlertaColegio ||--o{ SolicitudComite : "alerta (opcional)"
     Apelacion ||--o{ DocumentoApelacion : "apelacion"
     CasoEval ||--o{ EvalResultado : "casoEval"
     Ciudad ||--o{ Colegio : "ciudad"
@@ -1173,11 +1222,14 @@ erDiagram
     Colegio ||--o{ IdentificadorProfesor : "colegio"
     Colegio ||--o{ Materia : "colegio"
     Colegio ||--o{ NotaSeguimiento : "colegio"
+    Colegio ||--o{ NotificacionInApp : "colegio"
+    Colegio ||--o{ OnboardingColegio : "colegio"
     Colegio ||--o{ PatronInstitucional : "colegio"
     Colegio ||--o{ PreferenciaAlertaColegio : "colegio"
     Colegio ||--o{ Profesor : "colegio"
     Colegio ||--o{ RegistroAvisoColegio : "colegio"
     Colegio ||--o{ SeguimientoCaso : "colegio"
+    Colegio ||--o{ SolicitudComite : "colegio (opcional)"
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"
     CorreccionAdmin ||--o{ DatasetEntrenamiento : "correccion (opcional)"
@@ -1242,6 +1294,7 @@ erDiagram
     Usuario ||--o{ IntegranteComite : "creadoPor"
     Usuario ||--o{ IntegranteComite : "modificadoPor (opcional)"
     Usuario ||--o{ NotaSeguimiento : "autor"
+    Usuario ||--o{ NotificacionInApp : "usuario"
     Usuario ||--o{ ParametroSistema : "actualizadoPor (opcional)"
     Usuario ||--o{ PerfilOperador : "creadoPor"
     Usuario ||--o{ PerfilOperador : "usuario"
@@ -1253,6 +1306,7 @@ erDiagram
     Usuario ||--o{ Reporte : "usuario (opcional)"
     Usuario ||--o{ SimulacionRun : "creadoPor"
     Usuario ||--o{ SolicitudComite : "comite (opcional)"
+    Usuario ||--o{ SolicitudComite : "creadoPor (opcional)"
     Usuario ||--o{ SolicitudComite : "operador (opcional)"
     Usuario ||--o{ TokenRecuperacion : "usuario (opcional)"
     Usuario ||--o{ TransicionReporte : "responsableUsuario (opcional)"

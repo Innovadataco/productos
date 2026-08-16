@@ -18,6 +18,7 @@ const VIGENTE: ResultadoVigencia = { vigente: true, estado: "vigente", mensaje: 
 /**
  * SPEC-119: única función que decide la vigencia del servicio de un cliente.
  * - SCHOOL_ADMIN: la ventana es la de su Colegio (inicioServicio/finServicio del colegio).
+ * - COMITE_CONVIVENCIA: la ventana es la del colegio al que pertenece (comiteColegioId).
  * - PARENT: su propia ventana en Usuario (inicioServicio/finServicio); null = sin vigencia
  *   definida = acceso permitido (nadie se corta por omisión del dato).
  * - Roles internos (ADMIN, OPERADOR, COMITE_VALIDACION): siempre vigentes.
@@ -43,6 +44,18 @@ export async function verificarVigenciaCliente(usuarioId: string): Promise<Resul
             };
         }
         return verificarVigenciaPorColegioId(usuario.colegioId);
+    }
+
+    // SPEC-168: el comité de convivencia depende de la vigencia del colegio.
+    if (usuario.rol === "COMITE_CONVIVENCIA") {
+        if (!usuario.comiteColegioId) {
+            return {
+                vigente: false,
+                estado: "sin_colegio",
+                mensaje: "Tu cuenta institucional no está vinculada a un colegio. Contacta al administrador.",
+            };
+        }
+        return verificarVigenciaPorColegioId(usuario.comiteColegioId);
     }
 
     if (usuario.rol === "PARENT") {

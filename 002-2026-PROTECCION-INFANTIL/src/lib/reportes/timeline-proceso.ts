@@ -68,7 +68,12 @@ export async function obtenerTimelineProceso(reporteId: string): Promise<Timelin
         })),
     ];
 
-    eventos.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+    eventos.sort((a, b) => {
+        const ta = new Date(a.fecha).getTime();
+        const tb = new Date(b.fecha).getTime();
+        if (ta !== tb) return ta - tb;
+        return a.id.localeCompare(b.id);
+    });
 
     return { eventos };
 }

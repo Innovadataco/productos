@@ -5,6 +5,8 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { ColegioResumenRepository } from "@/lib/dal/repositories/colegio-resumen";
 import { HomeRectorPage } from "@/components/modules/colegio/home/HomeRectorPage";
 import { EmptyStateColegio } from "@/components/modules/colegio/home/EmptyStateColegio";
+import { OnboardingModal } from "@/components/modules/colegio/OnboardingModal";
+import { calcularCobertura } from "@/lib/colegio/cobertura";
 
 /**
  * SPEC-143 (FR-001/FR-002) — Home operativa del rector.
@@ -29,11 +31,21 @@ export default async function ColegioDashboardPage() {
     if (!usuario?.colegioId) redirect("/login");
 
     const datos = await new ColegioResumenRepository().homeRector(usuario.colegioId);
+    const cobertura = await calcularCobertura(usuario.colegioId);
 
     // US4: colegio sin cursos → empty state del mockup §5.2 (no un tablero de ceros).
     if (datos.kpis.cursos === 0) {
         return <EmptyStateColegio colegioNombre={datos.colegio.nombre} />;
     }
 
-    return <HomeRectorPage nombreUsuario={usuario.nombre?.trim() ?? ""} datos={datos} />;
+    return (
+        <>
+            <OnboardingModal />
+            <HomeRectorPage
+                nombreUsuario={usuario.nombre?.trim() ?? ""}
+                datos={datos}
+                cobertura={cobertura}
+            />
+        </>
+    );
 }

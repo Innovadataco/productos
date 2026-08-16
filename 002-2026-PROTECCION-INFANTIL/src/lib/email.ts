@@ -287,7 +287,7 @@ export async function enviarAvisoUmbralCursoColegio(
         from: FROM,
         to: email,
         subject: "Te avisamos: un curso de tu colegio acumula reportes",
-        text: `Hola,\n\nTe avisamos que un curso de tu colegio acumula ${params.reportes} reportes en los últimos ${params.dias} días. Ingresa a tu panel para ver el panorama completo:\n\n${baseUrl}/dashboard/colegio/tablero\n\nEste aviso no incluye nombres ni datos de los reportes; toda la información está en tu panel.`,
+        text: `Hola,\n\nTe avisamos que un curso de tu colegio acumula ${params.reportes} reportes en los últimos ${params.dias} días. Ingresa a tu panel para ver el panorama completo:\n\n${baseUrl}/dashboard/colegio\n\nEste aviso no incluye nombres ni datos de los reportes; toda la información está en tu panel.`,
     });
 
     if (result.error) {

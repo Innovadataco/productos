@@ -89,11 +89,13 @@ export class UsuarioRepository {
         });
     }
 
-    /** SPEC-134 (E-1): rol + colegio + ventana propia (vigencia de clientes, SPEC-119). */
+    /** SPEC-134 (E-1): rol + colegio + ventana propia (vigencia de clientes, SPEC-119).
+     *  SPEC-168: incluye comiteColegioId para vigencia del Comité de Convivencia.
+     */
     findVigenciaCliente(id: string) {
         return this.db.usuario.findUnique({
             where: { id },
-            select: { rol: true, colegioId: true, inicioServicio: true, finServicio: true },
+            select: { rol: true, colegioId: true, comiteColegioId: true, inicioServicio: true, finServicio: true },
         });
     }
 
@@ -202,6 +204,14 @@ export class UsuarioRepository {
             where: { id },
             // SPEC-143: + nombre (aditivo) para el saludo de la home del rector.
             select: { id: true, nombre: true, rol: true, colegioId: true, estado: true, debeCambiarPassword: true },
+        });
+    }
+
+    /** SPEC-168: sesión del Comité de Convivencia (rol/colegio/flag password). */
+    findSesionComite(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            select: { id: true, nombre: true, rol: true, comiteColegioId: true, estado: true, debeCambiarPassword: true },
         });
     }
 

@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { unmockPrisma } from "@/lib/test-mocks/unmock-prisma";
 import {
     clasificarConRubrica,
     calcularPorcentajes,
@@ -24,6 +25,8 @@ vi.mock("@/lib/prisma", () => ({
         },
     },
 }));
+
+afterAll(async () => await unmockPrisma());
 
 const CONFIG_TEST = {
     enabled: true,

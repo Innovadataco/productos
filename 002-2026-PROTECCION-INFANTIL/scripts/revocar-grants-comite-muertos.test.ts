@@ -20,6 +20,18 @@ const filtroMuertosComite = {
     modulo: { clave: { in: MODULOS_MUERTOS } },
 };
 
+async function asegurarGrantsMuertosActivos() {
+    for (const clave of MODULOS_MUERTOS) {
+        const modulo = await prisma.moduloPermisible.findUnique({ where: { clave }, select: { id: true } });
+        if (!modulo) throw new Error(`Módulo ${clave} no encontrado en el catálogo`);
+        await prisma.permisoModulo.upsert({
+            where: { rol_moduloId: { rol: ROL_COMITE, moduloId: modulo.id } },
+            update: { activo: true },
+            create: { rol: ROL_COMITE, moduloId: modulo.id, activo: true },
+        });
+    }
+}
+
 describe("revocar-grants-comite-muertos (SPEC-128, D-43 Opción A)", () => {
     beforeAll(async () => {
         await resetDatabase();
@@ -30,7 +42,10 @@ describe("revocar-grants-comite-muertos (SPEC-128, D-43 Opción A)", () => {
     });
 
     it("revoca comite y comite_auditoria del comité (activo=false, sin borrar filas)", async () => {
-        // Precondición de la BD "vieja": el comité tiene los grants muertos activos.
+        // Reproduce de forma autosuficiente el estado de una BD "vieja": el comité
+        // tiene los grants muertos activos. Esto evita que el test falle por orden
+        // cuando otro test o el seed nuevo ya los dejó inactivos o ausentes.
+        await asegurarGrantsMuertosActivos();
         const antesActivos = await prisma.permisoModulo.count({ where: { ...filtroMuertosComite, activo: true } });
         expect(antesActivos).toBe(2);
 
@@ -63,6 +78,7 @@ describe("revocar-grants-comite-muertos (SPEC-128, D-43 Opción A)", () => {
     });
 
     it("es idempotente: la segunda corrida no revoca nada más", async () => {
+        await revocarGrantsComiteMuertos();
         const segunda = await revocarGrantsComiteMuertos();
         expect(segunda.revocados).toBe(0);
         expect(segunda.yaInactivos).toBe(2);

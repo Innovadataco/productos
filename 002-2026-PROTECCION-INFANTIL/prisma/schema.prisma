@@ -17,6 +17,7 @@ enum RolUsuario {
   PARENT
   OPERADOR
   COMITE_VALIDACION
+  COMITE_CONVIVENCIA
 }
 
 enum EstadoUsuario {
@@ -154,6 +155,14 @@ enum AccionAudit {
   COLEGIO_AVISO_PREFERENCIA_ACTUALIZADA
   // SPEC-159: bitácora del caso del colegio (nota de seguimiento agregada).
   COLEGIO_CASO_NOTA_AGREGADA
+  // SPEC-168 (Fase F): Comité de Convivencia por colegio.
+  COLEGIO_COMITE_CREADO
+  COLEGIO_COMITE_PASSWORD_REGENERADA
+  COLEGIO_COMITE_INTEGRANTE_CREADO
+  COLEGIO_COMITE_INTEGRANTE_ACTUALIZADO
+  COLEGIO_COMITE_INTEGRANTE_INACTIVADO
+  COLEGIO_CASO_ESCALADO_A_COMITE
+  COLEGIO_CASO_RESUELTO_POR_COMITE
   // SPEC-150: observación especial del estudiante (marca auditable, Ley 1581).
   COLEGIO_OBSERVACION_MARCADA
   COLEGIO_OBSERVACION_DESMARCADA
@@ -163,6 +172,13 @@ enum AccionAudit {
   COLEGIO_CURSO_DUPLICADO
   // SPEC-153: descarga de comparativa entre cursos en Excel.
   COLEGIO_COMPARATIVA_EXCEL_DESCARGADO
+  // SPEC-169 (Fase G): onboarding, cobertura y notificaciones in-app del colegio.
+  COLEGIO_ONBOARDING_OMITIDO
+  COLEGIO_ONBOARDING_REACTIVADO
+  COLEGIO_ONBOARDING_COMPLETADO
+  COLEGIO_NOTIFICACION_CREADA
+  COLEGIO_NOTIFICACION_LEIDA
+  COLEGIO_NOTIFICACION_ARCHIVADA
 }
 
 enum TipoPeriodoServicio {
@@ -256,6 +272,8 @@ model Usuario {
   ultimaSesion        DateTime?
   tenantId            String?
   colegioId           String?       @unique
+  // SPEC-168: cuenta compartida del Comité de Convivencia del colegio (una por colegio).
+  comiteColegioId     String?       @unique
   // SPEC-119: ventana de servicio del cliente padre (PARENT). null = sin vigencia
   // definida = acceso permitido. Para SCHOOL_ADMIN la ventana es la del Colegio.
   inicioServicio      DateTime?
@@ -265,6 +283,7 @@ model Usuario {
 
   tenant                       Tenant?                    @relation(fields: [tenantId], references: [id])
   colegio                      Colegio?                   @relation(fields: [colegioId], references: [id])
+  comiteConvivenciaColegio     Colegio?                   @relation(name: "ComiteConvivenciaColegio", fields: [comiteColegioId], references: [id])
   parametros                   ParametroSistema[]
   auditLogs                    AuditLog[]
   permisosModuloActualizados   PermisoModulo[]
@@ -289,6 +308,7 @@ model Usuario {
   transicionesReporte          TransicionReporte[]
   solicitudesComite            SolicitudComite[]          @relation("SolicitudesComite")
   solicitudesEscaladas         SolicitudComite[]          @relation("SolicitudesEscaladas")
+  solicitudesComiteCreadas     SolicitudComite[]          @relation("SolicitudesCreadasPorColegio")
   notasSeguimiento             NotaSeguimiento[]
   integrantesComite            IntegranteComite[]         @relation("IntegrantesComite")
   integrantesComiteCreados     IntegranteComite[]         @relation("IntegrantesComiteCreados")
@@ -298,6 +318,7 @@ model Usuario {
   apelacionesResueltas         Apelacion[]                @relation("ApelacionesResueltas")
   accesosDocumentoApelacion    AccesoDocumentoApelacion[]
   alertasAsignadas             AlertaColegio[]
+  notificacionesInApp          NotificacionInApp[]
 
   @@index([email])
   @@index([rol])
@@ -332,7 +353,9 @@ model IntegranteComite {
   apellidos            String
   tipoIdentificacion   TipoIdentificacionIntegrante
   numeroIdentificacion String
+  hashIdentificacion   String
   email                String
+  cargo                String?
   fechaInicio          DateTime                     @default(now())
   fechaFin             DateTime?
   estado               EstadoIntegranteComite       @default(ACTIVO)
@@ -345,6 +368,7 @@ model IntegranteComite {
   creadoPor     Usuario  @relation(fields: [creadoPorId], references: [id], name: "IntegrantesComiteCreados")
   modificadoPor Usuario? @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
 
+  @@unique([comiteId, hashIdentificacion])
   @@index([comiteId])
   @@index([estado])
   @@index([tipoIdentificacion])
@@ -493,10 +517,12 @@ model Colegio {
   ciudad             Ciudad                     @relation(fields: [ciudadId], references: [id])
   tenant             Tenant                     @relation(fields: [tenantId], references: [id])
   admin              Usuario?
+  comiteConvivencia  Usuario?                   @relation(name: "ComiteConvivenciaColegio")
   cursos             Curso[]
   estudiantes        Estudiante[]
   profesores         Profesor[]
   alertas            AlertaColegio[]
+  solicitudesComite  SolicitudComite[]
   patrones           PatronInstitucional[]
   preferenciasAvisos PreferenciaAlertaColegio[]
   registrosAvisos    RegistroAvisoColegio[]
@@ -508,11 +534,53 @@ model Colegio {
   CursoMateria            CursoMateria[]
   identificadoresAcudiente IdentificadorAcudiente[]
   identificadoresProfesor  IdentificadorProfesor[]
+  onboarding               OnboardingColegio?
+  notificacionesInApp      NotificacionInApp[]
 
   @@index([paisId])
   @@index([departamentoId])
   @@index([ciudadId])
   @@index([estado])
+}
+
+// SPEC-169 (Fase G): onboarding "Activa tu protección" — fila única por colegio.
+// El progreso real se calcula sobre cursos, estudiantes, profesores, acudientes e
+// identificadores activos; aquí solo se guarda estado, paso visible y timestamp.
+model OnboardingColegio {
+  id            String    @id @default(cuid())
+  colegioId     String    @unique
+  estado        String    @default("activo") // activo | omitido | completado
+  pasoActual    Int       @default(1)
+  completadoEn  DateTime?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@index([estado])
+}
+
+// SPEC-169 (Fase G): notificaciones in-app dirigidas al SCHOOL_ADMIN del colegio.
+// Estados implícitos por leidaEn / archivadaEn; nunca almacena texto del reporte.
+model NotificacionInApp {
+  id            String    @id @default(cuid())
+  colegioId     String
+  usuarioId     String
+  tipo          String // ALERTA_NUEVA | ALERTA_GESTIONADA | ALERTA_ESCALADA | SISTEMA
+  titulo        String
+  mensaje       String
+  entidadId     String?
+  leidaEn       DateTime?
+  archivadaEn   DateTime?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([colegioId, usuarioId, archivadaEn, leidaEn, creadoEn])
+  @@index([colegioId, usuarioId, archivadaEn, creadoEn])
+  @@index([colegioId, entidadId, tipo])
 }
 
 model Curso {
@@ -764,6 +832,8 @@ model AlertaColegio {
   patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
   asignadoA               Usuario?                 @relation(fields: [asignadoAId], references: [id])
   seguimiento             SeguimientoCaso?
+  // SPEC-168: una alerta escalada genera una única solicitud al Comité de Convivencia.
+  solicitudComite         SolicitudComite?
 
   @@unique([colegioId, reporteId, identificadorEstudianteId])
   @@unique([colegioId, reporteId, identificadorProfesorId])
@@ -1047,24 +1117,34 @@ model Reporte {
 }
 
 model SolicitudComite {
-  id         String    @id @default(cuid())
-  reporteId  String    @unique
-  numero     String    @unique
-  estado     String    @default("PENDIENTE")
-  comiteId   String?
-  operadorId String?
-  motivo     String    @db.Text
-  resolucion String?   @db.Text
-  creadoEn   DateTime  @default(now())
-  resueltoEn DateTime?
+  id              String    @id @default(cuid())
+  reporteId       String    @unique
+  numero          String    @unique
+  estado          String    @default("PENDIENTE")
+  comiteId        String?
+  operadorId      String?
+  // SPEC-168: escalamiento colegio-scoped al Comité de Convivencia.
+  colegioId       String?
+  alertaColegioId String?   @unique
+  creadoPorId     String?
+  motivo          String    @db.Text
+  resolucion      String?   @db.Text
+  creadoEn        DateTime  @default(now())
+  resueltoEn      DateTime?
 
-  reporte  Reporte  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
-  comite   Usuario? @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
-  operador Usuario? @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
+  reporte  Reporte        @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  comite   Usuario?       @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
+  operador Usuario?       @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
+  colegio  Colegio?       @relation(fields: [colegioId], references: [id])
+  alerta   AlertaColegio? @relation(fields: [alertaColegioId], references: [id])
+  creadoPor Usuario?      @relation(fields: [creadoPorId], references: [id], name: "SolicitudesCreadasPorColegio")
 
   @@index([estado])
   @@index([comiteId])
   @@index([operadorId])
+  @@index([colegioId])
+  @@index([alertaColegioId])
+  @@index([creadoPorId])
   @@index([creadoEn])
 }
 

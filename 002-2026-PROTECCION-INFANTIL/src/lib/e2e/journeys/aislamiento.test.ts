@@ -54,6 +54,7 @@ const EMAILS: Record<RolUsuario, string> = {
     ADMIN: `e2e-c${CICLO}-ais-admin@test.local`,
     OPERADOR: `e2e-c${CICLO}-ais-op@test.local`,
     COMITE_VALIDACION: `e2e-c${CICLO}-ais-comite@test.local`,
+    COMITE_CONVIVENCIA: "",
 };
 
 describe(`SPEC-114 · aislamiento por rol (ciclo ${CICLO})`, { timeout: 30_000 }, () => {

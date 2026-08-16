@@ -134,7 +134,7 @@ describe("/api/colegio/estadisticas", () => {
 
             expect(json.colegioId).toBe(colegio.id);
             expect(json.colegioNombre).toBe(colegio.nombre);
-            expect(json.totales).toEqual({ cursos: 1, profesores: 0, alumnos: 1, identificadores: 1, alertas: 1 });
+            expect(json.totales).toEqual({ cursos: 1, profesores: 0, estudiantes: 1, identificadores: 1, alertas: 1 });
             expect(json.porCurso).toHaveLength(1);
             expect(json.porCurso[0]).toMatchObject({
                 nombre: "5A",
@@ -143,6 +143,12 @@ describe("/api/colegio/estadisticas", () => {
                 identificadores: 1,
                 alertas: 1,
             });
+            // SPEC-167: DTO ampliado con tendencia, reloj 24h, patrones y comparativa.
+            expect(json.tendencia).toBeDefined();
+            expect(json.tendencia.semanal).toHaveLength(12);
+            expect(json.reloj24h).toHaveLength(24);
+            expect(json.patrones).toBeDefined();
+            expect(json.comparativa).toBeDefined();
         });
 
         it("SCHOOL_ADMIN de otro colegio ve totales en cero", async () => {
@@ -158,7 +164,7 @@ describe("/api/colegio/estadisticas", () => {
             );
             expect(res.status).toBe(200);
             const json = await res.json();
-            expect(json.totales).toEqual({ cursos: 0, profesores: 0, alumnos: 0, identificadores: 0, alertas: 0 });
+            expect(json.totales).toEqual({ cursos: 0, profesores: 0, estudiantes: 0, identificadores: 0, alertas: 0 });
             expect(json.porCurso).toHaveLength(0);
         });
 

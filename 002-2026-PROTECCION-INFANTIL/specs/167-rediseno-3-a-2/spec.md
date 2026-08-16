@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-12
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: [BRIEF-MODULO-COLEGIO](../../../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-MODULO-COLEGIO.md) §6 (rediseño de 3 → 2 pantallas). Fuentes vinculantes: SPEC-143 (home operativa del rector), SPEC-158 (tablero de control), SPEC-142 (patrones institucionales), SPEC-153 (comparativa entre cursos), SPEC-162 (materia configurable), SPEC-129 (rediseño UX colegio), SPEC-078 (estadísticas e informe PDF). Patrones: SPEC-134 (tenant-first / DAL E-1), SPEC-157 (sistema de diseño, tokens).
 
@@ -152,3 +152,21 @@ Como rector, cuando navegue a `/dashboard/colegio/tablero` quiero ser redirigido
 - **Navegación**: `src/lib/nav-items.ts` pierde el ítem "Tablero"; se actualiza `nav-items.test.ts` si lo verifica.
 - **Arquitectura**: se regeneran artefactos de `docs/architecture/` (`03-pantallas.md`, `04-rutas-api.md`, etc.) y se deja `npm run arch:check` verde.
 - **Modelo de datos**: sin cambios; no hay migración.
+
+---
+
+## Implementación *(cerrado 002-PI-062)*
+
+**Rama**: `work/002-pi-062` → PR sobre `feature/001-scaffolding`.
+
+**Cambios principales**:
+- UI/App Router: `src/app/dashboard/colegio/page.tsx` ahora renderiza `HomeRectorPage` como radar operativo; `src/app/dashboard/colegio/estadisticas/page.tsx` y su cliente exponen la inteligencia del colegio; `src/app/dashboard/colegio/tablero/page.tsx` redirige a Inicio; `TableroClient.tsx` y la carpeta `tablero/` se eliminan.
+- Componentes: reubicación de `EmbudoEstado` a `src/components/modules/colegio/home/`, `RelojActividad`, `RitmoMensual` y `BarrasPorCurso` a `src/components/modules/colegio/estadisticas/`; nuevos `SeccionComparativa`, `SeccionPatrones`, `TablaDesgloseCursos`.
+- DAL/Servicios: `ColegioResumenRepository.homeRector` amplía el embudo; `src/lib/colegio/inteligencia.ts` centraliza agregados del radar; `src/lib/colegio/estadisticas.ts` expande el DTO de estadísticas.
+- API: `GET /api/colegio/estadisticas` y su PDF ajustados a los nuevos datos.
+- Navegación: `src/lib/nav-items.ts` y `src/components/modules/colegio/ColegioSideNav.tsx` actualizados a 2 pantallas; `nav-items.test.ts` ajustado.
+- Arquitectura: regenerada línea base (`npm run arch:check` verde).
+
+**Deuda técnica / notas**:
+- No se modificó schema ni migraciones.
+- El rediseño asume que SPEC-143 y SPEC-158 ya estaban implementados.

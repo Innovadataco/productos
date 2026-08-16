@@ -391,6 +391,42 @@ export const observacionBodySchema = z.object({
     motivo: z.string().trim().max(500, "El motivo no puede superar 500 caracteres").optional(),
 });
 
+// SPEC-168 (Fase F): cuenta compartida del Comité de Convivencia.
+export const comiteCuentaSchema = z.object({
+    email: emailSchema,
+});
+
+// SPEC-168 (Fase F): integrante documentado del Comité de Convivencia.
+export const integranteComiteConvivenciaSchema = z.object({
+    nombres: z.string().trim().min(1).max(100),
+    apellidos: z.string().trim().min(1).max(100),
+    tipoIdentificacion: z.enum(["CEDULA_CIUDADANIA", "CEDULA_EXTRANJERIA", "PASAPORTE", "OTRO"]),
+    numeroIdentificacion: z.string().trim().min(1).max(100),
+    email: emailSchema,
+    cargo: z.string().trim().min(1).max(100),
+});
+
+// SPEC-168 (Fase F): motivo de escalamiento de una alerta al comité.
+export const escalarAlertaSchema = z.object({
+    motivo: z.string().trim().min(1, "Escribe el motivo del escalamiento").max(2000),
+});
+
+// SPEC-168 (Fase F): resolución documentada del comité al cerrar un caso.
+export const resolverSolicitudSchema = z.object({
+    resolucion: z.string().trim().min(1, "Escribe la decisión del comité").max(4000),
+});
+
+// SPEC-169 (Fase G): onboarding, cobertura y notificaciones in-app del colegio.
+export const onboardingPatchSchema = z.object({
+    estado: z.enum(["activo", "omitido"]),
+});
+
+export const notificacionFiltroSchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    soloNoLeidas: z.coerce.boolean().optional(),
+});
+
 // SPEC-149 (FR-007): PATCH de preferencias de avisos del colegio. Upsert por
 // tipo (tenant lo pone la sesión). Umbrales 1-100, ventanas 1-90 días; null en
 // umbral/ventanaDias/emailDestino = volver al default. Mensajes humanos (§4.6).

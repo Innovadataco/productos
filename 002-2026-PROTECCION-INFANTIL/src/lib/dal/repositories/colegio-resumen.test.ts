@@ -166,6 +166,9 @@ describe("ColegioResumenRepository.homeRector", () => {
         expect(homeA.semaforo.alertas72h).toBe(3); // filas (hoy×2 + 2d), sin distinct
         expect(homeA.ultimaSenal).not.toBeNull();
 
+        // SPEC-167: embudo por reporte distinto en el radar operativo.
+        expect(homeA.embudo).toEqual({ recibidos: 4, cerrados: 0, enRevision: 3, teEsperan: 1 });
+
         // Series: 12/12/3 puntos, huecos en cero; el punto actual recoge la actividad.
         expect(homeA.tendencia.semanal).toHaveLength(12);
         expect(homeA.tendencia.mensual).toHaveLength(12);
@@ -235,6 +238,7 @@ describe("ColegioResumenRepository.homeRector", () => {
         expect(homeVacio.ultimaSenal).toBeNull();
         expect(homeVacio.cursosMirada).toEqual([]);
         expect(homeVacio.tendencia.semanal.every((p) => p.reportes === 0)).toBe(true);
+        expect(homeVacio.embudo).toEqual({ recibidos: 0, cerrados: 0, enRevision: 0, teEsperan: 0 });
     });
 
     it("UNA llamada: cada consulta del repo hijo se invoca una vez por carga (SC-002)", async () => {

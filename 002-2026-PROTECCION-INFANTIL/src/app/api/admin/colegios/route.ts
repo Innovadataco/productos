@@ -17,6 +17,7 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PaisRepository } from "@/lib/dal/repositories/pais";
 import { CiudadRepository } from "@/lib/dal/repositories/ciudad";
 import { DepartamentoRepository } from "@/lib/dal/repositories/departamento";
+import { OnboardingColegioRepository } from "@/lib/dal/repositories/onboarding-colegio";
 import { randomBytes } from "crypto";
 
 function tempPassword() {
@@ -169,6 +170,13 @@ export async function POST(request: Request) {
                 debeCambiarPassword: true,
                 tenantId: tenant.id,
                 colegioId: creado.id,
+            });
+
+            // SPEC-169: cada colegio nuevo nace con onboarding activo.
+            await new OnboardingColegioRepository(tx).crear({
+                colegioId: creado.id,
+                estado: "activo",
+                pasoActual: 1,
             });
 
             return { ...creado, admin: schoolAdmin, tenant };

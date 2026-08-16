@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario, crearRequestAutenticado } from "@/lib/reporte-test-utils";
 import { encryptParameter, decryptParameter } from "@/lib/param-encryption";
+import { hashIdentificacion } from "@/lib/hash-identificacion";
 
 let mockToken: string | undefined;
 
@@ -77,6 +78,7 @@ describe("/api/admin/comite/integrantes", () => {
                 apellidos: "Gómez",
                 tipoIdentificacion: "PASAPORTE",
                 numeroIdentificacion: encryptParameter("AB123456"),
+                hashIdentificacion: hashIdentificacion("AB123456"),
                 email: "ana@example.com",
                 creadoPorId: admin.id,
             },
@@ -105,6 +107,7 @@ describe("/api/admin/comite/integrantes", () => {
                 apellidos: "Ruiz",
                 tipoIdentificacion: "CEDULA_EXTRANJERIA",
                 numeroIdentificacion: encryptParameter("CE987654"),
+                hashIdentificacion: hashIdentificacion("CE987654"),
                 email: "carlos@example.com",
                 creadoPorId: admin.id,
             },
@@ -144,6 +147,7 @@ describe("/api/admin/comite/integrantes", () => {
                 apellidos: "Martínez",
                 tipoIdentificacion: "OTRO",
                 numeroIdentificacion: encryptParameter("ID000"),
+                hashIdentificacion: hashIdentificacion("ID000"),
                 email: "luis@example.com",
                 creadoPorId: admin.id,
             },

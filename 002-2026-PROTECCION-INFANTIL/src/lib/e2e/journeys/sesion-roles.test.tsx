@@ -44,6 +44,7 @@ const RUTA_PRIVADA_POR_ROL: Record<RolUsuario, string> = {
     ADMIN: "/dashboard/admin",
     OPERADOR: "/dashboard/admin",
     COMITE_VALIDACION: "/dashboard/admin/comite",
+    COMITE_CONVIVENCIA: "/dashboard/colegio/comite/casos",
 };
 
 describe(`SPEC-114 · sesión de los 5 roles (ciclo ${CICLO})`, { timeout: 30_000 }, () => {

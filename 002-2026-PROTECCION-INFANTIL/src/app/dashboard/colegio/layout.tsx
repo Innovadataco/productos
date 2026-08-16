@@ -6,7 +6,10 @@ import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
 import { ColegioSideNav } from "@/components/modules/colegio/ColegioSideNav";
 import { BuscadorGlobal } from "@/components/modules/colegio/BuscadorGlobal";
+import { CentroNotificaciones } from "@/components/modules/colegio/CentroNotificaciones";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
+
+const ROLES_COLEGIO = new Set(["SCHOOL_ADMIN", "COMITE_CONVIVENCIA"]);
 
 export default async function ColegioLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();
@@ -17,14 +20,18 @@ export default async function ColegioLayout({ children }: { children: React.Reac
     }
 
     const payload = await verifyToken(token);
-    if (!payload?.sub || payload.rol !== "SCHOOL_ADMIN") {
+    const rol = payload?.rol as string | undefined;
+    if (!payload?.sub || !rol || !ROLES_COLEGIO.has(rol)) {
         redirect("/login");
     }
 
     // E-8: la consulta vive en el repo; el componente no toca prisma.
-    const usuario = await new UsuarioRepository().findSesionColegio(payload.sub as string);
+    const usuario =
+        rol === "COMITE_CONVIVENCIA"
+            ? await new UsuarioRepository().findSesionComite(payload.sub as string)
+            : await new UsuarioRepository().findSesionColegio(payload.sub as string);
 
-    if (!usuario || usuario.estado !== "activo" || usuario.rol !== "SCHOOL_ADMIN") {
+    if (!usuario || usuario.estado !== "activo" || usuario.rol !== rol) {
         redirect("/login");
     }
 
@@ -57,7 +64,7 @@ export default async function ColegioLayout({ children }: { children: React.Reac
         );
     }
 
-    const permitidos = await modulosPermitidosParaRol("SCHOOL_ADMIN");
+    const permitidos = await modulosPermitidosParaRol(usuario.rol);
 
     // SPEC-129 (C3): navegación lateral única patrón AdminNav (antes ColegioNav, tabs).
     // SPEC-148 (US2): buscador global ⌘K montado UNA vez para toda el área.
@@ -65,7 +72,12 @@ export default async function ColegioLayout({ children }: { children: React.Reac
         <div className="theme-colegio flex min-h-screen bg-page">
             <ColegioSideNav rol={usuario.rol} modulosPermitidos={[...permitidos]} />
             <BuscadorGlobal />
-            <div className="min-w-0 flex-1">{children}</div>
+            <div className="flex min-w-0 flex-1 flex-col">
+                <header className="flex items-center justify-end gap-3 border-b border-tinta/10 px-4 py-3 sm:px-6">
+                    <CentroNotificaciones />
+                </header>
+                <main className="min-w-0 flex-1">{children}</main>
+            </div>
         </div>
     );
 }

@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterAll } from "vitest";
+import { unmockPrisma } from "@/lib/test-mocks/unmock-prisma";
 
 const mockSend = vi.hoisted(() => vi.fn());
 const mockStart = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -24,7 +25,7 @@ vi.mock("./prisma", () => ({
             findMany: (...args: unknown[]) => mockFindMany(...args),
         },
         parametroSistema: {
-            findUnique: vi.fn(),
+            findUnique: () => Promise.resolve(null),
         },
     },
 }));
@@ -34,6 +35,8 @@ vi.mock("./parametros", () => ({
 }));
 
 import { sendReporte, getQueueStats, drainPending, getWorkerParams } from "./queue";
+
+afterAll(async () => await unmockPrisma());
 
 describe("queue.ts", () => {
     beforeEach(async () => {
