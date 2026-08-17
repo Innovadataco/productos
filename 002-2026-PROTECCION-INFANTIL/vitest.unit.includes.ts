@@ -78,7 +78,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/ai/pii-patterns.test.ts",
     "src/lib/ai/rubrica-config.test.ts",
     "src/lib/ai/rubrica.test.ts",
-    "src/lib/anti-abuso/fuente-reporte-salt.test.ts",
+    // 002-PI-068: fuente-reporte-salt.test.ts importa fuente-reporte.ts que carga
+    // repositorios Prisma al evaluarse; lo movemos a integration.
     "src/lib/api-handler.test.ts",
     "src/lib/auth.test.ts",
     "src/lib/colegio/alertas-prioridad.test.ts",

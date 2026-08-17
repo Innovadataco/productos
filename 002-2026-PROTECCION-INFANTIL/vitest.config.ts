@@ -54,9 +54,15 @@ export default defineConfig({
             provider: "v8",
             reporter: ["text", "json", "html"],
             exclude: ["node_modules/", ".next/", "prisma/"],
-            // 002-PI-068: los umbrales globales se movieron al agregador `npm run test:coverage`
-            // (unit + integration juntos) porque cada project por separado no alcanza el piso
-            // histórico. La deuda de mergear cobertura entre projects queda documentada en H-1.
+            // Q-2 (002-PI-056): ratchet de cobertura. El umbral solo sube; bajarlo requiere
+            // decisión explícita de ZEUS. Se aplica al project integration (corrida más
+            // completa). H-1: mergear cobertura unit + integration sigue pendiente.
+            thresholds: {
+                statements: 45,
+                branches: 75,
+                functions: 83,
+                lines: 45,
+            },
         },
     },
     resolve: {

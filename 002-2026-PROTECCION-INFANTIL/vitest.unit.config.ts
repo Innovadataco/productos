@@ -17,9 +17,9 @@ export default defineConfig({
         include: UNIT_TEST_INCLUDES,
         exclude: [],
         pool: "forks",
-        // Los tests de componentes React comparten el DOM global de jsdom;
-        // fileParallelism:false + sequence.concurrent:false evita races de DOM.
-        fileParallelism: false,
+        // 002-PI-068: pool:forks da a cada archivo su propio fork/DOM; el paralelismo
+        // entre archivos es seguro. sequence.concurrent:false protege el orden dentro
+        // de un mismo archivo.
         sequence: {
             concurrent: false,
             hooks: "list",
