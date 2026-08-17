@@ -55,8 +55,8 @@ Como equipo quiero que los casos curados del sistema de Experimentos no se pierd
 
 **Acceptance Scenarios**:
 
-1. **Given** tablas `CasoEval` con casos activos, **When** corre `npm run exportar-banco-curado`, **Then** genera `fixtures/banco-curado-v2.jsonl` con los campos: `id`, `texto`, `categoriaEsperada`, `secundariaEsperada`, `ruido`, `fuente`, `fixtureVersion`, `creadoEn`.
-2. **Given** el archivo generado, **Then** es válido JSONL (una línea JSON parseable por línea) y contiene todos los casos de `CasoEval` con `activo=true`.
+1. **Given** tablas `CasoEval` con casos activos e inactivos, **When** corre `npm run exportar-banco-curado`, **Then** genera `fixtures/banco-curado-v2.jsonl` con los campos: `id`, `texto`, `categoriaEsperada`, `secundariaEsperada`, `ruido`, `fuente`, `fixtureVersion`, `creadoEn`, `activo`.
+2. **Given** el archivo generado, **Then** es válido JSONL (una línea JSON parseable por línea) y contiene todos los casos de `CasoEval`, tanto `activo=true` como `activo=false`.
 3. **Given** `fixtures/README.md`, **Then** explica qué es el banco, quién lo aprobó (D-20/D-24) y la fecha del snapshot.
 
 ---
@@ -114,7 +114,7 @@ Como CEO quiero eliminar el motor legacy de votos, porque ya decidimos usar rúb
 - **FR-001**: El sistema DEBE dividir el job `test` de CI en `test-unit` y `test-integration` paralelos.
 - **FR-002**: El project `unit` de Vitest DEBE contener tests sin dependencia de Prisma/BD.
 - **FR-003**: El project `integration` de Vitest DEBE contener tests con Prisma/BD y mantener `singleFork:true`.
-- **FR-004**: El script `exportar-banco-curado` DEBE generar `fixtures/banco-curado-v2.jsonl` con todos los casos activos de `CasoEval`.
+- **FR-004**: El script `exportar-banco-curado` DEBE generar `fixtures/banco-curado-v2.jsonl` con todos los casos de `CasoEval` (activos e inactivos), incluyendo el campo `activo` en cada línea.
 - **FR-005**: El sistema DEBE eliminar endpoints, componentes, DAL y modelos Prisma del sistema de Experimentos.
 - **FR-006**: El sistema DEBE renombrar la tab `Eval` a `Simulación` en el Centro de Control IA.
 - **FR-007**: El sistema DEBE eliminar `src/lib/ai/classifier.ts` y todo el switch legacy/rúbrica.

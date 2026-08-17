@@ -143,8 +143,8 @@ specs/170-limpieza-centro-control-ia/
 
 1. Crear `scripts/exportar-banco-curado.ts`:
    - Lee `CasoEval` desde Prisma.
-   - Filtra `activo=true` (o todos, según decisión; por defecto activos).
-   - Escribe `fixtures/banco-curado-v2.jsonl` con los campos requeridos.
+   - Lee TODOS los registros de `CasoEval` (activos e inactivos).
+   - Escribe `fixtures/banco-curado-v2.jsonl` con los campos requeridos, incluyendo `activo`.
    - Idempotente (sobreescribe archivo).
 
 2. Añadir script `exportar-banco-curado` en `package.json`.
