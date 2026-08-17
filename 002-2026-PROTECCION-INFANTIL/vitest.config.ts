@@ -54,14 +54,15 @@ export default defineConfig({
             provider: "v8",
             reporter: ["text", "json", "html"],
             exclude: ["node_modules/", ".next/", "prisma/"],
-            // Q-2 (002-PI-056): ratchet de cobertura. El umbral solo sube; bajarlo requiere
-            // decisión explícita de ZEUS. Se aplica al project integration (corrida más
-            // completa). H-1: mergear cobertura unit + integration sigue pendiente.
+            // 002-PI-068 (Opción 2): ratchet por proyecto post-split. Pisos medidos el
+            // 2026-08-17 con integration corriendo solo tests de BD. El ratchet solo
+            // sube; bajar cualquier piso requiere decisión explícita de ZEUS.
+            // H-1: mergear cobertura unit + integration queda como deuda técnica.
             thresholds: {
-                statements: 45,
-                branches: 75,
-                functions: 83,
-                lines: 45,
+                statements: 36,
+                branches: 71,
+                functions: 49,
+                lines: 36,
             },
         },
     },

@@ -1,11 +1,26 @@
 // @ts-nocheck
-// 002-PI-068: test-setup-shared se importa AL FINAL para que su afterEach
-// (limpieza global de JS/DOM) se ejecute ANTES del afterEach de este archivo
-// (restorePrismaMethods + releaseTestLock). Ese orden es el que I-54 demostró
-// estable: limpiar primero, restaurar métodos reales después.
-process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
-
+import { TextEncoder as NodeTextEncoder, TextDecoder as NodeTextDecoder } from "util";
+import { webcrypto } from "node:crypto";
+import { cleanup } from "@testing-library/react";
 import { prisma } from "./prisma";
+
+// Wrapper que garantiza que encode() devuelva una Uint8Array pura,
+// evitando problemas con jose/webapi en entornos de test.
+class FixedTextEncoder extends NodeTextEncoder {
+    encode(input?: string) {
+        const buffer = super.encode(input);
+        return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    }
+}
+
+Object.assign(globalThis, { TextEncoder: FixedTextEncoder, TextDecoder: NodeTextDecoder });
+Object.defineProperty(globalThis, "crypto", { value: webcrypto });
+
+process.env.JWT_SECRET = "test-secret-key-32-chars-long-12345678";
+process.env.RESEND_API_KEY = "re_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+process.env.ENCRYPTION_KEY = "test-encryption-32-chars-key!!";
+process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
+process.env.WORKER_SECRET = "worker-secret-test";
 
 // Algunos tests usan vi.mock del módulo prisma con factories parciales; bajo
 // singleFork esas funciones de fábrica pueden filtrar a tests posteriores y
@@ -190,11 +205,26 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+    // Restaurar estado global de JS antes de soltar el lock de BD. Un test que
+    // deje fake timers, mocks o globals stubs (fetch, etc.) contamina a todos
+    // los siguientes en el mismo fork (singleFork:true). Esto causa flakes
+    // order-dependent, especialmente en librerías con WASM como
+    // @react-pdf/renderer/yoga-layout (HALLAZGO 002-PI-062).
+    //
+    // Nota: NO usamos vi.restoreAllMocks() porque Vitest lo aplica también a
+    // los mocks creados con vi.mock(), reseteándolos a vi.fn() sin
+    // implementación y rompiendo tests que dependen de la factory del módulo.
+    // Limpiamos calls con clearAllMocks() y dejamos que cada test restaure sus
+    // propios spyOn si es necesario.
+    vi.useRealTimers();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
     await restorePrismaMethods();
+
+    try {
+        cleanup();
+    } catch (e) {
+        console.warn("[TEST SETUP] cleanup() falló:", e);
+    }
     await releaseTestLock();
 });
-
-// Importar AL FINAL para que el afterEach de limpieza global se registre
-// DESPUÉS del afterEach de arriba y, por tanto, se ejecute ANTES de él.
-import "./test-setup-shared";
-

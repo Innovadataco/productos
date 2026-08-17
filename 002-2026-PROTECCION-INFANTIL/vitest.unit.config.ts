@@ -28,6 +28,16 @@ export default defineConfig({
             provider: "v8",
             reporter: ["text", "json", "html"],
             exclude: ["node_modules/", ".next/", "prisma/"],
+            // 002-PI-068 (Opción 2): ratchet por proyecto post-split. Pisos medidos el
+            // 2026-08-17 con unit corriendo solo tests sin BD. El ratchet solo sube;
+            // bajar cualquier piso requiere decisión explícita de ZEUS.
+            // H-1: mergear cobertura unit + integration queda como deuda técnica.
+            thresholds: {
+                statements: 10,
+                branches: 71,
+                functions: 49,
+                lines: 10,
+            },
         },
     },
     resolve: {
