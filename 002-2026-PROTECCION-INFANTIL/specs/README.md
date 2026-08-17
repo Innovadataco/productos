@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **147** |
+| **Total de specs** | **148** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **36** |
 | **Implementadas (IMPLEMENTADO)** | **44** |
-| **Pendientes (PLANEADO)** | **5** |
+| **Pendientes (PLANEADO)** | **6** |
 
 ## Backlog activo (no cerradas)
 
@@ -108,8 +108,9 @@
 | [167](167-rediseno-3-a-2/spec.md) | SPEC-167 — Rediseño 3→2: Inicio + Estadísticas (002-PI-062) | 🟢 Implementada |
 | [168](168-comite-convivencia/spec.md) | SPEC-168 — Comité de Convivencia por colegio (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [169](169-onboarding-cobertura/spec.md) | SPEC-169 — Onboarding + cobertura + notificaciones in-app (002-PI-062) | 🟢 Implementada (ver cierre.md) |
+| [170](170-limpieza-centro-control-ia/spec.md) | SPEC-170 — Limpieza del Centro de Control IA (002-PI-068) | 🔵 Planeada |
 
-## Tabla completa (118 specs)
+## Tabla completa (119 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -263,6 +264,7 @@
 | [167](167-rediseno-3-a-2/spec.md) | SPEC-167 — Rediseño 3→2: Inicio + Estadísticas (002-PI-062) | 🟢 Implementada |
 | [168](168-comite-convivencia/spec.md) | SPEC-168 — Comité de Convivencia por colegio (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [169](169-onboarding-cobertura/spec.md) | SPEC-169 — Onboarding + cobertura + notificaciones in-app (002-PI-062) | 🟢 Implementada (ver cierre.md) |
+| [170](170-limpieza-centro-control-ia/spec.md) | SPEC-170 — Limpieza del Centro de Control IA (002-PI-068) | 🔵 Planeada |
 
 ## Incidencias de calidad de datos
 
