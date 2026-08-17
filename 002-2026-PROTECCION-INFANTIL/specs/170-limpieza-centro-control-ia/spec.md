@@ -6,6 +6,8 @@
 
 **Status**: PLANEADO
 
+Impacto en arquitectura: modifica la configuración de Vitest/CI (Fase 1), retira modelos `EvalRun`/`EvalResultado`/`CasoEval` + enums (Fase 2) y simplifica `src/lib/ai/motor.ts` eliminando el switch legacy/rúbrica (Fase 3).
+
 **Input**: Instructivo 002-PI-068. Contexto: el Centro de Control IA (`/dashboard/admin/ia`) acumula tres deudas técnicas que ralentizan el desarrollo y mantienen código no usado en producción: (1) el job `test` de CI tarda ~26m28s con `singleFork`; (2) el sistema de "Experimentos" (tabs Laboratorio/Historial/Casos) es código muerto — el ciclo real de afinamiento pasa por Simulación; (3) el motor "legacy" de votación quedó atrás tras la decisión D-28 de usar rúbrica multi-modelo. Esta spec unifica la limpieza en tres fases secuenciales, en un solo PR, con un commit por fase para auditoría separada.
 
 ## Alcance y fases
