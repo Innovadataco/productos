@@ -1,5 +1,10 @@
 // @ts-nocheck
-import "./test-setup-shared";
+// 002-PI-068: test-setup-shared se importa AL FINAL para que su afterEach
+// (limpieza global de JS/DOM) se ejecute ANTES del afterEach de este archivo
+// (restorePrismaMethods + releaseTestLock). Ese orden es el que I-54 demostró
+// estable: limpiar primero, restaurar métodos reales después.
+process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
+
 import { prisma } from "./prisma";
 
 // Algunos tests usan vi.mock del módulo prisma con factories parciales; bajo
@@ -188,3 +193,8 @@ afterEach(async () => {
     await restorePrismaMethods();
     await releaseTestLock();
 });
+
+// Importar AL FINAL para que el afterEach de limpieza global se registre
+// DESPUÉS del afterEach de arriba y, por tanto, se ejecute ANTES de él.
+import "./test-setup-shared";
+

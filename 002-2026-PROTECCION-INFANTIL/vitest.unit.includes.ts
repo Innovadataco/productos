@@ -83,7 +83,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/api-handler.test.ts",
     "src/lib/auth.test.ts",
     "src/lib/colegio/alertas-prioridad.test.ts",
-    "src/lib/colegio/carga/parser.test.ts",
+    // 002-PI-068: parser.test.ts importa parser.ts que carga repositorios Prisma.
     "src/lib/colegio/carga/validator.test.ts",
     "src/lib/colegio/fechas-humano.test.ts",
     "src/lib/colegio/normalizacion.test.ts",
@@ -110,7 +110,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/reporte-estados-usuario.test.ts",
     "src/lib/reportes-acceso.test.ts",
     "src/lib/riesgo-consulta.test.ts",
-    "src/lib/role-visibility.test.tsx",
+    // 002-PI-068: role-visibility.test.tsx importa proxy.ts que carga repositorios Prisma.
     "src/lib/schemas/index.test.ts",
     "src/lib/schemas/unificado.test.ts",
     "src/lib/simulacion/executor.test.ts",
