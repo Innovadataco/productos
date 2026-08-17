@@ -9,9 +9,8 @@ import type { CategoriaConducta } from "@prisma/client";
 /**
  * E-4: fuente ÚNICA de las categorías válidas del motor (idénticas al enum
  * CategoriaConducta de Prisma, que es la fuente de tipos). `classifier.ts` la
- * re-exporta por compatibilidad. Distinta a propósito de: CATEGORIAS_EVAL
- * (eval-runner: banco de casos, sin SPAM) y CATEGORIAS_RUBRICA (rubrica-semilla:
- * llaves de la rúbrica de preguntas) — no son la misma cosa y NO se unifican.
+ * re-exporta por compatibilidad. Incluye SPAM; CATEGORIAS_RUBRICA (rubrica-semilla)
+ * es distinta porque no clasifica SPAM.
  */
 export const CATEGORIAS_VALIDAS: readonly CategoriaConducta[] = [
     "CONTACTO_INSISTENTE",

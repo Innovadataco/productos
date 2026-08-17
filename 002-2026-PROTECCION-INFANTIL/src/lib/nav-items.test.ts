@@ -16,7 +16,6 @@ const SIN_PANTALLA_PROPIA = new Set([
     "comite",
     "ia_playground",
     "ia_rubrica",
-    "ia_eval",
     "ia_simulaciones",
     "ia_configuracion",
     "configuracion_permisos",

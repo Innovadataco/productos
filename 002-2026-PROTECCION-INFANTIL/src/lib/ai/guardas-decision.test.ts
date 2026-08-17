@@ -77,8 +77,8 @@ describe("paridad guardas: módulo compartido vs helper de producción", () => {
     }
 });
 
-// Copia literal de la lógica que sandbox.ts y eval-runner.ts tenían ANTES de la
-// unificación (spec 123), para demostrar el antes/después.
+// Copia literal de la lógica que sandbox.ts tenía ANTES de la unificación
+// (spec 123), para demostrar el antes/después.
 function guardasViejas({
     texto,
     categoria,

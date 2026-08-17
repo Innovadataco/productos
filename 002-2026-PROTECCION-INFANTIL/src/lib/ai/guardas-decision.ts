@@ -15,8 +15,7 @@ import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
  *
  * La usan TODOS los contextos: producción (vía el wrapper fino
  * `aplicarGuardasSeguridad` de `reporte-processing/guardas.ts`, que añade el
- * side-effect `registrarPaso` de expediente) y los no productivos (sandbox,
- * eval-runner). Antes era una réplica de la lógica de producción; desde E-4
+ * side-effect `registrarPaso` de expediente) y el sandbox. Antes era una réplica de la lógica de producción; desde E-4
  * ES la implementación de producción. La decisión bit a bit idéntica la
  * afirman `guardas-decision.test.ts` y los tests del pipeline.
  */

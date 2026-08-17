@@ -137,7 +137,6 @@ async function start() {
     await ensureQueue("reporte-procesamiento");
     await ensureQueue("dataset-anonimizacion-backfill");
     await ensureQueue("dataset-embedding-backfill");
-    await ensureQueue("eval-classifier-run");
     await ensureQueue("simulacion-run");
     await ensureQueue("simulacion-lote");
     await ensureQueue("apelacion-mantenimiento");
@@ -148,7 +147,7 @@ async function start() {
 
     const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
-    console.log("[WORKER] Iniciado. Escuchando colas 'reporte-procesamiento', 'dataset-anonimizacion-backfill', 'dataset-embedding-backfill', 'eval-classifier-run' y 'simulacion-run'...");
+    console.log("[WORKER] Iniciado. Escuchando colas 'reporte-procesamiento', 'dataset-anonimizacion-backfill', 'dataset-embedding-backfill', 'simulacion-run' y 'simulacion-lote'...");
     console.log(`[WORKER] Config: max_reintentos=${maxReintentos}, retry_delay=${retryDelaySegundos}s, concurrencia=${concurrencia}, backoff=exponencial`);
 
     const ollamaOk = await checkOllamaHealth();
@@ -313,104 +312,6 @@ async function start() {
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[WORKER] ERROR dataset=${datasetId} intento=${retryCount + 1} error=${msg}`);
-            throw err;
-        }
-    });
-
-    await boss.work("eval-classifier-run", async (jobs) => {
-        const job = Array.isArray(jobs) ? jobs[0] : jobs;
-        if (!job || !job.data) {
-            console.error("[WORKER] Job inválido:", JSON.stringify(jobs));
-            return;
-        }
-        const { runId } = job.data;
-        console.log(`[WORKER] Iniciando eval run ${runId} (job ${job.id})`);
-
-        const {
-            loadActiveEvalCases,
-            runF7Eval,
-            buildF7Report,
-            persistEvalRun,
-            saveEvalReportToFile,
-            markEvalRunFailed,
-            updateEvalRunProgress,
-        } = await import("../src/lib/ai/eval-runner.ts");
-
-        try {
-            const run = await prisma.evalRun.update({ where: { id: runId }, data: { estado: "EN_PROGRESO" } });
-
-            const ollamaHealthy = await checkOllamaHealth();
-            if (!ollamaHealthy) {
-                throw new Error("Ollama no disponible");
-            }
-
-            const snapshot = run.configSnapshot || {};
-            const modeloClasificacion = snapshot.modeloClasificacion || "ornith:9b";
-            const ollamaBaseUrl = await getOllamaBaseUrl();
-            const tagsRes = await fetch(`${ollamaBaseUrl}/api/tags`, { signal: AbortSignal.timeout(10000) });
-            if (tagsRes.ok) {
-                const tagsData = await tagsRes.json();
-                const installed = (tagsData.models || []).map((m) => m.name || m.model);
-                if (!installed.includes(modeloClasificacion)) {
-                    throw new Error(`El modelo ${modeloClasificacion} no está instalado en Ollama`);
-                }
-            }
-
-            const { examples, fixtureVersion } = await loadActiveEvalCases();
-            const start = Date.now();
-            const results = await runF7Eval(examples, {
-                config: {
-                    modeloClasificacion,
-                    modeloEmbedding: snapshot.modeloEmbedding || "nomic-embed-text",
-                    umbralRevision: snapshot.umbralRevision ?? 1.0,
-                    nVotos: snapshot.nVotos ?? 5,
-                    temperaturaVotos: snapshot.temperaturaVotos ?? 0.7,
-                    ragTopK: snapshot.ragTopK ?? 3,
-                    ollamaBaseUrl,
-                    fixtureVersion,
-                },
-                onProgress: (done, total) => updateEvalRunProgress(runId, done, total),
-            });
-            const duracionTotalMs = Date.now() - start;
-
-            const report = buildF7Report(results, fixtureVersion, {
-                modeloClasificacion,
-                modeloEmbedding: snapshot.modeloEmbedding || "nomic-embed-text",
-                duracionTotalMs,
-            });
-
-            const resultados = examples
-                .map((ex, i) => (ex.id && results[i] ? { casoEvalId: ex.id, result: results[i] } : null))
-                .filter(Boolean);
-
-            await persistEvalRun(runId, report, { resultados });
-            const outFile = await saveEvalReportToFile(report);
-
-            await logAudit({
-                accion: "EXPERIMENT_COMPLETE",
-                tipoRecurso: "EvalRun",
-                recursoId: runId,
-                usuarioId: run.creadoPorId ?? undefined,
-                valorNuevo: JSON.stringify({
-                    nombre: run.nombre,
-                    fixtureVersion,
-                    metrics: report.metrics,
-                    operational: report.operational,
-                }),
-                ipAddress: "worker",
-                userAgent: "worker",
-            });
-
-            console.log(`[WORKER] OK eval run=${runId} fixtureVersion=${fixtureVersion} reporte=${outFile}`);
-            return { success: true, runId };
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : "Error desconocido";
-            console.error(`[WORKER] ERROR eval run=${runId} error=${msg}`);
-            try {
-                await markEvalRunFailed(runId, msg);
-            } catch (markErr) {
-                console.error(`[WORKER] ERROR no se pudo marcar eval run=${runId} como fallido:`, markErr);
-            }
             throw err;
         }
     });

@@ -94,7 +94,7 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
                         <IaPlayground initialOverrides={initialOverrides} />
                     </div>
                 )}
-                {activeTab === "eval" && <IaEvalManager />}
+                {activeTab === "simulacion" && <IaEvalManager />}
                 {activeTab === "rubrica" && <RubricaTab />}
                 {activeTab === "configuracion" && <ConfigPanel />}
             </Suspense>

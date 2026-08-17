@@ -65,7 +65,7 @@ export async function clasificarReporte({
 
     // SPEC-138 (E-7): el switch del motor (rúbrica si ia.rubrica.enabled, legacy
     // si no) vive en el selector unificado src/lib/ai/motor.ts — el MISMO que
-    // ejercitan sandbox y eval-runner.
+    // ejercita el sandbox.
     const [resultado, piiResult] = await Promise.all([
         clasificarConMotorActivo(texto, {
             modeloClasificacionLegacy: parametros.modeloClasificacion,

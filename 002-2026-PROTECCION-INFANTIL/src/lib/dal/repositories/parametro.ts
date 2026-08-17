@@ -19,7 +19,7 @@ export class ParametroRepository {
         return this.db.parametroSistema.findUnique({ where: { clave } });
     }
 
-    /** E-8: varios parámetros por clave (snapshot de configuración del eval-runner). */
+    /** E-8: varios parámetros por clave (snapshot de configuración del motor). */
     findPorClaves(claves: string[]) {
         return this.db.parametroSistema.findMany({
             where: { clave: { in: claves } },

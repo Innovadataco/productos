@@ -14,8 +14,7 @@ export interface ModuloCatalogo {
 export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "centro_control_ia", nombre: "Centro de Control IA", categoria: "admin", esCritico: true, orden: 10 },
     { clave: "ia_playground", nombre: "Playground y modelos", categoria: "admin", orden: 11, padre: "centro_control_ia" },
-    { clave: "ia_eval", nombre: "Evaluación del clasificador", categoria: "admin", orden: 12, padre: "centro_control_ia" },
-    { clave: "ia_simulaciones", nombre: "Simulaciones", categoria: "admin", orden: 13, padre: "centro_control_ia" },
+    { clave: "ia_simulaciones", nombre: "Simulaciones", categoria: "admin", orden: 12, padre: "centro_control_ia" },
     { clave: "ia_configuracion", nombre: "Configuración del motor IA", categoria: "admin", orden: 14, padre: "centro_control_ia" },
     { clave: "ia_rubrica", nombre: "Rúbrica de clasificación", categoria: "admin", orden: 15, padre: "centro_control_ia" },
     { clave: "operadores", nombre: "Gestión de operadores", categoria: "admin", esCritico: true, orden: 20 },

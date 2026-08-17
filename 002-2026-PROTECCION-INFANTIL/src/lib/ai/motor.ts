@@ -1,9 +1,8 @@
 /**
  * SPEC-138 (E-7): selector UNIFICADO del motor de clasificación.
  * El MISMO switch que producción: `ia.rubrica.enabled` (parámetro en BD) decide
- * rúbrica vs legacy (default seguro: legacy, D-19 spec 095). Lo usan los TRES
- * contextos: pipeline de procesamiento (reporte-processing), sandbox y
- * eval-runner — el laboratorio ejercita el motor que corre en prod.
+ * rúbrica vs legacy (default seguro: legacy, D-19 spec 095). Lo usan el
+ * pipeline de procesamiento (reporte-processing) y el sandbox.
  *
  * Overrides por contexto: `voting`/`modeloClasificacionLegacy` aplican SOLO al
  * motor legacy (como hoy); la rúbrica usa su propia config por parámetros

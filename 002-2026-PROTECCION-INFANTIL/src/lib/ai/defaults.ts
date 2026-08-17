@@ -2,7 +2,7 @@
  * E-4 (002-PI-056): fuente ÚNICA de los modelos por defecto del motor de IA.
  * Es el ÚLTIMO eslabón de la cadena de configuración en cada sitio:
  * parámetro en BD (ParametroSistema) → variable de entorno → ESTE default.
- * Antes estaba el literal repetido en cada consumidor (eval-runner, sandbox,
+ * Antes estaba el literal repetido en cada consumidor (sandbox,
  * backfills, parametros del pipeline, rutas admin).
  */
 

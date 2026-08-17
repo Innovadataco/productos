@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 267 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1869 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 257 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1799 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -57,16 +57,6 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/estadisticas` | api | permitir | permite | sí |
 | `/api/admin/estadisticas/clasificacion` | api | permitir | permite | sí |
 | `/api/admin/estadisticas/denuncias-formales` | api | permitir | permite | sí |
-| `/api/admin/ia/evals` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/[id]` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/casos` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/casos/[id]/desactivar` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/historial` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/[id]` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/[id]/resultados` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/comparar` | api | permitir | permite | sí |
 | `/api/admin/ia/modelos` | api | permitir | permite | sí |
 | `/api/admin/ia/ollama/probar` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica` | api | permitir | permite | sí |
@@ -329,16 +319,6 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/estadisticas` | api | permitir | permite | sí |
 | `/api/admin/estadisticas/clasificacion` | api | permitir | permite | sí |
 | `/api/admin/estadisticas/denuncias-formales` | api | permitir | permite | sí |
-| `/api/admin/ia/evals` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/[id]` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/casos` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/casos/[id]/desactivar` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/historial` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/[id]` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/[id]/resultados` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/comparar` | api | permitir | permite | sí |
 | `/api/admin/ia/modelos` | api | permitir | permite | sí |
 | `/api/admin/ia/ollama/probar` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica` | api | permitir | permite | sí |
@@ -601,16 +581,6 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/estadisticas` | api | permitir | permite | sí |
 | `/api/admin/estadisticas/clasificacion` | api | permitir | permite | sí |
 | `/api/admin/estadisticas/denuncias-formales` | api | permitir | permite | sí |
-| `/api/admin/ia/evals` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/[id]` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/casos` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/casos/[id]/desactivar` | api | permitir | permite | sí |
-| `/api/admin/ia/evals/historial` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/[id]` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/[id]/resultados` | api | permitir | permite | sí |
-| `/api/admin/ia/experimentos/comparar` | api | permitir | permite | sí |
 | `/api/admin/ia/modelos` | api | permitir | permite | sí |
 | `/api/admin/ia/ollama/probar` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica` | api | permitir | permite | sí |
@@ -873,16 +843,6 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/estadisticas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/estadisticas/clasificacion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/estadisticas/denuncias-formales` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/[id]` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/casos` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/casos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/historial` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/[id]` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/[id]/resultados` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/comparar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/modelos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/ollama/probar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica` | api | HTTP 403 | no permite | sí |
@@ -1145,16 +1105,6 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/estadisticas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/estadisticas/clasificacion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/estadisticas/denuncias-formales` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/[id]` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/casos` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/casos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/historial` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/[id]` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/[id]/resultados` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/comparar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/modelos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/ollama/probar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica` | api | HTTP 403 | no permite | sí |
@@ -1417,16 +1367,6 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/estadisticas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/estadisticas/clasificacion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/estadisticas/denuncias-formales` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/[id]` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/casos` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/casos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/evals/historial` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/[id]` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/[id]/resultados` | api | HTTP 403 | no permite | sí |
-| `/api/admin/ia/experimentos/comparar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/modelos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/ollama/probar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica` | api | HTTP 403 | no permite | sí |
@@ -1689,16 +1629,6 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/estadisticas` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/estadisticas/clasificacion` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/estadisticas/denuncias-formales` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/evals` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/evals/[id]` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/evals/casos` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/evals/casos/[id]/desactivar` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/evals/historial` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/experimentos` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/experimentos/[id]` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/experimentos/[id]/preparar-activacion` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/experimentos/[id]/resultados` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/ia/experimentos/comparar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/modelos` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/ollama/probar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/rubrica` | api | HTTP 401 | permite | **NO** |
@@ -1962,16 +1892,6 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/estadisticas` | HTTP 401 | permite |
 | `/api/admin/estadisticas/clasificacion` | HTTP 401 | permite |
 | `/api/admin/estadisticas/denuncias-formales` | HTTP 401 | permite |
-| `/api/admin/ia/evals` | HTTP 401 | permite |
-| `/api/admin/ia/evals/[id]` | HTTP 401 | permite |
-| `/api/admin/ia/evals/casos` | HTTP 401 | permite |
-| `/api/admin/ia/evals/casos/[id]/desactivar` | HTTP 401 | permite |
-| `/api/admin/ia/evals/historial` | HTTP 401 | permite |
-| `/api/admin/ia/experimentos` | HTTP 401 | permite |
-| `/api/admin/ia/experimentos/[id]` | HTTP 401 | permite |
-| `/api/admin/ia/experimentos/[id]/preparar-activacion` | HTTP 401 | permite |
-| `/api/admin/ia/experimentos/[id]/resultados` | HTTP 401 | permite |
-| `/api/admin/ia/experimentos/comparar` | HTTP 401 | permite |
 | `/api/admin/ia/modelos` | HTTP 401 | permite |
 | `/api/admin/ia/ollama/probar` | HTTP 401 | permite |
 | `/api/admin/ia/rubrica` | HTTP 401 | permite |
