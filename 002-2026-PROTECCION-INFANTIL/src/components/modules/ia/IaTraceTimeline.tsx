@@ -47,7 +47,7 @@ export function IaTraceTimeline({ trace }: IaTraceTimelineProps) {
     const pii = etapas.pii;
     const guardas = etapas.guardas;
 
-    const voteChartData = votos.distribucion.map((d) => ({
+    const voteChartData = votos.votos.map((d) => ({
         label: d.categoria,
         value: d.count,
     }));
@@ -83,9 +83,9 @@ export function IaTraceTimeline({ trace }: IaTraceTimelineProps) {
                             Categoría: <Badge variant="info">{votos.categoria}</Badge>
                         </p>
                         <p>Confianza: {(votos.confianza * 100).toFixed(0)}%</p>
-                        <p>Votos: {parametrosEfectivos.nVotos}</p>
+                        <p>Modelos: {votos.modelos}</p>
                     </div>
-                    <BarChart ariaLabel="Distribución de votos" data={voteChartData} />
+                    <BarChart ariaLabel="Distribución por modelo" data={voteChartData} />
                 </div>
             </Stage>
 

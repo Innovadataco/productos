@@ -13,7 +13,6 @@ import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
  */
 
 export interface ConfigRubrica {
-    enabled: boolean;
     preguntas: SetsRubrica;
     modelos: string[];
     temperatura: number;
@@ -98,8 +97,7 @@ interface VotoModeloResponse {
 }
 
 export async function cargarConfigRubrica(): Promise<ConfigRubrica> {
-    const [enabled, preguntas, modelos, temperatura, umbral, embudo] = await Promise.all([
-        getParametroSistema("ia.rubrica.enabled"),
+    const [preguntas, modelos, temperatura, umbral, embudo] = await Promise.all([
         getParametroSistema("ia.rubrica.preguntas"),
         getParametroSistema("ia.rubrica.modelos"),
         getParametroSistema("ia.rubrica.temperatura"),
@@ -107,8 +105,6 @@ export async function cargarConfigRubrica(): Promise<ConfigRubrica> {
         getParametroSistema("ia.rubrica.modelo_embudo"),
     ]);
     return {
-        // D-19 (spec 095): el default seguro es el motor LEGACY; la rúbrica se activa explícitamente.
-        enabled: enabled?.valor === "true",
         preguntas: preguntas ? (JSON.parse(preguntas.valor) as SetsRubrica) : RUBRICA_SEMILLA,
         modelos: modelos ? (JSON.parse(modelos.valor) as string[]) : ["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"],
         temperatura: temperatura ? parseFloat(temperatura.valor) : 0.2,

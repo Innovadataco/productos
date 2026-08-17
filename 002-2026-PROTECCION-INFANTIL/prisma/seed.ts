@@ -986,7 +986,6 @@ async function main() {
 
     // ── Rúbrica de clasificación (spec 090) ────────────────────────────────
     const rubricaParams = [
-        { clave: "ia.rubrica.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, descripcion: "Motor rúbrica multi-etiqueta/multi-modelo (D-28: rúbrica por defecto; legacy desactivable por parámetro para reversión en caliente)" },
         { clave: "ia.rubrica.preguntas", valor: JSON.stringify(RUBRICA_SEMILLA), tipo: TipoParametro.JSON, descripcion: "Sets de preguntas factuales por categoría (editables por expertos)" },
         { clave: "ia.rubrica.modelos", valor: JSON.stringify(["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"]), tipo: TipoParametro.JSON, descripcion: "Modelos diversos que votan en la rúbrica (secuencial, 1 voto c/u)" },
         { clave: "ia.rubrica.temperatura", valor: "0.2", tipo: TipoParametro.FLOAT, descripcion: "Temperatura de los votos de la rúbrica (baja = determinista)" },

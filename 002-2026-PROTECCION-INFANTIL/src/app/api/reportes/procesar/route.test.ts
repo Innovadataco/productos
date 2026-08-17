@@ -15,18 +15,21 @@ const mockEnviarAlertaRevision = vi.fn();
 const mockEnviarAlertaScoreCritico = vi.fn();
 const mockEnviarAlertasSuscriptores = vi.fn();
 
-vi.mock("@/lib/ai/classifier", () => ({
-    clasificarConVotos: (...args: unknown[]) => mockClasificar(...args),
-}));
-
-// Spec 090: el pipeline usa el motor rúbrica cuando está habilitado; en estos tests
-// se ejerce el MISMO mock del clasificador legacy (los tests validan el pipeline, no el motor).
+// Spec 090 / 002-PI-068 Fase 3: el pipeline usa SOLO el motor rúbrica.
+// En estos tests se ejerce un mock del motor rúbrica; los tests validan el
+// pipeline, no el motor en sí.
 vi.mock("@/lib/ai/rubrica", () => ({
     clasificarConRubrica: async (...args: unknown[]) => {
         const r = await mockClasificar(...args);
         return { ...r, votosModelos: [], porcentajes: {} };
     },
-    cargarConfigRubrica: async () => ({ enabled: true }),
+    cargarConfigRubrica: async () => ({
+        preguntas: {},
+        modelos: ["m1", "m2", "m3"],
+        temperatura: 0.2,
+        umbralPresencia: 0.6,
+        modeloEmbudo: "embudo:test",
+    }),
     generarAnalisisRubrica: () => "",
 }));
 

@@ -1,24 +1,14 @@
 /**
  * SPEC-138 (E-7): selector UNIFICADO del motor de clasificación.
- * El MISMO switch que producción: `ia.rubrica.enabled` (parámetro en BD) decide
- * rúbrica vs legacy (default seguro: legacy, D-19 spec 095). Lo usan el
- * pipeline de procesamiento (reporte-processing) y el sandbox.
- *
- * Overrides por contexto: `voting`/`modeloClasificacionLegacy` aplican SOLO al
- * motor legacy (como hoy); la rúbrica usa su propia config por parámetros
- * (`ia.rubrica.*`), igual que en producción. `configRubrica` permite overrides
- * puntuales de la rúbrica si un contexto los necesita.
+ * A partir de la Fase 3 de 002-PI-068 el único motor activo es la RÚBRICA.
+ * `clasificarConMotorActivo` delega siempre en `clasificarConRubrica` y adapta
+ * el resultado a la forma `ResultadoMotor` que esperan el pipeline y el sandbox.
  */
-import { clasificarConVotos, type VotingConfig } from "./classifier";
 import { cargarConfigRubrica, clasificarConRubrica, type ConfigRubrica, type ResultadoRubrica } from "./rubrica";
-import { MODELO_CLASIFICACION_DEFAULT } from "./defaults";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
-export type MotorClasificacion = "rubrica" | "legacy";
-
-/** Forma unificada del resultado (compatible con ambos motores). */
+/** Forma unificada del resultado del motor de clasificación. */
 export interface ResultadoMotor {
-    motor: MotorClasificacion;
     categoria: CategoriaConducta;
     confianza: number;
     categoriasSecundarias: unknown[];
@@ -33,20 +23,12 @@ export interface ResultadoMotor {
     rawResponse: unknown;
     votos: unknown[];
     fallback: boolean;
-    /** Solo legacy con cascada. */
-    usoCascada?: boolean | undefined;
-    /** Solo legacy con cascada. */
-    modeloCascada?: string | undefined;
-    /** Resultado completo de la rúbrica (matriz de votos, solo motor rúbrica). */
+    /** Resultado completo de la rúbrica (matriz de votos por modelo). */
     rubrica?: ResultadoRubrica | undefined;
 }
 
 export interface OpcionesMotor {
-    /** Modelo del motor legacy (override del contexto; default: MODELO_CLASIFICACION_DEFAULT). */
-    modeloClasificacionLegacy?: string | undefined;
-    /** Overrides de votación del motor legacy (sandbox/eval/pipeline). */
-    voting?: Partial<VotingConfig> | undefined;
-    /** Overrides puntuales de la config de la rúbrica (hoy ningún contexto los usa). */
+    /** Overrides puntuales de la config de la rúbrica (sandbox/eval). */
     configRubrica?: Partial<ConfigRubrica> | undefined;
 }
 
@@ -62,55 +44,18 @@ export function leerPosibleAgresorPar(r: ResultadoRubrica | undefined): boolean 
     return "posibleAgresorPar" in r && typeof r.posibleAgresorPar === "boolean" ? r.posibleAgresorPar : false;
 }
 
-/** Solo lectura del switch (sin ejecutar el motor): para registrar `motorUsado`. */
-export async function motorActivo(): Promise<MotorClasificacion> {
-    const config = await cargarConfigRubrica();
-    return config.enabled ? "rubrica" : "legacy";
-}
-
 /**
- * Clasifica con el motor activo (mismo switch que producción).
- * La decisión de conducta (categoría/estado) es idéntica a la de cada motor por
- * su camino actual; esta función solo UNIFICA quién elige la rama.
+ * Clasifica con el motor activo (ahora siempre la rúbrica).
+ * La decisión de conducta (categoría/estado) la toma `clasificarConRubrica`;
+ * esta función solo adapta el resultado a la forma común del pipeline.
  */
 export async function clasificarConMotorActivo(texto: string, opciones: OpcionesMotor = {}): Promise<ResultadoMotor> {
-    const configRubrica = await cargarConfigRubrica();
-
-    if (configRubrica.enabled) {
-        const r = await clasificarConRubrica(texto, opciones.configRubrica);
-        return {
-            motor: "rubrica",
-            categoria: r.categoria,
-            confianza: r.confianza,
-            categoriasSecundarias: r.categoriasSecundarias,
-            posibleAgresorPar: leerPosibleAgresorPar(r),
-            estado: r.estado,
-            metrics: {
-                modelo: r.metrics.modelo,
-                latenciaMs: r.metrics.latenciaMs,
-                promptTokens: r.metrics.promptTokens,
-                responseTokens: r.metrics.responseTokens,
-            },
-            rawResponse: r.rawResponse,
-            votos: r.votosModelos,
-            fallback: r.fallback,
-            usoCascada: false,
-            modeloCascada: undefined,
-            rubrica: r,
-        };
-    }
-
-    const r = await clasificarConVotos(
-        opciones.modeloClasificacionLegacy ?? MODELO_CLASIFICACION_DEFAULT,
-        texto,
-        opciones.voting
-    );
+    const r = await clasificarConRubrica(texto, opciones.configRubrica);
     return {
-        motor: "legacy",
         categoria: r.categoria,
         confianza: r.confianza,
         categoriasSecundarias: r.categoriasSecundarias,
-        posibleAgresorPar: r.posibleAgresorPar,
+        posibleAgresorPar: leerPosibleAgresorPar(r),
         estado: r.estado,
         metrics: {
             modelo: r.metrics.modelo,
@@ -119,10 +64,8 @@ export async function clasificarConMotorActivo(texto: string, opciones: Opciones
             responseTokens: r.metrics.responseTokens,
         },
         rawResponse: r.rawResponse,
-        votos: r.votos,
+        votos: r.votosModelos,
         fallback: r.fallback,
-        usoCascada: r.usoCascada,
-        modeloCascada: r.modeloCascada,
-        rubrica: undefined,
+        rubrica: r,
     };
 }

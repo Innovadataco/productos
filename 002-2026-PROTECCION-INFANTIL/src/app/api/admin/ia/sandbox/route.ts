@@ -26,20 +26,13 @@ function sanitizeOverrides(raw: unknown): SandboxOverrides {
     if (!raw || typeof raw !== "object") return overrides;
     const r = raw as Record<string, unknown>;
 
-    const keys: (keyof Omit<SandboxOverrides, "modelo_clasificacion">)[] = [
-        "umbral_revision",
-        "n_votos",
-        "temperatura_votos",
-        "min_score_categoria",
+    const numericKeys: (keyof Pick<SandboxOverrides, "temperatura" | "umbral_presencia" | "rag_top_k">)[] = [
+        "temperatura",
+        "umbral_presencia",
         "rag_top_k",
     ];
 
-    // El override de modelo es string, no numérico
-    const modelo = r["modelo_clasificacion"];
-    if (typeof modelo === "string" && modelo.trim().length > 0) {
-        overrides.modelo_clasificacion = modelo.trim();
-    }
-    for (const key of keys) {
+    for (const key of numericKeys) {
         const value = r[key];
         if (value === undefined) continue;
         const num = typeof value === "string" ? parseFloat(value) : Number(value);
@@ -47,6 +40,12 @@ function sanitizeOverrides(raw: unknown): SandboxOverrides {
             overrides[key] = num;
         }
     }
+
+    const modelos = r["modelos"];
+    if (Array.isArray(modelos) && modelos.every((m) => typeof m === "string" && m.length > 0)) {
+        overrides.modelos = modelos;
+    }
+
     return overrides;
 }
 

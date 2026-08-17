@@ -1,41 +1,27 @@
 import { getParametroSistema } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "./dataset-retrieval";
-import { clasificarConMotorActivo, type MotorClasificacion, type ResultadoMotor } from "./motor";
-import type { ClasificacionCategoria, VotoIndividual } from "./classifier";
-
-/** Guard: voto individual del motor legacy (categoría + confianza + señal de par). */
-function esVotoIndividual(v: unknown): v is VotoIndividual {
-    return typeof v === "object" && v !== null && "categoria" in v && "confianza" in v && "posibleAgresorPar" in v;
-}
-
-/** Guard: categoría secundaria en la forma legacy ({ categoria, score }). */
-function esSecundariaLegacy(v: unknown): v is ClasificacionCategoria {
-    return typeof v === "object" && v !== null && "categoria" in v && "score" in v;
-}
+import { clasificarConMotorActivo, type ResultadoMotor } from "./motor";
 import { detectarPiiCombinado, type PiiDetectionResult } from "./pii-detector";
 import { anonimizarTexto, type AnonimizacionResult } from "./anonimizador";
 import { decidirGuardasSeguridad } from "./guardas-decision";
-import { MODELO_ANONIMIZACION_DEFAULT, MODELO_CLASIFICACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
+import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
 import type { CategoriaConducta } from "@prisma/client";
+import type { VotoRubricaModelo } from "./rubrica";
 
 export interface SandboxOverrides {
-    umbral_revision?: number | undefined;
-    n_votos?: number | undefined;
-    temperatura_votos?: number | undefined;
-    min_score_categoria?: number | undefined;
+    temperatura?: number | undefined;
+    umbral_presencia?: number | undefined;
+    modelos?: string[] | undefined;
     rag_top_k?: number | undefined;
-    modelo_clasificacion?: string | undefined;
 }
 
 export interface SandboxParametros {
-    modeloClasificacion: string;
+    modelos: string[];
     embeddingModel: string;
     anonymizationModel: string;
-    umbralRevision: number;
-    nVotos: number;
     temperatura: number;
-    minScoreCategoria: number;
+    umbralPresencia: number;
     ragTopK: number;
     ollamaNumParallel: number;
     umbralSpam: number;
@@ -49,8 +35,6 @@ export interface SandboxVotoDistribucion {
 export interface SandboxTrace {
     texto: string;
     parametrosEfectivos: SandboxParametros;
-    /** SPEC-138 (E-7): motor que ejercitó la corrida (selector unificado). */
-    motorUsado?: MotorClasificacion | undefined;
     etapas: {
         embedding: {
             latenciaMs: number;
@@ -63,8 +47,8 @@ export interface SandboxTrace {
         };
         votacion: {
             latenciaMs: number;
-            votos: VotoIndividual[];
-            distribucion: SandboxVotoDistribucion[];
+            votos: SandboxVotoDistribucion[];
+            modelos: number;
             categoria: CategoriaConducta;
             confianza: number;
             categoriasSecundarias: { categoria: CategoriaConducta; score: number }[];
@@ -112,49 +96,42 @@ function parseIntParam(valor: string | undefined, defaultValue: number): number 
 }
 
 async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParametros> {
-    const [
-        modeloClasificacion,
-        embeddingModel,
-        anonymizationModel,
-        umbralRevision,
-        nVotos,
-        temperatura,
-        minScoreCategoria,
-        ragTopK,
-        ollamaNumParallel,
-        umbralSpam,
-    ] = await Promise.all([
-        getParametroSistema("reportes.classification_model"),
+    const [modelosRaw, embeddingModel, anonymizationModel, temperatura, umbralPresencia, ragTopK, ollamaNumParallel, umbralSpam] = await Promise.all([
+        getParametroSistema("ia.rubrica.modelos"),
         getParametroSistema("reportes.embedding_model"),
         getParametroSistema("reportes.anonymization_model"),
-        getParametroSistema("reportes.classification.umbral_revision"),
-        getParametroSistema("reportes.classification.n_votos"),
-        getParametroSistema("reportes.classification.temperatura_votos"),
-        getParametroSistema("reportes.classification.min_score_categoria"),
+        getParametroSistema("ia.rubrica.temperatura"),
+        getParametroSistema("ia.rubrica.umbral_presencia"),
         getParametroSistema("reportes.classification.rag_top_k"),
         getParametroSistema("reportes.classification.ollama_num_parallel"),
         // Misma clave y default que producción (helpers/parametros.ts)
         getParametroSistema("clasificacion.umbral_spam"),
     ]);
 
+    const modelosDefault = ["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"];
+    const modelos = overrides.modelos ?? (modelosRaw ? (JSON.parse(modelosRaw.valor) as string[]) : modelosDefault);
+
     return {
-        modeloClasificacion: overrides.modelo_clasificacion || modeloClasificacion?.valor || MODELO_CLASIFICACION_DEFAULT,
+        modelos,
         embeddingModel: embeddingModel?.valor || MODELO_EMBEDDING_DEFAULT,
-        anonymizationModel: anonymizationModel?.valor || modeloClasificacion?.valor || MODELO_ANONIMIZACION_DEFAULT,
-        umbralRevision: overrides.umbral_revision ?? parseFloatParam(umbralRevision?.valor, 1.0),
-        nVotos: overrides.n_votos ?? parseIntParam(nVotos?.valor, 5),
-        temperatura: overrides.temperatura_votos ?? parseFloatParam(temperatura?.valor, 0.7),
-        minScoreCategoria: overrides.min_score_categoria ?? parseFloatParam(minScoreCategoria?.valor, 0.3),
+        anonymizationModel: anonymizationModel?.valor || MODELO_ANONIMIZACION_DEFAULT,
+        temperatura: overrides.temperatura ?? parseFloatParam(temperatura?.valor, 0.2),
+        umbralPresencia: overrides.umbral_presencia ?? parseFloatParam(umbralPresencia?.valor, 0.6),
         ragTopK: overrides.rag_top_k ?? parseIntParam(ragTopK?.valor, 3),
         ollamaNumParallel: parseIntParam(ollamaNumParallel?.valor, 2),
         umbralSpam: parseFloatParam(umbralSpam?.valor, 0.7),
     };
 }
 
-function calcularDistribucion(votos: VotoIndividual[]): SandboxVotoDistribucion[] {
+function calcularDistribucion(votos: VotoRubricaModelo[]): SandboxVotoDistribucion[] {
     const conteo = new Map<CategoriaConducta, number>();
     for (const voto of votos) {
-        conteo.set(voto.categoria, (conteo.get(voto.categoria) || 0) + 1);
+        if (voto.fallback) continue;
+        for (const [categoria, { cumple }] of Object.entries(voto.categorias)) {
+            if (cumple) {
+                conteo.set(categoria as CategoriaConducta, (conteo.get(categoria as CategoriaConducta) || 0) + 1);
+            }
+        }
     }
     return Array.from(conteo.entries())
         .map(([categoria, count]) => ({ categoria, count }))
@@ -190,18 +167,13 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
     const ejemplos = await buscarEjemplosSimilares(vector, { topK: parametros.ragTopK });
     const latenciaRag = Date.now() - inicioRag;
 
-    // 3. Clasificación — SPEC-138 (E-7): el MISMO selector que producción
-    // (rúbrica si ia.rubrica.enabled; los overrides del sandbox aplican al legacy).
+    // 3. Clasificación — SPEC-138 (E-7): el único motor activo es la rúbrica.
     const inicioVotacion = Date.now();
     const clasificacion = await clasificarConMotorActivo(texto, {
-        modeloClasificacionLegacy: parametros.modeloClasificacion,
-        voting: {
-            nVotos: parametros.nVotos,
+        configRubrica: {
+            modelos: parametros.modelos,
             temperatura: parametros.temperatura,
-            minScoreCategoria: parametros.minScoreCategoria,
-            umbralRevision: parametros.umbralRevision,
-            ollamaNumParallel: parametros.ollamaNumParallel,
-            ejemplos,
+            umbralPresencia: parametros.umbralPresencia,
         },
     });
     const latenciaVotacion = Date.now() - inicioVotacion;
@@ -252,24 +224,22 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
     const latenciaGuardas = Date.now() - inicioGuardas;
     const latenciaTotal = Date.now() - inicioTotal;
 
-    // SPEC-138 (E-7): la traza de votación expone la forma del motor LEGACY
-    // (votos individuales). Con la rúbrica, los votos vienen por modelo
-    // (VotoRubricaModelo): se filtran con guards (sin casts) — quedan vacíos y la
-    // distribución es 0s, el equivalente honesto a "esta corrida no fue por votos".
-    const votosLegacy = clasificacion.votos.filter(esVotoIndividual);
-    const secundariasLegacy = clasificacion.categoriasSecundarias.filter(esSecundariaLegacy);
+    const distribucion = calcularDistribucion((clasificacion.rubrica?.votosModelos as VotoRubricaModelo[]) ?? []);
+    const secundariasLegacy = clasificacion.categoriasSecundarias.filter(
+        (v): v is { categoria: CategoriaConducta; score: number } =>
+            typeof v === "object" && v !== null && "categoria" in v && "score" in v
+    );
 
     return {
         texto,
         parametrosEfectivos: parametros,
-        motorUsado: clasificacion.motor,
         etapas: {
             embedding: { latenciaMs: latenciaEmbedding, modelo: parametros.embeddingModel },
             rag: { latenciaMs: latenciaRag, topK: parametros.ragTopK, ejemplos },
             votacion: {
                 latenciaMs: latenciaVotacion,
-                votos: votosLegacy,
-                distribucion: calcularDistribucion(votosLegacy),
+                votos: distribucion,
+                modelos: parametros.modelos.length,
                 categoria: clasificacion.categoria,
                 confianza: clasificacion.confianza,
                 categoriasSecundarias: secundariasLegacy,

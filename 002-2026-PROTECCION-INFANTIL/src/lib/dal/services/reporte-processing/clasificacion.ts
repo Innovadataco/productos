@@ -63,23 +63,11 @@ export async function clasificarReporte({
         return { clasificacion, piiResult: undefined };
     }
 
-    // SPEC-138 (E-7): el switch del motor (rúbrica si ia.rubrica.enabled, legacy
-    // si no) vive en el selector unificado src/lib/ai/motor.ts — el MISMO que
-    // ejercita el sandbox.
+    // SPEC-138 (E-7): el único motor activo es la rúbrica, configurada desde
+    // los parámetros ia.rubrica.*. El mismo selector vive en src/lib/ai/motor.ts
+    // y lo ejercita el sandbox.
     const [resultado, piiResult] = await Promise.all([
-        clasificarConMotorActivo(texto, {
-            modeloClasificacionLegacy: parametros.modeloClasificacion,
-            voting: {
-                nVotos: parametros.nVotos,
-                temperatura: parametros.temperaturaVotos,
-                minScoreCategoria: parametros.minScoreCategoria,
-                umbralRevision: parametros.umbralRevision,
-                ollamaNumParallel: parametros.ollamaNumParallel,
-                ejemplos: ejemplosRag,
-                ...(parametros.modeloDesempate !== undefined ? { modeloDesempate: parametros.modeloDesempate } : {}),
-                keepAliveDesempate: 0,
-            },
-        }),
+        clasificarConMotorActivo(texto, {}),
         detectarPiiCombinado(parametros.modeloAnonimizacion, texto),
     ]);
 
@@ -94,8 +82,6 @@ export async function clasificarReporte({
         votos: resultado.votos,
         promptTokens: resultado.metrics.promptTokens ?? null,
         responseTokens: resultado.metrics.responseTokens ?? null,
-        usoCascada: resultado.usoCascada,
-        modeloCascada: resultado.modeloCascada,
         __rubrica: resultado.rubrica,
     };
 
@@ -110,9 +96,6 @@ export async function clasificarReporte({
                 categoriasSecundarias: aJson(clasificacion.categoriasSecundarias),
                 votos: aJson(clasificacion.votos),
                 posibleAgresorPar: clasificacion.posibleAgresorPar,
-                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
-                ...(clasificacion.usoCascada !== undefined ? { usoCascada: clasificacion.usoCascada } : {}),
-                ...(clasificacion.modeloCascada !== undefined ? { modeloCascada: clasificacion.modeloCascada } : {}),
                 modeloUsado: clasificacion.metrics.modelo,
                 latenciaMs: clasificacion.metrics.latenciaMs + piiResult.metrics.latenciaMs,
                 promptTokens: clasificacion.promptTokens ?? null,
