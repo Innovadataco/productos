@@ -70,10 +70,6 @@ jobs:
 
   test-integration:
     runs-on: ubuntu-latest
-    # I-55: no bloqueante hasta que SPEC-174 arregle el aislamiento de tests bajo
-    # singleFork. Los 4 jobs restantes (verificaciones/build/journeys/test-unit)
-    # siguen siendo gate. NO revertir sin coordinar con ZEUS.
-    continue-on-error: true
     defaults:
       run:
         working-directory: 002-2026-PROTECCION-INFANTIL
@@ -231,7 +227,7 @@ jobs:
 
   gate:
     runs-on: ubuntu-latest
-    needs: [verificaciones, test-unit, journeys, build]
+    needs: [verificaciones, test-unit, test-integration, journeys, build]
     steps:
       - name: Gate passed
         run: echo "All checks passed"

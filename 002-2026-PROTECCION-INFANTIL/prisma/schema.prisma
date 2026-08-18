@@ -51,6 +51,10 @@ enum AccionAudit {
   USER_UPDATE
   USER_DELETE
   CODE_REQUEST
+  // SPEC-171 (Pilar B): ciclo de vida de incidentes de infraestructura.
+  INFRA_INCIDENTE_ABIERTO
+  INFRA_INCIDENTE_RESUELTO
+  INFRA_EMAIL_ENVIADO
   CODE_VERIFY
   CODE_COMPLETE
   REPORT_DEACTIVATE
@@ -123,6 +127,8 @@ enum AccionAudit {
   COLEGIO_CARGA_MASIVA
   COLEGIO_ALERTA_CREADA
   COLEGIO_ALERTA_ESTADO
+  // SPEC-172 (Pilar D.5): recálculo bajo demanda de la deriva del motor.
+  MOTOR_DERIVA_RECALCULO
   COLEGIO_ESTADISTICAS_PDF_DESCARGADO
   // SPEC-140 (F2/N-4): denuncia formal y exportación forense (eventos sin contenido).
   DENUNCIA_FORMAL_GENERADA
@@ -1605,4 +1611,53 @@ model DemoMarcado {
   @@index([entidad])
   @@index([entidadId])
   @@map("demo_marcado")
+}
+
+// SPEC-171 (Pilar B, I-51): probes de salud de infraestructura (append-only,
+// retención corta; los escribe scripts/monitor-probes.mjs).
+model HealthProbe {
+  id         String   @id @default(cuid())
+  senal      String // app | worker | bd | ollama_ping | ollama_smoke | tailscale
+  ok         Boolean
+  latenciaMs Int      @default(0)
+  detalle    String?
+  creadoEn   DateTime @default(now())
+
+  @@index([senal, creadoEn])
+}
+
+// SPEC-171: incidente de infraestructura abierto tras doble rojo (re-probe).
+// Se resuelve solo cuando el probe vuelve a verde. Email con throttle por senal.
+model IncidenteInfra {
+  id            String    @id @default(cuid())
+  senal         String // misma nomenclatura que HealthProbe.senal
+  estado        String    @default("ABIERTO") // ABIERTO | RESUELTO
+  inicio        DateTime  @default(now())
+  fin           DateTime?
+  detalle       String?
+  ultimoEmailEn DateTime?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  @@index([senal, estado])
+}
+
+// SPEC-172 (Pilar D.5): snapshot semanal de la deriva del motor en producción
+// por categoría (tasa de corrección humana confirmada vs accuracy del banco
+// curado). Lo escribe el job semanal y el recálculo bajo demanda; el tablero
+// solo lee (cero groupBys pesados por carga).
+model DerivaMotorSnapshot {
+  id              String   @id @default(cuid())
+  semanaInicio    DateTime // lunes 00:00 America/Bogota de la semana medida
+  categoria       String // CategoriaConducta
+  total           Int // clasificaciones de producción en la ventana
+  correcciones    Int // correcciones humanas confirmadas en la ventana
+  tasaCorreccion  Float // correcciones / total (0 si total = 0)
+  accuracyBanco   Float? // recall por categoría del último SimulacionRun COMPLETADA (null = sin baseline)
+  brechaPp        Float? // tasaCorreccion − (1 − accuracyBanco), en puntos porcentuales (null = sin baseline)
+  alertada        Boolean  @default(false)
+  creadoEn        DateTime @default(now())
+
+  @@unique([semanaInicio, categoria])
+  @@index([semanaInicio])
 }

@@ -25,17 +25,6 @@ export default defineConfig({
             // Los journeys tienen su propio job de CI.
             "src/lib/e2e/journeys/**/*.test.ts",
             "src/lib/e2e/journeys/**/*.test.tsx",
-            // ─── EXCLUSIÓN TEMPORAL · I-55 leak recurrente prisma singleton bajo singleFork ───
-            // Los 7 archivos víctima quedan fuera del CI hasta que SPEC-174 (fix arquitectónico
-            // de fondo: aislamiento estricto de tests) los rehabilite. Ver 04-INCIDENCIAS I-55.
-            // NO tocar sin coordinar con ZEUS.
-            "src/app/api/admin/comite/apelaciones/route.test.ts",
-            "src/app/api/admin/comite/apelaciones/[id]/documento/route.test.ts",
-            "src/app/api/admin/ia/rubrica/route.test.ts",
-            "src/app/api/admin/ia/rubrica/config/route.test.ts",
-            "src/app/api/admin/ia/rubrica/preguntas/route.test.ts",
-            "src/app/api/admin/permisos-modulos/route.test.ts",
-            "src/app/api/reportes/route-atomicidad.test.ts",
         ],
         // Tests de integración comparten una única base de datos PostgreSQL.
         // Ejecutarlos secuencialmente evita race conditions entre archivos.
@@ -51,14 +40,14 @@ export default defineConfig({
         // Los hooks de aislamiento de BD pueden necesitar más de 10s si el
         // test anterior dejó el lock huérfano o la BD está bajo carga.
         hookTimeout: 60_000,
-        // Vitest 3.2.x ignora fileParallelism/sequence bajo carga; forzamos
-        // ejecución en un único fork para que el mutex en BD serialice todos
-        // los tests. vmThreads no sirve porque algunos tests usan módulos
-        // vinculados que exigen el mismo contexto.
+        // SPEC-174 (fix I-55): un fork POR ARCHIVO. El leak I-54 (spies/mocks del
+        // singleton de Prisma filtrados entre archivos bajo singleFork) no puede
+        // cruzar archivos cuando cada uno vive en su propio proceso. El mutex
+        // TestMutex en BD sigue serializando el acceso entre procesos.
         pool: "forks",
         poolOptions: {
             forks: {
-                singleFork: true,
+                singleFork: false,
             },
         },
         coverage: {

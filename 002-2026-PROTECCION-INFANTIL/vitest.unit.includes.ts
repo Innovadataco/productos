@@ -5,8 +5,9 @@
  */
 export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/seed-security.test.ts",
-    "src/app/dashboard/colegio/cursos/CursosPageClient.test.tsx",
+    "scripts/arch/no-prisma-mocks.test.ts",
     "src/app/dashboard/colegio/alertas/AlertasColegioPageClient.test.tsx",
+    "src/app/dashboard/colegio/cursos/CursosPageClient.test.tsx",
     "src/app/dashboard/colegio/configuracion/ConfiguracionPageClient.test.tsx",
     "src/app/dashboard/colegio/profesores/ProfesoresPageClient.test.tsx",
     "src/components/modules/AdminNav.test.tsx",
@@ -56,6 +57,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/colegio/unificado/WizardUnificado.test.tsx",
     "src/components/modules/ia/IaModelSelector.test.tsx",
     "src/components/modules/ia/simulacion/TablaResultadosSimulacion.test.tsx",
+    "src/components/modules/monitoreo/OperacionTableroClient.test.tsx",
+    "src/components/modules/monitoreo/SemaforoCard.test.tsx",
+    "src/components/modules/motor/DerivaProdBloque.test.tsx",
     "src/components/modules/nav-logo.test.ts",
     "src/components/ui/Accordion.test.tsx",
     "src/components/ui/Alerta.test.tsx",

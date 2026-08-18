@@ -1,0 +1,6 @@
+[
+    {
+        "archivo": "src/lib/dal/services/circulo-confianza-n1.test.ts",
+        "razon": "Cuenta queries N+1 con un Proxy transparente sobre el cliente real (importOriginal + unmockPrisma en afterAll). Patrón legítimo verificado por ZEUS en 002-PI-066/067."
+    }
+]

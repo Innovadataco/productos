@@ -3,6 +3,28 @@ import { checkRateLimit, getClientIp, resetRateLimitStore } from "./rate-limit";
 import { prisma } from "./prisma";
 import { resetDatabase } from "./test-utils";
 import { crearParametrosReportes } from "./reporte-test-utils";
+import type { PrismaClient } from "@prisma/client";
+
+// SPEC-174: el fallo de lectura de parámetros se simula envolviendo el módulo
+// `@/lib/parametros` (NO se espía el singleton de Prisma — la regla arch:check
+// (e) lo prohíbe). El flag hoisted activa el fallo solo en el test O-1.
+const falloParametros = vi.hoisted(() => ({ activo: false }));
+vi.mock("@/lib/parametros", async (importOriginal) => {
+    const mod = await importOriginal<typeof import("@/lib/parametros")>();
+    return {
+        ...mod,
+        getParametroSistema: async (...args: Parameters<typeof mod.getParametroSistema>) => {
+            if (falloParametros.activo) throw new Error("postgres caído");
+            return mod.getParametroSistema(...args);
+        },
+    };
+});
+
+// Cliente falso inyectable para simular el store caído (SPEC-174): el endpoint
+// usa `options.client ?? prisma` solo para el upsert de la ventana.
+function clienteStoreCaido(): PrismaClient {
+    return { $queryRaw: vi.fn().mockRejectedValue(new Error("store no disponible")) } as unknown as PrismaClient;
+}
 
 function makeRequest(ip: string): Request {
     return new Request("http://localhost:5005/api/test", {
@@ -184,8 +206,7 @@ describe("fail-closed ante fallo del store (I-28)", () => {
         if (rateLimitDisabled) return;
         await crearParametrosReportes();
 
-        vi.spyOn(prisma, "$queryRaw").mockRejectedValueOnce(new Error("store no disponible"));
-        const result = await checkRateLimit(makeRequest("10.9.9.9"), "seguimiento");
+        const result = await checkRateLimit(makeRequest("10.9.9.9"), "seguimiento", { client: clienteStoreCaido() });
         expect(result.allowed).toBe(false);
         expect(result.remaining).toBe(0);
         expect(result.headers["Retry-After"]).toBeDefined();
@@ -195,8 +216,7 @@ describe("fail-closed ante fallo del store (I-28)", () => {
         if (rateLimitDisabled) return;
         await crearParametrosReportes();
 
-        vi.spyOn(prisma, "$queryRaw").mockRejectedValueOnce(new Error("store no disponible"));
-        const result = await checkRateLimit(makeRequest("10.9.9.9"), "login");
+        const result = await checkRateLimit(makeRequest("10.9.9.9"), "login", { client: clienteStoreCaido() });
         expect(result.allowed).toBe(false);
     });
 
@@ -204,8 +224,7 @@ describe("fail-closed ante fallo del store (I-28)", () => {
         if (rateLimitDisabled) return;
         await crearParametrosReportes();
 
-        vi.spyOn(prisma, "$queryRaw").mockRejectedValueOnce(new Error("store no disponible"));
-        const result = await checkRateLimit(makeRequest("10.9.9.8"), "consulta");
+        const result = await checkRateLimit(makeRequest("10.9.9.8"), "consulta", { client: clienteStoreCaido() });
         expect(result.allowed).toBe(true);
         expect(result.remaining).toBeGreaterThan(0);
     });
@@ -216,10 +235,14 @@ describe("fail-closed ante fallo del store (I-28)", () => {
 
         // Antes del fix, getScopeConfig leía parámetros FUERA del try: un fallo aquí
         // lanzaba y el endpoint respondía 500 en vez del 429 + Retry-After prometido.
-        vi.spyOn(prisma.parametroSistema, "findUnique").mockRejectedValue(new Error("postgres caído"));
-        const result = await checkRateLimit(makeRequest("10.9.9.7"), "seguimiento");
-        expect(result.allowed).toBe(false);
-        expect(result.remaining).toBe(0);
-        expect(result.headers["Retry-After"]).toBeDefined();
+        falloParametros.activo = true;
+        try {
+            const result = await checkRateLimit(makeRequest("10.9.9.7"), "seguimiento");
+            expect(result.allowed).toBe(false);
+            expect(result.remaining).toBe(0);
+            expect(result.headers["Retry-After"]).toBeDefined();
+        } finally {
+            falloParametros.activo = false;
+        }
     });
 });

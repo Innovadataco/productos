@@ -100,4 +100,5 @@ Comando por defecto: `["node", "server.js"]`.
 | --- | --- | --- | --- |
 | app | `pi-app:${PI_APP_TAG:-latest}` (+ build local) | `pi-app` | — |
 | db | `pgvector/pgvector:pg16` | `pi-db` | — |
+| monitor | `pi-app:${PI_APP_TAG:-latest}` | `pi-monitor` | — |
 | worker | `pi-app:${PI_APP_TAG:-latest}` | `pi-worker` | — |

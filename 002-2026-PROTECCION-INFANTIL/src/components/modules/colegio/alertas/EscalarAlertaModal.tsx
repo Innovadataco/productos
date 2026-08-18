@@ -79,7 +79,7 @@ export function EscalarAlertaModal({ isOpen, alertaId, onClose, onEscalada }: Es
                     </label>
                     <textarea
                         id="motivo-escalamiento"
-                        className="min-h-28 w-full rounded-xl border border-slate-300 bg-transparent p-3 text-sm text-body focus:border-emerald-500 focus:outline-none dark:border-slate-700"
+                        className="min-h-28 w-full rounded-xl border border-tinta/20 bg-transparent p-3 text-sm text-body focus:border-pino focus:outline-none"
                         maxLength={2000}
                         placeholder="Ej.: el estudiante acumula tres reportes por acoso y necesita acompañamiento del comité"
                         value={motivo}
@@ -90,7 +90,7 @@ export function EscalarAlertaModal({ isOpen, alertaId, onClose, onEscalada }: Es
                 {error && (
                     <div
                         role="alert"
-                        className="rounded-xl bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200"
+                        className="rounded-xl bg-rubi/10 p-3 text-sm text-rubi"
                     >
                         {error}
                     </div>

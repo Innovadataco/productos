@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **61** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **64** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -482,7 +482,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (13)
+### Otros (sin regla de dominio) (16)
 
 #### `CargaRosterSesion`
 
@@ -504,6 +504,21 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | entidadId | String | — |
 | metadata | Json | opcional |
 
+#### `DerivaMotorSnapshot`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| semanaInicio | DateTime | — |
+| categoria | String | — |
+| total | Int | — |
+| correcciones | Int | — |
+| tasaCorreccion | Float | — |
+| accuracyBanco | Float | opcional |
+| brechaPp | Float | opcional |
+| alertada | Boolean | — |
+| creadoEn | DateTime | — |
+
 #### `EventoMatch`
 
 | Campo | Tipo | Atributos |
@@ -518,6 +533,17 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | identificador | IdentificadorReportado | relación (FK) |
 | reporteNuevo | Reporte | relación (FK) |
+
+#### `HealthProbe`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| senal | String | — |
+| ok | Boolean | — |
+| latenciaMs | Int | — |
+| detalle | String | opcional |
+| creadoEn | DateTime | — |
 
 #### `IdentificadorAcudiente`
 
@@ -554,6 +580,20 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 | alertas | AlertaColegio | lista, relación |
+
+#### `IncidenteInfra`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| senal | String | — |
+| estado | String | — |
+| inicio | DateTime | — |
+| fin | DateTime | opcional |
+| detalle | String | opcional |
+| ultimoEmailEn | DateTime | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
 
 #### `Materia`
 
@@ -1261,6 +1301,9 @@ por ningún otro modelo. La lista de excepciones declarada vive en
 | --- | --- |
 | BillingCycle | sí |
 | DemoMarcado | sí |
+| DerivaMotorSnapshot | sí |
+| HealthProbe | sí |
+| IncidenteInfra | sí |
 | Plan | sí |
 | RateLimit | sí |
 | Subscription | sí |

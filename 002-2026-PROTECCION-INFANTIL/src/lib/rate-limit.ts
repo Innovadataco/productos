@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { getParametroSistema } from "./parametros";
 import { logger } from "@/lib/logger";
+import type { PrismaClient } from "@prisma/client";
 
 export interface RateLimitResult {
     allowed: boolean;
@@ -91,7 +92,7 @@ export function getClientIp(request: Request): string {
 export async function checkRateLimit(
     request: Request,
     scope: string,
-    options?: { identifier?: string | undefined; soft?: boolean | undefined }
+    options?: { identifier?: string | undefined; soft?: boolean | undefined; client?: PrismaClient | undefined }
 ): Promise<RateLimitResult> {
     if (process.env.DISABLE_RATE_LIMIT === "true") {
         return {
@@ -116,8 +117,11 @@ export async function checkRateLimit(
         const windowStartMs = Math.floor(now / windowMs) * windowMs;
         const resetAt = windowStartMs + windowMs;
         const key = `${scope}:${identifier}:${windowStartMs}`;
+        // SPEC-174: cliente inyectable SOLO para tests (simular store caído sin
+        // espiar el singleton de Prisma — la regla arch:check (e) lo prohíbe).
+        const db = options?.client ?? prisma;
         // Atomic upsert: crea la ventana o incrementa el contador
-        const rows = await prisma.$queryRaw<{ count: number }[]>`
+        const rows = await db.$queryRaw<{ count: number }[]>`
             INSERT INTO "RateLimit" (key, scope, identifier, "windowStart", count, "createdAt", "actualizadoEn")
             VALUES (${key}, ${scope}, ${identifier}, ${new Date(windowStartMs)}, 1, NOW(), NOW())
             ON CONFLICT (key) DO UPDATE SET

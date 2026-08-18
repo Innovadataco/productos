@@ -143,9 +143,11 @@ export function arraysNav(): NavArray[] {
 }
 
 /**
- * Submenús de tabs fijas (OperadoresSubNav, DashboardSubNav): sus arrays `tabs`
- * viven en el propio componente. Se extraen los hrefs literales por parseo; si
- * el bloque cambia de forma y no se encuentra ninguno, falla ruidoso (ZEUS 2).
+ * Submenús de tabs fijas (OperadoresSubNav): sus arrays `tabs` viven en el
+ * propio componente. Se extraen los hrefs literales por parseo; si el bloque
+ * cambia de forma y no se encuentra ninguno, falla ruidoso (ZEUS 2).
+ * SPEC-171: DashboardSubNav desapareció — el tablero operativo usa tabs
+ * internos por query param (`?tab=`, como IA_TABS: no son enlaces).
  */
 function subnavsFijos(): NavArray[] {
     const archivos: Array<{ nombre: string; ruta: string; area: string }> = [
@@ -153,11 +155,6 @@ function subnavsFijos(): NavArray[] {
             nombre: "OperadoresSubNav.tabs",
             ruta: "src/app/dashboard/admin/operadores/components/OperadoresSubNav.tsx",
             area: "/dashboard/admin/operadores",
-        },
-        {
-            nombre: "DashboardSubNav.tabs",
-            ruta: "src/app/dashboard/admin/estadisticas/components/DashboardSubNav.tsx",
-            area: "/dashboard/admin/estadisticas",
         },
     ];
     return archivos.map(({ nombre, ruta, area }) => {

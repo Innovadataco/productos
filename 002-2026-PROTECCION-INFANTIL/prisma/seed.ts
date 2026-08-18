@@ -229,6 +229,27 @@ async function main() {
             esPublico: true,
             descripcion: "Tamaño máximo del PDF de evidencia de una apelación (MB)",
         },
+        // SPEC-171 (Pilar B): parámetros del vigilante de infraestructura.
+        { clave: "monitoreo.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar el vigilante del sistema (probes e incidentes)" },
+        { clave: "monitoreo.app.intervalo_seg", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto revisamos que la app responde (segundos)" },
+        { clave: "monitoreo.worker.heartbeat_max_seg", valor: "90", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Tiempo máximo sin señal del worker antes de marcarlo en rojo (segundos)" },
+        { clave: "monitoreo.ollama.ping.intervalo_seg", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto tocamos la puerta del cerebro IA /api/tags (segundos)" },
+        { clave: "monitoreo.ollama.smoke.intervalo_min", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto pedimos una generación mínima real al cerebro IA (minutos)" },
+        { clave: "monitoreo.ollama.smoke.timeout_ms", valor: "60000", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Espera máxima de la generación mínima del cerebro IA (milisegundos)" },
+        { clave: "monitoreo.tailscale.url", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "URL del cerebro por el túnel Tailscale (vacío = no aplica, ej. desarrollo local)" },
+        { clave: "monitoreo.tailscale.intervalo_seg", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto revisamos el túnel Tailscale (segundos)" },
+        { clave: "monitoreo.reprobe.segundos", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Espera antes de confirmar un rojo con un segundo intento (segundos)" },
+        { clave: "monitoreo.email.throttle_min", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Mínimo entre correos del mismo aviso de infraestructura (minutos)" },
+        { clave: "monitoreo.email.destinatarios", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "A quién avisar cuando algo se pone en rojo (correos separados por coma; vacío = no enviar)" },
+        { clave: "monitoreo.autorefresh_seg", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Autorefresco del tablero operativo (segundos)" },
+        { clave: "monitoreo.atascados.horas", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Horas sin moverse para considerar un reporte atascado" },
+        // SPEC-172 (Pilar D.5): parámetros de la deriva del motor en producción.
+        { clave: "motor.deriva.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Medir la deriva del motor en producción (tasa de corrección semanal vs banco curado)" },
+        { clave: "motor.deriva.umbral_pp", valor: "15", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Avisar si la brecha de una categoría supera estos puntos porcentuales" },
+        { clave: "motor.deriva.min_muestra", valor: "20", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Mínimo de casos semanales para medir una categoría (debajo no alerta)" },
+        { clave: "motor.deriva.ventana_dias", valor: "7", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días de la ventana de medición (la semana operativa)" },
+        { clave: "motor.deriva.email.destinatarios", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "A quién avisar si hay deriva (correos separados por coma; vacío = no enviar)" },
+        { clave: "motor.deriva.email.siempre", valor: "false", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Enviar el resumen semanal aunque ninguna categoría supere el umbral" },
     ];
 
     for (const p of defaults) {

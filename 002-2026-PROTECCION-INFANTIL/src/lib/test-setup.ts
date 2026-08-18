@@ -22,28 +22,16 @@ process.env.ENCRYPTION_KEY = "test-encryption-32-chars-key!!";
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
 process.env.WORKER_SECRET = "worker-secret-test";
 
-// Algunos tests usan vi.mock del módulo prisma con factories parciales; bajo
-// singleFork esas funciones de fábrica pueden filtrar a tests posteriores y
-// dejar métodos del singleton como undefined (HALLAZGO 002-PI-066). Para
-// recuperarnos sin depender del orden de carga, mantenemos una referencia a
-// un cliente real en globalThis y restauramos métodos perdidos copiándolos
-// desde él. Los métodos de Prisma están ligados a su instancia, por lo que
-// copiarlos a un delegate vacío sigue funcionando.
+// Higiene intra-archivo: un test que espía métodos del singleton de Prisma y no
+// restaura rompería a sus vecinos del MISMO archivo. Entre archivos ya no hace
+// falta: SPEC-174 corre un fork por archivo, así que el estado de módulos no
+// cruza. Mantenemos un snapshot de los métodos reales y los restauramos
+// incondicionalmente en cada hook (la guarda "solo si dejó de ser función"
+// dejaba vivos los spies, I-54).
 const globalStore = globalThis as unknown as {
     __prismaMethodSnapshot?: Map<string, Record<string, unknown>>;
     __testPrismaClient?: unknown;
-    // Registro de TODAS las instancias de PrismaClient vistas en el fork.
-    // unmockPrisma() (resetModules + delete globalThis.prisma) crea instancias
-    // nuevas; un spy sobre cualquiera de ellas debe restaurarse, no solo sobre
-    // el binding que test-setup capturó al cargar (HALLAZGO 002-PI-068 CI-Linux).
-    __prismaInstances?: Set<unknown>;
 };
-
-function registerPrismaInstance(client: unknown) {
-    if (!client || typeof client !== "object") return;
-    if (!globalStore.__prismaInstances) globalStore.__prismaInstances = new Set();
-    globalStore.__prismaInstances.add(client);
-}
 
 function looksLikeRealPrisma(client: unknown): boolean {
     if (!client || typeof client !== "object") return false;
@@ -68,8 +56,6 @@ function snapshotPrismaMethods(client: unknown): Map<string, Record<string, unkn
 }
 
 async function ensureRealPrismaClient() {
-    registerPrismaInstance(globalThis.prisma);
-    registerPrismaInstance(prisma);
     if (looksLikeRealPrisma(globalStore.__testPrismaClient)) {
         return globalStore.__testPrismaClient;
     }
@@ -83,7 +69,6 @@ async function ensureRealPrismaClient() {
     const fresh = new PrismaClient();
     globalStore.__testPrismaClient = fresh;
     if (process.env.NODE_ENV !== "production") globalThis.prisma = fresh;
-    registerPrismaInstance(fresh);
     return fresh;
 }
 
@@ -97,29 +82,19 @@ async function getPrismaMethodSnapshot() {
 
 async function restorePrismaMethods() {
     const snapshot = await getPrismaMethodSnapshot();
-    // Restaurar sobre TODAS las instancias vistas en el fork, no solo sobre el
-    // binding estático de este módulo: tras resetModules() (unmockPrisma) las
-    // rutas importan una instancia nueva y restaurar la vieja no sirve.
-    registerPrismaInstance(globalThis.prisma);
-    registerPrismaInstance(prisma);
-    for (const client of globalStore.__prismaInstances ?? []) {
-        for (const [key, methods] of snapshot) {
-            const delegate = (client as Record<string, unknown>)[key];
-            if (!delegate || typeof delegate !== "object") continue;
-            for (const [method, originalFn] of Object.entries(methods)) {
-                // Restauramos incondicionalmente: la guarda "solo si dejó de ser
-                // función" dejaba vivos los spies de tests anteriores (aún son
-                // funciones, pero con implementación rota) bajo singleFork.
-                try {
-                    Object.defineProperty(delegate, method, {
-                        value: originalFn,
-                        writable: true,
-                        enumerable: true,
-                        configurable: true,
-                    });
-                } catch {
-                    // Ignorar propiedades de solo lectura (no debería pasar).
-                }
+    for (const [key, methods] of snapshot) {
+        const delegate = (prisma as Record<string, unknown>)[key];
+        if (!delegate || typeof delegate !== "object") continue;
+        for (const [method, originalFn] of Object.entries(methods)) {
+            try {
+                Object.defineProperty(delegate, method, {
+                    value: originalFn,
+                    writable: true,
+                    enumerable: true,
+                    configurable: true,
+                });
+            } catch {
+                // Ignorar propiedades de solo lectura (no debería pasar).
             }
         }
     }
@@ -222,26 +197,14 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await restorePrismaMethods();
-    // CANARIO: detectar quién contamina parametroSistema.findUnique entre tests,
-    // en CUALQUIER instancia registrada (no solo el binding estático de este módulo).
-    for (const client of globalStore.__prismaInstances ?? []) {
-        const delegate = (client as Record<string, unknown>)?.parametroSistema as Record<string, unknown> | undefined;
-        if (delegate && typeof delegate.findUnique !== "function") {
-            const prev = (globalThis as unknown as { __lastTestFile?: string }).__lastTestFile;
-            console.error("[LEAK-CANARY] parametroSistema.findUnique NO es función en una instancia. Archivo previo:", prev);
-        }
-    }
-    (globalThis as unknown as { __lastTestFile?: string }).__lastTestFile = expect?.getState?.()?.testPath ?? "unknown";
     await ensureTestMutexTable();
     await acquireTestLock();
 });
 
 afterEach(async () => {
     // Restaurar estado global de JS antes de soltar el lock de BD. Un test que
-    // deje fake timers, mocks o globals stubs (fetch, etc.) contamina a todos
-    // los siguientes en el mismo fork (singleFork:true). Esto causa flakes
-    // order-dependent, especialmente en librerías con WASM como
-    // @react-pdf/renderer/yoga-layout (HALLAZGO 002-PI-062).
+    // deje fake timers, mocks o globals stubs (fetch, etc.) contamina a los
+    // siguientes del MISMO archivo (los archivos ya no comparten fork, SPEC-174).
     //
     // Nota: NO usamos vi.restoreAllMocks() porque Vitest lo aplica también a
     // los mocks creados con vi.mock(), reseteándolos a vi.fn() sin

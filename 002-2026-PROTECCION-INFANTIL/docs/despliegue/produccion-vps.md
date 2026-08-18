@@ -12,7 +12,9 @@ Cloudflare Tunnel (servicio cloudflared-hermes, tunnel "hermes" — ya existía)
 VPS Hostinger (Docker)                    Mac Studio (cerebro IA)
 ├─ pi-app    (Next.js standalone :3000)   Ollama :11434 (localhost)
 ├─ pi-worker (pg-boss, UN worker)              ▲
-├─ pi-db     (Postgres+pgvector)               │ SOLO tailnet
+├─ pi-monitor (vigilante infra: 6 probes →    │ SOLO tailnet
+│   HealthProbe, incidentes + email)          │ tailscale serve --tcp=11434
+├─ pi-db     (Postgres+pgvector)               │ (100.91.87.86, Mac)
 │     └─ red interna de Docker, SIN puerto     │ tailscale serve --tcp=11434
 │        publicado al host                     │ (100.91.87.86, Mac)
 └─ OLLAMA_BASE_URL=http://100.91.87.86:11434 ──┘
@@ -61,9 +63,12 @@ PI_APP_TAG=<sha-anterior> ./scripts/deploy-prod.sh --skip-pull
 ## Runbook
 
 - Estado: `docker compose --env-file .env.production -f docker-compose.prod.yml ps`
-- Logs: `docker logs pi-app --tail 50` · `docker logs pi-worker --tail 50` · `docker logs pi-db --tail 20`
+- Logs: `docker logs pi-app --tail 50` · `docker logs pi-worker --tail 50` · `docker logs pi-monitor --tail 50` · `docker logs pi-db --tail 20`
 - Reinicio: `docker compose --env-file .env.production -f docker-compose.prod.yml restart app worker`
   (todos los servicios tienen `restart: always`: sobreviven reboot del VPS).
+- **Monitor (SPEC-171/178)**: el servicio `pi-monitor` corre el vigilante de infraestructura (6 probes → tabla `HealthProbe`, incidentes + email throttled). Verificar que escribe:
+  `docker exec pi-db psql -U proteccion proteccion_infantil -c 'SELECT senal, ok, "creadoEn" FROM "HealthProbe" ORDER BY "creadoEn" DESC LIMIT 6'`
+  (filas con `creadoEn` reciente = vivo). Si el tablero operativo muestra semáforos vacíos, revisar `docker logs pi-monitor`.
 - Backup BD: `docker exec pi-db pg_dump -U proteccion proteccion_infantil | gzip > pi-$(date +%F).sql.gz`
 - Si la Mac se apaga: el worker detecta Ollama caído (healthcheck previo a cada job) y
   reintenta con backoff; los reportes quedan PENDIENTE hasta que la tailnet vuelva.
