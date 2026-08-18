@@ -100,14 +100,31 @@ export class ComiteConvivenciaBandejaService {
     /**
      * SPEC-173: agregados de la bandeja del colegio. Tiempo medio de resolución
      * = AVG(resueltoEn - creadoEn) en días sobre solicitudes resueltas.
+     * SPEC-177: + tendencia semanal, cumplimiento SLA, tiempo medio por
+     * categoría y distribución por estado con %. Todo agregado, cero PII.
      */
     async estadisticas(colegioId: string): Promise<EstadisticasComiteDto> {
-        const { porEstado, resueltas, porCategoria } = await this.solicitudes.estadisticasPorColegio(colegioId, 5);
+        const [{ porEstado, resueltas, porCategoria }, tendenciaSemanal, sla, tiempoMedioPorCategoria] =
+            await Promise.all([
+                this.solicitudes.estadisticasPorColegio(colegioId, 5),
+                this.solicitudes.tendenciaSemanal(colegioId),
+                this.solicitudes.cumplimientoSla(colegioId),
+                this.solicitudes.tiempoMedioPorCategoria(colegioId),
+            ]);
 
         const casosPorEstado: Record<string, number> = {};
         for (const fila of porEstado) {
             casosPorEstado[fila.estado] = fila._count._all;
         }
+
+        const totalCasos = Object.values(casosPorEstado).reduce((acc, n) => acc + n, 0);
+        const distribucionEstado = Object.entries(casosPorEstado)
+            .map(([estado, total]) => ({
+                estado,
+                total,
+                pct: totalCasos > 0 ? Math.round((total / totalCasos) * 100) : 0,
+            }))
+            .sort((a, b) => b.total - a.total || a.estado.localeCompare(b.estado));
 
         let tiempoMedioResolucionDias: number | null = null;
         if (resueltas.length > 0) {
@@ -125,6 +142,10 @@ export class ComiteConvivenciaBandejaService {
                 categoria: fila.categoria,
                 total: fila._count._all,
             })),
+            distribucionEstado,
+            tendenciaSemanal,
+            sla,
+            tiempoMedioPorCategoria,
         };
     }
 

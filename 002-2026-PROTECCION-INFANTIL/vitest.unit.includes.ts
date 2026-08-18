@@ -27,6 +27,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/audit-log/legible.test.ts",
     "src/components/modules/colegio/BuscadorGlobal.test.tsx",
     "src/components/modules/colegio/ColegioSideNav.test.tsx",
+    "src/components/modules/colegio/comite/ComiteEstadisticas.test.tsx",
     "src/components/modules/colegio/curso/AcudienteContacto.test.tsx",
     "src/components/modules/colegio/curso/AnilloCurso.test.tsx",
     "src/components/modules/colegio/curso/CursoHeader.test.tsx",

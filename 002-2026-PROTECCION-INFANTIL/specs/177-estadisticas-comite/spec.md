@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-18
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-18): ver [cierre.md](./cierre.md). 4 bloques nuevos (tendencia semanal, SLA, tiempo medio por categoría, distribución con %) — todo agregado, cero PII, contrato aditivo.
 
 Impacto en arquitectura: extiende el DTO y la página de estadísticas del comité (`/dashboard/colegio/comite/estadisticas`) con 4 bloques nuevos de agregados. Sin cambios de modelo, sin migraciones, cero PII.
 
