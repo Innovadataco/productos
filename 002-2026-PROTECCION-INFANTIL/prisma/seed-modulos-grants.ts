@@ -46,7 +46,10 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
         ADMIN: modulosSeed.map((m) => m.clave),
         SCHOOL_ADMIN: ["colegios", "colegios_gestion", "colegios_auditoria", "colegios_comite", "colegios_comite_bandeja", "colegios_onboarding", "colegios_notificaciones"],
         // SPEC-168 (Fase F): el Comité de Convivencia accede solo a su bandeja de casos.
-        COMITE_CONVIVENCIA: ["colegios_comite_bandeja"],
+        // I-57 (SPEC-175): la jerarquía de módulos es AND (padre ∧ hijo) y
+        // colegios_comite_bandeja tiene padre `colegios` — sin el padre el rol
+        // quedaba inoperante (menú vacío, "Sin acceso al módulo").
+        COMITE_CONVIVENCIA: ["colegios", "colegios_comite_bandeja"],
         OPERADOR: ["bandeja_reportes"],
         // SPEC-128 (D-43): el comité solo recibe su bandeja. "comite" y "comite_auditoria"
         // mapean a rutas ADMIN_ONLY (proxy.ts) que la puerta le niega: el seed ya no dice
@@ -55,7 +58,7 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
         // SPEC-140 (decisión ZEUS): denuncia_formal por defecto para ADMIN y
         // COMITE_VALIDACION; como es hijo de bandeja_reportes (jerarquía AND), el comité
         // también recibe el padre.
-        COMITE_VALIDACION: ["comite_bandeja", "bandeja_reportes", "denuncia_formal"],
+        COMITE_VALIDACION: ["comite", "comite_bandeja", "bandeja_reportes", "denuncia_formal"],
     };
     let permisosCreados = 0;
     for (const [rol, claves] of Object.entries(clavesPorRol)) {
