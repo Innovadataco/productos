@@ -9,7 +9,7 @@
  *
  * Audit sin texto de reportes: solo señal, timestamps y detalle técnico.
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { logAudit } from "@/lib/audit";
 import { enviarAlertaInfra } from "@/lib/email";
