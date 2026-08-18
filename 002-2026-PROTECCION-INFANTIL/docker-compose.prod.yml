@@ -70,6 +70,28 @@ services:
       app:
         condition: service_started
 
+  # SPEC-171/178 (I-58): el vigilante de infraestructura (6 probes → HealthProbe,
+  # incidentes + email throttled, cero acciones destructivas). Sin este servicio
+  # los semáforos del tablero operativo salen vacíos. Advisory lock en Postgres:
+  # si se levanta dos veces, la segunda instancia sale con código 2.
+  monitor:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-monitor
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/monitor-probes.mjs
+    environment:
+      WORKER_RUN_DIR: /app/run
+      # En la red interna de Docker la app es `app:3000` (no localhost:5005).
+      API_BASE_URL: http://app:3000
+    volumes:
+      - pi_worker_run:/app/run
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
 volumes:
   pi_postgres_data:
   pi_worker_run:
