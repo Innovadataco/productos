@@ -113,6 +113,7 @@
 | [171](171-tablero-operativo/spec.md) | SPEC-171 — Pilar B · Tablero Operativo: 6 semáforos + incidentes (nocturno 2026-08-17) | 🟢 Implementada (ver cierre.md) |
 | [172](172-deriva-motor-prod/spec.md) | SPEC-172 — Pilar D.5 · Deriva del motor en producción (nocturno 2026-08-17) | 🟢 Implementada (ver cierre.md) |
 | [174](174-aislamiento-tests-strict/spec.md) | SPEC-174 — Aislamiento estricto de tests, fix I-55 (nocturno 2026-08-17) | 🟢 Implementada (ver cierre.md) |
+| [178](178-monitor-arranque-prod/spec.md) | SPEC-178 — Hotfix I-58: el monitor de infra arranca en prod (auditoría PR #55) | 🔵 Planeada |
 
 ## Tabla completa (119 specs)
 
@@ -273,6 +274,7 @@
 | [171](171-tablero-operativo/spec.md) | SPEC-171 — Pilar B · Tablero Operativo: 6 semáforos + incidentes (nocturno 2026-08-17) | 🟢 Implementada (ver cierre.md) |
 | [172](172-deriva-motor-prod/spec.md) | SPEC-172 — Pilar D.5 · Deriva del motor en producción (nocturno 2026-08-17) | 🟢 Implementada (ver cierre.md) |
 | [174](174-aislamiento-tests-strict/spec.md) | SPEC-174 — Aislamiento estricto de tests, fix I-55 (nocturno 2026-08-17) | 🟢 Implementada (ver cierre.md) |
+| [178](178-monitor-arranque-prod/spec.md) | SPEC-178 — Hotfix I-58: el monitor de infra arranca en prod (auditoría PR #55) | 🔵 Planeada |
 
 ## Incidencias de calidad de datos
 
