@@ -30,22 +30,22 @@ export function nombreSenal(clave: string): string {
 const ESTADO_CONFIG: Record<EstadoSemaforo, { label: string; punto: string; texto: string }> = {
     verde: {
         label: "Operativo",
-        punto: "bg-emerald-500",
-        texto: "text-emerald-700 dark:text-emerald-300",
+        punto: "bg-pino",
+        texto: "text-pino",
     },
     rojo: {
         label: "Con problema",
-        punto: "bg-red-500",
-        texto: "text-red-700 dark:text-red-300",
+        punto: "bg-rubi",
+        texto: "text-rubi",
     },
     amarillo: {
         label: "Con demora",
-        punto: "bg-amber-400",
-        texto: "text-amber-700 dark:text-amber-300",
+        punto: "bg-ambar",
+        texto: "text-ambar",
     },
     "no-aplica": {
         label: "No aplica",
-        punto: "bg-slate-300 dark:bg-slate-600",
+        punto: "bg-tinta/30",
         texto: "text-subtle",
     },
 };

@@ -124,7 +124,7 @@ function extraerMensajeError(body: unknown): string | null {
 }
 
 const CLASES_LINK_BOTON =
-    "inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 glass-input text-body hover:bg-white/80 dark:hover:bg-slate-800/80 border";
+    "inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 glass-input text-body hover:bg-white/80 dark:hover:bg-tinta/20 border";
 
 export function DerivaProdBloque() {
     const [datos, setDatos] = useState<DatosDeriva | null>(null);
@@ -230,7 +230,7 @@ export function DerivaProdBloque() {
             {datos?.sinBaseline && (
                 <div
                     role="status"
-                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+                    className="rounded-xl border border-ambar/40 bg-ambar/10 p-4 text-sm text-ambar"
                 >
                     <p>
                         Sin baseline del banco — corre una simulación.{" "}
@@ -245,7 +245,7 @@ export function DerivaProdBloque() {
             {!datos?.sinBaseline && datos?.baseline?.baselineVieja && datos.baseline.baselineFecha && (
                 <div
                     role="status"
-                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+                    className="rounded-xl border border-ambar/40 bg-ambar/10 p-4 text-sm text-ambar"
                 >
                     <p>
                         Baseline desactualizada ({formatearFecha(datos.baseline.baselineFecha)}) — corre Simulación de
@@ -260,7 +260,7 @@ export function DerivaProdBloque() {
             {errorRecalculo && (
                 <p
                     role="alert"
-                    className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
+                    className="rounded-xl border border-rubi/40 bg-rubi/10 p-3 text-sm text-rubi"
                 >
                     {errorRecalculo}
                 </p>

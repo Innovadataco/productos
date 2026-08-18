@@ -19,7 +19,7 @@ export function MarcoWidget({ titulo, cargando, error, children }: MarcoWidgetPr
         <article className="glass rounded-2xl p-5">
             <h3 className="text-sm font-semibold text-body">{titulo}</h3>
             {error ? (
-                <p className="mt-3 text-xs text-red-700 dark:text-red-300">{error}</p>
+                <p className="mt-3 text-xs text-rubi">{error}</p>
             ) : cargando ? (
                 <Cargando inline tamano="sm" className="mt-3" texto="Actualizando..." />
             ) : (
