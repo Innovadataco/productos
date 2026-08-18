@@ -293,8 +293,6 @@ model Usuario {
   reportesDadosDeBaja          Reporte[]                  @relation("ReportesDadosDeBaja")
   correcciones                 CorreccionAdmin[]
   alertasSuscripcion           AlertaSuscripcion[]
-  casosEval                    CasoEval[]
-  evalRuns                     EvalRun[]
   simulaciones                 SimulacionRun[]
   casosAsignados               Reporte[]                  @relation("CasosOperador")
   casosComiteAsignados         Reporte[]                  @relation("CasosComite")
@@ -1490,88 +1488,6 @@ model RateLimit {
   actualizadoEn DateTime @updatedAt
 
   @@index([scope, identifier, windowStart])
-}
-
-enum CasoEvalFuente {
-  SEMILLA
-  MANUAL_ADMIN
-  PRODUCCION_ANONIMIZADO
-}
-
-model CasoEval {
-  id                 String         @id @default(cuid())
-  texto              String         @db.Text
-  categoriaEsperada  String
-  secundariaEsperada String?
-  ruido              Boolean        @default(false)
-  fuente             CasoEvalFuente @default(SEMILLA)
-  activo             Boolean        @default(true)
-  fixtureVersion     Int            @default(1)
-  creadoPorId        String?
-  creadoEn           DateTime       @default(now())
-
-  creadoPor  Usuario?        @relation(fields: [creadoPorId], references: [id])
-  resultados EvalResultado[]
-
-  @@index([categoriaEsperada])
-  @@index([fuente])
-  @@index([activo])
-  @@index([fixtureVersion])
-}
-
-enum EvalRunEstado {
-  PENDIENTE
-  EN_PROGRESO
-  COMPLETADA
-  FALLIDA
-  CANCELADA
-}
-
-model EvalRun {
-  id             String        @id @default(cuid())
-  tipo           String        @default("f7")
-  fixtureVersion Int
-  estado         EvalRunEstado @default(PENDIENTE)
-  iniciadoEn     DateTime      @default(now())
-  finalizadoEn   DateTime?
-  resultadoJson  Json?
-  error          String?       @db.Text
-  creadoPorId    String?
-
-  // Spec 014 — Laboratorio de experimentos
-  nombre         String?
-  notas          String? @db.Text
-  configSnapshot Json?
-  progresoCasos  Int     @default(0)
-  progresoTotal  Int     @default(0)
-
-  creadoPor  Usuario?        @relation(fields: [creadoPorId], references: [id])
-  resultados EvalResultado[]
-
-  @@index([estado])
-  @@index([fixtureVersion])
-  @@index([creadoPorId])
-}
-
-model EvalResultado {
-  id            String   @id @default(cuid())
-  experimentoId String
-  casoEvalId    String
-  esperado      String
-  predicho      String
-  confianza     Float
-  estadoFinal   String
-  correcto      Boolean
-  latenciaMs    Int
-  creadoEn      DateTime @default(now())
-
-  experimento EvalRun  @relation(fields: [experimentoId], references: [id], onDelete: Cascade)
-  casoEval    CasoEval @relation(fields: [casoEvalId], references: [id], onDelete: Cascade)
-
-  @@index([experimentoId])
-  @@index([casoEvalId])
-  @@index([correcto])
-  @@index([esperado])
 }
 
 model SimulacionRun {

@@ -211,7 +211,7 @@ export function IaModelSelector() {
                                 <Button
                                     variant="secondary"
                                     onClick={() => {
-                                        window.location.href = `/dashboard/admin/ia?tab=playground&modelo_clasificacion=${encodeURIComponent(selectedModel)}`;
+                                        window.location.href = `/dashboard/admin/ia?tab=playground&modelos=${encodeURIComponent(JSON.stringify([selectedModel]))}`;
                                     }}
                                     disabled={!selectedModel}
                                 >

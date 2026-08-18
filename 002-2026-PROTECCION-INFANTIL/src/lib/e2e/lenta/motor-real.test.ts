@@ -23,10 +23,7 @@ describe.skipIf(!LENTA)("SPEC-114 · prueba lenta con motor real (opt-in, E2E_LE
     });
 
     afterEach(async () => {
-        // Deja ia.rubrica.enabled como estaba: la prueba no cambia el motor por defecto
-        await prisma.parametroSistema
-            .update({ where: { clave: "ia.rubrica.enabled" }, data: { valor: "true" } })
-            .catch(() => undefined);
+        // La rúbrica es el único motor activo; no hay flag que restaurar.
     });
 
     it(

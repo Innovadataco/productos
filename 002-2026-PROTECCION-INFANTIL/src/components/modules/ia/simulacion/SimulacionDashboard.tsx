@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { formatDuration, formatMs } from "../eval/format";
+import { formatDuration, formatMs } from "./format";
 import { TablaResultadosSimulacion } from "./TablaResultadosSimulacion";
 import { MetricasSimulacion } from "./MetricasSimulacion";
 import type { SimulacionRun, ResultadoCaso, MetricasSimulacionUI } from "./types";

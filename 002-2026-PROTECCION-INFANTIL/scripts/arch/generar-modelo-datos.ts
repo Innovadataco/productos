@@ -33,7 +33,7 @@ const REGLAS_DOMINIO: Array<{ dominio: string; coincide: RegExp }> = [
         dominio: "IA: clasificación, dataset y embeddings",
         coincide: /^(ClasificacionIA|CorreccionAdmin|DatasetEntrenamiento|EmbeddingDataset|EmbeddingReporte|ClasificacionRubricaVoto)/,
     },
-    { dominio: "Evaluación del clasificador", coincide: /^(CasoEval|EvalRun|EvalResultado|SimulacionRun|SimulacionReporte)/ },
+    { dominio: "Simulación", coincide: /^(SimulacionRun|SimulacionReporte)/ },
     { dominio: "Permisos por módulo", coincide: /^(ModuloPermisible|PermisoModulo)/ },
     { dominio: "Usuarios y acceso", coincide: /^(Usuario|PerfilOperador|IntegranteComite|CodigoVerificacion|TokenRecuperacion)$/ },
     { dominio: "Plataforma: configuración, auditoría y límites", coincide: /^(ParametroSistema|AuditLog|RateLimit)$/ },

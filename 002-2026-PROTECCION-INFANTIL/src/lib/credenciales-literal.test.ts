@@ -27,6 +27,7 @@ const RUTAS_EXCLUIDAS = [
     /\/(test|tests|__tests__)\//,
     /\.(test|spec)\.(ts|tsx|js|mjs)$/,
     /test-setup\.ts$/,
+    /test-setup-shared\.ts$/,
     /reporte-test-utils\.ts$/,
     /\.env(\..*)?\.example$/,
     /credenciales-literal\.test\.ts$/,

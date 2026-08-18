@@ -17,11 +17,9 @@ interface PageProps {
 
 function parseOverrides(params: Record<string, string | undefined>): SandboxOverrides {
     const overrides: SandboxOverrides = {};
-    const keys: (keyof Omit<SandboxOverrides, "modelo_clasificacion">)[] = [
-        "umbral_revision",
-        "n_votos",
-        "temperatura_votos",
-        "min_score_categoria",
+    const keys: (keyof Pick<SandboxOverrides, "temperatura" | "umbral_presencia" | "rag_top_k">)[] = [
+        "temperatura",
+        "umbral_presencia",
         "rag_top_k",
     ];
     for (const key of keys) {
@@ -30,8 +28,15 @@ function parseOverrides(params: Record<string, string | undefined>): SandboxOver
         const num = parseFloat(raw);
         if (Number.isFinite(num)) overrides[key] = num;
     }
-    if (params.modelo_clasificacion) {
-        overrides.modelo_clasificacion = params.modelo_clasificacion;
+    if (params.modelos) {
+        try {
+            const parsed = JSON.parse(params.modelos);
+            if (Array.isArray(parsed) && parsed.every((m) => typeof m === "string" && m.length > 0)) {
+                overrides.modelos = parsed;
+            }
+        } catch {
+            // Ignorar JSON inválido
+        }
     }
     return overrides;
 }
@@ -94,7 +99,7 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
                         <IaPlayground initialOverrides={initialOverrides} />
                     </div>
                 )}
-                {activeTab === "eval" && <IaEvalManager />}
+                {activeTab === "simulacion" && <IaEvalManager />}
                 {activeTab === "rubrica" && <RubricaTab />}
                 {activeTab === "configuracion" && <ConfigPanel />}
             </Suspense>

@@ -1,7 +1,7 @@
 import { RUBRICA_SEMILLA } from "../src/lib/ai/rubrica-semilla";
 import { normalizarNombreGeografico } from "../src/lib/normalizar";
 import { syncModulosYGrants } from "./seed-modulos-grants";
-import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, CasoEvalFuente } from "@prisma/client";
+import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
 import path from "path";
@@ -986,7 +986,6 @@ async function main() {
 
     // ── Rúbrica de clasificación (spec 090) ────────────────────────────────
     const rubricaParams = [
-        { clave: "ia.rubrica.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, descripcion: "Motor rúbrica multi-etiqueta/multi-modelo (D-28: rúbrica por defecto; legacy desactivable por parámetro para reversión en caliente)" },
         { clave: "ia.rubrica.preguntas", valor: JSON.stringify(RUBRICA_SEMILLA), tipo: TipoParametro.JSON, descripcion: "Sets de preguntas factuales por categoría (editables por expertos)" },
         { clave: "ia.rubrica.modelos", valor: JSON.stringify(["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"]), tipo: TipoParametro.JSON, descripcion: "Modelos diversos que votan en la rúbrica (secuencial, 1 voto c/u)" },
         { clave: "ia.rubrica.temperatura", valor: "0.2", tipo: TipoParametro.FLOAT, descripcion: "Temperatura de los votos de la rúbrica (baja = determinista)" },
@@ -1310,9 +1309,6 @@ async function main() {
     }
     console.log("Países y ciudades creados");
 
-    // Seed de casos de evaluación desde fixture (Spec 013)
-    await seedEvalFixture();
-
     // Tablas SaaS vacías en desarrollo (no se cargan datos de prueba)
     console.log("Tablas Tenant, Plan, Subscription, BillingCycle listas");
 
@@ -1322,116 +1318,6 @@ async function main() {
     const { modulosCatalogo, permisosCreados } = await syncModulosYGrants(prisma);
 
     console.log(`Permisos de módulos: ${modulosCatalogo} módulos en catálogo, ${permisosCreados} permisos backfill`);
-}
-
-async function seedEvalFixture() {
-    const fixturePath = path.join(process.cwd(), "scripts", "eval-fixture.json");
-    let raw: string;
-    try {
-        raw = await fs.readFile(fixturePath, "utf-8");
-    } catch {
-        console.warn("No se encontró scripts/eval-fixture.json; omitiendo seed de casos de evaluación");
-        return;
-    }
-
-    const fixture = JSON.parse(raw) as {
-        examples?: { text: string; expected: string; ruido?: boolean; secundariaEsperada?: string }[];
-    };
-    const examples = fixture.examples || [];
-    if (examples.length === 0) {
-        console.warn("eval-fixture.json no contiene ejemplos");
-        return;
-    }
-
-    let created = 0;
-    let updated = 0;
-    for (const ex of examples) {
-        const existing = await prisma.casoEval.findFirst({
-            where: {
-                texto: ex.text,
-                fuente: CasoEvalFuente.SEMILLA,
-                fixtureVersion: 1,
-            },
-        });
-
-        const data = {
-            categoriaEsperada: ex.expected,
-            secundariaEsperada: ex.secundariaEsperada || null,
-            ruido: ex.ruido ?? false,
-            activo: true,
-        };
-
-        if (existing) {
-            if (
-                existing.categoriaEsperada !== data.categoriaEsperada ||
-                existing.secundariaEsperada !== data.secundariaEsperada ||
-                existing.ruido !== data.ruido ||
-                existing.activo !== data.activo
-            ) {
-                await prisma.casoEval.update({
-                    where: { id: existing.id },
-                    data,
-                });
-                updated++;
-            }
-        } else {
-            await prisma.casoEval.create({
-                data: {
-                    texto: ex.text,
-                    ...data,
-                    fuente: CasoEvalFuente.SEMILLA,
-                    fixtureVersion: 1,
-                    creadoPorId: null,
-                },
-            });
-            created++;
-        }
-    }
-
-    console.log(`Casos de evaluación SEMILLA: ${created} creados, ${updated} actualizados`);
-
-    // Spec 095-US3a (D-20): el banco GOBERNADO es el de 200 casos (fixtureVersion 2,
-    // scripts/simulacion/simulacion-50-casos-eval.json); el fixture v1 (110) queda subordinado.
-    await seedBancoGobernado();
-}
-
-async function seedBancoGobernado() {
-    const bancoPath = path.join(process.cwd(), "scripts", "simulacion", "simulacion-50-casos-eval.json");
-    let raw: string;
-    try {
-        raw = await fs.readFile(bancoPath, "utf-8");
-    } catch {
-        console.warn("No se encontró el banco gobernado; omitiendo");
-        return;
-    }
-    const banco = JSON.parse(raw) as { casos?: { texto: string; categoriaEsperada?: string; secundariaEsperada?: string }[] };
-    const casos = banco.casos ?? [];
-    let created = 0;
-    let updated = 0;
-    for (const c of casos) {
-        if (!c.categoriaEsperada) continue;
-        const existing = await prisma.casoEval.findFirst({
-            where: { texto: c.texto, fuente: CasoEvalFuente.SEMILLA, fixtureVersion: 2 },
-        });
-        const data = {
-            categoriaEsperada: c.categoriaEsperada,
-            secundariaEsperada: c.secundariaEsperada ?? null,
-            ruido: false,
-            activo: true,
-        };
-        if (existing) {
-            if (existing.categoriaEsperada !== data.categoriaEsperada || existing.secundariaEsperada !== data.secundariaEsperada) {
-                await prisma.casoEval.update({ where: { id: existing.id }, data });
-                updated++;
-            }
-        } else {
-            await prisma.casoEval.create({
-                data: { texto: c.texto, ...data, fuente: CasoEvalFuente.SEMILLA, fixtureVersion: 2, creadoPorId: null },
-            });
-            created++;
-        }
-    }
-    console.log(`Banco gobernado (fixtureVersion 2): ${created} creados, ${updated} actualizados (${casos.length} casos)`);
 }
 
 main()

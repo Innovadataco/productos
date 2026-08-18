@@ -9,7 +9,7 @@ import type { CategoriaConducta } from "@prisma/client";
 
 const mockEmbedding = vi.fn();
 const mockRag = vi.fn();
-const mockVotos = vi.fn();
+const mockClasificarConRubrica = vi.fn();
 const mockPii = vi.fn();
 const mockAnonimizar = vi.fn();
 
@@ -21,9 +21,13 @@ vi.mock("@/lib/ai/dataset-retrieval", () => ({
     buscarEjemplosSimilares: (...args: unknown[]) => mockRag(...args),
 }));
 
-vi.mock("@/lib/ai/classifier", () => ({
-    clasificarConVotos: (...args: unknown[]) => mockVotos(...args),
-}));
+vi.mock("@/lib/ai/rubrica", async (importOriginal) => {
+    const original = await importOriginal<typeof import("@/lib/ai/rubrica")>();
+    return {
+        ...original,
+        clasificarConRubrica: (...args: unknown[]) => mockClasificarConRubrica(...args),
+    };
+});
 
 vi.mock("@/lib/ai/pii-detector", () => ({
     detectarPiiCombinado: (...args: unknown[]) => mockPii(...args),
@@ -37,13 +41,17 @@ function baseClasificacion(categoria: CategoriaConducta, confianza: number, esta
     return {
         categoria,
         confianza,
+        categoriasPresentes: [categoria],
         categoriasSecundarias: [],
-        posibleAgresorPar: false,
+        porcentajes: { [categoria]: confianza },
         estado,
         rawResponse: "{}",
-        metrics: { modelo: "ornith:9b", latenciaMs: 100, promptTokens: 50, responseTokens: 20 },
+        metrics: { modelo: "rubrica:test", latenciaMs: 100, promptTokens: 50, responseTokens: 20 },
         fallback: false,
-        votos: Array.from({ length: 5 }, () => ({ categoria, confianza, posibleAgresorPar: false })),
+        votosModelos: [
+            { modelo: "m1", categorias: { [categoria]: { cumple: true, preguntasCumplidas: ["p1"] } } },
+            { modelo: "m2", categorias: { [categoria]: { cumple: true, preguntasCumplidas: ["p1"] } } },
+        ],
     };
 }
 
@@ -56,13 +64,13 @@ describe("POST /api/admin/ia/sandbox", () => {
         );
         mockEmbedding.mockReset().mockResolvedValue(new Array(768).fill(0.1));
         mockRag.mockReset().mockResolvedValue([]);
-        mockVotos.mockReset().mockResolvedValue(baseClasificacion("EXTORSION", 1.0, "CLASIFICADO"));
+        mockClasificarConRubrica.mockReset().mockResolvedValue(baseClasificacion("EXTORSION", 1.0, "CLASIFICADO"));
         mockPii.mockReset().mockResolvedValue({
             contienePii: false,
             contienePiiDeterministico: false,
             contienePiiLLM: false,
             piiDetectada: [],
-            piiDetectadaDeterministica: [],
+            piiDetectadaDeterministico: [],
             piiDetectadaLLM: [],
             metrics: { modelo: "ornith:9b", latenciaMs: 0, promptTokens: null, responseTokens: null },
             rawResponse: "{}",
@@ -101,35 +109,36 @@ describe("POST /api/admin/ia/sandbox", () => {
         expect(body.trace.decision.categoria).toBe("EXTORSION");
         expect(body.trace.decision.estado).toBe("CLASIFICADO");
         expect(body.trace.etapas.votacion.confianza).toBe(1.0);
+        expect(body.trace.etapas.votacion.modelos).toBe(3);
         expect(mockEmbedding).toHaveBeenCalled();
     });
 
-    it("aplica overrides y refleja parámetros efectivos", async () => {
+    it("aplica overrides de rúbrica y refleja parámetros efectivos", async () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
         const req = crearRequestAutenticado(
             "POST",
             "http://localhost/api/admin/ia/sandbox",
-            { texto: "prueba", parametrosOverride: { umbral_revision: 0.8, n_votos: 3, rag_top_k: 2 } }
+            { texto: "prueba", parametrosOverride: { temperatura: 0.8, umbral_presencia: 0.9, rag_top_k: 2 } }
         );
         const res = await POST(req);
         expect(res.status).toBe(200);
         const body = await res.json();
-        expect(body.trace.parametrosEfectivos.umbralRevision).toBe(0.8);
-        expect(body.trace.parametrosEfectivos.nVotos).toBe(3);
+        expect(body.trace.parametrosEfectivos.temperatura).toBe(0.8);
+        expect(body.trace.parametrosEfectivos.umbralPresencia).toBe(0.9);
         expect(body.trace.parametrosEfectivos.ragTopK).toBe(2);
     });
 
     it("modo comparar devuelve baseline y override", async () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
-        mockVotos
+        mockClasificarConRubrica
             .mockResolvedValueOnce(baseClasificacion("EXTORSION", 1.0, "CLASIFICADO"))
             .mockResolvedValueOnce(baseClasificacion("OTRO", 0.6, "REVISION_MANUAL"));
         const req = crearRequestAutenticado(
             "POST",
             "http://localhost/api/admin/ia/sandbox",
-            { texto: "prueba", comparar: true, parametrosOverride: { umbral_revision: 0.5 } }
+            { texto: "prueba", comparar: true, parametrosOverride: { umbral_presencia: 0.5 } }
         );
         const res = await POST(req);
         expect(res.status).toBe(200);

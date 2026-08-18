@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **64** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **61** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -337,95 +337,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | cursos | Curso | lista, relación |
 | CursoMateria | CursoMateria | lista, relación |
 | identificadoresProf | IdentificadorProfesor | lista, relación |
-
-### Evaluación del clasificador (5)
-
-#### `CasoEval`
-
-| Campo | Tipo | Atributos |
-| --- | --- | --- |
-| id | String | id |
-| texto | String | — |
-| categoriaEsperada | String | — |
-| secundariaEsperada | String | opcional |
-| ruido | Boolean | — |
-| fuente | CasoEvalFuente | — |
-| activo | Boolean | — |
-| fixtureVersion | Int | — |
-| creadoPorId | String | opcional |
-| creadoEn | DateTime | — |
-| creadoPor | Usuario | opcional, relación (FK) |
-| resultados | EvalResultado | lista, relación |
-
-#### `EvalResultado`
-
-| Campo | Tipo | Atributos |
-| --- | --- | --- |
-| id | String | id |
-| experimentoId | String | — |
-| casoEvalId | String | — |
-| esperado | String | — |
-| predicho | String | — |
-| confianza | Float | — |
-| estadoFinal | String | — |
-| correcto | Boolean | — |
-| latenciaMs | Int | — |
-| creadoEn | DateTime | — |
-| experimento | EvalRun | relación (FK) |
-| casoEval | CasoEval | relación (FK) |
-
-#### `EvalRun`
-
-| Campo | Tipo | Atributos |
-| --- | --- | --- |
-| id | String | id |
-| tipo | String | — |
-| fixtureVersion | Int | — |
-| estado | EvalRunEstado | — |
-| iniciadoEn | DateTime | — |
-| finalizadoEn | DateTime | opcional |
-| resultadoJson | Json | opcional |
-| error | String | opcional |
-| creadoPorId | String | opcional |
-| nombre | String | opcional |
-| notas | String | opcional |
-| configSnapshot | Json | opcional |
-| progresoCasos | Int | — |
-| progresoTotal | Int | — |
-| creadoPor | Usuario | opcional, relación (FK) |
-| resultados | EvalResultado | lista, relación |
-
-#### `SimulacionReporte`
-
-| Campo | Tipo | Atributos |
-| --- | --- | --- |
-| id | String | id |
-| simulacionRunId | String | — |
-| simulacionRun | SimulacionRun | relación (FK) |
-| reporteId | String | único |
-| indice | Int | — |
-| categoriaEsperada | String | opcional |
-| secundariaEsperada | String | opcional |
-| createdAt | DateTime | — |
-
-#### `SimulacionRun`
-
-| Campo | Tipo | Atributos |
-| --- | --- | --- |
-| id | String | id |
-| modelo | String | — |
-| totalCasos | Int | — |
-| progreso | Int | — |
-| estado | String | — |
-| fechaInicio | DateTime | — |
-| fechaFin | DateTime | opcional |
-| metricasJson | Json | opcional |
-| casosJson | Json | opcional |
-| creadoPorId | String | — |
-| creadoPor | Usuario | relación (FK) |
-| casos | SimulacionReporte | lista, relación |
-| createdAt | DateTime | — |
-| updatedAt | DateTime | — |
 
 ### Geografía (3)
 
@@ -1066,6 +977,40 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reportes | Reporte | lista, relación |
 | colegio | Colegio | opcional, relación |
 
+### Simulación (2)
+
+#### `SimulacionReporte`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| simulacionRunId | String | — |
+| simulacionRun | SimulacionRun | relación (FK) |
+| reporteId | String | único |
+| indice | Int | — |
+| categoriaEsperada | String | opcional |
+| secundariaEsperada | String | opcional |
+| createdAt | DateTime | — |
+
+#### `SimulacionRun`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| modelo | String | — |
+| totalCasos | Int | — |
+| progreso | Int | — |
+| estado | String | — |
+| fechaInicio | DateTime | — |
+| fechaFin | DateTime | opcional |
+| metricasJson | Json | opcional |
+| casosJson | Json | opcional |
+| creadoPorId | String | — |
+| creadoPor | Usuario | relación (FK) |
+| casos | SimulacionReporte | lista, relación |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+
 ### Usuarios y acceso (5)
 
 #### `CodigoVerificacion`
@@ -1170,8 +1115,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reportesDadosDeBaja | Reporte | lista, relación |
 | correcciones | CorreccionAdmin | lista, relación |
 | alertasSuscripcion | AlertaSuscripcion | lista, relación |
-| casosEval | CasoEval | lista, relación |
-| evalRuns | EvalRun | lista, relación |
 | simulaciones | SimulacionRun | lista, relación |
 | casosAsignados | Reporte | lista, relación |
 | casosComiteAsignados | Reporte | lista, relación |
@@ -1207,7 +1150,6 @@ erDiagram
     AlertaColegio ||--o{ SeguimientoCaso : "alerta"
     AlertaColegio ||--o{ SolicitudComite : "alerta (opcional)"
     Apelacion ||--o{ DocumentoApelacion : "apelacion"
-    CasoEval ||--o{ EvalResultado : "casoEval"
     Ciudad ||--o{ Colegio : "ciudad"
     Ciudad ||--o{ Reporte : "ciudadRel (opcional)"
     ClasificacionIA ||--o{ ClasificacionRubricaVoto : "clasificacionIA"
@@ -1242,7 +1184,6 @@ erDiagram
     Estudiante ||--o{ AcudienteEstudiante : "estudiante"
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
-    EvalRun ||--o{ EvalResultado : "experimento"
     IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante (opcional)"
     IdentificadorProfesor ||--o{ AlertaColegio : "identificadorProfesor (opcional)"
@@ -1285,11 +1226,9 @@ erDiagram
     Usuario ||--o{ AlertaColegio : "asignadoA (opcional)"
     Usuario ||--o{ AlertaSuscripcion : "usuario"
     Usuario ||--o{ AuditLog : "usuario (opcional)"
-    Usuario ||--o{ CasoEval : "creadoPor (opcional)"
     Usuario ||--o{ CodigoVerificacion : "usuario (opcional)"
     Usuario ||--o{ ContactoConfianza : "usuario"
     Usuario ||--o{ CorreccionAdmin : "admin"
-    Usuario ||--o{ EvalRun : "creadoPor (opcional)"
     Usuario ||--o{ IntegranteComite : "comite"
     Usuario ||--o{ IntegranteComite : "creadoPor"
     Usuario ||--o{ IntegranteComite : "modificadoPor (opcional)"

@@ -32,7 +32,18 @@ process.env.WORKER_SECRET = "worker-secret-test";
 const globalStore = globalThis as unknown as {
     __prismaMethodSnapshot?: Map<string, Record<string, unknown>>;
     __testPrismaClient?: unknown;
+    // Registro de TODAS las instancias de PrismaClient vistas en el fork.
+    // unmockPrisma() (resetModules + delete globalThis.prisma) crea instancias
+    // nuevas; un spy sobre cualquiera de ellas debe restaurarse, no solo sobre
+    // el binding que test-setup capturó al cargar (HALLAZGO 002-PI-068 CI-Linux).
+    __prismaInstances?: Set<unknown>;
 };
+
+function registerPrismaInstance(client: unknown) {
+    if (!client || typeof client !== "object") return;
+    if (!globalStore.__prismaInstances) globalStore.__prismaInstances = new Set();
+    globalStore.__prismaInstances.add(client);
+}
 
 function looksLikeRealPrisma(client: unknown): boolean {
     if (!client || typeof client !== "object") return false;
@@ -57,6 +68,8 @@ function snapshotPrismaMethods(client: unknown): Map<string, Record<string, unkn
 }
 
 async function ensureRealPrismaClient() {
+    registerPrismaInstance(globalThis.prisma);
+    registerPrismaInstance(prisma);
     if (looksLikeRealPrisma(globalStore.__testPrismaClient)) {
         return globalStore.__testPrismaClient;
     }
@@ -70,6 +83,7 @@ async function ensureRealPrismaClient() {
     const fresh = new PrismaClient();
     globalStore.__testPrismaClient = fresh;
     if (process.env.NODE_ENV !== "production") globalThis.prisma = fresh;
+    registerPrismaInstance(fresh);
     return fresh;
 }
 
@@ -83,11 +97,19 @@ async function getPrismaMethodSnapshot() {
 
 async function restorePrismaMethods() {
     const snapshot = await getPrismaMethodSnapshot();
-    for (const [key, methods] of snapshot) {
-        const delegate = (prisma as Record<string, unknown>)[key];
-        if (!delegate || typeof delegate !== "object") continue;
-        for (const [method, originalFn] of Object.entries(methods)) {
-            if (typeof (delegate as Record<string, unknown>)[method] !== "function") {
+    // Restaurar sobre TODAS las instancias vistas en el fork, no solo sobre el
+    // binding estático de este módulo: tras resetModules() (unmockPrisma) las
+    // rutas importan una instancia nueva y restaurar la vieja no sirve.
+    registerPrismaInstance(globalThis.prisma);
+    registerPrismaInstance(prisma);
+    for (const client of globalStore.__prismaInstances ?? []) {
+        for (const [key, methods] of snapshot) {
+            const delegate = (client as Record<string, unknown>)[key];
+            if (!delegate || typeof delegate !== "object") continue;
+            for (const [method, originalFn] of Object.entries(methods)) {
+                // Restauramos incondicionalmente: la guarda "solo si dejó de ser
+                // función" dejaba vivos los spies de tests anteriores (aún son
+                // funciones, pero con implementación rota) bajo singleFork.
                 try {
                     Object.defineProperty(delegate, method, {
                         value: originalFn,
@@ -200,6 +222,16 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await restorePrismaMethods();
+    // CANARIO: detectar quién contamina parametroSistema.findUnique entre tests,
+    // en CUALQUIER instancia registrada (no solo el binding estático de este módulo).
+    for (const client of globalStore.__prismaInstances ?? []) {
+        const delegate = (client as Record<string, unknown>)?.parametroSistema as Record<string, unknown> | undefined;
+        if (delegate && typeof delegate.findUnique !== "function") {
+            const prev = (globalThis as unknown as { __lastTestFile?: string }).__lastTestFile;
+            console.error("[LEAK-CANARY] parametroSistema.findUnique NO es función en una instancia. Archivo previo:", prev);
+        }
+    }
+    (globalThis as unknown as { __lastTestFile?: string }).__lastTestFile = expect?.getState?.()?.testPath ?? "unknown";
     await ensureTestMutexTable();
     await acquireTestLock();
 });

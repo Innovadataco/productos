@@ -2,7 +2,7 @@
 
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
-import { formatPct } from "../eval/format";
+import { formatPct } from "./format";
 import type { SimulacionRun } from "./types";
 
 export function SimulacionCard({ run, onClick }: { run: SimulacionRun; onClick: () => void }) {

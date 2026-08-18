@@ -70,10 +70,12 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `lint` | `eslint .` |
 | `start` | `next start -p 5005` |
 | `test` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run` |
-| `test:coverage` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --coverage.enabled` |
+| `test:coverage` | `npm run test:unit && npm run test:integration` |
 | `test:e2e` | `node --env-file=.env.test ./node_modules/@playwright/test/cli.js test` |
 | `test:e2e:ui` | `node --env-file=.env.test ./node_modules/@playwright/test/cli.js test --ui` |
-| `test:journeys` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run src/lib/e2e/journeys/` |
+| `test:integration` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --coverage.enabled` |
+| `test:journeys` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --config vitest.journeys.config.ts` |
+| `test:unit` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --config vitest.unit.config.ts --coverage.enabled` |
 | `test:watch` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs` |
 | `tokens:check` | `tsx scripts/tokens-check.ts` |
 | `worker` | `node scripts/worker-supervisor.mjs` |
