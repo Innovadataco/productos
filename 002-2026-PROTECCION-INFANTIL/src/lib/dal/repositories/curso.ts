@@ -53,8 +53,17 @@ export class CursoRepository {
 
     /** Cursos activos del colegio, ordenados por nombre (GET /api/colegio/cursos). */
     listarActivos(colegioId: string) {
+        return this.listarPorColegio(colegioId);
+    }
+
+    /**
+     * Cursos del colegio ordenados por nombre; por defecto solo activos.
+     * SPEC-176: `incluirInactivos: true` trae también los desactivados (toggle
+     * "Mostrar desactivados" de la página de cursos) — tenant-first intacto.
+     */
+    listarPorColegio(colegioId: string, opts?: { incluirInactivos?: boolean }) {
         return this.db.curso.findMany({
-            where: { colegioId, estado: "activo" },
+            where: { colegioId, ...(opts?.incluirInactivos ? {} : { estado: "activo" }) },
             orderBy: { nombre: "asc" },
         });
     }

@@ -43,7 +43,9 @@ export async function GET(request: Request) {
         }
 
         // SPEC-134 (E-1): la consulta vive en el repo (tenant obligatorio); la ruta no toca prisma.
-        const cursos = await new CursoRepository().listarActivos(user.colegioId);
+        // SPEC-176: ?incluirInactivos=true trae también los desactivados (toggle de la página).
+        const incluirInactivos = new URL(request.url).searchParams.get("incluirInactivos") === "true";
+        const cursos = await new CursoRepository().listarPorColegio(user.colegioId, { incluirInactivos });
 
         return NextResponse.json({ cursos });
     } catch (error) {

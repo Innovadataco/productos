@@ -28,12 +28,16 @@ export default function CursosPageClient() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [message, setMessage] = useState<Mensaje>(null);
+    // SPEC-176: el listado por defecto solo trae activos; el toggle trae también
+    // los desactivados para poder reactivarlos sin salir de la página.
+    const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
     async function cargar() {
         setLoading(true);
         setError("");
         try {
-            const res = await fetch("/api/colegio/cursos", { credentials: "include" });
+            const url = mostrarInactivos ? "/api/colegio/cursos?incluirInactivos=true" : "/api/colegio/cursos";
+            const res = await fetch(url, { credentials: "include" });
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setCursos(data.cursos || []);
@@ -52,7 +56,8 @@ export default function CursosPageClient() {
 
     useEffect(() => {
         cargar();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mostrarInactivos]);
 
     async function toggleEstado(curso: Curso) {
         const nuevoEstado = curso.estado === "activo" ? "inactivo" : "activo";
@@ -131,6 +136,16 @@ export default function CursosPageClient() {
                             Subir lista
                         </Button>
                     </div>
+
+                    <label className="flex items-center gap-2 text-sm text-muted cursor-pointer select-none w-fit">
+                        <input
+                            type="checkbox"
+                            checked={mostrarInactivos}
+                            onChange={(e) => setMostrarInactivos(e.target.checked)}
+                            className="h-4 w-4 accent-pino"
+                        />
+                        Mostrar desactivados
+                    </label>
 
                     {message && (
                         <div

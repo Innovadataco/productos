@@ -4,8 +4,10 @@
  * Mantener al día al agregar tests unitarios puros.
  */
 export const UNIT_TEST_INCLUDES: string[] = [
+    "prisma/seed-security.test.ts",
     "scripts/arch/no-prisma-mocks.test.ts",
     "src/app/dashboard/colegio/alertas/AlertasColegioPageClient.test.tsx",
+    "src/app/dashboard/colegio/cursos/CursosPageClient.test.tsx",
     "src/app/dashboard/colegio/configuracion/ConfiguracionPageClient.test.tsx",
     "src/app/dashboard/colegio/profesores/ProfesoresPageClient.test.tsx",
     "src/components/modules/AdminNav.test.tsx",
@@ -26,6 +28,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/audit-log/legible.test.ts",
     "src/components/modules/colegio/BuscadorGlobal.test.tsx",
     "src/components/modules/colegio/ColegioSideNav.test.tsx",
+    "src/components/modules/colegio/comite/ComiteEstadisticas.test.tsx",
     "src/components/modules/colegio/curso/AcudienteContacto.test.tsx",
     "src/components/modules/colegio/curso/AnilloCurso.test.tsx",
     "src/components/modules/colegio/curso/CursoHeader.test.tsx",

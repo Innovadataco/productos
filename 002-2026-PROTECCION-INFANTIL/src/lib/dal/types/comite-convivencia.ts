@@ -85,4 +85,42 @@ export interface EstadisticasComiteDto {
     casosPorEstado: Record<string, number>;
     tiempoMedioResolucionDias: number | null;
     topCategorias: { categoria: string; total: number }[];
+    // SPEC-177: bloques aditivos — solo agregados numéricos, cero PII.
+    distribucionEstado: DistribucionEstadoComiteDto[];
+    tendenciaSemanal: TendenciaSemanalComiteDto[];
+    sla: SlaComiteDto;
+    tiempoMedioPorCategoria: TiempoMedioCategoriaComiteDto[];
+}
+
+/** SPEC-177: distribución por estado con porcentaje sobre el total de casos. */
+export interface DistribucionEstadoComiteDto {
+    estado: string;
+    total: number;
+    pct: number;
+}
+
+/** SPEC-177: una semana (lunes-domingo, America/Bogota) de la tendencia. */
+export interface TendenciaSemanalComiteDto {
+    /** Lunes de la semana como fecha ISO "YYYY-MM-DD". */
+    semanaInicio: string;
+    creados: number;
+    resueltos: number;
+}
+
+/**
+ * SPEC-177: cumplimiento del SLA de los casos del comité.
+ * `pctATiempo` es null cuando no hay casos con fecha límite evaluable.
+ */
+export interface SlaComiteDto {
+    aTiempo: number;
+    vencidos: number;
+    sinSla: number;
+    pctATiempo: number | null;
+}
+
+/** SPEC-177: días promedio de resolución por categoría (con ≥1 resuelto). */
+export interface TiempoMedioCategoriaComiteDto {
+    categoria: string;
+    dias: number;
+    resueltos: number;
 }

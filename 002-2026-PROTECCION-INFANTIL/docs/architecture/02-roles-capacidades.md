@@ -2132,7 +2132,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | anti_abuso | `/dashboard/admin/anti-abuso` | ADMIN |
 | bandeja_reportes | `/dashboard/admin` | ADMIN, COMITE_VALIDACION, OPERADOR |
 | centro_control_ia | `/dashboard/admin/ia` | ADMIN |
-| colegios | `/dashboard/colegio` | ADMIN, SCHOOL_ADMIN |
+| colegios | `/dashboard/colegio` | ADMIN, COMITE_CONVIVENCIA, SCHOOL_ADMIN |
 | colegios_auditoria | `/dashboard/colegio/auditoria` | ADMIN, SCHOOL_ADMIN |
 | colegios_comite_bandeja | `/dashboard/colegio/comite/casos` | ADMIN, COMITE_CONVIVENCIA, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/admin/colegios` | ADMIN, SCHOOL_ADMIN |
@@ -2141,7 +2141,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | colegios_gestion | `/dashboard/colegio/cursos` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/estadisticas` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `#` | ADMIN, SCHOOL_ADMIN |
-| comite | `/dashboard/admin/comite/gestion` | ADMIN |
+| comite | `/dashboard/admin/comite/gestion` | ADMIN, COMITE_VALIDACION |
 | comite_auditoria | `/dashboard/admin/comite/auditoria` | ADMIN |
 | comite_bandeja | `/dashboard/admin/comite` | ADMIN, COMITE_VALIDACION |
 | comite_bandeja | `/dashboard/admin/comite` | ADMIN, COMITE_VALIDACION |
