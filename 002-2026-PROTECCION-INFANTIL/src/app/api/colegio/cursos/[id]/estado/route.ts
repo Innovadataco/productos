@@ -53,7 +53,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
-            accion: "COLEGIO_CURSO_DESACTIVADO",
+            // SPEC-176: la reactivación se audita como tal (antes ambas direcciones
+            // quedaban como DESACTIVADO).
+            accion: body === "activo" ? "COLEGIO_CURSO_ACTIVADO" : "COLEGIO_CURSO_DESACTIVADO",
             tipoRecurso: "Curso",
             recursoId: id,
             usuarioId: user.id,

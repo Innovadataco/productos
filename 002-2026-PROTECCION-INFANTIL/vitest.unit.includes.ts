@@ -5,6 +5,7 @@
  */
 export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/seed-security.test.ts",
+    "src/app/dashboard/colegio/cursos/CursosPageClient.test.tsx",
     "src/app/dashboard/colegio/alertas/AlertasColegioPageClient.test.tsx",
     "src/app/dashboard/colegio/configuracion/ConfiguracionPageClient.test.tsx",
     "src/app/dashboard/colegio/profesores/ProfesoresPageClient.test.tsx",

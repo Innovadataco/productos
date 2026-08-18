@@ -98,6 +98,48 @@ describe("/api/colegio/cursos", () => {
         expect(json.curso.estado).toBe("inactivo");
     });
 
+    it("SPEC-176: por defecto solo lista activos; con incluirInactivos=true incluye desactivados", async () => {
+        const { admin } = await setupSchoolAdmin();
+        await crearCurso(admin.colegioId!, { nombre: "6A" });
+        await crearCurso(admin.colegioId!, { nombre: "Curso DEMO 010", estado: "inactivo" });
+
+        const sinFlag = await GET(request("GET", "http://localhost:5005/api/colegio/cursos", undefined, mockToken));
+        expect(sinFlag.status).toBe(200);
+        const jsonSin = await sinFlag.json();
+        expect(jsonSin.cursos).toHaveLength(1);
+        expect(jsonSin.cursos[0].nombre).toBe("6A");
+
+        const conFlag = await GET(request("GET", "http://localhost:5005/api/colegio/cursos?incluirInactivos=true", undefined, mockToken));
+        expect(conFlag.status).toBe(200);
+        const jsonCon = await conFlag.json();
+        expect(jsonCon.cursos).toHaveLength(2);
+        const demo = jsonCon.cursos.find((c: { nombre: string }) => c.nombre === "Curso DEMO 010");
+        expect(demo?.estado).toBe("inactivo");
+    });
+
+    it("SPEC-176: reactivar un curso inactivo (ida y vuelta, auditada)", async () => {
+        const { admin } = await setupSchoolAdmin();
+        const curso = await crearCurso(admin.colegioId!, { nombre: "10°", estado: "inactivo" });
+
+        const res = await PATCHEstadoCurso(
+            request("PATCH", `http://localhost:5005/api/colegio/cursos/${curso.id}/estado`, "activo", mockToken),
+            { params: Promise.resolve({ id: curso.id }) }
+        );
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.curso.estado).toBe("activo");
+
+        const audit = await prisma.auditLog.findFirst({
+            where: { recursoId: curso.id, accion: "COLEGIO_CURSO_ACTIVADO" },
+        });
+        expect(audit).not.toBeNull();
+
+        // Tras reactivar, vuelve a aparecer en el listado por defecto (solo activos).
+        const getRes = await GET(request("GET", "http://localhost:5005/api/colegio/cursos", undefined, mockToken));
+        const getJson = await getRes.json();
+        expect(getJson.cursos.map((c: { id: string }) => c.id)).toContain(curso.id);
+    });
+
     it("rechaza desactivar un curso ya inactivo", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "9D", estado: "inactivo" });
