@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-18
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-18): ver [cierre.md](./cierre.md). Servicio `monitor` en compose prod + evidencia local (probes frescos en HealthProbe, advisory lock exit 2) + cron de deriva confirmado registrado.
 
 Impacto en arquitectura: un servicio nuevo `monitor` en `docker-compose.prod.yml` (mismo patrón que `worker`). Sin cambios de código de aplicación ni de modelo.
 
