@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-17
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-18): ver [cierre.md](./cierre.md). Fork por archivo + 7 archivos reintroducidos + gate CI restaurado + regla arch:check (e). Fallback autorizado por ZEUS: regla sobre integration, mockers de unit = deuda I-56.
 
 Impacto en arquitectura: cambia la configuración de ejecución de la suite de integración (`vitest.config.ts`: `singleFork` true→false), simplifica `src/lib/test-setup.ts`, reintroduce los 7 archivos excluidos en el corte I-55, restaura `test-integration` como job bloqueante del gate de CI y añade una regla de arquitectura contra mocks del singleton de Prisma.
 

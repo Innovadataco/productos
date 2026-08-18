@@ -1,5 +1,8 @@
 /**
- * SPEC-126 · `npm run arch:check` — la compuerta de la línea base. Cuatro verificaciones:
+ * SPEC-126 · `npm run arch:check` — la compuerta de la línea base. Cinco verificaciones:
+ * ...
+ * (e) ANTI-MOCKS PRISMA (SPEC-174, I-55): ningún test de integration espía o
+ *     mockea el singleton de Prisma fuera de `prisma-mocks-allowlist.json`.
  *
  * (a) DRIFT: regenera los 5 artefactos (convención: cada `generar-*.ts` exporta una
  *     función `generar*()`) y los compara byte a byte con `docs/architecture/`.
@@ -16,6 +19,7 @@ import * as path from "node:path";
 import { ARTEFACTOS } from "./artefactos";
 import { ejecutarAsercionA } from "./asercion-puerta-predicado";
 import { ejecutarAsercionB } from "./asercion-menu-no-miente";
+import { buscarInfractores } from "./no-prisma-mocks";
 import { RUTA_DOCS_ARCH, RUTA_EXCEPCIONES, RUTA_SCHEMA } from "./lib/paths";
 import { modelosHuerfanos, parsearSchemaPrisma } from "./lib/schema-prisma";
 
@@ -103,6 +107,16 @@ async function main() {
         rojo = true;
         console.error(`[Arch:check] (d) ROJO: ${b.muertos.length} hrefs muertos (pintados pero bloqueados por la puerta):`);
         for (const m of b.muertos) console.error(`  - ${m.rol} · ${m.href} · ${m.origen} · proxy=${m.veredicto}`);
+    }
+
+    console.log("[Arch:check] (e) Anti-mocks del singleton de Prisma en tests de integration (SPEC-174, I-55)…");
+    const infractores = buscarInfractores();
+    if (infractores.length === 0) {
+        console.log("[Arch:check] (e) VERDE: cero mocks/spies de Prisma en integration (allowlist: solo las declaradas con razón).");
+    } else {
+        rojo = true;
+        console.error(`[Arch:check] (e) ROJO: ${infractores.length} mocks/spies del singleton de Prisma fuera de la allowlist:`);
+        for (const f of infractores) console.error(`  - ${f.archivo}:${f.linea} [${f.patron}] ${f.texto}`);
     }
 
     if (rojo) {
