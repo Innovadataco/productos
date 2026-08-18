@@ -1,0 +1,179 @@
+"use client";
+
+/**
+ * SPEC-171 (Pilar B) — Tablero operativo.
+ * Tab "Operación": 6 semáforos de infraestructura + widgets (cola, atascados,
+ * errores, SLA) encima del dashboard de métricas de negocio. Autorefresco con
+ * `autorefreshSeg` del endpoint de estado (default 30 s); si el vigilante está
+ * desactivado (`monitoreoEnabled: false`) se muestra un banner y no hay
+ * autorefresco. Tablero de solo lectura: cero acciones destructivas.
+ * Tab "Clasificación": el tablero de la antigua ruta .../clasificacion.
+ */
+import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AdminDashboard } from "@/components/modules/AdminDashboard";
+import { Cargando } from "@/components/ui/Cargando";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { SemaforoCard, SENALES_OPERACION, type EstadoSemaforo } from "@/components/modules/monitoreo/SemaforoCard";
+import { WidgetAtascados } from "@/components/modules/monitoreo/WidgetAtascados";
+import { WidgetCola } from "@/components/modules/monitoreo/WidgetCola";
+import { WidgetErrores } from "@/components/modules/monitoreo/WidgetErrores";
+import { WidgetSla } from "@/components/modules/monitoreo/WidgetSla";
+import { ClasificacionTab } from "./ClasificacionTab";
+
+type SenalEstado = {
+    estado: EstadoSemaforo;
+    ultimoProbeEn: string | null;
+    detalle?: string | null;
+};
+
+type EstadoMonitoreo = {
+    senales: Record<string, SenalEstado>;
+    autorefreshSeg?: number;
+    monitoreoEnabled?: boolean;
+};
+
+const TABS = [
+    { key: "operacion", label: "Operación" },
+    { key: "clasificacion", label: "Clasificación" },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
+
+export function OperacionTableroClient() {
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const router = useRouter();
+    const tab: TabKey = searchParams.get("tab") === "clasificacion" ? "clasificacion" : "operacion";
+
+    const [estado, setEstado] = useState<EstadoMonitoreo | null>(null);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    // Recargo compartido: los widgets repiden su endpoint en cada tick del autorefresco.
+    const [tick, setTick] = useState(0);
+
+    const cargarEstado = useCallback(async () => {
+        try {
+            const res = await fetch("/api/admin/monitoreo/estado", { credentials: "include" });
+            const data: unknown = await res.json().catch(() => null);
+            if (!res.ok) {
+                const mensaje =
+                    data && typeof data === "object" && "error" in data
+                        ? (data as { error?: { message?: string } }).error?.message
+                        : undefined;
+                setError(mensaje || "No se pudo consultar el estado del monitoreo.");
+                return;
+            }
+            setEstado(data as EstadoMonitoreo);
+            setError(null);
+        } catch {
+            setError("Error de red al consultar el estado del monitoreo.");
+        } finally {
+            setCargando(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (tab !== "operacion") return;
+        void cargarEstado();
+    }, [cargarEstado, tab]);
+
+    const monitoreoEnabled = estado?.monitoreoEnabled !== false;
+    const autorefreshSeg =
+        estado?.autorefreshSeg && estado.autorefreshSeg > 0 ? estado.autorefreshSeg : 30;
+
+    useEffect(() => {
+        if (tab !== "operacion" || !monitoreoEnabled) return;
+        const id = setInterval(() => {
+            void cargarEstado();
+            setTick((t) => t + 1);
+        }, autorefreshSeg * 1000);
+        return () => clearInterval(id);
+    }, [cargarEstado, autorefreshSeg, monitoreoEnabled, tab]);
+
+    function cambiarTab(next: TabKey) {
+        router.replace(next === "operacion" ? pathname : `${pathname}?tab=${next}`);
+    }
+
+    return (
+        <div className="space-y-6">
+            <nav className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-3 dark:border-slate-800" aria-label="Secciones del tablero">
+                {TABS.map((t) => {
+                    const active = tab === t.key;
+                    return (
+                        <button
+                            key={t.key}
+                            type="button"
+                            aria-current={active ? "page" : undefined}
+                            onClick={() => cambiarTab(t.key)}
+                            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                                active
+                                    ? "bg-accent text-white shadow"
+                                    : "text-muted hover:bg-slate-100 hover:text-body dark:hover:bg-slate-800/60"
+                            }`}
+                        >
+                            {t.label}
+                        </button>
+                    );
+                })}
+            </nav>
+
+            {tab === "clasificacion" ? (
+                <ClasificacionTab />
+            ) : (
+                <div className="space-y-8">
+                    {cargando && !estado ? (
+                        <Cargando texto="Consultando el vigilante..." />
+                    ) : error && !estado ? (
+                        <ErrorState
+                            title="No pudimos consultar el monitoreo"
+                            description={error}
+                            onRetry={() => void cargarEstado()}
+                        />
+                    ) : (
+                        <>
+                            {!monitoreoEnabled && (
+                                <div
+                                    role="status"
+                                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+                                >
+                                    Monitoreo desactivado: el vigilante está apagado en Configuración. Los semáforos muestran el último estado conocido y el tablero no se actualiza solo.
+                                </div>
+                            )}
+
+                            <section className="space-y-4" aria-labelledby="semaforos-title">
+                                <h2 id="semaforos-title" className="text-lg font-semibold text-body">Salud del sistema</h2>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {SENALES_OPERACION.map((senal) => {
+                                        const datosSenal = estado?.senales?.[senal.clave];
+                                        return (
+                                            <SemaforoCard
+                                                key={senal.clave}
+                                                nombre={senal.nombre}
+                                                estado={datosSenal?.estado ?? "amarillo"}
+                                                ultimoProbeEn={datosSenal?.ultimoProbeEn ?? null}
+                                                hint={senal.hint}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </section>
+
+                            <section className="space-y-4" aria-labelledby="widgets-title">
+                                <h2 id="widgets-title" className="text-lg font-semibold text-body">Operación en curso</h2>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                    <WidgetCola recargaId={tick} />
+                                    <WidgetAtascados recargaId={tick} />
+                                    <WidgetErrores recargaId={tick} />
+                                    <WidgetSla recargaId={tick} />
+                                </div>
+                            </section>
+                        </>
+                    )}
+
+                    <AdminDashboard />
+                </div>
+            )}
+        </div>
+    );
+}

@@ -32,7 +32,6 @@ describe("fuentes del menú (SPEC-126)", () => {
         expect(nombres).toContain("COMITE_NAV_TABS");
         expect(nombres).toContain("COLEGIO_NAV_ITEMS");
         expect(nombres).toContain("OperadoresSubNav.tabs");
-        expect(nombres).toContain("DashboardSubNav.tabs");
         for (const nav of arraysNav()) {
             expect(nav.items.length).toBeGreaterThan(0);
         }

@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-17
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-18): ver [cierre.md](./cierre.md). 6 semáforos + incidentes con re-probe + email throttled + widgets + fusión Clasificación como sub-tab + ConfigPanel Monitoreo (13 params). Smoke con modelo vigente del motor (decisión ZEUS). Migración aditiva (I-53 intacta).
 
 Impacto en arquitectura: añade modelos `HealthProbe` e `IncidenteInfra` (migración aditiva) + valores nuevos al enum `AccionAudit`, worker nuevo `scripts/monitor-probes.mjs`, endpoints `/api/admin/monitoreo/*`, renovación de `/dashboard/admin/estadisticas/operacion` (6 semáforos + widgets + fusión de Clasificación como sub-tab), 12 parámetros `monitoreo.*` en seed y sección "Monitoreo" en ConfigPanel.
 

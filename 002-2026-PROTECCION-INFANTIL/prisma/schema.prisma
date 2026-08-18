@@ -51,6 +51,10 @@ enum AccionAudit {
   USER_UPDATE
   USER_DELETE
   CODE_REQUEST
+  // SPEC-171 (Pilar B): ciclo de vida de incidentes de infraestructura.
+  INFRA_INCIDENTE_ABIERTO
+  INFRA_INCIDENTE_RESUELTO
+  INFRA_EMAIL_ENVIADO
   CODE_VERIFY
   CODE_COMPLETE
   REPORT_DEACTIVATE
@@ -1605,3 +1609,33 @@ model DemoMarcado {
   @@index([entidadId])
   @@map("demo_marcado")
 }
+
+// SPEC-171 (Pilar B, I-51): probes de salud de infraestructura (append-only,
+// retención corta; los escribe scripts/monitor-probes.mjs).
+model HealthProbe {
+  id         String   @id @default(cuid())
+  senal      String // app | worker | bd | ollama_ping | ollama_smoke | tailscale
+  ok         Boolean
+  latenciaMs Int      @default(0)
+  detalle    String?
+  creadoEn   DateTime @default(now())
+
+  @@index([senal, creadoEn])
+}
+
+// SPEC-171: incidente de infraestructura abierto tras doble rojo (re-probe).
+// Se resuelve solo cuando el probe vuelve a verde. Email con throttle por senal.
+model IncidenteInfra {
+  id            String    @id @default(cuid())
+  senal         String // misma nomenclatura que HealthProbe.senal
+  estado        String    @default("ABIERTO") // ABIERTO | RESUELTO
+  inicio        DateTime  @default(now())
+  fin           DateTime?
+  detalle       String?
+  ultimoEmailEn DateTime?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  @@index([senal, estado])
+}
+

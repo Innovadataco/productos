@@ -495,6 +495,24 @@ async function start() {
         console.log(`[WORKER] Resumen semanal de colegios: OK ${JSON.stringify(resumen)}`);
         return { success: true, ...resumen };
     });
+
+    // SPEC-172 (Pilar D.5): deriva del motor en producción — lunes 07:00
+    // America/Bogota, misma franja que el resumen de colegios. La lógica vive
+    // en src/lib/motor/deriva-semanal.ts (script delgado, handler importable).
+    await ensureQueue("motor-deriva-semanal");
+    await boss.schedule("motor-deriva-semanal", "0 7 * * 1", {}, { tz: "America/Bogota" });
+    await boss.work("motor-deriva-semanal", async () => {
+        try {
+            const { ejecutarDerivaSemanal } = await import("../src/lib/motor/deriva-semanal.ts");
+            const resultado = await ejecutarDerivaSemanal();
+            console.log(`[WORKER] Deriva del motor: OK ${JSON.stringify(resultado)}`);
+            return { success: true, ...resultado };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR deriva del motor: ${msg}`);
+            throw err;
+        }
+    });
 }
 
 start().catch((err) => {

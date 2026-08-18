@@ -443,3 +443,32 @@ export async function enviarAlertasSuscriptores(payload: {
         });
     }
 }
+
+/**
+ * SPEC-171 (Pilar B, I-51) — Alerta de infraestructura en rojo. Texto plano,
+ * cero datos de reportes: solo la señal, desde cuándo y el detalle técnico.
+ * El throttle y la lista de destinatarios los resuelve el caller
+ * (`notificarIncidente` en src/lib/monitoreo/incidentes.ts), que además
+ * garantiza que no se llama con `monitoreo.enabled` en false.
+ */
+export async function enviarAlertaInfra(params: {
+    senal: string;
+    inicio: Date;
+    detalle?: string | null;
+    destinatarios: string[];
+}): Promise<void> {
+    const { senal, inicio, detalle, destinatarios } = params;
+    const result = await resend.emails.send({
+        from: FROM,
+        to: destinatarios,
+        subject: `[PI-ALERTA] Infra: ${senal} en rojo`,
+        text: `Señal en rojo: ${senal}\nDesde: ${inicio.toISOString()}\n${detalle ? `Detalle: ${detalle}\n` : ""}\nEl sistema reintenta solo; si persiste, revisa el servidor.`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error alerta infra:", result.error);
+        throw new Error("Error al enviar alerta de infraestructura");
+    }
+
+    logger.info(`[EMAIL] Alerta de infraestructura enviada (senal=${senal}, destinatarios=${destinatarios.length}, resendId=${result.data?.id ?? "n/a"})`);
+}

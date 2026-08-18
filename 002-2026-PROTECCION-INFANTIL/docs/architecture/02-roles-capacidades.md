@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 260 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1820 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 263 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1841 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -71,6 +71,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | permitir | permite | sí |
 | `/api/admin/matches` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/atascados` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
@@ -336,6 +339,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | permitir | permite | sí |
 | `/api/admin/matches` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/atascados` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
@@ -601,6 +607,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | permitir | permite | sí |
 | `/api/admin/matches` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/atascados` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
@@ -866,6 +875,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/matches` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/atascados` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
@@ -1131,6 +1143,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/matches` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/atascados` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
@@ -1396,6 +1411,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones/comparar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/matches` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/atascados` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
@@ -1661,6 +1679,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/simulaciones/[id]/resultados` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/simulaciones/comparar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/matches` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/monitoreo/atascados` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/monitoreo/estado` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/monitoreo/incidentes` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
@@ -1927,6 +1948,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/ia/simulaciones/[id]/resultados` | HTTP 401 | permite |
 | `/api/admin/ia/simulaciones/comparar` | HTTP 401 | permite |
 | `/api/admin/matches` | HTTP 401 | permite |
+| `/api/admin/monitoreo/atascados` | HTTP 401 | permite |
+| `/api/admin/monitoreo/estado` | HTTP 401 | permite |
+| `/api/admin/monitoreo/incidentes` | HTTP 401 | permite |
 | `/api/admin/operadores` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]/reactivar` | HTTP 401 | permite |

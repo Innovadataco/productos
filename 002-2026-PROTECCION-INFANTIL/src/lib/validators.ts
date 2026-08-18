@@ -99,6 +99,13 @@ export const padresQuerySchema = z.object({
     q: z.string().trim().min(2).max(120).optional(),
 });
 
+// SPEC-171 (Pilar B): incidentes de infraestructura, paginación estándar + filtro por estado
+export const incidentesInfraQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    estado: z.enum(["ABIERTO", "RESUELTO"]).optional(),
+});
+
 const estadosPermitidos = Object.values(EstadoReporte) as [string, ...string[]];
 const categoriasPermitidas = Object.values(CategoriaConducta) as [string, ...string[]];
 
