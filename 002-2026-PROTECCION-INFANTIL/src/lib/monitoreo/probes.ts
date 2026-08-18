@@ -6,9 +6,12 @@
  * el caller (`scripts/monitor-probes.mjs`) los relee de ParametroSistema en
  * cada ciclo.
  *
+ * Frontera DAL (Q-3, auditoría ZEUS #55): este archivo NO importa prisma;
+ * el probe de BD delega en `MonitoreoRepository`.
+ *
  * Señales: app | worker | bd | ollama_ping | ollama_smoke | tailscale.
  */
-import { prisma } from "../prisma";
+import { MonitoreoRepository } from "@/lib/dal/repositories/monitoreo";
 import { getParametroSistema } from "@/lib/parametros";
 import { leerHeartbeatWorker } from "@/lib/worker-heartbeat";
 
@@ -62,7 +65,7 @@ export function probeWorker({ heartbeatMaxSeg }: { heartbeatMaxSeg: number }): R
 export async function probeBd(): Promise<ResultadoProbe> {
     const inicio = Date.now();
     try {
-        await prisma.$queryRaw`SELECT 1`;
+        await new MonitoreoRepository().pingBd();
         return { ok: true, latenciaMs: Date.now() - inicio };
     } catch (error) {
         return { ok: false, latenciaMs: Date.now() - inicio, detalle: mensajeError(error) };

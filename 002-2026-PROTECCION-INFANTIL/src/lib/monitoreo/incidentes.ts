@@ -8,14 +8,18 @@
  * incidente se resuelve solo cuando el probe vuelve a verde.
  *
  * Audit sin texto de reportes: solo señal, timestamps y detalle técnico.
+ * Frontera DAL (Q-3, auditoría ZEUS #55): este archivo NO importa prisma;
+ * toda la persistencia pasa por `MonitoreoRepository`.
  */
-import { prisma } from "../prisma";
+import { MonitoreoRepository } from "@/lib/dal/repositories/monitoreo";
 import { getParametroSistema } from "@/lib/parametros";
 import { logAudit } from "@/lib/audit";
 import { enviarAlertaInfra } from "@/lib/email";
 import { logger } from "@/lib/logger";
 import type { IncidenteInfra } from "@prisma/client";
 import type { ResultadoProbe, SenalMonitoreo } from "./probes";
+
+const repo = () => new MonitoreoRepository();
 
 export type ResultadoEvaluacion = "verde" | "resuelto" | "pendiente-reprobe";
 
@@ -28,13 +32,11 @@ async function monitoreoHabilitado(): Promise<boolean> {
 /** Persiste el resultado de un probe. No-op si el vigilante está apagado. */
 export async function registrarProbe(senal: SenalMonitoreo, resultado: ResultadoProbe): Promise<void> {
     if (!(await monitoreoHabilitado())) return;
-    await prisma.healthProbe.create({
-        data: {
-            senal,
-            ok: resultado.ok,
-            latenciaMs: resultado.latenciaMs,
-            detalle: resultado.detalle ?? null,
-        },
+    await repo().crearProbe({
+        senal,
+        ok: resultado.ok,
+        latenciaMs: resultado.latenciaMs,
+        detalle: resultado.detalle ?? null,
     });
 }
 
@@ -47,16 +49,11 @@ export async function evaluarSenal(senal: SenalMonitoreo, resultado: ResultadoPr
     if (!(await monitoreoHabilitado())) return resultado.ok ? "verde" : "pendiente-reprobe";
     if (!resultado.ok) return "pendiente-reprobe";
 
-    const abierto = await prisma.incidenteInfra.findFirst({
-        where: { senal, estado: "ABIERTO" },
-    });
+    const abierto = await repo().incidenteAbiertoDe(senal);
     if (!abierto) return "verde";
 
     const fin = new Date();
-    await prisma.incidenteInfra.update({
-        where: { id: abierto.id },
-        data: { estado: "RESUELTO", fin },
-    });
+    await repo().resolverIncidente(abierto.id, fin);
     await logAudit({
         accion: "INFRA_INCIDENTE_RESUELTO",
         tipoRecurso: "IncidenteInfra",
@@ -74,14 +71,10 @@ export async function evaluarSenal(senal: SenalMonitoreo, resultado: ResultadoPr
 export async function confirmarRojo(senal: SenalMonitoreo, detalle?: string): Promise<IncidenteInfra | null> {
     if (!(await monitoreoHabilitado())) return null;
 
-    const existente = await prisma.incidenteInfra.findFirst({
-        where: { senal, estado: "ABIERTO" },
-    });
+    const existente = await repo().incidenteAbiertoDe(senal);
     if (existente) return existente;
 
-    const incidente = await prisma.incidenteInfra.create({
-        data: { senal, estado: "ABIERTO", detalle: detalle ?? null },
-    });
+    const incidente = await repo().crearIncidente(senal, detalle ?? null);
     await logAudit({
         accion: "INFRA_INCIDENTE_ABIERTO",
         tipoRecurso: "IncidenteInfra",
@@ -130,10 +123,7 @@ export async function notificarIncidente(incidente: IncidenteInfra): Promise<boo
     }
 
     const ahora = new Date();
-    await prisma.incidenteInfra.update({
-        where: { id: incidente.id },
-        data: { ultimoEmailEn: ahora },
-    });
+    await repo().marcarEmailEnviado(incidente.id, ahora);
     await logAudit({
         accion: "INFRA_EMAIL_ENVIADO",
         tipoRecurso: "IncidenteInfra",
