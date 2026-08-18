@@ -56,6 +56,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/ia/simulacion/TablaResultadosSimulacion.test.tsx",
     "src/components/modules/monitoreo/OperacionTableroClient.test.tsx",
     "src/components/modules/monitoreo/SemaforoCard.test.tsx",
+    "src/components/modules/motor/DerivaProdBloque.test.tsx",
     "src/components/modules/nav-logo.test.ts",
     "src/components/ui/Accordion.test.tsx",
     "src/components/ui/Alerta.test.tsx",

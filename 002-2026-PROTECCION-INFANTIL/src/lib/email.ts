@@ -3,6 +3,7 @@ import { requireEnv } from "./env";
 import { prisma } from "./prisma";
 import { getParametroSistema } from "./parametros";
 import { logger } from "@/lib/logger";
+import type { FilaDeriva } from "./motor/deriva";
 
 const resend = new Resend(requireEnv("RESEND_API_KEY", 10));
 const FROM = requireEnv("EMAIL_FROM", 5);
@@ -471,4 +472,60 @@ export async function enviarAlertaInfra(params: {
     }
 
     logger.info(`[EMAIL] Alerta de infraestructura enviada (senal=${senal}, destinatarios=${destinatarios.length}, resendId=${result.data?.id ?? "n/a"})`);
+}
+
+/**
+ * SPEC-172 (Pilar D.5) — Aviso semanal de deriva del motor en producción.
+ * Texto plano con estadísticas agregadas por categoría: cero textos de
+ * reportes y cero datos de personas. La deriva es "tasa de corrección humana
+ * confirmada sobre lo revisado", no un error absoluto (presunción de inocencia
+ * también aplica al lenguaje operativo).
+ *
+ * A diferencia de las demás enviar*: NO lanza si Resend falla — el snapshot ya
+ * quedó persistido y el caller (job semanal) decide si el fallo amerita
+ * reintento; aquí solo se registra el error.
+ */
+export async function enviarAlertaDerivaMotor(params: {
+    destinatarios: string[];
+    filas: FilaDeriva[];
+    desde: Date;
+    hasta: Date;
+}): Promise<void> {
+    const { destinatarios, filas, desde, hasta } = params;
+    const sobreUmbral = filas.filter((f) => f.alertada).length;
+
+    const filaTexto = (f: FilaDeriva): string => {
+        const tasa = (f.tasaCorreccion * 100).toFixed(1);
+        const banco = f.accuracyBanco !== null ? (f.accuracyBanco * 100).toFixed(1) : "s/d";
+        const brecha = f.brechaPp !== null ? f.brechaPp.toFixed(1) : "s/d";
+        const nota = f.muestraInsuficiente ? "  (muestra insuficiente)" : "";
+        return `${f.categoria} | ${f.total} | ${f.correcciones} | ${tasa}% | ${banco}% | ${brecha} pp${nota}`;
+    };
+
+    const text = [
+        "Deriva del motor de clasificación en producción: tasa de corrección humana confirmada sobre lo revisado,",
+        "comparada con el error del banco curado (brecha en puntos porcentuales).",
+        `Semana medida: ${desde.toISOString().slice(0, 10)} a ${hasta.toISOString().slice(0, 10)} (America/Bogota).`,
+        "",
+        "categoria | total | correcciones | tasa% | banco% | brecha pp",
+        ...filas.map(filaTexto),
+        "",
+        "Afina la rúbrica en Simulación: /dashboard/admin/ia?tab=simulacion",
+    ].join("\n");
+
+    const result = await resend.emails.send({
+        from: FROM,
+        to: destinatarios,
+        subject: `[PI-MOTOR] Deriva del motor: ${sobreUmbral} categorías sobre el umbral`,
+        text,
+    });
+
+    if (result.error) {
+        logger.error("Resend error alerta deriva motor:", result.error);
+        return;
+    }
+
+    logger.info(
+        `[EMAIL] Alerta de deriva del motor enviada (categorías=${filas.length}, sobreUmbral=${sobreUmbral}, resendId=${result.data?.id ?? "n/a"})`
+    );
 }

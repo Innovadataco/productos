@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-17
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-18): ver [cierre.md](./cierre.md). Deriva semanal × categoría vs banco curado con snapshot en tabla (opción A), fórmula exacta con test, cron lunes 07:00 Bogotá, email umbral, tablero motor + ConfigPanel. Migración aditiva (I-53 intacta).
 
 Impacto en arquitectura: sin migraciones (reusa `CorreccionAdmin`, `SimulacionRun`, `ClasificacionIA`). Añade 6 parámetros `motor.deriva.*`, endpoints `/api/admin/motor/deriva*`, job semanal programado (patrón `boss.schedule` existente), email de deriva alta, tablero nuevo `/dashboard/admin/estadisticas/motor` y sección "Motor › Deriva" en ConfigPanel.
 

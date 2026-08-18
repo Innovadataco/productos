@@ -18,6 +18,7 @@ export const SECTIONS: { key: string; label: string; description: string; prefix
     { key: "ratelimit", label: "Rate Limiting", description: "Límites de peticiones por ventana de tiempo.", prefixes: ["ratelimit."] },
     { key: "reportes", label: "Procesamiento de Reportes", description: "Modelos de IA, umbrales de duplicados y parámetros del worker.", prefixes: ["reportes."] },
     { key: "monitoreo", label: "Monitoreo", description: "El vigilante del sistema: cada cuánto revisa, a quién avisa y qué tan seguido", prefixes: ["monitoreo."] },
+    { key: "motor-deriva", label: "Motor › Deriva", description: "Cuánto se desvía el motor en producción frente al banco curado y cuándo avisar", prefixes: ["motor.deriva."] },
     { key: "ui", label: "Interfaz de usuario", description: "Parámetros visibles para usuarios finales, como SLA de seguimiento.", prefixes: ["ui."] },
     { key: "security", label: "Seguridad", description: "Intentos de login, duración de bloqueo, longitud de contraseña, etc.", prefixes: ["security."] },
     { key: "system", label: "Sistema", description: "Parámetros generales de la aplicación.", prefixes: ["system."] },

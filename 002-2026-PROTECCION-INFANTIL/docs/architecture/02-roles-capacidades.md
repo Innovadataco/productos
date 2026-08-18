@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 263 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1841 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 266 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1862 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -74,6 +74,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/atascados` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
+| `/api/admin/motor/deriva` | api | permitir | permite | sí |
+| `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
@@ -239,6 +241,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/dataset-entrenamiento` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/clasificacion` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/motor` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
@@ -342,6 +345,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/atascados` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
+| `/api/admin/motor/deriva` | api | permitir | permite | sí |
+| `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
@@ -507,6 +512,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/dataset-entrenamiento` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/clasificacion` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/motor` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
@@ -610,6 +616,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/atascados` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
+| `/api/admin/motor/deriva` | api | permitir | permite | sí |
+| `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
@@ -775,6 +783,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/dataset-entrenamiento` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/clasificacion` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/motor` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
@@ -878,6 +887,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/atascados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
+| `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
@@ -1043,6 +1054,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/estadisticas` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/estadisticas/motor` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1146,6 +1158,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/atascados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
+| `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
@@ -1311,6 +1325,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/estadisticas` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/estadisticas/motor` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -1414,6 +1429,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/atascados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
+| `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
@@ -1579,6 +1596,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/estadisticas` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/estadisticas/motor` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/ | no permite | sí |
@@ -1682,6 +1700,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/atascados` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/monitoreo/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/motor/deriva` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/motor/deriva/recalcular` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
@@ -1847,6 +1867,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/estadisticas` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/estadisticas/motor` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/login | no permite | sí |
@@ -1951,6 +1972,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/monitoreo/atascados` | HTTP 401 | permite |
 | `/api/admin/monitoreo/estado` | HTTP 401 | permite |
 | `/api/admin/monitoreo/incidentes` | HTTP 401 | permite |
+| `/api/admin/motor/deriva` | HTTP 401 | permite |
+| `/api/admin/motor/deriva/recalcular` | HTTP 401 | permite |
 | `/api/admin/operadores` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]/reactivar` | HTTP 401 | permite |
