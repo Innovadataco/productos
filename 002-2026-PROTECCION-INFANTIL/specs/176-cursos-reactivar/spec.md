@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-18
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-18): ver [cierre.md](./cierre.md). Toggle Mostrar desactivados + reactivación auditada con acción propia (COLEGIO_CURSO_ACTIVADO, migración aditiva).
 
 Impacto en arquitectura: mínimo — un parámetro de consulta en el listado de cursos (`GET /api/colegio/cursos?incluirInactivos=true`), un método de repositorio y UI en la página de cursos. Sin cambios de modelo ni migraciones.
 
