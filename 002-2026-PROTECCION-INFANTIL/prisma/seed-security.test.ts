@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
+import { CATALOGO_MODULOS } from "../src/lib/permisos-catalogo";
 
 const SEED_PATH = path.join(process.cwd(), "prisma", "seed.ts");
 
@@ -69,10 +70,34 @@ describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", (
         // SPEC-128 (D-43): solo comite_bandeja. 002-PI-056 (F2, decisión ZEUS): el comité
         // genera denuncias formales → denuncia_formal, que es hijo de bandeja_reportes
         // (jerarquía AND) y exige el padre. No reabre D-43: esas rutas no son ADMIN_ONLY.
-        expect(claves).toEqual(['"comite_bandeja"', '"bandeja_reportes"', '"denuncia_formal"']);
+        // I-57 (SPEC-175): comite_bandeja también exige SU padre `comite` (jerarquía AND);
+        // sin él la bandeja del comité quedaba inoperante en prod. `comite` solo mapea a
+        // rutas ADMIN_ONLY (la puerta las niega) y los endpoints que lo exigen verifican
+        // verifyAuth("ADMIN") antes — concederlo no abre nada al comité.
+        expect(claves).toEqual(['"comite"', '"comite_bandeja"', '"bandeja_reportes"', '"denuncia_formal"']);
     });
 
     it("ADMIN deriva sus grants del catálogo completo (conserva comite y comite_auditoria)", () => {
         expect(bloqueClavesPorRol()).toMatch(/ADMIN:\s*modulosSeed\.map/);
+    });
+});
+
+describe("grants por rol — jerarquía AND completa (I-57, SPEC-175)", () => {
+    it("todo rol que recibe un módulo hijo recibe también su padre", () => {
+        const bloque = bloqueClavesPorRol();
+        const padreDe = new Map(CATALOGO_MODULOS.filter((m) => m.padre).map((m) => [m.clave, m.padre!]));
+        const violaciones: string[] = [];
+        // Entradas literales rol: ["a", "b"] — ADMIN es dinámico (todo el catálogo) y no aplica.
+        for (const m of bloque.matchAll(/(\w+):\s*\[([^\]]*)\]/g)) {
+            const [_, rol, listaRaw] = m;
+            const claves = new Set(listaRaw.match(/"[^"]+"/g)?.map((c) => c.replaceAll('"', "")) ?? []);
+            for (const clave of claves) {
+                const padre = padreDe.get(clave);
+                if (padre && !claves.has(padre)) {
+                    violaciones.push(`${rol}: recibe "${clave}" pero no su padre "${padre}"`);
+                }
+            }
+        }
+        expect(violaciones, violaciones.join("; ")).toEqual([]);
     });
 });

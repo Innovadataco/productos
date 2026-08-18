@@ -109,7 +109,9 @@
 | [168](168-comite-convivencia/spec.md) | SPEC-168 — Comité de Convivencia por colegio (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [169](169-onboarding-cobertura/spec.md) | SPEC-169 — Onboarding + cobertura + notificaciones in-app (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [170](170-limpieza-centro-control-ia/spec.md) | SPEC-170 — Limpieza del Centro de Control IA (002-PI-068) | 🔵 Planeada |
-| [175](175-hotfix-permisos-comite/spec.md) | SPEC-175 — Hotfix I-57: permiso padre del comité de convivencia (002-PI-072) | 🔵 Planeada |
+| [175](175-hotfix-permisos-comite/spec.md) | SPEC-175 — Hotfix I-57: permiso padre del comité de convivencia (002-PI-072) | 🟢 Implementada (ver cierre.md) |
+| [176](176-cursos-reactivar/spec.md) | SPEC-176 — Cursos: ver y reactivar desactivados (002-PI-073) | 🔵 Planeada |
+| [177](177-estadisticas-comite/spec.md) | SPEC-177 — Estadísticas del comité más útiles (002-PI-074) | 🔵 Planeada |
 | [173](173-restructura-nav-colegio/spec.md) | SPEC-173 — Módulo Colegio: restructura nav por rol + fixes H01-H06 (002-PI-071) | 🟢 Implementada (ver cierre.md) |
 
 ## Tabla completa (119 specs)
@@ -267,7 +269,9 @@
 | [168](168-comite-convivencia/spec.md) | SPEC-168 — Comité de Convivencia por colegio (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [169](169-onboarding-cobertura/spec.md) | SPEC-169 — Onboarding + cobertura + notificaciones in-app (002-PI-062) | 🟢 Implementada (ver cierre.md) |
 | [170](170-limpieza-centro-control-ia/spec.md) | SPEC-170 — Limpieza del Centro de Control IA (002-PI-068) | 🔵 Planeada |
-| [175](175-hotfix-permisos-comite/spec.md) | SPEC-175 — Hotfix I-57: permiso padre del comité de convivencia (002-PI-072) | 🔵 Planeada |
+| [175](175-hotfix-permisos-comite/spec.md) | SPEC-175 — Hotfix I-57: permiso padre del comité de convivencia (002-PI-072) | 🟢 Implementada (ver cierre.md) |
+| [176](176-cursos-reactivar/spec.md) | SPEC-176 — Cursos: ver y reactivar desactivados (002-PI-073) | 🔵 Planeada |
+| [177](177-estadisticas-comite/spec.md) | SPEC-177 — Estadísticas del comité más útiles (002-PI-074) | 🔵 Planeada |
 | [173](173-restructura-nav-colegio/spec.md) | SPEC-173 — Módulo Colegio: restructura nav por rol + fixes H01-H06 (002-PI-071) | 🟢 Implementada (ver cierre.md) |
 
 ## Incidencias de calidad de datos

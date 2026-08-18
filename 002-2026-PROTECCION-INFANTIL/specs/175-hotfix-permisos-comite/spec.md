@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-18
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-18): ver plan.md y esta nota. **HALLAZGO de alcance (a la atención de ZEUS)**: el guard estructural nuevo atrapó una SEGUNDA instancia del mismo bug — `COMITE_VALIDACION` (comité de plataforma) recibía `comite_bandeja` sin su padre `comite` → su bandeja también estaba inoperante en prod. Misma clase, mismo fix (grant del padre), mismo candado verificado en fuente: las rutas de `comite` son ADMIN_ONLY en el proxy y los endpoints que exigen el módulo `comite` (`/api/admin/comite/integrantes/**`) verifican `verifyAuth("ADMIN")` ANTES de `assertModulo` — conceder el padre no abre nada al comité de plataforma. Test D-43 de `seed-security.test.ts` actualizado para fijar la lista nueva con la razón documentada.
 
 Impacto en arquitectura: mínimo — una línea en `prisma/seed-modulos-grants.ts` (grant del rol) + tests que fijan el candado. Sin cambios de schema, sin migración, sin endpoints nuevos.
 

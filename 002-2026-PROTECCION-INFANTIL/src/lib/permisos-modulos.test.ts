@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { CATALOGO_MODULOS } from "./permisos-catalogo";
-import { puedeAccederAModulo, rolesConocidos } from "./permisos-modulos";
+import { puedeAccederAModulo, rolesConocidos, modulosPermitidosParaRol } from "./permisos-modulos";
+import { syncModulosYGrants } from "../../prisma/seed-modulos-grants";
 
 async function crearModulo(clave: string, padreId?: string) {
     return prisma.moduloPermisible.create({
@@ -108,5 +109,22 @@ describe("permisos-modulos", () => {
         // Jerarquía AND: sin el padre, el submódulo se deniega aunque esté activo
         await setPermiso("OPERADOR", padre.id, false);
         expect(await puedeAccederAModulo("OPERADOR", "expediente_revelar_original")).toBe(false);
+    });
+
+    it("I-57 (SPEC-175): COMITE_CONVIVENCIA obtiene su bandeja con los grants REALES del seed y nada del rector", async () => {
+        // resetDatabase() otorga todo a todos (aislamiento de la suite); aquí medimos
+        // los grants REALES del seed: limpiamos y aplicamos el sync de verdad.
+        await prisma.permisoModulo.deleteMany({});
+        await syncModulosYGrants(prisma);
+
+        const permitidos = await modulosPermitidosParaRol("COMITE_CONVIVENCIA");
+        // La bandeja queda concedida (padre `colegios` + hija activos: jerarquía AND).
+        expect(permitidos.has("colegios_comite_bandeja")).toBe(true);
+        // Candado: el comité NO gana los módulos del rector.
+        expect(permitidos.has("colegios_gestion")).toBe(false);
+        expect(permitidos.has("colegios_comite")).toBe(false);
+        expect(permitidos.has("colegios_auditoria")).toBe(false);
+        expect(permitidos.has("colegios_onboarding")).toBe(false);
+        expect(permitidos.has("colegios_notificaciones")).toBe(false);
     });
 });
