@@ -69,6 +69,30 @@ describe("/api/colegio/onboarding", () => {
         expect(json.onboarding.pasos[3]?.estado).toBe("pendiente");
     });
 
+    it("GET con onboarding completado incluye resumen con conteos aislados por colegio", async () => {
+        const { colegio } = await setupSchoolAdmin();
+        await prisma.onboardingColegio.updateMany({
+            where: { colegioId: colegio.id },
+            data: { estado: "completado", completadoEn: new Date() },
+        });
+        const curso = await prisma.curso.create({
+            data: { colegioId: colegio.id, nombre: "6A", estado: "activo" },
+        });
+        await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId: colegio.id, nombre: "Ana", apellidos: "López" } });
+        await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId: colegio.id, nombre: "Luis", apellidos: "Gómez" } });
+        await prisma.profesor.create({ data: { colegioId: colegio.id, nombre: "Carlos", apellidos: "Pérez" } });
+
+        // Datos de OTRO colegio no deben contarse en el resumen.
+        const { colegio: otroColegio } = await crearColegioConAdmin();
+        await prisma.profesor.create({ data: { colegioId: otroColegio.id, nombre: "Otro", apellidos: "Profesor" } });
+
+        const res = await GET(request("GET", "http://localhost:5005/api/colegio/onboarding", undefined, mockToken));
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.onboarding.estado).toBe("completado");
+        expect(json.onboarding.resumen).toEqual({ estudiantes: 2, cursos: 1, profesores: 1 });
+    });
+
     it("PATCH a 'omitido' oculta el onboarding y audita", async () => {
         const { colegio } = await setupSchoolAdmin();
         const res = await PATCH(

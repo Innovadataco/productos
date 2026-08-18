@@ -7,7 +7,7 @@ import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import type { PuntoTendencia } from "@/lib/dal/repositories/colegio-resumen";
 import { calcularComparativaCursos, type ComparativaCursos } from "./comparativa";
-import { calcularEstadisticasColegio, type EstadisticasColegio, type EstadisticasCurso } from "./estadisticas";
+import { calcularEstadisticasColegio, ESTADOS_VISIBLES, type EstadisticasColegio, type EstadisticasCurso } from "./estadisticas";
 import { obtenerPatronesColegio, type PatronesColegioDto } from "./patrones";
 import { periodoTrimestre } from "./patrones";
 
@@ -56,6 +56,7 @@ export interface EstadisticasInteligenciaColegio {
         alertas: number;
     };
     porCurso: EstadisticasCurso[];
+    alertasPorTipoSujeto: { ESTUDIANTE: number; PROFESOR: number; ACUDIENTE: number };
     tendencia: TendenciaInteligencia;
     reloj24h: number[];
     patrones: PatronesColegioDto;
@@ -79,7 +80,7 @@ export async function calcularInteligenciaColegio(colegioId: string): Promise<Es
 
     const alertaRepo = new AlertaColegioRepository();
 
-    const [estadisticas, serieSemanal, serieMensual, serieAnual, reloj24h, patrones, comparativa] = await Promise.all([
+    const [estadisticas, serieSemanal, serieMensual, serieAnual, reloj24h, patrones, comparativa, alertasPorTipoSujeto] = await Promise.all([
         calcularEstadisticasColegio(colegioId),
         alertaRepo.serieReportesPorPeriodo(colegioId, "week", semanas[0]!),
         alertaRepo.serieReportesPorPeriodo(colegioId, "month", meses[0]!),
@@ -87,6 +88,7 @@ export async function calcularInteligenciaColegio(colegioId: string): Promise<Es
         alertaRepo.reloj24h(colegioId),
         obtenerPatronesColegio(colegioId, periodoTrimestre(ahora)),
         calcularComparativaCursos(colegioId, "grado"),
+        alertaRepo.contarPorTipoSujeto(colegioId, ESTADOS_VISIBLES),
     ]);
 
     return {
@@ -100,6 +102,7 @@ export async function calcularInteligenciaColegio(colegioId: string): Promise<Es
             alertas: estadisticas.totales.alertas,
         },
         porCurso: estadisticas.porCurso,
+        alertasPorTipoSujeto,
         tendencia: {
             semanal: rellenarSerie(serieSemanal, semanas),
             mensual: rellenarSerie(serieMensual, meses),

@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 257 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1799 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 260 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1820 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -153,6 +153,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
@@ -257,6 +258,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/comite` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/comite/casos` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/comite/casos/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/comite/estadisticas` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/comite/integrantes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/confianza` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/configuracion` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/cursos` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -415,6 +418,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
@@ -519,6 +523,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/comite` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/comite/casos` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/comite/casos/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/comite/estadisticas` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/colegio/comite/integrantes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/confianza` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/configuracion` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/cursos` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -677,6 +683,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
@@ -781,6 +788,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/comite` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/comite/casos` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/comite/casos/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/comite/estadisticas` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/colegio/comite/integrantes` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/confianza` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/configuracion` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/cursos` | página | redirigir→/dashboard/admin/comite | no permite | sí |
@@ -939,6 +948,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
@@ -1043,6 +1053,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/comite` | página | permitir | permite | sí |
 | `/dashboard/colegio/comite/casos` | página | permitir | permite | sí |
 | `/dashboard/colegio/comite/casos/[id]` | página | permitir | permite | sí |
+| `/dashboard/colegio/comite/estadisticas` | página | permitir | permite | sí |
+| `/dashboard/colegio/comite/integrantes` | página | permitir | permite | sí |
 | `/dashboard/colegio/confianza` | página | permitir | permite | sí |
 | `/dashboard/colegio/configuracion` | página | permitir | permite | sí |
 | `/dashboard/colegio/cursos` | página | permitir | permite | sí |
@@ -1075,8 +1087,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
 | Ruta | Tipo | Puerta (`proxy()`) | Predicado | Alineado |
 | --- | --- | --- | --- | --- |
-| `/` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `//` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
+| `/` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `//` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/api/` | api | HTTP 403 | no permite | sí |
 | `/api/admin` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/simulacion-score` | api | HTTP 403 | no permite | sí |
@@ -1201,9 +1213,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
-| `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
-| `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
-| `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
+| `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
+| `/api/colegio/comite/integrantes` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/comite/integrantes/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/comite/integrantes/[id]/estado` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/comite/solicitudes` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/notas` | api | permitir | permite | sí |
@@ -1267,71 +1280,73 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/seguimiento` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | HTTP 403 | no permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
-| `/consulta` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard-publico` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/anti-abuso` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/colegios` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/colegios/[id]/estructura` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/colegios/nuevo` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/comite` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/comite/apelaciones` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/configuracion` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/estadisticas` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/estadisticas/operacion` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/monitoreo/worker` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/operadores` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/operadores/asignar` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/operadores/auditoria` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/operadores/gestion` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/operadores/modelo` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/padres` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/padres/[id]/circulo` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/apelaciones` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/circulo-confianza` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/alertas` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/alertas/[id]` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/alumnos/[id]` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/analisis/comparativa` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/auditoria` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
+| `/consulta` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard-publico` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/anti-abuso` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/colegios` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/colegios/[id]/estructura` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/colegios/nuevo` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/comite` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/comite/apelaciones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/configuracion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/dataset-entrenamiento` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/estadisticas` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/estadisticas/clasificacion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/estadisticas/operacion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/monitoreo/worker` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/operadores` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/operadores/asignar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/operadores/auditoria` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/operadores/gestion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/operadores/modelo` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/padres` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/padres/[id]/circulo` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/apelaciones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/circulo-confianza` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/alertas` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/alertas/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/alumnos/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/analisis/comparativa` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/auditoria` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/colegio/comite` | página | permitir | permite | sí |
 | `/dashboard/colegio/comite/casos` | página | permitir | permite | sí |
 | `/dashboard/colegio/comite/casos/[id]` | página | permitir | permite | sí |
-| `/dashboard/colegio/confianza` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/configuracion` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/cursos` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/cursos/[id]` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/cursos/carga` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/cursos/nuevo` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/cursos/unificado` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/materias` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/onboarding` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/profesores` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/colegio/tablero` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/docs` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/docs/operar` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/docs/tecnico` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/login` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/mis-reportes` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/offline` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/privacidad` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/recuperar` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/recuperar/[token]` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/registro` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/reportar` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/seguimiento` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
-| `/terminos` | página | redirigir→/dashboard/colegio/comite/casos | no permite | sí |
+| `/dashboard/colegio/comite/estadisticas` | página | permitir | permite | sí |
+| `/dashboard/colegio/comite/integrantes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/confianza` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/configuracion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/cursos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/cursos/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/cursos/carga` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/cursos/nuevo` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/cursos/unificado` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/estadisticas` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/materias` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/onboarding` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/profesores` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/colegio/tablero` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/docs` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/docs/operar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/docs/tecnico` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/login` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/mis-reportes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/offline` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/privacidad` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/recuperar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/recuperar/[token]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/registro` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/reportar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/seguimiento` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/terminos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 
 ### PARENT
 
@@ -1463,6 +1478,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
@@ -1567,6 +1583,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/comite` | página | permitir | permite | sí |
 | `/dashboard/colegio/comite/casos` | página | permitir | permite | sí |
 | `/dashboard/colegio/comite/casos/[id]` | página | permitir | permite | sí |
+| `/dashboard/colegio/comite/estadisticas` | página | permitir | permite | sí |
+| `/dashboard/colegio/comite/integrantes` | página | permitir | permite | sí |
 | `/dashboard/colegio/confianza` | página | permitir | permite | sí |
 | `/dashboard/colegio/configuracion` | página | permitir | permite | sí |
 | `/dashboard/colegio/cursos` | página | permitir | permite | sí |
@@ -1725,6 +1743,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/cuenta` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/cuenta/regenerar-password` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/comite/estadisticas` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/integrantes` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/integrantes/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/integrantes/[id]/estado` | api | HTTP 401 | permite | **NO** |
@@ -1829,6 +1848,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/comite` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/comite/casos` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/comite/casos/[id]` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/comite/estadisticas` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/colegio/comite/integrantes` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/confianza` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/configuracion` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/cursos` | página | redirigir→/login | permite | **NO** |
@@ -1975,6 +1996,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/comite` | HTTP 401 | permite |
 | `/api/colegio/comite/cuenta` | HTTP 401 | permite |
 | `/api/colegio/comite/cuenta/regenerar-password` | HTTP 401 | permite |
+| `/api/colegio/comite/estadisticas` | HTTP 401 | permite |
 | `/api/colegio/comite/integrantes` | HTTP 401 | permite |
 | `/api/colegio/comite/integrantes/[id]` | HTTP 401 | permite |
 | `/api/colegio/comite/integrantes/[id]/estado` | HTTP 401 | permite |
@@ -2034,6 +2056,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/colegio/comite` | redirigir→/login | permite |
 | `/dashboard/colegio/comite/casos` | redirigir→/login | permite |
 | `/dashboard/colegio/comite/casos/[id]` | redirigir→/login | permite |
+| `/dashboard/colegio/comite/estadisticas` | redirigir→/login | permite |
+| `/dashboard/colegio/comite/integrantes` | redirigir→/login | permite |
 | `/dashboard/colegio/confianza` | redirigir→/login | permite |
 | `/dashboard/colegio/configuracion` | redirigir→/login | permite |
 | `/dashboard/colegio/cursos` | redirigir→/login | permite |
@@ -2063,17 +2087,13 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | centro_control_ia | `/dashboard/admin/ia` | ADMIN |
 | colegios | `/dashboard/colegio` | ADMIN, SCHOOL_ADMIN |
 | colegios_auditoria | `/dashboard/colegio/auditoria` | ADMIN, SCHOOL_ADMIN |
-| colegios_comite | `/dashboard/colegio/comite` | ADMIN, SCHOOL_ADMIN |
 | colegios_comite_bandeja | `/dashboard/colegio/comite/casos` | ADMIN, COMITE_CONVIVENCIA, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/admin/colegios` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/alertas` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/configuracion` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/cursos` | ADMIN, SCHOOL_ADMIN |
-| colegios_gestion | `/dashboard/colegio/cursos/unificado` | ADMIN, SCHOOL_ADMIN |
 | colegios_gestion | `/dashboard/colegio/estadisticas` | ADMIN, SCHOOL_ADMIN |
-| colegios_gestion | `/dashboard/colegio/materias` | ADMIN, SCHOOL_ADMIN |
-| colegios_gestion | `/dashboard/colegio/profesores` | ADMIN, SCHOOL_ADMIN |
-| colegios_onboarding | `/dashboard/colegio/onboarding` | ADMIN, SCHOOL_ADMIN |
+| colegios_gestion | `#` | ADMIN, SCHOOL_ADMIN |
 | comite | `/dashboard/admin/comite/gestion` | ADMIN |
 | comite_auditoria | `/dashboard/admin/comite/auditoria` | ADMIN |
 | comite_bandeja | `/dashboard/admin/comite` | ADMIN, COMITE_VALIDACION |

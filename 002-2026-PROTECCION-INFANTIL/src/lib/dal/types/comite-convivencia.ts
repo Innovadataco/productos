@@ -59,3 +59,30 @@ export interface InfoClienteDto {
     ipAddress: string;
     userAgent: string;
 }
+
+/**
+ * SPEC-173: home del rol COMITE_CONVIVENCIA. SOLO metadatos de caso
+ * (número, categoría, estado, fechas, SLA); nunca texto de reporte ni
+ * datos del denunciante.
+ */
+export interface CasoProximoSlaDto {
+    id: string;
+    numero: string;
+    estado: string;
+    categoria: string | null;
+    creadoEn: string;
+    prioridad: string | null;
+    vencimientoSla: string | null;
+}
+
+export interface ResumenComiteHomeDto {
+    casosAbiertos: number;
+    misCasosAsignados: number;
+    proximosVencerSla: CasoProximoSlaDto[];
+}
+
+export interface EstadisticasComiteDto {
+    casosPorEstado: Record<string, number>;
+    tiempoMedioResolucionDias: number | null;
+    topCategorias: { categoria: string; total: number }[];
+}

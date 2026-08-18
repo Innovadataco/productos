@@ -167,4 +167,45 @@ describe("/api/colegio/cursos/[id]/materias", () => {
             expect(res.status).toBe(403);
         }
     });
+
+    // SPEC-173 (H02): Materia tiene ids mixtos — UUID del backfill del catálogo
+    // y CUID de las materias creadas desde la app. El body acepta ambos.
+    it("asigna una materia con id UUID v4 (backfill del catálogo)", async () => {
+        const { admin, colegio } = await setupSchoolAdmin();
+        const curso = await crearCurso(colegio.id, { nombre: "6A" });
+        const materiaUuid = await prisma.materia.create({
+            data: { id: crypto.randomUUID(), colegioId: colegio.id, nombre: "Ciencias Naturales", estado: "activo" },
+        });
+
+        const res = await POST(
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materiaUuid.id }, mockToken),
+            { params: Promise.resolve({ id: curso.id }) }
+        );
+        expect(res.status).toBe(201);
+        expect((await res.json()).vinculo.materia.id).toBe(materiaUuid.id);
+    });
+
+    it("asigna una materia con id CUID (creada desde la app)", async () => {
+        const { admin, colegio } = await setupSchoolAdmin();
+        const curso = await crearCurso(colegio.id, { nombre: "6A" });
+        const materia = await new MateriaRepository().crear(colegio.id, "Matemáticas");
+
+        const res = await POST(
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materia.id }, mockToken),
+            { params: Promise.resolve({ id: curso.id }) }
+        );
+        expect(res.status).toBe(201);
+        expect((await res.json()).vinculo.materia.id).toBe(materia.id);
+    });
+
+    it("rechaza un materiaId que no es CUID ni UUID", async () => {
+        const { admin, colegio } = await setupSchoolAdmin();
+        const curso = await crearCurso(colegio.id, { nombre: "6A" });
+
+        const res = await POST(
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: "materia-no-valida" }, mockToken),
+            { params: Promise.resolve({ id: curso.id }) }
+        );
+        expect(res.status).toBe(400);
+    });
 });

@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-17
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-18): ver [cierre.md](./cierre.md). Nav rector 8 items + comité 3 items + H01-H06 cerrados; compuerta §4 aprobada con candados A (H02 union UUID+CUID) y B (`/comite/integrantes` excluido del comité). Raíz del 500 batch de H01: acción de auditoría dinámica inexistente en el enum `AccionAudit`.
 
 Impacto en arquitectura: modifica navegación gobernada por rol (`src/lib/nav-items.ts`, layouts del área Colegio, `src/lib/proxy.ts`), mueve la administración del comité de `/dashboard/colegio/comite` a `/dashboard/colegio/comite/integrantes`, añade rutas nuevas del rol comité (`/dashboard/colegio/comite` como home, `/dashboard/colegio/comite/estadisticas`), ajusta schemas Zod (`src/lib/schemas/index.ts`) y el DTO de estadísticas (`src/lib/colegio/inteligencia.ts`). Requiere regenerar `docs/architecture/` y dejar `npm run arch:check` verde.
 

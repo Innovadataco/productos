@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { ADMIN_NAV_ITEMS, COLEGIO_NAV_ITEMS, COMITE_NAV_TABS, IA_TABS } from "./nav-items";
+import { ADMIN_NAV_ITEMS, COLEGIO_NAV_ITEMS, COMITE_COLEGIO_NAV_ITEMS, COMITE_NAV_TABS, IA_TABS } from "./nav-items";
+import type { NavItem } from "./nav-items";
 import { CATALOGO_MODULOS } from "./permisos-catalogo";
 
 /**
@@ -31,9 +32,18 @@ const SIN_PANTALLA_PROPIA = new Set([
     // SPEC-169 (Fase G): las notificaciones in-app se consumen desde el centro de
     // notificaciones en el header; no tienen ítem de menú lateral propio.
     "colegios_notificaciones",
+    // SPEC-173 (FASE-C): el onboarding salió del menú lateral; sigue accesible por
+    // su flujo (URL directa / reactivación), sin ítem de menú propio.
+    "colegios_onboarding",
 ]);
 
-const TODOS_LOS_ITEMS = [...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS];
+// SPEC-173 (FASE-C): los nodos expandibles (p. ej. "Usuarios") declaran hijos;
+// el test valida tanto padres como children contra el catálogo.
+function aplanar(items: NavItem[]): NavItem[] {
+    return items.flatMap((item) => [item, ...aplanar(item.children ?? [])]);
+}
+
+const TODOS_LOS_ITEMS = aplanar([...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS]);
 
 describe("estructura menú ↔ catálogo", () => {
     it("todo ítem de menú referencia un módulo existente en el catálogo", () => {

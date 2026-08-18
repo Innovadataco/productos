@@ -6,7 +6,7 @@ import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
 
-const ESTADOS_VISIBLES: EstadoReporte[] = [
+export const ESTADOS_VISIBLES: EstadoReporte[] = [
     "CLASIFICADO",
     "CORREGIDO",
     "REVISION_MANUAL",

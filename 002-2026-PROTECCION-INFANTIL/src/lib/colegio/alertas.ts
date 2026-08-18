@@ -467,7 +467,11 @@ export async function aplicarAccionEnLote(
     }
 
     await logAudit({
-        accion: `COLEGIO_ALERTA_LOTE_${accion.toUpperCase()}` as AccionAudit,
+        // SPEC-173 (H01): el batch 500 del CEO venía de aquí — la acción dinámica
+        // `COLEGIO_ALERTA_LOTE_${accion}` no existe en el enum AccionAudit y Prisma
+        // la rechazaba. Se audita con la acción canónica de cambio de estado y el
+        // detalle del lote queda en valorNuevo.
+        accion: "COLEGIO_ALERTA_ESTADO",
         tipoRecurso: "AlertaColegio",
         recursoId: Array.from(idsValidos).join(","),
         usuarioId: actorId,

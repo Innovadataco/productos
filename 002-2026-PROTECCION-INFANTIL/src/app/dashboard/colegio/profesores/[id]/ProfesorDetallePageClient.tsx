@@ -41,6 +41,7 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
     const [profesor, setProfesor] = useState<Profesor | null>(null);
     const [identificadores, setIdentificadores] = useState<Identificador[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
+    const [errorPlataformas, setErrorPlataformas] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [message, setMessage] = useState<Mensaje>(null);
@@ -54,11 +55,22 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
             setProfesorId(p.id);
             cargar(p.id);
         });
-        fetch("/api/plataformas", { credentials: "include" })
-            .then((r) => r.json().catch(() => ({})))
-            .then((data) => setPlataformas(data.plataformas || []))
-            .catch(() => {});
+        void cargarPlataformas();
     }, [params]);
+
+    // /api/plataformas responde { plataformas: [...] }; error visible con reintento (SPEC-173, H03).
+    async function cargarPlataformas() {
+        try {
+            const res = await fetch("/api/plataformas", { credentials: "include" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data: unknown = await res.json();
+            const lista = (data as { plataformas?: unknown }).plataformas;
+            setPlataformas(Array.isArray(lista) ? (lista as Plataforma[]) : []);
+            setErrorPlataformas(false);
+        } catch {
+            setErrorPlataformas(true);
+        }
+    }
 
     async function cargar(id: string) {
         setLoading(true);
@@ -285,14 +297,25 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
                         onChange={(e) => setNuevo({ ...nuevo, valor: e.target.value })}
                         placeholder="Ej. +573001234567, correo@dominio.com o nick"
                     />
+                    {errorPlataformas && (
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-rubi/10 p-3 text-sm text-estado-rubi dark:bg-rubi/20">
+                            <span>No se pudieron cargar las plataformas — reintenta</span>
+                            <Button variant="outline" className="px-3 py-1.5 text-xs" onClick={cargarPlataformas}>
+                                Reintentar
+                            </Button>
+                        </div>
+                    )}
                     <Select
                         label="Plataforma"
                         options={[{ value: "", label: "Ninguna / General" }, ...plataformas.map((p) => ({ value: p.id, label: p.nombre }))]}
                         value={nuevo.plataformaId}
                         onChange={(e) => setNuevo({ ...nuevo, plataformaId: e.target.value })}
                     />
+                    {plataformas.length === 0 && !errorPlataformas && (
+                        <p className="text-xs text-muted">Cargando plataformas… el guardado se habilita cuando estén disponibles.</p>
+                    )}
                     <div className="flex items-center gap-3">
-                        <Button onClick={guardar} isLoading={saving}>
+                        <Button onClick={guardar} isLoading={saving} disabled={plataformas.length === 0}>
                             Guardar
                         </Button>
                         <Button variant="outline" onClick={() => setModalOpen(false)}>

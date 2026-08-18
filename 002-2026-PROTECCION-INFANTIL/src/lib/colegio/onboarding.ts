@@ -22,6 +22,8 @@ export interface OnboardingCalculado {
     pasoActual: number;
     completadoEn: string | null;
     pasos: PasoOnboarding[];
+    /** SPEC-173 (H05): conteos del colegio, solo cuando el onboarding está completado. */
+    resumen?: { estudiantes: number; cursos: number; profesores: number };
 }
 
 const PASOS: Omit<PasoOnboarding, "estado">[] = [
@@ -107,11 +109,21 @@ export async function calcularOnboarding(colegioId: string): Promise<OnboardingC
     }
 
     const actualizado = await repo.obtenerPorColegio(colegioId);
+    const estadoFinal = actualizado?.estado ?? onboarding.estado;
 
     return {
-        estado: actualizado?.estado ?? onboarding.estado,
+        estado: estadoFinal,
         pasoActual,
         completadoEn: actualizado?.completadoEn?.toISOString() ?? null,
         pasos,
+        ...(estadoFinal === "completado"
+            ? {
+                resumen: {
+                    estudiantes: requisitos.estudiantes,
+                    cursos: requisitos.cursos,
+                    profesores: requisitos.profesores,
+                },
+            }
+            : {}),
     };
 }

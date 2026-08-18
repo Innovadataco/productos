@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { GET } from "./route";
+import { GET, POST } from "./route";
 import { PATCH } from "./[id]/estado/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -348,6 +348,58 @@ describe("/api/colegio/alertas", () => {
                 { params: Promise.resolve({ id: alertaId }) }
             );
             expect(res.status).toBe(400);
+        });
+    });
+
+    // SPEC-173 (H01/H06): el batch del rector solo permite "Revisar en lote"
+    // (accion "vista"); el resto de acciones salen de la superficie batch.
+    describe("POST /api/colegio/alertas (batch)", () => {
+        async function crearAlertasParaBatch(colegioId: string, cantidad: number) {
+            const curso = await crearCurso(colegioId, { nombre: "6A" });
+            const alumno = await crearEstudiante(curso.id, colegioId, { nombre: "María Gómez" });
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+
+            for (let i = 0; i < cantidad; i += 1) {
+                const valor = `+57300BATCH${i}`;
+                await crearIdentificadorEstudiante(alumno.id, { valor, plataformaId: plataforma!.id });
+                const reporte = await crearReporte(valor, plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
+                await notificarColegioSiCorresponde(reporte.id);
+            }
+
+            const alertas = await prisma.alertaColegio.findMany({ where: { colegioId } });
+            return alertas.map((a) => a.id);
+        }
+
+        it("accion 'vista' marca N alertas como vistas", async () => {
+            const { colegio } = await setupSchoolAdmin();
+            const ids = await crearAlertasParaBatch(colegio.id, 2);
+            expect(ids).toHaveLength(2);
+
+            const res = await POST(
+                request("POST", "http://localhost:5005/api/colegio/alertas", { ids, accion: "vista" }, mockToken)
+            );
+            expect(res.status).toBe(200);
+            const json = await res.json();
+            expect(json.afectadas).toBe(2);
+            expect(json.accion).toBe("vista");
+
+            const alertas = await prisma.alertaColegio.findMany({ where: { colegioId: colegio.id } });
+            expect(alertas.every((a) => a.estado === "vista")).toBe(true);
+        });
+
+        it("rechaza con 400 las acciones retiradas del batch", async () => {
+            const { colegio } = await setupSchoolAdmin();
+            const ids = await crearAlertasParaBatch(colegio.id, 1);
+
+            for (const accion of ["escalada", "gestionada", "cerrada", "asignar", "desasignar"] as const) {
+                const res = await POST(
+                    request("POST", "http://localhost:5005/api/colegio/alertas", { ids, accion }, mockToken)
+                );
+                expect(res.status).toBe(400);
+            }
+
+            const alertas = await prisma.alertaColegio.findMany({ where: { colegioId: colegio.id } });
+            expect(alertas.every((a) => a.estado === "nueva")).toBe(true);
         });
     });
 });

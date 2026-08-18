@@ -3,10 +3,12 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
-import { ComiteConvivenciaBandejaService } from "@/lib/dal/services/comite-convivencia-bandeja";
-import { ComiteHome } from "@/components/modules/colegio/comite/ComiteHome";
+import { ComiteConvivenciaService } from "@/lib/dal/services/comite-convivencia";
+import { ComiteConvivenciaIntegrantesService } from "@/lib/dal/services/comite-convivencia-integrantes";
+import { ComiteCuentaCard } from "@/components/modules/colegio/comite/ComiteCuentaCard";
+import { IntegrantesList } from "@/components/modules/colegio/comite/IntegrantesList";
 
-export default async function ComitePage() {
+export default async function ComiteIntegrantesPage() {
     const cookieStore = await cookies();
     const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
     if (!token) {
@@ -19,16 +21,16 @@ export default async function ComitePage() {
         redirect("/login");
     }
 
-    if (rol === "SCHOOL_ADMIN") {
-        redirect("/dashboard/colegio/comite/integrantes");
+    if (rol === "COMITE_CONVIVENCIA") {
+        redirect("/dashboard/colegio/comite");
     }
 
-    if (rol !== "COMITE_CONVIVENCIA") {
+    if (rol !== "SCHOOL_ADMIN") {
         redirect("/login");
     }
 
-    const usuario = await new UsuarioRepository().findSesionComite(payload.sub as string);
-    if (!usuario || usuario.estado !== "activo" || usuario.rol !== "COMITE_CONVIVENCIA" || !usuario.comiteColegioId) {
+    const usuario = await new UsuarioRepository().findSesionColegio(payload.sub as string);
+    if (!usuario || usuario.estado !== "activo" || usuario.rol !== "SCHOOL_ADMIN" || !usuario.colegioId) {
         redirect("/login");
     }
 
@@ -42,7 +44,11 @@ export default async function ComitePage() {
         );
     }
 
-    const resumen = await new ComiteConvivenciaBandejaService().resumen(usuario.comiteColegioId, usuario.id);
+    const colegioId = usuario.colegioId;
+    const [cuenta, integrantes] = await Promise.all([
+        new ComiteConvivenciaService().obtenerCuenta(colegioId),
+        new ComiteConvivenciaIntegrantesService().listar(colegioId).catch(() => []),
+    ]);
 
     return (
         <main className="min-h-screen p-6 md:p-10">
@@ -50,11 +56,13 @@ export default async function ComitePage() {
                 <div>
                     <h1 className="text-3xl font-bold text-body">Comité de Convivencia</h1>
                     <p className="mt-2 text-muted">
-                        Resumen de los casos escalados al Comité de Convivencia de tu colegio.
+                        Crea la cuenta compartida del comité y documenta a sus integrantes.
                     </p>
                 </div>
 
-                <ComiteHome resumen={resumen} />
+                <ComiteCuentaCard cuenta={cuenta} />
+
+                {cuenta && <IntegrantesList integrantesIniciales={integrantes} />}
             </div>
         </main>
     );
