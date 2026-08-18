@@ -87,17 +87,18 @@ async function restorePrismaMethods() {
         const delegate = (prisma as Record<string, unknown>)[key];
         if (!delegate || typeof delegate !== "object") continue;
         for (const [method, originalFn] of Object.entries(methods)) {
-            if (typeof (delegate as Record<string, unknown>)[method] !== "function") {
-                try {
-                    Object.defineProperty(delegate, method, {
-                        value: originalFn,
-                        writable: true,
-                        enumerable: true,
-                        configurable: true,
-                    });
-                } catch {
-                    // Ignorar propiedades de solo lectura (no debería pasar).
-                }
+            // Restauramos incondicionalmente: la guarda "solo si dejó de ser función"
+            // dejaba vivos los spies de tests anteriores (aún son funciones, pero con
+            // implementación rota) bajo singleFork (HALLAZGO 002-PI-068).
+            try {
+                Object.defineProperty(delegate, method, {
+                    value: originalFn,
+                    writable: true,
+                    enumerable: true,
+                    configurable: true,
+                });
+            } catch {
+                // Ignorar propiedades de solo lectura (no debería pasar).
             }
         }
     }
@@ -200,6 +201,12 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await restorePrismaMethods();
+    // CANARIO: detectar quién contamina parametroSistema.findUnique entre tests.
+    if (typeof prisma.parametroSistema?.findUnique !== "function") {
+        const prev = (globalThis as unknown as { __lastTestFile?: string }).__lastTestFile;
+        console.error("[LEAK-CANARY] parametroSistema.findUnique NO es función. Archivo previo:", prev);
+    }
+    (globalThis as unknown as { __lastTestFile?: string }).__lastTestFile = expect?.getState?.()?.testPath ?? "unknown";
     await ensureTestMutexTable();
     await acquireTestLock();
 });
