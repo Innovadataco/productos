@@ -7,6 +7,8 @@ export interface NavItem {
     href: string;
     label: string;
     modulo: string;
+    /** Hijos para nodos expandibles (p. ej. "Usuarios" del menú del colegio). */
+    children?: NavItem[];
 }
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [
@@ -31,21 +33,33 @@ export const COMITE_NAV_TABS: NavItem[] = [
     { href: "/dashboard/admin/comite/auditoria", label: "Auditoría", modulo: "comite_auditoria" },
 ];
 
+// SPEC-173 (FASE-C): menú del rector — 8 entradas; "Usuarios" es un nodo padre
+// expandible (href "#", no navegable) con Profesores e Integrantes del comité.
+// Retirados: Onboarding, Materias y Subir lista (quedan accesibles por flujo, no por menú).
 export const COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio", label: "Inicio", modulo: "colegios" },
-    // SPEC-169 (Fase G): onboarding accesible desde el menú para reactivarlo.
-    { href: "/dashboard/colegio/onboarding", label: "Onboarding", modulo: "colegios_onboarding" },
-    { href: "/dashboard/colegio/cursos", label: "Cursos", modulo: "colegios_gestion" },
-    { href: "/dashboard/colegio/profesores", label: "Profesores", modulo: "colegios_gestion" },
-    { href: "/dashboard/colegio/materias", label: "Materias", modulo: "colegios_gestion" },
-    { href: "/dashboard/colegio/cursos/unificado", label: "Subir lista", modulo: "colegios_gestion" },
-    { href: "/dashboard/colegio/alertas", label: "Alertas", modulo: "colegios_gestion" },
-    // SPEC-168 (Fase F): gestión del comité (rector) y bandeja de casos (rector/comité).
-    { href: "/dashboard/colegio/comite", label: "Comité de Convivencia", modulo: "colegios_comite" },
-    { href: "/dashboard/colegio/comite/casos", label: "Casos del comité", modulo: "colegios_comite_bandeja" },
     { href: "/dashboard/colegio/estadisticas", label: "Estadísticas", modulo: "colegios_gestion" },
+    { href: "/dashboard/colegio/alertas", label: "Alertas", modulo: "colegios_gestion" },
+    { href: "/dashboard/colegio/cursos", label: "Cursos", modulo: "colegios_gestion" },
+    { href: "/dashboard/colegio/comite/casos", label: "Casos comité", modulo: "colegios_comite_bandeja" },
+    {
+        href: "#",
+        label: "Usuarios",
+        modulo: "colegios_gestion",
+        children: [
+            { href: "/dashboard/colegio/profesores", label: "Profesores", modulo: "colegios_gestion" },
+            { href: "/dashboard/colegio/comite/integrantes", label: "Comité de convivencia", modulo: "colegios_comite" },
+        ],
+    },
     { href: "/dashboard/colegio/configuracion", label: "Configuración", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/auditoria", label: "Auditoría", modulo: "colegios_auditoria" },
+];
+
+// SPEC-173 (FASE-C): menú reducido del rol COMITE_CONVIVENCIA (solo su bandeja).
+export const COMITE_COLEGIO_NAV_ITEMS: NavItem[] = [
+    { href: "/dashboard/colegio/comite", label: "Inicio", modulo: "colegios_comite_bandeja" },
+    { href: "/dashboard/colegio/comite/estadisticas", label: "Estadísticas", modulo: "colegios_comite_bandeja" },
+    { href: "/dashboard/colegio/comite/casos", label: "Gestión casos", modulo: "colegios_comite_bandeja" },
 ];
 
 /** Tabs del Centro de Control IA filtradas por submódulo (null = visible con la raíz). */

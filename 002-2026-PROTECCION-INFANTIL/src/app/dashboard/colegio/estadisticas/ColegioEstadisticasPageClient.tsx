@@ -26,6 +26,12 @@ const TARJETAS = [
     { key: "alertas", label: "Alertas", icon: "🚨" },
 ] as const;
 
+const TARJETAS_TIPO_SUJETO = [
+    { key: "ESTUDIANTE", label: "Estudiantes", icon: "🎓" },
+    { key: "PROFESOR", label: "Profesores", icon: "👨‍🏫" },
+    { key: "ACUDIENTE", label: "Acudientes", icon: "👪" },
+] as const;
+
 function mesAnteriorDefault(): string {
     const hoy = new Date();
     let anio = hoy.getFullYear();
@@ -186,6 +192,23 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                             </GlassCard>
                         ))}
                     </div>
+
+                    <section aria-labelledby="titulo-alertas-tipo-sujeto" className="space-y-4">
+                        <h2 id="titulo-alertas-tipo-sujeto" className="titular-seccion text-body">
+                            Alertas por tipo de sujeto
+                        </h2>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            {TARJETAS_TIPO_SUJETO.map((tarjeta) => (
+                                <GlassCard key={tarjeta.key} className="border-l-4 border-l-emerald-500 text-center">
+                                    <div className="text-2xl">{tarjeta.icon}</div>
+                                    <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-subtle">{tarjeta.label}</p>
+                                    <p className="mt-1 text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+                                        {estadisticas.alertasPorTipoSujeto[tarjeta.key]}
+                                    </p>
+                                </GlassCard>
+                            ))}
+                        </div>
+                    </section>
 
                     <div className="grid gap-5 sm:gap-6 lg:grid-cols-2">
                         <TendenciaReportes

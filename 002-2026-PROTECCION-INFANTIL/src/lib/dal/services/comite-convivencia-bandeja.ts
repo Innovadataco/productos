@@ -14,6 +14,8 @@ import type {
     ResolverSolicitudComiteInput,
     SolicitudComiteBandejaDto,
     DetalleSolicitudComiteDto,
+    ResumenComiteHomeDto,
+    EstadisticasComiteDto,
     InfoClienteDto,
 } from "../types/comite-convivencia";
 
@@ -65,6 +67,64 @@ export class ComiteConvivenciaBandejaService {
             page,
             pageSize,
             totalPages: Math.ceil(total / pageSize),
+        };
+    }
+
+    /**
+     * SPEC-173: resumen para la home del rol COMITE_CONVIVENCIA.
+     * "Próximos a vencer" = SLA vencido o que vence en las próximas 24 h.
+     */
+    async resumen(colegioId: string, usuarioId: string): Promise<ResumenComiteHomeDto> {
+        const slaHasta = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const { casosAbiertos, misCasosAsignados, proximosSla } = await this.solicitudes.resumenPorColegio(
+            colegioId,
+            usuarioId,
+            slaHasta,
+            5
+        );
+        return {
+            casosAbiertos,
+            misCasosAsignados,
+            proximosVencerSla: proximosSla.map((row) => ({
+                id: row.id,
+                numero: row.numero,
+                estado: row.estado,
+                categoria: row.reporte.clasificacion?.categoria ?? null,
+                creadoEn: row.creadoEn.toISOString(),
+                prioridad: row.alerta?.prioridad ?? null,
+                vencimientoSla: row.alerta?.vencimientoSla?.toISOString() ?? null,
+            })),
+        };
+    }
+
+    /**
+     * SPEC-173: agregados de la bandeja del colegio. Tiempo medio de resolución
+     * = AVG(resueltoEn - creadoEn) en días sobre solicitudes resueltas.
+     */
+    async estadisticas(colegioId: string): Promise<EstadisticasComiteDto> {
+        const { porEstado, resueltas, porCategoria } = await this.solicitudes.estadisticasPorColegio(colegioId, 5);
+
+        const casosPorEstado: Record<string, number> = {};
+        for (const fila of porEstado) {
+            casosPorEstado[fila.estado] = fila._count._all;
+        }
+
+        let tiempoMedioResolucionDias: number | null = null;
+        if (resueltas.length > 0) {
+            const totalMs = resueltas.reduce((acc, row) => {
+                const fin = row.resueltoEn;
+                return fin ? acc + (fin.getTime() - row.creadoEn.getTime()) : acc;
+            }, 0);
+            tiempoMedioResolucionDias = Math.round((totalMs / resueltas.length / (24 * 60 * 60 * 1000)) * 10) / 10;
+        }
+
+        return {
+            casosPorEstado,
+            tiempoMedioResolucionDias,
+            topCategorias: porCategoria.map((fila) => ({
+                categoria: fila.categoria,
+                total: fila._count._all,
+            })),
         };
     }
 

@@ -40,6 +40,10 @@ const COLEGIO_ROUTES = ["/dashboard/colegio", "/api/me/colegio", "/api/colegio"]
 // SPEC-168: rutas exclusivas del Comité de Convivencia (rol COMITE_CONVIVENCIA).
 const COMITE_CONVIVENCIA_ROUTES = ["/dashboard/colegio/comite", "/api/colegio/comite"];
 
+// SPEC-173 (candado B): la gestión de integrantes del comité es exclusiva del
+// rector (SCHOOL_ADMIN); el rol COMITE_CONVIVENCIA no puede administrarse a sí mismo.
+const COMITE_INTEGRANTES_SOLO_RECTOR = ["/dashboard/colegio/comite/integrantes", "/api/colegio/comite/integrantes"];
+
 // Rutas de sesión propias de cualquier rol autenticado: datos del usuario actual
 // (el header las consulta para reconocer la sesión), el cambio de contraseña
 // (obligatorio cuando debeCambiarPassword=true) y el cierre de sesión.
@@ -96,8 +100,11 @@ function isComiteConvivenciaRoute(pathname: string): boolean {
  * SPEC-168: el Comité de Convivencia solo puede usar sus propias rutas y las de
  * sesión (cambiar contraseña, /api/me, logout). No accede al resto del módulo
  * colegio ni al área de usuario final.
+ * SPEC-173 (candado B): EXCLUYE la gestión de integrantes — esa pantalla/API es
+ * solo del rector; se evalúa ANTES del prefijo "/dashboard/colegio/comite".
  */
 function esRutaPermitidaComiteConvivencia(pathname: string): boolean {
+    if (COMITE_INTEGRANTES_SOLO_RECTOR.some((route) => matchesRoute(pathname, route))) return false;
     if (isComiteConvivenciaRoute(pathname)) return true;
     return SESION_ROUTES.some((route) => matchesRoute(pathname, route));
 }
@@ -191,8 +198,8 @@ function esRutaAdminOnly(pathname: string) {
 
 function homeForRole(rol: string) {
     if (rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
-    // SPEC-168: el Comité de Convivencia aterriza en su bandeja de casos.
-    if (rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite/casos";
+    // SPEC-173 (FASE-C): el Comité de Convivencia aterriza en su panel de inicio.
+    if (rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite";
     if (rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
     // SPEC-127 (I-40, D-42): el padre va a su área de usuario final. Sin este caso caía
     // al default "/dashboard/admin", que la propia puerta le niega → doble rebote a "/".

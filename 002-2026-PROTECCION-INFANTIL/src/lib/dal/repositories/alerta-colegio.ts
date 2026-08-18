@@ -177,6 +177,31 @@ export class AlertaColegioRepository {
         });
     }
 
+    /** SPEC-173 (H04): alertas visibles agrupadas por tipo de sujeto (groupBy, tenant-first). */
+    async contarPorTipoSujeto(
+        colegioId: string,
+        estadosVisibles: EstadoReporte[]
+    ): Promise<{ ESTUDIANTE: number; PROFESOR: number; ACUDIENTE: number }> {
+        const grupos = await this.db.alertaColegio.groupBy({
+            by: ["tipoSujeto"],
+            where: {
+                colegioId,
+                reporte: {
+                    eliminado: false,
+                    estado: { in: estadosVisibles },
+                },
+            },
+            _count: { _all: true },
+        });
+        const totales = { ESTUDIANTE: 0, PROFESOR: 0, ACUDIENTE: 0 };
+        for (const grupo of grupos) {
+            if (grupo.tipoSujeto === "ESTUDIANTE" || grupo.tipoSujeto === "PROFESOR" || grupo.tipoSujeto === "ACUDIENTE") {
+                totales[grupo.tipoSujeto] = grupo._count._all;
+            }
+        }
+        return totales;
+    }
+
     /** Conteo de alertas visibles agrupado por curso (join, tenant en ambos lados). */
     async contarVisiblesPorCursoIds(colegioId: string, cursoIds: string[], estadosVisibles: EstadoReporte[]): Promise<Map<string, number>> {
         if (cursoIds.length === 0) return new Map();

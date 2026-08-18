@@ -9,6 +9,11 @@ import { z } from "zod";
 // Identificadores y claves
 export const cuidIdSchema = z.string().cuid();
 
+// SPEC-173 (H02, candado A compuerta): Materia tiene ids mixtos en prod — la
+// migración 20260812052407 sembró el catálogo con gen_random_uuid() y la app
+// crea materias nuevas con @default(cuid()). El schema acepta ambos formatos.
+export const materiaIdSchema = z.union([cuidIdSchema, z.string().uuid()]);
+
 export const emailSchema = z.string().email().max(255);
 
 export const parametroClaveSchema = z.string().min(1).max(100);
@@ -152,7 +157,10 @@ export const materiaUpdateBodySchema = z.object({
 }).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
 
 export const materiaIdParamsSchema = z.object({
-    id: cuidIdSchema,
+    // SPEC-173 (corrección ZEUS, candado B): las materias sembradas por la
+    // migración tienen id UUID; con cuidIdSchema los endpoints /materias/[id]
+    // y /materias/[id]/estado daban 400 sobre el catálogo sembrado.
+    id: materiaIdSchema,
 });
 
 // SPEC-163: acudiente de un estudiante (gestión post-alta).
@@ -221,13 +229,13 @@ export const cursoMateriaParamsSchema = z.object({
 });
 
 export const cursoMateriaBodySchema = z.object({
-    materiaId: cuidIdSchema,
+    materiaId: materiaIdSchema,
     profesorId: cuidIdSchema.optional().nullable(),
 });
 
 export const cursoMateriaIdParamsSchema = z.object({
     id: cuidIdSchema,
-    materiaId: cuidIdSchema,
+    materiaId: materiaIdSchema,
 });
 
 // SPEC-144 (FR-010, D3): alta de estudiante — obligatorios solo nombre + apellidos;
@@ -355,9 +363,12 @@ export const alertaAsignarSchema = z.object({
     asignadoAId: z.union([cuidIdSchema, z.literal("")]).optional(),
 });
 
+// SPEC-173 (H01/H06): el batch del rector solo permite "Revisar en lote".
+// Escalar exige motivo caso por caso (endpoint individual); gestionar/asignar/
+// cerrar salen de la superficie batch del rector.
 export const alertaBatchSchema = z.object({
     ids: z.array(cuidIdSchema).min(1, "Selecciona al menos una alerta"),
-    accion: z.enum(["vista", "gestionada", "escalada", "cerrada", "asignar", "desasignar"]),
+    accion: z.enum(["vista"]),
     asignadoAId: cuidIdSchema.optional(),
 });
 

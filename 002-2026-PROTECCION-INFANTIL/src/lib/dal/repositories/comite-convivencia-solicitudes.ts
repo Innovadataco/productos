@@ -75,4 +75,55 @@ export class ComiteConvivenciaSolicitudesRepository {
             select: SELECT_BANDEJA,
         });
     }
+
+    /**
+     * SPEC-173: resumen para la home del comité. Solo metadatos (número,
+     * categoría, estado, fechas, SLA); nunca texto de reporte ni denunciante.
+     */
+    async resumenPorColegio(colegioId: string, usuarioId: string, slaHasta: Date, takeSla: number) {
+        const abiertos: Prisma.SolicitudComiteWhereInput = { colegioId, estado: "PENDIENTE" };
+        const [casosAbiertos, misCasosAsignados, proximosSla] = await Promise.all([
+            this.db.solicitudComite.count({ where: abiertos }),
+            this.db.solicitudComite.count({
+                where: { ...abiertos, alerta: { asignadoAId: usuarioId } },
+            }),
+            this.db.solicitudComite.findMany({
+                where: { ...abiertos, alerta: { vencimientoSla: { lte: slaHasta } } },
+                orderBy: { alerta: { vencimientoSla: "asc" } },
+                take: takeSla,
+                select: {
+                    id: true,
+                    numero: true,
+                    estado: true,
+                    creadoEn: true,
+                    alerta: { select: { prioridad: true, vencimientoSla: true } },
+                    reporte: { select: { clasificacion: { select: { categoria: true } } } },
+                },
+            }),
+        ]);
+        return { casosAbiertos, misCasosAsignados, proximosSla };
+    }
+
+    /** SPEC-173: agregados de la bandeja, colegio-scoped. */
+    async estadisticasPorColegio(colegioId: string, takeTopCategorias: number) {
+        const [porEstado, resueltas, porCategoria] = await Promise.all([
+            this.db.solicitudComite.groupBy({
+                by: ["estado"],
+                where: { colegioId },
+                _count: { _all: true },
+            }),
+            this.db.solicitudComite.findMany({
+                where: { colegioId, resueltoEn: { not: null } },
+                select: { creadoEn: true, resueltoEn: true },
+            }),
+            this.db.clasificacionIA.groupBy({
+                by: ["categoria"],
+                where: { reporte: { solicitudComite: { colegioId } } },
+                _count: { _all: true },
+                orderBy: { _count: { categoria: "desc" } },
+                take: takeTopCategorias,
+            }),
+        ]);
+        return { porEstado, resueltas, porCategoria };
+    }
 }

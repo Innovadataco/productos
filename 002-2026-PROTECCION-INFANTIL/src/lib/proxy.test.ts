@@ -1,7 +1,50 @@
 import { describe, it, expect } from "vitest";
 import { SignJWT } from "jose";
 import { NextRequest } from "next/server";
-import { esRutaPermitidaSchoolAdmin, proxy } from "./proxy";
+import { esDestinoPermitidoPorRol, esRutaPermitidaSchoolAdmin, proxy } from "./proxy";
+
+describe("COMITE_CONVIVENCIA (SPEC-173, FASE-C)", () => {
+    it("puede usar su panel: inicio, casos y estadísticas", () => {
+        expect(esDestinoPermitidoPorRol("COMITE_CONVIVENCIA", "/dashboard/colegio/comite")).toBe(true);
+        expect(esDestinoPermitidoPorRol("COMITE_CONVIVENCIA", "/dashboard/colegio/comite/casos")).toBe(true);
+        expect(esDestinoPermitidoPorRol("COMITE_CONVIVENCIA", "/dashboard/colegio/comite/estadisticas")).toBe(true);
+    });
+
+    it("NO puede entrar a integrantes (candado B: gestión solo del rector)", () => {
+        expect(esDestinoPermitidoPorRol("COMITE_CONVIVENCIA", "/dashboard/colegio/comite/integrantes")).toBe(false);
+        expect(esDestinoPermitidoPorRol("COMITE_CONVIVENCIA", "/api/colegio/comite/integrantes")).toBe(false);
+    });
+
+    it("NO puede usar el resto del módulo colegio", () => {
+        expect(esDestinoPermitidoPorRol("COMITE_CONVIVENCIA", "/dashboard/colegio/cursos")).toBe(false);
+        expect(esDestinoPermitidoPorRol("COMITE_CONVIVENCIA", "/dashboard/colegio")).toBe(false);
+    });
+
+    it("el rector (SCHOOL_ADMIN) SÍ puede gestionar integrantes", () => {
+        expect(esDestinoPermitidoPorRol("SCHOOL_ADMIN", "/dashboard/colegio/comite/integrantes")).toBe(true);
+        expect(esDestinoPermitidoPorRol("SCHOOL_ADMIN", "/api/colegio/comite/integrantes")).toBe(true);
+    });
+
+    it("su home es /dashboard/colegio/comite y aterriza sin rebote", async () => {
+        const token = await tokenParaRol("COMITE_CONVIVENCIA");
+
+        // Fuera de su área lo redirigen a su home...
+        const redirect = await proxy(requestConSesion("/dashboard/colegio/cursos", token));
+        expect(redirect.status).toBe(307);
+        const destino = new URL(redirect.headers.get("location")!).pathname;
+        expect(destino).toBe("/dashboard/colegio/comite");
+
+        // ...y ese destino le está permitido: aterriza sin segundo rebote.
+        const aterrizaje = await proxy(requestConSesion(destino, token));
+        expect(aterrizaje.status).toBe(200);
+    });
+
+    it("la API de integrantes le responde 403 (no redirect)", async () => {
+        const token = await tokenParaRol("COMITE_CONVIVENCIA");
+        const res = await proxy(requestConSesion("/api/colegio/comite/integrantes", token));
+        expect(res.status).toBe(403);
+    });
+});
 
 describe("esRutaPermitidaSchoolAdmin", () => {
     it("permite las rutas del módulo colegio", () => {

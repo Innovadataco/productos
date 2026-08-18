@@ -4,9 +4,9 @@ import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { ComiteConvivenciaBandejaService } from "@/lib/dal/services/comite-convivencia-bandeja";
-import { ComiteHome } from "@/components/modules/colegio/comite/ComiteHome";
+import { ComiteEstadisticas } from "@/components/modules/colegio/comite/ComiteEstadisticas";
 
-export default async function ComitePage() {
+export default async function ComiteEstadisticasPage() {
     const cookieStore = await cookies();
     const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
     if (!token) {
@@ -42,19 +42,19 @@ export default async function ComitePage() {
         );
     }
 
-    const resumen = await new ComiteConvivenciaBandejaService().resumen(usuario.comiteColegioId, usuario.id);
+    const estadisticas = await new ComiteConvivenciaBandejaService().estadisticas(usuario.comiteColegioId);
 
     return (
         <main className="min-h-screen p-6 md:p-10">
             <div className="mx-auto max-w-4xl space-y-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-body">Comité de Convivencia</h1>
+                    <h1 className="text-3xl font-bold text-body">Estadísticas del comité</h1>
                     <p className="mt-2 text-muted">
-                        Resumen de los casos escalados al Comité de Convivencia de tu colegio.
+                        Agregados de los casos escalados al Comité de Convivencia de tu colegio.
                     </p>
                 </div>
 
-                <ComiteHome resumen={resumen} />
+                <ComiteEstadisticas estadisticas={estadisticas} />
             </div>
         </main>
     );

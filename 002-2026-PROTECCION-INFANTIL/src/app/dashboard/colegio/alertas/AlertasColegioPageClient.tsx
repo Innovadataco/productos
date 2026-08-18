@@ -1,5 +1,5 @@
 "use client";
-/* eslint-disable max-lines -- Bandeja nivel-dios: filtros, paginación, selección, acciones inline y modal de asignación. */
+/* eslint-disable max-lines -- Bandeja nivel-dios: filtros, paginación, selección y acciones inline. */
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
@@ -9,7 +9,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
-import { Modal } from "@/components/ui/Modal";
+import { EscalarAlertaModal } from "@/components/modules/colegio/alertas/EscalarAlertaModal";
+import { ResolverAlertaModal } from "@/components/modules/colegio/alertas/ResolverAlertaModal";
 
 type AsignadoA = { id: string; nombre: string | null; email: string };
 
@@ -28,8 +29,6 @@ type Alerta = {
     creadoEn: string;
 };
 
-type UsuarioAsignable = { id: string; nombre: string | null; email: string; rol: string };
-
 type FiltroEstado = "todas" | "nueva" | "vista" | "gestionada" | "escalada" | "cerrada";
 type FiltroTipoSujeto = "todos" | "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE";
 type FiltroPrioridad = "todas" | "alta" | "media" | "baja";
@@ -40,6 +39,15 @@ const ESTADO_LABELS: Record<string, string> = {
     gestionada: "Gestionada",
     escalada: "Escalada",
     cerrada: "Cerrada",
+};
+
+// SPEC-173 (H06): tooltip en criollo para que el rector entienda cada estado.
+const ESTADO_TOOLTIPS: Record<string, string> = {
+    nueva: "Recién llegada, nadie la ha revisado",
+    vista: "Ya la vi, pendiente de actuar",
+    gestionada: "La resolví yo en el colegio, sin comité",
+    escalada: "La pasé al comité de convivencia",
+    cerrada: "El comité la cerró",
 };
 
 const ESTADO_VARIANTS: Record<string, "default" | "warning" | "success" | "neutral" | "info" | "danger"> = {
@@ -99,9 +107,8 @@ export default function AlertasColegioPageClient() {
     const [filtroPrioridad, setFiltroPrioridad] = useState<FiltroPrioridad>("todas");
     const [accionando, setAccionando] = useState<Set<string>>(new Set());
     const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
-    const [modalAsignar, setModalAsignar] = useState(false);
-    const [usuarios, setUsuarios] = useState<UsuarioAsignable[]>([]);
-    const [asignadoAId, setAsignadoAId] = useState<string>("");
+    const [modalEscalarId, setModalEscalarId] = useState<string | null>(null);
+    const [modalResolverId, setModalResolverId] = useState<string | null>(null);
 
     const cargar = useCallback(async () => {
         setCargando(true);
@@ -136,17 +143,7 @@ export default function AlertasColegioPageClient() {
         cargar();
     }, [cargar]);
 
-    const cargarUsuarios = useCallback(async () => {
-        try {
-            const res = await fetch("/api/colegio/usuarios", { credentials: "include" });
-            const data = await res.json().catch(() => ({}));
-            if (res.ok) setUsuarios(data.usuarios || []);
-        } catch {
-            // Silencio: el modal muestra input manual como fallback.
-        }
-    }, []);
-
-    const cambiarEstado = async (id: string, estado: "vista" | "gestionada" | "escalada" | "cerrada") => {
+    const marcarVista = async (id: string) => {
         if (accionando.has(id)) return;
         setAccionando((prev) => new Set(prev).add(id));
         try {
@@ -154,7 +151,7 @@ export default function AlertasColegioPageClient() {
                 method: "PATCH",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ estado }),
+                body: JSON.stringify({ estado: "vista" }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
@@ -173,70 +170,12 @@ export default function AlertasColegioPageClient() {
         }
     };
 
-    const escalar = async (id: string) => {
-        if (accionando.has(id)) return;
-        setAccionando((prev) => new Set(prev).add(id));
-        try {
-            const res = await fetch(`/api/colegio/alertas/${id}/escalar`, {
-                method: "POST",
-                credentials: "include",
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                setError(data?.error?.message || "Error escalando alerta");
-                return;
-            }
-            setAlertas((prev) => prev.map((a) => (a.id === id ? { ...a, estadoAlerta: data.alerta.estado } : a)));
-        } catch {
-            setError("Error de red escalando alerta");
-        } finally {
-            setAccionando((prev) => {
-                const next = new Set(prev);
-                next.delete(id);
-                return next;
-            });
-        }
+    const actualizarEstadoLocal = (id: string, estado: string) => {
+        setAlertas((prev) => prev.map((a) => (a.id === id ? { ...a, estadoAlerta: estado } : a)));
     };
 
-    const asignar = async (id: string, usuarioId: string | null) => {
-        if (accionando.has(id)) return;
-        setAccionando((prev) => new Set(prev).add(id));
-        try {
-            const res = await fetch(`/api/colegio/alertas/${id}/asignar`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ asignadoAId: usuarioId ?? "" }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                setError(data?.error?.message || "Error asignando alerta");
-                return;
-            }
-            setAlertas((prev) =>
-                prev.map((a) =>
-                    a.id === id
-                        ? {
-                            ...a,
-                            asignadoA: data.alerta.asignadoAId
-                                ? { id: data.alerta.asignadoAId, nombre: null, email: "" }
-                                : null,
-                        }
-                        : a
-                )
-            );
-        } catch {
-            setError("Error de red asignando alerta");
-        } finally {
-            setAccionando((prev) => {
-                const next = new Set(prev);
-                next.delete(id);
-                return next;
-            });
-        }
-    };
-
-    const aplicarLote = async (accion: "vista" | "gestionada" | "escalada" | "cerrada" | "asignar" | "desasignar") => {
+    // SPEC-173 (H01/H06): la única acción en lote del rector es "Revisar en lote".
+    const revisarEnLote = async () => {
         if (seleccionadas.size === 0) return;
         setAccionando((prev) => new Set([...prev, ...seleccionadas]));
         try {
@@ -244,11 +183,7 @@ export default function AlertasColegioPageClient() {
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ids: Array.from(seleccionadas),
-                    accion,
-                    ...(accion === "asignar" ? { asignadoAId } : {}),
-                }),
+                body: JSON.stringify({ ids: Array.from(seleccionadas), accion: "vista" }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
@@ -341,30 +276,8 @@ export default function AlertasColegioPageClient() {
                     {seleccionadas.size > 0 && (
                         <GlassCard className="flex flex-wrap items-center gap-3">
                             <span className="text-sm text-body">{seleccionadas.size} seleccionadas</span>
-                            <Button variant="secondary" onClick={() => aplicarLote("vista")}>
-                                Marcar vista
-                            </Button>
-                            <Button variant="secondary" onClick={() => aplicarLote("gestionada")}>
-                                Marcar gestionada
-                            </Button>
-                            <Button variant="outline" onClick={() => aplicarLote("escalada")}>
-                                Escalar
-                            </Button>
-                            <Button variant="outline" onClick={() => aplicarLote("cerrada")}>
-                                Cerrar
-                            </Button>
-                            <Button
-                               
-                                variant="secondary"
-                                onClick={() => {
-                                    setModalAsignar(true);
-                                    void cargarUsuarios();
-                                }}
-                            >
-                                Asignar
-                            </Button>
-                            <Button variant="outline" onClick={() => aplicarLote("desasignar")}>
-                                Desasignar
+                            <Button variant="secondary" onClick={() => void revisarEnLote()}>
+                                Revisar en lote
                             </Button>
                         </GlassCard>
                     )}
@@ -427,9 +340,11 @@ export default function AlertasColegioPageClient() {
                                                     <Badge variant={TIPO_SUJETO_VARIANTS[alerta.tipoSujeto] || "neutral"}>
                                                         {TIPO_SUJETO_LABELS[alerta.tipoSujeto] || alerta.tipoSujeto}
                                                     </Badge>
-                                                    <Badge variant={ESTADO_VARIANTS[alerta.estadoAlerta] || "neutral"}>
-                                                        {ESTADO_LABELS[alerta.estadoAlerta] || alerta.estadoAlerta}
-                                                    </Badge>
+                                                    <span title={ESTADO_TOOLTIPS[alerta.estadoAlerta] || alerta.estadoAlerta}>
+                                                        <Badge variant={ESTADO_VARIANTS[alerta.estadoAlerta] || "neutral"}>
+                                                            {ESTADO_LABELS[alerta.estadoAlerta] || alerta.estadoAlerta}
+                                                        </Badge>
+                                                    </span>
                                                     <Badge variant={PRIORIDAD_VARIANTS[alerta.prioridad] || "neutral"}>
                                                         {PRIORIDAD_LABELS[alerta.prioridad] || alerta.prioridad}
                                                     </Badge>
@@ -493,43 +408,29 @@ export default function AlertasColegioPageClient() {
                                                         variant="secondary"
                                                         className="py-1.5 px-3 text-xs"
                                                         isLoading={accionando.has(alerta.id)}
-                                                        onClick={() => cambiarEstado(alerta.id, "vista")}
+                                                        onClick={() => marcarVista(alerta.id)}
                                                     >
-                                                        Marcar vista
+                                                        Revisar
                                                     </Button>
                                                 )}
-                                                {alerta.estadoAlerta !== "gestionada" && (
-                                                    <Button
-                                                        variant="outline"
-                                                        className="py-1.5 px-3 text-xs"
-                                                        isLoading={accionando.has(alerta.id)}
-                                                        onClick={() => cambiarEstado(alerta.id, "gestionada")}
-                                                    >
-                                                        Marcar gestionada
-                                                    </Button>
+                                                {(alerta.estadoAlerta === "nueva" || alerta.estadoAlerta === "vista") && (
+                                                    <>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="py-1.5 px-3 text-xs"
+                                                            onClick={() => setModalResolverId(alerta.id)}
+                                                        >
+                                                            Resolver aquí
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="py-1.5 px-3 text-xs"
+                                                            onClick={() => setModalEscalarId(alerta.id)}
+                                                        >
+                                                            Escalar al Comité
+                                                        </Button>
+                                                    </>
                                                 )}
-                                                {alerta.estadoAlerta !== "escalada" && (
-                                                    <Button
-                                                        variant="outline"
-                                                        className="py-1.5 px-3 text-xs"
-                                                        isLoading={accionando.has(alerta.id)}
-                                                        onClick={() => escalar(alerta.id)}
-                                                    >
-                                                        Escalar
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    className="py-1.5 px-3 text-xs"
-                                                    isLoading={accionando.has(alerta.id)}
-                                                    onClick={() => {
-                                                        setAsignadoAId(alerta.asignadoA?.id ?? "");
-                                                        setModalAsignar(true);
-                                                        void cargarUsuarios();
-                                                    }}
-                                                >
-                                                    {alerta.asignadoA ? "Reasignar" : "Asignar"}
-                                                </Button>
                                             </div>
                                         </div>
                                     </GlassCard>
@@ -558,43 +459,18 @@ export default function AlertasColegioPageClient() {
                 </div>
             </main>
 
-            <Modal isOpen={modalAsignar} onClose={() => setModalAsignar(false)} title="Asignar alertas">
-                <div className="space-y-4">
-                    <p className="text-sm text-muted">
-                        {seleccionadas.size > 0
-                            ? `Se asignarán ${seleccionadas.size} alertas al usuario seleccionado.`
-                            : "Selecciona alertas y luego elige un usuario."}
-                    </p>
-                    <Select
-                        label="Usuario"
-                        value={asignadoAId}
-                        onChange={(e) => setAsignadoAId(e.target.value)}
-                        options={[
-                            { value: "", label: "Selecciona un usuario" },
-                            ...usuarios.map((u) => ({
-                                value: u.id,
-                                label: `${u.nombre ?? u.email} (${u.rol})`,
-                            })),
-                        ]}
-                    />
-                    <div className="flex justify-end gap-3">
-                        <Button variant="outline" onClick={() => setModalAsignar(false)}>
-                            Cancelar
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                if (seleccionadas.size > 0) {
-                                    void aplicarLote("asignar");
-                                }
-                                setModalAsignar(false);
-                            }}
-                            disabled={!asignadoAId}
-                        >
-                            Asignar
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
+            <EscalarAlertaModal
+                isOpen={modalEscalarId !== null}
+                alertaId={modalEscalarId}
+                onClose={() => setModalEscalarId(null)}
+                onEscalada={actualizarEstadoLocal}
+            />
+            <ResolverAlertaModal
+                isOpen={modalResolverId !== null}
+                alertaId={modalResolverId}
+                onClose={() => setModalResolverId(null)}
+                onResuelta={actualizarEstadoLocal}
+            />
         </div>
     );
 }
