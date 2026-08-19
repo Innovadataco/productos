@@ -39,7 +39,7 @@ export async function GET(req: Request) {
             );
         }
 
-        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, padre, q } = parsedQuery.data;
+        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, padre, q, orden } = parsedQuery.data;
         const skip = (page - 1) * pageSize;
 
         // SPEC-122: la bandeja excluye bajas lógicas salvo que se pidan explícitamente.
@@ -93,7 +93,7 @@ export async function GET(req: Request) {
         }
 
         // E-8: la bandeja vive en el repo (mismo select/orden/paginación); la ruta no toca prisma.
-        const [reportes, total] = await new ReporteRepository().findBandejaRevision(where, { skip, take: pageSize });
+        const [reportes, total] = await new ReporteRepository().findBandejaRevision(where, { skip, take: pageSize }, orden);
 
         return NextResponse.json({
             reportes,

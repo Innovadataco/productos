@@ -6,6 +6,7 @@
  */
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { OrdenBandeja } from "@/lib/validators";
 import type { DbClient } from "../unit-of-work";
 
 const INCLUDE_CON_DETALLE = {
@@ -125,6 +126,17 @@ const SELECT_BANDEJA_SPAM = {
 export type ReporteBandejaRevisionRow = Prisma.ReporteGetPayload<{ select: typeof SELECT_BANDEJA_REVISION }>;
 export type ReporteBandejaSpamRow = Prisma.ReporteGetPayload<{ select: typeof SELECT_BANDEJA_SPAM }>;
 
+/**
+ * SPEC-181: órdenes de las bandejas del admin. Mapa CERRADO: la clave llega
+ * validada por `ordenBandejaSchema` y NUNCA se interpola entrada del cliente
+ * en el orderBy (anti-inyección). `prioridad` es el orden histórico.
+ */
+export const ORDENES_BANDEJA: Record<OrdenBandeja, Prisma.ReporteOrderByWithRelationInput[]> = {
+    prioridad: [{ prioridadAlta: "desc" }, { creadoEn: "desc" }],
+    recientes: [{ creadoEn: "desc" }],
+    antiguos: [{ creadoEn: "asc" }],
+};
+
 export type ReporteConDetalle = Prisma.ReporteGetPayload<{ include: typeof INCLUDE_CON_DETALLE }>;
 export type ReporteSeguimientoRow = Prisma.ReporteGetPayload<{ select: typeof SELECT_SEGUIMIENTO }>;
 
@@ -187,12 +199,13 @@ export class ReporteRepository {
     /** E-8: bandeja de revisión del admin (select exacto de la ruta, con corrección). */
     findBandejaRevision(
         where: Prisma.ReporteWhereInput,
-        paginacion: { skip: number; take: number }
+        paginacion: { skip: number; take: number },
+        orden: OrdenBandeja = "prioridad"
     ): Promise<[ReporteBandejaRevisionRow[], number]> {
         return Promise.all([
             this.db.reporte.findMany({
                 where,
-                orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "desc" }],
+                orderBy: ORDENES_BANDEJA[orden],
                 skip: paginacion.skip,
                 take: paginacion.take,
                 select: SELECT_BANDEJA_REVISION,
@@ -212,12 +225,13 @@ export class ReporteRepository {
     /** E-8: bandeja de spam pendientes (select exacto de la ruta). */
     findBandejaSpam(
         where: Prisma.ReporteWhereInput,
-        paginacion: { skip: number; take: number }
+        paginacion: { skip: number; take: number },
+        orden: OrdenBandeja = "prioridad"
     ): Promise<[ReporteBandejaSpamRow[], number]> {
         return Promise.all([
             this.db.reporte.findMany({
                 where,
-                orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "desc" }],
+                orderBy: ORDENES_BANDEJA[orden],
                 skip: paginacion.skip,
                 take: paginacion.take,
                 select: SELECT_BANDEJA_SPAM,

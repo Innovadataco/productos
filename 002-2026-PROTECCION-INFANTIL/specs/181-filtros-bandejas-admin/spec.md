@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-19
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-19): ver [cierre.md](./cierre.md). Bandeja gana orden; spam gana barra completa + convención de respuesta; anti-abuso gana filtros + Cargando estándar (adiós skeleton parpadeante). Mapas cerrados de orden, cero interpolación.
 
 Impacto en arquitectura: extiende 3 endpoints de lectura con query params validados (Zod) y parametriza el `orderBy` fijo de los repositorios de bandeja. Sin modelo, sin migraciones, sin permisos nuevos.
 

@@ -451,6 +451,28 @@ export const preferenciaAvisoBodySchema = z.object({
     ventanaDias: z.number().int().min(1, "La ventana mínima es 1 día").max(90, "La ventana máxima es 90 días").nullable().optional(),
 });
 
+// SPEC-181 (Tarea C): query de la simulación anti-abuso del admin. Es un schema
+// de query del área admin viviendo en este módulo (mayoría colegio): se ubica
+// aquí porque `src/lib/validators.ts` está siendo editado por otro frente de
+// trabajo en la misma spec y no debe tocarse desde esta vía.
+// `orden` es un enum cerrado: el repo lo traduce a orderBy por mapa, nunca por
+// interpolación. Default `recientes` = el orden histórico del repo
+// (ultimoReporteEn desc).
+export const nivelRiesgoFiltroSchema = z.enum(["BAJO", "MEDIO", "ALTO", "CRITICO"]);
+
+export const ordenSimulacionSchema = z.enum(["recientes", "antiguos", "score"]);
+
+export const antiAbusoSimulacionQuerySchema = z.object({
+    q: z.string().trim().min(3).max(120).optional(),
+    nivel: nivelRiesgoFiltroSchema.optional(),
+    plataformaId: cuidIdSchema.optional(),
+    orden: ordenSimulacionSchema.default("recientes"),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export type AntiAbusoSimulacionQuery = z.infer<typeof antiAbusoSimulacionQuerySchema>;
+
 // SPEC-151 (FR-002): parámetro ?mes=YYYY-MM para el informe PDF mensual.
 // No futuro, no más de 12 meses atrás; mes actual permitido.
 export const informeMensualQuerySchema = z.object({

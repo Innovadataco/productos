@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { AdminReporteDetalle } from "./AdminReporteDetalle";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -25,6 +27,20 @@ const CATEGORIAS = [
     { value: "OTRO", label: "Otro" },
 ];
 
+// SPEC-181: la cola mezcla POSIBLE_SPAM y REVISION_MANUAL clasificado como SPAM.
+const ESTADOS_SPAM = [
+    { value: "", label: "Todos los estados" },
+    { value: "POSIBLE_SPAM", label: "Posible spam" },
+    { value: "REVISION_MANUAL", label: "Revisión manual" },
+];
+
+// Claves de orden validadas por `ordenBandejaSchema` (mapa cerrado en el repo).
+const ORDENES = [
+    { value: "prioridad", label: "Prioridad" },
+    { value: "recientes", label: "Más recientes" },
+    { value: "antiguos", label: "Más antiguos" },
+];
+
 type SpamReporteItem = {
     id: string;
     identificador: string;
@@ -44,20 +60,47 @@ function formatCategoria(value: string) {
 }
 
 export function SpamRevisionPanel() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
     const [reportes, setReportes] = useState<SpamReporteItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [categoria, setCategoria] = useState("OTRO");
     const [motivo, setMotivo] = useState("");
     const [resolviendo, setResolviendo] = useState(false);
     const [success, setSuccess] = useState("");
 
+    const [q, setQ] = useState(searchParams.get("q") || "");
+    const [estado, setEstado] = useState(searchParams.get("estado") || "");
+    const [orden, setOrden] = useState(searchParams.get("orden") || "prioridad");
+
+    const page = Math.max(1, Number(searchParams.get("page") || "1"));
+
+    const buildQueryString = useCallback(
+        (override: Record<string, string> = {}) => {
+            const params = new URLSearchParams();
+            if (q.trim()) params.set("q", q.trim());
+            if (estado) params.set("estado", estado);
+            params.set("orden", orden);
+            params.set("page", String(page));
+            Object.entries(override).forEach(([k, v]) => {
+                if (v) params.set(k, v);
+                else params.delete(k);
+            });
+            return params.toString();
+        },
+        [q, estado, orden, page]
+    );
+
     const fetchReportes = useCallback(async () => {
         setLoading(true);
         setError("");
         try {
-            const res = await fetch("/api/admin/spam/pendientes", { credentials: "include" });
+            const res = await fetch(`/api/admin/spam/pendientes?${buildQueryString()}`, { credentials: "include" });
             if (res.status === 401) {
                 window.location.href = "/login";
                 return;
@@ -65,16 +108,25 @@ export function SpamRevisionPanel() {
             if (!res.ok) throw new Error("Error cargando pendientes");
             const json = await res.json();
             setReportes(json.reportes || []);
+            setPagination(json.pagination);
         } catch {
             setError("Error cargando reportes en revisión de spam");
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [buildQueryString]);
 
     useEffect(() => {
         fetchReportes();
     }, [fetchReportes]);
+
+    const applyFilters = () => {
+        router.push(`${pathname}?${buildQueryString({ page: "1" })}`);
+    };
+
+    const goToPage = (newPage: number) => {
+        router.push(`${pathname}?${buildQueryString({ page: String(newPage) })}`);
+    };
 
     const selected = reportes.find((r) => r.id === selectedId);
 
@@ -122,6 +174,38 @@ export function SpamRevisionPanel() {
                 <p className="text-sm text-muted">Reportes marcados como posible spam por la IA esperando validación humana.</p>
             </div>
 
+            <div className="glass rounded-2xl p-4 sm:p-5">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="lg:col-span-2">
+                        <Input
+                            label="Buscar"
+                            type="text"
+                            placeholder="RPT-XXXX o identificador/nick"
+                            value={q}
+                            onChange={(e) => setQ(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    applyFilters();
+                                }
+                            }}
+                        />
+                    </div>
+                    <Select label="Estado" options={ESTADOS_SPAM} value={estado} onChange={(e) => setEstado(e.target.value)} />
+                    <Select
+                        label="Ordenar por"
+                        options={ORDENES}
+                        value={orden}
+                        onChange={(e) => {
+                            setOrden(e.target.value);
+                            router.push(`${pathname}?${buildQueryString({ page: "1", orden: e.target.value })}`);
+                        }}
+                    />
+                    <div className="flex items-end">
+                        <Button onClick={applyFilters}>Aplicar filtros</Button>
+                    </div>
+                </div>
+            </div>
+
             {error && (
                 <ErrorState
                     title="No pudimos cargar los reportes en revisión"
@@ -131,51 +215,69 @@ export function SpamRevisionPanel() {
             )}
             {success && <Alerta tono="exito" role="status" className="p-4">{success}</Alerta>}
 
-            <Tabla>
-                <TablaHead>
-                    <tr>
-                        <th className="px-4 py-3 font-medium">Identificador</th>
-                        <th className="px-4 py-3 font-medium">Plataforma</th>
-                        <th className="px-4 py-3 font-medium">Confianza SPAM</th>
-                        <th className="px-4 py-3 font-medium">Asignado a</th>
-                        <th className="px-4 py-3 font-medium">Recibido</th>
-                        <th className="px-4 py-3 font-medium">Acciones</th>
-                    </tr>
-                </TablaHead>
-                <TablaBody>
-                    {loading ? (
+            <div className="glass rounded-2xl overflow-hidden">
+                <Tabla sinContenedor>
+                    <TablaHead>
                         <tr>
-                            <td colSpan={6} className="px-4 py-2 text-center text-subtle">
-                                <Cargando tamano="sm" />
-                            </td>
+                            <th className="px-4 py-3 font-medium">Identificador</th>
+                            <th className="px-4 py-3 font-medium">Plataforma</th>
+                            <th className="px-4 py-3 font-medium">Confianza SPAM</th>
+                            <th className="px-4 py-3 font-medium">Asignado a</th>
+                            <th className="px-4 py-3 font-medium">Recibido</th>
+                            <th className="px-4 py-3 font-medium">Acciones</th>
                         </tr>
-                    ) : reportes.length === 0 ? (
-                        <tr>
-                            <td colSpan={6} className="px-4 py-2">
-                                <EmptyState
-                                    title="No hay reportes en revisión de spam"
-                                    description="Cuando la IA marque un reporte como posible spam, aparecerá aquí para validación humana."
-                                />
-                            </td>
-                        </tr>
-                    ) : (
-                        reportes.map((r) => (
-                            <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                <td className="px-4 py-3 text-body">{r.identificador}</td>
-                                <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
-                                <td className="px-4 py-3 text-body">{(r.confianzaSpam * 100).toFixed(1)}%</td>
-                                <td className="px-4 py-3 text-body">{r.asignadoA?.nombre || r.asignadoA?.email || "—"}</td>
-                                <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleString()}</td>
-                                <td className="px-4 py-3">
-                                    <Button onClick={() => setSelectedId(r.id)} variant="outline" className="py-2 px-3 text-xs">
-                                                Revisar
-                                    </Button>
+                    </TablaHead>
+                    <TablaBody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan={6} className="px-4 py-2 text-center text-subtle">
+                                    <Cargando tamano="sm" />
                                 </td>
                             </tr>
-                        ))
-                    )}
-                </TablaBody>
-            </Tabla>
+                        ) : reportes.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="px-4 py-2">
+                                    <EmptyState
+                                        title="No hay reportes en revisión de spam"
+                                        description="Cuando la IA marque un reporte como posible spam, aparecerá aquí para validación humana."
+                                    />
+                                </td>
+                            </tr>
+                        ) : (
+                            reportes.map((r) => (
+                                <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                    <td className="px-4 py-3 text-body">{r.identificador}</td>
+                                    <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
+                                    <td className="px-4 py-3 text-body">{(r.confianzaSpam * 100).toFixed(1)}%</td>
+                                    <td className="px-4 py-3 text-body">{r.asignadoA?.nombre || r.asignadoA?.email || "—"}</td>
+                                    <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleString()}</td>
+                                    <td className="px-4 py-3">
+                                        <Button onClick={() => setSelectedId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                                                Revisar
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </TablaBody>
+                </Tabla>
+
+                {pagination.totalPages > 1 && (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">
+                        <p className="text-sm text-subtle">
+                            Página {pagination.page} de {pagination.totalPages} · {pagination.total} reportes
+                        </p>
+                        <div className="flex gap-2">
+                            <Button onClick={() => goToPage(page - 1)} disabled={page <= 1} variant="outline">
+                                Anterior
+                            </Button>
+                            <Button onClick={() => goToPage(page + 1)} disabled={page >= pagination.totalPages} variant="outline">
+                                Siguiente
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {selectedId && selected && (
                 <Modal isOpen onClose={() => setSelectedId(null)} title="Revisar posible spam">
