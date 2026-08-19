@@ -89,7 +89,10 @@ describe("OperacionTableroClient", () => {
 
         await waitFor(() => expect(screen.getByText("Aplicación")).toBeTruthy());
         for (const nombre of ["Procesador de reportes", "Base de datos", "Cerebro IA", "Clasificación real del cerebro", "Túnel Tailscale"]) {
-            expect(screen.getByText(nombre)).toBeTruthy();
+            // getAllByText: "Cerebro IA" también aparece en WidgetErrores cuando el
+            // incidente del fixture (ollama_ping ABIERTO) ya se renderizó — la
+            // unicidad depende del timing del fetch y convertía el test en flake.
+            expect(screen.getAllByText(nombre).length).toBeGreaterThanOrEqual(1);
         }
         // Estados del fixture: rojo y no-aplica llegan al DOM.
         expect(screen.getByText("Con problema")).toBeTruthy();

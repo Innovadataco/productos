@@ -148,6 +148,9 @@ export function arraysNav(): NavArray[] {
  * cambia de forma y no se encuentra ninguno, falla ruidoso (ZEUS 2).
  * SPEC-171: DashboardSubNav desapareció — el tablero operativo usa tabs
  * internos por query param (`?tab=`, como IA_TABS: no son enlaces).
+ * SPEC-179 (I-59): EstadisticasSubNav vuelve con hrefs reales; el destino
+ * Clasificación lleva `?tab=clasificacion` y la puerta evalúa pathname — por
+ * eso el parseo usa split("?")[0] (decisión de la compuerta de SPEC-179).
  */
 function subnavsFijos(): NavArray[] {
     const archivos: Array<{ nombre: string; ruta: string; area: string }> = [
@@ -156,10 +159,15 @@ function subnavsFijos(): NavArray[] {
             ruta: "src/app/dashboard/admin/operadores/components/OperadoresSubNav.tsx",
             area: "/dashboard/admin/operadores",
         },
+        {
+            nombre: "EstadisticasSubNav.tabs",
+            ruta: "src/app/dashboard/admin/estadisticas/components/EstadisticasSubNav.tsx",
+            area: "/dashboard/admin/estadisticas",
+        },
     ];
     return archivos.map(({ nombre, ruta, area }) => {
         const texto = fs.readFileSync(`${RAIZ_PRODUCTO}/${ruta}`, "utf-8");
-        const hrefs = [...texto.matchAll(/href:\s*"([^"]+)"/g)].map((m) => m[1]);
+        const hrefs = [...texto.matchAll(/href:\s*"([^"]+)"/g)].map((m) => m[1].split("?")[0]);
         if (hrefs.length === 0) {
             throw new Error(
                 `[Arch:B] no se encontraron tabs literales en ${ruta} (submenú fijo). ` +
