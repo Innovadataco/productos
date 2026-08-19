@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-18
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación** (2026-08-18): ver [cierre.md](./cierre.md). Sub-nav con Operación · Clasificación · Motor montado en ambas páginas; aserción B evalúa los 3 hrefs (97 totales). Flake de timing en OperacionTableroClient.test.tsx corregido (getAllByText).
 
 Impacto en arquitectura: restaura un sub-nav en el área `/dashboard/admin/estadisticas` con 3 destinos (Operación, Clasificación, Motor). Sin cambios de permisos (todo usa el módulo `estadisticas`, que ADMIN ya tiene), sin modelo, sin endpoints.
 
