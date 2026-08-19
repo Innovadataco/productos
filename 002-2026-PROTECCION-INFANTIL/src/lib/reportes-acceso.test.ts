@@ -68,7 +68,7 @@ describe("whereReporteVigente", () => {
         expect(whereReporteVigente({ operadorId: "op-1" })).toEqual({ operadorId: "op-1", eliminado: false });
     });
 
-    it("equivale a `{ eliminado: false, OR: [...] }` (admin/spam/pendientes/route.ts:37-43)", () => {
+    it("equivale a `{ eliminado: false, OR: [...] }` (composición con OR, p. ej. la cola de spam de admin/spam/pendientes)", () => {
         const OR = [
             { estado: "POSIBLE_SPAM" as const },
             { estado: "REVISION_MANUAL" as const, clasificacion: { categoria: "SPAM" as const } },

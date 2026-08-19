@@ -7,6 +7,37 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { DbClient } from "../unit-of-work";
 
+// SPEC-181: orden cerrado de la simulación anti-abuso. El default `recientes`
+// reproduce el orden histórico del repo (ultimoReporteEn desc).
+export type OrdenSimulacion = "recientes" | "antiguos" | "score";
+
+const ORDENES_SIMULACION: Record<OrdenSimulacion, Prisma.IdentificadorReportadoOrderByWithRelationInput[]> = {
+    recientes: [{ ultimoReporteEn: "desc" }, { id: "asc" }],
+    antiguos: [{ ultimoReporteEn: "asc" }, { id: "asc" }],
+    score: [{ score: "desc" }, { ultimoReporteEn: "desc" }, { id: "asc" }],
+};
+
+export type FiltrosSimulacion = {
+    q?: string | undefined;
+    nivel?: string | undefined;
+    plataformaId?: string | undefined;
+    orden?: OrdenSimulacion | undefined;
+};
+
+function whereSimulacion(filtros: Omit<FiltrosSimulacion, "orden">): Prisma.IdentificadorReportadoWhereInput {
+    const where: Prisma.IdentificadorReportadoWhereInput = {};
+    if (filtros.q) {
+        where.identificador = { contains: filtros.q, mode: "insensitive" };
+    }
+    if (filtros.nivel) {
+        where.nivelRiesgo = filtros.nivel;
+    }
+    if (filtros.plataformaId) {
+        where.plataformaId = filtros.plataformaId;
+    }
+    return where;
+}
+
 export class IdentificadorReportadoRepository {
     private readonly db: DbClient;
 
@@ -75,19 +106,24 @@ export class IdentificadorReportadoRepository {
         });
     }
 
-    /** E-8: página de identificadores para la simulación de score anti-abuso. */
-    listarParaSimulacion(paginacion: { skip: number; take: number }) {
+    /**
+     * E-8: página de identificadores para la simulación de score anti-abuso.
+     * SPEC-181: filtros dinámicos (where tipado) y orden por mapa cerrado —
+     * la entrada del cliente nunca se interpola en la consulta.
+     */
+    listarParaSimulacion(paginacion: { skip: number; take: number }, filtros: FiltrosSimulacion = {}) {
         return this.db.identificadorReportado.findMany({
+            where: whereSimulacion(filtros),
             skip: paginacion.skip,
             take: paginacion.take,
-            orderBy: { ultimoReporteEn: "desc" },
+            orderBy: ORDENES_SIMULACION[filtros.orden ?? "recientes"],
             select: { id: true, identificador: true, plataformaId: true },
         });
     }
 
     /** E-8: total de identificadores agregados (paginación de la simulación). */
-    contarTodos(): Promise<number> {
-        return this.db.identificadorReportado.count();
+    contarTodos(filtros: Omit<FiltrosSimulacion, "orden"> = {}): Promise<number> {
+        return this.db.identificadorReportado.count({ where: whereSimulacion(filtros) });
     }
 
     /** SPEC-139 (F5): agregado por clave del match (identificador + plataforma). */

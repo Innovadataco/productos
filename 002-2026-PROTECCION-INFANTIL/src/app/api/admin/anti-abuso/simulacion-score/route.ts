@@ -4,11 +4,10 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { calcularScore, determinarNivelRiesgo } from "@/lib/scoring";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { antiAbusoSimulacionQuerySchema } from "@/lib/schemas";
 import { IdentificadorReportadoRepository } from "@/lib/dal/repositories/identificador-reportado";
 import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import type { NivelRiesgo } from "@/lib/scoring";
-
-const PAGE_SIZE = 50;
 
 export interface SimulacionScoreItem {
     identificador: string;
@@ -46,13 +45,34 @@ export async function GET(req: Request) {
         }
 
         const { searchParams } = new URL(req.url);
-        const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+        // SPEC-181: validación Zod de la query (q/nivel/plataformaId/orden/page/pageSize).
+        const parsed = antiAbusoSimulacionQuerySchema.safeParse({
+            q: searchParams.get("q") ?? undefined,
+            nivel: searchParams.get("nivel") ?? undefined,
+            plataformaId: searchParams.get("plataformaId") ?? undefined,
+            orden: searchParams.get("orden") ?? undefined,
+            page: searchParams.get("page") ?? undefined,
+            pageSize: searchParams.get("pageSize") ?? undefined,
+        });
+        if (!parsed.success) {
+            const detalle = parsed.error.issues
+                .map((i) => `${i.path.join(".") || "query"}: ${i.message}`)
+                .join("; ");
+            return NextResponse.json(
+                { error: { message: `Parámetros inválidos — ${detalle}`, code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+        const { q, nivel, plataformaId, orden, page, pageSize } = parsed.data;
 
         // E-8: las lecturas viven en los repos; la ruta no toca prisma.
         const identificadoresRepo = new IdentificadorReportadoRepository();
         const [totalItems, identificadores] = await Promise.all([
-            identificadoresRepo.contarTodos(),
-            identificadoresRepo.listarParaSimulacion({ skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+            identificadoresRepo.contarTodos({ q, nivel, plataformaId }),
+            identificadoresRepo.listarParaSimulacion(
+                { skip: (page - 1) * pageSize, take: pageSize },
+                { q, nivel, plataformaId, orden }
+            ),
         ]);
 
         const plataformaIds = [...new Set(identificadores.map((i) => i.plataformaId).filter(Boolean))];
@@ -100,14 +120,17 @@ export async function GET(req: Request) {
 
         return NextResponse.json({
             resumen: {
-                totalItems,
-                totalPages: Math.ceil(totalItems / PAGE_SIZE),
-                currentPage: page,
                 subidas,
                 bajadas,
                 sinCambio: detalles.length - subidas - bajadas,
             },
             detalles,
+            pagination: {
+                page,
+                pageSize,
+                total: totalItems,
+                totalPages: Math.ceil(totalItems / pageSize),
+            },
         });
     } catch (error) {
         if (error instanceof AppError) {

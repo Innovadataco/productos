@@ -109,6 +109,11 @@ export const incidentesInfraQuerySchema = z.object({
 const estadosPermitidos = Object.values(EstadoReporte) as [string, ...string[]];
 const categoriasPermitidas = Object.values(CategoriaConducta) as [string, ...string[]];
 
+// SPEC-181: orden cerrado de las bandejas del admin. El orderBy real vive en
+// ORDENES_BANDEJA (repositorio de reportes); aquí solo se valida la clave.
+export const ordenBandejaSchema = z.enum(["prioridad", "recientes", "antiguos"]).optional().default("prioridad");
+export type OrdenBandeja = z.infer<typeof ordenBandejaSchema>;
+
 export const reportesRevisionQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
@@ -122,6 +127,17 @@ export const reportesRevisionQuerySchema = z.object({
     // N-2 (002-PI-056): filtro por padre (email o nombre del usuario denunciante).
     padre: z.string().min(3).max(120).optional(),
     q: z.string().min(3).max(120).optional(),
+    orden: ordenBandejaSchema,
+});
+
+// SPEC-181 (Tarea B): bandeja de spam con barra completa (búsqueda, estado, orden, paginación).
+export const spamPendientesQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(3).max(120).optional(),
+    estado: z.enum(["POSIBLE_SPAM", "REVISION_MANUAL"]).optional(),
+    orden: ordenBandejaSchema,
+    asignadoAMi: z.coerce.boolean().default(false),
 });
 
 // ---------------------------------------------------------------------------

@@ -119,6 +119,7 @@
 | [178](178-monitor-arranque-prod/spec.md) | SPEC-178 — Hotfix I-58: el monitor de infra arranca en prod (auditoría PR #55) | 🟢 Implementada (ver cierre.md) |
 | [179](179-subnav-estadisticas-admin/spec.md) | SPEC-179 — Sub-nav del área Estadísticas del admin (I-59) | 🟢 Implementada (ver cierre.md) |
 | [180](180-fixes-visuales-admin/spec.md) | SPEC-180 — Fixes visuales del admin: tabs duplicados, texto invisible, monitoreo redundante, propósito Dataset | 🟢 Implementada (ver cierre.md) |
+| [181](181-filtros-bandejas-admin/spec.md) | SPEC-181 — Filtros, búsqueda y orden en las bandejas del admin | 🟢 Implementada (ver cierre.md) |
 
 ## Tabla completa (119 specs)
 
@@ -285,6 +286,7 @@
 | [178](178-monitor-arranque-prod/spec.md) | SPEC-178 — Hotfix I-58: el monitor de infra arranca en prod (auditoría PR #55) | 🟢 Implementada (ver cierre.md) |
 | [179](179-subnav-estadisticas-admin/spec.md) | SPEC-179 — Sub-nav del área Estadísticas del admin (I-59) | 🟢 Implementada (ver cierre.md) |
 | [180](180-fixes-visuales-admin/spec.md) | SPEC-180 — Fixes visuales del admin: tabs duplicados, texto invisible, monitoreo redundante, propósito Dataset | 🟢 Implementada (ver cierre.md) |
+| [181](181-filtros-bandejas-admin/spec.md) | SPEC-181 — Filtros, búsqueda y orden en las bandejas del admin | 🟢 Implementada (ver cierre.md) |
 
 ## Incidencias de calidad de datos
 
