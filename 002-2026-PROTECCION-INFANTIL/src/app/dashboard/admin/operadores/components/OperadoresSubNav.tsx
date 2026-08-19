@@ -28,7 +28,7 @@ export function OperadoresSubNav() {
                         href={tab.href}
                         className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                             active
-                                ? "bg-accent text-white shadow"
+                                ? "bg-pino text-white shadow"
                                 : "text-muted hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-body"
                         }`}
                     >

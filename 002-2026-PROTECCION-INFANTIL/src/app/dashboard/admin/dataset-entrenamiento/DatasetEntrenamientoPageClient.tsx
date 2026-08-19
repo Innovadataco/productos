@@ -116,6 +116,17 @@ export default function DatasetEntrenamientoPageClient() {
                 </p>
             </div>
 
+            {/* SPEC-180: el CEO preguntó "¿para qué sirve esta página?" — propósito explicado en criollo. */}
+            <div className="rounded-2xl border border-cielo/30 bg-cielo/10 p-4 text-sm text-body">
+                <p className="font-semibold">¿Qué es esto y para qué sirve?</p>
+                <p className="mt-1 text-muted">
+                    Cada vez que una persona operadora corrige la clasificación que hizo la IA de un reporte, esa corrección
+                    (ya anonimizada, sin datos de nadie) queda guardada aquí. Es la memoria de aprendizaje del clasificador:
+                    con estos ejemplos medimos qué tan bien está clasificando y afinamos sus reglas en la sección de
+                    Simulación del Centro de Control IA. No hay nada que operar en esta página — es solo consulta.
+                </p>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="glass rounded-2xl p-4">
                     <p className="text-xs font-medium text-subtle uppercase tracking-wide">Total registros</p>
