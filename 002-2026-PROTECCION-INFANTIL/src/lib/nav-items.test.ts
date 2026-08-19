@@ -35,6 +35,9 @@ const SIN_PANTALLA_PROPIA = new Set([
     // SPEC-173 (FASE-C): el onboarding salió del menú lateral; sigue accesible por
     // su flujo (URL directa / reactivación), sin ítem de menú propio.
     "colegios_onboarding",
+    // SPEC-180: la página Monitoreo worker salió del menú (redundante con el
+    // tablero operativo de SPEC-171); la ruta redirige a operación.
+    "monitoreo_worker",
 ]);
 
 // SPEC-173 (FASE-C): los nodos expandibles (p. ej. "Usuarios") declaran hijos;

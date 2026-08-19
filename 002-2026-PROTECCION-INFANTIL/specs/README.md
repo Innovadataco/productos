@@ -118,6 +118,7 @@
 | [174](174-aislamiento-tests-strict/spec.md) | SPEC-174 — Aislamiento estricto de tests, fix I-55 (nocturno 2026-08-17) | 🟢 Implementada (ver cierre.md) |
 | [178](178-monitor-arranque-prod/spec.md) | SPEC-178 — Hotfix I-58: el monitor de infra arranca en prod (auditoría PR #55) | 🟢 Implementada (ver cierre.md) |
 | [179](179-subnav-estadisticas-admin/spec.md) | SPEC-179 — Sub-nav del área Estadísticas del admin (I-59) | 🟢 Implementada (ver cierre.md) |
+| [180](180-fixes-visuales-admin/spec.md) | SPEC-180 — Fixes visuales del admin: tabs duplicados, texto invisible, monitoreo redundante, propósito Dataset | 🟢 Implementada (ver cierre.md) |
 
 ## Tabla completa (119 specs)
 
@@ -283,6 +284,7 @@
 | [174](174-aislamiento-tests-strict/spec.md) | SPEC-174 — Aislamiento estricto de tests, fix I-55 (nocturno 2026-08-17) | 🟢 Implementada (ver cierre.md) |
 | [178](178-monitor-arranque-prod/spec.md) | SPEC-178 — Hotfix I-58: el monitor de infra arranca en prod (auditoría PR #55) | 🟢 Implementada (ver cierre.md) |
 | [179](179-subnav-estadisticas-admin/spec.md) | SPEC-179 — Sub-nav del área Estadísticas del admin (I-59) | 🟢 Implementada (ver cierre.md) |
+| [180](180-fixes-visuales-admin/spec.md) | SPEC-180 — Fixes visuales del admin: tabs duplicados, texto invisible, monitoreo redundante, propósito Dataset | 🟢 Implementada (ver cierre.md) |
 
 ## Incidencias de calidad de datos
 

@@ -21,7 +21,9 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/admin/padres", label: "Padres", modulo: "padres" },
     { href: "/dashboard/admin/colegios", label: "Colegios", modulo: "colegios_gestion" },
     { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", modulo: "anti_abuso" },
-    { href: "/dashboard/admin/monitoreo/worker", label: "Monitoreo worker", modulo: "monitoreo_worker" },
+    // SPEC-180: la página Monitoreo worker se retiró del menú (redundante con el
+    // tablero operativo de SPEC-171, que cubre worker + BD + 4 señales más).
+    // La ruta redirige a /dashboard/admin/estadisticas/operacion.
     { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", modulo: "dataset_entrenamiento" },
     { href: "/dashboard/admin/configuracion", label: "Configuración", modulo: "configuracion_sistema" },
 ];

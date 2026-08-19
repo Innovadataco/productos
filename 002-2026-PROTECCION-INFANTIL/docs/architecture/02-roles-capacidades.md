@@ -2149,7 +2149,6 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | configuracion_sistema | `/dashboard/admin/configuracion` | ADMIN |
 | dataset_entrenamiento | `/dashboard/admin/dataset-entrenamiento` | ADMIN |
 | estadisticas | `/dashboard/admin/estadisticas` | ADMIN |
-| monitoreo_worker | `/dashboard/admin/monitoreo/worker` | ADMIN |
 | operadores | `/dashboard/admin/operadores` | ADMIN |
 | padres | `/dashboard/admin/padres` | ADMIN |
 | revision_spam | `/dashboard/admin/spam` | ADMIN |

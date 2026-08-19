@@ -133,12 +133,15 @@ describe("OperacionTableroClient", () => {
         expect(screen.queryByTestId("admin-dashboard")).toBeNull();
     });
 
-    it("al hacer clic en el tab Clasificación navega con ?tab=clasificacion", async () => {
+    it("SPEC-180: no renderiza nav interno de tabs (la navegación es del sub-nav de página)", async () => {
         stubFetch();
         render(<OperacionTableroClient />);
 
         await waitFor(() => expect(screen.getByText("Aplicación")).toBeTruthy());
-        fireEvent.click(screen.getByRole("button", { name: "Clasificación" }));
-        expect(nav.replace).toHaveBeenCalledWith("/dashboard/admin/estadisticas/operacion?tab=clasificacion");
+        // El nav interno (botones Operación/Clasificación) se retiró en SPEC-180:
+        // la navegación vive en EstadisticasSubNav (nivel página, con <Link>).
+        expect(screen.queryByRole("button", { name: "Clasificación" })).toBeNull();
+        expect(screen.queryByRole("button", { name: "Operación" })).toBeNull();
+        expect(screen.queryByRole("navigation", { name: "Secciones del tablero" })).toBeNull();
     });
 });

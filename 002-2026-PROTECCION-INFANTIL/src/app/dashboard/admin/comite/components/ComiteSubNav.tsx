@@ -27,7 +27,7 @@ export function ComiteSubNav({ rol, modulosPermitidos }: { rol: string; modulosP
                         href={tab.href}
                         className={`inline-flex min-h-9 items-center rounded-lg px-4 py-2 text-sm font-semibold transition ${
                             active
-                                ? "bg-accent text-white shadow"
+                                ? "bg-pino text-white shadow"
                                 : "text-muted hover:bg-slate-100 hover:text-body dark:hover:bg-slate-800/60"
                         }`}
                     >
