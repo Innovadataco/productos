@@ -26,9 +26,17 @@ $COMPOSE up -d
 echo "==> Migraciones (aditivas)"
 $COMPOSE exec -T app npx prisma migrate deploy
 
+# 002-PI-085 (I-67): seed idempotente de parámetros y catálogos. Respeta los
+# valores custom del CEO (update: {} por defecto; solo los parámetros cuyo
+# default cambió por decisión de una SPEC usan update explícito, documentado).
+echo "==> Seed idempotente (params + catálogos, respeta valor custom si existe)"
+$COMPOSE exec -T app node --import tsx prisma/seed.ts
+
 # 002-PI-048: propagar módulos/grants nuevos a la BD existente (aditivo e
 # idempotente: crea faltantes, nunca revoca). Evita que un módulo nuevo quede
 # invisible por grants sembrados antes de su spec (clase I-39/D-43).
+# Nota: el seed también llama a syncModulosYGrants(), por lo que este paso es
+# redundante pero conservado como garantía explícita en el deploy.
 echo "==> Sync módulos/grants (aditivo)"
 $COMPOSE exec -T app node --import tsx scripts/sync-modulos-grants.ts
 

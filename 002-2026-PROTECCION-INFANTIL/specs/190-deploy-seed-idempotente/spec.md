@@ -4,7 +4,11 @@
 
 **Created**: 2026-08-20
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+**Implementación**: completado en `work/002-pi-085`. Ver [plan.md](./plan.md), [tasks.md](./tasks.md) y [cierre.md](./cierre.md).
+
+Impacto en arquitectura: cambios en `scripts/deploy-prod.sh` (llamada al seed idempotente) y `prisma/seed.ts` (comentarios justificativos en secciones con `update: { ... }` no vacío). Cero cambios en el motor `src/lib/ai/**`. No requiere migración de schema. La doble ejecución del sync de módulos/grants (`scripts/sync-modulos-grants.ts`) permanece idempotente.
 
 **Input**: 002-PI-085. `scripts/deploy-prod.sh` no ejecuta `prisma/seed.ts`. Consecuencia (I-67): los 13 parámetros del vigilante sembrados por SPEC-171 nunca llegaron a producción hasta intervención manual. Cualquier SPEC futura con parámetros o catálogos queda huérfana igual. Fix estructural de proceso.
 
@@ -103,6 +107,11 @@ Como auditor quiero ver en los logs del deploy qué sembró y qué no.
 
 ## Implementación *(post-aprobación)*
 
-- `scripts/deploy-prod.sh`: añadir llamada al seed entre migraciones y sync de módulos.
-- `prisma/seed.ts`: auditar secciones, añadir comentarios justificativos donde `update` no esté vacío, asegurar logs identificables por sección.
-- `specs/190-deploy-seed-idempotente/cierre.md`: documentar simulación de deploy doble y evidencia de valores custom conservados.
+- `scripts/deploy-prod.sh`: añadida llamada a `node --import tsx prisma/seed.ts` entre `prisma migrate deploy` y `scripts/sync-modulos-grants.ts` (líneas 29-33). Se documentó la doble ejecución idempotente del sync de módulos/grants.
+- `prisma/seed.ts`: auditadas las secciones con `update: { ... }` no vacío. Se añadieron comentarios `EXCEPCIÓN DOCUMENTADA (SPEC-190)` ante:
+  - `monitoreoNuevos` (SPEC-186: nuevos defaults de `monitoreo.ollama.smoke.intervalo_min` y `monitoreo.ollama.smoke.piggyback_min`).
+  - Backfill de ciudades de Colombia (coordenadas, departamento, nombre normalizado).
+  - Backfill de ciudades de otros países (coordenadas, nombre normalizado).
+  Las secciones de parámetros viejos/uso operativo (incluyendo `monitoreoViejos`) usan `update: {}` para respetar ajustes manuales del CEO.
+- `src/lib/deploy-seed-idempotencia.test.ts`: tests de integración que simulan doble deploy, verifican conservación de valores custom y recreación de parámetros faltantes.
+- Ver `specs/190-deploy-seed-idempotente/cierre.md` para evidencia de gate local y simulación de deploy.
