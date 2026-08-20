@@ -37,6 +37,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/anti-abuso/simular` | api | permitir | permite | sí |
 | `/api/admin/anti-abuso/simular/[id]` | api | permitir | permite | sí |
 | `/api/admin/anti-abuso/simular/[id]/cancelar` | api | permitir | permite | sí |
+| `/api/admin/anti-abuso/simular/sugerencias` | api | permitir | permite | sí |
 | `/api/admin/anti-abuso/tablero` | api | permitir | permite | sí |
 | `/api/admin/audit-logs` | api | permitir | permite | sí |
 | `/api/admin/colegios` | api | permitir | permite | sí |
@@ -315,6 +316,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/anti-abuso/simular` | api | permitir | permite | sí |
 | `/api/admin/anti-abuso/simular/[id]` | api | permitir | permite | sí |
 | `/api/admin/anti-abuso/simular/[id]/cancelar` | api | permitir | permite | sí |
+| `/api/admin/anti-abuso/simular/sugerencias` | api | permitir | permite | sí |
 | `/api/admin/anti-abuso/tablero` | api | permitir | permite | sí |
 | `/api/admin/audit-logs` | api | permitir | permite | sí |
 | `/api/admin/colegios` | api | permitir | permite | sí |
@@ -593,6 +595,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/anti-abuso/simular` | api | permitir | permite | sí |
 | `/api/admin/anti-abuso/simular/[id]` | api | permitir | permite | sí |
 | `/api/admin/anti-abuso/simular/[id]/cancelar` | api | permitir | permite | sí |
+| `/api/admin/anti-abuso/simular/sugerencias` | api | permitir | permite | sí |
 | `/api/admin/anti-abuso/tablero` | api | permitir | permite | sí |
 | `/api/admin/audit-logs` | api | permitir | permite | sí |
 | `/api/admin/colegios` | api | permitir | permite | sí |
@@ -871,6 +874,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/anti-abuso/simular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/simular/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/simular/[id]/cancelar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/anti-abuso/simular/sugerencias` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/tablero` | api | HTTP 403 | no permite | sí |
 | `/api/admin/audit-logs` | api | HTTP 403 | no permite | sí |
 | `/api/admin/colegios` | api | HTTP 403 | no permite | sí |
@@ -1149,6 +1153,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/anti-abuso/simular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/simular/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/simular/[id]/cancelar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/anti-abuso/simular/sugerencias` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/tablero` | api | HTTP 403 | no permite | sí |
 | `/api/admin/audit-logs` | api | HTTP 403 | no permite | sí |
 | `/api/admin/colegios` | api | HTTP 403 | no permite | sí |
@@ -1427,6 +1432,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/anti-abuso/simular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/simular/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/simular/[id]/cancelar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/anti-abuso/simular/sugerencias` | api | HTTP 403 | no permite | sí |
 | `/api/admin/anti-abuso/tablero` | api | HTTP 403 | no permite | sí |
 | `/api/admin/audit-logs` | api | HTTP 403 | no permite | sí |
 | `/api/admin/colegios` | api | HTTP 403 | no permite | sí |
@@ -1705,6 +1711,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/anti-abuso/simular` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/anti-abuso/simular/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/anti-abuso/simular/[id]/cancelar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/anti-abuso/simular/sugerencias` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/anti-abuso/tablero` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/audit-logs` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/colegios` | api | HTTP 401 | permite | **NO** |
@@ -1984,6 +1991,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/anti-abuso/simular` | HTTP 401 | permite |
 | `/api/admin/anti-abuso/simular/[id]` | HTTP 401 | permite |
 | `/api/admin/anti-abuso/simular/[id]/cancelar` | HTTP 401 | permite |
+| `/api/admin/anti-abuso/simular/sugerencias` | HTTP 401 | permite |
 | `/api/admin/anti-abuso/tablero` | HTTP 401 | permite |
 | `/api/admin/audit-logs` | HTTP 401 | permite |
 | `/api/admin/colegios` | HTTP 401 | permite |
