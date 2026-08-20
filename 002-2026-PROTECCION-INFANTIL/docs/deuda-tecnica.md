@@ -60,7 +60,7 @@
 
 | ID | Ítem | Detalle | Estado |
 |----|------|---------|--------|
-| I-66 (provisional) | **`seed-idempotencia.test.ts` flaky en suite completa** | `npm run test` completa termina con `Unhandled Rejection: process.exit(1)` desde `prisma/seed.ts:1451`, originado mientras corre `src/lib/seed-idempotencia.test.ts`. Aislado el archivo pasa (3/3). 231 test files y 1353 tests pasan; el error no afecta la funcionalidad de SPEC-189. Se alcanzaron 2 iteraciones del mismo síntoma (D-55). | PARA decisión de ZEUS: wrappear `main()` en seed, eliminar `process.exit(1)` en importación de módulo, o declarar no-bloqueante. |
+| I-72 | **`seed-idempotencia.test.ts` flaky en suite completa** | `npm run test` completa terminaba con `Unhandled Rejection: process.exit(1)` desde `prisma/seed.ts:1451`, originado mientras corre `src/lib/seed-idempotencia.test.ts`. El seed se ejecutaba al importar el módulo sin guard de CLI. Corregido con guard `import.meta.url === file://${process.argv[1]}` en `prisma/seed.ts`. | CORREGIDO en SPEC-189. |
 
 ## FIX AHORA hechos
 

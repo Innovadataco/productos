@@ -122,4 +122,4 @@ Como admin quiero ir al detalle de un operador directamente desde `/admin/operad
 
 ## Deuda técnica / Incidencias
 
-- **I-66 (provisional) — `seed-idempotencia.test.ts` flaky en suite completa**: al correr `npm run test` completa, `src/lib/seed-idempotencia.test.ts` deja un `Unhandled Rejection: process.exit(1)` originado en `prisma/seed.ts:1451`. El archivo pasó aislado en ambas re-runs. 231 test files y 1353 tests pasan; el error no afecta funcionalidad de SPEC-189. Se alcanzaron 2 iteraciones del mismo síntoma (D-55); no se intenta una tercera sin decisión de ZEUS.
+- **I-72 — `seed-idempotencia.test.ts` flaky en suite completa**: al correr `npm run test` completa, `src/lib/seed-idempotencia.test.ts` dejaba un `Unhandled Rejection: process.exit(1)` originado en `prisma/seed.ts:1451`. El seed se ejecutaba al importar el módulo sin guard de CLI. Corregido con guard `import.meta.url === file://${process.argv[1]}` en `prisma/seed.ts`.
