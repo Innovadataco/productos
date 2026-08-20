@@ -11,6 +11,7 @@ export type SemaforoCardProps = {
     estado: EstadoSemaforo;
     ultimoProbeEn: string | null;
     hint: string;
+    onClick?: (() => void) | undefined;
 };
 
 /** Configuración de las 6 señales del tablero (clave del endpoint + rótulos criollo). */
@@ -57,12 +58,17 @@ export function formatoUltimoProbe(ultimoProbeEn: string | null): string {
     return `Último chequeo: ${fecha.toLocaleString("es-CO", { dateStyle: "short", timeStyle: "medium" })}`;
 }
 
-export function SemaforoCard({ nombre, estado, ultimoProbeEn, hint }: SemaforoCardProps) {
+export function SemaforoCard({ nombre, estado, ultimoProbeEn, hint, onClick }: SemaforoCardProps) {
     const config = ESTADO_CONFIG[estado] ?? ESTADO_CONFIG["no-aplica"];
+    const clickable = typeof onClick === "function";
     return (
         <article
-            className="glass rounded-2xl p-5 transition hover:shadow-md motion-reduce:transition-none"
+            className={`glass rounded-2xl p-5 transition motion-reduce:transition-none ${clickable ? "cursor-pointer hover:shadow-md" : "hover:shadow-md"}`}
             aria-label={`Señal ${nombre}: ${config.label}`}
+            onClick={onClick}
+            role={clickable ? "button" : undefined}
+            tabIndex={clickable ? 0 : undefined}
+            onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") onClick(); } : undefined}
         >
             <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-medium text-body">{nombre}</p>

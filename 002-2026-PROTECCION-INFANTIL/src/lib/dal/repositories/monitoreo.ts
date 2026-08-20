@@ -17,7 +17,13 @@ export class MonitoreoRepository {
     }
 
     /** Persiste el resultado de un probe (append-only). */
-    async crearProbe(data: { senal: string; ok: boolean; latenciaMs: number; detalle: string | null }): Promise<void> {
+    async crearProbe(data: {
+        senal: string;
+        ok: boolean;
+        latenciaMs: number;
+        detalle: string | null;
+        metodo?: string | null;
+    }): Promise<void> {
         await this.db.healthProbe.create({ data });
     }
 
@@ -95,5 +101,61 @@ export class MonitoreoRepository {
             total += grupo._count._all;
         }
         return { porEstado, total };
+    }
+
+    /**
+     * SPEC-186 (002-PI-081): último probe de una señal filtrado por método.
+     * Usado para decidir si toca smoke real (último SMOKE exitoso).
+     */
+    async ultimoProbePorSenalYMetodo(
+        senal: string,
+        metodo: string,
+        ok?: boolean
+    ): Promise<HealthProbe | null> {
+        const where: Prisma.HealthProbeWhereInput = { senal, metodo };
+        if (ok !== undefined) where.ok = ok;
+        return this.db.healthProbe.findFirst({ where, orderBy: { creadoEn: "desc" } });
+    }
+
+    /** SPEC-186: historial de probes de una señal, más recientes primero. */
+    async historialProbes(senal: string, limite: number): Promise<HealthProbe[]> {
+        return this.db.healthProbe.findMany({
+            where: { senal },
+            orderBy: { creadoEn: "desc" },
+            take: limite,
+        });
+    }
+
+    /**
+     * SPEC-186: resumen de Ollama en las últimas 24h para el tablero.
+     * Cuenta pings, piggybacks, smokes reales y fallos de ambas señales Ollama.
+     */
+    async resumenOllamaUltimas24h(): Promise<{ pings: number; piggybacks: number; smokes: number; fallos: number }> {
+        const desde = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const probes = await this.db.healthProbe.findMany({
+            where: {
+                senal: { in: ["ollama_ping", "ollama_smoke"] },
+                creadoEn: { gte: desde },
+            },
+            select: { senal: true, ok: true, metodo: true },
+        });
+        let pings = 0;
+        let piggybacks = 0;
+        let smokes = 0;
+        let fallos = 0;
+        for (const p of probes) {
+            if (!p.ok) {
+                fallos++;
+                continue;
+            }
+            if (p.senal === "ollama_ping") {
+                pings++;
+            } else if (p.metodo === "PIGGYBACK") {
+                piggybacks++;
+            } else {
+                smokes++;
+            }
+        }
+        return { pings, piggybacks, smokes, fallos };
     }
 }

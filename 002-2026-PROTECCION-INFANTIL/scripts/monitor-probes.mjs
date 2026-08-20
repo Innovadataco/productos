@@ -14,7 +14,7 @@
  * - monitoreo.app.intervalo_seg           (también cadencia de worker y bd)
  * - monitoreo.worker.heartbeat_max_seg
  * - monitoreo.ollama.ping.intervalo_seg
- * - monitoreo.ollama.smoke.intervalo_min / monitoreo.ollama.smoke.timeout_ms
+ * - monitoreo.ollama.smoke.intervalo_min / .timeout_ms / .piggyback_min
  * - monitoreo.tailscale.url               (vacío = no aplica) / .intervalo_seg
  * - monitoreo.reprobe.segundos            (espera antes de confirmar un rojo)
  * Retención: HealthProbe se purga cada hora (7 días).
@@ -110,8 +110,9 @@ async function leerConfig() {
         appIntervaloSeg: await entero("monitoreo.app.intervalo_seg", 60),
         heartbeatMaxSeg: await entero("monitoreo.worker.heartbeat_max_seg", 90),
         ollamaPingIntervaloSeg: await entero("monitoreo.ollama.ping.intervalo_seg", 60),
-        ollamaSmokeIntervaloSeg: (await entero("monitoreo.ollama.smoke.intervalo_min", 5)) * 60,
+        ollamaSmokeIntervaloSeg: (await entero("monitoreo.ollama.smoke.intervalo_min", 30)) * 60,
         ollamaSmokeTimeoutMs: await entero("monitoreo.ollama.smoke.timeout_ms", 60000),
+        ollamaSmokePiggybackMin: await entero("monitoreo.ollama.smoke.piggyback_min", 15),
         tailscaleUrl: (tailscaleParam?.valor ?? "").trim(),
         tailscaleIntervaloSeg: await entero("monitoreo.tailscale.intervalo_seg", 60),
         reprobeSeg: await entero("monitoreo.reprobe.segundos", 60),
@@ -134,7 +135,12 @@ async function correrProbe(senal, config) {
             case "worker": return probeWorker({ heartbeatMaxSeg: config.heartbeatMaxSeg });
             case "bd": return await probeBd();
             case "ollama_ping": return await probeOllamaPing({ baseUrl: await getOllamaBaseUrl() });
-            case "ollama_smoke": return await probeOllamaSmoke({ baseUrl: await getOllamaBaseUrl(), timeoutMs: config.ollamaSmokeTimeoutMs });
+            case "ollama_smoke": return await probeOllamaSmoke({
+                baseUrl: await getOllamaBaseUrl(),
+                timeoutMs: config.ollamaSmokeTimeoutMs,
+                piggybackMin: config.ollamaSmokePiggybackMin,
+                intervaloMin: config.ollamaSmokeIntervaloSeg / 60,
+            });
             case "tailscale": return await probeTailscale({ url: config.tailscaleUrl });
             default: throw new Error(`Señal desconocida: ${senal}`);
         }

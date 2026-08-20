@@ -53,4 +53,27 @@ export class ClasificacionIARepository {
             select: { reporteId: true, categoria: true, confianza: true, latenciaMs: true, usoCascada: true },
         });
     }
+
+    /**
+     * SPEC-186 (002-PI-081): ¿existe alguna clasificación exitosa desde `desde`?
+     * La existencia de la fila implica que Ollama respondió; no filtramos por
+     * categoría ni confianza.
+     */
+    async existeClasificacionExitosaDesde(desde: Date): Promise<boolean> {
+        const fila = await this.db.clasificacionIA.findFirst({
+            where: { creadoEn: { gte: desde } },
+            select: { id: true },
+            orderBy: { creadoEn: "desc" },
+        });
+        return fila !== null;
+    }
+
+    /** SPEC-186: última clasificación exitosa dentro de una ventana (para detalle del piggyback). */
+    async ultimaClasificacionExitosaDesde(desde: Date): Promise<{ creadoEn: Date } | null> {
+        return this.db.clasificacionIA.findFirst({
+            where: { creadoEn: { gte: desde } },
+            select: { creadoEn: true },
+            orderBy: { creadoEn: "desc" },
+        });
+    }
 }
