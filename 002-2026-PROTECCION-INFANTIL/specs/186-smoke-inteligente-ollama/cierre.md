@@ -42,7 +42,7 @@ Esto libera la GPU del CEO: Ollama solo se molesta cuando no hay tráfico real r
 | `npm run arch:check` | ✅ |
 | Tests de integración SPEC-186 | ✅ 24 tests |
 | Tests unitarios SPEC-186 | ✅ 14 tests |
-| `npm run build` | ⏳ en ejecución / pendiente documentar |
+| `npm run build` | ✅ |
 
 ## Tests nuevos / actualizados
 
