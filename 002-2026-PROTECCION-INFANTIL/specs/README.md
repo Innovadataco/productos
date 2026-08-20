@@ -14,7 +14,7 @@
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **44** |
-| **Pendientes (PLANEADO)** | **6** |
+| **Pendientes (PLANEADO)** | **7** |
 
 ## Backlog activo (no cerradas)
 
@@ -120,6 +120,8 @@
 | [179](179-subnav-estadisticas-admin/spec.md) | SPEC-179 — Sub-nav del área Estadísticas del admin (I-59) | 🟢 Implementada (ver cierre.md) |
 | [180](180-fixes-visuales-admin/spec.md) | SPEC-180 — Fixes visuales del admin: tabs duplicados, texto invisible, monitoreo redundante, propósito Dataset | 🟢 Implementada (ver cierre.md) |
 | [181](181-filtros-bandejas-admin/spec.md) | SPEC-181 — Filtros, búsqueda y orden en las bandejas del admin | 🟢 Implementada (ver cierre.md) |
+| [182](182-reconciliacion-huerfanos/spec.md) | SPEC-182 — Reconciliación de reportes huérfanos (I-60) | 🟢 Implementada (ver cierre.md) |
+| [183](183-zeus-readonly-tailscale/spec.md) | SPEC-183 — Acceso lectura ZEUS a BD prod por Tailscale (002-PI-078) | 🟢 Implementada (ver cierre.md) |
 | [184](184-anti-abuso-operativo-simulador/spec.md) | SPEC-184 — Anti-abuso operativo + simulador de abusos (002-PI-079) | 🟢 Finalizada (ver cierre.md) |
 
 ## Tabla completa (120 specs)
@@ -288,6 +290,8 @@
 | [179](179-subnav-estadisticas-admin/spec.md) | SPEC-179 — Sub-nav del área Estadísticas del admin (I-59) | 🟢 Implementada (ver cierre.md) |
 | [180](180-fixes-visuales-admin/spec.md) | SPEC-180 — Fixes visuales del admin: tabs duplicados, texto invisible, monitoreo redundante, propósito Dataset | 🟢 Implementada (ver cierre.md) |
 | [181](181-filtros-bandejas-admin/spec.md) | SPEC-181 — Filtros, búsqueda y orden en las bandejas del admin | 🟢 Implementada (ver cierre.md) |
+| [182](182-reconciliacion-huerfanos/spec.md) | SPEC-182 — Reconciliación de reportes huérfanos (I-60) | 🟢 Implementada (ver cierre.md) |
+| [183](183-zeus-readonly-tailscale/spec.md) | SPEC-183 — Acceso lectura ZEUS a BD prod por Tailscale (002-PI-078) | 🟢 Implementada (ver cierre.md) |
 | [184](184-anti-abuso-operativo-simulador/spec.md) | SPEC-184 — Anti-abuso operativo + simulador de abusos (002-PI-079) | 🟢 Finalizada (ver cierre.md) |
 
 ## Incidencias de calidad de datos
