@@ -775,6 +775,39 @@ async function main() {
             esPublico: false,
             descripcion: "Enviar alertas por email a usuarios suscritos a identificadores",
         },
+        // SPEC-184 (002-PI-079): alertas throttled ante picos de bloqueos de rate-limit.
+        {
+            clave: "alerts.ratelimit.enabled",
+            valor: "true",
+            tipo: TipoParametro.BOOLEAN,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "Enviar alertas por pico de bloqueos de rate-limit",
+        },
+        {
+            clave: "alerts.ratelimit.umbral_bloqueos_hora",
+            valor: "20",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "Bloqueos por IP/hora que disparan alerta",
+        },
+        {
+            clave: "alerts.ratelimit.throttle_min",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "Mínimo entre emails del mismo pico de bloqueos (minutos)",
+        },
+        {
+            clave: "alerts.ratelimit.destinatarios",
+            valor: "",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.EMAIL,
+            esPublico: false,
+            descripcion: "A quién avisar por pico de bloqueos (correos separados por coma; vacío = no enviar)",
+        },
         {
             // SPEC-149 (FR-008): interruptor global del canal de avisos del colegio.
             clave: "colegio.notificaciones.enabled",

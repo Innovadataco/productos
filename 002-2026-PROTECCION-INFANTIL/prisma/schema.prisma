@@ -186,6 +186,12 @@ enum AccionAudit {
   COLEGIO_NOTIFICACION_CREADA
   COLEGIO_NOTIFICACION_LEIDA
   COLEGIO_NOTIFICACION_ARCHIVADA
+  // SPEC-184 (002-PI-079): anti-abuso operativo + simulador de abusos.
+  IP_BLOQUEADA
+  IP_DESBLOQUEADA
+  SIMULACION_ABUSO_INICIADA
+  SIMULACION_ABUSO_CANCELADA
+  SIMULACION_ABUSO_COMPLETADA
 }
 
 enum TipoPeriodoServicio {
@@ -324,6 +330,9 @@ model Usuario {
   accesosDocumentoApelacion    AccesoDocumentoApelacion[]
   alertasAsignadas             AlertaColegio[]
   notificacionesInApp          NotificacionInApp[]
+  // SPEC-184 (002-PI-079): blocklist y simulador de abusos.
+  bloqueosCreados              BlockList[]
+  simulacionesAbuso            SimulacionAbusoRun[]
 
   @@index([email])
   @@index([rol])
@@ -517,26 +526,26 @@ model Colegio {
   creadoEn                         DateTime            @default(now())
   actualizadoEn                    DateTime            @updatedAt
 
-  pais               Pais                       @relation(fields: [paisId], references: [id])
-  departamento       Departamento?              @relation(fields: [departamentoId], references: [id])
-  ciudad             Ciudad                     @relation(fields: [ciudadId], references: [id])
-  tenant             Tenant                     @relation(fields: [tenantId], references: [id])
-  admin              Usuario?
-  comiteConvivencia  Usuario?                   @relation(name: "ComiteConvivenciaColegio")
-  cursos             Curso[]
-  estudiantes        Estudiante[]
-  profesores         Profesor[]
-  alertas            AlertaColegio[]
-  solicitudesComite  SolicitudComite[]
-  patrones           PatronInstitucional[]
-  preferenciasAvisos PreferenciaAlertaColegio[]
-  registrosAvisos    RegistroAvisoColegio[]
-  seguimientosCaso   SeguimientoCaso[]
-  notasSeguimiento   NotaSeguimiento[]
-  auditLogs          AuditLog[]
-  sesionesCarga      CargaRosterSesion[]
-  Materia                 Materia[]
-  CursoMateria            CursoMateria[]
+  pais                     Pais                       @relation(fields: [paisId], references: [id])
+  departamento             Departamento?              @relation(fields: [departamentoId], references: [id])
+  ciudad                   Ciudad                     @relation(fields: [ciudadId], references: [id])
+  tenant                   Tenant                     @relation(fields: [tenantId], references: [id])
+  admin                    Usuario?
+  comiteConvivencia        Usuario?                   @relation(name: "ComiteConvivenciaColegio")
+  cursos                   Curso[]
+  estudiantes              Estudiante[]
+  profesores               Profesor[]
+  alertas                  AlertaColegio[]
+  solicitudesComite        SolicitudComite[]
+  patrones                 PatronInstitucional[]
+  preferenciasAvisos       PreferenciaAlertaColegio[]
+  registrosAvisos          RegistroAvisoColegio[]
+  seguimientosCaso         SeguimientoCaso[]
+  notasSeguimiento         NotaSeguimiento[]
+  auditLogs                AuditLog[]
+  sesionesCarga            CargaRosterSesion[]
+  Materia                  Materia[]
+  CursoMateria             CursoMateria[]
   identificadoresAcudiente IdentificadorAcudiente[]
   identificadoresProfesor  IdentificadorProfesor[]
   onboarding               OnboardingColegio?
@@ -621,7 +630,7 @@ model Profesor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  colegio             Colegio              @relation(fields: [colegioId], references: [id])
+  colegio             Colegio                 @relation(fields: [colegioId], references: [id])
   cursos              Curso[]
   CursoMateria        CursoMateria[]
   identificadoresProf IdentificadorProfesor[]
@@ -710,7 +719,7 @@ model AcudienteEstudiante {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  estudiante    Estudiante              @relation(fields: [estudianteId], references: [id])
+  estudiante      Estudiante               @relation(fields: [estudianteId], references: [id])
   identificadores IdentificadorAcudiente[]
 
   @@unique([estudianteId, orden, estado])
@@ -755,9 +764,9 @@ model IdentificadorProfesor {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  profesor   Profesor    @relation(fields: [profesorId], references: [id])
-  colegio    Colegio     @relation(fields: [colegioId], references: [id])
-  plataforma Plataforma? @relation(fields: [plataformaId], references: [id])
+  profesor   Profesor        @relation(fields: [profesorId], references: [id])
+  colegio    Colegio         @relation(fields: [colegioId], references: [id])
+  plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
   @@unique([profesorId, tipo, valor, plataformaId])
@@ -812,25 +821,25 @@ model IdentificadorEstudiante {
 // SPEC-165: alerta extendida a estudiante/profesor/acudiente. Una sola FK
 // poblada según tipoSujeto; constraint única por tipo evita duplicados.
 model AlertaColegio {
-  id                        String    @id @default(cuid())
+  id                        String   @id @default(cuid())
   colegioId                 String
   reporteId                 String
-  identificadorEstudianteId String?   @map("identificadorAlumnoId")
+  identificadorEstudianteId String?  @map("identificadorAlumnoId")
   identificadorProfesorId   String?
   identificadorAcudienteId  String?
-  tipoSujeto                String    @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE
-  estado                    String    @default("nueva") // nueva | vista | gestionada | escalada | cerrada
-  prioridad                 String    @default("media") // alta | media | baja
+  tipoSujeto                String   @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE
+  estado                    String   @default("nueva") // nueva | vista | gestionada | escalada | cerrada
+  prioridad                 String   @default("media") // alta | media | baja
   vencimientoSla            DateTime
   asignadoAId               String?
   // SPEC-142 (F6): fila agregada que ESTA alerta aportó (idempotencia + reversa
   // exacta en baja). Nullable: las alertas previas a F6 no aportan al agregado.
   patronInstitucionalId     String?
-  creadoEn                  DateTime  @default(now())
-  actualizadoEn             DateTime  @updatedAt
+  creadoEn                  DateTime @default(now())
+  actualizadoEn             DateTime @updatedAt
 
-  colegio                 Colegio                 @relation(fields: [colegioId], references: [id])
-  reporte                 Reporte                 @relation(fields: [reporteId], references: [id])
+  colegio                 Colegio                  @relation(fields: [colegioId], references: [id])
+  reporte                 Reporte                  @relation(fields: [reporteId], references: [id])
   identificadorEstudiante IdentificadorEstudiante? @relation(fields: [identificadorEstudianteId], references: [id])
   identificadorProfesor   IdentificadorProfesor?   @relation(fields: [identificadorProfesorId], references: [id])
   identificadorAcudiente  IdentificadorAcudiente?  @relation(fields: [identificadorAcudienteId], references: [id])
@@ -1137,12 +1146,12 @@ model SolicitudComite {
   creadoEn        DateTime  @default(now())
   resueltoEn      DateTime?
 
-  reporte  Reporte        @relation(fields: [reporteId], references: [id], onDelete: Cascade)
-  comite   Usuario?       @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
-  operador Usuario?       @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
-  colegio  Colegio?       @relation(fields: [colegioId], references: [id])
-  alerta   AlertaColegio? @relation(fields: [alertaColegioId], references: [id])
-  creadoPor Usuario?      @relation(fields: [creadoPorId], references: [id], name: "SolicitudesCreadasPorColegio")
+  reporte   Reporte        @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  comite    Usuario?       @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
+  operador  Usuario?       @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
+  colegio   Colegio?       @relation(fields: [colegioId], references: [id])
+  alerta    AlertaColegio? @relation(fields: [alertaColegioId], references: [id])
+  creadoPor Usuario?       @relation(fields: [creadoPorId], references: [id], name: "SolicitudesCreadasPorColegio")
 
   @@index([estado])
   @@index([comiteId])
@@ -1534,6 +1543,42 @@ model SimulacionReporte {
   @@map("simulacion_reportes")
 }
 
+// SPEC-184 (002-PI-079): bloqueo persistente de IPs por ipHash.
+model BlockList {
+  id            String    @id @default(cuid())
+  ipHash        String    @unique
+  motivo        String
+  expiraEn      DateTime?
+  creadoPorId   String
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  creadoPor Usuario @relation(fields: [creadoPorId], references: [id])
+
+  @@index([ipHash])
+  @@map("block_list")
+}
+
+// SPEC-184 (002-PI-079): corrida del simulador de abusos (reportes reales).
+model SimulacionAbusoRun {
+  id             String   @id @default(cuid())
+  escenario      String
+  totalReportes  Int
+  progreso       Int      @default(0)
+  estado         String   @default("PENDIENTE") // PENDIENTE | EN_PROGRESO | COMPLETADA | CANCELADA | FALLIDA
+  configJson     Json?
+  resultadosJson Json?
+  creadoPorId    String
+  creadoEn       DateTime @default(now())
+  actualizadoEn  DateTime @updatedAt
+
+  creadoPor Usuario @relation(fields: [creadoPorId], references: [id])
+
+  @@index([estado])
+  @@index([creadoPorId])
+  @@map("simulacion_abuso_runs")
+}
+
 model ModuloPermisible {
   id            String   @id @default(cuid())
   clave         String   @unique
@@ -1647,16 +1692,16 @@ model IncidenteInfra {
 // curado). Lo escribe el job semanal y el recálculo bajo demanda; el tablero
 // solo lee (cero groupBys pesados por carga).
 model DerivaMotorSnapshot {
-  id              String   @id @default(cuid())
-  semanaInicio    DateTime // lunes 00:00 America/Bogota de la semana medida
-  categoria       String // CategoriaConducta
-  total           Int // clasificaciones de producción en la ventana
-  correcciones    Int // correcciones humanas confirmadas en la ventana
-  tasaCorreccion  Float // correcciones / total (0 si total = 0)
-  accuracyBanco   Float? // recall por categoría del último SimulacionRun COMPLETADA (null = sin baseline)
-  brechaPp        Float? // tasaCorreccion − (1 − accuracyBanco), en puntos porcentuales (null = sin baseline)
-  alertada        Boolean  @default(false)
-  creadoEn        DateTime @default(now())
+  id             String   @id @default(cuid())
+  semanaInicio   DateTime // lunes 00:00 America/Bogota de la semana medida
+  categoria      String // CategoriaConducta
+  total          Int // clasificaciones de producción en la ventana
+  correcciones   Int // correcciones humanas confirmadas en la ventana
+  tasaCorreccion Float // correcciones / total (0 si total = 0)
+  accuracyBanco  Float? // recall por categoría del último SimulacionRun COMPLETADA (null = sin baseline)
+  brechaPp       Float? // tasaCorreccion − (1 − accuracyBanco), en puntos porcentuales (null = sin baseline)
+  alertada       Boolean  @default(false)
+  creadoEn       DateTime @default(now())
 
   @@unique([semanaInicio, categoria])
   @@index([semanaInicio])
