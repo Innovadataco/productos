@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **64** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **66** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -482,7 +482,20 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (16)
+### Otros (sin regla de dominio) (18)
+
+#### `BlockList`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| ipHash | String | único |
+| motivo | String | — |
+| expiraEn | DateTime | opcional |
+| creadoPorId | String | — |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| creadoPor | Usuario | relación (FK) |
 
 #### `CargaRosterSesion`
 
@@ -713,6 +726,22 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | alerta | AlertaColegio | relación (FK) |
 | notas | NotaSeguimiento | lista, relación |
+
+#### `SimulacionAbusoRun`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| escenario | String | — |
+| totalReportes | Int | — |
+| progreso | Int | — |
+| estado | String | — |
+| configJson | Json | opcional |
+| resultadosJson | Json | opcional |
+| creadoPorId | String | — |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| creadoPor | Usuario | relación (FK) |
 
 ### Permisos por módulo (2)
 
@@ -1179,6 +1208,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | accesosDocumentoApelacion | AccesoDocumentoApelacion | lista, relación |
 | alertasAsignadas | AlertaColegio | lista, relación |
 | notificacionesInApp | NotificacionInApp | lista, relación |
+| bloqueosCreados | BlockList | lista, relación |
+| simulacionesAbuso | SimulacionAbusoRun | lista, relación |
 
 ## Diagrama ER (Mermaid)
 
@@ -1266,6 +1297,7 @@ erDiagram
     Usuario ||--o{ AlertaColegio : "asignadoA (opcional)"
     Usuario ||--o{ AlertaSuscripcion : "usuario"
     Usuario ||--o{ AuditLog : "usuario (opcional)"
+    Usuario ||--o{ BlockList : "creadoPor"
     Usuario ||--o{ CodigoVerificacion : "usuario (opcional)"
     Usuario ||--o{ ContactoConfianza : "usuario"
     Usuario ||--o{ CorreccionAdmin : "admin"
@@ -1283,6 +1315,7 @@ erDiagram
     Usuario ||--o{ Reporte : "eliminadoPor (opcional)"
     Usuario ||--o{ Reporte : "operador (opcional)"
     Usuario ||--o{ Reporte : "usuario (opcional)"
+    Usuario ||--o{ SimulacionAbusoRun : "creadoPor"
     Usuario ||--o{ SimulacionRun : "creadoPor"
     Usuario ||--o{ SolicitudComite : "comite (opcional)"
     Usuario ||--o{ SolicitudComite : "creadoPor (opcional)"

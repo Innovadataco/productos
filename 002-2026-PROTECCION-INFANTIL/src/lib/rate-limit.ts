@@ -1,6 +1,9 @@
 import { prisma } from "./prisma";
 import { getParametroSistema } from "./parametros";
 import { logger } from "@/lib/logger";
+import { estaIpBloqueada } from "./anti-abuso/block-list";
+import { calcularIpHash } from "./anti-abuso/fuente-reporte";
+import { evaluarYAlertarRateLimit } from "./anti-abuso/rate-limit-alerts";
 import type { PrismaClient } from "@prisma/client";
 
 export interface RateLimitResult {
@@ -44,7 +47,7 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     ciudades_buscar: { windowSeconds: 60, maxRequests: 60 },
 };
 
-function getScopeDefaults(scope: string): ScopeDefaults {
+export function getScopeDefaults(scope: string): ScopeDefaults {
     return DEFAULTS[scope] || { windowSeconds: 60, maxRequests: 30 };
 }
 
@@ -108,6 +111,33 @@ export async function checkRateLimit(
 
     const identifier = options?.identifier ?? getClientIp(request);
 
+    // SPEC-184: consultar BlockList antes de contar. Si la IP está bloqueada,
+    // devolvemos 429 inmediato sin incrementar el contador de RateLimit.
+    try {
+        const clientIp = getClientIp(request);
+        const ipHash = calcularIpHash(clientIp);
+        if (await estaIpBloqueada(ipHash)) {
+            const defaults = getScopeDefaults(scope);
+            const resetAt = Date.now() + defaults.windowSeconds * 1000;
+            const headers: Record<string, string> = {
+                "X-RateLimit-Limit": String(defaults.maxRequests),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": String(Math.ceil(resetAt / 1000)),
+                "Retry-After": String(defaults.windowSeconds),
+            };
+            return {
+                allowed: false,
+                limit: defaults.maxRequests,
+                remaining: 0,
+                resetAt,
+                headers,
+            };
+        }
+    } catch (error) {
+        logger.error("[RATE-LIMIT] Error consultando BlockList:", error);
+        // Fail-open: si no podemos verificar la blocklist, no bloqueamos todo el tráfico.
+    }
+
     try {
         // O-1 (SPEC-108): la config se lee DENTRO del try. Con Postgres caído, los scopes
         // de FAIL_CLOSED_SCOPES deben responder 429 + Retry-After (SPEC-103), no 500.
@@ -151,6 +181,13 @@ export async function checkRateLimit(
 
         if (!allowed) {
             headers["Retry-After"] = String(Math.ceil((resetAt - now) / 1000));
+            // SPEC-184: alerta throttled cuando una IP acumula muchos bloqueos.
+            void evaluarYAlertarRateLimit({
+                scope,
+                identifier,
+                ipHash: calcularIpHash(getClientIp(request)),
+                maxRequests: config.maxRequests,
+            });
         }
 
         // Limpieza periódica de ventanas antiguas (probabilidad 1%)

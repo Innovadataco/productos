@@ -473,6 +473,38 @@ export const antiAbusoSimulacionQuerySchema = z.object({
 
 export type AntiAbusoSimulacionQuery = z.infer<typeof antiAbusoSimulacionQuerySchema>;
 
+// SPEC-184 (002-PI-079): tablero operativo anti-abuso.
+export const ventanaAntiAbusoSchema = z.enum(["24h", "7d", "30d"]).default("24h");
+
+export const duracionBloqueoSchema = z.enum(["24h", "7d", "permanente"]);
+
+export const bloquearIpBodySchema = z.object({
+    ipHash: z.string().min(64).max(64).regex(/^[a-f0-9]{64}$/, "ipHash debe ser SHA-256 hex en minúsculas"),
+    motivo: z.string().trim().min(1, "El motivo es obligatorio").max(500, "Máximo 500 caracteres"),
+    duracion: duracionBloqueoSchema,
+});
+
+export const desbloquearIpBodySchema = z.object({
+    id: cuidIdSchema,
+});
+
+// SPEC-184 (002-PI-079): simulador de abusos.
+export const escenarioSimulacionAbusoSchema = z.enum([
+    "robot_inundando",
+    "ataque_coordinado",
+    "bot_ips_rotativas",
+    "denunciante_spam",
+    "personalizado",
+]);
+
+export const simularAbusoBodySchema = z.object({
+    escenario: escenarioSimulacionAbusoSchema,
+    n: z.coerce.number().int().min(1).max(200).default(50),
+    ip: z.string().optional(),
+    identificador: z.string().min(3).max(100).optional(),
+    plataforma: z.string().min(1).optional(),
+});
+
 // SPEC-151 (FR-002): parámetro ?mes=YYYY-MM para el informe PDF mensual.
 // No futuro, no más de 12 meses atrás; mes actual permitido.
 export const informeMensualQuerySchema = z.object({

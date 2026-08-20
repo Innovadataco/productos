@@ -92,6 +92,25 @@ services:
       app:
         condition: service_started
 
+  # SPEC-184 (002-PI-079): simulador de abusos. Worker separado con advisory lock
+  # propio; envía reportes reales al endpoint público inyectando IPs de test RFC 5737.
+  simulador-abuso:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-simulador-abuso
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/simulador-abuso.mjs
+    environment:
+      WORKER_RUN_DIR: /app/run
+      API_BASE_URL: http://app:3000
+    volumes:
+      - pi_worker_run:/app/run
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
 volumes:
   pi_postgres_data:
   pi_worker_run:
