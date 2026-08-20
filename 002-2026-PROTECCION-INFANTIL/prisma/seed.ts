@@ -1444,11 +1444,15 @@ async function main() {
 
 export { main };
 
-main()
-    .catch((e) => {
-        console.error(e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+// Guard: solo ejecutar como script CLI, no al importarse desde tests (I-72).
+const esScriptDirecto = import.meta.url === `file://${process.argv[1]}`;
+if (esScriptDirecto) {
+    main()
+        .catch((e) => {
+            console.error(e);
+            process.exit(1);
+        })
+        .finally(async () => {
+            await prisma.$disconnect();
+        });
+}
