@@ -33,7 +33,7 @@ Sembrar en `prisma/seed.ts` (o migración aditiva si el seed no cubre updates id
 },
 ```
 
-Nota: si se usa `boss.schedule` con expresión fija en el worker, el parámetro de intervalo se aplica solo documentando que debe coincidir; la forma preferida es leer el intervalo y re-schedule, o documentar que el cambio requiere reinicio. En este plan se propone cron fijo `*/15 * * * *` y el parámetro como documentación/ajuste futuro; si ZEUS prefiere schedule dinámico, se lee el parámetro al inicio y se re-schedule.
+El parámetro es efectivo: al arrancar el worker se lee `operadores.reconciliacion_intervalo_min` y se construye la expresión cron `*/X * * * *` que se pasa a `boss.schedule`. Si el CEO cambia el valor en ConfigPanel, un restart del worker aplica el nuevo intervalo.
 
 ### 2. Worker periódico en `scripts/worker-reportes.mjs`
 
@@ -41,11 +41,21 @@ Añadir tras la cola `reportes-reconciliacion` existente:
 
 ```js
 await ensureQueue("operadores-reconciliacion-huerfanos");
-await boss.schedule("operadores-reconciliacion-huerfanos", "*/15 * * * *", {}, { tz: "America/Bogota" });
+
+const intervaloMin = Number.parseInt(
+  (await getParametroSistemaValor("operadores.reconciliacion_intervalo_min")) ?? "15",
+  10
+);
+const cronReconciliacionHuerfanos =
+  Number.isFinite(intervaloMin) && intervaloMin >= 1 && intervaloMin <= 59
+    ? `*/${intervaloMin} * * * *`
+    : "*/15 * * * *";
+await boss.schedule("operadores-reconciliacion-huerfanos", cronReconciliacionHuerfanos, {}, { tz: "America/Bogota" });
+
 await boss.work("operadores-reconciliacion-huerfanos", async () => {
   const { reconciliarHuerfanos } = await import("../src/lib/operadores/reconciliacion-huerfanos.ts");
   const resumen = await reconciliarHuerfanos();
-  if (resumen.asignados > 0 || resumen.fallidos > 0) {
+  if (!resumen.deshabilitado && resumen.encontrados > 0) {
     console.log(`[RECONCILIACION-HUERFANOS] Ciclo: ${resumen.encontrados} encontrados, ${resumen.asignados} asignados, ${resumen.fallidos} fallidos`);
   }
   return { success: true, ...resumen };

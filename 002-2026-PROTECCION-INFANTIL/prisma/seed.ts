@@ -1128,6 +1128,34 @@ async function main() {
     }
     console.log("Parámetros del módulo de reportes creados");
 
+    // SPEC-182 (I-60): reconciliación periódica de reportes huérfanos sin operador.
+    const operadoresParams = [
+        {
+            clave: "operadores.reconciliacion_intervalo_min",
+            valor: "15",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Intervalo en minutos entre ciclos de reconciliación de reportes huérfanos (REVISION_MANUAL sin operador)",
+        },
+        {
+            clave: "operadores.reconciliacion_enabled",
+            valor: "true",
+            tipo: TipoParametro.BOOLEAN,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Activa/desactiva el job de reconciliación de reportes huérfanos",
+        },
+    ];
+    for (const p of operadoresParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    console.log("Parámetros de reconciliación de operadores creados");
+
     // SPEC-142 (F6): umbral de k-anonimato de la vista de patrones del colegio
     // (ZEUS D-2: k=3 en TODOS los desgloses — grado, conducta y plataforma).
     await prisma.parametroSistema.upsert({

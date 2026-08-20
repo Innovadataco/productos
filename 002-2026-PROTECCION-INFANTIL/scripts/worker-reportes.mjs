@@ -28,6 +28,7 @@ import { detectarYRegistrarMatch } from "../src/lib/dal/services/evento-match.ts
 import { agregarPatronPorReporte } from "../src/lib/colegio/patrones.ts";
 import { boss, getWorkerParams, drainPending, ensureStarted } from "../src/lib/queue.ts";
 import { guardarReintento } from "../src/lib/reporte-reintentos.ts";
+import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -142,6 +143,7 @@ async function start() {
     await ensureQueue("apelacion-mantenimiento");
     await ensureQueue("carga-roster-limpieza");
     await ensureQueue("reportes-reconciliacion");
+    await ensureQueue("operadores-reconciliacion-huerfanos");
     await ensureQueue("colegio-aviso");
     await ensureQueue("colegio-resumen-semanal");
 
@@ -471,6 +473,34 @@ async function start() {
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[WORKER] ERROR reconciliación de reportes: ${msg}`);
+            throw err;
+        }
+    });
+
+    // SPEC-182 (I-60): reconciliación de reportes REVISION_MANUAL sin operador.
+    // El intervalo se lee de ParametroSistema al arrancar; un restart aplica cambios.
+    const intervaloMin = Number.parseInt(
+        (await getParametroSistemaValor("operadores.reconciliacion_intervalo_min")) ?? "15",
+        10
+    );
+    const cronReconciliacionHuerfanos =
+        Number.isFinite(intervaloMin) && intervaloMin >= 1 && intervaloMin <= 59
+            ? `*/${intervaloMin} * * * *`
+            : "*/15 * * * *";
+    await boss.schedule("operadores-reconciliacion-huerfanos", cronReconciliacionHuerfanos, {}, { tz: "America/Bogota" });
+    await boss.work("operadores-reconciliacion-huerfanos", async () => {
+        try {
+            const { reconciliarHuerfanos } = await import("../src/lib/operadores/reconciliacion-huerfanos.ts");
+            const resumen = await reconciliarHuerfanos();
+            if (resumen.deshabilitado) {
+                console.log("[RECONCILIACION-HUERFANOS] Job deshabilitado por parámetro");
+            } else if (resumen.encontrados > 0) {
+                console.log(`[RECONCILIACION-HUERFANOS] Ciclo: ${resumen.encontrados} encontrados, ${resumen.asignados} asignados, ${resumen.fallidos} fallidos`);
+            }
+            return { success: true, ...resumen };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR reconciliación de huérfanos: ${msg}`);
             throw err;
         }
     });

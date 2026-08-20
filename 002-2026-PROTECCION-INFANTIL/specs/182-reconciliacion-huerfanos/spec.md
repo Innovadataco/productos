@@ -75,7 +75,7 @@ Como operador/admin quiero saber cuántos huérfanos se reasignaron por ciclo, p
 
 ### Functional Requirements
 
-- **FR-001**: DEBE existir una cola/job `operadores-reconciliacion-huerfanos` en `scripts/worker-reportes.mjs` (patrón `ensureQueue` + `boss.schedule` + `boss.work`), con cron `*/15 * * * *` y tz `America/Bogota`.
+- **FR-001**: DEBE existir una cola/job `operadores-reconciliacion-huerfanos` en `scripts/worker-reportes.mjs` (patrón `ensureQueue` + `boss.schedule` + `boss.work`). Al arrancar, el worker DEBE leer `operadores.reconciliacion_intervalo_min` y construir la expresión cron `*/X * * * *` (default 15 min); un restart aplica cambios del parámetro.
 - **FR-002**: El worker DEBE buscar reportes `WHERE estado='REVISION_MANUAL' AND operadorId IS NULL AND eliminado=false` (sin límite arbitrario o con límite alto documentado).
 - **FR-003**: Por cada huérfano DEBE llamar `asignarOperadorAReporte(reporteId)` y manejar su resultado; NO DEBE modificar la lógica interna del asignador.
 - **FR-004**: El worker DEBE registrar en log el resumen del ciclo (`encontrados`, `asignados`, `fallidos`) y crear un `AuditLog` agregado cuando `asignados > 0`.
