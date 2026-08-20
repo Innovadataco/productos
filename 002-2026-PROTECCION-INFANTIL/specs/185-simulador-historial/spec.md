@@ -10,6 +10,8 @@
 
 **Impacto esperado**: añade historial paginado de simulaciones, endpoint de sugerencias frescas por escenario, detalle de corrida con descripción en criollo, y corrige I-64 sin migraciones. No toca el motor ni el rate-limit real.
 
+**Impacto en arquitectura**: extiende la capa DAL (`SimulacionAbusoRepository`, `RateLimitRepository`), añade endpoints bajo `/api/admin/anti-abuso/simular`, refactoriza componentes React del tab Simulador y actualiza el worker `scripts/simulador-abuso.mjs`. Sin cambios de schema ni migraciones. Impacto en arquitectura: cambios localizados en módulo anti-abuso.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
