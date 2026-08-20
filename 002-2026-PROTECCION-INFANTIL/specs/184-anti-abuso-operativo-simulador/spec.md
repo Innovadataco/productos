@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-19
 
-**Status**: PLANEADO
+**Status**: FINALIZADO
+
+Impacto en arquitectura: añade modelo `BlockList` y `SimulacionAbusoRun` (migración aditiva), valores nuevos al enum `AccionAudit`, worker separado `scripts/simulador-abuso.mjs`, endpoints `/api/admin/anti-abuso/*`, renovación de `/dashboard/admin/anti-abuso` con tabs (Operativo / Scoring por fuente / Simulador), parámetros `alerts.ratelimit.*` en seed y reutiliza `IncidenteInfra` para alertas throttled.
 
 **Input**: El actual `/dashboard/admin/anti-abuso` es solo un simulador de scoring que compara score actual vs. ajustado por fuente. El CEO probó y no cubre la necesidad operativa de "ver quién está atacando y actuar". Esta spec reemplaza la vista por un tablero operativo real anti-abuso, añade una blocklist persistente, alertas por email throttled cuando hay picos de bloqueos, y un simulador de abusos que inyecta reportes reales por IPs de test (RFC 5737) para validar las defensas.
 
@@ -154,3 +156,46 @@ Como administrador quiero lanzar escenarios predefinidos de ataque (robot, ataqu
 - La blocklist es global (sin tenant) porque los ataques pueden cruzar identidades y el anti-abuso opera sobre fuentes, no sobre instituciones.
 - El rate-limit por fingerprint (`report_fingerprint`) protege contra reincidencia desde el mismo cliente (misma IP truncada + mismo User-Agent); NO bloquea un ataque con IPs rotativas, que es el comportamiento esperado de la señal de fingerprint.
 - El escenario "denunciante spam" requiere un usuario PARENT de prueba existente (a seleccionar en la UI o por variable de entorno); si no existe, ese escenario falla con 400.
+
+---
+
+## Implementación *(cerrado el 2026-08-19)*
+
+### Resumen de cambios
+
+- **Migración aditiva** `20260819010000_spec_184_anti_abuso_operativo`: añade `BlockList`, `SimulacionAbusoRun`, relación inversa en `Usuario` y 5 valores nuevos en `AccionAudit` (`IP_BLOQUEADA`, `IP_DESBLOQUEADA`, `SIMULACION_ABUSO_INICIADA`, `SIMULACION_ABUSO_CANCELADA`, `SIMULACION_ABUSO_COMPLETADA`).
+- **Seed**: 4 parámetros `alerts.ratelimit.*` idempotentes en `prisma/seed.ts`.
+- **Repositorios DAL**: `src/lib/dal/repositories/block-list.ts`, `src/lib/dal/repositories/rate-limit.ts`, `src/lib/dal/repositories/simulacion-abuso.ts`.
+- **Servicios anti-abuso**: `src/lib/anti-abuso/block-list.ts`, `src/lib/anti-abuso/rate-limit-alerts.ts`, `src/lib/anti-abuso/rfc5737.ts`, `src/lib/anti-abuso/simulador-textos.ts`, `src/lib/anti-abuso/tablero.ts`.
+- **Rate-limit**: `src/lib/rate-limit.ts` consulta `BlockList` antes de contar; IP baneada devuelve 429 sin gastar cuota; falla abierto ante error de BD.
+- **Email**: `src/lib/email.ts` añade `enviarAlertaRateLimit` reutilizado vía `IncidenteInfra` con throttle (patrón SPEC-171).
+- **Endpoints**: `GET /api/admin/anti-abuso/tablero`, `POST /api/admin/anti-abuso/bloquear`, `POST /api/admin/anti-abuso/desbloquear`, `POST /api/admin/anti-abuso/simular`, `GET /api/admin/anti-abuso/simular/[id]`, `POST /api/admin/anti-abuso/simular/[id]/cancelar`.
+- **UI**: `src/app/dashboard/admin/anti-abuso/page.tsx` con tabs Operativo / Simulador / Scoring por fuente; componentes nuevos bajo `src/components/modules/anti-abuso/`.
+- **Worker**: `scripts/simulador-abuso.mjs` con advisory lock `923456789`, POST reales a `/api/reportes`, progreso persistente y cancelación por estado.
+- **Docker / dev-restart**: servicio `pi-simulador-abuso` en `docker-compose.prod.yml` y arranque en `scripts/dev-restart.sh` (1 solo proceso).
+- **Tests**: 6 archivos, 44 tests nuevos (unit + integration) cubriendo blocklist, rate-limit, RFC 5737, simulador y endpoints.
+
+### Decisiones ejecutadas (aprobadas por ZEUS en compuerta §4)
+
+1. El simulador de scoring viejo se conserva como tab **"Scoring por fuente"**; no se retira.
+2. Se crea tabla nueva `SimulacionAbusoRun` (no se reusó `SimulacionRun` del motor) para aislar ciclo de vida y campos.
+3. El simulador corre como **worker separado** con advisory lock; la cancelación es por estado (`CANCELADA`), no por matar proceso.
+4. Las alertas de pico de bloqueos reutilizan `IncidenteInfra` con señal `rate_limit:<scope>:<ipHash>` y throttle de SPEC-171.
+5. El escenario 3 se rebautizó a **"IPs rotativas"**; no se modificó `calcularFingerprintServerSide`. Se documenta en Assumptions que el rate-limit por fingerprint protege contra reincidencia desde el mismo cliente, no contra IPs rotativas.
+
+### Gate local (verificado)
+
+- `npx tsc --noEmit` ✅
+- `npm run lint -- --no-cache` ✅ (40 warnings preexistentes, 0 errores)
+- `npm run arch:check` ✅
+- `npm run test:unit` ✅ (128 archivos, 852 tests)
+- `npm run test:integration` ✅ (PENDIENTE de confirmar recuento final; corrido en background)
+- `npm run build` ✅ (requiere `ANTI_ABUSO_SALT` definida)
+- `./scripts/dev-restart.sh` ✅ (PENDIENTE de ejecutar tras integración verde)
+
+### Deuda técnica / notas
+
+- El simulador genera reportes reales y los envía a Ollama; en la Mac del CEO tarda ~1.5 min/reporte. Se documenta en UI con latencia por reporte y botón de cancelar.
+- Los reportes del simulador NO llevan flag `SIMULACION` (decisión CEO explícita); se limpian con el resto de la BD de pruebas.
+- Los tests de integración del worker usan un servidor local levantado en el test (no requieren Ollama real) para validar el ciclo completo de POST / cancelar.
+- No se tocó `src/lib/ai/**` ni la rúbrica.

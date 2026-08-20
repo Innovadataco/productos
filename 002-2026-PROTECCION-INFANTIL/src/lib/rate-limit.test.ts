@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { checkRateLimit, getClientIp, resetRateLimitStore } from "./rate-limit";
 import { prisma } from "./prisma";
 import { resetDatabase } from "./test-utils";
-import { crearParametrosReportes } from "./reporte-test-utils";
+import { crearParametrosReportes, crearUsuario } from "./reporte-test-utils";
+import { bloquearIp } from "./anti-abuso/block-list";
+import { calcularIpHash } from "./anti-abuso/fuente-reporte";
 import type { PrismaClient } from "@prisma/client";
 
 // SPEC-174: el fallo de lectura de parámetros se simula envolviendo el módulo
@@ -244,5 +246,40 @@ describe("fail-closed ante fallo del store (I-28)", () => {
         } finally {
             falloParametros.activo = false;
         }
+    });
+});
+
+describe("SPEC-184: BlockList intercepta antes de contar", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await crearParametrosReportes();
+        await resetRateLimitStore();
+    });
+
+    it("IP baneada devuelve 429 inmediato y no consume cuota de rate-limit", async () => {
+        if (rateLimitDisabled) return;
+
+        const admin = await crearUsuario("ADMIN");
+        const ip = "192.0.2.50";
+        const ipHash = calcularIpHash(ip);
+        await bloquearIp({ ipHash, motivo: "Test SPEC-184", duracion: "24h", creadoPorId: admin.id });
+
+        const req = makeRequest(ip);
+        const blocked = await checkRateLimit(req, "consulta");
+        expect(blocked.allowed).toBe(false);
+        expect(blocked.remaining).toBe(0);
+        expect(blocked.headers["Retry-After"]).toBeDefined();
+
+        // No debe haber creado fila en RateLimit para esta IP.
+        const count = await prisma.rateLimit.count({ where: { identifier: ip } });
+        expect(count).toBe(0);
+    });
+
+    it("IP no baneada sigue el flujo normal de rate-limit", async () => {
+        if (rateLimitDisabled) return;
+
+        const result = await checkRateLimit(makeRequest("192.0.2.51"), "consulta");
+        expect(result.allowed).toBe(true);
+        expect(result.remaining).toBe(29);
     });
 });
