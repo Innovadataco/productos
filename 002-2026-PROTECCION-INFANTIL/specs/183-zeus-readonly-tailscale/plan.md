@@ -12,7 +12,7 @@ Crear un usuario Postgres de solo lectura (`zeus_readonly`) y exponer el puerto 
 
 ## Diseño de conectividad
 
-### Opción A (recomendada): `tailscale serve` en el VPS
+### Opción A (elegida por ZEUS): `tailscale serve` en el VPS
 
 1. En el VPS, levantar un proxy TCP de Tailscale hacia el puerto local 5433:
 
@@ -93,11 +93,19 @@ BEGIN
 END
 \$\$;
 
+REVOKE ALL ON SCHEMA public FROM ${ZEUS_USER};
 GRANT USAGE ON SCHEMA public TO ${ZEUS_USER};
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${ZEUS_USER};
 GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO ${ZEUS_USER};
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO ${ZEUS_USER};
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO ${ZEUS_USER};
+
+-- Endurecimiento del schema public: quitar CREATE al pseudo-rol PUBLIC y
+-- devolvérselo solo al rol de aplicación (proteccion).
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT CREATE ON SCHEMA public TO proteccion;
+
+ALTER ROLE ${ZEUS_USER} NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
 SQL
 
 echo "[OK] Usuario ${ZEUS_USER} creado/actualizado con grants de solo lectura sobre public."
