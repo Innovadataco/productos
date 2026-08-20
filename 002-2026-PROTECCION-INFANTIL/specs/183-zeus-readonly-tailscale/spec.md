@@ -6,6 +6,8 @@
 
 **Status**: IMPLEMENTADO
 
+Impacto en arquitectura: expone el puerto Postgres del contenedor `db` solo en `127.0.0.1:5433` (nunca `0.0.0.0`) para que Tailscale lo sirva; añade scripts idempotentes para crear/verificar el usuario `zeus_readonly`; documenta el string de conexión. Sin cambios en la red interna de Docker, sin modelos y sin tocar el motor.
+
 **Input**: Instructivo 002-PI-078. Contexto: el CEO no quiere seguir copiando SQL en la terminal para que ZEUS diagnostique. Se requiere un acceso de solo lectura a la BD de producción sin dar SSH ni root.
 
 **Restricción de seguridad innegociable**: la BD nunca queda expuesta a internet. Solo Tailscale. Si la infra actual del VPS/Docker no permite hacerlo de forma segura, ODIN debe declararlo en este spec+plan y NO forzar una solución insegura.
