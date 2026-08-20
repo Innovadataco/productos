@@ -12,6 +12,7 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { validarIpInyectable } from "./rfc5737";
 import { sendSimulacionAbuso } from "@/lib/queue";
 import { logAudit } from "@/lib/audit";
+import { AppError } from "@/lib/errors";
 import { escenarioSimulacionAbusoSchema, simularAbusoBodySchema } from "@/lib/schemas";
 import type { z } from "zod";
 
@@ -75,7 +76,7 @@ function validarIpsInyectables(params: SimularAbusoBody): void {
     for (const ip of new Set(ips)) {
         const validacion = validarIpInyectable(ip);
         if (!validacion.ok) {
-            throw new Error(validacion.mensaje);
+            throw new AppError(validacion.mensaje, "VALIDATION_ERROR", 400);
         }
     }
 }
@@ -140,11 +141,19 @@ export async function crearSimulacionAbuso(params: SimularAbusoBody, usuarioId: 
 
     if (params.escenario === "denunciante_spam") {
         if (!params.usuarioId) {
-            throw new Error("El escenario denunciante_spam requiere un usuarioId de tipo PARENT activo.");
+            throw new AppError(
+                "Falta configurar simulacion.spam.usuario_id en Configuración → Sistema. Debe apuntar al id de un usuario PARENT de prueba.",
+                "VALIDATION_ERROR",
+                400
+            );
         }
         const usuario = await new UsuarioRepository().findById(params.usuarioId);
         if (!usuario || usuario.rol !== "PARENT" || usuario.estado !== "activo") {
-            throw new Error("El escenario denunciante_spam requiere un usuarioId de tipo PARENT activo.");
+            throw new AppError(
+                "El usuario configurado en simulacion.spam.usuario_id no existe o no es un PARENT activo.",
+                "VALIDATION_ERROR",
+                400
+            );
         }
     }
 

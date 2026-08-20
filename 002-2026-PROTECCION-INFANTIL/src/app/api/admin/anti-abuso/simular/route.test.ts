@@ -77,14 +77,14 @@ describe("POST /api/admin/anti-abuso/simular (SPEC-184/185)", () => {
     it("rechaza IP real (8.8.8.8)", async () => {
         await autenticarAdmin();
         const { status, body } = await postSimular({ escenario: "personalizado", n: 1, ip: "8.8.8.8" });
-        expect(status).toBe(500);
+        expect(status).toBe(400);
         expect(body.error.message).toContain("RFC 5737");
     });
 
     it("rechaza IP privada", async () => {
         await autenticarAdmin();
         const { status, body } = await postSimular({ escenario: "personalizado", n: 1, ip: "10.0.0.1" });
-        expect(status).toBe(500);
+        expect(status).toBe(400);
         expect(body.error.message).toContain("RFC 5737");
     });
 
@@ -100,11 +100,11 @@ describe("POST /api/admin/anti-abuso/simular (SPEC-184/185)", () => {
         expect(status).toBe(400);
     });
 
-    it("falla loud con denunciante_spam sin usuarioId", async () => {
+    it("falla loud con denunciante_spam sin usuarioId (400)", async () => {
         await autenticarAdmin();
         const { status, body } = await postSimular({ escenario: "denunciante_spam", n: 3 });
-        expect(status).toBe(500);
-        expect(body.error.message).toContain("denunciante_spam");
+        expect(status).toBe(400);
+        expect(body.error.message).toContain("simulacion.spam.usuario_id");
     });
 
     it("solo ADMIN puede simular", async () => {
@@ -192,7 +192,7 @@ describe("GET /api/admin/anti-abuso/simular (SPEC-185)", () => {
         const { status, body } = await getDetalle(run.id);
         expect(status).toBe(200);
         expect(body.run.estado).toBe("COMPLETADA");
-        expect(body.run.descripcionEscenario).toContain("Una sola IP");
+        expect(body.run.descripcionEscenario).toContain("una sola IP");
         expect(body.run.latenciaP50Ms).toBe(90);
         expect(body.run.latenciaP95Ms).toBe(150);
         expect(body.run.detalles).toHaveLength(2);

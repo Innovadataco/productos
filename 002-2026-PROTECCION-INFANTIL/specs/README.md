@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-20** (SPEC-186 implementada; ver cierre.md en `specs/186-smoke-inteligente-ollama/`).
+> Última actualización: **2026-08-20** (SPEC-185 y SPEC-186 implementadas; ver cierre.md en `specs/185-simulador-historial/` y `specs/186-smoke-inteligente-ollama/`).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`

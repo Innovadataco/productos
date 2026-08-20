@@ -51,6 +51,7 @@ export interface ListadoSimulaciones {
         creadoPorId: string;
         creadoEn: Date;
         actualizadoEn: Date;
+        resultadosJson: unknown;
     }>;
     total: number;
     page: number;
@@ -147,6 +148,7 @@ export class SimulacionAbusoRepository {
                     creadoPorId: true,
                     creadoEn: true,
                     actualizadoEn: true,
+                    resultadosJson: true,
                 },
             }),
             this.db.simulacionAbusoRun.count({ where }),
@@ -158,12 +160,15 @@ export class SimulacionAbusoRepository {
     /**
      * Devuelve el conjunto de IPs que ya aparecen en configJson de corridas
      * existentes. Se usa para sugerir IPs frescas al operador.
+     * Si se pasa `desde`, solo considera corridas creadas a partir de esa fecha
+     * (p.ej. últimas 2 horas).
      */
-    async buscarIpsUsadas(): Promise<Set<string>> {
+    async buscarIpsUsadas(desde?: Date): Promise<Set<string>> {
         const rows = await this.db.$queryRaw<{ ip: string }[]>`
             SELECT DISTINCT "configJson"->>'ipInyectada' AS ip
             FROM "simulacion_abuso_runs"
             WHERE "configJson"->>'ipInyectada' IS NOT NULL
+              AND (${desde}::timestamptz IS NULL OR "creadoEn" >= ${desde}::timestamptz)
         `;
         return new Set(rows.map((r) => r.ip));
     }

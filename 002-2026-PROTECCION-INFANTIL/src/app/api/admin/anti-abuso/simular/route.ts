@@ -58,10 +58,17 @@ export async function GET(req: Request) {
         const listado = await repo.listar(parsed.data);
 
         return NextResponse.json({
-            items: listado.items.map((run) => ({
-                ...run,
-                n: run.totalReportes,
-            })),
+            items: listado.items.map((run) => {
+                const resultados = (run.resultadosJson ?? {}) as Record<string, unknown>;
+                return {
+                    ...run,
+                    n: run.totalReportes,
+                    totalEnviados: Number(resultados.totalEnviados ?? 0),
+                    totalBloqueados: Number(resultados.totalBloqueados ?? 0),
+                    totalSpam: Number(resultados.totalSpam ?? 0),
+                    latenciaP50Ms: Number(resultados.latenciaP50Ms ?? 0),
+                };
+            }),
             pagination: {
                 page: listado.page,
                 pageSize: listado.pageSize,

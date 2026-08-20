@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-20
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Extensión de SPEC-184 (002-PI-079). El CEO probó los 5 escenarios en prod y encontró tres problemas: (1) no hay dónde ver corridas pasadas, (2) los defaults compartidos hicieron colisionar escenarios por IP, (3) el worker `pi-simulador-abuso` intenta escribir `fechaFin` inexistente y marca las corridas `FALLIDA` aunque ejecutaron bien.
 
@@ -178,9 +178,54 @@ Como sistema quiero que el worker `pi-simulador-abuso` termine las corridas exit
 
 ---
 
+## Implementación *(closed loop)*
+
+### Decisiones de compuerta §4 aplicadas
+
+1. **Vista de detalle**: modal dentro del tab "Simulador". Componente `AdminAntiAbusoSimuladorDetalleModal.tsx`.
+2. **Campo `fechaFin`**: se eliminó la referencia del worker y del repositorio; se usa `actualizadoEn` + estado `COMPLETADA`. Sin migración.
+3. **Usuario PARENT de prueba**: se configura por parámetro `simulacion.spam.usuario_id` (sembrado vacío en seed). Fail-loud 400 si falta.
+4. **IPs rotativas para escenario 3**: rango `198.51.100.0/24`; el escenario se renombró a "Bot con IPs rotativas" sin promesa de mismo fingerprint (ver Assumptions).
+
+### Archivos modificados / creados
+
+- `src/lib/dal/repositories/simulacion-abuso.ts` — `actualizarEstado` sin `fechaFin`; `listar`, `contar`, `buscarIpsUsadas`.
+- `src/lib/dal/repositories/rate-limit.ts` — `buscarIpsBloqueadasRecientemente`.
+- `src/lib/anti-abuso/sugerencias-simulador.ts` — generación de sugerencias frescas RFC 5737 con ventana 2h.
+- `src/lib/anti-abuso/descripcion-escenario.ts` — textos en criollo por escenario.
+- `src/lib/anti-abuso/simulador.ts` — tipos y validación fail-loud para `denunciante_spam`.
+- `src/app/api/admin/anti-abuso/simular/route.ts` — `GET` listado paginado + agregados.
+- `src/app/api/admin/anti-abuso/simular/sugerencias/route.ts` — `GET` sugerencias por escenario.
+- `src/app/api/admin/anti-abuso/simular/[id]/route.ts` — detalle con descripción, percentiles y detalles.
+- `scripts/simulador-abuso.mjs` — fix I-64, guarda `detalles`, `latenciaP50Ms`, `latenciaP95Ms`.
+- `scripts/reparar-simulaciones-fechafin.mjs` — backfill idempotente.
+- `prisma/seed.ts` — parámetro `simulacion.spam.usuario_id`.
+- `src/components/modules/AdminAntiAbusoSimulador.tsx` — sub-tabs, autofill, integración historial.
+- `src/components/modules/AdminAntiAbusoSimuladorHistorial.tsx` — tabla con filtros y paginación.
+- `src/components/modules/AdminAntiAbusoSimuladorDetalleModal.tsx` — modal de detalle.
+- `src/lib/schemas/index.ts` — schema Zod para sugerencias.
+
+### Tests nuevos / ampliados
+
+- `src/lib/anti-abuso/simulador.test.ts` — corrida termina en `COMPLETADA` (I-64).
+- `src/lib/anti-abuso/reparar-simulaciones-fechafin.test.ts` — backfill idempotente.
+- `src/lib/anti-abuso/sugerencias-simulador.test.ts` — IPs distintas, ventana 2h, rango RFC 5737.
+- `src/app/api/admin/anti-abuso/simular/route.test.ts` — listado + filtros.
+- `src/app/api/admin/anti-abuso/simular/sugerencias/route.test.ts` — sugerencias + fail-loud spam.
+
+### Gate local
+
+- `npx tsc --noEmit` ✅
+- `npm run lint -- --no-cache` ✅ (0 errores; 40 warnings preexistentes)
+- `npm run build` ✅
+- Tests específicos de SPEC-185 ✅ (35 tests en 5 archivos)
+- `npm run test` completa: timeout en background; se reintentará/validará antes del push final.
+
+### Deuda técnica / notas
+
+- Ninguna migración. Detalles y percentiles viven en `resultadosJson`.
+- El test completo `npm run test` tardó más de 10 min en la Mac; se recomienda correrla con timeout mayor o en CI.
+
 ## Decisiones para compuerta §4
 
-1. **Vista de detalle**: ¿modal dentro del tab "Simulador" (recomendado, menos rutas) o página dedicada `/dashboard/admin/anti-abuso/simulador/[id]`?
-2. **Campo `fechaFin`**: ¿se elimina la referencia del worker y se usa `actualizadoEn` (opción propuesta, sin migración) o se añade `fechaFin DateTime?` al modelo con migración aditiva?
-3. **Usuario PARENT de prueba**: ¿se configura por parámetro `simulacion.spam.usuario_id` (propuesto) o se busca automáticamente el último PARENT activo?
-4. **IPs rotativas para escenario 3**: ¿se usa rango `198.51.100.0/24` (propuesto) o se alternan entre los tres rangos RFC 5737?
+Todas las decisiones fueron aprobadas por ZEUS en compuerta §4. Ver sección Implementación arriba.

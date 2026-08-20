@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
+import { AppError } from "@/lib/errors";
 import { generarPayloads, crearSimulacionAbuso, cancelarSimulacionAbuso } from "./simulador";
 import type { SimularAbusoBody } from "./simulador";
 
@@ -71,23 +72,26 @@ describe("crearSimulacionAbuso (integración)", () => {
         expect(config.usuarioId).toBe(parent.id);
     });
 
-    it("falla loud si denunciante_spam no tiene usuarioId", async () => {
+    it("falla loud con 400 si denunciante_spam no tiene usuarioId", async () => {
         const admin = await crearUsuario("ADMIN");
+        await expect(crearSimulacionAbuso({ escenario: "denunciante_spam", n: 3 }, admin.id)).rejects.toThrow(AppError);
         await expect(crearSimulacionAbuso({ escenario: "denunciante_spam", n: 3 }, admin.id)).rejects.toThrow(
-            "El escenario denunciante_spam requiere un usuarioId de tipo PARENT activo."
+            "Falta configurar simulacion.spam.usuario_id en Configuración → Sistema. Debe apuntar al id de un usuario PARENT de prueba."
         );
     });
 
     it("falla loud si el usuarioId no es PARENT activo", async () => {
         const admin = await crearUsuario("ADMIN");
         const otro = await crearUsuario("ADMIN");
+        await expect(crearSimulacionAbuso({ escenario: "denunciante_spam", n: 3, usuarioId: otro.id }, admin.id)).rejects.toThrow(AppError);
         await expect(crearSimulacionAbuso({ escenario: "denunciante_spam", n: 3, usuarioId: otro.id }, admin.id)).rejects.toThrow(
-            "El escenario denunciante_spam requiere un usuarioId de tipo PARENT activo."
+            "no es un PARENT activo"
         );
     });
 
-    it("rechaza IP real (8.8.8.8)", async () => {
+    it("rechaza IP real (8.8.8.8) con AppError 400", async () => {
         const admin = await crearUsuario("ADMIN");
+        await expect(crearSimulacionAbuso({ escenario: "personalizado", n: 1, ip: "8.8.8.8" }, admin.id)).rejects.toThrow(AppError);
         await expect(crearSimulacionAbuso({ escenario: "personalizado", n: 1, ip: "8.8.8.8" }, admin.id)).rejects.toThrow("RFC 5737");
     });
 
@@ -98,5 +102,7 @@ describe("crearSimulacionAbuso (integración)", () => {
         expect(ok).toBe(true);
         const actualizado = await prisma.simulacionAbusoRun.findUnique({ where: { id: run.id } });
         expect(actualizado?.estado).toBe("CANCELADA");
+        const config = (actualizado?.configJson ?? {}) as Record<string, unknown>;
+        expect(config).not.toHaveProperty("fechaFin");
     });
 });

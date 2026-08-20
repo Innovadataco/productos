@@ -531,6 +531,11 @@ export const simulacionAbusoQuerySchema = z.object({
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 
+// SPEC-185: query de sugerencias de configuración por escenario.
+export const sugerenciasSimulacionAbusoQuerySchema = z.object({
+    escenario: escenarioSimulacionAbusoSchema,
+});
+
 // SPEC-151 (FR-002): parámetro ?mes=YYYY-MM para el informe PDF mensual.
 // No futuro, no más de 12 meses atrás; mes actual permitido.
 export const informeMensualQuerySchema = z.object({

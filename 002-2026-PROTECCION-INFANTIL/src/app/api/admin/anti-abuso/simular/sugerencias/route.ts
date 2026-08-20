@@ -3,7 +3,8 @@ import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { generarSugerenciasSimulacion } from "@/lib/anti-abuso/sugerencias-simulador";
+import { sugerenciasSimulacionAbusoQuerySchema } from "@/lib/schemas";
+import { generarSugerenciasPorEscenario } from "@/lib/anti-abuso/sugerencias-simulador";
 
 export async function GET(req: Request) {
     try {
@@ -24,7 +25,19 @@ export async function GET(req: Request) {
             );
         }
 
-        const sugerencias = await generarSugerenciasSimulacion();
+        const { searchParams } = new URL(req.url);
+        const parsed = sugerenciasSimulacionAbusoQuerySchema.safeParse({
+            escenario: searchParams.get("escenario") ?? undefined,
+        });
+        if (!parsed.success) {
+            const detalle = parsed.error.issues.map((i) => `${i.path.join(".") || "query"}: ${i.message}`).join("; ");
+            return NextResponse.json(
+                { error: { message: `Parámetros inválidos — ${detalle}`, code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+
+        const sugerencias = await generarSugerenciasPorEscenario(parsed.data.escenario);
         return NextResponse.json({ ok: true, sugerencias });
     } catch (error) {
         if (error instanceof AppError) {

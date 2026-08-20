@@ -836,15 +836,14 @@ async function main() {
             esPublico: false,
             descripcion: "A quién avisar por pico de bloqueos (correos separados por coma; vacío = no enviar)",
         },
-        // SPEC-185 (002-PI-080): id de usuario PARENT de prueba para el escenario
-        // denunciante_spam del simulador de abusos. Vacío = no configurado.
+        // SPEC-185: id de usuario PARENT de prueba para el escenario denunciante_spam.
         {
             clave: "simulacion.spam.usuario_id",
             valor: "",
             tipo: TipoParametro.STRING,
             categoria: CategoriaParametro.SYSTEM,
             esPublico: false,
-            descripcion: "Id del usuario PARENT de prueba para el escenario denunciante_spam del simulador",
+            descripcion: "Id de un usuario PARENT de prueba para el simulador de abusos (escenario denunciante_spam). Debe configurarse antes de usar ese escenario.",
         },
         {
             // SPEC-149 (FR-008): interruptor global del canal de avisos del colegio.

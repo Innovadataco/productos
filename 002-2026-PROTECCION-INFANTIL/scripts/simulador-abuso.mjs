@@ -122,7 +122,14 @@ async function enviarReporte(payload, ip, tokenAutenticacion) {
         baseDelayMs: 500,
     });
     const latencia = Date.now() - startMs;
-    return { status: res.status, latencia };
+    let estadoReporte = null;
+    try {
+        const cuerpo = await res.json();
+        estadoReporte = cuerpo?.reporte?.estado ?? null;
+    } catch {
+        // ignore parse errors
+    }
+    return { status: res.status, latencia, estadoReporte };
 }
 
 function calcularPercentil(valores, percentil) {
@@ -188,13 +195,18 @@ async function ejecutarSimulacion(runId) {
 
         const payload = payloads[i];
         try {
-            const { status, latencia } = await enviarReporte(payload, payload.ip, tokenAutenticacion);
+            const { status, latencia, estadoReporte } = await enviarReporte(payload, payload.ip, tokenAutenticacion);
             latenciaTotal += latencia;
             latencias.push(latencia);
             let estado = "fallido";
             if (status === 201 || status === 200 || status === 202) {
-                enviados++;
-                estado = "enviado";
+                if (estadoReporte === "POSIBLE_SPAM") {
+                    spam++;
+                    estado = "posible_spam";
+                } else {
+                    enviados++;
+                    estado = "enviado";
+                }
             } else if (status === 429) {
                 bloqueados++;
                 estado = "bloqueado";
