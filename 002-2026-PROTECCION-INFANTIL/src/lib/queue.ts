@@ -233,6 +233,19 @@ export async function sendSimulacionLote(runIds: string[]) {
 }
 
 /**
+ * SPEC-184 (002-PI-079): encola una simulación de abuso para que el worker
+ * separado `scripts/simulador-abuso.mjs` la ejecute.
+ */
+export async function sendSimulacionAbuso(runId: string) {
+    await ensureQueue("simulacion-abuso");
+    await boss.send("simulacion-abuso", { runId }, {
+        retryLimit: 1,
+        retryDelay: 30,
+        retryBackoff: true,
+    });
+}
+
+/**
  * SPEC-149 (FR-002): cola `colegio-aviso` — el hook de alerta nueva ENCOLA el
  * evento y responde sin bloquear; el worker consume y envía con retry. El
  * payload NO lleva datos sensibles: solo ids y el día (YYYY-MM-DD Bogotá).

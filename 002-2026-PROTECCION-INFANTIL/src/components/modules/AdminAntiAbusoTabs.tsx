@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { AdminAntiAbusoOperativo } from "./AdminAntiAbusoOperativo";
 import { AdminAntiAbusoSimulacion } from "./AdminAntiAbusoSimulacion";
+import { AdminAntiAbusoSimulador } from "./AdminAntiAbusoSimulador";
 
 const TABS = [
     { id: "operativo", label: "Operativo" },
     { id: "scoring", label: "Scoring por fuente" },
+    { id: "simulador", label: "Simulador de abusos" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -43,6 +45,7 @@ export function AdminAntiAbusoTabs() {
             <div id={`anti-abuso-panel-${tab}`} role="tabpanel" aria-labelledby={`anti-abuso-tab-${tab}`}>
                 {tab === "operativo" && <AdminAntiAbusoOperativo />}
                 {tab === "scoring" && <AdminAntiAbusoSimulacion />}
+                {tab === "simulador" && <AdminAntiAbusoSimulador />}
             </div>
         </section>
     );

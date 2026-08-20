@@ -488,6 +488,23 @@ export const desbloquearIpBodySchema = z.object({
     id: cuidIdSchema,
 });
 
+// SPEC-184 (002-PI-079): simulador de abusos.
+export const escenarioSimulacionAbusoSchema = z.enum([
+    "robot_inundando",
+    "ataque_coordinado",
+    "bot_ips_rotativas",
+    "denunciante_spam",
+    "personalizado",
+]);
+
+export const simularAbusoBodySchema = z.object({
+    escenario: escenarioSimulacionAbusoSchema,
+    n: z.coerce.number().int().min(1).max(200).default(50),
+    ip: z.string().optional(),
+    identificador: z.string().min(3).max(100).optional(),
+    plataforma: z.string().min(1).optional(),
+});
+
 // SPEC-151 (FR-002): parámetro ?mes=YYYY-MM para el informe PDF mensual.
 // No futuro, no más de 12 meses atrás; mes actual permitido.
 export const informeMensualQuerySchema = z.object({
