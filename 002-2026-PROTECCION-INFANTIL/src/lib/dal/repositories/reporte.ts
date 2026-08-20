@@ -489,6 +489,64 @@ export class ReporteRepository {
         });
     }
 
+    /**
+     * SPEC-184 (002-PI-079): top identificadores más reportados en la ventana.
+     * Devuelve identificador, plataformaId y total reportes. El identificador
+     * sale porque el tablero anti-abuso es interno y operativo.
+     */
+    async topIdentificadoresEnVentana(desde: Date, limite: number): Promise<Array<{ identificador: string; plataformaId: string; plataformaNombre: string; total: number }>> {
+        const rows = await this.db.reporte.groupBy({
+            by: ["identificador", "plataformaId"],
+            where: { creadoEn: { gte: desde }, eliminado: false },
+            _count: { _all: true },
+            orderBy: { _count: { _all: "desc" } },
+            take: limite,
+        });
+        const plataformaIds = [...new Set(rows.map((r) => r.plataformaId).filter(Boolean))];
+        const plataformas = await this.db.plataforma.findMany({
+            where: { id: { in: plataformaIds } },
+            select: { id: true, nombre: true },
+        });
+        const nombrePorId = Object.fromEntries(plataformas.map((p) => [p.id, p.nombre]));
+        return rows.map((r) => ({
+            identificador: r.identificador,
+            plataformaId: r.plataformaId,
+            plataformaNombre: nombrePorId[r.plataformaId] ?? "Desconocida",
+            total: r._count._all,
+        }));
+    }
+
+    /**
+     * SPEC-184 (002-PI-079): top fingerprints repetidores en la ventana.
+     * Agrupa por fingerprintHash de FuenteReporte; solo hashes no nulos.
+     */
+    async topFingerprintsRepetidores(desde: Date, limite: number): Promise<Array<{ fingerprintHash: string; reportes: number; ipsUnicas: number; ultimoReporteEn: Date | null }>> {
+        const rows = await this.db.$queryRaw<
+            { fingerprint_hash: string; reportes: bigint; ips_unicas: bigint; ultimo_reporte_en: Date | null }[]
+        >`
+            SELECT
+                f."fingerprintHash" AS fingerprint_hash,
+                COUNT(*) AS reportes,
+                COUNT(DISTINCT f."ipHash") AS ips_unicas,
+                MAX(r."creadoEn") AS ultimo_reporte_en
+            FROM "FuenteReporte" f
+            JOIN "Reporte" r ON r.id = f."reporteId"
+            WHERE r."creadoEn" >= ${desde}
+              AND r.eliminado = false
+              AND f."fingerprintHash" IS NOT NULL
+            GROUP BY f."fingerprintHash"
+            HAVING COUNT(*) > 1
+            ORDER BY reportes DESC
+            LIMIT ${limite}
+        `;
+        return rows.map((r) => ({
+            fingerprintHash: r.fingerprint_hash,
+            reportes: Number(r.reportes),
+            ipsUnicas: Number(r.ips_unicas),
+            ultimoReporteEn: r.ultimo_reporte_en,
+        }));
+    }
+
     /** SPEC-139 (F5): reporte con clasificación y huella de fuente (detección del match). */
     findParaMatch(id: string) {
         return this.db.reporte.findUnique({

@@ -47,7 +47,7 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     ciudades_buscar: { windowSeconds: 60, maxRequests: 60 },
 };
 
-function getScopeDefaults(scope: string): ScopeDefaults {
+export function getScopeDefaults(scope: string): ScopeDefaults {
     return DEFAULTS[scope] || { windowSeconds: 60, maxRequests: 30 };
 }
 
