@@ -556,6 +556,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ok | Boolean | — |
 | latenciaMs | Int | — |
 | detalle | String | opcional |
+| metodo | String | opcional |
 | creadoEn | DateTime | — |
 
 #### `IdentificadorAcudiente`

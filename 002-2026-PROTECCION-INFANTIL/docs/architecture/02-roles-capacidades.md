@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 272 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1904 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 273 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1911 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -79,6 +79,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/matches` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/atascados` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/historial` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
@@ -356,6 +357,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/matches` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/atascados` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/historial` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
@@ -633,6 +635,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/matches` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/atascados` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/historial` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
@@ -910,6 +913,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/matches` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/atascados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/historial` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
@@ -1187,6 +1191,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/matches` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/atascados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/historial` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
@@ -1464,6 +1469,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/matches` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/atascados` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/historial` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
@@ -1741,6 +1747,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/matches` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/monitoreo/atascados` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/monitoreo/estado` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/monitoreo/historial` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/motor/deriva` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 401 | permite | **NO** |
@@ -2019,6 +2026,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/matches` | HTTP 401 | permite |
 | `/api/admin/monitoreo/atascados` | HTTP 401 | permite |
 | `/api/admin/monitoreo/estado` | HTTP 401 | permite |
+| `/api/admin/monitoreo/historial` | HTTP 401 | permite |
 | `/api/admin/monitoreo/incidentes` | HTTP 401 | permite |
 | `/api/admin/motor/deriva` | HTTP 401 | permite |
 | `/api/admin/motor/deriva/recalcular` | HTTP 401 | permite |
