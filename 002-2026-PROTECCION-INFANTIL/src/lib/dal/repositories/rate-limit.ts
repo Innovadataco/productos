@@ -1,5 +1,5 @@
 /**
- * SPEC-184 (002-PI-079): repositorio de agregados de RateLimit.
+ * SPEC-184 (002-PI-079) + SPEC-185: repositorio de agregados de RateLimit.
  * Acepta un cliente transaccional opcional (D2).
  */
 import type { Prisma } from "@prisma/client";
@@ -71,5 +71,27 @@ export class RateLimitRepository {
               AND "windowStart" >= ${desde}
         `;
         return Number(rows[0]?.bloqueos ?? 0);
+    }
+
+    /**
+     * Dado un listado de IPs (identifiers), devuelve aquellas que tienen al
+     * menos un bloqueo reciente en el scope y la ventana indicados.
+     */
+    async buscarIpsBloqueadasRecientemente(
+        ips: string[],
+        desde: Date,
+        scope: string,
+        maxRequests: number
+    ): Promise<Set<string>> {
+        if (ips.length === 0 || maxRequests <= 0) return new Set();
+        const rows = await this.db.$queryRaw<{ identifier: string }[]>`
+            SELECT DISTINCT identifier
+            FROM "RateLimit"
+            WHERE identifier = ANY(${ips}::text[])
+              AND scope = ${scope}
+              AND "windowStart" >= ${desde}
+              AND count > ${maxRequests}
+        `;
+        return new Set(rows.map((r) => r.identifier));
     }
 }

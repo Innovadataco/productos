@@ -1,5 +1,5 @@
 /**
- * SPEC-184 (002-PI-079): simulador de abusos.
+ * SPEC-184 (002-PI-079) + SPEC-185: simulador de abusos.
  *
  * Genera reportes REALES (sin flag SIMULACION) para que el CEO pueda probar el
  * pipeline anti-abuso en el sandbox. Los reportes se envían por HTTP al endpoint
@@ -8,9 +8,11 @@
  * Frontera DAL (Q-3): SimulacionAbusoRun solo se toca por su repositorio.
  */
 import { SimulacionAbusoRepository, type ConfigSimulacionAbuso } from "@/lib/dal/repositories/simulacion-abuso";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { validarIpInyectable } from "./rfc5737";
 import { sendSimulacionAbuso } from "@/lib/queue";
 import { logAudit } from "@/lib/audit";
+import { AppError } from "@/lib/errors";
 import { escenarioSimulacionAbusoSchema, simularAbusoBodySchema } from "@/lib/schemas";
 import type { z } from "zod";
 
@@ -62,74 +64,68 @@ function ipEnRango(base: string, idx: number): string {
     return partes.join(".");
 }
 
+function primeraIpValida(params: SimularAbusoBody): string {
+    if (params.ips && params.ips.length > 0) return params.ips[0];
+    return params.ip ?? IP_DEFAULT;
+}
+
+function validarIpsInyectables(params: SimularAbusoBody): void {
+    const ips: string[] = [];
+    if (params.ip) ips.push(params.ip);
+    if (params.ips) ips.push(...params.ips);
+    for (const ip of new Set(ips)) {
+        const validacion = validarIpInyectable(ip);
+        if (!validacion.ok) {
+            throw new AppError(validacion.mensaje, "VALIDATION_ERROR", 400);
+        }
+    }
+}
+
+function identificadorParaEscenario(params: SimularAbusoBody, ip: string, idx: number): string {
+    if (params.identificadores && params.identificadores.length > 0) {
+        return params.identificadores[idx % params.identificadores.length];
+    }
+    if (params.identificador) return params.identificador;
+    if (params.escenario === "ataque_coordinado") return "3000000001";
+    if (params.escenario === "personalizado") return "3001234567";
+    return `300${ip.split(".").pop()?.padStart(4, "0") ?? "1234"}`;
+}
+
+function ipParaIndice(params: SimularAbusoBody, idx: number): string {
+    if (params.ips && params.ips.length > 0) {
+        return params.ips[idx % params.ips.length];
+    }
+    const baseIp = params.ip ?? IP_DEFAULT;
+    if (params.escenario === "ataque_coordinado" || params.escenario === "bot_ips_rotativas") {
+        return ipEnRango(baseIp, idx);
+    }
+    return baseIp;
+}
+
+function textoParaEscenario(escenario: EscenarioSimulacionAbuso): string {
+    if (escenario === "ataque_coordinado") return textoAleatorio(TEXTOS_ATAQUE);
+    if (escenario === "denunciante_spam") return textoAleatorio(TEXTOS_DENUNCIANTE);
+    return textoAleatorio(TEXTOS_ROBOT);
+}
+
 /**
  * Genera los payloads del escenario. Toda IP se valida contra RFC 5737 antes
  * de llegar aquí.
  */
 export function generarPayloads(params: SimularAbusoBody): PayloadSimulacion[] {
     const n = params.n;
-    const baseIp = params.ip ?? IP_DEFAULT;
-    const baseIdentificador = params.identificador ?? IDENTIFICADOR_DEFAULT;
     const plataforma = params.plataforma ?? PLATAFORMA_DEFAULT;
 
     const payloads: PayloadSimulacion[] = [];
 
-    switch (params.escenario) {
-        case "robot_inundando": {
-            for (let i = 0; i < n; i++) {
-                payloads.push({
-                    ip: baseIp,
-                    identificador: `${baseIdentificador.slice(0, -String(i).length)}${i}`,
-                    plataforma,
-                    texto: textoAleatorio(TEXTOS_ROBOT),
-                });
-            }
-            break;
-        }
-        case "ataque_coordinado": {
-            for (let i = 0; i < n; i++) {
-                payloads.push({
-                    ip: ipEnRango(baseIp, i),
-                    identificador: baseIdentificador,
-                    plataforma,
-                    texto: textoAleatorio(TEXTOS_ATAQUE),
-                });
-            }
-            break;
-        }
-        case "bot_ips_rotativas": {
-            for (let i = 0; i < n; i++) {
-                payloads.push({
-                    ip: ipEnRango(baseIp, i),
-                    identificador: `${baseIdentificador.slice(0, -String(i).length)}${i}`,
-                    plataforma,
-                    texto: textoAleatorio(TEXTOS_ROBOT),
-                });
-            }
-            break;
-        }
-        case "denunciante_spam": {
-            for (let i = 0; i < n; i++) {
-                payloads.push({
-                    ip: baseIp,
-                    identificador: `${baseIdentificador.slice(0, -String(i).length)}${i}`,
-                    plataforma,
-                    texto: textoAleatorio(TEXTOS_DENUNCIANTE),
-                });
-            }
-            break;
-        }
-        case "personalizado": {
-            for (let i = 0; i < n; i++) {
-                payloads.push({
-                    ip: baseIp,
-                    identificador: baseIdentificador,
-                    plataforma,
-                    texto: textoAleatorio(TEXTOS_ROBOT),
-                });
-            }
-            break;
-        }
+    for (let i = 0; i < n; i++) {
+        const ip = ipParaIndice(params, i);
+        payloads.push({
+            ip,
+            identificador: identificadorParaEscenario(params, ip, i),
+            plataforma,
+            texto: textoParaEscenario(params.escenario),
+        });
     }
 
     return payloads;
@@ -137,23 +133,42 @@ export function generarPayloads(params: SimularAbusoBody): PayloadSimulacion[] {
 
 /**
  * Crea el registro de simulación en PENDIENTE y encola el job.
- * Valida la IP inyectable contra RFC 5737.
+ * Valida la IP inyectable contra RFC 5737 y, para denunciante_spam, exige un
+ * usuario PARENT activo.
  */
 export async function crearSimulacionAbuso(params: SimularAbusoBody, usuarioId: string) {
-    const ip = params.ip ?? IP_DEFAULT;
-    const validacion = validarIpInyectable(ip);
-    if (!validacion.ok) {
-        throw new Error(validacion.mensaje);
+    validarIpsInyectables(params);
+
+    if (params.escenario === "denunciante_spam") {
+        if (!params.usuarioId) {
+            throw new AppError(
+                "Falta configurar simulacion.spam.usuario_id en Configuración → Sistema. Debe apuntar al id de un usuario PARENT de prueba.",
+                "VALIDATION_ERROR",
+                400
+            );
+        }
+        const usuario = await new UsuarioRepository().findById(params.usuarioId);
+        if (!usuario || usuario.rol !== "PARENT" || usuario.estado !== "activo") {
+            throw new AppError(
+                "El usuario configurado en simulacion.spam.usuario_id no existe o no es un PARENT activo.",
+                "VALIDATION_ERROR",
+                400
+            );
+        }
     }
 
+    const ip = primeraIpValida(params);
     const payloads = generarPayloads(params);
     const repo = new SimulacionAbusoRepository();
 
     const config: ConfigSimulacionAbuso = {
         n: payloads.length,
         ipInyectada: ip,
-        identificador: params.identificador ?? baseIdentificadorParaEscenario(params.escenario, ip),
+        identificador:
+            params.identificador ??
+            (params.identificadores && params.identificadores.length > 0 ? params.identificadores[0] : IDENTIFICADOR_DEFAULT),
         plataforma: params.plataforma ?? PLATAFORMA_DEFAULT,
+        ...(params.usuarioId ? { usuarioId: params.usuarioId } : {}),
     };
 
     const run = await repo.crear({
@@ -168,18 +183,16 @@ export async function crearSimulacionAbuso(params: SimularAbusoBody, usuarioId: 
         tipoRecurso: "SimulacionAbusoRun",
         recursoId: run.id,
         usuarioId,
-        valorNuevo: JSON.stringify({ escenario: run.escenario, n: run.totalReportes, ip: config.ipInyectada }),
+        valorNuevo: JSON.stringify({
+            escenario: run.escenario,
+            n: run.totalReportes,
+            ip: config.ipInyectada,
+            conUsuario: !!config.usuarioId,
+        }),
     });
 
     await sendSimulacionAbuso(run.id);
     return { ...run, configJson: config };
-}
-
-function baseIdentificadorParaEscenario(escenario: EscenarioSimulacionAbuso, ip: string): string {
-    if (escenario === "ataque_coordinado") return "3000000001";
-    if (escenario === "personalizado") return "3001234567";
-    // robot/bot/denunciante: usamos la IP como semilla simple para evitar colisiones
-    return `300${ip.split(".").pop()?.padStart(4, "0") ?? "1234"}`;
 }
 
 /**
@@ -192,7 +205,7 @@ export async function cancelarSimulacionAbuso(id: string, usuarioId: string): Pr
     if (!run) return false;
     if (run.estado !== "PENDIENTE" && run.estado !== "EN_PROGRESO") return false;
 
-    await repo.actualizarEstado(id, "CANCELADA", new Date());
+    await repo.actualizarEstado(id, "CANCELADA");
     await logAudit({
         accion: "SIMULACION_ABUSO_CANCELADA",
         tipoRecurso: "SimulacionAbusoRun",
