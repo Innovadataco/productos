@@ -475,6 +475,33 @@ export async function enviarAlertaInfra(params: {
 }
 
 /**
+ * SPEC-184 (002-PI-079) — Alerta de abuso por rate-limit. Mismo patrón
+ * throttled que SPEC-171, pero la señal describe un posible ataque desde una
+ * IP (hash) contra un scope. Cero datos de reportes ni personas.
+ */
+export async function enviarAlertaRateLimit(params: {
+    senal: string;
+    inicio: Date;
+    detalle?: string | null;
+    destinatarios: string[];
+}): Promise<void> {
+    const { senal, inicio, detalle, destinatarios } = params;
+    const result = await resend.emails.send({
+        from: FROM,
+        to: destinatarios,
+        subject: `[PI-ALERTA] Posible abuso: ${senal}`,
+        text: `Señal de posible abuso: ${senal}\nDesde: ${inicio.toISOString()}\n${detalle ? `Detalle: ${detalle}\n` : ""}\nRevisar el tablero Anti-abuso en el panel de administración.`,
+    });
+
+    if (result.error) {
+        logger.error("Resend error alerta rate-limit:", result.error);
+        throw new Error("Error al enviar alerta de rate-limit");
+    }
+
+    logger.info(`[EMAIL] Alerta de rate-limit enviada (senal=${senal}, destinatarios=${destinatarios.length}, resendId=${result.data?.id ?? "n/a"})`);
+}
+
+/**
  * SPEC-172 (Pilar D.5) — Aviso semanal de deriva del motor en producción.
  * Texto plano con estadísticas agregadas por categoría: cero textos de
  * reportes y cero datos de personas. La deriva es "tasa de corrección humana

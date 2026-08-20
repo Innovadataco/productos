@@ -3,6 +3,7 @@ import { getParametroSistema } from "./parametros";
 import { logger } from "@/lib/logger";
 import { estaIpBloqueada } from "./anti-abuso/block-list";
 import { calcularIpHash } from "./anti-abuso/fuente-reporte";
+import { evaluarYAlertarRateLimit } from "./anti-abuso/rate-limit-alerts";
 import type { PrismaClient } from "@prisma/client";
 
 export interface RateLimitResult {
@@ -180,6 +181,13 @@ export async function checkRateLimit(
 
         if (!allowed) {
             headers["Retry-After"] = String(Math.ceil((resetAt - now) / 1000));
+            // SPEC-184: alerta throttled cuando una IP acumula muchos bloqueos.
+            void evaluarYAlertarRateLimit({
+                scope,
+                identifier,
+                ipHash: calcularIpHash(getClientIp(request)),
+                maxRequests: config.maxRequests,
+            });
         }
 
         // Limpieza periódica de ventanas antiguas (probabilidad 1%)
