@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-20** (SPEC-185 y SPEC-186 implementadas; ver cierre.md en `specs/185-simulador-historial/` y `specs/186-smoke-inteligente-ollama/`).
+> Última actualización: **2026-08-20** (SPEC-185, SPEC-186 y SPEC-187 implementadas; ver cierre.md en `specs/185-simulador-historial/`, `specs/186-smoke-inteligente-ollama/` y `specs/187-override-modelo-smoke-ollama/`).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -10,10 +10,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **150** |
+| **Total de specs** | **151** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
-| **Implementadas (IMPLEMENTADO)** | **45** |
+| **Implementadas (IMPLEMENTADO)** | **46** |
 | **Pendientes (PLANEADO)** | **7** |
 
 ## Backlog activo (no cerradas)
@@ -125,6 +125,7 @@
 | [184](184-anti-abuso-operativo-simulador/spec.md) | SPEC-184 — Anti-abuso operativo + simulador de abusos (002-PI-079) | 🟢 Finalizada (ver cierre.md) |
 | [185](185-simulador-historial/spec.md) | SPEC-185 — Historial y sugerencias del simulador de abusos (002-PI-080) | 🟢 Implementada (ver cierre.md) |
 | [186](186-smoke-inteligente-ollama/spec.md) | SPEC-186 — Smoke inteligente del monitor Ollama (002-PI-081) | 🟢 Implementada (ver cierre.md) |
+| [187](187-override-modelo-smoke-ollama/spec.md) | SPEC-187 — Override de modelo para smoke Ollama (002-PI-082) | 🟢 Implementada (ver cierre.md) |
 
 ## Tabla completa (121 specs)
 
@@ -297,6 +298,7 @@
 | [184](184-anti-abuso-operativo-simulador/spec.md) | SPEC-184 — Anti-abuso operativo + simulador de abusos (002-PI-079) | 🟢 Finalizada (ver cierre.md) |
 | [185](185-simulador-historial/spec.md) | SPEC-185 — Historial y sugerencias del simulador de abusos (002-PI-080) | 🟢 Implementada (ver cierre.md) |
 | [186](186-smoke-inteligente-ollama/spec.md) | SPEC-186 — Smoke inteligente del monitor Ollama (002-PI-081) | 🟢 Implementada (ver cierre.md) |
+| [187](187-override-modelo-smoke-ollama/spec.md) | SPEC-187 — Override de modelo para smoke Ollama (002-PI-082) | 🟢 Implementada (ver cierre.md) |
 
 ## Incidencias de calidad de datos
 

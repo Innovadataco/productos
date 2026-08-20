@@ -159,24 +159,43 @@ export async function probeOllamaSmoke({
     }
 
     const inicio = Date.now();
-    let paramModelos;
-    try {
-        paramModelos = await getParametroSistema("ia.rubrica.modelos");
-    } catch (error) {
-        return { ok: false, latenciaMs: 0, detalle: `error leyendo ia.rubrica.modelos: ${mensajeError(error)}`, metodo: "SMOKE" };
-    }
+
+    // Selección de modelo: override operativo (SPEC-187) o modelo vigente del motor.
     let modelo: string | null = null;
+    let fuenteModelo: "override" | "motor" = "motor";
     try {
-        const parsed: unknown = paramModelos ? JSON.parse(paramModelos.valor) : null;
-        if (Array.isArray(parsed) && typeof parsed[0] === "string" && parsed[0].trim().length > 0) {
-            modelo = parsed[0].trim();
+        const paramOverride = await getParametroSistema("monitoreo.ollama.smoke.modelo");
+        const overrideModelo = paramOverride?.valor?.trim() ?? "";
+        if (overrideModelo.length > 0) {
+            modelo = overrideModelo;
+            fuenteModelo = "override";
         }
-    } catch {
-        modelo = null;
+    } catch (error) {
+        return { ok: false, latenciaMs: 0, detalle: `error leyendo monitoreo.ollama.smoke.modelo: ${mensajeError(error)}`, metodo: "SMOKE" };
     }
+
+    if (!modelo) {
+        let paramModelos;
+        try {
+            paramModelos = await getParametroSistema("ia.rubrica.modelos");
+        } catch (error) {
+            return { ok: false, latenciaMs: 0, detalle: `error leyendo ia.rubrica.modelos: ${mensajeError(error)}`, metodo: "SMOKE" };
+        }
+        try {
+            const parsed: unknown = paramModelos ? JSON.parse(paramModelos.valor) : null;
+            if (Array.isArray(parsed) && typeof parsed[0] === "string" && parsed[0].trim().length > 0) {
+                modelo = parsed[0].trim();
+            }
+        } catch {
+            modelo = null;
+        }
+    }
+
     if (!modelo) {
         return { ok: false, latenciaMs: 0, detalle: "sin modelo vigente configurado", metodo: "SMOKE" };
     }
+
+    const detalleModelo = `(modelo ${modelo}, ${fuenteModelo})`;
     try {
         const res = await fetch(`${baseUrl}/api/generate`, {
             method: "POST",
@@ -185,14 +204,14 @@ export async function probeOllamaSmoke({
             signal: AbortSignal.timeout(timeoutMs),
         });
         const latenciaMs = Date.now() - inicio;
-        if (!res.ok) return { ok: false, latenciaMs, detalle: `HTTP ${res.status} (modelo ${modelo})`, metodo: "SMOKE" };
+        if (!res.ok) return { ok: false, latenciaMs, detalle: `HTTP ${res.status} ${detalleModelo}`, metodo: "SMOKE" };
         const data = (await res.json()) as { response?: unknown };
         const texto = typeof data.response === "string" ? data.response.trim() : "";
         return texto.length > 0
-            ? { ok: true, latenciaMs, detalle: `smoke real ejecutado, latencia ${latenciaMs} ms (modelo ${modelo})`, metodo: "SMOKE" }
-            : { ok: false, latenciaMs, detalle: `respuesta vacía del modelo ${modelo}`, metodo: "SMOKE" };
+            ? { ok: true, latenciaMs, detalle: `smoke real ejecutado, latencia ${latenciaMs} ms ${detalleModelo}`, metodo: "SMOKE" }
+            : { ok: false, latenciaMs, detalle: `respuesta vacía ${detalleModelo}`, metodo: "SMOKE" };
     } catch (error) {
-        return { ok: false, latenciaMs: Date.now() - inicio, detalle: `${mensajeError(error)} (modelo ${modelo})`, metodo: "SMOKE" };
+        return { ok: false, latenciaMs: Date.now() - inicio, detalle: `${mensajeError(error)} ${detalleModelo}`, metodo: "SMOKE" };
     }
 }
 

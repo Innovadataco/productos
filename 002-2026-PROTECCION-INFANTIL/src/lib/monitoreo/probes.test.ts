@@ -60,6 +60,18 @@ async function sembrarModelos(valor: string | null) {
     });
 }
 
+async function sembrarOverrideModelo(valor: string | null) {
+    if (valor === null) {
+        await prisma.parametroSistema.deleteMany({ where: { clave: "monitoreo.ollama.smoke.modelo" } });
+        return;
+    }
+    await prisma.parametroSistema.upsert({
+        where: { clave: "monitoreo.ollama.smoke.modelo" },
+        update: { valor },
+        create: { clave: "monitoreo.ollama.smoke.modelo", valor, tipo: "STRING", categoria: "SYSTEM", esPublico: false },
+    });
+}
+
 async function crearReporteClasificado(id: string) {
     const plataforma = await crearPlataforma("test-plat-" + id, "Test");
     const reporte = await prisma.reporte.create({
@@ -157,8 +169,35 @@ describe("probeOllamaSmoke", () => {
 
         expect(resultado.ok).toBe(true);
         expect(resultado.metodo).toBe("SMOKE");
+        expect(resultado.detalle).toContain("(modelo modelo-vigente:9b, motor)");
         const body = JSON.parse(ultimoBody ?? "{}");
         expect(body).toMatchObject({ model: "modelo-vigente:9b", stream: false, options: { num_predict: 5 } });
+    });
+
+    it("ok: usa el modelo OVERRIDE cuando está configurado (SPEC-187)", async () => {
+        await sembrarModelos(JSON.stringify(["modelo-vigente:9b"]));
+        await sembrarOverrideModelo("llama-guard3:8b");
+        handler = (_req, res) => res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ response: "ok" }));
+
+        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000, piggybackMin: 15, intervaloMin: 30 });
+
+        expect(resultado.ok).toBe(true);
+        expect(resultado.metodo).toBe("SMOKE");
+        expect(resultado.detalle).toContain("(modelo llama-guard3:8b, override)");
+        const body = JSON.parse(ultimoBody ?? "{}");
+        expect(body).toMatchObject({ model: "llama-guard3:8b" });
+    });
+
+    it("override vacío o con espacios cae al modelo vigente del motor (SPEC-187)", async () => {
+        await sembrarModelos(JSON.stringify(["modelo-vigente:9b"]));
+        await sembrarOverrideModelo("   ");
+        handler = (_req, res) => res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ response: "ok" }));
+
+        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000, piggybackMin: 15, intervaloMin: 30 });
+
+        expect(resultado.ok).toBe(true);
+        const body = JSON.parse(ultimoBody ?? "{}");
+        expect(body).toMatchObject({ model: "modelo-vigente:9b" });
     });
 
     it("devuelve PIGGYBACK si hay ClasificacionIA reciente (no ejecuta smoke real)", async () => {
