@@ -4,11 +4,11 @@
 
 **Created**: 2026-08-20
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
-**Implementación**: pendiente aprobación de ZEUS (compuerta §4). Ver [plan.md](./plan.md) y [tasks.md](./tasks.md).
+**Implementación**: completado en `work/002-pi-083`. Ver [plan.md](./plan.md), [tasks.md](./tasks.md) y [cierre.md](./cierre.md).
 
-Impacto en arquitectura: cambios en UI de bandeja (`AdminReportesTable`), servicio de timeline (`timeline-proceso.ts`) y `AuditLogRepository`. Cero cambios en el motor `src/lib/ai/**` y ninguna migración.
+Impacto en arquitectura: cambios en UI de bandeja (`AdminReportesTable`), servicio de timeline (`timeline-proceso.ts`) y `AuditLogRepository`. Cero cambios en el motor `src/lib/ai/**`. Se requirió una migración aditiva mínima para añadir `OPERADOR_DESASIGNADO` al enum `AccionAudit` (no estaba en el schema a pesar de que el diseño asumía su existencia).
 
 **Input**: 002-PI-083. El CEO no puede saber a qué operador está asignado un reporte sin abrir el detalle uno por uno. El backend ya soporta filtro `?operadorId=` en `/api/admin/reportes-revision`, pero la UI no lo expone. El timeline "Ver proceso" no muestra eventos de asignación/reasignación/desasignación de operador.
 
@@ -103,8 +103,22 @@ Como admin quiero ver en "Ver proceso" cuándo y por quién se asignó, reasign�
 - El DTO de la bandeja (`ReporteListItem`) se puede extender sin romper otros consumidores.
 - La UI "Ver proceso" se renderiza en `AdminReporteExpediente` o componente equivalente.
 
-## Decisiones de compuerta §4 (propuestas)
+## Decisiones de compuerta §4 (aprobadas)
 
 1. **Textos del timeline**: "Asignado a `<operador>` por `<actor>`", "Reasignado a `<operador>` por `<actor>`", "Desasignado por `<actor>`".
-2. **Dropdown de operadores para OPERADOR/COMITE**: se deshabilita/oculta porque su bandeja ya está filtrada por su propio id.
+2. **Dropdown de operadores para OPERADOR/COMITE**: se oculta porque su bandeja ya está filtrada por su propio id.
 3. **Frontera DAL**: todo acceso a `AuditLog` pasa por `AuditLogRepository` (ya existe); se añade método `findAsignacionesReporte(reporteId)`.
+
+## Implementación *(post-aprobación)*
+
+- `src/app/dashboard/admin/page.tsx`: pasa `rol` a `AdminReportesTable` para decidir si mostrar el filtro de operador.
+- `src/components/modules/AdminReportesTable.tsx`: extiende el DTO con `operador`/`comite`, añade columna "Operador", carga operadores desde `/api/admin/operadores` y propaga `?operadorId=`; oculta el dropdown para `OPERADOR`/`COMITE_VALIDACION`.
+- `src/lib/dal/repositories/audit-log.ts`: nuevo método `findAsignacionesReporte` con join a `usuario`.
+- `src/lib/reportes/timeline-proceso.ts`: nuevo evento `ASIGNACION_OPERADOR`; consulta `AuditLogRepository`, parsea `valorNuevo`/`valorAnterior` y ordena cronológicamente con transiciones/reintentos.
+- `src/components/modules/AdminReporteProceso.tsx`: renderiza eventos de asignación con icono "A" y badge distintivo.
+- `prisma/schema.prisma` + `prisma/migrations/20260820020000_spec_188_operador_desasignado/migration.sql`: añaden `OPERADOR_DESASIGNADO` al enum `AccionAudit`.
+- Tests: `src/app/api/admin/reportes-revision/route.test.ts`, `src/lib/reportes/timeline-proceso.test.ts`, `src/components/modules/AdminReportesTable.test.tsx`.
+
+### Hallazgo durante la implementación
+
+El enum `AccionAudit` no contenía `OPERADOR_DESASIGNADO`, aunque el diseño aprobado lo requería. Se añadió mediante migración aditiva `ALTER TYPE ... ADD VALUE`. Esto es seguro y no pierde datos, pero significa que la premisa "ninguna migración" del plan no se cumplió.

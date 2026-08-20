@@ -77,6 +77,15 @@ Ver [tasks.md](./tasks.md).
 | Filtro dropdown para OPERADOR/COMITE | Ocultar/deshabilitar el select porque su bandeja ya está filtrada. |
 | Cambio en DTO rompe otros consumidores | Campos opcionales; solo `AdminReportesTable` los usa inicialmente. |
 
+## Migración
+
+Se requirió una migración aditiva mínima no prevista en la compuerta:
+
+- `prisma/migrations/20260820020000_spec_188_operador_desasignado/migration.sql`
+- `ALTER TYPE "AccionAudit" ADD VALUE 'OPERADOR_DESASIGNADO';`
+
+Razón: el diseño asumía que `OPERADOR_DESASIGNADO` ya existía en el enum, pero el schema solo tenía `OPERADOR_ASIGNADO` y `OPERADOR_REASIGNADO`. La migración es aditiva, no destructiva, y se aplicó a dev y test.
+
 ## Criterios de aceptación técnica
 
 - Gate local completo verde.

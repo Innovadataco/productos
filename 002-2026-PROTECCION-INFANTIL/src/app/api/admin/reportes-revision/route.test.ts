@@ -178,4 +178,28 @@ describe("GET /api/admin/reportes-revision", () => {
         const res = await GET(req);
         expect(res.status).toBe(400);
     });
+
+    // SPEC-188 (FR-002/003): filtro por operador y DTO con email del operador.
+    it("filtra por operadorId y expone el email del operador en la fila", async () => {
+        const admin = await crearUsuario("ADMIN");
+        const operador = await crearUsuario("OPERADOR", "operador188@example.com");
+        activeToken = await crearTokenUsuario(admin.id, "ADMIN");
+
+        const asignado = await crearReporteDePrueba({ numeroSeguimiento: "RPT-OPR-001" });
+        const sinAsignar = await crearReporteDePrueba({ numeroSeguimiento: "RPT-OPR-002" });
+
+        await prisma.reporte.update({ where: { id: asignado.id }, data: { operadorId: operador.id } });
+
+        const req = new Request(
+            `http://localhost:5005/api/admin/reportes-revision?operadorId=${operador.id}`,
+            { method: "GET", headers: { cookie: `token=${activeToken}` } }
+        );
+        const res = await GET(req);
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.reportes).toHaveLength(1);
+        expect(body.reportes[0].id).toBe(asignado.id);
+        expect(body.reportes[0].operador?.email).toBe("operador188@example.com");
+        expect(body.reportes.find((r: { id: string }) => r.id === sinAsignar.id)).toBeUndefined();
+    });
 });
