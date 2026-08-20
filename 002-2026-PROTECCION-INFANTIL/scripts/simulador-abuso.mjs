@@ -117,14 +117,15 @@ async function ejecutarSimulacion(runId) {
         return;
     }
 
-    await repo.actualizar(runId, { estado: "EN_PROGRESO", fechaInicio: new Date() });
+    await repo.actualizarEstado(runId, "EN_PROGRESO", undefined);
 
+    const config = run.configJson ?? {};
     const params = {
         escenario: run.escenario,
-        n: run.n,
-        ip: run.ipInyectada,
-        identificador: run.identificador,
-        plataforma: run.plataforma,
+        n: run.totalReportes,
+        ip: config.ipInyectada,
+        identificador: config.identificador,
+        plataforma: config.plataforma,
     };
     const payloads = generarPayloads(params);
 
@@ -139,13 +140,7 @@ async function ejecutarSimulacion(runId) {
         const actual = await repo.findById(runId);
         if (!actual || actual.estado === "CANCELADA") {
             console.log(`[SIMULADOR-ABUSO] Run ${runId} cancelado en ciclo ${i + 1}/${payloads.length}`);
-            await repo.actualizar(runId, {
-                estado: "CANCELADA",
-                fechaFin: new Date(),
-                totalEnviados: enviados,
-                totalBloqueados: bloqueados,
-                totalSpam: spam,
-            });
+            await repo.actualizarEstado(runId, "CANCELADA", new Date());
             return;
         }
 
@@ -163,6 +158,13 @@ async function ejecutarSimulacion(runId) {
             } else {
                 fallidos++;
             }
+            await repo.actualizarProgreso(runId, enviados + bloqueados + fallidos);
+            await repo.actualizarResultados(runId, {
+                totalEnviados: enviados,
+                totalBloqueados: bloqueados,
+                totalSpam: spam,
+                latenciaPromedioMs: enviados + bloqueados + fallidos > 0 ? Math.round(latenciaTotal / (enviados + bloqueados + fallidos)) : 0,
+            });
             console.log(`[SIMULADOR-ABUSO] Run ${runId} ${i + 1}/${payloads.length} status=${status} latencia=${latencia}ms`);
         } catch (err) {
             fallidos++;
@@ -179,9 +181,8 @@ async function ejecutarSimulacion(runId) {
     const latenciaPromedio = enviados + bloqueados + fallidos > 0 ? Math.round(latenciaTotal / (enviados + bloqueados + fallidos)) : 0;
     const estadoFinal = fallidos > 0 && enviados === 0 ? "FALLIDA" : "COMPLETADA";
 
-    await repo.actualizar(runId, {
-        estado: estadoFinal,
-        fechaFin: new Date(),
+    await repo.actualizarEstado(runId, estadoFinal, new Date());
+    await repo.actualizarResultados(runId, {
         totalEnviados: enviados,
         totalBloqueados: bloqueados,
         totalSpam: spam,
@@ -223,7 +224,7 @@ async function start() {
             try {
                 await prisma.simulacionAbusoRun.update({
                     where: { id: runId },
-                    data: { estado: "FALLIDA", fechaFin: new Date() },
+                    data: { estado: "FALLIDA" },
                 });
             } catch (markErr) {
                 console.error(`[SIMULADOR-ABUSO] ERROR no se pudo marcar runId=${runId} como fallida:`, markErr);

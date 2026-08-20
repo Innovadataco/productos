@@ -33,7 +33,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             );
         }
 
-        return NextResponse.json({ run });
+        const config = (run.configJson ?? {}) as Record<string, unknown>;
+        const resultados = (run.resultadosJson ?? {}) as Record<string, unknown>;
+
+        return NextResponse.json({
+            run: {
+                ...run,
+                n: run.totalReportes,
+                ipInyectada: config.ipInyectada ?? null,
+                identificador: config.identificador ?? null,
+                plataforma: config.plataforma ?? null,
+                totalEsperado: run.totalReportes,
+                totalEnviados: Number(resultados.totalEnviados ?? 0),
+                totalBloqueados: Number(resultados.totalBloqueados ?? 0),
+                totalSpam: Number(resultados.totalSpam ?? 0),
+                latenciaPromedioMs: Number(resultados.latenciaPromedioMs ?? 0),
+            },
+        });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

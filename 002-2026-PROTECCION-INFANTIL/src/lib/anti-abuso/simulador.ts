@@ -7,7 +7,7 @@
  *
  * Frontera DAL (Q-3): SimulacionAbusoRun solo se toca por su repositorio.
  */
-import { SimulacionAbusoRepository } from "@/lib/dal/repositories/simulacion-abuso";
+import { SimulacionAbusoRepository, type ConfigSimulacionAbuso } from "@/lib/dal/repositories/simulacion-abuso";
 import { validarIpInyectable } from "./rfc5737";
 import { sendSimulacionAbuso } from "@/lib/queue";
 import { logAudit } from "@/lib/audit";
@@ -149,27 +149,30 @@ export async function crearSimulacionAbuso(params: SimularAbusoBody, usuarioId: 
     const payloads = generarPayloads(params);
     const repo = new SimulacionAbusoRepository();
 
-    const run = await repo.crear({
-        escenario: params.escenario,
+    const config: ConfigSimulacionAbuso = {
         n: payloads.length,
         ipInyectada: ip,
         identificador: params.identificador ?? baseIdentificadorParaEscenario(params.escenario, ip),
         plataforma: params.plataforma ?? PLATAFORMA_DEFAULT,
-        estado: "PENDIENTE",
+    };
+
+    const run = await repo.crear({
+        escenario: params.escenario,
+        totalReportes: payloads.length,
         creadoPorId: usuarioId,
-        totalEsperado: payloads.length,
+        configJson: config,
     });
 
     await logAudit({
-        accion: "SIMULACION_ABUSO_CREADA",
+        accion: "SIMULACION_ABUSO_INICIADA",
         tipoRecurso: "SimulacionAbusoRun",
         recursoId: run.id,
         usuarioId,
-        valorNuevo: JSON.stringify({ escenario: run.escenario, n: run.n, ip: run.ipInyectada }),
+        valorNuevo: JSON.stringify({ escenario: run.escenario, n: run.totalReportes, ip: config.ipInyectada }),
     });
 
     await sendSimulacionAbuso(run.id);
-    return run;
+    return { ...run, configJson: config };
 }
 
 function baseIdentificadorParaEscenario(escenario: EscenarioSimulacionAbuso, ip: string): string {
@@ -189,7 +192,7 @@ export async function cancelarSimulacionAbuso(id: string, usuarioId: string): Pr
     if (!run) return false;
     if (run.estado !== "PENDIENTE" && run.estado !== "EN_PROGRESO") return false;
 
-    await repo.actualizar(id, { estado: "CANCELADA", fechaFin: new Date() });
+    await repo.actualizarEstado(id, "CANCELADA", new Date());
     await logAudit({
         accion: "SIMULACION_ABUSO_CANCELADA",
         tipoRecurso: "SimulacionAbusoRun",

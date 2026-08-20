@@ -498,8 +498,8 @@ export class ReporteRepository {
         const rows = await this.db.reporte.groupBy({
             by: ["identificador", "plataformaId"],
             where: { creadoEn: { gte: desde }, eliminado: false },
-            _count: { _all: true },
-            orderBy: { _count: { _all: "desc" } },
+            _count: { id: true },
+            orderBy: { _count: { id: "desc" } },
             take: limite,
         });
         const plataformaIds = [...new Set(rows.map((r) => r.plataformaId).filter(Boolean))];
@@ -512,7 +512,7 @@ export class ReporteRepository {
             identificador: r.identificador,
             plataformaId: r.plataformaId,
             plataformaNombre: nombrePorId[r.plataformaId] ?? "Desconocida",
-            total: r._count._all,
+            total: r._count?.id ?? 0,
         }));
     }
 
