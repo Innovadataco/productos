@@ -10,6 +10,8 @@
 
 Objetivo: dar al admin una vista de detalle por operador con métricas de gestión (casos abiertos, resueltos, tiempos, categorías, tasa de escalamiento) y listados navegables, sin exponer PII ni texto de reportes.
 
+Impacto en arquitectura: nueva página `/dashboard/admin/operadores/[id]` con dos endpoints admin (`/metricas`, `/casos`) que agregan sobre AuditLog, Reporte y ClasificacionIA vía repositorios existentes. Cero migración. Cero cambios de motor.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
