@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 274 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1918 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 276 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1932 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -86,6 +86,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/casos` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/metricas` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reenviar-email` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/regenerar-password` | api | permitir | permite | sí |
@@ -254,6 +256,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/[id]` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/gestion` | página | permitir | permite | sí |
@@ -365,6 +368,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/casos` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/metricas` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reenviar-email` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/regenerar-password` | api | permitir | permite | sí |
@@ -533,6 +538,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/[id]` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/gestion` | página | permitir | permite | sí |
@@ -644,6 +650,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/casos` | api | permitir | permite | sí |
+| `/api/admin/operadores/[id]/metricas` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/reenviar-email` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/regenerar-password` | api | permitir | permite | sí |
@@ -812,6 +820,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores` | página | permitir | permite | sí |
+| `/dashboard/admin/operadores/[id]` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores/gestion` | página | permitir | permite | sí |
@@ -923,6 +932,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/casos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/metricas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
@@ -1091,6 +1102,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/operadores/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/operadores/gestion` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1202,6 +1214,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/casos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/metricas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
@@ -1370,6 +1384,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/operadores/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/operadores/gestion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -1481,6 +1496,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/casos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/[id]/metricas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
@@ -1649,6 +1666,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/ia` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/operadores/[id]` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/operadores/gestion` | página | redirigir→/ | no permite | sí |
@@ -1760,6 +1778,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores/[id]/casos` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores/[id]/metricas` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]/reenviar-email` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 401 | permite | **NO** |
@@ -1928,6 +1948,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/ia` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/operadores/[id]` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/operadores/asignar` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/operadores/auditoria` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/operadores/gestion` | página | redirigir→/login | no permite | sí |
@@ -2040,6 +2061,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/motor/deriva/recalcular` | HTTP 401 | permite |
 | `/api/admin/operadores` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]` | HTTP 401 | permite |
+| `/api/admin/operadores/[id]/casos` | HTTP 401 | permite |
+| `/api/admin/operadores/[id]/metricas` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]/reactivar` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]/reenviar-email` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]/regenerar-password` | HTTP 401 | permite |

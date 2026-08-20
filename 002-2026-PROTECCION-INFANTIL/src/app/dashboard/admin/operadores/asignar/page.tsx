@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -162,6 +163,12 @@ export default function AdminOperadoresAsignarPage() {
                                                             style={{ width: `${Math.min(100, uso * 100)}%` }}
                                                         />
                                                     </div>
+                                                    <Link
+                                                        href={`/dashboard/admin/operadores/${op.id}`}
+                                                        className="rounded-lg border border-slate-300 px-3 py-1 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                    >
+                                                        Ver detalle
+                                                    </Link>
                                                     <Button
                                                         variant="outline"
                                                         className="px-3 py-1 text-xs"
