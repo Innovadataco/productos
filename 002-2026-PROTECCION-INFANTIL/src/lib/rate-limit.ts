@@ -1,6 +1,8 @@
 import { prisma } from "./prisma";
 import { getParametroSistema } from "./parametros";
 import { logger } from "@/lib/logger";
+import { estaIpBloqueada } from "./anti-abuso/block-list";
+import { calcularIpHash } from "./anti-abuso/fuente-reporte";
 import type { PrismaClient } from "@prisma/client";
 
 export interface RateLimitResult {
@@ -107,6 +109,33 @@ export async function checkRateLimit(
     }
 
     const identifier = options?.identifier ?? getClientIp(request);
+
+    // SPEC-184: consultar BlockList antes de contar. Si la IP está bloqueada,
+    // devolvemos 429 inmediato sin incrementar el contador de RateLimit.
+    try {
+        const clientIp = getClientIp(request);
+        const ipHash = calcularIpHash(clientIp);
+        if (await estaIpBloqueada(ipHash)) {
+            const defaults = getScopeDefaults(scope);
+            const resetAt = Date.now() + defaults.windowSeconds * 1000;
+            const headers: Record<string, string> = {
+                "X-RateLimit-Limit": String(defaults.maxRequests),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": String(Math.ceil(resetAt / 1000)),
+                "Retry-After": String(defaults.windowSeconds),
+            };
+            return {
+                allowed: false,
+                limit: defaults.maxRequests,
+                remaining: 0,
+                resetAt,
+                headers,
+            };
+        }
+    } catch (error) {
+        logger.error("[RATE-LIMIT] Error consultando BlockList:", error);
+        // Fail-open: si no podemos verificar la blocklist, no bloqueamos todo el tráfico.
+    }
 
     try {
         // O-1 (SPEC-108): la config se lee DENTRO del try. Con Postgres caído, los scopes
