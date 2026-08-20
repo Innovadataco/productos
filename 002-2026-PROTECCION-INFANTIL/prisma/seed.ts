@@ -6,8 +6,11 @@ import bcrypt from "bcryptjs";
 import fs from "fs/promises";
 import path from "path";
 
+// Instancia lazy: se crea solo al invocar main(), nunca al importar el módulo (I-72).
+let prisma: PrismaClient | undefined;
+
 async function main() {
-    const prisma = new PrismaClient();
+    prisma = new PrismaClient();
     // Admin inicial: SOLO desde variable de entorno, SOLO si no existe (spec 105, I-31).
     // Nunca un literal en el repo; el seed nunca pisa una credencial ya rotada.
     const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "soporte@innovadataco.com";
@@ -1452,6 +1455,6 @@ if (esScriptDirecto) {
             process.exit(1);
         })
         .finally(async () => {
-            await prisma.$disconnect();
+            await prisma?.$disconnect();
         });
 }
