@@ -220,11 +220,11 @@ Test con `8.8.8.8` → false.
 |-----------|-----|---------------|-------------|------|---|
 | 1. Robot inundando | 1 fija (RFC 5737) | rotativo | fijo | anónimo | 50 |
 | 2. Ataque coordinado | 30 distintas (RFC 5737) | mismo objetivo | variado | anónimo | 30 |
-| 3. IPs rotativas + mismo fingerprint | 20 distintas (RFC 5737) | rotativo | mismo UA/Lang | anónimo | 20 |
+| 3. IPs rotativas | 20 distintas (RFC 5737) | rotativo | variado | anónimo | 20 |
 | 4. Denunciante spam | 1 fija | 10 distintos | fijo | usuario PARENT dado | 10 |
 | 5. Personalizado | configurable | configurable | configurable | anónimo | configurable |
 
-Nota sobre escenario 3: "mismo fingerprint" se implementa enviando el mismo `User-Agent` y `Accept-Language`; el hash del servidor incluirá IP, por lo que no será idéntico. Esto se documenta como decisión/riesgo.
+Nota sobre escenario 3: el rate-limit por fingerprint protege contra reincidencia desde el mismo cliente (misma IP truncada + mismo User-Agent). IPs rotativas, por diseño, generan fingerprints distintos; este escenario prueba precisamente que el ataque con IPs rotativas evade la defensa por fingerprint y debe ser detectado por otras señales (IP/rate-limit, identificador, scoring).
 
 Nota sobre escenario 4: requiere un `usuarioId` de un PARENT existente; si no se provee, ese escenario falla con 400.
 
@@ -294,7 +294,7 @@ docs/architecture/                                                             #
 | `checkRateLimit` se hace más lento por consulta a BlockList | Índice por `ipHash`; consulta simple `findUnique`; fail-open ante timeout |
 | Worker del simulador caído con corrida en progreso | Estado persistente; el admin puede cancelar; no hay auto-reinicio |
 | Simulador usado accidentalmente en prod | Solo ADMIN con módulo `anti_abuso`; IPs restringidas a RFC 5737 |
-| "Mismo fingerprint" con IPs rotativas no es idéntico | Documentar que se fija UA/Lang; si ZEUS quiere hash idéntico, se discute en compuerta |
+| IPs rotativas generan fingerprints distintos | El escenario prueba el límite real de la señal; no se modifica `calcularFingerprintServerSide` |
 | Escenario 4 requiere usuario PARENT de prueba | Exigir `usuarioId` en la UI/endpoint; fallar 400 si no existe o no es PARENT |
 
 ---
@@ -305,4 +305,4 @@ docs/architecture/                                                             #
 2. **Persistencia del escenario en curso**: nueva tabla **`SimulacionAbusoRun`** (no reutilizar `SimulacionRun` del motor, porque los campos `modelo`/`casosJson` no encajan y queremos aislar el ciclo de vida del simulador de abusos).
 3. **Cómo cortar la simulación**: worker separado `scripts/simulador-abuso.mjs` con advisory lock. La UI actualiza el estado a `CANCELADA`; el worker consulta el estado antes de cada POST y se detiene. No se matan procesos; los reportes ya creados siguen su curso.
 4. **Alerta rate-limit**: reutilizar **`IncidenteInfra`** con señal `rate_limit:<scope>:<ipHash>` y throttle por señal (mismo patrón que SPEC-171). Email a `alerts.ratelimit.destinatarios`.
-5. **"Mismo fingerprint" en escenario 3**: se fijan `User-Agent` y `Accept-Language`, pero el hash del servidor incluye IP truncada, por lo que no será idéntico. ¿Aceptamos esta interpretación o permitimos un header controlado de test para forzar fingerprint idéntico?
+5. **Escenario 3 rebautizado a "IPs rotativas"**: no se modifica `calcularFingerprintServerSide` (verificado en fuente: incluye IP truncada). El escenario documenta el límite real de la señal de fingerprint, aprobado por ZEUS.

@@ -75,7 +75,7 @@ Como administrador quiero lanzar escenarios predefinidos de ataque (robot, ataqu
 
 **Acceptance Scenarios**:
 
-1. **Given** el simulador, **Then** el admin elige uno de 5 escenarios: robot inundando, ataque coordinado, IPs rotativas + mismo fingerprint, denunciante spam, personalizado.
+1. **Given** el simulador, **Then** el admin elige uno de 5 escenarios: robot inundando, ataque coordinado, IPs rotativas, denunciante spam, personalizado.
 2. **Given** un escenario, **When** se lanza, **Then** el sistema realiza POST HTTP reales a `/api/reportes` inyectando `x-forwarded-for` dentro de los rangos RFC 5737 (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`).
 3. **Given** una IP inyectable fuera de RFC 5737 (ej. `8.8.8.8`), **When** se lanza el simulador, **Then** devuelve 400 con mensaje claro antes de crear reportes.
 4. **Given** el simulador en curso, **Then** la UI muestra en vivo: reportes exitosos (201), bloqueados por rate-limit (429), reportes marcados como `POSIBLE_SPAM`, latencia por reporte y link al tablero anti-abuso.
@@ -109,7 +109,7 @@ Como administrador quiero lanzar escenarios predefinidos de ataque (robot, ataqu
 - **FR-006**: `checkRateLimit` DEBE soportar la consulta de `BlockList` de forma best-effort; si falla, fallar abierto y loguear.
 - **FR-007**: El sistema DEBE enviar un email throttled a los destinatarios configurados cuando una IP supere el umbral de bloqueos por hora, abriendo o actualizando un `IncidenteInfra` asociado.
 - **FR-008**: El sistema DEBE exponer el endpoint `/api/admin/anti-abuso/simular` para lanzar escenarios de abuso con reportes reales, validando que las IPs inyectables estén en rangos RFC 5737.
-- **FR-009**: El simulador DEBE soportar 5 escenarios predefinidos: robot inundando, ataque coordinado, IPs rotativas + mismo fingerprint, denunciante spam, personalizado.
+- **FR-009**: El simulador DEBE soportar 5 escenarios predefinidos: robot inundando, ataque coordinado, IPs rotativas, denunciante spam, personalizado.
 - **FR-010**: El simulador DEBE realizar POST HTTP reales a `/api/reportes` con `x-forwarded-for` inyectable; los reportes DEBEN entrar al pipeline real sin flag de simulación.
 - **FR-011**: El sistema DEBE permitir cancelar una simulación en curso desde la UI, deteniendo nuevos reportes sin afectar los ya creados.
 - **FR-012**: El sistema DEBE persistir el estado y resultados de cada simulación (pendiente/en progreso/completada/cancelada/fallida), quién la lanzó, escenario y conteos.
@@ -152,4 +152,5 @@ Como administrador quiero lanzar escenarios predefinidos de ataque (robot, ataqu
 - El simulador de scoring actual se conserva como tab secundario a menos que ZEUS decida retirarlo en la compuerta §4.
 - El costo de Ollama (~1.5 min/reporte) es aceptado por el CEO para las pruebas; el simulador procesa secuencialmente y muestra latencia real.
 - La blocklist es global (sin tenant) porque los ataques pueden cruzar identidades y el anti-abuso opera sobre fuentes, no sobre instituciones.
+- El rate-limit por fingerprint (`report_fingerprint`) protege contra reincidencia desde el mismo cliente (misma IP truncada + mismo User-Agent); NO bloquea un ataque con IPs rotativas, que es el comportamiento esperado de la señal de fingerprint.
 - El escenario "denunciante spam" requiere un usuario PARENT de prueba existente (a seleccionar en la UI o por variable de entorno); si no existe, ese escenario falla con 400.
