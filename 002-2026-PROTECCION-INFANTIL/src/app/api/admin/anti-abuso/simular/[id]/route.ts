@@ -3,7 +3,13 @@ import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { SimulacionAbusoRepository } from "@/lib/dal/repositories/simulacion-abuso";
+import { SimulacionAbusoRepository, type ResultadosSimulacionAbuso } from "@/lib/dal/repositories/simulacion-abuso";
+import { descripcionEscenario } from "@/lib/anti-abuso/descripcion-escenario";
+
+function extraerResultados(run: { resultadosJson: unknown }): Partial<ResultadosSimulacionAbuso> {
+    const datos = (run.resultadosJson ?? {}) as Record<string, unknown>;
+    return datos;
+}
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -34,7 +40,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         }
 
         const config = (run.configJson ?? {}) as Record<string, unknown>;
-        const resultados = (run.resultadosJson ?? {}) as Record<string, unknown>;
+        const resultados = extraerResultados(run);
+        const detalles = Array.isArray(resultados.detalles) ? resultados.detalles : [];
 
         return NextResponse.json({
             run: {
@@ -43,11 +50,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
                 ipInyectada: config.ipInyectada ?? null,
                 identificador: config.identificador ?? null,
                 plataforma: config.plataforma ?? null,
+                usuarioId: config.usuarioId ?? null,
                 totalEsperado: run.totalReportes,
                 totalEnviados: Number(resultados.totalEnviados ?? 0),
                 totalBloqueados: Number(resultados.totalBloqueados ?? 0),
                 totalSpam: Number(resultados.totalSpam ?? 0),
                 latenciaPromedioMs: Number(resultados.latenciaPromedioMs ?? 0),
+                latenciaP50Ms: Number(resultados.latenciaP50Ms ?? 0),
+                latenciaP95Ms: Number(resultados.latenciaP95Ms ?? 0),
+                descripcionEscenario: descripcionEscenario(run.escenario),
+                detalles,
             },
         });
     } catch (error) {

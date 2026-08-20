@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * SPEC-184 (002-PI-079): worker de simulación de abusos.
+ * SPEC-184 (002-PI-079) + SPEC-185: worker de simulación de abusos.
  *
  * Proceso separado con advisory lock propio. Consume jobs `simulacion-abuso`
  * de pg-boss y envía reportes REALES al endpoint público `/api/reportes`
@@ -9,6 +9,7 @@
  * No usa `X-Worker-Secret` porque `/api/reportes` es público por diseño.
  */
 
+import { SignJWT } from "jose";
 import { fetchWithRetry } from "../src/lib/fetch-retry.ts";
 import { boss, ensureStarted } from "../src/lib/queue.ts";
 import { prisma } from "../src/lib/prisma.ts";
@@ -28,6 +29,7 @@ if (!DATABASE_URL) {
 }
 
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5005";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 async function acquireAdvisoryLock() {
     lockClient = new Client({ connectionString: DATABASE_URL });
@@ -77,19 +79,37 @@ async function ensureQueue(name) {
     }
 }
 
+function getSecret() {
+    if (!JWT_SECRET) throw new Error("JWT_SECRET no configurado");
+    return new TextEncoder().encode(JWT_SECRET);
+}
+
+async function crearTokenUsuario(usuarioId) {
+    return new SignJWT({ sub: usuarioId, rol: "PARENT" })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setExpirationTime("24h")
+        .sign(getSecret());
+}
+
 /**
  * Envía un reporte simulado al endpoint público. Devuelve el status y la
  * latencia en ms.
  */
-async function enviarReporte(payload, ip) {
+async function enviarReporte(payload, ip, tokenAutenticacion) {
     const startMs = Date.now();
+    const headers = {
+        "Content-Type": "application/json",
+        "x-forwarded-for": ip,
+        "user-agent": "ProteccionInfantil-SimuladorAbuso/1.0",
+    };
+    if (tokenAutenticacion) {
+        headers.cookie = `token=${tokenAutenticacion}`;
+    }
+
     const res = await fetchWithRetry(`${API_BASE_URL}/api/reportes`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-forwarded-for": ip,
-            "user-agent": "ProteccionInfantil-SimuladorAbuso/1.0",
-        },
+        headers,
         body: JSON.stringify({
             identificador: payload.identificador,
             plataforma: payload.plataforma,
@@ -105,6 +125,16 @@ async function enviarReporte(payload, ip) {
     return { status: res.status, latencia };
 }
 
+function calcularPercentil(valores, percentil) {
+    if (valores.length === 0) return 0;
+    const ordenados = [...valores].sort((a, b) => a - b);
+    const idx = (percentil / 100) * (ordenados.length - 1);
+    const base = Math.floor(idx);
+    const resto = idx - base;
+    if (ordenados[base + 1] === undefined) return ordenados[base];
+    return Math.round(ordenados[base] + resto * (ordenados[base + 1] - ordenados[base]));
+}
+
 async function ejecutarSimulacion(runId) {
     const repo = new SimulacionAbusoRepository();
     const run = await repo.findById(runId);
@@ -117,7 +147,7 @@ async function ejecutarSimulacion(runId) {
         return;
     }
 
-    await repo.actualizarEstado(runId, "EN_PROGRESO", undefined);
+    await repo.actualizarEstado(runId, "EN_PROGRESO");
 
     const config = run.configJson ?? {};
     const params = {
@@ -126,48 +156,66 @@ async function ejecutarSimulacion(runId) {
         ip: config.ipInyectada,
         identificador: config.identificador,
         plataforma: config.plataforma,
+        usuarioId: config.usuarioId,
     };
     const payloads = generarPayloads(params);
+
+    let tokenAutenticacion = null;
+    if (config.usuarioId && JWT_SECRET) {
+        try {
+            tokenAutenticacion = await crearTokenUsuario(config.usuarioId);
+        } catch (err) {
+            console.error(`[SIMULADOR-ABUSO] Run ${runId} no se pudo generar token para usuario ${config.usuarioId}:`, err.message);
+        }
+    }
 
     let enviados = 0;
     let bloqueados = 0;
     let spam = 0;
     let fallidos = 0;
     let latenciaTotal = 0;
+    const latencias = [];
+    const detalles = [];
 
-    for (let i = 0; i < payloads.length; i++) {
+    async function procesarPayload(i) {
         // Verificar cancelación antes de cada envío
         const actual = await repo.findById(runId);
         if (!actual || actual.estado === "CANCELADA") {
             console.log(`[SIMULADOR-ABUSO] Run ${runId} cancelado en ciclo ${i + 1}/${payloads.length}`);
-            await repo.actualizarEstado(runId, "CANCELADA", new Date());
-            return;
+            await repo.actualizarEstado(runId, "CANCELADA");
+            return false;
         }
 
         const payload = payloads[i];
         try {
-            const { status, latencia } = await enviarReporte(payload, payload.ip);
+            const { status, latencia } = await enviarReporte(payload, payload.ip, tokenAutenticacion);
             latenciaTotal += latencia;
-            if (status === 201) {
+            latencias.push(latencia);
+            let estado = "fallido";
+            if (status === 201 || status === 200 || status === 202) {
                 enviados++;
+                estado = "enviado";
             } else if (status === 429) {
                 bloqueados++;
-            } else if (status === 200 || status === 202) {
-                // Tratado como aceptado
-                enviados++;
+                estado = "bloqueado";
             } else {
                 fallidos++;
             }
+            detalles.push({ idx: i, ip: payload.ip, identificador: payload.identificador, status, latenciaMs: latencia, estado });
             await repo.actualizarProgreso(runId, enviados + bloqueados + fallidos);
             await repo.actualizarResultados(runId, {
                 totalEnviados: enviados,
                 totalBloqueados: bloqueados,
                 totalSpam: spam,
-                latenciaPromedioMs: enviados + bloqueados + fallidos > 0 ? Math.round(latenciaTotal / (enviados + bloqueados + fallidos)) : 0,
+                latenciaPromedioMs: latencias.length > 0 ? Math.round(latenciaTotal / latencias.length) : 0,
+                latenciaP50Ms: calcularPercentil(latencias, 50),
+                latenciaP95Ms: calcularPercentil(latencias, 95),
+                detalles,
             });
             console.log(`[SIMULADOR-ABUSO] Run ${runId} ${i + 1}/${payloads.length} status=${status} latencia=${latencia}ms`);
         } catch (err) {
             fallidos++;
+            detalles.push({ idx: i, ip: payload.ip, identificador: payload.identificador, status: 0, latenciaMs: 0, estado: "error" });
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[SIMULADOR-ABUSO] Run ${runId} ${i + 1}/${payloads.length} error=${msg}`);
         }
@@ -176,17 +224,26 @@ async function ejecutarSimulacion(runId) {
         if (i < payloads.length - 1) {
             await new Promise((r) => setTimeout(r, 200));
         }
+        return true;
     }
 
-    const latenciaPromedio = enviados + bloqueados + fallidos > 0 ? Math.round(latenciaTotal / (enviados + bloqueados + fallidos)) : 0;
+    for (let i = 0; i < payloads.length; i++) {
+        const continuar = await procesarPayload(i);
+        if (!continuar) return;
+    }
+
+    const latenciaPromedio = latencias.length > 0 ? Math.round(latenciaTotal / latencias.length) : 0;
     const estadoFinal = fallidos > 0 && enviados === 0 ? "FALLIDA" : "COMPLETADA";
 
-    await repo.actualizarEstado(runId, estadoFinal, new Date());
+    await repo.actualizarEstado(runId, estadoFinal);
     await repo.actualizarResultados(runId, {
         totalEnviados: enviados,
         totalBloqueados: bloqueados,
         totalSpam: spam,
         latenciaPromedioMs: latenciaPromedio,
+        latenciaP50Ms: calcularPercentil(latencias, 50),
+        latenciaP95Ms: calcularPercentil(latencias, 95),
+        detalles,
     });
 
     await logAudit({

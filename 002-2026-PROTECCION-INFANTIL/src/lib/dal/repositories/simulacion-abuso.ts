@@ -1,5 +1,5 @@
 /**
- * SPEC-184 (002-PI-079): repositorio de SimulacionAbusoRun.
+ * SPEC-184 (002-PI-079) + SPEC-185: repositorio de SimulacionAbusoRun.
  * Frontera DAL (Q-3): todo acceso pasa por aquí.
  * El modelo persiste config y resultados como JSON.
  */
@@ -12,6 +12,16 @@ export interface ConfigSimulacionAbuso {
     ipInyectada: string;
     identificador: string;
     plataforma: string;
+    usuarioId?: string | undefined;
+}
+
+export interface ResultadoEnvioSimulacion {
+    idx: number;
+    ip: string;
+    identificador: string;
+    status: number;
+    latenciaMs: number;
+    estado?: string | undefined;
 }
 
 export interface ResultadosSimulacionAbuso {
@@ -19,6 +29,32 @@ export interface ResultadosSimulacionAbuso {
     totalBloqueados: number;
     totalSpam: number;
     latenciaPromedioMs: number;
+    latenciaP50Ms: number;
+    latenciaP95Ms: number;
+    detalles: ResultadoEnvioSimulacion[];
+}
+
+export interface FiltrosListarSimulaciones {
+    estado?: string | undefined;
+    escenario?: string | undefined;
+    page?: number;
+    pageSize?: number;
+}
+
+export interface ListadoSimulaciones {
+    items: Array<{
+        id: string;
+        escenario: string;
+        totalReportes: number;
+        progreso: number;
+        estado: string;
+        creadoPorId: string;
+        creadoEn: Date;
+        actualizadoEn: Date;
+    }>;
+    total: number;
+    page: number;
+    pageSize: number;
 }
 
 export class SimulacionAbusoRepository {
@@ -78,10 +114,57 @@ export class SimulacionAbusoRepository {
         });
     }
 
-    actualizarEstado(id: string, estado: string, fechaFin?: Date) {
+    actualizarEstado(id: string, estado: string) {
         return this.db.simulacionAbusoRun.update({
             where: { id },
-            data: { estado, ...(fechaFin ? { fechaFin } : {}) },
+            data: { estado },
         });
+    }
+
+    async listar(filtros: FiltrosListarSimulaciones = {}): Promise<ListadoSimulaciones> {
+        const page = Math.max(1, filtros.page ?? 1);
+        const pageSize = Math.min(100, Math.max(1, filtros.pageSize ?? 25));
+        const where: Prisma.SimulacionAbusoRunWhereInput = {};
+        if (filtros.estado) {
+            where.estado = filtros.estado;
+        }
+        if (filtros.escenario) {
+            where.escenario = filtros.escenario;
+        }
+
+        const [items, total] = await Promise.all([
+            this.db.simulacionAbusoRun.findMany({
+                where,
+                orderBy: { creadoEn: "desc" },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                select: {
+                    id: true,
+                    escenario: true,
+                    totalReportes: true,
+                    progreso: true,
+                    estado: true,
+                    creadoPorId: true,
+                    creadoEn: true,
+                    actualizadoEn: true,
+                },
+            }),
+            this.db.simulacionAbusoRun.count({ where }),
+        ]);
+
+        return { items, total, page, pageSize };
+    }
+
+    /**
+     * Devuelve el conjunto de IPs que ya aparecen en configJson de corridas
+     * existentes. Se usa para sugerir IPs frescas al operador.
+     */
+    async buscarIpsUsadas(): Promise<Set<string>> {
+        const rows = await this.db.$queryRaw<{ ip: string }[]>`
+            SELECT DISTINCT "configJson"->>'ipInyectada' AS ip
+            FROM "simulacion_abuso_runs"
+            WHERE "configJson"->>'ipInyectada' IS NOT NULL
+        `;
+        return new Set(rows.map((r) => r.ip));
     }
 }

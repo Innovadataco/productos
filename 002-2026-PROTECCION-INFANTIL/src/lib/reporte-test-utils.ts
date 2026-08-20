@@ -280,6 +280,8 @@ export async function crearParametrosReportes() {
         { clave: "ratelimit.report_identificador.spam_threshold", valor: "20", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.report_fingerprint.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.report_fingerprint.max_requests", valor: "5", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        // SPEC-185: id de usuario PARENT de prueba para el escenario denunciante_spam.
+        { clave: "simulacion.spam.usuario_id", valor: "", tipo: "STRING" as const, categoria: "SYSTEM" as const, esPublico: false },
         { clave: "ratelimit.recuperar_solicitar.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.recuperar_solicitar.max_requests", valor: "5", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.verificacion_solicitar.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },

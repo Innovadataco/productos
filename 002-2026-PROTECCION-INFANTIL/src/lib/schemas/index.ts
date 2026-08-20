@@ -497,12 +497,38 @@ export const escenarioSimulacionAbusoSchema = z.enum([
     "personalizado",
 ]);
 
+// SPEC-185: validación estricta de IPv4 para simulaciones.
+export const ipv4Schema = z
+    .string()
+    .regex(
+        /^(\d{1,3}\.){3}\d{1,3}$/,
+        "Debe ser una IPv4 válida (ej. 192.0.2.10)"
+    )
+    .refine(
+        (ip) => ip.split(".").every((octeto) => {
+            const n = Number(octeto);
+            return Number.isFinite(n) && n >= 0 && n <= 255;
+        }),
+        "Cada octeto debe estar entre 0 y 255"
+    );
+
 export const simularAbusoBodySchema = z.object({
     escenario: escenarioSimulacionAbusoSchema,
     n: z.coerce.number().int().min(1).max(200).default(50),
-    ip: z.string().optional(),
+    ip: ipv4Schema.optional(),
     identificador: z.string().min(3).max(100).optional(),
     plataforma: z.string().min(1).optional(),
+    // SPEC-185: soporte para múltiples IPs/identificadores y usuario PARENT de prueba.
+    usuarioId: z.string().cuid().optional(),
+    identificadores: z.array(z.string().min(3).max(100)).max(200).optional(),
+    ips: z.array(ipv4Schema).max(200).optional(),
+});
+
+export const simulacionAbusoQuerySchema = z.object({
+    estado: z.enum(["PENDIENTE", "EN_PROGRESO", "COMPLETADA", "CANCELADA", "FALLIDA"]).optional(),
+    escenario: escenarioSimulacionAbusoSchema.optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 
 // SPEC-151 (FR-002): parámetro ?mes=YYYY-MM para el informe PDF mensual.
