@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-19** (SPEC-184 finalizada; ver cierre.md en `specs/184-anti-abuso-operativo-simulador/`).
+> Última actualización: **2026-08-20** (SPEC-186 implementada; ver cierre.md en `specs/186-smoke-inteligente-ollama/`).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -10,10 +10,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **149** |
+| **Total de specs** | **150** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
-| **Implementadas (IMPLEMENTADO)** | **44** |
+| **Implementadas (IMPLEMENTADO)** | **45** |
 | **Pendientes (PLANEADO)** | **7** |
 
 ## Backlog activo (no cerradas)
@@ -123,6 +123,7 @@
 | [182](182-reconciliacion-huerfanos/spec.md) | SPEC-182 — Reconciliación de reportes huérfanos (I-60) | 🟢 Implementada (ver cierre.md) |
 | [183](183-zeus-readonly-tailscale/spec.md) | SPEC-183 — Acceso lectura ZEUS a BD prod por Tailscale (002-PI-078) | 🟢 Implementada (ver cierre.md) |
 | [184](184-anti-abuso-operativo-simulador/spec.md) | SPEC-184 — Anti-abuso operativo + simulador de abusos (002-PI-079) | 🟢 Finalizada (ver cierre.md) |
+| [186](186-smoke-inteligente-ollama/spec.md) | SPEC-186 — Smoke inteligente del monitor Ollama (002-PI-081) | 🟢 Implementada (ver cierre.md) |
 
 ## Tabla completa (120 specs)
 
@@ -293,6 +294,7 @@
 | [182](182-reconciliacion-huerfanos/spec.md) | SPEC-182 — Reconciliación de reportes huérfanos (I-60) | 🟢 Implementada (ver cierre.md) |
 | [183](183-zeus-readonly-tailscale/spec.md) | SPEC-183 — Acceso lectura ZEUS a BD prod por Tailscale (002-PI-078) | 🟢 Implementada (ver cierre.md) |
 | [184](184-anti-abuso-operativo-simulador/spec.md) | SPEC-184 — Anti-abuso operativo + simulador de abusos (002-PI-079) | 🟢 Finalizada (ver cierre.md) |
+| [186](186-smoke-inteligente-ollama/spec.md) | SPEC-186 — Smoke inteligente del monitor Ollama (002-PI-081) | 🟢 Implementada (ver cierre.md) |
 
 ## Incidencias de calidad de datos
 

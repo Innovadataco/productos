@@ -4,9 +4,9 @@
 
 **Created**: 2026-08-20
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
-**Implementación**: pendiente aprobación de ZEUS (compuerta §4). Ver [plan.md](./plan.md) y [tasks.md](./tasks.md).
+**Implementación**: 2026-08-20. Ver [plan.md](./plan.md), [tasks.md](./tasks.md) y [cierre.md](./cierre.md).
 
 Impacto en arquitectura: rediseño del probe `ollama_smoke` a 3 niveles (ping siempre → piggyback en tráfico real → smoke real raro); posible columna aditiva `metodo` en `HealthProbe`; nuevo endpoint de historial de probes; ampliación de la tarjeta "Cerebro IA" en el tablero operativo. Cero cambios en el motor `src/lib/ai/**`.
 
@@ -133,6 +133,19 @@ Como admin quiero poder configurar el intervalo de piggyback y asegurarme de que
 - El modelo vigente se lee de `ia.rubrica.modelos[0]` (decisión ZEUS en SPEC-171); el smoke real reusa esa misma regla.
 - El parámetro `monitoreo.ollama.smoke.intervalo_min` pasa a default 30 en el seed (frente al 5 actual), pero los valores existentes en BD no se sobrescriben (resiembra aditiva).
 - El tablero operativo actual tiene tarjeta "Cerebro IA" (`ollama_ping`) y "Clasificación real del cerebro" (`ollama_smoke`); el historial se ancla a la tarjeta "Cerebro IA" por ser la señal que resume la salud de Ollama.
+
+## Implementación
+
+- Migración aditiva: `HealthProbe.metodo` (`String? @default("SMOKE")`).
+- Seed mixto en `prisma/seed.ts`: params nuevos de SPEC-186 con `update`; params viejos de SPEC-171 con `update: {}` (resiembra aditiva sin pisar custom).
+- `src/lib/monitoreo/probes.ts`: `probeOllamaPing`, `probeOllamaPiggyback`, `probeOllamaSmoke` con lógica de 3 niveles y throttling.
+- `src/lib/monitoreo/incidentes.ts`: recibe `metodo` y lo registra en `HealthProbe`.
+- `src/lib/dal/repositories/monitoreo.ts`: operaciones de `HealthProbe` (incluyendo histórico y resumen 24h).
+- `src/lib/dal/repositories/clasificacion-ia.ts`: consulta de última clasificación exitosa para piggyback.
+- `src/app/api/admin/monitoreo/historial/route.ts`: endpoint nuevo, solo `señal=ollama_smoke`.
+- `src/components/modules/monitoreo/OllamaSmokeHistorial.tsx`: modal con tabla de últimos 50 chequeos y resumen 24h.
+- `src/app/dashboard/admin/estadisticas/operacion/OperacionTableroClient.tsx`: integra el historial en la tarjeta "Cerebro IA".
+- Tests: 24 integration + 14 unitarios verdes; `arch:check` verde.
 
 ## Decisiones de compuerta §4 (aprobadas)
 
