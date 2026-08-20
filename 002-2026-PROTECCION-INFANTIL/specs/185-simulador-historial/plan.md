@@ -206,6 +206,7 @@ prisma/seed.ts                        # MOD: param simulacion.spam.usuario_id
 2. **Fix I-64 sin `fechaFin`**: se elimina el argumento `fechaFin` del worker y del repo. El estado final + `actualizadoEn` es suficiente. Si se requiere un campo explícito de fin, se añade en una spec posterior.
 3. **Modal para detalle**: evita nueva ruta de página y mantiene al usuario dentro del tab "Simulador".
 4. **Usuario PARENT de prueba configurable**: parámetro `simulacion.spam.usuario_id` en seed (vacío). Más seguro que buscar automáticamente cualquier PARENT.
+5. **Fail-loud para denunciante spam**: si el parámetro no está configurado, `POST /api/admin/anti-abuso/simular` responde 400 con mensaje exacto antes de encolar el job. No hay fallback silencioso.
 
 ---
 

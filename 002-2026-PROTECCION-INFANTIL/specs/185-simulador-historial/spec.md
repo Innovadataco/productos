@@ -45,9 +45,10 @@ Como administrador quiero que el sistema me proponga configuraciones por escenar
 1. **Given** el escenario "Robot inundando", **When** se pide sugerencia, **Then** devuelve una IP de `192.0.2.0/24` que no haya sido usada en las últimas 2 horas, un identificador aleatorio, `N=50` y `plataforma=whatsapp`.
 2. **Given** el escenario "Ataque coordinado", **When** se pide sugerencia, **Then** devuelve un rango de 30 IPs consecutivas de `192.0.2.0/24`, el mismo identificador objetivo, `N=30` y `plataforma=whatsapp`.
 3. **Given** el escenario "Bot IPs rotativas", **When** se pide sugerencia, **Then** devuelve IPs de `198.51.100.0/24`, identificadores distintos, `N=20` y `plataforma=telegram`.
-4. **Given** el escenario "Denunciante spam", **When** se pide sugerencia, **Then** devuelve `N=15`, `plataforma=instagram` y un `usuarioId` de PARENT de prueba si está configurado; si no, el campo viene `null` y el UI exige seleccionarlo.
+4. **Given** el escenario "Denunciante spam", **When** se pide sugerencia, **Then** devuelve `N=15`, `plataforma=instagram` y un `usuarioId` de PARENT de prueba si el parámetro `simulacion.spam.usuario_id` está configurado; si no está configurado, la sugerencia incluye `usuarioId: null`.
 5. **Given** el escenario "Personalizado", **When** se pide sugerencia, **Then** no devuelve autocompletado (campos vacíos/null).
 6. **Given** dos llamadas seguidas al mismo escenario, **Then** las IPs propuestas son distintas (sin colisión con uso reciente).
+7. **Given** el escenario "Denunciante spam" sin `simulacion.spam.usuario_id` configurado, **When** el admin intenta lanzar la simulación, **Then** el endpoint responde HTTP 400 con mensaje: "Falta configurar simulacion.spam.usuario_id en Configuración → Sistema. Debe apuntar al id de un usuario PARENT de prueba."
 
 ---
 
@@ -128,6 +129,7 @@ Como sistema quiero que el worker `pi-simulador-abuso` termine las corridas exit
 - **FR-007**: El escenario "Bot IPs rotativas" DEBE sugerir IPs de `198.51.100.0/24`, identificadores distintos, `N=20`, `plataforma=telegram`.
 - **FR-008**: El escenario "Denunciante spam" DEBE sugerir `N=15`, `plataforma=instagram` y un `usuarioId` de PARENT de prueba si está configurado; de lo contrario `null`.
 - **FR-009**: El escenario "Personalizado" NO DEBE autocompletar.
+- **FR-009b**: Si el escenario es "Denunciante spam" y `simulacion.spam.usuario_id` no está configurado, el sistema DEBE responder HTTP 400 con el mensaje exacto "Falta configurar simulacion.spam.usuario_id en Configuración → Sistema. Debe apuntar al id de un usuario PARENT de prueba." antes de crear la corrida.
 - **FR-010**: El UI DEBE tener sub-tabs dentro del tab "Simulador": "Nueva corrida" e "Historial".
 - **FR-011**: El form "Nueva corrida" DEBE llamar al endpoint de sugerencias al cambiar de escenario y rellenar los campos editables.
 - **FR-012**: El form DEBE mostrar hint de sugerencia y botón "Refrescar sugerencia".
