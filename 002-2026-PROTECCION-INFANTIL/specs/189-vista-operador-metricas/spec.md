@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-20
 
-**Status**: `PLANEADO`
+**Status**: `IMPLEMENTADO`
 
 **Input**: 002-PI-084. El CEO quiere entrar a la ficha de un operador y ver sus casos + métricas de productividad. Hoy solo hay conteos agregados en `/admin/operadores/asignar`.
 
@@ -110,3 +110,12 @@ Como admin quiero ir al detalle de un operador directamente desde `/admin/operad
 3. **Tiempo medio**: primera `OPERADOR_ASIGNADO` del operador en el caso → primera acción de cierre; casos sin asignación se excluyen.
 4. **Vista solo para OPERADOR**: si el id es COMITE_VALIDACION, 400 con mensaje.
 5. **Distribución por categoría**: lista ordenada (top N), sin librería de gráficos.
+
+## Implementación
+
+- Backend: `GET /api/admin/operadores/[id]/metricas` y `GET /api/admin/operadores/[id]/casos` en `src/app/api/admin/operadores/[id]/`.
+- Servicio `OperadorMetricasService` (`src/lib/dal/services/operador-metricas.ts`) y repositorios `ReporteOperadorRepository` / `AuditLogRepository` / `UsuarioRepository`.
+- Frontend: `src/app/dashboard/admin/operadores/[id]/page.tsx` con subcomponentes de métricas, casos abiertos, historial y distribución por categoría.
+- Navegación: botón "Ver detalle" añadido en `/dashboard/admin/operadores/asignar/page.tsx`.
+- Tests: integración de endpoints + renderizado de la página; categorías alineadas al enum `CategoriaConducta`.
+- Sin migraciones; frontera DAL respetada; sin PII.
