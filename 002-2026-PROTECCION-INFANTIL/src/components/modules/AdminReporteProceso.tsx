@@ -26,7 +26,18 @@ interface EventoReintento {
     error: string | null;
 }
 
-type EventoProceso = EventoTransicion | EventoReintento;
+interface EventoAsignacionOperador {
+    tipo: "ASIGNACION_OPERADOR";
+    id: string;
+    fecha: string;
+    accion: "OPERADOR_ASIGNADO" | "OPERADOR_REASIGNADO" | "OPERADOR_DESASIGNADO";
+    operadorEmail: string | null;
+    operadorNombre: string | null;
+    actorEmail: string | null;
+    actorNombre: string | null;
+}
+
+type EventoProceso = EventoTransicion | EventoReintento | EventoAsignacionOperador;
 
 interface TimelineResponse {
     eventos: EventoProceso[];
@@ -105,6 +116,42 @@ function EventoReintentoCard({ evento }: { evento: EventoReintento }) {
     );
 }
 
+function textoAsignacion(evento: EventoAsignacionOperador): string {
+    const operador = evento.operadorEmail ?? "operador";
+    const actor = evento.actorEmail ?? "sistema";
+    switch (evento.accion) {
+        case "OPERADOR_ASIGNADO":
+            return `Asignado a ${operador} por ${actor}`;
+        case "OPERADOR_REASIGNADO":
+            return `Reasignado a ${operador} por ${actor}`;
+        case "OPERADOR_DESASIGNADO":
+            return `Desasignado por ${actor}`;
+        default:
+            return evento.accion;
+    }
+}
+
+function EventoAsignacionOperadorCard({ evento }: { evento: EventoAsignacionOperador }) {
+    return (
+        <Stage titulo={textoAsignacion(evento)} icono="A">
+            <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="info">{evento.accion.replace(/_/g, " ")}</Badge>
+                <span className="text-xs text-muted">{formatearFechaHora(evento.fecha)}</span>
+            </div>
+            {evento.operadorEmail && (
+                <p className="text-xs text-muted">
+                    Operador: <span className="font-mono">{evento.operadorEmail}</span>
+                </p>
+            )}
+            {evento.actorEmail && (
+                <p className="text-xs text-muted">
+                    Actor: <span className="font-mono">{evento.actorEmail}</span>
+                </p>
+            )}
+        </Stage>
+    );
+}
+
 export function AdminReporteProceso({ reporteId }: AdminReporteProcesoProps) {
     const [timeline, setTimeline] = useState<TimelineResponse | null>(null);
     const [loading, setLoading] = useState(true);
@@ -171,13 +218,15 @@ export function AdminReporteProceso({ reporteId }: AdminReporteProcesoProps) {
                 </GlassCard>
             ) : (
                 <div className="space-y-1">
-                    {eventos.map((evento) =>
-                        evento.tipo === "TRANSICION" ? (
-                            <EventoTransicionCard key={evento.id} evento={evento} />
-                        ) : (
-                            <EventoReintentoCard key={evento.id} evento={evento} />
-                        )
-                    )}
+                    {eventos.map((evento) => {
+                        if (evento.tipo === "TRANSICION") {
+                            return <EventoTransicionCard key={evento.id} evento={evento} />;
+                        }
+                        if (evento.tipo === "REINTENTO") {
+                            return <EventoReintentoCard key={evento.id} evento={evento} />;
+                        }
+                        return <EventoAsignacionOperadorCard key={evento.id} evento={evento} />;
+                    })}
                 </div>
             )}
         </div>
