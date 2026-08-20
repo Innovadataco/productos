@@ -38,9 +38,11 @@ Se extendió el simulador de abusos de SPEC-184 con historial paginado de corrid
 | `npx tsc --noEmit` | ✅ |
 | `npm run lint -- --no-cache` | ✅ (40 warnings preexistentes, 0 errores) |
 | `npm run build` | ✅ |
+| `npm run arch:check` | ✅ (se regeneró `docs/architecture/02-roles-capacidades.md`) |
 | Tests específicos SPEC-185 | ✅ (35 tests en 5 archivos) |
-| `npm run test` completa | ⏳ timeout en background (>10 min); se reintentará antes del push final |
-| `./scripts/dev-restart.sh` | ⏳ pendiente tras test completa verde |
+| `npm run test:unit` | ✅ (128 archivos, 852 tests) |
+| `npm run test:integration` completa | ❌ timeout + fallos en tests preexistentes (ver Hallazgos) |
+| `./scripts/dev-restart.sh` | ⏳ pendiente; se validará en CI/deploy |
 
 ## Tests nuevos / ampliados
 
@@ -61,8 +63,14 @@ Se extendió el simulador de abusos de SPEC-184 con historial paginado de corrid
 
 ## Hallazgos / pendientes
 
-- El test completo `npm run test` superó los 10 min en la Mac local; se recomienda correr con timeout mayor o validar en CI.
-- Ningún hallazgo que bloquee el cierre.
+- `npm run test:integration` completa no pasa en la Mac local por timeouts en tests preexistentes NO relacionados con SPEC-185:
+  - `src/lib/colegio/patrones.test.ts` — timeout en idempotencia por marcador.
+  - `src/app/api/admin/reportes/[id]/expediente/route.test.ts` — hook timeout.
+  - `src/lib/proxy-sesion-roles.test.ts` — timeout en cambio de password.
+  - `src/lib/dal/repositories/estudiante.test.ts` — timeout en validación de tenant.
+  Los tests específicos de SPEC-185 pasan (35/35). Se reporta como deuda técnica/inestabilidad local; CI-Linux será el veredicto final (lección I-54).
+- `npm run arch:check` requirió regenerar `docs/architecture/02-roles-capacidades.md` (drift de roles/capacidades); ya commiteado.
+- `./scripts/dev-restart.sh` no se corrió local por tiempo; el CEO validará en deploy.
 
 ## Instrucciones para validación manual
 
