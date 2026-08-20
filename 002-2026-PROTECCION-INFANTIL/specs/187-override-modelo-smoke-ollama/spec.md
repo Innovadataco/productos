@@ -4,9 +4,9 @@
 
 **Created**: 2026-08-20
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
-**Implementación**: pendiente aprobación de ZEUS (compuerta §4). Ver [plan.md](./plan.md) y [tasks.md](./tasks.md).
+**Implementación**: 2026-08-20. Aprobado en compuerta §4 con Bloque G añadido. Ver [plan.md](./plan.md), [tasks.md](./tasks.md) y [cierre.md](./cierre.md).
 
 Impacto en arquitectura: cambio local en `src/lib/monitoreo/probes.ts` y nuevo parámetro `monitoreo.ollama.smoke.modelo`. Cero cambios en el motor `src/lib/ai/**`.
 
@@ -44,6 +44,19 @@ Como admin quiero que, si no configuro override, el smoke siga usando el modelo 
 1. **Given** que `monitoreo.ollama.smoke.modelo` no existe o está vacío, **When** se ejecuta `probeOllamaSmoke`, **Then** se lee `ia.rubrica.modelos[0]` y se usa ese modelo.
 2. **Given** el fallback, **Then** el detalle del probe indica la fuente "motor" (p. ej. `"smoke real ejecutado, latencia X ms (modelo gemma2:27b, motor)"`).
 
+### User Story 3 — Seed no pisador (Bloque G, Priority: P1)
+
+Como admin quiero que volver a correr el seed no restaure los parámetros que ya ajusté a mano, para no que el vigilante se re-encienda o cambie de modelo sin aviso.
+
+**Why this priority**: I-69 real: `monitoreo.enabled` pasó a `true` tras correr el seed porque usaba `update: { valor: ... }`.
+
+**Independent Test**: correr seed, cambiar `monitoreo.enabled` a `false`, volver a correr seed → el valor sigue en `false`.
+
+**Acceptance Scenarios**:
+
+1. **Given** un parámetro existente con valor custom, **When** se re-corre el seed, **Then** el valor custom se respeta (`update: {}`).
+2. **Given** un parámetro inexistente, **When** se corre el seed, **Then** se crea con el default.
+
 ## Edge Cases
 
 - **Parámetro con espacios**: se hace `.trim()`; si tras trim queda vacío, se considera inexistente.
@@ -59,8 +72,10 @@ Como admin quiero que, si no configuro override, el smoke siga usando el modelo 
 - **FR-002**: Si el parámetro tiene valor no vacío tras `.trim()`, el smoke DEBE usar ese modelo y registrar fuente `"override"`.
 - **FR-003**: Si el parámetro está vacío o no existe, el smoke DEBE conservar el fallback a `ia.rubrica.modelos[0]` y registrar fuente `"motor"`.
 - **FR-004**: El detalle del probe DEBE incluir el modelo usado y la fuente (`override` o `motor`) en mensajes de éxito y error.
-- **FR-005**: El parámetro DEBE sembrarse en `prisma/seed.ts` con valor vacío por defecto (`""`) y descripción en criollo, usando `ON CONFLICT DO UPDATE` para no pisar valores existentes.
+- **FR-005**: El parámetro `monitoreo.ollama.smoke.modelo` DEBE sembrarse en `prisma/seed.ts` con valor vacío por defecto (`""`) y descripción en criollo, usando `update: {}` para no pisar un override ya configurado.
 - **FR-006**: No se DEBE modificar `src/lib/ai/**` ni la rúbrica del motor.
+- **FR-007**: Los parámetros "viejos" del seed (al menos `monitoreoViejos`) DEBEN usar `update: {}` (DO NOTHING) para respetar ajustes custom del CEO.
+- **FR-008**: Debe existir un test que verifique la idempotencia no pisadora del seed.
 
 ### Key Entities
 
@@ -73,6 +88,7 @@ Como admin quiero que, si no configuro override, el smoke siga usando el modelo 
 - **SC-002**: Sin override, el smoke usa `ia.rubrica.modelos[0]` y el detalle refleja `"motor"`.
 - **SC-003**: Tests unitarios/integración cubren ambos caminos.
 - **SC-004**: Gate local completo verde (tsc, lint --no-cache, arch:check, tests, build).
+- **SC-005**: Test de seed idempotencia verde: re-seed no pisa valores custom.
 
 ## Assumptions
 
@@ -80,8 +96,16 @@ Como admin quiero que, si no configuro override, el smoke siga usando el modelo 
 - `getParametroSistema` es la vía canónica para leer parámetros; se reutiliza.
 - No se requiere UI de configuración nueva; el parámetro se edita desde ConfigPanel existente (sección Monitoreo).
 
-## Decisiones de compuerta §4 (propuestas)
+## Implementación
+
+- `src/lib/monitoreo/probes.ts`: selección de modelo con override `monitoreo.ollama.smoke.modelo` y fallback a `ia.rubrica.modelos[0]`; detalle incluye `(modelo <nombre>, <override|motor>)`.
+- `prisma/seed.ts`: añadido `monitoreo.ollama.smoke.modelo` a `monitoreoViejos` con `update: {}`; confirmado que todos los arrays de parámetros "viejos" usan `update: {}`.
+- `prisma/seed-idempotencia.test.ts`: test que sembra, modifica un parámetro custom y re-semea sin perder el valor.
+- Gate local completo verde.
+
+## Decisiones de compuerta §4 (aprobadas)
 
 1. **Nombre del parámetro**: `monitoreo.ollama.smoke.modelo` (STRING, default `""`).
 2. **Formato del detalle**: `"(modelo <nombre>, <fuente>)"` en mensajes de éxito y error, manteniendo el prefijo existente (`smoke real ejecutado, latencia X ms` o `HTTP 500` / `respuesta vacía`).
-3. **Resiembra**: `ON CONFLICT DO UPDATE` con valor `""`; no pisa overrides ya configurados.
+3. **Seed no pisador**: parámetros viejos y el nuevo override usan `update: {}` (DO NOTHING); solo `monitoreoNuevos` de SPEC-186 mantiene `update: { valor, descripcion }` para forzar defaults de diseño.
+4. **Test de idempotencia**: obligatorio en `prisma/seed-idempotencia.test.ts`.

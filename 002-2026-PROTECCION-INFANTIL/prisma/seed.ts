@@ -266,6 +266,9 @@ async function main() {
         { clave: "monitoreo.email.destinatarios", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "A quién avisar cuando algo se pone en rojo (correos separados por coma; vacío = no enviar)" },
         { clave: "monitoreo.autorefresh_seg", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Autorefresco del tablero operativo (segundos)" },
         { clave: "monitoreo.atascados.horas", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Horas sin moverse para considerar un reporte atascado" },
+        // SPEC-187 (002-PI-082): override opcional de modelo para el smoke real de Ollama.
+        // Se siembra con update: {} para respetar cualquier override ya configurado por el CEO.
+        { clave: "monitoreo.ollama.smoke.modelo", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Modelo de Ollama a usar en el smoke real (override). Si está vacío, usa ia.rubrica.modelos[0]" },
     ];
     for (const p of monitoreoViejos) {
         await prisma.parametroSistema.upsert({
@@ -1439,6 +1442,8 @@ async function main() {
 
     console.log(`Permisos de módulos: ${modulosCatalogo} módulos en catálogo, ${permisosCreados} permisos backfill`);
 }
+
+export { main };
 
 main()
     .catch((e) => {

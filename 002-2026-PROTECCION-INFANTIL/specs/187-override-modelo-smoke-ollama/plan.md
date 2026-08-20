@@ -30,20 +30,20 @@ Los mensajes de detalle se actualizan a:
 
 ### 2. `prisma/seed.ts`
 
-Añadir a la sección de monitoreo:
+Añadir `monitoreo.ollama.smoke.modelo` al bloque `monitoreoViejos` (no a `monitoreoNuevos`) para que se siembre con `update: {}` y respete cualquier override ya configurado por el CEO.
 
 ```ts
 {
     clave: "monitoreo.ollama.smoke.modelo",
     valor: "",
-    tipo: "STRING",
+    tipo: TipoParametro.STRING,
+    categoria: CategoriaParametro.SYSTEM,
+    esPublico: false,
     descripcion: "Modelo de Ollama a usar en el smoke real (override). Si está vacío, usa ia.rubrica.modelos[0].",
-    editable: true,
-    seccion: "Monitoreo",
 },
 ```
 
-Usar `update: { valor: "", descripcion: ..., editable: ..., seccion: ... }` o `update: {}` según decisión de ZEUS. Se propone `update: {}` para no pisar un override ya configurado, salvo que ZEUS prefiera forzar el default vacío.
+Además, auditar que `monitoreoViejos` (y cualquier otro bloque de parámetros que deba respetar custom) use `update: {}`. Según ZEUS (Bloque G), el bug I-69 era que `update` incluía `valor`; se corrige aquí.
 
 ### 3. Tests
 
@@ -52,6 +52,13 @@ Actualizar `src/lib/monitoreo/probes.test.ts`:
 - Test con override: crear parámetro `monitoreo.ollama.smoke.modelo=llama-guard3:8b`, verificar que el body de `/api/generate` usa ese modelo y que el detalle incluye `(modelo llama-guard3:8b, override)`.
 - Test sin override: asegurar que se sigue usando `ia.rubrica.modelos[0]` y el detalle incluye `(modelo <modelo>, motor)`.
 - Test override vacío (solo espacios): tratar como inexistente y hacer fallback.
+
+Crear `prisma/seed-idempotencia.test.ts`:
+
+- Ejecutar seed (o una función exportada del seed) sobre BD limpia.
+- Modificar `monitoreo.enabled` a `false`.
+- Re-ejecutar seed.
+- Verificar que `monitoreo.enabled` sigue en `false`.
 
 ## Tareas
 
