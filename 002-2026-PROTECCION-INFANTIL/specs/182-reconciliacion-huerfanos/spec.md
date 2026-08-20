@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-19
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
+
+Impacto en arquitectura: añade un job `operadores-reconciliacion-huerfanos` al worker de reportes, un servicio de reconciliación en `src/lib/operadores/`, un valor al enum `AccionAudit` y parámetros de sistema. No modifica el asignador ni el motor de clasificación.
 
 **Input**: Instructivo 002-PI-077 (I-60). Contexto: en producción existen 26 reportes con `estado='REVISION_MANUAL'`, `operadorId=NULL` y `tenantId=NULL` (fechas feb→jul 2026, el más reciente hace 3 semanas). Los logs no muestran errores de asignación recientes, por lo que los 26 son legacy, no un bug activo.
 
