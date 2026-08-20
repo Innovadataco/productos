@@ -101,3 +101,46 @@ describe("grants por rol — jerarquía AND completa (I-57, SPEC-175)", () => {
         expect(violaciones, violaciones.join("; ")).toEqual([]);
     });
 });
+
+/**
+ * SPEC-186 (002-PI-081): seed MIXTO del vigilante (I-65).
+ * Verifica estructuralmente que los parámetros viejos de SPEC-171 se crean sin
+ * pisar valores existentes, y que los nuevos de SPEC-186 se aplican siempre.
+ */
+describe("seed de parámetros de monitoreo — idempotencia estructural", () => {
+    const src = fs.readFileSync(SEED_PATH, "utf-8");
+
+    it("los 13 parámetros viejos de SPEC-171 están en monitoreoViejos con update: {}", () => {
+        const inicio = src.indexOf("const monitoreoViejos");
+        const fin = src.indexOf("const monitoreoNuevos", inicio);
+        const bloque = src.slice(inicio, fin);
+        const viejos = [
+            "monitoreo.enabled",
+            "monitoreo.app.intervalo_seg",
+            "monitoreo.worker.heartbeat_max_seg",
+            "monitoreo.ollama.ping.intervalo_seg",
+            "monitoreo.ollama.smoke.timeout_ms",
+            "monitoreo.tailscale.url",
+            "monitoreo.tailscale.intervalo_seg",
+            "monitoreo.reprobe.segundos",
+            "monitoreo.email.throttle_min",
+            "monitoreo.email.destinatarios",
+            "monitoreo.autorefresh_seg",
+            "monitoreo.atascados.horas",
+        ];
+        for (const clave of viejos) {
+            expect(bloque).toContain(clave);
+        }
+        // El upsert de los viejos no pisa valores existentes.
+        expect(bloque).toMatch(/update:\s*\{\s*\}/);
+    });
+
+    it("los 2 parámetros nuevos/cambiados de SPEC-186 están en monitoreoNuevos con update que aplica valor", () => {
+        const inicio = src.indexOf("const monitoreoNuevos");
+        const fin = src.indexOf("console.log(\"Parámetros por defecto creados\")", inicio);
+        const bloque = src.slice(inicio, fin);
+        expect(bloque).toContain("monitoreo.ollama.smoke.intervalo_min");
+        expect(bloque).toContain("monitoreo.ollama.smoke.piggyback_min");
+        expect(bloque).toMatch(/update:\s*\{\s*valor:\s*p\.valor,\s*descripcion:\s*p\.descripcion\s*\}/);
+    });
+});

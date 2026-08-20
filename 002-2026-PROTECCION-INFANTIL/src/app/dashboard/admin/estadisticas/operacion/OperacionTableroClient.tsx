@@ -19,6 +19,7 @@ import { WidgetAtascados } from "@/components/modules/monitoreo/WidgetAtascados"
 import { WidgetCola } from "@/components/modules/monitoreo/WidgetCola";
 import { WidgetErrores } from "@/components/modules/monitoreo/WidgetErrores";
 import { WidgetSla } from "@/components/modules/monitoreo/WidgetSla";
+import { OllamaSmokeHistorial } from "@/components/modules/monitoreo/OllamaSmokeHistorial";
 import { ClasificacionTab } from "./ClasificacionTab";
 
 type SenalEstado = {
@@ -47,6 +48,8 @@ export function OperacionTableroClient() {
     const [error, setError] = useState<string | null>(null);
     // Recargo compartido: los widgets repiden su endpoint en cada tick del autorefresco.
     const [tick, setTick] = useState(0);
+    // SPEC-186: historial de probes Ollama.
+    const [historialAbierto, setHistorialAbierto] = useState(false);
 
     const cargarEstado = useCallback(async () => {
         try {
@@ -124,6 +127,7 @@ export function OperacionTableroClient() {
                                                 estado={datosSenal?.estado ?? "amarillo"}
                                                 ultimoProbeEn={datosSenal?.ultimoProbeEn ?? null}
                                                 hint={senal.hint}
+                                                onClick={senal.clave === "ollama_ping" ? () => setHistorialAbierto(true) : undefined}
                                             />
                                         );
                                     })}
@@ -145,6 +149,8 @@ export function OperacionTableroClient() {
                     <AdminDashboard />
                 </div>
             )}
+
+            <OllamaSmokeHistorial abierto={historialAbierto} onCerrar={() => setHistorialAbierto(false)} />
         </div>
     );
 }

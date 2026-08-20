@@ -12,7 +12,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { probeApp, probeBd, probeOllamaPing, probeOllamaSmoke, probeTailscale } from "./probes";
+import { crearPlataforma } from "@/lib/reporte-test-utils";
+import { probeApp, probeBd, probeOllamaPing, probeOllamaPiggyback, probeOllamaSmoke, probeTailscale } from "./probes";
 
 type Handler = (req: IncomingMessage, res: ServerResponse, body: string) => void;
 
@@ -59,6 +60,33 @@ async function sembrarModelos(valor: string | null) {
     });
 }
 
+async function crearReporteClasificado(id: string) {
+    const plataforma = await crearPlataforma("test-plat-" + id, "Test");
+    const reporte = await prisma.reporte.create({
+        data: {
+            id,
+            identificador: "+57300000000" + id.slice(-2),
+            plataformaId: plataforma.id,
+            texto: "texto de prueba",
+            fechaIncidente: new Date(),
+            ciudad: "Bogotá",
+            pais: "Colombia",
+            estado: "CLASIFICADO",
+            esAnonimo: true,
+        },
+    });
+    await prisma.clasificacionIA.create({
+        data: {
+            reporteId: reporte.id,
+            categoria: "SPAM",
+            confianza: 0.8,
+            modeloUsado: "modelo",
+            latenciaMs: 100,
+        },
+    });
+    return reporte;
+}
+
 describe("probeApp", () => {
     it("ok con HTTP 200 en /api/health/worker", async () => {
         const resultado = await probeApp({ url: baseUrl });
@@ -103,31 +131,78 @@ describe("probeOllamaPing", () => {
     });
 });
 
+describe("probeOllamaPiggyback", () => {
+    it("devuelve null si no hay ClasificacionIA reciente", async () => {
+        const resultado = await probeOllamaPiggyback({ ventanaMin: 15 });
+        expect(resultado).toBeNull();
+    });
+
+    it("devuelve PIGGYBACK verde si hay clasificación dentro de la ventana", async () => {
+        await crearReporteClasificado("r1");
+
+        const resultado = await probeOllamaPiggyback({ ventanaMin: 15 });
+        expect(resultado).not.toBeNull();
+        expect(resultado?.ok).toBe(true);
+        expect(resultado?.metodo).toBe("PIGGYBACK");
+        expect(resultado?.detalle).toContain("vivo por tráfico real");
+    });
+});
+
 describe("probeOllamaSmoke", () => {
-    it("ok: genera con el MODELO VIGENTE del motor (primer elemento de ia.rubrica.modelos)", async () => {
+    it("ok: genera con el MODELO VIGENTE del motor cuando no hay piggyback ni smoke reciente", async () => {
         await sembrarModelos(JSON.stringify(["modelo-vigente:9b", "otro:7b"]));
         handler = (_req, res) => res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ response: "ok" }));
 
-        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000 });
+        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000, piggybackMin: 15, intervaloMin: 30 });
 
         expect(resultado.ok).toBe(true);
+        expect(resultado.metodo).toBe("SMOKE");
         const body = JSON.parse(ultimoBody ?? "{}");
         expect(body).toMatchObject({ model: "modelo-vigente:9b", stream: false, options: { num_predict: 5 } });
     });
 
+    it("devuelve PIGGYBACK si hay ClasificacionIA reciente (no ejecuta smoke real)", async () => {
+        await sembrarModelos(JSON.stringify(["modelo-vigente:9b"]));
+        handler = (_req, res) => res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ response: "ok" }));
+
+        await crearReporteClasificado("r2");
+
+        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000, piggybackMin: 15, intervaloMin: 30 });
+
+        expect(resultado.ok).toBe(true);
+        expect(resultado.metodo).toBe("PIGGYBACK");
+        expect(ultimoBody).toBeNull(); // no llegó request al servidor Ollama
+    });
+
+    it("salta smoke real si hay un SMOKE exitoso reciente dentro del intervalo", async () => {
+        await sembrarModelos(JSON.stringify(["modelo-vigente:9b"]));
+        handler = (_req, res) => res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ response: "ok" }));
+
+        await prisma.healthProbe.create({
+            data: { senal: "ollama_smoke", ok: true, latenciaMs: 120, detalle: "smoke", metodo: "SMOKE" },
+        });
+
+        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000, piggybackMin: 15, intervaloMin: 30 });
+
+        expect(resultado.ok).toBe(true);
+        expect(resultado.metodo).toBe("SMOKE");
+        expect(resultado.detalle).toContain("smoke real no necesario");
+        expect(ultimoBody).toBeNull();
+    });
+
     it("falla con 'sin modelo vigente configurado' si el parámetro falta o es inválido", async () => {
         await sembrarModelos(null);
-        const sinParam = await probeOllamaSmoke({ baseUrl, timeoutMs: 1000 });
+        const sinParam = await probeOllamaSmoke({ baseUrl, timeoutMs: 1000, piggybackMin: 15, intervaloMin: 30 });
         expect(sinParam.ok).toBe(false);
         expect(sinParam.detalle).toBe("sin modelo vigente configurado");
 
         await sembrarModelos("no-es-json");
-        const invalido = await probeOllamaSmoke({ baseUrl, timeoutMs: 1000 });
+        const invalido = await probeOllamaSmoke({ baseUrl, timeoutMs: 1000, piggybackMin: 15, intervaloMin: 30 });
         expect(invalido.ok).toBe(false);
         expect(invalido.detalle).toBe("sin modelo vigente configurado");
 
         await sembrarModelos(JSON.stringify([]));
-        const vacio = await probeOllamaSmoke({ baseUrl, timeoutMs: 1000 });
+        const vacio = await probeOllamaSmoke({ baseUrl, timeoutMs: 1000, piggybackMin: 15, intervaloMin: 30 });
         expect(vacio.ok).toBe(false);
         expect(vacio.detalle).toBe("sin modelo vigente configurado");
     });
@@ -136,7 +211,7 @@ describe("probeOllamaSmoke", () => {
         await sembrarModelos(JSON.stringify(["modelo-vigente:9b"]));
         handler = (_req, res) => res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ response: "" }));
 
-        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000 });
+        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000, piggybackMin: 15, intervaloMin: 30 });
         expect(resultado.ok).toBe(false);
         expect(resultado.detalle).toContain("respuesta vacía");
     });
@@ -145,7 +220,7 @@ describe("probeOllamaSmoke", () => {
         await sembrarModelos(JSON.stringify(["modelo-vigente:9b"]));
         handler = (_req, res) => res.writeHead(500).end("boom");
 
-        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000 });
+        const resultado = await probeOllamaSmoke({ baseUrl, timeoutMs: 5000, piggybackMin: 15, intervaloMin: 30 });
         expect(resultado.ok).toBe(false);
         expect(resultado.detalle).toContain("HTTP 500");
     });

@@ -1662,12 +1662,14 @@ model DemoMarcado {
 
 // SPEC-171 (Pilar B, I-51): probes de salud de infraestructura (append-only,
 // retención corta; los escribe scripts/monitor-probes.mjs).
+// SPEC-186 (002-PI-081): añade metodo para distinguir PING / PIGGYBACK / SMOKE.
 model HealthProbe {
   id         String   @id @default(cuid())
   senal      String // app | worker | bd | ollama_ping | ollama_smoke | tailscale
   ok         Boolean
   latenciaMs Int      @default(0)
   detalle    String?
+  metodo     String?  @default("SMOKE") // PING | PIGGYBACK | SMOKE
   creadoEn   DateTime @default(now())
 
   @@index([senal, creadoEn])

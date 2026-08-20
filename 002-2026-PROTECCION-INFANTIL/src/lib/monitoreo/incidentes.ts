@@ -37,6 +37,7 @@ export async function registrarProbe(senal: SenalMonitoreo, resultado: Resultado
         ok: resultado.ok,
         latenciaMs: resultado.latenciaMs,
         detalle: resultado.detalle ?? null,
+        metodo: resultado.metodo ?? null,
     });
 }
 

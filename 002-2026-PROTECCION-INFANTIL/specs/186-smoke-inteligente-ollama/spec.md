@@ -134,10 +134,13 @@ Como admin quiero poder configurar el intervalo de piggyback y asegurarme de que
 - El parámetro `monitoreo.ollama.smoke.intervalo_min` pasa a default 30 en el seed (frente al 5 actual), pero los valores existentes en BD no se sobrescriben (resiembra aditiva).
 - El tablero operativo actual tiene tarjeta "Cerebro IA" (`ollama_ping`) y "Clasificación real del cerebro" (`ollama_smoke`); el historial se ancla a la tarjeta "Cerebro IA" por ser la señal que resume la salud de Ollama.
 
-## Decisiones para compuerta §4
+## Decisiones de compuerta §4 (aprobadas)
 
-1. **¿Columna aditiva `metodo` en `HealthProbe`?** Propuesta: añadir `metodo String?` con default `"SMOKE"` para probes históricos. Ventajas: filtrado/agrupación limpio en el historial, índice simple, no se parsea `detalle`. Alternativa: codificar el método en `detalle` (más barato, pero rompe la semántica del campo y dificulta agregaciones). Se solicita decisión de ZEUS.
-2. **Tratamiento de probes históricos**: si se añade `metodo`, ¿default `"SMOKE"` (asumir que todos los viejos eran smokes reales) o `"DESCONOCIDO"` (más honesto, pero el resumen de 24h muestra una categoría extra)?
-3. **Umbral por defecto del smoke real**: se propone pasar `monitoreo.ollama.smoke.intervalo_min` de 5 a 30 minutos en el seed. ¿Aprueba el CEO este nuevo default operativo?
-4. **Piggyback mínimo por defecto**: 15 minutos. ¿Ajustar?
-5. **Ubicación del historial en UI**: ¿modal al hacer click en la tarjeta "Cerebro IA", o subsección desplegable debajo de los semáforos?
+1. **Columna aditiva `metodo` en `HealthProbe`**: ✅ APROBADA. Se añade `metodo String? @default("SMOKE")` con migración aditiva. Probes históricos se reportan como `"SMOKE"` (eran todos smokes reales antes de SPEC-186).
+2. **Defaults operativos**: ✅ APROBADOS.
+   - `monitoreo.ollama.smoke.intervalo_min` pasa a `30` minutos (antes 5).
+   - `monitoreo.ollama.smoke.piggyback_min` = `15` minutos.
+3. **Seed MIXTO (I-65)**: ✅ APROBADO.
+   - Los 13 parámetros viejos de SPEC-171 se siembran si faltan con `update: {}` (no pisan valores custom del CEO).
+   - Los 2 parámetros nuevos/cambiados de SPEC-186 (`intervalo_min`, `piggyback_min`) se aplican siempre con `update: { valor, descripcion }`.
+4. **UI del historial**: ✅ APROBADA. Modal al hacer click en la tarjeta "Cerebro IA", con resumen de 24h y tabla de últimos 50 chequeos.

@@ -4,14 +4,14 @@
 
 ---
 
-## Pre-implementación (bloqueadas hasta aprobación)
+## Pre-implementación (aprobada)
 
-- [ ] **T001** Decisión de compuerta §4: columna `metodo` en `HealthProbe` (Opción A) vs codificar en `detalle` (Opción B); default histórico; defaults operativos; resiembra en BD existente; UI del historial.
+- [x] **T001** Decisión de compuerta §4: Opción A (columna `metodo`), default `"SMOKE"`, defaults 30/15, seed MIXTO, modal en tarjeta Cerebro IA.
 
 ## Fase 1 — Modelo y seed
 
-- [ ] **T002** (Opción A) Crear migración aditiva `spec_186_smoke_inteligente_ollama`: añadir `metodo String? @default("SMOKE")` a `HealthProbe`; regenerar Prisma Client.
-- [ ] **T003** (Opción B alternativa, si ZEUS elige) Omitir migración; documentar en spec/plan que el método viaja en `detalle`.
+- [x] **T002** Crear migración aditiva `spec_186_smoke_inteligente_ollama`: añadir `metodo String? @default("SMOKE")` a `HealthProbe`; regenerar Prisma Client.
+- [ ] **T003** (no aplica; Opción B descartada)
 - [ ] **T004** `prisma/seed.ts`: añadir `monitoreo.ollama.smoke.piggyback_min=15`; cambiar default de creación de `monitoreo.ollama.smoke.intervalo_min` a `30`; implementar resiembra aditiva (crear si no existe; no tocar valores existentes a menos que ZEUS apruebe forzar).
 
 ## Fase 2 — Repositorios

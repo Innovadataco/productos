@@ -4,7 +4,7 @@
  * y tab "Clasificación" por query param. Sin BD.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { OperacionTableroClient } from "@/app/dashboard/admin/estadisticas/operacion/OperacionTableroClient";
 
 const nav = vi.hoisted(() => ({ tab: null as string | null, replace: vi.fn() }));
@@ -41,6 +41,14 @@ function estadoMonitoreo(monitoreoEnabled = true) {
 
 function respuestaSegunUrl(url: string, monitoreoEnabled: boolean): unknown {
     if (url.startsWith("/api/admin/monitoreo/estado")) return estadoMonitoreo(monitoreoEnabled);
+    if (url.startsWith("/api/admin/monitoreo/historial")) {
+        return {
+            items: [
+                { id: "p1", senal: "ollama_smoke", ok: true, latenciaMs: 0, detalle: "piggyback", metodo: "PIGGYBACK", creadoEn: "2026-08-18T05:00:00.000Z" },
+            ],
+            resumen24h: { pings: 10, piggybacks: 5, smokes: 1, fallos: 0 },
+        };
+    }
     if (url.startsWith("/api/admin/monitoreo/incidentes")) {
         return {
             items: [
@@ -143,5 +151,21 @@ describe("OperacionTableroClient", () => {
         expect(screen.queryByRole("button", { name: "Clasificación" })).toBeNull();
         expect(screen.queryByRole("button", { name: "Operación" })).toBeNull();
         expect(screen.queryByRole("navigation", { name: "Secciones del tablero" })).toBeNull();
+    });
+
+    it("SPEC-186: click en 'Cerebro IA' abre el historial de probes Ollama", async () => {
+        stubFetch();
+        render(<OperacionTableroClient />);
+
+        await waitFor(() => expect(screen.getByText("Aplicación")).toBeTruthy());
+        const tarjeta = screen.getByLabelText("Señal Cerebro IA: Con problema");
+        fireEvent.click(tarjeta);
+
+        const dialog = await screen.findByRole("dialog", { name: "Historial de chequeos del Cerebro IA" });
+        expect(dialog).toBeTruthy();
+        expect(within(dialog).getByText("Pings")).toBeTruthy();
+        expect(within(dialog).getByText("10")).toBeTruthy();
+        expect(within(dialog).getByText("Piggybacks")).toBeTruthy();
+        expect(within(dialog).getByText("5")).toBeTruthy();
     });
 });

@@ -229,20 +229,10 @@ async function main() {
             esPublico: true,
             descripcion: "Tamaño máximo del PDF de evidencia de una apelación (MB)",
         },
-        // SPEC-171 (Pilar B): parámetros del vigilante de infraestructura.
-        { clave: "monitoreo.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar el vigilante del sistema (probes e incidentes)" },
-        { clave: "monitoreo.app.intervalo_seg", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto revisamos que la app responde (segundos)" },
-        { clave: "monitoreo.worker.heartbeat_max_seg", valor: "90", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Tiempo máximo sin señal del worker antes de marcarlo en rojo (segundos)" },
-        { clave: "monitoreo.ollama.ping.intervalo_seg", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto tocamos la puerta del cerebro IA /api/tags (segundos)" },
-        { clave: "monitoreo.ollama.smoke.intervalo_min", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto pedimos una generación mínima real al cerebro IA (minutos)" },
-        { clave: "monitoreo.ollama.smoke.timeout_ms", valor: "60000", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Espera máxima de la generación mínima del cerebro IA (milisegundos)" },
-        { clave: "monitoreo.tailscale.url", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "URL del cerebro por el túnel Tailscale (vacío = no aplica, ej. desarrollo local)" },
-        { clave: "monitoreo.tailscale.intervalo_seg", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto revisamos el túnel Tailscale (segundos)" },
-        { clave: "monitoreo.reprobe.segundos", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Espera antes de confirmar un rojo con un segundo intento (segundos)" },
-        { clave: "monitoreo.email.throttle_min", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Mínimo entre correos del mismo aviso de infraestructura (minutos)" },
-        { clave: "monitoreo.email.destinatarios", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "A quién avisar cuando algo se pone en rojo (correos separados por coma; vacío = no enviar)" },
-        { clave: "monitoreo.autorefresh_seg", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Autorefresco del tablero operativo (segundos)" },
-        { clave: "monitoreo.atascados.horas", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Horas sin moverse para considerar un reporte atascado" },
+        // SPEC-186 (002-PI-081): parámetros del vigilante de infraestructura se siembran
+        // por separado (ver bloque monitoreoParams debajo): los 13 viejos de SPEC-171
+        // usan ON CONFLICT DO NOTHING (crean los faltantes sin pisar valores del CEO),
+        // y los 2 nuevos de SPEC-186 usan ON CONFLICT DO UPDATE (aplican el nuevo default).
         // SPEC-172 (Pilar D.5): parámetros de la deriva del motor en producción.
         { clave: "motor.deriva.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Medir la deriva del motor en producción (tasa de corrección semanal vs banco curado)" },
         { clave: "motor.deriva.umbral_pp", valor: "15", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Avisar si la brecha de una categoría supera estos puntos porcentuales" },
@@ -256,6 +246,44 @@ async function main() {
         await prisma.parametroSistema.upsert({
             where: { clave: p.clave },
             update: {},
+            create: p,
+        });
+    }
+
+    // SPEC-186 (002-PI-081): seed MIXTO del vigilante (I-65).
+    // Los 13 parámetros viejos de SPEC-171 se crean si faltan, pero NO pisan valores custom (DO NOTHING).
+    // Los 2 parámetros nuevos/cambiados de SPEC-186 se aplican siempre (DO UPDATE).
+    const monitoreoViejos = [
+        { clave: "monitoreo.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar el vigilante del sistema (probes e incidentes)" },
+        { clave: "monitoreo.app.intervalo_seg", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto revisamos que la app responde (segundos)" },
+        { clave: "monitoreo.worker.heartbeat_max_seg", valor: "90", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Tiempo máximo sin señal del worker antes de marcarlo en rojo (segundos)" },
+        { clave: "monitoreo.ollama.ping.intervalo_seg", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto tocamos la puerta del cerebro IA /api/tags (segundos)" },
+        { clave: "monitoreo.ollama.smoke.timeout_ms", valor: "60000", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Espera máxima de la generación mínima del cerebro IA (milisegundos)" },
+        { clave: "monitoreo.tailscale.url", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "URL del cerebro por el túnel Tailscale (vacío = no aplica, ej. desarrollo local)" },
+        { clave: "monitoreo.tailscale.intervalo_seg", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto revisamos el túnel Tailscale (segundos)" },
+        { clave: "monitoreo.reprobe.segundos", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Espera antes de confirmar un rojo con un segundo intento (segundos)" },
+        { clave: "monitoreo.email.throttle_min", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Mínimo entre correos del mismo aviso de infraestructura (minutos)" },
+        { clave: "monitoreo.email.destinatarios", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "A quién avisar cuando algo se pone en rojo (correos separados por coma; vacío = no enviar)" },
+        { clave: "monitoreo.autorefresh_seg", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Autorefresco del tablero operativo (segundos)" },
+        { clave: "monitoreo.atascados.horas", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Horas sin moverse para considerar un reporte atascado" },
+    ];
+    for (const p of monitoreoViejos) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    const monitoreoNuevos = [
+        // SPEC-186: intervalo del smoke real pasa de 5 a 30 min (decisión de diseño; se aplica siempre).
+        { clave: "monitoreo.ollama.smoke.intervalo_min", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuánto pedimos una generación mínima real al cerebro IA, si no hay tráfico reciente (minutos)" },
+        // SPEC-186: ventana de piggyback en tráfico real de ClasificacionIA.
+        { clave: "monitoreo.ollama.smoke.piggyback_min", valor: "15", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Si hubo una clasificación real en estos minutos, el smoke se considera sano sin tocar Ollama (minutos)" },
+    ];
+    for (const p of monitoreoNuevos) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, descripcion: p.descripcion },
             create: p,
         });
     }
@@ -807,6 +835,16 @@ async function main() {
             categoria: CategoriaParametro.EMAIL,
             esPublico: false,
             descripcion: "A quién avisar por pico de bloqueos (correos separados por coma; vacío = no enviar)",
+        },
+        // SPEC-185 (002-PI-080): id de usuario PARENT de prueba para el escenario
+        // denunciante_spam del simulador de abusos. Vacío = no configurado.
+        {
+            clave: "simulacion.spam.usuario_id",
+            valor: "",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Id del usuario PARENT de prueba para el escenario denunciante_spam del simulador",
         },
         {
             // SPEC-149 (FR-008): interruptor global del canal de avisos del colegio.

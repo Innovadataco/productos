@@ -162,10 +162,10 @@ tests: probes (integration), repositorios (unit/integration), endpoint historial
 
 ---
 
-## Decisiones para compuerta §4
+## Decisiones de compuerta §4 (aprobadas)
 
-1. **Columna `metodo` en `HealthProbe`**: ¿Opción A (columna aditiva, recomendada) u Opción B (prefijo en `detalle`)?
-2. **Default histórico para `metodo`**: `"SMOKE"` (asume que todos los probes previos eran smokes reales) o `"DESCONOCIDO"`.
-3. **Defaults operativos**: ¿`monitoreo.ollama.smoke.intervalo_min=30` y `monitoreo.ollama.smoke.piggyback_min=15`?
-4. **Resiembra en BD existente**: ¿Forzar el cambio del default 5→30 en BD existente (UPDATE si el valor actual es 5) o dejar el valor del CEO intacto?
-5. **UI del historial**: ¿modal al hacer click en "Cerebro IA" o subsección desplegable debajo de la grilla de semáforos?
+1. **Columna `metodo` en `HealthProbe`**: Opción A aprobada — columna aditiva `metodo String? @default("SMOKE")`.
+2. **Default histórico para `metodo`**: `"SMOKE"` (los probes previos eran smokes reales).
+3. **Defaults operativos**: `monitoreo.ollama.smoke.intervalo_min=30` y `monitoreo.ollama.smoke.piggyback_min=15`.
+4. **Resiembra en BD existente**: seed MIXTO — viejos con `update: {}`, nuevos/cambiados con `update: { valor, descripcion }`.
+5. **UI del historial**: modal al hacer click en la tarjeta "Cerebro IA".
