@@ -6,9 +6,10 @@
 import { TransicionReporteRepository } from "@/lib/dal/repositories/transicion-reporte";
 import { ReintentoReporteRepository } from "@/lib/dal/repositories/reintento-reporte";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
-export type TipoEventoProceso = "TRANSICION" | "REINTENTO";
+export type TipoEventoProceso = "TRANSICION" | "REINTENTO" | "ASIGNACION_OPERADOR";
 
 export interface EventoTransicion {
     tipo: "TRANSICION";
@@ -30,10 +31,43 @@ export interface EventoReintento {
     error: string | null;
 }
 
-export type EventoProceso = EventoTransicion | EventoReintento;
+export interface EventoAsignacionOperador {
+    tipo: "ASIGNACION_OPERADOR";
+    id: string;
+    fecha: string;
+    accion: "OPERADOR_ASIGNADO" | "OPERADOR_REASIGNADO" | "OPERADOR_DESASIGNADO";
+    operadorEmail: string | null;
+    operadorNombre: string | null;
+    actorEmail: string | null;
+    actorNombre: string | null;
+}
+
+export type EventoProceso = EventoTransicion | EventoReintento | EventoAsignacionOperador;
 
 export interface TimelineProceso {
     eventos: EventoProceso[];
+}
+
+function parseJsonSeguro(valor: string | null): Record<string, unknown> | null {
+    if (!valor) return null;
+    try {
+        const parsed = JSON.parse(valor);
+        return typeof parsed === "object" && parsed !== null ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+function extraerEmailOperador(valor: Record<string, unknown> | null): string | null {
+    if (!valor) return null;
+    const email = valor.operadorEmail;
+    return typeof email === "string" ? email : null;
+}
+
+function extraerNombreOperador(valor: Record<string, unknown> | null): string | null {
+    if (!valor) return null;
+    const nombre = valor.operadorNombre;
+    return typeof nombre === "string" ? nombre : null;
 }
 
 export async function obtenerTimelineProceso(reporteId: string): Promise<TimelineProceso> {
@@ -42,9 +76,10 @@ export async function obtenerTimelineProceso(reporteId: string): Promise<Timelin
         throw new AppError("Reporte no encontrado", ERROR_CODES.NOT_FOUND, 404);
     }
 
-    const [transiciones, reintentos] = await Promise.all([
+    const [transiciones, reintentos, asignaciones] = await Promise.all([
         new TransicionReporteRepository().findByReporteId(reporteId),
         new ReintentoReporteRepository().findByReporteId(reporteId),
+        new AuditLogRepository().findAsignacionesReporte(reporteId),
     ]);
 
     const eventos: EventoProceso[] = [
@@ -66,6 +101,44 @@ export async function obtenerTimelineProceso(reporteId: string): Promise<Timelin
             exitoso: r.exitoso,
             error: r.error,
         })),
+        ...asignaciones.map((a): EventoAsignacionOperador => {
+            const valorNuevo = parseJsonSeguro(a.valorNuevo);
+            const valorAnterior = parseJsonSeguro(a.valorAnterior);
+            const usuarioEmail = a.usuario?.email ?? null;
+            const usuarioNombre = a.usuario?.nombre ?? null;
+            const accion = a.accion as EventoAsignacionOperador["accion"];
+
+            if (accion === "OPERADOR_ASIGNADO") {
+                return {
+                    tipo: "ASIGNACION_OPERADOR",
+                    id: a.id,
+                    fecha: a.creadoEn.toISOString(),
+                    accion,
+                    operadorEmail: usuarioEmail,
+                    operadorNombre: usuarioNombre,
+                    actorEmail: null,
+                    actorNombre: null,
+                };
+            }
+
+            const operadorEmail = accion === "OPERADOR_DESASIGNADO"
+                ? extraerEmailOperador(valorAnterior)
+                : extraerEmailOperador(valorNuevo);
+            const operadorNombre = accion === "OPERADOR_DESASIGNADO"
+                ? extraerNombreOperador(valorAnterior)
+                : extraerNombreOperador(valorNuevo);
+
+            return {
+                tipo: "ASIGNACION_OPERADOR",
+                id: a.id,
+                fecha: a.creadoEn.toISOString(),
+                accion,
+                operadorEmail,
+                operadorNombre,
+                actorEmail: usuarioEmail,
+                actorNombre: usuarioNombre,
+            };
+        }),
     ];
 
     eventos.sort((a, b) => {

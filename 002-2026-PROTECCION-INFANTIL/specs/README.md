@@ -14,7 +14,7 @@
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **47** |
-| **Pendientes (PLANEADO)** | **7** |
+| **Pendientes (PLANEADO)** | **6** |
 
 ## Backlog activo (no cerradas)
 
@@ -126,6 +126,7 @@
 | [185](185-simulador-historial/spec.md) | SPEC-185 — Historial y sugerencias del simulador de abusos (002-PI-080) | 🟢 Implementada (ver cierre.md) |
 | [186](186-smoke-inteligente-ollama/spec.md) | SPEC-186 — Smoke inteligente del monitor Ollama (002-PI-081) | 🟢 Implementada (ver cierre.md) |
 | [187](187-override-modelo-smoke-ollama/spec.md) | SPEC-187 — Override de modelo para smoke Ollama (002-PI-082) | 🟢 Implementada (ver cierre.md) |
+| [188](188-visibilidad-operador-bandeja/spec.md) | SPEC-188 — Visibilidad del operador en la bandeja (002-PI-083) | 🟢 Implementada (ver cierre.md) |
 | [189](189-vista-operador-metricas/spec.md) | SPEC-189 — Vista de operador con métricas (002-PI-084) | 🟢 Implementada |
 
 ## Tabla completa (121 specs)
@@ -300,6 +301,7 @@
 | [185](185-simulador-historial/spec.md) | SPEC-185 — Historial y sugerencias del simulador de abusos (002-PI-080) | 🟢 Implementada (ver cierre.md) |
 | [186](186-smoke-inteligente-ollama/spec.md) | SPEC-186 — Smoke inteligente del monitor Ollama (002-PI-081) | 🟢 Implementada (ver cierre.md) |
 | [187](187-override-modelo-smoke-ollama/spec.md) | SPEC-187 — Override de modelo para smoke Ollama (002-PI-082) | 🟢 Implementada (ver cierre.md) |
+| [188](188-visibilidad-operador-bandeja/spec.md) | SPEC-188 — Visibilidad del operador en la bandeja (002-PI-083) | 🟢 Implementada (ver cierre.md) |
 | [189](189-vista-operador-metricas/spec.md) | SPEC-189 — Vista de operador con métricas (002-PI-084) | 🟢 Implementada |
 
 ## Incidencias de calidad de datos

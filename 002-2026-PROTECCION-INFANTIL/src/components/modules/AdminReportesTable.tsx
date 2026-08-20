@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
 import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
+import type { OperadorListItemDto } from "@/lib/dal/types/operador";
 
 const ESTADOS = [
     { value: "", label: "Todos los estados" },
@@ -69,6 +70,8 @@ type ReporteListItem = {
         confianza: number;
         correccion: { categoriaCorregida: string } | null;
     } | null;
+    operador: { id: string; email: string; nombre: string | null } | null;
+    comite: { id: string; email: string; nombre: string | null } | null;
 };
 
 type Plataforma = { id: string; nombre: string };
@@ -81,13 +84,20 @@ function formatCategoria(categoria: string) {
     return CATEGORIAS.find((c) => c.value === categoria)?.label || categoria;
 }
 
-export function AdminReportesTable() {
+interface AdminReportesTableProps {
+    rol: string | null;
+}
+
+const OPERADOR_ROLES = new Set(["OPERADOR", "COMITE_VALIDACION"]);
+
+export function AdminReportesTable({ rol }: AdminReportesTableProps) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
     const [reportes, setReportes] = useState<ReporteListItem[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
+    const [operadores, setOperadores] = useState<OperadorListItemDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
@@ -104,8 +114,10 @@ export function AdminReportesTable() {
     const [q, setQ] = useState(searchParams.get("q") || "");
     const [padre, setPadre] = useState(searchParams.get("padre") || "");
     const [orden, setOrden] = useState(searchParams.get("orden") || "prioridad");
+    const [operadorId, setOperadorId] = useState(searchParams.get("operadorId") || "");
 
     const page = Math.max(1, Number(searchParams.get("page") || "1"));
+    const esRolConBandejaPropia = rol !== null && OPERADOR_ROLES.has(rol);
 
     useEffect(() => {
         fetch("/api/plataformas", { credentials: "include" })
@@ -113,6 +125,17 @@ export function AdminReportesTable() {
             .then((json) => setPlataformas(json.plataformas || []))
             .catch(() => setError("Error cargando plataformas"));
     }, []);
+
+    useEffect(() => {
+        if (esRolConBandejaPropia) {
+            setOperadores([]);
+            return;
+        }
+        fetch("/api/admin/operadores", { credentials: "include" })
+            .then((r) => r.json())
+            .then((json) => setOperadores((json.operadores || []).filter((op: OperadorListItemDto) => op.rol === "OPERADOR")))
+            .catch(() => setError("Error cargando operadores"));
+    }, [esRolConBandejaPropia]);
 
     const buildQueryString = useCallback(
         (override: Record<string, string> = {}) => {
@@ -125,6 +148,7 @@ export function AdminReportesTable() {
             if (incluirEliminados) params.set("incluirEliminados", "true");
             if (q.trim()) params.set("q", q.trim());
             if (padre.trim()) params.set("padre", padre.trim());
+            if (operadorId) params.set("operadorId", operadorId);
             params.set("orden", orden);
             params.set("pageSize", pageSize);
             params.set("page", String(page));
@@ -134,7 +158,7 @@ export function AdminReportesTable() {
             });
             return params.toString();
         },
-        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page, q, padre, orden]
+        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page, q, padre, orden, operadorId]
     );
 
     const fetchReportes = useCallback(async () => {
@@ -175,6 +199,11 @@ export function AdminReportesTable() {
         ...plataformas.map((p) => ({ value: p.id, label: p.nombre })),
     ];
 
+    const operadorOptions = [
+        { value: "", label: "Todos los operadores" },
+        ...operadores.map((op) => ({ value: op.id, label: op.email })),
+    ];
+
     return (
         <div className="space-y-6">
             <div>
@@ -213,6 +242,14 @@ export function AdminReportesTable() {
                     />
                     <Select label="Plataforma" options={plataformaOptions} value={plataformaId} onChange={(e) => setPlataformaId(e.target.value)} />
                     <Select label="Categoría" options={CATEGORIAS} value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+                    {!esRolConBandejaPropia && (
+                        <Select
+                            label="Operador"
+                            options={operadorOptions}
+                            value={operadorId}
+                            onChange={(e) => setOperadorId(e.target.value)}
+                        />
+                    )}
                     <Select
                         label="Ordenar por"
                         options={ORDENES}
@@ -277,6 +314,7 @@ export function AdminReportesTable() {
                             <th className="px-4 py-3 font-medium">Estado</th>
                             <th className="px-4 py-3 font-medium">Señales</th>
                             <th className="px-4 py-3 font-medium">Categoría</th>
+                            <th className="px-4 py-3 font-medium">Operador</th>
                             <th className="px-4 py-3 font-medium">Fecha</th>
                             <th className="px-4 py-3 font-medium">Origen</th>
                             <th className="px-4 py-3 font-medium">Acciones</th>
@@ -285,13 +323,13 @@ export function AdminReportesTable() {
                     <TablaBody>
                         {loading ? (
                             <tr>
-                                <td colSpan={8} className="px-4 py-2 text-center text-subtle">
+                                <td colSpan={9} className="px-4 py-2 text-center text-subtle">
                                     <Cargando tamano="sm" />
                                 </td>
                             </tr>
                         ) : reportes.length === 0 ? (
                             <tr>
-                                <td colSpan={8} className="px-4 py-2">
+                                <td colSpan={9} className="px-4 py-2">
                                     <EmptyState
                                         title="No hay reportes que coincidan"
                                         description="Prueba ajustar los filtros o vuelve más tarde."
@@ -335,6 +373,15 @@ export function AdminReportesTable() {
                                             : r.clasificacion
                                                 ? formatCategoria(r.clasificacion.categoria)
                                                 : "—"}
+                                    </td>
+                                    <td className="px-4 py-3 text-subtle">
+                                        {r.operador ? (
+                                            <span title={r.operador.email} className="truncate max-w-[12rem] inline-block">
+                                                {r.operador.email}
+                                            </span>
+                                        ) : (
+                                            <span className="text-subtle/70">Sin asignar</span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString()}</td>
                                     <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : (r.usuario?.email ?? "Autenticado")}</td>

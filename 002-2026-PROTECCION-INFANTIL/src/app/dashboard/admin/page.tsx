@@ -24,5 +24,5 @@ export default async function AdminBandejaPage() {
         return <SinAccesoModulo />;
     }
 
-    return <AdminReportesTable />;
+    return <AdminReportesTable rol={acceso.rol} />;
 }

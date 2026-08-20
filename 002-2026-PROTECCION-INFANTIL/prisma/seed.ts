@@ -5,12 +5,38 @@ import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro } from "@pr
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
 import path from "path";
+import { fileURLToPath } from "url";
+import { realpathSync } from "fs";
 
-// Instancia lazy: se crea solo al invocar main(), nunca al importar el módulo (I-72).
-let prisma: PrismaClient | undefined;
+let prismaInstance: PrismaClient | null = null;
+
+function isMainModule(): boolean {
+    if (typeof process === "undefined" || !process.argv[1]) return false;
+    try {
+        const scriptReal = realpathSync(process.argv[1]);
+        const moduleReal = realpathSync(fileURLToPath(import.meta.url));
+        return scriptReal === moduleReal;
+    } catch {
+        return false;
+    }
+}
+
+function getPrisma(): PrismaClient {
+    if (!prismaInstance) {
+        prismaInstance = new PrismaClient();
+    }
+    return prismaInstance;
+}
+
+// Proxy para mantener todas las referencias existentes a `prisma` funcionales
+// mientras permitimos recrear el cliente entre llamadas a main() en tests.
+const prisma = new Proxy({} as PrismaClient, {
+    get(_target, prop) {
+        return getPrisma()[prop as keyof PrismaClient];
+    },
+});
 
 async function main() {
-    prisma = new PrismaClient();
     // Admin inicial: SOLO desde variable de entorno, SOLO si no existe (spec 105, I-31).
     // Nunca un literal en el repo; el seed nunca pisa una credencial ya rotada.
     const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "soporte@innovadataco.com";
@@ -1442,19 +1468,27 @@ async function main() {
     const { modulosCatalogo, permisosCreados } = await syncModulosYGrants(prisma);
 
     console.log(`Permisos de módulos: ${modulosCatalogo} módulos en catálogo, ${permisosCreados} permisos backfill`);
+
+    // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
+    // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
+    await prisma.$disconnect();
+    prismaInstance = null;
 }
 
 export { main };
 
-// Guard: solo ejecutar como script CLI, no al importarse desde tests (I-72).
-const esScriptDirecto = import.meta.url === `file://${process.argv[1]}`;
-if (esScriptDirecto) {
+// Solo ejecutar el seed automáticamente cuando este archivo es el punto de
+// entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como
+// módulo desde tests, main() se invoca explícitamente bajo el mutex de BD;
+// un main() top-level desprotegido corría en paralelo con resetDatabase() y
+// causaba deadlocks 40P01 contra TRUNCATE CASCADE.
+if (isMainModule()) {
     main()
         .catch((e) => {
             console.error(e);
             process.exit(1);
         })
         .finally(async () => {
-            await prisma?.$disconnect();
+            await prisma.$disconnect();
         });
 }

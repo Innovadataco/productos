@@ -100,6 +100,25 @@ export class AuditLogRepository {
     }
 
     /**
+     * SPEC-188 (FR-005): eventos de asignación/reasignación/desasignación de un
+     * reporte, con el email del usuario ligado al AuditLog (actor o afectado
+     * según la acción).
+     */
+    findAsignacionesReporte(
+        recursoId: string
+    ): Promise<Prisma.AuditLogGetPayload<{ include: { usuario: { select: { id: true; email: true; nombre: true } } } }>[]> {
+        return this.db.auditLog.findMany({
+            where: {
+                tipoRecurso: "Reporte",
+                recursoId,
+                accion: { in: ["OPERADOR_ASIGNADO", "OPERADOR_REASIGNADO", "OPERADOR_DESASIGNADO"] },
+            },
+            orderBy: { creadoEn: "asc" },
+            include: { usuario: { select: { id: true, email: true, nombre: true } } },
+        });
+    }
+
+    /**
      * SPEC-134 (E-1): listado paginado con el actor (nombre/email) para la auditoría
      * del colegio — el `where` lo construye el llamador SIEMPRE con su tenant
      * (`colegioId`). Devuelve [items, total] en una pasada.
