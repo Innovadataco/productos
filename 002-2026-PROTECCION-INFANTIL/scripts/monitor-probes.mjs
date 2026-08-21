@@ -33,6 +33,7 @@ import {
     probeTailscale,
 } from "../src/lib/monitoreo/probes.ts";
 import { registrarProbe, evaluarSenal, confirmarRojo } from "../src/lib/monitoreo/incidentes.ts";
+import { revisarSlaSpam } from "../src/lib/spam/sla.ts";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -46,6 +47,7 @@ const ADVISORY_LOCK_ID = 123456790;
 // evalúa qué señales tocan según su intervalo (acotado por el mínimo vigente).
 const TICK_MS = 5000;
 const LIMPIEZA_CADA_MS = 60 * 60 * 1000;
+const SLA_SPAM_INTERVALO_MS = 15 * 60 * 1000;
 const SENALES = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale"];
 
 // --- Advisory lock (instancia única, patrón de worker-reportes.mjs) ---
@@ -154,6 +156,7 @@ async function correrProbe(senal, config) {
 const proximoProbeEn = new Map(); // senal -> epoch ms del próximo probe programado
 const reprobes = new Map();       // senal -> { en: epoch ms } (segundo intento tras un fallo)
 let proximaLimpiezaEn = Date.now() + LIMPIEZA_CADA_MS;
+let proximoSlaSpamEn = Date.now() + SLA_SPAM_INTERVALO_MS;
 
 async function procesarTick() {
     const config = await leerConfig();
@@ -208,6 +211,14 @@ async function start() {
             corriendo = true;
             try {
                 await procesarTick();
+                if (Date.now() >= proximoSlaSpamEn) {
+                    proximoSlaSpamEn = Date.now() + SLA_SPAM_INTERVALO_MS;
+                    try {
+                        await revisarSlaSpam();
+                    } catch (err) {
+                        console.error("[MONITOR] Error revisando SLA SPAM:", err instanceof Error ? err.message : err);
+                    }
+                }
                 if (Date.now() >= proximaLimpiezaEn) {
                     proximaLimpiezaEn = Date.now() + LIMPIEZA_CADA_MS;
                     await limpiarProbesViejos();
