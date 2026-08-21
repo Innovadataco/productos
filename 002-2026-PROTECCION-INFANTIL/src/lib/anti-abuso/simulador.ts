@@ -136,7 +136,7 @@ export function generarPayloads(params: SimularAbusoBody): PayloadSimulacion[] {
  * Valida la IP inyectable contra RFC 5737 y, para denunciante_spam, exige un
  * usuario PARENT activo.
  */
-export async function crearSimulacionAbuso(params: SimularAbusoBody, usuarioId: string) {
+export async function crearSimulacionAbuso(params: SimularAbusoBody, usuarioId: string, opts?: { nota?: string | null | undefined }) {
     validarIpsInyectables(params);
 
     if (params.escenario === "denunciante_spam") {
@@ -176,6 +176,7 @@ export async function crearSimulacionAbuso(params: SimularAbusoBody, usuarioId: 
         totalReportes: payloads.length,
         creadoPorId: usuarioId,
         configJson: config,
+        nota: opts?.nota,
     });
 
     await logAudit({

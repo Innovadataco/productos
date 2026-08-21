@@ -523,6 +523,8 @@ export const simularAbusoBodySchema = z.object({
     usuarioId: z.string().cuid().optional(),
     identificadores: z.array(z.string().min(3).max(100)).max(200).optional(),
     ips: z.array(ipv4Schema).max(200).optional(),
+    // SPEC-192: nota interna opcional para el operador.
+    nota: z.string().max(200).optional(),
 });
 
 export const simulacionAbusoQuerySchema = z.object({
