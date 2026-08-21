@@ -27,12 +27,37 @@ export class AuditLogRepository {
         });
     }
 
+    /** SPEC-189 (002-PI-084): cierres de un operador específico en el rango. */
+    findCierresPorUsuario(acciones: AccionAudit[], usuarioId: string, rango: { gte: Date; lte: Date }) {
+        return this.db.auditLog.findMany({
+            where: { accion: { in: acciones }, usuarioId, creadoEn: rango, recursoId: { not: null } },
+            select: { recursoId: true, creadoEn: true },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
+
     /** Asignaciones de un conjunto de casos (primera por recurso la deduce el servicio). */
     findAsignaciones(recursoIds: string[], usuarioId?: string) {
         return this.db.auditLog.findMany({
             where: { accion: "OPERADOR_ASIGNADO", recursoId: { in: recursoIds }, ...(usuarioId ? { usuarioId } : {}) },
             select: { recursoId: true, creadoEn: true },
             orderBy: { creadoEn: "asc" },
+        });
+    }
+
+    /** SPEC-189 (002-PI-084): asignaciones de un operador en el rango. */
+    findAsignacionesPorUsuario(usuarioId: string, rango?: { gte: Date; lte: Date }) {
+        return this.db.auditLog.findMany({
+            where: { accion: "OPERADOR_ASIGNADO", usuarioId, ...(rango ? { creadoEn: rango } : {}) },
+            select: { recursoId: true, creadoEn: true },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
+
+    /** SPEC-189 (002-PI-084): conteo de acciones de un operador en el rango. */
+    countAccionesPorUsuario(acciones: AccionAudit[], usuarioId: string, rango: { gte: Date; lte: Date }) {
+        return this.db.auditLog.count({
+            where: { accion: { in: acciones }, usuarioId, creadoEn: rango },
         });
     }
 
