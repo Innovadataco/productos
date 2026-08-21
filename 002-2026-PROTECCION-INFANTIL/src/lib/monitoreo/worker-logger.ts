@@ -1,6 +1,6 @@
-import { logger } from "../logger";
-import { prisma } from "../prisma";
-import { getParametroSistemaValor } from "../parametros";
+import { logger } from "../logger.ts";
+import { prisma } from "../prisma.ts";
+import { getParametroSistemaValor } from "../parametros.ts";
 import { NivelLog } from "@prisma/client";
 
 const NIVELES_ORDEN: Record<NivelLog, number> = {

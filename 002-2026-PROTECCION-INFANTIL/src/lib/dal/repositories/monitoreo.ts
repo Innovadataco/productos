@@ -5,8 +5,8 @@
  * (frontera DAL Q-3: las rutas no importan prisma).
  */
 import type { EstadoReporte, HealthProbe, IncidenteInfra, Prisma } from "@prisma/client";
-import { prisma } from "../prisma";
-import type { DbClient } from "../unit-of-work";
+import { prisma } from "../prisma.ts";
+import type { DbClient } from "../unit-of-work.ts";
 
 export class MonitoreoRepository {
     constructor(private readonly db: DbClient = prisma) {}

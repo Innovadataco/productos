@@ -1,9 +1,9 @@
 import { Resend } from "resend";
-import { requireEnv } from "./env";
-import { prisma } from "./prisma";
-import { getParametroSistema } from "./parametros";
-import { logger } from "./logger";
-import type { FilaDeriva } from "./motor/deriva";
+import { requireEnv } from "./env.ts";
+import { prisma } from "./prisma.ts";
+import { getParametroSistema } from "./parametros.ts";
+import { logger } from "./logger.ts";
+import type { FilaDeriva } from "./motor/deriva.ts";
 
 const resend = new Resend(requireEnv("RESEND_API_KEY", 10));
 const FROM = requireEnv("EMAIL_FROM", 5);

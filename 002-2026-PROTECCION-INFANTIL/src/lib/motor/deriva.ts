@@ -20,9 +20,9 @@
  */
 import { Prisma } from "@prisma/client";
 import type { DerivaMotorSnapshot } from "@prisma/client";
-import { prisma } from "../prisma";
-import { getParametroSistema } from "../parametros";
-import { logger } from "../logger";
+import { prisma } from "../prisma.ts";
+import { getParametroSistema } from "../parametros.ts";
+import { logger } from "../logger.ts";
 
 // ---------------------------------------------------------------------------
 // Parámetros (ParametroSistema, sembrados en prisma/seed.ts)

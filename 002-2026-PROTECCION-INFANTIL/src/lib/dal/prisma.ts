@@ -5,4 +5,4 @@
  * (../prisma), evitando depender del alias "@/lib/prisma" que los scripts de
  * worker corridos con `node --import tsx` no resuelven.
  */
-export { prisma } from "../prisma";
+export { prisma } from "../prisma.ts";
