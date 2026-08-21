@@ -147,7 +147,7 @@ export default function UsuariosAdminClient() {
                         <select
                             value={estado}
                             onChange={(e) => setEstado(e.target.value)}
-                            className="w-full rounded-xl border border-tinta/20 bg-white/70 px-3 py-2 text-sm text-body outline-none focus:border-pino dark:bg-slate-900/70"
+                            className="w-full rounded-xl border border-tinta/20 bg-papel/70 px-3 py-2 text-sm text-body outline-none focus:border-pino dark:bg-papel/70"
                         >
                             <option value="">Todos</option>
                             <option value="activo">Activo</option>
@@ -162,7 +162,7 @@ export default function UsuariosAdminClient() {
                         <select
                             value={conReportes}
                             onChange={(e) => setConReportes(e.target.value)}
-                            className="w-full rounded-xl border border-tinta/20 bg-white/70 px-3 py-2 text-sm text-body outline-none focus:border-pino dark:bg-slate-900/70"
+                            className="w-full rounded-xl border border-tinta/20 bg-papel/70 px-3 py-2 text-sm text-body outline-none focus:border-pino dark:bg-papel/70"
                         >
                             <option value="">Todos</option>
                             <option value="true">Con reportes</option>
@@ -220,7 +220,7 @@ export default function UsuariosAdminClient() {
                                         <td className="py-3 text-right">
                                             <Link
                                                 href={`/dashboard/admin/usuarios/${u.id}`}
-                                                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                className="rounded-lg border border-tinta/20 bg-papel/70 px-3 py-1.5 text-xs text-body hover:bg-tinta/5 dark:border-tinta/30 dark:bg-papel/70 dark:hover:bg-tinta/10"
                                             >
                                                 Ver detalle
                                             </Link>

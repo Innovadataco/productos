@@ -10,6 +10,8 @@
 
 **Objetivo**: construir (1) `/dashboard/admin/usuarios` con sub-tab "Padres" como default (cierra I-37), y (2) sub-tab "Colegios" en `/dashboard/admin/estadisticas/operacion` con resumen de todos los colegios + ficha detalle de 7 secciones + hallazgos automáticos configurables.
 
+Impacto en arquitectura: 4 endpoints GET nuevos bajo `/api/admin/**` + 2 paginas en `/dashboard/admin/**` + repositorios de lectura con cache. Cero cambios en el motor `src/lib/ai/**`. Migracion aditiva minima: indices en `Reporte`, `AlertaColegio` y `SolicitudComite` (el indice originalmente previsto en `IntegranteColegio` se retiro tras validar que el modelo no tiene `colegioId`); la metrica de integrantes activos se resuelve por join a la cuenta del comite (`Usuario.comiteColegioId`).
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*

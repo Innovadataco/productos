@@ -83,19 +83,19 @@ export function ColegioDetalleSecciones({ detalle }: { detalle: Detalle }) {
                 <GlassCard>
                     <h2 className="mb-3 text-lg font-semibold text-body">2. Métricas de tamaño</h2>
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="rounded-xl bg-white/50 p-4 dark:bg-slate-900/50">
+                        <div className="rounded-xl bg-papel/50 p-4">
                             <p className="text-2xl font-bold text-body">{metricasTamaño.alumnos}</p>
                             <p className="text-xs text-muted">Alumnos activos</p>
                         </div>
-                        <div className="rounded-xl bg-white/50 p-4 dark:bg-slate-900/50">
+                        <div className="rounded-xl bg-papel/50 p-4">
                             <p className="text-2xl font-bold text-body">{metricasTamaño.profesores}</p>
                             <p className="text-xs text-muted">Profesores activos</p>
                         </div>
-                        <div className="rounded-xl bg-white/50 p-4 dark:bg-slate-900/50">
+                        <div className="rounded-xl bg-papel/50 p-4">
                             <p className="text-2xl font-bold text-body">{metricasTamaño.cursos}</p>
                             <p className="text-xs text-muted">Cursos activos</p>
                         </div>
-                        <div className="rounded-xl bg-white/50 p-4 dark:bg-slate-900/50">
+                        <div className="rounded-xl bg-papel/50 p-4">
                             <p className="text-2xl font-bold text-body">{metricasTamaño.materias}</p>
                             <p className="text-xs text-muted">Materias activas</p>
                         </div>
@@ -192,13 +192,13 @@ export function ColegioDetalleSecciones({ detalle }: { detalle: Detalle }) {
                 ) : (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
-                            <h3 className="mb-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">Qué está bien</h3>
+                            <h3 className="mb-2 text-sm font-medium text-estado-pino">Qué está bien</h3>
                             <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
                                 {hallazgos.positivos.map((h, i) => (<li key={i}>{h}</li>))}
                             </ul>
                         </div>
                         <div>
-                            <h3 className="mb-2 text-sm font-medium text-rose-700 dark:text-rose-300">Qué está mal</h3>
+                            <h3 className="mb-2 text-sm font-medium text-estado-rubi">Qué está mal</h3>
                             <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
                                 {hallazgos.negativos.map((h, i) => (<li key={i}>{h}</li>))}
                             </ul>

@@ -15,6 +15,3 @@ CREATE INDEX IF NOT EXISTS "idx_alertas_colegio_estado"
 
 CREATE INDEX IF NOT EXISTS "idx_solicitudes_comite_colegio_estado"
     ON "SolicitudComite" ("colegioId", "estado");
-
-CREATE INDEX IF NOT EXISTS "idx_integrantes_comite_colegio_estado"
-    ON "IntegranteComite" ("colegioId", "estado");

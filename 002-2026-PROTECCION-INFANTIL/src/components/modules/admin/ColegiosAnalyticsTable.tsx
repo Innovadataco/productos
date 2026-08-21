@@ -175,7 +175,7 @@ export function ColegiosAnalyticsTable() {
                                         <td className="py-3 text-right">
                                             <Link
                                                 href={`/dashboard/admin/estadisticas/operacion/colegios/${c.id}`}
-                                                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                className="rounded-lg border border-tinta/20 bg-papel/70 px-3 py-1.5 text-xs text-body hover:bg-tinta/5 dark:border-tinta/30 dark:bg-papel/70 dark:hover:bg-tinta/10"
                                             >
                                                 Ver ficha
                                             </Link>

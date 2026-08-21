@@ -38,6 +38,9 @@ const SIN_PANTALLA_PROPIA = new Set([
     // SPEC-180: la página Monitoreo worker salió del menú (redundante con el
     // tablero operativo de SPEC-171); la ruta redirige a operación.
     "monitoreo_worker",
+    // SPEC-194 (002-PI-088): analítica de colegios es un sub-tab dentro de
+    // `/dashboard/admin/estadisticas/operacion`; no tiene ítem de menú lateral propio.
+    "analytics_colegios",
 ]);
 
 // SPEC-173 (FASE-C): los nodos expandibles (p. ej. "Usuarios") declaran hijos;

@@ -95,8 +95,14 @@ export async function metricasReportesColegio(tenantId: string | null, periodoDi
 }
 
 export async function metricasComiteColegio(colegioId: string, db: DbClient = prisma): Promise<MetricasComite> {
+    const comite = await db.usuario.findUnique({
+        where: { comiteColegioId: colegioId },
+        select: { id: true },
+    });
+    const comiteId = comite?.id;
+
     const [integrantesActivos, casosEscaladosRaw, casosResueltosRaw, ultimosCasosRaw] = await Promise.all([
-        db.integranteComite.count({ where: { comiteId: colegioId, estado: "ACTIVO" } }),
+        comiteId ? db.integranteComite.count({ where: { comiteId, estado: "ACTIVO" } }) : 0,
         db.solicitudComite.count({ where: { colegioId } }),
         db.solicitudComite.count({ where: { colegioId, resueltoEn: { not: null } } }),
         db.solicitudComite.findMany({
