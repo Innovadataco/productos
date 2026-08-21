@@ -28,6 +28,13 @@ if (!DATABASE_URL) {
     process.exit(1);
 }
 
+const SIMULADOR_ABUSO_SECRET = process.env.SIMULADOR_ABUSO_SECRET;
+if (!SIMULADOR_ABUSO_SECRET) {
+    console.error("[SIMULADOR-ABUSO] ERROR: SIMULADOR_ABUSO_SECRET no configurada");
+    console.error("[SIMULADOR-ABUSO] Generar con: openssl rand -hex 32");
+    process.exit(1);
+}
+
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5005";
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -101,6 +108,7 @@ async function enviarReporte(payload, ip, tokenAutenticacion) {
     const headers = {
         "Content-Type": "application/json",
         "x-forwarded-for": ip,
+        "x-simulacion-secret": SIMULADOR_ABUSO_SECRET,
         "user-agent": "ProteccionInfantil-SimuladorAbuso/1.0",
     };
     if (tokenAutenticacion) {

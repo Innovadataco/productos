@@ -8,6 +8,7 @@ import { detectarKeywordsRiesgo } from "@/lib/ai/keywords-riesgo";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
+import { validarSecretoSimulacion } from "@/lib/anti-abuso/simulador-secreto";
 import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 
@@ -77,14 +78,20 @@ export async function POST(request: Request) {
         }
 
         // Rate limiting por fuente (Fase B)
+        // SPEC-192: el worker del simulador envía un secret compartido para saltar
+        // el rate-limit por fingerprint, que satura por /24 con IPs RFC 5737.
+        // Solo se salta este scope; report (IP) e report_identificador siguen activos.
+        const bypassFingerprint = validarSecretoSimulacion(request);
         const fingerprintHash = calcularFingerprintServerSide(request);
 
-        const rateFingerprint = await checkRateLimit(request, "report_fingerprint", { identifier: fingerprintHash });
-        if (!rateFingerprint.allowed) {
-            return NextResponse.json(
-                { error: { message: "Demasiados reportes desde este dispositivo. Espere un momento.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rateFingerprint.resetAt - Date.now()) / 1000) } },
-                { status: 429, headers: rateFingerprint.headers }
-            );
+        if (!bypassFingerprint) {
+            const rateFingerprint = await checkRateLimit(request, "report_fingerprint", { identifier: fingerprintHash });
+            if (!rateFingerprint.allowed) {
+                return NextResponse.json(
+                    { error: { message: "Demasiados reportes desde este dispositivo. Espere un momento.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rateFingerprint.resetAt - Date.now()) / 1000) } },
+                    { status: 429, headers: rateFingerprint.headers }
+                );
+            }
         }
 
         const rateIdentificador = await checkRateLimit(request, "report_identificador", {

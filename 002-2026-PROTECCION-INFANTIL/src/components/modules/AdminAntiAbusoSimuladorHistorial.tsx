@@ -24,6 +24,7 @@ type RunListItem = {
     latenciaP50Ms: number;
     creadoEn: string;
     actualizadoEn: string;
+    nota: string | null;
 };
 
 const ESCENARIO_OPCIONES = [
@@ -49,6 +50,15 @@ const ESTADO_VARIANT: Record<EstadoRun, "default" | "success" | "warning" | "dan
     FALLIDA: "danger",
     CANCELADA: "neutral",
 };
+
+function labelEscenario(escenario: Escenario): string {
+    return ESCENARIO_OPCIONES.find((o) => o.value === escenario)?.label ?? escenario;
+}
+
+function truncarNota(nota: string | null, max = 40): string | null {
+    if (!nota) return null;
+    return nota.length > max ? `${nota.slice(0, max)}…` : nota;
+}
 
 interface HistorialProps {
     onVerDetalle: (id: string) => void;
@@ -119,6 +129,7 @@ export function AdminAntiAbusoSimuladorHistorial({ onVerDetalle }: HistorialProp
                     <TablaHead>
                         <tr>
                             <th className="px-4 py-3">Escenario</th>
+                            <th className="px-4 py-3">Nota</th>
                             <th className="px-4 py-3">Estado</th>
                             <th className="px-4 py-3">Progreso</th>
                             <th className="px-4 py-3">Creada</th>
@@ -128,7 +139,10 @@ export function AdminAntiAbusoSimuladorHistorial({ onVerDetalle }: HistorialProp
                     <TablaBody>
                         {runs.map((r) => (
                             <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                                <td className="px-4 py-3 font-medium">{r.escenario}</td>
+                                <td className="px-4 py-3 font-medium">{labelEscenario(r.escenario)}</td>
+                                <td className="px-4 py-3 text-muted" title={r.nota ?? undefined}>
+                                    {truncarNota(r.nota) ?? "—"}
+                                </td>
                                 <td className="px-4 py-3">
                                     <Badge variant={ESTADO_VARIANT[r.estado]}>{ESTADO_LABELS[r.estado]}</Badge>
                                 </td>
