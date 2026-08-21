@@ -56,7 +56,7 @@ export function SpamReportesTabla({
                         </tr>
                     ) : (
                         reportes.map((r) => (
-                            <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                            <tr key={r.id} className="hover:bg-tinta/5 dark:hover:bg-tinta/10 transition">
                                 <td className="px-4 py-3 text-body">{r.identificador}</td>
                                 <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
                                 <td className="px-4 py-3 text-body">{(r.confianzaSpam * 100).toFixed(1)}%</td>
@@ -74,7 +74,7 @@ export function SpamReportesTabla({
             </Tabla>
 
             {totalPages > 1 && (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-tinta/10 dark:border-tinta/10 px-4 py-3">
                     <p className="text-sm text-subtle">
                         Página {page} de {totalPages} · {total} reportes
                     </p>

@@ -94,14 +94,14 @@ export function SpamAnaliticaPanel({
             {analitica && metricas && (
                 <>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <MetricCard label="Confirmados spam" value={metricas.esSpam} color="bg-red-500" />
-                        <MetricCard label="Corregidos" value={metricas.corregidos} color="bg-amber-500" />
-                        <MetricCard label="Procesados como acoso" value={metricas.procesadosComoAcoso} color="bg-blue-500" />
+                        <MetricCard label="Confirmados spam" value={metricas.esSpam} color="bg-rubi" />
+                        <MetricCard label="Corregidos" value={metricas.corregidos} color="bg-ambar" />
+                        <MetricCard label="Procesados como acoso" value={metricas.procesadosComoAcoso} color="bg-cielo" />
                         <MetricCard
                             label="Tasa spam"
                             value={`${(metricas.tasaSpam * 100).toFixed(1)}%`}
                             sub={metricas.tiempoPromedioResolucionMin !== null ? `Ø ${metricas.tiempoPromedioResolucionMin} min` : undefined}
-                            color="bg-slate-500"
+                            color="bg-pino"
                         />
                     </div>
 
@@ -121,17 +121,17 @@ export function SpamAnaliticaPanel({
                                                 title={`${formatDate(punto.fecha)}: ${total}`}
                                             >
                                                 {punto.procesadosComoAcoso > 0 && (
-                                                    <div className="bg-blue-500 w-full" style={{ height: `${(punto.procesadosComoAcoso / total) * 100}%` }} />
+                                                    <div className="bg-cielo w-full" style={{ height: `${(punto.procesadosComoAcoso / total) * 100}%` }} />
                                                 )}
                                                 {punto.corregidos > 0 && (
-                                                    <div className="bg-amber-500 w-full" style={{ height: `${(punto.corregidos / total) * 100}%` }} />
+                                                    <div className="bg-ambar w-full" style={{ height: `${(punto.corregidos / total) * 100}%` }} />
                                                 )}
                                                 {punto.esSpam > 0 && (
-                                                    <div className="bg-red-500 w-full" style={{ height: `${(punto.esSpam / total) * 100}%` }} />
+                                                    <div className="bg-rubi w-full" style={{ height: `${(punto.esSpam / total) * 100}%` }} />
                                                 )}
                                             </div>
                                             <span className="text-[10px] text-subtle text-center mt-1 hidden sm:block">{formatDate(punto.fecha)}</span>
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-slate-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-tinta text-papel text-xs rounded px-2 py-1 whitespace-nowrap z-10">
                                                 {formatDate(punto.fecha)}: spam {punto.esSpam}, corregidos {punto.corregidos}, acoso {punto.procesadosComoAcoso}
                                             </div>
                                         </div>
@@ -139,9 +139,9 @@ export function SpamAnaliticaPanel({
                                 })}
                             </div>
                             <div className="flex flex-wrap gap-3 mt-3 text-xs text-subtle">
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Spam</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Corregidos</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Procesados como acoso</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rubi" /> Spam</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-ambar" /> Corregidos</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cielo" /> Procesados como acoso</span>
                             </div>
                         </div>
 
@@ -215,8 +215,8 @@ function DistribucionBar({ items }: { items: { label: string; count: number }[] 
                         <span className="truncate max-w-[70%]">{item.label}</span>
                         <span>{item.count}</span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800">
-                        <div className="h-1.5 rounded-full bg-slate-500" style={{ width: `${(item.count / max) * 100}%` }} />
+                    <div className="h-1.5 w-full rounded-full bg-tinta/10 dark:bg-tinta/20">
+                        <div className="h-1.5 rounded-full bg-tinta/50" style={{ width: `${(item.count / max) * 100}%` }} />
                     </div>
                 </div>
             ))}
