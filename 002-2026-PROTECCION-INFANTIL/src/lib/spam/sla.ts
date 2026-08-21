@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { SpamReporteRepository } from "@/lib/dal/repositories/spam-reporte";
 import { getParametroSistema } from "@/lib/parametros";
 import { enviarAlertaRevision } from "@/lib/email";
 import { logger } from "@/lib/logger";
@@ -13,21 +13,7 @@ export async function revisarSlaSpam(): Promise<void> {
     if (!Number.isFinite(slaHoras) || slaHoras < 1) return;
 
     const limite = new Date(Date.now() - slaHoras * 60 * 60 * 1000);
-    const vencidos = await prisma.reporte.findMany({
-        where: {
-            estado: "POSIBLE_SPAM",
-            eliminado: false,
-            creadoEn: { lt: limite },
-        },
-        select: {
-            id: true,
-            numeroSeguimiento: true,
-            identificador: true,
-            creadoEn: true,
-        },
-        orderBy: { creadoEn: "asc" },
-        take: 100,
-    });
+    const vencidos = await new SpamReporteRepository().findSpamVencidos(limite, 100);
 
     if (vencidos.length === 0) return;
 

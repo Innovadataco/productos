@@ -123,6 +123,28 @@ export class EmbeddingRepository {
     }
 
     /**
+     * SPEC-195 (002-PI-089): candidatos a patrón coordinado. Reportes recientes
+     * con embedding similar al texto actual, excluyendo el propio reporte.
+     */
+    async buscarPatronCoordinadoCandidatos(
+        embedding: number[],
+        opciones: { reporteId: string; modeloEmbedding: string; umbral: number; ventana: Date }
+    ): Promise<{ id: string; identificador: string; similitud: number }[]> {
+        const vectorStr = "[" + embedding.join(",") + "]";
+        return this.db.$queryRaw<{ id: string; identificador: string; similitud: number }[]>`
+            SELECT r.id, r.identificador, 1 - (e.vector <=> ${vectorStr}::vector) AS similitud
+            FROM "EmbeddingReporte" e
+            JOIN "Reporte" r ON r.id = e."reporteId"
+            WHERE e."reporteId" != ${opciones.reporteId}
+              AND r.eliminado = false
+              AND e."modeloUsado" = ${opciones.modeloEmbedding}
+              AND r."creadoEn" >= ${opciones.ventana}
+              AND 1 - (e.vector <=> ${vectorStr}::vector) >= ${opciones.umbral}
+            ORDER BY e.vector <=> ${vectorStr}::vector ASC
+        `;
+    }
+
+    /**
      * E-8 (D3): similitud máxima contra reportes del mismo identificador +
      * plataforma, sin filtro de umbral (traza del expediente, spec 096).
      */

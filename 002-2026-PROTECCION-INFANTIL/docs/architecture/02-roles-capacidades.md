@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 277 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1939 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 279 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1953 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -113,10 +113,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/forense/pdf` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/proceso` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/resolver-spam` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
-| `/api/admin/spam/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/spam/analitica` | api | permitir | permite | sí |
+| `/api/admin/spam/banco-sugerencias` | api | permitir | permite | sí |
 | `/api/admin/spam/pendientes` | api | permitir | permite | sí |
 | `/api/alertas` | api | permitir | permite | sí |
 | `/api/alertas/[id]` | api | permitir | permite | sí |
@@ -395,10 +397,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/forense/pdf` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/proceso` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/resolver-spam` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
-| `/api/admin/spam/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/spam/analitica` | api | permitir | permite | sí |
+| `/api/admin/spam/banco-sugerencias` | api | permitir | permite | sí |
 | `/api/admin/spam/pendientes` | api | permitir | permite | sí |
 | `/api/alertas` | api | permitir | permite | sí |
 | `/api/alertas/[id]` | api | permitir | permite | sí |
@@ -677,10 +681,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/forense/pdf` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/proceso` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/reportes/[id]/resolver-spam` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
-| `/api/admin/spam/[id]/resolver` | api | permitir | permite | sí |
+| `/api/admin/spam/analitica` | api | permitir | permite | sí |
+| `/api/admin/spam/banco-sugerencias` | api | permitir | permite | sí |
 | `/api/admin/spam/pendientes` | api | permitir | permite | sí |
 | `/api/alertas` | api | permitir | permite | sí |
 | `/api/alertas/[id]` | api | permitir | permite | sí |
@@ -959,10 +965,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/forense/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/proceso` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/resolver-spam` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
-| `/api/admin/spam/[id]/resolver` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/analitica` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/banco-sugerencias` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/alertas` | api | HTTP 403 | no permite | sí |
 | `/api/alertas/[id]` | api | HTTP 403 | no permite | sí |
@@ -1241,10 +1249,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/forense/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/proceso` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/resolver-spam` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
-| `/api/admin/spam/[id]/resolver` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/analitica` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/banco-sugerencias` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/alertas` | api | HTTP 403 | no permite | sí |
 | `/api/alertas/[id]` | api | HTTP 403 | no permite | sí |
@@ -1523,10 +1533,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/forense/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/proceso` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes/[id]/resolver-spam` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
-| `/api/admin/spam/[id]/resolver` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/analitica` | api | HTTP 403 | no permite | sí |
+| `/api/admin/spam/banco-sugerencias` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/alertas` | api | permitir | permite | sí |
 | `/api/alertas/[id]` | api | permitir | permite | sí |
@@ -1805,10 +1817,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/forense/pdf` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/proceso` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes/[id]/resolver-spam` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 401 | permite | **NO** |
-| `/api/admin/spam/[id]/resolver` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/spam/analitica` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/spam/banco-sugerencias` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/spam/pendientes` | api | HTTP 401 | permite | **NO** |
 | `/api/alertas` | api | HTTP 401 | permite | **NO** |
 | `/api/alertas/[id]` | api | HTTP 401 | permite | **NO** |
@@ -2088,10 +2102,12 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/reportes/[id]/forense/pdf` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/proceso` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/reactivar` | HTTP 401 | permite |
+| `/api/admin/reportes/[id]/resolver-spam` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/revelar-original` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/transiciones` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | HTTP 401 | permite |
-| `/api/admin/spam/[id]/resolver` | HTTP 401 | permite |
+| `/api/admin/spam/analitica` | HTTP 401 | permite |
+| `/api/admin/spam/banco-sugerencias` | HTTP 401 | permite |
 | `/api/admin/spam/pendientes` | HTTP 401 | permite |
 | `/api/alertas` | HTTP 401 | permite |
 | `/api/alertas/[id]` | HTTP 401 | permite |

@@ -21,6 +21,11 @@ export class UsuarioRepository {
         return this.db.usuario.findUnique({ where: { id } });
     }
 
+    /** SPEC-195 (002-PI-089): email de un usuario para notificación de spam confirmado. */
+    findEmailById(id: string) {
+        return this.db.usuario.findUnique({ where: { id }, select: { email: true } });
+    }
+
     crear(data: Prisma.UsuarioUncheckedCreateInput) {
         return this.db.usuario.create({ data });
     }

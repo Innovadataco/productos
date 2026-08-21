@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { prisma } from "@/lib/prisma";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { getParametroSistema } from "@/lib/parametros";
 import { logger } from "@/lib/logger";
 
@@ -28,10 +28,7 @@ export async function notificarSpamConfirmado(reporte: {
         templateParam?.valor ??
         "Hola,\n\nTe escribimos para informarte que tu reporte sobre {{identificador}} fue revisado y confirmado como spam. No será tenido en cuenta en las estadísticas públicas.\n\nGracias por tu participación.";
 
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: reporte.usuarioId },
-        select: { email: true },
-    });
+    const usuario = await new UsuarioRepository().findEmailById(reporte.usuarioId);
     if (!usuario?.email) return;
 
     if (!resendApiKey || !emailFrom) {

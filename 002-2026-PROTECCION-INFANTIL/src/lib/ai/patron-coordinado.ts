@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
-import { prisma } from "@/lib/prisma";
 import { MonitoreoRepository } from "@/lib/dal/repositories/monitoreo";
+import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
 import { getParametroSistema } from "@/lib/parametros";
 import { enviarAlertaInfra } from "@/lib/email";
 import { logAudit } from "@/lib/audit";
@@ -45,22 +45,14 @@ export async function detectarPatronCoordinado(
     embedding: number[],
     opciones: OpcionesPatronCoordinado
 ): Promise<PatronCoordinadoResult> {
-    const vectorStr = "[" + embedding.join(",") + "]";
     const ventana = new Date(Date.now() - opciones.ventanaMin * 60_000);
 
-    const rows = await prisma.$queryRaw<
-        { id: string; identificador: string; similitud: number }[]
-    >`
-        SELECT r.id, r.identificador, 1 - (e.vector <=> ${vectorStr}::vector) AS similitud
-        FROM "EmbeddingReporte" e
-        JOIN "Reporte" r ON r.id = e."reporteId"
-        WHERE e."reporteId" != ${reporteId}
-          AND r.eliminado = false
-          AND e."modeloUsado" = ${opciones.modeloEmbedding}
-          AND r."creadoEn" >= ${ventana}
-          AND 1 - (e.vector <=> ${vectorStr}::vector) >= ${opciones.similitudUmbral}
-        ORDER BY e.vector <=> ${vectorStr}::vector ASC
-    `;
+    const rows = await new EmbeddingRepository().buscarPatronCoordinadoCandidatos(embedding, {
+        reporteId,
+        modeloEmbedding: opciones.modeloEmbedding,
+        umbral: opciones.similitudUmbral,
+        ventana,
+    });
 
     // Agrupar por identificador: solo un reporte por identificador cuenta.
     const porIdentificador = new Map<string, { id: string; similitud: number }>();
@@ -121,10 +113,7 @@ export async function registrarPatronCoordinado(
                 metadatos: { senal, cierreAutomatico: true, fin: ahora.toISOString() },
             });
         } else {
-            await prisma.incidenteInfra.update({
-                where: { id: existente.id },
-                data: { detalle },
-            });
+            await repo.actualizarDetalleIncidente(existente.id, detalle);
             await notificarPatronCoordinado(existente, repo);
             return;
         }

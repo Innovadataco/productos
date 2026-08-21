@@ -1,5 +1,6 @@
-import { prisma } from "@/lib/prisma";
 import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
+import { SpamReporteRepository } from "@/lib/dal/repositories/spam-reporte";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import type { AccionAudit } from "@prisma/client";
 
 const VENTANAS_DIAS = [7, 30, 90] as const;
@@ -43,6 +44,8 @@ function formatoFecha(d: Date): string {
 
 export async function generarAnaliticaSpam(): Promise<AnaliticaSpam> {
     const auditRepo = new AuditLogRepository();
+    const spamRepo = new SpamReporteRepository();
+    const usuarioRepo = new UsuarioRepository();
     const accionesSpam: AccionAudit[] = ["SPAM_CONFIRMADO", "SPAM_CORREGIDO", "SPAM_PROCESADO_COMO_ACOSO"];
 
     const metricas = {} as Record<VentanaDias, MetricasVentana>;
@@ -76,41 +79,14 @@ export async function generarAnaliticaSpam(): Promise<AnaliticaSpam> {
     }
 
     const { inicio: inicioSerie } = inicioFinDias(30);
-    const cierresSerie = await prisma.auditLog.findMany({
-        where: { accion: { in: accionesSpam }, creadoEn: { gte: inicioSerie }, recursoId: { not: null } },
-        select: { accion: true, creadoEn: true },
-        orderBy: { creadoEn: "asc" },
-    });
-
+    const cierresSerie = await auditRepo.findCierresConAccion(accionesSpam, { gte: inicioSerie, lte: new Date() });
     const serie = agruparSerie(cierresSerie);
 
     const { inicio: inicioDist } = inicioFinDias(30);
-    const reportesSpam = await prisma.reporte.findMany({
-        where: {
-            eliminado: true,
-            motivoBaja: "RETIRO_LIMPIEZA",
-            eliminadoEn: { gte: inicioDist },
-        },
-        select: {
-            identificador: true,
-            plataformaId: true,
-            plataforma: { select: { nombre: true } },
-        },
-    });
-
-    const reportesCorregidos = await prisma.reporte.findMany({
-        where: {
-            estado: "CLASIFICADO",
-            actualizadoEn: { gte: inicioDist },
-            clasificacion: { correccion: { categoriaOriginal: "SPAM" } },
-        },
-        select: {
-            identificador: true,
-            plataformaId: true,
-            plataforma: { select: { nombre: true } },
-            clasificacion: { select: { correccion: { select: { categoriaCorregida: true } } } },
-        },
-    });
+    const [reportesSpam, reportesCorregidos] = await Promise.all([
+        spamRepo.findReportesSpamEliminados(inicioDist),
+        spamRepo.findReportesCorregidosDeSpam(inicioDist),
+    ]);
 
     const distribucion = {
         porPlataforma: contarPorPlataforma([...reportesSpam, ...reportesCorregidos]),
@@ -121,10 +97,7 @@ export async function generarAnaliticaSpam(): Promise<AnaliticaSpam> {
 
     const topOperadoresRaw = await auditRepo.groupByUsuario(accionesSpam, { gte: inicioDist, lte: new Date() });
     const usuariosIds = topOperadoresRaw.map((r) => r.usuarioId).filter((id): id is string => id !== null);
-    const usuarios = await prisma.usuario.findMany({
-        where: { id: { in: usuariosIds } },
-        select: { id: true, nombre: true, email: true },
-    });
+    const usuarios = await usuarioRepo.findInfoPorIds(usuariosIds);
     const usuarioPorId = new Map(usuarios.map((u) => [u.id, u]));
 
     const topOperadores = topOperadoresRaw
@@ -150,10 +123,7 @@ export async function generarAnaliticaSpam(): Promise<AnaliticaSpam> {
 async function calcularTiemposResolucion(cierres: AuditCierre[]): Promise<number[]> {
     if (cierres.length === 0) return [];
     const recursoIds = cierres.map((c) => c.recursoId);
-    const reportes = await prisma.reporte.findMany({
-        where: { id: { in: recursoIds } },
-        select: { id: true, creadoEn: true },
-    });
+    const reportes = await new SpamReporteRepository().findCreadoEnPorIds(recursoIds);
     const creadoEnPorId = new Map(reportes.map((r) => [r.id, r.creadoEn]));
 
     const tiempos: number[] = [];
@@ -248,20 +218,7 @@ export interface SugerenciaBanco {
 
 export async function generarSugerenciasBanco(limit = 100): Promise<SugerenciaBanco[]> {
     const { inicio } = inicioFinDias(30);
-    const reportes = await prisma.reporte.findMany({
-        where: {
-            eliminado: true,
-            motivoBaja: "RETIRO_LIMPIEZA",
-            eliminadoEn: { gte: inicio },
-        },
-        select: {
-            id: true,
-            texto: true,
-            eliminadoEn: true,
-        },
-        orderBy: { eliminadoEn: "desc" },
-        take: limit,
-    });
+    const reportes = await new SpamReporteRepository().findSugerenciasBancoSpam(inicio, limit);
 
     return reportes.map((r) => ({
         id: r.id,

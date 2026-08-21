@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **153** |
+| **Total de specs** | **154** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **48** |
-| **Pendientes (PLANEADO)** | **5** |
+| **Pendientes (PLANEADO)** | **6** |
 
 ## Backlog activo (no cerradas)
 
@@ -129,8 +129,9 @@
 | [188](188-visibilidad-operador-bandeja/spec.md) | SPEC-188 — Visibilidad del operador en la bandeja (002-PI-083) | 🟢 Implementada (ver cierre.md) |
 | [189](189-vista-operador-metricas/spec.md) | SPEC-189 — Vista de operador con métricas (002-PI-084) | 🟢 Implementada |
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
+| [195](195-motor-spam-aprendizaje-operativo/spec.md) | SPEC-195 — Motor SPAM + Aprendizaje operativo (002-PI-089) | 🔵 Planeado |
 
-## Tabla completa (122 specs)
+## Tabla completa (123 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -305,6 +306,7 @@
 | [188](188-visibilidad-operador-bandeja/spec.md) | SPEC-188 — Visibilidad del operador en la bandeja (002-PI-083) | 🟢 Implementada (ver cierre.md) |
 | [189](189-vista-operador-metricas/spec.md) | SPEC-189 — Vista de operador con métricas (002-PI-084) | 🟢 Implementada |
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
+| [195](195-motor-spam-aprendizaje-operativo/spec.md) | SPEC-195 — Motor SPAM + Aprendizaje operativo (002-PI-089) | 🔵 Planeado |
 
 ## Incidencias de calidad de datos
 
