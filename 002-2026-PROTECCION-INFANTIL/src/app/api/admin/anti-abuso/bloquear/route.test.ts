@@ -1,10 +1,14 @@
+import { createHash } from "crypto";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 import { crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
-import { calcularIpHash } from "@/lib/anti-abuso/fuente-reporte";
+
+function hashIp(ip: string): string {
+    return createHash("sha256").update(ip.trim().toLowerCase()).digest("hex");
+}
 
 let activeToken: string | null = null;
 
@@ -47,10 +51,11 @@ describe("POST /api/admin/anti-abuso/bloquear (SPEC-184)", () => {
         expect(res.status).toBe(401);
     });
 
-    it("bloquea una IP con motivo y duración", async () => {
+    it("bloquea una IP en claro calculando el hash en el backend", async () => {
         await autenticarAdmin();
-        const ipHash = calcularIpHash("192.0.2.10");
-        const { status, body } = await postBloquear({ ipHash, motivo: "Robot inundando", duracion: "24h" });
+        const ip = "192.0.2.10";
+        const ipHash = hashIp(ip);
+        const { status, body } = await postBloquear({ ip, motivo: "Robot inundando", duracion: "24h" });
 
         expect(status).toBe(200);
         expect(body.ok).toBe(true);
@@ -62,25 +67,33 @@ describe("POST /api/admin/anti-abuso/bloquear (SPEC-184)", () => {
         expect(count).toBe(1);
     });
 
-    it("rechaza ipHash mal formado", async () => {
+    it("normaliza a minúsculas al hashear IPv6", async () => {
         await autenticarAdmin();
-        const { status, body } = await postBloquear({ ipHash: "no-valido", motivo: "X", duracion: "24h" });
+        const ip = "2001:0DB8:0000:0000:0000:0000:0000:0001";
+        const ipHash = hashIp(ip.toLowerCase());
+        const { status, body } = await postBloquear({ ip, motivo: "IPv6 de prueba", duracion: "7d" });
+
+        expect(status).toBe(200);
+        expect(body.bloqueo.ipHash).toBe(ipHash);
+    });
+
+    it("rechaza IP inválida", async () => {
+        await autenticarAdmin();
+        const { status, body } = await postBloquear({ ip: "no-valido", motivo: "X", duracion: "24h" });
         expect(status).toBe(400);
         expect(body.error.code).toBe("VALIDATION_ERROR");
     });
 
     it("rechaza motivo vacío", async () => {
         await autenticarAdmin();
-        const ipHash = calcularIpHash("192.0.2.10");
-        const { status } = await postBloquear({ ipHash, motivo: "", duracion: "24h" });
+        const { status } = await postBloquear({ ip: "192.0.2.10", motivo: "", duracion: "24h" });
         expect(status).toBe(400);
     });
 
     it("rechaza rol no ADMIN", async () => {
         const parent = await crearUsuario("PARENT");
         activeToken = await crearTokenUsuario(parent.id, "PARENT");
-        const ipHash = calcularIpHash("192.0.2.10");
-        const { status } = await postBloquear({ ipHash, motivo: "X", duracion: "24h" });
+        const { status } = await postBloquear({ ip: "192.0.2.10", motivo: "X", duracion: "24h" });
         expect(status).toBe(403);
     });
 });

@@ -1,6 +1,6 @@
 # SPEC-196 — Parche UI Anti-abuso (002-PI-090)
 
-> Status: `PLANEADO`  
+> Status: `IMPLEMENTADO`  
 > PI: 002-PI-090  
 > Responsable: ODIN  
 > Rama: `work/002-pi-090`  
@@ -75,8 +75,8 @@ Todos son parches localizados en componentes React y endpoints API. Cero cambios
 
 ## Success Criteria
 
-- [ ] AS-001 a AS-005 pasan en local y en CI.
-- [ ] Gate local completo: typecheck, lint, test, arch:check, build.
+- [x] AS-001 a AS-005 pasan en local y en CI.
+- [x] Gate local completo: typecheck, lint, test, arch:check, build.
 - [ ] CI 6/6 verde en el PR.
 
 ## Assumptions
@@ -90,6 +90,10 @@ Todos son parches localizados en componentes React y endpoints API. Cero cambios
 - El hash de IP se calcula en el endpoint para evitar discrepancias entre cliente y servidor.
 - El enum `AccionAudit` ya contiene `IP_BLOQUEADA` e `IP_DESBLOQUEADA`; se añade `IP_DESBLOQUEADA_MANUAL` para distinguir la acción humana con motivo.
 - La tabla de bloqueos vigentes sigue mostrando el hash truncado; no se expone IP en claro.
+
+## Impacto en arquitectura:
+
+- Ninguno estructural. Los cambios son localizados en componentes React (`AdminAntiAbusoSimulador`, `AdminAntiAbusoSimuladorHistorial`, `AdminAntiAbusoOperativo`), schemas de validación (`src/lib/schemas/index.ts`), endpoints API (`/api/admin/anti-abuso/bloquear`, `/api/admin/anti-abuso/desbloquear`) y servicio `src/lib/anti-abuso/block-list.ts`. Se añade un valor aditivo al enum `AccionAudit` de Prisma. No se modifica el motor de IA, el rate-limit ni la lógica de ráfagas/duplicados.
 
 ## Deuda Técnica
 

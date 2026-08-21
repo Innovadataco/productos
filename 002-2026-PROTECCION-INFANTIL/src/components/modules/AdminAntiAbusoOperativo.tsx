@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
+import { Modal } from "@/components/ui/Modal";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Cargando } from "@/components/ui/Cargando";
@@ -142,7 +144,7 @@ export function AdminAntiAbusoOperativo() {
 }
 
 function PanelBloquearIp({ onChange }: { onChange: () => void }) {
-    const [ipHash, setIpHash] = useState("");
+    const [ip, setIp] = useState("");
     const [motivo, setMotivo] = useState("");
     const [duracion, setDuracion] = useState<"24h" | "7d" | "permanente">("24h");
     const [enviando, setEnviando] = useState(false);
@@ -157,14 +159,14 @@ function PanelBloquearIp({ onChange }: { onChange: () => void }) {
                 const res = await fetch("/api/admin/anti-abuso/bloquear", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ipHash, motivo, duracion }),
+                    body: JSON.stringify({ ip, motivo, duracion }),
                 });
                 const json = await res.json().catch(() => ({ error: { message: "Error de red" } }));
                 if (!res.ok) {
                     setMensaje({ tipo: "error", texto: json.error?.message ?? "No se pudo bloquear" });
                 } else {
                     setMensaje({ tipo: "ok", texto: "IP bloqueada." });
-                    setIpHash("");
+                    setIp("");
                     setMotivo("");
                     onChange();
                 }
@@ -174,7 +176,7 @@ function PanelBloquearIp({ onChange }: { onChange: () => void }) {
                 setEnviando(false);
             }
         },
-        [ipHash, motivo, duracion, onChange]
+        [ip, motivo, duracion, onChange]
     );
 
     return (
@@ -182,7 +184,7 @@ function PanelBloquearIp({ onChange }: { onChange: () => void }) {
             <h3 className="mb-4 font-semibold text-body">Bloquear IP</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div className="md:col-span-2">
-                    <Input label="IP hash (SHA-256)" value={ipHash} onChange={(e) => setIpHash(e.target.value)} placeholder="64 caracteres hex" required />
+                    <Input label="IP" value={ip} onChange={(e) => setIp(e.target.value)} placeholder="192.0.2.10" required />
                 </div>
                 <Select
                     label="Duración"
@@ -207,27 +209,82 @@ function PanelBloquearIp({ onChange }: { onChange: () => void }) {
 }
 
 function BotonDesbloquear({ id, onChange }: { id: string; onChange: () => void }) {
+    const [abierto, setAbierto] = useState(false);
+    const [motivo, setMotivo] = useState("");
     const [enviando, setEnviando] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const desbloquear = useCallback(async () => {
-        if (!confirm("¿Desbloquear esta IP?")) return;
-        setEnviando(true);
-        try {
-            await fetch("/api/admin/anti-abuso/desbloquear", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id }),
-            });
-            onChange();
-        } finally {
-            setEnviando(false);
-        }
-    }, [id, onChange]);
+    const abrir = useCallback(() => {
+        setMotivo("");
+        setError(null);
+        setAbierto(true);
+    }, []);
+
+    const cerrar = useCallback(() => {
+        if (enviando) return;
+        setAbierto(false);
+    }, [enviando]);
+
+    const desbloquear = useCallback(
+        async (e: React.FormEvent) => {
+            e.preventDefault();
+            if (motivo.trim().length < 20) {
+                setError("El motivo debe tener al menos 20 caracteres.");
+                return;
+            }
+            setError(null);
+            setEnviando(true);
+            try {
+                const res = await fetch("/api/admin/anti-abuso/desbloquear", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id, motivo: motivo.trim() }),
+                });
+                const json = await res.json().catch(() => ({ error: { message: "Error de red" } }));
+                if (!res.ok) {
+                    setError(json.error?.message ?? "No se pudo desbloquear");
+                    return;
+                }
+                setAbierto(false);
+                setMotivo("");
+                onChange();
+            } catch {
+                setError("Error de red");
+            } finally {
+                setEnviando(false);
+            }
+        },
+        [id, motivo, onChange]
+    );
 
     return (
-        <Button onClick={desbloquear} disabled={enviando} variant="outline">
-            {enviando ? "..." : "Desbloquear"}
-        </Button>
+        <>
+            <Button onClick={abrir} variant="outline">Desbloquear</Button>
+            <Modal isOpen={abierto} onClose={cerrar} title="Desbloquear IP" size="sm">
+                <form onSubmit={desbloquear} className="space-y-4">
+                    <p className="text-sm text-muted">
+                        El desbloqueo queda auditado. Escribe el motivo con al menos 20 caracteres.
+                    </p>
+                    <Textarea
+                        label="Motivo"
+                        value={motivo}
+                        onChange={(e) => setMotivo(e.target.value.slice(0, 500))}
+                        placeholder="Explica por qué se desbloquea esta IP..."
+                        rows={4}
+                        required
+                    />
+                    {error && <p className="text-sm text-rubi">{error}</p>}
+                    <div className="flex justify-end gap-2">
+                        <Button type="button" onClick={cerrar} variant="secondary" disabled={enviando}>
+                            Cancelar
+                        </Button>
+                        <Button type="submit" disabled={enviando || motivo.trim().length < 20} isLoading={enviando}>
+                            Confirmar desbloqueo
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
+        </>
     );
 }
 

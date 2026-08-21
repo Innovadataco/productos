@@ -335,6 +335,7 @@ export function AdminAntiAbusoSimulador() {
                                     setRunId(null);
                                     setError(null);
                                     setSugerencia(null);
+                                    setNota("");
                                 }}
                             />
                             <Input
