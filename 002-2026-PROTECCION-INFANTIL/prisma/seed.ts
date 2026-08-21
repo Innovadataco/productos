@@ -311,6 +311,10 @@ async function main() {
         // SPEC-186: ventana de piggyback en tráfico real de ClasificacionIA.
         { clave: "monitoreo.ollama.smoke.piggyback_min", valor: "15", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Si hubo una clasificación real en estos minutos, el smoke se considera sano sin tocar Ollama (minutos)" },
     ];
+    // EXCEPCIÓN DOCUMENTADA (SPEC-190): estos parámetros nacieron o cambiaron de
+    // default por decisión de diseño de SPEC-186. Se aplica ON CONFLICT DO UPDATE
+    // para que el nuevo default llegue a producción. No son valores operativos
+    // ajustados por el CEO en runtime.
     for (const p of monitoreoNuevos) {
         await prisma.parametroSistema.upsert({
             where: { clave: p.clave },
@@ -1419,6 +1423,10 @@ async function main() {
                 departamentoMap.set(d.nombre, departamento.id);
             }
 
+            // EXCEPCIÓN DOCUMENTADA (SPEC-190): las ciudades son un catálogo
+            // canónico. El update rellena coordenadas, departamento y nombre
+            // normalizado cuando una ciudad fue creada previamente sin esos datos
+            // (p. ej. pre-SPEC-115). No es un "valor custom del CEO".
             for (const d of departamentosColombia) {
                 const departamentoId = departamentoMap.get(d.nombre);
                 for (const c of d.ciudades) {
@@ -1448,6 +1456,9 @@ async function main() {
             continue;
         }
 
+        // EXCEPCIÓN DOCUMENTADA (SPEC-190): catálogo canónico; el update
+        // rellena coordenadas y nombre normalizado cuando una ciudad existía
+        // sin ellos. No es un valor custom del CEO.
         for (const c of p.ciudades) {
             const coords = COORDENADAS_CIUDADES[`${p.codigo}:${c}`];
             await prisma.ciudad.upsert({
