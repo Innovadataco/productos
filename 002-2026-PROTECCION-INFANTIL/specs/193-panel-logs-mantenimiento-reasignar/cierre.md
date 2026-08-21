@@ -3,7 +3,8 @@
 **Status**: `FINALIZADO`  
 **Rama**: `work/002-pi-087`  
 **Merge base**: `feature/001-scaffolding` @ `abdaf208`  
-**Commit de cierre**: `PENDIENTE` (se actualiza tras push final).
+**Commit de cierre**: `cabaf333` (último commit de trabajo; ver git log para hash definitivo).
+**Pull Request**: #72.
 
 ---
 
