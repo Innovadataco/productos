@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NivelLog } from "@prisma/client";
 
 /**
  * Esquemas zod reutilizables para validación de entradas en rutas API.
@@ -550,4 +551,29 @@ export const informeMensualQuerySchema = z.object({
             const finMesActual = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1, 5, 0, 0, 0));
             return inicioMes >= hace12Meses && inicioMes < finMesActual;
         }, "El mes debe estar entre los últimos 12 meses y no puede ser futuro"),
+});
+
+// SPEC-193 (Fase 2): administración de logs de workers.
+export const monitoreoLogsQuerySchema = z.object({
+    servicio: z.string().optional(),
+    nivel: z.nativeEnum(NivelLog).optional(),
+    desde: z.string().datetime().optional(),
+    hasta: z.string().datetime().optional(),
+    q: z.string().min(1).max(120).optional(),
+    limit: z.coerce.number().int().min(1).max(500).default(100),
+    offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const monitoreoLogsPurgeSchema = z.object({
+    hasta: z.string().datetime(),
+    servicio: z.string().optional(),
+    nivel: z.nativeEnum(NivelLog).optional(),
+    motivo: z.string().min(20).max(500),
+});
+
+// SPEC-193 (Fase 2): reasignación manual de reportes entre operadores.
+export const reasignarOperadorBodySchema = z.object({
+    reporteId: cuidIdSchema,
+    operadorDestinoId: cuidIdSchema,
+    motivo: z.string().min(20).max(500),
 });
