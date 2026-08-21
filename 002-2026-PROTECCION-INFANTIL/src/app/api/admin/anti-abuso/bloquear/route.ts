@@ -43,6 +43,7 @@ export async function POST(req: Request) {
         const ipHash = hashIp(parsed.data.ip);
         const bloqueo = await bloquearIp({
             ipHash,
+            ipOriginal: parsed.data.ip,
             motivo: parsed.data.motivo,
             duracion: parsed.data.duracion,
             creadoPorId: user.id,

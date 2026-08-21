@@ -60,6 +60,7 @@ describe("POST /api/admin/anti-abuso/bloquear (SPEC-184)", () => {
         expect(status).toBe(200);
         expect(body.ok).toBe(true);
         expect(body.bloqueo.ipHash).toBe(ipHash);
+        expect(body.bloqueo.ipOriginal).toBe(ip);
         expect(body.bloqueo.motivo).toBe("Robot inundando");
         expect(body.bloqueo.expiraEn).not.toBeNull();
 

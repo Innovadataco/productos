@@ -19,7 +19,7 @@ type Tablero = {
     topIpsBloqueadas: Array<{ ip: string; bloqueos: number; ultimoBloqueoEn: string | null }>;
     topIdentificadores: Array<{ identificador: string; plataformaId: string; plataformaNombre: string; total: number }>;
     topFingerprints: Array<{ fingerprintHash: string; reportes: number; ipsUnicas: number; ultimoReporteEn: string | null }>;
-    bloqueosVigentes: Array<{ id: string; ipHash: string; motivo: string; expiraEn: string | null; creadoEn: string }>;
+    bloqueosVigentes: Array<{ id: string; ipHash: string; ipOriginal: string | null; motivo: string; expiraEn: string | null; creadoEn: string }>;
     alertasActivas: Array<{ senal: string; inicio: string; detalle: string | null }>;
 };
 
@@ -114,6 +114,7 @@ export function AdminAntiAbusoOperativo() {
                             <Tabla sinContenedor>
                                 <TablaHead>
                                     <tr>
+                                        <th className="px-4 py-3 font-medium">IP</th>
                                         <th className="px-4 py-3 font-medium">IP hash</th>
                                         <th className="px-4 py-3 font-medium">Motivo</th>
                                         <th className="px-4 py-3 font-medium">Expira</th>
@@ -124,7 +125,8 @@ export function AdminAntiAbusoOperativo() {
                                 <TablaBody>
                                     {tablero.bloqueosVigentes.map((b) => (
                                         <tr key={b.id}>
-                                            <td className="px-4 py-3 font-mono text-xs">{truncar(b.ipHash, 16)}</td>
+                                            <td className="px-4 py-3 font-mono text-xs">{b.ipOriginal ?? "—"}</td>
+                                            <td className="px-4 py-3 font-mono text-xs text-muted">{truncar(b.ipHash, 16)}</td>
                                             <td className="px-4 py-3 text-body">{b.motivo}</td>
                                             <td className="px-4 py-3 text-body">{b.expiraEn ? formatearFecha(b.expiraEn) : "Nunca"}</td>
                                             <td className="px-4 py-3 text-body">{formatearFecha(b.creadoEn)}</td>

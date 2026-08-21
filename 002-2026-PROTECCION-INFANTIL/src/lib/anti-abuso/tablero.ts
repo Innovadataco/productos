@@ -41,6 +41,7 @@ export interface FingerprintTopRow {
 export interface BloqueoVigenteRow {
     id: string;
     ipHash: string;
+    ipOriginal: string | null;
     motivo: string;
     expiraEn: Date | null;
     creadoEn: Date;
