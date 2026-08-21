@@ -5,7 +5,7 @@
  * Acepta un cliente transaccional opcional (D2).
  */
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
 export class ParametroRepository {

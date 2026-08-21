@@ -1,8 +1,12 @@
 /**
- * SPEC-126 · `npm run arch:check` — la compuerta de la línea base. Cinco verificaciones:
+ * SPEC-126 · `npm run arch:check` — la compuerta de la línea base. Seis verificaciones:
  * ...
  * (e) ANTI-MOCKS PRISMA (SPEC-174, I-55): ningún test de integration espía o
  *     mockea el singleton de Prisma fuera de `prisma-mocks-allowlist.json`.
+ * (f) ANTI-ALIAS WORKER (SPEC-197, I-88): ningún archivo en la cadena de imports
+ *     de los scripts de worker usa `@/lib/...`, salvo la deuda declarada en
+ *     `worker-alias-allowlist.json`. Los archivos bajo `src/lib/monitoreo/**`
+ *     deben usar imports relativos.
  *
  * (a) DRIFT: regenera los 5 artefactos (convención: cada `generar-*.ts` exporta una
  *     función `generar*()`) y los compara byte a byte con `docs/architecture/`.
@@ -12,7 +16,7 @@
  * (d) ASERCIÓN B (el menú no miente): ROJO por href muerto o no resoluble,
  *     listándolo. Regla de pintado D-41: módulo de BD ∧ predicado del proxy.
  *
- * Exit 0 solo si las cuatro están en VERDE. Uso: `npx tsx scripts/arch/arch-check.ts`.
+ * Exit 0 solo si las seis están en VERDE. Uso: `npx tsx scripts/arch/arch-check.ts`.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -20,6 +24,7 @@ import { ARTEFACTOS } from "./artefactos";
 import { ejecutarAsercionA } from "./asercion-puerta-predicado";
 import { ejecutarAsercionB } from "./asercion-menu-no-miente";
 import { buscarInfractores } from "./no-prisma-mocks";
+import { buscarInfractores as buscarAliasWorker } from "./no-worker-alias";
 import { RUTA_DOCS_ARCH, RUTA_EXCEPCIONES, RUTA_SCHEMA } from "./lib/paths";
 import { modelosHuerfanos, parsearSchemaPrisma } from "./lib/schema-prisma";
 
@@ -119,11 +124,21 @@ async function main() {
         for (const f of infractores) console.error(`  - ${f.archivo}:${f.linea} [${f.patron}] ${f.texto}`);
     }
 
+    console.log("[Arch:check] (f) Anti-alias @/lib/ en la cadena de imports de los scripts de worker (SPEC-197, I-88)…");
+    const aliasWorker = buscarAliasWorker();
+    if (aliasWorker.length === 0) {
+        console.log("[Arch:check] (f) VERDE: cero alias @/lib/ no permitidos en la cadena de worker.");
+    } else {
+        rojo = true;
+        console.error(`[Arch:check] (f) ROJO: ${aliasWorker.length} alias @/lib/ en la cadena de worker fuera de la allowlist:`);
+        for (const f of aliasWorker) console.error(`  - ${f.archivo} · ${f.import}`);
+    }
+
     if (rojo) {
         console.error("[Arch:check] ROJO: la línea base no está al día o hay un desalineo real. Ver entradas arriba.");
         process.exitCode = 1;
     } else {
-        console.log("[Arch:check] VERDE: línea base al día, huérfanos declarados, puerta ≡ predicado, menú honesto.");
+        console.log("[Arch:check] VERDE: línea base al día, huérfanos declarados, puerta ≡ predicado, menú honesto, worker sin alias.");
     }
 }
 

@@ -27,6 +27,15 @@ export class AuditLogRepository {
         });
     }
 
+    /** SPEC-195 (002-PI-089): cierres con su acción para series temporales. */
+    findCierresConAccion(acciones: AccionAudit[], rango: { gte: Date; lte: Date }) {
+        return this.db.auditLog.findMany({
+            where: { accion: { in: acciones }, creadoEn: rango, recursoId: { not: null } },
+            select: { accion: true, creadoEn: true },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
+
     /** SPEC-189 (002-PI-084): cierres de un operador específico en el rango. */
     findCierresPorUsuario(acciones: AccionAudit[], usuarioId: string, rango: { gte: Date; lte: Date }) {
         return this.db.auditLog.findMany({

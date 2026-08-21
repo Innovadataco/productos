@@ -130,6 +130,7 @@
 | [193](193-panel-logs-mantenimiento-reasignar/spec.md) | SPEC-193 — Panel de Logs + Mantenimiento + Reasignar Operador (002-PI-087) | 🔵 Planeada |
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
 | [192](192-ux-simulador-anti-abuso/spec.md) | SPEC-192 — UX del simulador anti-abuso (002-PI-086) | 🟢 Implementada (ver cierre.md) |
+| [195](195-motor-spam-aprendizaje-operativo/spec.md) | SPEC-195 — Motor SPAM + Aprendizaje operativo (002-PI-089) | 🔵 Planeado |
 | [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
 | [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🟢 Implementada |
 
@@ -310,6 +311,7 @@
 | [193](193-panel-logs-mantenimiento-reasignar/spec.md) | SPEC-193 — Panel de Logs + Mantenimiento + Reasignar Operador (002-PI-087) | 🔵 Planeada |
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
 | [192](192-ux-simulador-anti-abuso/spec.md) | SPEC-192 — UX del simulador anti-abuso (002-PI-086) | 🟢 Implementada (ver cierre.md) |
+| [195](195-motor-spam-aprendizaje-operativo/spec.md) | SPEC-195 — Motor SPAM + Aprendizaje operativo (002-PI-089) | 🔵 Planeado |
 | [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
 | [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🟢 Implementada |
 

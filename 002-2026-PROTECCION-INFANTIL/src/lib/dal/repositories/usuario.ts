@@ -3,7 +3,7 @@
  * Acepta un cliente transaccional opcional (D2).
  */
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
 export class UsuarioRepository {
@@ -19,6 +19,11 @@ export class UsuarioRepository {
 
     findById(id: string) {
         return this.db.usuario.findUnique({ where: { id } });
+    }
+
+    /** SPEC-195 (002-PI-089): email de un usuario para notificación de spam confirmado. */
+    findEmailById(id: string) {
+        return this.db.usuario.findUnique({ where: { id }, select: { email: true } });
     }
 
     crear(data: Prisma.UsuarioUncheckedCreateInput) {

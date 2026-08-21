@@ -5,7 +5,7 @@
  * (frontera DAL Q-3: las rutas no importan prisma).
  */
 import type { EstadoReporte, HealthProbe, IncidenteInfra, Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
 export class MonitoreoRepository {
@@ -40,6 +40,11 @@ export class MonitoreoRepository {
     /** Cierra un incidente (estado RESUELTO con su `fin`). */
     async resolverIncidente(id: string, fin: Date): Promise<void> {
         await this.db.incidenteInfra.update({ where: { id }, data: { estado: "RESUELTO", fin } });
+    }
+
+    /** SPEC-195 (002-PI-089): actualiza el detalle JSON de un incidente abierto. */
+    async actualizarDetalleIncidente(id: string, detalle: string): Promise<void> {
+        await this.db.incidenteInfra.update({ where: { id }, data: { detalle } });
     }
 
     /** Marca la hora del último email enviado (throttle). */

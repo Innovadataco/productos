@@ -11,6 +11,9 @@ import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "@/lib/ai/dataset-retrieval";
+import { buscarClasificacionCache, persistirClasificacionCache } from "@/lib/ai/cache-semantico";
+import { detectarPatronCoordinado, registrarPatronCoordinado } from "@/lib/ai/patron-coordinado";
+import { getParametroSistemaValor } from "@/lib/parametros";
 import { registrarPaso } from "@/lib/expediente/pasos";
 import { verificarWorkerSecret } from "@/lib/worker-auth";
 import { withUnitOfWork } from "../../unit-of-work";
@@ -130,37 +133,78 @@ export async function procesarReporte(request: Request): Promise<NextResponse> {
             return NextResponse.json({ reporteId: reporte.id, estado: estadoCorte, clasificacion: null, corteGuardaPrevia: true });
         }
 
-        // Recuperar ejemplos corregidos similares para RAG (después de dedup)
-        const ragTopK = parametros.ragTopK ?? 3;
-        const ejemplosRecuperados = await buscarEjemplosSimilares(vector, { topK: ragTopK });
-        const ejemplosRag: EjemploRecuperado[] = ejemplosRecuperados.map((e) => ({
-            datasetId: e.datasetId,
-            texto: e.texto,
-            categoria: e.categoria,
-            similitud: e.similitud,
-        }));
+        // SPEC-195: caché semántico humano exacto. Solo si no hay señales de
+        // anti-abuso (ráfaga o duplicado), porque el anti-abuso siempre precede.
+        let resultadoClasificacion: Awaited<ReturnType<typeof clasificarReporte>> | undefined;
+        let cacheHit = false;
 
-        // Spec 096-US3: traza del contexto RAG (sin textos, solo referencias y scores).
-        await registrarPaso(reporte.id, "contexto_rag", {
-            veredicto: ejemplosRag.length > 0 ? "casos_recuperados" : "sin_casos",
-            detalle: {
-                casosSimilares: ejemplosRag.map((e) => ({
-                    datasetId: e.datasetId,
-                    categoria: e.categoria,
-                    similitud: e.similitud,
-                })),
-                categoriasVecinas: Array.from(new Set(ejemplosRag.map((e) => e.categoria))),
-                topK: ragTopK,
-            },
-        });
+        const puedeUsarCache = !esRafaga && !duplicado.esDuplicado;
+        if (puedeUsarCache) {
+            const [similitudUmbralStr, soloHumanoStr] = await Promise.all([
+                getParametroSistemaValor("motor.cache.similitud_umbral"),
+                getParametroSistemaValor("motor.cache.solo_humano_confirmado"),
+            ]);
+            const cache = await buscarClasificacionCache(vector, {
+                reporteIdActual: reporte.id,
+                modeloEmbedding: parametros.modeloEmbedding,
+                similitudUmbral: parseFloat(similitudUmbralStr ?? "0.98"),
+                soloHumanoConfirmado: soloHumanoStr !== "false",
+            });
+            if (cache.hit) {
+                const clasificacionCache = await persistirClasificacionCache(reporte.id, cache);
+                resultadoClasificacion = { clasificacion: clasificacionCache, piiResult: undefined };
+                cacheHit = true;
+                await registrarPaso(reporte.id, "decision", {
+                    veredicto: "cache_humano_hit",
+                    detalle: {
+                        reporteOrigenId: cache.reporteOrigenId,
+                        categoria: cache.categoria,
+                        confianza: cache.confianza,
+                        similitud: cache.similitud,
+                    },
+                });
+            }
+        }
 
-        // Clasificar y detectar PII
-        const { clasificacion, piiResult } = await clasificarReporte({
-            reporteId: reporte.id,
-            texto: reporte.texto,
-            parametros,
-            ejemplosRag,
-        });
+        if (!cacheHit) {
+            // Recuperar ejemplos corregidos similares para RAG (después de dedup)
+            const ragTopK = parametros.ragTopK ?? 3;
+            const ejemplosRecuperados = await buscarEjemplosSimilares(vector, { topK: ragTopK });
+            const ejemplosRag: EjemploRecuperado[] = ejemplosRecuperados.map((e) => ({
+                datasetId: e.datasetId,
+                texto: e.texto,
+                categoria: e.categoria,
+                similitud: e.similitud,
+            }));
+
+            // Spec 096-US3: traza del contexto RAG (sin textos, solo referencias y scores).
+            await registrarPaso(reporte.id, "contexto_rag", {
+                veredicto: ejemplosRag.length > 0 ? "casos_recuperados" : "sin_casos",
+                detalle: {
+                    casosSimilares: ejemplosRag.map((e) => ({
+                        datasetId: e.datasetId,
+                        categoria: e.categoria,
+                        similitud: e.similitud,
+                    })),
+                    categoriasVecinas: Array.from(new Set(ejemplosRag.map((e) => e.categoria))),
+                    topK: ragTopK,
+                },
+            });
+
+            // Clasificar y detectar PII
+            resultadoClasificacion = await clasificarReporte({
+                reporteId: reporte.id,
+                texto: reporte.texto,
+                parametros,
+                ejemplosRag,
+            });
+        }
+
+        if (!resultadoClasificacion) {
+            throw new Error("[PROCESAR] resultadoClasificacion no inicializado tras caché/clasificación");
+        }
+        const clasificacion = resultadoClasificacion.clasificacion;
+        const piiResult = resultadoClasificacion.piiResult;
 
         let estadoFinal = clasificacion.estado;
 
@@ -186,6 +230,28 @@ export async function procesarReporte(request: Request): Promise<NextResponse> {
             umbralSpam: parametros.umbralSpam,
         });
         estadoFinal = guardas.estadoFinal;
+
+        // SPEC-195: patrón coordinado. Si el mismo texto aparece contra N
+        // identificadores distintos en poco tiempo, forzar revisión humana.
+        const patron = await detectarPatronCoordinado(reporte.id, vector, {
+            minReportes: parseInt((await getParametroSistemaValor("patron_coordinado.min_reportes")) ?? "5", 10),
+            ventanaMin: parseInt((await getParametroSistemaValor("patron_coordinado.ventana_min")) ?? "60", 10),
+            similitudUmbral: parseFloat((await getParametroSistemaValor("patron_coordinado.similitud_umbral")) ?? "0.90"),
+            modeloEmbedding: parametros.modeloEmbedding,
+        });
+        if (patron.coordinado) {
+            estadoFinal = "REVISION_MANUAL";
+            guardas.prioridadAlta = true;
+            await registrarPatronCoordinado(reporte.texto, patron);
+            await registrarPaso(reporte.id, "guardas", {
+                veredicto: "REVISION_MANUAL",
+                detalle: {
+                    reportesRelacionadosIds: patron.reportesRelacionadosIds,
+                    count: patron.count,
+                    similitudPromedio: patron.similitudPromedio,
+                },
+            });
+        }
 
         // Finalizar reporte y alertas
         estadoFinal = await finalizarReporte({
