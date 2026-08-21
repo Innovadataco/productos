@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { execFileSync } from "node:child_process";
 import { workerLogger, _invalidateWorkerLoggerCache, type WorkerLogger } from "./worker-logger";
-import { prisma } from "@/lib/prisma";
-import { getParametroSistemaValor } from "@/lib/parametros";
+import { prisma } from "../prisma";
+import { getParametroSistemaValor } from "../parametros";
 
 /**
  * Tests unitarios del helper workerLogger (SPEC-193 Fase 5).
@@ -10,7 +11,7 @@ import { getParametroSistemaValor } from "@/lib/parametros";
  * salida de los tests.
  */
 
-vi.mock("@/lib/prisma", () => ({
+vi.mock("../prisma", () => ({
     prisma: {
         workerLog: {
             create: vi.fn().mockResolvedValue({ id: "log-id" }),
@@ -18,11 +19,11 @@ vi.mock("@/lib/prisma", () => ({
     },
 }));
 
-vi.mock("@/lib/parametros", () => ({
+vi.mock("../parametros", () => ({
     getParametroSistemaValor: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock("@/lib/logger", () => ({
+vi.mock("../logger", () => ({
     logger: {
         debug: vi.fn(),
         info: vi.fn(),
@@ -186,5 +187,19 @@ describe("workerLogger (SPEC-193 Fase 5)", () => {
         await workerLogger.error("error");
 
         expect(createMock).toHaveBeenCalledTimes(4);
+    });
+
+    it("importa correctamente con node --import tsx sin build de Next.js", () => {
+        const code = `
+            import('./src/lib/monitoreo/worker-logger.ts')
+                .then(() => console.log('OK_IMPORT_WORKER_LOGGER'))
+                .catch((e) => { console.error(e.message); process.exit(1); });
+        `;
+        const out = execFileSync(process.execPath, ["--import", "tsx", "-e", code], {
+            cwd: process.cwd(),
+            encoding: "utf8",
+            timeout: 15_000,
+        });
+        expect(out).toContain("OK_IMPORT_WORKER_LOGGER");
     });
 });

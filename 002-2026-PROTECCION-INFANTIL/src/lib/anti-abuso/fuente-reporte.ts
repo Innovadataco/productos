@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
-import { FuenteReporteRepository } from "@/lib/dal/repositories/fuente-reporte";
-import { ParametroRepository } from "@/lib/dal/repositories/parametro";
-import { requireEnv } from "@/lib/env";
+import { FuenteReporteRepository } from "../dal/repositories/fuente-reporte";
+import { ParametroRepository } from "../dal/repositories/parametro";
+import { requireEnv } from "../env";
 import type { Prisma, Reporte, Usuario } from "@prisma/client";
 
 // S-1 (002-PI-052): el salt del fingerprint es OBLIGATORIO y sin fallback — el

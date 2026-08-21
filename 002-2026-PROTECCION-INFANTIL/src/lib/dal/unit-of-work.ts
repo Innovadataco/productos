@@ -6,7 +6,7 @@
  * `prisma.$transaction` (una tx anidada abriría otra transacción real).
  */
 import type { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../prisma";
 
 /** Cliente de BD que aceptan los repositorios: la tx inyectada o el singleton. */
 export type DbClient = PrismaClient | Prisma.TransactionClient;

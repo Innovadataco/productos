@@ -1,7 +1,7 @@
 import { PgBoss } from "pg-boss";
 import { prisma } from "./prisma";
 import { getParametroSistemaValor } from "./parametros";
-import { logger } from "@/lib/logger";
+import { logger } from "./logger";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL requerida");
