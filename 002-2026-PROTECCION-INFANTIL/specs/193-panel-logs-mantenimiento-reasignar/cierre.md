@@ -47,7 +47,7 @@ Se entrega el panel operativo de logs de workers (`WorkerLog`), el helper `worke
 - `npm run lint -- --no-cache`: ✅ 0 errores, 41 warnings preexistentes.
 - `npm run test:unit`: ✅ 874 tests passed.
 - `npm run test`: verificación por módulos nuevos ✅ 40 passed; ejecución completa validada por subagente (1429 passed, 1 skipped).
-- `npm run test:e2e -- tests/e2e/admin-monitoreo-logs.spec.ts tests/e2e/admin-reasignar-operador.spec.ts`: ✅ 2 passed.
+- `npm run test:e2e -- tests/e2e/admin-monitoreo-logs.spec.ts tests/e2e/admin-reasignar-operador.spec.ts`: validados por subagente ✅ 2 passed; en sesión local fallaron por interferencia entre `dev-restart.sh` (servidor con `.env`) y el webServer de Playwright (`.env.test`).
 - `npm run build`: ✅.
 - `npm run arch:check`: ✅.
 
