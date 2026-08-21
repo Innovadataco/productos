@@ -1,6 +1,6 @@
-import { logAudit } from "@/lib/audit";
-import { AppError, ERROR_CODES } from "@/lib/errors";
-import { prisma } from "@/lib/prisma";
+import { logAudit } from "../audit";
+import { AppError, ERROR_CODES } from "../errors";
+import { prisma } from "../prisma";
 import { NivelLog, Prisma, type WorkerLog } from "@prisma/client";
 
 const NIVELES_ORDEN: Record<NivelLog, number> = {

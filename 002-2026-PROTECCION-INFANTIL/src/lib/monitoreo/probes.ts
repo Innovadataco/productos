@@ -12,10 +12,10 @@
  *
  * Señales: app | worker | bd | ollama_ping | ollama_smoke | tailscale.
  */
-import { MonitoreoRepository } from "@/lib/dal/repositories/monitoreo";
-import { ClasificacionIARepository } from "@/lib/dal/repositories/clasificacion-ia";
-import { getParametroSistema } from "@/lib/parametros";
-import { leerHeartbeatWorker } from "@/lib/worker-heartbeat";
+import { MonitoreoRepository } from "../dal/repositories/monitoreo";
+import { ClasificacionIARepository } from "../dal/repositories/clasificacion-ia";
+import { getParametroSistema } from "../parametros";
+import { leerHeartbeatWorker } from "../worker-heartbeat";
 
 export const SENALES_MONITOREO = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale"] as const;
 export type SenalMonitoreo = (typeof SENALES_MONITOREO)[number];

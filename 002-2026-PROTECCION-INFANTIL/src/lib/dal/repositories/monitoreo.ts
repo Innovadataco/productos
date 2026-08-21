@@ -5,7 +5,7 @@
  * (frontera DAL Q-3: las rutas no importan prisma).
  */
 import type { EstadoReporte, HealthProbe, IncidenteInfra, Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
 export class MonitoreoRepository {

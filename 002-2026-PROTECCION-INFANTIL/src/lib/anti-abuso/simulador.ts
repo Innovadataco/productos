@@ -7,13 +7,13 @@
  *
  * Frontera DAL (Q-3): SimulacionAbusoRun solo se toca por su repositorio.
  */
-import { SimulacionAbusoRepository, type ConfigSimulacionAbuso } from "@/lib/dal/repositories/simulacion-abuso";
-import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { SimulacionAbusoRepository, type ConfigSimulacionAbuso } from "../dal/repositories/simulacion-abuso";
+import { UsuarioRepository } from "../dal/repositories/usuario";
 import { validarIpInyectable } from "./rfc5737";
-import { sendSimulacionAbuso } from "@/lib/queue";
-import { logAudit } from "@/lib/audit";
-import { AppError } from "@/lib/errors";
-import { escenarioSimulacionAbusoSchema, simularAbusoBodySchema } from "@/lib/schemas";
+import { sendSimulacionAbuso } from "../queue";
+import { logAudit } from "../audit";
+import { AppError } from "../errors";
+import { escenarioSimulacionAbusoSchema, simularAbusoBodySchema } from "../schemas";
 import type { z } from "zod";
 
 export type EscenarioSimulacionAbuso = z.infer<typeof escenarioSimulacionAbusoSchema>;
