@@ -42,6 +42,11 @@ export class MonitoreoRepository {
         await this.db.incidenteInfra.update({ where: { id }, data: { estado: "RESUELTO", fin } });
     }
 
+    /** SPEC-195 (002-PI-089): actualiza el detalle JSON de un incidente abierto. */
+    async actualizarDetalleIncidente(id: string, detalle: string): Promise<void> {
+        await this.db.incidenteInfra.update({ where: { id }, data: { detalle } });
+    }
+
     /** Marca la hora del último email enviado (throttle). */
     async marcarEmailEnviado(id: string, fecha: Date): Promise<void> {
         await this.db.incidenteInfra.update({ where: { id }, data: { ultimoEmailEn: fecha } });

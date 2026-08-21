@@ -190,15 +190,15 @@ describe(`SPEC-114 · admin (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
             return reporte;
         };
 
-        const { POST: resolverSpamPOST } = await import("@/app/api/admin/spam/[id]/resolver/route");
+        const { POST: resolverSpamPOST } = await import("@/app/api/admin/reportes/[id]/resolver-spam/route");
 
         // Caso 1 — falso positivo: es reporte válido y se corrige la categoría
         const casoValido = await sembrarCasoSpam("valido");
         const resValido = await resolverSpamPOST(
-            new Request(`http://localhost:5005/api/admin/spam/${casoValido.id}/resolver`, {
+            new Request(`http://localhost:5005/api/admin/reportes/${casoValido.id}/resolver-spam`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ esSpam: false, categoria: "CONTACTO_INSISTENTE", motivo: "Es una conducta real, no spam" }),
+                body: JSON.stringify({ decision: "corregir", categoria: "CONTACTO_INSISTENTE", motivo: "Es una conducta real, no spam" }),
             }),
             { params: Promise.resolve({ id: casoValido.id }) }
         );
@@ -220,10 +220,10 @@ describe(`SPEC-114 · admin (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         // Caso 2 — spam real: baja con purga D4 del texto y ejemplo para el dataset
         const casoSpam = await sembrarCasoSpam("real");
         const resSpam = await resolverSpamPOST(
-            new Request(`http://localhost:5005/api/admin/spam/${casoSpam.id}/resolver`, {
+            new Request(`http://localhost:5005/api/admin/reportes/${casoSpam.id}/resolver-spam`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ esSpam: true, motivo: "Publicidad irrelevante repetida" }),
+                body: JSON.stringify({ decision: "es_spam", motivo: "Publicidad irrelevante repetida" }),
             }),
             { params: Promise.resolve({ id: casoSpam.id }) }
         );

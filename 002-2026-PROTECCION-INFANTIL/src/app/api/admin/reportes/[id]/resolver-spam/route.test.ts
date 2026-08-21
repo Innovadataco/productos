@@ -24,7 +24,7 @@ vi.mock("@/lib/ai/embedder", () => ({
     generarEmbedding: vi.fn().mockResolvedValue(new Array(768).fill(0.1)),
 }));
 
-describe("POST /api/admin/spam/[id]/resolver", () => {
+describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetDatabase();
@@ -64,19 +64,19 @@ describe("POST /api/admin/spam/[id]/resolver", () => {
     }
 
     function crearRequestResolver(reporteId: string, body: unknown, token?: string) {
-        return new Request(`http://localhost:5005/api/admin/spam/${reporteId}/resolver`, {
+        return new Request(`http://localhost:5005/api/admin/reportes/${reporteId}/resolver-spam`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Cookie: token ? `token=${token}` : "" },
             body: JSON.stringify(body),
         });
     }
 
-    it("operador marca spam como válido y pasa a CLASIFICADO", async () => {
+    it("operador corregir reporte spam a OTRO y pasa a CLASIFICADO", async () => {
         const operador = await crearUsuario("OPERADOR", "op@test.com");
         const reporte = await setupReporteSpam(operador.id);
         mockToken = await crearTokenUsuario(operador.id, "OPERADOR");
 
-        const req = crearRequestResolver(reporte.id, { esSpam: false, categoria: "OTRO" }, mockToken);
+        const req = crearRequestResolver(reporte.id, { decision: "corregir", categoria: "OTRO" }, mockToken);
         const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
         expect(res.status).toBe(200);
 
@@ -86,21 +86,25 @@ describe("POST /api/admin/spam/[id]/resolver", () => {
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("CLASIFICADO");
+
+        const audit = await prisma.auditLog.findFirst({
+            where: { recursoId: reporte.id, accion: "SPAM_CORREGIDO" },
+        });
+        expect(audit).not.toBeNull();
     });
 
-    it("operador confirma spam, da de baja y registra dataset", async () => {
+    it("operador confirma spam, da de baja, registra dataset y audit SPAM_CONFIRMADO", async () => {
         const operador = await crearUsuario("OPERADOR", "op@test.com");
         const reporte = await setupReporteSpam(operador.id);
         mockToken = await crearTokenUsuario(operador.id, "OPERADOR");
 
-        const req = crearRequestResolver(reporte.id, { esSpam: true, motivo: "Contenido promocional" }, mockToken);
+        const req = crearRequestResolver(reporte.id, { decision: "es_spam", motivo: "Contenido promocional" }, mockToken);
         const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
         expect(res.status).toBe(200);
 
         const body = await res.json();
-        expect(body.estado).toBe("DADO_DE_BAJA");
+        expect(body.eliminado).toBe(true);
         expect(body.motivoBaja).toBe("RETIRO_LIMPIEZA");
-        expect(body.datasetRegistrado).toBe(true);
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.eliminado).toBe(true);
@@ -111,6 +115,30 @@ describe("POST /api/admin/spam/[id]/resolver", () => {
         });
         expect(dataset).not.toBeNull();
         expect(dataset?.fuente).toBe("spam_revisado");
+
+        const audit = await prisma.auditLog.findFirst({
+            where: { recursoId: reporte.id, accion: "SPAM_CONFIRMADO" },
+        });
+        expect(audit).not.toBeNull();
+    });
+
+    it("operador procesa como acoso y pasa a CLASIFICADO", async () => {
+        const operador = await crearUsuario("OPERADOR", "op@test.com");
+        const reporte = await setupReporteSpam(operador.id);
+        mockToken = await crearTokenUsuario(operador.id, "OPERADOR");
+
+        const req = crearRequestResolver(reporte.id, { decision: "procesar_como_acoso" }, mockToken);
+        const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
+        expect(res.status).toBe(200);
+
+        const body = await res.json();
+        expect(body.estado).toBe("CLASIFICADO");
+        expect(body.categoria).toBe("SPAM");
+
+        const audit = await prisma.auditLog.findFirst({
+            where: { recursoId: reporte.id, accion: "SPAM_PROCESADO_COMO_ACOSO" },
+        });
+        expect(audit).not.toBeNull();
     });
 
     it("rechaza si el operador no está asignado", async () => {
@@ -119,7 +147,7 @@ describe("POST /api/admin/spam/[id]/resolver", () => {
         const reporte = await setupReporteSpam(otro.id);
         mockToken = await crearTokenUsuario(operador.id, "OPERADOR");
 
-        const req = crearRequestResolver(reporte.id, { esSpam: false, categoria: "OTRO" }, mockToken);
+        const req = crearRequestResolver(reporte.id, { decision: "corregir", categoria: "OTRO" }, mockToken);
         const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
         expect(res.status).toBe(403);
     });
@@ -142,7 +170,7 @@ describe("POST /api/admin/spam/[id]/resolver", () => {
         });
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
 
-        const req = crearRequestResolver(reporte.id, { esSpam: true }, mockToken);
+        const req = crearRequestResolver(reporte.id, { decision: "es_spam" }, mockToken);
         const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
         expect(res.status).toBe(400);
     });
