@@ -322,6 +322,21 @@ async function main() {
             create: p,
         });
     }
+
+    // SPEC-193 (Fase 1): parámetros de la bitácora de logs de workers.
+    const monitoreoLogsParams = [
+        { clave: "monitoreo.logs.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar la persistencia de logs de worker en base de datos" },
+        { clave: "monitoreo.logs.nivel_minimo", valor: "WARN", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Nivel mínimo de log que se persiste en base de datos (DEBUG|INFO|WARN|ERROR)" },
+        { clave: "monitoreo.logs.max_muestras_ui", valor: "500", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Máximo de logs que la UI de monitoreo puede consultar en una sola petición" },
+    ];
+    for (const p of monitoreoLogsParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, descripcion: p.descripcion },
+            create: p,
+        });
+    }
+
     console.log("Parámetros por defecto creados");
 
     // Nuevos parámetros del módulo de reportes (fase 2)
