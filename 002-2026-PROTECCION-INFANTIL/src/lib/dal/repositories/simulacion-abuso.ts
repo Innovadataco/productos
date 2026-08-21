@@ -52,6 +52,7 @@ export interface ListadoSimulaciones {
         creadoEn: Date;
         actualizadoEn: Date;
         resultadosJson: unknown;
+        nota: string | null;
     }>;
     total: number;
     page: number;
@@ -81,6 +82,7 @@ export class SimulacionAbusoRepository {
         totalReportes: number;
         creadoPorId: string;
         configJson: ConfigSimulacionAbuso;
+        nota?: string | null | undefined;
     }) {
         return this.db.simulacionAbusoRun.create({
             data: {
@@ -88,6 +90,7 @@ export class SimulacionAbusoRepository {
                 totalReportes: data.totalReportes,
                 creadoPorId: data.creadoPorId,
                 configJson: data.configJson as unknown as Prisma.InputJsonValue,
+                ...(data.nota !== undefined ? { nota: data.nota } : {}),
             },
         });
     }
@@ -149,6 +152,7 @@ export class SimulacionAbusoRepository {
                     creadoEn: true,
                     actualizadoEn: true,
                     resultadosJson: true,
+                    nota: true,
                 },
             }),
             this.db.simulacionAbusoRun.count({ where }),

@@ -739,6 +739,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | estado | String | — |
 | configJson | Json | opcional |
 | resultadosJson | Json | opcional |
+| nota | String | opcional |
 | creadoPorId | String | — |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |

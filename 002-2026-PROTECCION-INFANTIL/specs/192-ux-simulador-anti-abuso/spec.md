@@ -4,11 +4,11 @@
 
 **Created**: 2026-08-20
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: 002-PI-086. El simulador `/dashboard/admin/anti-abuso` (SPEC-184/185) tiene 6 defectos de UX y 1 de fingerprint rate-limit cazados por el CEO en pruebas post-deploy `abdaf208` (2026-08-20 noche). Este SPEC los cierra todos en 1 PR. Diseño y detalle: [BRIEF-SIMULADOR-ANTI-ABUSO-UX](../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-SIMULADOR-ANTI-ABUSO-UX.md) (v1.1, corrección honesta ZEUS en F2). Cero riesgo al motor (`src/lib/ai/**`).
 
-**Impacto en arquitectura**: cambios localizados en el módulo anti-abuso: componentes React (`AdminAntiAbusoSimulador`, `AdminAntiAbusoSimuladorHistorial`, modal de detalle), endpoint público `POST /api/reportes` (bypass condicional de `report_fingerprint` mediante header `x-simulacion-secret` validado con `crypto.timingSafeEqual` contra `process.env.SIMULADOR_ABUSO_SECRET`), worker `scripts/simulador-abuso.mjs` (envío del header; fail-loud si falta el secret), configuración de despliegue (`.env.production.example`) y migración aditiva opcional `simulacion_abuso_runs.nota VARCHAR(200)`. No se toca `src/lib/ai/**`, ni se modifican scopes ni límites de `src/lib/rate-limit.ts`.
+**Impacto en arquitectura:** cambios localizados en el módulo anti-abuso: componentes React (`AdminAntiAbusoSimulador`, `AdminAntiAbusoSimuladorHistorial`, modal de detalle), endpoint público `POST /api/reportes` (bypass condicional de `report_fingerprint` mediante header `x-simulacion-secret` validado con `crypto.timingSafeEqual` contra `process.env.SIMULADOR_ABUSO_SECRET`), worker `scripts/simulador-abuso.mjs` (envío del header; fail-loud si falta el secret), configuración de despliegue (`.env.production.example`) y migración aditiva opcional `simulacion_abuso_runs.nota VARCHAR(200)`. No se toca `src/lib/ai/**`, ni se modifican scopes ni límites de `src/lib/rate-limit.ts`.
 
 ---
 

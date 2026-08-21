@@ -1571,6 +1571,7 @@ model SimulacionAbusoRun {
   estado         String   @default("PENDIENTE") // PENDIENTE | EN_PROGRESO | COMPLETADA | CANCELADA | FALLIDA
   configJson     Json?
   resultadosJson Json?
+  nota           String?  @db.VarChar(200)
   creadoPorId    String
   creadoEn       DateTime @default(now())
   actualizadoEn  DateTime @updatedAt

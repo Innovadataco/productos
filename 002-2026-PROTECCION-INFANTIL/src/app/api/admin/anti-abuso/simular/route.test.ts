@@ -113,6 +113,18 @@ describe("POST /api/admin/anti-abuso/simular (SPEC-184/185)", () => {
         const { status } = await postSimular({ escenario: "robot_inundando", n: 5 });
         expect(status).toBe(403);
     });
+
+    it("persiste la nota interna al crear la simulación (SPEC-192 I-76)", async () => {
+        await autenticarAdmin();
+        const nota = "Revisar alertas tras el ataque simulado";
+        const { status, body } = await postSimular({ escenario: "robot_inundando", n: 3, nota });
+
+        expect(status).toBe(201);
+        expect(body.ok).toBe(true);
+
+        const run = await prisma.simulacionAbusoRun.findUnique({ where: { id: body.runId } });
+        expect(run?.nota).toBe(nota);
+    });
 });
 
 describe("GET /api/admin/anti-abuso/simular (SPEC-185)", () => {
@@ -196,5 +208,22 @@ describe("GET /api/admin/anti-abuso/simular (SPEC-185)", () => {
         expect(body.run.latenciaP50Ms).toBe(90);
         expect(body.run.latenciaP95Ms).toBe(150);
         expect(body.run.detalles).toHaveLength(2);
+    });
+
+    it("devuelve la nota en el detalle de la simulación (SPEC-192 I-76)", async () => {
+        const admin = await autenticarAdmin();
+        const run = await prisma.simulacionAbusoRun.create({
+            data: {
+                escenario: "robot_inundando",
+                totalReportes: 1,
+                creadoPorId: admin.id,
+                estado: "COMPLETADA",
+                nota: "Nota de prueba para el detalle",
+                resultadosJson: { totalEnviados: 1, detalles: [] },
+            },
+        });
+        const { status, body } = await getDetalle(run.id);
+        expect(status).toBe(200);
+        expect(body.run.nota).toBe("Nota de prueba para el detalle");
     });
 });
