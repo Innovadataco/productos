@@ -11,13 +11,13 @@
  * Frontera DAL (Q-3, auditoría ZEUS #55): este archivo NO importa prisma;
  * toda la persistencia pasa por `MonitoreoRepository`.
  */
-import { MonitoreoRepository } from "../dal/repositories/monitoreo";
-import { getParametroSistema } from "../parametros";
-import { logAudit } from "../audit";
-import { enviarAlertaInfra } from "../email";
-import { logger } from "../logger";
+import { MonitoreoRepository } from "../dal/repositories/monitoreo.ts";
+import { getParametroSistema } from "../parametros.ts";
+import { logAudit } from "../audit.ts";
+import { enviarAlertaInfra } from "../email.ts";
+import { logger } from "../logger.ts";
 import type { IncidenteInfra } from "@prisma/client";
-import type { ResultadoProbe, SenalMonitoreo } from "./probes";
+import type { ResultadoProbe, SenalMonitoreo } from "./probes.ts";
 
 const repo = () => new MonitoreoRepository();
 

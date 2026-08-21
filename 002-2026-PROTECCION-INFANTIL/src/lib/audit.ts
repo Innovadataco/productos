@@ -1,5 +1,5 @@
-import { prisma } from "./prisma";
-import { hashConSalt } from "./anti-abuso/fuente-reporte";
+import { prisma } from "./prisma.ts";
+import { hashConSalt } from "./anti-abuso/fuente-reporte.ts";
 import type { AccionAudit, CategoriaConducta, EstadoReporte, Prisma } from "@prisma/client";
 
 /**

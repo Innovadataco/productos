@@ -4,8 +4,8 @@
  * aquí vive SOLO el acceso a datos. Dominio global (sin tenant). Acepta tx (D2).
  */
 import type { Prisma } from "@prisma/client";
-import { prisma } from "../prisma";
-import type { DbClient } from "../unit-of-work";
+import { prisma } from "../prisma.ts";
+import type { DbClient } from "../unit-of-work.ts";
 
 export class FuenteReporteRepository {
     private readonly db: DbClient;
