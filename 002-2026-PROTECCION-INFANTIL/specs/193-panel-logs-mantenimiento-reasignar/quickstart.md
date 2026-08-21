@@ -139,7 +139,7 @@ Verificar:
 
 ### Requisitos previos
 
-- Un reporte en estado `REVISION_MANUAL` o `PROCESADO` con `operadorId` asignado.
+- Un reporte en estado `REVISION_MANUAL` con `operadorId` asignado.
 - Un usuario destino con rol `OPERADOR` y estado activo.
 - Sesión de `ADMIN`.
 

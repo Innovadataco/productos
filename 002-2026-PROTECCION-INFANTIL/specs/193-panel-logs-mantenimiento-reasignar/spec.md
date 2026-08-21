@@ -173,17 +173,50 @@ Como administrador de la plataforma quiero mover un caso de un operador a otro, 
 
 ---
 
-## Implementación *(se completará en fase de implementación)*
+## Implementación
 
-Esta sección se llenará al cerrar la feature con:
+## Implementación
 
-- Hash del commit de cierre.
-- Endpoints y componentes afectados.
-- Tests agregados.
-- Migraciones relevantes.
-- Deuda técnica identificada.
+- **Commit de cierre**: `PENDIENTE` (se actualiza tras el gate final y push).
+- **Merge base**: `feature/001-scaffolding` @ `abdaf208`.
 
----
+### Endpoints afectados
+- `GET /api/admin/monitoreo/logs` — listado filtrado de `WorkerLog` (ADMIN, rate-limit `admin_read`).
+- `DELETE /api/admin/monitoreo/logs` — purga manual de logs con motivo + `AuditLog` (ADMIN, rate-limit `admin_write`).
+- `PATCH /api/admin/operadores/reasignar` — reasignación de reporte `REVISION_MANUAL` entre operadores (ADMIN, rate-limit `admin_write`).
+
+### Componentes frontend
+- Sub-tab "Logs" en `/dashboard/admin/estadisticas/operacion` (`LogsTab`, `LogsFilters`, `LogsTable`, `LogContextoModal`).
+- Sección "Mantenimiento" en `/dashboard/admin/configuracion` (`MantenimientoLogsPanel`).
+- `ReasignarModal` reusable en ficha de operador y listado `/admin/operadores/asignar`.
+
+### Workers instrumentados
+- `pi-app` en `src/app/api/health/worker/route.ts`.
+- `pi-worker` en `scripts/worker-reportes.mjs`.
+- `pi-monitor` en `scripts/worker-supervisor.mjs`.
+- `pi-simulador-abuso` en `scripts/simulador-abuso.mjs`.
+
+### Tests agregados
+- Unitarios: `src/lib/monitoreo/worker-logger.test.ts`, `src/lib/monitoreo/logs-service.test.ts`.
+- Integración: `src/app/api/admin/monitoreo/logs/route.test.ts`, `src/app/api/admin/operadores/reasignar/route.test.ts`.
+- Componentes: `src/components/modules/monitoreo/LogsTab.test.tsx`, `src/components/modules/operadores/ReasignarModal.test.tsx`.
+- E2E: `tests/e2e/admin-monitoreo-logs.spec.ts`, `tests/e2e/admin-reasignar-operador.spec.ts`.
+
+### Migraciones relevantes
+- `prisma/migrations/20260821000000_add_worker_log/migration.sql` — crea `NivelLog`, `WorkerLog` e índices; extiende `AccionAudit` con `LOGS_MANTENIMIENTO_PURGA` y `REPORTE_REASIGNADO_MANUAL`.
+- `prisma/migrations/20260821010000_add_acceso_denegado_audit/migration.sql` — extiende `AccionAudit` con `ACCESO_DENEGADO`.
+
+### Cambios de configuración
+- `package.json`: script `worker` ahora usa `--import tsx` para soportar imports `.ts` desde `worker-supervisor.mjs`.
+- `playwright.config.ts`: `webServer` fuerza `NODE_ENV: "test"` para que los E2E compartan `.env.test` y la misma base de datos.
+- `prisma/seed.ts`: nuevos parámetros `monitoreo.logs.enabled`, `monitoreo.logs.nivel_minimo`, `monitoreo.logs.max_muestras_ui`.
+
+### Deuda técnica identificada
+- **Purga automática**: sigue siendo manual por decisión del CEO; se documenta la posibilidad futura con `monitoreo.logs.retencion_dias`.
+- **Agregaciones/alertas**: los logs son consulta directa; podría agregarse un job periódico que cuente errores y abra incidentes.
+- **Tamaño de contexto JSON**: no hay límite estricto en BD; se recomienda validar profundidad/cantidad de claves en `workerLogger`.
+- **Reasignación masiva**: el modal es unitario; si el volumen crece, se necesitará endpoint batch.
+
 
 ## Deuda técnica
 
