@@ -21,6 +21,7 @@ export const SECTIONS: { key: string; label: string; description: string; prefix
     { key: "motor-deriva", label: "Motor › Deriva", description: "Cuánto se desvía el motor en producción frente al banco curado y cuándo avisar", prefixes: ["motor.deriva."] },
     { key: "ui", label: "Interfaz de usuario", description: "Parámetros visibles para usuarios finales, como SLA de seguimiento.", prefixes: ["ui."] },
     { key: "security", label: "Seguridad", description: "Intentos de login, duración de bloqueo, longitud de contraseña, etc.", prefixes: ["security."] },
+    { key: "analytics", label: "Analítica › Colegios", description: "Umbrales de hallazgos automáticos del panel de colegios.", prefixes: ["analytics.colegios."] },
     { key: "system", label: "Sistema", description: "Parámetros generales de la aplicación.", prefixes: ["system."] },
     { key: "other", label: "Otros", description: "Parámetros adicionales no agrupados.", prefixes: [] },
 ];

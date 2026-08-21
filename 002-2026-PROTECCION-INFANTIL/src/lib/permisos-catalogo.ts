@@ -19,6 +19,8 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "ia_rubrica", nombre: "Rúbrica de clasificación", categoria: "admin", orden: 15, padre: "centro_control_ia" },
     { clave: "operadores", nombre: "Gestión de operadores", categoria: "admin", esCritico: true, orden: 20 },
     { clave: "padres", nombre: "Gestión de padres", categoria: "admin", esCritico: true, orden: 25 },
+    // SPEC-194 (002-PI-088): vista unificada de usuarios por rol (Padres default).
+    { clave: "usuarios_admin", nombre: "Usuarios", categoria: "admin", esCritico: true, orden: 27 },
     // SPEC-141 (N-1, decisión ZEUS): visibilidad de soporte SOLO LECTURA sobre datos
     // sensibles (círculo de confianza de padres, cursos/alumnos de colegios).
     // Módulo propio — NO reusar padres/colegios_gestion. Default: solo ADMIN.
@@ -45,6 +47,8 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "configuracion_permisos", nombre: "Permisos por rol", categoria: "admin", orden: 71, padre: "configuracion_sistema" },
     { clave: "audit_logs", nombre: "Logs de auditoría", categoria: "admin", esCritico: true, orden: 80 },
     { clave: "estadisticas", nombre: "Estadísticas", categoria: "admin", orden: 90 },
+    // SPEC-194 (002-PI-088): analítica agregada de colegios (sub-tab de estadísticas/operacion).
+    { clave: "analytics_colegios", nombre: "Analítica de colegios", categoria: "admin", orden: 91, padre: "estadisticas" },
     { clave: "anti_abuso", nombre: "Anti-abuso", categoria: "admin", orden: 100 },
     { clave: "monitoreo_worker", nombre: "Monitoreo del worker", categoria: "admin", orden: 105 },
     { clave: "dataset_entrenamiento", nombre: "Dataset de entrenamiento", categoria: "admin", orden: 120 },

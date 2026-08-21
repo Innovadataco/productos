@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-21
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: 002-PI-088. Cierra I-37 (admin sin vista de usuarios PARENT registrados) y añade analítica agregada de colegios para evaluación operativa y gerencial. Diseño vinculante en `BRIEF-ANALITICA-COLEGIOS.md`.
 
@@ -172,3 +172,15 @@ Como admin quiero exportar el resumen de colegios y el detalle de un colegio a C
 5. **Comparación con la media**: usar mediana (no promedio) para no distorsionar por outliers. Si hay < 3 colegios activos, se muestra "insuficientes datos".
 6. **Charts**: reutilizar componentes existentes si los hay; de lo contrario, barras HTML+CSS. No agregar librerías pesadas.
 7. **Export CSV**: US5 se implementa si el esfuerzo es menor a 1 día; de lo contrario se deja como deuda técnica documentada.
+
+## Implementación
+
+- **Rama**: `work/002-pi-088`
+- **Migración aditiva**: `prisma/migrations/20260821110000_spec_194_analytics_indexes/migration.sql` (índices en `Reporte(tenantId, creadoEn, estado)`, `AlertaColegio(colegioId, estado, creadoEn)`, `SolicitudComite(colegioId, estado, creadoEn)`)
+- **Parámetros**: 5 params sembrados en `prisma/seed.ts` (`analytics.colegios.cache_ttl_min`, `analytics.colegios.inactividad_alerta_dias`, `analytics.colegios.spam_alerta_pct`, `analytics.colegios.resolucion_comite_ok_pct`, `analytics.colegios.periodo_default_dias`)
+- **Servicios**: `src/lib/analytics/cache.ts`, `src/lib/analytics/parametros.ts`, `src/lib/analytics/hallazgos-colegio.ts`, `src/lib/analytics/usuarios-query.ts`
+- **Endpoints**: `GET /api/admin/usuarios`, `GET /api/admin/usuarios/[id]`, `GET /api/admin/analytics/colegios`, `GET /api/admin/analytics/colegios/[id]`
+- **UI**: `/dashboard/admin/usuarios`, `/dashboard/admin/usuarios/[id]`, sub-tab "Colegios" en `/dashboard/admin/estadisticas/operacion`, ficha `/dashboard/admin/estadisticas/operacion/colegios/[colegioId]`, sección "Analítica → Colegios" en `ConfigPanel`
+- **Tests**: endpoints de usuarios y analytics (4 archivos, 15 tests integración)
+- **Deuda técnica**: export CSV (US5) queda como P3 documentada en `cierre.md`
+- **Gate local**: `tsc --noEmit`, `lint --no-cache`, `arch:check`, `test`, `build` verdes

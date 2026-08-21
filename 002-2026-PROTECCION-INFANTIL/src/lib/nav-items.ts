@@ -18,6 +18,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/admin/estadisticas", label: "Dashboard", modulo: "estadisticas" },
     { href: "/dashboard/admin/ia", label: "Centro de Control IA", modulo: "centro_control_ia" },
     { href: "/dashboard/admin/operadores", label: "Operadores", modulo: "operadores" },
+    { href: "/dashboard/admin/usuarios", label: "Usuarios", modulo: "usuarios_admin" },
     { href: "/dashboard/admin/padres", label: "Padres", modulo: "padres" },
     { href: "/dashboard/admin/colegios", label: "Colegios", modulo: "colegios_gestion" },
     { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", modulo: "anti_abuso" },

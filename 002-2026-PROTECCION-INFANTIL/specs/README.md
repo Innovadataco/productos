@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-21** (SPEC-185, SPEC-186, SPEC-187 y SPEC-189 implementadas; SPEC-193 planeada; ver cierre.md en `specs/185-simulador-historial/`, `specs/186-smoke-inteligente-ollama/` y `specs/187-override-modelo-smoke-ollama/`, `specs/189-vista-operador-metricas/spec.md` y `specs/193-panel-logs-mantenimiento-reasignar/`).
+> Última actualización: **2026-08-21** (SPEC-185, SPEC-186, SPEC-187, SPEC-189 y SPEC-194 implementadas; SPEC-193 planeada; ver cierre.md en `specs/185-simulador-historial/`, `specs/186-smoke-inteligente-ollama/`, `specs/187-override-modelo-smoke-ollama/`, `specs/194-analitica-colegios/`, `specs/189-vista-operador-metricas/spec.md` y `specs/193-panel-logs-mantenimiento-reasignar/`).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -131,7 +131,7 @@
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
 | [192](192-ux-simulador-anti-abuso/spec.md) | SPEC-192 — UX del simulador anti-abuso (002-PI-086) | 🟢 Implementada (ver cierre.md) |
 | [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
-| [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🔵 Planeada |
+| [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🟢 Implementada |
 
 ## Tabla completa (125 specs)
 
@@ -311,7 +311,7 @@
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
 | [192](192-ux-simulador-anti-abuso/spec.md) | SPEC-192 — UX del simulador anti-abuso (002-PI-086) | 🟢 Implementada (ver cierre.md) |
 | [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
-| [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🔵 Planeada |
+| [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🟢 Implementada |
 
 ## Incidencias de calidad de datos
 
