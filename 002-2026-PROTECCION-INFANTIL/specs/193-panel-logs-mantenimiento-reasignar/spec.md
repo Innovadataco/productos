@@ -13,7 +13,7 @@ En producción conviven cuatro procesos (`pi-app`, `pi-worker`, `pi-monitor`, `p
 
 Esta feature resuelve ambos problemas: centraliza los logs de workers en una tabla consultable por ADMIN, expone una UI de monitoreo con filtros y autorefresco, permite ejecutar purga manual de logs antiguos con trazabilidad de auditoría, y cierra el flujo de reasignación de casos entre operadores.
 
-**Impacto en arquitectura**: se agrega una nueva entidad de infraestructura (`WorkerLog`) y un helper de logging (`workerLogger`) que escribe siempre a `stdout` y opcionalmente a PostgreSQL; se añaden dos rutas administrativas bajo `/api/admin/monitoreo/logs` y `/api/admin/operadores/reasignar`; se instrumentan los cuatro workers existentes; no se modifican modelos de negocio (`Reporte` solo recibe una actualización de `operadorId`, sin nuevos campos; `Usuario` no cambia).
+Impacto en arquitectura: se agrega una nueva entidad de infraestructura (`WorkerLog`) y un helper de logging (`workerLogger`) que escribe siempre a `stdout` y opcionalmente a PostgreSQL; se añaden dos rutas administrativas bajo `/api/admin/monitoreo/logs` y `/api/admin/operadores/reasignar`; se instrumentan los cuatro workers existentes; no se modifican modelos de negocio (`Reporte` solo recibe una actualización de `operadorId`, sin nuevos campos; `Usuario` no cambia).
 
 ---
 

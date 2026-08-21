@@ -16,11 +16,14 @@ import { prisma } from "../src/lib/prisma.ts";
 import { SimulacionAbusoRepository } from "../src/lib/dal/repositories/simulacion-abuso.ts";
 import { generarPayloads } from "../src/lib/anti-abuso/simulador.ts";
 import { logAudit } from "../src/lib/audit.ts";
+import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
 import pg from "pg";
 
 const { Client } = pg;
 const ADVISORY_LOCK_ID = 923456789;
 let lockClient = null;
+
+const logger = workerLogger.child({ servicio: "pi-simulador-abuso" });
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -155,6 +158,7 @@ async function ejecutarSimulacion(runId) {
     }
 
     await repo.actualizarEstado(runId, "EN_PROGRESO");
+    await logger.info("Simulación en progreso", { runId, totalReportes: run.totalReportes });
 
     const config = run.configJson ?? {};
     const params = {
@@ -188,6 +192,7 @@ async function ejecutarSimulacion(runId) {
         // Verificar cancelación antes de cada envío
         const actual = await repo.findById(runId);
         if (!actual || actual.estado === "CANCELADA") {
+            logger.warn("Simulación cancelada", { runId, ciclo: i + 1, total: payloads.length });
             console.log(`[SIMULADOR-ABUSO] Run ${runId} cancelado en ciclo ${i + 1}/${payloads.length}`);
             await repo.actualizarEstado(runId, "CANCELADA");
             return false;
@@ -224,11 +229,13 @@ async function ejecutarSimulacion(runId) {
                 latenciaP95Ms: calcularPercentil(latencias, 95),
                 detalles,
             });
+            logger.info("Reporte simulado enviado/bloqueado", { runId, i, status, latenciaMs: latencia, estado });
             console.log(`[SIMULADOR-ABUSO] Run ${runId} ${i + 1}/${payloads.length} status=${status} latencia=${latencia}ms`);
         } catch (err) {
             fallidos++;
             detalles.push({ idx: i, ip: payload.ip, identificador: payload.identificador, status: 0, latenciaMs: 0, estado: "error" });
             const msg = err instanceof Error ? err.message : "Error desconocido";
+            logger.error("Reporte simulado falló", { runId, i, error: msg });
             console.error(`[SIMULADOR-ABUSO] Run ${runId} ${i + 1}/${payloads.length} error=${msg}`);
         }
 
@@ -258,6 +265,9 @@ async function ejecutarSimulacion(runId) {
         detalles,
     });
 
+    const resumen = { enviados, bloqueados, spam, fallidos, latenciaPromedioMs: latenciaPromedio };
+    await logger.info("Simulación finalizada", { runId, estado: estadoFinal, resumen });
+
     await logAudit({
         accion: "SIMULACION_ABUSO_COMPLETADA",
         tipoRecurso: "SimulacionAbusoRun",
@@ -271,6 +281,7 @@ async function ejecutarSimulacion(runId) {
 
 async function start() {
     await acquireAdvisoryLock();
+    await logger.info("Simulador iniciado y lock adquirido");
     await ensureStarted();
     await ensureQueue("simulacion-abuso");
 
@@ -283,13 +294,16 @@ async function start() {
             return;
         }
         const { runId } = job.data;
+        await logger.info("Simulación recibida", { runId });
         console.log(`[SIMULADOR-ABUSO] Job recibido runId=${runId}`);
         try {
             await ejecutarSimulacion(runId);
+            await logger.info("Simulación finalizada", { runId, estado: "COMPLETADA" });
             return { success: true, runId };
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[SIMULADOR-ABUSO] ERROR runId=${runId}: ${msg}`);
+            await logger.error("Simulación fallida", { runId, error: msg });
             try {
                 await prisma.simulacionAbusoRun.update({
                     where: { id: runId },

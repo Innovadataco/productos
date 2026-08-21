@@ -14,6 +14,7 @@ import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 const tabs = [
     { href: "/dashboard/admin/estadisticas/operacion", label: "Operación" },
     { href: "/dashboard/admin/estadisticas/operacion?tab=clasificacion", label: "Clasificación" },
+    { href: "/dashboard/admin/estadisticas/operacion?tab=logs", label: "Logs" },
     { href: "/dashboard/admin/estadisticas/motor", label: "Motor" },
 ];
 
@@ -22,16 +23,23 @@ export function EstadisticasSubNav() {
     const searchParams = useSearchParams();
     const { user } = useAuth();
 
-    const esTabClasificacion = pathname === "/dashboard/admin/estadisticas/operacion" && searchParams?.get("tab") === "clasificacion";
+    const tabQuery = searchParams?.get("tab");
+    const esTabClasificacion = pathname === "/dashboard/admin/estadisticas/operacion" && tabQuery === "clasificacion";
+    const esTabLogs = pathname === "/dashboard/admin/estadisticas/operacion" && tabQuery === "logs";
 
     const visibles = tabs.filter((tab) => esDestinoPermitidoPorRol(user?.rol, tab.href.split("?")[0]));
 
     return (
         <nav className="mb-6 flex flex-wrap gap-2 border-b border-tinta/15 pb-3" aria-label="Secciones de estadísticas">
             {visibles.map((tab) => {
-                const activo = tab.href.includes("?tab=clasificacion")
-                    ? esTabClasificacion
-                    : pathname === tab.href && !esTabClasificacion;
+                let activo: boolean;
+                if (tab.href.includes("?tab=clasificacion")) {
+                    activo = esTabClasificacion;
+                } else if (tab.href.includes("?tab=logs")) {
+                    activo = esTabLogs;
+                } else {
+                    activo = pathname === tab.href && !esTabClasificacion && !esTabLogs;
+                }
                 return (
                     <Link
                         key={tab.href}
