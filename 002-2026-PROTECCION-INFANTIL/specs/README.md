@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **155** |
+| **Total de specs** | **156** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **50** |
-| **Pendientes (PLANEADO)** | **5** |
+| **Pendientes (PLANEADO)** | **6** |
 ## Backlog activo (no cerradas)
 
 | Nº | Nombre | Estado |
@@ -131,8 +131,9 @@
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
 | [192](192-ux-simulador-anti-abuso/spec.md) | SPEC-192 — UX del simulador anti-abuso (002-PI-086) | 🟢 Implementada (ver cierre.md) |
 | [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
+| [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🔵 Planeada |
 
-## Tabla completa (124 specs)
+## Tabla completa (125 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -310,6 +311,7 @@
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
 | [192](192-ux-simulador-anti-abuso/spec.md) | SPEC-192 — UX del simulador anti-abuso (002-PI-086) | 🟢 Implementada (ver cierre.md) |
 | [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
+| [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🔵 Planeada |
 
 ## Incidencias de calidad de datos
 
