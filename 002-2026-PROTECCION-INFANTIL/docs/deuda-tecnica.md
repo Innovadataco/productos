@@ -1,7 +1,7 @@
 # Deuda técnica — Protección Infantil
 
 > Inventario clasificado de deuda técnica del proyecto.
-> Última actualización: 2026-07-19.
+> Última actualización: 2026-08-20.
 
 ## Clasificación
 
@@ -55,6 +55,12 @@
 |----|------|---------|----------|
 | D-APE-1 | **Mecanismo de apelación fuera de alcance** | El CEO sacó las apelaciones del alcance (2026-07-24) pero el código vivo sigue (flujo, pausa de visibilidad, job de vencimiento manual). Opciones: implementarlo bien, retirarlo, o enmendar §1.6 de la constitución. | CEO + revisión legal ANTES de producción (Ley 1581 / habeas data). NO automatizar ni tocar el flujo hasta decidir. |
 | D-SEV-1 | **Escala de gravedad sin criterio** (`scoring.severity.*`) | Números (30/60/90) sin criterio documentado ni validación experta. Tras la 092 ya no decide de cara al usuario, pero sigue usándose internamente (priorización de bandeja). | NECESITA SPEC: definir el criterio de la escala con expertos. |
+
+## Incidencias de gate (I-XX)
+
+| ID | Ítem | Detalle | Estado |
+|----|------|---------|--------|
+| I-72 | **`seed-idempotencia.test.ts` flaky en suite completa** | `npm run test` completa terminaba con `Unhandled Rejection: process.exit(1)` desde `prisma/seed.ts:1451`, originado mientras corre `src/lib/seed-idempotencia.test.ts`. El seed se ejecutaba al importar el módulo sin guard de CLI. Corregido con guard `import.meta.url === file://${process.argv[1]}` en `prisma/seed.ts`. | CORREGIDO en SPEC-189. |
 
 ## FIX AHORA hechos
 

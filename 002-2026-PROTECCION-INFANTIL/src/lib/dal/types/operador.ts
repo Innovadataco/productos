@@ -68,3 +68,49 @@ export interface PanelAsignacionDto {
     estrategia: string;
     cupoDefault: number;
 }
+
+/** SPEC-189 (002-PI-084): métricas de productividad de un operador. */
+export interface CasoAbiertoMetricaDto {
+    id: string;
+    numeroSeguimiento: string | null;
+    identificador: string;
+    plataformaClave: string;
+    plataformaNombre: string;
+    categoria: string | null;
+    estado: string;
+    asignadoEn: Date;
+    tiempoDesdeAsignacionMs: number;
+}
+
+export interface CategoriaConteoDto {
+    categoria: string;
+    total: number;
+}
+
+export interface MetricasOperadorDto {
+    operador: {
+        id: string;
+        email: string;
+        nombre: string | null;
+        cupoMaximo: number;
+    };
+    casosAbiertos: CasoAbiertoMetricaDto[];
+    casosResueltos24h: number;
+    casosResueltos7d: number;
+    casosResueltos30d: number;
+    tiempoMedioResolucionMs: number | null;
+    casosPorCategoria: CategoriaConteoDto[];
+    tasaEscalamientoComite: number | null;
+}
+
+/** SPEC-189 (002-PI-084): ítem de caso en el listado de un operador. */
+export interface CasoOperadorListItemDto {
+    id: string;
+    numeroSeguimiento: string | null;
+    identificador: string;
+    plataformaClave: string;
+    plataformaNombre: string;
+    estado: string;
+    categoria: string | null;
+    asignadoEn: Date;
+}
