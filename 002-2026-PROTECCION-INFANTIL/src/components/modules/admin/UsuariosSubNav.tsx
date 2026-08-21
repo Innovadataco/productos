@@ -14,10 +14,17 @@ const tabs = [
 export function UsuariosSubNav() {
     const pathname = usePathname();
 
+    function isActive(href: string) {
+        if (href === "/dashboard/admin/usuarios") {
+            return pathname === href;
+        }
+        return pathname === href || pathname.startsWith(`${href}/`);
+    }
+
     return (
         <nav className="mb-6 flex flex-wrap gap-2 border-b border-tinta/15 pb-3" aria-label="Secciones de usuarios">
             {tabs.map((tab) => {
-                const activo = pathname === tab.href;
+                const activo = isActive(tab.href);
                 return (
                     <Link
                         key={tab.href}

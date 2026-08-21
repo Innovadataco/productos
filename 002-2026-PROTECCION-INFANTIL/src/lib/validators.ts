@@ -103,7 +103,7 @@ export const padresQuerySchema = z.object({
 export const usuariosQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
-    rol: z.enum(["PARENT", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION", "ADMIN"]).default("PARENT"),
+    rol: z.enum(["PARENT", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA", "COMITE", "ADMIN"]).default("PARENT"),
     q: z.string().trim().min(2).max(120).optional(),
     estado: z.enum(["activo", "inactivo", "bloqueado"]).optional(),
     desde: z.string().date().optional(),

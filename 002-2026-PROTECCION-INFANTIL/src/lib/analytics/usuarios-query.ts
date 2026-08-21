@@ -6,7 +6,7 @@
 import type { Prisma } from "@prisma/client";
 
 export interface FiltrosUsuarios {
-    rol: "PARENT" | "SCHOOL_ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "ADMIN";
+    rol: "PARENT" | "SCHOOL_ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "COMITE_CONVIVENCIA" | "COMITE" | "ADMIN";
     q?: string | undefined;
     estado?: "activo" | "inactivo" | "bloqueado" | undefined;
     desde?: string | undefined;
@@ -16,7 +16,10 @@ export interface FiltrosUsuarios {
 }
 
 export function construirWhereUsuarios(filtros: FiltrosUsuarios): Prisma.UsuarioWhereInput {
-    const where: Prisma.UsuarioWhereInput = { rol: filtros.rol };
+    const where: Prisma.UsuarioWhereInput =
+        filtros.rol === "COMITE"
+            ? { rol: { in: ["COMITE_VALIDACION", "COMITE_CONVIVENCIA"] } }
+            : { rol: filtros.rol };
 
     if (filtros.q) {
         where.OR = [
