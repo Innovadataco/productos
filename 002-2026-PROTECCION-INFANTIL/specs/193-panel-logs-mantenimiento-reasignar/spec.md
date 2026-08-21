@@ -84,8 +84,7 @@ Como administrador de la plataforma quiero mover un caso de un operador a otro, 
 **Acceptance Scenarios**:
 
 1. **Given** un reporte en estado `REVISION_MANUAL` con un operador asignado, **When** un `ADMIN` reasigna el caso a otro `OPERADOR` activo, **Then** el sistema actualiza `Reporte.operadorId`, inserta una entrada en `TransicionReporte` (o su equivalente timeline) con tipo `REPORTE_REASIGNADO_MANUAL` y genera un `AuditLog` con `REPORTE_REASIGNADO_MANUAL`.
-2. **Given** un reporte en estado `PROCESADO` con operador asignado, **When** un `ADMIN` reasigna el caso, **Then** el sistema acepta la operación y registra la trazabilidad.
-3. **Given** un reporte en estado `PENDIENTE` (sin operador asignado), **When** un `ADMIN` intenta reasignar, **Then** el sistema rechaza la operación con error de validación.
+2. **Given** un reporte en estado `PENDIENTE` (sin operador asignado), **When** un `ADMIN` intenta reasignar, **Then** el sistema rechaza la operación con error de validación.
 4. **Given** un reporte en `REVISION_MANUAL`, **When** el operador destino está inactivo o no tiene rol `OPERADOR`, **Then** el sistema rechaza la operación.
 5. **Given** un usuario sin rol `ADMIN`, **When** intenta llamar `PATCH /api/admin/operadores/reasignar`, **Then** el sistema deniega el acceso.
 6. **Given** un `ADMIN` que reasigna un caso, **When** deja el motivo vacío o con menos de 20 caracteres, **Then** el sistema rechaza la petición.
@@ -100,7 +99,7 @@ Como administrador de la plataforma quiero mover un caso de un operador a otro, 
 - **`hasta` igual a hoy en purga**: rechazo inmediato; la fecha límite debe ser como máximo ayer para evitar borrar logs del día en curso.
 - **Purga con filtros que no coinciden con ninguna fila**: la operación es idempotente, no falla; el `AuditLog` registra `filas_borradas=0`.
 - **Reasignar al mismo operador**: se rechaza porque no hay cambio real.
-- **Reporte con `operadorId=null`**: aunque el estado sea `REVISION_MANUAL` o `PROCESADO`, se rechaza si no hay operador asignado.
+- **Reporte con `operadorId=null`**: aunque el estado sea `REVISION_MANUAL`, se rechaza si no hay operador asignado.
 - **Operador destino es el admin mismo u otro rol**: se valida estrictamente que el usuario destino tenga rol `OPERADOR` y estado activo.
 - **Reasignación concurrente**: si dos admins reasignan el mismo reporte simultáneamente, el segundo update debe detectar la inconsistencia (validación previa del operador actual) y retornar `409`.
 - **Mensaje de log con PII**: `workerLogger` debe recibir `contextoJson` estructurado; el mensaje principal no debe incluir datos personales, textos de reportes ni identificadores sensibles.
@@ -129,7 +128,7 @@ Como administrador de la plataforma quiero mover un caso de un operador a otro, 
 - **FR-016**: El sistema DEBE exponer `DELETE /api/admin/monitoreo/logs` restringido a `ADMIN`, con rate-limit `admin_write`, que ejecute la purga y retorne las filas borradas.
 - **FR-017**: Tras una purga, el sistema DEBE insertar un `AuditLog` con `accion='LOGS_MANTENIMIENTO_PURGA'` y `metadataJson` que incluya `{filtros, motivo, filas_borradas, ejecutado_por}`.
 - **FR-018**: El sistema DEBE exponer `PATCH /api/admin/operadores/reasignar` restringido a `ADMIN` y con rate-limit `admin_write`.
-- **FR-019**: El endpoint `PATCH /api/admin/operadores/reasignar` DEBE recibir `{ reporteId, operadorDestinoId, motivo }`, validar que el operador destino sea un `Usuario` activo con rol `OPERADOR`, y que el reporte esté en `REVISION_MANUAL` o `PROCESADO` con `operadorId` no nulo.
+- **FR-019**: El endpoint `PATCH /api/admin/operadores/reasignar` DEBE recibir `{ reporteId, operadorDestinoId, motivo }`, validar que el operador destino sea un `Usuario` activo con rol `OPERADOR`, y que el reporte esté en `REVISION_MANUAL` con `operadorId` no nulo.
 - **FR-020**: El endpoint `PATCH /api/admin/operadores/reasignar` DEBE actualizar `Reporte.operadorId`, insertar una entrada en la tabla de timeline con tipo `REPORTE_REASIGNADO_MANUAL` y metadata `{operador_anterior, operador_nuevo, motivo, admin_id}`, y generar un `AuditLog` con `accion='REPORTE_REASIGNADO_MANUAL'`.
 - **FR-021**: El sistema DEBE implementar el componente `ReasignarModal` reusable desde la ficha del operador y desde el listado de casos.
 - **FR-022**: El sistema DEBE rechazar cualquier intento de acceder a `WorkerLog` por usuarios que no tengan rol `ADMIN`.

@@ -148,7 +148,7 @@ Casos mínimos:
 **Archivo**: `src/lib/operadores/reasignar-service.ts`
 
 Función `reasignarReporte({ reporteId, operadorDestinoId, motivo, adminId })`:
-- Leer reporte y validar: estado `REVISION_MANUAL` o `PROCESADO`, `operadorId` no nulo.
+- Leer reporte y validar: estado `REVISION_MANUAL`, `operadorId` no nulo.
 - Validar operador destino: `rol=OPERADOR`, `estado=activo`, distinto al operador actual.
 - Ejecutar transacción:
   1. `UPDATE Reporte SET operadorId = destino WHERE id = reporteId AND operadorId = actual`.

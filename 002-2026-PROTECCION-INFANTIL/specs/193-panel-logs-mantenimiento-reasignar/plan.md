@@ -134,6 +134,10 @@ Los tres parámetros de monitoreo viven en `ParametroSistema`:
 
 Se siembran con `ON CONFLICT DO UPDATE` en `prisma/seed.ts` para que el default llegue a todos los entornos sin pisar valores operativos del CEO.
 
+### 3.11 Corrección I-82: reasignación solo para `REVISION_MANUAL`
+
+El BRIEF original y el spec inicial permitían reasignar reportes en `REVISION_MANUAL` o `PROCESADO`. Tras auditoría en fuente, ZEUS detectó que el enum `EstadoReporte` no contiene `PROCESADO` y que en producción solo los reportes en `REVISION_MANUAL` tienen `operadorId` asignado. Se aplica **Opción 1**: la reasignación solo es válida para reportes en estado `REVISION_MANUAL` con `operadorId` no nulo. Esto mantiene intacto FR-023 (sin cambios de estructura en `Reporte` ni `Usuario`) y evita mezclar semánticas con `CORREGIDO`. El spec, plan y tests se ajustaron en consecuencia.
+
 ---
 
 ## 4. Riesgos y mitigaciones
