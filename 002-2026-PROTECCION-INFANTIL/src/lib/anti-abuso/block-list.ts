@@ -71,6 +71,7 @@ export async function bloquearIp(params: {
 export async function desbloquearIp(params: {
     id: string;
     creadoPorId: string;
+    motivo?: string;
     request?: Request;
 }) {
     const repo = new BlockListRepository();
@@ -81,12 +82,20 @@ export async function desbloquearIp(params: {
 
     const ipAddress = params.request?.headers.get("x-forwarded-for") || params.request?.headers.get("x-real-ip") || "unknown";
     const userAgent = params.request?.headers.get("user-agent") || "unknown";
+    const accion = params.motivo ? "IP_DESBLOQUEADA_MANUAL" : "IP_DESBLOQUEADA";
     await logAudit({
-        accion: "IP_DESBLOQUEADA",
+        accion,
         tipoRecurso: "BlockList",
         recursoId: bloqueo.id,
         usuarioId: params.creadoPorId,
-        valorAnterior: JSON.stringify({ ipHash: bloqueo.ipHash, motivo: bloqueo.motivo }),
+        valorAnterior: JSON.stringify({
+            ipHash: bloqueo.ipHash,
+            motivo: bloqueo.motivo,
+            admin_id: params.creadoPorId,
+            bloqueo_id: bloqueo.id,
+            duracion_original: bloqueo.expiraEn ? new Date(bloqueo.expiraEn).toISOString() : "permanente",
+            ...(params.motivo ? { motivo_desbloqueo: params.motivo } : {}),
+        }),
         ipAddress,
         userAgent,
     });

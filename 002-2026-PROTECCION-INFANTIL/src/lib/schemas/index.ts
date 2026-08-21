@@ -479,14 +479,29 @@ export const ventanaAntiAbusoSchema = z.enum(["24h", "7d", "30d"]).default("24h"
 
 export const duracionBloqueoSchema = z.enum(["24h", "7d", "permanente"]);
 
+function esIpValida(ip: string): boolean {
+    const ipv4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+    if (ipv4.test(ip)) return true;
+    const ipv6 =
+        /^(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}$|^([a-fA-F0-9]{1,4}:){1,7}:$|^([a-fA-F0-9]{1,4}:){1,6}:[a-fA-F0-9]{1,4}$|^([a-fA-F0-9]{1,4}:){1,5}(:[a-fA-F0-9]{1,4}){1,2}$|^([a-fA-F0-9]{1,4}:){1,4}(:[a-fA-F0-9]{1,4}){1,3}$|^([a-fA-F0-9]{1,4}:){1,3}(:[a-fA-F0-9]{1,4}){1,4}$|^([a-fA-F0-9]{1,4}:){1,2}(:[a-fA-F0-9]{1,4}){1,5}$|^[a-fA-F0-9]{1,4}:((:[a-fA-F0-9]{1,4}){1,6})$|^:((:[a-fA-F0-9]{1,4}){1,7}|:)$/;
+    return ipv6.test(ip);
+}
+
+// SPEC-196 (002-PI-090): bloqueo manual recibe la IP en claro; el backend calcula el hash.
 export const bloquearIpBodySchema = z.object({
-    ipHash: z.string().min(64).max(64).regex(/^[a-f0-9]{64}$/, "ipHash debe ser SHA-256 hex en minúsculas"),
+    ip: z
+        .string()
+        .trim()
+        .min(1, "La IP es obligatoria")
+        .refine(esIpValida, { message: "Debe ser una IPv4 o IPv6 válida" }),
     motivo: z.string().trim().min(1, "El motivo es obligatorio").max(500, "Máximo 500 caracteres"),
     duracion: duracionBloqueoSchema,
 });
 
+// SPEC-196 (002-PI-090): desbloqueo manual requiere motivo de al menos 20 caracteres.
 export const desbloquearIpBodySchema = z.object({
     id: cuidIdSchema,
+    motivo: z.string().trim().min(20, "El motivo debe tener al menos 20 caracteres").max(500, "Máximo 500 caracteres"),
 });
 
 // SPEC-184 (002-PI-079): simulador de abusos.

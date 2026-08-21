@@ -192,6 +192,8 @@ enum AccionAudit {
   // SPEC-184 (002-PI-079): anti-abuso operativo + simulador de abusos.
   IP_BLOQUEADA
   IP_DESBLOQUEADA
+  // SPEC-196 (002-PI-090): desbloqueo manual de IP con motivo obligatorio.
+  IP_DESBLOQUEADA_MANUAL
   SIMULACION_ABUSO_INICIADA
   SIMULACION_ABUSO_CANCELADA
   SIMULACION_ABUSO_COMPLETADA

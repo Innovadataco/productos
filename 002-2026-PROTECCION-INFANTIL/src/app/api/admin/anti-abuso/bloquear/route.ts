@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -5,6 +6,10 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { bloquearIpBodySchema } from "@/lib/schemas";
 import { bloquearIp } from "@/lib/anti-abuso/block-list";
+
+function hashIp(ip: string): string {
+    return createHash("sha256").update(ip.trim().toLowerCase()).digest("hex");
+}
 
 export async function POST(req: Request) {
     try {
@@ -35,8 +40,9 @@ export async function POST(req: Request) {
             );
         }
 
+        const ipHash = hashIp(parsed.data.ip);
         const bloqueo = await bloquearIp({
-            ipHash: parsed.data.ipHash,
+            ipHash,
             motivo: parsed.data.motivo,
             duracion: parsed.data.duracion,
             creadoPorId: user.id,

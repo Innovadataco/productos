@@ -78,4 +78,21 @@ describe("BlockList service (SPEC-184)", () => {
         audits = await prisma.auditLog.count({ where: { tipoRecurso: "BlockList", recursoId: bloqueo.id } });
         expect(audits).toBe(2);
     });
+
+    it("desbloqueo manual usa acción IP_DESBLOQUEADA_MANUAL y guarda motivo", async () => {
+        const admin = await crearUsuario("ADMIN");
+        const ipHash = calcularIpHash("192.0.2.16");
+
+        const bloqueo = await bloquearIp({ ipHash, motivo: "Bloqueo de prueba", duracion: "24h", creadoPorId: admin.id });
+        await desbloquearIp({ id: bloqueo.id, creadoPorId: admin.id, motivo: "Revisado por el comité, es tráfico legítimo" });
+
+        const audit = await prisma.auditLog.findFirst({
+            where: { accion: "IP_DESBLOQUEADA_MANUAL", recursoId: bloqueo.id },
+        });
+        expect(audit).not.toBeNull();
+        const meta = JSON.parse(audit!.valorAnterior ?? "{}");
+        expect(meta.motivo_desbloqueo).toBe("Revisado por el comité, es tráfico legítimo");
+        expect(meta.bloqueo_id).toBe(bloqueo.id);
+        expect(meta.duracion_original).toBeDefined();
+    });
 });

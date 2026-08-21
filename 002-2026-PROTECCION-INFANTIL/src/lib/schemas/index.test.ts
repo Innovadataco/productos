@@ -15,6 +15,8 @@ import {
     profesoresQuerySchema,
     cursoBodySchema,
     cursoUpdateBodySchema,
+    bloquearIpBodySchema,
+    desbloquearIpBodySchema,
 } from "./index";
 
 describe("schemas/index", () => {
@@ -182,5 +184,39 @@ describe("schemas profesor (SPEC-145)", () => {
         expect(() => cursoBodySchema.parse({ nombre: "6A", profesorTitularId: "no-es-cuid" })).toThrow();
         expect(() => cursoUpdateBodySchema.parse({ profesorTitularId: cuid })).not.toThrow();
         expect(() => cursoUpdateBodySchema.parse({ profesorTitularId: null })).not.toThrow();
+    });
+
+    it("bloquearIpBodySchema acepta IPv4 e IPv6 válidas", () => {
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "192.0.2.10", motivo: "Robot inundando", duracion: "24h" })
+        ).not.toThrow();
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "2001:db8::1", motivo: "Robot inundando", duracion: "7d" })
+        ).not.toThrow();
+    });
+
+    it("bloquearIpBodySchema rechaza IPs inválidas", () => {
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "999.999.999.999", motivo: "X", duracion: "24h" })
+        ).toThrow();
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "no-es-ip", motivo: "X", duracion: "24h" })
+        ).toThrow();
+    });
+
+    it("bloquearIpBodySchema rechaza motivo vacío o duración inválida", () => {
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "192.0.2.10", motivo: "", duracion: "24h" })
+        ).toThrow();
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "192.0.2.10", motivo: "X", duracion: "1h" as "24h" })
+        ).toThrow();
+    });
+
+    it("desbloquearIpBodySchema requiere motivo de al menos 20 caracteres", () => {
+        const id = "cm0k5example12345678901234567890";
+        expect(() => desbloquearIpBodySchema.parse({ id, motivo: "Motivo suficientemente largo" })).not.toThrow();
+        expect(() => desbloquearIpBodySchema.parse({ id, motivo: "corto" })).toThrow();
+        expect(() => desbloquearIpBodySchema.parse({ id })).toThrow();
     });
 });

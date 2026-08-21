@@ -10,7 +10,7 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **154** |
+| **Total de specs** | **155** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **50** |
@@ -130,8 +130,9 @@
 | [193](193-panel-logs-mantenimiento-reasignar/spec.md) | SPEC-193 — Panel de Logs + Mantenimiento + Reasignar Operador (002-PI-087) | 🔵 Planeada |
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
 | [192](192-ux-simulador-anti-abuso/spec.md) | SPEC-192 — UX del simulador anti-abuso (002-PI-086) | 🟢 Implementada (ver cierre.md) |
+| [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
 
-## Tabla completa (123 specs)
+## Tabla completa (124 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -308,6 +309,7 @@
 | [193](193-panel-logs-mantenimiento-reasignar/spec.md) | SPEC-193 — Panel de Logs + Mantenimiento + Reasignar Operador (002-PI-087) | 🔵 Planeada |
 | [190](190-deploy-seed-idempotente/spec.md) | SPEC-190 — Deploy ejecuta seed idempotente (002-PI-085) | 🟢 Implementada (ver cierre.md) |
 | [192](192-ux-simulador-anti-abuso/spec.md) | SPEC-192 — UX del simulador anti-abuso (002-PI-086) | 🟢 Implementada (ver cierre.md) |
+| [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
 
 ## Incidencias de calidad de datos
 
