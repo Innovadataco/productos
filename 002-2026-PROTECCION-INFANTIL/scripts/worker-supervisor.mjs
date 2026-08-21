@@ -10,6 +10,7 @@
 import { spawn } from "node:child_process";
 import { writeFileSync, unlinkSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
 
 const WORKER_SCRIPT = resolve(import.meta.dirname, "worker-reportes.mjs");
 // Spec 097: en contenedores app y worker son procesos separados; el heartbeat compartido
@@ -23,6 +24,8 @@ const RESTART_DELAY_MS = 2000;
 let restartCount = 0;
 let worker = null;
 let shuttingDown = false;
+
+const logger = workerLogger.child({ servicio: "pi-monitor" });
 
 function log(msg) {
     console.log(`[SUPERVISOR] ${msg}`);
@@ -47,6 +50,7 @@ function clearPid() {
 function startWorker() {
     if (shuttingDown) return;
 
+    logger.info("Iniciando worker supervisado", { intento: restartCount + 1 });
     log(`Iniciando worker (intento ${restartCount + 1}/${MAX_RESTARTS})`);
     // --env-file-if-exists: dev carga .env; en contenedor las vars llegan por compose.
     worker = spawn("node", ["--env-file-if-exists=.env", "--import", "tsx", WORKER_SCRIPT], {
@@ -61,10 +65,12 @@ function startWorker() {
         clearPid();
 
         if (shuttingDown) {
+            logger.info("Worker terminado por cierre controlado");
             log("Worker terminado por cierre controlado");
             process.exit(0);
         }
 
+        logger.warn("Worker hijo terminó", { code, signal });
         log(`Worker terminado (code=${code}, signal=${signal})`);
 
         if (restartCount < MAX_RESTARTS - 1) {
@@ -78,12 +84,14 @@ function startWorker() {
     });
 
     worker.on("error", (err) => {
+        logger.error("Error del worker hijo", { error: err.message });
         log(`Error del worker: ${err.message}`);
     });
 }
 
 function shutdown(signal) {
     shuttingDown = true;
+    logger.warn("Supervisor cerrándose por señal", { signal });
     log(`Recibida señal ${signal}. Cerrando worker...`);
     if (worker) {
         worker.kill(signal);

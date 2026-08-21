@@ -1,4 +1,8 @@
 {
   "descripcion": "Q-3 (002-PI-056): archivos con acceso directo a @/lib/prisma tolerados mientras E-8 completa la migración al DAL (src/lib/dal/). La lista SOLO SE ENCOGE: al migrar un archivo al DAL se quita de aquí en el mismo commit; añadir un archivo nuevo pone el lint y scripts/arch/dal-frontera.test.ts en ROJO.",
-  "archivos": []
+  "archivos": [
+    "src/lib/monitoreo/logs-service.ts",
+    "src/lib/monitoreo/worker-logger.ts",
+    "src/lib/operadores/reasignar-service.ts"
+  ]
 }

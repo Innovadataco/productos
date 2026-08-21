@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { verificarConexionDb } from "@/lib/dal/adapters/health";
 import { existeHeartbeatWorker, leerHeartbeatWorker } from "@/lib/worker-heartbeat";
+import { workerLogger } from "@/lib/monitoreo/worker-logger";
 
 // Spec 097: en contenedores (app y worker separados) el PID no es visible entre
 // procesos; el heartbeat en volumen compartido (WORKER_RUN_DIR) es la fuente de verdad.
@@ -43,6 +44,16 @@ export async function GET() {
 
         const healthy = workerAlive && dbOk;
 
+        const appLogger = workerLogger.child({ servicio: "pi-app" });
+        if (healthy) {
+            appLogger.info("Healthcheck app respondiendo correctamente");
+        } else {
+            const motivos = [];
+            if (!workerAlive) motivos.push("worker_not_alive");
+            if (!dbOk) motivos.push("db_not_ok");
+            appLogger.warn("Healthcheck app degradado", { motivos });
+        }
+
         return NextResponse.json(
             {
                 status: healthy ? "ok" : "degraded",
@@ -53,6 +64,9 @@ export async function GET() {
             { status: healthy ? 200 : 503 }
         );
     } catch (error) {
+        const appLogger = workerLogger.child({ servicio: "pi-app" });
+        const msg = error instanceof Error ? error.message : String(error);
+        appLogger.error("Healthcheck app falló", { error: msg });
         logger.error("[HEALTH-WORKER] Error:", error);
         return NextResponse.json(
             { status: "error", message: safeErrorMessage(error), code: ERROR_CODES.INTERNAL_ERROR, timestamp: new Date().toISOString() },
