@@ -4,7 +4,7 @@
 
 # 03 · Pantallas por rol y transiciones
 
-70 páginas (`page.tsx`) clasificadas por quién las alcanza según la
+73 páginas (`page.tsx`) clasificadas por quién las alcanza según la
 puerta real (`proxy()` ejecutado con la sesión canónica; segmentos `[x]` evaluados
 con un valor muestra fijo — al proxy solo le importa el prefijo).
 
@@ -43,6 +43,7 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/admin/estadisticas/clasificacion` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/estadisticas/motor` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/estadisticas/operacion` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/admin/estadisticas/operacion/colegios/[colegioId]` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/ia` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/monitoreo/worker` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/operadores` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
@@ -54,6 +55,8 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/admin/padres` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/padres/[id]/circulo` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/spam` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/admin/usuarios` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/admin/usuarios/[id]` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/apelaciones` | PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/circulo-confianza` | PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/colegio` | SCHOOL_ADMIN, PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |

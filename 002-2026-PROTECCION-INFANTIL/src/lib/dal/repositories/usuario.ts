@@ -170,6 +170,34 @@ export class UsuarioRepository {
         ]);
     }
 
+    /** SPEC-194 (002-PI-088): listado admin de usuarios por rol (empieza por PARENT). */
+    findUsuariosAdminPaginados(
+        where: Prisma.UsuarioWhereInput,
+        paginacion: { skip: number; take: number }
+    ) {
+        const select = {
+            id: true,
+            email: true,
+            nombre: true,
+            estado: true,
+            creadoEn: true,
+            ultimaSesion: true,
+            colegioId: true,
+            tenantId: true,
+            colegio: { select: { id: true, nombre: true } },
+        } satisfies Prisma.UsuarioSelect;
+        return Promise.all([
+            this.db.usuario.findMany({
+                where,
+                orderBy: { creadoEn: "desc" },
+                skip: paginacion.skip,
+                take: paginacion.take,
+                select,
+            }),
+            this.db.usuario.count({ where }),
+        ]);
+    }
+
     /** E-8: cuenta PARENT para gestión admin (desactivar/reactivar/restablecer). */
     findPadreById(id: string) {
         return this.db.usuario.findFirst({

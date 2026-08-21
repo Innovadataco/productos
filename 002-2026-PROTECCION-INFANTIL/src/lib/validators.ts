@@ -99,6 +99,32 @@ export const padresQuerySchema = z.object({
     q: z.string().trim().min(2).max(120).optional(),
 });
 
+// SPEC-194 (002-PI-088): listado admin de usuarios por rol (empieza por PARENT).
+export const usuariosQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    rol: z.enum(["PARENT", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION", "ADMIN"]).default("PARENT"),
+    q: z.string().trim().min(2).max(120).optional(),
+    estado: z.enum(["activo", "inactivo", "bloqueado"]).optional(),
+    desde: z.string().date().optional(),
+    hasta: z.string().date().optional(),
+    conReportes: z.enum(["true", "false"]).optional().transform((v) => (v === undefined ? undefined : v === "true")),
+    colegioId: idSchema.optional(),
+});
+export type UsuariosQueryInput = z.infer<typeof usuariosQuerySchema>;
+
+// SPEC-194 (002-PI-088): resumen de analítica por colegio.
+export const analyticsColegiosQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(2).max(120).optional(),
+    ciudadId: idSchema.optional(),
+    estado: z.enum(["activo", "inactivo"]).optional(),
+    orden: z.enum(["nombre", "reportesTotal", "reportesUltimos30Dias", "alertasEscaladas", "casosProcesadosPct", "fechaRegistro"]).optional().default("nombre"),
+    direccion: z.enum(["asc", "desc"]).optional().default("asc"),
+});
+export type AnalyticsColegiosQueryInput = z.infer<typeof analyticsColegiosQuerySchema>;
+
 // SPEC-171 (Pilar B): incidentes de infraestructura, paginación estándar + filtro por estado
 export const incidentesInfraQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),

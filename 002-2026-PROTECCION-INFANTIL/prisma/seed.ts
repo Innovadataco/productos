@@ -337,6 +337,23 @@ async function main() {
         });
     }
 
+    // SPEC-194 (002-PI-088): parámetros de analítica de colegios.
+    // Se siembran con update: {} para no pisar ajustes custom del CEO (patrón SPEC-187).
+    const analyticsColegiosParams = [
+        { clave: "analytics.colegios.cache_ttl_min", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "TTL en minutos de la caché en memoria de los endpoints de analítica de colegios" },
+        { clave: "analytics.colegios.inactividad_alerta_dias", valor: "45", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Si un colegio no tiene reportes en estos días, se muestra como hallazgo negativo" },
+        { clave: "analytics.colegios.spam_alerta_pct", valor: "0.5", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Porcentaje de reportes SPAM que dispara hallazgo negativo (0.5 = 50%)" },
+        { clave: "analytics.colegios.resolucion_comite_ok_pct", valor: "0.8", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Tasa mínima de resolución del comité para generar hallazgo positivo (0.8 = 80%)" },
+        { clave: "analytics.colegios.periodo_default_dias", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Ventana temporal por defecto de las series de reportes en la ficha de colegio" },
+    ];
+    for (const p of analyticsColegiosParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+
     console.log("Parámetros por defecto creados");
 
     // Nuevos parámetros del módulo de reportes (fase 2)
