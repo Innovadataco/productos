@@ -92,8 +92,11 @@ export function AdminAntiAbusoSimulador() {
     const [identificadores, setIdentificadores] = useState("");
     const [plataforma, setPlataforma] = useState("");
     const [usuarioId, setUsuarioId] = useState("");
+    const [nota, setNota] = useState("");
     const [sugerencia, setSugerencia] = useState<Sugerencias | null>(null);
     const [cargandoSugerencia, setCargandoSugerencia] = useState(false);
+
+    const [plataformaOptions, setPlataformaOptions] = useState<{ value: string; label: string }[]>([]);
 
     const [enviando, setEnviando] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -117,6 +120,7 @@ export function AdminAntiAbusoSimulador() {
 
     const cargarSugerencia = useCallback(
         async (esc: Escenario, opts?: { silent?: boolean }) => {
+            setError(null);
             if (esc === "personalizado") {
                 setSugerencia(null);
                 setIp("");
@@ -150,6 +154,31 @@ export function AdminAntiAbusoSimulador() {
     useEffect(() => {
         void cargarSugerencia(escenario);
     }, [escenario, cargarSugerencia]);
+
+    useEffect(() => {
+        const FALLBACK_PLATAFORMAS = [
+            { value: "whatsapp", label: "WhatsApp" },
+            { value: "telegram", label: "Telegram" },
+            { value: "instagram", label: "Instagram" },
+            { value: "facebook", label: "Facebook" },
+        ];
+
+        fetch("/api/plataformas", { credentials: "include" })
+            .then((r) => r.json())
+            .then((json: { plataformas?: Array<{ clave: string; nombre: string }> }) => {
+                const lista = json.plataformas ?? [];
+                if (lista.length === 0) {
+                    setPlataformaOptions(FALLBACK_PLATAFORMAS);
+                    return;
+                }
+                setPlataformaOptions(
+                    lista
+                        .filter((p) => p.clave !== "otro")
+                        .map((p) => ({ value: p.clave, label: p.nombre }))
+                );
+            })
+            .catch(() => setPlataformaOptions(FALLBACK_PLATAFORMAS));
+    }, []);
 
     const cargarRun = useCallback(async (id: string) => {
         try {
@@ -198,12 +227,16 @@ export function AdminAntiAbusoSimulador() {
         setRunId(null);
         try {
             const body: Record<string, unknown> = { escenario, n };
-            if (ip.trim()) body.ip = ip.trim();
-            if (ips.trim()) body.ips = arraysFromInput(ips);
-            if (identificador.trim()) body.identificador = identificador.trim();
+            // SPEC-192: priorizar arrays sobre campos únicos cuando el array tiene contenido.
             if (identificadores.trim()) body.identificadores = arraysFromInput(identificadores);
+            else if (identificador.trim()) body.identificador = identificador.trim();
+
+            if (ips.trim()) body.ips = arraysFromInput(ips);
+            else if (ip.trim()) body.ip = ip.trim();
+
             if (plataforma.trim()) body.plataforma = plataforma.trim();
             if (usuarioId.trim()) body.usuarioId = usuarioId.trim();
+            if (nota.trim()) body.nota = nota.trim();
 
             const res = await fetch("/api/admin/anti-abuso/simular", {
                 method: "POST",
@@ -222,7 +255,7 @@ export function AdminAntiAbusoSimulador() {
         } finally {
             setEnviando(false);
         }
-    }, [escenario, n, ip, ips, identificador, identificadores, plataforma, usuarioId]);
+    }, [escenario, n, ip, ips, identificador, identificadores, plataforma, usuarioId, nota]);
 
     const cancelar = useCallback(async () => {
         if (!runId) return;
@@ -296,7 +329,14 @@ export function AdminAntiAbusoSimulador() {
                                 label="Escenario"
                                 options={ESCENARIO_OPCIONES}
                                 value={escenario}
-                                onChange={(e) => setEscenario(e.target.value as Escenario)}
+                                onChange={(e) => {
+                                    setEscenario(e.target.value as Escenario);
+                                    setRun(null);
+                                    setRunId(null);
+                                    setError(null);
+                                    setSugerencia(null);
+                                    setNota("");
+                                }}
                             />
                             <Input
                                 label="Cantidad (N)"
@@ -306,41 +346,59 @@ export function AdminAntiAbusoSimulador() {
                                 value={n}
                                 onChange={(e) => setN(Number(e.target.value))}
                             />
-                            <Input
-                                label="IP inyectable (RFC 5737)"
-                                value={ip}
-                                onChange={(e) => setIp(e.target.value)}
-                                placeholder="192.0.2.x"
-                            />
+                            <div className="space-y-1">
+                                <Input
+                                    label="IP inyectable (RFC 5737)"
+                                    value={ip}
+                                    onChange={(e) => setIp(e.target.value)}
+                                    placeholder="192.0.2.x"
+                                    disabled={ips.trim().length > 0}
+                                />
+                                {ips.trim().length > 0 && (
+                                    <p className="text-xs text-muted">Se usa el array de arriba</p>
+                                )}
+                            </div>
                             <Input
                                 label="IPs (array separado por coma)"
                                 value={ips}
                                 onChange={(e) => setIps(formatArrayField(e.target.value))}
                                 placeholder="192.0.2.20, 192.0.2.21, ..."
                             />
-                            <Input
-                                label="Identificador objetivo"
-                                value={identificador}
-                                onChange={(e) => setIdentificador(e.target.value)}
-                                placeholder="Teléfono, nick o perfil"
-                            />
+                            <div className="space-y-1">
+                                <Input
+                                    label="Identificador objetivo"
+                                    value={identificador}
+                                    onChange={(e) => setIdentificador(e.target.value)}
+                                    placeholder="Teléfono, nick o perfil"
+                                    disabled={identificadores.trim().length > 0}
+                                />
+                                {identificadores.trim().length > 0 && (
+                                    <p className="text-xs text-muted">Se usa el array de arriba</p>
+                                )}
+                            </div>
                             <Input
                                 label="Identificadores (array separado por coma)"
                                 value={identificadores}
                                 onChange={(e) => setIdentificadores(formatArrayField(e.target.value))}
                                 placeholder="3001000001, 3001000002, ..."
                             />
-                            <Input
+                            <Select
                                 label="Plataforma"
+                                options={[{ value: "", label: "Selecciona una plataforma" }, ...plataformaOptions]}
                                 value={plataforma}
                                 onChange={(e) => setPlataforma(e.target.value)}
-                                placeholder="whatsapp, telegram, instagram"
                             />
                             <Input
                                 label="Usuario PARENT de prueba"
                                 value={usuarioId}
                                 onChange={(e) => setUsuarioId(e.target.value)}
                                 placeholder="Solo para denunciante_spam"
+                            />
+                            <Input
+                                label="Nota (interna)"
+                                value={nota}
+                                onChange={(e) => setNota(e.target.value.slice(0, 200))}
+                                placeholder="Opcional, máximo 200 caracteres"
                             />
                         </div>
 
@@ -370,7 +428,7 @@ export function AdminAntiAbusoSimulador() {
 
                         {error && <p className="mt-3 text-sm text-rubi">{error}</p>}
                         <div className="mt-4 flex gap-2">
-                            <Button onClick={iniciar} disabled={enviando || !!runId} isLoading={enviando}>
+                            <Button onClick={iniciar} disabled={enviando || (!!runId && !finalizada)} isLoading={enviando}>
                                 Iniciar simulación
                             </Button>
                             {runId && !finalizada && (

@@ -102,7 +102,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const run = await crearSimulacionAbuso(parsed.data, auth.user.id);
+        const run = await crearSimulacionAbuso(parsed.data, auth.user.id, { nota: parsed.data.nota });
         return NextResponse.json({ ok: true, runId: run.id, estado: run.estado }, { status: 201 });
     } catch (error) {
         if (error instanceof AppError) {

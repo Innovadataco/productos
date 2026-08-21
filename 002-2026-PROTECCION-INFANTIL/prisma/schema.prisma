@@ -196,9 +196,16 @@ enum AccionAudit {
   // SPEC-184 (002-PI-079): anti-abuso operativo + simulador de abusos.
   IP_BLOQUEADA
   IP_DESBLOQUEADA
+  // SPEC-196 (002-PI-090): desbloqueo manual de IP con motivo obligatorio.
+  IP_DESBLOQUEADA_MANUAL
   SIMULACION_ABUSO_INICIADA
   SIMULACION_ABUSO_CANCELADA
   SIMULACION_ABUSO_COMPLETADA
+  // SPEC-193 (Fase 1): mantenimiento de logs y reasignación manual de reportes.
+  LOGS_MANTENIMIENTO_PURGA
+  REPORTE_REASIGNADO_MANUAL
+  // SPEC-193 (Fase 5): auditoría de intentos de acceso no autorizado a recursos admin.
+  ACCESO_DENEGADO
 }
 
 enum TipoPeriodoServicio {
@@ -235,6 +242,13 @@ enum MotivoBajaReporte {
   RETIRO_LIMPIEZA
   REPORTE_FALSO
   ORDEN_LEGAL
+}
+
+enum NivelLog {
+  DEBUG
+  INFO
+  WARN
+  ERROR
 }
 
 enum CategoriaConducta {
@@ -1575,6 +1589,7 @@ model SimulacionAbusoRun {
   estado         String   @default("PENDIENTE") // PENDIENTE | EN_PROGRESO | COMPLETADA | CANCELADA | FALLIDA
   configJson     Json?
   resultadosJson Json?
+  nota           String?  @db.VarChar(200)
   creadoPorId    String
   creadoEn       DateTime @default(now())
   actualizadoEn  DateTime @updatedAt
@@ -1694,6 +1709,22 @@ model IncidenteInfra {
   actualizadoEn DateTime  @updatedAt
 
   @@index([senal, estado])
+}
+
+// SPEC-193 (Fase 1): bitácora de logs de workers y servicios.
+// No almacena PII ni texto de reportes; retención acotada por purga explícita.
+model WorkerLog {
+  id           String   @id @default(cuid())
+  servicio     String
+  nivel        NivelLog
+  mensaje      String   @db.VarChar(500)
+  contextoJson Json?
+  creadoEn     DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([servicio, creadoEn(sort: Desc)], name: "idx_worker_logs_servicio_creado")
+  @@index([nivel, creadoEn(sort: Desc)], name: "idx_worker_logs_nivel_creado")
+  @@index([creadoEn(sort: Desc)], name: "idx_worker_logs_creado")
+  @@map("worker_logs")
 }
 
 // SPEC-172 (Pilar D.5): snapshot semanal de la deriva del motor en producción

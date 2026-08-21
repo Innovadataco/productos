@@ -4,7 +4,7 @@
  * ReporteRepository más allá del techo de líneas.
  */
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
 export class SpamReporteRepository {

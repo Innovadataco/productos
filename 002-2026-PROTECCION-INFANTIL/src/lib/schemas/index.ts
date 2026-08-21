@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NivelLog } from "@prisma/client";
 
 /**
  * Esquemas zod reutilizables para validación de entradas en rutas API.
@@ -478,14 +479,29 @@ export const ventanaAntiAbusoSchema = z.enum(["24h", "7d", "30d"]).default("24h"
 
 export const duracionBloqueoSchema = z.enum(["24h", "7d", "permanente"]);
 
+function esIpValida(ip: string): boolean {
+    const ipv4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+    if (ipv4.test(ip)) return true;
+    const ipv6 =
+        /^(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}$|^([a-fA-F0-9]{1,4}:){1,7}:$|^([a-fA-F0-9]{1,4}:){1,6}:[a-fA-F0-9]{1,4}$|^([a-fA-F0-9]{1,4}:){1,5}(:[a-fA-F0-9]{1,4}){1,2}$|^([a-fA-F0-9]{1,4}:){1,4}(:[a-fA-F0-9]{1,4}){1,3}$|^([a-fA-F0-9]{1,4}:){1,3}(:[a-fA-F0-9]{1,4}){1,4}$|^([a-fA-F0-9]{1,4}:){1,2}(:[a-fA-F0-9]{1,4}){1,5}$|^[a-fA-F0-9]{1,4}:((:[a-fA-F0-9]{1,4}){1,6})$|^:((:[a-fA-F0-9]{1,4}){1,7}|:)$/;
+    return ipv6.test(ip);
+}
+
+// SPEC-196 (002-PI-090): bloqueo manual recibe la IP en claro; el backend calcula el hash.
 export const bloquearIpBodySchema = z.object({
-    ipHash: z.string().min(64).max(64).regex(/^[a-f0-9]{64}$/, "ipHash debe ser SHA-256 hex en minúsculas"),
+    ip: z
+        .string()
+        .trim()
+        .min(1, "La IP es obligatoria")
+        .refine(esIpValida, { message: "Debe ser una IPv4 o IPv6 válida" }),
     motivo: z.string().trim().min(1, "El motivo es obligatorio").max(500, "Máximo 500 caracteres"),
     duracion: duracionBloqueoSchema,
 });
 
+// SPEC-196 (002-PI-090): desbloqueo manual requiere motivo de al menos 20 caracteres.
 export const desbloquearIpBodySchema = z.object({
     id: cuidIdSchema,
+    motivo: z.string().trim().min(20, "El motivo debe tener al menos 20 caracteres").max(500, "Máximo 500 caracteres"),
 });
 
 // SPEC-184 (002-PI-079): simulador de abusos.
@@ -522,6 +538,8 @@ export const simularAbusoBodySchema = z.object({
     usuarioId: z.string().cuid().optional(),
     identificadores: z.array(z.string().min(3).max(100)).max(200).optional(),
     ips: z.array(ipv4Schema).max(200).optional(),
+    // SPEC-192: nota interna opcional para el operador.
+    nota: z.string().max(200).optional(),
 });
 
 export const simulacionAbusoQuerySchema = z.object({
@@ -550,4 +568,29 @@ export const informeMensualQuerySchema = z.object({
             const finMesActual = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1, 5, 0, 0, 0));
             return inicioMes >= hace12Meses && inicioMes < finMesActual;
         }, "El mes debe estar entre los últimos 12 meses y no puede ser futuro"),
+});
+
+// SPEC-193 (Fase 2): administración de logs de workers.
+export const monitoreoLogsQuerySchema = z.object({
+    servicio: z.string().optional(),
+    nivel: z.nativeEnum(NivelLog).optional(),
+    desde: z.string().datetime().optional(),
+    hasta: z.string().datetime().optional(),
+    q: z.string().min(1).max(120).optional(),
+    limit: z.coerce.number().int().min(1).max(500).default(100),
+    offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const monitoreoLogsPurgeSchema = z.object({
+    hasta: z.string().datetime(),
+    servicio: z.string().optional(),
+    nivel: z.nativeEnum(NivelLog).optional(),
+    motivo: z.string().min(20).max(500),
+});
+
+// SPEC-193 (Fase 2): reasignación manual de reportes entre operadores.
+export const reasignarOperadorBodySchema = z.object({
+    reporteId: cuidIdSchema,
+    operadorDestinoId: cuidIdSchema,
+    motivo: z.string().min(20).max(500),
 });

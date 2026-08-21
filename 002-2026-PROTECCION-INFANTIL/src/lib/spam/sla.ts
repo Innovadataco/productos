@@ -1,7 +1,7 @@
-import { SpamReporteRepository } from "@/lib/dal/repositories/spam-reporte";
-import { getParametroSistema } from "@/lib/parametros";
-import { enviarAlertaRevision } from "@/lib/email";
-import { logger } from "@/lib/logger";
+import { SpamReporteRepository } from "../dal/repositories/spam-reporte";
+import { getParametroSistema } from "../parametros";
+import { enviarAlertaRevision } from "../email";
+import { logger } from "../logger";
 
 /**
  * SPEC-195 (002-PI-089): alerta sobre reportes POSIBLE_SPAM que superan el SLA

@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 279 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1953 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 281 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 1967 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -82,6 +82,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/historial` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/logs` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
@@ -93,6 +94,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/operadores/[id]/regenerar-password` | api | permitir | permite | sí |
 | `/api/admin/operadores/asignacion` | api | permitir | permite | sí |
 | `/api/admin/operadores/modelo` | api | permitir | permite | sí |
+| `/api/admin/operadores/reasignar` | api | permitir | permite | sí |
 | `/api/admin/padres` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | permitir | permite | sí |
@@ -366,6 +368,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/historial` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/logs` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
@@ -377,6 +380,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/operadores/[id]/regenerar-password` | api | permitir | permite | sí |
 | `/api/admin/operadores/asignacion` | api | permitir | permite | sí |
 | `/api/admin/operadores/modelo` | api | permitir | permite | sí |
+| `/api/admin/operadores/reasignar` | api | permitir | permite | sí |
 | `/api/admin/padres` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | permitir | permite | sí |
@@ -650,6 +654,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/estado` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/historial` | api | permitir | permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | permitir | permite | sí |
+| `/api/admin/monitoreo/logs` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
@@ -661,6 +666,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/operadores/[id]/regenerar-password` | api | permitir | permite | sí |
 | `/api/admin/operadores/asignacion` | api | permitir | permite | sí |
 | `/api/admin/operadores/modelo` | api | permitir | permite | sí |
+| `/api/admin/operadores/reasignar` | api | permitir | permite | sí |
 | `/api/admin/padres` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | permitir | permite | sí |
@@ -934,6 +940,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/historial` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/logs` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
@@ -945,6 +952,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/asignacion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/modelo` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/reasignar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | HTTP 403 | no permite | sí |
@@ -1218,6 +1226,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/historial` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/logs` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
@@ -1229,6 +1238,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/asignacion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/modelo` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/reasignar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | HTTP 403 | no permite | sí |
@@ -1502,6 +1512,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/historial` | api | HTTP 403 | no permite | sí |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/monitoreo/logs` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
@@ -1513,6 +1524,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/asignacion` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/modelo` | api | HTTP 403 | no permite | sí |
+| `/api/admin/operadores/reasignar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | HTTP 403 | no permite | sí |
@@ -1786,6 +1798,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/monitoreo/historial` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/monitoreo/incidentes` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/monitoreo/logs` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/motor/deriva` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores` | api | HTTP 401 | permite | **NO** |
@@ -1797,6 +1810,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/operadores/[id]/regenerar-password` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/asignacion` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/modelo` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/operadores/reasignar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]/circulo-confianza` | api | HTTP 401 | permite | **NO** |
@@ -2071,6 +2085,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/monitoreo/estado` | HTTP 401 | permite |
 | `/api/admin/monitoreo/historial` | HTTP 401 | permite |
 | `/api/admin/monitoreo/incidentes` | HTTP 401 | permite |
+| `/api/admin/monitoreo/logs` | HTTP 401 | permite |
 | `/api/admin/motor/deriva` | HTTP 401 | permite |
 | `/api/admin/motor/deriva/recalcular` | HTTP 401 | permite |
 | `/api/admin/operadores` | HTTP 401 | permite |
@@ -2082,6 +2097,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/operadores/[id]/regenerar-password` | HTTP 401 | permite |
 | `/api/admin/operadores/asignacion` | HTTP 401 | permite |
 | `/api/admin/operadores/modelo` | HTTP 401 | permite |
+| `/api/admin/operadores/reasignar` | HTTP 401 | permite |
 | `/api/admin/padres` | HTTP 401 | permite |
 | `/api/admin/padres/[id]` | HTTP 401 | permite |
 | `/api/admin/padres/[id]/circulo-confianza` | HTTP 401 | permite |

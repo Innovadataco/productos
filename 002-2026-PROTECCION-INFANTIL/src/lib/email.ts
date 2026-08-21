@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { requireEnv } from "./env";
 import { prisma } from "./prisma";
 import { getParametroSistema } from "./parametros";
-import { logger } from "@/lib/logger";
+import { logger } from "./logger";
 import type { FilaDeriva } from "./motor/deriva";
 
 const resend = new Resend(requireEnv("RESEND_API_KEY", 10));

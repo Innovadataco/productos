@@ -78,7 +78,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `test:unit` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --config vitest.unit.config.ts --coverage.enabled` |
 | `test:watch` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs` |
 | `tokens:check` | `tsx scripts/tokens-check.ts` |
-| `worker` | `node scripts/worker-supervisor.mjs` |
+| `worker` | `node --import tsx scripts/worker-supervisor.mjs` |
 
 ## Imagen de producción (Dockerfile)
 

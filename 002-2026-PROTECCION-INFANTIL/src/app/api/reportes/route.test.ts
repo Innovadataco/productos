@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -355,6 +355,127 @@ describe("POST /api/reportes", () => {
         expect(reporte?.prioridadAlta).toBe(true);
         expect(reporte?.keywordsDetectadas).toContain("doxear");
         expect(sendReporte).toHaveBeenCalledWith(body.reporte.id, { prioridadAlta: true });
+    });
+});
+
+describe("POST /api/reportes — bypass fingerprint simulador (SPEC-192 I-71)", () => {
+    const TEST_SECRET = "test-simulador-abuso-secret-32bytes";
+    let originalSimuladorSecret: string | undefined;
+
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        await crearParametrosReportes();
+        await crearPlataforma();
+        await crearPaisCiudad();
+        originalSimuladorSecret = process.env.SIMULADOR_ABUSO_SECRET;
+        process.env.SIMULADOR_ABUSO_SECRET = TEST_SECRET;
+    });
+
+    afterEach(() => {
+        process.env.SIMULADOR_ABUSO_SECRET = originalSimuladorSecret;
+    });
+
+    const baseFingerprintHeaders = {
+        "Content-Type": "application/json",
+        "user-agent": "SimuladorAbuso/1.0",
+        "accept-language": "es-CO",
+    };
+
+    it("secret correcto permite superar el límite por fingerprint", async () => {
+        const originalDisableRateLimit = process.env.DISABLE_RATE_LIMIT;
+        process.env.DISABLE_RATE_LIMIT = "false";
+        const secret = TEST_SECRET;
+
+        try {
+            for (let i = 0; i < 6; i++) {
+                const req = new Request("http://localhost:5005/api/reportes", {
+                    method: "POST",
+                    headers: {
+                        ...baseFingerprintHeaders,
+                        "x-forwarded-for": `10.9.0.${i + 1}`,
+                        "x-simulacion-secret": secret,
+                    },
+                    body: JSON.stringify({ ...reporteValido, identificador: `+57300BY${i}` }),
+                });
+                const res = await POST(req);
+                expect(res.status).toBe(201);
+            }
+        } finally {
+            process.env.DISABLE_RATE_LIMIT = originalDisableRateLimit;
+        }
+    });
+
+    it("sin header el sexto reporte con igual fingerprint es 429", async () => {
+        const originalDisableRateLimit = process.env.DISABLE_RATE_LIMIT;
+        process.env.DISABLE_RATE_LIMIT = "false";
+
+        try {
+            for (let i = 0; i < 5; i++) {
+                const req = new Request("http://localhost:5005/api/reportes", {
+                    method: "POST",
+                    headers: {
+                        ...baseFingerprintHeaders,
+                        "x-forwarded-for": `10.10.0.${i + 1}`,
+                    },
+                    body: JSON.stringify({ ...reporteValido, identificador: `+57300NO${i}` }),
+                });
+                const res = await POST(req);
+                expect(res.status).toBe(201);
+            }
+
+            const req6 = new Request("http://localhost:5005/api/reportes", {
+                method: "POST",
+                headers: {
+                    ...baseFingerprintHeaders,
+                    "x-forwarded-for": "10.10.0.6",
+                },
+                body: JSON.stringify({ ...reporteValido, identificador: "+57300NO5" }),
+            });
+            const res6 = await POST(req6);
+            expect(res6.status).toBe(429);
+            const body6 = await res6.json();
+            expect(body6.error.code).toBe("RATE_LIMITED");
+        } finally {
+            process.env.DISABLE_RATE_LIMIT = originalDisableRateLimit;
+        }
+    });
+
+    it("header falso no bypassa el rate limit por fingerprint", async () => {
+        const originalDisableRateLimit = process.env.DISABLE_RATE_LIMIT;
+        process.env.DISABLE_RATE_LIMIT = "false";
+
+        try {
+            for (let i = 0; i < 5; i++) {
+                const req = new Request("http://localhost:5005/api/reportes", {
+                    method: "POST",
+                    headers: {
+                        ...baseFingerprintHeaders,
+                        "x-forwarded-for": `10.11.0.${i + 1}`,
+                        "x-simulacion-secret": "test-simulador-abuso-secret-32bytes-FALSO",
+                    },
+                    body: JSON.stringify({ ...reporteValido, identificador: `+57300FA${i}` }),
+                });
+                const res = await POST(req);
+                expect(res.status).toBe(201);
+            }
+
+            const req6 = new Request("http://localhost:5005/api/reportes", {
+                method: "POST",
+                headers: {
+                    ...baseFingerprintHeaders,
+                    "x-forwarded-for": "10.11.0.6",
+                    "x-simulacion-secret": "test-simulador-abuso-secret-32bytes-FALSO",
+                },
+                body: JSON.stringify({ ...reporteValido, identificador: "+57300FA5" }),
+            });
+            const res6 = await POST(req6);
+            expect(res6.status).toBe(429);
+            const body6 = await res6.json();
+            expect(body6.error.code).toBe("RATE_LIMITED");
+        } finally {
+            process.env.DISABLE_RATE_LIMIT = originalDisableRateLimit;
+        }
     });
 });
 

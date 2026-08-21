@@ -38,6 +38,7 @@ export async function POST(req: Request) {
         const bloqueo = await desbloquearIp({
             id: parsed.data.id,
             creadoPorId: user.id,
+            motivo: parsed.data.motivo,
             request: req,
         });
 

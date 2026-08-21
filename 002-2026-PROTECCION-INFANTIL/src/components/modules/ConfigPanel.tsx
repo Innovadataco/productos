@@ -7,6 +7,7 @@ import { Cargando } from "@/components/ui/Cargando";
 import { CategoriaGruposEditor } from "./CategoriaGruposEditor";
 import { ConfigSection } from "./config-panel/ConfigSection";
 import { TimelineSection } from "./config-panel/TimelineSection";
+import { MantenimientoLogsPanel } from "./config-panel/MantenimientoLogsPanel";
 import { validateValue, SECTIONS, sectionForParam, type Param } from "./config-panel/types";
 
 export default function ConfigPanel() {
@@ -277,6 +278,8 @@ export default function ConfigPanel() {
                     onSaveSection={saveSection}
                 />
             ))}
+
+            <MantenimientoLogsPanel />
 
             <section className="glass rounded-2xl p-5 sm:p-6">
                 <div className="mb-4">

@@ -1,4 +1,4 @@
-import { getParametroSistema } from "@/lib/parametros";
+import { getParametroSistema } from "../parametros";
 import { MODELO_EMBEDDING_DEFAULT } from "./defaults";
 
 const FALLBACK_OLLAMA_BASE_URL = "http://localhost:11434";

@@ -24,6 +24,7 @@ type RunListItem = {
     latenciaP50Ms: number;
     creadoEn: string;
     actualizadoEn: string;
+    nota: string | null;
 };
 
 const ESCENARIO_OPCIONES = [
@@ -50,6 +51,15 @@ const ESTADO_VARIANT: Record<EstadoRun, "default" | "success" | "warning" | "dan
     CANCELADA: "neutral",
 };
 
+function labelEscenario(escenario: Escenario): string {
+    return ESCENARIO_OPCIONES.find((o) => o.value === escenario)?.label ?? escenario;
+}
+
+function truncarNota(nota: string | null, max = 40): string | null {
+    if (!nota) return null;
+    return nota.length > max ? `${nota.slice(0, max)}…` : nota;
+}
+
 interface HistorialProps {
     onVerDetalle: (id: string) => void;
 }
@@ -61,6 +71,17 @@ export function AdminAntiAbusoSimuladorHistorial({ onVerDetalle }: HistorialProp
     const [filtroEstado, setFiltroEstado] = useState("");
     const [filtroEscenario, setFiltroEscenario] = useState("");
     const [cargando, setCargando] = useState(false);
+    const [copiadoId, setCopiadoId] = useState<string | null>(null);
+
+    const copiarId = useCallback(async (id: string) => {
+        try {
+            await navigator.clipboard.writeText(id);
+            setCopiadoId(id);
+            setTimeout(() => setCopiadoId((actual) => (actual === id ? null : actual)), 2000);
+        } catch {
+            // fallback silencioso
+        }
+    }, []);
 
     const cargar = useCallback(async () => {
         setCargando(true);
@@ -118,7 +139,9 @@ export function AdminAntiAbusoSimuladorHistorial({ onVerDetalle }: HistorialProp
                 <Tabla aria-label="Historial de simulaciones de abuso">
                     <TablaHead>
                         <tr>
+                            <th className="px-4 py-3">ID</th>
                             <th className="px-4 py-3">Escenario</th>
+                            <th className="px-4 py-3">Nota</th>
                             <th className="px-4 py-3">Estado</th>
                             <th className="px-4 py-3">Progreso</th>
                             <th className="px-4 py-3">Creada</th>
@@ -128,7 +151,23 @@ export function AdminAntiAbusoSimuladorHistorial({ onVerDetalle }: HistorialProp
                     <TablaBody>
                         {runs.map((r) => (
                             <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                                <td className="px-4 py-3 font-medium">{r.escenario}</td>
+                                <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                        <code className="font-mono text-xs">{r.id.slice(0, 8)}</code>
+                                        <button
+                                            type="button"
+                                            onClick={() => void copiarId(r.id)}
+                                            className="text-xs text-sky-600 hover:underline"
+                                            aria-label={`Copiar ID ${r.id.slice(0, 8)}`}
+                                        >
+                                            {copiadoId === r.id ? "Copiado" : "Copiar"}
+                                        </button>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3 font-medium">{labelEscenario(r.escenario)}</td>
+                                <td className="px-4 py-3 text-muted" title={r.nota ?? undefined}>
+                                    {truncarNota(r.nota) ?? "—"}
+                                </td>
                                 <td className="px-4 py-3">
                                     <Badge variant={ESTADO_VARIANT[r.estado]}>{ESTADO_LABELS[r.estado]}</Badge>
                                 </td>

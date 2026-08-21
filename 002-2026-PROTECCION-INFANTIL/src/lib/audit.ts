@@ -113,3 +113,25 @@ export async function auditAccesoAdmin(params: {
         userAgent,
     });
 }
+
+/**
+ * E-7 (SPEC-193 Fase 5): registra intentos de acceso a recursos administrativos
+ * denegados por rol insuficiente. El usuarioId puede ser undefined si el intento
+ * fue anónimo o con token inválido.
+ */
+export async function auditAccesoDenegado(params: {
+    request?: Request;
+    usuarioId?: string;
+    recurso: string;
+    metadatos?: Record<string, unknown>;
+}): Promise<void> {
+    const { ipAddress, userAgent } = extractClientInfo(params.request);
+    await logAudit({
+        accion: "ACCESO_DENEGADO",
+        tipoRecurso: params.recurso,
+        usuarioId: params.usuarioId,
+        ipAddress,
+        userAgent,
+        metadatos: params.metadatos,
+    });
+}

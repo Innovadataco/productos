@@ -21,6 +21,7 @@ import { WidgetErrores } from "@/components/modules/monitoreo/WidgetErrores";
 import { WidgetSla } from "@/components/modules/monitoreo/WidgetSla";
 import { OllamaSmokeHistorial } from "@/components/modules/monitoreo/OllamaSmokeHistorial";
 import { ClasificacionTab } from "./ClasificacionTab";
+import { LogsTab } from "@/components/modules/monitoreo/LogsTab";
 
 type SenalEstado = {
     estado: EstadoSemaforo;
@@ -34,14 +35,20 @@ type EstadoMonitoreo = {
     monitoreoEnabled?: boolean;
 };
 
-type TabKey = "operacion" | "clasificacion";
+type TabKey = "operacion" | "clasificacion" | "logs";
+
+function tabDesdeQuery(raw: string | null): TabKey {
+    if (raw === "clasificacion") return "clasificacion";
+    if (raw === "logs") return "logs";
+    return "operacion";
+}
 
 export function OperacionTableroClient() {
     const searchParams = useSearchParams();
     // SPEC-180: la navegación entre secciones vive en EstadisticasSubNav (nivel
     // página); este componente solo LEE el tab de la URL (sin nav interno — la
     // doble fila de tabs fue el hallazgo I-59 del CEO en prod).
-    const tab: TabKey = searchParams.get("tab") === "clasificacion" ? "clasificacion" : "operacion";
+    const tab: TabKey = tabDesdeQuery(searchParams.get("tab"));
 
     const [estado, setEstado] = useState<EstadoMonitoreo | null>(null);
     const [cargando, setCargando] = useState(true);
@@ -92,9 +99,9 @@ export function OperacionTableroClient() {
 
     return (
         <div className="space-y-6">
-            {tab === "clasificacion" ? (
-                <ClasificacionTab />
-            ) : (
+            {tab === "clasificacion" && <ClasificacionTab />}
+            {tab === "logs" && <LogsTab />}
+            {tab === "operacion" && (
                 <div className="space-y-8">
                     {cargando && !estado ? (
                         <Cargando texto="Consultando el vigilante..." />
@@ -147,10 +154,9 @@ export function OperacionTableroClient() {
                     )}
 
                     <AdminDashboard />
+                    <OllamaSmokeHistorial abierto={historialAbierto} onCerrar={() => setHistorialAbierto(false)} />
                 </div>
             )}
-
-            <OllamaSmokeHistorial abierto={historialAbierto} onCerrar={() => setHistorialAbierto(false)} />
         </div>
     );
 }
