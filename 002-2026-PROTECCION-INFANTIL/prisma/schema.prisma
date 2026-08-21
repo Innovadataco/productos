@@ -198,6 +198,8 @@ enum AccionAudit {
   // SPEC-193 (Fase 1): mantenimiento de logs y reasignación manual de reportes.
   LOGS_MANTENIMIENTO_PURGA
   REPORTE_REASIGNADO_MANUAL
+  // SPEC-193 (Fase 5): auditoría de intentos de acceso no autorizado a recursos admin.
+  ACCESO_DENEGADO
 }
 
 enum TipoPeriodoServicio {

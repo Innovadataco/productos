@@ -1,14 +1,27 @@
 import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
+import { verifyAuth, getUserFromToken } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
+import { auditAccesoDenegado } from "@/lib/audit";
 import { listarLogs, purgarLogs, type ListarLogsInput, type PurgarLogsInput } from "@/lib/monitoreo/logs-service";
 import {
     monitoreoLogsQuerySchema,
     monitoreoLogsPurgeSchema,
 } from "@/lib/schemas";
+
+async function auditarSiAccesoDenegado(error: unknown, request: Request): Promise<void> {
+    if (error instanceof AppError && error.statusCode === 403) {
+        const user = await getUserFromToken(request).catch(() => null);
+        await auditAccesoDenegado({
+            request,
+            ...(user?.id ? { usuarioId: user.id } : {}),
+            recurso: "WorkerLog",
+            metadatos: { endpoint: request.method, url: request.url },
+        });
+    }
+}
 
 /**
  * GET /api/admin/monitoreo/logs (SPEC-193 Fase 2)
@@ -51,6 +64,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ items, total });
     } catch (error) {
+        await auditarSiAccesoDenegado(error, request);
         return errorToResponse(error, "[ADMIN/MONITOREO/LOGS]");
     }
 }
@@ -87,6 +101,7 @@ export async function DELETE(request: Request) {
 
         return NextResponse.json(resultado);
     } catch (error) {
+        await auditarSiAccesoDenegado(error, request);
         return errorToResponse(error, "[ADMIN/MONITOREO/LOGS]");
     }
 }

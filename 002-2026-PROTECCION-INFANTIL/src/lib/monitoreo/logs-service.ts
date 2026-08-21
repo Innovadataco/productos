@@ -1,7 +1,7 @@
 import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
-import { NivelLog, Prisma } from "@prisma/client";
+import { NivelLog, Prisma, type WorkerLog } from "@prisma/client";
 
 const NIVELES_ORDEN: Record<NivelLog, number> = {
     DEBUG: 0,
@@ -95,7 +95,7 @@ function validarMotivo(motivo: string): void {
     }
 }
 
-export async function listarLogs(input: ListarLogsInput): Promise<{ items: unknown[]; total: number }> {
+export async function listarLogs(input: ListarLogsInput): Promise<{ items: WorkerLog[]; total: number }> {
     const limit = input.limit ?? 100;
     const offset = input.offset ?? 0;
 

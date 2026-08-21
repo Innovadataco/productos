@@ -5,6 +5,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 import { crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
 import * as auth from "@/lib/auth";
+import * as rateLimit from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const URL = "http://localhost:5005/api/admin/monitoreo/logs";
@@ -22,6 +23,12 @@ async function autenticarAdmin() {
     const admin = await crearUsuario("ADMIN");
     mockToken = await crearTokenUsuario(admin.id, "ADMIN");
     return admin;
+}
+
+async function autenticarNoAdmin(rol: "PARENT" | "OPERADOR" = "PARENT") {
+    const user = await crearUsuario(rol);
+    mockToken = await crearTokenUsuario(user.id, rol);
+    return user;
 }
 
 function requestConBody(method: string, body: unknown): Request {
@@ -99,12 +106,45 @@ describe("GET /api/admin/monitoreo/logs (SPEC-193 Fase 2)", () => {
         expect(body.error.code).toBe(ERROR_CODES.VALIDATION_ERROR);
     });
 
-    it("devuelve 403 para un usuario no admin", async () => {
-        vi.spyOn(auth, "verifyAuth").mockRejectedValue(
-            new AppError("No autorizado", ERROR_CODES.FORBIDDEN, 403)
-        );
-        const res = await GET(new Request(URL));
+    it("devuelve 429 cuando se supera el rate-limit", async () => {
+        await autenticarAdmin();
+        vi.spyOn(rateLimit, "checkRateLimit").mockResolvedValue({
+            allowed: false,
+            limit: 60,
+            remaining: 0,
+            resetAt: Date.now() + 60_000,
+            headers: { "Retry-After": "60" },
+        });
+
+        const res = await GET(new Request(URL, { headers: { cookie: `token=${mockToken}` } }));
+        expect(res.status).toBe(429);
+        const body = await res.json();
+        expect(body.error.code).toBe(ERROR_CODES.RATE_LIMITED);
+    });
+
+    it("devuelve 403 para un usuario no admin y genera AuditLog", async () => {
+        const user = await autenticarNoAdmin("PARENT");
+
+        const res = await GET(new Request(URL, { headers: { cookie: `token=${mockToken}` } }));
         expect(res.status).toBe(403);
+
+        const audit = await prisma.auditLog.findFirst({
+            where: { accion: "ACCESO_DENEGADO", usuarioId: user.id },
+        });
+        expect(audit).not.toBeNull();
+        expect(audit?.tipoRecurso).toBe("WorkerLog");
+    });
+
+    it("devuelve 403 para un operador y genera AuditLog", async () => {
+        const user = await autenticarNoAdmin("OPERADOR");
+
+        const res = await GET(new Request(URL, { headers: { cookie: `token=${mockToken}` } }));
+        expect(res.status).toBe(403);
+
+        const audit = await prisma.auditLog.findFirst({
+            where: { accion: "ACCESO_DENEGADO", usuarioId: user.id },
+        });
+        expect(audit).not.toBeNull();
     });
 });
 
@@ -181,5 +221,43 @@ describe("DELETE /api/admin/monitoreo/logs (SPEC-193 Fase 2)", () => {
         expect(res.status).toBe(400);
         const body = await res.json();
         expect(body.error.code).toBe(ERROR_CODES.VALIDATION_ERROR);
+    });
+
+    it("devuelve 429 cuando se supera el rate-limit de escritura", async () => {
+        await autenticarAdmin();
+        vi.spyOn(rateLimit, "checkRateLimit").mockResolvedValue({
+            allowed: false,
+            limit: 30,
+            remaining: 0,
+            resetAt: Date.now() + 60_000,
+            headers: { "Retry-After": "60" },
+        });
+
+        const res = await DELETE(
+            requestConBody("DELETE", {
+                hasta: "2026-01-01T00:00:00Z",
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        );
+        expect(res.status).toBe(429);
+        const body = await res.json();
+        expect(body.error.code).toBe(ERROR_CODES.RATE_LIMITED);
+    });
+
+    it("devuelve 403 para un usuario no admin e intenta auditar", async () => {
+        const user = await autenticarNoAdmin("PARENT");
+
+        const res = await DELETE(
+            requestConBody("DELETE", {
+                hasta: "2026-01-01T00:00:00Z",
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        );
+        expect(res.status).toBe(403);
+
+        const audit = await prisma.auditLog.findFirst({
+            where: { accion: "ACCESO_DENEGADO", usuarioId: user.id },
+        });
+        expect(audit).not.toBeNull();
     });
 });

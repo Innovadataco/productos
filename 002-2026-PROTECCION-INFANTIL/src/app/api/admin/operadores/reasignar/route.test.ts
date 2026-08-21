@@ -5,6 +5,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 import { crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
 import * as auth from "@/lib/auth";
+import * as rateLimit from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const URL = "http://localhost:5005/api/admin/operadores/reasignar";
@@ -229,6 +230,69 @@ describe("PATCH /api/admin/operadores/reasignar (SPEC-193 Fase 2)", () => {
         expect(res.status).toBe(400);
         const body = await res.json();
         expect(body.error.code).toBe(ERROR_CODES.VALIDATION_ERROR);
+    });
+
+    it("devuelve 429 cuando se supera el rate-limit de escritura", async () => {
+        await autenticarAdmin();
+        vi.spyOn(rateLimit, "checkRateLimit").mockResolvedValue({
+            allowed: false,
+            limit: 30,
+            remaining: 0,
+            resetAt: Date.now() + 60_000,
+            headers: { "Retry-After": "60" },
+        });
+
+        const res = await PATCH(
+            requestReasignar({
+                reporteId: "cuid",
+                operadorDestinoId: "cuid",
+                motivo: "Reasignación bloqueada por rate limit",
+            })
+        );
+        expect(res.status).toBe(429);
+        const body = await res.json();
+        expect(body.error.code).toBe(ERROR_CODES.RATE_LIMITED);
+    });
+
+    it("detecta conflicto cuando el operador actual cambia durante la reasignación", async () => {
+        await autenticarAdmin();
+        const origen = await crearOperador("origen");
+        const destino = await crearOperador("destino");
+        const otro = await crearOperador("otro");
+        const reporte = await crearReporteRevisionManual(origen.id);
+
+        // Bloquear la fila del reporte en una transacción paralela, simulando que
+        // otro admin está modificando el operador. Cuando el endpoint intente el
+        // updateMany quedará en espera; al liberar el lock, la fila ya no coincide
+        // con operadorActual y el updateMany devuelve count 0 → 409.
+        const patchPromise = PATCH(
+            requestReasignar({
+                reporteId: reporte.id,
+                operadorDestinoId: destino.id,
+                motivo: "Reasignación con cambio concurrente simulado",
+            })
+        );
+
+        await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT * FROM "Reporte" WHERE id = ${reporte.id} FOR UPDATE`;
+
+            // Dar tiempo a que el endpoint llegue al updateMany y se bloquee.
+            await new Promise((resolve) => setTimeout(resolve, 300));
+
+            // Otro admin cambia el operador mientras el endpoint espera el lock.
+            await tx.reporte.update({
+                where: { id: reporte.id },
+                data: { operadorId: otro.id },
+            });
+        });
+
+        const res = await patchPromise;
+        expect(res.status).toBe(409);
+        const body = await res.json();
+        expect(body.error.code).toBe(ERROR_CODES.CONFLICT);
+
+        const final = await prisma.reporte.findUnique({ where: { id: reporte.id } });
+        expect(final?.operadorId).toBe(otro.id);
     });
 
     it("devuelve 403 para un usuario no admin", async () => {

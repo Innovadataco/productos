@@ -114,6 +114,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/expediente/mensaje-padre.test.ts",
     "src/lib/expediente/pdf-denuncia.test.ts",
     "src/lib/fetch-retry.test.ts",
+    "src/lib/monitoreo/worker-logger.test.ts",
     "src/lib/nav-items.test.ts",
     "src/lib/normalizar.test.ts",
     "src/lib/param-encryption.test.ts",
