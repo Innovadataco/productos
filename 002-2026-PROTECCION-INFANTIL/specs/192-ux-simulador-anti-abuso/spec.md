@@ -6,9 +6,9 @@
 
 **Status**: PLANEADO
 
-**Input**: 002-PI-086. El simulador `/dashboard/admin/anti-abuso` (SPEC-184/185) tiene 6 defectos de UX y 1 de fingerprint rate-limit cazados por el CEO en pruebas post-deploy `abdaf208` (2026-08-20 noche). Este SPEC los cierra todos en 1 PR. Diseño y detalle: [BRIEF-SIMULADOR-ANTI-ABUSO-UX](../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-SIMULADOR-ANTI-ABUSO-UX.md). Cero riesgo al motor (`src/lib/ai/**`).
+**Input**: 002-PI-086. El simulador `/dashboard/admin/anti-abuso` (SPEC-184/185) tiene 6 defectos de UX y 1 de fingerprint rate-limit cazados por el CEO en pruebas post-deploy `abdaf208` (2026-08-20 noche). Este SPEC los cierra todos en 1 PR. Diseño y detalle: [BRIEF-SIMULADOR-ANTI-ABUSO-UX](../../Gestion-de-proyectos/01-PROYECTOS/001-2026-PROTECCION_INFANTIL/05-ENTREGABLES/BRIEF-SIMULADOR-ANTI-ABUSO-UX.md) (v1.1, corrección honesta ZEUS en F2). Cero riesgo al motor (`src/lib/ai/**`).
 
-**Impacto en arquitectura**: cambios localizados en el módulo anti-abuso: componentes React (`AdminAntiAbusoSimulador`, `AdminAntiAbusoSimuladorHistorial`, modal de detalle), endpoint público `POST /api/reportes` (bypass condicional de `report_fingerprint` para requests con header `x-simulacion: true` y sesión ADMIN), worker `scripts/simulador-abuso.mjs` (envío del header) y migración aditiva opcional `simulacion_abuso_runs.nota VARCHAR(200)`. No se toca `src/lib/ai/**`, ni se modifican scopes ni límites de `src/lib/rate-limit.ts`.
+**Impacto en arquitectura**: cambios localizados en el módulo anti-abuso: componentes React (`AdminAntiAbusoSimulador`, `AdminAntiAbusoSimuladorHistorial`, modal de detalle), endpoint público `POST /api/reportes` (bypass condicional de `report_fingerprint` mediante header `x-simulacion-secret` validado con `crypto.timingSafeEqual` contra `process.env.SIMULADOR_ABUSO_SECRET`), worker `scripts/simulador-abuso.mjs` (envío del header; fail-loud si falta el secret), configuración de despliegue (`.env.production.example`) y migración aditiva opcional `simulacion_abuso_runs.nota VARCHAR(200)`. No se toca `src/lib/ai/**`, ni se modifican scopes ni límites de `src/lib/rate-limit.ts`.
 
 ---
 
@@ -38,10 +38,11 @@ Como administrador quiero poder lanzar múltiples escenarios de simulación sin 
 
 **Acceptance Scenarios**:
 
-1. **Given** un request a `POST /api/reportes` con header `x-simulacion: true` y cookie de sesión ADMIN, **When** se evalúa `report_fingerprint`, **Then** el bucket se salta y no incrementa contador.
-2. **Given** un request público sin header `x-simulacion`, **When** se evalúa `report_fingerprint`, **Then** aplica el límite normal de 5/hora.
-3. **Given** un request con header `x-simulacion: true` pero sin sesión ADMIN, **When** se evalúa, **Then** se ignora el header y aplica el límite normal (no se expone bypass al público).
-4. **Given** una simulación, **Then** los scopes `report` (IP) y `report_identificador` siguen activos y se cuentan normalmente.
+1. **Given** un request a `POST /api/reportes` con header `x-simulacion-secret` igual al valor de `SIMULADOR_ABUSO_SECRET`, **When** se evalúa `report_fingerprint`, **Then** el bucket se salta y no incrementa contador.
+2. **Given** un request público sin header `x-simulacion-secret`, **When** se evalúa `report_fingerprint`, **Then** aplica el límite normal de 5/hora.
+3. **Given** un request con header `x-simulacion-secret` incorrecto, **When** se evalúa, **Then** se ignora el header y aplica el límite normal (no se expone bypass al público).
+4. **Given** el env `SIMULADOR_ABUSO_SECRET` no definido, **Then** el worker `simulador-abuso.mjs` no arranca (fail-loud).
+5. **Given** una simulación, **Then** los scopes `report` (IP) y `report_identificador` siguen activos y se cuentan normalmente.
 
 ### User Story 3 — Campo Plataforma como dropdown (Priority: P1)
 
@@ -106,7 +107,9 @@ Como administrador quiero poder lanzar otra simulación inmediatamente después 
 ## Edge Cases
 
 - **Cambio de escenario durante progreso**: si hay una corrida en progreso y el usuario cambia de escenario, el polling continúa pero el detalle visible se limpia; no se cancela la corrida automáticamente.
-- **Header x-simulacion manipulado por cliente no autenticado**: `POST /api/reportes` verifica sesión ADMIN antes de saltar `report_fingerprint`; el header solo funciona cuando `verifyAuth` devuelve un usuario con `rol === "ADMIN"`.
+- **Header x-simulacion-secret manipulado**: `POST /api/reportes` compara con `crypto.timingSafeEqual`; un valor incorrecto no activa el bypass.
+- **Secret no definido en app**: el bypass nunca se activa; comportamiento público normal.
+- **Secret no definido en worker**: el worker falla al arrancar (fail-loud), evitando simulaciones silenciosas sin bypass.
 - **Plataforma sugerida no está en BD**: el fallback hardcoded garantiza que el dropdown siempre tenga opciones.
 - **Array vacío pero campo único vacío**: la validación Zod del body rechaza el request con error claro.
 - **Nota mayor a 200 caracteres**: truncada o validada a 200 en el frontend/backend.
@@ -119,25 +122,27 @@ Como administrador quiero poder lanzar otra simulación inmediatamente después 
 ### Functional Requirements
 
 - **FR-001**: `AdminAntiAbusoSimulador.tsx` DEBE resetear `run`, `runId`, `error` y `sugerencia` al cambiar de escenario.
-- **FR-002**: `POST /api/reportes` DEBE saltar el rate-limit `report_fingerprint` cuando el request incluya header `x-simulacion: true` Y la sesión autenticada tenga rol `ADMIN`.
-- **FR-003**: El bypass de FR-002 DEBE ser estrictamente server-side; no se puede activar desde sesión no autenticada o con rol distinto a `ADMIN`.
-- **FR-004**: Los scopes `report` e `report_identificador` NO DEBEN ser afectados por el bypass; siguen contando normalmente.
-- **FR-005**: El worker `scripts/simulador-abuso.mjs` DEBE enviar el header `x-simulacion: true` en cada request simulado.
-- **FR-006**: El campo Plataforma en `AdminAntiAbusoSimulador.tsx` DEBE ser un `<Select>` que cargue `/api/plataformas` y tenga fallback hardcoded si la BD está vacía.
-- **FR-007**: La función `iniciar` de `AdminAntiAbusoSimulador.tsx` DEBE priorizar arrays (`ips`, `identificadores`) sobre campos únicos (`ip`, `identificador`) cuando el array tenga contenido.
-- **FR-008**: Cuando el array tenga contenido, el campo único correspondiente DEBE deshabilitarse con leyenda "Se usa el array de arriba".
-- **FR-009**: `AdminAntiAbusoSimuladorHistorial.tsx` DEBE mostrar el label legible del escenario como primera columna, reusando `ESCENARIO_OPCIONES`.
-- **FR-010**: El historial DEBE mostrar la nota interna (si existe) truncada con tooltip del texto completo.
-- **FR-011**: El form DEBE incluir input opcional "Nota (interna)" con máximo 200 caracteres.
-- **FR-012**: Se DEBE añadir la columna `nota VARCHAR(200)` a `simulacion_abuso_runs` mediante migración aditiva.
-- **FR-013**: El botón "Iniciar simulación" DEBE estar habilitado cuando no haya una corrida en progreso (`disabled={enviando || (!!runId && !finalizada)}`).
-- **FR-014**: No se DEBE tocar `src/lib/ai/**`.
-- **FR-015**: No se DEBEN modificar los scopes ni límites de `src/lib/rate-limit.ts`.
+- **FR-002**: Debe existir una variable de entorno `SIMULADOR_ABUSO_SECRET` (string ≥ 32 bytes, generado con `openssl rand -hex 32`) disponible para `pi-app` y `pi-simulador-abuso`.
+- **FR-003**: `POST /api/reportes` DEBE saltar el rate-limit `report_fingerprint` cuando el request incluya header `x-simulacion-secret` cuyo valor coincida con `process.env.SIMULADOR_ABUSO_SECRET` usando `crypto.timingSafeEqual`.
+- **FR-004**: El bypass de FR-003 DEBE ser estrictamente server-side; no se puede activar sin el secret correcto.
+- **FR-005**: Los scopes `report` e `report_identificador` NO DEBEN ser afectados por el bypass; siguen contando normalmente.
+- **FR-006**: El worker `scripts/simulador-abuso.mjs` DEBE enviar el header `x-simulacion-secret` en cada request simulado, leyendo el valor de `process.env.SIMULADOR_ABUSO_SECRET`.
+- **FR-007**: El worker DEBE fallar al arrancar (fail-loud) si `SIMULADOR_ABUSO_SECRET` no está definido.
+- **FR-008**: El campo Plataforma en `AdminAntiAbusoSimulador.tsx` DEBE ser un `<Select>` que cargue `/api/plataformas` y tenga fallback hardcoded si la BD está vacía.
+- **FR-009**: La función `iniciar` de `AdminAntiAbusoSimulador.tsx` DEBE priorizar arrays (`ips`, `identificadores`) sobre campos únicos (`ip`, `identificador`) cuando el array tenga contenido.
+- **FR-010**: Cuando el array tenga contenido, el campo único correspondiente DEBE deshabilitarse con leyenda "Se usa el array de arriba".
+- **FR-011**: `AdminAntiAbusoSimuladorHistorial.tsx` DEBE mostrar el label legible del escenario como primera columna, reusando `ESCENARIO_OPCIONES`.
+- **FR-012**: El historial DEBE mostrar la nota interna (si existe) truncada con tooltip del texto completo.
+- **FR-013**: El form DEBE incluir input opcional "Nota (interna)" con máximo 200 caracteres.
+- **FR-014**: Se DEBE añadir la columna `nota VARCHAR(200)` a `simulacion_abuso_runs` mediante migración aditiva.
+- **FR-015**: El botón "Iniciar simulación" DEBE estar habilitado cuando no haya una corrida en progreso (`disabled={enviando || (!!runId && !finalizada)}`).
+- **FR-016**: No se DEBE tocar `src/lib/ai/**`.
+- **FR-017**: No se DEBEN modificar los scopes ni límites de `src/lib/rate-limit.ts`.
 
 ### Key Entities
 
 - **SimulacionAbusoRun**: se extiende con campo opcional `nota` (migración aditiva).
-- **Reporte / RateLimit**: solo lectura/escritura existente; `report_fingerprint` se salta condicionalmente.
+- **Reporte / RateLimit**: solo lectura/escritura existente; `report_fingerprint` se salta condicionalmente mediante secret.
 - **Plataforma**: catálogo ya existente; se lee para llenar el dropdown.
 
 ---
@@ -146,33 +151,37 @@ Como administrador quiero poder lanzar otra simulación inmediatamente después 
 
 - **SC-001**: Al cambiar de escenario, el detalle de la corrida anterior desaparece.
 - **SC-002**: Dos simulaciones seguidas desde el simulador no son bloqueadas por `report_fingerprint`.
-- **SC-003**: Un request público sin header `x-simulacion` sigue siendo bloqueado por `report_fingerprint` tras 5 intentos.
-- **SC-004**: El dropdown de Plataforma muestra las plataformas de BD o el fallback hardcoded.
-- **SC-005**: Con ambos campos llenos, el payload envía el array y no el campo único.
-- **SC-006**: El historial muestra el label legible del escenario.
-- **SC-007**: El historial muestra la nota interna cuando existe.
-- **SC-008**: Tras una corrida completada, el botón "Iniciar simulación" está habilitado.
-- **SC-009**: Gate local completo verde (tsc, lint --no-cache, test:unit, test:integration, build).
+- **SC-003**: Un request público sin header `x-simulacion-secret` sigue siendo bloqueado por `report_fingerprint` tras 5 intentos.
+- **SC-004**: Un request con header `x-simulacion-secret` incorrecto sigue siendo bloqueado por `report_fingerprint` tras 5 intentos.
+- **SC-005**: El dropdown de Plataforma muestra las plataformas de BD o el fallback hardcoded.
+- **SC-006**: Con ambos campos llenos, el payload envía el array y no el campo único.
+- **SC-007**: El historial muestra el label legible del escenario.
+- **SC-008**: El historial muestra la nota interna cuando existe.
+- **SC-009**: Tras una corrida completada, el botón "Iniciar simulación" está habilitado.
+- **SC-010**: Gate local completo verde (tsc, lint --no-cache, test:unit, test:integration, build).
 
 ---
 
 ## Assumptions
 
-- El bypass de `report_fingerprint` es seguro porque solo aplica a sesiones ADMIN y el simulador genera reportes de prueba con IPs RFC 5737.
-- El header `x-simulacion: true` es de uso interno; no se documenta para usuarios finales.
+- El bypass de `report_fingerprint` es seguro porque depende de un secret compartido server-only (`SIMULADOR_ABUSO_SECRET`) generado con alta entropía y nunca expuesto al frontend.
+- El secret se propaga a `pi-app` y `pi-simulador-abuso` mediante `.env.production` (y `.env` en desarrollo). No se versiona.
+- El header `x-simulacion-secret` es de uso exclusivamente interno; no se documenta para usuarios finales.
+- Los logs nunca registran el valor del secret.
 - El campo `nota` es puramente operativo e interno; no se expone fuera del admin.
 - Las plataformas del catálogo usan `clave` como valor a enviar y `nombre` como label visible.
-- El worker `scripts/simulador-abuso.mjs` puede importar constantes/headers del simulador sin tocar el motor.
+- El worker `scripts/simulador-abuso.mjs` puede leer `process.env.SIMULADOR_ABUSO_SECRET` sin tocar el motor.
 
 ---
 
 ## Decisiones de compuerta §4 (propuestas)
 
-1. **Bypass fingerprint**: saltar solo `report_fingerprint`, manteniendo `report` e `report_identificador`. La validación ADMIN es server-side en `POST /api/reportes`.
-2. **Header `x-simulacion: true`**: se envía desde el worker; el endpoint público lo interpreta. No se añade a rutas de admin porque el worker habla con `/api/reportes`.
-3. **Nota interna**: se implementa con migración aditiva `nota VARCHAR(200)` porque cierra I-76 por completo y es un campo seguro (no PII de reportes reales).
-4. **Priorización array**: en el frontend se deshabilita el campo único cuando el array tiene contenido; en el backend se aplica la misma lógica al construir `configJson`.
-5. **Plataforma dropdown**: se reusa `/api/plataformas` del form público con fallback hardcoded para robustez.
+1. **Bypass fingerprint**: saltar solo `report_fingerprint`, manteniendo `report` e `report_identificador`. La activación usa secret compartido validado con `crypto.timingSafeEqual` en `POST /api/reportes`.
+2. **Secret compartido `SIMULADOR_ABUSO_SECRET`**: se genera con `openssl rand -hex 32`, se carga en `process.env`, y se propaga a app y worker. Fail-loud en el worker si falta.
+3. **Header `x-simulacion-secret`**: se envía desde el worker; el endpoint público lo valida. No se usa sesión de usuario porque `POST /api/reportes` rechaza roles distintos a PARENT.
+4. **Nota interna**: se implementa con migración aditiva `nota VARCHAR(200)` porque cierra I-76 por completo y es un campo seguro (no PII de reportes reales).
+5. **Priorización array**: en el frontend se deshabilita el campo único cuando el array tiene contenido; en el backend se aplica la misma lógica al construir `configJson`.
+6. **Plataforma dropdown**: se reusa `/api/plataformas` del form público con fallback hardcoded para robustez.
 
 ---
 

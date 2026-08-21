@@ -11,6 +11,17 @@
 | `cmt2dng3` | personalizado | Botón Iniciar bloqueado tras finalizar |
 | `cmt2dtjb` | robot_inundando | Historial muestra clave técnica, no label |
 
+## Corrección honesta ZEUS en F2 (I-71 / I-78)
+
+La primera propuesta de diseño usaba "sesión ADMIN" para validar el bypass de `report_fingerprint`, pero `POST /api/reportes` rechaza con 403 cualquier usuario con `rol !== "PARENT"` antes de llegar al rate-limit. Además, el worker envía requests anónimos (sin cookie) o con JWT `rol=PARENT` (escenario `denunciante_spam`), nunca ADMIN.
+
+**Decisión corregida**: usar un **secret compartido server-only** (`SIMULADOR_ABUSO_SECRET`):
+- Generado con `openssl rand -hex 32`.
+- Propagado a `pi-app` y `pi-simulador-abuso` vía `.env.production`.
+- Worker envía header `x-simulacion-secret`.
+- Endpoint valida con `crypto.timingSafeEqual`.
+- Fail-loud en el worker si falta el secret.
+
 ## Decisiones de diseño previas (SPEC-184/185)
 
 - El worker envía requests reales a `POST /api/reportes` sin token ADMIN (solo token PARENT si el escenario lo requiere).
@@ -22,11 +33,12 @@
 
 | Opción | Pros | Contras |
 |--------|------|---------|
-| A. Header `x-simulacion: true` + validación ADMIN en `POST /api/reportes` | Simple, no toca rate-limit library | Requiere confiar en header interno |
-| B. Endpoint dedicado `/api/admin/reportes/simulacion` para el worker | Más aislado | Mayor cambio arquitectónico, duplicaría lógica de creación de reporte |
+| A. Header `x-simulacion-secret` + env compartido | Funciona con requests anónimos/PARENT; no requiere sesión ADMIN; auditable | Requiere gestionar un secret más |
+| B. Endpoint dedicado `/api/admin/reportes/simulacion` | Más aislado | Mayor cambio arquitectónico; duplicaría lógica de creación de reporte |
 | C. Excluir IPs RFC 5737 del rate-limit fingerprint | Automático, sin header | Expone bypass implícito, menos auditable |
+| D. Sesión ADMIN en `POST /api/reportes` | Simple conceptualmente | Imposible: endpoint rechaza roles ≠ PARENT con 403 |
 
-**Elegida: A**. Es la más localizada y auditable; el header solo funciona con sesión ADMIN.
+**Elegida: A** (versión corregida con secret compartido).
 
 ## Referencias
 
@@ -36,3 +48,4 @@
 - `scripts/simulador-abuso.mjs`
 - `src/lib/rate-limit.ts`
 - `src/lib/anti-abuso/fuente-reporte.ts`
+- `BRIEF-SIMULADOR-ANTI-ABUSO-UX.md` v1.1 (corrección F2)
