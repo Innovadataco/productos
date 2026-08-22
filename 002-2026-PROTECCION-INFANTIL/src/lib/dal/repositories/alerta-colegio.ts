@@ -372,7 +372,7 @@ export class AlertaColegioRepository {
         let filas: { hora: number; reportes: number }[];
         try {
             filas = await this.db.$queryRaw`
-                SELECT EXTRACT(HOUR FROM ac."creadoEn" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Bogota')::int AS hora,
+                SELECT EXTRACT(HOUR FROM ac."creadoEn" AT TIME ZONE 'America/Bogota')::int AS hora,
                        COUNT(DISTINCT ac."reporteId")::int AS reportes
                 FROM "AlertaColegio" ac
                 JOIN "Reporte" r ON r.id = ac."reporteId"
