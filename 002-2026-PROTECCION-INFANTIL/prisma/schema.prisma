@@ -293,6 +293,31 @@ enum ResponsableTransicion {
   ADMIN
 }
 
+// SPEC-230 (002-PI-130): estados del expediente padre.
+enum EstadoExpediente {
+  ACTIVO
+  CONSOLIDANDO
+  PENDIENTE_COMITE
+  EN_APROBACION_PADRE
+  EN_ACLARACION
+  CERRADO
+  ESCALADO
+}
+
+// SPEC-230 (002-PI-130): score de gravedad agregado del expediente padre.
+enum ScoreGravedad {
+  VERDE
+  AMARILLO
+  ROJO
+}
+
+// SPEC-230 (002-PI-130): tipos de revisión del comité. Se crea con ambos valores
+// porque no existía previamente en el schema (ZEUS confirmó).
+enum TipoRevisionComite {
+  REVISION_REPORTE
+  CONSOLIDACION_EXPEDIENTE
+}
+
 model Usuario {
   id                  String        @id @default(cuid())
   email               String        @unique
@@ -354,6 +379,8 @@ model Usuario {
   // SPEC-184 (002-PI-079): blocklist y simulador de abusos.
   bloqueosCreados              BlockList[]
   simulacionesAbuso            SimulacionAbusoRun[]
+  // SPEC-230 (002-PI-130): expedientes del padre.
+  expedientes                  Expediente[]
 
   @@index([email])
   @@index([rol])
@@ -1136,6 +1163,9 @@ model Reporte {
   solicitudComite          SolicitudComite?
   alertasColegio           AlertaColegio[]
   eventoMatchDisparado     EventoMatch?
+  // SPEC-230 (002-PI-130): relación inversa para EventoExpediente.
+  // Autorizado por ZEUS: no modifica columnas de la tabla reportes.
+  eventos                  EventoExpediente[]
 
   @@index([identificador, plataformaId])
   @@index([estado])
@@ -1746,4 +1776,56 @@ model DerivaMotorSnapshot {
 
   @@unique([semanaInicio, categoria])
   @@index([semanaInicio])
+}
+
+// SPEC-230 (002-PI-130): expediente que agrupa eventos sobre un identificador
+// reportado, visto/desde la perspectiva del padre/tutor.
+model Expediente {
+  id                            String            @id @default(cuid())
+  padreUsuarioId                String
+  identificadorReportado        String
+  plataformaId                  String?
+  fechaApertura                 DateTime          @db.Timestamptz(6)
+  fechaCierre                   DateTime?         @db.Timestamptz(6)
+  fechaEscalado                 DateTime?         @db.Timestamptz(6)
+  estado                        EstadoExpediente
+  scoreGravedadActual           ScoreGravedad     @default(VERDE)
+  categoriasDominantesJson      Json?
+  numEventos                    Int               @default(0)
+  ultimoEventoEn                DateTime?         @db.Timestamptz(6)
+  autoCerradoPorInactividad     Boolean           @default(false)
+  expedienteRelacionadoAnteriorId String?
+  patronesDetectadosJson        Json?
+  createdAt                     DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt                     DateTime          @updatedAt @db.Timestamptz(6)
+
+  padre        Usuario?     @relation(fields: [padreUsuarioId], references: [id])
+  eventos      EventoExpediente[]
+  expedienteAnterior Expediente? @relation("ExpedienteRelacionado", fields: [expedienteRelacionadoAnteriorId], references: [id])
+  expedientesPosteriores Expediente[] @relation("ExpedienteRelacionado")
+
+  @@index([padreUsuarioId, estado])
+  @@index([identificadorReportado])
+  @@index([estado, updatedAt(sort: Desc)])
+}
+
+// SPEC-230 (002-PI-130): evento dentro de un expediente padre.
+model EventoExpediente {
+  id                      String    @id @default(cuid())
+  expedienteId            String
+  ordenSecuencial         Int
+  reporteId               String?
+  fechaEvento             DateTime  @db.Timestamptz(6)
+  texto                   String    @db.Text
+  categoriaDetectada      String?
+  confianzaClasificacion  Float?
+  plataforma              String?
+  adjuntosMetaJson        Json?
+  createdAt               DateTime  @default(now()) @db.Timestamptz(6)
+
+  expediente Expediente @relation(fields: [expedienteId], references: [id])
+  reporte    Reporte?  @relation(fields: [reporteId], references: [id])
+
+  @@unique([expedienteId, ordenSecuencial])
+  @@index([expedienteId, fechaEvento(sort: Desc)])
 }
