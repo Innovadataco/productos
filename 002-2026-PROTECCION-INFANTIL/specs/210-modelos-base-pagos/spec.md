@@ -98,7 +98,7 @@ Esta SPEC es bloqueante para las 8 SPECs siguientes de la cola Pagos (211-218).
 4. **Seed anti-I-100**: planes y parámetros `pagos.*` usan `update: { ... }` explícito para permitir propagar cambios estructurales en versiones futuras.
 5. **DAL único**: todo acceso a datos de pagos pasa por `src/lib/dal/repositories/pagos-repository.ts`.
 
-## Impacto en arquitectura
+## Impacto en arquitectura:
 
 Cambios en `prisma/schema.prisma` (aditivos), nueva migración Prisma, `prisma/seed.ts` (bloque de pagos), y `src/lib/dal/repositories/pagos-repository.ts`. No se toca el motor IA, el flujo de reportes ni el rate-limit. `BillingCycle` placeholder se deja intacto.
 
