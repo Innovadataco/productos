@@ -54,13 +54,13 @@ Esta SPEC es bloqueante para las 8 SPECs siguientes de la cola Pagos (211-218).
   - `TipoTitular`: `COLEGIO | PADRE`
   - `EstadoSuscripcion`: `ACTIVA | EN_GRACIA | SUSPENDIDA | CANCELADA`
   - `DuracionPlan`: `MES_1 | MES_2 | MES_3 | MES_6 | MES_12`
-  - `EstadoPago`: `PENDIENTE_AUTORIZACION | AUTORIZADO | RECHAZADO | REEMBOLSADO`
+  - `EstadoPago`: `PENDIENTE_AUTORIZACION | AUTORIZADO | RECHAZADO` (`REEMBOLSADO` queda fuera de v1; se evalúa en SPEC-212).
   - `MetodoPago`: `TRANSFERENCIA | NEQUI | DAVIPLATA | PSE_MANUAL | EFECTIVO | CHEQUE | OTRO`
   - `TipoBono`: `DESCUENTO_PCT | DESCUENTO_FIJO_USD | MESES_GRATIS`
   - `FuenteTasa`: `API | ADMIN_MANUAL`
 - **FR-003**: Todos los campos `DateTime` de los modelos de pagos DEBEN usar `@db.Timestamptz(6)`.
 - **FR-004**: La migración DEBE ser aditiva: cero `DROP TABLE`, cero `DROP COLUMN`, cero renombre destructivo de columnas con datos.
-- **FR-005**: El seed DEBE crear 20 planes iniciales (`2 tiposTitular × 5 duraciones × año 2026`) con `precioBaseUSD` placeholder documentado.
+- **FR-005**: El seed DEBE crear 10 planes iniciales (`2 tiposTitular × 5 duraciones × año 2026`) con `precioBaseUSD` placeholder documentado.
 - **FR-006**: El seed DEBE sembrar los 11 parámetros `pagos.*` del BRIEF §5.8 con valores default.
 - **FR-007**: El `upsert` de parámetros y planes del motor Pagos DEBE usar `update: { ...campos... }` explícito, con comentario justificativo (patrón anti-I-100).
 - **FR-008**: Se DEBE crear `src/lib/dal/repositories/pagos-repository.ts` con métodos CRUD base sobre los 7 modelos.
@@ -92,7 +92,7 @@ Esta SPEC es bloqueante para las 8 SPECs siguientes de la cola Pagos (211-218).
 
 ## Decisiones propuestas para compuerta §4
 
-1. **Alineación con BRIEF para enums**: se usan los valores exactos del BRIEF §3 (`EstadoSuscripcion` sin `FREEMIUM`; `DuracionPlan` como `MES_1..MES_12`; `EstadoPago` como `PENDIENTE_AUTORIZACION..REEMBOLSADO`). El instructivo indica valores distintos; se señala en compuerta para ratificación de ZEUS.
+1. **Alineación con BRIEF para enums**: se usan los valores exactos del BRIEF §3 (`EstadoSuscripcion` sin `FREEMIUM`; `DuracionPlan` como `MES_1..MES_12`). `EstadoPago` se implementa como `PENDIENTE_AUTORIZACION..RECHAZADO` por ratificación de ZEUS en compuerta §4 (`REEMBOLSADO` se evaluará en SPEC-212).
 2. **Campos `monedaLocal`/`monedaOrigen`/`monedaDestino` como `String`**, no enum, para permitir agregar monedas sin migración. Validación por Zod en capa de servicio.
 3. **Migración aditiva sobre modelos placeholder**: se agregan columnas nuevas y relaciones; columnas legacy (`precio`, `tenantId`, `planId`) se conservan sin datos críticos, sin renombrar ni borrar.
 4. **Seed anti-I-100**: planes y parámetros `pagos.*` usan `update: { ... }` explícito para permitir propagar cambios estructurales en versiones futuras.

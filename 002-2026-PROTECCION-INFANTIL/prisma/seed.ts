@@ -1,7 +1,7 @@
 import { RUBRICA_SEMILLA } from "../src/lib/ai/rubrica-semilla";
 import { normalizarNombreGeografico } from "../src/lib/normalizar";
 import { syncModulosYGrants } from "./seed-modulos-grants";
-import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro } from "@prisma/client";
+import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
 import path from "path";
@@ -35,6 +35,83 @@ const prisma = new Proxy({} as PrismaClient, {
         return getPrisma()[prop as keyof PrismaClient];
     },
 });
+
+// SPEC-210 (002-PI-110): seed de planes base del módulo de pagos.
+// EXCEPCIÓN DOCUMENTADA: los planes son estructurales del motor de pagos.
+// Cuando cambia el catálogo, duración o año base, el seed debe propagar el
+// cambio con update explícito (anti-I-100). El primer seed es INSERT limpio.
+async function seedPlanesPagos(adminId: string) {
+    const planesBase = [];
+    for (const tipo of [TipoTitular.COLEGIO, TipoTitular.PADRE]) {
+        for (const duracion of [
+            DuracionPlan.MES_1,
+            DuracionPlan.MES_2,
+            DuracionPlan.MES_3,
+            DuracionPlan.MES_6,
+            DuracionPlan.MES_12,
+        ]) {
+            planesBase.push({
+                tipoTitular: tipo,
+                duracion,
+                anio: 2026,
+                nombre: `${tipo} · ${duracion} · 2026`,
+                precio: 0, // legacy placeholder; no usar en lógica nueva
+                precioBaseUSD: 0,
+                activo: true,
+                descripcion: `Plan ${tipo} ${duracion} 2026 (precio placeholder)`,
+                creadoPorAdminId: adminId,
+            });
+        }
+    }
+
+    for (const plan of planesBase) {
+        await prisma.plan.upsert({
+            where: {
+                tipoTitular_duracion_anio: {
+                    tipoTitular: plan.tipoTitular,
+                    duracion: plan.duracion,
+                    anio: plan.anio,
+                },
+            },
+            update: {
+                precioBaseUSD: plan.precioBaseUSD,
+                activo: plan.activo,
+                descripcion: plan.descripcion,
+                creadoPorAdminId: plan.creadoPorAdminId,
+            },
+            create: plan,
+        });
+    }
+    console.log(`[SEED] ${planesBase.length} planes de pagos listos`);
+}
+
+// SPEC-210 (002-PI-110): parámetros del módulo de pagos.
+async function seedParametrosPagos() {
+    const pagosParams = [
+        { clave: "pagos.descuento_anual_pct_default", valor: "15", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "% descuento aplicable a duración MES_12 salvo override en Plan" },
+        { clave: "pagos.freemium.duracion_dias", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días de duración del freemium" },
+        { clave: "pagos.freemium.activo", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar freemium para nuevos clientes" },
+        { clave: "pagos.referidos.max_por_año", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Máximo de referidos exitosos por año por cliente" },
+        { clave: "pagos.referidos.notificar_admin_al", valor: "4", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Al 4º referido del año notificar a admin para revisión" },
+        { clave: "pagos.gracia_dias", valor: "3", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días de gracia antes del corte automático" },
+        { clave: "pagos.moneda_base", valor: "USD", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Moneda base del modelo comercial" },
+        { clave: "pagos.tasas.api_url_default", valor: "https://api.exchangerate.host/latest?base=USD", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "URL default para consulta de tasas de cambio" },
+        { clave: "pagos.tasas.refresco_horas", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Horas entre refrescos de la tasa de cambio" },
+        { clave: "pagos.contrato_obligatorio_colegios", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "El contrato firmado es obligatorio para colegios" },
+        { clave: "pagos.contrato_obligatorio_padres", valor: "false", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "El contrato firmado es obligatorio para padres" },
+        { clave: "pagos.comprobante_tamaño_max_mb", valor: "10", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Tamaño máximo del comprobante de pago en MB" },
+        { clave: "pagos.comprobante_formatos_permitidos", valor: "image/png,image/jpeg,application/pdf", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Formatos MIME permitidos para comprobantes" },
+    ];
+
+    for (const p of pagosParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, descripcion: p.descripcion },
+            create: p,
+        });
+    }
+    console.log(`[SEED] ${pagosParams.length} parámetros pagos.* listos`);
+}
 
 async function main() {
     // Admin inicial: SOLO desde variable de entorno, SOLO si no existe (spec 105, I-31).
@@ -368,6 +445,15 @@ async function main() {
     }
 
     console.log("Parámetros por defecto creados");
+
+    // SPEC-210 (002-PI-110): seed del módulo de pagos.
+    const adminPagos = await prisma.usuario.findFirst({ where: { rol: RolUsuario.ADMIN } });
+    if (adminPagos) {
+        await seedPlanesPagos(adminPagos.id);
+    } else {
+        console.log("[SEED] No hay admin en BD; se omite seed de planes de pagos.");
+    }
+    await seedParametrosPagos();
 
     // Nuevos parámetros del módulo de reportes (fase 2)
     const reportesParams = [

@@ -215,6 +215,54 @@ enum TipoPeriodoServicio {
   LIBRE
 }
 
+// SPEC-210 (002-PI-110): enums del módulo de pagos.
+enum TipoTitular {
+  COLEGIO
+  PADRE
+}
+
+enum EstadoSuscripcion {
+  ACTIVA
+  EN_GRACIA
+  SUSPENDIDA
+  CANCELADA
+}
+
+enum DuracionPlan {
+  MES_1
+  MES_2
+  MES_3
+  MES_6
+  MES_12
+}
+
+enum EstadoPago {
+  PENDIENTE_AUTORIZACION
+  AUTORIZADO
+  RECHAZADO
+}
+
+enum MetodoPago {
+  TRANSFERENCIA
+  NEQUI
+  DAVIPLATA
+  PSE_MANUAL
+  EFECTIVO
+  CHEQUE
+  OTRO
+}
+
+enum TipoBono {
+  DESCUENTO_PCT
+  DESCUENTO_FIJO_USD
+  MESES_GRATIS
+}
+
+enum FuenteTasa {
+  API
+  ADMIN_MANUAL
+}
+
 enum EtiquetaRelacionEstudiante {
   ESTUDIANTE @map("ALUMNO")
   MADRE
@@ -354,6 +402,13 @@ model Usuario {
   // SPEC-184 (002-PI-079): blocklist y simulador de abusos.
   bloqueosCreados              BlockList[]
   simulacionesAbuso            SimulacionAbusoRun[]
+  // SPEC-210 (002-PI-110): módulo de pagos.
+  suscripciones                Suscripcion[]
+  planesCreados                Plan[]                     @relation("PlanesCreados")
+  bonosCreados                 BonoPromocional[]          @relation("BonosCreados")
+  pagosAutorizados             Pago[]                     @relation("PagosAutorizados")
+  referidosRevisados           CodigoReferidoUso[]        @relation("ReferidosRevisados")
+  tasasIngresadas              TasaCambio[]               @relation("TasasIngresadas")
 
   @@index([email])
   @@index([rol])
@@ -500,12 +555,28 @@ model Tenant {
   colegio  Colegio?
 }
 
+// SPEC-210 (002-PI-110): Plan enriquecido. El campo `precio` es legacy del
+// placeholder original; la lógica nueva usa `precioBaseUSD`.
 model Plan {
-  id          String   @id @default(cuid())
-  nombre      String
-  descripcion String?
-  precio      Float
-  creadoEn    DateTime @default(now())
+  id                String       @id @default(cuid())
+  nombre            String
+  tipoTitular       TipoTitular
+  duracion          DuracionPlan
+  anio              Int
+  precioBaseUSD     Float
+  descuentoAnualPct Float?
+  activo            Boolean      @default(true)
+  descripcion       String?
+  precio            Float? // legacy placeholder; no usar en lógica nueva
+  creadoPorAdminId  String
+  createdAt         DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(6)
+
+  creadoPor     Usuario       @relation(fields: [creadoPorAdminId], references: [id], name: "PlanesCreados")
+  suscripciones Suscripcion[]
+
+  @@unique([tipoTitular, duracion, anio])
+  @@index([activo, anio])
 }
 
 model Subscription {
@@ -526,6 +597,156 @@ model BillingCycle {
   periodoInicio  DateTime
   periodoFin     DateTime
   creadoEn       DateTime @default(now())
+}
+
+// ============================================
+// MÓDULO DE PAGOS (SPEC-210 · 002-PI-110)
+// ============================================
+
+model Suscripcion {
+  id                   String            @id @default(cuid())
+  tipoTitular          TipoTitular
+  colegioId            String?
+  usuarioId            String?
+  estado               EstadoSuscripcion
+  planActualId         String
+  contratoPDFUrl       String?
+  fechaInicio          DateTime          @db.Timestamptz(6)
+  fechaFin             DateTime          @db.Timestamptz(6)
+  fechaCorteProgramado DateTime?         @db.Timestamptz(6)
+  esFreemium           Boolean           @default(false)
+  freemiumFechaFin     DateTime?         @db.Timestamptz(6)
+  codigoReferidoPropio String            @unique
+  codigoReferidoUsado  String?
+  monedaLocal          String            @default("COP")
+  paisCliente          String            @default("CO")
+  suspendidaEn         DateTime?         @db.Timestamptz(6)
+  canceladaEn          DateTime?         @db.Timestamptz(6)
+  canceladaPorUsuario  Boolean?
+  motivoCancelacion    String?
+  createdAt            DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @db.Timestamptz(6)
+
+  colegio               Colegio?            @relation(fields: [colegioId], references: [id])
+  usuario               Usuario?            @relation(fields: [usuarioId], references: [id])
+  planActual            Plan                @relation(fields: [planActualId], references: [id])
+  pagos                 Pago[]
+  bonosAplicados        BonoAplicado[]
+  referidosCodigoPropio CodigoReferidoUso[] @relation("CodigoPropio")
+  referidosUsados       CodigoReferidoUso[] @relation("Referida")
+
+  @@index([estado, fechaFin])
+  @@index([tipoTitular, estado])
+}
+
+model Pago {
+  id                    String       @id @default(cuid())
+  suscripcionId         String
+  duracionCubierta      DuracionPlan
+  montoBaseUSD          Float
+  descuentoAplicadoUSD  Float        @default(0)
+  montoNetoUSD          Float
+  tasaCambioAplicada    Float
+  montoLocalPagado      Float
+  monedaLocal           String
+  metodoDeclarado       MetodoPago
+  comprobanteAdjuntoUrl String
+  comprobanteMimeType   String
+  comprobanteHashSha256 String
+  fechaReporte          DateTime     @db.Timestamptz(6)
+  fechaAutorizacion     DateTime?    @db.Timestamptz(6)
+  estado                EstadoPago
+  motivoRechazo         String?
+  autorizadoPorAdminId  String?
+  codigoReferidoUsado   String?
+  createdAt             DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime     @updatedAt @db.Timestamptz(6)
+
+  suscripcion    Suscripcion    @relation(fields: [suscripcionId], references: [id])
+  autorizadoPor  Usuario?       @relation(fields: [autorizadoPorAdminId], references: [id], name: "PagosAutorizados")
+  bonosAplicados BonoAplicado[]
+
+  @@index([suscripcionId, createdAt])
+  @@index([estado, fechaReporte])
+}
+
+model BonoPromocional {
+  id                          String       @id @default(cuid())
+  nombre                      String       @unique
+  tipo                        TipoBono
+  valor                       Float
+  vigenciaInicio              DateTime     @db.Timestamptz(6)
+  vigenciaFin                 DateTime     @db.Timestamptz(6)
+  usosMaximosTotales          Int?
+  usosMaximosPorCliente       Int          @default(1)
+  aplicaANuevos               Boolean      @default(true)
+  aplicaARenovaciones         Boolean      @default(false)
+  aplicaSoloA                 TipoTitular?
+  combinableConCodigoPersonal Boolean      @default(false)
+  activo                      Boolean      @default(true)
+  descripcion                 String?
+  creadoPorAdminId            String
+  createdAt                   DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt                   DateTime     @updatedAt @db.Timestamptz(6)
+
+  creadoPor Usuario        @relation(fields: [creadoPorAdminId], references: [id], name: "BonosCreados")
+  usos      BonoAplicado[]
+
+  @@index([activo, vigenciaInicio, vigenciaFin])
+}
+
+model BonoAplicado {
+  id            String   @id @default(cuid())
+  bonoId        String
+  suscripcionId String
+  pagoId        String?
+  aplicadoEn    DateTime @default(now()) @db.Timestamptz(6)
+  descuentoUSD  Float
+
+  bono        BonoPromocional @relation(fields: [bonoId], references: [id])
+  suscripcion Suscripcion     @relation(fields: [suscripcionId], references: [id])
+  pago        Pago?           @relation(fields: [pagoId], references: [id])
+
+  @@index([bonoId, aplicadoEn])
+}
+
+model CodigoReferidoUso {
+  id                      String    @id @default(cuid())
+  codigoReferidoUsuarioId String
+  suscripcionReferidaId   String
+  fechaRegistro           DateTime  @default(now()) @db.Timestamptz(6)
+  fechaActivacion         DateTime? @db.Timestamptz(6)
+  recompensaOtorgada      Boolean   @default(false)
+  recompensaOtorgadaEn    DateTime? @db.Timestamptz(6)
+  tipoRecompensa          String?
+  anio                    Int
+  requiereRevisionAdmin   Boolean   @default(false)
+  revisadaPorAdminId      String?
+  revisionOK              Boolean?
+
+  referidor   Suscripcion @relation(fields: [codigoReferidoUsuarioId], references: [id], name: "CodigoPropio")
+  referida    Suscripcion @relation(fields: [suscripcionReferidaId], references: [id], name: "Referida")
+  revisadaPor Usuario?    @relation(fields: [revisadaPorAdminId], references: [id], name: "ReferidosRevisados")
+
+  @@unique([codigoReferidoUsuarioId, suscripcionReferidaId])
+  @@index([codigoReferidoUsuarioId, anio])
+}
+
+model TasaCambio {
+  id                  String     @id @default(cuid())
+  monedaOrigen        String
+  monedaDestino       String
+  tasa                Float
+  fecha               DateTime   @db.Timestamptz(6)
+  fuente              FuenteTasa
+  apiUrl              String?
+  ingresadoPorAdminId String?
+  motivoManual        String?
+  createdAt           DateTime   @default(now()) @db.Timestamptz(6)
+
+  ingresadoPor Usuario? @relation(fields: [ingresadoPorAdminId], references: [id], name: "TasasIngresadas")
+
+  @@index([monedaDestino, fecha])
 }
 
 model Colegio {
@@ -571,6 +792,8 @@ model Colegio {
   identificadoresProfesor  IdentificadorProfesor[]
   onboarding               OnboardingColegio?
   notificacionesInApp      NotificacionInApp[]
+  // SPEC-210 (002-PI-110): módulo de pagos.
+  suscripciones            Suscripcion[]
 
   @@index([paisId])
   @@index([departamentoId])

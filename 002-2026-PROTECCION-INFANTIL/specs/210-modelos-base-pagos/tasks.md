@@ -21,7 +21,7 @@
 
 ## Fase 3 — Seed
 
-- [ ] T012 [P1] Implementar `seedPlanesPagos(adminId)` en `prisma/seed.ts`: 20 planes con upsert anti-I-100.
+- [ ] T012 [P1] Implementar `seedPlanesPagos(adminId)` en `prisma/seed.ts`: 10 planes con upsert anti-I-100.
 - [ ] T013 [P1] Implementar `seedParametrosPagos()` en `prisma/seed.ts`: 11 parámetros `pagos.*` con upsert anti-I-100.
 - [ ] T014 [P1] Wirear nuevas funciones en el flujo principal del seed.
 - [ ] T015 [P1] Verificar idempotencia: correr `npm run db:seed` dos veces sin duplicados.

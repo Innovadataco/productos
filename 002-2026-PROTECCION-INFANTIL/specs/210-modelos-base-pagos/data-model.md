@@ -11,7 +11,7 @@ Migración **aditiva**. Se añaden 7 modelos de pagos, 7 enums nuevos y relacion
 | `TipoTitular` | `COLEGIO`, `PADRE` | `Suscripcion.tipoTitular`, `Plan.tipoTitular`, `BonoPromocional.aplicaSoloA` |
 | `EstadoSuscripcion` | `ACTIVA`, `EN_GRACIA`, `SUSPENDIDA`, `CANCELADA` | `Suscripcion.estado` |
 | `DuracionPlan` | `MES_1`, `MES_2`, `MES_3`, `MES_6`, `MES_12` | `Plan.duracion`, `Pago.duracionCubierta` |
-| `EstadoPago` | `PENDIENTE_AUTORIZACION`, `AUTORIZADO`, `RECHAZADO`, `REEMBOLSADO` | `Pago.estado` |
+| `EstadoPago` | `PENDIENTE_AUTORIZACION`, `AUTORIZADO`, `RECHAZADO` | `Pago.estado` |
 | `MetodoPago` | `TRANSFERENCIA`, `NEQUI`, `DAVIPLATA`, `PSE_MANUAL`, `EFECTIVO`, `CHEQUE`, `OTRO` | `Pago.metodoDeclarado` |
 | `TipoBono` | `DESCUENTO_PCT`, `DESCUENTO_FIJO_USD`, `MESES_GRATIS` | `BonoPromocional.tipo` |
 | `FuenteTasa` | `API`, `ADMIN_MANUAL` | `TasaCambio.fuente` |

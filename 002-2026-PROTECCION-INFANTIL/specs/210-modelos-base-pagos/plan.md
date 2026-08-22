@@ -75,7 +75,7 @@ Generar con `npx prisma migrate dev --name pagos_modelos_base`. Revisar el SQL p
 ### 3. Seed idempotente
 
 En `prisma/seed.ts`, crear funciones:
-- `seedPlanesPagos(adminId: string)`: upsert de 20 planes (2 titulares × 5 duraciones × 2026) con `precioBaseUSD = 0` placeholder y comentario.
+- `seedPlanesPagos(adminId: string)`: upsert de 10 planes (2 titulares × 5 duraciones × 2026) con `precioBaseUSD = 0` placeholder y comentario.
 - `seedParametrosPagos()`: upsert de los 11 parámetros `pagos.*` del BRIEF §5.8.
 
 Ambos usan `update: { ... }` explícito para propagar cambios estructurales (anti-I-100). El primer seed es INSERT limpio.
