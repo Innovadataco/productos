@@ -1,6 +1,6 @@
 # SPEC-206 — Infra · Session Log (002-PI-120)
 
-> Status: `PLANEADO`
+> Status: `IMPLEMENTADO`
 > PI: 002-PI-120
 > Responsable: ODIN
 > Rama: `work/002-pi-120`
@@ -109,7 +109,7 @@ Cada inicio de sesión explícito crea una fila `SesionLog`. El cliente actualiz
 5. **Invalidación de sesión forzada**: `verifyAuth` verifica el estado de `SesionLog` cuando el payload contiene `sesionLogId`; las sesiones previas sin el campo siguen funcionando.
 6. **IP hasheada con salt del sistema**: se reutiliza `calcularIpHash` del módulo anti-abuso (`src/lib/anti-abuso/fuente-reporte.ts`) para consistencia y cumplimiento.
 
-## Impacto en arquitectura
+## Impacto en arquitectura:
 
 - Nuevo modelo `SesionLog` + migración aditiva + índices.
 - Cambio en `src/lib/auth.ts` para validar sesión cerrada cuando el payload lo indica.
@@ -123,3 +123,16 @@ Cada inicio de sesión explícito crea una fila `SesionLog`. El cliente actualiz
 ## Deuda Técnica
 
 - Ninguna identificada en fase de diseño.
+
+## Implementación
+
+- Migración aditiva `20260822000000_spec_206_sesion_log` aplicada; modelo `SesionLog`, enum `MotivoCierreSesion` y valores `SESION_FORZADA_CIERRE`/`SESION_CIERRE_INACTIVIDAD` en `AccionAudit`.
+- Servicio DAL `SessionLogService` en `src/lib/dal/services/session-log.ts` con registro, ping, cierre por inactividad, forzar cierre, listado de activas y purga.
+- `verifyAuth` valida `sesionLogId`; login crea sesión y la incluye en el JWT.
+- Endpoints `POST /api/session/ping`, `GET /api/admin/sesiones`, `POST /api/admin/sesiones/[id]/cerrar` con tests de integración.
+- Hook `useSessionPing` + `SessionPingProvider` montado en layout dashboard; respeta Page Visibility API.
+- Worker `scripts/worker-sesiones.mjs` con pg-boss y advisory lock separado.
+- Sub-tab "Sesiones" en `/dashboard/admin/estadisticas/operacion?tab=sesiones` con tabla y forzar cierre.
+- Seed idempotente de params `sesion.*` con `update: {}`.
+- Artefactos de arquitectura regenerados (`docs/architecture/01-modelo-datos.md`, `02-roles-capacidades.md`, `06-stack.md`).
+- Ver `specs/206-infra-session-log/cierre.md` para evidencia completa del gate.

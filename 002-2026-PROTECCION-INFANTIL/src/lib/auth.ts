@@ -6,6 +6,7 @@ import { AppError, ERROR_CODES } from "./errors";
 import { requireEnv } from "./env";
 import type { RolUsuario } from "@prisma/client";
 import { getParametroSistema } from "./parametros";
+import { SessionLogService } from "./dal/services/session-log";
 
 const LEGACY_COOKIE_NAME = "token";
 const HOST_COOKIE_NAME = "__Host-token";
@@ -118,6 +119,16 @@ export async function verifyAuth(requiredRol?: RolUsuario | RolUsuario[]) {
 
     if (!user || user.estado !== "activo") {
         throw new AppError("Usuario no activo", ERROR_CODES.AUTH_INVALID, 401);
+    }
+
+    // SPEC-206 (002-PI-120): si el JWT trae sesionLogId, la sesión debe seguir abierta.
+    // Tokens previos sin el campo siguen funcionando (retrocompatibilidad).
+    const sesionLogId = payload.sesionLogId;
+    if (typeof sesionLogId === "string") {
+        const sesionActiva = await new SessionLogService().estaSesionActiva(sesionLogId);
+        if (!sesionActiva) {
+            throw new AppError("Sesión cerrada", ERROR_CODES.AUTH_EXPIRED, 401);
+        }
     }
 
     if (requiredRol) {

@@ -4,6 +4,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { loginSchema } from "@/lib/validators";
 import { AutenticacionService } from "@/lib/dal/services/autenticacion";
+import { SessionLogService } from "@/lib/dal/services/session-log";
+import { RolUsuario } from "@prisma/client";
 
 export async function POST(request: Request) {
     try {
@@ -64,7 +66,11 @@ export async function POST(request: Request) {
             }
         }
 
-        const token = await createToken({ sub: user.id, rol: user.rol });
+        const sesionLogId = await new SessionLogService().registrarInicioSesion(request, {
+            id: user.id,
+            rol: user.rol as RolUsuario,
+        });
+        const token = await createToken({ sub: user.id, rol: user.rol as RolUsuario, sesionLogId });
         await setSessionCookie(request, token);
 
         return NextResponse.json({

@@ -81,6 +81,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `test:watch` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs` |
 | `tokens:check` | `tsx scripts/tokens-check.ts` |
 | `worker` | `node --import tsx scripts/worker-supervisor.mjs` |
+| `worker:sesiones` | `node --import tsx scripts/worker-sesiones.mjs` |
 
 ## Imagen de producción (Dockerfile)
 

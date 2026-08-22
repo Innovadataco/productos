@@ -50,6 +50,8 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "estadisticas", nombre: "Estadísticas", categoria: "admin", orden: 90 },
     // SPEC-194 (002-PI-088): analítica agregada de colegios (sub-tab de estadísticas/operacion).
     { clave: "analytics_colegios", nombre: "Analítica de colegios", categoria: "admin", orden: 91, padre: "estadisticas" },
+    // SPEC-206 (002-PI-120): instrumentación de sesiones activas.
+    { clave: "sesiones_admin", nombre: "Sesiones activas", categoria: "admin", orden: 92, padre: "estadisticas" },
     { clave: "anti_abuso", nombre: "Anti-abuso", categoria: "admin", orden: 100 },
     { clave: "monitoreo_worker", nombre: "Monitoreo del worker", categoria: "admin", orden: 105 },
     { clave: "dataset_entrenamiento", nombre: "Dataset de entrenamiento", categoria: "admin", orden: 120 },

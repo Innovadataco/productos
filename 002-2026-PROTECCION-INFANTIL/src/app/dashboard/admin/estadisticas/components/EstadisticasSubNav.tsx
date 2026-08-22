@@ -16,6 +16,7 @@ const tabs = [
     { href: "/dashboard/admin/estadisticas/operacion?tab=clasificacion", label: "Clasificación" },
     { href: "/dashboard/admin/estadisticas/operacion?tab=logs", label: "Logs" },
     { href: "/dashboard/admin/estadisticas/operacion?tab=colegios", label: "Colegios" },
+    { href: "/dashboard/admin/estadisticas/operacion?tab=sesiones", label: "Sesiones" },
     { href: "/dashboard/admin/estadisticas/motor", label: "Motor" },
 ];
 
@@ -28,6 +29,7 @@ export function EstadisticasSubNav() {
     const esTabClasificacion = pathname === "/dashboard/admin/estadisticas/operacion" && tabQuery === "clasificacion";
     const esTabLogs = pathname === "/dashboard/admin/estadisticas/operacion" && tabQuery === "logs";
     const esTabColegios = pathname === "/dashboard/admin/estadisticas/operacion" && tabQuery === "colegios";
+    const esTabSesiones = pathname === "/dashboard/admin/estadisticas/operacion" && tabQuery === "sesiones";
 
     const visibles = tabs.filter((tab) => esDestinoPermitidoPorRol(user?.rol, tab.href.split("?")[0]));
 
@@ -41,8 +43,10 @@ export function EstadisticasSubNav() {
                     activo = esTabLogs;
                 } else if (tab.href.includes("?tab=colegios")) {
                     activo = esTabColegios;
+                } else if (tab.href.includes("?tab=sesiones")) {
+                    activo = esTabSesiones;
                 } else {
-                    activo = pathname === tab.href && !esTabClasificacion && !esTabLogs && !esTabColegios;
+                    activo = pathname === tab.href && !esTabClasificacion && !esTabLogs && !esTabColegios && !esTabSesiones;
                 }
                 return (
                     <Link

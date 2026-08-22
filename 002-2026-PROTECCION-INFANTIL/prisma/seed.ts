@@ -489,6 +489,22 @@ async function main() {
         });
     }
 
+    // SPEC-206 (002-PI-120): parámetros de sesión activa.
+    // Se siembran con update: {} para no pisar ajustes custom del CEO (patrón SPEC-187).
+    const sesionParams = [
+        { clave: "sesion.timeout_inactividad_minutos", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Minutos sin actividad antes de cerrar una sesión automáticamente" },
+        { clave: "sesion.ping_intervalo_minutos", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Intervalo entre pings de actividad desde el cliente (minutos)" },
+        { clave: "sesion.retencion_dias", valor: "90", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días que se conservan las filas de SesionLog antes de purgar" },
+        { clave: "sesion.worker_intervalo_minutos", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cada cuántos minutos el worker de sesiones revisa inactividad" },
+    ];
+    for (const p of sesionParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+
     console.log("Parámetros por defecto creados");
 
     // SPEC-210 (002-PI-110): seed del módulo de pagos.

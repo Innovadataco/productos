@@ -219,6 +219,9 @@ enum AccionAudit {
   SUSCRIPCION_EXTENSION_MANUAL
   // SPEC-214 (002-PI-114): tasas de cambio.
   TASA_MANUAL_CREADA
+  // SPEC-206 (002-PI-120): auditoría de cierre de sesiones.
+  SESION_FORZADA_CIERRE
+  SESION_CIERRE_INACTIVIDAD
 }
 
 enum TipoPeriodoServicio {
@@ -305,6 +308,13 @@ enum MotivoBajaReporte {
   RETIRO_LIMPIEZA
   REPORTE_FALSO
   ORDEN_LEGAL
+}
+
+// SPEC-206 (002-PI-120): motivos de cierre de una sesión activa.
+enum MotivoCierreSesion {
+  LOGOUT
+  INACTIVIDAD
+  FORZADA
 }
 
 enum NivelLog {
@@ -444,6 +454,8 @@ model Usuario {
   simulacionesAbuso            SimulacionAbusoRun[]
   // SPEC-230 (002-PI-130): expedientes del padre.
   expedientes                  Expediente[]
+  // SPEC-206 (002-PI-120): sesiones activas del usuario.
+  sesionesLog                  SesionLog[]
   // SPEC-210 (002-PI-110): módulo de pagos.
   suscripciones                Suscripcion[]
   planesCreados                Plan[]                     @relation("PlanesCreados")
@@ -584,6 +596,31 @@ model AuditLog {
   @@index([colegioId])
   @@index([accion])
   @@index([creadoEn])
+}
+
+// SPEC-206 (002-PI-120): bitácora de sesiones activas para instrumentación de uso.
+model SesionLog {
+  id                String             @id @default(cuid())
+  usuarioId         String
+  tenantId          String?
+  rol               RolUsuario
+  iniciadaEn        DateTime           @db.Timestamptz(6)
+  ultimaActividadEn DateTime           @db.Timestamptz(6)
+  cerradaEn         DateTime?          @db.Timestamptz(6)
+  motivoCierre      MotivoCierreSesion?
+  duracionMin       Int?
+  ipHash            String
+  userAgent         String?
+  creadoEn          DateTime           @default(now())
+  actualizadoEn     DateTime           @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, iniciadaEn(sort: Desc)])
+  @@index([tenantId, iniciadaEn(sort: Desc)])
+  @@index([cerradaEn, ultimaActividadEn])
+  @@index([creadoEn])
+  @@map("sesiones_log")
 }
 
 model Tenant {

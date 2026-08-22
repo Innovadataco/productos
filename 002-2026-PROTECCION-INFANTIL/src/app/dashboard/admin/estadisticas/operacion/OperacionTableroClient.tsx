@@ -23,6 +23,7 @@ import { OllamaSmokeHistorial } from "@/components/modules/monitoreo/OllamaSmoke
 import { ClasificacionTab } from "./ClasificacionTab";
 import { LogsTab } from "@/components/modules/monitoreo/LogsTab";
 import { ColegiosAnalyticsTable } from "@/components/modules/admin/ColegiosAnalyticsTable";
+import { SesionesTab } from "./components/SesionesTab";
 
 type SenalEstado = {
     estado: EstadoSemaforo;
@@ -36,12 +37,13 @@ type EstadoMonitoreo = {
     monitoreoEnabled?: boolean;
 };
 
-type TabKey = "operacion" | "clasificacion" | "logs" | "colegios";
+type TabKey = "operacion" | "clasificacion" | "logs" | "colegios" | "sesiones";
 
 function tabDesdeQuery(raw: string | null): TabKey {
     if (raw === "clasificacion") return "clasificacion";
     if (raw === "logs") return "logs";
     if (raw === "colegios") return "colegios";
+    if (raw === "sesiones") return "sesiones";
     return "operacion";
 }
 
@@ -104,6 +106,7 @@ export function OperacionTableroClient() {
             {tab === "clasificacion" && <ClasificacionTab />}
             {tab === "logs" && <LogsTab />}
             {tab === "colegios" && <ColegiosAnalyticsTable />}
+            {tab === "sesiones" && <SesionesTab />}
             {tab === "operacion" && (
                 <div className="space-y-8">
                     {cargando && !estado ? (
