@@ -28,9 +28,9 @@ Opciones evaluadas:
 
 Se elige la opción 1 para cumplir "event-based simple" sin bloquear SPEC-236.
 
-### ¿Hash del identificador en caché?
+### ¿Identificador en claro en la caché?
 
-Para cumplir Ley 1581 se almacena `identificadorHash` (SHA-256). La compilación calcula el hash a partir de `Expediente.identificadorReportado`. No se guarda el identificador en claro ni `reporteId` en la caché.
+El brief §7.6 define `identificadorReportado String @id` en claro. El identificador denunciado es dato del contexto reportado, no PII del denunciante ni texto de reporte; SPEC-233 requiere búsqueda por identificador. La protección se gobierna por permisos de rol.
 
 ### ¿Score lineal vs no lineal?
 

@@ -20,7 +20,7 @@ Como OPERADOR o miembro del COMITÉ_DE_VALIDACION quiero compilar los eventos de
 
 **Why this priority**: es el núcleo de la fase "Padre v2"; sin compilación no hay informe ni evidencia N2.
 
-**Independent Test**: invocar `compilarExpediente(expedienteId)` sobre un expediente con 5 eventos y verificar que devuelve un `InformeConsolidado` con score, categorías, patrones y markdown estructurado.
+**Independent Test**: invocar `compilarExpediente(expedienteId)` sobre un expediente con 5 eventos y verificar que devuelve un `InformeConsolidado` con score, categorías, patrones y `resumenTextoGenerado` estructurado.
 
 **Acceptance Scenarios**:
 
@@ -76,9 +76,9 @@ Como padre o comité quiero descargar un PDF de evidencia generado a partir del 
 
 **Acceptance Scenarios**:
 
-1. **Given** un informe consolidado, **When** se genera el PDF, **Then** se persiste en `/data/informes/[expedienteId]-v[n].pdf` y se guardan `pdfRuta`, `hashSha256` y `fechaGeneracion`.
-2. **Given** el mismo informe compilado dos veces, **Then** ambos PDFs tienen el mismo `hashSha256` (determinismo).
-3. **Given** el PDF generado, **Then** su contenido markdown no incluye texto original de reportes, nombres, teléfonos ni identificadores; solo datos agregados y señales.
+1. **Given** un informe consolidado, **When** se genera el PDF, **Then** se persiste en `/data/informes/[expedienteId]-v[n].pdf` y se guardan `pdfUrl`, `pdfHash` y `pdfGeneradoEn`.
+2. **Given** el mismo informe compilado dos veces, **Then** ambos PDFs tienen el mismo `pdfHash` (determinismo, incluyendo JSON con keys canónicas).
+3. **Given** el PDF generado, **Then** su contenido `resumenTextoGenerado` no incluye texto original de reportes, nombres, teléfonos ni identificadores; solo datos agregados y señales.
 4. **Given** el endpoint `/api/publico/verificar-pdf/[hash]`, **When** el hash existe, **Then** responde 200 con metadatos mínimos; si no existe, 404.
 5. **Given** el endpoint público, **Then** aplica rate-limit `verificar_pdf` para mitigar enumeración de hashes.
 
@@ -90,13 +90,13 @@ Como sistema quiero que un worker refresque periódicamente la caché de señal 
 
 **Why this priority**: la señal comunitaria puede requerer barrer muchos reportes; un worker con caché mejora latencia y reduce carga.
 
-**Independent Test**: invalidar la caché, lanzar el worker y verificar que reconstruye la fila de `SenalComunitariaCache` y actualiza `refrescadoEn`.
+**Independent Test**: invalidar la caché, lanzar el worker y verificar que reconstruye la fila de `SenalComunitariaCache` y actualiza `actualizadoEn`.
 
 **Acceptance Scenarios**:
 
-1. **Given** un cambio que invalida la caché (nuevo evento relevante), **When** el worker `pi-senal-comunitaria` ejecuta, **Then** recalcula y actualiza los agregados para el identificador/plataforma afectado.
-2. **Given** la caché vigente, **When** la compilación la consume, **Then** usa `totalReportes`, `totalAprobados`, `categoriasJson` y `scoreComunitario` sin tocar `Reporte`.
-3. **Given** la caché expirada (`expiraEn` pasado), **When** la compilación la consume, **Then** la marca como inválida y fuerza recálculo (o recalcula inline según decida la implementación).
+1. **Given** un cambio que invalida la caché (nuevo evento relevante), **When** el worker `pi-senal-comunitaria` ejecuta, **Then** recalcula y actualiza los agregados para el `identificadorReportado` afectado.
+2. **Given** la caché vigente, **When** la compilación la consume, **Then** usa `totalExpedientesActivos`, `totalExpedientesCerrados`, `totalExpedientesEscalados`, `categoriasFrecuenciaJson`, `paisesJson`, `ciudadesJson` y `plataformasJson` sin tocar `Reporte`.
+3. **Given** la caché expirada (`actualizadoEn` antiguo respecto a `refresh_min`), **When** la compilación la consume, **Then** la marca como inválida y fuerza recálculo (o recalcula inline según decida la implementación).
 
 ---
 
@@ -104,7 +104,7 @@ Como sistema quiero que un worker refresque periódicamente la caché de señal 
 
 - **Expediente CERRADO**: la compilación sigue permitida (lectura histórica); `agregarEvento` sigue rechazando en CERRADO (SPEC-230).
 - **Evento sin categoría hidratada aún**: se ignora en agregados de categorías y se asume categoría desconocida con peso 0.
-- **Texto original nunca sale**: ni markdown, ni JSON, ni PDF contienen el texto del reporte; solo categorías y conteos.
+- **Texto original nunca sale**: ni `resumenTextoGenerado`, ni JSON, ni PDF contienen el texto del reporte; solo categorías y conteos.
 - **Hash reproducible**: se fija el timestamp de generación a precisión de segundos (o se pasa explícitamente en tests) para que el mismo contenido produzca el mismo hash.
 - **Storage no disponible**: la generación de PDF falla con error 500 controlado y se loguea; no se persiste informe incompleto.
 - **Rate-limit store caído**: el endpoint `/api/publico/verificar-pdf/[hash]` falla abierto (permite la request) salvo que ZEUS decida fail-closed en la compuerta.
@@ -121,20 +121,20 @@ Como sistema quiero que un worker refresque periódicamente la caché de señal 
 - **FR-003**: La compilación DEBE usar SQL puro (`$queryRaw`) para agregados de categorías y señal comunitaria; está prohibido usar `src/lib/ai/**`.
 - **FR-004**: El sistema DEBE implementar cuatro funciones puras N1 —`detectarAceleracion`, `detectarProgresion`, `detectarPerpetradorSerial`, `detectarMultiplataforma`— con umbrales leídos de `ParametroSistema` (`padre.patron.*`).
 - **FR-005**: El sistema DEBE calcular el score con la fórmula parametrizada definida en `src/lib/expediente/compilacion/score/calcular-score.ts`, usando `padre.score.*`.
-- **FR-006**: El sistema DEBE generar un markdown estructurado (`src/lib/expediente/compilacion/template/renderizar-markdown.ts`) con secciones: Alcance, Clasificaciones, Resumen, Patrones, Señal y Nivel de gravedad.
-- **FR-007**: El sistema DEBE generar un PDF determinista con `pdfmake`, persistirlo en `/data/informes/[expedienteId]-v[n].pdf` y guardar `pdfRuta`, `hashSha256` y `fechaGeneracion` en `InformeConsolidado`.
+- **FR-006**: El sistema DEBE generar un `resumenTextoGenerado` estructurado (`src/lib/expediente/compilacion/template/renderizar-markdown.ts`) con secciones: Alcance, Clasificaciones, Resumen, Patrones, Señal y Nivel de gravedad.
+- **FR-007**: El sistema DEBE generar un PDF determinista con `pdfmake`, persistirlo en `/data/informes/[expedienteId]-v[n].pdf` y guardar `pdfUrl`, `pdfHash` y `pdfGeneradoEn` en `InformeConsolidado`.
 - **FR-008**: El sistema DEBE exponer `GET /api/publico/verificar-pdf/[hash]` con rate-limit scope `verificar_pdf` y sin exponer PII.
 - **FR-009**: El sistema DEBE implementar el worker `scripts/worker-senal-comunitaria.mjs` que refresca `SenalComunitariaCache` ante invalidaciones, con un advisory lock o polling simple.
 - **FR-010**: El sistema DEBE sembrar el parámetro `padre.senal_comunitaria.refresh_min` INTEGER 60 en `prisma/seed.ts` (upsert anti-I-100) y reutilizar los parámetros `padre.score.*` / `padre.patron.*` ya sembrados.
 - **FR-011**: El sistema DEBE respetar la frontera DAL Q-3: todo acceso a los nuevos modelos pasa por `src/lib/dal/repositories/informe-consolidado-repository.ts`, `senal-comunitaria-repository.ts` y `patron-expediente-repository.ts`.
 - **FR-012**: `SenalComunitariaCache` y `PatronExpediente` NUNCA DEBEN almacenar textos originales, identidades ni datos re-identificables; solo agregados y metadatos estructurales.
 - **FR-013**: El sistema DEBE auditar la generación de informes y PDFs mediante `AuditLog` (acciones nuevas o reutilizadas) sin incluir textos de reportes.
-- **FR-014**: El sistema DEBE soportar la generación de múltiples versiones de informe por expediente (`version` autoincremental por expediente).
+- **FR-014**: El sistema DEBE soportar la generación de múltiples versiones de informe por expediente (`versionSecuencial` autoincremental por expediente).
 
 ### Key Entities
 
-- **InformeConsolidado**: resultado de la compilación de un expediente. Atributos: `expedienteId`, `version`, `scoreGravedad`, `scoreValor`, `categoriasDominantesJson`, `patronesJson`, `senalComunitariaJson`, `nivelConfianza`, `markdown`, `pdfRuta`, `hashSha256`, `generadoPorId`, `fechaGeneracion`, `vigenteHasta`.
-- **SenalComunitariaCache**: agregados comunitarios por identificador hasheado y plataforma. Atributos: `identificadorHash`, `plataformaId`, `periodo`, `totalReportes`, `totalAprobados`, `categoriasJson`, `scoreComunitario`, `refrescadoEn`, `expiraEn`, `invalidado`, `version`.
+- **InformeConsolidado**: resultado de la compilación de un expediente. Atributos: `expedienteId`, `versionSecuencial`, `scoreGravedad`, `scoreValor`, `categoriasDetectadasJson`, `patronesDetectadosJson`, `senalComunitariaJson`, `resumenTextoGenerado`, `pdfUrl`, `pdfHash`, `pdfGeneradoEn`, `generadoPorId`, `tipoRevision`, `guiaAccionCategoriaIdPrincipal`, `estadoAprobacion`, `aprobadoPorMiembrosJson`, `correccionesJson`.
+- **SenalComunitariaCache**: agregados comunitarios por `identificadorReportado`. Atributos: `identificadorReportado` (PK), `totalExpedientesActivos`, `totalExpedientesCerrados`, `totalExpedientesEscalados`, `categoriasFrecuenciaJson`, `primeraAparicionEn`, `ultimaAparicionEn`, `paisesJson`, `ciudadesJson`, `plataformasJson`, `invalidado`, `actualizadoEn`.
 - **PatronExpediente**: patrón N1 detectado en un expediente. Atributos: `expedienteId`, `tipoPatron`, `nivelConfianza`, `metadatosJson`, `detectadoEn`.
 - **Expediente / EventoExpediente**: modelos base de SPEC-230; solo lectura en esta SPEC.
 - **ParametroSistema**: fuente de `padre.score.*`, `padre.patron.*` y `padre.senal_comunitaria.refresh_min`.
@@ -146,10 +146,10 @@ Como sistema quiero que un worker refresque periódicamente la caché de señal 
 
 ### Measurable Outcomes
 
-- **SC-001**: `compilarExpediente` sobre un expediente con 5 eventos devuelve un `InformeConsolidado` con score, categorías, patrones, señal y markdown en menos de 1 segundo (sin contar IA).
+- **SC-001**: `compilarExpediente` sobre un expediente con 5 eventos devuelve un `InformeConsolidado` con score, categorías, patrones, señal y `resumenTextoGenerado` en menos de 1 segundo (sin contar IA).
 - **SC-002**: Cada una de las 4 reglas N1 tiene al menos 2 tests sintéticos (dispara / no dispara) y todos pasan.
 - **SC-003**: El cálculo de score produce VERDE/AMARILLO/ROJO según los umbrales configurados; los tests cubren los tres casos.
-- **SC-004**: Dos generaciones consecutivas del mismo PDF producen el mismo `hashSha256`.
+- **SC-004**: Dos generaciones consecutivas del mismo PDF producen el mismo `pdfHash`.
 - **SC-005**: `GET /api/publico/verificar-pdf/[hash]` responde 200 para hash existente, 404 para hash inexistente y aplica rate-limit.
 - **SC-006**: El seed de `padre.senal_comunitaria.refresh_min` es idempotente: ejecutarlo dos veces no duplica filas.
 - **SC-007**: `SenalComunitariaCache` y `PatronExpediente` no contienen campos de PII; el test de esquema lo verifica.
@@ -165,7 +165,7 @@ Como sistema quiero que un worker refresque periódicamente la caché de señal 
 - El PDF usa `pdfmake` (ya dependencia del proyecto); no se introduce librería nueva sin ratificación de ZEUS.
 - El almacenamiento de PDFs es filesystem local en `/data/informes/` dentro del contenedor `pi-app`, montado mediante volumen en `docker-compose.prod.yml`.
 - El worker `pi-senal-comunitaria` se modela como servicio Docker separado con `TZ=America/Bogota`, siguiendo el patrón de `pi-worker`, `pi-monitor` y `pi-simulador-abuso`.
-- La señal comunitaria se indexa por hash del identificador y plataforma para evitar almacenar el identificador en claro dentro de la caché.
+
 - La invalidación de caché es "event-based simple": en esta fase se implementa como polling periódico contra una tabla de invalidaciones (o marcas `invalidado`); notificaciones push quedan para SPEC-236.
 - No se implementan en esta SPEC: bandeja del comité, aclaración padre-comité, notificaciones, auto-cierre, transiciones de estado, escalación ROJO ni UI `/dashboard/padre/*`.
 
@@ -179,7 +179,7 @@ Como sistema quiero que un worker refresque periódicamente la caché de señal 
 
 - **Migración aditiva** `20260823010000_padre_v2_compilacion_senal_patrones`: añade `InformeConsolidado`, `SenalComunitariaCache`, `PatronExpediente` y el enum `TipoPatronExpediente`.
 - **Seed**: parámetro `padre.senal_comunitaria.refresh_min` INTEGER 60 en `prisma/seed.ts` (upsert anti-I-100).
-- **Servicio de compilación**: `src/lib/expediente/compilacion/compilar-expediente.ts`, queries SQL en `agregar-categorias.ts` y `senal-comunitaria.ts`, reglas N1 puras, score parametrizado y renderizado markdown.
+- **Servicio de compilación**: `src/lib/expediente/compilacion/compilar-expediente.ts`, queries SQL en `agregar-categorias.ts` y `senal-comunitaria.ts`, reglas N1 puras (con severidad MEDIA/ALTA que aportan al score vía `padre.score.peso_aceleracion`), score parametrizado y renderizado de `resumenTextoGenerado`.
 - **Kit evidencia PDF**: `src/lib/expediente/pdf/generar-pdf.ts` con `pdfmake`, hash SHA256 reproducible y timestamp Bogotá.
 - **Repositorios DAL**: `informe-consolidado-repository.ts`, `senal-comunitaria-repository.ts`, `patron-expediente-repository.ts`.
 - **Endpoint**: `GET /api/publico/verificar-pdf/[hash]/route.ts` con rate-limit.
@@ -197,6 +197,6 @@ Como sistema quiero que un worker refresque periódicamente la caché de señal 
 
 ### Deuda técnica / notas
 
-- La determinización del PDF requiere fijar el timestamp de generación; se documentará la precisión elegida (segundos) para mantener el hash reproducible.
+- La determinización del PDF requiere fijar el timestamp de generación a segundos y serializar JSON con keys ordenadas canónicamente; se documentará en `generar-pdf.ts`.
 - El worker de señal comunitaria podría evolucionar a invalidación por cola pg-boss en SPEC-236; esta fase usa polling simple para no bloquear dependencias.
 - La relación inversa `Expediente.informes` y `Expediente.patrones` se añade en Prisma si ZEUS la ratifica en la compuerta; de lo contrario se consulta por FK sin relación inversa.

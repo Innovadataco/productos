@@ -18,15 +18,15 @@ Entregar la capa de compilación técnica de expedientes padre: modelos de datos
 
 ### 2. Determinismo del hash SHA256
 
-**Decisión**: el PDF incluye un timestamp de generación truncado a segundos (formato ISO Bogotá). En tests se inyecta el timestamp para garantizar reproducibilidad.
+**Decisión**: el PDF incluye un timestamp de generación truncado a segundos (formato ISO Bogotá) y los JSONs embebidos se serializan con keys ordenadas canónicamente. En tests se inyecta el timestamp para garantizar reproducibilidad.
 
-**Justificación**: si el timestamp cambia en cada generación, el hash cambia y no es reproducible. Truncar a segundos y pasarlo explícitamente en tests permite verificar el hash sin sacrificar la trazabilidad temporal.
+**Justificación**: el timestamp y el orden de keys afectan el buffer del PDF; fijarlos permite que el `pdfHash` sea reproducible para el mismo contenido.
 
 **Alternativa descartada**: omitir timestamp del PDF; se descarta porque el kit evidencia N2 requiere constancia de cuándo se generó.
 
 ### 3. Worker de señal comunitaria
 
-**Decisión**: servicio Docker separado `pi-senal-comunitaria` que hace polling simple contra una tabla de invalidaciones (`SenalComunitariaCache.invalidado = true` o `expiraEn < NOW()`), con advisory lock en PostgreSQL para evitar duplicados.
+**Decisión**: servicio Docker separado `pi-senal-comunitaria` que hace polling simple contra filas `SenalComunitariaCache.invalidado = true` o cuyo `actualizadoEn` supere `refresh_min`, con advisory lock en PostgreSQL para evitar duplicados.
 
 **Justificación**: la SPEC pide "event-based simple". Un polling con advisory lock es suficiente, no depende de pg-boss ni de notificaciones push, y se alinea con `pi-monitor` y `pi-simulador-abuso`.
 
@@ -34,34 +34,32 @@ Entregar la capa de compilación técnica de expedientes padre: modelos de datos
 
 ### 4. Invalidación de caché
 
-**Decisión**: la compilación, tras agregar un evento a un expediente, marcará como `invalidado = true` las filas de `SenalComunitariaCache` cuyo `identificadorHash` coincida con el del expediente. El worker detecta esas filas, recalcula y actualiza.
+**Decisión**: la compilación, tras agregar un evento a un expediente, marcará como `invalidado = true` la fila de `SenalComunitariaCache` cuyo `identificadorReportado` coincida con el del expediente. El worker detecta filas `invalidado = true` o cuyo `actualizadoEn` supere `refresh_min`, recalcula y actualiza.
 
-**Justificación**: mantiene la caché eventualmente consistente sin bloquear la escritura del evento. El worker usa `refresh_min` para limitar frecuencia de recálculo.
+**Justificación**: mantiene la caché eventualmente consistente sin bloquear la escritura del evento. El worker usa `padre.senal_comunitaria.refresh_min` para limitar frecuencia de recálculo.
 
 ### 5. Cálculo de score
 
-**Decisión**: fórmula lineal ponderada:
+**Decisión**: fórmula lineal ponderada. Cada patrón N1 detectado aporta al score según su severidad:
 
 ```
 score = (numEventos * peso_num_reportes)
       + (peso_categorias_graves)
-      + (aceleracionDetectada ? peso_aceleracion : 0)
-      + (senalComunitaria.scoreComunitario * peso_senal_comunitaria)
+      + Σ(patronDetectado ? peso_aceleracion * (severidad === "ALTA" ? 2 : 1) : 0)
+      + (senalComunitariaScore * peso_senal_comunitaria)
 ```
 
-Donde `peso_categorias_graves` suma `peso_categoria_grave` por cada evento cuya categoría esté en `padre.categorias_graves_json`.
+- `peso_categorias_graves` suma `peso_categoria_grave` por cada evento cuya categoría esté en `padre.categorias_graves_json`.
+- Cada regla N1 devuelve `detectado` y `severidad` (`MEDIA` | `ALTA`).
+- En v1 se usa `padre.score.peso_aceleracion` para los 4 tipos de patrón; granularidad por tipo en v2.
 
-**Justificación**: es parametrizable, reproducible y no requiere IA. Los umbrales `umbral_amarillo` y `umbral_rojo` definen el semáforo.
+**Justificación**: cumple brief §5.5; es parametrizable, reproducible y no requiere IA. Los umbrales `umbral_amarillo` y `umbral_rojo` definen el semáforo.
 
-**Ratificación ZEUS**: validar si la fórmula debe incluir términos adicionales (por ejemplo, peso por progresión o multiplataforma) o si los patrones N1 solo aportan al informe textual.
+### 6. Señal comunitaria: identificador en claro
 
-### 6. Señal comunitaria: raw identifier vs hash
+**Decisión**: `SenalComunitariaCache` usa `identificadorReportado String @id` en claro, siguiendo el brief §7.6.
 
-**Decisión**: `SenalComunitariaCache` almacena `identificadorHash` (SHA-256) en lugar del identificador en claro.
-
-**Justificación**: cumple Ley 1581 y el candado de "solo agregados". La compilación calcula el hash a partir de `Expediente.identificadorReportado` y consulta la caché.
-
-**Nota**: si ZEUS considera que el hash dificulta demasiado la query, se puede usar un identificador normalizado (teléfono E.164, nick lower-case); esto almacenaría PII en caché y requeriría revisión legal.
+**Justificación**: el identificador denunciado es dato del contexto reportado, no PII del denunciante ni texto de reporte; SPEC-233 requiere búsqueda por identificador en vistas padre/admin. La protección se gobierna por permisos de rol, no por hash irreversible. Los campos agregados no permiten re-identificar padres.
 
 ### 7. Almacenamiento de PDFs
 
@@ -86,7 +84,7 @@ y declarar el volumen global `pi_informes_storage`.
 
 ### 9. Endpoint `/api/publico/verificar-pdf/[hash]`
 
-**Decisión**: ruta pública sin autenticación; aplica rate-limit `verificar_pdf` (30 req/min/IP). Devuelve 200 con `{ expedienteId, version, fechaGeneracion, vigenteHasta }` o 404.
+**Decisión**: ruta pública sin autenticación; aplica rate-limit `verificar_pdf` (30 req/min/IP). Devuelve 200 con `{ expedienteId, versionSecuencial, pdfGeneradoEn }` o 404.
 
 **Justificación**: verificación pública de integridad sin exponer contenido sensible. Rate-limit evita enumeración.
 
@@ -118,10 +116,10 @@ y declarar el volumen global `pi_informes_storage`.
 1. `src/lib/dal/repositories/informe-consolidado-repository.ts`
    - `crearInforme(data)`
    - `listarPorExpediente(expedienteId, paginacion)`
-   - `obtenerPorHash(hashSha256)`
+   - `obtenerPorHash(pdfHash)`
 2. `src/lib/dal/repositories/senal-comunitaria-repository.ts`
-   - `obtenerORecalcular(identificadorHash, plataformaId, periodo)`
-   - `invalidar(identificadorHash, plataformaId?)`
+   - `obtenerORecalcular(identificadorReportado)`
+   - `invalidar(identificadorReportado)`
    - `obtenerPendientesDeRefresco(limite)`
    - `guardarCache(data)`
 3. `src/lib/dal/repositories/patron-expediente-repository.ts`
@@ -143,7 +141,7 @@ y declarar el volumen global `pi_informes_storage`.
 
 ### Fase 5: Kit evidencia PDF
 
-1. `src/lib/expediente/pdf/generar-pdf.ts`: recibe `InformeConsolidado` y devuelve `{ buffer, hashSha256 }`.
+1. `src/lib/expediente/pdf/generar-pdf.ts`: recibe `InformeConsolidado` y devuelve `{ buffer, pdfHash }`.
 2. Persistencia en `/data/informes/[expedienteId]-v[version].pdf`.
 3. Endpoint `GET /api/publico/verificar-pdf/[hash]/route.ts`.
 
@@ -151,7 +149,7 @@ y declarar el volumen global `pi_informes_storage`.
 
 1. `scripts/worker-senal-comunitaria.mjs` con advisory lock.
 2. Servicio `pi-senal-comunitaria` en `docker-compose.prod.yml` con `TZ=America/Bogota`.
-3. Función `recalcularSenalComunitaria(identificadorHash, plataformaId, periodo)`.
+3. Función `recalcularSenalComunitaria(identificadorReportado)`.
 
 ### Fase 7: Tests
 
@@ -178,7 +176,7 @@ y declarar el volumen global `pi_informes_storage`.
 |--------|------------|
 | SPEC-230 no mergeado en `feature/001-scaffolding` al hacer rebase | Documentar dependencia; si ocurre, coordinar con ZEUS/Fábrica 4 antes de continuar. |
 | `pdfmake` no genera buffers idénticos por metadatos internos | Fijar metadatos (`creationDate`, `modDate`) al timestamp inyectado; validar con test de hash. |
-| Query de señal comunitaria lenta | Límite de `periodo` mensual o `ALL` con índices; worker precalcula. |
+| Query de señal comunitaria lenta | Índice en `ultimaAparicionEn`; worker precalcula y limita frecuencia con `refresh_min`. |
 | Almacenamiento de PDF no persistido en prod | Añadir volumen Docker antes del deploy. |
 | Hash del identificador dificulta debugging | Logs nunca incluyen identificador ni hash; se usa solo para consulta interna. |
 

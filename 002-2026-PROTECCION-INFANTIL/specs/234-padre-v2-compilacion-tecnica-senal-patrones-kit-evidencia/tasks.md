@@ -15,7 +15,7 @@
 - [ ] T001 [P] Editar `prisma/schema.prisma`:
   - Añadir `enum TipoPatronExpediente` (`ACELERACION`, `PROGRESION`, `PERPETRADOR_SERIAL`, `MULTIPLATAFORMA`).
   - Añadir `model InformeConsolidado` con campos e índices exactos de `data-model.md`.
-  - Añadir `model SenalComunitariaCache` con `identificadorHash`, sin PII.
+  - Añadir `model SenalComunitariaCache` con `identificadorReportado` como PK y campos exactos del brief §7.6.
   - Añadir `model PatronExpediente`.
   - Añadir relaciones inversas en `Expediente` si ZEUS ratifica.
 - [ ] T002 [P] Generar migración aditiva (`npx prisma migrate dev --create-only --name padre_v2_compilacion_senal_patrones`) y verificar SQL.
@@ -46,10 +46,10 @@
 - [ ] T006 [P] Crear `src/lib/dal/repositories/informe-consolidado-repository.ts` con:
   - `crearInforme(data)`
   - `listarPorExpediente(expedienteId, paginacion)`
-  - `obtenerPorHash(hashSha256)`
+  - `obtenerPorHash(pdfHash)`
 - [ ] T007 [P] Crear `src/lib/dal/repositories/senal-comunitaria-repository.ts` con:
-  - `obtenerORecalcular(identificadorHash, plataformaId, periodo)`
-  - `invalidar(identificadorHash, plataformaId?)`
+  - `obtenerORecalcular(identificadorReportado)`
+  - `invalidar(identificadorReportado)`
   - `obtenerPendientesDeRefresco(limite)`
   - `guardarCache(data)`
 - [ ] T008 [P] Crear `src/lib/dal/repositories/patron-expediente-repository.ts` con:
@@ -74,7 +74,7 @@
   - `perpetrador-serial.ts`
   - `multiplataforma.ts`
 - [ ] T012 [P] Crear `src/lib/expediente/compilacion/score/calcular-score.ts` con fórmula parametrizada.
-- [ ] T013 [P] Crear `src/lib/expediente/compilacion/template/renderizar-markdown.ts` con secciones §9.
+- [ ] T013 [P] Crear `src/lib/expediente/compilacion/template/renderizar-markdown.ts` que genere `resumenTextoGenerado` con secciones §9.
 - [ ] T014 [P] Crear `src/lib/expediente/compilacion/compilar-expediente.ts` orquestador.
 
 **Checkpoint**: `npm run test -- src/lib/expediente/compilacion` pasa.
@@ -88,7 +88,7 @@
 - [ ] T015 [P] Crear `src/lib/expediente/pdf/generar-pdf.ts`:
   - Usa `pdfmake`.
   - Fija metadatos para hash reproducible.
-  - Devuelve `{ buffer, hashSha256 }`.
+  - Devuelve `{ buffer, pdfHash }`.
 - [ ] T016 [P] Persistir PDF en `/data/informes/[expedienteId]-v[n].pdf` y actualizar `InformeConsolidado`.
 - [ ] T017 [P] Crear `src/app/api/publico/verificar-pdf/[hash]/route.ts`:
   - GET público.
@@ -118,7 +118,7 @@
 **Purpose**: Garantizar Ley 1581 y ausencia de PII en modelos agregados.
 
 - [ ] T020 [P] Crear test de esquema que itere campos de `SenalComunitariaCache` y `PatronExpediente` y verifique ausencia de nombres prohibidos (`texto`, `identificador`, `reporteId`, `nombre`, `telefono`, etc.).
-- [ ] T021 [P] Verificar que markdown y PDF no contienen texto original de reportes.
+- [ ] T021 [P] Verificar que `resumenTextoGenerado` y PDF no contienen texto original de reportes.
 
 **Checkpoint**: Tests de privacidad pasan.
 
@@ -168,7 +168,7 @@
 1. Schema + migración aditiva.
 2. Seed idempotente.
 3. Repositorios DAL + tests.
-4. Compilación SQL + reglas N1 + score + markdown.
+4. Compilación SQL + reglas N1 (severidad MEDIA/ALTA) + score + `resumenTextoGenerado`.
 5. PDF + endpoint de verificación.
 6. Worker de señal comunitaria.
 7. Tests de privacidad y esquema.

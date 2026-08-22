@@ -37,30 +37,34 @@ Resultado inmutable de la compilación de un expediente. Cada compilación crea 
 
 ```prisma
 model InformeConsolidado {
-  id                      String          @id @default(cuid())
-  expedienteId            String
-  version                 Int
-  scoreGravedad           ScoreGravedad   @default(VERDE)
-  scoreValor              Float?
-  categoriasDominantesJson Json?
-  patronesJson            Json?
-  senalComunitariaJson    Json?
-  nivelConfianza          Float?
-  markdown                String          @db.Text
-  pdfRuta                 String?
-  hashSha256              String?
-  generadoPorId           String?
-  fechaGeneracion         DateTime        @db.Timestamptz(6)
-  vigenteHasta            DateTime?       @db.Timestamptz(6)
-  createdAt               DateTime        @default(now()) @db.Timestamptz(6)
-  updatedAt               DateTime        @updatedAt @db.Timestamptz(6)
+  id                         String             @id @default(cuid())
+  expedienteId               String
+  versionSecuencial          Int
+  scoreGravedad              ScoreGravedad      @default(VERDE)
+  scoreValor                 Float?             // valor numérico raw para trazabilidad/depuración
+  categoriasDetectadasJson   Json?
+  patronesDetectadosJson     Json?
+  senalComunitariaJson       Json?
+  resumenTextoGenerado       String             @db.Text
+  pdfUrl                     String?
+  pdfHash                    String?
+  pdfGeneradoEn              DateTime           @db.Timestamptz(6)
+  generadoPorId              String?            // actor/usuario que generó el informe; sin FK para permitir worker
+  // Campos del comité (SPEC-237)
+  tipoRevision               TipoRevisionComite @default(CONSOLIDACION_EXPEDIENTE)
+  guiaAccionCategoriaIdPrincipal String?
+  estadoAprobacion           String             @default("PENDIENTE_COMITE") // PENDIENTE_COMITE | APROBADO | CORREGIDO
+  aprobadoPorMiembrosJson    Json?
+  correccionesJson           Json?
+  createdAt                  DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt                  DateTime           @updatedAt @db.Timestamptz(6)
 
   expediente Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
 
-  @@unique([expedienteId, version])
-  @@index([expedienteId, version])
-  @@index([expedienteId, fechaGeneracion])
-  @@index([hashSha256])
+  @@unique([expedienteId, versionSecuencial])
+  @@index([expedienteId, versionSecuencial])
+  @@index([expedienteId, pdfGeneradoEn])
+  @@index([pdfHash])
   @@map("informes_consolidados")
 }
 ```
@@ -69,58 +73,51 @@ model InformeConsolidado {
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| `version` | `Int` | Incremental por expediente; la compilación lee `MAX(version) + 1`. |
+| `versionSecuencial` | `Int` | Incremental por expediente; la compilación lee `MAX(versionSecuencial) + 1`. |
 | `scoreGravedad` | `ScoreGravedad` | Semáforo VERDE/AMARILLO/ROJO. |
-| `scoreValor` | `Float?` | Valor numérico raw (opcional, útil para depuración). |
-| `categoriasDominantesJson` | `Json?` | Top categorías con conteos y pesos (sin texto). |
-| `patronesJson` | `Json?` | Array de patrones N1 detectados con metadatos. |
+| `scoreValor` | `Float?` | Valor numérico raw para trazabilidad/depuración. |
+| `categoriasDetectadasJson` | `Json?` | Categorías detectadas con conteos y pesos (sin texto). |
+| `patronesDetectadosJson` | `Json?` | Array de patrones N1 detectados con metadatos. |
 | `senalComunitariaJson` | `Json?` | Snapshot agregado de la señal comunitaria. |
-| `nivelConfianza` | `Float?` | Confianza global del informe (0..1). |
-| `markdown` | `String @db.Text` | Texto plano estructurado para PDF/lectura. |
-| `pdfRuta` | `String?` | Ruta absoluta dentro del contenedor (`/data/informes/...`). |
-| `hashSha256` | `String?` | Hash del PDF (no del markdown). |
+| `resumenTextoGenerado` | `String @db.Text` | Texto plano estructurado para PDF/lectura. |
+| `pdfUrl` | `String?` | Ruta absoluta dentro del contenedor (`/data/informes/...`). |
+| `pdfHash` | `String?` | Hash SHA256 del PDF. |
+| `pdfGeneradoEn` | `DateTime` | Timestamp Bogotá de generación. |
 | `generadoPorId` | `String?` | Id del actor (usuario o worker); sin FK obligatoria para permitir worker. |
-| `fechaGeneracion` | `DateTime` | Timestamp Bogotá de generación. |
-| `vigenteHasta` | `DateTime?` | Hasta cuándo es válido el informe; null = indefinido. |
+| `tipoRevision` | `TipoRevisionComite` | `CONSOLIDACION_EXPEDIENTE` por defecto. |
+| `estadoAprobacion` | `String` | `PENDIENTE_COMITE` / `APROBADO` / `CORREGIDO`. |
 
 ---
 
 ### `SenalComunitariaCache`
 
-Caché de agregados comunitarios por identificador hasheado y plataforma. Sin PII: solo conteos, categorías agregadas y score.
+Caché de agregados comunitarios por identificador reportado. Solo agregados; no textos ni datos re-identificables.
 
 ```prisma
 model SenalComunitariaCache {
-  id                String   @id @default(cuid())
-  identificadorHash String
-  plataformaId      String?
-  periodo           String   // Ej: "2026-08" o "ALL"; acota el tamaño de la caché.
-  totalReportes     Int      @default(0)
-  totalAprobados    Int      @default(0)
-  categoriasJson    Json?
-  scoreComunitario  Float?
-  refrescadoEn      DateTime @db.Timestamptz(6)
-  expiraEn          DateTime @db.Timestamptz(6)
-  invalidado        Boolean  @default(false)
-  version           Int      @default(0)
-  createdAt         DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt         DateTime @updatedAt @db.Timestamptz(6)
+  identificadorReportado    String   @id
+  totalExpedientesActivos   Int      @default(0)
+  totalExpedientesCerrados  Int      @default(0)
+  totalExpedientesEscalados Int      @default(0)
+  categoriasFrecuenciaJson  Json     // { GROOMING: 5, SEXTORSION: 2 }
+  primeraAparicionEn        DateTime @db.Timestamptz(6)
+  ultimaAparicionEn         DateTime @db.Timestamptz(6)
+  paisesJson                Json     // { "CO": 12, "MX": 1 }
+  ciudadesJson              Json
+  plataformasJson           Json
+  invalidado                Boolean  @default(false) // aditivo para el worker de refresco
+  actualizadoEn             DateTime @updatedAt @db.Timestamptz(6)
 
-  plataforma Plataforma? @relation(fields: [plataformaId], references: [id])
-
-  @@unique([identificadorHash, plataformaId, periodo])
-  @@index([identificadorHash, plataformaId])
-  @@index([expiraEn])
-  @@index([invalidado, refrescadoEn])
+  @@index([ultimaAparicionEn(sort: Desc)])
   @@map("senal_comunitaria_cache")
 }
 ```
 
 **Notas de privacidad**:
 
-- `identificadorHash` es SHA-256 del identificador reportado (sal opcional si aplica). No almacena el identificador en claro.
-- No guarda `reporteId`, texto, ciudad, nombres ni cualquier otro dato re-identificable.
-- `categoriasJson` solo contiene conteos por categoría (ej. `{ "GROOMING": 3, "SPAM": 1 }`).
+- `identificadorReportado` es PK en claro: dato del contexto reportado, necesario para SPEC-233 (búsqueda padre/admin); no es PII del denunciante ni texto de reporte.
+- No guarda `reporteId`, texto original, nombres, teléfonos de padres ni cualquier otro dato re-identificable.
+- `categoriasFrecuenciaJson`, `paisesJson`, `ciudadesJson`, `plataformasJson` son conteos agregados.
 
 ---
 

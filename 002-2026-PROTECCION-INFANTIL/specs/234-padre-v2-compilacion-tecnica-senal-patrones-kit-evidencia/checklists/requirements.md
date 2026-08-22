@@ -2,7 +2,7 @@
 
 ## Modelos y migración
 
-- [ ] Migración aditiva con `InformeConsolidado`, `SenalComunitariaCache`, `PatronExpediente`.
+- [ ] Migración aditiva con `InformeConsolidado` (campos exactos del brief §7.3), `SenalComunitariaCache` (PK `identificadorReportado`, campos exactos del brief §7.6), `PatronExpediente`.
 - [ ] Enum `TipoPatronExpediente` con 4 valores.
 - [ ] Todos los `DateTime` usan `@db.Timestamptz(6)`.
 - [ ] Cero `DROP`, `RENAME` o alteraciones destructivas.
@@ -32,7 +32,7 @@
 ## Kit evidencia PDF
 
 - [ ] `generar-pdf.ts` con `pdfmake`.
-- [ ] Hash SHA256 reproducible.
+- [ ] `pdfHash` reproducible (timestamp fijo + JSON con keys canónicas).
 - [ ] Almacenamiento en `/data/informes/[expedienteId]-v[n].pdf`.
 - [ ] Endpoint `GET /api/publico/verificar-pdf/[hash]` con rate-limit.
 
@@ -44,9 +44,9 @@
 
 ## Privacidad (Ley 1581)
 
-- [ ] `SenalComunitariaCache` no almacena identificador en claro ni textos.
+- [ ] `SenalComunitariaCache` almacena `identificadorReportado` (PK en claro según brief §7.6) pero no textos originales ni datos re-identificables.
 - [ ] `PatronExpediente` no almacena identificador en claro ni textos.
-- [ ] PDF y markdown no contienen texto original ni PII.
+- [ ] PDF y `resumenTextoGenerado` no contienen texto original ni PII.
 - [ ] Test de esquema verifica ausencia de campos sensibles.
 
 ## Gate de calidad
