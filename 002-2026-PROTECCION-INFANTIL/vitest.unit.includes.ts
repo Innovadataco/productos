@@ -8,6 +8,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/arch/no-prisma-mocks.test.ts",
     "src/app/dashboard/admin/estadisticas/components/EstadisticasSubNav.test.tsx",
     "src/app/dashboard/colegio/alertas/AlertasColegioPageClient.test.tsx",
+    "src/components/modules/config-panel/MantenimientoLogsPanel.test.tsx",
     "src/app/dashboard/colegio/cursos/CursosPageClient.test.tsx",
     "src/app/dashboard/colegio/configuracion/ConfiguracionPageClient.test.tsx",
     "src/app/dashboard/colegio/profesores/ProfesoresPageClient.test.tsx",
