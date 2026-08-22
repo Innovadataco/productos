@@ -1587,7 +1587,7 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main };
+export { main, seedParametrosPadre };
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como
