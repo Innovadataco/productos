@@ -50,7 +50,7 @@ score = (numEventos * peso_num_reportes)
 ```
 
 - `peso_categorias_graves` suma `peso_categoria_grave` por cada evento cuya categoría esté en `padre.categorias_graves_json`.
-- Cada regla N1 devuelve `detectado` y `severidad` (`MEDIA` | `ALTA`).
+- Cada regla N1 devuelve `detectado`, `severidad` (`BAJA` | `MEDIA` | `ALTA`), `descripcionTexto` y `datosContextoJson`.
 - En v1 se usa `padre.score.peso_aceleracion` para los 4 tipos de patrón; granularidad por tipo en v2.
 
 **Justificación**: cumple brief §5.5; es parametrizable, reproducible y no requiere IA. Los umbrales `umbral_amarillo` y `umbral_rojo` definen el semáforo.

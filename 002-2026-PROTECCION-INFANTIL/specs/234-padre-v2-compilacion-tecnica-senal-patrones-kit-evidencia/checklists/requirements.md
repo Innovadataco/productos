@@ -2,7 +2,7 @@
 
 ## Modelos y migración
 
-- [ ] Migración aditiva con `InformeConsolidado` (campos exactos del brief §7.3), `SenalComunitariaCache` (PK `identificadorReportado`, campos exactos del brief §7.6), `PatronExpediente`.
+- [ ] Migración aditiva con `InformeConsolidado` (campos exactos del brief §7.3), `SenalComunitariaCache` (PK `identificadorReportado`, campos exactos del brief §7.6), `PatronExpediente` (campos exactos del brief §7.7: `tipoPatron`, `severidad`, `descripcionTexto`, `datosContextoJson`, índice `[expedienteId, severidad]`).
 - [ ] Enum `TipoPatronExpediente` con 4 valores.
 - [ ] Todos los `DateTime` usan `@db.Timestamptz(6)`.
 - [ ] Cero `DROP`, `RENAME` o alteraciones destructivas.

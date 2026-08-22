@@ -135,7 +135,7 @@ Como sistema quiero que un worker refresque periódicamente la caché de señal 
 
 - **InformeConsolidado**: resultado de la compilación de un expediente. Atributos: `expedienteId`, `versionSecuencial`, `scoreGravedad`, `scoreValor`, `categoriasDetectadasJson`, `patronesDetectadosJson`, `senalComunitariaJson`, `resumenTextoGenerado`, `pdfUrl`, `pdfHash`, `pdfGeneradoEn`, `generadoPorId`, `tipoRevision`, `guiaAccionCategoriaIdPrincipal`, `estadoAprobacion`, `aprobadoPorMiembrosJson`, `correccionesJson`.
 - **SenalComunitariaCache**: agregados comunitarios por `identificadorReportado`. Atributos: `identificadorReportado` (PK), `totalExpedientesActivos`, `totalExpedientesCerrados`, `totalExpedientesEscalados`, `categoriasFrecuenciaJson`, `primeraAparicionEn`, `ultimaAparicionEn`, `paisesJson`, `ciudadesJson`, `plataformasJson`, `invalidado`, `actualizadoEn`.
-- **PatronExpediente**: patrón N1 detectado en un expediente. Atributos: `expedienteId`, `tipoPatron`, `nivelConfianza`, `metadatosJson`, `detectadoEn`.
+- **PatronExpediente**: patrón N1 detectado en un expediente. Atributos: `expedienteId`, `tipoPatron`, `severidad` (`BAJA`/`MEDIA`/`ALTA`), `nivelConfianza`, `descripcionTexto`, `datosContextoJson`, `detectadoEn`.
 - **Expediente / EventoExpediente**: modelos base de SPEC-230; solo lectura en esta SPEC.
 - **ParametroSistema**: fuente de `padre.score.*`, `padre.patron.*` y `padre.senal_comunitaria.refresh_min`.
 - **AuditLog**: registro de generación de informes y PDFs.

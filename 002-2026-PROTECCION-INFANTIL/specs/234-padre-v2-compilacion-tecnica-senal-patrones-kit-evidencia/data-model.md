@@ -127,17 +127,19 @@ Patrón N1 detectado dentro de un expediente.
 
 ```prisma
 model PatronExpediente {
-  id               String               @id @default(cuid())
-  expedienteId     String
-  tipoPatron       TipoPatronExpediente
-  nivelConfianza   Float
-  metadatosJson    Json?
-  detectadoEn      DateTime             @db.Timestamptz(6)
-  createdAt        DateTime             @default(now()) @db.Timestamptz(6)
+  id                String               @id @default(cuid())
+  expedienteId      String
+  tipoPatron        TipoPatronExpediente
+  severidad         String               // "BAJA" | "MEDIA" | "ALTA"
+  nivelConfianza    Float                // aditivo: 0..1 para trazabilidad/depuración
+  descripcionTexto  String               @db.Text
+  datosContextoJson Json?                // aditivo: datos estructurales de la regla
+  detectadoEn       DateTime             @db.Timestamptz(6)
+  createdAt         DateTime             @default(now()) @db.Timestamptz(6) // aditivo: trazabilidad forense
 
   expediente Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
 
-  @@index([expedienteId, tipoPatron])
+  @@index([expedienteId, severidad])
   @@index([expedienteId, detectadoEn])
   @@map("patrones_expediente")
 }
@@ -148,8 +150,10 @@ model PatronExpediente {
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | `tipoPatron` | `TipoPatronExpediente` | `ACELERACION`, `PROGRESION`, `PERPETRADOR_SERIAL`, `MULTIPLATAFORMA`. |
-| `nivelConfianza` | `Float` | 0..1 calculado por la regla. |
-| `metadatosJson` | `Json?` | Datos estructurales de la regla: ratio, plataformas, etc. |
+| `severidad` | `String` | `BAJA` / `MEDIA` / `ALTA`; usada por la fórmula de score (×1 / ×2). |
+| `nivelConfianza` | `Float` | 0..1 calculado por la regla (aditivo, para trazabilidad). |
+| `descripcionTexto` | `String @db.Text` | Texto descriptivo usado por el template del informe (ej. "⚠️ Aceleración temporal..."). |
+| `datosContextoJson` | `Json?` | Datos estructurales de la regla: ratio, plataformas, etc. |
 | `detectadoEn` | `DateTime` | Momento del evento/ventana que disparó el patrón. |
 
 ---

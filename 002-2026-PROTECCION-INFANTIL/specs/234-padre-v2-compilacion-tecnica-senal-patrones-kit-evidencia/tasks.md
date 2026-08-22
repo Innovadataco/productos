@@ -73,6 +73,7 @@
   - `progresion.ts`
   - `perpetrador-serial.ts`
   - `multiplataforma.ts`
+  - Cada regla devuelve `detectado`, `severidad`, `descripcionTexto` y `datosContextoJson`.
 - [ ] T012 [P] Crear `src/lib/expediente/compilacion/score/calcular-score.ts` con fórmula parametrizada.
 - [ ] T013 [P] Crear `src/lib/expediente/compilacion/template/renderizar-markdown.ts` que genere `resumenTextoGenerado` con secciones §9.
 - [ ] T014 [P] Crear `src/lib/expediente/compilacion/compilar-expediente.ts` orquestador.
