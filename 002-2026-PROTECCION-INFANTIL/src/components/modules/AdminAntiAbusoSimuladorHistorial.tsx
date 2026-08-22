@@ -72,16 +72,26 @@ export function AdminAntiAbusoSimuladorHistorial({ onVerDetalle }: HistorialProp
     const [filtroEscenario, setFiltroEscenario] = useState("");
     const [cargando, setCargando] = useState(false);
     const [copiadoId, setCopiadoId] = useState<string | null>(null);
+    const [toast, setToast] = useState<{ mensaje: string; id: string } | null>(null);
+
+    const mostrarToast = useCallback((mensaje: string) => {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        setToast({ mensaje, id });
+        setTimeout(() => {
+            setToast((actual) => (actual?.id === id ? null : actual));
+        }, 2500);
+    }, []);
 
     const copiarId = useCallback(async (id: string) => {
         try {
             await navigator.clipboard.writeText(id);
             setCopiadoId(id);
+            mostrarToast("ID copiado al portapapeles");
             setTimeout(() => setCopiadoId((actual) => (actual === id ? null : actual)), 2000);
         } catch {
-            // fallback silencioso
+            mostrarToast("No se pudo copiar el ID");
         }
-    }, []);
+    }, [mostrarToast]);
 
     const cargar = useCallback(async () => {
         setCargando(true);
@@ -201,6 +211,23 @@ export function AdminAntiAbusoSimuladorHistorial({ onVerDetalle }: HistorialProp
                     </Button>
                 </div>
             )}
+
+            {toast ? (
+                <div
+                    role="status"
+                    aria-live="polite"
+                    className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl bg-body px-4 py-3 text-sm font-medium text-white shadow-lg transition-opacity duration-200"
+                >
+                    <svg aria-hidden="true" className="h-4 w-4 text-pino" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                        />
+                    </svg>
+                    {toast.mensaje}
+                </div>
+            ) : null}
         </div>
     );
 }

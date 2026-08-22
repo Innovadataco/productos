@@ -28,6 +28,7 @@ export async function estaIpBloqueada(ipHash: string): Promise<boolean> {
 
 export async function bloquearIp(params: {
     ipHash: string;
+    ipOriginal?: string;
     motivo: string;
     duracion: DuracionBloqueo;
     creadoPorId: string;
@@ -43,6 +44,7 @@ export async function bloquearIp(params: {
 
     const bloqueo = await repo.crear({
         ipHash: params.ipHash,
+        ipOriginal: params.ipOriginal ?? null,
         motivo: params.motivo,
         expiraEn: calcularExpiraEn(params.duracion),
         creadoPorId: params.creadoPorId,

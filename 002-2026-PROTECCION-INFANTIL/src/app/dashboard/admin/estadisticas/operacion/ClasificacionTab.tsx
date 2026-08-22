@@ -171,33 +171,41 @@ export function ClasificacionTab() {
                 <MetricCard label="Escalados pendientes" value={data?.indicadores.escaladosPendientes ?? 0} />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <GlassCard className="p-4 sm:col-span-2 lg:col-span-2">
+            <div className="grid gap-4 lg:grid-cols-3">
+                <GlassCard className="p-4 lg:col-span-2 flex flex-col min-h-[320px]">
                     <h3 className="mb-4 text-lg font-semibold text-body">Casos por día</h3>
-                    <BarChart
-                        ariaLabel="Casos atendidos por día"
-                        data={casosPorDiaAgrupado}
-                    />
+                    <div className="flex-1">
+                        <BarChart
+                            ariaLabel="Casos atendidos por día"
+                            data={casosPorDiaAgrupado}
+                        />
+                    </div>
                 </GlassCard>
 
-                <GlassCard className="p-4">
-                    <h3 className="mb-4 text-lg font-semibold text-body">Distribución por operador</h3>
-                    <DonutChart
-                        ariaLabel="Distribución de casos atendidos por operador"
-                        data={(data?.distribucionOperador || []).map((d) => ({ label: d.nombre, value: d.count }))}
-                    />
-                </GlassCard>
+                <div className="flex flex-col gap-4">
+                    <GlassCard className="p-4 flex-1 flex flex-col min-h-[180px]">
+                        <h3 className="mb-2 text-base font-semibold text-body">Distribución por operador</h3>
+                        <div className="flex-1">
+                            <DonutChart
+                                ariaLabel="Distribución de casos atendidos por operador"
+                                data={(data?.distribucionOperador || []).map((d) => ({ label: d.nombre, value: d.count }))}
+                            />
+                        </div>
+                    </GlassCard>
 
-                <GlassCard className="p-4">
-                    <h3 className="mb-4 text-lg font-semibold text-body">Clasificaciones revisadas</h3>
-                    <DonutChart
-                        ariaLabel="Clasificaciones revisadas por categoría"
-                        data={(data?.clasificacionesPorCategoria || []).map((d) => ({ label: formatCategoria(d.categoria), value: d.count }))}
-                    />
-                </GlassCard>
+                    <GlassCard className="p-4 flex-1 flex flex-col min-h-[180px]">
+                        <h3 className="mb-2 text-base font-semibold text-body">Clasificaciones revisadas</h3>
+                        <div className="flex-1">
+                            <DonutChart
+                                ariaLabel="Clasificaciones revisadas por categoría"
+                                data={(data?.clasificacionesPorCategoria || []).map((d) => ({ label: formatCategoria(d.categoria), value: d.count }))}
+                            />
+                        </div>
+                    </GlassCard>
+                </div>
             </div>
 
-            <GlassCard className="p-4">
+            <GlassCard className="p-4 min-h-[280px]">
                 <h3 className="mb-4 text-lg font-semibold text-body">Tasa de escalamiento por operador</h3>
                 <BarChart
                     ariaLabel="Escalados por operador"
