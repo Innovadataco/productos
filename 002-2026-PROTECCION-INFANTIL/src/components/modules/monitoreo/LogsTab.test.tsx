@@ -101,6 +101,9 @@ describe("LogsTab", () => {
 
         const dialog = await screen.findByRole("dialog", { name: "Contexto del log" });
         expect(dialog).toBeTruthy();
+
+        fireEvent.click(within(dialog).getByRole("button", { name: /Contexto técnico \(debug\)/ }));
+
         const pre = within(dialog).getByText((_, el) => el?.tagName === "PRE");
         expect(pre.textContent).toContain('"key": "value"');
     });

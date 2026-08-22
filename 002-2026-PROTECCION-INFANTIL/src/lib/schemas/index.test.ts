@@ -17,6 +17,7 @@ import {
     cursoUpdateBodySchema,
     bloquearIpBodySchema,
     desbloquearIpBodySchema,
+    monitoreoLogsPurgeSchema,
 } from "./index";
 
 describe("schemas/index", () => {
@@ -218,5 +219,54 @@ describe("schemas profesor (SPEC-145)", () => {
         expect(() => desbloquearIpBodySchema.parse({ id, motivo: "Motivo suficientemente largo" })).not.toThrow();
         expect(() => desbloquearIpBodySchema.parse({ id, motivo: "corto" })).toThrow();
         expect(() => desbloquearIpBodySchema.parse({ id })).toThrow();
+    });
+
+    it("monitoreoLogsPurgeSchema rechaza fecha límite igual o posterior a hoy", () => {
+        const ayer = new Date();
+        ayer.setUTCDate(ayer.getUTCDate() - 1);
+        ayer.setUTCHours(23, 59, 0, 0);
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: ayer.toISOString(),
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        ).not.toThrow();
+
+        const hoy = new Date();
+        hoy.setUTCHours(12, 0, 0, 0);
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: hoy.toISOString(),
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        ).toThrow();
+    });
+
+    it("monitoreoLogsPurgeSchema requiere servicio cuando se indica nivel", () => {
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: "2026-01-01T00:00:00Z",
+                nivel: "ERROR",
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        ).toThrow();
+
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: "2026-01-01T00:00:00Z",
+                servicio: "pi-app",
+                nivel: "ERROR",
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        ).not.toThrow();
+    });
+
+    it("monitoreoLogsPurgeSchema rechaza motivo fuera de rango", () => {
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: "2026-01-01T00:00:00Z",
+                motivo: "Corto",
+            })
+        ).toThrow();
     });
 });

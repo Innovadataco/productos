@@ -6,7 +6,6 @@ import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Alerta } from "@/components/ui/Alerta";
-import { Cargando } from "@/components/ui/Cargando";
 
 const SERVICIOS = [
     { value: "", label: "Todos los servicios" },
@@ -24,11 +23,20 @@ const NIVELES = [
     { value: "ERROR", label: "ERROR" },
 ];
 
+type BackendErrorDetail = {
+    message?: string;
+    path?: string | string[];
+};
+
 function localDateTimeToIso(valor: string): string | undefined {
     if (!valor) return undefined;
     const d = new Date(`${valor}:00`);
     if (Number.isNaN(d.getTime())) return undefined;
     return d.toISOString();
+}
+
+function inicioDelDiaUtc(date: Date): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
 function maxAyer(): string {
@@ -42,6 +50,62 @@ function maxAyer(): string {
     return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 }
 
+function validar(
+    hasta: string,
+    servicio: string,
+    nivel: string,
+    motivo: string,
+    { requiereMotivo = false }: { requiereMotivo?: boolean } = {}
+): string[] {
+    const errores: string[] = [];
+
+    if (!hasta) {
+        errores.push("Selecciona una fecha límite.");
+    } else {
+        const fecha = new Date(`${hasta}:00`);
+        if (Number.isNaN(fecha.getTime())) {
+            errores.push("La fecha límite no es válida.");
+        } else if (fecha >= inicioDelDiaUtc(new Date())) {
+            errores.push("La fecha límite debe ser anterior al día actual.");
+        }
+    }
+
+    if (nivel && !servicio) {
+        errores.push("Si seleccionas un nivel, debes seleccionar un servicio.");
+    }
+
+    if (requiereMotivo) {
+        if (!motivo) {
+            errores.push("El motivo de la purga es obligatorio.");
+        } else if (motivo.length < 20) {
+            errores.push("El motivo debe tener al menos 20 caracteres.");
+        } else if (motivo.length > 500) {
+            errores.push("El motivo no puede superar los 500 caracteres.");
+        }
+    }
+
+    return errores;
+}
+
+function extraerErroresBackend(data: unknown): string[] {
+    if (!data || typeof data !== "object") return [];
+    const err = (data as { error?: unknown }).error;
+    if (!err || typeof err !== "object") return [];
+
+    const details = (err as { details?: BackendErrorDetail[] }).details;
+    if (Array.isArray(details) && details.length > 0) {
+        return details
+            .map((d) => {
+                const path = d.path ? (Array.isArray(d.path) ? d.path.join(".") : d.path) : "";
+                return path && d.message ? `${path}: ${d.message}` : d.message;
+            })
+            .filter((m): m is string => typeof m === "string" && m.length > 0);
+    }
+
+    const message = (err as { message?: string }).message;
+    return typeof message === "string" && message.length > 0 ? [message] : [];
+}
+
 export function MantenimientoLogsPanel() {
     const [hasta, setHasta] = useState("");
     const [servicio, setServicio] = useState("");
@@ -50,7 +114,7 @@ export function MantenimientoLogsPanel() {
 
     const [contando, setContando] = useState(false);
     const [filasAfectadas, setFilasAfectadas] = useState<number | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [errores, setErrores] = useState<string[]>([]);
     const [exito, setExito] = useState<string | null>(null);
 
     const [modalAbierto, setModalAbierto] = useState(false);
@@ -68,21 +132,21 @@ export function MantenimientoLogsPanel() {
         return params.toString();
     };
 
-    const validarMotivo = (): string | null => {
-        if (motivo.length < 20 || motivo.length > 500) {
-            return "El motivo debe tener entre 20 y 500 caracteres.";
-        }
-        return null;
+    const limpiarEstado = () => {
+        setErrores([]);
+        setExito(null);
     };
 
     const contar = async () => {
-        setError(null);
-        setExito(null);
+        limpiarEstado();
         setFilasAfectadas(null);
-        if (!hasta) {
-            setError("Selecciona una fecha límite.");
+
+        const erroresValidacion = validar(hasta, servicio, nivel, motivo);
+        if (erroresValidacion.length > 0) {
+            setErrores(erroresValidacion);
             return;
         }
+
         setContando(true);
         try {
             const res = await fetch(`/api/admin/monitoreo/logs?${buildQuery()}`, {
@@ -90,36 +154,38 @@ export function MantenimientoLogsPanel() {
             });
             const data: unknown = await res.json().catch(() => null);
             if (!res.ok) {
-                const mensaje =
-                    data && typeof data === "object" && "error" in data
-                        ? (data as { error?: { message?: string } }).error?.message
-                        : undefined;
-                setError(mensaje || "No se pudo contar las filas afectadas.");
+                const detalles = extraerErroresBackend(data);
+                setErrores(detalles.length > 0 ? detalles : ["No se pudo contar las filas afectadas."]);
                 return;
             }
             const total = typeof data === "object" && data !== null ? (data as { total?: number }).total ?? 0 : 0;
             setFilasAfectadas(total);
         } catch {
-            setError("Error de red al contar las filas afectadas.");
+            setErrores(["Error de red al contar las filas afectadas."]);
         } finally {
             setContando(false);
         }
     };
 
-    const confirmarPurga = async () => {
-        const errorMotivo = validarMotivo();
-        if (errorMotivo) {
-            setError(errorMotivo);
+    const abrirModal = () => {
+        limpiarEstado();
+        const erroresValidacion = validar(hasta, servicio, nivel, motivo, { requiereMotivo: true });
+        if (erroresValidacion.length > 0) {
+            setErrores(erroresValidacion);
             return;
         }
+        setModalAbierto(true);
+    };
+
+    const confirmarPurga = async () => {
         const hastaIso = localDateTimeToIso(hasta);
         if (!hastaIso) {
-            setError("Selecciona una fecha límite válida.");
+            setErrores(["Selecciona una fecha límite válida."]);
+            setModalAbierto(false);
             return;
         }
         setPurgaEnCurso(true);
-        setError(null);
-        setExito(null);
+        limpiarEstado();
         try {
             const res = await fetch("/api/admin/monitoreo/logs", {
                 method: "DELETE",
@@ -134,11 +200,8 @@ export function MantenimientoLogsPanel() {
             });
             const data: unknown = await res.json().catch(() => null);
             if (!res.ok) {
-                const mensaje =
-                    data && typeof data === "object" && "error" in data
-                        ? (data as { error?: { message?: string } }).error?.message
-                        : undefined;
-                setError(mensaje || "No se pudo purgar los logs.");
+                const detalles = extraerErroresBackend(data);
+                setErrores(detalles.length > 0 ? detalles : ["No se pudo purgar los logs."]);
                 return;
             }
             const filas = typeof data === "object" && data !== null ? (data as { filasBorradas?: number }).filasBorradas ?? 0 : 0;
@@ -146,8 +209,9 @@ export function MantenimientoLogsPanel() {
             setFilasAfectadas(null);
             setMotivo("");
             setHasta("");
+            setNivel("");
         } catch {
-            setError("Error de red al purgar los logs.");
+            setErrores(["Error de red al purgar los logs."]);
         } finally {
             setPurgaEnCurso(false);
             setModalAbierto(false);
@@ -163,9 +227,13 @@ export function MantenimientoLogsPanel() {
                 </p>
             </div>
 
-            {error && (
+            {errores.length > 0 && (
                 <Alerta tono="error" className="mb-4">
-                    {error}
+                    <ul className="list-inside list-disc space-y-1">
+                        {errores.map((e) => (
+                            <li key={e}>{e}</li>
+                        ))}
+                    </ul>
                 </Alerta>
             )}
             {exito && (
@@ -181,7 +249,10 @@ export function MantenimientoLogsPanel() {
                         type="datetime-local"
                         max={maxHasta}
                         value={hasta}
-                        onChange={(e) => setHasta(e.target.value)}
+                        onChange={(e) => {
+                            setHasta(e.target.value);
+                            limpiarEstado();
+                        }}
                     />
                 </div>
                 <div>
@@ -189,7 +260,10 @@ export function MantenimientoLogsPanel() {
                         label="Servicio"
                         options={SERVICIOS}
                         value={servicio}
-                        onChange={(e) => setServicio(e.target.value)}
+                        onChange={(e) => {
+                            setServicio(e.target.value);
+                            limpiarEstado();
+                        }}
                     />
                 </div>
                 <div>
@@ -197,7 +271,10 @@ export function MantenimientoLogsPanel() {
                         label="Nivel"
                         options={NIVELES}
                         value={nivel}
-                        onChange={(e) => setNivel(e.target.value)}
+                        onChange={(e) => {
+                            setNivel(e.target.value);
+                            limpiarEstado();
+                        }}
                     />
                 </div>
             </div>
@@ -212,7 +289,10 @@ export function MantenimientoLogsPanel() {
                     className="w-full rounded-xl px-4 py-3 text-sm text-body placeholder:text-subtle outline-none transition glass-input ring-accent-input"
                     placeholder="Describe por qué se eliminan estos logs (obligatorio, entre 20 y 500 caracteres)."
                     value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
+                    onChange={(e) => {
+                        setMotivo(e.target.value);
+                        limpiarEstado();
+                    }}
                 />
                 <p className="mt-1 text-xs text-muted">{motivo.length} / 500 caracteres</p>
             </div>
@@ -221,7 +301,7 @@ export function MantenimientoLogsPanel() {
                 <Button variant="outline" onClick={contar} isLoading={contando} disabled={!hasta}>
                     Contar filas afectadas
                 </Button>
-                <Button onClick={() => setModalAbierto(true)} disabled={!hasta || !motivo}>
+                <Button onClick={abrirModal} disabled={!hasta || !motivo}>
                     Confirmar purga
                 </Button>
                 {filasAfectadas !== null && (

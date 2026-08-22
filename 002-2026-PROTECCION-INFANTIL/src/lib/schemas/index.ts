@@ -581,12 +581,35 @@ export const monitoreoLogsQuerySchema = z.object({
     offset: z.coerce.number().int().min(0).default(0),
 });
 
-export const monitoreoLogsPurgeSchema = z.object({
-    hasta: z.string().datetime(),
-    servicio: z.string().optional(),
-    nivel: z.nativeEnum(NivelLog).optional(),
-    motivo: z.string().min(20).max(500),
-});
+export const monitoreoLogsPurgeSchema = z
+    .object({
+        hasta: z.string().datetime(),
+        servicio: z.string().optional(),
+        nivel: z.nativeEnum(NivelLog).optional(),
+        motivo: z.string().min(20, "El motivo debe tener al menos 20 caracteres").max(500, "El motivo no puede superar los 500 caracteres"),
+    })
+    .refine(
+        (data) => {
+            const fecha = new Date(data.hasta);
+            const hoy = new Date();
+            hoy.setUTCHours(0, 0, 0, 0);
+            return fecha < hoy;
+        },
+        {
+            message: "La fecha límite debe ser anterior al día actual",
+            path: ["hasta"],
+        }
+    )
+    .refine(
+        (data) => {
+            if (data.nivel && !data.servicio) return false;
+            return true;
+        },
+        {
+            message: "Debes seleccionar un servicio para filtrar por nivel",
+            path: ["servicio"],
+        }
+    );
 
 // SPEC-193 (Fase 2): reasignación manual de reportes entre operadores.
 export const reasignarOperadorBodySchema = z.object({
