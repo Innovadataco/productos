@@ -1,10 +1,10 @@
-import { getParametroSistema } from "@/lib/parametros";
+import { getParametroSistema, getParametroSistemaValor } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "./dataset-retrieval";
 import { clasificarConMotorActivo, type ResultadoMotor } from "./motor";
 import { detectarPiiCombinado, type PiiDetectionResult } from "./pii-detector";
 import { anonimizarTexto, type AnonimizacionResult } from "./anonimizador";
-import { decidirGuardasSeguridad } from "./guardas-decision";
+import { decidirGuardasSeguridad, normalizarCategoriasSecundarias } from "./guardas-decision";
 import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
 import type { CategoriaConducta } from "@prisma/client";
 import type { VotoRubricaModelo } from "./rubrica";
@@ -25,6 +25,8 @@ export interface SandboxParametros {
     ragTopK: number;
     ollamaNumParallel: number;
     umbralSpam: number;
+    umbralSpamDominancia: number;
+    severidadMinGrave: number;
 }
 
 export interface SandboxVotoDistribucion {
@@ -96,7 +98,18 @@ function parseIntParam(valor: string | undefined, defaultValue: number): number 
 }
 
 async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParametros> {
-    const [modelosRaw, embeddingModel, anonymizationModel, temperatura, umbralPresencia, ragTopK, ollamaNumParallel, umbralSpam] = await Promise.all([
+    const [
+        modelosRaw,
+        embeddingModel,
+        anonymizationModel,
+        temperatura,
+        umbralPresencia,
+        ragTopK,
+        ollamaNumParallel,
+        umbralSpam,
+        umbralSpamDominancia,
+        severidadMinGrave,
+    ] = await Promise.all([
         getParametroSistema("ia.rubrica.modelos"),
         getParametroSistema("reportes.embedding_model"),
         getParametroSistema("reportes.anonymization_model"),
@@ -106,6 +119,8 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
         getParametroSistema("reportes.classification.ollama_num_parallel"),
         // Misma clave y default que producción (helpers/parametros.ts)
         getParametroSistema("clasificacion.umbral_spam"),
+        getParametroSistema("spam.dominancia_umbral"),
+        getParametroSistema("spam.dominancia_categoria_grave_severidad_min"),
     ]);
 
     const modelosDefault = ["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"];
@@ -120,6 +135,8 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
         ragTopK: overrides.rag_top_k ?? parseIntParam(ragTopK?.valor, 3),
         ollamaNumParallel: parseIntParam(ollamaNumParallel?.valor, 2),
         umbralSpam: parseFloatParam(umbralSpam?.valor, 0.7),
+        umbralSpamDominancia: parseFloatParam(umbralSpamDominancia?.valor, 0.66),
+        severidadMinGrave: parseIntParam(severidadMinGrave?.valor, 75),
     };
 }
 
@@ -195,6 +212,21 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
         };
     }
 
+    // SPEC-199: severidades para la guarda de dominancia SPAM.
+    const categoriasNecesarias = [
+        clasificacion.categoria,
+        ...clasificacion.categoriasSecundarias
+            .filter((c): c is { categoria: string; score: number } => typeof c === "object" && c !== null && typeof (c as Record<string, unknown>).categoria === "string")
+            .map((c) => c.categoria),
+    ];
+    const severidades: Record<string, number> = {};
+    await Promise.all(
+        categoriasNecesarias.map(async (categoria) => {
+            const valor = await getParametroSistemaValor(`scoring.severity.${categoria}`);
+            if (valor !== null) severidades[categoria] = parseInt(valor, 10);
+        })
+    );
+
     // 6. Guardas determinísticas: misma decisión que producción (spec 123).
     // esRafaga=false: el sandbox procesa un solo texto; la ráfaga requiere
     // múltiples reportes contra el mismo identificador.
@@ -202,9 +234,13 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
     const decision = decidirGuardasSeguridad({
         texto,
         clasificacion: { categoria: clasificacion.categoria, confianza: clasificacion.confianza },
+        categoriasSecundarias: normalizarCategoriasSecundarias(clasificacion.categoriasSecundarias),
         estadoInicial: clasificacion.estado,
         esRafaga: false,
         umbralSpam: parametros.umbralSpam,
+        umbralSpamDominancia: parametros.umbralSpamDominancia,
+        severidadMinGrave: parametros.severidadMinGrave,
+        severidades,
     });
     const { estadoFinal, prioridadAlta, keywordsDetectadas, doxing, keywordsRiesgo: keywords, reglasAplicadas } = decision;
 

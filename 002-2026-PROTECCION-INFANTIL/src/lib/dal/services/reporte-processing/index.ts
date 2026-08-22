@@ -221,7 +221,7 @@ export async function procesarReporte(request: Request): Promise<NextResponse> {
         }
 
         // Aplicar guardas de seguridad
-        const guardas = aplicarGuardasSeguridad({
+        const guardas = await aplicarGuardasSeguridad({
             reporteId: reporte.id,
             texto: reporte.texto,
             clasificacion,

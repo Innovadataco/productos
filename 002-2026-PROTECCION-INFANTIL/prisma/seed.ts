@@ -323,6 +323,19 @@ async function main() {
         });
     }
 
+    // SPEC-199: parámetros de la guarda de dominancia SPAM.
+    const spamDominanciaParams = [
+        { clave: "spam.dominancia_umbral", valor: "0.66", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Score mínimo de SPAM entre categorías secundarias para disparar guarda de dominancia" },
+        { clave: "spam.dominancia_categoria_grave_severidad_min", valor: "75", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Severidad mínima que bloquea la dominancia SPAM" },
+    ];
+    for (const p of spamDominanciaParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, descripcion: p.descripcion },
+            create: p,
+        });
+    }
+
     // SPEC-193 (Fase 1): parámetros de la bitácora de logs de workers.
     const monitoreoLogsParams = [
         { clave: "monitoreo.logs.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar la persistencia de logs de worker en base de datos" },
@@ -1142,9 +1155,9 @@ async function main() {
     }
     console.log("Severidades scoring.severity.* listas");
 
-    // ── Rúbrica de clasificación (spec 090) ────────────────────────────────
+    // ── Rúbrica de clasificación (spec 090 / SPEC-199) ─────────────────────
     const rubricaParams = [
-        { clave: "ia.rubrica.preguntas", valor: JSON.stringify(RUBRICA_SEMILLA), tipo: TipoParametro.JSON, descripcion: "Sets de preguntas factuales por categoría (editables por expertos)" },
+        { clave: "ia.rubrica.preguntas", valor: JSON.stringify(RUBRICA_SEMILLA), tipo: TipoParametro.JSON, descripcion: "Sets de preguntas factuales por categoría (estructural del motor; ver nota de seed)" },
         { clave: "ia.rubrica.modelos", valor: JSON.stringify(["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"]), tipo: TipoParametro.JSON, descripcion: "Modelos diversos que votan en la rúbrica (secuencial, 1 voto c/u)" },
         { clave: "ia.rubrica.temperatura", valor: "0.2", tipo: TipoParametro.FLOAT, descripcion: "Temperatura de los votos de la rúbrica (baja = determinista)" },
         { clave: "ia.rubrica.umbral_presencia", valor: "0.6", tipo: TipoParametro.FLOAT, descripcion: "% mínimo de modelos que deben marcar 1 para que una categoría cuente (0.6 ≈ 2/3)" },
@@ -1153,7 +1166,15 @@ async function main() {
     for (const rp of rubricaParams) {
         await prisma.parametroSistema.upsert({
             where: { clave: rp.clave },
-            update: {},
+            update:
+                // SPEC-199 EXCEPCIÓN DOCUMENTADA: ia.rubrica.preguntas es ESTRUCTURAL
+                // del motor. Cuando cambia la estructura (nueva categoría o pregunta
+                // decisiva), se fuerza el update para propagar a producción. Esto
+                // DEPRECA la refinación runtime de este parámetro por expertos vía UI:
+                // cada deploy pisa el valor con el código fuente de RUBRICA_SEMILLA.
+                rp.clave === "ia.rubrica.preguntas"
+                    ? { valor: rp.valor, descripcion: rp.descripcion }
+                    : {},
             create: {
                 clave: rp.clave,
                 valor: rp.valor,
@@ -1164,7 +1185,7 @@ async function main() {
             },
         });
     }
-    console.log("Rúbrica de clasificación (spec 090) lista");
+    console.log("Rúbrica de clasificación (spec 090 / SPEC-199) lista");
 
     // ── Expediente del reporte (spec 096) ──────────────────────────────────
     const ETAPAS_EXPEDIENTE = [

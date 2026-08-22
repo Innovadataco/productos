@@ -50,11 +50,18 @@ export const RUBRICA_SEMILLA: SetsRubrica = {
     ],
     OFRECIMIENTO_REGALOS: [
         { texto: "¿Se ofrece algo de valor (dinero, regalos, recargas, skins, ropa)?", activo: true, tipo: "decisiva" },
-        // Spec 098 (targeting): regalo como gancho interpersonal, no concurso/estafa masiva.
-        { texto: "¿El ofrecimiento es personal, dirigido específicamente a este menor?", activo: true, tipo: "decisiva" },
+        // SPEC-199: evitar que publicidad masiva/estafa entre como acoso interpersonal.
+        { texto: "¿El mensaje se dirige a UN individuo específico (por nombre, situación o contexto único), NO como una campaña masiva o mensaje genérico?", activo: true, tipo: "decisiva" },
         { texto: "¿El ofrecimiento viene de un adulto o un desconocido?", activo: true },
         { texto: "¿Va dirigido a un menor de edad?", activo: true },
         { texto: "¿Se ofrece a cambio de algo o para ganar la confianza del menor?", activo: true },
+    ],
+    SPAM: [
+        { texto: "¿El texto ofrece dinero, premios, sorteos o beneficios sin víctima concreta identificable?", activo: true, tipo: "decisiva" },
+        { texto: "¿Incluye URLs, teléfonos o cuentas para reclamar/visitar/contactar comercialmente?", activo: true, tipo: "decisiva" },
+        { texto: "¿Usa lenguaje de urgencia comercial (cupos limitados, solo 24h, ya!!!, felicitaciones)?", activo: true },
+        { texto: "¿Describe una situación masiva/genérica en vez de un incidente con víctima e involucrado identificables?", activo: true },
+        { texto: "¿El propósito principal es vender/promover/estafar, no reportar peligro contra un menor?", activo: true, tipo: "decisiva" },
     ],
     SUPLANTACION_IDENTIDAD: [
         { texto: "¿Alguien se hace pasar por otra persona o entidad (nombre, fotos, cargo)?", activo: true, tipo: "decisiva" },

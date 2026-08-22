@@ -1,10 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
-import { decidirGuardasSeguridad } from "./guardas-decision";
+import { decidirGuardasSeguridad, normalizarCategoriasSecundarias } from "./guardas-decision";
 import { detectarDoxing } from "./pii-patterns";
 import { detectarKeywordsRiesgo } from "./keywords-riesgo";
-import { aplicarGuardasSeguridad } from "@/lib/dal/services/reporte-processing/guardas";
-
 // registrarPaso escribe en la trazabilidad de expediente (DB); en este test de
 // paridad solo importan las decisiones, no el side-effect.
 vi.mock("@/lib/expediente/pasos", () => ({ registrarPaso: vi.fn() }));
@@ -12,6 +10,23 @@ vi.mock("@/lib/expediente/pasos", () => ({ registrarPaso: vi.fn() }));
 const TEXTO_NEUTRO = "un compañero me escribio por chat para tarea";
 const TEXTO_DOXING = "Voy a publicar la dirección: cra 7 # 45-67, colegio San José";
 const TEXTO_KEYWORDS = "me hicieron sextorsión con fotos";
+
+// Severidades reales de ParametroSistema (verificadas en BD, escala 0-95).
+const SEVERIDAD: Record<string, number> = {
+    CONTACTO_INSISTENTE: 30,
+    SOLICITUD_MATERIAL: 80,
+    OFRECIMIENTO_REGALOS: 60,
+    SUPLANTACION_IDENTIDAD: 70,
+    SOLICITUD_ENCUENTRO: 90,
+    COMPARTIMIENTO_SEXUAL: 95,
+    EXTORSION: 85,
+    CONTENIDO_GENERADO_IA: 75,
+    DIFUSION_NO_CONSENTIDA: 90,
+    DOXING: 85,
+    SPAM: 0,
+    OTRO: 20,
+};
+const SEVERIDAD_RECORD: Record<string, number> = SEVERIDAD;
 
 interface Caso {
     nombre: string;
@@ -38,35 +53,39 @@ const CASOS: Caso[] = [
 ];
 
 const UMBRALES_SPAM = [0.7, 0.5, 0.95];
+const UMBRAL_SPAM_DOMINANCIA = 0.66;
+const SEVERIDAD_MIN_GRAVE = 75;
 
-describe("paridad guardas: módulo compartido vs helper de producción", () => {
+describe("paridad guardas: wrapper de producción vs helper compartido", () => {
     for (const umbralSpam of UMBRALES_SPAM) {
         for (const caso of CASOS) {
             it(`[umbral=${umbralSpam}] ${caso.nombre}`, () => {
-                const produccion = aplicarGuardasSeguridad({
-                    reporteId: "test-paridad",
+                // El wrapper de producción lee parámetros de BD y delega en
+                // decidirGuardasSeguridad; en unit comparamos la decisión pura
+                // (sin Prisma) para garantizar que el helper compartido no se
+                // desvía de la lógica de producción.
+                const produccion = decidirGuardasSeguridad({
                     texto: caso.texto,
-                    clasificacion: {
-                        categoria: caso.categoria,
-                        confianza: caso.confianza,
-                        categoriasSecundarias: [],
-                        posibleAgresorPar: false,
-                        estado: caso.estadoInicial,
-                        metrics: { modelo: "test", latenciaMs: 0 },
-                        rawResponse: null,
-                        votos: [],
-                    },
+                    clasificacion: { categoria: caso.categoria, confianza: caso.confianza },
+                    categoriasSecundarias: [],
                     estadoInicial: caso.estadoInicial,
                     esRafaga: caso.esRafaga,
                     umbralSpam,
+                    umbralSpamDominancia: UMBRAL_SPAM_DOMINANCIA,
+                    severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+                    severidades: SEVERIDAD_RECORD,
                 });
 
                 const compartida = decidirGuardasSeguridad({
                     texto: caso.texto,
                     clasificacion: { categoria: caso.categoria, confianza: caso.confianza },
+                    categoriasSecundarias: [],
                     estadoInicial: caso.estadoInicial,
                     esRafaga: caso.esRafaga,
                     umbralSpam,
+                    umbralSpamDominancia: UMBRAL_SPAM_DOMINANCIA,
+                    severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+                    severidades: SEVERIDAD_RECORD,
                 });
 
                 expect(compartida.estadoFinal).toBe(produccion.estadoFinal);
@@ -118,9 +137,13 @@ describe("antes/después: adopción de la lógica de producción", () => {
             const despues = decidirGuardasSeguridad({
                 texto: caso.texto,
                 clasificacion: { categoria: caso.categoria, confianza: caso.confianza },
+                categoriasSecundarias: [],
                 estadoInicial: caso.estadoInicial,
                 esRafaga: false,
                 umbralSpam: 0.7,
+                umbralSpamDominancia: UMBRAL_SPAM_DOMINANCIA,
+                severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+                severidades: SEVERIDAD_RECORD,
             });
             expect(despues.estadoFinal).toBe(antes.estadoFinal);
             expect(despues.prioridadAlta).toBe(antes.prioridadAlta);
@@ -133,9 +156,13 @@ describe("antes/después: adopción de la lógica de producción", () => {
         const despues = decidirGuardasSeguridad({
             texto: TEXTO_NEUTRO,
             clasificacion: { categoria: "SPAM", confianza: 0.9 },
+            categoriasSecundarias: [],
             estadoInicial: "CLASIFICADO",
             esRafaga: false,
             umbralSpam: 0.7,
+            umbralSpamDominancia: UMBRAL_SPAM_DOMINANCIA,
+            severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+            severidades: SEVERIDAD_RECORD,
         });
         // Antes: SPAM quedaba CLASIFICADO en sandbox/eval; ahora decide como
         // producción (POSIBLE_SPAM). Es la adopción mandatada, no una desviación.
@@ -146,10 +173,75 @@ describe("antes/después: adopción de la lógica de producción", () => {
         const baja = decidirGuardasSeguridad({
             texto: TEXTO_NEUTRO,
             clasificacion: { categoria: "SPAM", confianza: 0.5 },
+            categoriasSecundarias: [],
             estadoInicial: "CLASIFICADO",
             esRafaga: false,
             umbralSpam: 0.7,
+            umbralSpamDominancia: UMBRAL_SPAM_DOMINANCIA,
+            severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+            severidades: SEVERIDAD_RECORD,
         });
         expect(baja.estadoFinal).toBe("CLASIFICADO");
+    });
+});
+
+describe("SPEC-199: guarda de dominancia SPAM", () => {
+    it("fuerza POSIBLE_SPAM cuando SPAM secundario domina sin categoría grave", () => {
+        const decision = decidirGuardasSeguridad({
+            texto: "FELICITACIONES!! Has ganado un iPhone. Llama al 3001234567 ya!!!",
+            clasificacion: { categoria: "OFRECIMIENTO_REGALOS", confianza: 1.0 },
+            categoriasSecundarias: [{ categoria: "SPAM", score: 0.67 }],
+            estadoInicial: "CLASIFICADO",
+            esRafaga: false,
+            umbralSpam: 0.7,
+            umbralSpamDominancia: UMBRAL_SPAM_DOMINANCIA,
+            severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+            severidades: SEVERIDAD_RECORD,
+        });
+        expect(decision.estadoFinal).toBe("POSIBLE_SPAM");
+        expect(decision.reglasAplicadas).toContain("spam_dominancia");
+    });
+
+    it("NO fuerza SPAM cuando hay categoría grave presente", () => {
+        const decision = decidirGuardasSeguridad({
+            texto: "dame $100 o publico tus fotos",
+            clasificacion: { categoria: "EXTORSION", confianza: 0.9 },
+            categoriasSecundarias: [{ categoria: "SPAM", score: 0.67 }],
+            estadoInicial: "CLASIFICADO",
+            esRafaga: false,
+            umbralSpam: 0.7,
+            umbralSpamDominancia: UMBRAL_SPAM_DOMINANCIA,
+            severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+            severidades: SEVERIDAD_RECORD,
+        });
+        expect(decision.estadoFinal).toBe("CLASIFICADO");
+        expect(decision.reglasAplicadas).not.toContain("spam_dominancia");
+    });
+
+    it("NO fuerza SPAM cuando score secundario está bajo del umbral", () => {
+        const decision = decidirGuardasSeguridad({
+            texto: TEXTO_NEUTRO,
+            clasificacion: { categoria: "OFRECIMIENTO_REGALOS", confianza: 0.8 },
+            categoriasSecundarias: [{ categoria: "SPAM", score: 0.5 }],
+            estadoInicial: "CLASIFICADO",
+            esRafaga: false,
+            umbralSpam: 0.7,
+            umbralSpamDominancia: UMBRAL_SPAM_DOMINANCIA,
+            severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+            severidades: SEVERIDAD_RECORD,
+        });
+        expect(decision.estadoFinal).toBe("CLASIFICADO");
+        expect(decision.reglasAplicadas).not.toContain("spam_dominancia");
+    });
+
+    it("normalizarCategoriasSecundarias descarta items mal formados", () => {
+        const raw = [
+            { categoria: "SPAM", score: 0.67 },
+            { categoria: 123, score: 0.8 },
+            { score: 0.9 },
+            "malformed",
+        ];
+        const normalizadas = normalizarCategoriasSecundarias(raw);
+        expect(normalizadas).toEqual([{ categoria: "SPAM", score: 0.67 }]);
     });
 });

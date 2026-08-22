@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **156** |
+| **Total de specs** | **157** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **50** |
-| **Pendientes (PLANEADO)** | **6** |
+| **Pendientes (PLANEADO)** | **7** |
 ## Backlog activo (no cerradas)
 
 | Nº | Nombre | Estado |
@@ -315,6 +315,7 @@
 | [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
 | [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🟢 Implementada |
 | [197](197-fixes-operadores-usuarios/spec.md) | SPEC-197 — Fixes operadores + usuarios (002-PI-094) | 🟢 Implementada |
+| [199](199-parche-motor-spam/spec.md) | SPEC-199 — Parche motor SPAM (002-PI-093) | 🔵 Planeado |
 
 ## Incidencias de calidad de datos
 

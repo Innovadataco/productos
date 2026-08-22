@@ -25,6 +25,20 @@ export interface GuardasClasificacion {
     confianza: number;
 }
 
+export interface CategoriaSecundaria {
+    categoria: string;
+    score: number;
+}
+
+export function normalizarCategoriasSecundarias(val: unknown): CategoriaSecundaria[] {
+    if (!Array.isArray(val)) return [];
+    return val.filter((item): item is CategoriaSecundaria => {
+        if (typeof item !== "object" || item === null) return false;
+        const record = item as Record<string, unknown>;
+        return typeof record.categoria === "string" && typeof record.score === "number";
+    });
+}
+
 export interface GuardasDecision {
     estadoFinal: EstadoReporte;
     prioridadAlta: boolean;
@@ -37,15 +51,23 @@ export interface GuardasDecision {
 export function decidirGuardasSeguridad({
     texto,
     clasificacion,
+    categoriasSecundarias,
     estadoInicial,
     esRafaga,
     umbralSpam,
+    umbralSpamDominancia,
+    severidadMinGrave,
+    severidades,
 }: {
     texto: string;
     clasificacion: GuardasClasificacion;
+    categoriasSecundarias: CategoriaSecundaria[];
     estadoInicial: EstadoReporte;
     esRafaga: boolean;
     umbralSpam: number;
+    umbralSpamDominancia: number;
+    severidadMinGrave: number;
+    severidades: Record<string, number>;
 }): GuardasDecision {
     let estadoFinal: EstadoReporte = estadoInicial;
     let prioridadAlta = false;
@@ -56,6 +78,25 @@ export function decidirGuardasSeguridad({
     if (clasificacion.categoria === "SPAM" && clasificacion.confianza >= umbralSpam) {
         estadoFinal = "POSIBLE_SPAM";
         reglasAplicadas.push("spam_confianza_alta");
+    }
+
+    // SPEC-199: dominancia SPAM. Si SPAM vota fuerte entre las categorías
+    // presentes y ninguna es lo suficientemente grave, forzar POSIBLE_SPAM.
+    // Esto protege contra falsos positivos de rúbricas laxas (ej.
+    // OFRECIMIENTO_REGALOS clasificando publicidad masiva).
+    if (estadoFinal !== "POSIBLE_SPAM") {
+        const spamSecundario = categoriasSecundarias.find((c) => c.categoria === "SPAM");
+        if (spamSecundario && spamSecundario.score >= umbralSpamDominancia) {
+            const presentes: CategoriaSecundaria[] = [
+                { categoria: clasificacion.categoria, score: clasificacion.confianza },
+                ...categoriasSecundarias,
+            ];
+            const hayCategoriaGrave = presentes.some((c) => (severidades[c.categoria] ?? 0) >= severidadMinGrave);
+            if (!hayCategoriaGrave) {
+                estadoFinal = "POSIBLE_SPAM";
+                reglasAplicadas.push("spam_dominancia");
+            }
+        }
     }
 
     // Guarda de escalamiento DOXING (R3): la regla determinística nunca reclasifica,
