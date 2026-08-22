@@ -100,15 +100,15 @@ CERRADO → ACTIVO (reapertura manual)
 | `AMARILLO` | Riesgo moderado |
 | `ROJO` | Riesgo alto |
 
-### `TipoRevisionComite` (extendido)
+### `TipoRevisionComite` (nuevo)
 
-Migración aditiva; NO recrear el enum:
+Migración aditiva que crea el enum con ambos valores desde el inicio:
 
 ```sql
-ALTER TYPE "TipoRevisionComite" ADD VALUE 'CONSOLIDACION_EXPEDIENTE';
+CREATE TYPE "TipoRevisionComite" AS ENUM ('REVISION_REPORTE', 'CONSOLIDACION_EXPEDIENTE');
 ```
 
-**Nota de hallazgo**: en la rama base local no se encontró definido `TipoRevisionComite` en `prisma/schema.prisma`. Si al implementar tampoco existe, la migración deberá crearlo aditivamente antes del `ALTER TYPE ADD VALUE`; ZEUS debe validar este desvío mínimo.
+Confirmado por ZEUS: no se usa `ALTER TYPE ADD VALUE` porque el enum no existía previamente.
 
 ---
 

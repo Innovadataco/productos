@@ -52,7 +52,7 @@ El sistema detecta cuando un expediente acumula gravedad suficiente (múltiples 
 ### Edge Cases
 
 - ¿Qué ocurre si dos eventos concurrentes intentan obtener el mismo `ordenSecuencial`? El repository debe usar una transacción con bloqueo selectivo para garantizar monotonicidad sin huecos.
-- ¿Cómo se comporta el sistema si se agrega un evento a un expediente `CERRADO`? Se permite como re-apertura implícita (estado vuelve a `ACTIVO`) o se rechaza según reglas de negocio; esta decisión queda documentada en `plan.md`.
+- ¿Cómo se comporta el sistema si se agrega un evento a un expediente `CERRADO`? `agregarEvento` rechaza la operación con `AppError` (conflicto de estado). Una nueva situación sobre el mismo identificador se modelará en una SPEC posterior creando un expediente nuevo con `expedienteRelacionadoAnteriorId`.
 - ¿Qué pasa si el parámetro `padre.expediente.consolidacion_min_reportes` no existe? El repository debe usar un valor predeterminado conservador (`2`) y registrar la anomalía.
 - ¿Cómo se maneja un evento cuyo texto supera el límite permitido? Se rechaza antes de tocar la base de datos, preservando la integridad del expediente.
 - ¿Qué sucede si el padre intenta listar expedientes de otro usuario? El repository filtra estrictamente por `padreUsuarioId` y nunca expone expedientes ajenos.
@@ -73,8 +73,8 @@ El sistema detecta cuando un expediente acumula gravedad suficiente (múltiples 
 - **FR-006**: El sistema DEBE permitir que un evento opcionalmente vincule un `Reporte` existente sin modificar el modelo `Reporte`.
 - **FR-007**: El sistema DEBE proveer un método para listar todos los expedientes de un padre, ordenados por `updatedAt DESC`.
 - **FR-008**: El sistema DEBE proveer un método para obtener un expediente por `id` incluyendo sus eventos ordenados.
-- **FR-009**: El sistema DEBE extender el enum `TipoRevisionComite` con el valor `CONSOLIDACION_EXPEDIENTE` usando `ALTER TYPE ADD VALUE`, sin recrear el enum.
-- **FR-010**: El sistema DEBE sembrar 18 parámetros `padre.*` en `ParametroSistema` de forma idempotente mediante `upsert` (patrón anti-I-100), conservando valores modificados por administradores salvo excepción documentada.
+- **FR-009**: El sistema DEBE crear el enum `TipoRevisionComite` con los valores `REVISION_REPORTE` y `CONSOLIDACION_EXPEDIENTE` (ambos valores en la misma migración aditiva).
+- **FR-010**: El sistema DEBE sembrar 18 parámetros `padre.*` en `ParametroSistema` de forma idempotente mediante `upsert` (patrón anti-I-100): no duplica filas y propaga cambios de default definidos en código.
 - **FR-011**: El sistema DEBE ubicar todo acceso a Prisma para expedientes y eventos dentro de `src/lib/dal/repositories/expediente-repository.ts`; endpoints y servicios posteriores llamarán únicamente a este repository.
 - **FR-012**: El sistema DEBE implementar `crearExpediente`, `agregarEvento`, `listarExpedientesDePadre` y `obtenerExpedientePorId` en el repository.
 - **FR-013**: El sistema DEBE ejecutar `agregarEvento` dentro de una transacción atómica que cree el `EventoExpediente` y actualice los contadores/timestamps del expediente.
@@ -82,9 +82,10 @@ El sistema detecta cuando un expediente acumula gravedad suficiente (múltiples 
 - **FR-015**: El sistema DEBE soportar auto-cierre de expedientes por inactividad usando el parámetro `padre.expediente.auto_cierre_meses`.
 - **FR-016**: El sistema DEBE almacenar categorías dominantes y patrones detectados en campos JSON (`categoriasDominantesJson`, `patronesDetectadosJson`) para análisis posterior.
 - **FR-017**: El sistema DEBE permitir la auto-referencia opcional `expedienteRelacionadoAnteriorId` para encadenar expedientes históricos de un mismo identificador/padre.
-- **FR-018**: El sistema DEBE escribir tests unitarios del repository y un test de idempotencia del seed que verifique que ejecutar el seed dos veces no duplique ni sobreescriba valores custom de los 18 parámetros `padre.*`.
+- **FR-018**: El sistema DEBE escribir tests unitarios del repository y un test de idempotencia del seed que verifique que ejecutar el seed dos veces no duplique filas y propague cambios de default definidos en código.
 - **FR-019**: El sistema DEBE respetar la presunción de inocencia: ningún campo ni mensaje del expediente debe etiquetar al titular del identificador como culpable; solo se registran eventos, estados y estadísticas descriptivas.
 - **FR-020**: El sistema DEBE persistir todos los timestamps de momento con zona horaria (`@db.Timestamptz(6)`) alineado a la directriz D-69 (Bogotá).
+- **FR-021**: El sistema DEBE rechazar `agregarEvento` sobre un expediente en estado `CERRADO` con `AppError`; una nueva situación sobre el mismo identificador se resolverá en una SPEC posterior creando un expediente nuevo con `expedienteRelacionadoAnteriorId`.
 
 ### Key Entities
 
@@ -102,7 +103,7 @@ El sistema detecta cuando un expediente acumula gravedad suficiente (múltiples 
 
 - **SC-001**: El repository crea un expediente y agrega 5 eventos consecutivos asignando `ordenSecuencial` `1, 2, 3, 4, 5` sin saltos ni repeticiones, verificado por tests unitarios.
 - **SC-002**: La operación `agregarEvento` incrementa `numEventos` y actualiza `ultimoEventoEn` de forma atómica; un test de concurrencia simulada no genera registros huérfanos ni contadores inconsistentes.
-- **SC-003**: El seed de los 18 parámetros `padre.*` es idempotente: ejecutarlo dos veces consecutivas no crea duplicados y no sobrescribe valores modificados manualmente por un administrador (salvo parámetros estructurales explícitamente documentados).
+- **SC-003**: El seed de los 18 parámetros `padre.*` es idempotente: ejecutarlo dos veces consecutivas no duplica filas y propaga cambios de default definidos en código.
 - **SC-004**: El test de idempotencia del seed verifica que los valores por defecto de los 18 parámetros coinciden con los definidos en el instructivo.
 - **SC-005**: `listarExpedientesDePadre` retorna solo los expedientes del padre solicitado; un test con dos padres distintos confirma que no hay filtrado cruzado.
 - **SC-006**: `obtenerExpedientePorId` retorna el expediente con sus eventos ordenados por `ordenSecuencial`; si el expediente no existe o no pertenece al padre, retorna `null`.

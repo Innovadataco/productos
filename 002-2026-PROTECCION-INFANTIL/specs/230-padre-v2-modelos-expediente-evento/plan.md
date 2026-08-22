@@ -2,7 +2,7 @@
 
 **Branch**: `[work/002-pi-130]` | **Date**: 2026-08-22 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Instructivo 002-PI-130 — alcance exacto de modelos `Expediente` / `EventoExpediente`, enums, extensión de `TipoRevisionComite`, seed de 18 parámetros `padre.*` y repositorio DAL.
+**Input**: Instructivo 002-PI-130 (APROBADO por ZEUS) — modelos `Expediente` / `EventoExpediente`, enums, creación de `TipoRevisionComite` con `REVISION_REPORTE` + `CONSOLIDACION_EXPEDIENTE`, seed de 18 parámetros `padre.*` y repositorio DAL.
 
 ---
 
@@ -106,7 +106,9 @@ La restricción `@@unique([expedienteId, ordenSecuencial])` actúa como candado 
 
 ### 3. Corte y escalado de un expediente
 
-Esta SPEC **modela** los estados (`ACTIVO`, `CONSOLIDANDO`, `PENDIENTE_COMITE`, `EN_APROBACION_PADRE`, `EN_ACLARACION`, `CERRADO`, `ESCALADO`) y los parámetros que gobernarán las transiciones, pero **no implementa** la máquina de estados. Las reglas de negocio (auto-cierre por inactividad, consolidación al alcanzar `consolidacion_min_reportes`, escalado por score rojo, etc.) se implementarán en una SPEC posterior que consuma estos modelos y parámetros.
+Esta SPEC **modela** los estados (`ACTIVO`, `CONSOLIDANDO`, `PENDIENTE_COMITE`, `EN_APROBACION_PADRE`, `EN_ACLARACION`, `CERRADO`, `ESCALADO`) y los parámetros que gobernarán las transiciones, pero **no implementa** la máquina de estados completa. Las reglas de negocio (auto-cierre por inactividad, consolidación al alcanzar `consolidacion_min_reportes`, escalado por score rojo, etc.) se implementarán en una SPEC posterior que consuma estos modelos y parámetros.
+
+**Decisión concreta (aprobada por ZEUS)**: `agregarEvento` sobre un expediente en estado `CERRADO` rechaza la operación con `AppError` (conflicto de estado). Si el padre enfrenta una nueva situación sobre el mismo identificador, una SPEC posterior creará un expediente nuevo vinculado mediante `expedienteRelacionadoAnteriorId`.
 
 ### 4. Hidratación async de `categoriaDetectada` y `confianzaClasificacion`
 
@@ -124,9 +126,15 @@ El modelo `EventoExpediente` incluye `reporteId String?` con una relación Prism
 
 Los 18 parámetros `padre.*` se siembran con `prisma.parametroSistema.upsert` usando `update: { ... }` explícito. Esto permite que futuros cambios de default se propaguen al reejecutar `npx prisma db seed`, sin duplicar filas ni perder el valor actual si ya fue modificado por un administrador.
 
-### 8. Hallazgo preliminar: enum `TipoRevisionComite`
+### 8. `TipoRevisionComite`
 
-El instructivo asume que `TipoRevisionComite` ya existe y debe extenderse con `ALTER TYPE ADD VALUE`. En la rama base local no se encontró dicho enum en `prisma/schema.prisma`. Durante la implementación se verificará en `origin/feature/001-scaffolding` antes de generar la migración. Si efectivamente no existe, la migración deberá crearlo aditivamente y luego agregar `CONSOLIDACION_EXPEDIENTE`; ZEUS debe confirmar este desvío mínimo en la compuerta.
+Confirmado por ZEUS: el enum no existe en la base. La migración lo crea aditivamente con ambos valores desde el inicio:
+
+```sql
+CREATE TYPE "TipoRevisionComite" AS ENUM ('REVISION_REPORTE', 'CONSOLIDACION_EXPEDIENTE');
+```
+
+No se usa `ALTER TYPE ADD VALUE`.
 
 ---
 
@@ -137,16 +145,16 @@ El instructivo asume que `TipoRevisionComite` ya existe y debe extenderse con `A
 - Nuevos enums:
   - `EstadoExpediente`: `ACTIVO`, `CONSOLIDANDO`, `PENDIENTE_COMITE`, `EN_APROBACION_PADRE`, `EN_ACLARACION`, `CERRADO`, `ESCALADO`.
   - `ScoreGravedad`: `VERDE`, `AMARILLO`, `ROJO`.
-- Extender enum existente:
-  - `TipoRevisionComite` con `CONSOLIDACION_EXPEDIENTE` mediante `ALTER TYPE ... ADD VALUE`.
+- Enum nuevo:
+  - `TipoRevisionComite`: `REVISION_REPORTE`, `CONSOLIDACION_EXPEDIENTE`.
 - Nuevos modelos:
   - `Expediente` con self-referencia opcional, relaciones a `Usuario`, `EventoExpediente[]`.
   - `EventoExpediente` con FK opcional a `Reporte`, índice único `[expedienteId, ordenSecuencial]`.
-- Relaciones inversas mínimas en `Usuario` (`expedientes Expediente[]`) y `Reporte` (`eventos EventoExpediente[]`).
+- Relaciones inversas mínimas en `Usuario` (`expedientes Expediente[]`) y `Reporte` (`eventos EventoExpediente[]`) — autorizado por ZEUS; no toca nada más del bloque `Reporte`.
 
 ### Seed
 
-18 parámetros `padre.*` en `ParametroSistema` con tipos/categorías adecuados y `esPublico = false`.
+18 parámetros `padre.*` en `ParametroSistema` con tipos/categorías adecuados y `esPublico = false`. Idempotencia: `upsert` con `update` explícito; no duplica filas y propaga cambios de default definidos en código.
 
 ### Repository
 
