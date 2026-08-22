@@ -33,9 +33,13 @@ function fechaCorta(iso: string | null): string {
     return new Date(iso).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export default function UsuariosAdminClient() {
+type UsuariosAdminClientProps = {
+    rol?: "PARENT" | "SCHOOL_ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "COMITE_CONVIVENCIA" | "COMITE" | "ADMIN";
+};
+
+export default function UsuariosAdminClient({ rol: rolProp }: UsuariosAdminClientProps = {}) {
     const searchParams = useSearchParams();
-    const rol = (searchParams.get("rol") as UsuarioItem["estado"] | null) ?? "PARENT";
+    const rol = rolProp ?? (searchParams.get("rol") as UsuariosAdminClientProps["rol"] | null) ?? "PARENT";
 
     const [items, setItems] = useState<UsuarioItem[]>([]);
     const [paginacion, setPaginacion] = useState<Paginacion>({ page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 0 });

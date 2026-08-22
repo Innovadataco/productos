@@ -6,9 +6,10 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { ReasignarModal } from "./ReasignarModal";
 
 const operadoresMock = [
-    { id: "op-actual", email: "actual@example.com", nombre: "Actual", rol: "OPERADOR", estado: "activo" },
-    { id: "op-destino", email: "destino@example.com", nombre: "Destino", rol: "OPERADOR", estado: "activo" },
-    { id: "op-inactivo", email: "inactivo@example.com", nombre: "Inactivo", rol: "OPERADOR", estado: "inactivo" },
+    { id: "op-actual", email: "actual@example.com", nombre: "Actual", rol: "OPERADOR", estado: "activo", casosAbiertos: 5, perfil: { cupoMaximo: 10 } },
+    { id: "op-destino", email: "destino@example.com", nombre: "Destino", rol: "OPERADOR", estado: "activo", casosAbiertos: 2, perfil: { cupoMaximo: 10 } },
+    { id: "op-lleno", email: "lleno@example.com", nombre: "Lleno", rol: "OPERADOR", estado: "activo", casosAbiertos: 10, perfil: { cupoMaximo: 10 } },
+    { id: "op-inactivo", email: "inactivo@example.com", nombre: "Inactivo", rol: "OPERADOR", estado: "inactivo", casosAbiertos: 0, perfil: { cupoMaximo: 10 } },
 ];
 
 function mockFetch(url: string | Request, init?: RequestInit) {
@@ -87,6 +88,16 @@ describe("ReasignarModal", () => {
         const options = within(select).getAllByRole("option");
         const values = options.map((o) => (o as HTMLOptionElement).value);
         expect(values).not.toContain("op-actual");
+    });
+
+    it("excluye operadores sin cupo disponible (uso >= 100%)", async () => {
+        renderModal();
+        const select = await screen.findByLabelText("Operador destino");
+        const options = within(select).getAllByRole("option");
+        const values = options.map((o) => (o as HTMLOptionElement).value);
+        expect(values).toContain("op-destino");
+        expect(values).not.toContain("op-lleno");
+        expect(values).not.toContain("op-inactivo");
     });
 
     it("llama al endpoint y ejecuta onReasignado al confirmar", async () => {

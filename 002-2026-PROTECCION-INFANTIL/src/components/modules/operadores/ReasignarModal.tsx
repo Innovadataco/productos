@@ -13,6 +13,8 @@ type OperadorOpcion = {
     nombre: string | null;
     rol: string;
     estado: string;
+    casosAbiertos: number;
+    cupoMaximo: number;
 };
 
 type ReasignarModalProps = {
@@ -58,11 +60,37 @@ export function ReasignarModal({
                     setError(mensaje || "No se pudo cargar la lista de operadores.");
                     return;
                 }
-                const lista = Array.isArray((data as { operadores?: unknown }).operadores)
-                    ? ((data as { operadores: OperadorOpcion[] }).operadores as OperadorOpcion[])
+                const raw = Array.isArray((data as { operadores?: unknown }).operadores)
+                    ? ((data as { operadores: unknown[] }).operadores as unknown[])
                     : [];
+                const lista: OperadorOpcion[] = raw.map((op) => {
+                    const item = op as {
+                        id?: string;
+                        email?: string;
+                        nombre?: string | null;
+                        rol?: string;
+                        estado?: string;
+                        casosAbiertos?: number;
+                        perfil?: { cupoMaximo?: number | null } | null;
+                    };
+                    return {
+                        id: item.id ?? "",
+                        email: item.email ?? "",
+                        nombre: item.nombre ?? null,
+                        rol: item.rol ?? "",
+                        estado: item.estado ?? "",
+                        casosAbiertos: item.casosAbiertos ?? 0,
+                        cupoMaximo: item.perfil?.cupoMaximo ?? 10,
+                    };
+                });
                 setOperadores(
-                    lista.filter((op) => op.rol === "OPERADOR" && op.estado === "activo" && op.id !== operadorActualId)
+                    lista.filter(
+                        (op) =>
+                            op.rol === "OPERADOR" &&
+                            op.estado === "activo" &&
+                            op.id !== operadorActualId &&
+                            op.casosAbiertos < op.cupoMaximo
+                    )
                 );
             } catch {
                 setError("Error de red al cargar operadores.");

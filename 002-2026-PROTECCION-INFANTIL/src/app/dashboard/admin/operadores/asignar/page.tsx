@@ -10,7 +10,6 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Cargando } from "@/components/ui/Cargando";
 import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
-import { ReasignarModal } from "@/components/modules/operadores/ReasignarModal";
 
 type OperadorAsignacion = {
     id: string;
@@ -33,12 +32,6 @@ export default function AdminOperadoresAsignarPage() {
     const [data, setData] = useState<EstadoAsignacion | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [reasingandoId, setReasignandoId] = useState<string | null>(null);
-    const [modalReasignacion, setModalReasignacion] = useState<{
-        reporteId: string;
-        operadorActualId: string;
-        operadorActualNombre: string;
-    } | null>(null);
 
     async function cargar() {
         setLoading(true);
@@ -55,35 +48,6 @@ export default function AdminOperadoresAsignarPage() {
             setError("Error de red cargando estado de asignación");
         } finally {
             setLoading(false);
-        }
-    }
-
-    async function iniciarReasignacion(op: OperadorAsignacion) {
-        if (op.casosAbiertos === 0) {
-            setError("El operador no tiene casos abiertos para reasignar.");
-            return;
-        }
-        setReasignandoId(op.id);
-        try {
-            const res = await fetch(
-                `/api/admin/operadores/${encodeURIComponent(op.id)}/casos?estado=REVISION_MANUAL&pageSize=1`,
-                { credentials: "include" }
-            );
-            const json = await res.json().catch(() => ({}));
-            const caso = Array.isArray(json.items) && json.items.length > 0 ? json.items[0] : null;
-            if (!caso) {
-                setError("No se encontró un caso abierto disponible para reasignar.");
-                return;
-            }
-            setModalReasignacion({
-                reporteId: caso.id,
-                operadorActualId: op.id,
-                operadorActualNombre: op.nombre || op.email,
-            });
-        } catch {
-            setError("Error de red al buscar un caso para reasignar.");
-        } finally {
-            setReasignandoId(null);
         }
     }
 
@@ -204,14 +168,6 @@ export default function AdminOperadoresAsignarPage() {
                                                     >
                                                         Ver detalle
                                                     </Link>
-                                                    <Button
-                                                        variant="outline"
-                                                        className="px-3 py-1 text-xs"
-                                                        isLoading={reasingandoId === op.id}
-                                                        onClick={() => void iniciarReasignacion(op)}
-                                                    >
-                                                        Reasignar caso
-                                                    </Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -223,16 +179,6 @@ export default function AdminOperadoresAsignarPage() {
                 )}
             </GlassCard>
 
-            {modalReasignacion && (
-                <ReasignarModal
-                    reporteId={modalReasignacion.reporteId}
-                    operadorActualId={modalReasignacion.operadorActualId}
-                    operadorActualNombre={modalReasignacion.operadorActualNombre}
-                    isOpen={!!modalReasignacion}
-                    onClose={() => setModalReasignacion(null)}
-                    onReasignado={() => void cargar()}
-                />
-            )}
         </div>
     );
 }

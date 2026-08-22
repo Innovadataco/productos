@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 288 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2016 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 292 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2044 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -275,6 +275,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/admins` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/comite` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/operadores` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/rectores` | página | permitir | permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -568,6 +572,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/admins` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/comite` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/operadores` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/rectores` | página | permitir | permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -861,6 +869,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/admins` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/comite` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/operadores` | página | permitir | permite | sí |
+| `/dashboard/admin/usuarios/rectores` | página | permitir | permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio` | página | redirigir→/dashboard/admin/comite | no permite | sí |
@@ -1154,6 +1166,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/usuarios/admins` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/usuarios/comite` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/usuarios/operadores` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/usuarios/rectores` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/colegio` | página | permitir | permite | sí |
@@ -1447,6 +1463,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/usuarios/admins` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/usuarios/comite` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/usuarios/operadores` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/usuarios/rectores` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/circulo-confianza` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/colegio` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -1740,6 +1760,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/spam` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/usuarios/admins` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/usuarios/comite` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/usuarios/operadores` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/usuarios/rectores` | página | redirigir→/ | no permite | sí |
 | `/dashboard/apelaciones` | página | permitir | permite | sí |
 | `/dashboard/circulo-confianza` | página | permitir | permite | sí |
 | `/dashboard/colegio` | página | permitir | permite | sí |
@@ -2033,6 +2057,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/spam` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/usuarios/admins` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/usuarios/comite` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/usuarios/operadores` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/usuarios/rectores` | página | redirigir→/login | no permite | sí |
 | `/dashboard/apelaciones` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/circulo-confianza` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio` | página | redirigir→/login | permite | **NO** |
