@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-22
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: Instructivo SPEC-230 / 002-PI-130. Extender el módulo Padre con dos modelos de datos (`Expediente`, `EventoExpediente`), dos enums (`EstadoExpediente`, `ScoreGravedad`), un valor adicional en `TipoRevisionComite`, 18 parámetros de configuración `padre.*`, un repository DAL con operaciones atómicas, y sus tests correspondientes. Sin cambiar el motor de IA, sin alterar el modelo `Reporte`, sin UI ni rutas de dashboard.
 
@@ -107,7 +107,7 @@ El sistema detecta cuando un expediente acumula gravedad suficiente (múltiples 
 - **SC-004**: El test de idempotencia del seed verifica que los valores por defecto de los 18 parámetros coinciden con los definidos en el instructivo.
 - **SC-005**: `listarExpedientesDePadre` retorna solo los expedientes del padre solicitado; un test con dos padres distintos confirma que no hay filtrado cruzado.
 - **SC-006**: `obtenerExpedientePorId` retorna el expediente con sus eventos ordenados por `ordenSecuencial`; si el expediente no existe o no pertenece al padre, retorna `null`.
-- **SC-007**: La migración que extiende `TipoRevisionComite` usa `ALTER TYPE ADD VALUE` y no recrea el enum; se verifica inspeccionando el archivo de migración generado.
+- **SC-007**: La migración crea `TipoRevisionComite` con ambos valores (`REVISION_REPORTE`, `CONSOLIDACION_EXPEDIENTE`) en un solo `CREATE TYPE`, dado que el enum no existía en la base; no usa `ALTER TYPE ADD VALUE` ni recrea el enum.
 - **SC-008**: Los tests del repository y del seed pasan en menos de 30 segundos en el entorno de CI local.
 - **SC-009**: Ningún campo del modelo `Expediente` ni `EventoExpediente` almacena fotos, videos, audios ni archivos; solo texto y metadatos JSON.
 
@@ -130,4 +130,31 @@ El sistema detecta cuando un expediente acumula gravedad suficiente (múltiples 
 
 ## Implementación
 
-<!-- Sección reservada para documentación retroactiva al cerrar la especificación. -->
+### Resumen de cambios
+
+- **Schema / migración (SPEC-230 T001-T003)**:
+  - `prisma/schema.prisma`: añadidos enums `EstadoExpediente`, `ScoreGravedad` y `TipoRevisionComite`; modelos `Expediente` y `EventoExpediente`; relaciones inversas mínimas `Usuario.expedientes` y `Reporte.eventos` (esta última autorizada expresamente por ZEUS).
+  - `prisma/migrations/20260823000000_padre_v2_expediente_evento/migration.sql`: migración aditiva generada con `prisma migrate diff` contra `origin/feature/001-scaffolding`; contiene `CREATE TYPE`, `CREATE TABLE` e `CREATE INDEX`; cero `DROP`, `RENAME` ni `ALTER TABLE ... DROP COLUMN`.
+  - `TipoRevisionComite` se crea con los dos valores (`REVISION_REPORTE`, `CONSOLIDACION_EXPEDIENTE`) en un único `CREATE TYPE`, porque ZEUS confirmó que el enum no existía en la base.
+
+- **Seed idempotente (T004-T005)**:
+  - `prisma/seed.ts`: función `seedParametrosPadre()` con 18 upserts de `ParametroSistema` (tipos correctos, `esPublico = false`, categoría `CONFIG`).
+  - `src/lib/seed-padre.test.ts`: test de idempotencia que ejecuta el seed dos veces, verifica 18 filas, confirma que un valor modificado manualmente no se sobrescribe y que un cambio de default en código se propaga (SC-003 reformulado).
+
+- **Repository DAL (T006-T007)**:
+  - `src/lib/dal/repositories/expediente-repository.ts`: frontera Q-3; operaciones `crearExpediente`, `agregarEvento`, `listarExpedientesDePadre`, `obtenerExpedientePorId`.
+  - `agregarEvento` corre dentro de `withUnitOfWork`; bloquea la fila del expediente; calcula `ordenSecuencial = MAX + 1`; rechaza expedientes `CERRADO` con `AppError` (409); si no recibe `reporteId`, crea un `Reporte` vinculado resolviendo la clave de plataforma a su `id` real.
+  - `src/lib/dal/repositories/expediente-repository.test.ts`: 10 tests que cubren apertura, orden secuencial, rechazo de cerrado, límite de texto, listado aislado, recuperación con/sin filtro de padre, contadores atómicos y vinculación con reporte existente.
+
+### Decisiones tomadas
+
+- **Frontera DAL Q-3**: todo acceso a `Expediente`/`EventoExpediente` pasa por `expediente-repository.ts`; el repository sí puede leer `Plataforma` para resolver `plataformaId` clave → `id` al crear el `Reporte` vinculado, pero no expone ese acceso fuera del repository.
+- **Relación inversa en `Reporte`**: se añadió solo `eventos EventoExpediente[]` (autorizado por ZEUS en ajuste B); el resto del modelo `Reporte` quedó intacto.
+- **Creación de `Reporte` desde evento**: cuando `agregarEvento` no recibe `reporteId`, genera un reporte mínimo usando defaults seguros (`ciudad`/`pais` = "No especificado", `esAnonimo` = false) para no dejar una FK huérfana. Esto respeta la decisión de no alterar el modelo `Reporte` y de que `EventoExpediente` apunta a él opcionalmente.
+- **Zona horaria**: todos los timestamps de momento usan `@db.Timestamptz(6)` alineado a D-69 (Bogotá).
+
+### Tests
+
+- `npm run test -- src/lib/dal/repositories/expediente-repository.test.ts`: 10/10 verdes.
+- `npm run test -- src/lib/seed-padre.test.ts`: 1/1 verde.
+- Gate local: `npx tsc --noEmit` verde; `npm run lint` sin errores (solo warnings preexistentes); `npm run arch:check` verde tras regenerar `docs/architecture/01-modelo-datos.md`.
