@@ -158,3 +158,12 @@ El sistema detecta cuando un expediente acumula gravedad suficiente (múltiples 
 - `npm run test -- src/lib/dal/repositories/expediente-repository.test.ts`: 10/10 verdes.
 - `npm run test -- src/lib/seed-padre.test.ts`: 1/1 verde.
 - Gate local: `npx tsc --noEmit` verde; `npm run lint` sin errores (solo warnings preexistentes); `npm run arch:check` verde tras regenerar `docs/architecture/01-modelo-datos.md`.
+
+## Impacto en arquitectura
+- Deposita 2 modelos aditivos en `prisma/schema.prisma` (`Expediente`, `EventoExpediente`) + 2 enums nuevos (`EstadoExpediente`, `ScoreGravedad`) + creación aditiva del enum `TipoRevisionComite` con 2 valores (`REVISION_REPORTE`, `CONSOLIDACION_EXPEDIENTE`).
+- Extiende `ParametroSistema` con 18 parámetros `padre.*` (reutiliza tabla existente · [D-72](../../../docs/architecture/00-decisiones.md)).
+- Agrega frontera DAL `src/lib/dal/repositories/expediente-repository.ts` con `agregarEvento()` transaccional (Q-3).
+- Cero cambios en `src/lib/ai/**` (motor IA intacto).
+- Cero modificaciones estructurales al modelo `Reporte` (solo relación inversa Prisma autorizada por ZEUS).
+- Migración aditiva sin `DROP` ni `rename`.
+- Todos los `DateTime` de momento con `@db.Timestamptz(6)` (timezone Bogotá · [D-69](../../../docs/architecture/00-decisiones.md)).
