@@ -1567,12 +1567,13 @@ model SimulacionReporte {
 // SPEC-184 (002-PI-079): bloqueo persistente de IPs por ipHash.
 model BlockList {
   id            String    @id @default(cuid())
-  ipHash        String    @unique
-  motivo        String
-  expiraEn      DateTime?
-  creadoPorId   String
-  creadoEn      DateTime  @default(now())
-  actualizadoEn DateTime  @updatedAt
+  ipHash        String    @unique @map("ipHash")
+  ipOriginal    String?   @map("ipOriginal")
+  motivo        String    @map("motivo")
+  expiraEn      DateTime? @map("expiraEn")
+  creadoPorId   String    @map("creadoPorId")
+  creadoEn      DateTime  @default(now()) @map("creadoEn")
+  actualizadoEn DateTime  @updatedAt @map("actualizadoEn")
 
   creadoPor Usuario @relation(fields: [creadoPorId], references: [id])
 

@@ -490,6 +490,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | --- | --- | --- |
 | id | String | id |
 | ipHash | String | único |
+| ipOriginal | String | opcional |
 | motivo | String | — |
 | expiraEn | DateTime | opcional |
 | creadoPorId | String | — |
