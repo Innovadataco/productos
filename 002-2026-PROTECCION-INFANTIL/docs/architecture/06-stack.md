@@ -92,6 +92,7 @@ Comando por defecto: `["node", "server.js"]`.
 
 | Servicio | Imagen / build | Contenedor | Puertos (host:interno) |
 | --- | --- | --- | --- |
+| app | build local (Dockerfile) | `pi-app-dev` | 5005:3000 |
 | db | `pgvector/pgvector:pg16` | — | 5433:5432 |
 
 ### Producción (`docker-compose.prod.yml`)

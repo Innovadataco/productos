@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **67** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **73** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -231,6 +231,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadoresProfesor | IdentificadorProfesor | lista, relación |
 | onboarding | OnboardingColegio | opcional, relación |
 | notificacionesInApp | NotificacionInApp | lista, relación |
+| suscripciones | Suscripcion | lista, relación |
 
 #### `Curso`
 
@@ -482,7 +483,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (19)
+### Otros (sin regla de dominio) (25)
 
 #### `BlockList`
 
@@ -498,6 +499,44 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | actualizadoEn | DateTime | — |
 | creadoPor | Usuario | relación (FK) |
 
+#### `BonoAplicado`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| bonoId | String | — |
+| suscripcionId | String | — |
+| pagoId | String | opcional |
+| aplicadoEn | DateTime | — |
+| descuentoUSD | Float | — |
+| bono | BonoPromocional | relación (FK) |
+| suscripcion | Suscripcion | relación (FK) |
+| pago | Pago | opcional, relación (FK) |
+
+#### `BonoPromocional`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| nombre | String | único |
+| tipo | TipoBono | — |
+| valor | Float | — |
+| vigenciaInicio | DateTime | — |
+| vigenciaFin | DateTime | — |
+| usosMaximosTotales | Int | opcional |
+| usosMaximosPorCliente | Int | — |
+| aplicaANuevos | Boolean | — |
+| aplicaARenovaciones | Boolean | — |
+| aplicaSoloA | TipoTitular | opcional |
+| combinableConCodigoPersonal | Boolean | — |
+| activo | Boolean | — |
+| descripcion | String | opcional |
+| creadoPorAdminId | String | — |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| creadoPor | Usuario | relación (FK) |
+| usos | BonoAplicado | lista, relación |
+
 #### `CargaRosterSesion`
 
 | Campo | Tipo | Atributos |
@@ -508,6 +547,26 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | expiraEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
+
+#### `CodigoReferidoUso`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| codigoReferidoUsuarioId | String | — |
+| suscripcionReferidaId | String | — |
+| fechaRegistro | DateTime | — |
+| fechaActivacion | DateTime | opcional |
+| recompensaOtorgada | Boolean | — |
+| recompensaOtorgadaEn | DateTime | opcional |
+| tipoRecompensa | String | opcional |
+| anio | Int | — |
+| requiereRevisionAdmin | Boolean | — |
+| revisadaPorAdminId | String | opcional |
+| revisionOK | Boolean | opcional |
+| referidor | Suscripcion | relación (FK) |
+| referida | Suscripcion | relación (FK) |
+| revisadaPor | Usuario | opcional, relación (FK) |
 
 #### `DemoMarcado`
 
@@ -668,6 +727,35 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | actualizadoEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
 
+#### `Pago`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| suscripcionId | String | — |
+| duracionCubierta | DuracionPlan | — |
+| montoBaseUSD | Float | — |
+| descuentoAplicadoUSD | Float | — |
+| montoNetoUSD | Float | — |
+| tasaCambioAplicada | Float | — |
+| montoLocalPagado | Float | — |
+| monedaLocal | String | — |
+| metodoDeclarado | MetodoPago | — |
+| comprobanteAdjuntoUrl | String | — |
+| comprobanteMimeType | String | — |
+| comprobanteHashSha256 | String | — |
+| fechaReporte | DateTime | — |
+| fechaAutorizacion | DateTime | opcional |
+| estado | EstadoPago | — |
+| motivoRechazo | String | opcional |
+| autorizadoPorAdminId | String | opcional |
+| codigoReferidoUsado | String | opcional |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| suscripcion | Suscripcion | relación (FK) |
+| autorizadoPor | Usuario | opcional, relación (FK) |
+| bonosAplicados | BonoAplicado | lista, relación |
+
 #### `PatronInstitucional`
 
 | Campo | Tipo | Atributos |
@@ -745,6 +833,56 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | creadoPor | Usuario | relación (FK) |
+
+#### `Suscripcion`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| tipoTitular | TipoTitular | — |
+| colegioId | String | opcional |
+| usuarioId | String | opcional |
+| estado | EstadoSuscripcion | — |
+| planActualId | String | — |
+| contratoPDFUrl | String | opcional |
+| fechaInicio | DateTime | — |
+| fechaFin | DateTime | — |
+| fechaCorteProgramado | DateTime | opcional |
+| esFreemium | Boolean | — |
+| freemiumFechaFin | DateTime | opcional |
+| codigoReferidoPropio | String | único |
+| codigoReferidoUsado | String | opcional |
+| monedaLocal | String | — |
+| paisCliente | String | — |
+| suspendidaEn | DateTime | opcional |
+| canceladaEn | DateTime | opcional |
+| canceladaPorUsuario | Boolean | opcional |
+| motivoCancelacion | String | opcional |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| colegio | Colegio | opcional, relación (FK) |
+| usuario | Usuario | opcional, relación (FK) |
+| planActual | Plan | relación (FK) |
+| pagos | Pago | lista, relación |
+| bonosAplicados | BonoAplicado | lista, relación |
+| referidosCodigoPropio | CodigoReferidoUso | lista, relación |
+| referidosUsados | CodigoReferidoUso | lista, relación |
+
+#### `TasaCambio`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| monedaOrigen | String | — |
+| monedaDestino | String | — |
+| tasa | Float | — |
+| fecha | DateTime | — |
+| fuente | FuenteTasa | — |
+| apiUrl | String | opcional |
+| ingresadoPorAdminId | String | opcional |
+| motivoManual | String | opcional |
+| createdAt | DateTime | — |
+| ingresadoPor | Usuario | opcional, relación (FK) |
 
 #### `WorkerLog`
 
@@ -1032,9 +1170,19 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | --- | --- | --- |
 | id | String | id |
 | nombre | String | — |
+| tipoTitular | TipoTitular | — |
+| duracion | DuracionPlan | — |
+| anio | Int | — |
+| precioBaseUSD | Float | — |
+| descuentoAnualPct | Float | opcional |
+| activo | Boolean | — |
 | descripcion | String | opcional |
-| precio | Float | — |
-| creadoEn | DateTime | — |
+| precio | Float | opcional |
+| creadoPorAdminId | String | — |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| creadoPor | Usuario | relación (FK) |
+| suscripciones | Suscripcion | lista, relación |
 
 #### `Subscription`
 
@@ -1224,6 +1372,12 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | notificacionesInApp | NotificacionInApp | lista, relación |
 | bloqueosCreados | BlockList | lista, relación |
 | simulacionesAbuso | SimulacionAbusoRun | lista, relación |
+| suscripciones | Suscripcion | lista, relación |
+| planesCreados | Plan | lista, relación |
+| bonosCreados | BonoPromocional | lista, relación |
+| pagosAutorizados | Pago | lista, relación |
+| referidosRevisados | CodigoReferidoUso | lista, relación |
+| tasasIngresadas | TasaCambio | lista, relación |
 
 ## Diagrama ER (Mermaid)
 
@@ -1235,6 +1389,7 @@ erDiagram
     AlertaColegio ||--o{ SeguimientoCaso : "alerta"
     AlertaColegio ||--o{ SolicitudComite : "alerta (opcional)"
     Apelacion ||--o{ DocumentoApelacion : "apelacion"
+    BonoPromocional ||--o{ BonoAplicado : "bono"
     Ciudad ||--o{ Colegio : "ciudad"
     Ciudad ||--o{ Reporte : "ciudadRel (opcional)"
     ClasificacionIA ||--o{ ClasificacionRubricaVoto : "clasificacionIA"
@@ -1257,6 +1412,7 @@ erDiagram
     Colegio ||--o{ RegistroAvisoColegio : "colegio"
     Colegio ||--o{ SeguimientoCaso : "colegio"
     Colegio ||--o{ SolicitudComite : "colegio (opcional)"
+    Colegio ||--o{ Suscripcion : "colegio (opcional)"
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"
     CorreccionAdmin ||--o{ DatasetEntrenamiento : "correccion (opcional)"
@@ -1275,12 +1431,14 @@ erDiagram
     IdentificadorReportado ||--o{ EventoMatch : "identificador"
     Materia ||--o{ CursoMateria : "materia"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"
+    Pago ||--o{ BonoAplicado : "pago (opcional)"
     Pais ||--o{ Ciudad : "pais"
     Pais ||--o{ Colegio : "pais"
     Pais ||--o{ Departamento : "pais"
     Pais ||--o{ Reporte : "paisRel (opcional)"
     ParametroSistema ||--o{ AuditLog : "parametro (opcional)"
     PatronInstitucional ||--o{ AlertaColegio : "patronInstitucional (opcional)"
+    Plan ||--o{ Suscripcion : "planActual"
     Plataforma ||--o{ AlertaSuscripcion : "plataforma"
     Plataforma ||--o{ Apelacion : "plataforma"
     Plataforma ||--o{ IdentificadorAcudiente : "plataforma (opcional)"
@@ -1304,6 +1462,10 @@ erDiagram
     Reporte ||--o{ TransicionReporte : "reporte"
     SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
+    Suscripcion ||--o{ BonoAplicado : "suscripcion"
+    Suscripcion ||--o{ CodigoReferidoUso : "referida"
+    Suscripcion ||--o{ CodigoReferidoUso : "referidor"
+    Suscripcion ||--o{ Pago : "suscripcion"
     Tenant ||--o{ Colegio : "tenant"
     Tenant ||--o{ Reporte : "tenant (opcional)"
     Tenant ||--o{ Usuario : "tenant (opcional)"
@@ -1312,6 +1474,8 @@ erDiagram
     Usuario ||--o{ AlertaSuscripcion : "usuario"
     Usuario ||--o{ AuditLog : "usuario (opcional)"
     Usuario ||--o{ BlockList : "creadoPor"
+    Usuario ||--o{ BonoPromocional : "creadoPor"
+    Usuario ||--o{ CodigoReferidoUso : "revisadaPor (opcional)"
     Usuario ||--o{ CodigoVerificacion : "usuario (opcional)"
     Usuario ||--o{ ContactoConfianza : "usuario"
     Usuario ||--o{ CorreccionAdmin : "admin"
@@ -1320,10 +1484,12 @@ erDiagram
     Usuario ||--o{ IntegranteComite : "modificadoPor (opcional)"
     Usuario ||--o{ NotaSeguimiento : "autor"
     Usuario ||--o{ NotificacionInApp : "usuario"
+    Usuario ||--o{ Pago : "autorizadoPor (opcional)"
     Usuario ||--o{ ParametroSistema : "actualizadoPor (opcional)"
     Usuario ||--o{ PerfilOperador : "creadoPor"
     Usuario ||--o{ PerfilOperador : "usuario"
     Usuario ||--o{ PermisoModulo : "actualizadoPor (opcional)"
+    Usuario ||--o{ Plan : "creadoPor"
     Usuario ||--o{ Reporte : "anonimizacionValidadaPor (opcional)"
     Usuario ||--o{ Reporte : "comite (opcional)"
     Usuario ||--o{ Reporte : "eliminadoPor (opcional)"
@@ -1334,6 +1500,8 @@ erDiagram
     Usuario ||--o{ SolicitudComite : "comite (opcional)"
     Usuario ||--o{ SolicitudComite : "creadoPor (opcional)"
     Usuario ||--o{ SolicitudComite : "operador (opcional)"
+    Usuario ||--o{ Suscripcion : "usuario (opcional)"
+    Usuario ||--o{ TasaCambio : "ingresadoPor (opcional)"
     Usuario ||--o{ TokenRecuperacion : "usuario (opcional)"
     Usuario ||--o{ TransicionReporte : "responsableUsuario (opcional)"
 ```
@@ -1351,7 +1519,6 @@ por ningún otro modelo. La lista de excepciones declarada vive en
 | DerivaMotorSnapshot | sí |
 | HealthProbe | sí |
 | IncidenteInfra | sí |
-| Plan | sí |
 | RateLimit | sí |
 | Subscription | sí |
 | WorkerLog | sí |
