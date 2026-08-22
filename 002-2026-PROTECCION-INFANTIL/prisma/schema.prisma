@@ -1074,13 +1074,13 @@ model AlertaColegio {
   tipoSujeto                String   @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE
   estado                    String   @default("nueva") // nueva | vista | gestionada | escalada | cerrada
   prioridad                 String   @default("media") // alta | media | baja
-  vencimientoSla            DateTime
+  vencimientoSla            DateTime @db.Timestamptz(6)
   asignadoAId               String?
   // SPEC-142 (F6): fila agregada que ESTA alerta aportó (idempotencia + reversa
   // exacta en baja). Nullable: las alertas previas a F6 no aportan al agregado.
   patronInstitucionalId     String?
-  creadoEn                  DateTime @default(now())
-  actualizadoEn             DateTime @updatedAt
+  creadoEn                  DateTime @default(now()) @db.Timestamptz(6)
+  actualizadoEn             DateTime @updatedAt @db.Timestamptz(6)
 
   colegio                 Colegio                  @relation(fields: [colegioId], references: [id])
   reporte                 Reporte                  @relation(fields: [reporteId], references: [id])
