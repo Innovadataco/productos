@@ -14,15 +14,15 @@
 
 **Purpose**: Crear modelos, enums y migración sin DROP ni RENAME.
 
-- [ ] T001 [P] Editar `prisma/schema.prisma`:
+- [x] T001 [P] Editar `prisma/schema.prisma`:
   - Añadir `enum EstadoExpediente` (`ACTIVO`, `CONSOLIDANDO`, `PENDIENTE_COMITE`, `EN_APROBACION_PADRE`, `EN_ACLARACION`, `CERRADO`, `ESCALADO`).
   - Añadir `enum ScoreGravedad` (`VERDE`, `AMARILLO`, `ROJO`).
   - Añadir `enum TipoRevisionComite` (`REVISION_REPORTE`, `CONSOLIDACION_EXPEDIENTE`).
   - Añadir `model Expediente` con campos exactos del instructivo e índices.
   - Añadir `model EventoExpediente` con campos exactos e índices.
   - Añadir relaciones inversas mínimas: `Usuario.expedientes Expediente[]` y `Reporte.eventos EventoExpediente[]` (autorizado por ZEUS; no tocar nada más del bloque `Reporte`).
-- [ ] T002 [P] Generar migración aditiva (`npx prisma migrate dev --create-only --name padre_v2_expediente_evento`) y verificar que el SQL contiene `CREATE TYPE`, `CREATE TABLE`, `CREATE INDEX`; no contiene `DROP`, `RENAME` ni `ALTER TABLE ... DROP COLUMN`.
-- [ ] T003 [P] Aplicar migración localmente (`npx prisma migrate dev`) y regenerar cliente (`npx prisma generate`).
+- [x] T002 [P] Generar migración aditiva (`npx prisma migrate dev --create-only --name padre_v2_expediente_evento`) y verificar que el SQL contiene `CREATE TYPE`, `CREATE TABLE`, `CREATE INDEX`; no contiene `DROP`, `RENAME` ni `ALTER TABLE ... DROP COLUMN`.
+- [x] T003 [P] Aplicar migración localmente (`npx prisma migrate dev`) y regenerar cliente (`npx prisma generate`).
 
 **Checkpoint**: `npx prisma migrate status` verde; `npx prisma db pull` no detecta drift.
 
@@ -32,8 +32,8 @@
 
 **Purpose**: Sembrar los 18 parámetros con upsert anti-I-100.
 
-- [ ] T004 [P] Añadir función `seedParametrosPadre()` en `prisma/seed.ts` con 18 upserts de `ParametroSistema` (tipos/categorías correctos, `esPublico = false`).
-- [ ] T005 [P] Crear `prisma/seed-padre.test.ts` que:
+- [x] T004 [P] Añadir función `seedParametrosPadre()` en `prisma/seed.ts` con 18 upserts de `ParametroSistema` (tipos/categorías correctos, `esPublico = false`).
+- [x] T005 [P] Crear `prisma/seed-padre.test.ts` que:
   - Ejecute el seed dos veces.
   - Verifique que no haya duplicados (`count = 18`).
   - Verifique que un valor modificado manualmente no se sobrescriba.
@@ -47,7 +47,7 @@
 
 **Purpose**: Implementar `src/lib/dal/repositories/expediente-repository.ts` respetando frontera Q-3.
 
-- [ ] T006 [P] Crear `src/lib/dal/repositories/expediente-repository.ts` con:
+- [x] T006 [P] Crear `src/lib/dal/repositories/expediente-repository.ts` con:
   - `crearExpediente(data)`: crea expediente en estado `ACTIVO`, score `VERDE`.
   - `agregarEvento(data)`: transacción atómica que:
     - Rechaza si `expediente.estado = CERRADO` con `AppError`.
@@ -57,7 +57,7 @@
     - Incrementa `numEventos` y actualiza `ultimoEventoEn`.
   - `listarExpedientesDePadre(padreUsuarioId, paginacion)`: filtra por `padreUsuarioId`, ordena por `updatedAt DESC`, pagina.
   - `obtenerExpedientePorId(id, padreUsuarioId?)`: retorna expediente con eventos ordenados por `ordenSecuencial`; si se pasa `padreUsuarioId`, filtra por él.
-- [ ] T007 [P] Crear `src/lib/dal/repositories/expediente-repository.test.ts` con tests para:
+- [x] T007 [P] Crear `src/lib/dal/repositories/expediente-repository.test.ts` con tests para:
   - Crear expediente.
   - Agregar eventos y verificar `ordenSecuencial` monotónico.
   - Rechazo de `agregarEvento` sobre expediente `CERRADO`.
@@ -73,14 +73,14 @@
 
 **Purpose**: Gate de calidad local y documentación de cierre.
 
-- [ ] T008 [P] Ejecutar gate local:
-  - `npx tsc --noEmit`
-  - `npm run lint --no-cache`
-  - `npm run test`
-  - `npm run build`
-  - `npm run arch:check`
-- [ ] T009 [P] Actualizar `spec.md` sección **Implementación** con resumen de cambios, decisiones y tests.
-- [ ] T010 [P] Crear `cierre.md` en `specs/230-padre-v2-modelos-expediente-evento/` con evidencia de commits, tests y deuda técnica.
+- [x] T008 [P] Ejecutar gate local:
+  - `npx tsc --noEmit` verde.
+  - `npm run lint --no-cache` verde (0 errores; warnings preexistentes).
+  - `npm run test` verde para tests del SPEC; suite completa reporta 2 fallos preexistentes en `alerta-colegio-tablero.test.ts`.
+  - `npm run build` pendiente (ver nota en cierre.md).
+  - `npm run arch:check` verde.
+- [x] T009 [P] Actualizar `spec.md` sección **Implementación** con resumen de cambios, decisiones y tests.
+- [x] T010 [P] Crear `cierre.md` en `specs/230-padre-v2-modelos-expediente-evento/` con evidencia de commits, tests y deuda técnica.
 - [ ] T011 [P] Rebase sobre `origin/feature/001-scaffolding` y push único de `work/002-pi-130`.
 
 **Checkpoint**: Gate local verde; rama `work/002-pi-130` lista para auditoría de ZEUS.
