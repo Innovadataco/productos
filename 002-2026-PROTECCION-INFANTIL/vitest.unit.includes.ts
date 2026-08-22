@@ -18,6 +18,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/AdminReporteDetalle.test.tsx",
     "src/components/modules/AdminReporteExpediente.test.tsx",
     "src/components/modules/admin/UsuariosSubNav.test.tsx",
+    "src/components/modules/admin/tables/tables.test.tsx",
     "src/components/modules/ComiteBandeja.test.tsx",
     "src/components/modules/ComiteSolicitudDetalle.test.tsx",
     "src/components/modules/ConsultaEnriquecidaClient.test.tsx",
