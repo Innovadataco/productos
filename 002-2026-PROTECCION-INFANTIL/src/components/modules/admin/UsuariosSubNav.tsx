@@ -7,7 +7,8 @@ const tabs = [
     { href: "/dashboard/admin/usuarios", label: "Padres" },
     { href: "/dashboard/admin/usuarios/rectores", label: "Rectores" },
     { href: "/dashboard/admin/usuarios/operadores", label: "Operadores" },
-    { href: "/dashboard/admin/usuarios/comite", label: "Comité" },
+    { href: "/dashboard/admin/usuarios/comite-convivencia", label: "Comité de convivencia" },
+    { href: "/dashboard/admin/usuarios/comite-validacion", label: "Comité de validación" },
     { href: "/dashboard/admin/usuarios/admins", label: "Admins" },
 ];
 

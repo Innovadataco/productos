@@ -1,40 +1,58 @@
-import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import UsuariosAdminClient from "./UsuariosAdminClient";
 
-const pushMock = vi.fn();
 let searchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
     useSearchParams: () => searchParams,
-    useRouter: () => ({ push: pushMock }),
+    useRouter: () => ({ push: vi.fn() }),
     usePathname: () => "/dashboard/admin/usuarios",
 }));
 
-function usuarioBase(overrides: Record<string, unknown> = {}) {
-    return {
-        id: "usr-1",
-        email: "test@example.com",
-        nombre: "Test User",
-        estado: "activo",
-        creadoEn: "2026-08-01T10:00:00.000Z",
-        ultimaSesion: null,
-        reportesEnviados: 0,
-        colegiosAsociados: [],
-        ...overrides,
-    };
+function itemParaRol(rol: string) {
+    const base = { id: "usr-1", email: "test@example.com", nombre: "Test User", estado: "activo", ultimaSesion: null };
+    switch (rol) {
+        case "PARENT":
+            return { rol: "PARENT", ...base, reportesEnviados: 0, reportesUltimos30Dias: 0, colegiosAsociados: [], creadoEn: "2026-08-01T10:00:00.000Z" };
+        case "SCHOOL_ADMIN":
+            return { rol: "SCHOOL_ADMIN", ...base, colegio: null, alumnos: 0, profesores: 0, cursos: 0, reportesColegio: 0 };
+        case "OPERADOR":
+            return { rol: "OPERADOR", ...base, cupoMaximo: 10, casosAbiertos: 0, enProceso: 0, cerrados30Dias: 0, tiempoMedioResolucionMs: null };
+        case "COMITE_CONVIVENCIA":
+            return { rol: "COMITE_CONVIVENCIA", ...base, colegio: null, integrantesActivos: 0, casosEscaladosAbiertos: 0, casosEscaladosResueltos: 0, tiempoMedioResolucionHoras: null };
+        case "COMITE_VALIDACION":
+            return { rol: "COMITE_VALIDACION", ...base, casosEscaladosPlataforma: 0, casosPendientes: 0, casosResueltos: 0, ultimasDecisiones: [] };
+        case "ADMIN":
+            return { rol: "ADMIN", ...base, modulosGestionados: [{ clave: "usuarios", nombre: "Usuarios" }] };
+        default:
+            return { rol: "PARENT", ...base, reportesEnviados: 0, reportesUltimos30Dias: 0, colegiosAsociados: [], creadoEn: "2026-08-01T10:00:00.000Z" };
+    }
 }
 
 function mockFetchUsuarios() {
     return vi.spyOn(global, "fetch").mockImplementation(async (url) => {
         const u = String(url);
-        if (u.includes("/api/admin/usuarios")) {
+        if (u.includes("/api/admin/usuarios/dashboard")) {
             return {
                 ok: true,
                 status: 200,
                 json: async () => ({
-                    items: [usuarioBase()],
+                    kpi: [
+                        { key: "padres", label: "Padres", total: 1, activos: 1, inactivos: 0, bloqueados: 0, alerta: false },
+                    ],
+                    alertas: [],
+                }),
+            } as Response;
+        }
+        if (u.includes("/api/admin/usuarios?")) {
+            const params = new URLSearchParams(u.split("?")[1] ?? "");
+            const rol = params.get("rol") ?? "PARENT";
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    items: [itemParaRol(rol)],
                     pagination: { page: 1, pageSize: 25, total: 1, totalPages: 1 },
                 }),
             } as Response;
@@ -46,7 +64,6 @@ function mockFetchUsuarios() {
 describe("UsuariosAdminClient", () => {
     beforeEach(() => {
         searchParams = new URLSearchParams();
-        pushMock.mockClear();
     });
 
     afterEach(() => {
@@ -55,14 +72,14 @@ describe("UsuariosAdminClient", () => {
 
     it("carga listado de Padres por defecto", async () => {
         mockFetchUsuarios();
-        render(<UsuariosAdminClient />);
-        await waitFor(() => expect(screen.getByText("test@example.com")).toBeTruthy());
+        render(<UsuariosAdminClient rol="PARENT" />);
+        await waitFor(() => expect(screen.getByText("Test User")).toBeTruthy());
     });
 
     it("carga listado de Rectores (prop rol)", async () => {
         const fetchMock = mockFetchUsuarios();
         render(<UsuariosAdminClient rol="SCHOOL_ADMIN" />);
-        await waitFor(() => expect(screen.getByText("test@example.com")).toBeTruthy());
+        await waitFor(() => expect(screen.getByText("Test User")).toBeTruthy());
         await waitFor(() =>
             expect(fetchMock).toHaveBeenCalledWith(
                 expect.stringContaining("rol=SCHOOL_ADMIN"),
@@ -74,7 +91,7 @@ describe("UsuariosAdminClient", () => {
     it("carga listado de Operadores (prop rol)", async () => {
         const fetchMock = mockFetchUsuarios();
         render(<UsuariosAdminClient rol="OPERADOR" />);
-        await waitFor(() => expect(screen.getByText("test@example.com")).toBeTruthy());
+        await waitFor(() => expect(screen.getByText("Test User")).toBeTruthy());
         await waitFor(() =>
             expect(fetchMock).toHaveBeenCalledWith(
                 expect.stringContaining("rol=OPERADOR"),
@@ -83,22 +100,10 @@ describe("UsuariosAdminClient", () => {
         );
     });
 
-    it("carga listado de Comité con rol alias COMITE", async () => {
-        const fetchMock = mockFetchUsuarios();
-        render(<UsuariosAdminClient rol="COMITE" />);
-        await waitFor(() => expect(screen.getByText("test@example.com")).toBeTruthy());
-        await waitFor(() =>
-            expect(fetchMock).toHaveBeenCalledWith(
-                expect.stringContaining("rol=COMITE"),
-                expect.any(Object)
-            )
-        );
-    });
-
     it("carga listado de Admins (prop rol)", async () => {
         const fetchMock = mockFetchUsuarios();
         render(<UsuariosAdminClient rol="ADMIN" />);
-        await waitFor(() => expect(screen.getByText("test@example.com")).toBeTruthy());
+        await waitFor(() => expect(screen.getByText("Test User")).toBeTruthy());
         await waitFor(() =>
             expect(fetchMock).toHaveBeenCalledWith(
                 expect.stringContaining("rol=ADMIN"),

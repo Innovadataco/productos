@@ -1,38 +1,36 @@
-import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { UsuariosSubNav } from "./UsuariosSubNav";
 
-let pathname = "/dashboard/admin/usuarios";
-
 vi.mock("next/navigation", () => ({
-    usePathname: () => pathname,
+    usePathname: vi.fn(),
 }));
 
+const { usePathname } = await import("next/navigation");
+
 describe("UsuariosSubNav", () => {
-    beforeEach(() => {
-        pathname = "/dashboard/admin/usuarios";
+    it("renderiza 6 tabs", () => {
+        vi.mocked(usePathname).mockReturnValue("/dashboard/admin/usuarios");
+        render(<UsuariosSubNav />);
+        expect(screen.getByRole("link", { name: "Padres" })).toBeTruthy();
+        expect(screen.getByRole("link", { name: "Rectores" })).toBeTruthy();
+        expect(screen.getByRole("link", { name: "Operadores" })).toBeTruthy();
+        expect(screen.getByRole("link", { name: "Comité de convivencia" })).toBeTruthy();
+        expect(screen.getByRole("link", { name: "Comité de validación" })).toBeTruthy();
+        expect(screen.getByRole("link", { name: "Admins" })).toBeTruthy();
     });
 
-    it("resalta Padres solo en la ruta exacta", () => {
+    it("solo el tab Padres está activo en la raíz", () => {
+        vi.mocked(usePathname).mockReturnValue("/dashboard/admin/usuarios");
         render(<UsuariosSubNav />);
-        const padres = screen.getByRole("link", { name: "Padres" });
-        expect(padres.getAttribute("aria-current")).toBe("page");
+        expect(screen.getByRole("link", { name: "Padres" }).getAttribute("aria-current")).toBe("page");
+        expect(screen.getByRole("link", { name: "Rectores" }).getAttribute("aria-current")).toBeNull();
     });
 
-    it("resalta Rectores en sub-ruta", () => {
-        pathname = "/dashboard/admin/usuarios/rectores";
+    it("marca activo el tab de operadores y sus subrutas", () => {
+        vi.mocked(usePathname).mockReturnValue("/dashboard/admin/usuarios/operadores/op123");
         render(<UsuariosSubNav />);
-        const rectores = screen.getByRole("link", { name: "Rectores" });
-        expect(rectores.getAttribute("aria-current")).toBe("page");
-        const padres = screen.getByRole("link", { name: "Padres" });
-        expect(padres.getAttribute("aria-current")).toBeNull();
-    });
-
-    it("resalta Comité en sub-ruta", () => {
-        pathname = "/dashboard/admin/usuarios/comite";
-        render(<UsuariosSubNav />);
-        const comite = screen.getByRole("link", { name: "Comité" });
-        expect(comite.getAttribute("aria-current")).toBe("page");
+        expect(screen.getByRole("link", { name: "Operadores" }).getAttribute("aria-current")).toBe("page");
+        expect(screen.getByRole("link", { name: "Padres" }).getAttribute("aria-current")).toBeNull();
     });
 });

@@ -183,8 +183,10 @@ export class UsuarioRepository {
             creadoEn: true,
             ultimaSesion: true,
             colegioId: true,
+            comiteColegioId: true,
             tenantId: true,
             colegio: { select: { id: true, nombre: true } },
+            comiteConvivenciaColegio: { select: { id: true, nombre: true } },
         } satisfies Prisma.UsuarioSelect;
         return Promise.all([
             this.db.usuario.findMany({

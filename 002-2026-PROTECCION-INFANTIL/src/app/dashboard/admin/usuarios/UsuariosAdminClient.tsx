@@ -1,85 +1,113 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Alerta } from "@/components/ui/Alerta";
 import { Cargando } from "@/components/ui/Cargando";
-import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 import { UsuariosSubNav } from "@/components/modules/admin/UsuariosSubNav";
-
-type UsuarioItem = {
-    id: string;
-    email: string;
-    nombre: string | null;
-    estado: "activo" | "inactivo" | "bloqueado";
-    creadoEn: string;
-    ultimaSesion: string | null;
-    reportesEnviados: number;
-    colegiosAsociados: { id: string; nombre: string }[];
-};
-
-type Paginacion = { page: number; pageSize: number; total: number; totalPages: number };
+import { UsuariosKpiCards } from "@/components/modules/admin/UsuariosKpiCards";
+import { PadresTable } from "@/components/modules/admin/tables/PadresTable";
+import { RectoresTable } from "@/components/modules/admin/tables/RectoresTable";
+import { OperadoresTable } from "@/components/modules/admin/tables/OperadoresTable";
+import { ComiteConvivenciaTable } from "@/components/modules/admin/tables/ComiteConvivenciaTable";
+import { ComiteValidacionTable } from "@/components/modules/admin/tables/ComiteValidacionTable";
+import { AdminsTable } from "@/components/modules/admin/tables/AdminsTable";
+import type {
+    RolUsuariosListado,
+    UsuarioListItemDto,
+    PaginacionDto,
+    KpiRolCard,
+    AlertaDashboard,
+} from "@/lib/dal/types/usuarios-consolidado";
 
 const PAGE_SIZE = 25;
 
-function fechaCorta(iso: string | null): string {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
-}
-
-type UsuariosAdminClientProps = {
-    rol?: "PARENT" | "SCHOOL_ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "COMITE_CONVIVENCIA" | "COMITE" | "ADMIN";
+const ROL_TITULO: Record<RolUsuariosListado, string> = {
+    PARENT: "Padres",
+    SCHOOL_ADMIN: "Rectores",
+    OPERADOR: "Operadores",
+    COMITE_CONVIVENCIA: "Comité de convivencia",
+    COMITE_VALIDACION: "Comité de validación",
+    ADMIN: "Admins",
 };
 
-export default function UsuariosAdminClient({ rol: rolProp }: UsuariosAdminClientProps = {}) {
-    const searchParams = useSearchParams();
-    const rol = rolProp ?? (searchParams.get("rol") as UsuariosAdminClientProps["rol"] | null) ?? "PARENT";
+type VistaTablaProps = {
+    items: UsuarioListItemDto[];
+    pagination: PaginacionDto;
+    page: number;
+    onPageChange: (page: number) => void;
+};
 
-    const [items, setItems] = useState<UsuarioItem[]>([]);
-    const [paginacion, setPaginacion] = useState<Paginacion>({ page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 0 });
+function TablaPorRol({ rol, items, pagination, page, onPageChange }: VistaTablaProps & { rol: RolUsuariosListado }) {
+    switch (rol) {
+        case "PARENT":
+            return <PadresTable items={items as Extract<UsuarioListItemDto, { rol: "PARENT" }>[]} pagination={pagination} page={page} onPageChange={onPageChange} />;
+        case "SCHOOL_ADMIN":
+            return <RectoresTable items={items as Extract<UsuarioListItemDto, { rol: "SCHOOL_ADMIN" }>[]} pagination={pagination} page={page} onPageChange={onPageChange} />;
+        case "OPERADOR":
+            return <OperadoresTable items={items as Extract<UsuarioListItemDto, { rol: "OPERADOR" }>[]} pagination={pagination} page={page} onPageChange={onPageChange} />;
+        case "COMITE_CONVIVENCIA":
+            return <ComiteConvivenciaTable items={items as Extract<UsuarioListItemDto, { rol: "COMITE_CONVIVENCIA" }>[]} pagination={pagination} page={page} onPageChange={onPageChange} />;
+        case "COMITE_VALIDACION":
+            return <ComiteValidacionTable items={items as Extract<UsuarioListItemDto, { rol: "COMITE_VALIDACION" }>[]} pagination={pagination} page={page} onPageChange={onPageChange} />;
+        case "ADMIN":
+            return <AdminsTable items={items as Extract<UsuarioListItemDto, { rol: "ADMIN" }>[]} pagination={pagination} page={page} onPageChange={onPageChange} />;
+        default:
+            return null;
+    }
+}
+
+export default function UsuariosAdminClient({ rol }: { rol: RolUsuariosListado }) {
+    const [items, setItems] = useState<UsuarioListItemDto[]>([]);
+    const [pagination, setPagination] = useState<PaginacionDto>({ page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 0 });
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+    const [kpi, setKpi] = useState<KpiRolCard[]>([]);
+    const [alertas, setAlertas] = useState<AlertaDashboard[]>([]);
+    const [loadingKpi, setLoadingKpi] = useState(true);
+
     const [q, setQ] = useState("");
     const [estado, setEstado] = useState("");
-    const [desde, setDesde] = useState("");
-    const [hasta, setHasta] = useState("");
-    const [conReportes, setConReportes] = useState("");
     const [page, setPage] = useState(1);
 
-    const [filtrosActivos, setFiltrosActivos] = useState({
-        q: "",
-        estado: "",
-        desde: "",
-        hasta: "",
-        conReportes: "",
-    });
+    const [filtrosActivos, setFiltrosActivos] = useState({ q: "", estado: "" });
 
-    const cargar = useCallback(async (pagina: number, f: typeof filtrosActivos) => {
+    const cargarKpi = useCallback(async () => {
+        setLoadingKpi(true);
+        try {
+            const res = await fetch("/api/admin/usuarios/dashboard", { credentials: "include" });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setKpi(data.kpi || []);
+                setAlertas(data.alertas || []);
+            }
+        } catch {
+            // KPI es secundario; no bloqueamos la tabla.
+        } finally {
+            setLoadingKpi(false);
+        }
+    }, []);
+
+    const cargar = useCallback(async (pagina: number, f: { q: string; estado: string }) => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
                 page: String(pagina),
                 pageSize: String(PAGE_SIZE),
-                rol: rol || "PARENT",
+                rol,
             });
             if (f.q) params.set("q", f.q);
             if (f.estado) params.set("estado", f.estado);
-            if (f.desde) params.set("desde", f.desde);
-            if (f.hasta) params.set("hasta", f.hasta);
-            if (f.conReportes) params.set("conReportes", f.conReportes);
 
             const res = await fetch(`/api/admin/usuarios?${params.toString()}`, { credentials: "include" });
             const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setItems(data.items || []);
-                setPaginacion(data.pagination || { page: pagina, pageSize: PAGE_SIZE, total: 0, totalPages: 0 });
+                setPagination(data.pagination || { page: pagina, pageSize: PAGE_SIZE, total: 0, totalPages: 0 });
                 setMessage(null);
             } else {
                 setMessage({ type: "error", text: data?.error?.message || "Error cargando usuarios" });
@@ -93,13 +121,11 @@ export default function UsuariosAdminClient({ rol: rolProp }: UsuariosAdminClien
 
     useEffect(() => {
         setPage(1);
-        setFiltrosActivos({ q: "", estado: "", desde: "", hasta: "", conReportes: "" });
+        setFiltrosActivos({ q: "", estado: "" });
         setQ("");
         setEstado("");
-        setDesde("");
-        setHasta("");
-        setConReportes("");
-    }, [rol]);
+        void cargarKpi();
+    }, [rol, cargarKpi]);
 
     useEffect(() => {
         cargar(page, filtrosActivos);
@@ -108,17 +134,14 @@ export default function UsuariosAdminClient({ rol: rolProp }: UsuariosAdminClien
     function aplicarFiltros(e: React.FormEvent) {
         e.preventDefault();
         setPage(1);
-        setFiltrosActivos({ q: q.trim(), estado, desde, hasta, conReportes });
+        setFiltrosActivos({ q: q.trim(), estado });
     }
 
     function limpiarFiltros() {
         setQ("");
         setEstado("");
-        setDesde("");
-        setHasta("");
-        setConReportes("");
         setPage(1);
-        setFiltrosActivos({ q: "", estado: "", desde: "", hasta: "", conReportes: "" });
+        setFiltrosActivos({ q: "", estado: "" });
     }
 
     return (
@@ -126,9 +149,15 @@ export default function UsuariosAdminClient({ rol: rolProp }: UsuariosAdminClien
             <div className="mb-2">
                 <h1 className="text-2xl font-bold text-body">Usuarios</h1>
                 <p className="text-sm text-muted">
-                    Vista unificada de cuentas por rol. Solo lectura; para acciones de cuenta usa la gestión específica de cada rol.
+                    Vista operativa consolidada por rol. Fuente única de conteos para KPI y tablas.
                 </p>
             </div>
+
+            {loadingKpi ? (
+                <Cargando inline texto="Cargando KPI..." className="py-4" />
+            ) : (
+                <UsuariosKpiCards kpi={kpi} alertas={alertas} />
+            )}
 
             <UsuariosSubNav />
 
@@ -140,12 +169,7 @@ export default function UsuariosAdminClient({ rol: rolProp }: UsuariosAdminClien
 
             <GlassCard>
                 <form onSubmit={aplicarFiltros} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                    <Input
-                        label="Buscar"
-                        value={q}
-                        onChange={(e) => setQ(e.target.value)}
-                        placeholder="Email o nombre"
-                    />
+                    <Input label="Buscar" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Email o nombre" />
                     <div>
                         <label className="mb-1 block text-sm font-medium text-body">Estado</label>
                         <select
@@ -159,23 +183,9 @@ export default function UsuariosAdminClient({ rol: rolProp }: UsuariosAdminClien
                             <option value="bloqueado">Bloqueado</option>
                         </select>
                     </div>
-                    <Input label="Desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
-                    <Input label="Hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
-                    <div>
-                        <label className="mb-1 block text-sm font-medium text-body">Reportes</label>
-                        <select
-                            value={conReportes}
-                            onChange={(e) => setConReportes(e.target.value)}
-                            className="w-full rounded-xl border border-tinta/20 bg-papel/70 px-3 py-2 text-sm text-body outline-none focus:border-pino dark:bg-papel/70"
-                        >
-                            <option value="">Todos</option>
-                            <option value="true">Con reportes</option>
-                            <option value="false">Sin reportes</option>
-                        </select>
-                    </div>
                     <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-5">
                         <Button type="submit">Filtrar</Button>
-                        {(filtrosActivos.q || filtrosActivos.estado || filtrosActivos.desde || filtrosActivos.hasta || filtrosActivos.conReportes) && (
+                        {(filtrosActivos.q || filtrosActivos.estado) && (
                             <Button type="button" variant="outline" onClick={limpiarFiltros}>
                                 Limpiar
                             </Button>
@@ -185,7 +195,11 @@ export default function UsuariosAdminClient({ rol: rolProp }: UsuariosAdminClien
             </GlassCard>
 
             <GlassCard>
-                {loading ? (
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-body">{ROL_TITULO[rol]}</h2>
+                    {loading && <Cargando inline texto="Cargando..." />}
+                </div>
+                {loading && items.length === 0 ? (
                     <Cargando inline texto="Cargando usuarios..." className="py-8" />
                 ) : items.length === 0 ? (
                     <EmptyState
@@ -193,60 +207,7 @@ export default function UsuariosAdminClient({ rol: rolProp }: UsuariosAdminClien
                         description="No hay usuarios que coincidan con los filtros seleccionados."
                     />
                 ) : (
-                    <>
-                        <Tabla sinContenedor>
-                            <TablaHead variante="borde">
-                                <tr className="text-subtle">
-                                    <th className="pb-3 font-medium">Email</th>
-                                    <th className="pb-3 font-medium">Nombre</th>
-                                    <th className="pb-3 font-medium">Estado</th>
-                                    <th className="pb-3 font-medium">Registro</th>
-                                    <th className="pb-3 font-medium">Última sesión</th>
-                                    <th className="pb-3 font-medium">Reportes</th>
-                                    <th className="pb-3 font-medium">Colegio</th>
-                                    <th className="pb-3 font-medium text-right">Acciones</th>
-                                </tr>
-                            </TablaHead>
-                            <TablaBody>
-                                {items.map((u) => (
-                                    <tr key={u.id} className="align-top">
-                                        <td className="py-3 pr-3 text-body">{u.email}</td>
-                                        <td className="py-3 pr-3 text-muted">{u.nombre || "—"}</td>
-                                        <td className="py-3 pr-3">
-                                            <Badge variant={u.estado === "activo" ? "success" : "neutral"}>{u.estado}</Badge>
-                                        </td>
-                                        <td className="py-3 pr-3 text-muted">{fechaCorta(u.creadoEn)}</td>
-                                        <td className="py-3 pr-3 text-muted">{fechaCorta(u.ultimaSesion)}</td>
-                                        <td className="py-3 pr-3 text-muted">{u.reportesEnviados}</td>
-                                        <td className="py-3 pr-3 text-muted">
-                                            {u.colegiosAsociados.map((c) => c.nombre).join(", ") || "—"}
-                                        </td>
-                                        <td className="py-3 text-right">
-                                            <Link
-                                                href={`/dashboard/admin/usuarios/${u.id}`}
-                                                className="rounded-lg border border-tinta/20 bg-papel/70 px-3 py-1.5 text-xs text-body hover:bg-tinta/5 dark:border-tinta/30 dark:bg-papel/70 dark:hover:bg-tinta/10"
-                                            >
-                                                Ver detalle
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </TablaBody>
-                        </Tabla>
-                        <div className="mt-4 flex items-center justify-between text-sm text-muted">
-                            <span>
-                                Página {paginacion.page} de {Math.max(paginacion.totalPages, 1)} · {paginacion.total} usuarios
-                            </span>
-                            <div className="flex gap-2">
-                                <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                                    Anterior
-                                </Button>
-                                <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={page >= paginacion.totalPages} onClick={() => setPage((p) => p + 1)}>
-                                    Siguiente
-                                </Button>
-                            </div>
-                        </div>
-                    </>
+                    <TablaPorRol rol={rol} items={items} pagination={pagination} page={page} onPageChange={setPage} />
                 )}
             </GlassCard>
         </div>
