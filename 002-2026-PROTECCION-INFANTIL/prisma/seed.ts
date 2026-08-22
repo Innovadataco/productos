@@ -36,6 +36,51 @@ const prisma = new Proxy({} as PrismaClient, {
     },
 });
 
+// SPEC-230 (002-PI-130): parámetros del módulo Padre.
+// Idempotencia anti-I-100: upsert por clave, propaga cambios de default definidos en código.
+async function seedParametrosPadre() {
+    const parametrosPadre = [
+        { clave: "padre.expediente.auto_cierre_meses", valor: "6", tipo: TipoParametro.INTEGER, descripcion: "Meses de inactividad para auto-cierre de expediente" },
+        { clave: "padre.expediente.consolidacion_min_reportes", valor: "2", tipo: TipoParametro.INTEGER, descripcion: "Mínimo de reportes para pasar a CONSOLIDANDO" },
+        { clave: "padre.expediente.max_aclaraciones", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Máximo de aclaraciones por expediente" },
+        { clave: "padre.expediente.rate_limit_eventos_24h", valor: "999", tipo: TipoParametro.INTEGER, descripcion: "Límite de eventos que un padre puede agregar en 24h" },
+        { clave: "padre.comite.sla_horas_normal", valor: "48", tipo: TipoParametro.INTEGER, descripcion: "SLA de comité para casos normales" },
+        { clave: "padre.comite.sla_horas_gravedad_roja", valor: "12", tipo: TipoParametro.INTEGER, descripcion: "SLA de comité para expedientes ROJO" },
+        { clave: "padre.comite.miembros_minimos_aprobacion", valor: "2", tipo: TipoParametro.INTEGER, descripcion: "Miembros mínimos del comité para aprobación" },
+        { clave: "padre.score.peso_num_reportes", valor: "2", tipo: TipoParametro.FLOAT, descripcion: "Peso del número de reportes en score" },
+        { clave: "padre.score.peso_categoria_grave", valor: "5", tipo: TipoParametro.FLOAT, descripcion: "Peso de categoría grave en score" },
+        { clave: "padre.score.peso_aceleracion", valor: "3", tipo: TipoParametro.FLOAT, descripcion: "Peso de aceleración de reportes en score" },
+        { clave: "padre.score.peso_senal_comunitaria", valor: "4", tipo: TipoParametro.FLOAT, descripcion: "Peso de señal comunitaria en score" },
+        { clave: "padre.score.umbral_amarillo", valor: "20", tipo: TipoParametro.INTEGER, descripcion: "Score mínimo para gravedad AMARILLO" },
+        { clave: "padre.score.umbral_rojo", valor: "50", tipo: TipoParametro.INTEGER, descripcion: "Score mínimo para gravedad ROJO" },
+        { clave: "padre.categorias_graves_json", valor: '["GROOMING","SEXTORSION","EXTORSION","DIFUSION_NO_CONSENTIDA","SOLICITUD_ENCUENTRO","COMPARTIMIENTO_SEXUAL"]', tipo: TipoParametro.STRING, descripcion: "JSON array de códigos de categorías graves" },
+        { clave: "padre.patron.aceleracion_ratio_minimo", valor: "2.0", tipo: TipoParametro.FLOAT, descripcion: "Ratio mínimo de aceleración para detectar patrón" },
+        { clave: "padre.patron.senal_comunitaria_perpetrador_serial", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Reportes que señalan posible perpetrador serial" },
+        { clave: "padre.patron.multiplataforma_min", valor: "2", tipo: TipoParametro.INTEGER, descripcion: "Mínimo de plataformas distintas para patrón multiplataforma" },
+        { clave: "padre.guia.umbral_confianza_categoria_minimo", valor: "0.4", tipo: TipoParametro.FLOAT, descripcion: "Confianza mínima de clasificación para mostrar categoría" },
+    ];
+
+    for (const p of parametrosPadre) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {
+                valor: p.valor,
+                tipo: p.tipo,
+                descripcion: p.descripcion,
+            },
+            create: {
+                clave: p.clave,
+                valor: p.valor,
+                tipo: p.tipo,
+                categoria: CategoriaParametro.SYSTEM,
+                esPublico: false,
+                descripcion: p.descripcion,
+            },
+        });
+    }
+    console.log("Parámetros padre (SPEC-230) listos");
+}
+
 async function main() {
     // Admin inicial: SOLO desde variable de entorno, SOLO si no existe (spec 105, I-31).
     // Nunca un literal en el repo; el seed nunca pisa una credencial ya rotada.
@@ -1532,6 +1577,9 @@ async function main() {
     const { modulosCatalogo, permisosCreados } = await syncModulosYGrants(prisma);
 
     console.log(`Permisos de módulos: ${modulosCatalogo} módulos en catálogo, ${permisosCreados} permisos backfill`);
+
+    // ── Parámetros del módulo Padre (SPEC-230) ─────────────────────────────
+    await seedParametrosPadre();
 
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
