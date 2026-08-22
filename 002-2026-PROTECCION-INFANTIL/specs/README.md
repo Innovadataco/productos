@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **158** |
+| **Total de specs** | **160** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **50** |
-| **Pendientes (PLANEADO)** | **8** |
+| **Pendientes (PLANEADO)** | **10** |
 ## Backlog activo (no cerradas)
 
 | Nº | Nombre | Estado |
@@ -319,6 +319,8 @@
 | [199](199-parche-motor-spam/spec.md) | SPEC-199 — Parche motor SPAM (002-PI-093) | 🔵 Planeado |
 | [205](205-usuarios-vista-consolidada/spec.md) | SPEC-205 — Usuarios · Vista consolidada por rol (002-PI-102) | 🟢 Implementado |
 | [210](210-modelos-base-pagos/spec.md) | SPEC-210 · Modelos base Pagos (002-PI-110) | 🔵 Planeado |
+| [212](212-panel-admin-pagos/spec.md) | SPEC-212 · Panel admin Pagos (002-PI-112) | 🔵 Planeado |
+| [214](214-multi-moneda-pagos/spec.md) | SPEC-214 · Multi-moneda + API tasas (002-PI-114) | 🔵 Planeado |
 
 ## Incidencias de calidad de datos
 
