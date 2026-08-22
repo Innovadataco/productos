@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-21** (SPEC-185, SPEC-186, SPEC-187, SPEC-189 y SPEC-194 implementadas; SPEC-193 planeada; ver cierre.md en `specs/185-simulador-historial/`, `specs/186-smoke-inteligente-ollama/`, `specs/187-override-modelo-smoke-ollama/`, `specs/194-analitica-colegios/`, `specs/189-vista-operador-metricas/spec.md` y `specs/193-panel-logs-mantenimiento-reasignar/`).
+> Última actualización: **2026-08-22** (SPEC-205 planeada; SPEC-185, SPEC-186, SPEC-187, SPEC-189 y SPEC-194 implementadas; SPEC-193 planeada; ver `specs/205-usuarios-vista-consolidada/` y cierre.md en `specs/185-simulador-historial/`, `specs/186-smoke-inteligente-ollama/`, `specs/187-override-modelo-smoke-ollama/`, `specs/194-analitica-colegios/`, `specs/189-vista-operador-metricas/spec.md` y `specs/193-panel-logs-mantenimiento-reasignar/`).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **157** |
+| **Total de specs** | **158** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **50** |
-| **Pendientes (PLANEADO)** | **7** |
+| **Pendientes (PLANEADO)** | **8** |
 ## Backlog activo (no cerradas)
 
 | Nº | Nombre | Estado |
@@ -133,8 +133,9 @@
 | [195](195-motor-spam-aprendizaje-operativo/spec.md) | SPEC-195 — Motor SPAM + Aprendizaje operativo (002-PI-089) | 🔵 Planeado |
 | [196](196-parche-ui-anti-abuso/spec.md) | SPEC-196 — Parche UI Anti-abuso (002-PI-090) | 🟢 Implementada |
 | [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🟢 Implementada |
+| [205](205-usuarios-vista-consolidada/spec.md) | SPEC-205 — Usuarios · Vista consolidada por rol (002-PI-102) | 🔵 Planeado |
 
-## Tabla completa (125 specs)
+## Tabla completa (126 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -316,6 +317,7 @@
 | [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🟢 Implementada |
 | [197](197-fixes-operadores-usuarios/spec.md) | SPEC-197 — Fixes operadores + usuarios (002-PI-094) | 🟢 Implementada |
 | [199](199-parche-motor-spam/spec.md) | SPEC-199 — Parche motor SPAM (002-PI-093) | 🔵 Planeado |
+| [205](205-usuarios-vista-consolidada/spec.md) | SPEC-205 — Usuarios · Vista consolidada por rol (002-PI-102) | 🔵 Planeado |
 
 ## Incidencias de calidad de datos
 
