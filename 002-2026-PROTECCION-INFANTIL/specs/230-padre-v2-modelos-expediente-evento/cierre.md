@@ -11,7 +11,7 @@
 - `252f7eed` — Agrega modelos Expediente y EventoExpediente con migración aditiva.
 - `413bee61` — Agrega seed idempotente de 18 parámetros padre.*.
 - `dc33e38d` — feat(002-PI-130): repository ExpedienteRepository con TX atómica y tests.
-- `ed8fb148` — docs(002-PI-130): implementación en spec.md, cierre.md y línea base de arquitectura.
+- `2edcc51c` — docs(002-PI-130): implementación en spec.md, cierre.md y línea base de arquitectura.
 
 ---
 
