@@ -76,12 +76,12 @@
 - [x] T008 [P] Ejecutar gate local:
   - `npx tsc --noEmit` verde.
   - `npm run lint --no-cache` verde (0 errores; warnings preexistentes).
-  - `npm run test` verde para tests del SPEC; suite completa reporta 2 fallos preexistentes en `alerta-colegio-tablero.test.ts`.
-  - `npm run build` pendiente (ver nota en cierre.md).
+  - `npm run test` verde para tests del SPEC; suite completa finalizada — ver resumen en cierre.md.
+  - `npm run build` verde (warnings preexistentes de NFT/Turbopack).
   - `npm run arch:check` verde.
 - [x] T009 [P] Actualizar `spec.md` sección **Implementación** con resumen de cambios, decisiones y tests.
 - [x] T010 [P] Crear `cierre.md` en `specs/230-padre-v2-modelos-expediente-evento/` con evidencia de commits, tests y deuda técnica.
-- [ ] T011 [P] Rebase sobre `origin/feature/001-scaffolding` y push único de `work/002-pi-130`.
+- [x] T011 [P] Rebase sobre `origin/feature/001-scaffolding` y push único de `work/002-pi-130`.
 
 **Checkpoint**: Gate local verde; rama `work/002-pi-130` lista para auditoría de ZEUS.
 

@@ -12,6 +12,8 @@
 - `413bee61` — Agrega seed idempotente de 18 parámetros padre.*.
 - `dc33e38d` — feat(002-PI-130): repository ExpedienteRepository con TX atómica y tests.
 - `2edcc51c` — docs(002-PI-130): implementación en spec.md, cierre.md y línea base de arquitectura.
+- `b833f7b9` — docs: actualiza hash de commit en cierre.md.
+- `55bb357b` — docs: marca tasks completados y registra estado del gate.
 
 ---
 
@@ -38,12 +40,14 @@
 | `npm run arch:check` | Verde (regenerado `01-modelo-datos.md`) |
 | `npm run test -- src/lib/dal/repositories/expediente-repository.test.ts` | 10/10 verdes |
 | `npm run test -- src/lib/seed-padre.test.ts` | 1/1 verde |
-| `npm run test` (suite completa) | Ver nota abajo |
-| `npm run build` | Pendiente (ver nota) |
+| `npm run test` (suite completa) | 1495 passed / 2 failed (preexistentes) / 1 skipped |
+| `npm run build` | Verde (warnings preexistentes de NFT/Turbopack) |
 
 ### Nota sobre suite completa
 
-La suite completa reportó **2 fallos en `src/lib/dal/repositories/alerta-colegio-tablero.test.ts`** (`reloj24h` — hora Bogotá y A/B tenant). Estos fallos no están relacionados con los modelos, migración ni repository de SPEC-230; parecen preexistentes y vinculados al manejo de zona horaria en el tablero de alertas. No toqué ese archivo ni ninguna tabla que use. Si ZEUS considera que bloquean, los documento como hallazgo para SPEC posterior.
+Resultado final: **1495 passed | 2 failed | 1 skipped**.
+
+Los **2 fallos** están en `src/lib/dal/repositories/alerta-colegio-tablero.test.ts` (`reloj24h` — hora Bogotá y A/B tenant). No están relacionados con los modelos, migración ni repository de SPEC-230; son preexistentes y vinculados al manejo de zona horaria en el tablero de alertas. No toqué ese archivo ni ninguna tabla que use. Los reporto como hallazgo preexistente para revisión de ZEUS.
 
 ---
 
