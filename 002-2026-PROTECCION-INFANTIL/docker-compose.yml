@@ -17,5 +17,27 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pi-app-dev
+    env_file: .env
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      TZ: "America/Bogota"
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
+      - pi_apelaciones_storage:/app/storage
+    ports:
+      - "5005:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  pi_worker_run:
+  pi_apelaciones_storage:
