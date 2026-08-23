@@ -79,6 +79,7 @@ async function seedParametrosPadre() {
         });
     }
     console.log("Parámetros padre (SPEC-230) listos");
+}
 // SPEC-210 (002-PI-110): seed de planes base del módulo de pagos.
 // EXCEPCIÓN DOCUMENTADA: los planes son estructurales del motor de pagos.
 // Cuando cambia el catálogo, duración o año base, el seed debe propagar el
