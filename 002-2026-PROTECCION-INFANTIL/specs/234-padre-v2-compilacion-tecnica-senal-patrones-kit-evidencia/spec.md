@@ -6,7 +6,9 @@
 
 **Status**: `IMPLEMENTADO`
 
-**Impacto en arquitectura**: añade los modelos `InformeConsolidado`, `SenalComunitariaCache` y `PatronExpediente`; el servicio de compilación `src/lib/expediente/compilacion/`; el kit de evidencia PDF `src/lib/expediente/pdf/`; el endpoint público `GET /api/publico/verificar-pdf/[hash]`; el worker `pi-senal-comunitaria`; tres repositorios DAL; y tests unitarios/integración. No toca el motor IA ni implementa UI de padre/comité.
+## Impacto en arquitectura:
+
+Añade los modelos `InformeConsolidado`, `SenalComunitariaCache` y `PatronExpediente`; el servicio de compilación `src/lib/expediente/compilacion/`; el kit de evidencia PDF `src/lib/expediente/pdf/`; el endpoint público `GET /api/publico/verificar-pdf/[hash]`; el worker `pi-senal-comunitaria`; tres repositorios DAL; y tests unitarios/integración. No toca el motor IA ni implementa UI de padre/comité.
 
 **Input**: SPEC-230 dejó los modelos base `Expediente` / `EventoExpediente` y los parámetros `padre.score.*` / `padre.patron.*`. Esta SPEC construye la **capa de compilación técnica** que transforma los eventos de un expediente en un informe consolidado con score, patrones N1, señal comunitaria y un PDF verificable N2, respetando la frontera DAL (Q-3) y la Ley 1581.
 
