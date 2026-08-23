@@ -55,10 +55,10 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
                                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                                     active
                                         ? isPagos
-                                            ? "bg-amber-500 text-white shadow-lg shadow-amber-500/25 dark:bg-amber-600 dark:shadow-amber-500/20"
+                                            ? "bg-ambar text-white shadow-lg shadow-ambar/25 dark:bg-ambar dark:shadow-ambar/20"
                                             : "accent-gradient text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20"
                                         : isPagos
-                                            ? "text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30 hover:text-amber-700"
+                                            ? "text-ambar hover:bg-ambar/10 dark:text-ambar dark:hover:bg-ambar/20 hover:text-ambar"
                                             : "text-muted hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-body"
                                 }`}
                             >

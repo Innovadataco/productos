@@ -26,18 +26,18 @@ export default async function PagosLayout({ children }: { children: React.ReactN
                     <h1 className="text-2xl font-bold text-body">Pagos</h1>
                     <p className="text-sm text-muted">Gestión de pagos, suscripciones, bonos y reembolsos.</p>
                 </div>
-                <span className="self-start rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+                <span className="self-start rounded-full bg-ambar/10 px-3 py-1 text-xs font-medium text-estado-ambar dark:bg-ambar/20 dark:text-ambar">
                     Admin
                 </span>
             </div>
 
-            <div className="border-b border-slate-200 dark:border-slate-700">
+            <div className="border-b border-tinta/10 dark:border-tinta/20">
                 <nav className="-mb-px flex gap-6 overflow-x-auto" aria-label="Tabs pagos">
                     {TABS.map((tab) => (
                         <Link
                             key={tab.href}
                             href={tab.href}
-                            className="inline-flex shrink-0 items-center border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted transition hover:border-amber-300 hover:text-amber-600 dark:hover:border-amber-700 dark:hover:text-amber-400"
+                            className="inline-flex shrink-0 items-center border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted transition hover:border-ambar/30 hover:text-ambar dark:hover:border-ambar/50 dark:hover:text-ambar"
                         >
                             {tab.label}
                         </Link>

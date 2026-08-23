@@ -8,7 +8,7 @@ export default async function AnaliticaPage() {
     await assertModulo(admin, "pagos_admin");
 
     return (
-        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700">
+        <div className="rounded-xl border-dashed border-tinta/15 p-8 text-center dark:border-tinta/20">
             <h2 className="text-lg font-semibold text-body">Analítica de pagos</h2>
             <p className="mt-2 text-muted">Disponible en SPEC-218.</p>
         </div>

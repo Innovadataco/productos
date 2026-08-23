@@ -41,9 +41,9 @@ export default async function PendientesPage({ searchParams }: PageProps) {
                 <span className="text-sm text-muted">{total} registro(s)</span>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="overflow-x-auto rounded-xl border border-tinta/10 dark:border-tinta/20">
                 <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-800/60">
+                    <thead className="bg-tinta/5 dark:bg-tinta/10">
                         <tr>
                             <th className="px-4 py-3 text-left font-medium text-muted">Cliente</th>
                             <th className="px-4 py-3 text-left font-medium text-muted">Monto neto USD</th>
@@ -53,11 +53,11 @@ export default async function PendientesPage({ searchParams }: PageProps) {
                             <th className="px-4 py-3 text-left font-medium text-muted">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                    <tbody className="divide-y divide-tinta/10 dark:divide-tinta/20">
                         {items.map((pago) => {
                             const cliente = clienteNombre(pago);
                             return (
-                                <tr key={pago.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                <tr key={pago.id} className="hover:bg-tinta/5 dark:hover:bg-tinta/10">
                                     <td className="px-4 py-3">
                                         <div className="font-medium text-body">{cliente.nombre}</div>
                                         <div className="text-xs text-muted">{cliente.tipo} · {cliente.email}</div>
@@ -70,7 +70,7 @@ export default async function PendientesPage({ searchParams }: PageProps) {
                                         <div className="flex gap-2">
                                             <Link
                                                 href={`/dashboard/admin/pagos/cliente/${pago.suscripcionId}`}
-                                                className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium text-body hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                                className="rounded-lg bg-tinta/10 px-3 py-1 text-xs font-medium text-body hover:bg-tinta/20 dark:bg-tinta/15 dark:hover:bg-tinta/25"
                                             >
                                                 Ver cliente
                                             </Link>
@@ -97,7 +97,7 @@ export default async function PendientesPage({ searchParams }: PageProps) {
                         {page > 1 && (
                             <Link
                                 href={`/dashboard/admin/pagos/pendientes?page=${page - 1}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                                className="rounded-lg border border-slate-200 px-3 py-1 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                className="rounded-lg border border-tinta/10 px-3 py-1 hover:bg-tinta/5 dark:border-tinta/20 dark:hover:bg-tinta/15"
                             >
                                 Anterior
                             </Link>
@@ -105,7 +105,7 @@ export default async function PendientesPage({ searchParams }: PageProps) {
                         {page < totalPages && (
                             <Link
                                 href={`/dashboard/admin/pagos/pendientes?page=${page + 1}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                                className="rounded-lg border border-slate-200 px-3 py-1 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                className="rounded-lg border border-tinta/10 px-3 py-1 hover:bg-tinta/5 dark:border-tinta/20 dark:hover:bg-tinta/15"
                             >
                                 Siguiente
                             </Link>

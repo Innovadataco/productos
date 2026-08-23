@@ -52,9 +52,9 @@ export default async function ReembolsosPage({ searchParams }: PageProps) {
                 <span className="text-sm text-muted">{total} registro(s)</span>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="overflow-x-auto rounded-xl border border-tinta/10 dark:border-tinta/20">
                 <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-800/60">
+                    <thead className="bg-tinta/5 dark:bg-tinta/10">
                         <tr>
                             <th className="px-4 py-3 text-left font-medium text-muted">Titular</th>
                             <th className="px-4 py-3 text-left font-medium text-muted">Monto reembolsado USD</th>
@@ -63,9 +63,9 @@ export default async function ReembolsosPage({ searchParams }: PageProps) {
                             <th className="px-4 py-3 text-left font-medium text-muted">Fecha</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                    <tbody className="divide-y divide-tinta/10 dark:divide-tinta/20">
                         {items.map((pago) => (
-                            <tr key={pago.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                            <tr key={pago.id} className="hover:bg-tinta/5 dark:hover:bg-tinta/10">
                                 <td className="px-4 py-3">
                                     <div className="font-medium text-body">{titularNombre(pago as never)}</div>
                                 </td>
@@ -93,7 +93,7 @@ export default async function ReembolsosPage({ searchParams }: PageProps) {
                         {page > 1 && (
                             <Link
                                 href={`/dashboard/admin/pagos/reembolsos?page=${page - 1}`}
-                                className="rounded-lg border border-slate-200 px-3 py-1 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                className="rounded-lg border border-tinta/10 px-3 py-1 hover:bg-tinta/5 dark:border-tinta/20 dark:hover:bg-tinta/15"
                             >
                                 Anterior
                             </Link>
@@ -101,7 +101,7 @@ export default async function ReembolsosPage({ searchParams }: PageProps) {
                         {page < totalPages && (
                             <Link
                                 href={`/dashboard/admin/pagos/reembolsos?page=${page + 1}`}
-                                className="rounded-lg border border-slate-200 px-3 py-1 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                className="rounded-lg border border-tinta/10 px-3 py-1 hover:bg-tinta/5 dark:border-tinta/20 dark:hover:bg-tinta/15"
                             >
                                 Siguiente
                             </Link>

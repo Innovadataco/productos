@@ -34,7 +34,7 @@ export default async function ClientePage({ params }: PageProps) {
                 <span className="text-body">Ficha cliente</span>
             </div>
 
-            <div className="rounded-xl border border-slate-200 p-6 dark:border-slate-700">
+            <div className="rounded-xl border border-tinta/10 p-6 dark:border-tinta/20">
                 <h2 className="text-xl font-bold text-body">{titular.nombre}</h2>
                 <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
                     <div>
@@ -67,9 +67,9 @@ export default async function ClientePage({ params }: PageProps) {
 
             <div>
                 <h3 className="mb-3 text-lg font-semibold text-body">Pagos</h3>
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                <div className="overflow-x-auto rounded-xl border border-tinta/10 dark:border-tinta/20">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-slate-50 dark:bg-slate-800/60">
+                        <thead className="bg-tinta/5 dark:bg-tinta/10">
                             <tr>
                                 <th className="px-4 py-3 text-left font-medium text-muted">Estado</th>
                                 <th className="px-4 py-3 text-left font-medium text-muted">Monto neto USD</th>
@@ -78,9 +78,9 @@ export default async function ClientePage({ params }: PageProps) {
                                 <th className="px-4 py-3 text-left font-medium text-muted">Fecha reporte</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        <tbody className="divide-y divide-tinta/10 dark:divide-tinta/20">
                             {pagos.map((pago) => (
-                                <tr key={pago.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                <tr key={pago.id} className="hover:bg-tinta/5 dark:hover:bg-tinta/10">
                                     <td className="px-4 py-3">{pago.estado}</td>
                                     <td className="px-4 py-3">${pago.montoNetoUSD.toFixed(2)}</td>
                                     <td className="px-4 py-3">
@@ -108,7 +108,7 @@ export default async function ClientePage({ params }: PageProps) {
                     {eventos.slice(0, 10).map((evento) => (
                         <div
                             key={evento.id}
-                            className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700"
+                            className="rounded-lg border border-tinta/10 p-3 text-sm dark:border-tinta/20"
                         >
                             <div className="flex items-center justify-between">
                                 <span className="font-medium text-body">{evento.accion}</span>

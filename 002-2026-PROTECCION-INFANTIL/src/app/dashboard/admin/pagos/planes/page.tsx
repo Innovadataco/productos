@@ -38,9 +38,9 @@ export default async function PlanesPage({ searchParams }: PageProps) {
                 <span className="text-sm text-muted">{total} registro(s)</span>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="overflow-x-auto rounded-xl border border-tinta/10 dark:border-tinta/20">
                 <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-800/60">
+                    <thead className="bg-tinta/5 dark:bg-tinta/10">
                         <tr>
                             <th className="px-4 py-3 text-left font-medium text-muted">Nombre</th>
                             <th className="px-4 py-3 text-left font-medium text-muted">Titular</th>
@@ -50,9 +50,9 @@ export default async function PlanesPage({ searchParams }: PageProps) {
                             <th className="px-4 py-3 text-left font-medium text-muted">Descuento anual %</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                    <tbody className="divide-y divide-tinta/10 dark:divide-tinta/20">
                         {items.map((p) => (
-                            <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                            <tr key={p.id} className="hover:bg-tinta/5 dark:hover:bg-tinta/10">
                                 <td className="px-4 py-3 font-medium text-body">{p.nombre}</td>
                                 <td className="px-4 py-3">{p.tipoTitular}</td>
                                 <td className="px-4 py-3">{p.duracion}</td>
@@ -79,7 +79,7 @@ export default async function PlanesPage({ searchParams }: PageProps) {
                         {page > 1 && (
                             <a
                                 href={`/dashboard/admin/pagos/planes?page=${page - 1}`}
-                                className="rounded-lg border border-slate-200 px-3 py-1 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                className="rounded-lg border border-tinta/10 px-3 py-1 hover:bg-tinta/5 dark:border-tinta/20 dark:hover:bg-tinta/15"
                             >
                                 Anterior
                             </a>
@@ -87,7 +87,7 @@ export default async function PlanesPage({ searchParams }: PageProps) {
                         {page < totalPages && (
                             <a
                                 href={`/dashboard/admin/pagos/planes?page=${page + 1}`}
-                                className="rounded-lg border border-slate-200 px-3 py-1 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                className="rounded-lg border border-tinta/10 px-3 py-1 hover:bg-tinta/5 dark:border-tinta/20 dark:hover:bg-tinta/15"
                             >
                                 Siguiente
                             </a>
