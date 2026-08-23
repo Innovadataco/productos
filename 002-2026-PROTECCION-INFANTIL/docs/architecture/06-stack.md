@@ -105,5 +105,6 @@ Comando por defecto: `["node", "server.js"]`.
 | app | `pi-app:${PI_APP_TAG:-latest}` (+ build local) | `pi-app` | — |
 | db | `pgvector/pgvector:pg16` | `pi-db` | — |
 | monitor | `pi-app:${PI_APP_TAG:-latest}` | `pi-monitor` | — |
+| pi-senal-comunitaria | `pi-app:${PI_APP_TAG:-latest}` | `pi-senal-comunitaria` | — |
 | simulador-abuso | `pi-app:${PI_APP_TAG:-latest}` | `pi-simulador-abuso` | — |
 | worker | `pi-app:${PI_APP_TAG:-latest}` | `pi-worker` | — |

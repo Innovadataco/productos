@@ -80,6 +80,30 @@ async function seedParametrosPadre() {
     }
     console.log("Parámetros padre (SPEC-230) listos");
 }
+
+// SPEC-234 (002-PI-134): parámetro de frecuencia de refresco de la caché de
+// señal comunitaria. Idempotente anti-I-100: un cambio de default en código se
+// propaga a la base de datos.
+async function seedParametrosSenalComunitaria() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "padre.senal_comunitaria.refresh_min" },
+        update: {
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            descripcion: "Minutos entre refrescos de la caché de señal comunitaria por parte del worker",
+        },
+        create: {
+            clave: "padre.senal_comunitaria.refresh_min",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Minutos entre refrescos de la caché de señal comunitaria por parte del worker",
+        },
+    });
+    console.log("Parámetro padre.senal_comunitaria.refresh_min (SPEC-234) listo");
+}
+
 // SPEC-210 (002-PI-110): seed de planes base del módulo de pagos.
 // EXCEPCIÓN DOCUMENTADA: los planes son estructurales del motor de pagos.
 // Cuando cambia el catálogo, duración o año base, el seed debe propagar el
@@ -1683,13 +1707,16 @@ async function main() {
     // ── Parámetros del módulo Padre (SPEC-230) ─────────────────────────────
     await seedParametrosPadre();
 
+    // ── Parámetros de señal comunitaria (SPEC-234) ─────────────────────────
+    await seedParametrosSenalComunitaria();
+
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
     await prisma.$disconnect();
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria };
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como

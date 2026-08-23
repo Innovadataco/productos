@@ -111,7 +111,27 @@ services:
       app:
         condition: service_started
 
+  # SPEC-234 (002-PI-134): refresco periódico de la caché de señal comunitaria.
+  # Advisory lock propio; una sola instancia activa. Solo lectura de /data/informes
+  # (montado por consistencia; no genera PDFs).
+  pi-senal-comunitaria:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-senal-comunitaria
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-senal-comunitaria.mjs
+    environment:
+      TZ: America/Bogota
+    volumes:
+      - pi_informes_storage:/data/informes:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
 volumes:
   pi_postgres_data:
   pi_worker_run:
   pi_apelaciones_storage:
+  pi_informes_storage:

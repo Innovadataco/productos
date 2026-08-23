@@ -146,6 +146,9 @@ enum AccionAudit {
   MATCH_DETECTADO
   CONSULTA_SIN_RESULTADOS
   CONSULTA_VACIA_CTA_REPORTAR
+  // SPEC-234 (002-PI-134): auditoría de compilación de informes y generación de PDFs.
+  INFORME_CONSOLIDADO_CREADO
+  PDF_GENERADO
   // SPEC-145: CRUD de profesores del colegio.
   COLEGIO_PROFESOR_CREADO
   COLEGIO_PROFESOR_EDITADO
@@ -391,6 +394,14 @@ enum TipoRevisionComite {
   CONSOLIDACION_EXPEDIENTE
 }
 
+// SPEC-234 (002-PI-134): tipos de patrón N1 detectados en la compilación de expedientes.
+enum TipoPatronExpediente {
+  ACELERACION
+  PROGRESION
+  PERPETRADOR_SERIAL
+  MULTIPLATAFORMA
+}
+
 model Usuario {
   id                  String        @id @default(cuid())
   email               String        @unique
@@ -456,6 +467,8 @@ model Usuario {
   expedientes                  Expediente[]
   // SPEC-206 (002-PI-120): sesiones activas del usuario.
   sesionesLog                  SesionLog[]
+  // SPEC-234 (002-PI-134): informes consolidados generados por el usuario/worker.
+  informesConsolidados         InformeConsolidado[]
   // SPEC-210 (002-PI-110): módulo de pagos.
   suscripciones                Suscripcion[]
   planesCreados                Plan[]                     @relation("PlanesCreados")
@@ -2060,28 +2073,31 @@ model DerivaMotorSnapshot {
 // SPEC-230 (002-PI-130): expediente que agrupa eventos sobre un identificador
 // reportado, visto/desde la perspectiva del padre/tutor.
 model Expediente {
-  id                            String            @id @default(cuid())
-  padreUsuarioId                String
-  identificadorReportado        String
-  plataformaId                  String?
-  fechaApertura                 DateTime          @db.Timestamptz(6)
-  fechaCierre                   DateTime?         @db.Timestamptz(6)
-  fechaEscalado                 DateTime?         @db.Timestamptz(6)
-  estado                        EstadoExpediente
-  scoreGravedadActual           ScoreGravedad     @default(VERDE)
-  categoriasDominantesJson      Json?
-  numEventos                    Int               @default(0)
-  ultimoEventoEn                DateTime?         @db.Timestamptz(6)
-  autoCerradoPorInactividad     Boolean           @default(false)
+  id                              String           @id @default(cuid())
+  padreUsuarioId                  String
+  identificadorReportado          String
+  plataformaId                    String?
+  fechaApertura                   DateTime         @db.Timestamptz(6)
+  fechaCierre                     DateTime?        @db.Timestamptz(6)
+  fechaEscalado                   DateTime?        @db.Timestamptz(6)
+  estado                          EstadoExpediente
+  scoreGravedadActual             ScoreGravedad    @default(VERDE)
+  categoriasDominantesJson        Json?
+  numEventos                      Int              @default(0)
+  ultimoEventoEn                  DateTime?        @db.Timestamptz(6)
+  autoCerradoPorInactividad       Boolean          @default(false)
   expedienteRelacionadoAnteriorId String?
-  patronesDetectadosJson        Json?
-  createdAt                     DateTime          @default(now()) @db.Timestamptz(6)
-  updatedAt                     DateTime          @updatedAt @db.Timestamptz(6)
+  patronesDetectadosJson          Json?
+  createdAt                       DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt                       DateTime         @updatedAt @db.Timestamptz(6)
 
-  padre        Usuario?     @relation(fields: [padreUsuarioId], references: [id])
-  eventos      EventoExpediente[]
-  expedienteAnterior Expediente? @relation("ExpedienteRelacionado", fields: [expedienteRelacionadoAnteriorId], references: [id])
-  expedientesPosteriores Expediente[] @relation("ExpedienteRelacionado")
+  padre                  Usuario?             @relation(fields: [padreUsuarioId], references: [id])
+  eventos                EventoExpediente[]
+  // SPEC-234 (002-PI-134): informes consolidados y patrones N1 del expediente.
+  informes               InformeConsolidado[]
+  patrones               PatronExpediente[]
+  expedienteAnterior     Expediente?          @relation("ExpedienteRelacionado", fields: [expedienteRelacionadoAnteriorId], references: [id])
+  expedientesPosteriores Expediente[]         @relation("ExpedienteRelacionado")
 
   @@index([padreUsuarioId, estado])
   @@index([identificadorReportado])
@@ -2090,21 +2106,94 @@ model Expediente {
 
 // SPEC-230 (002-PI-130): evento dentro de un expediente padre.
 model EventoExpediente {
-  id                      String    @id @default(cuid())
-  expedienteId            String
-  ordenSecuencial         Int
-  reporteId               String?
-  fechaEvento             DateTime  @db.Timestamptz(6)
-  texto                   String    @db.Text
-  categoriaDetectada      String?
-  confianzaClasificacion  Float?
-  plataforma              String?
-  adjuntosMetaJson        Json?
-  createdAt               DateTime  @default(now()) @db.Timestamptz(6)
+  id                     String   @id @default(cuid())
+  expedienteId           String
+  ordenSecuencial        Int
+  reporteId              String?
+  fechaEvento            DateTime @db.Timestamptz(6)
+  texto                  String   @db.Text
+  categoriaDetectada     String?
+  confianzaClasificacion Float?
+  plataforma             String?
+  adjuntosMetaJson       Json?
+  createdAt              DateTime @default(now()) @db.Timestamptz(6)
 
   expediente Expediente @relation(fields: [expedienteId], references: [id])
-  reporte    Reporte?  @relation(fields: [reporteId], references: [id])
+  reporte    Reporte?   @relation(fields: [reporteId], references: [id])
 
   @@unique([expedienteId, ordenSecuencial])
   @@index([expedienteId, fechaEvento(sort: Desc)])
+}
+
+// SPEC-234 (002-PI-134): informe consolidado de un expediente padre. Resultado
+// inmutable de la compilación; cada versión conserva el estado del expediente en
+// un momento dado. NUNCA incluye texto original de reportes.
+model InformeConsolidado {
+  id                             String             @id @default(cuid())
+  expedienteId                   String
+  versionSecuencial              Int
+  scoreValor                     Float
+  scoreGravedad                  ScoreGravedad
+  categoriasDetectadasJson       Json
+  patronesDetectadosJson         Json?
+  senalComunitariaJson           Json?
+  resumenTextoGenerado           String             @db.Text
+  pdfUrl                         String?
+  pdfHash                        String?            @unique
+  pdfGeneradoEn                  DateTime?          @db.Timestamptz(6)
+  generadoPorId                  String?
+  tipoRevision                   TipoRevisionComite @default(CONSOLIDACION_EXPEDIENTE)
+  guiaAccionCategoriaIdPrincipal String?
+  estadoAprobacion               String             @default("PENDIENTE_COMITE")
+  aprobadoPorMiembrosJson        Json?
+  correccionesJson               Json?
+  nivelConfianza                 Float?
+  createdAt                      DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt                      DateTime           @updatedAt @db.Timestamptz(6)
+
+  expediente  Expediente @relation(fields: [expedienteId], references: [id])
+  generadoPor Usuario?   @relation(fields: [generadoPorId], references: [id])
+
+  @@unique([expedienteId, versionSecuencial])
+  @@index([expedienteId, createdAt(sort: Desc)])
+  @@map("informes_consolidados")
+}
+
+// SPEC-234 (002-PI-134): caché de agregados comunitarios por identificador reportado.
+// Solo conteos agregados; nunca textos, nombres ni datos re-identificables.
+model SenalComunitariaCache {
+  identificadorReportado    String   @id
+  totalExpedientesActivos   Int      @default(0)
+  totalExpedientesCerrados  Int      @default(0)
+  totalExpedientesEscalados Int      @default(0)
+  categoriasFrecuenciaJson  Json
+  primeraAparicionEn        DateTime @db.Timestamptz(6)
+  ultimaAparicionEn         DateTime @db.Timestamptz(6)
+  paisesJson                Json
+  ciudadesJson              Json
+  plataformasJson           Json
+  invalidado                Boolean  @default(false)
+  actualizadoEn             DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([ultimaAparicionEn(sort: Desc)])
+  @@map("senal_comunitaria_cache")
+}
+
+// SPEC-234 (002-PI-134): patrón N1 detectado dentro de un expediente padre.
+model PatronExpediente {
+  id                String               @id @default(cuid())
+  expedienteId      String
+  tipoPatron        TipoPatronExpediente
+  severidad         String // "BAJA" | "MEDIA" | "ALTA"
+  nivelConfianza    Float
+  descripcionTexto  String               @db.Text
+  datosContextoJson Json
+  detectadoEn       DateTime             @db.Timestamptz(6)
+  createdAt         DateTime             @default(now()) @db.Timestamptz(6)
+
+  expediente Expediente @relation(fields: [expedienteId], references: [id])
+
+  @@index([expedienteId, severidad])
+  @@index([expedienteId, tipoPatron])
+  @@map("patrones_expediente")
 }

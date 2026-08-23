@@ -8,6 +8,7 @@
         "IncidenteInfra",
         "Plan",
         "RateLimit",
+        "SenalComunitariaCache",
         "Subscription",
         "WorkerLog"
     ]

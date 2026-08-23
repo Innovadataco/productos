@@ -319,6 +319,7 @@
 | [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🟢 Implementada |
 | [197](197-fixes-operadores-usuarios/spec.md) | SPEC-197 — Fixes operadores + usuarios (002-PI-094) | 🟢 Implementada |
 | [199](199-parche-motor-spam/spec.md) | SPEC-199 — Parche motor SPAM (002-PI-093) | 🔵 Planeado |
+| [234](234-padre-v2-compilacion-tecnica-senal-patrones-kit-evidencia/spec.md) | SPEC-234 — Padre v2 · Compilación técnica + Señal + Patrones N1 + Kit evidencia (002-PI-134) | 🔵 Planeado |
 | [205](205-usuarios-vista-consolidada/spec.md) | SPEC-205 — Usuarios · Vista consolidada por rol (002-PI-102) | 🟢 Implementado |
 | [206](206-infra-session-log/spec.md) | SPEC-206 — Infra · Session Log (002-PI-120) | 🟢 Implementada |
 | [230](230-padre-v2-modelos-expediente-evento/spec.md) | SPEC-230 — Padre v2 · Modelos Expediente + Evento (002-PI-130) | 🔵 Planeado |
