@@ -13,8 +13,8 @@
 | **Total de specs** | **163** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
-| **Implementadas (IMPLEMENTADO)** | **50** |
-| **Pendientes (PLANEADO)** | **13** |
+| **Implementadas (IMPLEMENTADO)** | **53** |
+| **Pendientes (PLANEADO)** | **10** |
 ## Backlog activo (no cerradas)
 
 | Nº | Nombre | Estado |
@@ -135,9 +135,9 @@
 | [194](194-analitica-colegios/spec.md) | SPEC-194 — Analítica de Colegios + Vista Usuarios PARENT (002-PI-088) | 🟢 Implementada |
 | [205](205-usuarios-vista-consolidada/spec.md) | SPEC-205 — Usuarios · Vista consolidada por rol (002-PI-102) | 🟢 Implementado |
 | [206](206-infra-session-log/spec.md) | SPEC-206 — Infra · Session Log (002-PI-120) | 🟢 Implementada |
-| [207](207-parche-motor-spam-dominancia/spec.md) | SPEC-207 — Parche motor SPAM dominancia (002-PI-140) | 🔵 Planeado |
-| [208](208-fechacorta-central/spec.md) | SPEC-208 — fechaCorta helper central (002-PI-141) | 🔵 Planeado |
-| [209](209-log-modal-contraste/spec.md) | SPEC-209 — LogContextoModal contraste (002-PI-142) | 🔵 Planeado |
+| [207](207-parche-motor-spam-dominancia/spec.md) | SPEC-207 — Parche motor SPAM dominancia (002-PI-140) | 🟢 Implementada |
+| [208](208-fechacorta-central/spec.md) | SPEC-208 — fechaCorta helper central (002-PI-141) | 🟢 Implementada |
+| [209](209-log-modal-contraste/spec.md) | SPEC-209 — LogContextoModal contraste (002-PI-142) | 🟢 Implementada |
 
 ## Tabla completa (130 specs)
 
@@ -323,9 +323,9 @@
 | [199](199-parche-motor-spam/spec.md) | SPEC-199 — Parche motor SPAM (002-PI-093) | 🔵 Planeado |
 | [205](205-usuarios-vista-consolidada/spec.md) | SPEC-205 — Usuarios · Vista consolidada por rol (002-PI-102) | 🟢 Implementado |
 | [206](206-infra-session-log/spec.md) | SPEC-206 — Infra · Session Log (002-PI-120) | 🟢 Implementada |
-| [207](207-parche-motor-spam-dominancia/spec.md) | SPEC-207 — Parche motor SPAM dominancia (002-PI-140) | 🔵 Planeado |
-| [208](208-fechacorta-central/spec.md) | SPEC-208 — fechaCorta helper central (002-PI-141) | 🔵 Planeado |
-| [209](209-log-modal-contraste/spec.md) | SPEC-209 — LogContextoModal contraste (002-PI-142) | 🔵 Planeado |
+| [207](207-parche-motor-spam-dominancia/spec.md) | SPEC-207 — Parche motor SPAM dominancia (002-PI-140) | 🟢 Implementada |
+| [208](208-fechacorta-central/spec.md) | SPEC-208 — fechaCorta helper central (002-PI-141) | 🟢 Implementada |
+| [209](209-log-modal-contraste/spec.md) | SPEC-209 — LogContextoModal contraste (002-PI-142) | 🟢 Implementada |
 | [230](230-padre-v2-modelos-expediente-evento/spec.md) | SPEC-230 — Padre v2 · Modelos Expediente + Evento (002-PI-130) | 🔵 Planeado |
 | [210](210-modelos-base-pagos/spec.md) | SPEC-210 · Modelos base Pagos (002-PI-110) | 🔵 Planeado |
 | [212](212-panel-admin-pagos/spec.md) | SPEC-212 · Panel admin Pagos (002-PI-112) | 🔵 Planeado |
