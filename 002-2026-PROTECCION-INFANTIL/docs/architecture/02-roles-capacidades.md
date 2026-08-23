@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 294 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2058 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 318 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2226 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -103,6 +103,21 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
+| `/api/admin/pagos/bonos` | api | permitir | permite | sí |
+| `/api/admin/pagos/bonos/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/bonos/[id]/desactivar` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
+| `/api/admin/pagos/mora` | api | permitir | permite | sí |
+| `/api/admin/pagos/pendientes` | api | permitir | permite | sí |
+| `/api/admin/pagos/pendientes/[id]/autorizar` | api | permitir | permite | sí |
+| `/api/admin/pagos/pendientes/[id]/rechazar` | api | permitir | permite | sí |
+| `/api/admin/pagos/planes` | api | permitir | permite | sí |
+| `/api/admin/pagos/planes/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/reembolsos` | api | permitir | permite | sí |
+| `/api/admin/pagos/reembolsos/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/tasas` | api | permitir | permite | sí |
+| `/api/admin/pagos/vencimientos` | api | permitir | permite | sí |
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
@@ -273,6 +288,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/operadores/modelo` | página | permitir | permite | sí |
 | `/dashboard/admin/padres` | página | permitir | permite | sí |
 | `/dashboard/admin/padres/[id]/circulo` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/analitica` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/bonos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/cliente/[id]` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/mora` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/pendientes` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/planes` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/reembolsos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | permitir | permite | sí |
@@ -402,6 +426,21 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
+| `/api/admin/pagos/bonos` | api | permitir | permite | sí |
+| `/api/admin/pagos/bonos/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/bonos/[id]/desactivar` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
+| `/api/admin/pagos/mora` | api | permitir | permite | sí |
+| `/api/admin/pagos/pendientes` | api | permitir | permite | sí |
+| `/api/admin/pagos/pendientes/[id]/autorizar` | api | permitir | permite | sí |
+| `/api/admin/pagos/pendientes/[id]/rechazar` | api | permitir | permite | sí |
+| `/api/admin/pagos/planes` | api | permitir | permite | sí |
+| `/api/admin/pagos/planes/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/reembolsos` | api | permitir | permite | sí |
+| `/api/admin/pagos/reembolsos/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/tasas` | api | permitir | permite | sí |
+| `/api/admin/pagos/vencimientos` | api | permitir | permite | sí |
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
@@ -572,6 +611,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/operadores/modelo` | página | permitir | permite | sí |
 | `/dashboard/admin/padres` | página | permitir | permite | sí |
 | `/dashboard/admin/padres/[id]/circulo` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/analitica` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/bonos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/cliente/[id]` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/mora` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/pendientes` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/planes` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/reembolsos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | permitir | permite | sí |
@@ -701,6 +749,21 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
+| `/api/admin/pagos/bonos` | api | permitir | permite | sí |
+| `/api/admin/pagos/bonos/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/bonos/[id]/desactivar` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
+| `/api/admin/pagos/mora` | api | permitir | permite | sí |
+| `/api/admin/pagos/pendientes` | api | permitir | permite | sí |
+| `/api/admin/pagos/pendientes/[id]/autorizar` | api | permitir | permite | sí |
+| `/api/admin/pagos/pendientes/[id]/rechazar` | api | permitir | permite | sí |
+| `/api/admin/pagos/planes` | api | permitir | permite | sí |
+| `/api/admin/pagos/planes/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/reembolsos` | api | permitir | permite | sí |
+| `/api/admin/pagos/reembolsos/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/tasas` | api | permitir | permite | sí |
+| `/api/admin/pagos/vencimientos` | api | permitir | permite | sí |
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
@@ -871,6 +934,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/operadores/modelo` | página | permitir | permite | sí |
 | `/dashboard/admin/padres` | página | permitir | permite | sí |
 | `/dashboard/admin/padres/[id]/circulo` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/analitica` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/bonos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/cliente/[id]` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/mora` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/pendientes` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/planes` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/reembolsos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | permitir | permite | sí |
@@ -1000,6 +1072,21 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/bonos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/bonos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/pendientes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/pendientes/[id]/autorizar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/pendientes/[id]/rechazar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/planes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/planes/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/reembolsos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/reembolsos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/tasas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/vencimientos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
@@ -1170,6 +1257,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/operadores/modelo` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/padres` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/padres/[id]/circulo` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos/analitica` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos/bonos` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos/cliente/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos/mora` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos/pendientes` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos/planes` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos/reembolsos` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos/vencimientos` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1299,6 +1395,21 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/bonos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/bonos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/pendientes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/pendientes/[id]/autorizar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/pendientes/[id]/rechazar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/planes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/planes/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/reembolsos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/reembolsos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/tasas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/vencimientos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
@@ -1469,6 +1580,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/operadores/modelo` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/padres` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/padres/[id]/circulo` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos/analitica` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos/bonos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos/cliente/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos/mora` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos/pendientes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos/planes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos/reembolsos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos/vencimientos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -1598,6 +1718,21 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/bonos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/bonos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/pendientes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/pendientes/[id]/autorizar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/pendientes/[id]/rechazar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/planes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/planes/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/reembolsos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/reembolsos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/tasas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/vencimientos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
@@ -1768,6 +1903,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/operadores/modelo` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/padres` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/padres/[id]/circulo` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos/analitica` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos/bonos` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos/cliente/[id]` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos/mora` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos/pendientes` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos/planes` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos/reembolsos` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos/vencimientos` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/ | no permite | sí |
@@ -1897,6 +2041,21 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/bonos` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/bonos/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/cliente/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/mora` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/pendientes` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/pendientes/[id]/autorizar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/pendientes/[id]/rechazar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/planes` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/planes/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/reembolsos` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/reembolsos/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/tasas` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/vencimientos` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/permisos-modulos` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes-revision` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 401 | permite | **NO** |
@@ -2067,6 +2226,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/operadores/modelo` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/padres` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/padres/[id]/circulo` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos/analitica` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos/bonos` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos/cliente/[id]` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos/mora` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos/pendientes` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos/planes` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos/reembolsos` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos/vencimientos` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/login | no permite | sí |
@@ -2197,6 +2365,21 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/padres/[id]/reactivar` | HTTP 401 | permite |
 | `/api/admin/padres/[id]/restablecer-password` | HTTP 401 | permite |
 | `/api/admin/padres/[id]/vigencia` | HTTP 401 | permite |
+| `/api/admin/pagos/bonos` | HTTP 401 | permite |
+| `/api/admin/pagos/bonos/[id]` | HTTP 401 | permite |
+| `/api/admin/pagos/bonos/[id]/desactivar` | HTTP 401 | permite |
+| `/api/admin/pagos/cliente/[id]` | HTTP 401 | permite |
+| `/api/admin/pagos/cliente/[id]/extender` | HTTP 401 | permite |
+| `/api/admin/pagos/mora` | HTTP 401 | permite |
+| `/api/admin/pagos/pendientes` | HTTP 401 | permite |
+| `/api/admin/pagos/pendientes/[id]/autorizar` | HTTP 401 | permite |
+| `/api/admin/pagos/pendientes/[id]/rechazar` | HTTP 401 | permite |
+| `/api/admin/pagos/planes` | HTTP 401 | permite |
+| `/api/admin/pagos/planes/[id]` | HTTP 401 | permite |
+| `/api/admin/pagos/reembolsos` | HTTP 401 | permite |
+| `/api/admin/pagos/reembolsos/[id]` | HTTP 401 | permite |
+| `/api/admin/pagos/tasas` | HTTP 401 | permite |
+| `/api/admin/pagos/vencimientos` | HTTP 401 | permite |
 | `/api/admin/permisos-modulos` | HTTP 401 | permite |
 | `/api/admin/reportes-revision` | HTTP 401 | permite |
 | `/api/admin/reportes-revision/[id]` | HTTP 401 | permite |
@@ -2366,6 +2549,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | estadisticas | `/dashboard/admin/estadisticas` | ADMIN |
 | operadores | `/dashboard/admin/operadores` | ADMIN |
 | padres | `/dashboard/admin/padres` | ADMIN |
+| pagos_admin | `/dashboard/admin/pagos` | ADMIN, OPERADOR |
 | revision_spam | `/dashboard/admin/spam` | ADMIN |
 | usuarios_admin | `/dashboard/admin/usuarios` | ADMIN |
 

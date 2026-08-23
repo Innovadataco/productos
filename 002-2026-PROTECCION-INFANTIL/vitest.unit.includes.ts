@@ -128,6 +128,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/nav-items.test.ts",
     "src/lib/normalizar.test.ts",
     "src/lib/param-encryption.test.ts",
+    "src/lib/pagos/api-helpers.test.ts",
+    "src/lib/pagos/tasas.test.ts",
     "src/lib/plataforma.test.ts",
     "src/lib/proxy.test.ts",
     "src/lib/queue.test.ts",
@@ -137,6 +139,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/riesgo-consulta.test.ts",
     // 002-PI-068: role-visibility.test.tsx importa proxy.ts que carga repositorios Prisma.
     "src/lib/schemas/index.test.ts",
+    "src/lib/schemas/pagos.test.ts",
     "src/lib/schemas/unificado.test.ts",
     "src/lib/simulacion/executor.test.ts",
     "src/lib/simulacion/metricas.test.ts",
