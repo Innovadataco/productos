@@ -108,8 +108,8 @@ export function LogContextoModal({ isOpen, onClose, contextoJson }: LogContextoM
                 ) : (
                     <>
                         {mensajeHumano ? (
-                            <div className="rounded-xl bg-tinta/10 p-4 dark:bg-tinta/20">
-                                <p className="text-sm font-medium text-body">{mensajeHumano}</p>
+                            <div className="rounded-xl bg-tinta/90 p-4 dark:bg-tinta/95">
+                                <p className="text-sm font-medium text-fondo">{mensajeHumano}</p>
                             </div>
                         ) : null}
                         <Accordion

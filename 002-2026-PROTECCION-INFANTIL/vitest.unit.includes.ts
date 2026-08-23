@@ -68,6 +68,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/colegio/unificado/WizardUnificado.test.tsx",
     "src/components/modules/ia/IaModelSelector.test.tsx",
     "src/components/modules/ia/simulacion/TablaResultadosSimulacion.test.tsx",
+    "src/components/modules/monitoreo/LogContextoModal.test.tsx",
     "src/components/modules/monitoreo/LogsTab.test.tsx",
     "src/components/modules/monitoreo/OperacionTableroClient.test.tsx",
     "src/components/modules/monitoreo/SemaforoCard.test.tsx",
