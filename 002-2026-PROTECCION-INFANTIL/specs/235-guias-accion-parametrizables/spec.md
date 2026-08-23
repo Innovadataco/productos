@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-22
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 Impacto en arquitectura: añade modelo `GuiaAccionCategoria` (migración aditiva con índice único parcial manual), repositorio DAL `src/lib/dal/repositories/guia-accion-repository.ts`, 7 endpoints REST bajo `/api/admin/guias-accion/*` y `/api/publico/guia-accion/categoria/[cat]`, dos pantallas admin (`/dashboard/admin/configuracion/guias-accion` y `/dashboard/admin/comite/guias-pendientes`), seed idempotente de 8 guías ACTIVA v1, y tests de integración/unitarios.
 
@@ -175,4 +175,13 @@ Como administrador quiero previsualizar una guía en borrador o pendiente exacta
 
 ## Implementación
 
-*(Vacío mientras la spec está en estado PLANEADO; se completará al cerrar la feature.)*
+- Modelo `GuiaAccionCategoria` + enum `EstadoGuiaAccion` en `prisma/schema.prisma`; migraciones aditivas `20260823120000_spec_235_guia_accion_categoria` e `20260823130000_spec_235_accion_audit_guia_accion` (ALTER TYPE seguro para `AccionAudit`).
+- Seed idempotente de 8 guías ACTIVA v1 en `prisma/seed.ts` (`seedGuiasAccion`), marcadas como contenido preliminar; respeta guías personalizadas existentes.
+- DAL: `src/lib/dal/repositories/guia-accion-repository.ts` + servicio `src/lib/dal/services/guia-accion.ts` (lógica de aprobación con umbral configurable, reemplazo de guía ACTIVA anterior).
+- Validadores Zod en `src/lib/schemas/guia-accion.ts` y helpers de estado en `src/lib/guias-accion/`.
+- Endpoints admin bajo `/api/admin/guias-accion/*` (CRUD, enviar a comité, aprobar/rechazar, preview) y comité `/api/admin/comite/guias-accion/*`; endpoint público `/api/publico/guia-accion/categoria/[cat]` con rate-limit por IP.
+- UI: `src/app/dashboard/admin/configuracion/guias-accion/` (editor + listado) y `src/app/dashboard/admin/comite/guias-pendientes/` (bandeja de aprobación), componentes en `src/components/modules/guias-accion/`.
+- Integración en navegación y permisos: `src/lib/nav-items.ts`, `src/lib/permisos-catalogo.ts`, `prisma/seed-modulos-grants.ts`, `src/components/modules/ConfiguracionTabs.tsx`.
+- Tests: servicio, repositorio, endpoints admin/comité/público y seed en `src/lib/dal/services/guia-accion.test.ts`, `src/lib/seed-guia-accion.test.ts` y tests de ruta asociados.
+- Docs arquitectura regenerados (`docs/architecture/01-modelo-datos.md`, `02-roles-capacidades.md`, `03-pantallas.md`).
+- Gate local verde: `tsc --noEmit`, `lint`, `arch:check`, `test`, `build`.

@@ -44,6 +44,9 @@ const SIN_PANTALLA_PROPIA = new Set([
     // SPEC-206 (002-PI-120): sesiones activas es un sub-tab dentro de
     // `/dashboard/admin/estadisticas/operacion`; no tiene ítem de menú lateral propio.
     "sesiones_admin",
+    // SPEC-235 (002-PI-135): guías de acción parametrizables es un sub-tab dentro de
+    // `/dashboard/admin/configuracion`; no tiene ítem de menú lateral propio.
+    "guias_accion_admin",
 ]);
 
 // SPEC-173 (FASE-C): los nodos expandibles (p. ej. "Usuarios") declaran hijos;

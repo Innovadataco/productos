@@ -225,6 +225,14 @@ enum AccionAudit {
   // SPEC-206 (002-PI-120): auditoría de cierre de sesiones.
   SESION_FORZADA_CIERRE
   SESION_CIERRE_INACTIVIDAD
+  // SPEC-235 (002-PI-135): auditoría del ciclo de vida de guías de acción.
+  GUIA_ACCION_CREADA
+  GUIA_ACCION_EDITADA
+  GUIA_ACCION_ENVIADA_COMITE
+  GUIA_ACCION_APROBADA
+  GUIA_ACCION_RECHAZADA
+  GUIA_ACCION_PUBLICADA
+  GUIA_ACCION_REEMPLAZADA
 }
 
 enum TipoPeriodoServicio {
@@ -245,6 +253,14 @@ enum EstadoSuscripcion {
   EN_GRACIA
   SUSPENDIDA
   CANCELADA
+}
+
+// SPEC-235 (002-PI-135): estados del ciclo de vida de una guía de acción.
+enum EstadoGuiaAccion {
+  BORRADOR
+  PENDIENTE_APROBACION_COMITE
+  ACTIVA
+  REEMPLAZADA
 }
 
 enum DuracionPlan {
@@ -469,6 +485,8 @@ model Usuario {
   sesionesLog                  SesionLog[]
   // SPEC-234 (002-PI-134): informes consolidados generados por el usuario/worker.
   informesConsolidados         InformeConsolidado[]
+  // SPEC-235 (002-PI-135): guías de acción creadas por el admin.
+  guiasAccionCreadas           GuiaAccionCategoria[]
   // SPEC-210 (002-PI-110): módulo de pagos.
   suscripciones                Suscripcion[]
   planesCreados                Plan[]                     @relation("PlanesCreados")
@@ -2196,4 +2214,35 @@ model PatronExpediente {
   @@index([expedienteId, severidad])
   @@index([expedienteId, tipoPatron])
   @@map("patrones_expediente")
+}
+
+// SPEC-235 (002-PI-135): guía de acción parametrizable por categoría de riesgo.
+// El contenido es editorial, validado por el comité y publicado de forma atómica.
+// La unicidad de una guía ACTIVA por categoría se garantiza con un índice único
+// parcial SQL (ver migración aditiva); Prisma no modela índices condicionales.
+model GuiaAccionCategoria {
+  id                    String            @id @default(cuid())
+  categoria             String
+  versionSecuencial     Int
+  tituloEmocional       String
+  subtitulo             String?
+  categoriaBadgeTexto   String
+  pasosJson             Json
+  calloutTitulo         String?
+  calloutTexto          String?
+  botonesAccionJson     Json
+  piePagina             String?
+  estado                EstadoGuiaAccion
+  aprobadaPorComiteJson Json              @default("[]")
+  creadaPorAdminId      String
+  createdAt             DateTime          @default(now()) @db.Timestamptz(6)
+  publicadaEn           DateTime?         @db.Timestamptz(6)
+  reemplazadaEn         DateTime?         @db.Timestamptz(6)
+
+  creadaPor Usuario @relation(fields: [creadaPorAdminId], references: [id])
+
+  @@index([categoria, estado])
+  @@index([estado])
+  @@index([creadaPorAdminId])
+  @@map("GuiaAccionCategoria")
 }

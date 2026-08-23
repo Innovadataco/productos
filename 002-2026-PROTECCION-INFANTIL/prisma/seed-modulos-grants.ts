@@ -57,7 +57,8 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
         // SPEC-140 (decisión ZEUS): denuncia_formal por defecto para ADMIN y
         // COMITE_VALIDACION; como es hijo de bandeja_reportes (jerarquía AND), el comité
         // también recibe el padre.
-        COMITE_VALIDACION: ["comite", "comite_bandeja", "bandeja_reportes", "denuncia_formal"],
+        // SPEC-235 (002-PI-135): el comité de validación aprueba/rechaza guías de acción.
+        COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_guias_accion", "bandeja_reportes", "denuncia_formal"],
         // SPEC-212 (002-PI-112): panel de pagos también para operadores por defecto.
         OPERADOR: ["bandeja_reportes", "pagos_admin"],
     };
