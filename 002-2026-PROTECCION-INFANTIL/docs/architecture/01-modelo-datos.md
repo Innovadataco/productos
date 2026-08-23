@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **73** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **75** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -483,7 +483,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (25)
+### Otros (sin regla de dominio) (27)
 
 #### `BlockList`
 
@@ -592,6 +592,24 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | alertada | Boolean | — |
 | creadoEn | DateTime | — |
 
+#### `EventoExpediente`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| expedienteId | String | — |
+| ordenSecuencial | Int | — |
+| reporteId | String | opcional |
+| fechaEvento | DateTime | — |
+| texto | String | — |
+| categoriaDetectada | String | opcional |
+| confianzaClasificacion | Float | opcional |
+| plataforma | String | opcional |
+| adjuntosMetaJson | Json | opcional |
+| createdAt | DateTime | — |
+| expediente | Expediente | relación (FK) |
+| reporte | Reporte | opcional, relación (FK) |
+
 #### `EventoMatch`
 
 | Campo | Tipo | Atributos |
@@ -606,6 +624,32 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | identificador | IdentificadorReportado | relación (FK) |
 | reporteNuevo | Reporte | relación (FK) |
+
+#### `Expediente`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| padreUsuarioId | String | — |
+| identificadorReportado | String | — |
+| plataformaId | String | opcional |
+| fechaApertura | DateTime | — |
+| fechaCierre | DateTime | opcional |
+| fechaEscalado | DateTime | opcional |
+| estado | EstadoExpediente | — |
+| scoreGravedadActual | ScoreGravedad | — |
+| categoriasDominantesJson | Json | opcional |
+| numEventos | Int | — |
+| ultimoEventoEn | DateTime | opcional |
+| autoCerradoPorInactividad | Boolean | — |
+| expedienteRelacionadoAnteriorId | String | opcional |
+| patronesDetectadosJson | Json | opcional |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| padre | Usuario | opcional, relación (FK) |
+| eventos | EventoExpediente | lista, relación |
+| expedienteAnterior | Expediente | opcional, relación |
+| expedientesPosteriores | Expediente | lista, relación |
 
 #### `HealthProbe`
 
@@ -1112,6 +1156,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | solicitudComite | SolicitudComite | opcional, relación |
 | alertasColegio | AlertaColegio | lista, relación |
 | eventoMatchDisparado | EventoMatch | opcional, relación |
+| eventos | EventoExpediente | lista, relación |
 
 #### `SolicitudComite`
 
@@ -1375,6 +1420,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | notificacionesInApp | NotificacionInApp | lista, relación |
 | bloqueosCreados | BlockList | lista, relación |
 | simulacionesAbuso | SimulacionAbusoRun | lista, relación |
+| expedientes | Expediente | lista, relación |
 | suscripciones | Suscripcion | lista, relación |
 | planesCreados | Plan | lista, relación |
 | bonosCreados | BonoPromocional | lista, relación |
@@ -1428,6 +1474,7 @@ erDiagram
     Estudiante ||--o{ AcudienteEstudiante : "estudiante"
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
+    Expediente ||--o{ EventoExpediente : "expediente"
     IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante (opcional)"
     IdentificadorProfesor ||--o{ AlertaColegio : "identificadorProfesor (opcional)"
@@ -1457,6 +1504,7 @@ erDiagram
     Reporte ||--o{ AlertaColegio : "reporte"
     Reporte ||--o{ ClasificacionIA : "reporte"
     Reporte ||--o{ EmbeddingReporte : "reporte"
+    Reporte ||--o{ EventoExpediente : "reporte (opcional)"
     Reporte ||--o{ EventoMatch : "reporteNuevo"
     Reporte ||--o{ FuenteReporte : "reporte"
     Reporte ||--o{ PasoProcesamiento : "reporte"
@@ -1482,6 +1530,7 @@ erDiagram
     Usuario ||--o{ CodigoVerificacion : "usuario (opcional)"
     Usuario ||--o{ ContactoConfianza : "usuario"
     Usuario ||--o{ CorreccionAdmin : "admin"
+    Usuario ||--o{ Expediente : "padre (opcional)"
     Usuario ||--o{ IntegranteComite : "comite"
     Usuario ||--o{ IntegranteComite : "creadoPor"
     Usuario ||--o{ IntegranteComite : "modificadoPor (opcional)"
