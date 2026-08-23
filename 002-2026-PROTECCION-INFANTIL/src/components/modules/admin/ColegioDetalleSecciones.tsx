@@ -3,6 +3,7 @@
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { fechaCorta } from "@/lib/format/fecha";
 
 type Detalle = {
     id: string;
@@ -36,10 +37,6 @@ type Detalle = {
     hallazgos: { positivos: string[]; negativos: string[]; semaforo: "verde" | "amarillo" | "rojo" };
     comparacionMedia: { metricas: Array<{ nombre: string; valorColegio: number; mediana: number | null }>; insuficientes: boolean };
 };
-
-function fechaCorta(iso: string): string {
-    return new Date(iso).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
-}
 
 function BarrasSimples({ data }: { data: Array<{ label: string; valor: number }> }) {
     const max = Math.max(1, ...data.map((d) => d.valor));

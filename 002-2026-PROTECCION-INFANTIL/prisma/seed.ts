@@ -469,10 +469,14 @@ async function main() {
         });
     }
 
-    // SPEC-199: parámetros de la guarda de dominancia SPAM.
+    // SPEC-199 + SPEC-207: parámetros de la guarda de dominancia SPAM y hard-rule.
+    // EXCEPCIÓN DOCUMENTADA (SPEC-207): spam.dominancia_umbral se fuerza a 0.33
+    // por decisión de diseño de esta SPEC; spam.dominios_acortadores se fuerza con
+    // la lista inicial porque es parte de la red de seguridad determinística.
     const spamDominanciaParams = [
-        { clave: "spam.dominancia_umbral", valor: "0.66", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Score mínimo de SPAM entre categorías secundarias para disparar guarda de dominancia" },
+        { clave: "spam.dominancia_umbral", valor: "0.33", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Score mínimo de SPAM entre categorías secundarias para disparar guarda de dominancia (SPEC-207: un voto entre tres modelos basta si no hay categoría grave)" },
         { clave: "spam.dominancia_categoria_grave_severidad_min", valor: "75", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Severidad mínima que bloquea la dominancia SPAM" },
+        { clave: "spam.dominios_acortadores", valor: JSON.stringify(["bit.ly", "tinyurl", "is.gd", "t.co", "cutt.ly", "ow.ly", "buff.ly"]), tipo: TipoParametro.JSON, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Dominios de acortadores que la hard-rule de spam publicitario considera sospechosos (editable en caliente sin deploy)" },
     ];
     for (const p of spamDominanciaParams) {
         await prisma.parametroSistema.upsert({

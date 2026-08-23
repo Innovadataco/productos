@@ -2,6 +2,51 @@ import { detectarDoxing } from "./pii-patterns";
 import { detectarKeywordsRiesgo } from "./keywords-riesgo";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
+const EMOJIS_MONETARIOS = new Set(["💰", "🤑", "💵", "💸", "🎁", "🎉", "🔥", "⚡", "🚀"]);
+
+export interface SpamPublicitarioSignals {
+    hashtags: number;
+    linksAcortados: number;
+    dineroUrgenciaCta: boolean;
+    emojisMonetarios: number;
+}
+
+export function detectarSpamPublicitarioDeterministico(
+    texto: string,
+    dominiosAcortadores: string[] = []
+): { esSpam: boolean; señales: number; detalle: SpamPublicitarioSignals } {
+    const lower = texto.toLowerCase();
+    const hashtags = (texto.match(/#[a-zA-Z0-9_]+/g) ?? []).length;
+
+    const linksAcortados = dominiosAcortadores.reduce((count, dominio) => {
+        const escaped = dominio.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`(?:https?://|\\b)${escaped}(?:/[^\\s]*)?`, "gi");
+        return count + (texto.match(regex)?.length ?? 0);
+    }, 0);
+
+    const mencionaDinero = /gana|dinero|pagos|ingresos/i.test(texto);
+    const mencionaUrgencia = /ahora|ya|hoy|urgente|limitado|últimas/i.test(texto);
+    const mencionaCtaMasiva = /envía|escribe|contacta|únete|link|click/i.test(texto);
+    const dineroUrgenciaCta = mencionaDinero && mencionaUrgencia && mencionaCtaMasiva;
+
+    const emojisMonetarios = Array.from(texto).filter((c) => EMOJIS_MONETARIOS.has(c)).length;
+
+    const detalle: SpamPublicitarioSignals = {
+        hashtags,
+        linksAcortados,
+        dineroUrgenciaCta,
+        emojisMonetarios,
+    };
+
+    const señales =
+        (hashtags >= 2 ? 1 : 0) +
+        (linksAcortados >= 1 ? 1 : 0) +
+        (dineroUrgenciaCta ? 1 : 0) +
+        (emojisMonetarios >= 3 ? 1 : 0);
+
+    return { esSpam: señales >= 2, señales, detalle };
+}
+
 /**
  * FUENTE ÚNICA de la decisión de las guardas de seguridad (spec 123, E-4).
  *
@@ -58,6 +103,7 @@ export function decidirGuardasSeguridad({
     umbralSpamDominancia,
     severidadMinGrave,
     severidades,
+    dominiosAcortadores,
 }: {
     texto: string;
     clasificacion: GuardasClasificacion;
@@ -68,6 +114,7 @@ export function decidirGuardasSeguridad({
     umbralSpamDominancia: number;
     severidadMinGrave: number;
     severidades: Record<string, number>;
+    dominiosAcortadores?: string[];
 }): GuardasDecision {
     let estadoFinal: EstadoReporte = estadoInicial;
     let prioridadAlta = false;
@@ -80,7 +127,17 @@ export function decidirGuardasSeguridad({
         reglasAplicadas.push("spam_confianza_alta");
     }
 
-    // SPEC-199: dominancia SPAM. Si SPAM vota fuerte entre las categorías
+    // SPEC-207: red de seguridad determinística anti-spam-publicitario. Actúa antes
+    // de la guarda de dominancia y tiene prioridad sobre el veredicto LLM.
+    if (estadoFinal !== "POSIBLE_SPAM") {
+        const spamDet = detectarSpamPublicitarioDeterministico(texto, dominiosAcortadores);
+        if (spamDet.esSpam) {
+            estadoFinal = "POSIBLE_SPAM";
+            reglasAplicadas.push("spam_publicitario_deterministico");
+        }
+    }
+
+    // SPEC-199 + SPEC-207: dominancia SPAM. Si SPAM vota fuerte entre las categorías
     // presentes y ninguna es lo suficientemente grave, forzar POSIBLE_SPAM.
     // Esto protege contra falsos positivos de rúbricas laxas (ej.
     // OFRECIMIENTO_REGALOS clasificando publicidad masiva).

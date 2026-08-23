@@ -6,6 +6,7 @@ import { detectarPiiCombinado, type PiiDetectionResult } from "./pii-detector";
 import { anonimizarTexto, type AnonimizacionResult } from "./anonimizador";
 import { decidirGuardasSeguridad, normalizarCategoriasSecundarias } from "./guardas-decision";
 import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
+import { workerLogger } from "@/lib/monitoreo/worker-logger";
 import type { CategoriaConducta } from "@prisma/client";
 import type { VotoRubricaModelo } from "./rubrica";
 
@@ -27,6 +28,7 @@ export interface SandboxParametros {
     umbralSpam: number;
     umbralSpamDominancia: number;
     severidadMinGrave: number;
+    dominiosAcortadores: string[];
 }
 
 export interface SandboxVotoDistribucion {
@@ -109,6 +111,7 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
         umbralSpam,
         umbralSpamDominancia,
         severidadMinGrave,
+        dominiosAcortadoresRaw,
     ] = await Promise.all([
         getParametroSistema("ia.rubrica.modelos"),
         getParametroSistema("reportes.embedding_model"),
@@ -121,10 +124,18 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
         getParametroSistema("clasificacion.umbral_spam"),
         getParametroSistema("spam.dominancia_umbral"),
         getParametroSistema("spam.dominancia_categoria_grave_severidad_min"),
+        getParametroSistema("spam.dominios_acortadores"),
     ]);
 
     const modelosDefault = ["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"];
     const modelos = overrides.modelos ?? (modelosRaw ? (JSON.parse(modelosRaw.valor) as string[]) : modelosDefault);
+    const dominiosAcortadores: string[] = (() => {
+        try {
+            return dominiosAcortadoresRaw?.valor ? (JSON.parse(dominiosAcortadoresRaw.valor) as string[]) : [];
+        } catch {
+            return [];
+        }
+    })();
 
     return {
         modelos,
@@ -135,8 +146,9 @@ async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParam
         ragTopK: overrides.rag_top_k ?? parseIntParam(ragTopK?.valor, 3),
         ollamaNumParallel: parseIntParam(ollamaNumParallel?.valor, 2),
         umbralSpam: parseFloatParam(umbralSpam?.valor, 0.7),
-        umbralSpamDominancia: parseFloatParam(umbralSpamDominancia?.valor, 0.66),
+        umbralSpamDominancia: parseFloatParam(umbralSpamDominancia?.valor, 0.33),
         severidadMinGrave: parseIntParam(severidadMinGrave?.valor, 75),
+        dominiosAcortadores,
     };
 }
 
@@ -153,6 +165,18 @@ function calcularDistribucion(votos: VotoRubricaModelo[]): SandboxVotoDistribuci
     return Array.from(conteo.entries())
         .map(([categoria, count]) => ({ categoria, count }))
         .sort((a, b) => b.count - a.count);
+}
+
+/** SPEC-207: loggear modelos de rúbrica que no respondieron. */
+export function logModelosSinRespuesta(votos: VotoRubricaModelo[]): void {
+    for (const voto of votos) {
+        if (voto.fallback) {
+            void workerLogger.error("Rúbrica: modelo sin respuesta", {
+                modelo: voto.modelo,
+                latenciaMs: voto.metrics.latenciaMs,
+            });
+        }
+    }
 }
 
 function generarExplicacion(clasificacion: ResultadoMotor, estadoFinal: string, prioridadAlta: boolean, guardas: { keywords: { tieneMatch: boolean }; doxing: { esDoxing: boolean } }): string {
@@ -241,6 +265,7 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
         umbralSpamDominancia: parametros.umbralSpamDominancia,
         severidadMinGrave: parametros.severidadMinGrave,
         severidades,
+        dominiosAcortadores: parametros.dominiosAcortadores,
     });
     const { estadoFinal, prioridadAlta, keywordsDetectadas, doxing, keywordsRiesgo: keywords, reglasAplicadas } = decision;
 
@@ -260,7 +285,13 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
     const latenciaGuardas = Date.now() - inicioGuardas;
     const latenciaTotal = Date.now() - inicioTotal;
 
-    const distribucion = calcularDistribucion((clasificacion.rubrica?.votosModelos as VotoRubricaModelo[]) ?? []);
+    const votosModelos = (clasificacion.rubrica?.votosModelos as VotoRubricaModelo[]) ?? [];
+    const distribucion = calcularDistribucion(votosModelos);
+
+    // SPEC-207: instrumentar modelos de rúbrica que no respondieron.
+    // No altera el resultado; solo expone el modelo y latencia para diagnóstico.
+    logModelosSinRespuesta(votosModelos);
+
     const secundariasLegacy = clasificacion.categoriasSecundarias.filter(
         (v): v is { categoria: CategoriaConducta; score: number } =>
             typeof v === "object" && v !== null && "categoria" in v && "score" in v
