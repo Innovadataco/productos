@@ -45,6 +45,8 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     recuperar_solicitar: { windowSeconds: 3600, maxRequests: 5 },
     verificacion_solicitar: { windowSeconds: 3600, maxRequests: 5 },
     ciudades_buscar: { windowSeconds: 60, maxRequests: 60 },
+    // SPEC-216 (002-PI-116): escrituras del módulo de pagos (aplicar bono, etc.).
+    pagos_write: { windowSeconds: 60, maxRequests: 30 },
 };
 
 export function getScopeDefaults(scope: string): ScopeDefaults {

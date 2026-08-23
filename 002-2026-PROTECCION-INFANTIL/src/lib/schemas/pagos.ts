@@ -61,6 +61,13 @@ export const pagosExtenderBodySchema = z.object({
     motivo: z.string().min(10).max(500),
 });
 
+// SPEC-216 (002-PI-116): aplicación de bono promocional a una suscripción.
+export const pagosAplicarBonoBodySchema = z.object({
+    suscripcionId: z.string().min(1),
+    bonoId: z.string().min(1),
+    montoBaseUSD: z.coerce.number().positive(),
+});
+
 // SPEC-214 (002-PI-114): tasas de cambio.
 export const pagosTasaManualBodySchema = z.object({
     monedaDestino: z.string().min(3).max(3).toUpperCase(),
