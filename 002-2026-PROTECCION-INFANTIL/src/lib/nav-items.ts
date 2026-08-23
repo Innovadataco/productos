@@ -69,6 +69,19 @@ export const COMITE_COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio/comite/casos", label: "Gestión casos", modulo: "colegios_comite_bandeja" },
 ];
 
+// SPEC-231 (002-PI-131): menú del padre — 7 entradas planas, sin grupos expandibles.
+// El campo `modulo` es informativo en v1: el área padre no usa permisos granulares
+// por módulo; el proxy controla el acceso por rol.
+export const PADRE_NAV_ITEMS: NavItem[] = [
+    { href: "/dashboard/padre", label: "Inicio", modulo: "padre" },
+    { href: "/dashboard/padre/expedientes", label: "Mis expedientes", modulo: "padre" },
+    { href: "/dashboard/padre/reportar", label: "Reportar", modulo: "padre" },
+    { href: "/dashboard/padre/suscripcion", label: "Suscripción", modulo: "padre" },
+    { href: "/dashboard/padre/circulo-confianza", label: "Círculo confianza", modulo: "padre" },
+    { href: "/dashboard/padre/notificaciones", label: "Notificaciones", modulo: "padre" },
+    { href: "/dashboard/padre/perfil", label: "Mi perfil", modulo: "padre" },
+];
+
 /** Tabs del Centro de Control IA filtradas por submódulo (null = visible con la raíz). */
 export const IA_TABS: Array<{ key: string; label: string; modulo: string | null }> = [
     { key: "documentacion", label: "Documentación", modulo: null },

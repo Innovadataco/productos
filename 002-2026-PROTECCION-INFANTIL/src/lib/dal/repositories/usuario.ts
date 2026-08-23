@@ -250,6 +250,14 @@ export class UsuarioRepository {
         });
     }
 
+    /** SPEC-231 (002-PI-131): sesión del panel padre (rol/estado/flag password). */
+    findSesionPadre(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            select: { id: true, nombre: true, rol: true, estado: true, debeCambiarPassword: true },
+        });
+    }
+
     /** E-8: usuario con su colegio y ubicación completa (home del panel colegio). */
     findConColegioYUbicacion(id: string) {
         return this.db.usuario.findUnique({

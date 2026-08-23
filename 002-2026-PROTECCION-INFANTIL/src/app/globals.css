@@ -404,3 +404,51 @@
         radial-gradient(900px 600px at 50% 110%, rgb(var(--pino-rgb) / var(--luz-c)) 0%, transparent 50%),
         rgb(var(--papel-rgb));
 }
+
+/* ==========================================================================
+   Tema padre (PARENT) — capa de compatibilidad re-mapeada a tokens cielo.
+   SPEC-231 (002-PI-131): área del padre usa la familia cielo como acento.
+   ========================================================================== */
+.theme-padre .text-accent,
+.theme-padre.text-accent {
+    color: rgb(var(--cielo-rgb));
+}
+
+.theme-padre .text-gradient,
+.theme-padre.text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    background-image: linear-gradient(to right, rgb(var(--cielo-rgb)), rgb(var(--pino-rgb)));
+}
+
+.theme-padre .accent-gradient,
+.theme-padre.accent-gradient {
+    background-image: linear-gradient(to right, rgb(var(--cielo-rgb)), rgb(var(--pino-rgb)));
+}
+
+.theme-padre .ring-accent,
+.theme-padre.ring-accent {
+    outline: none;
+}
+
+.theme-padre .ring-accent:focus-visible,
+.theme-padre.ring-accent:focus-visible {
+    outline: 2px solid rgb(var(--cielo-rgb));
+    outline-offset: 2px;
+}
+
+.theme-padre .ring-accent-input:focus,
+.theme-padre.ring-accent-input:focus {
+    border-color: rgb(var(--cielo-rgb));
+    box-shadow: 0 0 0 2px rgb(var(--cielo-rgb) / 0.5);
+}
+
+.theme-padre .bg-page,
+.theme-padre.bg-page {
+    background:
+        radial-gradient(1200px 800px at 10% -10%, rgb(var(--cielo-rgb) / var(--luz-a)) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
+        radial-gradient(900px 600px at 50% 110%, rgb(var(--cielo-rgb) / var(--luz-c)) 0%, transparent 50%),
+        rgb(var(--papel-rgb));
+}

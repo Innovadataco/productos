@@ -109,3 +109,13 @@ Primer paso de la cadena UI Padre v2 (231 → 232 → 233). Crea la navegación 
 2. **Tema padre**: se propone `.theme-padre` en `globals.css` que mapee a tokens `cielo` (análogo a `.theme-colegio` que mapea a `pino`).
 3. **Coordinación 231↔211**: el sidebar queda completo en esta SPEC. SPEC-211 solo reemplaza el contenido de `/dashboard/padre/suscripcion/page.tsx`.
 4. **Deuda técnica**: las rutas antiguas `/dashboard/mis-reportes`, `/dashboard/circulo-confianza`, `/dashboard/apelaciones` conviven con `/dashboard/padre/*`. En una fase posterior se evaluará migrar el contenido de las antiguas a las nuevas rutas del sidebar.
+
+## Impacto en arquitectura:
+
+- Agrega `src/components/modules/padre/PadreSideNav.tsx` (nuevo componente cliente, patrón sidebar).
+- Agrega `src/app/dashboard/padre/layout.tsx` + 7 páginas placeholder (nueva sub-ruta UI).
+- Extiende `src/lib/nav-items.ts` con `PADRE_NAV_ITEMS` y `src/lib/permisos-catalogo.ts` con módulo `padre`.
+- Extiende `src/app/globals.css` con `.theme-padre` (mapeo a tokens `cielo`).
+- Regenera artefactos de arquitectura `docs/architecture/02-roles-capacidades.md` y `03-pantallas.md` (SPEC-126).
+- Cero cambios en `src/lib/ai/**`, cero cambios de schema Prisma, cero migraciones.
+- Cero imports de `@/lib/prisma` en nuevas páginas/componentes.
