@@ -35,6 +35,8 @@ export const COMITE_NAV_TABS: NavItem[] = [
     { href: "/dashboard/admin/comite", label: "Bandeja", modulo: "comite_bandeja" },
     { href: "/dashboard/admin/comite/apelaciones", label: "Apelaciones", modulo: "comite_bandeja" },
     { href: "/dashboard/admin/comite/gestion", label: "Gestión", modulo: "comite" },
+    // SPEC-235 (002-PI-135): aprobación de guías de acción por el comité.
+    { href: "/dashboard/admin/comite/guias-pendientes", label: "Guías", modulo: "comite_guias_accion" },
     { href: "/dashboard/admin/comite/auditoria", label: "Auditoría", modulo: "comite_auditoria" },
 ];
 

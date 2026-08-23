@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **79** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **80** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -483,7 +483,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (31)
+### Otros (sin regla de dominio) (32)
 
 #### `BlockList`
 
@@ -652,6 +652,29 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | patrones | PatronExpediente | lista, relación |
 | expedienteAnterior | Expediente | opcional, relación |
 | expedientesPosteriores | Expediente | lista, relación |
+
+#### `GuiaAccionCategoria`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| categoria | String | — |
+| versionSecuencial | Int | — |
+| tituloEmocional | String | — |
+| subtitulo | String | opcional |
+| categoriaBadgeTexto | String | — |
+| pasosJson | Json | — |
+| calloutTitulo | String | opcional |
+| calloutTexto | String | opcional |
+| botonesAccionJson | Json | — |
+| piePagina | String | opcional |
+| estado | EstadoGuiaAccion | — |
+| aprobadaPorComiteJson | Json | — |
+| creadaPorAdminId | String | — |
+| createdAt | DateTime | — |
+| publicadaEn | DateTime | opcional |
+| reemplazadaEn | DateTime | opcional |
+| creadaPor | Usuario | relación (FK) |
 
 #### `HealthProbe`
 
@@ -1504,6 +1527,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | expedientes | Expediente | lista, relación |
 | sesionesLog | SesionLog | lista, relación |
 | informesConsolidados | InformeConsolidado | lista, relación |
+| guiasAccionCreadas | GuiaAccionCategoria | lista, relación |
 | suscripciones | Suscripcion | lista, relación |
 | planesCreados | Plan | lista, relación |
 | bonosCreados | BonoPromocional | lista, relación |
@@ -1616,6 +1640,7 @@ erDiagram
     Usuario ||--o{ ContactoConfianza : "usuario"
     Usuario ||--o{ CorreccionAdmin : "admin"
     Usuario ||--o{ Expediente : "padre (opcional)"
+    Usuario ||--o{ GuiaAccionCategoria : "creadaPor"
     Usuario ||--o{ InformeConsolidado : "generadoPor (opcional)"
     Usuario ||--o{ IntegranteComite : "comite"
     Usuario ||--o{ IntegranteComite : "creadoPor"
