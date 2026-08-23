@@ -129,6 +129,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/normalizar.test.ts",
     "src/lib/param-encryption.test.ts",
     "src/lib/pagos/api-helpers.test.ts",
+    "src/lib/pagos/bono-aplicacion.service.test.ts",
+    "src/lib/pagos/pagos-calculos.service.test.ts",
     "src/lib/pagos/tasas.test.ts",
     "src/lib/plataforma.test.ts",
     "src/lib/proxy.test.ts",

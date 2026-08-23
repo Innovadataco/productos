@@ -383,6 +383,26 @@ export class PagosRepository {
         });
     }
 
+    obtenerBonoPromocionalPorNombre(nombre: string) {
+        return this.db.bonoPromocional.findUnique({ where: { nombre } });
+    }
+
+    contarBonosAplicadosPorBono(bonoId: string) {
+        return this.db.bonoAplicado.count({ where: { bonoId } });
+    }
+
+    contarBonosAplicadosPorSuscripcion(suscripcionId: string, bonoId?: string) {
+        return this.db.bonoAplicado.count({
+            where: { suscripcionId, ...(bonoId ? { bonoId } : {}) },
+        });
+    }
+
+    existeBonoAplicado(bonoId: string, suscripcionId: string) {
+        return this.db.bonoAplicado
+            .count({ where: { bonoId, suscripcionId } })
+            .then((count) => count > 0);
+    }
+
     // ── Código de referido ──
 
     crearCodigoReferidoUso(data: Prisma.CodigoReferidoUsoUncheckedCreateInput) {

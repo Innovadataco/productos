@@ -213,6 +213,8 @@ enum AccionAudit {
   BONO_CREADO
   BONO_ACTUALIZADO
   BONO_DESACTIVADO
+  // SPEC-216 (002-PI-116): aplicación de bonos promocionales.
+  BONO_APLICADO
   PLAN_ACTUALIZADO
   SUSCRIPCION_EXTENSION_MANUAL
   // SPEC-214 (002-PI-114): tasas de cambio.

@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 318 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2226 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 319 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2233 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -249,6 +249,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -572,6 +573,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -895,6 +897,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -1218,6 +1221,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | HTTP 403 | no permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/pagos/aplicar-bono` | api | HTTP 403 | no permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
@@ -1541,6 +1545,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | HTTP 403 | no permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/pagos/aplicar-bono` | api | HTTP 403 | no permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
@@ -1864,6 +1869,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -2187,6 +2193,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | HTTP 401 | permite | **NO** |
 | `/api/me/colegio` | api | HTTP 401 | permite | **NO** |
+| `/api/pagos/aplicar-bono` | api | HTTP 401 | permite | **NO** |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -2488,6 +2495,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/config/parametros/[clave]/revelar` | HTTP 401 | permite |
 | `/api/me` | HTTP 401 | permite |
 | `/api/me/colegio` | HTTP 401 | permite |
+| `/api/pagos/aplicar-bono` | HTTP 401 | permite |
 | `/cambiar-password` | redirigir→/login | permite |
 | `/dashboard` | redirigir→/login | permite |
 | `/dashboard/apelaciones` | redirigir→/login | permite |
