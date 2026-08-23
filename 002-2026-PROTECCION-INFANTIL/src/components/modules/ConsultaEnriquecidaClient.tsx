@@ -20,7 +20,7 @@ const MapaUbicaciones = dynamic(
 
 function formatFecha(iso: string | null | undefined) {
     if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("es-CO", { dateStyle: "medium" });
+    return new Date(iso).toLocaleDateString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium" });
 }
 
 type ReporteDetalle = {

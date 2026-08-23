@@ -74,9 +74,7 @@ describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", (
         // sin él la bandeja del comité quedaba inoperante en prod. `comite` solo mapea a
         // rutas ADMIN_ONLY (la puerta las niega) y los endpoints que lo exigen verifican
         // verifyAuth("ADMIN") antes — concederlo no abre nada al comité.
-        // SPEC-235 (002-PI-135): el comité de validación aprueba/rechaza guías de acción;
-        // comite_guias_accion es hijo de comite (padre ya concedido arriba).
-        expect(claves).toEqual(['"comite"', '"comite_bandeja"', '"comite_guias_accion"', '"bandeja_reportes"', '"denuncia_formal"']);
+        expect(claves).toEqual(['"comite"', '"comite_bandeja"', '"bandeja_reportes"', '"denuncia_formal"']);
     });
 
     it("ADMIN deriva sus grants del catálogo completo (conserva comite y comite_auditoria)", () => {

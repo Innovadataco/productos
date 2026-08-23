@@ -203,7 +203,7 @@ export default function DatasetEntrenamientoPageClient() {
                                         )}
                                     </td>
                                     <td className="px-4 py-3 text-subtle whitespace-nowrap">
-                                        {new Date(item.creadoEn).toLocaleString()}
+                                        {new Date(item.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}
                                     </td>
                                 </tr>
                             ))

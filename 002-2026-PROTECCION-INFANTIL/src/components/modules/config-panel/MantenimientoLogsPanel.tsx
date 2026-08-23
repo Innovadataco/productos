@@ -315,7 +315,7 @@ export function MantenimientoLogsPanel() {
                 <div className="space-y-4">
                     <p className="text-sm text-body">
                         Se eliminarán los logs anteriores a{" "}
-                        <span className="font-medium">{hasta ? new Date(`${hasta}:00`).toLocaleString("es-CO") : "—"}</span>
+                        <span className="font-medium">{hasta ? new Date(`${hasta}:00`).toLocaleString("es-CO", { timeZone: "America/Bogota" }) : "—"}</span>
                         {servicio && (
                             <>
                                 {" "}

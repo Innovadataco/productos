@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **80** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **85** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -483,7 +483,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (32)
+### Otros (sin regla de dominio) (37)
 
 #### `BlockList`
 
@@ -793,6 +793,45 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | autor | Usuario | relación (FK) |
 
+#### `Notificacion`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| evento | String | — |
+| destinatarioUsuarioId | String | opcional |
+| destinatarioEmail | String | — |
+| plantillaClave | String | — |
+| canal | CanalNotificacion | — |
+| variables | Json | — |
+| sujetoTipo | String | opcional |
+| sujetoId | String | opcional |
+| enviarEn | DateTime | opcional |
+| estado | EstadoNotificacion | — |
+| intentos | Int | — |
+| ultimoError | String | opcional |
+| proveedorId | String | opcional |
+| sentAt | DateTime | opcional |
+| deliveredAt | DateTime | opcional |
+| openedAt | DateTime | opcional |
+| clickedAt | DateTime | opcional |
+| bouncedAt | DateTime | opcional |
+| canceladoEn | DateTime | opcional |
+| motivoCancelacion | String | opcional |
+| createdAt | DateTime | — |
+
+#### `NotificacionContactoBloqueado`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| email | String | único |
+| bounceCount | Int | — |
+| ultimoBounce | DateTime | — |
+| motivo | String | — |
+| bloqueadoEn | DateTime | — |
+| notificadoAdminEn | DateTime | opcional |
+
 #### `NotificacionInApp`
 
 | Campo | Tipo | Atributos |
@@ -810,6 +849,43 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | actualizadoEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
 | usuario | Usuario | relación (FK) |
+
+#### `NotificacionPlantilla`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| clave | String | único |
+| canal | CanalNotificacion | — |
+| asunto | String | opcional |
+| cuerpoMarkdown | String | — |
+| variablesSchema | Json | — |
+
+#### `NotificacionPreferencia`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| usuarioId | String | — |
+| eventoRegla | String | — |
+| habilitado | Boolean | — |
+| updatedAt | DateTime | — |
+
+#### `NotificacionRegla`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| evento | String | — |
+| rol | String | — |
+| offset | String | — |
+| canal | CanalNotificacion | — |
+| plantillaClave | String | — |
+| obligatoria | Boolean | — |
+| activa | Boolean | — |
+| createdAt | DateTime | — |
+| actualizadaPor | String | opcional |
+| actualizadaEn | DateTime | — |
 
 #### `OnboardingColegio`
 
@@ -1683,6 +1759,11 @@ por ningún otro modelo. La lista de excepciones declarada vive en
 | DerivaMotorSnapshot | sí |
 | HealthProbe | sí |
 | IncidenteInfra | sí |
+| Notificacion | sí |
+| NotificacionContactoBloqueado | sí |
+| NotificacionPlantilla | sí |
+| NotificacionPreferencia | sí |
+| NotificacionRegla | sí |
 | RateLimit | sí |
 | SenalComunitariaCache | sí |
 | Subscription | sí |

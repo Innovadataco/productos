@@ -20,6 +20,7 @@
     "test:e2e:ui": "node --env-file=.env.test ./node_modules/@playwright/test/cli.js test --ui",
     "worker": "node --import tsx scripts/worker-supervisor.mjs",
     "worker:sesiones": "node --import tsx scripts/worker-sesiones.mjs",
+    "worker:notificaciones": "node --import tsx scripts/worker-notificaciones.mjs",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:verify:hnsw": "tsx scripts/verify-hnsw-indexes.ts",

@@ -331,7 +331,7 @@ export function ClasificacionTab() {
                                             {[r.ciudad, r.pais].filter(Boolean).join(", ") || "—"}
                                         </td>
                                         <td className="py-3 pr-3 text-muted">
-                                            {new Date(r.creadoEn).toLocaleDateString("es-CO")}
+                                            {new Date(r.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                                         </td>
                                     </tr>
                                 ))}

@@ -26,6 +26,14 @@ export class UsuarioRepository {
         return this.db.usuario.findUnique({ where: { id }, select: { email: true } });
     }
 
+    /** SPEC-201: emails de administradores activos para alertas del motor de notificaciones. */
+    findAdminEmails() {
+        return this.db.usuario.findMany({
+            where: { rol: "ADMIN", estado: "activo" },
+            select: { email: true },
+        });
+    }
+
     crear(data: Prisma.UsuarioUncheckedCreateInput) {
         return this.db.usuario.create({ data });
     }

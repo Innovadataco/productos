@@ -552,7 +552,7 @@ export default function GestionPageClient() {
                                                     </td>
                                                     <td className="py-3 pr-3 text-muted">{integrante.email}</td>
                                                     <td className="py-3 pr-3 text-muted">
-                                                        {new Date(integrante.fechaInicio).toLocaleDateString("es-CO")}
+                                                        {new Date(integrante.fechaInicio).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                                                     </td>
                                                     <td className="py-3 pr-3">
                                                         <Badge variant={integrante.estado === "ACTIVO" ? "success" : "neutral"}>

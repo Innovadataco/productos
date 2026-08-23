@@ -92,7 +92,7 @@ export function HistorialCasos({
                                             </Badge>
                                         </td>
                                         <td className="py-3 pr-3 text-muted">
-                                            {new Date(c.asignadoEn).toLocaleDateString("es-CO")}
+                                            {new Date(c.asignadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                                         </td>
                                         <td className="py-3 text-right">
                                             <Button

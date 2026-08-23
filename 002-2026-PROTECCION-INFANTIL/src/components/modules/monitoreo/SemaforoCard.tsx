@@ -55,7 +55,7 @@ export function formatoUltimoProbe(ultimoProbeEn: string | null): string {
     if (!ultimoProbeEn) return "Sin chequeos aún";
     const fecha = new Date(ultimoProbeEn);
     if (Number.isNaN(fecha.getTime())) return "Sin chequeos aún";
-    return `Último chequeo: ${fecha.toLocaleString("es-CO", { dateStyle: "short", timeStyle: "medium" })}`;
+    return `Último chequeo: ${fecha.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "medium" })}`;
 }
 
 export function SemaforoCard({ nombre, estado, ultimoProbeEn, hint, onClick }: SemaforoCardProps) {

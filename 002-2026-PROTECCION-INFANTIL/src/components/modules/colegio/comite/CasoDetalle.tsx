@@ -97,7 +97,7 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                 <h1 className="text-2xl font-bold text-body">{solicitud.numero}</h1>
                 <p className="mt-1 text-muted">
                     Estado: <span className="font-medium text-body">{solicitud.estado}</span> · Escalado el{" "}
-                    {new Date(solicitud.creadoEn).toLocaleDateString("es-CO")}
+                    {new Date(solicitud.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                 </p>
             </div>
 
@@ -153,7 +153,7 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                             />
                             <div>
                                 <p className="text-sm font-medium text-body">{hito.detalle}</p>
-                                {hito.fecha && <p className="text-xs text-muted">{new Date(hito.fecha).toLocaleString("es-CO")}</p>}
+                                {hito.fecha && <p className="text-xs text-muted">{new Date(hito.fecha).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</p>}
                             </div>
                         </li>
                     ))}
@@ -170,7 +170,7 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                             <li key={nota.id} className="rounded-xl border border-tinta/10 p-4">
                                 <p className="text-sm text-body">{nota.texto}</p>
                                 <p className="mt-1 text-xs text-muted">
-                                    {nota.autor} · {new Date(nota.creadoEn).toLocaleString("es-CO")}
+                                    {nota.autor} · {new Date(nota.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}
                                 </p>
                             </li>
                         ))}

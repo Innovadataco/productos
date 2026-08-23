@@ -18,6 +18,7 @@ const tabs = [
     { href: "/dashboard/admin/estadisticas/operacion?tab=colegios", label: "Colegios" },
     { href: "/dashboard/admin/estadisticas/operacion?tab=sesiones", label: "Sesiones" },
     { href: "/dashboard/admin/estadisticas/motor", label: "Motor" },
+    { href: "/dashboard/admin/estadisticas/salud-motor", label: "Salud motor" },
 ];
 
 export function EstadisticasSubNav() {

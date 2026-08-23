@@ -26,6 +26,14 @@ export class ParametroRepository {
         });
     }
 
+    /** SPEC-202 (002-PI-099): parámetros cuya clave comienza con un prefijo. */
+    findPorPrefijo(prefijo: string) {
+        return this.db.parametroSistema.findMany({
+            where: { clave: { startsWith: prefijo } },
+            orderBy: { clave: "asc" },
+        });
+    }
+
     /** Listado admin paginado (filtro opcional por categoría), ordenado por categoría. */
     findPaginadosConTotal(
         where: Prisma.ParametroSistemaWhereInput,

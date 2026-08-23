@@ -12,7 +12,7 @@ interface TimelineCasoProps {
 }
 
 function fechaLegible(iso: string): string {
-    return new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+    return new Date(iso).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium", timeStyle: "short" });
 }
 
 export function TimelineCaso({ hitos }: TimelineCasoProps) {

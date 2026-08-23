@@ -198,7 +198,7 @@ export default function ConfianzaPageClient() {
                         <TablaBody>
                             {eventos.map((evento) => (
                                 <tr key={evento.id}>
-                                    <td className="px-4 py-3 text-sm">{new Date(evento.fecha).toLocaleString("es-CO")}</td>
+                                    <td className="px-4 py-3 text-sm">{new Date(evento.fecha).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</td>
                                     <td className="px-4 py-3 text-sm">{evento.accion}</td>
                                     <td className="px-4 py-3 text-sm">{evento.tipoRecurso}</td>
                                     <td className="px-4 py-3 text-sm">{evento.resumen ?? "—"}</td>

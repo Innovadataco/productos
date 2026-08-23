@@ -55,7 +55,7 @@ function SearchIcon({ className }: { className?: string }) {
 function formatearFecha(fecha?: string | null): string {
     if (!fecha) return "";
     try {
-        return new Date(fecha).toLocaleDateString("es-LA", { day: "2-digit", month: "2-digit", year: "numeric" });
+        return new Date(fecha).toLocaleDateString("es-LA", { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "numeric" });
     } catch {
         return fecha;
     }

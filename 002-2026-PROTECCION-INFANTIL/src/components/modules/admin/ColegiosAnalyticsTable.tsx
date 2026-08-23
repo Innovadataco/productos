@@ -10,7 +10,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Alerta } from "@/components/ui/Alerta";
 import { Cargando } from "@/components/ui/Cargando";
 import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
-import { fechaCorta } from "@/lib/format/fecha";
 
 type ColegioItem = {
     id: string;
@@ -39,6 +38,10 @@ const ORDENES = [
     { key: "casosProcesadosPct", label: "% procesados" },
     { key: "creadoEn", label: "Registro" },
 ] as const;
+
+function fechaCorta(iso: string): string {
+    return new Date(iso).toLocaleDateString("es-CO", { timeZone: "America/Bogota", year: "numeric", month: "short", day: "numeric" });
+}
 
 function semaforoBadge(semaforo: ColegioItem["semaforo"]) {
     const variant = semaforo === "verde" ? "success" : semaforo === "rojo" ? "danger" : "warning";

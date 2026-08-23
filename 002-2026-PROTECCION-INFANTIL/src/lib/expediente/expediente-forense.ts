@@ -16,6 +16,7 @@ import type {
     StyleDictionary,
     Alignment,
 } from "pdfmake/interfaces";
+import { formatoFechaHoraBogota } from "@/lib/fechas/formato-bogota";
 import type { ReporteExpediente } from "./expediente";
 import { plantillasDenunciaUnicas } from "./pdf-denuncia";
 
@@ -107,7 +108,7 @@ export function armarExpedienteForense(
 }
 
 function formatoFechaColombia(fechaIso: string): string {
-    return new Date(fechaIso).toLocaleDateString("es-CO", {
+    return formatoFechaHoraBogota(fechaIso, {
         year: "numeric",
         month: "long",
         day: "numeric",

@@ -1,4 +1,6 @@
 import { randomBytes } from "crypto";
+import { addDays, getDay } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "./prisma";
 import { getParametroSistemaValor, type ParametroClient } from "./parametros";
 import type { EstadoApelacion } from "@prisma/client";
@@ -44,14 +46,20 @@ export function getMaxTamanoDocumentoMb(client?: ParametroClient): Promise<numbe
     return getParamEntero("apelacion.max_tamano_documento_mb", APELACION_DEFAULTS.maxTamanoDocumentoMb, client);
 }
 
-function inicioDeDia(fecha: Date): Date {
-    const d = new Date(fecha);
-    d.setHours(0, 0, 0, 0);
-    return d;
+const TZ = "America/Bogota";
+
+function isoDiaBogota(fecha: Date): string {
+    return formatInTimeZone(fecha, TZ, "yyyy-MM-dd");
+}
+
+/** Medianoche UTC del día calendario en Bogotá. */
+function inicioDeDiaBogota(fecha: Date): Date {
+    const [y, m, d] = isoDiaBogota(fecha).split("-").map(Number);
+    return new Date(Date.UTC(y!, m! - 1, d!));
 }
 
 export function esDiaHabil(fecha: Date): boolean {
-    const dia = fecha.getDay();
+    const dia = getDay(inicioDeDiaBogota(fecha));
     return dia >= 1 && dia <= 5;
 }
 
@@ -60,13 +68,15 @@ export function esDiaHabil(fecha: Date): boolean {
  * días hábiles siguientes). Conserva la hora de la fecha de inicio.
  */
 export function sumarDiasHabiles(fecha: Date, dias: number): Date {
-    const resultado = new Date(fecha);
+    const base = inicioDeDiaBogota(fecha);
+    const offsetMs = fecha.getTime() - base.getTime();
+    let cursor = base;
     let restantes = dias;
     while (restantes > 0) {
-        resultado.setDate(resultado.getDate() + 1);
-        if (esDiaHabil(resultado)) restantes--;
+        cursor = addDays(cursor, 1);
+        if (esDiaHabil(cursor)) restantes--;
     }
-    return resultado;
+    return new Date(cursor.getTime() + offsetMs);
 }
 
 /**
@@ -74,11 +84,11 @@ export function sumarDiasHabiles(fecha: Date, dias: number): Date {
  * 0 si `hasta` es el mismo día o anterior.
  */
 export function diasHabilesTranscurridos(desde: Date, hasta: Date): number {
-    const cursor = inicioDeDia(desde);
-    const fin = inicioDeDia(hasta);
+    let cursor = inicioDeDiaBogota(desde);
+    const fin = inicioDeDiaBogota(hasta);
     let count = 0;
-    while (cursor < fin) {
-        cursor.setDate(cursor.getDate() + 1);
+    while (cursor.getTime() < fin.getTime()) {
+        cursor = addDays(cursor, 1);
         if (esDiaHabil(cursor)) count++;
     }
     return count;
@@ -89,8 +99,8 @@ export async function calcularPlazoRespuesta(desde: Date, client?: ParametroClie
     return sumarDiasHabiles(desde, dias);
 }
 
-export function generarNumeroApelacion(): string {
-    const year = new Date().getFullYear();
+export function generarNumeroApelacion(ahora: Date = new Date()): string {
+    const year = formatInTimeZone(ahora, TZ, "yyyy");
     const sufijo = randomBytes(3).toString("hex").toUpperCase();
     return `APL-${year}-${sufijo}`;
 }

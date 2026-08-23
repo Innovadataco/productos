@@ -185,7 +185,7 @@ export function AdminAntiAbusoSimuladorHistorial({ onVerDetalle }: HistorialProp
                                     {r.progreso}/{r.totalReportes}
                                 </td>
                                 <td className="px-4 py-3 text-muted">
-                                    {new Date(r.creadoEn).toLocaleString("es-CO")}
+                                    {new Date(r.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                     <Button variant="ghost" className="h-auto px-2 py-1 text-xs" onClick={() => onVerDetalle(r.id)}>

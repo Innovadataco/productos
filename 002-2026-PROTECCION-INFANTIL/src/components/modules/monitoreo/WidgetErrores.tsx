@@ -26,7 +26,7 @@ type IncidentesRespuesta = {
 function formatoInicio(iso: string): string {
     const fecha = new Date(iso);
     if (Number.isNaN(fecha.getTime())) return "—";
-    return fecha.toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
+    return fecha.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
 }
 
 export function WidgetErrores({ recargaId }: { recargaId: number }) {

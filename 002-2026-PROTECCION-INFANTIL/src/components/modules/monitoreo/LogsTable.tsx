@@ -18,8 +18,7 @@ type LogsTableProps = {
 };
 
 function formatearFecha(fecha: Date): string {
-    return new Date(fecha).toLocaleString("es-CO", {
-        year: "numeric",
+    return new Date(fecha).toLocaleString("es-CO", { timeZone: "America/Bogota", year: "numeric",
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",

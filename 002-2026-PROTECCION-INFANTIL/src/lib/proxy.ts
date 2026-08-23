@@ -70,10 +70,18 @@ const PUBLICAS_LECTURA_SCHOOL_ADMIN = ["/", "/dashboard-publico", "/seguimiento"
 // institucional no reporta; solo el sub-árbol de seguimiento (GET, solo lectura).
 const APIS_LECTURA_SCHOOL_ADMIN = ["/api/consulta", "/api/estadisticas-publicas", "/api/reportes/seguimiento"];
 
+// SPEC-203 (002-PI-100): panel de preferencias/bandeja de notificaciones compartido
+// por todos los roles autenticados (padre, rector, comités, operador, admin).
+const RUTAS_PERFIL = ["/dashboard/perfil", "/api/notificaciones"];
+
 function matchesRoute(pathname: string, route: string): boolean {
     // Coincidencia exacta o por prefijo de segmento. Para "/" el startsWith queda
     // "//" y nunca casa: la raíz NO abre el árbol entero.
     return pathname === route || pathname.startsWith(route + "/");
+}
+
+function esRutaPerfil(pathname: string): boolean {
+    return RUTAS_PERFIL.some((route) => matchesRoute(pathname, route));
 }
 
 /**
@@ -84,8 +92,10 @@ function matchesRoute(pathname: string, route: string): boolean {
  * SPEC-118 (D-37): también el área pública de solo lectura (inicio, dashboard
  * público, seguimiento y sus APIs de consulta) — sigue sin entrar al área interna,
  * al área de padres ni a /reportar.
+ * SPEC-203: también el panel de preferencias de notificaciones compartido.
  */
 export function esRutaPermitidaSchoolAdmin(pathname: string): boolean {
+    if (esRutaPerfil(pathname)) return true;
     if (isColegioRoute(pathname)) return true;
     if (PUBLICAS_LECTURA_SCHOOL_ADMIN.some((route) => matchesRoute(pathname, route))) return true;
     if (APIS_LECTURA_SCHOOL_ADMIN.some((route) => matchesRoute(pathname, route))) return true;
@@ -104,6 +114,7 @@ function isComiteConvivenciaRoute(pathname: string): boolean {
  * solo del rector; se evalúa ANTES del prefijo "/dashboard/colegio/comite".
  */
 function esRutaPermitidaComiteConvivencia(pathname: string): boolean {
+    if (esRutaPerfil(pathname)) return true;
     if (COMITE_INTEGRANTES_SOLO_RECTOR.some((route) => matchesRoute(pathname, route))) return false;
     if (isComiteConvivenciaRoute(pathname)) return true;
     return SESION_ROUTES.some((route) => matchesRoute(pathname, route));
@@ -137,6 +148,7 @@ function isUserFinalRoute(pathname: string): boolean {
  */
 export function esDestinoPermitidoPorRol(rol: string | null | undefined, pathname: string): boolean {
     if (!rol) return !pathname.startsWith("/dashboard/admin");
+    if (esRutaPerfil(pathname)) return true;
     if (rol === "SCHOOL_ADMIN") return esRutaPermitidaSchoolAdmin(pathname);
     if (rol === "COMITE_CONVIVENCIA") return esRutaPermitidaComiteConvivencia(pathname);
     if (esRolInterno(rol)) {
@@ -240,6 +252,9 @@ async function proxyCore(request: NextRequest) {
     }
 
     const rol = payload.rol;
+
+    // SPEC-203: panel de preferencias/bandeja de notificaciones para cualquier rol autenticado.
+    if (esRutaPerfil(pathname)) return NextResponse.next();
 
     // SCHOOL_ADMIN: módulo colegio + sesión + área pública de solo lectura (SPEC-118/D-37).
     if (rol === "SCHOOL_ADMIN") {

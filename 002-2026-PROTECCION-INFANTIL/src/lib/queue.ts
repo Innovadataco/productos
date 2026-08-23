@@ -246,6 +246,16 @@ export async function sendSimulacionAbuso(runId: string) {
 }
 
 /**
+ * SPEC-201: encola un job de envío en el motor de notificaciones. El worker
+ * `scripts/worker-notificaciones.mjs` consume esta cola.
+ */
+export async function sendNotificacionEnvio(notificacionId: string, enviarEn?: Date) {
+    await ensureQueue("notificacion-envio");
+    const options = enviarEn ? { startAfter: enviarEn } : undefined;
+    return boss.send("notificacion-envio", { notificacionId }, options) ?? undefined;
+}
+
+/**
  * SPEC-149 (FR-002): cola `colegio-aviso` — el hook de alerta nueva ENCOLA el
  * evento y responde sin bloquear; el worker consume y envía con retry. El
  * payload NO lleva datos sensibles: solo ids y el día (YYYY-MM-DD Bogotá).

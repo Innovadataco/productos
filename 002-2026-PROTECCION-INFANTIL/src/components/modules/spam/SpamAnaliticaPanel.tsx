@@ -25,7 +25,7 @@ function formatCategoria(value: string) {
 }
 
 function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
+    return new Date(iso).toLocaleDateString("es-CO", { timeZone: "America/Bogota", day: "2-digit", month: "short" });
 }
 
 interface SpamAnaliticaPanelProps {

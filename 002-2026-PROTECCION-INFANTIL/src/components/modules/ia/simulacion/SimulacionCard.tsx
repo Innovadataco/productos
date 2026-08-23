@@ -26,7 +26,7 @@ export function SimulacionCard({ run, onClick }: { run: SimulacionRun; onClick: 
                 <div>
                     <h4 className="font-semibold text-body">Simulación {run.id.slice(0, 8)}</h4>
                     <p className="text-xs text-muted">
-                        {new Date(run.fechaInicio).toLocaleString()} · {run.totalCasos} casos
+                        {new Date(run.fechaInicio).toLocaleString("es-CO", { timeZone: "America/Bogota" })} · {run.totalCasos} casos
                     </p>
                 </div>
                 <Badge variant={badgeVariant}>{run.estado}</Badge>

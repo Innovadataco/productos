@@ -50,7 +50,7 @@ interface AdminReporteProcesoProps {
 function formatearFechaHora(fecha: string): string {
     const d = new Date(fecha);
     if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleString("es-CO", { dateStyle: "short", timeStyle: "medium" });
+    return d.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "medium" });
 }
 
 function formatearEstado(estado: string): string {

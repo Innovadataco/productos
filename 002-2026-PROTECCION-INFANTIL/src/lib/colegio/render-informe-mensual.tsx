@@ -3,15 +3,12 @@
  * `@react-pdf/renderer`. Vive en un archivo .tsx para poder usar JSX.
  */
 import { renderToBuffer } from "@react-pdf/renderer";
+import { formatoFechaLargaBogota } from "@/lib/fechas/formato-bogota";
 import { calcularInformeMensual, etiquetaMes, type InformeMensualColegio } from "./informe-mensual";
 import { InformeMensualPDF } from "./pdf-informe-mensual";
 
 function fechaGeneracionColombia(): string {
-    return new Date().toLocaleDateString("es-CO", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    });
+    return formatoFechaLargaBogota(new Date());
 }
 
 export async function renderInformeMensualPDF(colegioId: string, mes: string): Promise<{ datos: InformeMensualColegio; buffer: Buffer }> {

@@ -1,6 +1,9 @@
+import { subDays } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
 import { SpamReporteRepository } from "@/lib/dal/repositories/spam-reporte";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { diaCalendarioBogota } from "@/lib/fechas/formato-bogota";
 import type { AccionAudit } from "@prisma/client";
 
 const VENTANAS_DIAS = [7, 30, 90] as const;
@@ -32,14 +35,16 @@ interface AuditCierre {
     creadoEn: Date;
 }
 
+const TZ = "America/Bogota";
+
 function inicioFinDias(dias: number): { inicio: Date; fin: Date } {
-    const fin = new Date();
-    const inicio = new Date(fin.getTime() - dias * 24 * 60 * 60 * 1000);
+    const fin = diaCalendarioBogota(new Date());
+    const inicio = subDays(fin, dias);
     return { inicio, fin };
 }
 
 function formatoFecha(d: Date): string {
-    return d.toISOString().slice(0, 10);
+    return formatInTimeZone(d, TZ, "yyyy-MM-dd");
 }
 
 export async function generarAnaliticaSpam(): Promise<AnaliticaSpam> {
@@ -138,9 +143,9 @@ async function calcularTiemposResolucion(cierres: AuditCierre[]): Promise<number
 
 function agruparSerie(cierres: { accion: AccionAudit; creadoEn: Date }[]) {
     const mapa = new Map<string, { fecha: string; esSpam: number; corregidos: number; procesadosComoAcoso: number }>();
-    const hoy = new Date();
+    const hoy = diaCalendarioBogota(new Date());
     for (let i = 29; i >= 0; i--) {
-        const d = new Date(hoy.getTime() - i * 24 * 60 * 60 * 1000);
+        const d = subDays(hoy, i);
         const fecha = formatoFecha(d);
         mapa.set(fecha, { fecha, esSpam: 0, corregidos: 0, procesadosComoAcoso: 0 });
     }

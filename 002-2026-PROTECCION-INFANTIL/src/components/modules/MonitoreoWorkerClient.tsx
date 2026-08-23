@@ -80,7 +80,7 @@ export function MonitoreoWorkerClient() {
 
                 {estado?.timestamp && (
                     <p className="mt-4 text-xs text-muted">
-                        Última actualización: {new Date(estado.timestamp).toLocaleString("es-CO")}
+                        Última actualización: {new Date(estado.timestamp).toLocaleString("es-CO", { timeZone: "America/Bogota" })}
                     </p>
                 )}
             </GlassCard>

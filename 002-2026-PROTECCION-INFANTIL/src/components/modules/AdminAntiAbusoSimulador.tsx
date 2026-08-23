@@ -452,7 +452,7 @@ export function AdminAntiAbusoSimulador() {
                                     Simulación {run.id.slice(0, 8)} · {ESTADO_LABELS[run.estado]}
                                 </h3>
                                 <span className="text-sm text-muted">
-                                    {run.creadoEn ? new Date(run.creadoEn).toLocaleString("es-CO") : "—"}
+                                    {run.creadoEn ? new Date(run.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" }) : "—"}
                                 </span>
                             </div>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">

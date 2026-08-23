@@ -43,7 +43,7 @@ export function ComiteHome({ resumen }: Props) {
                                     </p>
                                     <p className="text-sm text-muted">
                                         {caso.vencimientoSla
-                                            ? `Vence: ${new Date(caso.vencimientoSla).toLocaleString("es-CO")}`
+                                            ? `Vence: ${new Date(caso.vencimientoSla).toLocaleString("es-CO", { timeZone: "America/Bogota" })}`
                                             : "Sin fecha de vencimiento"}
                                     </p>
                                 </div>

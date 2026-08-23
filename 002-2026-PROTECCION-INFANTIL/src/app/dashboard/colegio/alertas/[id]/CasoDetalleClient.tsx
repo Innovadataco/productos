@@ -102,8 +102,7 @@ export default function CasoDetalleClient({ caso }: CasoDetalleClientProps) {
                             <div>
                                 <dt className="microetiqueta">Recibida el</dt>
                                 <dd className="mt-0.5 text-body">
-                                    {new Date(alerta.creadoEn).toLocaleString("es-CO", {
-                                        dateStyle: "medium",
+                                    {new Date(alerta.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium",
                                         timeStyle: "short",
                                     })}
                                 </dd>

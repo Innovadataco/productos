@@ -365,7 +365,7 @@ export default function NuevoColegioPageClient() {
                                     <label className="mb-1.5 block text-sm font-medium text-body">Fin del servicio</label>
                                     <div className="w-full rounded-xl px-4 py-3 text-sm text-muted glass-input">
                                         {finCalculado
-                                            ? `Se calcula automáticamente: ${finCalculado.toLocaleDateString("es-CO")}`
+                                            ? `Se calcula automáticamente: ${finCalculado.toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}`
                                             : "Se calcula automáticamente al elegir el inicio"}
                                     </div>
                                 </div>

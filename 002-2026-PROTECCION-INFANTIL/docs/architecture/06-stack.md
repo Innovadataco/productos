@@ -81,6 +81,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `test:watch` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs` |
 | `tokens:check` | `tsx scripts/tokens-check.ts` |
 | `worker` | `node --import tsx scripts/worker-supervisor.mjs` |
+| `worker:notificaciones` | `node --import tsx scripts/worker-notificaciones.mjs` |
 | `worker:sesiones` | `node --import tsx scripts/worker-sesiones.mjs` |
 
 ## Imagen de producción (Dockerfile)
@@ -105,6 +106,7 @@ Comando por defecto: `["node", "server.js"]`.
 | app | `pi-app:${PI_APP_TAG:-latest}` (+ build local) | `pi-app` | — |
 | db | `pgvector/pgvector:pg16` | `pi-db` | — |
 | monitor | `pi-app:${PI_APP_TAG:-latest}` | `pi-monitor` | — |
+| pi-notificaciones | `pi-app:${PI_APP_TAG:-latest}` | `pi-notificaciones` | — |
 | pi-senal-comunitaria | `pi-app:${PI_APP_TAG:-latest}` | `pi-senal-comunitaria` | — |
 | simulador-abuso | `pi-app:${PI_APP_TAG:-latest}` | `pi-simulador-abuso` | — |
 | worker | `pi-app:${PI_APP_TAG:-latest}` | `pi-worker` | — |

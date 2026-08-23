@@ -96,7 +96,7 @@ function formatearFechaHora(fechaHora: string | null): string {
     if (!fechaHora) return "—";
     const fecha = new Date(fechaHora);
     if (Number.isNaN(fecha.getTime())) return "—";
-    return fecha.toLocaleString("es-CO", { dateStyle: "short", timeStyle: "medium" });
+    return fecha.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "medium" });
 }
 
 function formatearValor(valor: unknown): string {

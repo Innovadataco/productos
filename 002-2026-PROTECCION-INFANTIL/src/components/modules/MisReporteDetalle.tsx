@@ -117,7 +117,7 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
                             {reporte.plataforma} · {reporte.ciudad}, {reporte.pais}
                         </p>
                         <p className="mt-0.5 text-xs text-subtle">
-                            Reportado el {new Date(reporte.creadoEn).toLocaleDateString("es-CO")}
+                            Reportado el {new Date(reporte.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                         </p>
                     </div>
                     <span className={estadoBadgeClass(reporte.badge)}>{reporte.estadoVisual}</span>
