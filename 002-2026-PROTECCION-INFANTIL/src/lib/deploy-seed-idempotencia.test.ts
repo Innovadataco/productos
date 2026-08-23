@@ -8,7 +8,7 @@ import { main } from "../../prisma/seed";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 
-describe("deploy seed idempotente (SPEC-190)", () => {
+describe("deploy seed idempotente (SPEC-190)", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
     });

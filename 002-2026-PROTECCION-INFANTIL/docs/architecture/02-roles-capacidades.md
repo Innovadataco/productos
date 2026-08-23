@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 319 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2233 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 322 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2254 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -136,6 +136,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/sesiones` | api | permitir | permite | sí |
+| `/api/admin/sesiones/[id]/cerrar` | api | permitir | permite | sí |
 | `/api/admin/spam/analitica` | api | permitir | permite | sí |
 | `/api/admin/spam/banco-sugerencias` | api | permitir | permite | sí |
 | `/api/admin/spam/pendientes` | api | permitir | permite | sí |
@@ -259,6 +261,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/procesar` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/api/session/ping` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -460,6 +463,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/sesiones` | api | permitir | permite | sí |
+| `/api/admin/sesiones/[id]/cerrar` | api | permitir | permite | sí |
 | `/api/admin/spam/analitica` | api | permitir | permite | sí |
 | `/api/admin/spam/banco-sugerencias` | api | permitir | permite | sí |
 | `/api/admin/spam/pendientes` | api | permitir | permite | sí |
@@ -583,6 +588,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/procesar` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/api/session/ping` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -784,6 +790,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/sesiones` | api | permitir | permite | sí |
+| `/api/admin/sesiones/[id]/cerrar` | api | permitir | permite | sí |
 | `/api/admin/spam/analitica` | api | permitir | permite | sí |
 | `/api/admin/spam/banco-sugerencias` | api | permitir | permite | sí |
 | `/api/admin/spam/pendientes` | api | permitir | permite | sí |
@@ -907,6 +915,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/procesar` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/api/session/ping` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/admin/comite | no permite | sí |
@@ -1108,6 +1117,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/sesiones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/sesiones/[id]/cerrar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/analitica` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/banco-sugerencias` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/pendientes` | api | HTTP 403 | no permite | sí |
@@ -1231,6 +1242,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/procesar` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/api/session/ping` | api | HTTP 403 | no permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1432,6 +1444,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/sesiones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/sesiones/[id]/cerrar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/analitica` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/banco-sugerencias` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/pendientes` | api | HTTP 403 | no permite | sí |
@@ -1555,6 +1569,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/procesar` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/seguimiento` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | HTTP 403 | no permite | sí |
+| `/api/session/ping` | api | HTTP 403 | no permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -1756,6 +1771,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/sesiones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/sesiones/[id]/cerrar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/analitica` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/banco-sugerencias` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/pendientes` | api | HTTP 403 | no permite | sí |
@@ -1879,6 +1896,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/procesar` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/api/session/ping` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | permitir | permite | sí |
@@ -2080,6 +2098,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/sesiones` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/sesiones/[id]/cerrar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/spam/analitica` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/spam/banco-sugerencias` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/spam/pendientes` | api | HTTP 401 | permite | **NO** |
@@ -2203,6 +2223,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/procesar` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
+| `/api/session/ping` | api | HTTP 401 | permite | **NO** |
 | `/cambiar-password` | página | redirigir→/login | permite | **NO** |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/login | permite | **NO** |
@@ -2405,6 +2426,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/reportes/[id]/revelar-original` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/transiciones` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | HTTP 401 | permite |
+| `/api/admin/sesiones` | HTTP 401 | permite |
+| `/api/admin/sesiones/[id]/cerrar` | HTTP 401 | permite |
 | `/api/admin/spam/analitica` | HTTP 401 | permite |
 | `/api/admin/spam/banco-sugerencias` | HTTP 401 | permite |
 | `/api/admin/spam/pendientes` | HTTP 401 | permite |
@@ -2496,6 +2519,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/me` | HTTP 401 | permite |
 | `/api/me/colegio` | HTTP 401 | permite |
 | `/api/pagos/aplicar-bono` | HTTP 401 | permite |
+| `/api/session/ping` | HTTP 401 | permite |
 | `/cambiar-password` | redirigir→/login | permite |
 | `/dashboard` | redirigir→/login | permite |
 | `/dashboard/apelaciones` | redirigir→/login | permite |

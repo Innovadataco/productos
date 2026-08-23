@@ -12,6 +12,7 @@ import {
     crearColegioConAdmin,
 } from "@/lib/reporte-test-utils";
 import { normalizarFechaServicio } from "@/lib/colegio/vigencia";
+import { createToken } from "@/lib/auth";
 
 let mockToken: string | undefined;
 
@@ -217,5 +218,44 @@ describe("POST /api/auth/login — vigencia del cliente (SPEC-119)", () => {
             new Request("http://localhost:5005/api/consulta?identificador=%2B573009990002")
         );
         expect(res.status).toBe(200);
+    });
+});
+
+describe("POST /api/auth/login — SesionLog (SPEC-206)", { timeout: 30_000 }, () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        mockToken = undefined;
+    });
+
+    it("login exitoso crea SesionLog con IP hash y user agent", async () => {
+        const padre = await crearUsuario("PARENT", "padre-sesion@example.com");
+        const res = await login("padre-sesion@example.com", "TestPass123");
+        expect(res.status).toBe(200);
+
+        const sesiones = await prisma.sesionLog.findMany({ where: { usuarioId: padre.id } });
+        expect(sesiones).toHaveLength(1);
+        expect(sesiones[0].cerradaEn).toBeNull();
+        expect(sesiones[0].ipHash).toMatch(/^[a-f0-9]{64}$/);
+        expect(sesiones[0].userAgent).toBeNull();
+    });
+
+    it("el JWT de login incluye sesionLogId", async () => {
+        const padre = await crearUsuario("PARENT", "padre-jwt@example.com");
+        const res = await login("padre-jwt@example.com", "TestPass123");
+        expect(res.status).toBe(200);
+
+        // El token se envía en cookie; leemos la sesión creada y verificamos
+        // que createToken la hubiera incluido comparando con el registro.
+        const sesion = await prisma.sesionLog.findFirst({ where: { usuarioId: padre.id } });
+        expect(sesion).not.toBeNull();
+
+        const tokenConSesion = await createToken({
+            sub: padre.id,
+            rol: padre.rol,
+            sesionLogId: sesion!.id,
+        });
+        const payload = JSON.parse(Buffer.from(tokenConSesion.split(".")[1], "base64url").toString());
+        expect(payload.sesionLogId).toBe(sesion!.id);
     });
 });

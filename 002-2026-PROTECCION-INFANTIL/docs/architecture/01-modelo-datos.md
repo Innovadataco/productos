@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **75** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **76** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -483,7 +483,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (27)
+### Otros (sin regla de dominio) (28)
 
 #### `BlockList`
 
@@ -863,6 +863,25 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | alerta | AlertaColegio | relación (FK) |
 | notas | NotaSeguimiento | lista, relación |
+
+#### `SesionLog`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| usuarioId | String | — |
+| tenantId | String | opcional |
+| rol | RolUsuario | — |
+| iniciadaEn | DateTime | — |
+| ultimaActividadEn | DateTime | — |
+| cerradaEn | DateTime | opcional |
+| motivoCierre | MotivoCierreSesion | opcional |
+| duracionMin | Int | opcional |
+| ipHash | String | — |
+| userAgent | String | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| usuario | Usuario | relación (FK) |
 
 #### `SimulacionAbusoRun`
 
@@ -1421,6 +1440,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | bloqueosCreados | BlockList | lista, relación |
 | simulacionesAbuso | SimulacionAbusoRun | lista, relación |
 | expedientes | Expediente | lista, relación |
+| sesionesLog | SesionLog | lista, relación |
 | suscripciones | Suscripcion | lista, relación |
 | planesCreados | Plan | lista, relación |
 | bonosCreados | BonoPromocional | lista, relación |
@@ -1547,6 +1567,7 @@ erDiagram
     Usuario ||--o{ Reporte : "eliminadoPor (opcional)"
     Usuario ||--o{ Reporte : "operador (opcional)"
     Usuario ||--o{ Reporte : "usuario (opcional)"
+    Usuario ||--o{ SesionLog : "usuario"
     Usuario ||--o{ SimulacionAbusoRun : "creadoPor"
     Usuario ||--o{ SimulacionRun : "creadoPor"
     Usuario ||--o{ SolicitudComite : "comite (opcional)"

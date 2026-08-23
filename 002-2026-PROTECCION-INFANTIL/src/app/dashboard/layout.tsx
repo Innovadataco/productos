@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { verificarVigenciaCliente } from "@/lib/colegio/vigencia";
 import { ServicioVencidoScreen } from "@/components/modules/ServicioVencidoScreen";
+import { SessionPingProvider } from "@/components/providers/SessionPingProvider";
 
 /**
  * Layout raíz de /dashboard (SPEC-119): aplica la guarda de vigencia al área del padre
@@ -23,5 +24,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         }
     }
 
-    return <div className="min-h-screen">{children}</div>;
+    return (
+        <SessionPingProvider>
+            <div className="min-h-screen">{children}</div>
+        </SessionPingProvider>
+    );
 }
