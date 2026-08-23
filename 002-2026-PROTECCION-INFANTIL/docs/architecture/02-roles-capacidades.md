@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 322 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2254 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 323 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2261 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -254,6 +254,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
@@ -581,6 +582,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
@@ -908,6 +910,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
@@ -1235,6 +1238,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/aplicar-bono` | api | HTTP 403 | no permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
+| `/api/publico/verificar-pdf/[hash]` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/fallback` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/mis-reportes` | api | HTTP 403 | no permite | sí |
@@ -1562,6 +1566,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/aplicar-bono` | api | HTTP 403 | no permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
+| `/api/publico/verificar-pdf/[hash]` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/fallback` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/mis-reportes` | api | HTTP 403 | no permite | sí |
@@ -1889,6 +1894,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
@@ -2216,6 +2222,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/aplicar-bono` | api | HTTP 401 | permite | **NO** |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/publico/verificar-pdf/[hash]` | api | HTTP 401 | permite | **NO** |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
@@ -2519,6 +2526,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/me` | HTTP 401 | permite |
 | `/api/me/colegio` | HTTP 401 | permite |
 | `/api/pagos/aplicar-bono` | HTTP 401 | permite |
+| `/api/publico/verificar-pdf/[hash]` | HTTP 401 | permite |
 | `/api/session/ping` | HTTP 401 | permite |
 | `/cambiar-password` | redirigir→/login | permite |
 | `/dashboard` | redirigir→/login | permite |

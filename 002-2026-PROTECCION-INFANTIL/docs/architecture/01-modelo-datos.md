@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **76** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **79** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -483,7 +483,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (28)
+### Otros (sin regla de dominio) (31)
 
 #### `BlockList`
 
@@ -648,6 +648,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | updatedAt | DateTime | — |
 | padre | Usuario | opcional, relación (FK) |
 | eventos | EventoExpediente | lista, relación |
+| informes | InformeConsolidado | lista, relación |
+| patrones | PatronExpediente | lista, relación |
 | expedienteAnterior | Expediente | opcional, relación |
 | expedientesPosteriores | Expediente | lista, relación |
 
@@ -712,6 +714,34 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ultimoEmailEn | DateTime | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
+
+#### `InformeConsolidado`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| expedienteId | String | — |
+| versionSecuencial | Int | — |
+| scoreValor | Float | — |
+| scoreGravedad | ScoreGravedad | — |
+| categoriasDetectadasJson | Json | — |
+| patronesDetectadosJson | Json | opcional |
+| senalComunitariaJson | Json | opcional |
+| resumenTextoGenerado | String | — |
+| pdfUrl | String | opcional |
+| pdfHash | String | único, opcional |
+| pdfGeneradoEn | DateTime | opcional |
+| generadoPorId | String | opcional |
+| tipoRevision | TipoRevisionComite | — |
+| guiaAccionCategoriaIdPrincipal | String | opcional |
+| estadoAprobacion | String | — |
+| aprobadoPorMiembrosJson | Json | opcional |
+| correccionesJson | Json | opcional |
+| nivelConfianza | Float | opcional |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| expediente | Expediente | relación (FK) |
+| generadoPor | Usuario | opcional, relación (FK) |
 
 #### `Materia`
 
@@ -803,6 +833,21 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | autorizadoPor | Usuario | opcional, relación (FK) |
 | bonosAplicados | BonoAplicado | lista, relación |
 
+#### `PatronExpediente`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| expedienteId | String | — |
+| tipoPatron | TipoPatronExpediente | — |
+| severidad | String | — |
+| nivelConfianza | Float | — |
+| descripcionTexto | String | — |
+| datosContextoJson | Json | — |
+| detectadoEn | DateTime | — |
+| createdAt | DateTime | — |
+| expediente | Expediente | relación (FK) |
+
 #### `PatronInstitucional`
 
 | Campo | Tipo | Atributos |
@@ -863,6 +908,23 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | alerta | AlertaColegio | relación (FK) |
 | notas | NotaSeguimiento | lista, relación |
+
+#### `SenalComunitariaCache`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| identificadorReportado | String | id |
+| totalExpedientesActivos | Int | — |
+| totalExpedientesCerrados | Int | — |
+| totalExpedientesEscalados | Int | — |
+| categoriasFrecuenciaJson | Json | — |
+| primeraAparicionEn | DateTime | — |
+| ultimaAparicionEn | DateTime | — |
+| paisesJson | Json | — |
+| ciudadesJson | Json | — |
+| plataformasJson | Json | — |
+| invalidado | Boolean | — |
+| actualizadoEn | DateTime | — |
 
 #### `SesionLog`
 
@@ -1441,6 +1503,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | simulacionesAbuso | SimulacionAbusoRun | lista, relación |
 | expedientes | Expediente | lista, relación |
 | sesionesLog | SesionLog | lista, relación |
+| informesConsolidados | InformeConsolidado | lista, relación |
 | suscripciones | Suscripcion | lista, relación |
 | planesCreados | Plan | lista, relación |
 | bonosCreados | BonoPromocional | lista, relación |
@@ -1495,6 +1558,8 @@ erDiagram
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
     Expediente ||--o{ EventoExpediente : "expediente"
+    Expediente ||--o{ InformeConsolidado : "expediente"
+    Expediente ||--o{ PatronExpediente : "expediente"
     IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante (opcional)"
     IdentificadorProfesor ||--o{ AlertaColegio : "identificadorProfesor (opcional)"
@@ -1551,6 +1616,7 @@ erDiagram
     Usuario ||--o{ ContactoConfianza : "usuario"
     Usuario ||--o{ CorreccionAdmin : "admin"
     Usuario ||--o{ Expediente : "padre (opcional)"
+    Usuario ||--o{ InformeConsolidado : "generadoPor (opcional)"
     Usuario ||--o{ IntegranteComite : "comite"
     Usuario ||--o{ IntegranteComite : "creadoPor"
     Usuario ||--o{ IntegranteComite : "modificadoPor (opcional)"
@@ -1593,5 +1659,6 @@ por ningún otro modelo. La lista de excepciones declarada vive en
 | HealthProbe | sí |
 | IncidenteInfra | sí |
 | RateLimit | sí |
+| SenalComunitariaCache | sí |
 | Subscription | sí |
 | WorkerLog | sí |
