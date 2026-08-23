@@ -15,6 +15,8 @@ const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element
     "/dashboard/admin/ia": BrainIcon,
     "/dashboard/admin/operadores": UsersIcon,
     "/dashboard/admin/padres": UserCircleIcon,
+    // SPEC-212 (002-PI-112): panel de pagos.
+    "/dashboard/admin/pagos": CurrencyDollarIcon,
     "/dashboard/admin/colegios": BuildingIcon,
     "/dashboard/admin/anti-abuso": ShieldIcon,
     "/dashboard/admin/dataset-entrenamiento": DatabaseIcon,
@@ -45,14 +47,19 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
                     const active =
                         pathname === link.href ||
                         (link.href !== "/dashboard/admin" && (pathname?.startsWith(link.href + "/") ?? false));
+                    const isPagos = link.href === "/dashboard/admin/pagos";
                     return (
                         <li key={link.href}>
                             <Link
                                 href={link.href}
                                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                                     active
-                                        ? "accent-gradient text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20"
-                                        : "text-muted hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-body"
+                                        ? isPagos
+                                            ? "bg-amber-500 text-white shadow-lg shadow-amber-500/25 dark:bg-amber-600 dark:shadow-amber-500/20"
+                                            : "accent-gradient text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20"
+                                        : isPagos
+                                            ? "text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30 hover:text-amber-700"
+                                            : "text-muted hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-body"
                                 }`}
                             >
                                 <link.icon className="h-4 w-4" />
@@ -173,6 +180,14 @@ function BuildingIcon({ className }: { className?: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 2.25h15A2.25 2.25 0 0 1 21.75 4.5v15A2.25 2.25 0 0 1 19.5 21.75h-15A2.25 2.25 0 0 1 2.25 19.5v-15A2.25 2.25 0 0 1 4.5 2.25Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Zm4.5-9h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Zm4.5-9h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.75V18" />
+        </svg>
+    );
+}
+
+function CurrencyDollarIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
         </svg>
     );
 }

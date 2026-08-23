@@ -45,6 +45,7 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "colegios_notificaciones", nombre: "Notificaciones in-app del colegio", categoria: "colegio", orden: 66, padre: "colegios" },
     { clave: "configuracion_sistema", nombre: "Configuración del sistema", categoria: "admin", esCritico: true, orden: 70 },
     { clave: "configuracion_permisos", nombre: "Permisos por rol", categoria: "admin", orden: 71, padre: "configuracion_sistema" },
+    { clave: "pagos_admin", nombre: "Pagos", categoria: "admin", esCritico: true, orden: 75 },
     { clave: "audit_logs", nombre: "Logs de auditoría", categoria: "admin", esCritico: true, orden: 80 },
     { clave: "estadisticas", nombre: "Estadísticas", categoria: "admin", orden: 90 },
     // SPEC-194 (002-PI-088): analítica agregada de colegios (sub-tab de estadísticas/operacion).

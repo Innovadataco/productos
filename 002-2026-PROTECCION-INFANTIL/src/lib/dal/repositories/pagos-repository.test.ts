@@ -228,4 +228,220 @@ describe("PagosRepository", () => {
         expect(masReciente?.id).toBe(tasa.id);
         expect(masReciente?.tasa).toBe(4050);
     });
+
+    it("lista planes paginados con filtros", async () => {
+        const admin = await crearAdmin();
+        const plan = await crearPlan(admin.id);
+        const repo = new PagosRepository();
+
+        const { items, total } = await repo.listarPlanesPaginados({ anio: 2026 }, { skip: 0, take: 10 });
+        expect(total).toBeGreaterThanOrEqual(1);
+        expect(items.map((p) => p.id)).toContain(plan.id);
+    });
+
+    it("lista pagos pendientes y aplica búsqueda", async () => {
+        const admin = await crearAdmin();
+        const padre = await crearUsuarioPadre();
+        const plan = await crearPlan(admin.id);
+        const repo = new PagosRepository();
+
+        const suscripcion = await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.PADRE,
+            usuarioId: padre.id,
+            estado: EstadoSuscripcion.ACTIVA,
+            planActualId: plan.id,
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-PEND-001",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        await repo.crearPago({
+            suscripcionId: suscripcion.id,
+            duracionCubierta: DuracionPlan.MES_1,
+            montoBaseUSD: 10,
+            montoNetoUSD: 10,
+            tasaCambioAplicada: 4000,
+            montoLocalPagado: 40000,
+            monedaLocal: "COP",
+            metodoDeclarado: MetodoPago.TRANSFERENCIA,
+            comprobanteAdjuntoUrl: "https://example.com/comp.jpg",
+            comprobanteMimeType: "image/jpeg",
+            comprobanteHashSha256: "abc123",
+            fechaReporte: new Date(),
+            estado: EstadoPago.PENDIENTE_AUTORIZACION,
+        });
+
+        const { items, total } = await repo.listarPagosPendientes({}, { skip: 0, take: 10 });
+        expect(total).toBe(1);
+        expect(items[0]?.suscripcion.usuario?.id).toBe(padre.id);
+
+        const porEmail = await repo.listarPagosPendientes({ q: padre.email }, { skip: 0, take: 10 });
+        expect(porEmail.total).toBe(1);
+    });
+
+    it("lista vencimientos próximos", async () => {
+        const admin = await crearAdmin();
+        const padre = await crearUsuarioPadre();
+        const plan = await crearPlan(admin.id);
+        const repo = new PagosRepository();
+
+        const suscripcion = await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.PADRE,
+            usuarioId: padre.id,
+            estado: EstadoSuscripcion.ACTIVA,
+            planActualId: plan.id,
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-VENC-001",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        const { items, total } = await repo.listarVencimientosProximos({ dias: 7 }, { skip: 0, take: 10 });
+        expect(total).toBeGreaterThanOrEqual(1);
+        expect(items.map((s) => s.id)).toContain(suscripcion.id);
+    });
+
+    it("lista suscripciones en mora", async () => {
+        const admin = await crearAdmin();
+        const padre = await crearUsuarioPadre();
+        const plan = await crearPlan(admin.id);
+        const repo = new PagosRepository();
+
+        const suspendida = await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.PADRE,
+            usuarioId: padre.id,
+            estado: EstadoSuscripcion.SUSPENDIDA,
+            planActualId: plan.id,
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-MORA-001",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        const { items, total } = await repo.listarMora({}, { skip: 0, take: 10 });
+        expect(total).toBeGreaterThanOrEqual(1);
+        expect(items.map((s) => s.id)).toContain(suspendida.id);
+    });
+
+    it("lista bonos paginados", async () => {
+        const admin = await crearAdmin();
+        const repo = new PagosRepository();
+
+        await repo.crearBonoPromocional({
+            nombre: "BONO-LISTA",
+            tipo: TipoBono.DESCUENTO_PCT,
+            valor: 10,
+            vigenciaInicio: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+            vigenciaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            creadoPorAdminId: admin.id,
+        });
+
+        const { items, total } = await repo.listarBonos({}, { skip: 0, take: 10 });
+        expect(total).toBeGreaterThanOrEqual(1);
+        expect(items[0]?.nombre).toBe("BONO-LISTA");
+    });
+
+    it("registra un reembolso", async () => {
+        const admin = await crearAdmin();
+        const padre = await crearUsuarioPadre();
+        const plan = await crearPlan(admin.id);
+        const repo = new PagosRepository();
+
+        const suscripcion = await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.PADRE,
+            usuarioId: padre.id,
+            estado: EstadoSuscripcion.ACTIVA,
+            planActualId: plan.id,
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-REM-001",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        const pago = await repo.crearPago({
+            suscripcionId: suscripcion.id,
+            duracionCubierta: DuracionPlan.MES_1,
+            montoBaseUSD: 10,
+            montoNetoUSD: 10,
+            tasaCambioAplicada: 4000,
+            montoLocalPagado: 40000,
+            monedaLocal: "COP",
+            metodoDeclarado: MetodoPago.TRANSFERENCIA,
+            comprobanteAdjuntoUrl: "https://example.com/comp.jpg",
+            comprobanteMimeType: "image/jpeg",
+            comprobanteHashSha256: "abc123",
+            fechaReporte: new Date(),
+            estado: EstadoPago.AUTORIZADO,
+        });
+
+        const reembolsado = await repo.registrarReembolso(pago.id, {
+            montoReembolsoUSD: 10,
+            motivoReembolso: "Solicitud del cliente",
+            referenciaReembolso: "REF-123",
+        });
+
+        expect(reembolsado.estado).toBe(EstadoPago.REEMBOLSADO);
+        expect(reembolsado.montoReembolsoUSD).toBe(10);
+    });
+
+    it("lista tasas vigentes con flag de desactualización", async () => {
+        const repo = new PagosRepository();
+        await repo.crearTasaCambio({
+            monedaOrigen: "USD",
+            monedaDestino: "COP",
+            tasa: 4100,
+            fecha: new Date(),
+            fuente: FuenteTasa.API,
+        });
+
+        const tasas = await repo.listarTasasVigentes({});
+        const cop = tasas.find((t) => t.monedaDestino === "COP");
+        expect(cop).toBeDefined();
+        expect(cop?.desactualizada).toBe(false);
+        expect(cop?.horasDesdeActualizacion).toBe(0);
+    });
+
+    it("obtiene ficha de cliente", async () => {
+        const admin = await crearAdmin();
+        const padre = await crearUsuarioPadre();
+        const plan = await crearPlan(admin.id);
+        const repo = new PagosRepository();
+
+        const suscripcion = await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.PADRE,
+            usuarioId: padre.id,
+            estado: EstadoSuscripcion.ACTIVA,
+            planActualId: plan.id,
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-FICHA-001",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        await repo.crearPago({
+            suscripcionId: suscripcion.id,
+            duracionCubierta: DuracionPlan.MES_1,
+            montoBaseUSD: 10,
+            montoNetoUSD: 10,
+            tasaCambioAplicada: 4000,
+            montoLocalPagado: 40000,
+            monedaLocal: "COP",
+            metodoDeclarado: MetodoPago.TRANSFERENCIA,
+            comprobanteAdjuntoUrl: "https://example.com/comp.jpg",
+            comprobanteMimeType: "image/jpeg",
+            comprobanteHashSha256: "abc123",
+            fechaReporte: new Date(),
+            estado: EstadoPago.PENDIENTE_AUTORIZACION,
+        });
+
+        const ficha = await repo.obtenerFichaCliente(suscripcion.id);
+        expect(ficha.suscripcion?.id).toBe(suscripcion.id);
+        expect(ficha.pagos).toHaveLength(1);
+    });
 });

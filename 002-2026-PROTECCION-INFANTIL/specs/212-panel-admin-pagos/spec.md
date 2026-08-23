@@ -1,6 +1,6 @@
 # SPEC-212 · Panel admin Pagos (002-PI-112)
 
-> Status: `PLANEADO`
+> Status: `IMPLEMENTADO`
 > PI: 002-PI-112
 > Responsable: ODIN
 > Rama: `work/002-PI-pagos-lote2`
@@ -123,9 +123,21 @@ Depende de SPEC-210 (modelos + `pagos-repository`). No implementa pasarela, fact
 5. **`EstadoPago.REEMBOLSADO`**: agregar estado aditivo para soportar reembolsos en v1 sin pasarela.
 6. **DAL único**: todo endpoint admin/pagos consume `pagos-repository`; cero `@/lib/prisma`.
 
-## Impacto en arquitectura
+## Implementación
 
-Nuevas rutas: `src/app/dashboard/admin/pagos/**`, `src/app/api/admin/pagos/**`. Posibles extensiones en `src/lib/dal/repositories/pagos-repository.ts`. Modificación de `AdminNav.tsx` para agregar item. Migración aditiva para agregar `REEMBOLSADO` al enum `EstadoPago` si el schema aún no lo incluye. No se toca motor IA ni flujo de reportes.
+Entregado en rama `work/002-PI-pagos-lote2` sobre base `244e9d7c`:
+
+- Schema/migración: `REEMBOLSADO` en `EstadoPago`; campos `montoReembolsoUSD`, `motivoReembolso`, `referenciaReembolso` en `Pago`; acciones de auditoría `PAGO_*`, `BONO_*`, `PLAN_ACTUALIZADO`, `SUSCRIPCION_EXTENSION_MANUAL`.
+- `src/lib/dal/repositories/pagos-repository.ts`: métodos para pendientes, vencimientos, mora, bonos/planes, reembolsos, ficha cliente.
+- `src/lib/permisos-catalogo.ts` + `prisma/seed-modulos-grants.ts`: módulo `pagos_admin` con grants para ADMIN/OPERADOR.
+- `src/lib/nav-items.ts` + `src/components/modules/AdminNav.tsx`: item "Pagos" con `CurrencyDollarIcon` y color ámbar.
+- UI: `src/app/dashboard/admin/pagos/**` (layout, redirect, 7 tabs, ficha cliente).
+- API: `src/app/api/admin/pagos/**` (pendientes, autorizar/rechazar, vencimientos, mora, bonos, planes, reembolsos, cliente/extender).
+- Tests: unitarios para `tasas.ts`, `schemas/pagos.ts`, `api-helpers.ts`; tests de integración para endpoints pendientes y tasas.
+
+## Impacto en arquitectura:
+
+Impacto en arquitectura: nuevas rutas `src/app/dashboard/admin/pagos/**`, `src/app/api/admin/pagos/**`; extensiones en `src/lib/dal/repositories/pagos-repository.ts`; modificación de `AdminNav.tsx` para agregar item. Migración aditiva para agregar `REEMBOLSADO` al enum `EstadoPago` si el schema aún no lo incluye. No se toca motor IA ni flujo de reportes.
 
 ## Deuda Técnica
 
