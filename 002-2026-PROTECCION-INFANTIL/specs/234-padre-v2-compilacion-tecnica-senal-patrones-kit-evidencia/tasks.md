@@ -12,14 +12,14 @@
 
 **Purpose**: Crear modelos y migración sin DROP/RENAME.
 
-- [ ] T001 [P] Editar `prisma/schema.prisma`:
+- [x] T001 [P] Editar `prisma/schema.prisma`:
   - Añadir `enum TipoPatronExpediente` (`ACELERACION`, `PROGRESION`, `PERPETRADOR_SERIAL`, `MULTIPLATAFORMA`).
   - Añadir `model InformeConsolidado` con campos e índices exactos de `data-model.md`.
   - Añadir `model SenalComunitariaCache` con `identificadorReportado` como PK y campos exactos del brief §7.6.
   - Añadir `model PatronExpediente`.
   - Añadir relaciones inversas en `Expediente` si ZEUS ratifica.
-- [ ] T002 [P] Generar migración aditiva (`npx prisma migrate dev --create-only --name padre_v2_compilacion_senal_patrones`) y verificar SQL.
-- [ ] T003 [P] Aplicar migración localmente y regenerar cliente (`npx prisma migrate dev && npx prisma generate`).
+- [x] T002 [P] Generar migración aditiva (`npx prisma migrate dev --create-only --name padre_v2_compilacion_senal_patrones`) y verificar SQL.
+- [x] T003 [P] Aplicar migración localmente y regenerar cliente (`npx prisma migrate dev && npx prisma generate`).
 
 **Checkpoint**: `npx prisma migrate status` verde; `npx prisma db pull` no detecta drift.
 
@@ -29,8 +29,8 @@
 
 **Purpose**: Sembrar `padre.senal_comunitaria.refresh_min` de forma idempotente.
 
-- [ ] T004 [P] Añadir `seedParametrosSenalComunitaria()` en `prisma/seed.ts` con upsert anti-I-100.
-- [ ] T005 [P] Crear `src/lib/seed-senal-comunitaria.test.ts` que:
+- [x] T004 [P] Añadir `seedParametrosSenalComunitaria()` en `prisma/seed.ts` con upsert anti-I-100.
+- [x] T005 [P] Crear `src/lib/seed-senal-comunitaria.test.ts` que:
   - Ejecute el seed dos veces.
   - Verifique `count = 1` para la nueva clave.
   - Verifique que un cambio de default en código se propaga.
@@ -43,16 +43,16 @@
 
 **Purpose**: Respetar frontera Q-3.
 
-- [ ] T006 [P] Crear `src/lib/dal/repositories/informe-consolidado-repository.ts` con:
+- [x] T006 [P] Crear `src/lib/dal/repositories/informe-consolidado-repository.ts` con:
   - `crearInforme(data)`
   - `listarPorExpediente(expedienteId, paginacion)`
   - `obtenerPorHash(pdfHash)`
-- [ ] T007 [P] Crear `src/lib/dal/repositories/senal-comunitaria-repository.ts` con:
+- [x] T007 [P] Crear `src/lib/dal/repositories/senal-comunitaria-repository.ts` con:
   - `obtenerORecalcular(identificadorReportado)`
   - `invalidar(identificadorReportado)`
   - `obtenerPendientesDeRefresco(limite)`
   - `guardarCache(data)`
-- [ ] T008 [P] Crear `src/lib/dal/repositories/patron-expediente-repository.ts` con:
+- [x] T008 [P] Crear `src/lib/dal/repositories/patron-expediente-repository.ts` con:
   - `guardarPatrones(expedienteId, patrones[])`
   - `listarPorExpediente(expedienteId)`
 
@@ -64,19 +64,19 @@
 
 **Purpose**: Implementar la lógica de compilación 100% SQL + funciones puras.
 
-- [ ] T009 [P] Crear `src/lib/expediente/compilacion/queries/agregar-categorias.ts`:
+- [x] T009 [P] Crear `src/lib/expediente/compilacion/queries/agregar-categorias.ts`:
   - Query SQL que, dado `expedienteId`, devuelve conteos y confianza por categoría.
-- [ ] T010 [P] Crear `src/lib/expediente/compilacion/queries/senal-comunitaria.ts`:
+- [x] T010 [P] Crear `src/lib/expediente/compilacion/queries/senal-comunitaria.ts`:
   - Lee cache; si no existe/vencida, recalcula inline y guarda.
-- [ ] T011 [P] Crear 4 reglas N1 puras en `src/lib/expediente/compilacion/reglas/`:
+- [x] T011 [P] Crear 4 reglas N1 puras en `src/lib/expediente/compilacion/reglas/`:
   - `aceleracion.ts`
   - `progresion.ts`
   - `perpetrador-serial.ts`
   - `multiplataforma.ts`
   - Cada regla devuelve `detectado`, `severidad`, `descripcionTexto` y `datosContextoJson`.
-- [ ] T012 [P] Crear `src/lib/expediente/compilacion/score/calcular-score.ts` con fórmula parametrizada.
-- [ ] T013 [P] Crear `src/lib/expediente/compilacion/template/renderizar-markdown.ts` que genere `resumenTextoGenerado` con secciones §9.
-- [ ] T014 [P] Crear `src/lib/expediente/compilacion/compilar-expediente.ts` orquestador.
+- [x] T012 [P] Crear `src/lib/expediente/compilacion/score/calcular-score.ts` con fórmula parametrizada.
+- [x] T013 [P] Crear `src/lib/expediente/compilacion/template/renderizar-markdown.ts` que genere `resumenTextoGenerado` con secciones §9.
+- [x] T014 [P] Crear `src/lib/expediente/compilacion/compilar-expediente.ts` orquestador.
 
 **Checkpoint**: `npm run test -- src/lib/expediente/compilacion` pasa.
 
@@ -86,12 +86,12 @@
 
 **Purpose**: Generar PDF determinista y endpoint de verificación.
 
-- [ ] T015 [P] Crear `src/lib/expediente/pdf/generar-pdf.ts`:
+- [x] T015 [P] Crear `src/lib/expediente/pdf/generar-pdf.ts`:
   - Usa `pdfmake`.
   - Fija metadatos para hash reproducible.
   - Devuelve `{ buffer, pdfHash }`.
-- [ ] T016 [P] Persistir PDF en `/data/informes/[expedienteId]-v[n].pdf` y actualizar `InformeConsolidado`.
-- [ ] T017 [P] Crear `src/app/api/publico/verificar-pdf/[hash]/route.ts`:
+- [x] T016 [P] Persistir PDF en `/data/informes/[expedienteId]-v[n].pdf` y actualizar `InformeConsolidado`.
+- [x] T017 [P] Crear `src/app/api/publico/verificar-pdf/[hash]/route.ts`:
   - GET público.
   - Rate-limit scope `verificar_pdf`.
   - 200 con metadatos / 404.
@@ -104,11 +104,11 @@
 
 **Purpose**: Refrescar caché de forma asíncrona.
 
-- [ ] T018 [P] Crear `scripts/worker-senal-comunitaria.mjs`:
+- [x] T018 [P] Crear `scripts/worker-senal-comunitaria.mjs`:
   - Advisory lock propio.
   - Polling de cachés invalidadas/vencidas.
   - Recálculo y guardado.
-- [ ] T019 [P] Añadir servicio `pi-senal-comunitaria` en `docker-compose.prod.yml` con `TZ=America/Bogota` y volumen `/data/informes` si comparte storage (solo lectura no necesaria; se añade por consistencia).
+- [x] T019 [P] Añadir servicio `pi-senal-comunitaria` en `docker-compose.prod.yml` con `TZ=America/Bogota` y volumen `/data/informes` si comparte storage (solo lectura no necesaria; se añade por consistencia).
 
 **Checkpoint**: Worker arranca localmente sin errores; test de invalidación pasa.
 
@@ -118,8 +118,8 @@
 
 **Purpose**: Garantizar Ley 1581 y ausencia de PII en modelos agregados.
 
-- [ ] T020 [P] Crear test de esquema que itere campos de `SenalComunitariaCache` y `PatronExpediente` y verifique ausencia de nombres prohibidos (`texto`, `identificador`, `reporteId`, `nombre`, `telefono`, etc.).
-- [ ] T021 [P] Verificar que `resumenTextoGenerado` y PDF no contienen texto original de reportes.
+- [x] T020 [P] Crear test de esquema que itere campos de `SenalComunitariaCache` y `PatronExpediente` y verifique ausencia de nombres prohibidos (`texto`, `identificador`, `reporteId`, `nombre`, `telefono`, etc.).
+- [x] T021 [P] Verificar que `resumenTextoGenerado` y PDF no contienen texto original de reportes.
 
 **Checkpoint**: Tests de privacidad pasan.
 
@@ -129,15 +129,15 @@
 
 **Purpose**: Verificar el sistema completo y documentar.
 
-- [ ] T022 [P] Ejecutar gate local:
-  - `npx tsc --noEmit`
-  - `npm run lint --no-cache`
-  - `npm run arch:check`
-  - `npm run test`
-  - `npm run build`
-  - `./scripts/dev-restart.sh`
-- [ ] T023 [P] Actualizar `spec.md` sección Implementación.
-- [ ] T024 [P] Crear `cierre.md` con commits, gate y deuda técnica.
+- [x] T022 [P] Ejecutar gate local:
+  - `npx tsc --noEmit` ✅
+  - `npm run lint --no-cache` ✅ (0 errores, warnings preexistentes)
+  - `npm run arch:check` ✅
+  - `npm run test` ✅ — 274 archivos passed / 1 skipped (275), 1559 tests passed / 1 skipped (1560), 830.12 s
+  - `npm run build` ✅
+  - `./scripts/dev-restart.sh` ⏭️ no ejecutado (fase desarrollo)
+- [x] T023 [P] Actualizar `spec.md` sección Implementación.
+- [x] T024 [P] Crear `cierre.md` con commits, gate y deuda técnica.
 
 **Checkpoint**: Gate verde; rama `work/002-pi-134` lista para auditoría.
 

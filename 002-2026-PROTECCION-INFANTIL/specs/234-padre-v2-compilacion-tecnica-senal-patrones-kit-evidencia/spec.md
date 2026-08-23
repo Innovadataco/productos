@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-22
 
-**Status**: `PLANEADO`
+**Status**: `IMPLEMENTADO`
 
 **Impacto en arquitectura**: añade los modelos `InformeConsolidado`, `SenalComunitariaCache` y `PatronExpediente`; el servicio de compilación `src/lib/expediente/compilacion/`; el kit de evidencia PDF `src/lib/expediente/pdf/`; el endpoint público `GET /api/publico/verificar-pdf/[hash]`; el worker `pi-senal-comunitaria`; tres repositorios DAL; y tests unitarios/integración. No toca el motor IA ni implementa UI de padre/comité.
 
@@ -171,32 +171,67 @@ Como sistema quiero que un worker refresque periódicamente la caché de señal 
 
 ---
 
-## Implementación *(pendiente de ejecución)*
+## Implementación
 
-> Esta sección se completa al cerrar la SPEC. Ahora mismo describe el plan a ejecutar tras aprobación de ZEUS.
+### Resumen de cambios ejecutados
 
-### Resumen de cambios previstos
+- **Schema + migraciones aditivas**:
+  - `prisma/schema.prisma`: añade `enum TipoPatronExpediente`, `model InformeConsolidado`, `model SenalComunitariaCache`, `model PatronExpediente` y relaciones inversas `Expediente.informes` / `Expediente.patrones`.
+  - `prisma/migrations/20260823010000_padre_v2_compilacion_senal_patrones/migration.sql`
+  - `prisma/migrations/20260823010100_padre_v2_audit_informe_pdf/migration.sql` (valores `INFORME_CONSOLIDADO_CREADO` y `PDF_GENERADO` en `AccionAudit`).
+  - **Nota**: la relación `InformeConsolidado.aclaraciones` se omitió porque `AclaracionExpediente` no existe en el schema base; queda pendiente para SPEC-236.
 
-- **Migración aditiva** `20260823010000_padre_v2_compilacion_senal_patrones`: añade `InformeConsolidado`, `SenalComunitariaCache`, `PatronExpediente` y el enum `TipoPatronExpediente`.
-- **Seed**: parámetro `padre.senal_comunitaria.refresh_min` INTEGER 60 en `prisma/seed.ts` (upsert anti-I-100).
-- **Servicio de compilación**: `src/lib/expediente/compilacion/compilar-expediente.ts`, queries SQL en `agregar-categorias.ts` y `senal-comunitaria.ts`, reglas N1 puras (con severidad MEDIA/ALTA que aportan al score vía `padre.score.peso_aceleracion`), score parametrizado y renderizado de `resumenTextoGenerado`.
-- **Kit evidencia PDF**: `src/lib/expediente/pdf/generar-pdf.ts` con `pdfmake`, hash SHA256 reproducible y timestamp Bogotá.
-- **Repositorios DAL**: `informe-consolidado-repository.ts`, `senal-comunitaria-repository.ts`, `patron-expediente-repository.ts`.
-- **Endpoint**: `GET /api/publico/verificar-pdf/[hash]/route.ts` con rate-limit.
-- **Worker**: `scripts/worker-senal-comunitaria.mjs` y servicio en `docker-compose.prod.yml`.
-- **Tests**: reglas N1, score, seed idempotente, query señal, template markdown, PDF hash reproducible, esquema sin PII.
+- **Seed idempotente**:
+  - `prisma/seed.ts`: `seedParametrosSenalComunitaria()` con `padre.senal_comunitaria.refresh_min = 60` (upsert anti-I-100).
 
-### Gate local a verificar
+- **Repositorios DAL (frontera Q-3)**:
+  - `src/lib/dal/repositories/informe-consolidado-repository.ts`
+  - `src/lib/dal/repositories/senal-comunitaria-repository.ts`
+  - `src/lib/dal/repositories/patron-expediente-repository.ts`
+
+- **Servicio de compilación**:
+  - `src/lib/expediente/compilacion/compilar-expediente.ts` (orquestador).
+  - Queries SQL puras en `src/lib/expediente/compilacion/queries/agregar-categorias.ts` y `src/lib/expediente/compilacion/queries/senal-comunitaria.ts`.
+  - Reglas N1: `reglas/aceleracion.ts`, `reglas/progresion.ts`, `reglas/perpetrador-serial.ts`, `reglas/multiplataforma.ts`.
+  - Score: `score/calcular-score.ts`.
+  - Template: `template/renderizar-markdown.ts`.
+
+- **Kit evidencia PDF**:
+  - `src/lib/expediente/pdf/generar-pdf.ts` (pdfmake, hash SHA256 determinista fijando `creationDate`/`modDate` a segundos y JSON canónico).
+  - Persistencia en `process.env.INFORMES_STORAGE_DIR ?? "/data/informes"`.
+
+- **Endpoint público**:
+  - `src/app/api/publico/verificar-pdf/[hash]/route.ts` con rate-limit scope `verificar_pdf` (añadido en `src/lib/rate-limit.ts`).
+
+- **Worker de señal comunitaria**:
+  - `scripts/worker-senal-comunitaria.mjs` (advisory lock propio, polling, recálculo SQL puro).
+  - `src/lib/expediente/senal-comunitaria/refrescar-pendientes.ts` (lógica testeable sin lock).
+  - Servicio `pi-senal-comunitaria` y volumen `pi_informes_storage` en `docker-compose.prod.yml`.
+
+- **Tests**:
+  - Repositorios: `*.test.ts` de los tres repositorios DAL.
+  - Compilación: tests de queries, reglas N1, score, template y orquestador.
+  - Seed: `src/lib/seed-senal-comunitaria.test.ts`.
+  - PDF + endpoint: `src/lib/expediente/pdf/generar-pdf.test.ts`, `src/app/api/publico/verificar-pdf/[hash]/route.test.ts`.
+  - Worker: `src/lib/expediente/senal-comunitaria/refrescar-pendientes.test.ts`.
+  - Privacidad/esquema: `src/lib/expediente/privacidad/padre-v2-privacidad.test.ts`.
+
+- **Ajustes de arquitectura**:
+  - Queries de compilación importan el singleton Prisma desde `@/lib/dal/prisma.ts` para respetar la frontera DAL (Q-3) y pasar lint/arch:check.
+  - `scripts/arch/excepciones.json`: `SenalComunitariaCache` declarado como huérfano permitido (tabla de agregados sin FK).
+  - Regenerados `docs/architecture/01-modelo-datos.md`, `02-roles-capacidades.md`, `06-stack.md`.
+
+### Gate local
 
 - `npx tsc --noEmit` ✅
-- `npm run lint --no-cache` ✅
+- `npm run lint --no-cache` ✅ (0 errores; warnings preexistentes no relacionados)
 - `npm run arch:check` ✅
-- `npm run test` ✅
+- `npm run test` ✅ — 274 archivos passed / 1 skipped (275), 1559 tests passed / 1 skipped (1560), 830.12 s
 - `npm run build` ✅
-- `./scripts/dev-restart.sh` ✅
+- `./scripts/dev-restart.sh`: no ejecutado (fase de desarrollo local sin deploy)
 
 ### Deuda técnica / notas
 
-- La determinización del PDF requiere fijar el timestamp de generación a segundos y serializar JSON con keys ordenadas canónicamente; se documentará en `generar-pdf.ts`.
-- El worker de señal comunitaria podría evolucionar a invalidación por cola pg-boss en SPEC-236; esta fase usa polling simple para no bloquear dependencias.
-- La relación inversa `Expediente.informes` y `Expediente.patrones` se añade en Prisma si ZEUS la ratifica en la compuerta; de lo contrario se consulta por FK sin relación inversa.
+- La determinización del PDF requiere fijar el timestamp de generación a segundos y serializar JSON con keys ordenadas canónicamente; documentado en `src/lib/expediente/pdf/generar-pdf.ts`.
+- El worker de señal comunitaria usa polling simple; puede evolucionar a invalidación por cola pg-boss en SPEC-236.
+- La relación `InformeConsolidado.aclaraciones` queda pendiente hasta que exista `AclaracionExpediente`.
