@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **158** |
+| **Total de specs** | **160** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **50** |
-| **Pendientes (PLANEADO)** | **8** |
+| **Pendientes (PLANEADO)** | **10** |
 ## Backlog activo (no cerradas)
 
 | Nº | Nombre | Estado |
@@ -320,6 +320,8 @@
 | [205](205-usuarios-vista-consolidada/spec.md) | SPEC-205 — Usuarios · Vista consolidada por rol (002-PI-102) | 🟢 Implementado |
 | [230](230-padre-v2-modelos-expediente-evento/spec.md) | SPEC-230 — Padre v2 · Modelos Expediente + Evento (002-PI-130) | 🔵 Planeado |
 | [210](210-modelos-base-pagos/spec.md) | SPEC-210 · Modelos base Pagos (002-PI-110) | 🔵 Planeado |
+| [212](212-panel-admin-pagos/spec.md) | SPEC-212 · Panel admin Pagos (002-PI-112) | 🔵 Planeado |
+| [214](214-multi-moneda-pagos/spec.md) | SPEC-214 · Multi-moneda + API tasas (002-PI-114) | 🔵 Planeado |
 
 ## Incidencias de calidad de datos
 

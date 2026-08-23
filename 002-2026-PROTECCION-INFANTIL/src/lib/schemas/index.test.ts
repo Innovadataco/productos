@@ -18,6 +18,8 @@ import {
     bloquearIpBodySchema,
     desbloquearIpBodySchema,
     monitoreoLogsPurgeSchema,
+    ipv4Schema,
+    informeMensualQuerySchema,
 } from "./index";
 
 describe("schemas/index", () => {
@@ -268,5 +270,49 @@ describe("schemas profesor (SPEC-145)", () => {
                 motivo: "Corto",
             })
         ).toThrow();
+    });
+
+    it("ipv4Schema rechaza octetos fuera de rango", () => {
+        expect(() => ipv4Schema.parse("256.0.0.1")).toThrow();
+        expect(() => ipv4Schema.parse("192.168.1.256")).toThrow();
+        expect(() => ipv4Schema.parse("-1.0.0.1")).toThrow();
+    });
+
+    it("ipv4Schema rechaza formato inválido", () => {
+        expect(() => ipv4Schema.parse("192.168.1")).toThrow();
+        expect(() => ipv4Schema.parse("abc")).toThrow();
+    });
+
+    it("ipv4Schema acepta una IPv4 válida", () => {
+        expect(() => ipv4Schema.parse("192.0.2.10")).not.toThrow();
+    });
+
+    it("informeMensualQuerySchema acepta el mes actual", () => {
+        const ahora = new Date();
+        const mes = `${ahora.getUTCFullYear()}-${String(ahora.getUTCMonth() + 1).padStart(2, "0")}`;
+        expect(() => informeMensualQuerySchema.parse({ mes })).not.toThrow();
+    });
+
+    it("informeMensualQuerySchema rechaza mes futuro y mayor a 12 meses atrás", () => {
+        const ahora = new Date();
+        const futuro = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1));
+        const mesFuturo = `${futuro.getUTCFullYear()}-${String(futuro.getUTCMonth() + 1).padStart(2, "0")}`;
+        expect(() => informeMensualQuerySchema.parse({ mes: mesFuturo })).toThrow();
+
+        const viejo = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() - 13, 1));
+        const mesViejo = `${viejo.getUTCFullYear()}-${String(viejo.getUTCMonth() + 1).padStart(2, "0")}`;
+        expect(() => informeMensualQuerySchema.parse({ mes: mesViejo })).toThrow();
+    });
+
+    it("informeMensualQuerySchema acepta el límite de 12 meses atrás", () => {
+        const ahora = new Date();
+        const limite = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() - 11, 1));
+        const mesLimite = `${limite.getUTCFullYear()}-${String(limite.getUTCMonth() + 1).padStart(2, "0")}`;
+        expect(() => informeMensualQuerySchema.parse({ mes: mesLimite })).not.toThrow();
+    });
+
+    it("informeMensualQuerySchema rechaza formato de mes inválido", () => {
+        expect(() => informeMensualQuerySchema.parse({ mes: "2026-13" })).toThrow();
+        expect(() => informeMensualQuerySchema.parse({ mes: "2026-1" })).toThrow();
     });
 });

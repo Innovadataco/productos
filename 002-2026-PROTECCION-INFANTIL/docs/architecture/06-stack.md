@@ -14,6 +14,8 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | @prisma/client | 5.22.0 |
 | @react-pdf/renderer | ^4.6.0 |
 | bcryptjs | ^3.0.2 |
+| date-fns | ^4.4.0 |
+| date-fns-tz | ^3.2.0 |
 | exceljs | ^4.4.0 |
 | jose | ^6.0.10 |
 | leaflet | ^1.9.4 |

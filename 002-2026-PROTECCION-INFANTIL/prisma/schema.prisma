@@ -206,6 +206,17 @@ enum AccionAudit {
   REPORTE_REASIGNADO_MANUAL
   // SPEC-193 (Fase 5): auditoría de intentos de acceso no autorizado a recursos admin.
   ACCESO_DENEGADO
+  // SPEC-212 (002-PI-112): auditoría del módulo de pagos.
+  PAGO_AUTORIZADO
+  PAGO_RECHAZADO
+  PAGO_REEMBOLSADO
+  BONO_CREADO
+  BONO_ACTUALIZADO
+  BONO_DESACTIVADO
+  PLAN_ACTUALIZADO
+  SUSCRIPCION_EXTENSION_MANUAL
+  // SPEC-214 (002-PI-114): tasas de cambio.
+  TASA_MANUAL_CREADA
 }
 
 enum TipoPeriodoServicio {
@@ -240,6 +251,8 @@ enum EstadoPago {
   PENDIENTE_AUTORIZACION
   AUTORIZADO
   RECHAZADO
+  // SPEC-212 (002-PI-112): estado aditivo para reembolsos.
+  REEMBOLSADO
 }
 
 enum MetodoPago {
@@ -686,6 +699,10 @@ model Pago {
   motivoRechazo         String?
   autorizadoPorAdminId  String?
   codigoReferidoUsado   String?
+  // SPEC-212 (002-PI-112): campos aditivos de reembolso.
+  montoReembolsoUSD     Float?
+  motivoReembolso       String?
+  referenciaReembolso   String?
   createdAt             DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime     @updatedAt @db.Timestamptz(6)
 
