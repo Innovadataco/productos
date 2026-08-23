@@ -259,8 +259,28 @@ async function seedGuiasAccion(adminEmail: string) {
                 { orden: 3, tipo: "ACCION", titulo: "Informá a la familia y a las autoridades", descripcion: "Este tipo de situación requiere denuncia formal. La prevención física es prioridad." },
                 { orden: 4, tipo: "ACCION", titulo: "Reforzá la supervisión", descripcion: "Revisá con quién tiene contacto el menor y ajustá la privacidad de sus redes." },
             ],
-            calloutTitulo: "Secreto = alerta",
-            calloutTexto: "Los adultos de confianza no piden secreto a los menores. Hablar con la familia es protección, no traición.",
+            calloutTitulo: "El secreto es una señal de alarma",
+            calloutTexto: "Pedir encuentros a escondidas, regalos o fotos es parte de una estrategia de acercamiento. Detenerlo temprano es clave.",
+            botones: [
+                { tipo: "tel", texto: "Línea 141 ICBF", subtexto: "Atención 24 horas", valor: "141", estilo: "urgente" },
+                { tipo: "url", texto: "CAI Virtual", valor: "https://www.cai.gov.co", estilo: "primario" },
+                { tipo: "url", texto: "Te Protejo", valor: "https://teprotejo.org", estilo: "secundario" },
+            ],
+            piePagina: marcaPreliminar,
+        },
+        {
+            categoria: "COMPARTIMIENTO_SEXUAL",
+            tituloEmocional: "Si se compartió o solicitó material sexual de un menor",
+            subtitulo: "Toda imagen o video sexual de menores es abuso. La respuesta es denunciar, preservar evidencia y proteger a la víctima.",
+            categoriaBadgeTexto: "Material sexual de menores",
+            pasos: [
+                { orden: 1, tipo: "ATENCION", titulo: "No compartas el material", descripcion: "Ni siquiera para pedir ayuda. Su posesión o difusión también es delito." },
+                { orden: 2, tipo: "ACCION", titulo: "Reportá en la plataforma", descripcion: "Usá la opción de reporte por explotación sexual infantil. Guardá URLs, perfiles y capturas sin el contenido íntimo." },
+                { orden: 3, tipo: "URGENCIA", titulo: "Denunciá de inmediato", descripcion: "Fiscalía, CAI o Policía Judicial. Este delito requiere acción profesional urgente." },
+                { orden: 4, tipo: "ACCION", titulo: "Acompañá a la víctima", descripcion: "Ofrecé contención y buscá apoyo psicológico. La culpa no es de quien fue engañado o presionado." },
+            ],
+            calloutTitulo: "La víctima no es responsable",
+            calloutTexto: "Los menores son manipulados, engañados o presionados. La responsabilidad es siempre del adulto agresor.",
             botones: [
                 { tipo: "tel", texto: "Línea 141 ICBF", subtexto: "Atención 24 horas", valor: "141", estilo: "urgente" },
                 { tipo: "url", texto: "CAI Virtual", valor: "https://www.cai.gov.co", estilo: "primario" },
@@ -272,10 +292,10 @@ async function seedGuiasAccion(adminEmail: string) {
 
     for (const g of guiasBase) {
         const existe = await prisma.guiaAccionCategoria.findFirst({
-            where: { categoria: g.categoria, estado: EstadoGuiaAccion.ACTIVA },
+            where: { categoria: g.categoria },
         });
         if (existe) {
-            console.log(`[SEED] Guía ${g.categoria} v1 ya existe (activa); se respeta.`);
+            console.log(`[SEED] Guía ${g.categoria} ya existe, se respeta.`);
             continue;
         }
         await prisma.guiaAccionCategoria.create({
