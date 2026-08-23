@@ -20,6 +20,8 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/admin/operadores", label: "Operadores", modulo: "operadores" },
     { href: "/dashboard/admin/usuarios", label: "Usuarios", modulo: "usuarios_admin" },
     { href: "/dashboard/admin/padres", label: "Padres", modulo: "padres" },
+    // SPEC-212 (002-PI-112): panel administrativo de pagos (color ámbar en AdminNav).
+    { href: "/dashboard/admin/pagos", label: "Pagos", modulo: "pagos_admin" },
     { href: "/dashboard/admin/colegios", label: "Colegios", modulo: "colegios_gestion" },
     { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", modulo: "anti_abuso" },
     // SPEC-180: la página Monitoreo worker se retiró del menú (redundante con el

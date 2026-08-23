@@ -750,6 +750,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | motivoRechazo | String | opcional |
 | autorizadoPorAdminId | String | opcional |
 | codigoReferidoUsado | String | opcional |
+| montoReembolsoUSD | Float | opcional |
+| motivoReembolso | String | opcional |
+| referenciaReembolso | String | opcional |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
 | suscripcion | Suscripcion | relación (FK) |

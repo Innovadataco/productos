@@ -50,7 +50,6 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
         // colegios_comite_bandeja tiene padre `colegios` — sin el padre el rol
         // quedaba inoperante (menú vacío, "Sin acceso al módulo").
         COMITE_CONVIVENCIA: ["colegios", "colegios_comite_bandeja"],
-        OPERADOR: ["bandeja_reportes"],
         // SPEC-128 (D-43): el comité solo recibe su bandeja. "comite" y "comite_auditoria"
         // mapean a rutas ADMIN_ONLY (proxy.ts) que la puerta le niega: el seed ya no dice
         // SÍ donde la puerta dice NO. Los módulos siguen en el catálogo (ADMIN los usa) y
@@ -59,6 +58,8 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
         // COMITE_VALIDACION; como es hijo de bandeja_reportes (jerarquía AND), el comité
         // también recibe el padre.
         COMITE_VALIDACION: ["comite", "comite_bandeja", "bandeja_reportes", "denuncia_formal"],
+        // SPEC-212 (002-PI-112): panel de pagos también para operadores por defecto.
+        OPERADOR: ["bandeja_reportes", "pagos_admin"],
     };
     let permisosCreados = 0;
     for (const [rol, claves] of Object.entries(clavesPorRol)) {
