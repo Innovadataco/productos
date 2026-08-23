@@ -1,7 +1,7 @@
 import { RUBRICA_SEMILLA } from "../src/lib/ai/rubrica-semilla";
 import { normalizarNombreGeografico } from "../src/lib/normalizar";
 import { syncModulosYGrants } from "./seed-modulos-grants";
-import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan } from "@prisma/client";
+import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import fs from "fs/promises";
 import path from "path";
@@ -102,6 +102,201 @@ async function seedParametrosSenalComunitaria() {
         },
     });
     console.log("Parámetro padre.senal_comunitaria.refresh_min (SPEC-234) listo");
+}
+
+// SPEC-235 (002-PI-135): guías de acción v1 para el flujo padre.
+// Idempotente: solo crea una guía ACTIVA v1 si la categoría aún no tiene ninguna.
+// Si un admin ya creó/editó una guía, el seed la respeta (no pisa).
+async function seedGuiasAccion(adminEmail: string) {
+    const admin = await prisma.usuario.findUnique({ where: { email: adminEmail } });
+    if (!admin) {
+        console.log("[SEED] Guías de acción omitidas: no existe admin inicial.");
+        return;
+    }
+
+    const marcaPreliminar = "contenido preliminar · pendiente revisión psicólogo+jurídico";
+
+    const guiasBase: Array<{
+        categoria: string;
+        tituloEmocional: string;
+        subtitulo: string;
+        categoriaBadgeTexto: string;
+        pasos: Array<{ orden: number; tipo: "TRANQUILIDAD" | "ATENCION" | "ACCION" | "URGENCIA"; titulo: string; descripcion: string }>;
+        calloutTitulo: string;
+        calloutTexto: string;
+        botones: Array<{ tipo: "tel" | "url"; texto: string; subtexto?: string; valor: string; estilo: "primario" | "urgente" | "secundario" }>;
+        piePagina: string;
+    }> = [
+        {
+            categoria: "GROOMING",
+            tituloEmocional: "Si alguien está construyendo confianza para dañar",
+            subtitulo: "El grooming suele parecer amistad o atención al principio. Tomá distancia, documentá y pedí ayuda.",
+            categoriaBadgeTexto: "Manipulación progresiva",
+            pasos: [
+                { orden: 1, tipo: "TRANQUILIDAD", titulo: "Respirá y escuchá", descripcion: "La urgencia que siente el adulto responsable es natural. Antes de actuar, calmarte ayuda a tomar mejores decisiones." },
+                { orden: 2, tipo: "ATENCION", titulo: "No bloqueés el contacto todavía", descripcion: "Preservá las conversaciones como evidencia. Bloquear puede alertar al agresor y dificultar una investigación." },
+                { orden: 3, tipo: "ACCION", titulo: "Capturá evidencia sin invadir", descripcion: "Fotos de pantalla de los mensajes, nombres de usuario, plataforma y fechas. No interrogués a la persona menor." },
+                { orden: 4, tipo: "ACCION", titulo: "Cambiá contraseñas y revisá privacidad", descripcion: "Asegurá las cuentas del menor y de la familia. Activá la autenticación de dos factores donde sea posible." },
+                { orden: 5, tipo: "URGENCIA", titulo: "Denunciá ante autoridad competente", descripcion: "Contactá a la Fiscalía, la Policía Judicial o la línea 141 del ICBF. El bloqueo definitivo lo define la autoridad." },
+            ],
+            calloutTitulo: "¿Por qué no bloquear de inmediado?",
+            calloutTexto: "Bloquear puede destruir pruebas y alertar al agresor. Primero documentá, luego pedí orientación a las autoridades.",
+            botones: [
+                { tipo: "tel", texto: "Línea 141 ICBF", subtexto: "Atención 24 horas", valor: "141", estilo: "urgente" },
+                { tipo: "url", texto: "CAI Virtual", subtexto: "Denuncia en línea", valor: "https://www.cai.gov.co", estilo: "primario" },
+                { tipo: "url", texto: "Te Protejo", subtexto: "Orientación y denuncia", valor: "https://teprotejo.org", estilo: "secundario" },
+            ],
+            piePagina: marcaPreliminar,
+        },
+        {
+            categoria: "SEXTORSION",
+            tituloEmocional: "Si alguien exige material íntimo bajo amenaza",
+            subtitulo: "La sextorsión funciona con vergüenza y aislamiento. Parar, respirar y pedir ayuda es la mejor estrategia.",
+            categoriaBadgeTexto: "Extorsión con contenido íntimo",
+            pasos: [
+                { orden: 1, tipo: "TRANQUILIDAD", titulo: "No respondas con más contenido", descripcion: "Ceder rara vez detiene la extorsión. El agresor suele seguir exigiendo más." },
+                { orden: 2, tipo: "ATENCION", titulo: "No borres todo de inmediato", descripcion: "Conservá mensajes, perfiles, enlaces y capturas. Son evidencia para la denuncia." },
+                { orden: 3, tipo: "ACCION", titulo: "Bloqueá la comunicación y reportá la cuenta", descripcion: "Usá los mecanismos de la plataforma para reportar abuso. Luego bloqueá al contacto." },
+                { orden: 4, tipo: "URGENCIA", titulo: "Hacé la denuncia", descripcion: "La Fiscalía y la Línea 141 atienden estos casos con protocolo de protección a la víctima." },
+            ],
+            calloutTitulo: "No estás solo",
+            calloutTexto: "Muchas víctimas de sextorsión son menores. Pedir ayuda no es culpa; es el primer paso para cortar el ciclo.",
+            botones: [
+                { tipo: "tel", texto: "Línea 141 ICBF", subtexto: "Atención 24 horas", valor: "141", estilo: "urgente" },
+                { tipo: "url", texto: "CAI Virtual", valor: "https://www.cai.gov.co", estilo: "primario" },
+                { tipo: "url", texto: "Te Protejo", valor: "https://teprotejo.org", estilo: "secundario" },
+            ],
+            piePagina: marcaPreliminar,
+        },
+        {
+            categoria: "DIFUSION_NO_CONSENTIDA",
+            tituloEmocional: "Si una imagen o video íntimo se compartió sin consentimiento",
+            subtitulo: "La difusión no consentida es delito. Se puede pedir la baja del contenido y denunciar sin exponer a la víctima.",
+            categoriaBadgeTexto: "Imágenes compartidas sin permiso",
+            pasos: [
+                { orden: 1, tipo: "TRANQUILIDAD", titulo: "Priorizá el bienestar de la víctima", descripcion: "Evitá juicios. Ofrecé contención y escuchá sin presionar por detalles." },
+                { orden: 2, tipo: "ACCION", titulo: "Solicitá la baja del contenido", descripcion: "Reportá el material en la plataforma como abuso/ contenido íntimo no consentido. No compartas el enlace." },
+                { orden: 3, tipo: "ACCION", titulo: "Documentá URLs y perfiles", descripcion: "Capturas de pantalla de dónde se publicó, quién lo compartió y cuándo." },
+                { orden: 4, tipo: "URGENCIA", titulo: "Denunciá ante Fiscalía o CAI", descripcion: "La Ley 2196 de 2022 tipifica este delito. Presentá la evidencia sin exponer a la víctima." },
+            ],
+            calloutTitulo: "No difundir = proteger",
+            calloutTexto: "Compartir el material, aunque sea para pedir ayuda, reproduce el daño. Documentá por capturas propias.",
+            botones: [
+                { tipo: "tel", texto: "Línea 141 ICBF", subtexto: "Atención 24 horas", valor: "141", estilo: "urgente" },
+                { tipo: "url", texto: "CAI Virtual", valor: "https://www.cai.gov.co", estilo: "primario" },
+                { tipo: "url", texto: "Te Protejo", valor: "https://teprotejo.org", estilo: "secundario" },
+            ],
+            piePagina: marcaPreliminar,
+        },
+        {
+            categoria: "EXTORSION",
+            tituloEmocional: "Si alguien exige dinero o favores bajo amenaza",
+            subtitulo: "La extorsión busca miedo y prisa. No pagar y pedir ayuda profesional es lo recomendado.",
+            categoriaBadgeTexto: "Amenaza con exigencia",
+            pasos: [
+                { orden: 1, tipo: "TRANQUILIDAD", titulo: "No actués solo", descripcion: "Contale a un adulto de confianza. La presión del agresor disminuye cuando hay acompañamiento." },
+                { orden: 2, tipo: "ATENCION", titulo: "No realices pagos ni entregues información", descripcion: "Pagar suele aumentar las exigencias. No confirmes datos personales ni financieros." },
+                { orden: 3, tipo: "ACCION", titulo: "Guardá toda la evidencia", descripcion: "Mensajes de texto, audios, números, nombres de usuario y capturas de pantalla." },
+                { orden: 4, tipo: "URGENCIA", titulo: "Denunciá de inmediato", descripcion: "Policía Judicial, Fiscalía o Gaula. Llevá la evidencia organizada." },
+            ],
+            calloutTitulo: "La plataforma no negocia",
+            calloutTexto: "Esta comunidad registra señales para alertar, pero no intercambia con agresores. La denuncia formal es la vía.",
+            botones: [
+                { tipo: "tel", texto: "Gaula", subtexto: "Policía Nacional", valor: "+571165", estilo: "urgente" },
+                { tipo: "tel", texto: "Línea 141 ICBF", valor: "141", estilo: "primario" },
+                { tipo: "url", texto: "CAI Virtual", valor: "https://www.cai.gov.co", estilo: "secundario" },
+            ],
+            piePagina: marcaPreliminar,
+        },
+        {
+            categoria: "DOXING",
+            tituloEmocional: "Si alguien publicó datos personales para exponer o intimidar",
+            subtitulo: "El doxing expone información privada. La prioridad es proteger la seguridad física y digital de la persona afectada.",
+            categoriaBadgeTexto: "Exposición de datos personales",
+            pasos: [
+                { orden: 1, tipo: "ATENCION", titulo: "Evaluá la gravedad de lo expuesto", descripcion: "Dirección, teléfono, escuela o lugar de trabajo requieren acción más urgente que un email o nickname." },
+                { orden: 2, tipo: "ACCION", titulo: "Solicitá la eliminación del contenido", descripcion: "Reportá en la plataforma por violación de privacidad o acoso. Guardá capturas antes de que se borre." },
+                { orden: 3, tipo: "ACCION", titulo: "Reforzá la seguridad digital", descripcion: "Cambiá contraseñas, revisá la configuración de privacidad y limitá la información pública." },
+                { orden: 4, tipo: "URGENCIA", titulo: "Denunciá ante autoridades", descripcion: "Si hay riesgo físico, contactá a la Policía y Fiscalía. El doxing puede estar vinculado a delitos de amenaza o lesiones." },
+            ],
+            calloutTitulo: "No respondas con más exposición",
+            calloutTexto: "Evitá publicar más datos de la víctima o del agresor. La documentación privada es la herramienta legal.",
+            botones: [
+                { tipo: "tel", texto: "Línea 141 ICBF", subtexto: "Atención 24 horas", valor: "141", estilo: "urgente" },
+                { tipo: "url", texto: "CAI Virtual", valor: "https://www.cai.gov.co", estilo: "primario" },
+                { tipo: "url", texto: "Te Protejo", valor: "https://teprotejo.org", estilo: "secundario" },
+            ],
+            piePagina: marcaPreliminar,
+        },
+        {
+            categoria: "CIBERACOSO",
+            tituloEmocional: "Si hay acoso repetido en entornos digitales",
+            subtitulo: "El ciberacoso puede ser mensajes, burlas, exclusión o suplantación. Documentar y reportar ayuda a detenerlo.",
+            categoriaBadgeTexto: "Acoso en línea",
+            pasos: [
+                { orden: 1, tipo: "TRANQUILIDAD", titulo: "Escuchá sin minimizar", descripcion: "Para quien lo sufre, el acoso en línea es real. Validá sus emociones antes de buscar soluciones." },
+                { orden: 2, tipo: "ACCION", titulo: "Bloqueá y reportá en la plataforma", descripcion: "Usá las herramientas de reporte. Capturá todo antes de bloquear por si la cuenta desaparece." },
+                { orden: 3, tipo: "ACCION", titulo: "Conservá un registro de fechas", descripcion: "Una línea de tiempo ayuda a mostrar el patrón repetido ante la escuela, la plataforma o la autoridad." },
+                { orden: 4, tipo: "ACCION", titulo: "Informá a la institución correspondiente", descripcion: "Si involucra a la escuela, contactá al comité de convivencia. Si es grave, acudé a la Fiscalía." },
+            ],
+            calloutTitulo: "No respondas con el mismo tono",
+            calloutTexto: "Responder al acoso puede escalar la situación. Documentá, reportá y pedí apoyo institucional.",
+            botones: [
+                { tipo: "url", texto: "Te Protejo", subtexto: "Orientación y denuncia", valor: "https://teprotejo.org", estilo: "primario" },
+                { tipo: "tel", texto: "Línea 141 ICBF", valor: "141", estilo: "secundario" },
+                { tipo: "url", texto: "CAI Virtual", valor: "https://www.cai.gov.co", estilo: "secundario" },
+            ],
+            piePagina: marcaPreliminar,
+        },
+        {
+            categoria: "SOLICITUD_ENCUENTRO",
+            tituloEmocional: "Si alguien propone encontrarse en persona",
+            subtitulo: "Un adulto que busca encontrarse con un menor en secreto pone en riesgo su seguridad. Actuá con calma y firmeza.",
+            categoriaBadgeTexto: "Propuesta de encuentro físico",
+            pasos: [
+                { orden: 1, tipo: "URGENCIA", titulo: "Evitá el encuentro y no lo justifiques", descripcion: "Ningún adulto con buenas intenciones necesita secreto para ver a un menor." },
+                { orden: 2, tipo: "ATENCION", titulo: "Conservá toda la conversación", descripcion: "No borres mensajes, audios ni ubicaciones. Son evidencia clave." },
+                { orden: 3, tipo: "ACCION", titulo: "Informá a la familia y a las autoridades", descripcion: "Este tipo de situación requiere denuncia formal. La prevención física es prioridad." },
+                { orden: 4, tipo: "ACCION", titulo: "Reforzá la supervisión", descripcion: "Revisá con quién tiene contacto el menor y ajustá la privacidad de sus redes." },
+            ],
+            calloutTitulo: "Secreto = alerta",
+            calloutTexto: "Los adultos de confianza no piden secreto a los menores. Hablar con la familia es protección, no traición.",
+            botones: [
+                { tipo: "tel", texto: "Línea 141 ICBF", subtexto: "Atención 24 horas", valor: "141", estilo: "urgente" },
+                { tipo: "url", texto: "CAI Virtual", valor: "https://www.cai.gov.co", estilo: "primario" },
+                { tipo: "url", texto: "Te Protejo", valor: "https://teprotejo.org", estilo: "secundario" },
+            ],
+            piePagina: marcaPreliminar,
+        },
+    ];
+
+    for (const g of guiasBase) {
+        const existe = await prisma.guiaAccionCategoria.findFirst({
+            where: { categoria: g.categoria, estado: EstadoGuiaAccion.ACTIVA },
+        });
+        if (existe) {
+            console.log(`[SEED] Guía ${g.categoria} v1 ya existe (activa); se respeta.`);
+            continue;
+        }
+        await prisma.guiaAccionCategoria.create({
+            data: {
+                categoria: g.categoria,
+                versionSecuencial: 1,
+                tituloEmocional: g.tituloEmocional,
+                subtitulo: g.subtitulo,
+                categoriaBadgeTexto: g.categoriaBadgeTexto,
+                pasosJson: g.pasos,
+                calloutTitulo: g.calloutTitulo,
+                calloutTexto: g.calloutTexto,
+                botonesAccionJson: g.botones,
+                piePagina: g.piePagina,
+                estado: EstadoGuiaAccion.ACTIVA,
+                aprobadaPorComiteJson: [],
+                creadaPorAdminId: admin.id,
+            },
+        });
+        console.log(`[SEED] Guía ${g.categoria} v1 creada.`);
+    }
 }
 
 // SPEC-210 (002-PI-110): seed de planes base del módulo de pagos.
@@ -1988,13 +2183,16 @@ async function main() {
     // ── Parámetros de señal comunitaria (SPEC-234) ─────────────────────────
     await seedParametrosSenalComunitaria();
 
+    // ── Guías de acción v1 (SPEC-235) ──────────────────────────────────────
+    await seedGuiasAccion(adminEmail);
+
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
     await prisma.$disconnect();
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion };
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como
