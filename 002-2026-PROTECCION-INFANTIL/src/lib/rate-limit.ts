@@ -48,6 +48,7 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     // SPEC-216 (002-PI-116): escrituras del módulo de pagos (aplicar bono, etc.).
     pagos_write: { windowSeconds: 60, maxRequests: 30 },
     session_ping: { windowSeconds: 60, maxRequests: 60 },
+    verificar_pdf: { windowSeconds: 60, maxRequests: 30 },
 };
 
 export function getScopeDefaults(scope: string): ScopeDefaults {
