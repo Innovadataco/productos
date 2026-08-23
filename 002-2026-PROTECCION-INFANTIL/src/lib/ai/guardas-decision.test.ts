@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
-import { decidirGuardasSeguridad, normalizarCategoriasSecundarias } from "./guardas-decision";
+import { decidirGuardasSeguridad, normalizarCategoriasSecundarias, detectarSpamPublicitarioDeterministico } from "./guardas-decision";
 import { detectarDoxing } from "./pii-patterns";
 import { detectarKeywordsRiesgo } from "./keywords-riesgo";
 // registrarPaso escribe en la trazabilidad de expediente (DB); en este test de
@@ -243,5 +243,72 @@ describe("SPEC-199: guarda de dominancia SPAM", () => {
         ];
         const normalizadas = normalizarCategoriasSecundarias(raw);
         expect(normalizadas).toEqual([{ categoria: "SPAM", score: 0.67 }]);
+    });
+});
+
+const ACORTADORES = ["bit.ly", "tinyurl", "is.gd", "t.co", "cutt.ly", "ow.ly", "buff.ly"];
+const TEXTO_RPT_QFUHE8 =
+    "🎉🎉🎉 FELICIDADES #ganadores #premio #sorteo 🎉🎉🎉 Has sido seleccionado para ganar $500.000 en efectivo. Solo tienes que enviar un mensaje AHORA al WhatsApp bit.ly/xyz123 y únete al grupo. Oferta limitada, últimas horas. Escribe YA para reclamar tu dinero. 💰💰💰";
+const TEXTO_UN_HASHTAG = "un compañero #molesto me escribio por chat";
+
+describe("SPEC-207: hard-rule anti-spam publicitario determinístico", () => {
+    it("detecta spam textbook RPT-QFUHE8", () => {
+        const det = detectarSpamPublicitarioDeterministico(TEXTO_RPT_QFUHE8, ACORTADORES);
+        expect(det.esSpam).toBe(true);
+        expect(det.señales).toBeGreaterThanOrEqual(2);
+    });
+
+    it("fuerza POSIBLE_SPAM con regla spam_publicitario_deterministico", () => {
+        const decision = decidirGuardasSeguridad({
+            texto: TEXTO_RPT_QFUHE8,
+            clasificacion: { categoria: "OFRECIMIENTO_REGALOS", confianza: 0.67 },
+            categoriasSecundarias: [],
+            estadoInicial: "CLASIFICADO",
+            esRafaga: false,
+            umbralSpam: 0.7,
+            umbralSpamDominancia: 0.33,
+            severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+            severidades: SEVERIDAD_RECORD,
+            dominiosAcortadores: ACORTADORES,
+        });
+        expect(decision.estadoFinal).toBe("POSIBLE_SPAM");
+        expect(decision.reglasAplicadas).toContain("spam_publicitario_deterministico");
+    });
+
+    it("NO aplica hard-rule con solo 1 hashtag y sin link acortado", () => {
+        const det = detectarSpamPublicitarioDeterministico(TEXTO_UN_HASHTAG, ACORTADORES);
+        expect(det.esSpam).toBe(false);
+
+        const decision = decidirGuardasSeguridad({
+            texto: TEXTO_UN_HASHTAG,
+            clasificacion: { categoria: "CONTACTO_INSISTENTE", confianza: 0.8 },
+            categoriasSecundarias: [],
+            estadoInicial: "CLASIFICADO",
+            esRafaga: false,
+            umbralSpam: 0.7,
+            umbralSpamDominancia: 0.33,
+            severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+            severidades: SEVERIDAD_RECORD,
+            dominiosAcortadores: ACORTADORES,
+        });
+        expect(decision.estadoFinal).toBe("CLASIFICADO");
+        expect(decision.reglasAplicadas).not.toContain("spam_publicitario_deterministico");
+    });
+
+    it("umbral de dominancia 0.33: un voto SPAM secundario basta sin categoría grave", () => {
+        const decision = decidirGuardasSeguridad({
+            texto: TEXTO_NEUTRO,
+            clasificacion: { categoria: "OFRECIMIENTO_REGALOS", confianza: 1.0 },
+            categoriasSecundarias: [{ categoria: "SPAM", score: 0.34 }],
+            estadoInicial: "CLASIFICADO",
+            esRafaga: false,
+            umbralSpam: 0.7,
+            umbralSpamDominancia: 0.33,
+            severidadMinGrave: SEVERIDAD_MIN_GRAVE,
+            severidades: SEVERIDAD_RECORD,
+            dominiosAcortadores: ACORTADORES,
+        });
+        expect(decision.estadoFinal).toBe("POSIBLE_SPAM");
+        expect(decision.reglasAplicadas).toContain("spam_dominancia");
     });
 });

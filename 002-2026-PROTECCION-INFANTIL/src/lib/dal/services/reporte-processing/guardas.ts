@@ -32,14 +32,22 @@ export async function aplicarGuardasSeguridad({
     prioridadAlta: boolean;
     keywordsDetectadas: string[];
 }> {
-    const [umbralSpamDominanciaRaw, severidadMinGraveRaw, severidadesRows] = await Promise.all([
+    const [umbralSpamDominanciaRaw, severidadMinGraveRaw, severidadesRows, dominiosAcortadoresRaw] = await Promise.all([
         prisma.parametroSistema.findUnique({ where: { clave: "spam.dominancia_umbral" } }),
         prisma.parametroSistema.findUnique({ where: { clave: "spam.dominancia_categoria_grave_severidad_min" } }),
         prisma.parametroSistema.findMany({ where: { clave: { startsWith: "scoring.severity." } } }),
+        prisma.parametroSistema.findUnique({ where: { clave: "spam.dominios_acortadores" } }),
     ]);
 
-    const umbralSpamDominancia = parseFloat(umbralSpamDominanciaRaw?.valor ?? "0.66");
+    const umbralSpamDominancia = parseFloat(umbralSpamDominanciaRaw?.valor ?? "0.33");
     const severidadMinGrave = parseInt(severidadMinGraveRaw?.valor ?? "75", 10);
+    const dominiosAcortadores: string[] = (() => {
+        try {
+            return dominiosAcortadoresRaw?.valor ? (JSON.parse(dominiosAcortadoresRaw.valor) as string[]) : [];
+        } catch {
+            return [];
+        }
+    })();
 
     const severidades: Record<string, number> = {};
     for (const row of severidadesRows) {
@@ -57,6 +65,7 @@ export async function aplicarGuardasSeguridad({
         umbralSpamDominancia,
         severidadMinGrave,
         severidades,
+        dominiosAcortadores,
     });
 
     // Spec 096-US3: razón explícita de la regla de decisión (best-effort).
