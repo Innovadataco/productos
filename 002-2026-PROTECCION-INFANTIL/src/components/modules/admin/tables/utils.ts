@@ -1,7 +1,4 @@
-export function fechaCorta(iso: string | null | undefined): string {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
-}
+export { fechaCorta } from "@/lib/format/fecha";
 
 export function formatDuracionHoras(horas: number | null | undefined): string {
     if (horas === null || horas === undefined) return "—";

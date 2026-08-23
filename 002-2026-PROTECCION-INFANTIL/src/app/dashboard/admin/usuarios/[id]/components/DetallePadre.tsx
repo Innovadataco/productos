@@ -7,11 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 import type { DetallePadreDto } from "@/lib/dal/types/usuarios-consolidado";
-
-function fechaCorta(iso: string | null | undefined): string {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
-}
+import { fechaCorta } from "@/lib/format/fecha";
 
 interface DetallePadreProps {
     detalle: DetallePadreDto;

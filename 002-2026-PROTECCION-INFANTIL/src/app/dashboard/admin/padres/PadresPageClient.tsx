@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Alerta } from "@/components/ui/Alerta";
 import { Cargando } from "@/components/ui/Cargando";
 import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
+import { fechaCorta } from "@/lib/format/fecha";
 
 type Padre = {
     id: string;
@@ -31,11 +32,6 @@ type Mensaje = { type: "success" | "error"; text: string } | null;
 type VigenciaEdit = { padre: Padre; inicio: string; fin: string } | null;
 
 const PAGE_SIZE = 25;
-
-function fechaCorta(iso: string | null): string {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
-}
 
 function aFechaInput(iso: string | null): string {
     if (!iso) return "";
