@@ -1,6 +1,6 @@
 # SPEC-214 · Multi-moneda + API tasas (002-PI-114)
 
-> Status: `PLANEADO`
+> Status: `IMPLEMENTADO`
 > PI: 002-PI-114
 > Responsable: ODIN
 > Rama: `work/002-PI-pagos-lote2`
@@ -98,9 +98,19 @@ Depende de SPEC-210. No implementa pasarela ni cobro automático; solo obtiene, 
 4. **DAL único**: todo acceso a `TasaCambio` pasa por `pagos-repository`.
 5. **Desactualización**: banner cuando `now - tasa.fecha > 48h`; no bloquear operaciones.
 
-## Impacto en arquitectura
+## Implementación
 
-Nuevo servicio `src/lib/pagos/tasas.ts` (o similar), posible script/worker `scripts/worker-tasas.mjs`, endpoint `src/app/api/admin/pagos/tasas/route.ts`, extensión de `pagos-repository.ts`. No cambia modelos de datos salvo posible parámetro adicional. No toca IA ni flujo de reportes.
+Entregado en rama `work/002-PI-pagos-lote2` sobre base `244e9d7c`:
+
+- `src/lib/pagos/tasas.ts`: `calcularMontoLocal`, `actualizarTasasDesdeAPI` con timeout 5s, 1 reintento, parseo robusto de `rates`/`conversion_rates`, catálogo configurable por `ParametroSistema`.
+- `scripts/worker-tasas.mjs`: worker con advisory lock de PostgreSQL y scheduler de refresco diario a las 04:00 America/Bogota.
+- `src/app/api/admin/pagos/tasas/route.ts`: `GET` listado vigente y `POST` inyección manual con `AuditLog`.
+- `src/lib/dal/repositories/pagos-repository.ts`: `crearTasaCambio`, `obtenerTasaCambioMasReciente`, `listarTasasVigentes`.
+- Tests unitarios con `fetch` mockeado y tests de integración para el endpoint.
+
+## Impacto en arquitectura:
+
+Impacto en arquitectura: nuevo servicio `src/lib/pagos/tasas.ts`, script/worker `scripts/worker-tasas.mjs`, endpoint `src/app/api/admin/pagos/tasas/route.ts`, extensión de `pagos-repository.ts`. No cambia modelos de datos salvo posible parámetro adicional. No toca IA ni flujo de reportes.
 
 ## Deuda Técnica
 
