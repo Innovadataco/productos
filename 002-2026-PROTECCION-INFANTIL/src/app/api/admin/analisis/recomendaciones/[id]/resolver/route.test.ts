@@ -134,4 +134,24 @@ describe("POST /api/admin/analisis/recomendaciones/[id]/resolver", () => {
         const recargada = await prisma.recomendacion.findUnique({ where: { id: rec.id } });
         expect(recargada?.estado).toBe("APLICADA");
     });
+
+    // SPEC-222 (002-PI-123, FR-004): el contrato del panel Dinero vs Valor usa
+    // `accion`; el endpoint la acepta como alias de `estado` (exactamente uno).
+    it("200 con `accion` (alias SPEC-222); 400 si vienen ambos o ninguno", async () => {
+        const admin = await crearUsuario("ADMIN", unico("admin") + "@test.local");
+        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
+        const rec = await crearRecomendacionPendiente(admin.id);
+
+        const res = await llamar(rec.id, { accion: "IGNORADA", motivo: "No aplica esta semana" });
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.recomendacion.estado).toBe("IGNORADA");
+
+        const rec2 = await crearRecomendacionPendiente(admin.id);
+        expect((await llamar(rec2.id, { estado: "APLICADA", accion: "IGNORADA" })).status).toBe(400);
+        expect((await llamar(rec2.id, { motivo: "sin acción" })).status).toBe(400);
+
+        const recargada = await prisma.recomendacion.findUnique({ where: { id: rec2.id } });
+        expect(recargada?.estado).toBe("PENDIENTE");
+    });
 });

@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-24
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Dependencias bloqueantes**: SPEC-220 (modelos `ScoreCliente` + parámetros `analisis.*` + job de recálculo) y SPEC-221 (`ReglaRecomendacion` + `Recomendacion` + worker de evaluación) del mismo mega-lote. El panel de anomalías consume el modelo `Anomalia` de SPEC-225 (hermana del lote); si aún no está implementada, el bloque renderiza estado vacío.
 
@@ -212,16 +212,52 @@ Como ADMIN quiero filtros de período, estado de suscripción y tipo de titular 
 
 ### Resumen de cambios
 
-*(Se completará tras la implementación con la lista exacta de archivos, endpoints y tests.)*
+Implementado 2026-08-24 en `work/002-PI-mega-cola-restante`. Archivos:
+
+**Creados — lógica y DAL**
+- `src/lib/analisis/panel-calculos.ts` (+ `.test.ts`): helpers puros (cuadrante, mediana, semáforo, canal FR-018, delta, rangos Bogotá, cohorte, mensualización MRR).
+- `src/lib/schemas/analisis-panel.ts` (+ `.test.ts`): Zod de los 4 query contracts + `parseQuery`.
+- `src/lib/dal/repositories/analisis-panel-repository.ts`: frontera Q-3 del dominio (Top 5, base de suscripciones con includes en UNA query, groupBy de variación, anomalías con guard P2021/P2022, KPIs).
+- `src/lib/dal/services/analisis-panel.ts` + `analisis-panel-tipos.ts` (split por techo E-8) + `analisis-panel.test.ts` (integración).
+
+**Creados — endpoints** (`verifyAuth` → `assertModulo("estadisticas")` → rol ADMIN → rate limit `admin_read` → Zod → servicio DAL):
+- `src/app/api/admin/analisis/top-decisiones/route.ts` (+ test), `dinero-vs-valor/route.ts` (+ test), `dispersion/route.ts` (+ test), `kpis/route.ts` (+ test), `anomalias/route.ts` (+ test).
+
+**Creados — UI** (`src/app/dashboard/admin/estadisticas/dinero-vs-valor/`):
+- `DineroVsValorPanelClient.tsx` (orquestador; filtros + drill en querystring, FR-017).
+- `components/`: `tipos.ts`, `TopDecisiones.tsx` (+ test unitario), `KpiTiles.tsx`, `MatrizDispersion.tsx` (recharts, 4 series por cuadrante, ReferenceLine en cortes, click → vista cliente), `TablaGranularidad.tsx`, `BreadcrumbDrill.tsx`, `FiltrosGlobales.tsx`, `PanelAnomalias.tsx`.
+
+**Modificados**
+- `src/app/dashboard/admin/estadisticas/dinero-vs-valor/page.tsx`: mantiene intacto el contenido de SPEC-218 (KPIs + 4 widgets, sección "Analítica de pagos") y monta encima el panel SPEC-222.
+- `src/app/api/admin/analisis/recomendaciones/[id]/resolver/route.ts` (SPEC-221): body acepta `accion` como alias de `estado` (exactamente uno), comportamiento 200/400/403/404/409 intacto (+ test añadido en su `route.test.ts`).
+- `prisma/seed.ts`: `seedParametrosPanelAnalisis()` (ancla `// ── SPEC-222:`) — `analisis.panel.umbral_monto_usd`, `analisis.panel.umbral_score` (vacío = mediana), `analisis.panel.dispersion_max_puntos` (500); upsert `update: {}`, invocado desde `main()` y exportado.
+- `vitest.unit.includes.ts`: 3 tests unitarios nuevos (ancla `// SPEC-222:`).
+- `specs/222-panel-principal-analisis/`: `tasks.md` (generado), `checklists/requirements.md` (validado), este `spec.md`.
 
 ### Decisiones ejecutadas
 
-*(Se completará tras compuertas de revisión.)*
+- **H-1 (hallazgo)**: SPEC-218 ya ocupaba la ruta `/dashboard/admin/estadisticas/dinero-vs-valor` y el tab del subnav (el research asumía que vivía solo en `/dashboard/admin/pagos/analitica`). Decisión: convivencia en el mismo tab — el panel SPEC-222 (5 bloques) arriba y la analítica de pagos de SPEC-218 abajo, sin tocar sus widgets (§2.2 del plan). FR-001 quedó satisfecho sin añadir href nuevo (el tab ya existía); `src/lib/proxy.ts` no se tocó (el área `/dashboard/admin/**` ya está abierta a roles internos y el ADMIN-only se fuerza en página/rutas, patrón existente).
+- **H-2 (hallazgo)**: el endpoint de resolución de FR-004 ya existía (SPEC-221, con TX + `AuditLog RECOMENDACION_RESUELTA` + 409). Se reutilizó y se extendió de forma aditiva con `accion` (alias del contrato). Cero migraciones: el valor de enum ya existía. Nota: el resolver de SPEC-221 no aplica rate limit `admin_read` ni `assertModulo("estadisticas")` (usa `verifyAuth("ADMIN")`); se mantuvo intacto por minimalidad — desviación parcial de FR-011 documentada.
+- **H-3**: `Anomalia` ya estaba en el schema (SPEC-225 integrada); el guard de tabla ausente se implementó igual (FR-010) como defensa.
+- Agregación en dos pasos: UNA query base `findMany` con includes tipados (sin N+1) + UN `groupBy` para la variación vs período anterior; agrupación por granularidad en el servicio. Cohorte y canal se calculan con helpers puros (no hizo falta `$queryRaw`).
+- Score promedio y dispersión excluyen suscripciones sin snapshot del período (conteo `sinScore` visible); nunca score 0 silencioso.
+- Cortes de cuadrantes: parámetros si AMBOS umbrales existen; si no, mediana del dataset (`cortes.fuente` lo indica).
+- Deltas de KPIs: `conversionFreemiumPct` es stock histórico sin equivalente de período → `deltaPct: null` (contrato lo permite). MRR anterior = aproximación documentada (activas actuales que ya existían al cierre del período anterior; no hay snapshots de estado).
+- Drill geográfico de padres: sin relación Pais/Ciudad; se contrasta `paisCliente` con el código del país del nivel y se agrupan en bucket "Sin ciudad" (Edge Case). El bucket de padres por país no tiene drill (etiqueta = código de país).
 
 ### Gate local
 
-*(Se completará tras validación.)*
+- `npx tsc --noEmit`: VERDE (0 errores).
+- ESLint sobre todos los archivos de la spec (código + tests): VERDE (tras `--fix` de indentación y split del servicio por techo de 500 líneas).
+- Tests unitarios (`vitest.unit.config.ts`, `--coverage.enabled=false`): 38/38 VERDES — `panel-calculos.test.ts` (23), `analisis-panel.test.ts` de schemas (9), `TopDecisiones.test.tsx` (6).
+- `npm run tokens:check`: VERDE global (1090 ≤ piso 1094); 0 ocurrencias de color crudo en los archivos de la spec (regex del script).
+- Tests de integración (rutas + servicio): escritos bajo `src/**`; NO corridos localmente (BD compartida, los corre el coordinador).
+- `arch:check`: no corrido localmente (lo corre el coordinador); no se añadió href nuevo al subnav (el tab ya existía de SPEC-218).
+- `./scripts/dev-restart.sh`: a cargo del coordinador (regla del mega-lote).
 
 ### Deuda técnica / notas
 
-*(Se completará al cerrar.)*
+- El resolver de SPEC-221 queda sin rate limit `admin_read` (ver H-2); si ZEUS lo exige, se añade en una pasada posterior.
+- Etiqueta del bucket de padres en granularidad País = código de país (`"CO"`); mapear al nombre del país sería una mejora cosmética.
+- MRR "anterior" y deltas de métricas stock son aproximaciones documentadas (no hay snapshots históricos de estado de suscripción).
+- SPEC-227 reutilizará el endpoint de resolución (Assumption confirmado).
