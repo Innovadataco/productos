@@ -195,16 +195,35 @@ Como operador/admin o cuenta de servicio quiero un endpoint interno para transic
 
 ### Resumen de cambios
 
-*(Se completará tras la implementación con la lista exacta de archivos, migraciones, endpoints y tests.)*
+- **Schema** (`prisma/schema.prisma`): 4 valores aditivos en `AccionAudit` (`EXPEDIENTE_TRANSICION_ESTADO`, `EXPEDIENTE_RETENIDO`, `EXPEDIENTE_SLA_VENCIDO`, `EXPEDIENTE_GRAVEDAD_SUBIO_A_ROJO`) + índice `Expediente(estado, ultimoEventoEn)`. Migración aditiva `prisma/migrations/20260824060000_spec_236_motor_estados_expediente/`.
+- **Máquina de estados** (`src/lib/expediente/estados/`): `transiciones.ts` (whitelist + guards FR-001 a FR-011), `aplicar-transicion.ts` (TX + AuditLog + publicación, FR-002), `publicar-evento-expediente.ts` (wrapper fail-open a Motor Notif SPEC-201), `aclaracion-consulta.ts` (stub documentado hasta SPEC-238). Todo el acceso a Prisma vive en el DAL `src/lib/dal/repositories/expediente-motor-repository.ts` (frontera Q-3: los módulos del motor y la API no importan `@/lib/prisma`).
+- **Endpoint** `POST /api/interno/expediente/[id]/transicionar` (FR-020/021): ADMIN, service-account (`X-Worker-Secret`) o PARENT solo para reapertura `CERRADO → ESCALADO` propia.
+- **Worker** `scripts/worker-expediente-motor.mjs` (advisory lock `123456793`, TZ America/Bogota, `--run-once`) con lógica en `src/lib/expediente/motor/` (`fechas-motor.ts` puro con date-fns-tz; `tareas-motor.ts`: auto-cierre, SLA 48h/12h, recálculo gravedad 24h, purga `[retenido]`).
+- **Seed** (`prisma/seed.ts`, `seedMotorExpediente()`): parámetros nuevos `padre.expediente.motor.tick_min` (15) y `padre.expediente.retencion_cerrados_meses` (24); 11 eventos × plantillas ES (EMAIL + IN_APP) + reglas de Motor Notif, idempotente.
+- **Infra**: servicio `pi-expediente-motor` en `docker-compose.prod.yml` (FR-017).
+- **Tests**: unitarios puros (`transiciones.test.ts`, `fechas-motor.test.ts`, 11/11 verdes, registrados en `vitest.unit.includes.ts`) e integración BD (`aplicar-transicion.test.ts`, `route.test.ts`, `scripts/worker-expediente-motor.test.ts`, `prisma/seed-expediente-motor.test.ts`).
 
 ### Decisiones ejecutadas
 
-*(Se completará tras compuertas de revisión.)*
+- Motor Notif real (SPEC-201) usa `NotificacionPlantilla`/`NotificacionRegla` y API estricta `programar()` — no las tablas `EventoNotificacion`/`NotificacionTemplate` asumidas en data-model.md. Los 11 eventos se siembran como plantillas `expediente.*.{email,in_app}` + reglas por rol; la publicación es fail-open post-commit (el motor no acepta cliente transaccional).
+- SLA del comité: el reloj arranca en la entrada al estado (`updatedAt`), no en `createdAt`; un expediente viejo recién pasado a `PENDIENTE_COMITE` no debe alertar al instante.
+- Retención: el plazo corre desde `fechaCierre` (fallback `createdAt`), según la descripción del parámetro en data-model.md ("meses tras cierre").
+- No se inserta `EventoExpediente` por transición (corrompería `numEventos`, insumo del guard de consolidación); motivo y actor van en `AuditLog.metadatos`.
+- `padre.expediente.consolidacion_min_reportes`, `auto_cierre_meses` y SLA `padre.comite.sla_horas_*` ya los sembraba SPEC-230; no se duplican ni se pisan sus defaults.
+- `AclaracionExpediente` (SPEC-238) aún no existe en el schema: los guards de aclaración consultan `aclaracion-consulta.ts`, que devuelve 0 (falla segura 409) hasta que SPEC-238 aterrice el modelo.
+- Advisory lock `123456793`: 791 lo tomó SPEC-220 y 792 SPEC-213 durante el mega-lote.
+- `dev-restart.sh` NO se toca: el quickstart §3 define arranque manual del worker en desarrollo (T051 "si es necesario" → no necesario).
 
 ### Gate local
 
-*(Se completará tras validación.)*
+- `npx tsc --noEmit`: limpio en archivos de esta spec (2 errores restantes en `src/lib/pagos/*`, de SPEC-213/216 en progreso por otro agente).
+- `npx prisma generate`: OK.
+- Tests unitarios (`vitest.unit.config.ts`): 11/11 verdes (`fechas-motor.test.ts` 7, `transiciones.test.ts` 4).
+- Tests de integración BD: escritos, los corre el coordinador (BD compartida del mega-lote).
+- Lint/build/dev-restart/quickstart manual: pendientes del gate global del coordinador.
 
 ### Deuda técnica / notas
 
-*(Se completará al cerrar.)*
+- `aclaracion-consulta.ts`: reemplazar el stub por la consulta real a `AclaracionExpediente` cuando SPEC-238 defina el modelo.
+- Locks preexistentes colisionados (ajeno a esta spec): `worker-senal-comunitaria.mjs` usa `123_456_790`, numéricamente idéntico al de `monitor-probes.mjs`, `worker-sesiones.mjs` y `worker-tasas.mjs`.
+- El recálculo de gravedad 24h del worker corre en memoria de proceso; si el worker reinicia, recalcula en el primer tick (idempotente, sin efecto adverso).

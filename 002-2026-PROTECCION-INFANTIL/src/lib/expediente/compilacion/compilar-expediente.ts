@@ -30,7 +30,7 @@ export interface CompilarExpedienteOptions {
     timestampPdf?: Date;
 }
 
-interface ParametrosCompilacion {
+export interface ParametrosCompilacion {
     pesoNumReportes: number;
     pesoCategoriaGrave: number;
     pesoAceleracion: number;
@@ -43,7 +43,7 @@ interface ParametrosCompilacion {
     multiplataformaMin: number;
 }
 
-async function cargarParametrosCompilacion(): Promise<ParametrosCompilacion> {
+export async function cargarParametrosCompilacion(): Promise<ParametrosCompilacion> {
     const [
         pesoNumReportes,
         pesoCategoriaGrave,
@@ -89,7 +89,7 @@ async function cargarParametrosCompilacion(): Promise<ParametrosCompilacion> {
     };
 }
 
-async function cargarSeveridadCategorias(client?: Prisma.TransactionClient): Promise<Record<string, number>> {
+export async function cargarSeveridadCategorias(client?: Prisma.TransactionClient): Promise<Record<string, number>> {
     const db = client ?? prisma;
     const params = await db.parametroSistema.findMany({
         where: { clave: { startsWith: "scoring.severity." } },
