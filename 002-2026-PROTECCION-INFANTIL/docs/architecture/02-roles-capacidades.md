@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 333 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2331 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 340 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2380 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -347,6 +347,13 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/tablero` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/expedientes` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -685,6 +692,13 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/colegio/tablero` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/expedientes` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -1023,6 +1037,13 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/colegio/tablero` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/expedientes` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/reportar` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -1361,6 +1382,13 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/profesores/[id]` | página | permitir | permite | sí |
 | `/dashboard/colegio/tablero` | página | permitir | permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/expedientes` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/perfil` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/reportar` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs/operar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs/tecnico` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1699,6 +1727,13 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/colegio/tablero` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/expedientes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/perfil` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/reportar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs/operar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs/tecnico` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -2037,6 +2072,13 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/profesores/[id]` | página | permitir | permite | sí |
 | `/dashboard/colegio/tablero` | página | permitir | permite | sí |
 | `/dashboard/mis-reportes/[id]` | página | permitir | permite | sí |
+| `/dashboard/padre` | página | permitir | permite | sí |
+| `/dashboard/padre/circulo-confianza` | página | permitir | permite | sí |
+| `/dashboard/padre/expedientes` | página | permitir | permite | sí |
+| `/dashboard/padre/notificaciones` | página | permitir | permite | sí |
+| `/dashboard/padre/perfil` | página | permitir | permite | sí |
+| `/dashboard/padre/reportar` | página | permitir | permite | sí |
+| `/dashboard/padre/suscripcion` | página | permitir | permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -2375,6 +2417,13 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/colegio/profesores/[id]` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/colegio/tablero` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/mis-reportes/[id]` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/circulo-confianza` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/expedientes` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/notificaciones` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/perfil` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/reportar` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/suscripcion` | página | redirigir→/login | permite | **NO** |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -2635,6 +2684,13 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/colegio/profesores/[id]` | redirigir→/login | permite |
 | `/dashboard/colegio/tablero` | redirigir→/login | permite |
 | `/dashboard/mis-reportes/[id]` | redirigir→/login | permite |
+| `/dashboard/padre` | redirigir→/login | permite |
+| `/dashboard/padre/circulo-confianza` | redirigir→/login | permite |
+| `/dashboard/padre/expedientes` | redirigir→/login | permite |
+| `/dashboard/padre/notificaciones` | redirigir→/login | permite |
+| `/dashboard/padre/perfil` | redirigir→/login | permite |
+| `/dashboard/padre/reportar` | redirigir→/login | permite |
+| `/dashboard/padre/suscripcion` | redirigir→/login | permite |
 | `/mis-reportes` | redirigir→/login | permite |
 
 ## Eje de módulos (BD): módulo → ruta → rol

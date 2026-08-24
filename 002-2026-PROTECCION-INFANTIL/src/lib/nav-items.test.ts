@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ADMIN_NAV_ITEMS, COLEGIO_NAV_ITEMS, COMITE_COLEGIO_NAV_ITEMS, COMITE_NAV_TABS, IA_TABS } from "./nav-items";
+import { ADMIN_NAV_ITEMS, COLEGIO_NAV_ITEMS, COMITE_COLEGIO_NAV_ITEMS, COMITE_NAV_TABS, IA_TABS, PADRE_NAV_ITEMS } from "./nav-items";
 import type { NavItem } from "./nav-items";
 import { CATALOGO_MODULOS } from "./permisos-catalogo";
 
@@ -55,7 +55,7 @@ function aplanar(items: NavItem[]): NavItem[] {
     return items.flatMap((item) => [item, ...aplanar(item.children ?? [])]);
 }
 
-const TODOS_LOS_ITEMS = aplanar([...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS]);
+const TODOS_LOS_ITEMS = aplanar([...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS, ...PADRE_NAV_ITEMS]);
 
 describe("estructura menú ↔ catálogo", () => {
     it("todo ítem de menú referencia un módulo existente en el catálogo", () => {

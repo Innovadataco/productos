@@ -38,7 +38,7 @@ describe("permisos-modulos", () => {
     });
 
     it("AND jerárquico: submódulo exige padre activo", async () => {
-        const padre = await crearModulo("padre");
+        const padre = await crearModulo("padre_test");
         const hijo = await crearModulo("hijo", padre.id);
 
         await setPermiso("ADMIN", hijo.id, true);
@@ -51,7 +51,7 @@ describe("permisos-modulos", () => {
         // Padre activo + hijo inactivo → hijo denegado, padre accesible
         await setPermiso("ADMIN", hijo.id, false);
         expect(await puedeAccederAModulo("ADMIN", "hijo")).toBe(false);
-        expect(await puedeAccederAModulo("ADMIN", "padre")).toBe(true);
+        expect(await puedeAccederAModulo("ADMIN", "padre_test")).toBe(true);
     });
 
     it("monitoreo_worker: ADMIN sí, OPERADOR no (módulo exclusivo de admin)", async () => {
