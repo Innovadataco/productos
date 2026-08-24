@@ -20,10 +20,10 @@ export function TimelineEventos({ eventos }: { eventos: EventoItem[] }) {
     }
 
     return (
-        <ol className="relative space-y-6 border-l border-slate-200 dark:border-slate-700">
+        <ol className="relative space-y-6 border-l border-tinta/15">
             {eventos.map((evento) => (
                 <li key={evento.id} className="ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-800 ring-8 ring-white dark:bg-sky-900 dark:text-sky-200 dark:ring-slate-950">
+                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-cielo/15 text-xs font-semibold text-cielo ring-8 ring-papel">
                         {evento.ordenSecuencial}
                     </span>
                     <div className="glass rounded-2xl p-4">
@@ -36,7 +36,7 @@ export function TimelineEventos({ eventos }: { eventos: EventoItem[] }) {
                                 })}
                             </time>
                             {evento.categoriaDetectada && (
-                                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                <span className="rounded-full bg-tinta/10 px-2.5 py-0.5 text-xs font-semibold text-muted">
                                     {evento.categoriaDetectada}
                                 </span>
                             )}

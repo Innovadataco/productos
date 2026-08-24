@@ -55,8 +55,8 @@ export function ExpedientesListClient({ expedientes }: { expedientes: Expediente
                         onClick={() => setFiltro(f.key)}
                         className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                             filtro === f.key
-                                ? "bg-sky-600 text-white shadow-lg shadow-sky-500/25"
-                                : "text-sky-900/70 hover:bg-sky-100 hover:text-sky-900 dark:text-sky-200/70 dark:hover:bg-sky-900/40 dark:hover:text-sky-100"
+                                ? "bg-primary-600 text-white shadow-lg shadow-cielo/25"
+                                : "text-muted hover:bg-cielo/10 hover:text-body"
                         }`}
                     >
                         {f.label}

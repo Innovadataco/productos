@@ -66,7 +66,7 @@ export function AgregarEventoForm({ expedienteId, onCancel, onSuccess }: Agregar
                         onChange={(e) => setTexto(e.target.value)}
                         rows={4}
                         maxLength={2000}
-                        className="mt-1 w-full rounded-xl border border-slate-300 bg-white/80 p-3 text-sm text-body shadow-sm transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-700 dark:bg-slate-900/60"
+                        className="mt-1 w-full rounded-xl border border-tinta/20 bg-papel/80 p-3 text-sm text-body shadow-sm transition focus:border-cielo focus:outline-none focus:ring-2 focus:ring-cielo/50"
                         placeholder="Describe la nueva situación..."
                         disabled={enviando}
                     />
@@ -81,7 +81,7 @@ export function AgregarEventoForm({ expedienteId, onCancel, onSuccess }: Agregar
                         type="text"
                         value={plataforma}
                         onChange={(e) => setPlataforma(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-slate-300 bg-white/80 p-3 text-sm text-body shadow-sm transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-700 dark:bg-slate-900/60"
+                        className="mt-1 w-full rounded-xl border border-tinta/20 bg-papel/80 p-3 text-sm text-body shadow-sm transition focus:border-cielo focus:outline-none focus:ring-2 focus:ring-cielo/50"
                         placeholder="Instagram, WhatsApp, TikTok..."
                         disabled={enviando}
                     />
@@ -99,7 +99,7 @@ export function AgregarEventoForm({ expedienteId, onCancel, onSuccess }: Agregar
                         type="button"
                         onClick={onCancel}
                         disabled={enviando}
-                        className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-body transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/60"
+                        className="rounded-xl border border-tinta/20 px-5 py-2.5 text-sm font-semibold text-body transition hover:bg-tinta/5"
                     >
                         Cancelar
                     </button>
