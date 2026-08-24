@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
+import { AnalisisRepository } from "@/lib/dal/repositories/analisis-repository";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
+import { ScoreClienteCard } from "@/components/modules/pagos/ScoreClienteCard";
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -17,6 +19,9 @@ export default async function ClientePage({ params }: PageProps) {
     const { id } = await params;
     const { suscripcion, pagos, eventos } = await new PagosRepository().obtenerFichaCliente(id);
     if (!suscripcion) notFound();
+
+    // SPEC-220: score de valor del cliente (solo visible bajo la puerta de arriba).
+    const score = await new AnalisisRepository().obtenerScoreCliente(id);
 
     const titular = suscripcion.colegio
         ? { tipo: "COLEGIO", nombre: suscripcion.colegio.nombre, email: suscripcion.usuario?.email ?? "—" }
@@ -64,6 +69,8 @@ export default async function ClientePage({ params }: PageProps) {
                     </div>
                 </div>
             </div>
+
+            <ScoreClienteCard actual={score.actual} historico={score.historico} />
 
             <div>
                 <h3 className="mb-3 text-lg font-semibold text-body">Pagos</h3>
