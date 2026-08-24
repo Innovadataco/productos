@@ -51,6 +51,23 @@ export async function obtenerDescuentoReferidoPct(): Promise<number> {
     return parseFloatNoNegativo(await getParametroSistemaValor("pagos.referidos.descuento_referido_pct"), 0);
 }
 
+/**
+ * SPEC-215 (002-PI-115): tope anual de referidos exitosos por código
+ * (`pagos.referidos.max_por_año`). Default 5 (BRIEF §5.1).
+ */
+export async function obtenerMaxReferidosPorAnio(): Promise<number> {
+    return parseEnteroPositivo(await getParametroSistemaValor("pagos.referidos.max_por_año"), 5);
+}
+
+/**
+ * SPEC-215 (002-PI-115): umbral de usos activados del año a partir del cual se
+ * marca el uso para revisión de admin y se emite `referido.tope_anual`
+ * (`pagos.referidos.notificar_admin_al`). Default 4.
+ */
+export async function obtenerReferidosNotificarAdminAl(): Promise<number> {
+    return parseEnteroPositivo(await getParametroSistemaValor("pagos.referidos.notificar_admin_al"), 4);
+}
+
 /** Si el contrato firmado es obligatorio para el tipo de titular (bloque 6 de la vista). */
 export async function esContratoObligatorio(tipoTitular: TipoTitular): Promise<boolean> {
     const clave = tipoTitular === "COLEGIO" ? "pagos.contrato_obligatorio_colegios" : "pagos.contrato_obligatorio_padres";
@@ -58,4 +75,26 @@ export async function esContratoObligatorio(tipoTitular: TipoTitular): Promise<b
     // Colegios: obligatorio por defecto (BRIEF); padres: opcional por defecto.
     const fallback = tipoTitular === "COLEGIO" ? "true" : "false";
     return (valor ?? fallback).trim().toLowerCase() === "true";
+}
+
+/**
+ * SPEC-218 (002-PI-118): TTL de la caché en memoria por widget de la analítica
+ * dinero-vs-valor (`pagos.analitica.cache_segundos`). Default 60 s (FR-006).
+ */
+export async function obtenerCacheAnaliticaSegundos(): Promise<number> {
+    return parseEnteroPositivo(await getParametroSistemaValor("pagos.analitica.cache_segundos"), 60);
+}
+
+// SPEC-217 (002-PI-117): parámetros del freemium (seed de SPEC-210; defaults
+// defensivos idénticos para que el alta funcione aunque el seed no haya corrido).
+
+/** Si el freemium está activo para nuevos clientes (`pagos.freemium.activo`). Default true. */
+export async function esFreemiumActivo(): Promise<boolean> {
+    const valor = await getParametroSistemaValor("pagos.freemium.activo");
+    return (valor ?? "true").trim().toLowerCase() === "true";
+}
+
+/** Días de duración del freemium (`pagos.freemium.duracion_dias`). Default 30. */
+export async function obtenerDuracionFreemiumDias(): Promise<number> {
+    return parseEnteroPositivo(await getParametroSistemaValor("pagos.freemium.duracion_dias"), 30);
 }

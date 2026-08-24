@@ -109,6 +109,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/ai/rubrica.test.ts",
     // SPEC-220: helpers puros de períodos Bogotá del dominio Análisis.
     "src/lib/analisis/periodos.test.ts",
+    // SPEC-221 (002-PI-122): validador SQL y renderer de plantillas del motor de reglas (puros).
+    "src/lib/analisis/reglas/ejecutor-sql.test.ts",
+    "src/lib/analisis/reglas/plantilla.test.ts",
     // SPEC-220: card presentacional del score de valor (sin BD).
     "src/components/modules/pagos/ScoreClienteCard.test.tsx",
     // 002-PI-068: fuente-reporte-salt.test.ts importa fuente-reporte.ts que carga
@@ -158,8 +161,19 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/pagos/vigencia.service.test.ts",
     // SPEC-211 (002-PI-111): vistas de cliente del módulo de pagos.
     "src/lib/pagos/renovacion-calculos.test.ts",
+    // SPEC-215 (002-PI-115): generador puro de códigos de referido (sin BD).
+    "src/lib/utils/referido-codigo.test.ts",
     "src/lib/pagos/comprobante-storage.test.ts",
     "src/components/modules/cliente/suscripcion/SuscripcionResumen.test.tsx",
+    // SPEC-218 (002-PI-118): analítica dinero-vs-valor (cálculos puros, servicio con repo doble y componentes).
+    "src/lib/pagos/analitica-calculos.test.ts",
+    "src/lib/pagos/analitica.service.test.ts",
+    "src/components/modules/admin/pagos/analitica/KpiPagosCards.test.tsx",
+    "src/components/modules/admin/pagos/analitica/WidgetsAccion.test.tsx",
+    "src/components/modules/admin/pagos/analitica/WidgetCrecimientoPaisCiudad.test.tsx",
+    // SPEC-217 (002-PI-117): freemium 30 días (cálculos puros y servicio con dependencias mockeadas, sin BD).
+    "src/lib/pagos/freemium-calculos.test.ts",
+    "src/lib/pagos/freemium.service.test.ts",
     "src/lib/plataforma.test.ts",
     "src/lib/proxy.test.ts",
     "src/lib/queue.test.ts",
@@ -185,4 +199,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/worker-auth.test.ts",
     "src/lib/worker-heartbeat.test.ts",
     "src/proxy-csp.test.ts",
+    // SPEC-237: bandeja comité CONSOLIDACION + aprobación multi-miembro
+    "src/lib/comite/sla.test.ts",
+    "src/components/modules/comite/consolidacion/ConsolidacionAcciones.test.tsx",
 ];

@@ -793,6 +793,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | aprobadoPorMiembrosJson | Json | opcional |
 | correccionesJson | Json | opcional |
 | nivelConfianza | Float | opcional |
+| motivoDevolucion | String | opcional |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
 | expediente | Expediente | relación (FK) |

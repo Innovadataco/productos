@@ -107,6 +107,7 @@ Comando por defecto: `["node", "server.js"]`.
 | app | `pi-app:${PI_APP_TAG:-latest}` (+ build local) | `pi-app` | — |
 | db | `pgvector/pgvector:pg16` | `pi-db` | — |
 | monitor | `pi-app:${PI_APP_TAG:-latest}` | `pi-monitor` | — |
+| pi-analisis-reglas | `pi-app:${PI_APP_TAG:-latest}` | `pi-analisis-reglas` | — |
 | pi-analisis-score | `pi-app:${PI_APP_TAG:-latest}` | `pi-analisis-score` | — |
 | pi-expediente-motor | `pi-app:${PI_APP_TAG:-latest}` | `pi-expediente-motor` | — |
 | pi-notificaciones | `pi-app:${PI_APP_TAG:-latest}` | `pi-notificaciones` | — |

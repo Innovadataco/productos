@@ -252,6 +252,18 @@ enum AccionAudit {
   // SPEC-211 (002-PI-111): renovación reportada por el cliente y cancelación de su suscripción.
   PAGO_REPORTADO
   SUSCRIPCION_CANCELADA
+  // SPEC-237 (002-PI-mega-cola): aprobación colegiada, corrección y devolución de informes consolidados.
+  INFORME_CONSOLIDADO_APROBADO
+  INFORME_CONSOLIDADO_CORREGIDO
+  INFORME_CONSOLIDADO_DEVUELTO
+  // SPEC-221 (002-PI-122): resolución humana de una recomendación del motor de reglas.
+  RECOMENDACION_RESUELTA
+  // SPEC-215 (002-PI-115): uso de código de referido y recompensa otorgada al referidor.
+  REFERIDO_REGISTRADO
+  REFERIDO_RECOMPENSA_OTORGADA
+  // SPEC-217 (002-PI-117): activación del freemium y conversión por pago durante el periodo gratuito.
+  SUSCRIPCION_FREEMIUM_ACTIVADA
+  SUSCRIPCION_FREEMIUM_CONVERTIDA
 }
 
 enum TipoPeriodoServicio {
@@ -776,6 +788,12 @@ model Suscripcion {
   // SPEC-213 (002-PI-113): índices del worker de vigencia (activas por vencer + freemium; en gracia por cortar).
   @@index([estado, fechaFin, esFreemium])
   @@index([estado, fechaCorteProgramado])
+  // SPEC-218 (002-PI-118): widget de crecimiento por país de la analítica dinero-vs-valor.
+  @@index([estado, paisCliente, monedaLocal, createdAt])
+  // SPEC-217 (002-PI-117): corte de freemiums vencidos por el worker y verificación de histórico por titular.
+  @@index([esFreemium, freemiumFechaFin])
+  @@index([usuarioId, esFreemium])
+  @@index([colegioId, esFreemium])
 }
 
 model Pago {
@@ -813,6 +831,8 @@ model Pago {
 
   @@index([suscripcionId, createdAt])
   @@index([estado, fechaReporte])
+  // SPEC-218 (002-PI-118): KPIs de recaudo mes a mes de la analítica dinero-vs-valor.
+  @@index([estado, createdAt, monedaLocal])
 }
 
 model BonoPromocional {
@@ -2199,6 +2219,8 @@ model InformeConsolidado {
   aprobadoPorMiembrosJson        Json?
   correccionesJson               Json?
   nivelConfianza                 Float?
+  // SPEC-237 (002-PI-mega-cola): motivo de devolución al área de origen.
+  motivoDevolucion               String?            @db.Text
   createdAt                      DateTime           @default(now()) @db.Timestamptz(6)
   updatedAt                      DateTime           @updatedAt @db.Timestamptz(6)
 
@@ -2207,6 +2229,7 @@ model InformeConsolidado {
 
   @@unique([expedienteId, versionSecuencial])
   @@index([expedienteId, createdAt(sort: Desc)])
+  @@index([estadoAprobacion])
   @@map("informes_consolidados")
 }
 
@@ -2462,6 +2485,8 @@ model ReglaRecomendacion {
   creadaPorAdminId       String
   createdAt              DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt              DateTime  @updatedAt @db.Timestamptz(6)
+  // SPEC-221 (002-PI-122): última corrida del motor; gobierna la cadencia por frecuenciaMin.
+  ultimaEvaluacionEn     DateTime? @db.Timestamptz(6)
 
   creadaPor       Usuario         @relation(fields: [creadaPorAdminId], references: [id])
   recomendaciones Recomendacion[]
@@ -2498,6 +2523,9 @@ model Recomendacion {
 
   @@index([estado, prioridad(sort: Desc), generadaEn(sort: Desc)])
   @@index([sujetoId])
+  // SPEC-221 (002-PI-122): dedup del motor por (regla, sujeto) en PENDIENTE + barrido de expiración.
+  @@index([reglaId, sujetoId, estado])
+  @@index([expiraEn])
   @@map("recomendaciones")
 }
 

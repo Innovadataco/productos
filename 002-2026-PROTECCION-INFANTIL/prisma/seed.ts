@@ -1,5 +1,6 @@
 import { RUBRICA_SEMILLA } from "../src/lib/ai/rubrica-semilla";
 import { normalizarNombreGeografico } from "../src/lib/normalizar";
+import { REGLAS_SEMILLA } from "../src/lib/analisis/reglas/seed-reglas";
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -279,6 +280,29 @@ async function seedMotorExpediente() {
     console.log("Eventos y plantillas del motor de expediente (SPEC-236) listos");
 }
 
+// ── SPEC-237 (002-PI-mega-cola): SLA de las tareas de consolidación de la
+// bandeja del comité. Idempotente (patrón I-100: upsert con update explícito).
+// Nota: `padre.comite.miembros_minimos_aprobacion` ya lo siembra SPEC-230.
+async function seedParametrosComiteConsolidacion() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "padre.comite.sla_horas_consolidacion" },
+        update: {
+            valor: "72",
+            tipo: TipoParametro.INTEGER,
+            descripcion: "Horas desde la creación para considerar vencido el SLA de una tarea de consolidación",
+        },
+        create: {
+            clave: "padre.comite.sla_horas_consolidacion",
+            valor: "72",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Horas desde la creación para considerar vencido el SLA de una tarea de consolidación",
+        },
+    });
+    console.log("Parámetro padre.comite.sla_horas_consolidacion (SPEC-237) listo");
+}
+
 // SPEC-235 (002-PI-135): guías de acción v1 para el flujo padre.
 // Idempotente: solo crea una guía ACTIVA v1 si la categoría aún no tiene ninguna.
 // Si un admin ya creó/editó una guía, el seed la respeta (no pisa).
@@ -551,6 +575,8 @@ async function seedParametrosPagos() {
         { clave: "pagos.freemium.activo", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar freemium para nuevos clientes" },
         { clave: "pagos.referidos.max_por_año", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Máximo de referidos exitosos por año por cliente" },
         { clave: "pagos.referidos.notificar_admin_al", valor: "4", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Al 4º referido del año notificar a admin para revisión" },
+        // ── SPEC-215: % de descuento del primer pago del referido (programa de referidos).
+        { clave: "pagos.referidos.descuento_referido_pct", valor: "15", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "% de descuento en el primer pago del cliente referido" },
         { clave: "pagos.gracia_dias", valor: "3", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días de gracia antes del corte automático" },
         { clave: "pagos.moneda_base", valor: "USD", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Moneda base del modelo comercial" },
         { clave: "pagos.tasas.api_url_default", valor: "https://api.exchangerate.host/v1/latest?access_key=REPLACE_ME&base=USD&symbols=", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "URL default para consulta de tasas de cambio" },
@@ -602,6 +628,59 @@ async function seedParametrosAnalisis() {
     console.log(`[SEED] ${analisisParams.length} parámetros analisis.* listos`);
 }
 
+// ── SPEC-221 (002-PI-122): parámetros y reglas semilla del motor de recomendación ──
+// Idempotente: parámetros con `update: {}` (nunca pisan el tuning del admin);
+// reglas con upsert por `clave` cuyo `update` solo toca campos descriptivos
+// (`nombre`, `descripcion`, `plantillaRecomendacion`) — NUNCA `modo`, `activa`
+// ni `sqlQuery` (respeta la promoción manual RECOMIENDA→EJECUTA y el tuning).
+// `analisis.recomendaciones.frecuencia_evaluacion_min` ya la siembra SPEC-220.
+async function seedReglasRecomendacion(adminEmail: string) {
+    const params = [
+        { clave: "analisis.recomendaciones.expiracion_dias", valor: "7", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Días hasta que una recomendación PENDIENTE expira (SPEC-221)" },
+        { clave: "analisis.recomendaciones.statement_timeout_ms", valor: "5000", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Timeout del sandbox SQL por regla (SPEC-221)" },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+
+    const admin = await prisma.usuario.findUnique({ where: { email: adminEmail } });
+    if (!admin) {
+        console.log("[SEED] Reglas de recomendación omitidas: no existe admin inicial.");
+        return;
+    }
+
+    for (const regla of REGLAS_SEMILLA) {
+        await prisma.reglaRecomendacion.upsert({
+            where: { clave: regla.clave },
+            update: {
+                nombre: regla.nombre,
+                descripcion: regla.descripcion,
+                plantillaRecomendacion: regla.plantillaRecomendacion,
+            },
+            create: {
+                clave: regla.clave,
+                nombre: regla.nombre,
+                descripcion: regla.descripcion,
+                categoria: regla.categoria,
+                sqlQuery: regla.sqlQuery,
+                plantillaRecomendacion: regla.plantillaRecomendacion,
+                modo: "RECOMIENDA",
+                accionEjecutable: regla.accionEjecutable ?? null,
+                prioridad: regla.prioridad,
+                umbralMinimo: regla.umbralMinimo ?? null,
+                frecuenciaMin: regla.frecuenciaMin,
+                activa: true,
+                creadaPorAdminId: admin.id,
+            },
+        });
+    }
+    console.log(`[SEED] ${REGLAS_SEMILLA.length} reglas de recomendación listas (modo RECOMIENDA)`);
+}
+
 // ── SPEC-213 (002-PI-113): parámetro del motor de vigencia de pagos ──
 // Idempotente: `update: {}` — el seed nunca pisa la hora ajustada por el admin.
 // `pagos.vigencia.ultima_corrida` NO se siembra: la escribe el worker.
@@ -620,6 +699,25 @@ async function seedParametrosVigenciaPagos() {
         },
     });
     console.log("[SEED] parámetro pagos.vigencia.hora_corrida listo");
+}
+
+// ── SPEC-218 (002-PI-118): TTL de la caché por widget de la analítica dinero-vs-valor ──
+// Idempotente: `update: {}` — el seed nunca pisa el ajuste hecho por el admin.
+async function seedParametrosAnaliticaPagos() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "pagos.analitica.cache_segundos" },
+        update: {},
+        create: {
+            clave: "pagos.analitica.cache_segundos",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion: "TTL en segundos de la caché en memoria por widget del dashboard dinero-vs-valor",
+        },
+    });
+    console.log("[SEED] parámetro pagos.analitica.cache_segundos listo");
 }
 
 async function main() {
@@ -2078,6 +2176,44 @@ async function main() {
             cuerpoMarkdown:
                 "Hola {{nombreColegio}},\n\nSe creó la cuenta institucional de tu colegio en Protección Infantil.\n\nUsuario: {{emailAdmin}}\nContraseña temporal: {{passwordTemporal}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible.\n\nEsta contraseña temporal no se volverá a mostrar.",
         },
+        // ── SPEC-215: programa de referidos del módulo de pagos ──
+        {
+            clave: "referido.registrado.email",
+            canal: "EMAIL",
+            asunto: "Alguien usó tu código de referido",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nUn nuevo cliente registró tu código de referido {{codigoReferido}}. Cuando su primer pago sea autorizado, recibirás tu recompensa.",
+        },
+        {
+            clave: "referido.registrado.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Un nuevo cliente registró tu código de referido {{codigoReferido}}.",
+        },
+        {
+            clave: "referido.recompensa.otorgada.email",
+            canal: "EMAIL",
+            asunto: "Tu recompensa por referido fue otorgada",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nEl primer pago de tu referido fue autorizado. Se otorgó 1 mes gratis a tu suscripción (código {{codigoReferido}}).",
+        },
+        {
+            clave: "referido.recompensa.otorgada.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Se otorgó 1 mes gratis a tu suscripción por tu referido (código {{codigoReferido}}).",
+        },
+        {
+            clave: "referido.tope_anual.email",
+            canal: "EMAIL",
+            asunto: "Tu código de referido se acerca a su tope anual",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nTu código de referido {{codigoReferido}} ya tiene {{usosAnio}} referidos activados este año: uno más y llegas al tope anual.",
+        },
+        {
+            clave: "referido.tope_anual.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown:
+                "Tu código {{codigoReferido}} tiene {{usosAnio}} referidos activados este año: uno más y llegas al tope anual.",
+        },
     ];
 
     for (const pl of plantillasSeed) {
@@ -2141,6 +2277,18 @@ async function main() {
         { evento: "caso.asignado", rol: "COMITE_VALIDACION", offset: "+0m", canal: "IN_APP", obligatoria: false },
         // SPEC-204: bienvenida al admin de un colegio nuevo (piloto migración motor)
         { evento: "colegio.creado", rol: "SCHOOL_ADMIN", offset: "+0m", canal: "EMAIL", obligatoria: true },
+        // ── SPEC-215: programa de referidos (titulares colegio/padre + aviso a admin) ──
+        { evento: "referido.registrado", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.registrado", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        { evento: "referido.registrado", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.registrado", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        { evento: "referido.recompensa.otorgada", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "EMAIL", obligatoria: true },
+        { evento: "referido.recompensa.otorgada", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "IN_APP", obligatoria: true },
+        { evento: "referido.recompensa.otorgada", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: true },
+        { evento: "referido.recompensa.otorgada", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: true },
+        { evento: "referido.tope_anual", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.tope_anual", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.tope_anual", rol: "ADMIN", offset: "+0m", canal: "EMAIL", obligatoria: true },
     ];
 
     for (const r of reglasSeed) {
@@ -2431,6 +2579,9 @@ async function main() {
     // ── SPEC-220: parámetros del dominio Análisis (score, reglas, digest, anomalías) ──
     await seedParametrosAnalisis();
 
+    // ── SPEC-221: parámetros + 7 reglas semilla del motor de recomendación ──
+    await seedReglasRecomendacion(adminEmail);
+
     // ── SPEC-213: hora de corrida del motor de vigencia de pagos ──
     await seedParametrosVigenciaPagos();
 
@@ -2440,13 +2591,19 @@ async function main() {
     // ── SPEC-236: parámetros + eventos/plantillas del motor de expediente ──
     await seedMotorExpediente();
 
+    // ── SPEC-237: SLA de consolidación de la bandeja del comité ──
+    await seedParametrosComiteConsolidacion();
+
+    // ── SPEC-218: TTL de caché de la analítica dinero-vs-valor ──
+    await seedParametrosAnaliticaPagos();
+
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
     await prisma.$disconnect();
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion, seedParametrosAnalisis, seedMotorExpediente };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion, seedParametrosAnalisis, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion };
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como
