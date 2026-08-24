@@ -21,8 +21,19 @@ import { EventoMatchRepository } from "../repositories/evento-match";
 import { withUnitOfWork } from "../unit-of-work";
 import { detectarYRegistrarMatch } from "./evento-match";
 import { agregarPatronPorReporte } from "@/lib/colegio/patrones";
+import { getParametroSistemaValor } from "@/lib/parametros";
+import { construirSla } from "@/lib/comite/sla";
 import type { InfoClienteDto } from "../types/operador";
 import type { ResolverSolicitudInput } from "../types/comite";
+
+// SPEC-237: SLA default de una revisión de reporte si el parámetro no existe.
+const DEFAULT_SLA_HORAS_REVISION = 48;
+
+async function slaHorasRevisionReporte(): Promise<number> {
+    const raw = await getParametroSistemaValor("padre.comite.sla_horas_normal");
+    const parsed = Number.parseInt(raw ?? String(DEFAULT_SLA_HORAS_REVISION), 10);
+    return Number.isFinite(parsed) && parsed >= 1 ? parsed : DEFAULT_SLA_HORAS_REVISION;
+}
 
 export class ComiteBandejaService {
     private readonly solicitudes: SolicitudComiteRepository;
@@ -102,9 +113,16 @@ export class ComiteBandejaService {
             solicitudesTodas.map((s) => s.reporte)
         );
         const clavesConMatch = new Set(paresConMatch.map((p) => `${p.identificador}|${p.plataformaId}`));
+        // SPEC-237 (002-PI-mega-cola): SLA visible por tarea (FR-004). Las
+        // revisiones de reporte usan `padre.comite.sla_horas_normal`.
+        const slaHoras = await slaHorasRevisionReporte();
         const anotadas = solicitudesTodas.map((s) => {
             const { reporte, ...resto } = s;
-            return { ...resto, matchInterCiudad: clavesConMatch.has(`${reporte.identificador}|${reporte.plataformaId}`) };
+            return {
+                ...resto,
+                matchInterCiudad: clavesConMatch.has(`${reporte.identificador}|${reporte.plataformaId}`),
+                sla: construirSla(s.creadoEn, slaHoras),
+            };
         });
         anotadas.sort((a, b) => Number(b.matchInterCiudad) - Number(a.matchInterCiudad));
 
