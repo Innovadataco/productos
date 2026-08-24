@@ -106,3 +106,13 @@ Segunda etapa de la cadena UI Padre v2 (231 → 232 → 233). Implementa la list
 1. **AutoSuggest en lista**: se propone mostrarlo en `/dashboard/padre/expedientes` (y opcionalmente en `/dashboard/padre`), no como modal invasivo.
 2. **Botón "Ya se resolvió"**: placeholder visual sin acción; la consolidación real se implementa en SPEC-234/236.
 3. **Deuda técnica**: la vista de búsqueda por identificador (`/dashboard/padre/identificador/[nick]`) queda para SPEC-233.
+
+## Impacto en arquitectura:
+
+- Agrega `src/app/dashboard/padre/expedientes/page.tsx` (reemplaza placeholder) y `src/app/dashboard/padre/expedientes/[id]/page.tsx` (nueva ruta).
+- Agrega `src/app/api/padre/expedientes/[id]/eventos/route.ts` (endpoint POST).
+- Agrega 6 componentes en `src/components/modules/padre/` (lista, detalle, card, timeline, formulario, autosuggest).
+- Agrega `src/lib/padre/expediente-ui.ts` (helpers de formato y timezone Bogotá).
+- Regenera artefactos de arquitectura `docs/architecture/02-roles-capacidades.md` y `03-pantallas.md` (SPEC-126).
+- Cero cambios en `src/lib/ai/**`, cero cambios de schema Prisma, cero migraciones.
+- Cero imports de `@/lib/prisma` en nuevas páginas/componentes (usa `ExpedienteRepository`).
