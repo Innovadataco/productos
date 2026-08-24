@@ -7,6 +7,8 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
+import { procesarRecompensasPagoAutorizado } from "@/lib/pagos/referido.service";
+import { extenderVigenciaDesdeFreemium } from "@/lib/pagos/freemium.service";
 import { z } from "zod";
 import { withValidation } from "@/lib/validation";
 import { getClientInfo } from "@/lib/pagos/api-helpers";
@@ -58,6 +60,34 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             ipAddress,
             userAgent,
         });
+
+        // SPEC-215 (002-PI-115): hook del evento interno `pago.autorizado` — activa
+        // el uso de referido pendiente y otorga las recompensas. Fail-open: una
+        // falla aquí no revierte la autorización ya persistida.
+        try {
+            await procesarRecompensasPagoAutorizado(id, admin.id);
+        } catch (err) {
+            console.error(
+                `[Referidos] Hook pago.autorizado: error — pago ${id}: ${err instanceof Error ? err.message : "desconocido"}`
+            );
+        }
+
+        // SPEC-217 (002-PI-117): hook `pago.autorizado` sobre suscripción freemium —
+        // convierte el freemium (esFreemium=false) y extiende la vigencia desde
+        // freemiumFechaFin. Fail-open, mismo patrón que el hook de referidos.
+        try {
+            await extenderVigenciaDesdeFreemium({
+                suscripcionId: actualizado.suscripcionId,
+                duracionCubierta: actualizado.duracionCubierta,
+                actorAdminId: admin.id,
+                ipAddress,
+                userAgent,
+            });
+        } catch (err) {
+            console.error(
+                `[Freemium] Hook pago.autorizado: error — pago ${id}: ${err instanceof Error ? err.message : "desconocido"}`
+            );
+        }
 
         return NextResponse.json({ pago: actualizado });
     } catch (error) {

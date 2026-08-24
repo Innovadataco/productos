@@ -38,6 +38,9 @@ export interface VistaSuscripcion {
     id: string;
     estado: string;
     esFreemium: boolean;
+    // SPEC-217 (002-PI-117): datos de freemium para la vista cliente (FR-008).
+    freemiumFechaFin: string | null;
+    diasRestantesFreemium: number | null;
     diasRestantes: number;
     fechaInicio: string;
     fechaFin: string;

@@ -16,6 +16,7 @@ import {
     calcularDescuentoAnualUSD,
     calcularDiasRestantesBogota,
 } from "./renovacion-calculos";
+import { calcularDiasRestantesFreemium } from "./freemium-calculos";
 import {
     esContratoObligatorio,
     obtenerDescuentoAnualDefaultPct,
@@ -132,6 +133,9 @@ export async function obtenerVistaSuscripcion(usuario: UsuarioTitular): Promise<
         id: suscripcion.id,
         estado: suscripcion.estado,
         esFreemium: suscripcion.esFreemium,
+        // SPEC-217 (002-PI-117): FR-008 — datos de freemium para la vista cliente.
+        freemiumFechaFin: suscripcion.freemiumFechaFin?.toISOString() ?? null,
+        diasRestantesFreemium: calcularDiasRestantesFreemium(suscripcion.esFreemium, suscripcion.freemiumFechaFin),
         diasRestantes: calcularDiasRestantesBogota(suscripcion.fechaFin),
         fechaInicio: suscripcion.fechaInicio.toISOString(),
         fechaFin: suscripcion.fechaFin.toISOString(),

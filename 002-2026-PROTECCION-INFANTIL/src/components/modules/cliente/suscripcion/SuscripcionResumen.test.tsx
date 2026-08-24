@@ -12,6 +12,8 @@ function vistaBase(overrides: Partial<VistaSuscripcion> = {}): VistaSuscripcion 
         id: "sub-1",
         estado: "ACTIVA",
         esFreemium: false,
+        freemiumFechaFin: null,
+        diasRestantesFreemium: null,
         diasRestantes: 120,
         fechaInicio: "2026-08-01T05:00:00.000Z",
         fechaFin: "2026-12-01T05:00:00.000Z",
@@ -63,5 +65,16 @@ describe("SuscripcionResumen", () => {
     it("muestra el aviso de periodo gratuito cuando es freemium", () => {
         render(<SuscripcionResumen vista={vistaBase({ esFreemium: true })} />);
         expect(screen.getByText(/periodo gratuito/)).toBeDefined();
+    });
+
+    // SPEC-217 (002-PI-117): días restantes de freemium en la vista cliente (SC-002).
+    it("muestra los días restantes del freemium", () => {
+        render(<SuscripcionResumen vista={vistaBase({ esFreemium: true, diasRestantesFreemium: 12 })} />);
+        expect(screen.getByText(/quedan 12 días/)).toBeDefined();
+    });
+
+    it("muestra 'Termina hoy' cuando el freemium vence hoy", () => {
+        render(<SuscripcionResumen vista={vistaBase({ esFreemium: true, diasRestantesFreemium: 0 })} />);
+        expect(screen.getByText(/Termina hoy/)).toBeDefined();
     });
 });

@@ -60,7 +60,12 @@ export function SuscripcionResumen({ vista }: { vista: VistaSuscripcion }) {
 
             {vista.esFreemium && (
                 <p className="mt-4 rounded-xl bg-cielo/10 px-4 py-2 text-xs font-medium text-cielo">
+                    {/* SPEC-217 (002-PI-117): días restantes del periodo gratuito (SC-002). */}
                     Estás en el periodo gratuito de bienvenida.
+                    {vista.diasRestantesFreemium !== null &&
+                        (vista.diasRestantesFreemium === 0
+                            ? " Termina hoy."
+                            : ` Te ${vista.diasRestantesFreemium === 1 ? "queda 1 día" : `quedan ${vista.diasRestantesFreemium} días`}.`)}
                 </p>
             )}
         </GlassCard>

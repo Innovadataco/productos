@@ -1,6 +1,6 @@
 # SPEC-217 · Freemium 30 días (002-PI-117)
 
-> Status: `PLANEADO`
+> Status: `IMPLEMENTADO`
 > PI: 002-PI-117
 > Responsable: ODIN
 > Rama: `work/002-PI-pagos-planes-lote3`
@@ -98,3 +98,14 @@ Freemium del Módulo Pagos: al registrarse, el cliente recibe acceso gratuito eq
 2. **Pago durante freemium**: extensión desde `freemiumFechaFin`; si ya venció, desde fecha de autorización (sin prorrateo).
 3. **Plan básico**: `MES_1` del año actual. Si no existe, se loggea error y no se activa freemium.
 4. **Deuda técnica**: la lógica de activación debe ubicarse en el servicio de creación de suscripción compartido por registro de cliente y creación admin.
+
+## Implementación
+
+Cerrada el 2026-08-24 (rama `work/002-PI-mega-cola-restante`). Detalle en `cierre.md`.
+
+- Servicio: `src/lib/pagos/freemium.service.ts` (`crearSuscripcionCliente` = servicio compartido de creación, Deuda 4; `extenderVigenciaDesdeFreemium` = hook `pago.autorizado`); cálculos puros en `src/lib/pagos/freemium-calculos.ts`; parámetros en `src/lib/pagos/parametros-pagos.ts`.
+- DAL: `src/lib/dal/repositories/pagos-freemium-repository.ts` (nuevo; `pagos-repository.ts` intacto por max-lines).
+- Hook de autorización: `src/app/api/admin/pagos/pendientes/[id]/autorizar/route.ts` (fail-open, tras el hook de referidos).
+- Endpoint cliente: `VistaSuscripcion` expone `esFreemium` + `freemiumFechaFin` + `diasRestantesFreemium` (FR-008); `SuscripcionResumen` muestra los días restantes (SC-002).
+- Migración `20260824100000_spec_217_freemium` (aditiva): 3 índices + 2 valores de `AccionAudit`.
+- Hallazgo preexistente corregido: `existeCodigoReferidoPropio` (SPEC-215) no existía en ningún repositorio y rompía `tsc` en todo el árbol; se añadió a `PagosReferidosRepository` y se corrigieron dos fixtures de tests de SPEC-215 sin el obligatorio `codigoReferidoPropio`.
