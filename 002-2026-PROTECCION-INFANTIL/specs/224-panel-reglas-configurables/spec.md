@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-24
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO (integración pendiente de corrida por el coordinador)
 
 Impacto en arquitectura: añade el panel admin `/dashboard/admin/analisis/reglas` (CRUD de reglas + editor SQL con test en transacción `READ ONLY` + versionado), la tabla `ReglaRecomendacionHistorial` y la columna aditiva `version` en `ReglaRecomendacion` (migración aditiva), 7 valores `AccionAudit REGLA_*`, parámetros `analisis.reglas.*` y el módulo permisible nuevo `analisis_admin`.
 
@@ -180,16 +180,30 @@ Como sistema quiero endpoints `/api/admin/analisis/reglas` con autenticación `A
 
 ### Resumen de cambios
 
-*(Se completará tras la implementación con la lista exacta de archivos, migraciones, endpoints y tests.)*
+- **Datos (aditivo)**: columna `version` en `reglas_recomendacion`, tabla `regla_recomendacion_historial` (snapshot JSON + motivo + admin, `@@unique(reglaId, version)`), 7 valores `AccionAudit REGLA_*` — migración `prisma/migrations/20260824150000_spec_224_panel_reglas/migration.sql` (cero DROP; `ALTER TYPE ADD VALUE` con guarda `pg_enum`, patrón SPEC-225). Seed idempotente `seedParametrosReglasAdmin()` (`analisis.reglas.test_timeout_ms` = 5000, `analisis.reglas.test_max_filas` = 50, `update: {}`); el grant `analisis_admin` → ADMIN lo cubre `syncModulosYGrants`.
+- **Catálogo/navegación**: módulo `analisis_admin` ("Análisis · Reglas", admin, crítico, orden 76) en `src/lib/permisos-catalogo.ts`; ítem `/dashboard/admin/analisis/reglas` en `src/lib/nav-items.ts`.
+- **Servicio**: validador estático puro `src/lib/analisis/reglas/validar-sql.ts` (SELECT/WITH única sentencia, deny-list fuera de literales, falla cerrado ante literal sin cerrar); helpers puros `test-sql.ts` (envoltura LIMIT, huella sha256, acotados 1000..30000 ms / 1..200 filas, mensajes PG legibles) y `versionado.ts` (snapshot + diff de campos funcionales); schemas Zod `src/lib/schemas/analisis-reglas.ts`; DAL `src/lib/dal/repositories/reglas-admin-repository.ts` (CRUD + historial + auditoría en TX con `logAudit`) y orquestador `src/lib/dal/services/reglas-admin.ts` (el test SQL reutiliza `ReglasRecomendacionRepository.ejecutarQuerySoloLectura` — TX READ ONLY + statement_timeout, sin `$queryRawUnsafe` nuevo fuera del DAL).
+- **API (6 handlers)**: `GET/POST /api/admin/analisis/reglas`, `GET/PATCH .../[id]`, `POST .../[id]/modo`, `GET .../[id]/historial`, `POST .../test-sql` — `verifyAuth("ADMIN")` + `assertModulo("analisis_admin")` + rate limit (`admin_read`/`admin_write`) + Zod + `errorToResponse`.
+- **UI**: página `/dashboard/admin/analisis/reglas` + componentes `ReglasPanel`, `ReglasTable`, `ReglaEditor` (preview SQL, Probar, muestra, chequeo de variables), `ReglaModoDialog` (confirmación fuerte), `ReglaHistorial` (solo lectura).
+- **Tests**: 69 unitarios verdes (validador 33 — 10 válidas + 20 maliciosas/erróneas, helpers test-sql, versionado, schemas, diálogo de modo) + 4 archivos de integración (CRUD 401/403/400/409/201, versionado, promoción SC-004, test-sql con SC-003: PostgreSQL rechaza INSERT en la TX READ ONLY con código 25006).
 
 ### Decisiones ejecutadas
 
-*(Se completará tras compuertas de revisión.)*
+- El validador del panel (`validar-sql.ts`) es MÁS estricto que el del motor (SPEC-221 `ejecutor-sql.ts`, intacto): distingue literales y rechaza multi-sentencia; el del motor no se modificó para no alterar SPECs ajenas.
+- El test SQL NO introduce un segundo `$queryRawUnsafe`: consume el sandbox DAL ya aprobado de SPEC-221 (TX READ ONLY + `statement_timeout` interpolado como entero acotado).
+- `camposCambiados` del historial se calcula en lectura (diff snapshot N vs snapshot N+1 o estado actual); no se añadió columna extra — volumen ínfimo.
+- `clave` inmutable y `modo` solo vía endpoint dedicado: el PATCH los captura en el schema y el servicio los rechaza con 400 explícito.
+- El modo NO genera versión (no es campo funcional, FR-010); su rastro es la auditoría dedicada con valorAnterior/valorNuevo.
 
 ### Gate local
 
-*(Se completará tras validación.)*
+- `npx tsc --noEmit`: limpio en todos los archivos de SPEC-224.
+- Tests unitarios SPEC-224: 69/69 verdes (`vitest.unit.config.ts`); estructurales nav/AdminNav: 7/7 verdes.
+- `npm run tokens:check`: VERDE global (1090 ≤ piso 1094); archivos UI de SPEC-224 aportan 0 colores crudos (regex del script).
+- Tests de integración: escritos bajo `src/**`; los corre el coordinador (BD compartida).
 
 ### Deuda técnica / notas
 
-*(Se completará al cerrar.)*
+- Restauración automática de versiones fuera de v1 (restaurar = editar copiando valores).
+- Sin locks de edición (un solo ADMIN operativo); el worker toma la última versión en su siguiente ciclo.
+- La validación estática no es un parser SQL completo; la barrera real es la TX READ ONLY (verificada en integración).
