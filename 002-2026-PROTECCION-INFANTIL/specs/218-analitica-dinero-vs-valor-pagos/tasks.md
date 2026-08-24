@@ -9,27 +9,27 @@
 
 ## Fase 2 — Queries analíticas
 
-- [ ] T003 [P1] Extender `PagosRepository` con queries de los 4 widgets y KPIs.
-- [ ] T004 [P1] Crear `src/lib/pagos/analitica.service.ts` con caché 60s.
-- [ ] T005 [P1] Tests de agregación con fechas Bogotá.
+- [x] T003 [P1] Extender `PagosRepository` con queries de los 4 widgets y KPIs.
+- [x] T004 [P1] Crear `src/lib/pagos/analitica.service.ts` con caché 60s.
+- [x] T005 [P1] Tests de agregación con fechas Bogotá.
 
 ## Fase 3 — UI
 
-- [ ] T006 [P1] Verificar/reutilizar componentes de charts existentes.
-- [ ] T007 [P1] Crear KPI cards.
-- [ ] T008 [P1] Crear 4 widgets.
-- [ ] T009 [P1] Crear página `/dashboard/admin/estadisticas/dinero-vs-valor/page.tsx`.
+- [x] T006 [P1] Verificar/reutilizar componentes de charts existentes.
+- [x] T007 [P1] Crear KPI cards.
+- [x] T008 [P1] Crear 4 widgets.
+- [x] T009 [P1] Crear página `/dashboard/admin/estadisticas/dinero-vs-valor/page.tsx`.
 
 ## Fase 4 — Integración y navegación
 
-- [ ] T010 [P1] Agregar tab en sub-nav de estadísticas.
-- [ ] T011 [P1] Responsive y contraste AA.
+- [x] T010 [P1] Agregar tab en sub-nav de estadísticas.
+- [x] T011 [P1] Responsive y contraste AA.
 
 ## Fase 5 — Gate y cierre
 
-- [ ] T012 [P1] Gate local completo.
-- [ ] T013 [P1] Actualizar `specs/README.md` estado a IMPLEMENTADO.
-- [ ] T014 [P1] Redactar `cierre.md`.
+- [ ] T012 [P1] Gate local completo. *(parcial ODIN: tsc + prisma generate + unit tests verdes; lint/build/integration/deploy los corre el coordinador del mega-lote)*
+- [ ] T013 [P1] Actualizar `specs/README.md` estado a IMPLEMENTADO. *(archivo compartido: lo actualiza el coordinador)*
+- [ ] T014 [P1] Redactar `cierre.md`. *(cierre del coordinador)*
 
 ## Dependencias y orden
 
