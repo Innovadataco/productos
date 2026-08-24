@@ -16,6 +16,8 @@ pkill -f worker-notificaciones.mjs 2>/dev/null || true
 pkill -f worker-vigencia-pagos.mjs 2>/dev/null || true
 # SPEC-220: worker del score de valor de cliente (instancia única vía advisory lock)
 pkill -f worker-analisis-score.mjs 2>/dev/null || true
+# SPEC-221: worker del motor de reglas de recomendación (instancia única vía advisory lock)
+pkill -f worker-analisis-reglas.mjs 2>/dev/null || true
 sleep 1
 
 echo "==> [2/4] Rebuild limpio (rm -rf .next && build)"
@@ -39,9 +41,11 @@ nohup node --env-file-if-exists=.env --import tsx scripts/worker-notificaciones.
 nohup node --env-file-if-exists=.env --import tsx scripts/worker-vigencia-pagos.mjs > /tmp/worker-vigencia-pagos-002.log 2>&1 &
 # SPEC-220: worker del score de valor (recálculo diario + purga). Advisory lock propio (exit 2 si hay otro).
 nohup node --env-file-if-exists=.env --import tsx scripts/worker-analisis-score.mjs > /tmp/worker-analisis-score-002.log 2>&1 &
+# SPEC-221: worker del motor de reglas de recomendación. Advisory lock propio (exit 2 si hay otro).
+nohup node --env-file-if-exists=.env --import tsx scripts/worker-analisis-reglas.mjs > /tmp/worker-analisis-reglas-002.log 2>&1 &
 sleep 4
 
 echo "==> [4/4] Healthcheck"
 curl -s localhost:5005/api/health/worker && echo "  <- worker OK" || echo "  <- sin respuesta"
-echo "Procesos:"; ps aux | grep -E "next start|worker-reportes|monitor-probes|simulador-abuso|worker-notificaciones|worker-vigencia-pagos|worker-analisis-score" | grep -v grep || true
-echo "Logs: tail -f /tmp/app-002.log | tail -f /tmp/worker-002.log | tail -f /tmp/monitor-002.log | tail -f /tmp/simulador-abuso-002.log | tail -f /tmp/worker-notificaciones-002.log | tail -f /tmp/worker-vigencia-pagos-002.log | tail -f /tmp/worker-analisis-score-002.log"
+echo "Procesos:"; ps aux | grep -E "next start|worker-reportes|monitor-probes|simulador-abuso|worker-notificaciones|worker-vigencia-pagos|worker-analisis-score|worker-analisis-reglas" | grep -v grep || true
+echo "Logs: tail -f /tmp/app-002.log | tail -f /tmp/worker-002.log | tail -f /tmp/monitor-002.log | tail -f /tmp/simulador-abuso-002.log | tail -f /tmp/worker-notificaciones-002.log | tail -f /tmp/worker-vigencia-pagos-002.log | tail -f /tmp/worker-analisis-score-002.log | tail -f /tmp/worker-analisis-reglas-002.log"
