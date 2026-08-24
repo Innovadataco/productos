@@ -10,37 +10,37 @@ const TEMA_POR_ROL: Record<
     PARENT: {
         titulo: "Preferencias de notificaciones",
         subtitulo: "Elige cómo quieres recibir avisos de tus reportes y suscripción.",
-        barra: "bg-sky-600",
+        barra: "bg-cielo-600",
         tema: "theme-padre",
     },
     SCHOOL_ADMIN: {
         titulo: "Preferencias de notificaciones",
         subtitulo: "Configura los avisos del colegio y del servicio.",
-        barra: "bg-emerald-600",
+        barra: "bg-pino-600",
         tema: "theme-colegio",
     },
     COMITE_CONVIVENCIA: {
         titulo: "Preferencias de notificaciones",
         subtitulo: "Configura los avisos del comité de convivencia.",
-        barra: "bg-emerald-600",
+        barra: "bg-pino-600",
         tema: "theme-colegio",
     },
     ADMIN: {
         titulo: "Preferencias de notificaciones",
         subtitulo: "Configura los avisos de la plataforma.",
-        barra: "bg-amber-600",
+        barra: "bg-ambar-600",
         tema: "theme-admin",
     },
     OPERADOR: {
         titulo: "Preferencias de notificaciones",
         subtitulo: "Configura los avisos de casos asignados.",
-        barra: "bg-amber-600",
+        barra: "bg-ambar-600",
         tema: "theme-admin",
     },
     COMITE_VALIDACION: {
         titulo: "Preferencias de notificaciones",
         subtitulo: "Configura los avisos del comité de validación.",
-        barra: "bg-amber-600",
+        barra: "bg-ambar-600",
         tema: "theme-admin",
     },
 };

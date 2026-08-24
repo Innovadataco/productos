@@ -25,22 +25,22 @@ interface NotificacionesInboxProps {
 
 const PALETA: Record<NotificacionesVariant, { badge: string; unread: string; iconHover: string; textAccent: string }> = {
     padre: {
-        badge: "bg-sky-600",
-        unread: "bg-sky-500/10",
-        iconHover: "hover:bg-sky-100",
-        textAccent: "text-sky-700",
+        badge: "bg-cielo-600",
+        unread: "bg-cielo-500/10",
+        iconHover: "hover:bg-cielo-100",
+        textAccent: "text-cielo-700",
     },
     colegio: {
-        badge: "bg-emerald-600",
-        unread: "bg-emerald-500/10",
-        iconHover: "hover:bg-emerald-100",
-        textAccent: "text-emerald-700",
+        badge: "bg-pino-600",
+        unread: "bg-pino-500/10",
+        iconHover: "hover:bg-pino-100",
+        textAccent: "text-pino-700",
     },
     admin: {
-        badge: "bg-amber-600",
-        unread: "bg-amber-500/10",
-        iconHover: "hover:bg-amber-100",
-        textAccent: "text-amber-700",
+        badge: "bg-ambar-600",
+        unread: "bg-ambar-500/10",
+        iconHover: "hover:bg-ambar-100",
+        textAccent: "text-ambar-700",
     },
 };
 
