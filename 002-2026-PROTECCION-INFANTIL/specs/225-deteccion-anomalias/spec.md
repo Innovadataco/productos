@@ -155,16 +155,53 @@ Como admin quiero listar las anomalías detectadas con filtros y marcarlas como 
 
 ### Resumen de cambios
 
-*(Se completará tras la implementación con la lista exacta de archivos, migraciones, endpoints y tests.)*
+Implementada el 2026-08-24 en la rama `work/002-PI-mega-cola-restante` (mega-lote).
+
+**Modelo y seed**
+
+- `prisma/schema.prisma` (M): valor `ANOMALIA_RESUELTA` al final de `AccionAudit` + `@@index([resueltaEn])` en `Anomalia`.
+- `prisma/migrations/20260824110000_spec_225_anomalias_indice_audit/migration.sql` (A): índice `anomalias_resuelta_en_idx` + `ALTER TYPE AccionAudit ADD VALUE` guardado con `pg_enum`. Aditiva, cero DROP.
+- `prisma/seed.ts` (M): `seedAnomalias()` — 7 parámetros `analisis.anomalias.*` (los otros 3 los siembra SPEC-220), regla Motor Notif `analisis.anomalia.detectada` (ADMIN, EMAIL + IN_APP obligatorias) y plantillas `.email`/`.in_app`. Idempotente.
+
+**Detector (sin IA, 100% reglas)**
+
+- `src/lib/dal/repositories/anomalia-repository.ts` (A): frontera DAL (Q-3) — lecturas por regla, dedup+create atómico (`crearSiNoExisteAbierta`, una TX por anomalía), ADMINs activos, consultas de la API admin.
+- `src/lib/analisis/anomalias/` (A): `tipos.ts`, `ventanas.ts` (semana calendario Bogotá), `comparativas.ts` (base mínima, sin división por cero), `puntualidad.ts` (definición operacional H-6: `fechaReporte ≤ fechaInicio + meses cubiertos + 3 días de tolerancia`), `parametros.ts` (10 umbrales frescos por tick), 6 reglas en `reglas/`, `alertas.ts` (evento Motor Notif, fail-open), `detector.ts` (orquestador), `resolucion.ts` (PATCH + AuditLog), `fixtures.ts` (helpers de tests).
+
+**API admin (solo ADMIN)**
+
+- `GET /api/admin/analisis/anomalias` — filtros `tipo`/`severidad`/`estado` + paginación estándar (`route.ts`).
+- `GET|PATCH /api/admin/analisis/anomalias/[id]` — detalle con `datosContexto`; PATCH resuelve (409 si ya resuelta, nota opcional con merge aditivo, AuditLog `ANOMALIA_RESUELTA`).
+
+**Worker e infra**
+
+- `scripts/worker-anomalias.mjs` (A): advisory lock `123456795` (exit 2 si hay otra instancia), tick releído de `analisis.anomalias.tick_min` en cada ciclo, `--run-once`, TZ Bogotá.
+- `scripts/dev-restart.sh` (M): pkill + nohup del worker (una instancia).
+- `docker-compose.prod.yml` (M): servicio `pi-anomalias` (TZ America/Bogota, healthcheck PID 1).
+
+**Tests** (FR-016): unitarios puros (`ventanas`, `comparativas`, `puntualidad`, `alertas` con motor mockeado — 22 tests, verdes) e integración escritos bajo `src/**` (DAL, 6 reglas a favor/en contra, orquestador SC-001..SC-004, rutas 200/400/401/403/404/409) para correr contra la BD compartida en el gate del coordinador.
 
 ### Decisiones ejecutadas
 
-*(Se completará tras compuertas de revisión.)*
+- **H-1 (desviación aprobada por la propia spec §Assumptions)**: el modelo `Anomalia` YA existía (SPEC-220, migración `20260824061000_analisis_modelo_score`) con `tipo`/`severidad` como `String` de valores cerrados. Se REUTILIZA: no se crean los enums `TipoAnomalia`/`SeveridadAnomalia` de data-model.md (convertir String→enum sería no aditivo); los valores cerrados se tipan como uniones de literales en `tipos.ts`. Tampoco existía `@@index([resueltaEn])`: se añadió de forma aditiva.
+- **H-2**: SPEC-220 ya sembraba 3 de los 10 parámetros; esta spec siembra los 7 restantes.
+- **H-6**: "pago puntual" = `fechaReporte` ≤ `fechaInicio` + meses acumulados de pagos autorizados anteriores + tolerancia fija de 3 días (el modelo `Pago` no guarda el período cubierto; documentado en `puntualidad.ts`).
+- **H-8**: `notaResolucion` se conserva con merge aditivo en `datosContexto.notaResolucion` (opción 1 del contrato).
+- Advisory lock: `123456795` (verificado libre: en uso 123456789–123456794, 923456789, 987654321).
+- `urlAnomalia` apunta a `/dashboard/admin/estadisticas` (la página existe; el tab "Dinero vs Valor" lo monta SPEC-222 en el mismo lote, §Assumptions).
 
 ### Gate local
 
-*(Se completará tras validación.)*
+- `npx tsc --noEmit`: archivos de SPEC-225 limpios (los únicos errores del árbol son de SPEC-222 en progreso, ajenos a esta spec).
+- `npm run test:unit -- src/lib/analisis/anomalias`: **22/22 verdes** (vitest unit config, sin cobertura por subset).
+- `npx eslint` sobre los archivos propios: limpio (0 errores; solo warning preexistente de complejidad en `prisma/seed.ts` `main`).
+- `npx prisma generate`: OK. `node --check scripts/worker-anomalias.mjs`: OK. `bash -n scripts/dev-restart.sh`: OK.
+- Tests de integración: escritos, NO corridos localmente (BD compartida del mega-lote; los corre el coordinador).
 
 ### Deuda técnica / notas
 
-*(Se completará al cerrar.)*
+- Tests de integración pendientes de ejecución en el gate del coordinador (BD compartida).
+- v1 no auto-resuelve anomalías cuando la condición desaparece (research §3.3, candidata v2).
+- Suscripciones de titular PADRE no participan en reglas geográficas (sin ciudad en v1, research §2.3).
+- Retención de `anomalias` no definida en v1 (data-model §6: radicar spec aparte si el volumen lo justifica).
+- `prisma/seed.ts` `main` supera el umbral de complejidad de lint (warning preexistente, no introducido por esta spec).

@@ -242,6 +242,31 @@ services:
       timeout: 5s
       retries: 3
 
+  # SPEC-225 (002-PI-126): detector de anomalías dinero-vs-valor. Tick cada
+  # `analisis.anomalias.tick_min` (default 60 min, releído en cada ciclo):
+  # 6 reglas SQL deterministas + alerta inmediata al CEO (severidad ALTA) vía
+  # Motor Notif. Cortes semanales America/Bogota (TZ). Advisory lock propio
+  # (123456795): una segunda instancia sale con código 2.
+  pi-anomalias:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-anomalias
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-anomalias.mjs
+    environment:
+      TZ: America/Bogota
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      # El proceso principal del contenedor ES el worker (PID 1).
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 volumes:
   pi_postgres_data:
   pi_worker_run:
