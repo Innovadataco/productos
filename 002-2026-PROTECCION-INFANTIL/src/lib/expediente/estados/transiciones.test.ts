@@ -24,6 +24,8 @@ describe("whitelist de transiciones (SPEC-236)", () => {
         ]);
         expect(TRANSICIONES.get(EstadoExpediente.EN_ACLARACION)?.map((t) => t.destino)).toEqual([
             EstadoExpediente.EN_APROBACION_PADRE,
+            // SPEC-238: cierre forzoso por SLA de aclaración vencido (solo worker).
+            EstadoExpediente.CERRADO,
         ]);
         expect(TRANSICIONES.get(EstadoExpediente.CERRADO)?.map((t) => t.destino)).toEqual([
             EstadoExpediente.ESCALADO,

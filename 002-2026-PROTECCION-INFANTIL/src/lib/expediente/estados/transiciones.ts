@@ -123,6 +123,23 @@ const guardExisteAclaracionRespondida: GuardFn = async ({ expediente }) => {
 };
 
 /**
+ * SPEC-238 (FR-006, US4): EN_ACLARACION → CERRADO solo lo ejecuta el worker
+ * cuando la aclaración PENDIENTE superó el SLA del comité
+ * (`padre.comite.sla_horas_normal`). El vencimiento se re-verifica en la
+ * tarea del worker antes de llamar a la transición.
+ */
+const guardCierreForzosoSlaAclaracion: GuardFn = async ({ expediente, actor }) => {
+    if (actor.tipo !== "worker" && actor.tipo !== "service-account") {
+        return conflicto("El cierre desde EN_ACLARACION solo lo ejecuta el worker por SLA de aclaración vencido");
+    }
+    const pendientes = await contarAclaracionesPorEstado(expediente.id, "PENDIENTE");
+    if (pendientes === 0) {
+        return conflicto("No existe una aclaración pendiente para cerrar por SLA");
+    }
+    return { ok: true };
+};
+
+/**
  * FR-008: EN_APROBACION_PADRE → CERRADO permite (a) aceptación del padre
  * titular o (b) cierre forzado tras exactamente 1 aclaración respondida.
  */
@@ -235,6 +252,12 @@ export const TRANSICIONES: ReadonlyMap<EstadoExpediente, readonly TransicionDef[
                 guard: guardExisteAclaracionRespondida,
                 nota: "Exige Aclaracion.estado = RESPONDIDA (tabla real en SPEC-238).",
                 evento: EVENTOS_EXPEDIENTE.ACLARACION_RESPONDIDA,
+            },
+            {
+                destino: EstadoExpediente.CERRADO,
+                guard: guardCierreForzosoSlaAclaracion,
+                nota: "SPEC-238: solo worker; exige aclaración PENDIENTE con SLA vencido.",
+                evento: EVENTOS_EXPEDIENTE.CERRADO,
             },
         ],
     ],
