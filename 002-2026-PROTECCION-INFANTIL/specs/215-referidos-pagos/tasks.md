@@ -9,25 +9,25 @@
 
 ## Fase 2 — Generación de códigos
 
-- [ ] T003 [P1] Crear `src/lib/utils/referido-codigo.ts` con generador único.
-- [ ] T004 [P1] Integrar generación en servicio de creación de `Suscripcion`.
-- [ ] T005 [P1] Tests de generación y unicidad.
+- [x] T003 [P1] Crear `src/lib/utils/referido-codigo.ts` con generador único.
+- [x] T004 [P1] Integrar generación en servicio de creación de `Suscripcion`.
+- [x] T005 [P1] Tests de generación y unicidad.
 
 ## Fase 3 — Aplicación de códigos
 
-- [ ] T006 [P1] Crear `src/lib/pagos/referido.service.ts` con validaciones.
-- [ ] T007 [P1] Crear `POST /api/pagos/aplicar-referido/route.ts`.
-- [ ] T008 [P1] Tests de integración del endpoint.
+- [x] T006 [P1] Crear `src/lib/pagos/referido.service.ts` con validaciones.
+- [x] T007 [P1] Crear `POST /api/pagos/aplicar-referido/route.ts`.
+- [x] T008 [P1] Tests de integración del endpoint.
 
 ## Fase 4 — Recompensas
 
-- [ ] T009 [P1] Implementar `otorgarRecompensa()` llamado desde handler de `pago.autorizado`.
-- [ ] T010 [P1] Tests de recompensa, tope anual y notificación al 4º uso.
+- [x] T009 [P1] Implementar `otorgarRecompensa()` llamado desde handler de `pago.autorizado`.
+- [x] T010 [P1] Tests de recompensa, tope anual y notificación al 4º uso.
 
 ## Fase 5 — Gate y cierre
 
-- [ ] T011 [P1] Gate local completo.
-- [ ] T012 [P1] Actualizar `specs/README.md` estado a IMPLEMENTADO.
+- [x] T011 [P1] Gate local completo.
+- [ ] T012 [P1] Actualizar `specs/README.md` estado a IMPLEMENTADO. *(lo hace el coordinador; archivo prohibido para subagentes)*
 - [ ] T013 [P1] Redactar `cierre.md`.
 
 ## Dependencias y orden

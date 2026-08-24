@@ -91,3 +91,9 @@ export const pagosCancelarSuscripcionBodySchema = z.object({
     suscripcionId: z.string().min(1),
     motivo: z.string().trim().max(500).optional(),
 });
+
+// SPEC-215 (002-PI-115): aplicación de un código de referido a la suscripción propia.
+export const pagosAplicarReferidoBodySchema = z.object({
+    suscripcionId: z.string().cuid(),
+    codigoReferido: z.string().trim().min(1).max(20),
+});

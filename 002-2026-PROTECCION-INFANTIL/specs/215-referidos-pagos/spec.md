@@ -1,6 +1,6 @@
 # SPEC-215 · Código de referido (002-PI-115)
 
-> Status: `PLANEADO`
+> Status: `IMPLEMENTADO`
 > PI: 002-PI-115
 > Responsable: ODIN
 > Rama: `work/002-PI-pagos-planes-lote3`
@@ -110,3 +110,14 @@ Sistema de referidos personales del Módulo Pagos. Cada suscripción genera auto
 2. **Anti-autorreferido**: comparación por email y/o documento del titular; si el referido no tiene documento aún, se usa email.
 3. **Recompensa referidor**: "1 mes gratis" se materializa como extensión de `fechaFin` al autorizar la siguiente renovación; no se acumula como crédito.
 4. **Deuda técnica**: la recompensa del referidor requiere modificar el cálculo de vigencia en el flujo de autorización de pagos (SPEC-212).
+
+## Implementación
+
+Cerrada el 2026-08-24 (mega-lote, rama `work/002-PI-mega-cola-restante`). Detalle completo en `cierre.md`.
+
+- Generador puro `src/lib/utils/referido-codigo.ts` + auto-generación única en `PagosRepository.crearSuscripcion`.
+- Servicio `src/lib/pagos/referido.service.ts` (aplicación + recompensas) y endpoint `POST /api/pagos/aplicar-referido`.
+- Hook `pago.autorizado` en la autorización admin de pagos (fail-open).
+- DAL: `src/lib/dal/repositories/pagos-referidos-repository.ts` (desviación justificada de FR-011; `PagosRepository` rozaba max-lines).
+- Migración aditiva `20260824090000_spec_215_referidos_accion_audit` + seed de `pagos.referidos.descuento_referido_pct` y de plantillas/reglas `referido.*`.
+- Desviaciones documentadas en `cierre.md` (tope anual = 409 en aplicación; anti-autorreferido por email; mes gratis = extensión inmediata de `fechaFin`).
