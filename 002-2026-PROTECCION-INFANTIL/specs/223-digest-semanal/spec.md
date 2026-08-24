@@ -185,16 +185,25 @@ Como admin quiero cambiar el día, la hora y los destinatarios del digest desde 
 
 ### Resumen de cambios
 
-*(Se completará tras la implementación con la lista exacta de archivos, migraciones, eventos sembrados y tests.)*
+- Migración aditiva `20260824120000_spec_223_digest_semanal_audit` (3 valores `AccionAudit`, patrón `DO $$ IF NOT EXISTS`).
+- `src/lib/analisis/semana.ts` (ventana Bogotá + periodo ISO) y `digest-contenido.ts` (KPIs, deltas, renderers texto plano, heurística) puros; `digest-semanal.ts` (orquestación: destinatarios, idempotencia, envío por `motor.programar`, auditoría SYSTEM).
+- DAL: 10 métodos nuevos en `AnalisisRepository` (frontera Q-3).
+- Seed `seedDigestSemanal()`: params `analisis.digest.enabled`/`destinatarios_emails` + evento/reglas/plantillas Motor Notif (idempotente).
+- Schedule `analisis-digest-semanal` en `worker-reportes.mjs` con cron derivado de parámetros.
+- Tests: 26 unitarios (frontera 23:59/00:01, cambio de año ISO, contenido) + 11 de integración escritos (los corre el coordinador).
 
 ### Decisiones ejecutadas
 
-*(Se completará tras compuertas de revisión.)*
+- `DigestSemanal.estado` usa los valores reales del schema de SPEC-220 (`"generado" | "enviado" | "fallido"`, minúsculas), no los mayúsculas del data-model.
+- El modelo no tiene `motivoFallo` ni campos para anomalías/ganadores/recomendaciones: el motivo (≤500 chars) va a `AuditLog.metadatos` (FR-014) y esas secciones viajan en las variables de la notificación (regenerables), sin tocar el bloque del modelo de SPEC-220 (regla anti-colisión).
+- Email en TEXTO PLANO (limitación del motor, `enviarEmailNotificacion` solo `text:`): plantilla en Markdown legible; HTML con branding diferido al Motor Notif (compuerta ZEUS — no se tocó el motor).
+- Sin advisory lock nuevo: el schedule vive en `worker-reportes.mjs` (ya protegido por el lock 123456789 de ese worker).
 
 ### Gate local
 
-*(Se completará tras validación.)*
+`npx tsc --noEmit` ✅ · 26/26 tests unitarios ✅ · `node --check worker-reportes.mjs` ✅ · ESLint archivos propios: 0 errores (1 warning de complejidad preexistente en `main()` de seed.ts).
 
 ### Deuda técnica / notas
 
-*(Se completará al cerrar.)*
+- Email HTML con branding (brief §11): requiere soporte HTML en el Motor Notif (spec futura del motor).
+- `main()` de `prisma/seed.ts` supera el umbral de complejidad de ESLint (warning preexistente, +1 por esta spec).

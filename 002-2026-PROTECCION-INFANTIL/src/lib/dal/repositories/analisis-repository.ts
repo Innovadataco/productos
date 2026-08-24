@@ -5,7 +5,7 @@
  * esta clase; fuera de aquí nadie importa `@/lib/prisma` para este dominio.
  * Solo conteos agregados y snapshots: nunca texto de reportes ni PII.
  */
-import type { Prisma, ScoreCliente } from "@prisma/client";
+import type { DigestSemanal, Prisma, ScoreCliente } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { DbClient } from "../unit-of-work";
 import { periodoActualBogota } from "@/lib/analisis/periodos";
@@ -17,6 +17,48 @@ export interface ScoreClienteVista {
     pesos: { reportes: number; casos: number; alertas: number; sesiones: number };
     percentilEnCohorte: number | null;
     calculadoEn: Date;
+}
+
+// ── SPEC-223 (002-PI-124): tipos del digest semanal ──────────────────────────
+
+/** KPIs crudos de una ventana semanal (ver `kpisVentana`). */
+export interface KpisVentanaCrudos {
+    recaudoUSD: number;
+    recaudoCOP: number;
+    nuevas: number;
+    canceladas: number;
+    activasAlInicio: number;
+}
+
+export interface DecisionTopDigest {
+    titulo: string;
+    descripcion: string;
+    accionSugerida: string | null;
+}
+
+export interface ScoreClienteDigest {
+    nombre: string;
+    scoreTotal: number;
+}
+
+export interface AnomaliaDigest {
+    severidad: string;
+    descripcion: string;
+}
+
+export interface DestinatarioAdminDigest {
+    id: string;
+    email: string;
+}
+
+/** Contenido agregado persistido en `DigestSemanal` (nunca PII ni textos). */
+export interface DatosDigestUpsert {
+    periodo: string;
+    destinatarioId: string;
+    top5Decisiones: unknown;
+    kpisSemana: unknown;
+    kpisVsPrevia: unknown;
+    enlacePanel: string;
 }
 
 export interface ScoreClienteConHistorico {
@@ -182,5 +224,153 @@ export class AnalisisRepository {
             where: { periodo: { lt: periodoLimite } },
         });
         return eliminadas.count;
+    }
+
+    // ── SPEC-223 (002-PI-124): lecturas y persistencia del digest semanal ─────
+    // Todo es conteo/suma agregada de negocio: nunca textos de reportes ni PII
+    // de menores (FR-007). Los nombres visibles son clientes B2B (colegio o
+    // titular de la suscripción), alcance ADMIN.
+
+    /**
+     * KPIs crudos de la ventana `[desde, hasta)` (data-model §4):
+     * recaudo = `Pago` AUTORIZADO con `fechaAutorizacion` en la ventana (USD
+     * neto siempre; COP solo cuando `monedaLocal = 'COP'`), nuevas/canceladas
+     * por `Suscripcion.createdAt`/`canceladaEn`, y activas al inicio
+     * (creadas antes de `desde` y no canceladas antes de `desde`) como
+     * denominador del churn.
+     */
+    async kpisVentana(rango: RangoPeriodo): Promise<KpisVentanaCrudos> {
+        const ventana = { gte: rango.desde, lt: rango.hasta };
+        const [recaudoUSD, recaudoCOP, nuevas, canceladas, activasAlInicio] = await Promise.all([
+            this.db.pago.aggregate({
+                _sum: { montoNetoUSD: true },
+                where: { estado: "AUTORIZADO", fechaAutorizacion: ventana },
+            }),
+            this.db.pago.aggregate({
+                _sum: { montoLocalPagado: true },
+                where: { estado: "AUTORIZADO", fechaAutorizacion: ventana, monedaLocal: "COP" },
+            }),
+            this.db.suscripcion.count({ where: { createdAt: ventana } }),
+            this.db.suscripcion.count({ where: { canceladaEn: ventana } }),
+            this.db.suscripcion.count({
+                where: {
+                    createdAt: { lt: rango.desde },
+                    OR: [{ canceladaEn: null }, { canceladaEn: { gte: rango.desde } }],
+                },
+            }),
+        ]);
+        return {
+            recaudoUSD: recaudoUSD._sum.montoNetoUSD ?? 0,
+            recaudoCOP: recaudoCOP._sum.montoLocalPagado ?? 0,
+            nuevas,
+            canceladas,
+            activasAlInicio,
+        };
+    }
+
+    /** Top N decisiones: `Recomendacion` PENDIENTE por prioridad (FR-005.1). */
+    topRecomendacionesPendientes(take = 5): Promise<DecisionTopDigest[]> {
+        return this.db.recomendacion.findMany({
+            where: { estado: "PENDIENTE" },
+            orderBy: [{ prioridad: "desc" }, { generadaEn: "desc" }],
+            take,
+            select: { titulo: true, descripcion: true, accionSugerida: true },
+        });
+    }
+
+    /**
+     * Snapshots de score del período mensual ("YYYY-MM") ordenados por
+     * `scoreTotal` descendente, con el nombre visible del cliente B2B
+     * (colegio o titular de la suscripción; email solo como último fallback).
+     */
+    async scoresConNombreCliente(periodoMes: string): Promise<ScoreClienteDigest[]> {
+        const filas = await this.db.scoreCliente.findMany({
+            where: { periodo: periodoMes },
+            orderBy: { scoreTotal: "desc" },
+            select: {
+                scoreTotal: true,
+                suscripcion: {
+                    select: {
+                        colegio: { select: { nombre: true } },
+                        usuario: { select: { nombre: true, email: true } },
+                    },
+                },
+            },
+        });
+        return filas.map((f) => ({
+            nombre:
+                f.suscripcion.colegio?.nombre ??
+                f.suscripcion.usuario?.nombre ??
+                f.suscripcion.usuario?.email ??
+                "Cliente sin nombre",
+            scoreTotal: f.scoreTotal,
+        }));
+    }
+
+    /**
+     * Anomalías de la ventana (SPEC-225). Tope de 20: un digest con cientos de
+     * anomalías es ilegible; el panel las lista completas.
+     */
+    anomaliasEnVentana(rango: RangoPeriodo): Promise<AnomaliaDigest[]> {
+        return this.db.anomalia.findMany({
+            where: { detectadaEn: { gte: rango.desde, lt: rango.hasta } },
+            orderBy: { detectadaEn: "desc" },
+            take: 20,
+            select: { severidad: true, descripcion: true },
+        });
+    }
+
+    /** Digest persistido por (periodo, destinatario); null si no se generó. */
+    buscarDigest(periodo: string, destinatarioId: string): Promise<DigestSemanal | null> {
+        return this.db.digestSemanal.findUnique({
+            where: { periodo_destinatarioId: { periodo, destinatarioId } },
+        });
+    }
+
+    /**
+     * Upsert idempotente del digest por `(periodo, destinatarioId)`: el create
+     * lo deja en estado "generado"; el update regenera contenido y resetea el
+     * estado (solo se llama cuando el digest NO está "enviado" — el guard es
+     * responsabilidad del servicio).
+     */
+    upsertDigest(data: DatosDigestUpsert): Promise<DigestSemanal> {
+        const { periodo, destinatarioId, ...contenidoCrudo } = data;
+        const contenido = {
+            top5Decisiones: contenidoCrudo.top5Decisiones as Prisma.InputJsonValue,
+            kpisSemana: contenidoCrudo.kpisSemana as Prisma.InputJsonValue,
+            kpisVsPrevia: contenidoCrudo.kpisVsPrevia as Prisma.InputJsonValue,
+            enlacePanel: contenidoCrudo.enlacePanel,
+        };
+        return this.db.digestSemanal.upsert({
+            where: { periodo_destinatarioId: { periodo, destinatarioId } },
+            create: { periodo, destinatarioId, ...contenido, estado: "generado" },
+            update: { ...contenido, estado: "generado", generadoEn: new Date(), enviadoEn: null },
+        });
+    }
+
+    /** Marca el digest como enviado (con `enviadoEn`). */
+    async marcarDigestEnviado(id: string): Promise<void> {
+        await this.db.digestSemanal.update({
+            where: { id },
+            data: { estado: "enviado", enviadoEn: new Date() },
+        });
+    }
+
+    /** Marca el digest como fallido (el motivo va al AuditLog, FR-014). */
+    async marcarDigestFallido(id: string): Promise<void> {
+        await this.db.digestSemanal.update({ where: { id }, data: { estado: "fallido" } });
+    }
+
+    /** Destinatarios por defecto del digest: usuarios ADMIN activos (FR-010). */
+    listarAdminsActivosDigest(): Promise<DestinatarioAdminDigest[]> {
+        return this.db.usuario.findMany({
+            where: { rol: "ADMIN", estado: "activo" },
+            select: { id: true, email: true },
+        });
+    }
+
+    /** Resuelve un correo del parámetro de destinatarios a usuario, si existe. */
+    buscarUsuarioDigestPorEmail(email: string): Promise<DestinatarioAdminDigest | null> {
+        return this.db.usuario.findUnique({ where: { email }, select: { id: true, email: true } });
     }
 }
