@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-24
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Dependencia bloqueante**: SPEC-221 (002-PI-122 · Motor de reglas de recomendación) debe estar implementada en la misma rama antes de esta spec: entrega los modelos `ReglaRecomendacion` y `Recomendacion`, el enum `EstadoRecomendacion` (`PENDIENTE`/`APLICADA`/`IGNORADA`/`EXPIRADA`) y las 7 reglas semilla. SPEC-227 solo **lee** esos modelos; no los modifica.
 
@@ -143,16 +143,33 @@ Como ADMIN quiero descargar el historial filtrado en CSV con identificadores de 
 
 ### Resumen de cambios
 
-*(Se completará tras la implementación con la lista exacta de archivos, endpoints y tests.)*
+Implementada en `work/002-PI-mega-cola-restante` (002-PI-128). Tres endpoints de solo lectura, un servicio DAL + repositorio, tres módulos puros, vista admin, módulo permisible y dos parámetros.
+
+- Endpoints: `GET /api/admin/analisis/recomendaciones` (lista paginada), `.../metricas` (tasas sobre resueltas + `porRegla` ordenado por tasa de ignorada desc), `.../export` (CSV sin PII, 413 sobre tope, AuditLog `RECOMENDACIONES_EXPORT_CSV`).
+- DAL: `src/lib/dal/services/analisis-recomendaciones.ts` + `src/lib/dal/repositories/analisis-recomendaciones-repository.ts` (`Prisma.RecomendacionWhereInput` tipado; promedio de resolución con `$queryRaw` parametrizado `Prisma.sql`, columnas fijas).
+- Dominio puro: `src/lib/analisis/filtros-historial.ts` (Zod compartido + día calendario Bogotá), `pseudonimizar.ts` (SHA-256 + sal, 16 hex, fail-closed), `historial-csv.ts` (columnas del contrato, escape, nombre de archivo).
+- Vista: `src/app/dashboard/admin/analisis/recomendaciones/page.tsx` + `components/HistorialRecomendaciones.tsx` (tokens glass/tinta/ambar/pino/rubi, "Sugerencia", semáforo "revisar umbral").
+- Seed/permisos: parámetros `analisis.recomendaciones.tasa_ignorada_alerta_pct` (70) y `export_max_filas` (5000) en `prisma/seed.ts`; módulo `analisis_recomendaciones` en `src/lib/permisos-catalogo.ts` (backfill solo ADMIN vía seed-modulos-grants); entrada nav en `src/lib/nav-items.ts` + icono en `AdminNav.tsx`; `ANALISIS_EXPORT_SALT` documentada en `.env.example` (sin valor real).
+- Tests: 36 unitarios verdes (filtros, pseudonimizar, CSV, componente); 4 archivos de integración escritos (servicio DAL + 3 rutas), a correr por el coordinador (BD compartida).
 
 ### Decisiones ejecutadas
 
-*(Se completará tras compuertas de revisión.)*
+- **DESVIACIÓN documentada — migración aditiva de enum**: la spec declaraba "cero migraciones", pero FR-008 exige `AuditLog` por exportación y el enum `AccionAudit` no tenía ninguna acción de export reusable. Se añadió `RECOMENDACIONES_EXPORT_CSV` al final del enum (schema.prisma) + migración aditiva `prisma/migrations/20260824130000_spec_227_historial_recomendaciones/migration.sql` (`ALTER TYPE ... ADD VALUE IF NOT EXISTS`, cero DROP; precedente SPEC-221/223/225). Cero cambios en `Recomendacion`/`ReglaRecomendacion`.
+- **Código 413**: `ERROR_CODES` no contempla 413; se usa el literal `PAYLOAD_TOO_LARGE` (contracts §export) vía `AppError(msg, "PAYLOAD_TOO_LARGE", 413)`.
+- **Módulo de primer nivel**: SPEC-222 no registró un módulo padre `analisis` en el catálogo al momento de implementar (research §5.1); `analisis_recomendaciones` queda de primer nivel (orden 94).
+- **Select de categorías**: se deriva de las categorías de las reglas (sin input libre).
+- Sin worker, sin advisory lock (no aplica).
 
 ### Gate local
 
-*(Se completará tras validación.)*
+- `npx tsc --noEmit`: limpio en los archivos de la spec.
+- `npx prisma generate`: OK (tras añadir el valor de enum).
+- Unitarios: 36/36 verdes (`filtros-historial`, `pseudonimizar`, `historial-csv`, `HistorialRecomendaciones`) + `nav-items.test.ts` 4/4.
+- `npm run tokens:check`: VERDE global (1090 ≤ 1094); los archivos de la spec aportan 0 color crudo (verificado con el regex del script).
+- ESLint sobre los archivos de la spec: 0 errores (warning preexistente de complejidad en `main()` de seed.ts).
+- Integración: escrita, NO corrida (BD compartida; la corre el coordinador).
 
 ### Deuda técnica / notas
 
-*(Se completará al cerrar.)*
+- La verificación manual del `quickstart.md` y el `./scripts/dev-restart.sh` quedan para la fase de cierre del coordinador (requieren BD y deploy limpio serializado).
+- `cierre.md` se genera en la fase de cierre con la evidencia de git (commits serializados por el coordinador).
