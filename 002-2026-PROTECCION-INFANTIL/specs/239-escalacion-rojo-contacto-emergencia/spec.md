@@ -6,7 +6,7 @@
 
 **Status**: `PLANEADO`
 
-**Impacto en arquitectura**: añade modelo `ContactoEmergencia` (migración aditiva), repositorio DAL `contacto-emergencia-repository`, extensión de `expediente-repository` con `marcarEscaladoRojo()`, handler del evento `expediente.gravedad.subio_a_rojo`, endpoint `POST /api/admin/comite/expediente/[id]/activar-emergencia`, CRUD de contactos bajo `/api/padre/contacto-emergencia`, extensión del worker `pi-expediente-motor` (SPEC-236/D-72) para vigilar SLA 12h de casos ROJO, y botón "activar emergencia" en la vista `/admin/comite/consolidacion/[id]` (SPEC-237). Añade evento `expediente.emergencia.activada` y plantilla urgente en el catálogo del Motor Notif.
+Impacto en arquitectura: añade modelo `ContactoEmergencia` (migración aditiva), repositorio DAL `contacto-emergencia-repository`, extensión de `expediente-repository` con `marcarEscaladoRojo()`, handler del evento `expediente.gravedad.subio_a_rojo`, endpoint `POST /api/admin/comite/expediente/[id]/activar-emergencia`, CRUD de contactos bajo `/api/padre/contacto-emergencia`, extensión del worker `pi-expediente-motor` (SPEC-236/D-72) para vigilar SLA 12h de casos ROJO, y botón "activar emergencia" en la vista `/admin/comite/consolidacion/[id]` (SPEC-237). Añade evento `expediente.emergencia.activada` y plantilla urgente en el catálogo del Motor Notif.
 
 **Input**: Cuando un caso sube a gravedad ROJO, el sistema debe comprometer un SLA efectivo de 12h, alertar administrativamente y, si el comité activa la emergencia, contactar al acudiente de mayor prioridad registrado por el padre. Los contactos de emergencia los administra el propio padre; el comité solo los consulta y dispara la notificación.
 

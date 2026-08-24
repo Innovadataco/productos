@@ -6,6 +6,8 @@
 > Rama: `work/002-PI-pagos-planes-lote3`
 > Base: `feature/001-scaffolding`
 
+Impacto en arquitectura: añade el dashboard de analítica dinero-vs-valor del Módulo Pagos (reemplaza el stub dejado por SPEC-212) con 4 widgets y una fila de KPIs, implementado con SQL agregado y reglas simples, sin IA, color `ambar` (D-74). Sin cambios de modelo (depende de SPEC-210 y SPEC-213).
+
 ## Contexto
 
 Dashboard "motivar a la acción" del Módulo Pagos. Reemplaza el stub de analítica dejado por SPEC-212 con 4 widgets aprobados por CEO y una fila de KPIs base. Se implementa sin IA, usando SQL agregado y reglas simples. Depende de SPEC-210 (modelos) y SPEC-213 (datos de transiciones y pagos autorizados). Sigue D-72 (reutilizar módulos vivos) y D-74 (color `ambar`).

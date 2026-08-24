@@ -6,6 +6,8 @@
 > Rama: `work/002-PI-pagos-planes-lote3`
 > Base: `feature/001-scaffolding`
 
+Impacto en arquitectura: añade el freemium del Módulo Pagos: suscripción `ACTIVA` con `esFreemium=true` por `pagos.freemium.duracion_dias` (default 30), transición a `SUSPENDIDA` al vencer sin pago vía el worker de vigencia (SPEC-213) y extensión de vigencia desde `freemiumFechaFin` si paga durante el freemium.
+
 ## Contexto
 
 Freemium del Módulo Pagos: al registrarse, el cliente recibe acceso gratuito equivalente al plan más básico de su rol por un número parametrizable de días (`pagos.freemium.duracion_dias`, default 30). Durante el freemium la suscripción está `ACTIVA` con `esFreemium=true`. Al vencer sin pago, el worker de vigencia (SPEC-213) transita a `SUSPENDIDA`. Si paga durante freemium, se desactiva la bandera y se extiende la vigencia desde `freemiumFechaFin`. Depende de SPEC-210, SPEC-213 y SPEC-215.

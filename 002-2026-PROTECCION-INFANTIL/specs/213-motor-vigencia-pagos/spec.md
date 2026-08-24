@@ -6,6 +6,8 @@
 > Rama: `work/002-PI-pagos-planes-lote3`
 > Base: `feature/001-scaffolding`
 
+Impacto en arquitectura: añade el worker de transiciones automáticas de la máquina de estados de suscripciones (`ACTIVA → EN_GRACIA → SUSPENDIDA` y transiciones freemium), la emisión de los 18 eventos del módulo al Motor de Notificaciones (SPEC-201) y el registro de cada transición en `AuditLog`. Sin cambios de modelo propios (depende de SPEC-210).
+
 ## Contexto
 
 Worker de transiciones automáticas de la máquina de estados del Módulo Pagos. Evalúa diariamente las suscripciones y ejecuta las transiciones `ACTIVA → EN_GRACIA` (día 0), `EN_GRACIA → SUSPENDIDA` (día +3), y las transiciones relacionadas con freemium. Emite los 18 eventos del BRIEF §10 al Motor de Notificaciones (SPEC-201) y registra cada transición en `AuditLog`. Depende de SPEC-210 (modelos) y del Motor de Notificaciones (SPEC-201).

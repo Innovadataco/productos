@@ -6,6 +6,8 @@
 > Rama: `work/002-PI-pagos-planes-lote3`
 > Base: `feature/001-scaffolding`
 
+Impacto en arquitectura: añade el sistema de referidos del Módulo Pagos: código único generado por suscripción, aplicación de código ajeno en registro/renovación y recompensas (descuento al referido, mes gratis al referidor) otorgadas cuando admin autoriza el primer pago del referido. Depende de SPEC-210 y SPEC-213.
+
 ## Contexto
 
 Sistema de referidos personales del Módulo Pagos. Cada suscripción genera automáticamente un código único al crearse. Los clientes pueden aplicar un código ajeno al registrarse o renovar. Las recompensas (descuento al referido, mes gratis al referidor) se otorgan cuando admin autoriza el primer pago del referido. Depende de SPEC-210 (modelos) y SPEC-213 (evento `pago.autorizado`).

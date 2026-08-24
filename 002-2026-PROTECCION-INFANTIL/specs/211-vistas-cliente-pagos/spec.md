@@ -6,6 +6,8 @@
 > Rama: `work/002-PI-pagos-planes-lote3`
 > Base: `feature/001-scaffolding`
 
+Impacto en arquitectura: añade las vistas de suscripción para clientes finales del Módulo Pagos — `/dashboard/colegio/suscripcion` (rector, color `pino`) y `/dashboard/padre/suscripcion` (padre, color `cielo`) — con 7 bloques estándar (resumen, acciones, historial, código referido, bono, contrato, cancelar) y formulario de renovación con upload de comprobante. Sin cambios de modelo (depende de SPEC-210).
+
 ## Contexto
 
 Vistas de suscripción para los clientes finales del Módulo Pagos: Rector (`/dashboard/colegio/suscripcion`, color `pino`) y Padre (`/dashboard/padre/suscripcion`, color `cielo`). Ambas vistas muestran 7 bloques estándar (resumen, acciones, historial, código referido, bono, contrato, cancelar) y un formulario de renovación con upload de comprobante. Depende de SPEC-210 (modelos y DAL). **Nota de riesgo**: el layout/sidebar padre (`/dashboard/padre/*`) no existe en la rama base; depende de SPEC-231 / Fábrica 3.

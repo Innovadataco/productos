@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-22** (SPEC-205 planeada; SPEC-185, SPEC-186, SPEC-187, SPEC-189 y SPEC-194 implementadas; SPEC-193 planeada; ver `specs/205-usuarios-vista-consolidada/` y cierre.md en `specs/185-simulador-historial/`, `specs/186-smoke-inteligente-ollama/`, `specs/187-override-modelo-smoke-ollama/`, `specs/194-analitica-colegios/`, `specs/189-vista-operador-metricas/spec.md` y `specs/193-panel-logs-mantenimiento-reasignar/`).
+> Última actualización: **2026-08-24** (mega-lote 002-PI: SPEC-211/213/215/217/218/220-227/233/236-239 planeadas; ver `specs/233-busqueda-por-identificador/`, `specs/220-modelo-analisis-score/` y `specs/236-motor-estados-worker-eventos/`).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **164** |
+| **Total de specs** | **214** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **51** |
-| **Pendientes (PLANEADO)** | **13** |
+| **Pendientes (PLANEADO)** | **31** |
 ## Backlog activo (no cerradas)
 
 | Nº | Nombre | Estado |
@@ -150,8 +150,26 @@
 | [202](202-panel-admin-motor-notificaciones/spec.md) | SPEC-202 — Panel Admin del Motor de Notificaciones (002-PI-099) | 🟢 Implementado |
 | [203](203-preferencias-notificaciones-usuario/spec.md) | SPEC-203 — Preferencias de Notificaciones del Usuario (002-PI-100) | 🔵 Planeado |
 | [204](204-piloto-bienvenida-colegio/spec.md) | SPEC-204 — Piloto Migración Bienvenida Colegio (002-PI-101) | 🔵 Planeado |
+| [211](211-vistas-cliente-pagos/spec.md) | SPEC-211 — Vistas cliente pagos Rector + Padre (002-PI-111) | 🔵 Planeado |
+| [213](213-motor-vigencia-pagos/spec.md) | SPEC-213 — Motor vigencia + estados pagos (002-PI-113) | 🔵 Planeado |
+| [215](215-referidos-pagos/spec.md) | SPEC-215 — Código de referido (002-PI-115) | 🔵 Planeado |
+| [217](217-freemium-pagos/spec.md) | SPEC-217 — Freemium 30 días (002-PI-117) | 🔵 Planeado |
+| [218](218-analitica-dinero-vs-valor-pagos/spec.md) | SPEC-218 — Analítica dinero-vs-valor pagos (002-PI-118) | 🔵 Planeado |
+| [220](220-modelo-analisis-score/spec.md) | SPEC-220 — Modelo Análisis + score de valor de cliente (002-PI-121) | 🔵 Planeado |
+| [221](221-motor-reglas-recomendacion/spec.md) | SPEC-221 — Motor de reglas de recomendación (002-PI-122) | 🔵 Planeado |
+| [222](222-panel-principal-analisis/spec.md) | SPEC-222 — Panel principal Análisis Dinero vs Valor (002-PI-123) | 🔵 Planeado |
+| [223](223-digest-semanal/spec.md) | SPEC-223 — Digest semanal al CEO (002-PI-124) | 🔵 Planeado |
+| [224](224-panel-reglas-configurables/spec.md) | SPEC-224 — Panel de reglas configurables (002-PI-125) | 🔵 Planeado |
+| [225](225-deteccion-anomalias/spec.md) | SPEC-225 — Detección de anomalías dinero-vs-valor (002-PI-126) | 🔵 Planeado |
+| [226](226-ejecucion-acciones-automaticas/spec.md) | SPEC-226 — Ejecución de acciones automáticas reglas EJECUTA (002-PI-127) | 🔵 Planeado |
+| [227](227-historial-recomendaciones/spec.md) | SPEC-227 — Historial de recomendaciones y métricas de tuning (002-PI-128) | 🔵 Planeado |
+| [233](233-busqueda-por-identificador/spec.md) | SPEC-233 — Vista búsqueda por identificador padre + admin (002-PI-133) | 🔵 Planeado |
+| [236](236-motor-estados-worker-eventos/spec.md) | SPEC-236 · Motor de estados + worker + eventos Motor Notif (002-PI-136) | 🔵 Planeado |
+| [237](237-bandeja-comite-consolidacion/spec.md) | SPEC-237 · Bandeja comité CONSOLIDACION + aprobación multi-miembro (002-PI-137) | 🔵 Planeado |
+| [238](238-aclaracion-padre-comite/spec.md) | SPEC-238 · Aclaración padre-comité (002-PI-138) | 🔵 Planeado |
+| [239](239-escalacion-rojo-contacto-emergencia/spec.md) | SPEC-239 · Escalación ROJO + SLA 12h + Contacto emergencia (002-PI-139) | 🔵 Planeado |
 
-## Tabla completa (132 specs)
+## Tabla completa (214 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -355,6 +373,20 @@
 | [202](202-panel-admin-motor-notificaciones/spec.md) | SPEC-202 — Panel Admin del Motor de Notificaciones (002-PI-099) | 🟢 Implementado |
 | [203](203-preferencias-notificaciones-usuario/spec.md) | SPEC-203 — Preferencias de Notificaciones del Usuario (002-PI-100) | 🔵 Planeado |
 | [204](204-piloto-bienvenida-colegio/spec.md) | SPEC-204 — Piloto Migración Bienvenida Colegio (002-PI-101) | 🔵 Planeado |
+| [211](211-vistas-cliente-pagos/spec.md) | SPEC-211 — Vistas cliente pagos Rector + Padre (002-PI-111) | 🔵 Planeado |
+| [213](213-motor-vigencia-pagos/spec.md) | SPEC-213 — Motor vigencia + estados pagos (002-PI-113) | 🔵 Planeado |
+| [215](215-referidos-pagos/spec.md) | SPEC-215 — Código de referido (002-PI-115) | 🔵 Planeado |
+| [217](217-freemium-pagos/spec.md) | SPEC-217 — Freemium 30 días (002-PI-117) | 🔵 Planeado |
+| [218](218-analitica-dinero-vs-valor-pagos/spec.md) | SPEC-218 — Analítica dinero-vs-valor pagos (002-PI-118) | 🔵 Planeado |
+| [220](220-modelo-analisis-score/spec.md) | SPEC-220 — Modelo Análisis + score de valor de cliente (002-PI-121) | 🔵 Planeado |
+| [221](221-motor-reglas-recomendacion/spec.md) | SPEC-221 — Motor de reglas de recomendación (002-PI-122) | 🔵 Planeado |
+| [222](222-panel-principal-analisis/spec.md) | SPEC-222 — Panel principal Análisis Dinero vs Valor (002-PI-123) | 🔵 Planeado |
+| [223](223-digest-semanal/spec.md) | SPEC-223 — Digest semanal al CEO (002-PI-124) | 🔵 Planeado |
+| [224](224-panel-reglas-configurables/spec.md) | SPEC-224 — Panel de reglas configurables (002-PI-125) | 🔵 Planeado |
+| [225](225-deteccion-anomalias/spec.md) | SPEC-225 — Detección de anomalías dinero-vs-valor (002-PI-126) | 🔵 Planeado |
+| [226](226-ejecucion-acciones-automaticas/spec.md) | SPEC-226 — Ejecución de acciones automáticas reglas EJECUTA (002-PI-127) | 🔵 Planeado |
+| [227](227-historial-recomendaciones/spec.md) | SPEC-227 — Historial de recomendaciones y métricas de tuning (002-PI-128) | 🔵 Planeado |
+| [233](233-busqueda-por-identificador/spec.md) | SPEC-233 — Vista búsqueda por identificador padre + admin (002-PI-133) | 🔵 Planeado |
 
 ## Incidencias de calidad de datos
 

@@ -6,7 +6,7 @@
 
 **Status**: `PLANEADO`
 
-**Impacto en arquitectura**: enriquece `/dashboard/admin/comite` sin clonar la bandeja (D-72), añade tipo de tarea `CONSOLIDACION_EXPEDIENTE`, extiende `InformeConsolidado` con trazabilidad de aprobaciones (`aprobadoPorMiembrosJson`), correcciones append-only (`correccionesJson`) y guía de acción seleccionable (`guiaAccionCategoriaIdPrincipal`); crea vista `/dashboard/admin/comite/consolidacion/[expedienteId]` y endpoints de aprobación/corrección/devolución restringidos a `COMITE_VALIDACION`.
+Impacto en arquitectura: enriquece `/dashboard/admin/comite` sin clonar la bandeja (D-72), añade tipo de tarea `CONSOLIDACION_EXPEDIENTE`, extiende `InformeConsolidado` con trazabilidad de aprobaciones (`aprobadoPorMiembrosJson`), correcciones append-only (`correccionesJson`) y guía de acción seleccionable (`guiaAccionCategoriaIdPrincipal`); crea vista `/dashboard/admin/comite/consolidacion/[expedienteId]` y endpoints de aprobación/corrección/devolución restringidos a `COMITE_VALIDACION`.
 
 **Input**: ZEUS instructivo. El comité ya revisa reportes escalados (`REVISION_REPORTE`). Con SPEC-234 se generan `InformeConsolidado` y `PatronExpediente` para agrupar reportes relacionados en un expediente PADRE. El comité necesita una bandeja unificada que muestre tanto revisiones de reporte como consolidaciones de expediente, con SLA visible, y una vista de detalle donde varios miembros aprueben/corrijan/devuelvan el informe consolidado antes de que el expediente pase a `EN_APROBACION_PADRE`.
 
