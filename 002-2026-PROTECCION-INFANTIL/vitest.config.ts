@@ -40,6 +40,11 @@ export default defineConfig({
         // Los hooks de aislamiento de BD pueden necesitar más de 10s si el
         // test anterior dejó el lock huérfano o la BD está bajo carga.
         hookTimeout: 60_000,
+        // CI (runner compartido, Postgres en contenedor) es ~2-4x más lento que
+        // la Mac local: los tests con fixtures pesados (seed completo, tope
+        // anual de referidos, digest) rozaban el default de 5s y flapeaban por
+        // timeout sin fallo de lógica (observado en shards del mega-lote 2026-08-24).
+        testTimeout: 20_000,
         // SPEC-174 (fix I-55): un fork POR ARCHIVO. El leak I-54 (spies/mocks del
         // singleton de Prisma filtrados entre archivos bajo singleFork) no puede
         // cruzar archivos cuando cada uno vive en su propio proceso. El mutex
