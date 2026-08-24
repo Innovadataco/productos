@@ -85,9 +85,12 @@ async function tick() {
     for (const r of resultados) {
         if (r.error) {
             console.error(`[Analisis/Reglas] Regla ${r.clave}: error — ${r.error}`);
-        } else if (r.creadas > 0 || r.actualizadas > 0) {
+        } else if (r.creadas > 0 || r.actualizadas > 0 || (r.ejecutadas ?? 0) > 0 || (r.fallidasEjecucion ?? 0) > 0) {
+            const extra = r.ejecutadas !== undefined
+                ? `, acciones: ${r.ejecutadas} ejecutadas, ${r.fallidasEjecucion} fallidas`
+                : "";
             console.log(
-                `[Analisis/Reglas] Regla ${r.clave}: ${r.candidatos} candidatos, ${r.creadas} creadas, ${r.actualizadas} actualizadas`
+                `[Analisis/Reglas] Regla ${r.clave}: ${r.candidatos} candidatos, ${r.creadas} creadas, ${r.actualizadas} actualizadas${extra}`
             );
         }
     }

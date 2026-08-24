@@ -2,7 +2,8 @@
  * SPEC-221 (002-PI-122): tests de integración del motor de reglas.
  * Generación + render, dedup (reglaId, sujetoId) en PENDIENTE, re-detención
  * tras resolución, regla inactiva, umbral, sandbox (rechazo auditado y error
- * de ejecución sin tumbar el ciclo), EJECUTA diferida y expiración idempotente.
+ * de ejecución sin tumbar el ciclo), EJECUTA con ejecutor de SPEC-226 y
+ * expiración idempotente.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import type { Prisma } from "@prisma/client";
@@ -201,7 +202,7 @@ WHERE s.estado = 'ACTIVA'`,
         expect(resultadoBuena.creadas).toBe(1);
     });
 
-    it("regla en modo EJECUTA genera sin ejecutar acción (ejecutadaAutomatica = false)", async () => {
+    it("regla EJECUTA con acción desconocida genera y registra EjecucionAccion FALLIDA (SPEC-226)", async () => {
         const admin = await crearAdmin();
         await crearSuscripcionVigente(5);
         const regla = await crearRegla(admin.id, { modo: "EJECUTA", accionEjecutable: "crear_bono_retencion" });
@@ -209,9 +210,17 @@ WHERE s.estado = 'ACTIVA'`,
         const resultado = await evaluarRegla(regla.id);
         expect(resultado.error).toBeUndefined();
         expect(resultado.creadas).toBe(1);
+        expect(resultado.ejecutadas).toBe(0);
+        expect(resultado.fallidasEjecucion).toBe(1);
         const rec = await prisma.recomendacion.findFirst({ where: { reglaId: regla.id } });
+        // Clave desconocida: la recomendación NO se pierde (queda PENDIENTE para revisión humana).
         expect(rec?.ejecutadaAutomatica).toBe(false);
+        expect(rec?.estado).toBe("PENDIENTE");
         expect(rec?.accionSugerida).toBe("crear_bono_retencion");
+        const ejecuciones = await prisma.ejecucionAccion.findMany({ where: { recomendacionId: rec?.id ?? "sin-id" } });
+        expect(ejecuciones).toHaveLength(1);
+        expect(ejecuciones[0]?.estado).toBe("FALLIDA");
+        expect(ejecuciones[0]?.motivoFallo).toContain("accion_desconocida");
     });
 
     it("evaluarReglasPendientes solo evalúa reglas con cadencia vencida", async () => {

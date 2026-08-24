@@ -5,7 +5,9 @@
  *   transacción READ ONLY con timeout (DAL), filtra por `umbralMinimo`,
  *   renderiza la plantilla por fila y aplica dedup `(reglaId, sujetoId)` en
  *   estado PENDIENTE (actualiza en vez de duplicar). Regla en modo EJECUTA:
- *   genera igual pero NO ejecuta la acción (diferida a SPEC-226, candado D-77).
+ *   tras generar/actualizar, invoca in-process el ejecutor de SPEC-226
+ *   (`ejecutarAccion`) por cada recomendación; un fallo de ejecución NO
+ *   detiene a las demás ni al tick (FR-013 de SPEC-226).
  * - `evaluarReglasPendientes()`: reglas activas cuya cadencia efectiva
  *   (`max(frecuenciaMin, analisis.recomendaciones.frecuencia_evaluacion_min)`)
  *   ya venció desde `ultimaEvaluacionEn`. Una regla que falla no tumba a las demás.
@@ -25,6 +27,7 @@ import {
 } from "@/lib/dal/repositories/reglas-recomendacion";
 import { validarSqlRegla } from "./ejecutor-sql";
 import { renderPlantilla } from "./plantilla";
+import { ejecutarAccion } from "@/lib/analisis/acciones/ejecutor";
 
 export const EXPIRACION_DIAS_DEFAULT = 7;
 export const STATEMENT_TIMEOUT_MS_DEFAULT = 5000;
@@ -36,6 +39,9 @@ export interface ResultadoEvaluacion {
     candidatos: number;
     creadas: number;
     actualizadas: number;
+    /** SPEC-226: conteos del ejecutor (solo presentes si la regla es EJECUTA). */
+    ejecutadas?: number;
+    fallidasEjecucion?: number;
     error?: string;
 }
 
@@ -132,6 +138,9 @@ export async function evaluarRegla(
         const expiraEn = new Date(Date.now() + expiracionDias * 86_400_000);
         let creadas = 0;
         let actualizadas = 0;
+        // SPEC-226 (FR-013): ids de recomendaciones vivas del tick (candidatas
+        // a ejecución automática si la regla es EJECUTA).
+        const idsVivas: string[] = [];
 
         for (const contextoFila of candidatas) {
             const render = renderPlantilla(regla.plantillaRecomendacion, contextoFila);
@@ -161,8 +170,9 @@ export async function evaluarRegla(
             if (existente) {
                 await repo.actualizarRecomendacionPendiente(existente.id, escritura);
                 actualizadas += 1;
+                idsVivas.push(existente.id);
             } else {
-                await repo.crearRecomendacion({
+                const creada = await repo.crearRecomendacion({
                     ...escritura,
                     reglaId: regla.id,
                     categoria: regla.categoria,
@@ -170,16 +180,38 @@ export async function evaluarRegla(
                     sujetoId,
                 });
                 creadas += 1;
+                idsVivas.push(creada.id);
             }
         }
 
         await repo.marcarReglaEvaluada(regla.id, new Date());
 
-        if (regla.modo === "EJECUTA") {
-            // FR-006: en SPEC-221 ninguna acción automática se ejecuta (D-77).
-            console.warn(
-                `[Analisis/Reglas] Regla ${regla.clave} en modo EJECUTA: ejecución de la acción diferida a SPEC-226`
-            );
+        if (regla.modo === "EJECUTA" && idsVivas.length > 0) {
+            // SPEC-226 (FR-013): ejecutar la acción de cada recomendación viva
+            // in-process. Un fallo NO detiene a las demás ni al tick: el
+            // ejecutor nunca lanza (devuelve la EjecucionAccion EJECUTADA o
+            // FALLIDA) y el try/catch es defensa extra.
+            let ejecutadas = 0;
+            let fallidasEjecucion = 0;
+            for (const recId of idsVivas) {
+                try {
+                    const ejecucion = await ejecutarAccion({ recomendacionId: recId, origen: "AUTOMATICA" });
+                    if (ejecucion.estado === "EJECUTADA") ejecutadas += 1;
+                    else fallidasEjecucion += 1;
+                } catch (error) {
+                    fallidasEjecucion += 1;
+                    console.error(
+                        `[Analisis/Reglas] Error inesperado ejecutando acción de recomendación ${recId}:`,
+                        error instanceof Error ? error.message : error
+                    );
+                }
+            }
+            if (ejecutadas > 0 || fallidasEjecucion > 0) {
+                console.log(
+                    `[Analisis/Reglas] Regla ${regla.clave} (EJECUTA): ${ejecutadas} acciones ejecutadas, ${fallidasEjecucion} fallidas`
+                );
+            }
+            return { ...base, candidatos: candidatas.length, creadas, actualizadas, ejecutadas, fallidasEjecucion };
         }
 
         return { ...base, candidatos: candidatas.length, creadas, actualizadas };

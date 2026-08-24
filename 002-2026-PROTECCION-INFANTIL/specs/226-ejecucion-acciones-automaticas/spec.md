@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-24
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Dependencias**: SPEC-221 (motor de reglas de recomendación: `ReglaRecomendacion` + `Recomendacion` + worker de evaluación) en el mismo mega-lote; SPEC-216 (Bonos, en prod) para la acción `crear_bono`; Motor Notificaciones (SPEC-201..204, en prod) para `enviar_notificacion` y `crear_alerta`. Parte del mega-lote 220-227 (Análisis dinero-vs-valor, BRIEF §8/§9).
 
@@ -186,16 +186,34 @@ Como admin quiero que cada regla `EJECUTA` tenga un tope de ejecuciones por vent
 
 ### Resumen de cambios
 
-*(Se completará tras la implementación con la lista exacta de archivos, migraciones, endpoints y tests.)*
+Implementado 2026-08-24 (rama `work/002-PI-mega-cola-restante`):
+
+- **Modelo**: enums `TipoAccionEjecutable`, `EstadoEjecucion`, `OrigenEjecucion`, modelo `EjecucionAccion` (tabla `ejecuciones_accion`), relación inversa `Recomendacion.ejecuciones`, 3 valores `AccionAudit` (`ANALISIS_ACCION_EJECUTADA|FALLIDA|REVERTIDA`). Migración aditiva `prisma/migrations/20260824160000_spec_226_ejecucion_acciones/`.
+- **Ejecutor** (`src/lib/analisis/acciones/`): `ejecutor.ts` (orquestador: precondiciones, rate-limit por regla, TX única, AuditLog, notificar post-TX fail-open), `registry.ts`, `types.ts`, `schemas.ts` (Zod por tipo), `rate-limit-regla.ts`, `rollback.ts`, `aplicar.ts`, handlers `crear-bono.ts`, `enviar-notificacion.ts`, `asignar-operador.ts`, `crear-alerta.ts`.
+- **DAL**: `src/lib/dal/repositories/ejecucion-accion.ts` (frontera Q-3; incluye runner de TX y bloqueo `SELECT ... FOR UPDATE`).
+- **Hook SPEC-221** (FR-013): `src/lib/analisis/reglas/motor.ts` invoca `ejecutarAccion` por recomendación viva de reglas EJECUTA; contadores `ejecutadas`/`fallidasEjecucion` en `ResultadoEvaluacion`; log del worker actualizado.
+- **Endpoints**: `POST /api/admin/analisis/recomendaciones/[id]/aplicar` y `[id]/revertir` (ADMIN + módulo `analisis_recomendaciones` + rate-limit `admin_write`).
+- **Seed**: `seedEjecucionAcciones()` — parámetros `ratelimit.analisis_accion.*` + `analisis.acciones.alertas_destinatarios`, eventos `analisis.alerta.admin` (EMAIL, ADMIN) y `analisis.operador.asignacion` (EMAIL+IN_APP, OPERADOR) con plantillas `es`.
+- **Tests**: 4 unitarios (24 tests, verdes) + 3 de integración escritos (ejecutor, aplicar, revertir; los corre el coordinador).
 
 ### Decisiones ejecutadas
 
-*(Se completará tras compuertas de revisión.)*
+- `EjecucionAccion.tipoAccion` es NOT NULL (data-model §3.4): ante clave desconocida se persiste placeholder `CREAR_ALERTA` y el motivo real queda en `motivoFallo` (`accion_desconocida: <clave>`). El placeholder nunca se usa para rollback (una FALLIDA no es revertible).
+- `enviar_notificacion`/`crear_alerta` resuelven destinatarios dentro de la TX pero llaman `programar()` post-TX; el conteo `programadas` se fusiona en `resultado` tras la TX (FR-015 + contrato US-3).
+- Rollback de `ENVIAR_NOTIFICACION`: `cancelar()` post-TX; `canceladas = 0` → detalle "no reversible (ya enviada)" y `resultado.revertido.canceladas`.
+- Sin worker nuevo ni advisory lock: el ejecutor corre in-process en el worker de reglas de SPEC-221.
+- Test de SPEC-221 "EJECUTA diferida" actualizado al nuevo contrato (FR-013): ahora verifica la `EjecucionAccion(FALLIDA)` por clave desconocida.
 
 ### Gate local
 
-*(Se completará tras validación.)*
+- `npx prisma generate` ✔ · `npx prisma validate` ✔
+- `npx tsc --noEmit` ✔ limpio en archivos propios (el único error restante, `src/app/dashboard/admin/analisis/reglas/page.tsx` → `@/components/modules/analisis/ReglasPanel`, es de SPEC-224 en progreso — otro agente).
+- Tests unitarios: 24/24 verdes (`schemas`, `crear-bono` frontera Bogotá, `crear-alerta`, `asignar-operador`).
+- Sin UI → `tokens:check` no aplica.
 
 ### Deuda técnica / notas
 
-*(Se completará al cerrar.)*
+- La bandeja del operador para recomendaciones asignadas queda como deuda (v1 notifica por Motor Notif; ver Assumptions y research §6.1).
+- Reintentos de ejecuciones FALLIDA ocurren en ticks siguientes del worker (la recomendación queda PENDIENTE); cada intento consume rate-limit de la regla y genera su fila FALLIDA + AuditLog (trazabilidad deliberada).
+- Tests de integración escritos pero no corridos en el subagente (BD compartida): los corre el coordinador.
+
