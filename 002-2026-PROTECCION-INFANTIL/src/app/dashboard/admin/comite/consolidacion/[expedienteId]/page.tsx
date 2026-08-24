@@ -37,6 +37,8 @@ export default async function ConsolidacionPage({
     }
 
     const puedeActuar = rol === "COMITE_VALIDACION" && estadoPermiteAccion(detalle.informe.estadoAprobacion);
+    // SPEC-239 (FR-010): el botón de emergencia es exclusivo del comité de validación.
+    const puedeEmergencia = rol === "COMITE_VALIDACION";
 
     return (
         <div className="space-y-6">
@@ -46,7 +48,7 @@ export default async function ConsolidacionPage({
                     Revisión colegiada del informe consolidado antes de presentarlo al padre.
                 </p>
             </div>
-            <ConsolidacionClient detalle={detalle} puedeActuar={puedeActuar} />
+            <ConsolidacionClient detalle={detalle} puedeActuar={puedeActuar} puedeEmergencia={puedeEmergencia} />
         </div>
     );
 }

@@ -12,6 +12,7 @@ import { ConsolidacionPatronesN1 } from "./ConsolidacionPatronesN1";
 import { ConsolidacionSenalComunitaria } from "./ConsolidacionSenalComunitaria";
 import { ConsolidacionGuiaAccion } from "./ConsolidacionGuiaAccion";
 import { ConsolidacionAcciones } from "./ConsolidacionAcciones";
+import { BotonActivarEmergencia } from "./BotonActivarEmergencia";
 import type { DetalleConsolidacionDto } from "./tipos";
 
 async function extraerError(res: Response, fallback: string): Promise<string> {
@@ -26,9 +27,12 @@ async function extraerError(res: Response, fallback: string): Promise<string> {
 export function ConsolidacionClient({
     detalle,
     puedeActuar,
+    puedeEmergencia = false,
 }: {
     detalle: DetalleConsolidacionDto;
     puedeActuar: boolean;
+    /** SPEC-239: solo COMITE_VALIDACION puede activar la emergencia de un caso ROJO. */
+    puedeEmergencia?: boolean;
 }) {
     const router = useRouter();
     const [guiaSeleccionada, setGuiaSeleccionada] = useState<string | null>(
@@ -98,6 +102,12 @@ export function ConsolidacionClient({
                         onAprobar={handleAprobar}
                         onDevolver={handleDevolver}
                     />
+                    {puedeEmergencia && (
+                        <BotonActivarEmergencia
+                            expedienteId={detalle.expediente.id}
+                            scoreGravedadActual={detalle.expediente.scoreGravedadActual}
+                        />
+                    )}
                 </div>
             </div>
         </div>

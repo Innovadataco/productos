@@ -186,4 +186,74 @@ export class ExpedienteMotorRepository {
         });
         return miembros.map((m) => m.id);
     }
+
+    // ── SPEC-239 (002-PI-mega-cola): escalación ROJO + SLA 12h + emergencia ──
+
+    /**
+     * Marca el expediente como escalado a ROJO: fija `scoreGravedadActual` en
+     * ROJO y aplica los campos aditivos dados (estado compatible, SLA efectivo
+     * y/o fecha de escalamiento). Solo actualiza campos permitidos (FR-003).
+     */
+    marcarEscaladoRojo(
+        expedienteId: string,
+        datos: {
+            estado?: EstadoExpediente | undefined;
+            slaEfectivoHoras?: number | undefined;
+            fechaEscaladoRojoEn?: Date | undefined;
+        }
+    ): Promise<Expediente> {
+        const data: Prisma.ExpedienteUpdateInput = { scoreGravedadActual: "ROJO" };
+        if (datos.estado !== undefined) data.estado = datos.estado;
+        if (datos.slaEfectivoHoras !== undefined) data.slaEfectivoHoras = datos.slaEfectivoHoras;
+        if (datos.fechaEscaladoRojoEn !== undefined) data.fechaEscaladoRojoEn = datos.fechaEscaladoRojoEn;
+        return this.db.expediente.update({ where: { id: expedienteId }, data });
+    }
+
+    /**
+     * Expedientes ROJO en estados vigilados por el SLA 12h (FR-008) con fecha
+     * de escalamiento registrada. El filtro de vencimiento se aplica en la
+     * tarea (usa el parámetro vigente de horas).
+     */
+    listarRojosEnVigilanciaSla(take: number = LIMITE_LOTE_DEFAULT): Promise<Expediente[]> {
+        const where: Prisma.ExpedienteWhereInput = {
+            scoreGravedadActual: "ROJO",
+            estado: { in: [EstadoExpediente.PENDIENTE_COMITE, EstadoExpediente.EN_APROBACION_PADRE] },
+            fechaEscaladoRojoEn: { not: null },
+        };
+        return this.db.expediente.findMany({ where, take });
+    }
+
+    /** Último aviso de SLA ROJO vencido registrado para el expediente (idempotencia). */
+    obtenerUltimoAvisoSlaRojo(expedienteId: string): Promise<{ creadoEn: Date } | null> {
+        return this.db.auditLog.findFirst({
+            where: { accion: "EXPEDIENTE_COMITE_SLA_VENCIDO", recursoId: expedienteId },
+            orderBy: { creadoEn: "desc" },
+            select: { creadoEn: true },
+        });
+    }
+
+    /** Última activación de emergencia del expediente desde `desde` (ventana anti-doble). */
+    obtenerUltimaActivacionEmergencia(
+        expedienteId: string,
+        desde: Date
+    ): Promise<{ creadoEn: Date } | null> {
+        return this.db.auditLog.findFirst({
+            where: {
+                accion: "EXPEDIENTE_EMERGENCIA_ACTIVADA",
+                recursoId: expedienteId,
+                creadoEn: { gte: desde },
+            },
+            orderBy: { creadoEn: "desc" },
+            select: { creadoEn: true },
+        });
+    }
+
+    /** Nombre visible del padre titular (variables de plantilla Motor Notif). */
+    async obtenerNombrePadre(padreUsuarioId: string): Promise<string | null> {
+        const padre = await this.db.usuario.findUnique({
+            where: { id: padreUsuarioId },
+            select: { nombre: true, email: true },
+        });
+        return padre ? (padre.nombre ?? padre.email) : null;
+    }
 }

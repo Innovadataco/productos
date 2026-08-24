@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-22
 
-**Status**: `PLANEADO`
+**Status**: `IMPLEMENTADO`
 
 Impacto en arquitectura: añade modelo `ContactoEmergencia` (migración aditiva), repositorio DAL `contacto-emergencia-repository`, extensión de `expediente-repository` con `marcarEscaladoRojo()`, handler del evento `expediente.gravedad.subio_a_rojo`, endpoint `POST /api/admin/comite/expediente/[id]/activar-emergencia`, CRUD de contactos bajo `/api/padre/contacto-emergencia`, extensión del worker `pi-expediente-motor` (SPEC-236/D-72) para vigilar SLA 12h de casos ROJO, y botón "activar emergencia" en la vista `/admin/comite/consolidacion/[id]` (SPEC-237). Añade evento `expediente.emergencia.activada` y plantilla urgente en el catálogo del Motor Notif.
 
@@ -182,4 +182,13 @@ Como miembro del comité quiero ver un botón "activar emergencia" solo en casos
 
 ## Implementación
 
-*Pendiente de implementación. Esta sección se completará en `cierre.md` al cerrar la spec.*
+Implementada el 2026-08-24 en la rama `work/002-PI-mega-cola-restante` (mega-lote ODIN). Detalle completo de archivos, decisiones, gate y deuda técnica en [`cierre.md`](./cierre.md).
+
+- Migración aditiva `20260824140000_spec_239_contacto_emergencia`: `ContactoEmergencia` + enum `RelacionContactoEmergencia`, campos `Expediente.slaEfectivoHoras`/`fechaEscaladoRojoEn`, 8 valores de `AccionAudit`.
+- DAL: `src/lib/dal/repositories/contacto-emergencia.ts` + extensión de `expediente-motor-repository.ts` (`marcarEscaladoRojo`, vigilancia SLA ROJO, ventana anti-doble-activación).
+- Handler `src/lib/expediente/handlers/gravedad-subio-a-rojo.ts` integrado en `recalcularGravedad24h` (SLA 12h + evento + `EXPEDIENTE_ESCALADO_A_ROJO`).
+- Servicio `src/lib/expediente/activar-emergencia.ts` + endpoint `POST /api/admin/comite/expediente/[id]/activar-emergencia` (fallback de contactos 1→2→3, 409 no-ROJO/sin-contactos/doble, 202 best-effort).
+- CRUD padre `/api/padre/contacto-emergencia[/[id]]` con E.164 (Zod), ownership y baja lógica.
+- Worker `pi-expediente-motor`: nueva tarea `vigilarSlaRojo` en el tick (sin lock nuevo).
+- UI: `BotonActivarEmergencia` (token `rubi` + Modal) en la vista de consolidación, visible solo en ROJO para COMITE_VALIDACION.
+- Desviaciones relevantes: canal SMS no existe en Motor Notif → notificación al contacto por EMAIL (deuda documentada); "nivel CRITICAL" va en `AuditLog.metadatos.nivel` (el modelo no tiene columna de nivel).

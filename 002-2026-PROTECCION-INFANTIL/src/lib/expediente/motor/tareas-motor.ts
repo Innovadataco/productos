@@ -25,6 +25,7 @@ import { ExpedienteMotorRepository } from "@/lib/dal/repositories/expediente-mot
 import { aplicarTransicion, MOTIVO_AUTO_CIERRE_INACTIVIDAD } from "../estados/aplicar-transicion";
 import { publicarEventoExpediente } from "../estados/publicar-evento-expediente";
 import { EVENTOS_EXPEDIENTE } from "../estados/transiciones";
+import { manejarSubidaARojo } from "../handlers/gravedad-subio-a-rojo";
 import {
     calcularLimiteInactividad,
     calcularLimiteRetencion,
@@ -184,25 +185,19 @@ export async function recalcularGravedad24h(ahora: Date = new Date()): Promise<n
             const { anterior, nuevo } = await recalcularGravedadExpediente(exp);
             if (nuevo === anterior) continue;
 
-            const actualizado = await new ExpedienteMotorRepository().actualizarScoreGravedad(exp.id, nuevo);
-
             if (anterior !== ScoreGravedad.ROJO && nuevo === ScoreGravedad.ROJO) {
-                await logAudit({
-                    accion: "EXPEDIENTE_GRAVEDAD_SUBIO_A_ROJO",
-                    tipoRecurso: "Expediente",
-                    recursoId: exp.id,
-                    valorAnterior: anterior,
-                    valorNuevo: nuevo,
-                    ipAddress: "worker",
-                    userAgent: "expediente-motor/worker",
-                    metadatos: { anterior, nuevo },
-                });
-                await publicarEventoExpediente(EVENTOS_EXPEDIENTE.GRAVEDAD_SUBIO_A_ROJO, {
-                    expediente: actualizado,
+                // SPEC-239 (FR-004): el handler fija SLA 12h + fechaEscaladoRojoEn,
+                // audita EXPEDIENTE_ESCALADO_A_ROJO (nivel CRITICAL) y publica el evento.
+                await manejarSubidaARojo({
+                    expediente: exp,
+                    gravedadAnterior: anterior,
                     actor: ACTOR_WORKER.id,
                     motivo: `Gravedad subió de ${anterior} a ROJO`,
+                    ahora,
                 });
                 subidosARojo++;
+            } else {
+                await new ExpedienteMotorRepository().actualizarScoreGravedad(exp.id, nuevo);
             }
         } catch (error) {
             console.warn(
@@ -212,6 +207,67 @@ export async function recalcularGravedad24h(ahora: Date = new Date()): Promise<n
         }
     }
     return subidosARojo;
+}
+
+/**
+ * SPEC-239 (FR-008): vigila el SLA 12h de expedientes ROJO en
+ * PENDIENTE_COMITE o EN_APROBACION_PADRE. El reloj arranca en
+ * `fechaEscaladoRojoEn` (no en updatedAt). Publica
+ * `expediente.comite.sla_vencido` (Motor Notif, CRITICAL) y audita
+ * `EXPEDIENTE_COMITE_SLA_VENCIDO`. Idempotente por escalamiento: no
+ * re-publica si ya hay un aviso posterior a `fechaEscaladoRojoEn`.
+ * Fail-open por registro: un fallo no aborta el tick (US4.5).
+ *
+ * Solape conocido con `vigilarSlaComite` (SPEC-236) para ROJO en
+ * PENDIENTE_COMITE: ambos publican el mismo evento de Motor Notif, que
+ * reemplaza programaciones futuras duplicadas por (evento, sujeto,
+ * destinatario, canal); quedan dos filas de auditoría con acciones distintas
+ * (deuda técnica documentada en cierre.md de SPEC-239).
+ */
+export async function vigilarSlaRojo(ahora: Date = new Date()): Promise<number> {
+    const slaRojo = await numParam("padre.comite.sla_horas_gravedad_roja", DEFAULTS.slaHorasRojo);
+
+    const candidatos = await new ExpedienteMotorRepository().listarRojosEnVigilanciaSla(DEFAULTS.limiteLote);
+
+    let alertados = 0;
+    for (const exp of candidatos) {
+        try {
+            if (!exp.fechaEscaladoRojoEn) continue;
+            const fechaLimite = calcularFechaLimiteSla(exp.fechaEscaladoRojoEn, slaRojo);
+            if (ahora.getTime() <= fechaLimite.getTime()) continue;
+
+            const ultimoAviso = await new ExpedienteMotorRepository().obtenerUltimoAvisoSlaRojo(exp.id);
+            if (ultimoAviso && ultimoAviso.creadoEn.getTime() >= exp.fechaEscaladoRojoEn.getTime()) continue;
+
+            await logAudit({
+                accion: "EXPEDIENTE_COMITE_SLA_VENCIDO",
+                tipoRecurso: "Expediente",
+                recursoId: exp.id,
+                ipAddress: "worker",
+                userAgent: "expediente-motor/worker",
+                metadatos: {
+                    nivel: "CRITICAL",
+                    estado: exp.estado,
+                    slaHoras: slaRojo,
+                    fechaEscaladoRojoEn: exp.fechaEscaladoRojoEn.toISOString(),
+                    fechaLimite: fechaLimite.toISOString(),
+                },
+            });
+            await publicarEventoExpediente(EVENTOS_EXPEDIENTE.COMITE_SLA_VENCIDO, {
+                expediente: exp,
+                actor: ACTOR_WORKER.id,
+                motivo: `SLA 12h de expediente ROJO vencido (${slaRojo}h desde escalamiento)`,
+                fechaLimite,
+            });
+            alertados++;
+        } catch (error) {
+            console.warn(
+                `[ExpedienteMotor] Aviso de SLA ROJO omitido: expediente=${exp.id} —`,
+                error instanceof Error ? error.message : error
+            );
+        }
+    }
+    return alertados;
 }
 
 /**
