@@ -23,6 +23,10 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     // SPEC-212 (002-PI-112): panel administrativo de pagos (color ámbar en AdminNav).
     { href: "/dashboard/admin/pagos", label: "Pagos", modulo: "pagos_admin" },
     { href: "/dashboard/admin/colegios", label: "Colegios", modulo: "colegios_gestion" },
+    // SPEC-227 (002-PI-128): historial de sugerencias del motor de reglas (solo ADMIN).
+    { href: "/dashboard/admin/analisis/recomendaciones", label: "Sugerencias", modulo: "analisis_recomendaciones" },
+    // SPEC-224 (002-PI-125): panel de reglas configurables del motor (solo ADMIN).
+    { href: "/dashboard/admin/analisis/reglas", label: "Análisis · Reglas", modulo: "analisis_admin" },
     { href: "/dashboard/admin/anti-abuso", label: "Anti-abuso", modulo: "anti_abuso" },
     // SPEC-180: la página Monitoreo worker se retiró del menú (redundante con el
     // tablero operativo de SPEC-171, que cubre worker + BD + 4 señales más).

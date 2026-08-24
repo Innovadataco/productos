@@ -23,9 +23,13 @@ import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import {
     cerrarExpedientesInactivos,
     vigilarSlaComite,
+    vigilarSlaRojo,
     recalcularGravedad24h,
     purgarRetenidos,
 } from "../src/lib/expediente/motor/tareas-motor.ts";
+// SPEC-238 (002-PI-mega-cola): vigilancia del SLA de aclaraciones padre-comité
+// en el MISMO worker (sin worker nuevo, D-72).
+import { cerrarAclaracionesSlaVencidas } from "../src/lib/expediente/motor/tareas-aclaracion.ts";
 
 const { Client } = pg;
 // SPEC-236: lock propio del motor de expediente. En uso por otras specs del
@@ -88,6 +92,10 @@ async function ejecutarTick() {
 
     const cerrados = await cerrarExpedientesInactivos(ahora);
     const slaVencidos = await vigilarSlaComite(ahora);
+    // SPEC-239: vigilancia del SLA 12h de expedientes ROJO (desde fechaEscaladoRojoEn).
+    const slaRojoVencidos = await vigilarSlaRojo(ahora);
+    // SPEC-238: cierre forzoso de aclaraciones PENDIENTE con SLA vencido.
+    const aclaracionesCerradas = await cerrarAclaracionesSlaVencidas(ahora);
     const purgados = await purgarRetenidos(ahora);
 
     let subidosARojo = 0;
@@ -96,11 +104,11 @@ async function ejecutarTick() {
         ultimoRecalculoGravedad = ahora.getTime();
     }
 
-    if (cerrados > 0 || slaVencidos > 0 || purgados > 0 || subidosARojo > 0) {
-        await logger.info("Tick del motor de expediente", { cerrados, slaVencidos, purgados, subidosARojo });
+    if (cerrados > 0 || slaVencidos > 0 || slaRojoVencidos > 0 || aclaracionesCerradas > 0 || purgados > 0 || subidosARojo > 0) {
+        await logger.info("Tick del motor de expediente", { cerrados, slaVencidos, slaRojoVencidos, aclaracionesCerradas, purgados, subidosARojo });
     }
     console.log(
-        `[EXPEDIENTE-MOTOR] Tick: cerrados=${cerrados} slaVencidos=${slaVencidos} purgados=${purgados} subidosARojo=${subidosARojo}`
+        `[EXPEDIENTE-MOTOR] Tick: cerrados=${cerrados} slaVencidos=${slaVencidos} slaRojoVencidos=${slaRojoVencidos} aclaracionesCerradas=${aclaracionesCerradas} purgados=${purgados} subidosARojo=${subidosARojo}`
     );
 }
 

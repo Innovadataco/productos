@@ -55,6 +55,9 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // SPEC-202 (002-PI-099): panel admin del motor de notificaciones (sub-tab de configuración).
     { clave: "configuracion_notificaciones", nombre: "Notificaciones", categoria: "admin", orden: 73, padre: "configuracion_sistema" },
     { clave: "pagos_admin", nombre: "Pagos", categoria: "admin", esCritico: true, orden: 75 },
+    // SPEC-224 (002-PI-125): panel de reglas configurables del motor de recomendaciones
+    // (edita SQL y promueve a EJECUTA — capacidad crítica con permiso propio y revocable).
+    { clave: "analisis_admin", nombre: "Análisis · Reglas", categoria: "admin", esCritico: true, orden: 76 },
     { clave: "audit_logs", nombre: "Logs de auditoría", categoria: "admin", esCritico: true, orden: 80 },
     { clave: "estadisticas", nombre: "Estadísticas", categoria: "admin", orden: 90 },
     // SPEC-194 (002-PI-088): analítica agregada de colegios (sub-tab de estadísticas/operacion).
@@ -63,6 +66,9 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "sesiones_admin", nombre: "Sesiones activas", categoria: "admin", orden: 92, padre: "estadisticas" },
     // SPEC-202 (002-PI-099): dashboard de salud del motor de notificaciones (sub-tab de estadísticas).
     { clave: "estadisticas_salud_motor", nombre: "Salud del motor", categoria: "admin", orden: 93, padre: "estadisticas" },
+    // SPEC-227 (002-PI-128): historial de sugerencias del motor de reglas + métricas de tuning.
+    // Primer nivel: al implementar no existía un módulo padre `analisis` en el catálogo.
+    { clave: "analisis_recomendaciones", nombre: "Análisis · Historial de sugerencias", categoria: "admin", orden: 94 },
     { clave: "anti_abuso", nombre: "Anti-abuso", categoria: "admin", orden: 100 },
     { clave: "monitoreo_worker", nombre: "Monitoreo del worker", categoria: "admin", orden: 105 },
     { clave: "dataset_entrenamiento", nombre: "Dataset de entrenamiento", categoria: "admin", orden: 120 },

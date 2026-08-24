@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **90** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **94** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -483,7 +483,25 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (42)
+### Otros (sin regla de dominio) (46)
+
+#### `AclaracionExpediente`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| expedienteId | String | único |
+| informeConsolidadoId | String | — |
+| solicitadaEn | DateTime | — |
+| solicitudTexto | String | — |
+| respondidaEn | DateTime | opcional |
+| respondidaPor | String | opcional |
+| respuestaTexto | String | opcional |
+| estado | String | — |
+| createdAt | DateTime | — |
+| expediente | Expediente | relación (FK) |
+| informeConsolidado | InformeConsolidado | relación (FK) |
+| respondidaPorUsuario | Usuario | opcional, relación (FK) |
 
 #### `Anomalia`
 
@@ -584,6 +602,22 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | referida | Suscripcion | relación (FK) |
 | revisadaPor | Usuario | opcional, relación (FK) |
 
+#### `ContactoEmergencia`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| padreUsuarioId | String | — |
+| nombre | String | — |
+| relacion | RelacionContactoEmergencia | — |
+| telefono | String | — |
+| email | String | opcional |
+| prioridad | Int | — |
+| activo | Boolean | — |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| padre | Usuario | relación (FK) |
+
 #### `DemoMarcado`
 
 | Campo | Tipo | Atributos |
@@ -623,6 +657,27 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | enlacePanel | String | — |
 | estado | String | — |
 | destinatario | Usuario | relación (FK) |
+
+#### `EjecucionAccion`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| recomendacionId | String | — |
+| reglaId | String | — |
+| tipoAccion | TipoAccionEjecutable | — |
+| parametros | Json | — |
+| estado | EstadoEjecucion | — |
+| resultado | Json | opcional |
+| motivoFallo | String | opcional |
+| origenEjecucion | OrigenEjecucion | — |
+| ejecutadaPorAdminId | String | opcional |
+| ejecutadaEn | DateTime | — |
+| revertidaEn | DateTime | opcional |
+| revertidaPorAdminId | String | opcional |
+| motivoReversion | String | opcional |
+| createdAt | DateTime | — |
+| recomendacion | Recomendacion | relación (FK) |
 
 #### `EventoExpediente`
 
@@ -684,6 +739,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | patrones | PatronExpediente | lista, relación |
 | expedienteAnterior | Expediente | opcional, relación |
 | expedientesPosteriores | Expediente | lista, relación |
+| aclaracion | AclaracionExpediente | opcional, relación |
+| slaEfectivoHoras | Int | opcional |
+| fechaEscaladoRojoEn | DateTime | opcional |
 
 #### `GuiaAccionCategoria`
 
@@ -798,6 +856,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | updatedAt | DateTime | — |
 | expediente | Expediente | relación (FK) |
 | generadoPor | Usuario | opcional, relación (FK) |
+| aclaraciones | AclaracionExpediente | lista, relación |
 
 #### `Materia`
 
@@ -1037,6 +1096,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ejecutadaAutomatica | Boolean | — |
 | regla | ReglaRecomendacion | relación (FK) |
 | resueltaPor | Usuario | opcional, relación (FK) |
+| ejecuciones | EjecucionAccion | lista, relación |
 
 #### `RegistroAvisoColegio`
 
@@ -1064,6 +1124,20 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | categoria | String | — |
 | sqlQuery | String | — |
 | plantillaRecomendacion | String | — |
+
+#### `ReglaRecomendacionHistorial`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| reglaId | String | — |
+| version | Int | — |
+| snapshot | Json | — |
+| motivo | String | — |
+| cambiadoPorAdminId | String | — |
+| creadoEn | DateTime | — |
+| regla | ReglaRecomendacion | relación (FK) |
+| cambiadoPor | Usuario | relación (FK) |
 
 #### `ScoreCliente`
 
@@ -1706,6 +1780,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | recomendacionesResueltas | Recomendacion | lista, relación |
 | anomaliasResueltas | Anomalia | lista, relación |
 | digestsSemanal | DigestSemanal | lista, relación |
+| aclaracionesRespondidas | AclaracionExpediente | lista, relación |
+| contactosEmergencia | ContactoEmergencia | lista, relación |
+| reglasHistorialCambiadas | ReglaRecomendacionHistorial | lista, relación |
 
 ## Diagrama ER (Mermaid)
 
@@ -1753,6 +1830,7 @@ erDiagram
     Estudiante ||--o{ AcudienteEstudiante : "estudiante"
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
+    Expediente ||--o{ AclaracionExpediente : "expediente"
     Expediente ||--o{ EventoExpediente : "expediente"
     Expediente ||--o{ InformeConsolidado : "expediente"
     Expediente ||--o{ PatronExpediente : "expediente"
@@ -1760,6 +1838,7 @@ erDiagram
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante (opcional)"
     IdentificadorProfesor ||--o{ AlertaColegio : "identificadorProfesor (opcional)"
     IdentificadorReportado ||--o{ EventoMatch : "identificador"
+    InformeConsolidado ||--o{ AclaracionExpediente : "informeConsolidado"
     Materia ||--o{ CursoMateria : "materia"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"
     Pago ||--o{ BonoAplicado : "pago (opcional)"
@@ -1782,7 +1861,9 @@ erDiagram
     Profesor ||--o{ Curso : "profesorTitular (opcional)"
     Profesor ||--o{ CursoMateria : "profesor (opcional)"
     Profesor ||--o{ IdentificadorProfesor : "profesor"
+    Recomendacion ||--o{ EjecucionAccion : "recomendacion"
     ReglaRecomendacion ||--o{ Recomendacion : "regla"
+    ReglaRecomendacion ||--o{ ReglaRecomendacionHistorial : "regla"
     Reporte ||--o{ AlertaColegio : "reporte"
     Reporte ||--o{ ClasificacionIA : "reporte"
     Reporte ||--o{ EmbeddingReporte : "reporte"
@@ -1804,6 +1885,7 @@ erDiagram
     Tenant ||--o{ Reporte : "tenant (opcional)"
     Tenant ||--o{ Usuario : "tenant (opcional)"
     Usuario ||--o{ AccesoDocumentoApelacion : "usuario"
+    Usuario ||--o{ AclaracionExpediente : "respondidaPorUsuario (opcional)"
     Usuario ||--o{ AlertaColegio : "asignadoA (opcional)"
     Usuario ||--o{ AlertaSuscripcion : "usuario"
     Usuario ||--o{ Anomalia : "resueltaPor (opcional)"
@@ -1813,6 +1895,7 @@ erDiagram
     Usuario ||--o{ CodigoReferidoUso : "revisadaPor (opcional)"
     Usuario ||--o{ CodigoVerificacion : "usuario (opcional)"
     Usuario ||--o{ ContactoConfianza : "usuario"
+    Usuario ||--o{ ContactoEmergencia : "padre"
     Usuario ||--o{ CorreccionAdmin : "admin"
     Usuario ||--o{ DigestSemanal : "destinatario"
     Usuario ||--o{ Expediente : "padre (opcional)"
@@ -1830,6 +1913,7 @@ erDiagram
     Usuario ||--o{ PermisoModulo : "actualizadoPor (opcional)"
     Usuario ||--o{ Plan : "creadoPor"
     Usuario ||--o{ Recomendacion : "resueltaPor (opcional)"
+    Usuario ||--o{ ReglaRecomendacionHistorial : "cambiadoPor"
     Usuario ||--o{ Reporte : "anonimizacionValidadaPor (opcional)"
     Usuario ||--o{ Reporte : "comite (opcional)"
     Usuario ||--o{ Reporte : "eliminadoPor (opcional)"

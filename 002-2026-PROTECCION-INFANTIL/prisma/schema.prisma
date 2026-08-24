@@ -264,6 +264,39 @@ enum AccionAudit {
   // SPEC-217 (002-PI-117): activación del freemium y conversión por pago durante el periodo gratuito.
   SUSCRIPCION_FREEMIUM_ACTIVADA
   SUSCRIPCION_FREEMIUM_CONVERTIDA
+  // SPEC-225 (002-PI-126): resolución humana de una anomalía detectada por reglas.
+  ANOMALIA_RESUELTA
+  // SPEC-238 (002-PI-mega-cola): ciclo de vida de la aclaración padre-comité.
+  ACLARACION_SOLICITADA
+  ACLARACION_RESPONDIDA
+  ACLARACION_CERRADA_FORZOSAMENTE
+  // SPEC-223 (002-PI-124): trazabilidad SYSTEM del digest semanal al CEO.
+  ANALISIS_DIGEST_GENERADO
+  ANALISIS_DIGEST_ENVIADO
+  ANALISIS_DIGEST_FALLIDO
+  // SPEC-239 (002-PI-mega-cola): escalación ROJO, SLA 12h y contactos de emergencia.
+  CONTACTO_EMERGENCIA_CREADO
+  CONTACTO_EMERGENCIA_ACTUALIZADO
+  CONTACTO_EMERGENCIA_ELIMINADO
+  CONTACTO_EMERGENCIA_FALLBACK_USADO
+  EXPEDIENTE_ESCALADO_A_ROJO
+  EXPEDIENTE_EMERGENCIA_ACTIVADA
+  EXPEDIENTE_EMERGENCIA_SIN_CONTACTOS
+  EXPEDIENTE_COMITE_SLA_VENCIDO
+  // SPEC-227 (002-PI-128): export CSV pseudonimizado del historial de recomendaciones.
+  RECOMENDACIONES_EXPORT_CSV
+  // SPEC-224 (002-PI-125): ciclo de vida y promoción de reglas de recomendación (panel admin).
+  REGLA_CREADA
+  REGLA_ACTUALIZADA
+  REGLA_ACTIVADA
+  REGLA_DESACTIVADA
+  REGLA_PROMOVIDA_EJECUTA
+  REGLA_REVERTIDA_RECOMIENDA
+  REGLA_SQL_TEST
+  // SPEC-226 (002-PI-mega-cola): trazabilidad de acciones automáticas de reglas EJECUTA.
+  ANALISIS_ACCION_EJECUTADA
+  ANALISIS_ACCION_FALLIDA
+  ANALISIS_ACCION_REVERTIDA
 }
 
 enum TipoPeriodoServicio {
@@ -530,6 +563,12 @@ model Usuario {
   recomendacionesResueltas       Recomendacion[]
   anomaliasResueltas             Anomalia[]
   digestsSemanal                 DigestSemanal[]
+  // SPEC-238 (002-PI-mega-cola): aclaraciones respondidas por el miembro del comité.
+  aclaracionesRespondidas        AclaracionExpediente[]
+  // SPEC-239 (002-PI-mega-cola): contactos de emergencia administrados por el padre.
+  contactosEmergencia            ContactoEmergencia[]
+  // SPEC-224 (002-PI-125): versiones de reglas de recomendación cambiadas por el admin.
+  reglasHistorialCambiadas       ReglaRecomendacionHistorial[]
 
   @@index([email])
   @@index([rol])
@@ -2167,12 +2206,19 @@ model Expediente {
   patrones               PatronExpediente[]
   expedienteAnterior     Expediente?          @relation("ExpedienteRelacionado", fields: [expedienteRelacionadoAnteriorId], references: [id])
   expedientesPosteriores Expediente[]         @relation("ExpedienteRelacionado")
+  // SPEC-238 (002-PI-mega-cola): aclaración padre-comité (máx. una por expediente).
+  aclaracion             AclaracionExpediente?
+  // SPEC-239 (002-PI-mega-cola): SLA efectivo y marca de escalamiento a ROJO.
+  slaEfectivoHoras       Int?
+  fechaEscaladoRojoEn    DateTime?            @db.Timestamptz(6)
 
   @@index([padreUsuarioId, estado])
   @@index([identificadorReportado])
   @@index([estado, updatedAt(sort: Desc)])
   // SPEC-236 (002-PI-mega-cola): barridos del worker (auto-cierre por inactividad, SLA).
   @@index([estado, ultimoEventoEn])
+  // SPEC-239 (002-PI-mega-cola): vigilancia del SLA 12h de expedientes ROJO.
+  @@index([scoreGravedadActual, estado, fechaEscaladoRojoEn])
 }
 
 // SPEC-230 (002-PI-130): evento dentro de un expediente padre.
@@ -2226,6 +2272,8 @@ model InformeConsolidado {
 
   expediente  Expediente @relation(fields: [expedienteId], references: [id])
   generadoPor Usuario?   @relation(fields: [generadoPorId], references: [id])
+  // SPEC-238 (002-PI-mega-cola): aclaraciones vinculadas a este informe.
+  aclaraciones AclaracionExpediente[]
 
   @@unique([expedienteId, versionSecuencial])
   @@index([expedienteId, createdAt(sort: Desc)])
@@ -2490,6 +2538,9 @@ model ReglaRecomendacion {
 
   creadaPor       Usuario         @relation(fields: [creadaPorAdminId], references: [id])
   recomendaciones Recomendacion[]
+  // SPEC-224 (002-PI-125): versionado auditable; historial de snapshots previos.
+  version                Int                            @default(1)
+  historial              ReglaRecomendacionHistorial[]
 
   @@index([activa, prioridad(sort: Desc)])
   @@map("reglas_recomendacion")
@@ -2520,6 +2571,8 @@ model Recomendacion {
 
   regla       ReglaRecomendacion @relation(fields: [reglaId], references: [id])
   resueltaPor Usuario?           @relation(fields: [resueltaPorAdminId], references: [id])
+  // SPEC-226 (002-PI-mega-cola): trazabilidad de acciones ejecutadas (aditivo).
+  ejecuciones EjecucionAccion[]
 
   @@index([estado, prioridad(sort: Desc), generadaEn(sort: Desc)])
   @@index([sujetoId])
@@ -2565,5 +2618,138 @@ model Anomalia {
 
   @@index([tipo, detectadaEn(sort: Desc)])
   @@index([severidad, detectadaEn(sort: Desc)])
+  // SPEC-225: acelera la deduplicación por anomalía abierta (resueltaEn IS NULL).
+  @@index([resueltaEn])
   @@map("anomalias")
+}
+
+// SPEC-238 (002-PI-mega-cola): aclaración padre-comité (1 iteración máx).
+// El padre pide UNA aclaración antes de aprobar; el comité responde y el
+// expediente vuelve a EN_APROBACION_PADRE. Si el comité no responde dentro del
+// SLA (padre.comite.sla_horas_normal), el worker la cierra forzosamente.
+// `estado` es String (no enum) según brief §7.4: PENDIENTE | RESPONDIDA |
+// CERRADA_FORZOSAMENTE. NUNCA se loguean solicitudTexto/respuestaTexto.
+model AclaracionExpediente {
+  id                   String    @id @default(cuid())
+  expedienteId         String    @unique
+  informeConsolidadoId String
+  solicitadaEn         DateTime  @default(now()) @db.Timestamptz(6)
+  solicitudTexto       String    @db.Text
+  respondidaEn         DateTime? @db.Timestamptz(6)
+  respondidaPor        String?
+  respuestaTexto       String?   @db.Text
+  estado               String
+  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
+
+  expediente           Expediente         @relation(fields: [expedienteId], references: [id])
+  informeConsolidado   InformeConsolidado @relation(fields: [informeConsolidadoId], references: [id])
+  respondidaPorUsuario Usuario?           @relation(fields: [respondidaPor], references: [id])
+
+  @@index([expedienteId])
+  @@index([informeConsolidadoId])
+  @@index([estado])
+  @@index([solicitadaEn])
+  @@map("aclaracion_expediente")
+}
+
+// SPEC-239 (002-PI-mega-cola): relación del contacto de emergencia con el menor.
+enum RelacionContactoEmergencia {
+  MADRE
+  PADRE
+  TUTOR
+  HERMANO
+  OTRO
+}
+
+// SPEC-239 (002-PI-mega-cola): contacto de emergencia administrado por el padre.
+// El comité solo los lee (activos, por prioridad) para disparar la notificación
+// urgente al activar la emergencia de un expediente ROJO. Baja lógica (`activo`)
+// para conservar trazabilidad de activaciones históricas (D3). `telefono` se
+// valida E.164 en la capa API (Zod). NUNCA se loguea en AuditLog.
+model ContactoEmergencia {
+  id             String                     @id @default(cuid())
+  padreUsuarioId String
+  nombre         String
+  relacion       RelacionContactoEmergencia
+  telefono       String
+  email          String?
+  prioridad      Int
+  activo         Boolean                    @default(true)
+  createdAt      DateTime                   @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime                   @updatedAt @db.Timestamptz(6)
+
+  padre Usuario @relation(fields: [padreUsuarioId], references: [id])
+
+  @@index([padreUsuarioId, prioridad])
+  @@map("contactos_emergencia")
+}
+
+// SPEC-224 (002-PI-125): versionado auditable de reglas de recomendación.
+// Snapshot JSON completo del estado ANTERIOR de la regla; se inserta en la
+// misma transacción que el update (atomicidad). Solo configuración de reglas
+// (SQL, plantillas, umbrales): nunca datos de reportes ni de personas.
+model ReglaRecomendacionHistorial {
+  id                 String   @id @default(cuid())
+  reglaId            String
+  version            Int
+  snapshot           Json
+  motivo             String
+  cambiadoPorAdminId String
+  creadoEn           DateTime @default(now()) @db.Timestamptz(6)
+
+  regla       ReglaRecomendacion @relation(fields: [reglaId], references: [id])
+  cambiadoPor Usuario            @relation(fields: [cambiadoPorAdminId], references: [id])
+
+  @@unique([reglaId, version])
+  @@index([reglaId, creadoEn(sort: Desc)])
+  @@map("regla_recomendacion_historial")
+}
+
+// ── SPEC-226 (002-PI-mega-cola): ejecución de acciones automáticas ──
+// Trazabilidad y rollback de cada acción disparada por una regla en modo
+// EJECUTA (o aplicada manualmente por un admin). `parametros` es snapshot
+// deliberado: si la regla se edita después, la ejecución histórica conserva
+// con qué parámetros actuó. `resultado` guarda solo ids de dominio (bono,
+// notificaciones programadas, operador): nunca textos de reportes ni PII.
+enum TipoAccionEjecutable {
+  CREAR_BONO
+  ENVIAR_NOTIFICACION
+  ASIGNAR_OPERADOR
+  CREAR_ALERTA
+}
+
+enum EstadoEjecucion {
+  EJECUTADA
+  REVERTIDA
+  FALLIDA
+}
+
+enum OrigenEjecucion {
+  AUTOMATICA
+  MANUAL_ADMIN
+}
+
+model EjecucionAccion {
+  id                  String               @id @default(cuid())
+  recomendacionId     String
+  reglaId             String
+  tipoAccion          TipoAccionEjecutable
+  parametros          Json
+  estado              EstadoEjecucion
+  resultado           Json?
+  motivoFallo         String?
+  origenEjecucion     OrigenEjecucion
+  ejecutadaPorAdminId String?
+  ejecutadaEn         DateTime             @default(now()) @db.Timestamptz(6)
+  revertidaEn         DateTime?            @db.Timestamptz(6)
+  revertidaPorAdminId String?
+  motivoReversion     String?
+  createdAt           DateTime             @default(now()) @db.Timestamptz(6)
+
+  recomendacion Recomendacion @relation(fields: [recomendacionId], references: [id])
+
+  @@index([recomendacionId])
+  @@index([reglaId, ejecutadaEn])
+  @@index([estado, ejecutadaEn])
+  @@map("ejecuciones_accion")
 }
