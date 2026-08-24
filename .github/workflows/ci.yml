@@ -148,6 +148,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
       - uses: actions/upload-artifact@v4
+        # Sube el blob incluso si el shard falló: el job agregador mergea los 4 y
+        # reporta los tests fallidos con detalle (y el ratchet se evalúa sobre la
+        # suite completa cuando todo va verde). Sin esto, un shard rojo dejaba al
+        # agregador sin blobs y fallaba por umbrales parciales (ruido).
+        if: ${{ !cancelled() }}
         with:
           name: coverage-blob-${{ matrix.shard }}
           path: 002-2026-PROTECCION-INFANTIL/blobs/

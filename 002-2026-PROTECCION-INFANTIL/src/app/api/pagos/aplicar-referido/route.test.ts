@@ -194,7 +194,8 @@ describe("POST /api/pagos/aplicar-referido", () => {
         expect(json.error.code).toBe("referido_ya_registrado");
     });
 
-    it("rechaza cuando el referidor llegó al tope anual de exitosos", async () => {
+    // Sembrar el tope anual (5 exitosos + fixtures) supera los 5s en CI (5.7s observado).
+    it("rechaza cuando el referidor llegó al tope anual de exitosos", { timeout: 30_000 }, async () => {
         const repo = new PagosRepository();
         const referidor = await crearSuscripcionPadre(`tope-ref-${Date.now()}@test.co`, {
             codigoReferidoPropio: "PI-PADRE-E5F6G7H8",
