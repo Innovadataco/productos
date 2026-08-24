@@ -240,6 +240,18 @@ enum AccionAudit {
   // SPEC-203 (002-PI-100): auditoría de preferencias y lectura de notificaciones del usuario final.
   NOTIFICACION_PREFERENCIA_ACTUALIZADA
   NOTIFICACION_USUARIO_LEIDA
+  // SPEC-213 (002-PI-113): transición automática de estado de suscripción (worker de vigencia).
+  SUSCRIPCION_TRANSICION_AUTOMATICA
+  // SPEC-220 (002-PI-121): purga de retención de snapshots de score de valor.
+  ANALISIS_SCORE_PURGA
+  // SPEC-236 (002-PI-mega-cola): ciclo de vida del motor de estados del expediente padre.
+  EXPEDIENTE_TRANSICION_ESTADO
+  EXPEDIENTE_RETENIDO
+  EXPEDIENTE_SLA_VENCIDO
+  EXPEDIENTE_GRAVEDAD_SUBIO_A_ROJO
+  // SPEC-211 (002-PI-111): renovación reportada por el cliente y cancelación de su suscripción.
+  PAGO_REPORTADO
+  SUSCRIPCION_CANCELADA
 }
 
 enum TipoPeriodoServicio {
@@ -501,6 +513,11 @@ model Usuario {
   pagosAutorizados             Pago[]                     @relation("PagosAutorizados")
   referidosRevisados           CodigoReferidoUso[]        @relation("ReferidosRevisados")
   tasasIngresadas              TasaCambio[]               @relation("TasasIngresadas")
+  // SPEC-220 (002-PI-121): dominio Análisis (reglas, recomendaciones, anomalías, digest).
+  reglasRecomendacionCreadas     ReglaRecomendacion[]
+  recomendacionesResueltas       Recomendacion[]
+  anomaliasResueltas             Anomalia[]
+  digestsSemanal                 DigestSemanal[]
 
   @@index([email])
   @@index([rol])
@@ -751,9 +768,14 @@ model Suscripcion {
   bonosAplicados        BonoAplicado[]
   referidosCodigoPropio CodigoReferidoUso[] @relation("CodigoPropio")
   referidosUsados       CodigoReferidoUso[] @relation("Referida")
+  // SPEC-220 (002-PI-121): snapshots mensuales del score de valor.
+  scoreClientes         ScoreCliente[]
 
   @@index([estado, fechaFin])
   @@index([tipoTitular, estado])
+  // SPEC-213 (002-PI-113): índices del worker de vigencia (activas por vencer + freemium; en gracia por cortar).
+  @@index([estado, fechaFin, esFreemium])
+  @@index([estado, fechaCorteProgramado])
 }
 
 model Pago {
@@ -780,6 +802,8 @@ model Pago {
   montoReembolsoUSD     Float?
   motivoReembolso       String?
   referenciaReembolso   String?
+  // SPEC-211 (002-PI-111): notas opcionales del cliente al reportar la renovación.
+  notasCliente          String?
   createdAt             DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime     @updatedAt @db.Timestamptz(6)
 
@@ -2127,6 +2151,8 @@ model Expediente {
   @@index([padreUsuarioId, estado])
   @@index([identificadorReportado])
   @@index([estado, updatedAt(sort: Desc)])
+  // SPEC-236 (002-PI-mega-cola): barridos del worker (auto-cierre por inactividad, SLA).
+  @@index([estado, ultimoEventoEn])
 }
 
 // SPEC-230 (002-PI-130): evento dentro de un expediente padre.
@@ -2369,4 +2395,147 @@ model NotificacionContactoBloqueado {
 
   @@index([email])
   @@map("notificacion_contactos_bloqueados")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPEC-220 (002-PI-121): dominio Análisis dinero-vs-valor. Score de valor por
+// cliente (snapshot mensual con pesos congelados) + tablas base que consumen
+// SPEC-221 (motor de reglas), SPEC-223 (digest) y SPEC-225 (anomalías).
+// Sin PII por construcción: conteos, pesos, plantillas y metadatos; nunca texto
+// de reportes ni datos de menores.
+
+enum ModoRegla {
+  RECOMIENDA
+  EJECUTA
+}
+
+enum EstadoRecomendacion {
+  PENDIENTE
+  APLICADA
+  IGNORADA
+  EXPIRADA
+}
+
+// SPEC-220 (FR-001): snapshot mensual del score de valor de una suscripción.
+// `periodo` = "YYYY-MM" en mes calendario America/Bogota. Los `peso*` son el
+// snapshot de los pesos usados en el cálculo (auditoría del histórico).
+model ScoreCliente {
+  id                 String   @id @default(cuid())
+  suscripcionId      String
+  periodo            String // "YYYY-MM" mes calendario America/Bogota
+  componenteReportes Int      @default(0)
+  componenteCasos    Int      @default(0)
+  componenteAlertas  Int      @default(0)
+  componenteSesiones Int      @default(0)
+  pesoReportes       Float
+  pesoCasos          Float
+  pesoAlertas        Float
+  pesoSesiones       Float
+  scoreTotal         Float
+  percentilEnCohorte Float?
+  calculadoEn        DateTime @default(now()) @db.Timestamptz(6)
+
+  suscripcion Suscripcion @relation(fields: [suscripcionId], references: [id], onDelete: Cascade)
+
+  @@unique([suscripcionId, periodo])
+  @@index([periodo, scoreTotal(sort: Desc)])
+  @@map("score_clientes")
+}
+
+// SPEC-220 (FR-002): definición de una regla de recomendación. La lógica del
+// motor corresponde a SPEC-221/224; aquí solo vive la estructura.
+model ReglaRecomendacion {
+  id                     String    @id @default(cuid())
+  clave                  String    @unique // ej: "vencimiento.T_menos_7"
+  nombre                 String
+  descripcion            String
+  categoria              String // "renovacion" | "churn" | "crecimiento" | "anomalia"
+  sqlQuery               String
+  plantillaRecomendacion String // markdown con {{variables}}
+  modo                   ModoRegla @default(RECOMIENDA)
+  accionEjecutable       String?
+  accionParametros       Json?
+  prioridad              Int       @default(50) // 0=baja, 100=alta
+  umbralMinimo           Float?
+  frecuenciaMin          Int       @default(60)
+  activa                 Boolean   @default(true)
+  creadaPorAdminId       String
+  createdAt              DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(6)
+
+  creadaPor       Usuario         @relation(fields: [creadaPorAdminId], references: [id])
+  recomendaciones Recomendacion[]
+
+  @@index([activa, prioridad(sort: Desc)])
+  @@map("reglas_recomendacion")
+}
+
+// SPEC-220 (FR-003): instancia generada de una regla. `sujetoTipo`/`sujetoId`
+// son polimórficos sin FK (patrón deliberado del brief §5.4; la integridad la
+// garantiza la capa de servicio en las SPECs consumidoras).
+model Recomendacion {
+  id                  String              @id @default(cuid())
+  reglaId             String
+  titulo              String
+  descripcion         String
+  categoria           String
+  prioridad           Int
+  sujetoTipo          String? // "Suscripcion" | "Colegio" | "Usuario" (polimórfico, sin FK)
+  sujetoId            String?
+  datosContexto       Json
+  accionSugerida      String?
+  accionParametros    Json?
+  estado              EstadoRecomendacion @default(PENDIENTE)
+  generadaEn          DateTime            @default(now()) @db.Timestamptz(6)
+  resueltaEn          DateTime?           @db.Timestamptz(6)
+  resueltaPorAdminId  String?
+  motivoResolucion    String?
+  expiraEn            DateTime            @db.Timestamptz(6)
+  ejecutadaAutomatica Boolean             @default(false)
+
+  regla       ReglaRecomendacion @relation(fields: [reglaId], references: [id])
+  resueltaPor Usuario?           @relation(fields: [resueltaPorAdminId], references: [id])
+
+  @@index([estado, prioridad(sort: Desc), generadaEn(sort: Desc)])
+  @@index([sujetoId])
+  @@map("recomendaciones")
+}
+
+// SPEC-220 (FR-004): resumen semanal generado para un admin. Lógica en SPEC-223.
+model DigestSemanal {
+  id             String    @id @default(cuid())
+  periodo        String // "2026-W34" ISO week America/Bogota
+  destinatarioId String
+  generadoEn     DateTime  @default(now()) @db.Timestamptz(6)
+  enviadoEn      DateTime? @db.Timestamptz(6)
+  top5Decisiones Json
+  kpisSemana     Json
+  kpisVsPrevia   Json
+  enlacePanel    String
+  estado         String // "generado" | "enviado" | "fallido" (valores cerrados, patrón AlertaColegio.estado)
+
+  destinatario Usuario @relation(fields: [destinatarioId], references: [id])
+
+  @@unique([periodo, destinatarioId])
+  @@map("digest_semanal")
+}
+
+// SPEC-220 (FR-005): anomalía detectada por reglas. Lógica en SPEC-225.
+model Anomalia {
+  id                 String    @id @default(cuid())
+  tipo               String // "PAGO_ATRASADO_CLIENTE_HISTORICAMENTE_PUNTUAL" | "CRECIMIENTO_ANOMALO_CIUDAD" | "USO_CAIDO_ABRUPTO" | ...
+  sujetoTipo         String?
+  sujetoId           String?
+  severidad          String // "BAJA" | "MEDIA" | "ALTA" (valores cerrados)
+  descripcion        String
+  datosContexto      Json
+  detectadaEn        DateTime  @default(now()) @db.Timestamptz(6)
+  resueltaEn         DateTime? @db.Timestamptz(6)
+  resueltaPorAdminId String?
+
+  resueltaPor Usuario? @relation(fields: [resueltaPorAdminId], references: [id])
+
+  @@index([tipo, detectadaEn(sort: Desc)])
+  @@index([severidad, detectadaEn(sort: Desc)])
+  @@map("anomalias")
 }

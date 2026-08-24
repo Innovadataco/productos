@@ -19,6 +19,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/AdminReporteExpediente.test.tsx",
     "src/components/modules/admin/UsuariosSubNav.test.tsx",
     "src/components/modules/admin/tables/tables.test.tsx",
+    // SPEC-233: búsqueda por identificador (padre + admin)
+    "src/components/modules/admin/IdentificadorAgregadoAnonimo.test.tsx",
+    "src/components/modules/admin/IdentificadorExpedientesAnonimos.test.tsx",
+    "src/components/modules/padre/IdentificadorBusquedaClient.test.tsx",
     "src/components/modules/ComiteBandeja.test.tsx",
     "src/components/modules/ComiteSolicitudDetalle.test.tsx",
     "src/components/modules/ConsultaEnriquecidaClient.test.tsx",
@@ -103,6 +107,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/ai/pii-patterns.test.ts",
     "src/lib/ai/rubrica-config.test.ts",
     "src/lib/ai/rubrica.test.ts",
+    // SPEC-220: helpers puros de períodos Bogotá del dominio Análisis.
+    "src/lib/analisis/periodos.test.ts",
+    // SPEC-220: card presentacional del score de valor (sin BD).
+    "src/components/modules/pagos/ScoreClienteCard.test.tsx",
     // 002-PI-068: fuente-reporte-salt.test.ts importa fuente-reporte.ts que carga
     // repositorios Prisma al evaluarse; lo movemos a integration.
     "src/lib/api-handler.test.ts",
@@ -123,7 +131,11 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/errors.test.ts",
     "src/lib/expediente/analisis-interno.test.ts",
     "src/lib/expediente/expediente-forense.test.ts",
+    // SPEC-236: whitelist pura de la máquina de estados (sin BD).
+    "src/lib/expediente/estados/transiciones.test.ts",
     "src/lib/expediente/mensaje-padre.test.ts",
+    // SPEC-236: helpers puros de fechas del motor (America/Bogota, sin BD).
+    "src/lib/expediente/motor/fechas-motor.test.ts",
     "src/lib/expediente/pdf-denuncia.test.ts",
     "src/lib/fetch-retry.test.ts",
     "src/lib/format/fecha.test.ts",
@@ -142,6 +154,12 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/pagos/bono-aplicacion.service.test.ts",
     "src/lib/pagos/pagos-calculos.service.test.ts",
     "src/lib/pagos/tasas.test.ts",
+    // SPEC-213 (002-PI-113): motor de vigencia de pagos.
+    "src/lib/pagos/vigencia.service.test.ts",
+    // SPEC-211 (002-PI-111): vistas de cliente del módulo de pagos.
+    "src/lib/pagos/renovacion-calculos.test.ts",
+    "src/lib/pagos/comprobante-storage.test.ts",
+    "src/components/modules/cliente/suscripcion/SuscripcionResumen.test.tsx",
     "src/lib/plataforma.test.ts",
     "src/lib/proxy.test.ts",
     "src/lib/queue.test.ts",

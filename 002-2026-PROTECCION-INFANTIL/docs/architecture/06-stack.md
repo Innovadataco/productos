@@ -98,6 +98,7 @@ Comando por defecto: `["node", "server.js"]`.
 | --- | --- | --- | --- |
 | app | build local (Dockerfile) | `pi-app-dev` | 5005:3000 |
 | db | `pgvector/pgvector:pg16` | — | 5433:5432 |
+| pi-vigencia | build local (Dockerfile) | `pi-vigencia-dev` | — |
 
 ### Producción (`docker-compose.prod.yml`)
 
@@ -106,7 +107,10 @@ Comando por defecto: `["node", "server.js"]`.
 | app | `pi-app:${PI_APP_TAG:-latest}` (+ build local) | `pi-app` | — |
 | db | `pgvector/pgvector:pg16` | `pi-db` | — |
 | monitor | `pi-app:${PI_APP_TAG:-latest}` | `pi-monitor` | — |
+| pi-analisis-score | `pi-app:${PI_APP_TAG:-latest}` | `pi-analisis-score` | — |
+| pi-expediente-motor | `pi-app:${PI_APP_TAG:-latest}` | `pi-expediente-motor` | — |
 | pi-notificaciones | `pi-app:${PI_APP_TAG:-latest}` | `pi-notificaciones` | — |
 | pi-senal-comunitaria | `pi-app:${PI_APP_TAG:-latest}` | `pi-senal-comunitaria` | — |
+| pi-vigencia | `pi-app:${PI_APP_TAG:-latest}` | `pi-vigencia` | — |
 | simulador-abuso | `pi-app:${PI_APP_TAG:-latest}` | `pi-simulador-abuso` | — |
 | worker | `pi-app:${PI_APP_TAG:-latest}` | `pi-worker` | — |

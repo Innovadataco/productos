@@ -104,6 +104,181 @@ async function seedParametrosSenalComunitaria() {
     console.log("Parámetro padre.senal_comunitaria.refresh_min (SPEC-234) listo");
 }
 
+// ── SPEC-236 (002-PI-mega-cola): parámetros del motor de expediente + 11 eventos
+// y plantillas de Motor Notif. Idempotente (patrón I-100 de SPEC-201: upsert con
+// update explícito para propagar cambios de default definidos en código).
+// Nota: `padre.expediente.consolidacion_min_reportes`, `padre.expediente.auto_cierre_meses`
+// y los SLA `padre.comite.sla_horas_*` ya los siembra SPEC-230 (seedParametrosPadre);
+// aquí solo se añaden los parámetros nuevos de esta spec.
+async function seedMotorExpediente() {
+    const paramsMotor = [
+        { clave: "padre.expediente.motor.tick_min", valor: "15", descripcion: "Minutos entre ticks del worker del motor de expediente" },
+        { clave: "padre.expediente.retencion_cerrados_meses", valor: "24", descripcion: "Meses tras el cierre para purgar textos del expediente ([retenido])" },
+    ];
+    for (const p of paramsMotor) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, descripcion: p.descripcion },
+            create: {
+                clave: p.clave,
+                valor: p.valor,
+                tipo: TipoParametro.INTEGER,
+                categoria: CategoriaParametro.SYSTEM,
+                esPublico: false,
+                descripcion: p.descripcion,
+            },
+        });
+    }
+    console.log("Parámetros del motor de expediente (SPEC-236) listos");
+
+    // 11 eventos del ciclo de vida del expediente (FR-018) con su audiencia.
+    type EventoExpedienteSeed = {
+        evento: string;
+        roles: string[];
+        asuntoEmail: string;
+        cuerpoEmail: string;
+        cuerpoInApp: string;
+    };
+    const eventosSeed: EventoExpedienteSeed[] = [
+        {
+            evento: "expediente.creado",
+            roles: ["PADRE"],
+            asuntoEmail: "Tu expediente fue creado",
+            cuerpoEmail: "Hola,\n\nSe creó un expediente para dar seguimiento a tus reportes. Puedes verlo en {{urlExpediente}}.",
+            cuerpoInApp: "Se creó un expediente para dar seguimiento a tus reportes.",
+        },
+        {
+            evento: "expediente.evento.agregado",
+            roles: ["PADRE"],
+            asuntoEmail: "Se agregó un evento a tu expediente",
+            cuerpoEmail: "Hola,\n\nSe registró un nuevo evento en tu expediente. Revísalo en {{urlExpediente}}.",
+            cuerpoInApp: "Se registró un nuevo evento en tu expediente.",
+        },
+        {
+            evento: "expediente.gravedad.subio_a_rojo",
+            roles: ["PADRE", "COMITE_VALIDACION"],
+            asuntoEmail: "Cambio de prioridad en un expediente",
+            cuerpoEmail: "Hola,\n\nLa prioridad del expediente {{expedienteId}} subió a {{scoreGravedadActual}}. Detalle en {{urlExpediente}}.",
+            cuerpoInApp: "La prioridad del expediente {{expedienteId}} subió a {{scoreGravedadActual}}.",
+        },
+        {
+            evento: "expediente.consolidacion.solicitada",
+            roles: ["COMITE_VALIDACION"],
+            asuntoEmail: "Expediente listo para consolidación",
+            cuerpoEmail: "Hola,\n\nEl expediente {{expedienteId}} pasó a estado {{estadoDestino}} y requiere revisión del comité.",
+            cuerpoInApp: "El expediente {{expedienteId}} requiere revisión del comité.",
+        },
+        {
+            evento: "expediente.comite.aprobo",
+            roles: ["PADRE"],
+            asuntoEmail: "El comité aprobó el informe de tu expediente",
+            cuerpoEmail: "Hola,\n\nEl comité aprobó el informe consolidado de tu expediente. Ingresa a {{urlExpediente}} para revisarlo.",
+            cuerpoInApp: "El comité aprobó el informe consolidado de tu expediente.",
+        },
+        {
+            evento: "expediente.aclaracion.solicitada",
+            roles: ["PADRE"],
+            asuntoEmail: "Se solicitó una aclaración sobre tu expediente",
+            cuerpoEmail: "Hola,\n\nEl comité solicitó una aclaración sobre tu expediente. Motivo: {{motivo}}. Responde en {{urlExpediente}}.",
+            cuerpoInApp: "El comité solicitó una aclaración sobre tu expediente.",
+        },
+        {
+            evento: "expediente.aclaracion.respondida",
+            roles: ["COMITE_VALIDACION"],
+            asuntoEmail: "Aclaración respondida",
+            cuerpoEmail: "Hola,\n\nEl titular respondió la aclaración del expediente {{expedienteId}}. El caso vuelve a estado {{estadoDestino}}.",
+            cuerpoInApp: "El titular respondió la aclaración del expediente {{expedienteId}}.",
+        },
+        {
+            evento: "expediente.cerrado",
+            roles: ["PADRE"],
+            asuntoEmail: "Tu expediente fue cerrado",
+            cuerpoEmail: "Hola,\n\nTu expediente pasó a estado cerrado. Motivo: {{motivo}}. Puedes consultarlo en {{urlExpediente}}.",
+            cuerpoInApp: "Tu expediente pasó a estado cerrado.",
+        },
+        {
+            evento: "expediente.escalado",
+            roles: ["PADRE", "COMITE_VALIDACION"],
+            asuntoEmail: "Un expediente fue escalado",
+            cuerpoEmail: "Hola,\n\nEl expediente {{expedienteId}} pasó a estado escalado a solicitud del titular. Detalle en {{urlExpediente}}.",
+            cuerpoInApp: "El expediente {{expedienteId}} pasó a estado escalado.",
+        },
+        {
+            evento: "expediente.auto_cerrado_inactividad",
+            roles: ["PADRE"],
+            asuntoEmail: "Tu expediente se cerró por inactividad",
+            cuerpoEmail: "Hola,\n\nTu expediente se cerró automáticamente por inactividad prolongada. Si lo necesitas, puedes solicitar su reapertura desde {{urlExpediente}}.",
+            cuerpoInApp: "Tu expediente se cerró por inactividad. Puedes solicitar su reapertura.",
+        },
+        {
+            evento: "expediente.comite.sla_vencido",
+            roles: ["COMITE_VALIDACION"],
+            asuntoEmail: "SLA de revisión de comité vencido",
+            cuerpoEmail: "Hola,\n\nEl expediente {{expedienteId}} superó el tiempo límite de revisión del comité (límite: {{fechaLimite}}). Prioridad actual: {{scoreGravedadActual}}.",
+            cuerpoInApp: "El expediente {{expedienteId}} superó el SLA de revisión del comité.",
+        },
+    ];
+
+    for (const e of eventosSeed) {
+        const plantillas = [
+            { clave: `${e.evento}.email`, canal: "EMAIL" as const, asunto: e.asuntoEmail, cuerpoMarkdown: e.cuerpoEmail },
+            { clave: `${e.evento}.in_app`, canal: "IN_APP" as const, asunto: undefined, cuerpoMarkdown: e.cuerpoInApp },
+        ];
+        for (const pl of plantillas) {
+            await prisma.notificacionPlantilla.upsert({
+                where: { clave: pl.clave },
+                update: {
+                    canal: pl.canal,
+                    asunto: pl.asunto ?? null,
+                    cuerpoMarkdown: pl.cuerpoMarkdown,
+                    variablesSchema: { type: "object", properties: {} },
+                    activa: true,
+                },
+                create: {
+                    clave: pl.clave,
+                    canal: pl.canal,
+                    asunto: pl.asunto ?? null,
+                    cuerpoMarkdown: pl.cuerpoMarkdown,
+                    variablesSchema: { type: "object", properties: {} },
+                    activa: true,
+                },
+            });
+        }
+
+        for (const rol of e.roles) {
+            for (const canal of ["EMAIL", "IN_APP"] as const) {
+                const existente = await prisma.notificacionRegla.findFirst({
+                    where: { evento: e.evento, rol, canal },
+                    orderBy: { createdAt: "desc" },
+                });
+                const data = {
+                    evento: e.evento,
+                    rol,
+                    offset: "+0m",
+                    canal,
+                    plantillaClave: `${e.evento}.${canal.toLowerCase()}`,
+                    obligatoria: false,
+                    activa: true,
+                };
+                if (existente) {
+                    await prisma.notificacionRegla.update({
+                        where: { id: existente.id },
+                        data: {
+                            offset: data.offset,
+                            plantillaClave: data.plantillaClave,
+                            obligatoria: data.obligatoria,
+                            activa: true,
+                        },
+                    });
+                } else {
+                    await prisma.notificacionRegla.create({ data });
+                }
+            }
+        }
+    }
+    console.log("Eventos y plantillas del motor de expediente (SPEC-236) listos");
+}
+
 // SPEC-235 (002-PI-135): guías de acción v1 para el flujo padre.
 // Idempotente: solo crea una guía ACTIVA v1 si la categoría aún no tiene ninguna.
 // Si un admin ya creó/editó una guía, el seed la respeta (no pisa).
@@ -395,6 +570,56 @@ async function seedParametrosPagos() {
         });
     }
     console.log(`[SEED] ${pagosParams.length} parámetros pagos.* listos`);
+}
+
+// ── SPEC-220 (002-PI-121): parámetros del dominio Análisis dinero-vs-valor ──
+// 13 claves `analisis.*` (12 del brief §5.7 + retención de snapshots).
+// Idempotente: `update: {}` — el seed nunca pisa el tuning hecho por el admin
+// (pesos, umbrales y frecuencias son ajustables sin deploy).
+async function seedParametrosAnalisis() {
+    const analisisParams = [
+        { clave: "analisis.score.peso_reportes", valor: "3", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Peso del componente Reportes en el score de valor" },
+        { clave: "analisis.score.peso_casos", valor: "5", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Peso del componente Casos en el score de valor" },
+        { clave: "analisis.score.peso_alertas", valor: "2", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Peso del componente Alertas en el score de valor" },
+        { clave: "analisis.score.peso_sesiones", valor: "1", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Peso del componente Sesiones en el score de valor" },
+        { clave: "analisis.score.frecuencia_recalculo_horas", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Horas entre recálculos del score de valor (cron del worker)" },
+        { clave: "analisis.score.retencion_meses", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Meses de retención de snapshots de score antes de la purga (Ley 1581)" },
+        { clave: "analisis.recomendaciones.frecuencia_evaluacion_min", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Minutos entre evaluaciones del motor de reglas (SPEC-221)" },
+        { clave: "analisis.digest.dia_semana", valor: "1", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Día de la semana de envío del digest (1 = lunes)" },
+        { clave: "analisis.digest.hora_bogota", valor: "8", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Hora Bogotá de envío del digest semanal" },
+        { clave: "analisis.anomalias.crecimiento_pct_umbral", valor: "25", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "% de cambio que dispara anomalía de crecimiento (SPEC-225)" },
+        { clave: "analisis.anomalias.mora_dias_umbral_alta", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Días de mora para severidad ALTA (SPEC-225)" },
+        { clave: "analisis.anomalias.mora_dias_umbral_media", valor: "15", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Días de mora para severidad MEDIA (SPEC-225)" },
+    ];
+
+    for (const p of analisisParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    console.log(`[SEED] ${analisisParams.length} parámetros analisis.* listos`);
+}
+
+// ── SPEC-213 (002-PI-113): parámetro del motor de vigencia de pagos ──
+// Idempotente: `update: {}` — el seed nunca pisa la hora ajustada por el admin.
+// `pagos.vigencia.ultima_corrida` NO se siembra: la escribe el worker.
+async function seedParametrosVigenciaPagos() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "pagos.vigencia.hora_corrida" },
+        update: {},
+        create: {
+            clave: "pagos.vigencia.hora_corrida",
+            valor: "01:00",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion: "Hora diaria (HH:mm, America/Bogota) de la corrida del worker de vigencia de pagos",
+        },
+    });
+    console.log("[SEED] parámetro pagos.vigencia.hora_corrida listo");
 }
 
 async function main() {
@@ -2203,8 +2428,17 @@ async function main() {
     // ── Parámetros de señal comunitaria (SPEC-234) ─────────────────────────
     await seedParametrosSenalComunitaria();
 
+    // ── SPEC-220: parámetros del dominio Análisis (score, reglas, digest, anomalías) ──
+    await seedParametrosAnalisis();
+
+    // ── SPEC-213: hora de corrida del motor de vigencia de pagos ──
+    await seedParametrosVigenciaPagos();
+
     // ── Guías de acción v1 (SPEC-235) ──────────────────────────────────────
     await seedGuiasAccion(adminEmail);
+
+    // ── SPEC-236: parámetros + eventos/plantillas del motor de expediente ──
+    await seedMotorExpediente();
 
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
@@ -2212,7 +2446,7 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion, seedParametrosAnalisis, seedMotorExpediente };
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como
