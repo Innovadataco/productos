@@ -9,29 +9,29 @@
 
 ## Fase 2 — Verificación de dependencias UI
 
-- [ ] T003 [P1] Confirmar existencia de `ColegioSideNav` y layout `/dashboard/colegio/*`.
-- [ ] T004 [P1] Confirmar existencia de layout `/dashboard/padre/*` (SPEC-231) o documentar riesgo.
+- [x] T003 [P1] Confirmar existencia de `ColegioSideNav` y layout `/dashboard/colegio/*`.
+- [x] T004 [P1] Confirmar existencia de layout `/dashboard/padre/*` (SPEC-231) o documentar riesgo.
 
 ## Fase 3 — Backend
 
-- [ ] T005 [P1] Crear `GET /api/pagos/suscripcion`.
-- [ ] T006 [P1] Crear `POST /api/pagos/renovacion`.
-- [ ] T007 [P1] Crear `POST /api/pagos/suscripcion/cancelar`.
-- [ ] T008 [P1] Servicio de storage de comprobantes + SHA256.
-- [ ] T009 [P1] Tests de integración de endpoints.
+- [x] T005 [P1] Crear `GET /api/pagos/suscripcion`.
+- [x] T006 [P1] Crear `POST /api/pagos/renovacion`.
+- [x] T007 [P1] Crear `POST /api/pagos/suscripcion/cancelar`.
+- [x] T008 [P1] Servicio de storage de comprobantes + SHA256.
+- [x] T009 [P1] Tests de integración de endpoints (escritos; los corre el coordinador contra la BD compartida).
 
 ## Fase 4 — Frontend
 
-- [ ] T010 [P1] Crear componentes de los 7 bloques.
-- [ ] T011 [P1] Crear formulario de renovación con upload.
-- [ ] T012 [P1] Crear páginas rector y padre.
-- [ ] T013 [P1] Responsive y contraste AA.
+- [x] T010 [P1] Crear componentes de los 7 bloques.
+- [x] T011 [P1] Crear formulario de renovación con upload.
+- [x] T012 [P1] Crear páginas rector y padre.
+- [x] T013 [P1] Responsive y contraste AA.
 
 ## Fase 5 — Gate y cierre
 
-- [ ] T014 [P1] Gate local completo.
-- [ ] T015 [P1] Actualizar `specs/README.md` estado a IMPLEMENTADO.
-- [ ] T016 [P1] Redactar `cierre.md`.
+- [x] T014 [P1] Gate local (alcance subagente): `tsc --noEmit` VERDE, ESLint 0 errores, `tokens:check` VERDE, 47 tests unitarios VERDES. Pendiente para el coordinador: `npm run build`, tests de integración y `dev-restart.sh`.
+- [ ] T015 [P1] Actualizar `specs/README.md` estado a IMPLEMENTADO. *(lo hace el coordinador del mega-lote)*
+- [ ] T016 [P1] Redactar `cierre.md`. *(lo hace el coordinador del mega-lote)*
 
 ## Dependencias y orden
 

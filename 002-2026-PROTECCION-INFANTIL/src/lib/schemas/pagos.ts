@@ -74,3 +74,20 @@ export const pagosTasaManualBodySchema = z.object({
     tasa: z.coerce.number().positive(),
     motivoManual: z.string().min(10).max(500),
 });
+
+// SPEC-211 (002-PI-111): campos del formulario de renovación (multipart/form-data;
+// el archivo `comprobante` se valida aparte en el servicio).
+export const pagosRenovacionCamposSchema = z.object({
+    suscripcionId: z.string().min(1),
+    duracion: z.enum(["MES_1", "MES_2", "MES_3", "MES_6", "MES_12"]),
+    metodoDeclarado: z.enum(["TRANSFERENCIA", "NEQUI", "DAVIPLATA", "PSE_MANUAL", "EFECTIVO", "CHEQUE", "OTRO"]),
+    notas: z.string().trim().max(500).optional(),
+    codigoReferido: z.string().trim().max(50).optional(),
+    codigoBono: z.string().trim().max(100).optional(),
+});
+
+// SPEC-211 (002-PI-111): cancelación de la suscripción por el cliente.
+export const pagosCancelarSuscripcionBodySchema = z.object({
+    suscripcionId: z.string().min(1),
+    motivo: z.string().trim().max(500).optional(),
+});

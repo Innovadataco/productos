@@ -60,6 +60,8 @@ export const COLEGIO_NAV_ITEMS: NavItem[] = [
     },
     { href: "/dashboard/colegio/configuracion", label: "Configuración", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/auditoria", label: "Auditoría", modulo: "colegios_auditoria" },
+    // SPEC-211 (002-PI-111): vista de suscripción del rector (módulo Pagos).
+    { href: "/dashboard/colegio/suscripcion", label: "Suscripción", modulo: "colegios" },
 ];
 
 // SPEC-173 (FASE-C): menú reducido del rol COMITE_CONVIVENCIA (solo su bandeja).
