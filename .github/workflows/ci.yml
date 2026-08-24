@@ -20,8 +20,26 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Mega-lote 002-PI: skip de CI en commits doc-only (specs/**, docs/**, *.md).
+  # Un job skipped reporta conclusión "skipped", que GitHub trata como éxito en
+  # required checks (a diferencia de paths-ignore, que deja el check pendiente).
+  should-skip:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.detect.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - id: detect
+        run: |
+          files_changed=$(git diff --name-only HEAD^ HEAD || true)
+          code_files=$(echo "$files_changed" | grep -vE '(^002-2026-PROTECCION-INFANTIL/(docs|specs)/|^docs/|^specs/|\.md$)' || true)
+          if [ -z "$code_files" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
+
   verificaciones:
     runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
     defaults:
       run:
         working-directory: 002-2026-PROTECCION-INFANTIL
@@ -43,6 +61,8 @@ jobs:
 
   test-unit:
     runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
     defaults:
       run:
         working-directory: 002-2026-PROTECCION-INFANTIL
@@ -70,6 +90,15 @@ jobs:
 
   test-integration:
     runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
+    # Mega-lote 002-PI: shard 4 vías (~28min → ~7min por shard). Cada shard corre en
+    # su propio runner con su propio Postgres: no hay BD compartida entre shards.
+    # Los umbrales de cobertura se evalúan en el job agregador (test-integration-coverage).
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     defaults:
       run:
         working-directory: 002-2026-PROTECCION-INFANTIL
@@ -113,12 +142,60 @@ jobs:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
       - run: npx prisma generate
       # 002-PI-068: tests con base de datos y singleFork (mutex TestMutex).
-      - run: npm run test:integration
+      # Mega-lote: shard N/4. Umbrales de cobertura en 0 aquí (se evalúan al mergear
+      # los 4 blobs en test-integration-coverage); blob = resultados + cobertura.
+      - run: node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --shard=${{ matrix.shard }}/4 --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - uses: actions/upload-artifact@v4
+        # Sube el blob incluso si el shard falló: el job agregador mergea los 4 y
+        # reporta los tests fallidos con detalle (y el ratchet se evalúa sobre la
+        # suite completa cuando todo va verde). Sin esto, un shard rojo dejaba al
+        # agregador sin blobs y fallaba por umbrales parciales (ruido).
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-blob-${{ matrix.shard }}
+          path: 002-2026-PROTECCION-INFANTIL/blobs/
+          retention-days: 1
+
+  test-integration-coverage:
+    runs-on: ubuntu-latest
+    needs: [should-skip, test-integration]
+    # Agrega los 4 shards: re-reporta resultados (fallos de tests salen aquí con
+    # detalle) y aplica el ratchet de cobertura global de 002-PI-068.
+    if: ${{ needs.should-skip.outputs.skip != 'true' && !cancelled() }}
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - name: Generar .env.test (dummy, solo CI)
+        run: |
+          cat > .env.test <<'ENV_EOF'
+          DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
+          NEXT_PUBLIC_APP_URL=http://localhost:5005
+          OLLAMA_BASE_URL=http://localhost:11434
+          EMAIL_FROM=test@ci.local
+          ENV_EOF
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-blob-*
+          path: 002-2026-PROTECCION-INFANTIL/blobs
+          merge-multiple: true
+      - run: npx vitest run --config vitest.config.ts --mergeReports blobs --coverage.enabled --coverage.reporter=text
 
   journeys:
     runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
     defaults:
       run:
         working-directory: 002-2026-PROTECCION-INFANTIL
@@ -168,6 +245,8 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
     defaults:
       run:
         working-directory: 002-2026-PROTECCION-INFANTIL
@@ -227,7 +306,8 @@ jobs:
 
   gate:
     runs-on: ubuntu-latest
-    needs: [verificaciones, test-unit, test-integration, journeys, build]
+    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build]
+    if: needs.should-skip.outputs.skip != 'true'
     steps:
       - name: Gate passed
         run: echo "All checks passed"

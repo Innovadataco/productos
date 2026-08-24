@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { FileText, Layers } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { ComiteSolicitudDetalle } from "./ComiteSolicitudDetalle";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { formatearEnBogota, type ColorSla } from "@/lib/comite/sla";
 
 type Solicitud = {
     id: string;
@@ -17,7 +20,36 @@ type Solicitud = {
     comiteId?: string | null;
     // SPEC-139 (F5, ZEUS D-3): distintivo de reincidencia inter-ciudad (match).
     matchInterCiudad?: boolean;
+    // SPEC-237: SLA de la tarea (servidor, zona Bogotá).
+    sla?: SlaDto;
 };
+
+type SlaDto = {
+    fechaLimite: string;
+    color: ColorSla;
+    vencido: boolean;
+};
+
+// SPEC-237 (002-PI-mega-cola): fila de consolidación de expediente (FR-001).
+type ItemConsolidacion = {
+    id: string;
+    expedienteId: string;
+    tipo: "CONSOLIDACION_EXPEDIENTE";
+    estadoAprobacion: string;
+    identificadorPrincipal: string;
+    estadoExpediente: string;
+    categoriaDominante: string | null;
+    sla: SlaDto;
+    aprobacionesActuales: number;
+    aprobacionesRequeridas: number;
+    createdAt: string;
+};
+
+type TipoFiltro = "TODOS" | "REVISION_REPORTE" | "CONSOLIDACION_EXPEDIENTE";
+
+type FilaBandeja =
+    | { tipo: "REVISION_REPORTE"; clave: string; creadoEn: string; solicitud: Solicitud }
+    | { tipo: "CONSOLIDACION_EXPEDIENTE"; clave: string; creadoEn: string; consolidacion: ItemConsolidacion };
 
 type Paginacion = {
     page: number;
@@ -40,9 +72,46 @@ function estadoBadge(estado: Solicitud["estado"]) {
     }
 }
 
+// SPEC-237 (FR-003): badge distintivo por tipo de tarea (tokens, sin color crudo).
+function TipoBadge({ tipo }: { tipo: TipoFiltro }) {
+    const base = "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium";
+    if (tipo === "CONSOLIDACION_EXPEDIENTE") {
+        return (
+            <span className={`${base} bg-ambar/10 text-ambar`} data-testid="badge-consolidacion">
+                <Layers className="h-3 w-3" aria-hidden />
+                Consolidación
+            </span>
+        );
+    }
+    return (
+        <span className={`${base} bg-cielo/10 text-cielo`} data-testid="badge-revision">
+            <FileText className="h-3 w-3" aria-hidden />
+            Revisión
+        </span>
+    );
+}
+
+// SPEC-237 (002-PI-mega-cola): indicador de SLA con semáforo pino/ambar/rubi en Bogotá.
+function IndicadorSla({ sla }: { sla?: SlaDto | undefined }) {
+    if (!sla) return <span className="text-xs text-muted">—</span>;
+    const dotColor =
+        sla.color === "rubi" ? "bg-rubi" : sla.color === "ambar" ? "bg-ambar" : "bg-pino";
+    return (
+        <span className="inline-flex items-center gap-1.5" data-testid={`sla-${sla.color}`}>
+            <span className={`h-2.5 w-2.5 rounded-full ${dotColor}`} aria-hidden />
+            <span className="text-xs text-subtle">
+                {formatearEnBogota(new Date(sla.fechaLimite))}
+                {sla.vencido ? " · vencido" : ""}
+            </span>
+        </span>
+    );
+}
+
 export function ComiteBandeja() {
     const { user } = useAuth();
     const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+    const [consolidaciones, setConsolidaciones] = useState<ItemConsolidacion[]>([]);
+    const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>("TODOS");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [pagination, setPagination] = useState<Paginacion>({ page: 1, limit: 20, total: 0, totalPages: 0 });
@@ -71,9 +140,27 @@ export function ComiteBandeja() {
         }
     }, [pagination.page, pagination.limit]);
 
+    // SPEC-237: bandeja unificada — las consolidaciones llegan de su endpoint.
+    const fetchConsolidaciones = useCallback(async () => {
+        try {
+            const res = await fetch("/api/admin/comite/consolidacion?page=1&pageSize=50", {
+                credentials: "include",
+            });
+            if (!res.ok) return; // la tabla de solicitudes sigue funcionando
+            const json = await res.json();
+            setConsolidaciones(json.items || []);
+        } catch {
+            // Fail-open: las revisiones de reporte no se bloquean por esto.
+        }
+    }, []);
+
     useEffect(() => {
         fetchSolicitudes();
     }, [fetchSolicitudes]);
+
+    useEffect(() => {
+        fetchConsolidaciones();
+    }, [fetchConsolidaciones]);
 
     const handleVer = async (solicitud: Solicitud) => {
         if (solicitud.estado === "PENDIENTE") {
@@ -114,6 +201,26 @@ export function ComiteBandeja() {
         setPagination((p) => ({ ...p, page: newPage }));
     };
 
+    // SPEC-237 (FR-002): filtro por tipo de tarea sobre la bandeja unificada.
+    const filas: FilaBandeja[] = [
+        ...(tipoFiltro !== "CONSOLIDACION_EXPEDIENTE"
+            ? solicitudes.map<FilaBandeja>((s) => ({
+                tipo: "REVISION_REPORTE",
+                clave: `rev-${s.id}`,
+                creadoEn: s.creadoEn,
+                solicitud: s,
+            }))
+            : []),
+        ...(tipoFiltro !== "REVISION_REPORTE"
+            ? consolidaciones.map<FilaBandeja>((c) => ({
+                tipo: "CONSOLIDACION_EXPEDIENTE",
+                clave: `con-${c.id}`,
+                creadoEn: c.createdAt,
+                consolidacion: c,
+            }))
+            : []),
+    ].sort((a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime());
+
     return (
         <div className="space-y-6">
             {error && (
@@ -124,14 +231,33 @@ export function ComiteBandeja() {
                 />
             )}
 
+            {/* SPEC-237 (FR-002): selector de tipo de tarea */}
+            <div className="flex items-center gap-3">
+                <label htmlFor="filtro-tipo-tarea" className="text-sm text-muted">
+                    Tipo de tarea
+                </label>
+                <select
+                    id="filtro-tipo-tarea"
+                    value={tipoFiltro}
+                    onChange={(e) => setTipoFiltro(e.target.value as TipoFiltro)}
+                    className="rounded-lg border border-tinta/15 bg-transparent px-3 py-2 text-sm text-body"
+                >
+                    <option value="TODOS">Todas</option>
+                    <option value="REVISION_REPORTE">Revisiones de reporte</option>
+                    <option value="CONSOLIDACION_EXPEDIENTE">Consolidaciones</option>
+                </select>
+            </div>
+
             <div className="glass rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
                             <tr>
+                                <th className="px-4 py-3 font-medium">Tipo</th>
                                 <th className="px-4 py-3 font-medium">Número</th>
                                 <th className="px-4 py-3 font-medium">Estado</th>
                                 <th className="px-4 py-3 font-medium">Motivo</th>
+                                <th className="px-4 py-3 font-medium">SLA (Bogotá)</th>
                                 <th className="px-4 py-3 font-medium">Recibida</th>
                                 <th className="px-4 py-3 font-medium">Acciones</th>
                             </tr>
@@ -139,62 +265,34 @@ export function ComiteBandeja() {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-subtle">
+                                    <td colSpan={7} className="px-4 py-8 text-center text-subtle">
                                         <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
                                         <p className="mt-2 text-xs">Cargando...</p>
                                     </td>
                                 </tr>
-                            ) : solicitudes.length === 0 ? (
+                            ) : filas.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-2">
+                                    <td colSpan={7} className="px-4 py-2">
                                         <EmptyState
                                             title="No hay casos pendientes"
-                                            description="Cuando lleguen solicitudes de revisión, aparecerán aquí."
+                                            description="Cuando lleguen solicitudes de revisión o consolidaciones, aparecerán aquí."
                                         />
                                     </td>
                                 </tr>
                             ) : (
-                                solicitudes.map((s) => {
-                                    const readOnly = isReadOnly(s);
-                                    return (
-                                        <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                            <td className="px-4 py-3 font-mono text-xs text-body">{s.numero}</td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex flex-wrap items-center gap-1.5">
-                                                    <span className={estadoBadge(s.estado)}>{s.estado}</span>
-                                                    {s.matchInterCiudad && (
-                                                        <span
-                                                            className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
-                                                            title="El identificador tiene reportes de fuentes independientes desde 2 o más ciudades"
-                                                        >
-                                                            Reincidencia inter-ciudad
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-body max-w-xs truncate">{s.motivo}</td>
-                                            <td className="px-4 py-3 text-subtle">{new Date(s.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    {readOnly ? (
-                                                        <span className="text-xs text-muted">
-                                                            {s.estado === "RESUELTA" ? "Resuelto" : "Asignado a otro"}
-                                                        </span>
-                                                    ) : (
-                                                        <Button
-                                                            onClick={() => handleVer(s)}
-                                                            disabled={assigningId === s.id}
-                                                            variant="outline"
-                                                            className="py-2 px-3 text-xs"
-                                                        >
-                                                            {assigningId === s.id ? "Asignando..." : "Ver"}
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
+                                filas.map((fila) =>
+                                    fila.tipo === "CONSOLIDACION_EXPEDIENTE" ? (
+                                        <FilaConsolidacion key={fila.clave} item={fila.consolidacion} />
+                                    ) : (
+                                        <FilaRevision
+                                            key={fila.clave}
+                                            solicitud={fila.solicitud}
+                                            readOnly={isReadOnly(fila.solicitud)}
+                                            assigning={assigningId === fila.solicitud.id}
+                                            onVer={handleVer}
+                                        />
+                                    )
+                                )
                             )}
                         </tbody>
                     </table>
@@ -226,5 +324,95 @@ export function ComiteBandeja() {
                 />
             )}
         </div>
+    );
+}
+
+function FilaRevision({
+    solicitud: s,
+    readOnly,
+    assigning,
+    onVer,
+}: {
+    solicitud: Solicitud;
+    readOnly: boolean;
+    assigning: boolean;
+    onVer: (s: Solicitud) => void;
+}) {
+    return (
+        <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+            <td className="px-4 py-3">
+                <TipoBadge tipo="REVISION_REPORTE" />
+            </td>
+            <td className="px-4 py-3 font-mono text-xs text-body">{s.numero}</td>
+            <td className="px-4 py-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={estadoBadge(s.estado)}>{s.estado}</span>
+                    {s.matchInterCiudad && (
+                        <span
+                            className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                            title="El identificador tiene reportes de fuentes independientes desde 2 o más ciudades"
+                        >
+                            Reincidencia inter-ciudad
+                        </span>
+                    )}
+                </div>
+            </td>
+            <td className="px-4 py-3 text-body max-w-xs truncate">{s.motivo}</td>
+            <td className="px-4 py-3">
+                <IndicadorSla sla={s.sla} />
+            </td>
+            <td className="px-4 py-3 text-subtle">{new Date(s.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</td>
+            <td className="px-4 py-3">
+                <div className="flex items-center gap-2">
+                    {readOnly ? (
+                        <span className="text-xs text-muted">
+                            {s.estado === "RESUELTA" ? "Resuelto" : "Asignado a otro"}
+                        </span>
+                    ) : (
+                        <Button
+                            onClick={() => onVer(s)}
+                            disabled={assigning}
+                            variant="outline"
+                            className="py-2 px-3 text-xs"
+                        >
+                            {assigning ? "Asignando..." : "Ver"}
+                        </Button>
+                    )}
+                </div>
+            </td>
+        </tr>
+    );
+}
+
+// SPEC-237 (FR-001/T016): la fila de consolidación linkea a la vista de detalle.
+function FilaConsolidacion({ item }: { item: ItemConsolidacion }) {
+    return (
+        <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+            <td className="px-4 py-3">
+                <TipoBadge tipo="CONSOLIDACION_EXPEDIENTE" />
+            </td>
+            <td className="px-4 py-3 font-mono text-xs text-body">{item.identificadorPrincipal}</td>
+            <td className="px-4 py-3">
+                <span className="rounded-full bg-ambar/10 px-2.5 py-0.5 text-xs font-medium text-ambar">
+                    {item.estadoAprobacion}
+                </span>
+            </td>
+            <td className="px-4 py-3 text-body max-w-xs truncate">
+                {item.categoriaDominante ?? "Expediente consolidado"} · Aprobaciones {item.aprobacionesActuales}/
+                {item.aprobacionesRequeridas}
+            </td>
+            <td className="px-4 py-3">
+                <IndicadorSla sla={item.sla} />
+            </td>
+            <td className="px-4 py-3 text-subtle">{new Date(item.createdAt).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</td>
+            <td className="px-4 py-3">
+                <Link
+                    href={`/dashboard/admin/comite/consolidacion/${item.expedienteId}`}
+                    className="glass-input text-body hover:bg-papel/80 border inline-flex items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200"
+                >
+                    Revisar
+                </Link>
+            </td>
+        </tr>
     );
 }

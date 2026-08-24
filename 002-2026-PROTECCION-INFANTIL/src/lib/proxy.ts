@@ -37,6 +37,11 @@ const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes"];
 // Rutas exclusivas del módulo Colegio.
 const COLEGIO_ROUTES = ["/dashboard/colegio", "/api/me/colegio", "/api/colegio"];
 
+// SPEC-211 (002-PI-111): APIs de cliente del módulo de pagos (suscripción propia,
+// renovación, cancelación, aplicar bono de SPEC-216). La titularidad se verifica
+// dentro de cada endpoint; las APIs administrativas viven bajo /api/admin/pagos.
+const PAGOS_CLIENTE_ROUTES = ["/api/pagos"];
+
 // SPEC-168: rutas exclusivas del Comité de Convivencia (rol COMITE_CONVIVENCIA).
 const COMITE_CONVIVENCIA_ROUTES = ["/dashboard/colegio/comite", "/api/colegio/comite"];
 
@@ -97,6 +102,7 @@ function esRutaPerfil(pathname: string): boolean {
 export function esRutaPermitidaSchoolAdmin(pathname: string): boolean {
     if (esRutaPerfil(pathname)) return true;
     if (isColegioRoute(pathname)) return true;
+    if (PAGOS_CLIENTE_ROUTES.some((route) => matchesRoute(pathname, route))) return true;
     if (PUBLICAS_LECTURA_SCHOOL_ADMIN.some((route) => matchesRoute(pathname, route))) return true;
     if (APIS_LECTURA_SCHOOL_ADMIN.some((route) => matchesRoute(pathname, route))) return true;
     return SESION_ROUTES.some((route) => matchesRoute(pathname, route));

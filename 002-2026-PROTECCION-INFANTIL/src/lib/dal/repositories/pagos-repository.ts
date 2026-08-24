@@ -508,4 +508,5 @@ export class PagosRepository {
 
         return { suscripcion, pagos, eventos };
     }
+
 }

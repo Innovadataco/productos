@@ -19,6 +19,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/AdminReporteExpediente.test.tsx",
     "src/components/modules/admin/UsuariosSubNav.test.tsx",
     "src/components/modules/admin/tables/tables.test.tsx",
+    // SPEC-233: búsqueda por identificador (padre + admin)
+    "src/components/modules/admin/IdentificadorAgregadoAnonimo.test.tsx",
+    "src/components/modules/admin/IdentificadorExpedientesAnonimos.test.tsx",
+    "src/components/modules/padre/IdentificadorBusquedaClient.test.tsx",
     "src/components/modules/ComiteBandeja.test.tsx",
     "src/components/modules/ComiteSolicitudDetalle.test.tsx",
     "src/components/modules/ConsultaEnriquecidaClient.test.tsx",
@@ -103,6 +107,22 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/ai/pii-patterns.test.ts",
     "src/lib/ai/rubrica-config.test.ts",
     "src/lib/ai/rubrica.test.ts",
+    // SPEC-220: helpers puros de períodos Bogotá del dominio Análisis.
+    "src/lib/analisis/periodos.test.ts",
+    // SPEC-221 (002-PI-122): validador SQL y renderer de plantillas del motor de reglas (puros).
+    "src/lib/analisis/reglas/ejecutor-sql.test.ts",
+    "src/lib/analisis/reglas/plantilla.test.ts",
+    // SPEC-223: ventana semanal Bogotá/ISO y contenido puro del digest (sin BD).
+    "src/lib/analisis/semana.test.ts",
+    "src/lib/analisis/digest-contenido.test.ts",
+    // SPEC-225 (002-PI-126): ventanas Bogotá, comparativa semanal y puntualidad del detector (puros).
+    "src/lib/analisis/anomalias/ventanas.test.ts",
+    "src/lib/analisis/anomalias/comparativas.test.ts",
+    "src/lib/analisis/anomalias/puntualidad.test.ts",
+    // SPEC-225 (002-PI-126): fail-open de alertas al CEO (Motor Notif mockeado, sin BD).
+    "src/lib/analisis/anomalias/alertas.test.ts",
+    // SPEC-220: card presentacional del score de valor (sin BD).
+    "src/components/modules/pagos/ScoreClienteCard.test.tsx",
     // 002-PI-068: fuente-reporte-salt.test.ts importa fuente-reporte.ts que carga
     // repositorios Prisma al evaluarse; lo movemos a integration.
     "src/lib/api-handler.test.ts",
@@ -123,7 +143,11 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/errors.test.ts",
     "src/lib/expediente/analisis-interno.test.ts",
     "src/lib/expediente/expediente-forense.test.ts",
+    // SPEC-236: whitelist pura de la máquina de estados (sin BD).
+    "src/lib/expediente/estados/transiciones.test.ts",
     "src/lib/expediente/mensaje-padre.test.ts",
+    // SPEC-236: helpers puros de fechas del motor (America/Bogota, sin BD).
+    "src/lib/expediente/motor/fechas-motor.test.ts",
     "src/lib/expediente/pdf-denuncia.test.ts",
     "src/lib/fetch-retry.test.ts",
     "src/lib/format/fecha.test.ts",
@@ -142,6 +166,23 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/pagos/bono-aplicacion.service.test.ts",
     "src/lib/pagos/pagos-calculos.service.test.ts",
     "src/lib/pagos/tasas.test.ts",
+    // SPEC-213 (002-PI-113): motor de vigencia de pagos.
+    "src/lib/pagos/vigencia.service.test.ts",
+    // SPEC-211 (002-PI-111): vistas de cliente del módulo de pagos.
+    "src/lib/pagos/renovacion-calculos.test.ts",
+    // SPEC-215 (002-PI-115): generador puro de códigos de referido (sin BD).
+    "src/lib/utils/referido-codigo.test.ts",
+    "src/lib/pagos/comprobante-storage.test.ts",
+    "src/components/modules/cliente/suscripcion/SuscripcionResumen.test.tsx",
+    // SPEC-218 (002-PI-118): analítica dinero-vs-valor (cálculos puros, servicio con repo doble y componentes).
+    "src/lib/pagos/analitica-calculos.test.ts",
+    "src/lib/pagos/analitica.service.test.ts",
+    "src/components/modules/admin/pagos/analitica/KpiPagosCards.test.tsx",
+    "src/components/modules/admin/pagos/analitica/WidgetsAccion.test.tsx",
+    "src/components/modules/admin/pagos/analitica/WidgetCrecimientoPaisCiudad.test.tsx",
+    // SPEC-217 (002-PI-117): freemium 30 días (cálculos puros y servicio con dependencias mockeadas, sin BD).
+    "src/lib/pagos/freemium-calculos.test.ts",
+    "src/lib/pagos/freemium.service.test.ts",
     "src/lib/plataforma.test.ts",
     "src/lib/proxy.test.ts",
     "src/lib/queue.test.ts",
@@ -167,4 +208,35 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/worker-auth.test.ts",
     "src/lib/worker-heartbeat.test.ts",
     "src/proxy-csp.test.ts",
+    // SPEC-237: bandeja comité CONSOLIDACION + aprobación multi-miembro
+    "src/lib/comite/sla.test.ts",
+    "src/components/modules/comite/consolidacion/ConsolidacionAcciones.test.tsx",
+    // SPEC-222: helpers puros y schemas Zod del panel Dinero vs Valor.
+    "src/lib/analisis/panel-calculos.test.ts",
+    "src/lib/schemas/analisis-panel.test.ts",
+    // SPEC-238: helpers puros del SLA de aclaración y schemas Zod (sin BD).
+    "src/lib/expediente/motor/sla-aclaracion.test.ts",
+    "src/lib/schemas/aclaracion.test.ts",
+    // SPEC-222: bloque Top 5 decisiones del panel (sin BD).
+    "src/app/dashboard/admin/estadisticas/dinero-vs-valor/components/TopDecisiones.test.tsx",
+    // SPEC-239: schemas Zod de contactos de emergencia y botón de emergencia del comité (sin BD).
+    "src/lib/schemas/contacto-emergencia.test.ts",
+    "src/components/modules/comite/consolidacion/BotonActivarEmergencia.test.tsx",
+    // SPEC-227: filtros Zod + pseudonimización + CSV + vista del historial (sin BD).
+    "src/lib/analisis/filtros-historial.test.ts",
+    "src/lib/analisis/pseudonimizar.test.ts",
+    "src/lib/analisis/historial-csv.test.ts",
+    "src/app/dashboard/admin/analisis/recomendaciones/components/HistorialRecomendaciones.test.tsx",
+    // SPEC-224: validador estático SQL, helpers del test-sql, versionado y schemas Zod (sin BD).
+    "src/lib/analisis/reglas/validar-sql.test.ts",
+    "src/lib/analisis/reglas/test-sql.test.ts",
+    "src/lib/analisis/reglas/versionado.test.ts",
+    "src/lib/schemas/analisis-reglas.test.ts",
+    // SPEC-224: diálogo de confirmación fuerte del cambio de modo (fetch mockeado, sin BD).
+    "src/components/modules/analisis/ReglaModoDialog.test.tsx",
+    // SPEC-226: schemas Zod de acciones + helpers puros de handlers (vigencia Bogotá, nombre bono, destinatarios alerta, menor_carga).
+    "src/lib/analisis/acciones/schemas.test.ts",
+    "src/lib/analisis/acciones/handlers/crear-bono.test.ts",
+    "src/lib/analisis/acciones/handlers/crear-alerta.test.ts",
+    "src/lib/analisis/acciones/handlers/asignar-operador.test.ts",
 ];

@@ -1,5 +1,6 @@
 import { RUBRICA_SEMILLA } from "../src/lib/ai/rubrica-semilla";
 import { normalizarNombreGeografico } from "../src/lib/normalizar";
+import { REGLAS_SEMILLA } from "../src/lib/analisis/reglas/seed-reglas";
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -102,6 +103,204 @@ async function seedParametrosSenalComunitaria() {
         },
     });
     console.log("Parámetro padre.senal_comunitaria.refresh_min (SPEC-234) listo");
+}
+
+// ── SPEC-236 (002-PI-mega-cola): parámetros del motor de expediente + 11 eventos
+// y plantillas de Motor Notif. Idempotente (patrón I-100 de SPEC-201: upsert con
+// update explícito para propagar cambios de default definidos en código).
+// Nota: `padre.expediente.consolidacion_min_reportes`, `padre.expediente.auto_cierre_meses`
+// y los SLA `padre.comite.sla_horas_*` ya los siembra SPEC-230 (seedParametrosPadre);
+// aquí solo se añaden los parámetros nuevos de esta spec.
+async function seedMotorExpediente() {
+    const paramsMotor = [
+        { clave: "padre.expediente.motor.tick_min", valor: "15", descripcion: "Minutos entre ticks del worker del motor de expediente" },
+        { clave: "padre.expediente.retencion_cerrados_meses", valor: "24", descripcion: "Meses tras el cierre para purgar textos del expediente ([retenido])" },
+    ];
+    for (const p of paramsMotor) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, descripcion: p.descripcion },
+            create: {
+                clave: p.clave,
+                valor: p.valor,
+                tipo: TipoParametro.INTEGER,
+                categoria: CategoriaParametro.SYSTEM,
+                esPublico: false,
+                descripcion: p.descripcion,
+            },
+        });
+    }
+    console.log("Parámetros del motor de expediente (SPEC-236) listos");
+
+    // 11 eventos del ciclo de vida del expediente (FR-018) con su audiencia.
+    type EventoExpedienteSeed = {
+        evento: string;
+        roles: string[];
+        asuntoEmail: string;
+        cuerpoEmail: string;
+        cuerpoInApp: string;
+    };
+    const eventosSeed: EventoExpedienteSeed[] = [
+        {
+            evento: "expediente.creado",
+            roles: ["PADRE"],
+            asuntoEmail: "Tu expediente fue creado",
+            cuerpoEmail: "Hola,\n\nSe creó un expediente para dar seguimiento a tus reportes. Puedes verlo en {{urlExpediente}}.",
+            cuerpoInApp: "Se creó un expediente para dar seguimiento a tus reportes.",
+        },
+        {
+            evento: "expediente.evento.agregado",
+            roles: ["PADRE"],
+            asuntoEmail: "Se agregó un evento a tu expediente",
+            cuerpoEmail: "Hola,\n\nSe registró un nuevo evento en tu expediente. Revísalo en {{urlExpediente}}.",
+            cuerpoInApp: "Se registró un nuevo evento en tu expediente.",
+        },
+        {
+            evento: "expediente.gravedad.subio_a_rojo",
+            roles: ["PADRE", "COMITE_VALIDACION"],
+            asuntoEmail: "Cambio de prioridad en un expediente",
+            cuerpoEmail: "Hola,\n\nLa prioridad del expediente {{expedienteId}} subió a {{scoreGravedadActual}}. Detalle en {{urlExpediente}}.",
+            cuerpoInApp: "La prioridad del expediente {{expedienteId}} subió a {{scoreGravedadActual}}.",
+        },
+        {
+            evento: "expediente.consolidacion.solicitada",
+            roles: ["COMITE_VALIDACION"],
+            asuntoEmail: "Expediente listo para consolidación",
+            cuerpoEmail: "Hola,\n\nEl expediente {{expedienteId}} pasó a estado {{estadoDestino}} y requiere revisión del comité.",
+            cuerpoInApp: "El expediente {{expedienteId}} requiere revisión del comité.",
+        },
+        {
+            evento: "expediente.comite.aprobo",
+            roles: ["PADRE"],
+            asuntoEmail: "El comité aprobó el informe de tu expediente",
+            cuerpoEmail: "Hola,\n\nEl comité aprobó el informe consolidado de tu expediente. Ingresa a {{urlExpediente}} para revisarlo.",
+            cuerpoInApp: "El comité aprobó el informe consolidado de tu expediente.",
+        },
+        {
+            evento: "expediente.aclaracion.solicitada",
+            roles: ["PADRE"],
+            asuntoEmail: "Se solicitó una aclaración sobre tu expediente",
+            cuerpoEmail: "Hola,\n\nEl comité solicitó una aclaración sobre tu expediente. Motivo: {{motivo}}. Responde en {{urlExpediente}}.",
+            cuerpoInApp: "El comité solicitó una aclaración sobre tu expediente.",
+        },
+        {
+            evento: "expediente.aclaracion.respondida",
+            roles: ["COMITE_VALIDACION"],
+            asuntoEmail: "Aclaración respondida",
+            cuerpoEmail: "Hola,\n\nEl titular respondió la aclaración del expediente {{expedienteId}}. El caso vuelve a estado {{estadoDestino}}.",
+            cuerpoInApp: "El titular respondió la aclaración del expediente {{expedienteId}}.",
+        },
+        {
+            evento: "expediente.cerrado",
+            roles: ["PADRE"],
+            asuntoEmail: "Tu expediente fue cerrado",
+            cuerpoEmail: "Hola,\n\nTu expediente pasó a estado cerrado. Motivo: {{motivo}}. Puedes consultarlo en {{urlExpediente}}.",
+            cuerpoInApp: "Tu expediente pasó a estado cerrado.",
+        },
+        {
+            evento: "expediente.escalado",
+            roles: ["PADRE", "COMITE_VALIDACION"],
+            asuntoEmail: "Un expediente fue escalado",
+            cuerpoEmail: "Hola,\n\nEl expediente {{expedienteId}} pasó a estado escalado a solicitud del titular. Detalle en {{urlExpediente}}.",
+            cuerpoInApp: "El expediente {{expedienteId}} pasó a estado escalado.",
+        },
+        {
+            evento: "expediente.auto_cerrado_inactividad",
+            roles: ["PADRE"],
+            asuntoEmail: "Tu expediente se cerró por inactividad",
+            cuerpoEmail: "Hola,\n\nTu expediente se cerró automáticamente por inactividad prolongada. Si lo necesitas, puedes solicitar su reapertura desde {{urlExpediente}}.",
+            cuerpoInApp: "Tu expediente se cerró por inactividad. Puedes solicitar su reapertura.",
+        },
+        {
+            evento: "expediente.comite.sla_vencido",
+            roles: ["COMITE_VALIDACION"],
+            asuntoEmail: "SLA de revisión de comité vencido",
+            cuerpoEmail: "Hola,\n\nEl expediente {{expedienteId}} superó el tiempo límite de revisión del comité (límite: {{fechaLimite}}). Prioridad actual: {{scoreGravedadActual}}.",
+            cuerpoInApp: "El expediente {{expedienteId}} superó el SLA de revisión del comité.",
+        },
+    ];
+
+    for (const e of eventosSeed) {
+        const plantillas = [
+            { clave: `${e.evento}.email`, canal: "EMAIL" as const, asunto: e.asuntoEmail, cuerpoMarkdown: e.cuerpoEmail },
+            { clave: `${e.evento}.in_app`, canal: "IN_APP" as const, asunto: undefined, cuerpoMarkdown: e.cuerpoInApp },
+        ];
+        for (const pl of plantillas) {
+            await prisma.notificacionPlantilla.upsert({
+                where: { clave: pl.clave },
+                update: {
+                    canal: pl.canal,
+                    asunto: pl.asunto ?? null,
+                    cuerpoMarkdown: pl.cuerpoMarkdown,
+                    variablesSchema: { type: "object", properties: {} },
+                    activa: true,
+                },
+                create: {
+                    clave: pl.clave,
+                    canal: pl.canal,
+                    asunto: pl.asunto ?? null,
+                    cuerpoMarkdown: pl.cuerpoMarkdown,
+                    variablesSchema: { type: "object", properties: {} },
+                    activa: true,
+                },
+            });
+        }
+
+        for (const rol of e.roles) {
+            for (const canal of ["EMAIL", "IN_APP"] as const) {
+                const existente = await prisma.notificacionRegla.findFirst({
+                    where: { evento: e.evento, rol, canal },
+                    orderBy: { createdAt: "desc" },
+                });
+                const data = {
+                    evento: e.evento,
+                    rol,
+                    offset: "+0m",
+                    canal,
+                    plantillaClave: `${e.evento}.${canal.toLowerCase()}`,
+                    obligatoria: false,
+                    activa: true,
+                };
+                if (existente) {
+                    await prisma.notificacionRegla.update({
+                        where: { id: existente.id },
+                        data: {
+                            offset: data.offset,
+                            plantillaClave: data.plantillaClave,
+                            obligatoria: data.obligatoria,
+                            activa: true,
+                        },
+                    });
+                } else {
+                    await prisma.notificacionRegla.create({ data });
+                }
+            }
+        }
+    }
+    console.log("Eventos y plantillas del motor de expediente (SPEC-236) listos");
+}
+
+// ── SPEC-237 (002-PI-mega-cola): SLA de las tareas de consolidación de la
+// bandeja del comité. Idempotente (patrón I-100: upsert con update explícito).
+// Nota: `padre.comite.miembros_minimos_aprobacion` ya lo siembra SPEC-230.
+async function seedParametrosComiteConsolidacion() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "padre.comite.sla_horas_consolidacion" },
+        update: {
+            valor: "72",
+            tipo: TipoParametro.INTEGER,
+            descripcion: "Horas desde la creación para considerar vencido el SLA de una tarea de consolidación",
+        },
+        create: {
+            clave: "padre.comite.sla_horas_consolidacion",
+            valor: "72",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Horas desde la creación para considerar vencido el SLA de una tarea de consolidación",
+        },
+    });
+    console.log("Parámetro padre.comite.sla_horas_consolidacion (SPEC-237) listo");
 }
 
 // SPEC-235 (002-PI-135): guías de acción v1 para el flujo padre.
@@ -376,6 +575,8 @@ async function seedParametrosPagos() {
         { clave: "pagos.freemium.activo", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar freemium para nuevos clientes" },
         { clave: "pagos.referidos.max_por_año", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Máximo de referidos exitosos por año por cliente" },
         { clave: "pagos.referidos.notificar_admin_al", valor: "4", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Al 4º referido del año notificar a admin para revisión" },
+        // ── SPEC-215: % de descuento del primer pago del referido (programa de referidos).
+        { clave: "pagos.referidos.descuento_referido_pct", valor: "15", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "% de descuento en el primer pago del cliente referido" },
         { clave: "pagos.gracia_dias", valor: "3", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días de gracia antes del corte automático" },
         { clave: "pagos.moneda_base", valor: "USD", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Moneda base del modelo comercial" },
         { clave: "pagos.tasas.api_url_default", valor: "https://api.exchangerate.host/v1/latest?access_key=REPLACE_ME&base=USD&symbols=", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "URL default para consulta de tasas de cambio" },
@@ -395,6 +596,623 @@ async function seedParametrosPagos() {
         });
     }
     console.log(`[SEED] ${pagosParams.length} parámetros pagos.* listos`);
+}
+
+// ── SPEC-220 (002-PI-121): parámetros del dominio Análisis dinero-vs-valor ──
+// 13 claves `analisis.*` (12 del brief §5.7 + retención de snapshots).
+// Idempotente: `update: {}` — el seed nunca pisa el tuning hecho por el admin
+// (pesos, umbrales y frecuencias son ajustables sin deploy).
+async function seedParametrosAnalisis() {
+    const analisisParams = [
+        { clave: "analisis.score.peso_reportes", valor: "3", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Peso del componente Reportes en el score de valor" },
+        { clave: "analisis.score.peso_casos", valor: "5", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Peso del componente Casos en el score de valor" },
+        { clave: "analisis.score.peso_alertas", valor: "2", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Peso del componente Alertas en el score de valor" },
+        { clave: "analisis.score.peso_sesiones", valor: "1", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Peso del componente Sesiones en el score de valor" },
+        { clave: "analisis.score.frecuencia_recalculo_horas", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Horas entre recálculos del score de valor (cron del worker)" },
+        { clave: "analisis.score.retencion_meses", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Meses de retención de snapshots de score antes de la purga (Ley 1581)" },
+        { clave: "analisis.recomendaciones.frecuencia_evaluacion_min", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Minutos entre evaluaciones del motor de reglas (SPEC-221)" },
+        { clave: "analisis.digest.dia_semana", valor: "1", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Día de la semana de envío del digest (1 = lunes)" },
+        { clave: "analisis.digest.hora_bogota", valor: "8", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Hora Bogotá de envío del digest semanal" },
+        { clave: "analisis.anomalias.crecimiento_pct_umbral", valor: "25", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "% de cambio que dispara anomalía de crecimiento (SPEC-225)" },
+        { clave: "analisis.anomalias.mora_dias_umbral_alta", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Días de mora para severidad ALTA (SPEC-225)" },
+        { clave: "analisis.anomalias.mora_dias_umbral_media", valor: "15", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Días de mora para severidad MEDIA (SPEC-225)" },
+    ];
+
+    for (const p of analisisParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    console.log(`[SEED] ${analisisParams.length} parámetros analisis.* listos`);
+}
+
+// ── SPEC-225 (002-PI-126): parámetros del detector de anomalías + evento ──
+// `analisis.anomalia.detectada` del Motor Notif (alerta inmediata al CEO, D-78).
+// Las 3 claves `mora_dias_umbral_*`/`crecimiento_pct_umbral` ya las siembra
+// SPEC-220; aquí van las 7 restantes. Idempotente: parámetros con `update: {}`
+// (nunca pisan el tuning del admin); regla con findFirst→update/create (patrón
+// I-100 de SPEC-201); plantillas con upsert por clave.
+async function seedAnomalias() {
+    const params = [
+        { clave: "analisis.anomalias.tick_min", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Minutos entre ticks del worker de anomalías (SPEC-225)" },
+        { clave: "analisis.anomalias.uso_caido_pct_umbral", valor: "50", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "% de caída de sesiones semanales que dispara USO_CAIDO_ABRUPTO (SPEC-225)" },
+        { clave: "analisis.anomalias.caida_recaudo_pct_umbral", valor: "30", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "% de caída del recaudo semanal por ciudad que dispara CAIDA_RECAUDO_CIUDAD (SPEC-225)" },
+        { clave: "analisis.anomalias.cancelaciones_24h_umbral", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Cancelaciones en 24h que disparan CANCELACIONES_MASIVAS_24H (SPEC-225)" },
+        { clave: "analisis.anomalias.colegio_grande_min_reportes", valor: "50", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Reportes históricos mínimos para considerar 'colegio grande' (SPEC-225)" },
+        { clave: "analisis.anomalias.base_minima_comparacion", valor: "3", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Volumen mínimo de la semana de referencia para comparativas (SPEC-225)" },
+        { clave: "analisis.anomalias.email_inmediato_habilitado", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Kill-switch del email inmediato al CEO por anomalía ALTA (SPEC-225)" },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    console.log(`[SEED] ${params.length} parámetros analisis.anomalias.* listos`);
+
+    const evento = "analisis.anomalia.detectada";
+    const plantillas = [
+        {
+            clave: `${evento}.email`,
+            canal: "EMAIL" as const,
+            asunto: "Anomalía crítica detectada: {{tipoAnomalia}}",
+            cuerpoMarkdown:
+                "Se detectó una anomalía de severidad {{severidad}} en la plataforma.\n\n" +
+                "**Tipo:** {{tipoAnomalia}}\n" +
+                "**Detectada:** {{fechaDeteccion}}\n\n" +
+                "{{descripcion}}\n\n" +
+                "Ver detalle: {{urlAnomalia}}",
+        },
+        {
+            clave: `${evento}.in_app`,
+            canal: "IN_APP" as const,
+            asunto: null,
+            cuerpoMarkdown: "Anomalía {{severidad}} detectada: {{tipoAnomalia}}. Detalle: {{urlAnomalia}}",
+        },
+    ];
+    for (const pl of plantillas) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: { type: "object", properties: {} },
+                activa: true,
+            },
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: { type: "object", properties: {} },
+                activa: true,
+            },
+        });
+    }
+
+    for (const canal of ["EMAIL", "IN_APP"] as const) {
+        const existente = await prisma.notificacionRegla.findFirst({
+            where: { evento, rol: "ADMIN", canal },
+            orderBy: { createdAt: "desc" },
+        });
+        const data = {
+            evento,
+            rol: "ADMIN",
+            offset: "+0m",
+            canal,
+            plantillaClave: `${evento}.${canal.toLowerCase()}`,
+            obligatoria: true,
+            activa: true,
+        };
+        if (existente) {
+            await prisma.notificacionRegla.update({
+                where: { id: existente.id },
+                data: { offset: data.offset, plantillaClave: data.plantillaClave, obligatoria: true, activa: true },
+            });
+        } else {
+            await prisma.notificacionRegla.create({ data });
+        }
+    }
+    console.log("[SEED] Evento analisis.anomalia.detectada (regla + plantillas) listo");
+}
+
+// ── SPEC-223 (002-PI-124): digest semanal al CEO — parámetros propios + evento
+// `analisis.digest.semanal` del Motor Notif (reglas EMAIL/IN_APP + plantillas).
+// `analisis.digest.dia_semana` y `analisis.digest.hora_bogota` ya los siembra
+// SPEC-220 (seedParametrosAnalisis); aquí solo `enabled` y `destinatarios_emails`.
+// Idempotente: parámetros con `update: {}` (nunca pisan el tuning del admin);
+// plantillas con `update: {}` (respeta el editor de plantillas de SPEC-202,
+// data-model §5); reglas create-if-missing (si el admin las desactiva, el seed
+// no las reactiva — el digest es opt-out, D-70).
+async function seedDigestSemanal() {
+    const params = [
+        { clave: "analisis.digest.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Apaga/prende el job del digest semanal sin deploy (SPEC-223)" },
+        { clave: "analisis.digest.destinatarios_emails", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Correos destinatarios del digest separados por coma; vacío = todos los ADMIN activos (SPEC-223)" },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    console.log(`[SEED] ${params.length} parámetros analisis.digest.* listos (SPEC-223)`);
+
+    const evento = "analisis.digest.semanal";
+    const variablesSchema = {
+        type: "object",
+        properties: {
+            periodo: { type: "string" },
+            fechaInicio: { type: "string" },
+            fechaFin: { type: "string" },
+            top5Decisiones: { type: "string" },
+            tablaKpis: { type: "string" },
+            numAnomalias: { type: "string" },
+            anomalias: { type: "string" },
+            ganadoresPerdedores: { type: "string" },
+            recomendacionesSistema: { type: "string" },
+            enlacePanel: { type: "string" },
+        },
+    };
+    const plantillas = [
+        {
+            // El motor envía email en TEXTO PLANO (enviarEmailNotificacion usa
+            // solo `text:`): la plantilla es Markdown legible como texto; las
+            // listas llegan pre-renderizadas en las variables (sin loops).
+            clave: `${evento}.email`,
+            canal: "EMAIL" as const,
+            asunto: "Resumen semanal PI · {{periodo}} · Top 5 decisiones para esta semana",
+            cuerpoMarkdown:
+                "# Tu resumen semanal · {{fechaInicio}} – {{fechaFin}}\n\n" +
+                "## Top 5 decisiones para esta semana\n" +
+                "{{top5Decisiones}}\n\n" +
+                "## KPIs de la semana\n" +
+                "{{tablaKpis}}\n\n" +
+                "## Anomalías detectadas ({{numAnomalias}})\n" +
+                "{{anomalias}}\n\n" +
+                "## Ganadores y perdedores\n" +
+                "{{ganadoresPerdedores}}\n\n" +
+                "## Recomendaciones del sistema\n" +
+                "{{recomendacionesSistema}}\n\n" +
+                "Abrir el panel completo: {{enlacePanel}}\n\n" +
+                "Canales oficiales: Línea 141 ICBF · CAI Virtual · Te Protejo.\n" +
+                "Puedes desactivar este resumen en tu perfil de notificaciones.",
+        },
+        {
+            clave: `${evento}.in_app`,
+            canal: "IN_APP" as const,
+            asunto: null,
+            cuerpoMarkdown:
+                "Resumen semanal {{periodo}} ({{fechaInicio}} – {{fechaFin}}).\n\n" +
+                "{{top5Decisiones}}\n\n" +
+                "{{tablaKpis}}\n\n" +
+                "Panel completo: {{enlacePanel}}",
+        },
+    ];
+    for (const pl of plantillas) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {},
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema,
+                activa: true,
+            },
+        });
+    }
+
+    for (const canal of ["EMAIL", "IN_APP"] as const) {
+        const existente = await prisma.notificacionRegla.findFirst({
+            where: { evento, rol: "ADMIN", canal },
+            orderBy: { createdAt: "desc" },
+        });
+        if (!existente) {
+            await prisma.notificacionRegla.create({
+                data: {
+                    evento,
+                    rol: "ADMIN",
+                    offset: "+0m",
+                    canal,
+                    plantillaClave: `${evento}.${canal.toLowerCase()}`,
+                    obligatoria: false,
+                    activa: true,
+                },
+            });
+        }
+    }
+    console.log("[SEED] Evento analisis.digest.semanal (reglas + plantillas) listo (SPEC-223)");
+}
+
+// ── SPEC-221 (002-PI-122): parámetros y reglas semilla del motor de recomendación ──
+// Idempotente: parámetros con `update: {}` (nunca pisan el tuning del admin);
+// reglas con upsert por `clave` cuyo `update` solo toca campos descriptivos
+// (`nombre`, `descripcion`, `plantillaRecomendacion`) — NUNCA `modo`, `activa`
+// ni `sqlQuery` (respeta la promoción manual RECOMIENDA→EJECUTA y el tuning).
+// `analisis.recomendaciones.frecuencia_evaluacion_min` ya la siembra SPEC-220.
+async function seedReglasRecomendacion(adminEmail: string) {
+    const params = [
+        { clave: "analisis.recomendaciones.expiracion_dias", valor: "7", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Días hasta que una recomendación PENDIENTE expira (SPEC-221)" },
+        { clave: "analisis.recomendaciones.statement_timeout_ms", valor: "5000", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Timeout del sandbox SQL por regla (SPEC-221)" },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+
+    const admin = await prisma.usuario.findUnique({ where: { email: adminEmail } });
+    if (!admin) {
+        console.log("[SEED] Reglas de recomendación omitidas: no existe admin inicial.");
+        return;
+    }
+
+    for (const regla of REGLAS_SEMILLA) {
+        await prisma.reglaRecomendacion.upsert({
+            where: { clave: regla.clave },
+            update: {
+                nombre: regla.nombre,
+                descripcion: regla.descripcion,
+                plantillaRecomendacion: regla.plantillaRecomendacion,
+            },
+            create: {
+                clave: regla.clave,
+                nombre: regla.nombre,
+                descripcion: regla.descripcion,
+                categoria: regla.categoria,
+                sqlQuery: regla.sqlQuery,
+                plantillaRecomendacion: regla.plantillaRecomendacion,
+                modo: "RECOMIENDA",
+                accionEjecutable: regla.accionEjecutable ?? null,
+                prioridad: regla.prioridad,
+                umbralMinimo: regla.umbralMinimo ?? null,
+                frecuenciaMin: regla.frecuenciaMin,
+                activa: true,
+                creadaPorAdminId: admin.id,
+            },
+        });
+    }
+    console.log(`[SEED] ${REGLAS_SEMILLA.length} reglas de recomendación listas (modo RECOMIENDA)`);
+}
+
+// ── SPEC-222 (002-PI-123): umbrales opcionales del panel Dinero vs Valor ──
+// Idempotente: `update: {}` — el seed nunca pisa el tuning del admin. Los
+// umbrales vacíos significan "corte por mediana del dataset" (FR-008).
+async function seedParametrosPanelAnalisis() {
+    const params = [
+        { clave: "analisis.panel.umbral_monto_usd", valor: "", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Corte fijo del eje X de cuadrantes (vacío = mediana del dataset)" },
+        { clave: "analisis.panel.umbral_score", valor: "", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Corte fijo del eje Y de cuadrantes (vacío = mediana del dataset)" },
+        { clave: "analisis.panel.dispersion_max_puntos", valor: "500", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Límite de puntos de la dispersión antes de truncar (SPEC-222)" },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    console.log(`[SEED] ${params.length} parámetros analisis.panel.* listos`);
+}
+
+// ── SPEC-213 (002-PI-113): parámetro del motor de vigencia de pagos ──
+// Idempotente: `update: {}` — el seed nunca pisa la hora ajustada por el admin.
+// `pagos.vigencia.ultima_corrida` NO se siembra: la escribe el worker.
+async function seedParametrosVigenciaPagos() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "pagos.vigencia.hora_corrida" },
+        update: {},
+        create: {
+            clave: "pagos.vigencia.hora_corrida",
+            valor: "01:00",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion: "Hora diaria (HH:mm, America/Bogota) de la corrida del worker de vigencia de pagos",
+        },
+    });
+    console.log("[SEED] parámetro pagos.vigencia.hora_corrida listo");
+}
+
+// ── SPEC-218 (002-PI-118): TTL de la caché por widget de la analítica dinero-vs-valor ──
+// Idempotente: `update: {}` — el seed nunca pisa el ajuste hecho por el admin.
+async function seedParametrosAnaliticaPagos() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "pagos.analitica.cache_segundos" },
+        update: {},
+        create: {
+            clave: "pagos.analitica.cache_segundos",
+            valor: "60",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion: "TTL en segundos de la caché en memoria por widget del dashboard dinero-vs-valor",
+        },
+    });
+    console.log("[SEED] parámetro pagos.analitica.cache_segundos listo");
+}
+
+// ── SPEC-227 (002-PI-128): parámetros del historial de recomendaciones ──
+// Idempotente: `update: {}` — el seed nunca pisa el tuning hecho por el admin.
+async function seedParametrosHistorialRecomendaciones() {
+    const params = [
+        { clave: "analisis.recomendaciones.tasa_ignorada_alerta_pct", valor: "70", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Tasa de ignorada (%) sobre resueltas que marca la regla con \"revisar umbral\" en el historial (SPEC-227)" },
+        { clave: "analisis.recomendaciones.export_max_filas", valor: "5000", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Tope de filas del export CSV del historial de recomendaciones; 413 si se excede (SPEC-227)" },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    console.log("[SEED] 2 parámetros analisis.recomendaciones.* del historial listos (SPEC-227)");
+}
+
+// ── SPEC-224 (002-PI-125): parámetros del test SQL del panel de reglas ──
+// Idempotente: `update: {}` — el seed nunca pisa el tuning hecho por el admin.
+// El permiso de módulo `analisis_admin` para ADMIN lo cubre syncModulosYGrants
+// (backfill del catálogo: ADMIN recibe todos los módulos).
+async function seedParametrosReglasAdmin() {
+    const params = [
+        { clave: "analisis.reglas.test_timeout_ms", valor: "5000", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "statement_timeout (ms) del test SQL del panel de reglas; se aplica acotado 1000..30000 (SPEC-224)" },
+        { clave: "analisis.reglas.test_max_filas", valor: "50", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Máximo de filas de la muestra del test SQL; se aplica acotado 1..200 (SPEC-224)" },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    console.log("[SEED] 2 parámetros analisis.reglas.* del panel de reglas listos (SPEC-224)");
+}
+
+// ── SPEC-239 (002-PI-mega-cola): catálogo Motor Notif del evento
+// `expediente.emergencia.activada` (FR-009/FR-011). Aditivo e idempotente
+// (patrón I-100). Notas:
+// - El parámetro `padre.comite.sla_horas_gravedad_roja = 12` YA lo siembra
+//   SPEC-230 (seedParametrosPadre); no se duplica aquí.
+// - Canal EMAIL únicamente: Motor Notif solo soporta EMAIL/IN_APP (no existe
+//   canal SMS) y el contacto de emergencia no es un Usuario (sin IN_APP).
+//   La notificación admin/CEO al subir a ROJO reutiliza la plantilla
+//   `expediente.gravedad.subio_a_rojo` sembrada por SPEC-236.
+async function seedEmergenciaExpediente() {
+    const evento = "expediente.emergencia.activada";
+    const plantillaClave = `${evento}.email`;
+    const asunto = "Aviso urgente sobre un caso de protección";
+    const cuerpoMarkdown =
+        "Hola {{contactoNombre}},\n\n" +
+        "Te contactamos como contacto de emergencia (relación: {{relacion}}, teléfono registrado: {{telefono}}) " +
+        "registrado por {{padreNombre}}.\n\n" +
+        "El comité de validación activó el protocolo de emergencia del caso {{expedienteNumero}}. " +
+        "Por favor comunícate con la línea oficial de atención lo antes posible.\n\n" +
+        "Este mensaje es un aviso de contacto; no contiene detalles del caso.";
+
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave: plantillaClave },
+        update: {
+            canal: "EMAIL",
+            asunto,
+            cuerpoMarkdown,
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    contactoNombre: { type: "string" },
+                    relacion: { type: "string" },
+                    telefono: { type: "string" },
+                    expedienteNumero: { type: "string" },
+                    padreNombre: { type: "string" },
+                },
+            },
+            activa: true,
+        },
+        create: {
+            clave: plantillaClave,
+            canal: "EMAIL",
+            asunto,
+            cuerpoMarkdown,
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    contactoNombre: { type: "string" },
+                    relacion: { type: "string" },
+                    telefono: { type: "string" },
+                    expedienteNumero: { type: "string" },
+                    padreNombre: { type: "string" },
+                },
+            },
+            activa: true,
+        },
+    });
+
+    const reglaExistente = await prisma.notificacionRegla.findFirst({
+        where: { evento, rol: "CONTACTO_EMERGENCIA", canal: "EMAIL" },
+        orderBy: { createdAt: "desc" },
+    });
+    if (reglaExistente) {
+        await prisma.notificacionRegla.update({
+            where: { id: reglaExistente.id },
+            data: { offset: "+0m", plantillaClave, obligatoria: true, activa: true },
+        });
+    } else {
+        await prisma.notificacionRegla.create({
+            data: {
+                evento,
+                rol: "CONTACTO_EMERGENCIA",
+                offset: "+0m",
+                canal: "EMAIL",
+                plantillaClave,
+                obligatoria: true,
+                activa: true,
+            },
+        });
+    }
+    console.log("[SEED] Catálogo Motor Notif expediente.emergencia.activada listo (SPEC-239)");
+}
+
+// ── SPEC-226 (002-PI-mega-cola): parámetros del ejecutor de acciones automáticas
+// (rate-limit por regla, scope `analisis_accion`) + catálogo Motor Notif de los
+// eventos `analisis.alerta.admin` y `analisis.operador.asignacion` (FR-014).
+// Idempotente: parámetros con `update: {}` (nunca pisan el tuning del admin);
+// plantillas con upsert por clave; reglas con findFirst→update/create (I-100).
+async function seedEjecucionAcciones() {
+    const params = [
+        { clave: "ratelimit.analisis_accion.window_seconds", valor: "3600", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Ventana (s) del rate-limit por regla del ejecutor de acciones (SPEC-226)" },
+        { clave: "ratelimit.analisis_accion.max_requests", valor: "20", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Máx. ejecuciones de acciones por regla por ventana (SPEC-226)" },
+        { clave: "analisis.acciones.alertas_destinatarios", valor: "[]", tipo: TipoParametro.JSON, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "usuarioIds admin destinatarios de crear_alerta; vacío = todos los ADMIN activos (SPEC-226)" },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+    console.log(`[SEED] ${params.length} parámetros del ejecutor de acciones listos (SPEC-226)`);
+
+    // Evento 1: alerta al admin (acción crear_alerta). Canal EMAIL obligatorio.
+    const eventoAlerta = "analisis.alerta.admin";
+    const variablesAlerta = {
+        type: "object",
+        properties: {
+            severidad: { type: "string" },
+            mensaje: { type: "string" },
+            reglaClave: { type: "string" },
+            urlPanel: { type: "string" },
+        },
+    };
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave: `${eventoAlerta}.email` },
+        update: {
+            canal: "EMAIL",
+            asunto: "Alerta {{severidad}} · {{reglaClave}}",
+            cuerpoMarkdown:
+                "Se generó una alerta automática de severidad {{severidad}}.\n\n" +
+                "**Regla:** {{reglaClave}}\n\n" +
+                "{{mensaje}}\n\n" +
+                "Ver el panel de análisis: {{urlPanel}}",
+            variablesSchema: variablesAlerta,
+            activa: true,
+        },
+        create: {
+            clave: `${eventoAlerta}.email`,
+            canal: "EMAIL",
+            asunto: "Alerta {{severidad}} · {{reglaClave}}",
+            cuerpoMarkdown:
+                "Se generó una alerta automática de severidad {{severidad}}.\n\n" +
+                "**Regla:** {{reglaClave}}\n\n" +
+                "{{mensaje}}\n\n" +
+                "Ver el panel de análisis: {{urlPanel}}",
+            variablesSchema: variablesAlerta,
+            activa: true,
+        },
+    });
+    const reglaAlerta = await prisma.notificacionRegla.findFirst({
+        where: { evento: eventoAlerta, rol: "ADMIN", canal: "EMAIL" },
+        orderBy: { createdAt: "desc" },
+    });
+    if (reglaAlerta) {
+        await prisma.notificacionRegla.update({
+            where: { id: reglaAlerta.id },
+            data: { offset: "+0m", plantillaClave: `${eventoAlerta}.email`, obligatoria: true, activa: true },
+        });
+    } else {
+        await prisma.notificacionRegla.create({
+            data: {
+                evento: eventoAlerta,
+                rol: "ADMIN",
+                offset: "+0m",
+                canal: "EMAIL",
+                plantillaClave: `${eventoAlerta}.email`,
+                obligatoria: true,
+                activa: true,
+            },
+        });
+    }
+
+    // Evento 2: asignación de una recomendación a un operador (acción asignar_operador).
+    const eventoOperador = "analisis.operador.asignacion";
+    const variablesOperador = {
+        type: "object",
+        properties: {
+            tituloRecomendacion: { type: "string" },
+            descripcionRecomendacion: { type: "string" },
+            urlPanel: { type: "string" },
+        },
+    };
+    const plantillasOperador = [
+        {
+            clave: `${eventoOperador}.email`,
+            canal: "EMAIL" as const,
+            asunto: "Caso asignado: {{tituloRecomendacion}}",
+            cuerpoMarkdown:
+                "Se te asignó un caso del panel de análisis.\n\n" +
+                "**{{tituloRecomendacion}}**\n\n" +
+                "{{descripcionRecomendacion}}\n\n" +
+                "Abrir el panel: {{urlPanel}}",
+        },
+        {
+            clave: `${eventoOperador}.in_app`,
+            canal: "IN_APP" as const,
+            asunto: null,
+            cuerpoMarkdown: "Caso asignado: {{tituloRecomendacion}}. Panel: {{urlPanel}}",
+        },
+    ];
+    for (const pl of plantillasOperador) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: variablesOperador,
+                activa: true,
+            },
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: variablesOperador,
+                activa: true,
+            },
+        });
+    }
+    for (const canal of ["EMAIL", "IN_APP"] as const) {
+        const existente = await prisma.notificacionRegla.findFirst({
+            where: { evento: eventoOperador, rol: "OPERADOR", canal },
+            orderBy: { createdAt: "desc" },
+        });
+        if (existente) {
+            await prisma.notificacionRegla.update({
+                where: { id: existente.id },
+                data: { offset: "+0m", plantillaClave: `${eventoOperador}.${canal.toLowerCase()}`, obligatoria: false, activa: true },
+            });
+        } else {
+            await prisma.notificacionRegla.create({
+                data: {
+                    evento: eventoOperador,
+                    rol: "OPERADOR",
+                    offset: "+0m",
+                    canal,
+                    plantillaClave: `${eventoOperador}.${canal.toLowerCase()}`,
+                    obligatoria: false,
+                    activa: true,
+                },
+            });
+        }
+    }
+    console.log("[SEED] Eventos analisis.alerta.admin y analisis.operador.asignacion listos (SPEC-226)");
 }
 
 async function main() {
@@ -1853,6 +2671,44 @@ async function main() {
             cuerpoMarkdown:
                 "Hola {{nombreColegio}},\n\nSe creó la cuenta institucional de tu colegio en Protección Infantil.\n\nUsuario: {{emailAdmin}}\nContraseña temporal: {{passwordTemporal}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible.\n\nEsta contraseña temporal no se volverá a mostrar.",
         },
+        // ── SPEC-215: programa de referidos del módulo de pagos ──
+        {
+            clave: "referido.registrado.email",
+            canal: "EMAIL",
+            asunto: "Alguien usó tu código de referido",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nUn nuevo cliente registró tu código de referido {{codigoReferido}}. Cuando su primer pago sea autorizado, recibirás tu recompensa.",
+        },
+        {
+            clave: "referido.registrado.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Un nuevo cliente registró tu código de referido {{codigoReferido}}.",
+        },
+        {
+            clave: "referido.recompensa.otorgada.email",
+            canal: "EMAIL",
+            asunto: "Tu recompensa por referido fue otorgada",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nEl primer pago de tu referido fue autorizado. Se otorgó 1 mes gratis a tu suscripción (código {{codigoReferido}}).",
+        },
+        {
+            clave: "referido.recompensa.otorgada.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Se otorgó 1 mes gratis a tu suscripción por tu referido (código {{codigoReferido}}).",
+        },
+        {
+            clave: "referido.tope_anual.email",
+            canal: "EMAIL",
+            asunto: "Tu código de referido se acerca a su tope anual",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nTu código de referido {{codigoReferido}} ya tiene {{usosAnio}} referidos activados este año: uno más y llegas al tope anual.",
+        },
+        {
+            clave: "referido.tope_anual.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown:
+                "Tu código {{codigoReferido}} tiene {{usosAnio}} referidos activados este año: uno más y llegas al tope anual.",
+        },
     ];
 
     for (const pl of plantillasSeed) {
@@ -1916,6 +2772,18 @@ async function main() {
         { evento: "caso.asignado", rol: "COMITE_VALIDACION", offset: "+0m", canal: "IN_APP", obligatoria: false },
         // SPEC-204: bienvenida al admin de un colegio nuevo (piloto migración motor)
         { evento: "colegio.creado", rol: "SCHOOL_ADMIN", offset: "+0m", canal: "EMAIL", obligatoria: true },
+        // ── SPEC-215: programa de referidos (titulares colegio/padre + aviso a admin) ──
+        { evento: "referido.registrado", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.registrado", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        { evento: "referido.registrado", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.registrado", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        { evento: "referido.recompensa.otorgada", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "EMAIL", obligatoria: true },
+        { evento: "referido.recompensa.otorgada", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "IN_APP", obligatoria: true },
+        { evento: "referido.recompensa.otorgada", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: true },
+        { evento: "referido.recompensa.otorgada", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: true },
+        { evento: "referido.tope_anual", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.tope_anual", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.tope_anual", rol: "ADMIN", offset: "+0m", canal: "EMAIL", obligatoria: true },
     ];
 
     for (const r of reglasSeed) {
@@ -2203,8 +3071,47 @@ async function main() {
     // ── Parámetros de señal comunitaria (SPEC-234) ─────────────────────────
     await seedParametrosSenalComunitaria();
 
+    // ── SPEC-220: parámetros del dominio Análisis (score, reglas, digest, anomalías) ──
+    await seedParametrosAnalisis();
+
+    // ── SPEC-225: parámetros del detector + evento/plantillas de anomalías ──
+    await seedAnomalias();
+
+    // ── SPEC-223: parámetros propios + evento/reglas/plantillas del digest ──
+    await seedDigestSemanal();
+
+    // ── SPEC-221: parámetros + 7 reglas semilla del motor de recomendación ──
+    await seedReglasRecomendacion(adminEmail);
+
+    // ── SPEC-222: umbrales opcionales del panel Dinero vs Valor ──
+    await seedParametrosPanelAnalisis();
+
+    // ── SPEC-213: hora de corrida del motor de vigencia de pagos ──
+    await seedParametrosVigenciaPagos();
+
     // ── Guías de acción v1 (SPEC-235) ──────────────────────────────────────
     await seedGuiasAccion(adminEmail);
+
+    // ── SPEC-236: parámetros + eventos/plantillas del motor de expediente ──
+    await seedMotorExpediente();
+
+    // ── SPEC-237: SLA de consolidación de la bandeja del comité ──
+    await seedParametrosComiteConsolidacion();
+
+    // ── SPEC-218: TTL de caché de la analítica dinero-vs-valor ──
+    await seedParametrosAnaliticaPagos();
+
+    // ── SPEC-227: parámetros del historial de recomendaciones ──
+    await seedParametrosHistorialRecomendaciones();
+
+    // ── SPEC-239: catálogo Motor Notif de expediente.emergencia.activada ──
+    await seedEmergenciaExpediente();
+
+    // ── SPEC-226: parámetros del ejecutor + eventos Motor Notif de acciones ──
+    await seedEjecucionAcciones();
+
+    // ── SPEC-224: parámetros del test SQL del panel de reglas ──
+    await seedParametrosReglasAdmin();
 
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
@@ -2212,7 +3119,7 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones };
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como

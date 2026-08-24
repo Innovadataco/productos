@@ -29,6 +29,7 @@ import { agregarPatronPorReporte } from "../src/lib/colegio/patrones.ts";
 import { boss, getWorkerParams, drainPending, ensureStarted } from "../src/lib/queue.ts";
 import { guardarReintento } from "../src/lib/reporte-reintentos.ts";
 import { getParametroSistemaValor } from "../src/lib/parametros.ts";
+import { registrarScheduleDigestSemanal } from "./digest-semanal-schedule.mjs";
 import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -585,6 +586,10 @@ async function start() {
             throw err;
         }
     });
+
+    // SPEC-223 (002-PI-124): digest semanal al CEO — schedule registrado desde
+    // scripts/digest-semanal-schedule.mjs (extraído por la regla max-lines 500).
+    await registrarScheduleDigestSemanal(boss, logger, ensureQueue);
 }
 
 start().catch((err) => {

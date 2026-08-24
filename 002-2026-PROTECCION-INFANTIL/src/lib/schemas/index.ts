@@ -664,3 +664,12 @@ export const reglaRecalcularBodySchema = z.object({
 export const notificacionParametroPatchBodySchema = z.object({
     valor: z.string().min(1).max(4000),
 });
+
+// SPEC-237 (002-PI-mega-cola): bandeja comité CONSOLIDACION + aprobación multi-miembro.
+export * from "./comite-consolidacion";
+
+// SPEC-238 (002-PI-mega-cola): aclaración padre-comité (pedir/responder).
+export * from "./aclaracion";
+
+// SPEC-239 (002-PI-mega-cola): contactos de emergencia del padre (E.164).
+export * from "./contacto-emergencia";

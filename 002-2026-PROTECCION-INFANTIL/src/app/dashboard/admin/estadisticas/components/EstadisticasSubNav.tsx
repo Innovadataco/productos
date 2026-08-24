@@ -19,6 +19,8 @@ const tabs = [
     { href: "/dashboard/admin/estadisticas/operacion?tab=sesiones", label: "Sesiones" },
     { href: "/dashboard/admin/estadisticas/motor", label: "Motor" },
     { href: "/dashboard/admin/estadisticas/salud-motor", label: "Salud motor" },
+    // SPEC-218 (002-PI-118): tab "Dinero vs Valor" (analítica del Módulo Pagos).
+    { href: "/dashboard/admin/estadisticas/dinero-vs-valor", label: "Dinero vs Valor" },
 ];
 
 export function EstadisticasSubNav() {

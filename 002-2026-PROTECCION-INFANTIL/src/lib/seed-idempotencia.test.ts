@@ -8,7 +8,9 @@ import { main } from "../../prisma/seed";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 
-describe("seed idempotencia — no pisa valores custom (SPEC-187)", () => {
+// El seed main() completo creció con el mega-lote (SPEC-211..239): en CI cada
+// corrida supera los 5s del timeout por defecto (observado 6.6-8.6s).
+describe("seed idempotencia — no pisa valores custom (SPEC-187)", { timeout: 60_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
     });
