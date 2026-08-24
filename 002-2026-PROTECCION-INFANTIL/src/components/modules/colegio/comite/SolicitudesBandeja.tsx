@@ -54,7 +54,7 @@ export function SolicitudesBandeja({ puedeResolver }: Props) {
                                 <div>
                                     <p className="font-medium text-body">{solicitud.numero}</p>
                                     <p className="text-sm text-muted">
-                                        {new Date(solicitud.creadoEn).toLocaleDateString("es-CO")} · {solicitud.estado}
+                                        {new Date(solicitud.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })} · {solicitud.estado}
                                     </p>
                                 </div>
                                 <Link

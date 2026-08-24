@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 340 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2380 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 361 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2527 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -94,6 +94,19 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/logs` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/bandeja` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/bandeja/[id]/reenviar` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/catalogos` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/parametros` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/parametros/[clave]` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/plantillas` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]/preview` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas/[id]` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular-preview` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/salud` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/casos` | api | permitir | permite | sí |
@@ -258,6 +271,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/notificaciones` | api | permitir | permite | sí |
+| `/api/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/notificaciones/preferencias` | api | permitir | permite | sí |
+| `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -271,6 +288,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
 | `/api/session/ping` | api | permitir | permite | sí |
+| `/api/webhooks/resend` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -293,6 +311,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/motor` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion/colegios/[colegioId]` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/salud-motor` | página | permitir | permite | sí |
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores` | página | permitir | permite | sí |
@@ -354,6 +373,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/perfil` | página | permitir | permite | sí |
+| `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -439,6 +460,19 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/logs` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/bandeja` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/bandeja/[id]/reenviar` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/catalogos` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/parametros` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/parametros/[clave]` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/plantillas` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]/preview` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas/[id]` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular-preview` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/salud` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/casos` | api | permitir | permite | sí |
@@ -603,6 +637,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/notificaciones` | api | permitir | permite | sí |
+| `/api/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/notificaciones/preferencias` | api | permitir | permite | sí |
+| `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -616,6 +654,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
 | `/api/session/ping` | api | permitir | permite | sí |
+| `/api/webhooks/resend` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -638,6 +677,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/motor` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion/colegios/[colegioId]` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/salud-motor` | página | permitir | permite | sí |
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores` | página | permitir | permite | sí |
@@ -699,6 +739,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/perfil` | página | permitir | permite | sí |
+| `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -784,6 +826,19 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/logs` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva` | api | permitir | permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/bandeja` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/bandeja/[id]/reenviar` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/catalogos` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/parametros` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/parametros/[clave]` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/plantillas` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]/preview` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas/[id]` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular-preview` | api | permitir | permite | sí |
+| `/api/admin/notificaciones/salud` | api | permitir | permite | sí |
 | `/api/admin/operadores` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]` | api | permitir | permite | sí |
 | `/api/admin/operadores/[id]/casos` | api | permitir | permite | sí |
@@ -948,6 +1003,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/notificaciones` | api | permitir | permite | sí |
+| `/api/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/notificaciones/preferencias` | api | permitir | permite | sí |
+| `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -961,6 +1020,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
 | `/api/session/ping` | api | permitir | permite | sí |
+| `/api/webhooks/resend` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/admin/comite | no permite | sí |
@@ -983,6 +1043,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/motor` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | permitir | permite | sí |
 | `/dashboard/admin/estadisticas/operacion/colegios/[colegioId]` | página | permitir | permite | sí |
+| `/dashboard/admin/estadisticas/salud-motor` | página | permitir | permite | sí |
 | `/dashboard/admin/ia` | página | permitir | permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | permitir | permite | sí |
 | `/dashboard/admin/operadores` | página | permitir | permite | sí |
@@ -1044,6 +1105,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/perfil` | página | permitir | permite | sí |
+| `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -1129,6 +1192,19 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/logs` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/bandeja` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/bandeja/[id]/reenviar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/catalogos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/parametros` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/parametros/[clave]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/plantillas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]/preview` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular-preview` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/salud` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/casos` | api | HTTP 403 | no permite | sí |
@@ -1293,6 +1369,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | HTTP 403 | no permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/notificaciones` | api | permitir | permite | sí |
+| `/api/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/notificaciones/preferencias` | api | permitir | permite | sí |
+| `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | HTTP 403 | no permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
@@ -1306,6 +1386,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
 | `/api/session/ping` | api | HTTP 403 | no permite | sí |
+| `/api/webhooks/resend` | api | HTTP 403 | no permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1328,6 +1409,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/motor` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion/colegios/[colegioId]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/estadisticas/salud-motor` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1389,6 +1471,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/perfil` | página | permitir | permite | sí |
+| `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/docs` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs/operar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs/tecnico` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1474,6 +1558,19 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/logs` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/bandeja` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/bandeja/[id]/reenviar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/catalogos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/parametros` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/parametros/[clave]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/plantillas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]/preview` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular-preview` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/salud` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/casos` | api | HTTP 403 | no permite | sí |
@@ -1638,6 +1735,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | HTTP 403 | no permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/notificaciones` | api | permitir | permite | sí |
+| `/api/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/notificaciones/preferencias` | api | permitir | permite | sí |
+| `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | HTTP 403 | no permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
@@ -1651,6 +1752,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/seguimiento` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | HTTP 403 | no permite | sí |
 | `/api/session/ping` | api | HTTP 403 | no permite | sí |
+| `/api/webhooks/resend` | api | HTTP 403 | no permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -1673,6 +1775,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/motor` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion/colegios/[colegioId]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/estadisticas/salud-motor` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -1734,6 +1837,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/perfil` | página | permitir | permite | sí |
+| `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/docs` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs/operar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs/tecnico` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -1819,6 +1924,19 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/logs` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva` | api | HTTP 403 | no permite | sí |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/bandeja` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/bandeja/[id]/reenviar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/catalogos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/parametros` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/parametros/[clave]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/plantillas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/plantillas/[clave]/preview` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/reglas/[id]/recalcular-preview` | api | HTTP 403 | no permite | sí |
+| `/api/admin/notificaciones/salud` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/operadores/[id]/casos` | api | HTTP 403 | no permite | sí |
@@ -1983,6 +2101,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/notificaciones` | api | permitir | permite | sí |
+| `/api/notificaciones/[id]` | api | permitir | permite | sí |
+| `/api/notificaciones/preferencias` | api | permitir | permite | sí |
+| `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -1996,6 +2118,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
 | `/api/session/ping` | api | permitir | permite | sí |
+| `/api/webhooks/resend` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | permitir | permite | sí |
@@ -2018,6 +2141,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/motor` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion/colegios/[colegioId]` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/estadisticas/salud-motor` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/ | no permite | sí |
@@ -2079,6 +2203,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/perfil` | página | permitir | permite | sí |
 | `/dashboard/padre/reportar` | página | permitir | permite | sí |
 | `/dashboard/padre/suscripcion` | página | permitir | permite | sí |
+| `/dashboard/perfil` | página | permitir | permite | sí |
+| `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -2164,6 +2290,19 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/monitoreo/logs` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/motor/deriva` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/motor/deriva/recalcular` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/bandeja` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/bandeja/[id]/reenviar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/catalogos` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/parametros` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/parametros/[clave]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/plantillas` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/plantillas/[clave]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/plantillas/[clave]/preview` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/reglas` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/reglas/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/reglas/[id]/recalcular` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/reglas/[id]/recalcular-preview` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/notificaciones/salud` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/operadores/[id]/casos` | api | HTTP 401 | permite | **NO** |
@@ -2328,6 +2467,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/me` | api | HTTP 401 | permite | **NO** |
 | `/api/me/colegio` | api | HTTP 401 | permite | **NO** |
+| `/api/notificaciones` | api | HTTP 401 | permite | **NO** |
+| `/api/notificaciones/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/notificaciones/preferencias` | api | HTTP 401 | permite | **NO** |
+| `/api/notificaciones/resumen` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos/aplicar-bono` | api | HTTP 401 | permite | **NO** |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -2341,6 +2484,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/reportes/seguimiento` | api | permitir | permite | sí |
 | `/api/reportes/seguimiento/[numero]` | api | permitir | permite | sí |
 | `/api/session/ping` | api | HTTP 401 | permite | **NO** |
+| `/api/webhooks/resend` | api | HTTP 401 | permite | **NO** |
 | `/cambiar-password` | página | redirigir→/login | permite | **NO** |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/login | permite | **NO** |
@@ -2363,6 +2507,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/estadisticas/motor` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/estadisticas/operacion/colegios/[colegioId]` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/estadisticas/salud-motor` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/ia` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/monitoreo/worker` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/operadores` | página | redirigir→/login | no permite | sí |
@@ -2424,6 +2569,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/perfil` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/reportar` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/suscripcion` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/perfil` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/perfil/notificaciones` | página | redirigir→/login | permite | **NO** |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -2510,6 +2657,19 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/monitoreo/logs` | HTTP 401 | permite |
 | `/api/admin/motor/deriva` | HTTP 401 | permite |
 | `/api/admin/motor/deriva/recalcular` | HTTP 401 | permite |
+| `/api/admin/notificaciones/bandeja` | HTTP 401 | permite |
+| `/api/admin/notificaciones/bandeja/[id]/reenviar` | HTTP 401 | permite |
+| `/api/admin/notificaciones/catalogos` | HTTP 401 | permite |
+| `/api/admin/notificaciones/parametros` | HTTP 401 | permite |
+| `/api/admin/notificaciones/parametros/[clave]` | HTTP 401 | permite |
+| `/api/admin/notificaciones/plantillas` | HTTP 401 | permite |
+| `/api/admin/notificaciones/plantillas/[clave]` | HTTP 401 | permite |
+| `/api/admin/notificaciones/plantillas/[clave]/preview` | HTTP 401 | permite |
+| `/api/admin/notificaciones/reglas` | HTTP 401 | permite |
+| `/api/admin/notificaciones/reglas/[id]` | HTTP 401 | permite |
+| `/api/admin/notificaciones/reglas/[id]/recalcular` | HTTP 401 | permite |
+| `/api/admin/notificaciones/reglas/[id]/recalcular-preview` | HTTP 401 | permite |
+| `/api/admin/notificaciones/salud` | HTTP 401 | permite |
 | `/api/admin/operadores` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]` | HTTP 401 | permite |
 | `/api/admin/operadores/[id]/casos` | HTTP 401 | permite |
@@ -2651,10 +2811,15 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/config/parametros/[clave]/revelar` | HTTP 401 | permite |
 | `/api/me` | HTTP 401 | permite |
 | `/api/me/colegio` | HTTP 401 | permite |
+| `/api/notificaciones` | HTTP 401 | permite |
+| `/api/notificaciones/[id]` | HTTP 401 | permite |
+| `/api/notificaciones/preferencias` | HTTP 401 | permite |
+| `/api/notificaciones/resumen` | HTTP 401 | permite |
 | `/api/pagos/aplicar-bono` | HTTP 401 | permite |
 | `/api/publico/guia-accion/categoria/[cat]` | HTTP 401 | permite |
 | `/api/publico/verificar-pdf/[hash]` | HTTP 401 | permite |
 | `/api/session/ping` | HTTP 401 | permite |
+| `/api/webhooks/resend` | HTTP 401 | permite |
 | `/cambiar-password` | redirigir→/login | permite |
 | `/dashboard` | redirigir→/login | permite |
 | `/dashboard/apelaciones` | redirigir→/login | permite |
@@ -2691,6 +2856,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/padre/perfil` | redirigir→/login | permite |
 | `/dashboard/padre/reportar` | redirigir→/login | permite |
 | `/dashboard/padre/suscripcion` | redirigir→/login | permite |
+| `/dashboard/perfil` | redirigir→/login | permite |
+| `/dashboard/perfil/notificaciones` | redirigir→/login | permite |
 | `/mis-reportes` | redirigir→/login | permite |
 
 ## Eje de módulos (BD): módulo → ruta → rol

@@ -134,7 +134,7 @@ export function OllamaSmokeHistorial({ abierto, onCerrar }: { abierto: boolean; 
                                 {items.map((item) => (
                                     <tr key={item.id} className="border-t border-borde">
                                         <td className="py-2 text-body">
-                                            {new Date(item.creadoEn).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "medium" })}
+                                            {new Date(item.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "medium" })}
                                         </td>
                                         <td className="py-2 text-body">{etiquetaMetodo(item.metodo)}</td>
                                         <td className="py-2">

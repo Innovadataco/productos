@@ -47,6 +47,12 @@ const SIN_PANTALLA_PROPIA = new Set([
     // SPEC-235 (002-PI-135): guías de acción parametrizables es un sub-tab dentro de
     // `/dashboard/admin/configuracion`; no tiene ítem de menú lateral propio.
     "guias_accion_admin",
+    // SPEC-202/203: el panel de notificaciones es un tab dentro de
+    // `/dashboard/admin/configuracion`; no tiene ítem de menú lateral propio.
+    "configuracion_notificaciones",
+    // SPEC-202: salud del motor de notificaciones es una sub-página del área
+    // Estadísticas (sub-nav); no tiene ítem de menú lateral propio.
+    "estadisticas_salud_motor",
 ]);
 
 // SPEC-173 (FASE-C): los nodos expandibles (p. ej. "Usuarios") declaran hijos;

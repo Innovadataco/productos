@@ -52,7 +52,7 @@ function formatearValor(valor: unknown): string {
     if (typeof valor === "string") {
         if (REGEX_FECHA_ISO.test(valor)) {
             const fecha = new Date(valor);
-            return Number.isNaN(fecha.getTime()) ? valor : fecha.toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+            return Number.isNaN(fecha.getTime()) ? valor : fecha.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium", timeStyle: "short" });
         }
         return valor;
     }

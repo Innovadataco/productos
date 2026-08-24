@@ -115,11 +115,11 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
                 </div>
                 <div>
                     <p className="text-xs uppercase tracking-wide text-muted">Último acceso</p>
-                    <p className="font-medium text-body">{cuenta.ultimaSesion ? new Date(cuenta.ultimaSesion).toLocaleString("es-CO") : "Nunca"}</p>
+                    <p className="font-medium text-body">{cuenta.ultimaSesion ? new Date(cuenta.ultimaSesion).toLocaleString("es-CO", { timeZone: "America/Bogota" }) : "Nunca"}</p>
                 </div>
                 <div>
                     <p className="text-xs uppercase tracking-wide text-muted">Creada</p>
-                    <p className="font-medium text-body">{new Date(cuenta.creadoEn).toLocaleDateString("es-CO")}</p>
+                    <p className="font-medium text-body">{new Date(cuenta.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}</p>
                 </div>
             </div>
 

@@ -1676,6 +1676,280 @@ async function main() {
     }
     console.log("Parámetros del módulo de reportes creados");
 
+    // ── SPEC-201: parámetros del motor de notificaciones (BRIEF §5.6) ────────
+    // AJUSTE OBLIGATORIO CEO (E): estos parámetros son estructurales del motor.
+    // Cuando cambien de default entre versiones, el upsert debe usar update
+    // explícito, no update: {}. Primer seed es INSERT limpio; versiones futuras
+    // del seed propagan cambios de estructura con update: { valor, descripcion }.
+    const notificacionesParams = [
+        {
+            clave: "notificaciones.worker.intervalo_segundos",
+            valor: "10",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Intervalo entre polls del worker de notificaciones (segundos)",
+        },
+        {
+            clave: "notificaciones.worker.max_intentos",
+            valor: "4",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Máximo de intentos de envío de una notificación",
+        },
+        {
+            clave: "notificaciones.worker.backoff_segundos",
+            valor: "[60,300,1800,7200]",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Backoff entre reintentos de envío en segundos (JSON array)",
+        },
+        {
+            clave: "notificaciones.worker.lote_size",
+            valor: "20",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Tamaño del lote de envío del worker de notificaciones",
+        },
+        {
+            clave: "notificaciones.retencion_meses",
+            valor: "24",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Meses de retención de notificaciones enviadas/canceladas",
+        },
+        {
+            clave: "notificaciones.horario.silencio",
+            valor: "20:00-07:00",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: true,
+            descripcion: "Ventana de silencio del motor de notificaciones (Bogotá, HH:MM-HH:MM)",
+        },
+        {
+            clave: "notificaciones.bounces.umbral_bloqueo",
+            valor: "3",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Bounces acumulados para bloquear un destino de email",
+        },
+    ];
+    for (const p of notificacionesParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, descripcion: p.descripcion },
+            create: p,
+        });
+    }
+    console.log("Parámetros del motor de notificaciones (SPEC-201) creados");
+
+    // ── SPEC-201: plantillas y reglas semilla del motor (BRIEF §5.2-§6) ──────
+    // AJUSTE OBLIGATORIO CEO (E): el upsert de plantillas y reglas usa update
+    // explícito para propagar cambios de estructura entre versiones (patrón I-100).
+    type PlantillaSeed = {
+        clave: string;
+        canal: "EMAIL" | "IN_APP";
+        asunto?: string;
+        cuerpoMarkdown: string;
+    };
+
+    const plantillasSeed: PlantillaSeed[] = [
+        // suscripcion.por_vencer
+        {
+            clave: "suscripcion.por_vencer.email",
+            canal: "EMAIL",
+            asunto: "Tu suscripción vence pronto",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nTu suscripción vence el {{fecha}}. Renueva a tiempo para no perder la protección activa.",
+        },
+        {
+            clave: "suscripcion.por_vencer.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Tu suscripción vence el {{fecha}}. Renueva a tiempo.",
+        },
+        // suscripcion.en_gracia
+        {
+            clave: "suscripcion.en_gracia.email",
+            canal: "EMAIL",
+            asunto: "Tu suscripción está en período de gracia",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nTu suscripción venció el {{fecha}}. Tienes un período de gracia para regularizar el pago.",
+        },
+        {
+            clave: "suscripcion.en_gracia.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Tu suscripción venció el {{fecha}}. Regulariza el pago durante el período de gracia.",
+        },
+        // suscripcion.cortada
+        {
+            clave: "suscripcion.cortada.email",
+            canal: "EMAIL",
+            asunto: "Tu suscripción ha sido suspendida",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nTu suscripción fue suspendida el {{fecha}}. Contacta soporte para reactivarla.",
+        },
+        {
+            clave: "suscripcion.cortada.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Tu suscripción fue suspendida el {{fecha}}. Contacta soporte.",
+        },
+        // reporte.circulo_confianza.aparece_menor
+        {
+            clave: "reporte.circulo_confianza.aparece_menor.email",
+            canal: "EMAIL",
+            asunto: "Novedad en tu Círculo de Confianza",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nApareció una nueva alerta relacionada con tu Círculo de Confianza. Ingresa al panel para revisarla.",
+        },
+        {
+            clave: "reporte.circulo_confianza.aparece_menor.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Nueva alerta en tu Círculo de Confianza. Revisa el panel.",
+        },
+        // reporte.resuelto
+        {
+            clave: "reporte.resuelto.email",
+            canal: "EMAIL",
+            asunto: "Tu reporte fue resuelto",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nTu reporte fue resuelto. Ingresa al panel para ver el resultado.",
+        },
+        {
+            clave: "reporte.resuelto.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Tu reporte fue resuelto. Revisa el panel.",
+        },
+        // caso.asignado
+        {
+            clave: "caso.asignado.email",
+            canal: "EMAIL",
+            asunto: "Se te asignó un caso",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\nSe te asignó un caso para revisión. Ingresa al panel de administración.",
+        },
+        {
+            clave: "caso.asignado.in_app",
+            canal: "IN_APP",
+            cuerpoMarkdown: "Se te asignó un caso. Revisa la bandeja.",
+        },
+        // admin.contacto_bloqueado (evento interno)
+        {
+            clave: "admin.contacto_bloqueado.email",
+            canal: "EMAIL",
+            asunto: "Destino de email bloqueado por bounces",
+            cuerpoMarkdown:
+                "El email {{email}} fue bloqueado tras {{bounceCount}} bounces (motivo: {{motivo}}).",
+        },
+        // SPEC-204: bienvenida al admin de un colegio nuevo (piloto migración motor)
+        {
+            clave: "colegio.bienvenida.email",
+            canal: "EMAIL",
+            asunto: "Tu cuenta institucional está lista",
+            cuerpoMarkdown:
+                "Hola {{nombreColegio}},\n\nSe creó la cuenta institucional de tu colegio en Protección Infantil.\n\nUsuario: {{emailAdmin}}\nContraseña temporal: {{passwordTemporal}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible.\n\nEsta contraseña temporal no se volverá a mostrar.",
+        },
+    ];
+
+    for (const pl of plantillasSeed) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {
+                canal: pl.canal,
+                asunto: pl.asunto ?? null,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: { type: "object", properties: {} },
+                activa: true,
+            },
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto ?? null,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: { type: "object", properties: {} },
+                activa: true,
+            },
+        });
+    }
+    console.log("Plantillas del motor de notificaciones (SPEC-201) creadas");
+
+    type ReglaSeed = {
+        evento: string;
+        rol: string;
+        offset: string;
+        canal: "EMAIL" | "IN_APP";
+        obligatoria: boolean;
+    };
+
+    const reglasSeed: ReglaSeed[] = [
+        // suscripcion.por_vencer
+        { evento: "suscripcion.por_vencer", rol: "RECTOR_COLEGIO", offset: "-5d", canal: "EMAIL", obligatoria: true },
+        { evento: "suscripcion.por_vencer", rol: "RECTOR_COLEGIO", offset: "-5d", canal: "IN_APP", obligatoria: true },
+        { evento: "suscripcion.por_vencer", rol: "PADRE", offset: "-1d", canal: "EMAIL", obligatoria: true },
+        { evento: "suscripcion.por_vencer", rol: "PADRE", offset: "-1d", canal: "IN_APP", obligatoria: true },
+        // suscripcion.en_gracia
+        { evento: "suscripcion.en_gracia", rol: "RECTOR_COLEGIO", offset: "+2d", canal: "EMAIL", obligatoria: true },
+        { evento: "suscripcion.en_gracia", rol: "RECTOR_COLEGIO", offset: "+2d", canal: "IN_APP", obligatoria: true },
+        { evento: "suscripcion.en_gracia", rol: "PADRE", offset: "+2d", canal: "EMAIL", obligatoria: true },
+        { evento: "suscripcion.en_gracia", rol: "PADRE", offset: "+2d", canal: "IN_APP", obligatoria: true },
+        // suscripcion.cortada
+        { evento: "suscripcion.cortada", rol: "RECTOR_COLEGIO", offset: "+3d", canal: "EMAIL", obligatoria: true },
+        { evento: "suscripcion.cortada", rol: "RECTOR_COLEGIO", offset: "+3d", canal: "IN_APP", obligatoria: true },
+        { evento: "suscripcion.cortada", rol: "PADRE", offset: "+3d", canal: "EMAIL", obligatoria: true },
+        { evento: "suscripcion.cortada", rol: "PADRE", offset: "+3d", canal: "IN_APP", obligatoria: true },
+        // reporte.circulo_confianza.aparece_menor
+        { evento: "reporte.circulo_confianza.aparece_menor", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "reporte.circulo_confianza.aparece_menor", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        // reporte.resuelto
+        { evento: "reporte.resuelto", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "reporte.resuelto", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        // caso.asignado
+        { evento: "caso.asignado", rol: "COMITE_CONVIVENCIA", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "caso.asignado", rol: "COMITE_CONVIVENCIA", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        { evento: "caso.asignado", rol: "OPERADOR", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "caso.asignado", rol: "OPERADOR", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        { evento: "caso.asignado", rol: "COMITE_VALIDACION", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "caso.asignado", rol: "COMITE_VALIDACION", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        // SPEC-204: bienvenida al admin de un colegio nuevo (piloto migración motor)
+        { evento: "colegio.creado", rol: "SCHOOL_ADMIN", offset: "+0m", canal: "EMAIL", obligatoria: true },
+    ];
+
+    for (const r of reglasSeed) {
+        const existente = await prisma.notificacionRegla.findFirst({
+            where: { evento: r.evento, rol: r.rol, canal: r.canal },
+            orderBy: { createdAt: "desc" },
+        });
+        const plantillaClave = `${r.evento}.${r.canal.toLowerCase()}`;
+        const data = {
+            evento: r.evento,
+            rol: r.rol,
+            offset: r.offset,
+            canal: r.canal,
+            plantillaClave,
+            obligatoria: r.obligatoria,
+            activa: true,
+        };
+        if (existente) {
+            await prisma.notificacionRegla.update({
+                where: { id: existente.id },
+                data: {
+                    offset: data.offset,
+                    canal: data.canal,
+                    plantillaClave: data.plantillaClave,
+                    obligatoria: data.obligatoria,
+                    activa: true,
+                },
+            });
+        } else {
+            await prisma.notificacionRegla.create({ data });
+        }
+    }
+    console.log("Reglas semilla del motor de notificaciones (SPEC-201) creadas");
+
     // SPEC-182 (I-60): reconciliación periódica de reportes huérfanos sin operador.
     const operadoresParams = [
         {

@@ -183,7 +183,7 @@ export function SeguimientoClient() {
                     <div className={infoBox}>
                         <p className="text-sm font-medium text-body">{data.mensaje}</p>
                         <p className="mt-1 text-xs text-subtle">
-                            Reportado el {new Date(data.creadoEn).toLocaleDateString("es-CO")}
+                            Reportado el {new Date(data.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                         </p>
                         <p className="mt-2 text-xs font-medium text-body">Gracias por reportar.</p>
                     </div>

@@ -173,7 +173,7 @@ export function ComiteBandeja() {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 text-body max-w-xs truncate">{s.motivo}</td>
-                                            <td className="px-4 py-3 text-subtle">{new Date(s.creadoEn).toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-subtle">{new Date(s.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">
                                                     {readOnly ? (

@@ -52,8 +52,7 @@ export function buildQueryParams(filters: Filters, page: number): URLSearchParam
 }
 
 export function formatDate(iso: string): string {
-    return new Date(iso).toLocaleString("es-CO", {
-        year: "numeric",
+    return new Date(iso).toLocaleString("es-CO", { timeZone: "America/Bogota", year: "numeric",
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",

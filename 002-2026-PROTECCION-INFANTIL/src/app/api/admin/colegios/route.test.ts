@@ -16,10 +16,8 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
-vi.mock("@/lib/email", () => ({
-    enviarEmailBienvenidaColegio: vi.fn().mockResolvedValue(undefined),
-    enviarEmailBienvenidaOperador: vi.fn().mockResolvedValue(undefined),
-    enviarEmailBienvenidaComite: vi.fn().mockResolvedValue(undefined),
+vi.mock("@/lib/notificaciones", () => ({
+    programar: vi.fn().mockResolvedValue({ programadas: 1, canceladasPorReemplazo: 0 }),
 }));
 
 function baseColegio(paisId: string, ciudadId: string, departamentoId?: string) {

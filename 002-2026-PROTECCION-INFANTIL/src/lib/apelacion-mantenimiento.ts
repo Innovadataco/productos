@@ -1,3 +1,5 @@
+import { subDays } from "date-fns";
+import { diaCalendarioBogota } from "./fechas/formato-bogota";
 import { prisma } from "./prisma";
 import { logAudit } from "./audit";
 import { logger } from "./logger";
@@ -19,8 +21,8 @@ import { enviarAvisoPlazoApelaciones } from "./email";
 
 export async function purgarDocumentosVencidos(ahora: Date = new Date()): Promise<number> {
     const retencionDias = await getRetencionDocumentoDias();
-    const limite = new Date(ahora);
-    limite.setDate(limite.getDate() - retencionDias);
+    // SPEC-200: el corte de retención se fija sobre el día calendario Bogotá.
+    const limite = subDays(diaCalendarioBogota(ahora), retencionDias);
 
     const vencidos = await prisma.documentoApelacion.findMany({
         where: {

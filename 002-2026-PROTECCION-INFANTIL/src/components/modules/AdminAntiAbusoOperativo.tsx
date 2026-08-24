@@ -332,7 +332,7 @@ function TablaSimple({
 
 function formatearFecha(fecha: string | null): string {
     if (!fecha) return "—";
-    return new Date(fecha).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
+    return new Date(fecha).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
 }
 
 function truncar(texto: string, max: number): string {

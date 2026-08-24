@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NivelLog } from "@prisma/client";
+import { NivelLog, EstadoNotificacion, CanalNotificacion } from "@prisma/client";
 
 /**
  * Esquemas zod reutilizables para validación de entradas en rutas API.
@@ -616,4 +616,51 @@ export const reasignarOperadorBodySchema = z.object({
     reporteId: cuidIdSchema,
     operadorDestinoId: cuidIdSchema,
     motivo: z.string().min(20).max(500),
+});
+
+// SPEC-202 (002-PI-099): panel admin del motor de notificaciones.
+export const notificacionIdParamsSchema = z.object({
+    id: cuidIdSchema,
+});
+
+export const notificacionClaveParamsSchema = z.object({
+    clave: z.string().min(1).max(120),
+});
+
+export const bandejaNotificacionesQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    evento: z.string().min(1).max(100).optional(),
+    canal: z.nativeEnum(CanalNotificacion).optional(),
+    estado: z.nativeEnum(EstadoNotificacion).optional(),
+    destinatario: z.string().min(1).max(255).optional(),
+    fechaDesde: z.string().date().optional(),
+    fechaHasta: z.string().date().optional(),
+});
+
+export const plantillaPatchBodySchema = z.object({
+    asunto: z.string().max(255).optional().nullable(),
+    cuerpoMarkdown: z.string().min(1).max(8000),
+    variablesSchema: z.record(z.string(), z.unknown()).optional(),
+    activa: z.boolean().optional(),
+});
+
+export const plantillaPreviewBodySchema = z.object({
+    variables: z.record(z.string(), z.unknown()).default({}),
+});
+
+export const reglaPatchBodySchema = z.object({
+    offset: z.string().regex(/^[+-]\d+[dhm]$/, "Offset inválido: formato [+-]N[d|h|m]").optional(),
+    canal: z.nativeEnum(CanalNotificacion).optional(),
+    plantillaClave: z.string().min(1).max(120).optional(),
+    obligatoria: z.boolean().optional(),
+    activa: z.boolean().optional(),
+});
+
+export const reglaRecalcularBodySchema = z.object({
+    motivo: z.string().min(1).max(200),
+});
+
+export const notificacionParametroPatchBodySchema = z.object({
+    valor: z.string().min(1).max(4000),
 });

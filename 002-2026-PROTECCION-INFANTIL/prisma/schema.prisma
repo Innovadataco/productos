@@ -233,6 +233,13 @@ enum AccionAudit {
   GUIA_ACCION_RECHAZADA
   GUIA_ACCION_PUBLICADA
   GUIA_ACCION_REEMPLAZADA
+  // SPEC-202 (002-PI-099): auditoría de cambios en reglas del motor de notificaciones.
+  NOTIFICACION_REGLA_ACTUALIZADA
+  NOTIFICACION_PLANTILLA_ACTUALIZADA
+  NOTIFICACION_PARAMETRO_ACTUALIZADO
+  // SPEC-203 (002-PI-100): auditoría de preferencias y lectura de notificaciones del usuario final.
+  NOTIFICACION_PREFERENCIA_ACTUALIZADA
+  NOTIFICACION_USUARIO_LEIDA
 }
 
 enum TipoPeriodoServicio {
@@ -631,19 +638,19 @@ model AuditLog {
 
 // SPEC-206 (002-PI-120): bitácora de sesiones activas para instrumentación de uso.
 model SesionLog {
-  id                String             @id @default(cuid())
+  id                String              @id @default(cuid())
   usuarioId         String
   tenantId          String?
   rol               RolUsuario
-  iniciadaEn        DateTime           @db.Timestamptz(6)
-  ultimaActividadEn DateTime           @db.Timestamptz(6)
-  cerradaEn         DateTime?          @db.Timestamptz(6)
+  iniciadaEn        DateTime            @db.Timestamptz(6)
+  ultimaActividadEn DateTime            @db.Timestamptz(6)
+  cerradaEn         DateTime?           @db.Timestamptz(6)
   motivoCierre      MotivoCierreSesion?
   duracionMin       Int?
   ipHash            String
   userAgent         String?
-  creadoEn          DateTime           @default(now())
-  actualizadoEn     DateTime           @updatedAt
+  creadoEn          DateTime            @default(now())
+  actualizadoEn     DateTime            @updatedAt
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
@@ -2221,7 +2228,7 @@ model PatronExpediente {
 // La unicidad de una guía ACTIVA por categoría se garantiza con un índice único
 // parcial SQL (ver migración aditiva); Prisma no modela índices condicionales.
 model GuiaAccionCategoria {
-  id                    String            @id @default(cuid())
+  id                    String           @id @default(cuid())
   categoria             String
   versionSecuencial     Int
   tituloEmocional       String
@@ -2233,11 +2240,11 @@ model GuiaAccionCategoria {
   botonesAccionJson     Json
   piePagina             String?
   estado                EstadoGuiaAccion
-  aprobadaPorComiteJson Json              @default("[]")
+  aprobadaPorComiteJson Json             @default("[]")
   creadaPorAdminId      String
-  createdAt             DateTime          @default(now()) @db.Timestamptz(6)
-  publicadaEn           DateTime?         @db.Timestamptz(6)
-  reemplazadaEn         DateTime?         @db.Timestamptz(6)
+  createdAt             DateTime         @default(now()) @db.Timestamptz(6)
+  publicadaEn           DateTime?        @db.Timestamptz(6)
+  reemplazadaEn         DateTime?        @db.Timestamptz(6)
 
   creadaPor Usuario @relation(fields: [creadaPorAdminId], references: [id])
 
@@ -2245,4 +2252,121 @@ model GuiaAccionCategoria {
   @@index([estado])
   @@index([creadaPorAdminId])
   @@map("GuiaAccionCategoria")
+}
+
+// ============================================
+// MÓDULO DE NOTIFICACIONES (SPEC-201)
+// ============================================
+
+enum EstadoNotificacion {
+  ENCOLADA
+  ENVIANDO
+  ENVIADA
+  ABIERTA
+  CLICADA
+  FALLIDA
+  REINTENTANDO
+  CANCELADA
+}
+
+enum CanalNotificacion {
+  EMAIL
+  IN_APP
+}
+
+// SPEC-201 (BRIEF §5.1): cola + auditoría de envíos individuales.
+// El campo `proveedorId` es la clave de idempotencia de webhooks (Resend).
+model Notificacion {
+  id                    String             @id @default(cuid())
+  evento                String
+  destinatarioUsuarioId String?
+  destinatarioEmail     String
+  plantillaClave        String
+  canal                 CanalNotificacion
+  variables             Json
+  sujetoTipo            String?
+  sujetoId              String?
+  enviarEn              DateTime?          @db.Timestamptz(6)
+  estado                EstadoNotificacion @default(ENCOLADA)
+  intentos              Int                @default(0)
+  ultimoError           String?
+  proveedorId           String?
+  sentAt                DateTime?          @db.Timestamptz(6)
+  deliveredAt           DateTime?          @db.Timestamptz(6)
+  openedAt              DateTime?          @db.Timestamptz(6)
+  clickedAt             DateTime?          @db.Timestamptz(6)
+  bouncedAt             DateTime?          @db.Timestamptz(6)
+  canceladoEn           DateTime?          @db.Timestamptz(6)
+  motivoCancelacion     String?
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+
+  @@index([estado, enviarEn])
+  @@index([destinatarioUsuarioId, createdAt(sort: Desc)])
+  @@index([evento, createdAt(sort: Desc)])
+  @@index([proveedorId])
+  @@map("notificaciones")
+}
+
+// SPEC-201 (BRIEF §5.2): plantillas Markdown por canal.
+model NotificacionPlantilla {
+  id              String            @id @default(cuid())
+  clave           String            @unique
+  canal           CanalNotificacion
+  asunto          String?
+  cuerpoMarkdown  String
+  variablesSchema Json              @default("{}")
+  version         Int               @default(1)
+  activa          Boolean           @default(true)
+  creadaPor       String?
+  actualizadaPor  String?
+  createdAt       DateTime          @default(now()) @db.Timestamptz(6)
+  actualizadoEn   DateTime          @updatedAt @db.Timestamptz(6)
+
+  @@map("notificacion_plantillas")
+}
+
+// SPEC-201 (BRIEF §5.3): reglas programables de disparo.
+model NotificacionRegla {
+  id             String            @id @default(cuid())
+  evento         String
+  rol            String
+  offset         String
+  canal          CanalNotificacion
+  plantillaClave String
+  obligatoria    Boolean           @default(false)
+  activa         Boolean           @default(true)
+  createdAt      DateTime          @default(now()) @db.Timestamptz(6)
+  actualizadaPor String?
+  actualizadaEn  DateTime          @updatedAt @db.Timestamptz(6)
+
+  @@index([evento, activa])
+  @@map("notificacion_reglas")
+}
+
+// SPEC-201 (BRIEF §5.4): preferencias de opt-out del usuario final.
+// La clave `eventoRegla` es "evento.canal" (ej: "reporte.resuelto.email").
+model NotificacionPreferencia {
+  id          String   @id @default(cuid())
+  usuarioId   String
+  eventoRegla String
+  habilitado  Boolean  @default(true)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([usuarioId, eventoRegla])
+  @@index([usuarioId])
+  @@map("notificacion_preferencias")
+}
+
+// SPEC-201 (BRIEF §5.5): destinos con bounces reiterados.
+model NotificacionContactoBloqueado {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  bounceCount       Int       @default(1)
+  ultimoBounce      DateTime  @db.Timestamptz(6)
+  motivo            String
+  bloqueadoEn       DateTime  @default(now()) @db.Timestamptz(6)
+  notificadoAdminEn DateTime? @db.Timestamptz(6)
+
+  @@index([email])
+  @@map("notificacion_contactos_bloqueados")
 }

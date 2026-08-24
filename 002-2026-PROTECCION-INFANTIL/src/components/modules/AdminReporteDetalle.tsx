@@ -98,7 +98,7 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
                     <h3 className="mb-1 font-medium">Reporte dado de baja</h3>
                     <p><span className="text-subtle">Motivo:</span> {reporte.motivoBaja || "No especificado"}</p>
                     {reporte.notaBaja && <p><span className="text-subtle">Nota:</span> {reporte.notaBaja}</p>}
-                    {reporte.eliminadoEn && <p><span className="text-subtle">Fecha:</span> {new Date(reporte.eliminadoEn).toLocaleString()}</p>}
+                    {reporte.eliminadoEn && <p><span className="text-subtle">Fecha:</span> {new Date(reporte.eliminadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</p>}
                 </Alerta>
             )}
 

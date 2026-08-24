@@ -59,8 +59,7 @@ const tipoPeriodoLabels: Record<string, string> = {
 
 function formatDate(iso: string) {
     try {
-        return new Date(iso).toLocaleString("es-CO", {
-            year: "numeric",
+        return new Date(iso).toLocaleString("es-CO", { timeZone: "America/Bogota", year: "numeric",
             month: "short",
             day: "numeric",
             hour: "2-digit",

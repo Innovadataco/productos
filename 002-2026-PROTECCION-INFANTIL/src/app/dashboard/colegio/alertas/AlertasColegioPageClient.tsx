@@ -88,8 +88,7 @@ function estaVencida(vencimientoSla: string): boolean {
 }
 
 function formatoFecha(fecha: string): string {
-    return new Date(fecha).toLocaleString("es-CO", {
-        dateStyle: "medium",
+    return new Date(fecha).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium",
         timeStyle: "short",
     });
 }

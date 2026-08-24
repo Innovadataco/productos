@@ -144,6 +144,11 @@
 | [234](234-padre-v2-compilacion-tecnica-senal-patrones-kit-evidencia/spec.md) | SPEC-234 — Padre v2: compilación técnica + señal + patrones + kit evidencia (002-PI-134) | 🟢 Implementado |
 | [205](205-usuarios-vista-consolidada/spec.md) | SPEC-205 — Usuarios · Vista consolidada por rol (002-PI-102) | 🟢 Implementado |
 | [235](235-guias-accion-parametrizables/spec.md) | SPEC-235 — Guías de acción parametrizables | 🟢 Implementado |
+| [200](200-infra-timezone-bogota/spec.md) | SPEC-200 — INFRA · Timezone Bogotá (002-PI-097) | 🔵 Planeado |
+| [201](201-motor-notificaciones-nucleo/spec.md) | SPEC-201 — Motor de Notificaciones · Núcleo (002-PI-098) | 🔵 Planeado |
+| [202](202-panel-admin-motor-notificaciones/spec.md) | SPEC-202 — Panel Admin del Motor de Notificaciones (002-PI-099) | 🟢 Implementado |
+| [203](203-preferencias-notificaciones-usuario/spec.md) | SPEC-203 — Preferencias de Notificaciones del Usuario (002-PI-100) | 🔵 Planeado |
+| [204](204-piloto-bienvenida-colegio/spec.md) | SPEC-204 — Piloto Migración Bienvenida Colegio (002-PI-101) | 🔵 Planeado |
 
 ## Tabla completa (132 specs)
 
@@ -343,6 +348,11 @@
 | [237](237-bandeja-comite-consolidacion/spec.md) | SPEC-237 · Bandeja comité CONSOLIDACION + aprobación multi-miembro (002-PI-137) | 🔵 Planeado |
 | [238](238-aclaracion-padre-comite/spec.md) | SPEC-238 · Aclaración padre-comité (002-PI-138) | 🔵 Planeado |
 | [239](239-escalacion-rojo-contacto-emergencia/spec.md) | SPEC-239 · Escalación ROJO + SLA 12h + Contacto emergencia (002-PI-139) | 🔵 Planeado |
+| [200](200-infra-timezone-bogota/spec.md) | SPEC-200 — INFRA · Timezone Bogotá (002-PI-097) | 🔵 Planeado |
+| [201](201-motor-notificaciones-nucleo/spec.md) | SPEC-201 — Motor de Notificaciones · Núcleo (002-PI-098) | 🔵 Planeado |
+| [202](202-panel-admin-motor-notificaciones/spec.md) | SPEC-202 — Panel Admin del Motor de Notificaciones (002-PI-099) | 🟢 Implementado |
+| [203](203-preferencias-notificaciones-usuario/spec.md) | SPEC-203 — Preferencias de Notificaciones del Usuario (002-PI-100) | 🔵 Planeado |
+| [204](204-piloto-bienvenida-colegio/spec.md) | SPEC-204 — Piloto Migración Bienvenida Colegio (002-PI-101) | 🔵 Planeado |
 
 ## Incidencias de calidad de datos
 

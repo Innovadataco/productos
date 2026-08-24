@@ -146,7 +146,7 @@ export function SimulacionDashboard({ id, onBack, onRefresh }: SimulacionDashboa
                         />
                     </div>
                     <p className="mt-2 text-xs text-muted">
-                        Inicio: {new Date(run.fechaInicio).toLocaleString()}
+                        Inicio: {new Date(run.fechaInicio).toLocaleString("es-CO", { timeZone: "America/Bogota" })}
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-400">
                         Los jobs ya encolados seguirán su curso si cancela.
@@ -195,7 +195,7 @@ export function SimulacionDashboard({ id, onBack, onRefresh }: SimulacionDashboa
                         </div>
                         <div>
                             <p className="text-muted">Inicio</p>
-                            <p className="font-medium">{new Date(run.fechaInicio).toLocaleString()}</p>
+                            <p className="font-medium">{new Date(run.fechaInicio).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</p>
                         </div>
                         <div>
                             <p className="text-muted">Transcurrido</p>
@@ -203,7 +203,7 @@ export function SimulacionDashboard({ id, onBack, onRefresh }: SimulacionDashboa
                         </div>
                         <div>
                             <p className="text-muted">Fin</p>
-                            <p className="font-medium">{run.fechaFin ? new Date(run.fechaFin).toLocaleString() : "—"}</p>
+                            <p className="font-medium">{run.fechaFin ? new Date(run.fechaFin).toLocaleString("es-CO", { timeZone: "America/Bogota" }) : "—"}</p>
                         </div>
                     </div>
                 </GlassCard>

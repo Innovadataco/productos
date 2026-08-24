@@ -52,7 +52,7 @@ const ESTADO_VARIANT: Record<string, "info" | "warning" | "success" | "neutral">
 };
 
 function formatFecha(iso: string): string {
-    return new Date(iso).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
+    return new Date(iso).toLocaleDateString("es-CO", { timeZone: "America/Bogota", year: "numeric", month: "long", day: "numeric" });
 }
 
 export function ApelacionesClient() {

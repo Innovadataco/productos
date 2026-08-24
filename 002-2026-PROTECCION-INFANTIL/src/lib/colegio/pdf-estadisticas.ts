@@ -1,4 +1,5 @@
 import type { EstadisticasColegio, EstadisticasCurso } from "./estadisticas";
+import { formatoFechaHoraBogota } from "@/lib/fechas/formato-bogota";
 import { renderPdfBuffer } from "@/lib/pdf/pdfmake-node";
 import type {
     TDocumentDefinitions,
@@ -60,7 +61,7 @@ const estilos: EstilosPdf = {
 };
 
 function formatoFechaColombia(fecha: Date): string {
-    return fecha.toLocaleDateString("es-CO", {
+    return formatoFechaHoraBogota(fecha, {
         year: "numeric",
         month: "long",
         day: "numeric",

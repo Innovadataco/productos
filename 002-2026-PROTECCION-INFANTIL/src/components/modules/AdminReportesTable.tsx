@@ -383,7 +383,7 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                                             <span className="text-subtle/70">Sin asignar</span>
                                         )}
                                     </td>
-                                    <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString()}</td>
+                                    <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}</td>
                                     <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : (r.usuario?.email ?? "Autenticado")}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex flex-wrap gap-2">

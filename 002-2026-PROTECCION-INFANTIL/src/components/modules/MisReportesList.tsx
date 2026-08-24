@@ -136,7 +136,7 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                                 {r.estadoVisual}
                             </span>
                             <span className="text-xs text-subtle whitespace-nowrap">
-                                {new Date(r.creadoEn).toLocaleDateString("es-CO")}
+                                {new Date(r.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                             </span>
                         </div>
                         <button

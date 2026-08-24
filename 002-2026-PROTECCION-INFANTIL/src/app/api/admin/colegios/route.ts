@@ -6,7 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
-import { enviarEmailBienvenidaColegio } from "@/lib/email";
+import { programar as programarNotificacion } from "@/lib/notificaciones";
 import { withValidation } from "@/lib/validation";
 import { colegioBodySchema } from "@/lib/schemas";
 import { calcularFinServicio, esRangoServicioValido } from "@/lib/colegio/periodo";
@@ -203,10 +203,24 @@ export async function POST(request: Request) {
             userAgent,
         });
 
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
         let emailEnviado = false;
         try {
-            await enviarEmailBienvenidaColegio(colegio.admin.email, password);
-            emailEnviado = true;
+            const resultado = await programarNotificacion({
+                evento: "colegio.creado",
+                sujetoTipo: "Colegio",
+                sujetoId: colegio.id,
+                destinatarios: [{
+                    email: colegio.admin.email,
+                    variables: {
+                        nombreColegio: colegio.nombre,
+                        emailAdmin: colegio.admin.email,
+                        passwordTemporal: password,
+                        urlLogin: `${baseUrl}/login`,
+                    },
+                }],
+            });
+            emailEnviado = resultado.programadas > 0;
         } catch (err) {
             logger.error("[COLEGIOS] Error enviando email de bienvenida institucional", err);
         }

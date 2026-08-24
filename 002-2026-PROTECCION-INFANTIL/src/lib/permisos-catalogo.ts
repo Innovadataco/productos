@@ -52,6 +52,8 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "configuracion_permisos", nombre: "Permisos por rol", categoria: "admin", orden: 71, padre: "configuracion_sistema" },
     // SPEC-235 (002-PI-135): guías de acción parametrizables (admin).
     { clave: "guias_accion_admin", nombre: "Guías de acción", categoria: "admin", orden: 72, padre: "configuracion_sistema" },
+    // SPEC-202 (002-PI-099): panel admin del motor de notificaciones (sub-tab de configuración).
+    { clave: "configuracion_notificaciones", nombre: "Notificaciones", categoria: "admin", orden: 73, padre: "configuracion_sistema" },
     { clave: "pagos_admin", nombre: "Pagos", categoria: "admin", esCritico: true, orden: 75 },
     { clave: "audit_logs", nombre: "Logs de auditoría", categoria: "admin", esCritico: true, orden: 80 },
     { clave: "estadisticas", nombre: "Estadísticas", categoria: "admin", orden: 90 },
@@ -59,6 +61,8 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "analytics_colegios", nombre: "Analítica de colegios", categoria: "admin", orden: 91, padre: "estadisticas" },
     // SPEC-206 (002-PI-120): instrumentación de sesiones activas.
     { clave: "sesiones_admin", nombre: "Sesiones activas", categoria: "admin", orden: 92, padre: "estadisticas" },
+    // SPEC-202 (002-PI-099): dashboard de salud del motor de notificaciones (sub-tab de estadísticas).
+    { clave: "estadisticas_salud_motor", nombre: "Salud del motor", categoria: "admin", orden: 93, padre: "estadisticas" },
     { clave: "anti_abuso", nombre: "Anti-abuso", categoria: "admin", orden: 100 },
     { clave: "monitoreo_worker", nombre: "Monitoreo del worker", categoria: "admin", orden: 105 },
     { clave: "dataset_entrenamiento", nombre: "Dataset de entrenamiento", categoria: "admin", orden: 120 },

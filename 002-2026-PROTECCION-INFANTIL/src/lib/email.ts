@@ -81,24 +81,6 @@ export async function enviarEmailBienvenidaComite(
     }
 }
 
-export async function enviarEmailBienvenidaColegio(
-    email: string,
-    tempPassword: string
-): Promise<void> {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
-    const result = await resend.emails.send({
-        from: FROM,
-        to: email,
-        subject: "Tu cuenta institucional está lista",
-        text: `Hola,\n\nSe creó la cuenta institucional de tu colegio en Protección Infantil.\n\nUsuario: ${email}\nContraseña temporal: ${tempPassword}\n\nIngresa en ${baseUrl}/login y cambia tu contraseña lo antes posible.\n\nEsta contraseña temporal no se volverá a mostrar.`,
-    });
-
-    if (result.error) {
-        logger.error("Resend error:", result.error);
-        throw new Error("Error al enviar email de bienvenida institucional");
-    }
-}
-
 /**
  * 002-PI-051 (B3) — Credenciales de un padre enviadas por el admin (alta o
  * restablecimiento). Mismo patrón que el colegio: la temporal solo viaja por
@@ -512,6 +494,35 @@ export async function enviarAlertaRateLimit(params: {
  * quedó persistido y el caller (job semanal) decide si el fallo amerita
  * reintento; aquí solo se registra el error.
  */
+/**
+ * SPEC-201: envío genérico del motor de notificaciones. Devuelve el id del
+ * proveedor (Resend) para tracking de webhooks y deduplicación.
+ */
+export async function enviarEmailNotificacion(
+    email: string,
+    asunto: string,
+    cuerpo: string
+): Promise<{ id: string }> {
+    const result = await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: asunto,
+        text: cuerpo,
+    });
+
+    if (result.error) {
+        logger.error("Resend error notificación:", result.error);
+        throw new Error("Error al enviar notificación por email");
+    }
+
+    const id = result.data?.id;
+    if (!id) {
+        throw new Error("Resend no devolvió id de notificación");
+    }
+
+    return { id };
+}
+
 export async function enviarAlertaDerivaMotor(params: {
     destinatarios: string[];
     filas: FilaDeriva[];

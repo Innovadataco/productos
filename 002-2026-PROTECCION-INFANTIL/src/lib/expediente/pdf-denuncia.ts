@@ -125,6 +125,7 @@ export function plantillasDenunciaUnicas(conductas: string[]): PlantillaDenuncia
 
 function formatoFechaColombia(fecha: Date): string {
     return fecha.toLocaleDateString("es-CO", {
+        timeZone: "America/Bogota",
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -134,7 +135,7 @@ function formatoFechaColombia(fecha: Date): string {
 }
 
 function formatoSoloFecha(fecha: Date): string {
-    return fecha.toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
+    return fecha.toLocaleDateString("es-CO", { timeZone: "America/Bogota", year: "numeric", month: "long", day: "numeric" });
 }
 
 function campo(label: string, valor: string): Content {

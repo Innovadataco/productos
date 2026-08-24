@@ -103,6 +103,27 @@ services:
     environment:
       WORKER_RUN_DIR: /app/run
       API_BASE_URL: http://app:3000
+      TZ: America/Bogota
+    volumes:
+      - pi_worker_run:/app/run
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # SPEC-201 (002-PI-098): worker del motor de notificaciones. Instancia única
+  # vía advisory lock; envía EMAIL por Resend e IN_APP localmente.
+  pi-notificaciones:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-notificaciones
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-notificaciones.mjs
+    environment:
+      WORKER_RUN_DIR: /app/run
+      API_BASE_URL: http://app:3000
+      TZ: America/Bogota
     volumes:
       - pi_worker_run:/app/run
     depends_on:

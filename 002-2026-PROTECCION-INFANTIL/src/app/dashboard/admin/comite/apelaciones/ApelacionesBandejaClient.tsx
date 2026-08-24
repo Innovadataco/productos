@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
-import { fechaCorta } from "@/lib/format/fecha";
 
 /**
  * SPEC-110 — Bandeja de apelaciones del comité de validación. El caso llega directo
@@ -86,6 +85,9 @@ const ESTADOS_FILTRO = [
     { value: "RECHAZADA", label: "Rechazadas" },
 ];
 
+function formatFecha(iso: string): string {
+    return new Date(iso).toLocaleDateString("es-CO", { timeZone: "America/Bogota", year: "numeric", month: "short", day: "numeric" });
+}
 function formatTamano(bytes: number): string {
     if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -306,7 +308,7 @@ export function ApelacionesBandejaClient() {
                             <h2 className="font-mono text-lg font-semibold text-body">{detalle.apelacion.numero}</h2>
                             <p className="text-sm text-muted">
                                 {detalle.apelacion.identificador} · {detalle.apelacion.plataforma.nombre} · radicada el{" "}
-                                {fechaCorta(detalle.apelacion.creadoEn)}
+                                {formatFecha(detalle.apelacion.creadoEn)}
                             </p>
                         </div>
                         <Badge variant={ESTADO_VARIANT[detalle.apelacion.estado]}>{ESTADO_LABEL[detalle.apelacion.estado]}</Badge>
@@ -408,7 +410,7 @@ export function ApelacionesBandejaClient() {
                                                                 <span>
                                                                     <span className="text-body">{r.categoria || r.estado}</span>
                                                                     <span className="block text-xs">
-                                                                        {r.ciudad}, {r.pais} · {fechaCorta(r.creadoEn)}
+                                                                        {r.ciudad}, {r.pais} · {formatFecha(r.creadoEn)}
                                                                     </span>
                                                                 </span>
                                                             </label>
@@ -453,7 +455,7 @@ export function ApelacionesBandejaClient() {
                                                 <span className="font-medium text-body">{r.categoria || r.estado}</span>
                                                 {r.eliminado && <Badge variant="neutral">Dado de baja</Badge>}
                                                 <span className="text-xs text-subtle">
-                                                    {r.ciudad}, {r.pais} · {fechaCorta(r.creadoEn)}
+                                                    {r.ciudad}, {r.pais} · {formatFecha(r.creadoEn)}
                                                 </span>
                                             </div>
                                             <p className="mt-1 whitespace-pre-wrap text-muted">{r.texto}</p>

@@ -371,6 +371,7 @@ export class AlertaColegioRepository {
     async reloj24h(colegioId: string): Promise<number[]> {
         let filas: { hora: number; reportes: number }[];
         try {
+            // SPEC-200: creadoEn es Timestamptz; convertir directamente a America/Bogota.
             filas = await this.db.$queryRaw`
                 SELECT EXTRACT(HOUR FROM ac."creadoEn" AT TIME ZONE 'America/Bogota')::int AS hora,
                        COUNT(DISTINCT ac."reporteId")::int AS reportes
@@ -384,7 +385,7 @@ export class AlertaColegioRepository {
             if (!(error instanceof Error) || !error.message.includes("time zone")) throw error;
             console.warn("[AlertaColegio] reloj24h: tz 'America/Bogota' ausente en la BD — fallback UTC-5 fijo");
             filas = await this.db.$queryRaw`
-                SELECT EXTRACT(HOUR FROM ac."creadoEn" - INTERVAL '5 hours')::int AS hora,
+                SELECT EXTRACT(HOUR FROM (ac."creadoEn" AT TIME ZONE 'UTC') - INTERVAL '5 hours')::int AS hora,
                        COUNT(DISTINCT ac."reporteId")::int AS reportes
                 FROM "AlertaColegio" ac
                 JOIN "Reporte" r ON r.id = ac."reporteId"
