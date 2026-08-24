@@ -228,6 +228,63 @@ export class ExpedienteRepository {
     }
 
     /**
+     * SPEC-233 (002-PI-133): lista los expedientes de un padre sobre un
+     * identificador reportado exacto, ordenados por fechaApertura DESC
+     * (nuevo → anterior). Aditivo; no modifica métodos existentes.
+     */
+    async listarExpedientesDePadrePorIdentificador(
+        padreUsuarioId: string,
+        identificadorReportado: string,
+        paginacion: PaginacionInput = { page: 1, pageSize: 25 }
+    ) {
+        const page = Math.max(1, paginacion.page);
+        const pageSize = Math.min(100, Math.max(1, paginacion.pageSize));
+        const skip = (page - 1) * pageSize;
+        const where: Prisma.ExpedienteWhereInput = { padreUsuarioId, identificadorReportado };
+
+        const [items, total] = await Promise.all([
+            this.db.expediente.findMany({
+                where,
+                orderBy: { fechaApertura: "desc" },
+                skip,
+                take: pageSize,
+            }),
+            this.db.expediente.count({ where }),
+        ]);
+
+        return {
+            items,
+            pagination: {
+                page,
+                pageSize,
+                total,
+                totalPages: Math.ceil(total / pageSize),
+            },
+        };
+    }
+
+    /**
+     * SPEC-233 (002-PI-133): lista anonimizada de TODOS los expedientes de la
+     * plataforma sobre un identificador (vista admin/comité, Ley 1581).
+     * El `select` explícito garantiza que `padreUsuarioId`, eventos, JSON de
+     * categorías/patrones y cualquier texto jamás salen de la capa de datos.
+     */
+    async listarExpedientesPorIdentificadorAnonimo(identificadorReportado: string) {
+        return this.db.expediente.findMany({
+            where: { identificadorReportado },
+            orderBy: { fechaApertura: "desc" },
+            select: {
+                estado: true,
+                scoreGravedadActual: true,
+                fechaApertura: true,
+                fechaCierre: true,
+                numEventos: true,
+                plataformaId: true,
+            },
+        });
+    }
+
+    /**
      * Obtiene un expediente por id, opcionalmente filtrando por padre.
      * Incluye sus eventos ordenados por ordenSecuencial ascendente.
      */

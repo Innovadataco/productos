@@ -201,4 +201,87 @@ describe("ExpedienteRepository", () => {
 
         expect(evento.reporteId).toBe(reporte.id);
     });
+
+    // SPEC-233 (002-PI-133): búsqueda por identificador.
+    it("listarExpedientesDePadrePorIdentificador filtra por padre e identificador, orden fechaApertura desc", async () => {
+        const repo = new ExpedienteRepository();
+        const padreA = await crearPadre();
+        const padreB = await crearPadre();
+
+        const viejo = await repo.crearExpediente({
+            padreUsuarioId: padreA.id,
+            identificadorReportado: "@nick_objetivo",
+            plataformaId: "whatsapp",
+            fechaApertura: new Date("2026-08-01T10:00:00Z"),
+        });
+        const nuevo = await repo.crearExpediente({
+            padreUsuarioId: padreA.id,
+            identificadorReportado: "@nick_objetivo",
+            plataformaId: "whatsapp",
+            fechaApertura: new Date("2026-08-20T10:00:00Z"),
+        });
+        // Otro identificador del mismo padre: no debe aparecer.
+        await repo.crearExpediente({
+            padreUsuarioId: padreA.id,
+            identificadorReportado: "@otro_nick",
+            plataformaId: "whatsapp",
+        });
+        // Mismo identificador pero de otro padre: cero fuga cruzada.
+        await repo.crearExpediente({
+            padreUsuarioId: padreB.id,
+            identificadorReportado: "@nick_objetivo",
+            plataformaId: "whatsapp",
+        });
+
+        const resultado = await repo.listarExpedientesDePadrePorIdentificador(
+            padreA.id,
+            "@nick_objetivo"
+        );
+
+        expect(resultado.pagination.total).toBe(2);
+        expect(resultado.items.map((e) => e.id)).toEqual([nuevo.id, viejo.id]);
+
+        const vacio = await repo.listarExpedientesDePadrePorIdentificador(
+            padreA.id,
+            "@sin_expedientes"
+        );
+        expect(vacio.items).toHaveLength(0);
+        expect(vacio.pagination.total).toBe(0);
+    });
+
+    it("listarExpedientesPorIdentificadorAnonimo agrega la plataforma sin exponer campos sensibles", async () => {
+        const repo = new ExpedienteRepository();
+        const padreA = await crearPadre();
+        const padreB = await crearPadre();
+        await repo.crearExpediente({
+            padreUsuarioId: padreA.id,
+            identificadorReportado: "@nick_agregado",
+            plataformaId: "whatsapp",
+        });
+        await repo.crearExpediente({
+            padreUsuarioId: padreB.id,
+            identificadorReportado: "@nick_agregado",
+            plataformaId: "whatsapp",
+        });
+        await repo.crearExpediente({
+            padreUsuarioId: padreA.id,
+            identificadorReportado: "@nick_distinto",
+            plataformaId: "whatsapp",
+        });
+
+        const items = await repo.listarExpedientesPorIdentificadorAnonimo("@nick_agregado");
+
+        expect(items).toHaveLength(2);
+        for (const item of items) {
+            expect(Object.keys(item).sort()).toEqual([
+                "estado",
+                "fechaApertura",
+                "fechaCierre",
+                "numEventos",
+                "plataformaId",
+                "scoreGravedadActual",
+            ]);
+            expect("padreUsuarioId" in item).toBe(false);
+        }
+    });
 });

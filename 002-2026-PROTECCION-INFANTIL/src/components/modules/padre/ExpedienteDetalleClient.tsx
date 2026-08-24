@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { TimelineEventos } from "./TimelineEventos";
 import { AgregarEventoForm } from "./AgregarEventoForm";
@@ -48,6 +49,14 @@ export function ExpedienteDetalleClient({ expediente, eventos }: ExpedienteDetal
                     <span className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-semibold ${COLORES_SCORE[expediente.scoreGravedadActual]}`}>
                         {LABELS_SCORE[expediente.scoreGravedadActual]}
                     </span>
+                </div>
+                <div className="mt-4">
+                    <Link
+                        href={`/dashboard/padre/identificador/${encodeURIComponent(expediente.identificadorReportado)}`}
+                        className="text-sm font-semibold text-primary-600 hover:underline"
+                    >
+                        Ver todos tus expedientes sobre este identificador
+                    </Link>
                 </div>
                 {esEditable && (
                     <div className="mt-4">
