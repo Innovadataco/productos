@@ -78,35 +78,32 @@ export async function crearEventoConsentimiento() {
         });
     }
 
-    const roles = ["PARENT", "SCHOOL_ADMIN", "ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA"] as const;
-    for (const rol of roles) {
-        for (const canal of ["EMAIL", "IN_APP"] as const) {
-            const existente = await prisma.notificacionRegla.findFirst({
-                where: { evento, rol, canal },
-                orderBy: { createdAt: "desc" },
-            });
-            const data = {
+    // SPEC-247 (002-PI-150): el schema impone @@unique([evento, canal, plantillaClave]).
+    // El motor de notificaciones programa UNA notificación por canal para el evento,
+    // sin filtrar por rol del destinatario; basta con una regla representativa.
+    for (const canal of ["EMAIL", "IN_APP"] as const) {
+        await prisma.notificacionRegla.upsert({
+            where: {
+                evento_canal_plantillaClave: {
+                    evento,
+                    canal,
+                    plantillaClave: `${evento}.${canal.toLowerCase()}`,
+                },
+            },
+            update: {
+                offset: "+0m",
+                obligatoria: false,
+                activa: true,
+            },
+            create: {
                 evento,
-                rol,
+                rol: "PARENT",
                 offset: "+0m",
                 canal,
                 plantillaClave: `${evento}.${canal.toLowerCase()}`,
                 obligatoria: false,
                 activa: true,
-            };
-            if (existente) {
-                await prisma.notificacionRegla.update({
-                    where: { id: existente.id },
-                    data: {
-                        offset: data.offset,
-                        plantillaClave: data.plantillaClave,
-                        obligatoria: data.obligatoria,
-                        activa: true,
-                    },
-                });
-            } else {
-                await prisma.notificacionRegla.create({ data });
-            }
-        }
+            },
+        });
     }
 }
