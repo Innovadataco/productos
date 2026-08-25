@@ -118,7 +118,7 @@ export function ModalConsentimiento({
 
                     <div
                         ref={scrollRef}
-                        className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-white/50 p-4 text-sm text-body dark:bg-slate-900/50"
+                        className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-papel/50 p-4 text-sm text-body dark:bg-tinta/50"
                     >
                         <div className="prose prose-sm max-w-none dark:prose-invert">
                             {documentoContenido.split("\n").map((linea, index) => (
@@ -136,7 +136,7 @@ export function ModalConsentimiento({
                                 type="checkbox"
                                 checked={representanteLegal}
                                 onChange={(e) => setRepresentanteLegal(e.target.checked)}
-                                className="mt-1 h-4 w-4 accent-sky-600"
+                                className="mt-1 h-4 w-4 accent-cielo"
                                 data-testid="check-representante"
                             />
                             <span className="text-sm text-body">
@@ -151,7 +151,7 @@ export function ModalConsentimiento({
                                 type="checkbox"
                                 checked={aceptaPolitica}
                                 onChange={(e) => setAceptaPolitica(e.target.checked)}
-                                className="mt-1 h-4 w-4 accent-sky-600"
+                                className="mt-1 h-4 w-4 accent-cielo"
                                 data-testid="check-politica"
                             />
                             <span className="text-sm text-body">
