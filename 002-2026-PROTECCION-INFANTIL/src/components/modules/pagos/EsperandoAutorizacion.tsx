@@ -1,14 +1,59 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Alerta } from "@/components/ui/Alerta";
 import type { SuscripcionPendienteDTO } from "@/lib/pagos/planes-selector.types";
 
 interface EsperandoAutorizacionProps {
     suscripcion: SuscripcionPendienteDTO;
+    rol: "PARENT" | "SCHOOL_ADMIN";
 }
 
-export function EsperandoAutorizacion({ suscripcion }: EsperandoAutorizacionProps) {
+const INTERVALO_POLLING_MS = 10_000;
+const ESTADOS_ACTIVOS = new Set(["ACTIVA", "EN_GRACIA"]);
+
+export function EsperandoAutorizacion({ suscripcion, rol }: EsperandoAutorizacionProps) {
+    const router = useRouter();
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let ignorar = false;
+        let idIntervalo: ReturnType<typeof setInterval>;
+
+        const endpoint = `${window.location.origin}/api/pagos/suscripcion/estado`;
+
+        async function consultarEstado() {
+            try {
+                const res = await fetch(endpoint, { credentials: "same-origin" });
+                if (!res.ok) {
+                    console.warn("[EsperandoAutorizacion] consulta de estado falló", res.status);
+                    return;
+                }
+                const body = (await res.json()) as { estado: string };
+                if (ESTADOS_ACTIVOS.has(body.estado)) {
+                    clearInterval(idIntervalo);
+                    const dashboardBase = rol === "SCHOOL_ADMIN" ? "/dashboard/colegio" : "/dashboard/padre";
+                    router.push(`${dashboardBase}/suscripcion?bienvenida=1`);
+                    router.refresh();
+                }
+            } catch (err) {
+                const mensaje = err instanceof Error ? err.message : "Error de red";
+                console.warn("[EsperandoAutorizacion] error consultando estado:", mensaje);
+                if (!ignorar) setError(mensaje);
+            }
+        }
+
+        idIntervalo = setInterval(consultarEstado, INTERVALO_POLLING_MS);
+        void consultarEstado();
+
+        return () => {
+            ignorar = true;
+            clearInterval(idIntervalo);
+        };
+    }, [rol, router]);
+
     return (
         <div className="mx-auto w-full max-w-2xl p-4 sm:p-8">
             <GlassCard className="text-center">
@@ -49,9 +94,14 @@ export function EsperandoAutorizacion({ suscripcion }: EsperandoAutorizacionProp
                     </Alerta>
                 </div>
 
-                {/* Slot reservado para polling de SPEC-247 */}
-                <div data-polling-slot="suscripcion-pendiente" className="sr-only">
-                    Polling pendiente
+                {error && (
+                    <div className="mt-4" role="alert">
+                        <p className="text-sm text-rubi">Error verificando estado: {error}</p>
+                    </div>
+                )}
+
+                <div data-polling-slot="suscripcion-pendiente" className="sr-only" aria-live="polite">
+                    Verificando estado de la suscripción cada {INTERVALO_POLLING_MS / 1000} segundos.
                 </div>
             </GlassCard>
         </div>

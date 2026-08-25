@@ -20,6 +20,10 @@ export const metadata: Metadata = {
     description: "Gestiona tu suscripción de Protección Infantil.",
 };
 
+interface PageProps {
+    searchParams: Promise<{ bienvenida?: string }>;
+}
+
 function planToSelectorDTO(plan: {
     id: string;
     nombre: string;
@@ -89,7 +93,9 @@ async function actionActivarFreemium() {
     redirect("/dashboard/padre/suscripcion");
 }
 
-export default async function PadreSuscripcionPage() {
+export default async function PadreSuscripcionPage({ searchParams }: PageProps) {
+    const params = await searchParams;
+    const mostrarBienvenida = params.bienvenida === "1";
     const usuario = await verifyAuth("PARENT");
     const suscripcion = await obtenerSuscripcionTitular({
         id: usuario.id,
@@ -109,7 +115,13 @@ export default async function PadreSuscripcionPage() {
         if (vista) {
             return (
                 <main className="min-h-screen bg-page py-4">
-                    <SuscripcionVista vista={vista} color="cielo" mostrarContrato={false} cupones={cupones} />
+                    <SuscripcionVista
+                        vista={vista}
+                        color="cielo"
+                        mostrarContrato={false}
+                        cupones={cupones}
+                        mostrarBienvenida={mostrarBienvenida}
+                    />
                 </main>
             );
         }
@@ -126,6 +138,7 @@ export default async function PadreSuscripcionPage() {
                         fechaFin: suscripcion.fechaFin.toISOString(),
                         plan: { nombre: suscripcion.planActual.nombre },
                     }}
+                    rol="PARENT"
                 />
             </main>
         );

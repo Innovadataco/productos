@@ -16,6 +16,10 @@ export const metadata: Metadata = {
     description: "Gestiona la suscripción institucional de Protección Infantil.",
 };
 
+interface PageProps {
+    searchParams: Promise<{ bienvenida?: string }>;
+}
+
 function planToSelectorDTO(plan: {
     id: string;
     nombre: string;
@@ -64,7 +68,9 @@ async function actionSolicitarPlan(planId: string, codigoBono?: string) {
     revalidatePath("/dashboard/colegio/suscripcion");
 }
 
-export default async function ColegioSuscripcionPage() {
+export default async function ColegioSuscripcionPage({ searchParams }: PageProps) {
+    const params = await searchParams;
+    const mostrarBienvenida = params.bienvenida === "1";
     const usuario = await verifyAuth("SCHOOL_ADMIN");
     const suscripcion = await obtenerSuscripcionTitular({
         id: usuario.id,
@@ -81,7 +87,12 @@ export default async function ColegioSuscripcionPage() {
         if (vista) {
             return (
                 <main className="min-h-screen bg-page py-4">
-                    <SuscripcionVista vista={vista} color="pino" mostrarContrato={true} />
+                    <SuscripcionVista
+                        vista={vista}
+                        color="pino"
+                        mostrarContrato={true}
+                        mostrarBienvenida={mostrarBienvenida}
+                    />
                 </main>
             );
         }
@@ -98,6 +109,7 @@ export default async function ColegioSuscripcionPage() {
                         fechaFin: suscripcion.fechaFin.toISOString(),
                         plan: { nombre: suscripcion.planActual.nombre },
                     }}
+                    rol="SCHOOL_ADMIN"
                 />
             </main>
         );

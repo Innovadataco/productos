@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 415 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2905 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 424 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2968 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -151,6 +151,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
+| `/api/admin/pagos/activar-manual` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | permitir | permite | sí |
@@ -165,6 +166,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/planes/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/reembolsos` | api | permitir | permite | sí |
 | `/api/admin/pagos/reembolsos/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/sin-suscripcion` | api | permitir | permite | sí |
+| `/api/admin/pagos/solicitudes-pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/tasas` | api | permitir | permite | sí |
 | `/api/admin/pagos/vencimientos` | api | permitir | permite | sí |
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
@@ -285,6 +288,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/profesores/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/reportes/pdf` | api | permitir | permite | sí |
+| `/api/colegio/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/colegio/usuarios` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
@@ -312,12 +316,16 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
+| `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-referido` | api | permitir | permite | sí |
+| `/api/pagos/planes` | api | permitir | permite | sí |
 | `/api/pagos/renovacion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/cancelar` | api | permitir | permite | sí |
+| `/api/pagos/suscripcion/estado` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -380,6 +388,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/pendientes` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/planes` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/reembolsos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/sin-suscripcion` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
@@ -571,6 +580,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
+| `/api/admin/pagos/activar-manual` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | permitir | permite | sí |
@@ -585,6 +595,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/planes/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/reembolsos` | api | permitir | permite | sí |
 | `/api/admin/pagos/reembolsos/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/sin-suscripcion` | api | permitir | permite | sí |
+| `/api/admin/pagos/solicitudes-pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/tasas` | api | permitir | permite | sí |
 | `/api/admin/pagos/vencimientos` | api | permitir | permite | sí |
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
@@ -705,6 +717,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/profesores/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/reportes/pdf` | api | permitir | permite | sí |
+| `/api/colegio/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/colegio/usuarios` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
@@ -732,12 +745,16 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
+| `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-referido` | api | permitir | permite | sí |
+| `/api/pagos/planes` | api | permitir | permite | sí |
 | `/api/pagos/renovacion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/cancelar` | api | permitir | permite | sí |
+| `/api/pagos/suscripcion/estado` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -800,6 +817,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/pendientes` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/planes` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/reembolsos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/sin-suscripcion` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
@@ -991,6 +1009,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
+| `/api/admin/pagos/activar-manual` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | permitir | permite | sí |
@@ -1005,6 +1024,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/planes/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/reembolsos` | api | permitir | permite | sí |
 | `/api/admin/pagos/reembolsos/[id]` | api | permitir | permite | sí |
+| `/api/admin/pagos/sin-suscripcion` | api | permitir | permite | sí |
+| `/api/admin/pagos/solicitudes-pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/tasas` | api | permitir | permite | sí |
 | `/api/admin/pagos/vencimientos` | api | permitir | permite | sí |
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
@@ -1125,6 +1146,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/profesores/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/reportes/pdf` | api | permitir | permite | sí |
+| `/api/colegio/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/colegio/usuarios` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
@@ -1152,12 +1174,16 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
+| `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-referido` | api | permitir | permite | sí |
+| `/api/pagos/planes` | api | permitir | permite | sí |
 | `/api/pagos/renovacion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/cancelar` | api | permitir | permite | sí |
+| `/api/pagos/suscripcion/estado` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -1220,6 +1246,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/pendientes` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/planes` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/reembolsos` | página | permitir | permite | sí |
+| `/dashboard/admin/pagos/sin-suscripcion` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
@@ -1411,6 +1438,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/activar-manual` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
@@ -1425,6 +1453,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/planes/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/reembolsos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/reembolsos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/sin-suscripcion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/solicitudes-pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/tasas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/vencimientos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
@@ -1545,6 +1575,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/profesores/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/reportes/pdf` | api | permitir | permite | sí |
+| `/api/colegio/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/colegio/usuarios` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/[clave]` | api | HTTP 403 | no permite | sí |
@@ -1572,12 +1603,16 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/suscripcion/activar-freemium` | api | HTTP 403 | no permite | sí |
+| `/api/padre/suscripcion/solicitar-plan` | api | HTTP 403 | no permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-referido` | api | permitir | permite | sí |
+| `/api/pagos/planes` | api | permitir | permite | sí |
 | `/api/pagos/renovacion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/cancelar` | api | permitir | permite | sí |
+| `/api/pagos/suscripcion/estado` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
@@ -1640,6 +1675,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/pendientes` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/pagos/planes` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/pagos/reembolsos` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1831,6 +1867,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/activar-manual` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
@@ -1845,6 +1882,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/planes/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/reembolsos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/reembolsos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/sin-suscripcion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/solicitudes-pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/tasas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/vencimientos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
@@ -1965,6 +2004,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/profesores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/profesores/[id]/identificadores` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/reportes/pdf` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/suscripcion/solicitar-plan` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/usuarios` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/[clave]` | api | HTTP 403 | no permite | sí |
@@ -1992,12 +2032,16 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/suscripcion/activar-freemium` | api | HTTP 403 | no permite | sí |
+| `/api/padre/suscripcion/solicitar-plan` | api | HTTP 403 | no permite | sí |
 | `/api/pagos` | api | HTTP 403 | no permite | sí |
 | `/api/pagos/aplicar-bono` | api | HTTP 403 | no permite | sí |
 | `/api/pagos/aplicar-referido` | api | HTTP 403 | no permite | sí |
+| `/api/pagos/planes` | api | HTTP 403 | no permite | sí |
 | `/api/pagos/renovacion` | api | HTTP 403 | no permite | sí |
 | `/api/pagos/suscripcion` | api | HTTP 403 | no permite | sí |
 | `/api/pagos/suscripcion/cancelar` | api | HTTP 403 | no permite | sí |
+| `/api/pagos/suscripcion/estado` | api | HTTP 403 | no permite | sí |
 | `/api/pagos/suscripcion/validar-bono` | api | HTTP 403 | no permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
@@ -2060,6 +2104,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/pendientes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/pagos/planes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/pagos/reembolsos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -2251,6 +2296,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/activar-manual` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
@@ -2265,6 +2311,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/planes/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/reembolsos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/reembolsos/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/sin-suscripcion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/solicitudes-pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/tasas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/vencimientos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
@@ -2385,6 +2433,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/profesores/[id]` | api | permitir | permite | sí |
 | `/api/colegio/profesores/[id]/identificadores` | api | permitir | permite | sí |
 | `/api/colegio/reportes/pdf` | api | permitir | permite | sí |
+| `/api/colegio/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/colegio/usuarios` | api | permitir | permite | sí |
 | `/api/config/parametros` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
@@ -2412,12 +2461,16 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
+| `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-bono` | api | permitir | permite | sí |
 | `/api/pagos/aplicar-referido` | api | permitir | permite | sí |
+| `/api/pagos/planes` | api | permitir | permite | sí |
 | `/api/pagos/renovacion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/cancelar` | api | permitir | permite | sí |
+| `/api/pagos/suscripcion/estado` | api | permitir | permite | sí |
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -2480,6 +2533,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/pendientes` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/pagos/planes` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/pagos/reembolsos` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/ | no permite | sí |
@@ -2671,6 +2725,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/activar-manual` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/bonos` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/bonos/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 401 | permite | **NO** |
@@ -2685,6 +2740,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/planes/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/reembolsos` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/reembolsos/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/sin-suscripcion` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/solicitudes-pendientes` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/tasas` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/vencimientos` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/permisos-modulos` | api | HTTP 401 | permite | **NO** |
@@ -2805,6 +2862,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/profesores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/profesores/[id]/identificadores` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/reportes/pdf` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/suscripcion/solicitar-plan` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/usuarios` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros/[clave]` | api | HTTP 401 | permite | **NO** |
@@ -2832,12 +2890,16 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/suscripcion/activar-freemium` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/suscripcion/solicitar-plan` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos/aplicar-bono` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos/aplicar-referido` | api | HTTP 401 | permite | **NO** |
+| `/api/pagos/planes` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos/renovacion` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos/suscripcion` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos/suscripcion/cancelar` | api | HTTP 401 | permite | **NO** |
+| `/api/pagos/suscripcion/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos/suscripcion/validar-bono` | api | HTTP 401 | permite | **NO** |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
@@ -2900,6 +2962,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/pendientes` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/pagos/planes` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/pagos/reembolsos` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/login | no permite | sí |
@@ -3091,6 +3154,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/padres/[id]/reactivar` | HTTP 401 | permite |
 | `/api/admin/padres/[id]/restablecer-password` | HTTP 401 | permite |
 | `/api/admin/padres/[id]/vigencia` | HTTP 401 | permite |
+| `/api/admin/pagos/activar-manual` | HTTP 401 | permite |
 | `/api/admin/pagos/bonos` | HTTP 401 | permite |
 | `/api/admin/pagos/bonos/[id]` | HTTP 401 | permite |
 | `/api/admin/pagos/bonos/[id]/desactivar` | HTTP 401 | permite |
@@ -3105,6 +3169,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/pagos/planes/[id]` | HTTP 401 | permite |
 | `/api/admin/pagos/reembolsos` | HTTP 401 | permite |
 | `/api/admin/pagos/reembolsos/[id]` | HTTP 401 | permite |
+| `/api/admin/pagos/sin-suscripcion` | HTTP 401 | permite |
+| `/api/admin/pagos/solicitudes-pendientes` | HTTP 401 | permite |
 | `/api/admin/pagos/tasas` | HTTP 401 | permite |
 | `/api/admin/pagos/vencimientos` | HTTP 401 | permite |
 | `/api/admin/permisos-modulos` | HTTP 401 | permite |
@@ -3211,6 +3277,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/profesores/[id]` | HTTP 401 | permite |
 | `/api/colegio/profesores/[id]/identificadores` | HTTP 401 | permite |
 | `/api/colegio/reportes/pdf` | HTTP 401 | permite |
+| `/api/colegio/suscripcion/solicitar-plan` | HTTP 401 | permite |
 | `/api/colegio/usuarios` | HTTP 401 | permite |
 | `/api/config/parametros` | HTTP 401 | permite |
 | `/api/config/parametros/[clave]` | HTTP 401 | permite |
@@ -3228,12 +3295,16 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/padre/expediente/[id]/cerrar-forzoso` | HTTP 401 | permite |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | HTTP 401 | permite |
 | `/api/padre/expedientes/[id]/eventos` | HTTP 401 | permite |
+| `/api/padre/suscripcion/activar-freemium` | HTTP 401 | permite |
+| `/api/padre/suscripcion/solicitar-plan` | HTTP 401 | permite |
 | `/api/pagos` | HTTP 401 | permite |
 | `/api/pagos/aplicar-bono` | HTTP 401 | permite |
 | `/api/pagos/aplicar-referido` | HTTP 401 | permite |
+| `/api/pagos/planes` | HTTP 401 | permite |
 | `/api/pagos/renovacion` | HTTP 401 | permite |
 | `/api/pagos/suscripcion` | HTTP 401 | permite |
 | `/api/pagos/suscripcion/cancelar` | HTTP 401 | permite |
+| `/api/pagos/suscripcion/estado` | HTTP 401 | permite |
 | `/api/pagos/suscripcion/validar-bono` | HTTP 401 | permite |
 | `/api/publico/guia-accion/categoria/[cat]` | HTTP 401 | permite |
 | `/api/publico/verificar-pdf/[hash]` | HTTP 401 | permite |
