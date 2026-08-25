@@ -155,11 +155,11 @@ async function main() {
         });
 
         console.log(`[SPEC-248] ${modelo} COMPLETADA · accuracy ${accuracy.toFixed(3)} · aciertos ${ok}/${casos.length}`);
-        console.log(`[SPEC-248] Recall nuevas categorías:`, recallNuevas);
+        console.log("[SPEC-248] Recall nuevas categorías:", recallNuevas);
     }
 
     await prisma.$disconnect();
-    console.log(`\n[SPEC-248] Validación FR-016 completa.`);
+    console.log("\n[SPEC-248] Validación FR-016 completa.");
 }
 
 main().catch(async (err) => {
