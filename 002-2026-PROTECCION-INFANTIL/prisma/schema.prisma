@@ -312,6 +312,8 @@ enum AccionAudit {
   PLAN_CREATE
   PLAN_UPDATE
   PLAN_TOGGLE
+  // SPEC-245 (002-PI-148): activación/autorización manual de suscripción por admin.
+  SUSCRIPCION_ACTIVADA_MANUAL
 }
 
 enum TipoPeriodoServicio {

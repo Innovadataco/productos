@@ -3425,8 +3425,11 @@ async function seedEventosSuscripcion() {
         type: "object",
         properties: {
             nombre: { type: "string" },
-            duracionDias: { type: "string" },
             suscripcionId: { type: "string" },
+            plan: { type: "string" },
+            monto: { type: "number" },
+            fechaInicio: { type: "string" },
+            fechaFin: { type: "string" },
         },
     };
 
@@ -3464,26 +3467,32 @@ async function seedEventosSuscripcion() {
             clave: "suscripcion.activada.in_app",
             canal: "IN_APP" as const,
             asunto: null,
-            cuerpoMarkdown: "Tu prueba gratis está activa por {{duracionDias}} días.",
+            cuerpoMarkdown: "Tu suscripción al plan {{plan}} está activa ({{fechaInicio}} – {{fechaFin}}).",
             variablesSchema: variablesSchemaActivada,
         },
         {
             clave: "suscripcion.activada.email",
             canal: "EMAIL" as const,
-            asunto: "Tu prueba gratis está activa",
+            asunto: "Tu suscripción está activa · {{plan}}",
             cuerpoMarkdown:
                 "Hola {{nombre}},\n\n" +
-                "Tu prueba gratis está activa por **{{duracionDias}} días**.\n\n" +
+                "Tu suscripción al plan **{{plan}}** está activa.\n\n" +
+                "Inicia: {{fechaInicio}}\n" +
+                "Finaliza: {{fechaFin}}\n" +
+                "Monto pagado: ${{monto}} COP.\n\n" +
                 "Gracias por confiar en Protección Infantil.",
             variablesSchema: variablesSchemaActivada,
         },
         {
             clave: "suscripcion.activada.email.colegio",
             canal: "EMAIL" as const,
-            asunto: "Prueba gratis activada para tu colegio",
+            asunto: "Suscripción activada para tu colegio · {{plan}}",
             cuerpoMarkdown:
                 "Hola {{nombre}},\n\n" +
-                "La prueba gratis para tu colegio está activa por **{{duracionDias}} días**.\n\n" +
+                "La suscripción institucional al plan **{{plan}}** está activa.\n\n" +
+                "Inicia: {{fechaInicio}}\n" +
+                "Finaliza: {{fechaFin}}\n" +
+                "Monto pagado: ${{monto}} COP.\n\n" +
                 "Gracias por confiar en Protección Infantil.",
             variablesSchema: variablesSchemaActivada,
         },

@@ -125,6 +125,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/analisis/anomalias/alertas.test.ts",
     // SPEC-220: card presentacional del score de valor (sin BD).
     "src/components/modules/pagos/ScoreClienteCard.test.tsx",
+    // SPEC-245 (002-PI-148): modal de activación / autorización manual (sin BD).
+    "src/components/modules/pagos/ActivarSuscripcionManual.test.tsx",
     // 002-PI-068: fuente-reporte-salt.test.ts importa fuente-reporte.ts que carga
     // repositorios Prisma al evaluarse; lo movemos a integration.
     "src/lib/api-handler.test.ts",

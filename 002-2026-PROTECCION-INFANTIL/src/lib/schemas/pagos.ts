@@ -163,6 +163,21 @@ export const pagosActivarFreemiumBodySchema = z.object({
     }),
 });
 
+// SPEC-245 (002-PI-148): listado de targets sin suscripción vigente.
+export const pagosSinSuscripcionQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    tipo: z.enum(["PADRE", "COLEGIO"]).optional(),
+    q: z.string().trim().min(2).max(120).optional(),
+});
+
+// SPEC-245 (002-PI-148): listado de solicitudes PENDIENTE_AUTORIZACION.
+export const pagosSolicitudesPendientesQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(2).max(120).optional(),
+});
+
 // SPEC-245 (002-PI-148): activación manual de suscripción por admin.
 export const pagosActivarManualBodySchema = z.object({
     usuarioObjetivoId: z.string().cuid().optional(),

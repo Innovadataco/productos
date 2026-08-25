@@ -44,11 +44,14 @@ function ahoraBogota(): Date {
 function emitirEventoSolicitada(
     suscripcion: Suscripcion,
     usuario: SolicitarPlanInput["usuario"],
-    planNombre: string
+    planNombre: string,
+    desglose: DesglosePago
 ): void {
     const variablesBase = {
         nombre: usuario.nombre ?? "",
+        email: usuario.email ?? "",
         planNombre,
+        totalCOP: desglose.total.toString(),
         suscripcionId: suscripcion.id,
     };
 
@@ -159,7 +162,7 @@ export async function solicitarPlan(input: SolicitarPlanInput): Promise<Solicita
         metadatos: { planId: plan.id, codigoBono: input.codigoBono },
     });
 
-    emitirEventoSolicitada(suscripcion, input.usuario, plan.nombre);
+    emitirEventoSolicitada(suscripcion, input.usuario, plan.nombre, desglose);
 
     console.warn(`[SuscripcionSolicitud] Creada ${suscripcion.id} — PENDIENTE_AUTORIZACION para ${tipoTitular}`);
 
