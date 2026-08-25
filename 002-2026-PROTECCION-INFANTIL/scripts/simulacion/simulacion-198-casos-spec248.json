@@ -1,0 +1,1831 @@
+{
+ "fixtureVersion": 2,
+ "casos": [
+  {
+   "identificador": "sim-spec248-001",
+   "plataforma": "whatsapp",
+   "texto": "Un adulto desconocido contacto a mi hija insistiendo en hablar todos los dias pese a que ella no responde.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-002",
+   "plataforma": "instagram",
+   "texto": "El usuario le escribe a mi hijo varias veces al dia pidiendo que le conteste y se molesta cuando no lo hace.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-003",
+   "plataforma": "tiktok",
+   "texto": "Una cuenta insiste en agregar a mi sobrina a pesar de haber sido bloqueada dos veces.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-004",
+   "plataforma": "roblox",
+   "texto": "Un adulto le pidio a mi hija que le enviara fotografias personales en privado.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-005",
+   "plataforma": "discord",
+   "texto": "El contacto solicito imagenes intimas al menor a cambio de creditos del juego.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-006",
+   "plataforma": "facebook",
+   "texto": "Reporto que un usuario pidio reiteradamente material fotografico privado a un adolescente.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-007",
+   "plataforma": "whatsapp",
+   "texto": "Un desconocido ofrecio regalos y dinero a mi hijo a cambio de mantener conversaciones en secreto.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-008",
+   "plataforma": "instagram",
+   "texto": "El usuario prometio enviar una consola de videojuegos si el menor aceptaba hablar por privado.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-009",
+   "plataforma": "tiktok",
+   "texto": "Una cuenta ofrecio tarjetas de regalo al menor para ganar su confianza.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-010",
+   "plataforma": "roblox",
+   "texto": "Alguien creo un perfil haciendose pasar por un companiero de colegio de mi hija para contactarla.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-011",
+   "plataforma": "discord",
+   "texto": "Reporto una cuenta que finge ser una menor de la misma edad para acercarse a otros ninios.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-012",
+   "plataforma": "facebook",
+   "texto": "Un adulto se hace pasar por reclutador de un equipo deportivo juvenil para contactar menores.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-013",
+   "plataforma": "whatsapp",
+   "texto": "Un desconocido insiste en encontrarse en persona con mi hijo y le pide que no avise a nadie.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-014",
+   "plataforma": "instagram",
+   "texto": "El usuario propuso verse en un centro comercial y ofrecio pasar a buscar al menor.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-015",
+   "plataforma": "tiktok",
+   "texto": "Reporto que un adulto intento coordinar una cita a solas con una adolescente que conocio en linea.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-016",
+   "plataforma": "roblox",
+   "texto": "Un usuario envio contenido de tipo sexual a mi hijo sin que el lo solicitara.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "identificador": "sim-spec248-017",
+   "plataforma": "discord",
+   "texto": "El contacto compartio imagenes inapropiadas de caracter sexual con una menor.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "identificador": "sim-spec248-018",
+   "plataforma": "facebook",
+   "texto": "Reporto el envio de material sexual explicito dirigido a un adolescente en un chat de grupo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "identificador": "sim-spec248-019",
+   "plataforma": "whatsapp",
+   "texto": "Un desconocido amenaza a mi hija con difundir fotos suyas si no le envia mas imagenes.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-020",
+   "plataforma": "instagram",
+   "texto": "El usuario exige dinero al menor a cambio de no publicar capturas de sus conversaciones.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-021",
+   "plataforma": "tiktok",
+   "texto": "Reporto un caso donde amenazan a un adolescente con exponer su informacion si no coopera.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-022",
+   "plataforma": "roblox",
+   "texto": "Circula un video manipulado con inteligencia artificial que pone el rostro de una menor en otro cuerpo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-023",
+   "plataforma": "discord",
+   "texto": "Reporto imagenes creadas con IA que falsifican la apariencia de un adolescente de forma inapropiada.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-024",
+   "plataforma": "facebook",
+   "texto": "Un perfil publica montajes generados por IA usando la cara de mi hijo sin autorizacion.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-025",
+   "plataforma": "whatsapp",
+   "texto": "Alguien difundio fotos privadas de mi hija en un grupo sin su consentimiento.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-026",
+   "plataforma": "instagram",
+   "texto": "Reporto la publicacion de imagenes privadas de una menor compartidas sin permiso.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-027",
+   "plataforma": "tiktok",
+   "texto": "Un usuario reenvio capturas intimas de una adolescente a varios contactos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "identificador": "sim-spec248-028",
+   "plataforma": "roblox",
+   "texto": "Publicaron la direccion del colegio y la rutina diaria de mi hijo para que otros lo identifiquen.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-029",
+   "plataforma": "discord",
+   "texto": "Reporto que expusieron datos personales y el telefono de una menor en un foro publico.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-030",
+   "plataforma": "facebook",
+   "texto": "Alguien recopilo y publico informacion privada de una adolescente incluyendo su domicilio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-031",
+   "plataforma": "whatsapp",
+   "texto": "Recibimos mensajes masivos de publicidad de una tienda de ropa con enlaces de descuento.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-032",
+   "plataforma": "instagram",
+   "texto": "Un bot envia repetidamente enlaces a un sorteo de celulares sin relacion con menores.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-033",
+   "plataforma": "tiktok",
+   "texto": "Llegan mensajes automaticos promocionando criptomonedas varias veces al dia.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-034",
+   "plataforma": "roblox",
+   "texto": "Un usuario mayor pregunta la edad de mi hija y en que colegio estudia desde el primer mensaje.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-035",
+   "plataforma": "discord",
+   "texto": "El contacto pide al menor que borre los mensajes y mantenga la charla en secreto de sus padres.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-036",
+   "plataforma": "facebook",
+   "texto": "Un adulto solicito una videollamada privada a un menor insistiendo en que activara la camara.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-037",
+   "plataforma": "whatsapp",
+   "texto": "El usuario ofrecio dinero para que la menor le enviara fotos usando cierta ropa.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-038",
+   "plataforma": "instagram",
+   "texto": "Reporto a alguien que se hizo pasar por una agencia de modelaje para citar a una menor a solas.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD",
+   "secundariaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-039",
+   "plataforma": "tiktok",
+   "texto": "Un desconocido propuso recoger a mi hijo cerca del colegio sin conocimiento de la familia.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-040",
+   "plataforma": "roblox",
+   "texto": "Amenazan a una adolescente con enviar sus fotos a sus companieros si bloquea la cuenta.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-041",
+   "plataforma": "discord",
+   "texto": "Circulan capturas privadas de un menor reenviadas en varios grupos sin su permiso.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-042",
+   "plataforma": "facebook",
+   "texto": "Llegan mensajes repetidos de una promocion de comida rapida con cupones de descuento.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-043",
+   "plataforma": "whatsapp",
+   "texto": "Un hombre desconocido le escribe a mi hija de 13 años todos los días por WhatsApp desde hace dos semanas. Ella nunca le contesta y ya lo bloqueó dos veces, pero vuelve a escribirle desde números distintos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-044",
+   "plataforma": "instagram",
+   "texto": "Soy docente y una estudiante de sexto me contó que un perfil de Instagram que dice conocerla le escribe todas las noches desde hace un mes. Ella no le responde pero los mensajes siguen llegando.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-045",
+   "plataforma": "tiktok",
+   "texto": "Mi sobrino de 15 años recibe mensajes y llamadas de un número que no conoce a cualquier hora, incluso de madrugada. Ya le dijo que no quiere hablar y la persona sigue insistiendo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-046",
+   "plataforma": "roblox",
+   "texto": "Una vecina me comentó que un perfil de Facebook le manda solicitudes de amistad todos los días a su niña de 10 años. Las rechaza y vuelve a crear cuentas para insistir.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-047",
+   "plataforma": "discord",
+   "texto": "Me escribe una persona mayor todos los días por Discord. Le dije que no quería hablar con él y sigue mandándome mensajes en todos los servidores donde estoy.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-048",
+   "plataforma": "facebook",
+   "texto": "Un hombre le escribe todas las noches a mi hija preguntándole qué hace, dónde está y con quién anda. Nunca la ha citado en persona, pero no para de controlarla por chat y eso nos asusta mucho.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-049",
+   "plataforma": "whatsapp",
+   "texto": "Un señor le manda mensajes todos los días a mi nieta diciéndole que es muy linda y que por favor le mande un saludo. No le pide fotos ni nada más, pero es un desconocido y no deja de escribir aunque ella no contesta.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-050",
+   "plataforma": "instagram",
+   "texto": "Un exprofesor del colegio les escribe con frecuencia a varias exalumnas por Instagram con halagos sobre cómo han crecido. Dicen que solo saluda, pero les escribe todas las semanas aunque le dejan los mensajes en visto.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-051",
+   "plataforma": "tiktok",
+   "texto": "Un vecino del barrio le escribe todos los días por Snapchat a mi hijo de 14 años para saludarlo y preguntarle cómo le fue en el colegio. Mi hijo casi no le contesta porque le parece raro, pero el señor insiste.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-052",
+   "plataforma": "roblox",
+   "texto": "Un tipo le escribe a mi hermana menor todos los días sin parar desde hace semanas y ahora además le ofrece recargas del celular si le contesta los mensajes. Ella no le responde pero él no se rinde.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-053",
+   "plataforma": "discord",
+   "texto": "Un perfil le escribió a mi hija de 12 años pidiéndole fotos sin ropa. Le dijo que era para un concurso de modelaje y que todas las niñas de su edad lo hacían.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-054",
+   "plataforma": "facebook",
+   "texto": "Mi estudiante me mostró mensajes de un hombre que le pedía videos en ropa interior diciendo que la iba a hacer famosa en TikTok. Ella tiene 13 años y estaba muy asustada.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-055",
+   "plataforma": "whatsapp",
+   "texto": "Un desconocido en un chat de videojuegos le pidió a mi hijo de 11 años que le mandara fotos de su cuerpo a cambio de ayudarlo a subir de nivel. Menos mal mi hijo me contó de una vez.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-056",
+   "plataforma": "instagram",
+   "texto": "Hay un juego de retos que circula por WhatsApp donde un contacto desconocido empieza pidiendo cosas inocentes y termina pidiéndoles a las niñas fotos en ropa interior. A mi prima de 15 años ya le llegó.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-057",
+   "plataforma": "tiktok",
+   "texto": "Un hombre me escribió por Telegram diciendo que le mandara fotos mías desnuda y que si no lo hacía me iba a dejar de hablar. Tengo 16 años y no sé quién es.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-058",
+   "plataforma": "roblox",
+   "texto": "Un perfil le pide a mi hija fotos de cómo le quedó el uniforme nuevo del colegio y le insiste en que se tome las fotos sola en su cuarto. Dice que es diseñador, pero nos parece muy sospechoso que insista tanto en fotos de ella.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-059",
+   "plataforma": "discord",
+   "texto": "Lleva días escribiéndole a mi sobrina que le mande una foto de ella para saber que es real y poder seguir hablando. No le ha pedido nada explícito todavía, pero es un adulto desconocido insistiendo en fotos de una niña de 12 años.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-060",
+   "plataforma": "facebook",
+   "texto": "Una cuenta de TikTok le escribió a mi hija de 10 años diciendo que la iban a escoger para un concurso de baile y que debía grabar videos bailando con ropa ajustada para la audición. El perfil no tiene ninguna empresa detrás.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-061",
+   "plataforma": "whatsapp",
+   "texto": "Un hombre no para de escribirle a mi hija de 14 años desde hace un mes y en los últimos mensajes empezó a pedirle fotos sin blusa. Ella lo bloqueó pero apareció con otra cuenta.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-062",
+   "plataforma": "instagram",
+   "texto": "Un perfil con nombre y foto de una compañera del curso le pidió a mi hijo fotos íntimas, pero esa compañera dice que la cuenta no es suya y que ya le pidieron fotos a varios niños haciéndose pasar por ella.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-063",
+   "plataforma": "tiktok",
+   "texto": "Un desconocido le ofreció a mi hijo de 12 años recargas de dinero y saldo para el celular si le mandaba fotos y le contestaba los mensajes todos los días.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-064",
+   "plataforma": "roblox",
+   "texto": "Un jugador adulto del clan de mi hijo le regaló un pase de batalla y ahora le está ofreciendo skins caros a cambio de que hablen por videollamada a solas. Mi hijo tiene 11 años.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-065",
+   "plataforma": "discord",
+   "texto": "Un perfil de Instagram le escribió a mi sobrina de 14 años ofreciéndole un iPhone nuevo si salía con él un fin de semana. Dijo que era empresario y que podía darle todo lo que quisiera.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-066",
+   "plataforma": "facebook",
+   "texto": "Una señora que dice ser madrina de un programa de becas le ofrece a mi nieta de 13 años mercados y útiles escolares si habla con ella por WhatsApp todas las noches y le cuenta su rutina. No existe ningún programa con ese nombre.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-067",
+   "plataforma": "whatsapp",
+   "texto": "Un hombre me ofreció dinero por Nequi si le mandaba videos míos y le escribía todas las tardes. Me dijo que no le contara a mis papás porque era un secreto entre los dos. Tengo 15 años.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-068",
+   "plataforma": "instagram",
+   "texto": "Un desconocido le escribió a mi hijo de 13 años ofreciéndole skins gratis de su juego favorito sin pedirle nada todavía, pero le dice que es su amigo especial y que quiere seguir consintiéndolo. Nos preocupa porque ningún adulto regala cosas así sin querer algo a cambio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-069",
+   "plataforma": "tiktok",
+   "texto": "Un hombre le ofrece recargas del celular a mi hija de 16 años diciéndole que es muy especial para él y que quiere ayudarla porque es muy bonita. Le escribe todos los días con la misma oferta.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-070",
+   "plataforma": "roblox",
+   "texto": "Un adulto del chat de un juego en línea les ha regalado pases y monedas a varios niños del grupo, todos entre 9 y 12 años, y ahora les pide que hablen con él por privado para seguir recibiendo regalos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-071",
+   "plataforma": "discord",
+   "texto": "Un tipo le escribe a mi hermanita de 12 años todos los días sin que ella le conteste y le ofrece dinero para que compre lo que quiera si acepta ser su novia a distancia. No para de insistir con las dos cosas.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-072",
+   "plataforma": "facebook",
+   "texto": "Un perfil que se hace pasar por un influencer juvenil muy conocido les ofrece regalos y salidas exclusivas a menores que lo contacten por privado. Verificamos y el influencer real denunció que no es su cuenta.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD",
+   "secundariaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-073",
+   "plataforma": "whatsapp",
+   "texto": "Crearon un perfil de Instagram con el nombre y las fotos de mi hija de 13 años y están escribiéndole a sus compañeros haciéndose pasar por ella. Mi hija no tiene cuenta en esa red.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-074",
+   "plataforma": "instagram",
+   "texto": "Alguien abrió una cuenta de Facebook con el nombre y la foto de mi hermano de 15 años y desde ahí le escribe a niñas de su colegio diciendo cosas inapropiadas. Mi hermano está siendo culpado de algo que no hizo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-075",
+   "plataforma": "tiktok",
+   "texto": "Un hombre se hace pasar por un primo mío en WhatsApp y le escribió a mi hija de 11 años diciendo que era familia y que le mandara fotos de ella. Confirmamos con la familia y nadie le escribió.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-076",
+   "plataforma": "roblox",
+   "texto": "En el grupo del curso entró un contacto que decía ser una niña nueva del colegio y empezó a pedirles fotos a las compañeras. La rectoría confirmó que no hay ninguna estudiante nueva con ese nombre.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-077",
+   "plataforma": "discord",
+   "texto": "Un perfil de TikTok usa el nombre y las fotos de mi sobrino de 14 años para pedirles dinero y recargas a sus seguidores. Él ya denunció pero la cuenta sigue activa.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-078",
+   "plataforma": "facebook",
+   "texto": "Apareció una cuenta con el nombre completo y la foto del perfil de una compañera de mi hija, pero la niña dice que no es suya. La cuenta le escribe a los compañeros del curso preguntándoles cosas personales, y no sabemos si es una broma o algo peor.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-079",
+   "plataforma": "whatsapp",
+   "texto": "Un hombre le escribió a mi hijo de 12 años diciendo que era amigo de su tío y que por eso conocía su nombre y su colegio. El tío dice que no conoce a nadie con ese perfil, así que la identidad que dio es falsa.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-080",
+   "plataforma": "instagram",
+   "texto": "Una cuenta con el nombre del colegio les escribió a varios padres pidiendo datos de los estudiantes para supuestas actualizaciones de la plataforma. El colegio aclaró que la cuenta no es oficial y que nunca piden datos por redes.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-081",
+   "plataforma": "tiktok",
+   "texto": "Un perfil falso de un cantante famoso le escribe a mi hija de 13 años diciendo que la escogió entre sus fans y que quiere conocerla mejor. El equipo del artista ya desmintió esas cuentas, pero este perfil sigue contactando menores.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-082",
+   "plataforma": "roblox",
+   "texto": "Un desconocido se hace pasar por un chico de 14 años en Snapchat y le escribe todos los días a mi hija de 12 años insistiendo en que sean novios. Comparando las fotos con otros perfiles vimos que son robadas de otro niño.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-083",
+   "plataforma": "discord",
+   "texto": "Una cuenta con la foto y el nombre de una compañera del curso les ofrece a los niños premios y saldo si hablan por privado con ella. La compañera denunció que la cuenta no es suya y que alguien está usando su identidad para engañar menores.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD",
+   "secundariaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-084",
+   "plataforma": "facebook",
+   "texto": "Un hombre le propuso a mi hija de 15 años encontrarse en un centro comercial este sábado. Le dijo que no le contara a nadie y que él la reconocería por la foto de su perfil.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-085",
+   "plataforma": "whatsapp",
+   "texto": "Un desconocido que habla con mi hijo de 13 años por un juego en línea le dijo que viaja a nuestra ciudad la próxima semana y que quiere conocerlo en persona en el parque cerca de la casa.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-086",
+   "plataforma": "instagram",
+   "texto": "Un hombre mayor me escribió por Facebook diciendo que quiere invitarme a comer helado y conocerme en persona. Me preguntó a qué hora salgo del colegio y por dónde me recogen. Tengo 12 años y no lo conozco.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-087",
+   "plataforma": "tiktok",
+   "texto": "Un tipo le escribió a mi sobrina de 16 años diciendo que le tiene una sorpresa y que lo espere sola a la salida del gimnasio donde entrena. Le insistió varias veces en que vaya sin avisarle a su mamá.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-088",
+   "plataforma": "roblox",
+   "texto": "Un hombre que dice tener 20 años le propuso a una estudiante de octavo verse en un hotel de la ciudad. La niña le mostró los mensajes a la orientadora y están tomando cartas en el asunto.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-089",
+   "plataforma": "discord",
+   "texto": "Un desconocido le escribe a mi hija diciéndole que algún día se van a ver y que ya sabe en qué barrio vivimos. No ha dado fecha ni lugar concreto, pero insiste cada semana en que quiere conocerla en persona.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-090",
+   "plataforma": "facebook",
+   "texto": "Un señor le comenta en todas sus publicaciones de TikTok a mi nieta de 14 años que la quiere ver salir del colegio para conocerla. Le ha preguntado varias veces a qué hora sale y qué ruta coge para la casa.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-091",
+   "plataforma": "whatsapp",
+   "texto": "Un hombre le pregunta a mi hijo de 12 años a qué parque va los fines de semana con sus amigos y le dice que le gustaría coincidir con él algún día para jugar juntos. Nunca ha propuesto un plan concreto pero la intención de encontrarse es clara.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "identificador": "sim-spec248-092",
+   "plataforma": "instagram",
+   "texto": "Un desconocido le escribe a mi hija de 15 años todos los días desde hace un mes y esta semana le propuso verse en persona en la estación de TransMilenio cerca de la casa. La insistencia era constante y ahora la cita es concreta.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-093",
+   "plataforma": "tiktok",
+   "texto": "Un hombre le dijo a mi sobrina de 13 años que le tiene un regalo de cumpleaños pero que solo se lo puede entregar en persona, que lo espere sola el sábado en la entrada del centro comercial.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO",
+   "secundariaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "identificador": "sim-spec248-094",
+   "plataforma": "roblox",
+   "texto": "Unas fotos íntimas de una estudiante de noveno están circulando por los grupos de WhatsApp del colegio. La niña está destrozada y los compañeros las siguen reenviando a pesar de las advertencias.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+   "secundariaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-095",
+   "plataforma": "discord",
+   "texto": "El exnovio de mi hija de 16 años publicó en sus historias de Instagram fotos privadas que ella le había enviado cuando eran novios. Las borró a las horas pero ya varios las habían guardado y compartido.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+   "secundariaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-096",
+   "plataforma": "facebook",
+   "texto": "Un grupo de Telegram está compartiendo imágenes íntimas de niñas de varios colegios de la ciudad, algunas aparentemente menores de edad. Mi hijo me mostró el grupo y salí espantada.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+   "secundariaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-097",
+   "plataforma": "whatsapp",
+   "texto": "Un compañero de curso le tomó capturas a un video íntimo que mi hija de 15 años le envió en confianza por Snapchat y las repartió entre los amigos del grado. Ahora la amenazan con publicarlas si habla.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+   "secundariaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-098",
+   "plataforma": "instagram",
+   "texto": "Un hombre adulto le reenvió a mi hijo de 13 años fotos íntimas de una niña que dice ser de su edad y le pide que él también mande fotos suyas para intercambiar. Mi hijo me contó asustado.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "identificador": "sim-spec248-099",
+   "plataforma": "tiktok",
+   "texto": "El novio de mi sobrina de 17 años guardó las fotos íntimas que ella le enviaba y se las mostró a sus amigos en el celular sin publicarlas en internet. Ella se enteró por una amiga y está muy afectada.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+   "secundariaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-100",
+   "plataforma": "roblox",
+   "texto": "Después de terminar con mi hija de 16 años, su ex le escribió diciendo que si no volvía con él iba a publicar las fotos privadas que tiene de ella. Aún no publica nada pero la amenaza es explícita.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "identificador": "sim-spec248-101",
+   "plataforma": "discord",
+   "texto": "Hay un grupo de Discord donde varios jóvenes piden y reparten packs de niñas de los colegios de la zona, con nombres y cursos. Algunas de las mencionadas tienen 13 y 14 años.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+   "secundariaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-102",
+   "plataforma": "facebook",
+   "texto": "Un hombre le dice a mi hija de 14 años que si no le manda más fotos íntimas va a difundir las que ella ya le envió por error creyendo que era un chico de su edad. Está atrapada y no sabe qué hacer.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "identificador": "sim-spec248-103",
+   "plataforma": "whatsapp",
+   "texto": "El exnovio de mi hermana de 17 años la amenaza con subir sus fotos íntimas a internet si no acepta verse con él una última vez. Ella está aterrada porque él sí tiene ese material.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "identificador": "sim-spec248-104",
+   "plataforma": "instagram",
+   "texto": "Una cuenta de Instagram que se hace pasar por una tienda de tenis famosa anuncia sorteos falsos y les pide a los seguidores que compartan sus datos. Es pura publicidad engañosa para robar datos de adultos y niños por igual.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-105",
+   "plataforma": "tiktok",
+   "texto": "El perfil de mi hijo recibe todos los días comentarios con enlaces de casas de apuestas y casinos en línea. Es publicidad masiva que le llega a miles de cuentas, no algo dirigido a él.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-106",
+   "plataforma": "roblox",
+   "texto": "A mi hija le llega una cadena por WhatsApp que dice que si no la reenvía a diez amigos le pasará algo malo, y trae enlaces a páginas de premios falsos. Es la típica cadena que circula por todos los grupos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-107",
+   "plataforma": "discord",
+   "texto": "Un número desconocido le escribió a mi hijo exigiéndole doscientos mil pesos y diciendo que si no consigna va a publicar unas fotos que le sacaron de su perfil.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-108",
+   "plataforma": "facebook",
+   "texto": "A mi sobrina le llegaron mensajes pidiendo dinero a cambio de no difundir unos videos íntimos que dicen tener de ella. Está muy asustada y no quiere salir de la casa.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-109",
+   "plataforma": "whatsapp",
+   "texto": "Un usuario del servidor le exige a mi hijo recargas semanales para el juego y lo amenaza con filtrar las conversaciones privadas del grupo si no paga.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-110",
+   "plataforma": "instagram",
+   "texto": "Un compañero mayor le cobra plata todos los lunes a mi hijo y le dice que si no lleva la plata le va a pegar a la salida. Ya van tres semanas de lo mismo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-111",
+   "plataforma": "tiktok",
+   "texto": "Le hackearon la cuenta a mi hija y ahora le piden plata para devolvérsela. Dicen que si no paga borran todo y usan su nombre para estafar a sus seguidores.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-112",
+   "plataforma": "roblox",
+   "texto": "Recibí mensajes diciendo que tenían a mi hijo afuera del colegio y que debía consignar de inmediato o le harían daño. Mi hijo estaba en clase, pero siguen escribiendo y pidiendo plata.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-113",
+   "plataforma": "discord",
+   "texto": "Un niño del curso le dice al mío que si no le pasa las tareas le va a contar a la profesora que él copió en el examen y lo va a publicar en el grupo del salón.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-114",
+   "plataforma": "facebook",
+   "texto": "Le piden a mi hija cincuenta mil pesos o publican un video donde ella se cae en una fiesta y todos se ríen. No es íntimo, pero la tiene muy mal y le da miedo ir al colegio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-115",
+   "plataforma": "whatsapp",
+   "texto": "Un jugador mayor le dice a mi hijo que si no le regala sus skins lo va a denunciar con pruebas falsas y le van a cerrar la cuenta del juego.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-116",
+   "plataforma": "instagram",
+   "texto": "Un perfil falso le exige a mi hija trescientos mil pesos; ya compartió una foto íntima de ella en un grupo para demostrar que habla en serio y amenaza con publicar las demás.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-117",
+   "plataforma": "tiktok",
+   "texto": "Le montaron la cara de mi hija en imágenes generadas con inteligencia artificial y le piden plata para no repartirlas por todo el colegio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-118",
+   "plataforma": "roblox",
+   "texto": "Un hombre le escribió a mi hija diciendo que sabe dónde vive y dónde estudia, y que si no le manda plata publica la dirección completa y las fotos de la casa.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-119",
+   "plataforma": "discord",
+   "texto": "Le llamaron a mi hija con una voz igualita a la de su mamá, hecha con inteligencia artificial, pidiéndole que consignara una plata urgente a un número. Ella reconoció la voz y por poco cae.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "identificador": "sim-spec248-120",
+   "plataforma": "facebook",
+   "texto": "En un grupo del colegio están repartiendo imágenes falsas de una compañera hechas con una aplicación de inteligencia artificial que le quita la ropa en las fotos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-121",
+   "plataforma": "whatsapp",
+   "texto": "Alumnos de un colegio crearon un video falso con inteligencia artificial donde una profesora aparece diciendo cosas que nunca dijo, y ya tiene miles de reproducciones.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-122",
+   "plataforma": "instagram",
+   "texto": "Unos compañeros usaron inteligencia artificial para crear imágenes de mi hija como si estuviera en ropa interior y las andan mostrando entre ellos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-123",
+   "plataforma": "tiktok",
+   "texto": "Una cuenta anónima generó con inteligencia artificial fotos comprometedoras de varias niñas del grado y las está ofreciendo por internet.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-124",
+   "plataforma": "roblox",
+   "texto": "Le hicieron a mi hijo un video con inteligencia artificial donde aparece en situaciones humillantes; parece tan real que ya lo creyeron varios compañeros.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-125",
+   "plataforma": "discord",
+   "texto": "Mi hija denuncia que un conocido crea imágenes íntimas falsas de menores con inteligencia artificial y las guarda en su celular; lo vio una amiga por accidente.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-126",
+   "plataforma": "facebook",
+   "texto": "Mi hija lleva semanas hablando con un supuesto chico que resultó ser un bot de inteligencia artificial manejado por alguien; las respuestas eran demasiado perfectas y al final le pidió fotos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-127",
+   "plataforma": "whatsapp",
+   "texto": "Editaron con una aplicación de inteligencia artificial una foto de mi hija para ponerla en ridículo delante de todo el salón; no es íntima, pero la deformaron y parece real.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-128",
+   "plataforma": "instagram",
+   "texto": "Usaron una herramienta de voz con inteligencia artificial para hacerse pasar por un compañero y pedirle a mi hijo datos del curso y de los grupos del colegio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD",
+   "secundariaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-129",
+   "plataforma": "tiktok",
+   "texto": "Un creador de contenido local publica videos hechos con inteligencia artificial donde usa la cara de niños del barrio sin permiso de los padres para hacer chistes.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-130",
+   "plataforma": "roblox",
+   "texto": "Una cuenta pública publica imágenes íntimas falsas de mi hija hechas con inteligencia artificial; ya las vieron sus compañeros y la señalan en el colegio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-131",
+   "plataforma": "discord",
+   "texto": "Crearon con inteligencia artificial imágenes íntimas de mi hija y ya las compartieron en varios grupos del colegio. Ella no se ha tomado ninguna foto así en la vida.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+   "secundariaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-132",
+   "plataforma": "facebook",
+   "texto": "Fabricaron con inteligencia artificial unas imágenes falsas de mi hija y con eso la están chantajeando para que les dé plata a cambio de borrarlas.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "identificador": "sim-spec248-133",
+   "plataforma": "whatsapp",
+   "texto": "El ex novio de mi hija repartió en el grupo del curso unas fotos íntimas que ella le había enviado en confianza cuando andaban.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-134",
+   "plataforma": "instagram",
+   "texto": "Grabaron a escondidas a mi hijo en el baño del colegio y el video anda rodando por varias cuentas. Él no quiere volver a clases de la vergüenza.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-135",
+   "plataforma": "tiktok",
+   "texto": "Mi hija envió una foto privada por la aplicación, que se supone se borra sola, pero le hicieron captura sin permiso y la están reenviando entre conocidos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-136",
+   "plataforma": "roblox",
+   "texto": "Le sacaron fotos del perfil privado a mi hermana menor y las publicaron en páginas sin su autorización, con comentarios sobre su cuerpo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-137",
+   "plataforma": "discord",
+   "texto": "Un video íntimo de una menor del barrio está circulando en grupos de desconocidos; varias personas del sector ya lo recibieron y nadie sabe quién lo subió primero.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-138",
+   "plataforma": "facebook",
+   "texto": "Una cuenta subió un video donde graban a mi hija sin que ella supiera mientras se cambiaba en una pijamada; quien grabó era otra menor de la fiesta.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-139",
+   "plataforma": "whatsapp",
+   "texto": "Subieron sin permiso un video de mi hijo llorando después de una pelea en el colegio y lo usan para burlarse de él; no es íntimo, pero no lo quieren bajar.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-140",
+   "plataforma": "instagram",
+   "texto": "Una compañera publicó fotos de mi hija en una fiesta donde sale en una situación comprometedora, sin preguntarle, y se niega a borrarlas aunque se lo pedimos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-141",
+   "plataforma": "tiktok",
+   "texto": "Filtraron un audio privado de mi hija contando algo muy personal de su vida y ya lo escuchó medio colegio; lo mandan de grupo en grupo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-142",
+   "plataforma": "roblox",
+   "texto": "Un conocido transmitió en vivo desde una salida donde aparecía mi hija sin que ella lo supiera ni autorizara, y la grabación sigue disponible en su perfil.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-143",
+   "plataforma": "discord",
+   "texto": "Ya publicaron una foto íntima de mi hija en un grupo y ahora le escriben que si no paga una plata publican las demás que dicen tener.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "EXTORSION"
+  },
+  {
+   "identificador": "sim-spec248-144",
+   "plataforma": "facebook",
+   "texto": "Publicaron fotos íntimas de mi hermana menor junto con su nombre completo, el colegio donde estudia y el barrio donde vivimos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-145",
+   "plataforma": "whatsapp",
+   "texto": "Compartieron un video íntimo de una amiga de mi hija en un canal, y en los comentarios alguien dio su dirección y la hora a la que sale del colegio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-146",
+   "plataforma": "instagram",
+   "texto": "Después de una discusión en el juego, un usuario publicó en el servidor la dirección de nuestra casa y el nombre del colegio de mi hijo para que todos lo vieran.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-147",
+   "plataforma": "tiktok",
+   "texto": "Le hicieron doxeo a mi hija en un en vivo: revelaron su nombre real, el barrio y el colegio donde estudia frente a cientos de personas que estaban viendo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-148",
+   "plataforma": "roblox",
+   "texto": "En un grupo de compra y venta alguien publicó el teléfono y la dirección de mi hija acusándola de algo que no hizo; ya recibió llamadas de desconocidos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-149",
+   "plataforma": "discord",
+   "texto": "Publicaron en un canal el colegio y la ruta que toma mi hija todos los días para ir y volver, acompañado de mensajes intimidantes.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-150",
+   "plataforma": "facebook",
+   "texto": "Le enviaron a mi hija una captura de la fachada de nuestra casa con la dirección exacta y la compartieron en el grupo del barrio diciendo que ahí vive ella.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-151",
+   "plataforma": "whatsapp",
+   "texto": "Una cuenta expuso los datos de mi hijo y de nuestra familia: nombres completos, dónde trabajamos los papás y a qué horas queda solo en la casa.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-152",
+   "plataforma": "instagram",
+   "texto": "En los comentarios de un video dieron el nombre completo y el colegio de mi hija sin su permiso; no pusieron dirección, pero con eso ya varios la ubicaron.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING",
+   "secundariaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "identificador": "sim-spec248-153",
+   "plataforma": "tiktok",
+   "texto": "Pasaron el número de mi hijo a un grupo grande sin permiso y ahora le escriben desconocidos a todas horas, unos en broma y otros insistiendo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "identificador": "sim-spec248-154",
+   "plataforma": "roblox",
+   "texto": "Descubrieron quién era mi hijo detrás de su usuario anónimo en el juego y lo revelaron públicamente con su nombre real y la ciudad donde vive.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-155",
+   "plataforma": "discord",
+   "texto": "Un conocido comparte capturas de la ubicación en tiempo real de mi hija en varios grupos sin que ella lo sepa; se enteró por una amiga.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-156",
+   "plataforma": "facebook",
+   "texto": "Publicaron una foto de mi hija con el uniforme puesto y en los comentarios varios identificaron el colegio, el grado y hasta el nombre del profesor.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-157",
+   "plataforma": "whatsapp",
+   "texto": "Además de publicar dónde vive y dónde estudia mi hija, compartieron fotos de ella tomadas sin permiso mientras caminaba por la calle.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "DOXING"
+  },
+  {
+   "identificador": "sim-spec248-158",
+   "plataforma": "instagram",
+   "texto": "Un número desconocido entró al grupo de padres del colegio y llena el chat de publicidad de tenis y ropa todos los días, a cualquier hora.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-159",
+   "plataforma": "tiktok",
+   "texto": "Un perfil le escribe a mi hijo todos los días ofreciéndole ganar plata fácil con inversiones; es publicidad masiva de esas que le mandan a todo el mundo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-160",
+   "plataforma": "roblox",
+   "texto": "Le llegan mensajes de cuentas que dicen que se ganó un celular y le piden sus datos para reclamarlo; es el típico engaño masivo que circula siempre.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-161",
+   "plataforma": "discord",
+   "texto": "Cuentas desconocidas le escriben a mi hija pidiéndole votos y likes para concursos, varias veces al día y siempre con el mismo mensaje copiado.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-162",
+   "plataforma": "facebook",
+   "texto": "A mi hija le llegan cadenas que dicen que si no reenvía el mensaje a veinte personas le va a pasar algo muy malo; es de esas cadenas masivas que asustan a los niños.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-163",
+   "plataforma": "whatsapp",
+   "texto": "Le escribieron a mi hijo que su cuenta será cerrada en veinticuatro horas si no confirma sus datos en un enlace; es un mensaje masivo que les llegó a varios compañeros igual.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-164",
+   "plataforma": "instagram",
+   "texto": "A mi hijo de quince años le llegan promociones de casas de apuestas con bonos de bienvenida y frases dirigidas a jóvenes; son mensajes masivos de publicidad.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-165",
+   "plataforma": "tiktok",
+   "texto": "Le ofrecen a mi hija trabajar desde el celular ganando millones por semana si invita a más amigos; es la típica pirámide que spamean en todos lados.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-166",
+   "plataforma": "roblox",
+   "texto": "Unas cuentas que ofrecen hacer las tareas y los trabajos por plata le escriben a mi hijo constantemente con el mismo anuncio; puro correo no deseado.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-167",
+   "plataforma": "discord",
+   "texto": "Unos bots agregaron a mi hijo a como diez grupos de ventas de zapatos y suplementos sin que él aceptara; le llegan notificaciones todo el día.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-168",
+   "plataforma": "facebook",
+   "texto": "Le dicen a mi hija que quedó seleccionada para un premio y que solo debe dar nombre, colegio y dirección para recibirlo; el mismo mensaje les llegó a varias amigas.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-169",
+   "plataforma": "whatsapp",
+   "texto": "Le llenan a mi hijo la bandeja con encuestas que prometen regalos y recargas si responde y comparte con diez contactos; pura publicidad en cadena.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "identificador": "sim-spec248-170",
+   "plataforma": "instagram",
+   "texto": "Mi primo de 16 años creó un perfil con mi nombre y mi foto como broma entre la familia y me escribió cosas graciosas al chat. Fue de mal gusto pero ya se disculpó y borró todo, no hubo mala intención.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-171",
+   "plataforma": "tiktok",
+   "texto": "Mi hijo de 9 años y un amiguito del barrio juegan por chat a adivinar dónde vive el otro y qué estudia. Son dos niños de la misma edad jugando entre ellos, sin ningún adulto de por medio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-172",
+   "plataforma": "roblox",
+   "texto": "Un señor del conjunto me escribió preguntándome si conozco un buen tutor de matemáticas para su hijo y si puedo recomendarle a alguien del colegio. Es un vecino conocido buscando una recomendación, nada más.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-173",
+   "plataforma": "discord",
+   "texto": "En el álbum familiar de Facebook compartimos las fotos del cumpleaños de mi hija en la piscina con sus primos. Una vecina comentó que era peligroso, pero son fotos familiares normales compartidas por nosotros mismos en un grupo cerrado.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-174",
+   "plataforma": "facebook",
+   "texto": "El profesor de mi hijo escribe todas las noches al grupo de padres recordando las tareas y las entregas de la semana. Algunos padres se quejan de la insistencia, pero es el canal oficial del colegio y solo habla de temas académicos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-175",
+   "plataforma": "whatsapp",
+   "texto": "Un compañero de curso le escribe a mi hija todos los días pidiéndole que le pase los apuntes y las tareas. Es intenso y canson, pero es un niño de su mismo salón y solo habla de estudio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-176",
+   "plataforma": "instagram",
+   "texto": "Mi hijo se peleó con un amigo por una partida en línea y se bloquearon mutuamente; hablamos con la otra mamá y no pasó a mayores, solo quería dejar constancia.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-177",
+   "plataforma": "tiktok",
+   "texto": "A mi hijo le salió recomendado un video de una pelea real y quedó muy impresionado; no involucra a nadie conocido, pero no debió verlo a su edad.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-178",
+   "plataforma": "roblox",
+   "texto": "Un compañero insultó a mi hijo una sola vez durante una partida; fue un episodio aislado y no se ha repetido, pero él quedó muy dolido.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-179",
+   "plataforma": "discord",
+   "texto": "Sacaron a mi hija del grupo de amigas y ahora la ignoran en el colegio; no hay amenazas ni insultos, pero está muy triste y no entiende por qué.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-180",
+   "plataforma": "facebook",
+   "texto": "Un vecino adulto saluda con mucha confianza a los niños del parque y a veces les regala dulces delante de los papás; algunos lo ven raro, pero nunca ha pasado nada concreto.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-181",
+   "plataforma": "whatsapp",
+   "texto": "Mi sobrino le dijo a mi hija en broma, delante de toda la familia, que si no le daba su postre le contaría a la mamá su secreto; son primos y juegan así todo el tiempo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-182",
+   "plataforma": "instagram",
+   "texto": "Mi hijo y un amigo del curso juegan en el chat a eso de adivinar dónde vives; son niños del mismo barrio, se conocen de siempre y las casas quedan a dos cuadras.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-183",
+   "plataforma": "tiktok",
+   "texto": "Una amiga le puso stickers y filtros graciosos a una foto de mi hija y la subió a su historia; a ella también le dio risa y no hubo mala intención de nadie.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "identificador": "sim-spec248-184",
+   "plataforma": "roblox",
+   "texto": "Un grupo de companieros de curso le escribe todos los dias a mi hijo en el chat del salon burlandose de su forma de hablar y lo llaman con apodos crueles frente a todos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CIBERACOSO"
+  },
+  {
+   "identificador": "sim-spec248-185",
+   "plataforma": "discord",
+   "texto": "Desde hace semanas varios companieros crean memes con la cara de mi hija y los publican en el grupo del curso para reirse de ella; ella ya no quiere ir al colegio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CIBERACOSO"
+  },
+  {
+   "identificador": "sim-spec248-186",
+   "plataforma": "facebook",
+   "texto": "Un grupo de estudiantes excluyo a mi hijo de todos los chats del salon y organiza burlas coordinadas contra el en redes casi a diario.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CIBERACOSO"
+  },
+  {
+   "identificador": "sim-spec248-187",
+   "plataforma": "whatsapp",
+   "texto": "Varios companieros comentan constantemente fotos de mi hija en redes con insultos sobre su peso, se repite semana tras semana.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CIBERACOSO"
+  },
+  {
+   "identificador": "sim-spec248-188",
+   "plataforma": "instagram",
+   "texto": "Un grupo de chicos del colegio inunda el perfil de mi hijo con comentarios humillantes cada vez que publica algo, ya lleva mas de un mes.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "CIBERACOSO"
+  },
+  {
+   "identificador": "sim-spec248-189",
+   "plataforma": "tiktok",
+   "texto": "Grabaron a mi hijo mientras un companiero lo golpeaba en el patio y el video ya circula por los chats del colegio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "HAPPY_SLAPPING"
+  },
+  {
+   "identificador": "sim-spec248-190",
+   "plataforma": "roblox",
+   "texto": "Un grupo de estudiantes filmo como empujaban y humillaban a mi hija en el bano y lo subieron a una historia de Instagram.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "HAPPY_SLAPPING"
+  },
+  {
+   "identificador": "sim-spec248-191",
+   "plataforma": "discord",
+   "texto": "Varios companieros grabaron una pelea donde agredieron a mi hijo y compartieron el video en el grupo de WhatsApp del curso para burlarse.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "HAPPY_SLAPPING"
+  },
+  {
+   "identificador": "sim-spec248-192",
+   "plataforma": "facebook",
+   "texto": "Grabaron el momento en que insultaban y empujaban a mi hija en el bus escolar y el video se esta compartiendo entre varios cursos.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "HAPPY_SLAPPING"
+  },
+  {
+   "identificador": "sim-spec248-193",
+   "plataforma": "whatsapp",
+   "texto": "Un video donde un grupo de jovenes agrede fisicamente a mi hijo se volvio viral en TikTok entre companieros del colegio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "HAPPY_SLAPPING"
+  },
+  {
+   "identificador": "sim-spec248-194",
+   "plataforma": "instagram",
+   "texto": "Una cuenta desconocida sigue creando perfiles nuevos para seguir a mi hija despues de que la bloqueo varias veces, y sabe en que colegio estudia.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "STALKING"
+  },
+  {
+   "identificador": "sim-spec248-195",
+   "plataforma": "tiktok",
+   "texto": "Un usuario monitorea constantemente las publicaciones de mi hijo y le comenta en cada foto, incluso despues de haberlo bloqueado dos veces.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "STALKING"
+  },
+  {
+   "identificador": "sim-spec248-196",
+   "plataforma": "roblox",
+   "texto": "Alguien vigila las historias de mi hija todos los dias y le escribe mencionando lugares donde la vio, aunque ella nunca respondio.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "STALKING"
+  },
+  {
+   "identificador": "sim-spec248-197",
+   "plataforma": "discord",
+   "texto": "Una persona sigue contactando a mi hijo desde distintas cuentas nuevas cada vez que lo bloquea, y menciona detalles de su rutina diaria.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "STALKING"
+  },
+  {
+   "identificador": "sim-spec248-198",
+   "plataforma": "facebook",
+   "texto": "Un desconocido comenta cada publicacion de mi hija desde hace meses y una vez menciono la direccion del conjunto donde vive, aunque ella nunca se lo dijo.",
+   "fechaIncidente": "2026-08-01T12:00:00.000Z",
+   "ciudad": "Bogota",
+   "pais": "Colombia",
+   "categoriaEsperada": "STALKING"
+  }
+ ]
+}
