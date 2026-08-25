@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 409 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2863 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 410 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2870 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -29,6 +29,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | --- | --- | --- | --- | --- |
 | `/` | página | permitir | permite | sí |
 | `//` | página | permitir | permite | sí |
+| `/activar` | página | permitir | permite | sí |
 | `/api/` | api | permitir | permite | sí |
 | `/api/admin` | api | permitir | permite | sí |
 | `/api/admin/analisis/anomalias` | api | permitir | permite | sí |
@@ -197,6 +198,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones` | api | permitir | permite | sí |
 | `/api/apelaciones/mias` | api | permitir | permite | sí |
 | `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
@@ -433,6 +435,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
+| `/registro-colegio` | página | permitir | permite | sí |
 | `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -443,6 +446,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | --- | --- | --- | --- | --- |
 | `/` | página | permitir | permite | sí |
 | `//` | página | permitir | permite | sí |
+| `/activar` | página | permitir | permite | sí |
 | `/api/` | api | permitir | permite | sí |
 | `/api/admin` | api | permitir | permite | sí |
 | `/api/admin/analisis/anomalias` | api | permitir | permite | sí |
@@ -611,6 +615,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones` | api | permitir | permite | sí |
 | `/api/apelaciones/mias` | api | permitir | permite | sí |
 | `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
@@ -847,6 +852,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
+| `/registro-colegio` | página | permitir | permite | sí |
 | `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -857,6 +863,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | --- | --- | --- | --- | --- |
 | `/` | página | permitir | permite | sí |
 | `//` | página | permitir | permite | sí |
+| `/activar` | página | permitir | permite | sí |
 | `/api/` | api | permitir | permite | sí |
 | `/api/admin` | api | permitir | permite | sí |
 | `/api/admin/analisis/anomalias` | api | permitir | permite | sí |
@@ -1025,6 +1032,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones` | api | permitir | permite | sí |
 | `/api/apelaciones/mias` | api | permitir | permite | sí |
 | `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
@@ -1261,6 +1269,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
+| `/registro-colegio` | página | permitir | permite | sí |
 | `/reportar` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -1271,6 +1280,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | --- | --- | --- | --- | --- |
 | `/` | página | permitir | permite | sí |
 | `//` | página | permitir | permite | sí |
+| `/activar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/api/` | api | HTTP 403 | no permite | sí |
 | `/api/admin` | api | HTTP 403 | no permite | sí |
 | `/api/admin/analisis/anomalias` | api | HTTP 403 | no permite | sí |
@@ -1439,6 +1449,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones` | api | HTTP 403 | no permite | sí |
 | `/api/apelaciones/mias` | api | HTTP 403 | no permite | sí |
 | `/api/auth` | api | HTTP 403 | no permite | sí |
+| `/api/auth/activar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
 | `/api/auth/login` | api | HTTP 403 | no permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
@@ -1675,6 +1686,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/recuperar/[token]` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/registro` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/registro-colegio` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/reportar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -1685,6 +1697,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | --- | --- | --- | --- | --- |
 | `/` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `//` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/activar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/api/` | api | HTTP 403 | no permite | sí |
 | `/api/admin` | api | HTTP 403 | no permite | sí |
 | `/api/admin/analisis/anomalias` | api | HTTP 403 | no permite | sí |
@@ -1853,6 +1866,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones` | api | HTTP 403 | no permite | sí |
 | `/api/apelaciones/mias` | api | HTTP 403 | no permite | sí |
 | `/api/auth` | api | HTTP 403 | no permite | sí |
+| `/api/auth/activar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
 | `/api/auth/login` | api | HTTP 403 | no permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
@@ -2089,6 +2103,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/recuperar/[token]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/registro` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/registro-colegio` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/reportar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/seguimiento` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/terminos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -2099,6 +2114,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | --- | --- | --- | --- | --- |
 | `/` | página | permitir | permite | sí |
 | `//` | página | permitir | permite | sí |
+| `/activar` | página | permitir | permite | sí |
 | `/api/` | api | permitir | permite | sí |
 | `/api/admin` | api | HTTP 403 | no permite | sí |
 | `/api/admin/analisis/anomalias` | api | HTTP 403 | no permite | sí |
@@ -2267,6 +2283,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones` | api | permitir | permite | sí |
 | `/api/apelaciones/mias` | api | permitir | permite | sí |
 | `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
@@ -2503,6 +2520,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
+| `/registro-colegio` | página | permitir | permite | sí |
 | `/reportar` | página | permitir | permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -2513,6 +2531,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | --- | --- | --- | --- | --- |
 | `/` | página | permitir | permite | sí |
 | `//` | página | permitir | permite | sí |
+| `/activar` | página | redirigir→/login | permite | **NO** |
 | `/api/` | api | HTTP 401 | permite | **NO** |
 | `/api/admin` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/analisis/anomalias` | api | HTTP 401 | permite | **NO** |
@@ -2681,6 +2700,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones` | api | HTTP 401 | permite | **NO** |
 | `/api/apelaciones/mias` | api | HTTP 401 | permite | **NO** |
 | `/api/auth` | api | permitir | permite | sí |
+| `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
@@ -2917,6 +2937,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
+| `/registro-colegio` | página | redirigir→/login | permite | **NO** |
 | `/reportar` | página | permitir | permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -2928,6 +2949,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 
 | Ruta | Puerta (anónimo) | Predicado (anónimo) |
 | --- | --- | --- |
+| `/activar` | redirigir→/login | permite |
 | `/api/` | HTTP 401 | permite |
 | `/api/admin` | HTTP 401 | permite |
 | `/api/admin/analisis/anomalias` | HTTP 401 | permite |
@@ -3237,6 +3259,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/perfil` | redirigir→/login | permite |
 | `/dashboard/perfil/notificaciones` | redirigir→/login | permite |
 | `/mis-reportes` | redirigir→/login | permite |
+| `/registro-colegio` | redirigir→/login | permite |
 
 ## Eje de módulos (BD): módulo → ruta → rol
 
