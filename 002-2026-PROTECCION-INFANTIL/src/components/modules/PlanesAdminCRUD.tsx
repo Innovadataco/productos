@@ -325,7 +325,7 @@ export function PlanesAdminCRUD() {
                                     <td className="px-4 py-3">{formatoCOP(plan.precioBaseCOP)}</td>
                                     <td className="px-4 py-3">{plan.esFreemium ? "Sí" : "No"}</td>
                                     <td className="px-4 py-3">
-                                        <span className={plan.activo ? "text-emerald-600" : "text-red-600"}>
+                                        <span className={plan.activo ? "text-pino" : "text-rubi"}>
                                             {plan.activo ? "Activo" : "Inactivo"}
                                         </span>
                                     </td>
