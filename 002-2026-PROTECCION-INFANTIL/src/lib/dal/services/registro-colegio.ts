@@ -10,7 +10,6 @@ import type { Prisma } from "@prisma/client";
 import { hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { logAudit } from "@/lib/audit";
 import { programar as programarNotificacion } from "@/lib/notificaciones";
 import { withUnitOfWork, type DbClient } from "@/lib/dal/unit-of-work";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
@@ -139,7 +138,7 @@ export class RegistroColegioService {
         const expiraEn = expiracionDesdeAhora(vigenciaHoras);
         const passwordHashPlaceholder = await hashPassword(randomBytes(32).toString("hex"));
 
-        return withUnitOfWork(async (tx) => {
+        const resultado = await withUnitOfWork(async (tx) => {
             const service = new RegistroColegioService(tx);
             const { colegio, tenant } = await service.crearColegioMinimo({
                 nombreColegio,
@@ -159,30 +158,40 @@ export class RegistroColegioService {
                 tokenInvitacionExpiraEn: expiraEn,
             });
 
-            await logAudit({
-                accion: "COLEGIO_CREADO",
-                tipoRecurso: "Colegio",
-                recursoId: colegio.id,
-                usuarioId: adminId,
-                colegioId: colegio.id,
-                valorNuevo: JSON.stringify({
-                    nombre: nombreColegio,
-                    adminEmail: emailLower,
-                    adminId: user.id,
-                    tenantId: tenant.id,
-                    invitacion: true,
-                }),
-                tx,
-            });
-
             return {
-                ok: true,
+                ok: true as const,
                 user: { id: user.id, email: user.email, nombre: user.nombre },
                 token,
                 colegioId: colegio.id,
                 colegioNombre: colegio.nombre,
             };
         });
+
+        if (resultado.ok) {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pi.innovadataco.com";
+            await programarNotificacion({
+                evento: "colegio.invitacion.enviada",
+                sujetoTipo: "Colegio",
+                sujetoId: resultado.colegioId,
+                destinatarios: [
+                    {
+                        usuarioId: resultado.user.id,
+                        variables: {
+                            nombreRector: resultado.user.nombre ?? "Rector",
+                            nombreColegio: resultado.colegioNombre,
+                            linkActivacion: `${baseUrl}/activar?token=${resultado.token}`,
+                        },
+                    },
+                ],
+            }).catch((err: unknown) => {
+                console.warn(
+                    "[RegistroColegio] No se pudo programar invitación:",
+                    err instanceof Error ? err.message : err
+                );
+            });
+        }
+
+        return resultado;
     }
 
     /**
@@ -237,7 +246,7 @@ export class RegistroColegioService {
         return Number.isFinite(horas) && horas > 0 ? horas : DEFAULT_TOKEN_HOURS;
     }
 
-    private async resolverUbicacionDefault(): Promise<{ paisId: string; ciudadId: string; departamentoId?: string | undefined } | null> {
+    private async resolverUbicacionDefault(): Promise<{ paisId: string; ciudadId: string; departamentoId: string | undefined } | null> {
         const pais = await this.paises.findByCodigo(PAIS_DEFAULT_CODIGO);
         if (!pais) return null;
 
@@ -278,7 +287,7 @@ export class RegistroColegioService {
         nombreColegio: string;
         nombreRector: string;
         emailRector: string;
-        ubicacion: { paisId: string; ciudadId: string; departamentoId: string | undefined };
+        ubicacion: { paisId: string; ciudadId: string; departamentoId?: string | undefined };
     }) {
         const tenant = await this.colegios.crearTenantParaColegio(data.nombreColegio);
         const inicioServicio = toZonedTime(new Date(), TIMEZONE_BOGOTA);

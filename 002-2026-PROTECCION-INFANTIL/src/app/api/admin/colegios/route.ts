@@ -71,21 +71,20 @@ export async function POST(request: Request) {
             );
         }
 
-        const { usuario, colegio, expiraEn } = resultado;
+        const { user, colegioId, colegioNombre } = resultado;
         const { ipAddress, userAgent } = getClientInfo(request);
 
         await logAudit({
             accion: "COLEGIO_CREADO",
             tipoRecurso: "Colegio",
-            recursoId: colegio.id,
+            recursoId: colegioId,
             usuarioId: admin.id,
-            colegioId: colegio.id,
+            colegioId,
             valorNuevo: JSON.stringify({
-                nombre: colegio.nombre,
-                adminEmail: usuario.email,
-                adminId: usuario.id,
-                tenantId: usuario.tenantId,
-                invitacionExpiraEn: expiraEn.toISOString(),
+                nombre: colegioNombre,
+                adminEmail: user.email,
+                adminId: user.id,
+                invitacion: true,
             }),
             ipAddress,
             userAgent,
@@ -93,14 +92,14 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             colegio: {
-                id: colegio.id,
-                nombre: colegio.nombre,
+                id: colegioId,
+                nombre: colegioNombre,
                 estado: "activo",
             },
             admin: {
-                id: usuario.id,
-                email: usuario.email,
-                nombre: usuario.nombre,
+                id: user.id,
+                email: user.email,
+                nombre: user.nombre,
                 estadoActivacion: "INVITADO",
             },
             mensaje: "Invitación enviada. El rector recibirá un email para activar su cuenta.",
