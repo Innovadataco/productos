@@ -336,6 +336,22 @@ enum EstadoSuscripcion {
   PENDIENTE_AUTORIZACION
 }
 
+// SPEC-244/245 (002-PI-147/148): origen de la suscripción.
+enum OrigenSuscripcion {
+  SOLICITADA_CLIENTE
+  ACTIVADA_MANUAL_ADMIN
+  FREEMIUM_AUTO
+  INVITACION_ADMIN
+}
+
+// SPEC-245 (002-PI-148): métodos de pago admitidos en activación manual.
+enum MetodoPagoManual {
+  TRANSFERENCIA_BANCARIA
+  EFECTIVO
+  CHEQUE
+  OTRO
+}
+
 // SPEC-235 (002-PI-135): estados del ciclo de vida de una guía de acción.
 enum EstadoGuiaAccion {
   BORRADOR
@@ -374,6 +390,12 @@ enum TipoBono {
   DESCUENTO_PCT
   DESCUENTO_FIJO_USD
   MESES_GRATIS
+}
+
+// SPEC-246 (002-PI-149): origen del bono (promoción admin vs recompensa automática).
+enum OrigenBono {
+  PROMOCION_ADMIN
+  RECOMPENSA_PAGO
 }
 
 enum FuenteTasa {
@@ -524,7 +546,9 @@ model Usuario {
   comiteColegioId     String?       @unique
   // SPEC-119: ventana de servicio del cliente padre (PARENT). null = sin vigencia
   // definida = acceso permitido. Para SCHOOL_ADMIN la ventana es la del Colegio.
+  /// @deprecated · usar Suscripcion.fechaInicio/fechaFin
   inicioServicio      DateTime?
+  /// @deprecated · usar Suscripcion.fechaInicio/fechaFin
   finServicio         DateTime?
   // SPEC-241 (002-PI-144): campos de consentimiento informado (aditivos).
   consentimientoAceptadoEn    DateTime?
@@ -552,6 +576,10 @@ model Usuario {
   anonimizacionesValidadas     Reporte[]                  @relation("AnonimizacionesValidadas")
   perfilOperador               PerfilOperador?
   operadoresCreados            PerfilOperador[]           @relation("OperadoresCreados")
+  // SPEC-245 (002-PI-148): suscripciones que este admin autorizó manualmente.
+  suscripcionesAutorizadas     Suscripcion[]              @relation("SuscripcionesAutorizadasPorAdmin")
+  // SPEC-246 (002-PI-149): cupones de recompensa de los que este usuario es beneficiario.
+  bonosBeneficiario            BonoPromocional[]          @relation("BonosBeneficiario")
   contactosConfianza           ContactoConfianza[]
   notificacionesCirculo        Boolean                    @default(true)
   ultimaNotificacionCirculoEn  DateTime?
@@ -866,8 +894,18 @@ model Suscripcion {
   createdAt            DateTime          @default(now()) @db.Timestamptz(6)
   updatedAt            DateTime          @updatedAt @db.Timestamptz(6)
 
+  // SPEC-244/245 (002-PI-147/148): trazabilidad de origen y pago manual.
+  origen                OrigenSuscripcion @default(SOLICITADA_CLIENTE)
+  autorizadoPorAdminId  String?
+  autorizadoEn          DateTime?         @db.Timestamptz(6)
+  metodoPagoManual      MetodoPagoManual?
+  referenciaPagoManual  String?
+  montoRealPagado       Float?
+  fechaPagoReal         DateTime?         @db.Timestamptz(6)
+
   colegio               Colegio?            @relation(fields: [colegioId], references: [id])
   usuario               Usuario?            @relation(fields: [usuarioId], references: [id])
+  autorizadoPor         Usuario?            @relation(fields: [autorizadoPorAdminId], references: [id], name: "SuscripcionesAutorizadasPorAdmin")
   planActual            Plan                @relation(fields: [planActualId], references: [id])
   pagos                 Pago[]
   bonosAplicados        BonoAplicado[]
@@ -944,11 +982,16 @@ model BonoPromocional {
   activo                      Boolean      @default(true)
   descripcion                 String?
   creadoPorAdminId            String
+  // SPEC-246 (002-PI-149): origen, beneficiario y transferibilidad del cupón.
+  origen                      OrigenBono   @default(PROMOCION_ADMIN)
+  beneficiarioUsuarioId       String?
+  transferible                Boolean      @default(true)
   createdAt                   DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt                   DateTime     @updatedAt @db.Timestamptz(6)
 
-  creadoPor Usuario        @relation(fields: [creadoPorAdminId], references: [id], name: "BonosCreados")
-  usos      BonoAplicado[]
+  creadoPor   Usuario        @relation(fields: [creadoPorAdminId], references: [id], name: "BonosCreados")
+  beneficiario Usuario?      @relation(fields: [beneficiarioUsuarioId], references: [id], name: "BonosBeneficiario")
+  usos        BonoAplicado[]
 
   @@index([activo, vigenciaInicio, vigenciaFin])
 }
@@ -2491,6 +2534,8 @@ model NotificacionRegla {
   actualizadaEn  DateTime          @updatedAt @db.Timestamptz(6)
 
   @@index([evento, activa])
+  // SPEC-247 (002-PI-150): dedup de reglas por clave canónica (evento, canal, plantillaClave).
+  @@unique([evento, canal, plantillaClave])
   @@map("notificacion_reglas")
 }
 
