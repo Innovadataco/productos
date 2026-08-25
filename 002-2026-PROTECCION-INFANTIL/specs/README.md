@@ -13,8 +13,8 @@
 | **Total de specs** | **215** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
-| **Implementadas (IMPLEMENTADO)** | **51** |
-| **Pendientes (PLANEADO)** | **32** |
+| **Implementadas (IMPLEMENTADO)** | **52** |
+| **Pendientes (PLANEADO)** | **31** |
 ## Backlog activo (no cerradas)
 
 | Nº | Nombre | Estado |
@@ -169,6 +169,7 @@
 | [238](238-aclaracion-padre-comite/spec.md) | SPEC-238 · Aclaración padre-comité (002-PI-138) | 🔵 Planeado |
 | [239](239-escalacion-rojo-contacto-emergencia/spec.md) | SPEC-239 · Escalación ROJO + SLA 12h + Contacto emergencia (002-PI-139) | 🔵 Planeado |
 | [240](240-registro-colegio-activar/spec.md) | SPEC-240 · Registro público colegio + /activar + fix BUG-01 (002-PI-143) | 🔵 Planeado |
+| [241](241-consentimiento-modal-audit/spec.md) | SPEC-241 · Consentimiento informado + modal legal + AuditConsentimiento (002-PI-144) | 🟢 Implementado |
 | [242](242-middleware-vigencia/spec.md) | SPEC-242 · Middleware de vigencia + guardas por layout + banner ámbar EN_GRACIA (002-PI-145) | 🟢 Implementado |
 | [248](248-categorias-ley-2564/spec.md) | SPEC-248 · Categorías Ley 2564 completas + Definiciones legales editables (002-PI-151) | 🟡 Pendiente de prueba |
 
@@ -393,6 +394,7 @@
 | [226](226-ejecucion-acciones-automaticas/spec.md) | SPEC-226 — Ejecución de acciones automáticas reglas EJECUTA (002-PI-127) | 🔵 Planeado |
 | [227](227-historial-recomendaciones/spec.md) | SPEC-227 — Historial de recomendaciones y métricas de tuning (002-PI-128) | 🔵 Planeado |
 | [233](233-busqueda-por-identificador/spec.md) | SPEC-233 — Vista búsqueda por identificador padre + admin (002-PI-133) | 🔵 Planeado |
+| [241](241-consentimiento-modal-audit/spec.md) | SPEC-241 · Consentimiento informado + modal legal + AuditConsentimiento (002-PI-144) | 🟢 Implementado |
 
 ## Incidencias de calidad de datos
 

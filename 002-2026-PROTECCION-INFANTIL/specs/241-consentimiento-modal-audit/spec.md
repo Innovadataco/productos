@@ -3,7 +3,7 @@
 **Feature Branch**: `work/002-PI-144`  
 **SPEC**: 241  
 **Created**: 2026-08-25  
-**Status**: PLANEADO  
+**Status**: IMPLEMENTADO  
 **Input**: INSTRUCTIVO-002-PI-144 · BRIEF-ACTIVACION-Y-COBROS §5.1/§6.1/§6.2/§6.3/§7/§8/§9.1/§10/§11 · D-52/D-69/D-72/D-74
 
 Impacto en arquitectura: extiende `Usuario` aditivamente con 4 campos de consentimiento (`consentimientoAceptadoEn`, `consentimientoVersion`, `consentimientoDocumentoHash`, `consentimientoIP`), crea tabla nueva `AuditConsentimiento` (id/usuarioId/version/documentoTipo/documentoHash/aceptadoEn/ip/userAgent/esRepresentanteLegal) con índices en (usuarioId, aceptadoEn) y (version), nueva ruta `/consentimiento` + componente `ModalConsentimiento` con scroll `IntersectionObserver`, POST `/api/consentimiento/aceptar` con hash SHA256 + `AuditLog`, guardia server-side en layouts `/dashboard/**`, sembrado idempotente de `consentimiento.version_actual` + `consentimiento.padre.documento_ruta` + `consentimiento.colegio.documento_ruta` + evento `consentimiento.aceptado` (EMAIL + IN_APP).
@@ -132,4 +132,61 @@ Al aceptar, el endpoint `POST /api/consentimiento/aceptar` calcula el hash SHA25
 
 ## Implementación
 
-*(Por completar tras aprobación de ZEUS en compuerta §4.)*
+### Resumen ejecutivo
+
+SPEC-241 se implementó sobre la rama `work/002-PI-144` sin cambios destructivos. Se extendió el modelo `Usuario` con 4 campos aditivos, se creó la tabla `AuditConsentimiento`, se agregaron 3 parámetros de sistema y el evento `consentimiento.aceptado` en el seed, se construyeron el endpoint `POST /api/consentimiento/aceptar`, la página `/consentimiento`, el componente `ModalConsentimiento`, una guardia reusable en 4 layouts y tests unitarios/integración.
+
+### Archivos creados
+
+- `prisma/migrations/20260825054000_consentimiento_audit/migration.sql`
+- `public/legal/POLITICA-TRATAMIENTO-DATOS-v0.4.md`
+- `public/legal/CONVENIO-TRATAMIENTO-DATOS-COLEGIOS.md`
+- `src/lib/dal/repositories/consentimiento.ts`
+- `src/lib/dal/services/consentimiento.ts`
+- `src/lib/consentimiento/guard.ts`
+- `src/lib/consentimiento-test-utils.ts`
+- `src/app/api/consentimiento/aceptar/route.ts`
+- `src/app/api/consentimiento/aceptar/route.test.ts`
+- `src/app/consentimiento/page.tsx`
+- `src/app/consentimiento/page.test.tsx`
+- `src/components/modules/ModalConsentimiento.tsx`
+- `src/components/modules/ModalConsentimiento.test.tsx`
+- `specs/241-consentimiento-modal-audit/data-model.md`
+- `specs/241-consentimiento-modal-audit/quickstart.md`
+- `specs/241-consentimiento-modal-audit/contracts/consentimiento.md`
+- `specs/241-consentimiento-modal-audit/tasks.md`
+
+### Archivos modificados
+
+- `prisma/schema.prisma`
+- `prisma/seed.ts`
+- `src/lib/dal/repositories/usuario.ts`
+- `src/lib/validators.ts`
+- `src/app/dashboard/layout.tsx`
+- `src/app/dashboard/padre/layout.tsx`
+- `src/app/dashboard/colegio/layout.tsx`
+- `src/app/dashboard/admin/layout.tsx`
+- `vitest.unit.includes.ts`
+
+### Decisiones técnicas
+
+- **Sin `middleware.ts` global**: las guardias se implementan en layouts Server Components (`cookies()` + `verifyToken()`), consistente con el resto del proyecto.
+- **Fail-open**: si falla la lectura del parámetro `consentimiento.version_actual`, la guardia no bloquea al usuario; solo loguea el error.
+- **Hash SHA256 server-side**: el endpoint calcula el hash del archivo leído desde la ruta parametrizada; no confía en valores enviados por el cliente.
+- **Idempotencia**: si el usuario ya aceptó la versión vigente, el endpoint retorna `200` sin duplicar registros.
+- **Timezones**: timestamps en BD son UTC; `date-fns-tz` con `America/Bogota` solo se usa para la fecha mostrada en la notificación.
+- **Documentos legales**: ODIN no redactó contenido legal; los archivos existentes se copiaron a `public/legal/` y las rutas se parametrizaron en `ParametroSistema`.
+
+### Tests
+
+- Unitario: `src/components/modules/ModalConsentimiento.test.tsx` (5 tests).
+- Integración:
+  - `src/app/api/consentimiento/aceptar/route.test.ts` (7 tests)
+  - `src/lib/consentimiento/guard.test.ts` (4 tests)
+  - `src/app/consentimiento/page.test.tsx` (5 tests)
+
+### Deuda técnica / riesgos
+
+- Los tests de layouts propiamente dichos se cubren indirectamente mediante `page.test.tsx`; no se crearon tests que rendericen layouts con `cookies()`/componentes anidados por complejidad y bajo retorno.
+- El contenido legal debe ser revisado por abogado y aprobado ante la SIC; el sistema solo lo carga y traza.
+- Si el CEO cambia `consentimiento.version_actual`, todos los usuarios existentes serán redirigidos a `/consentimiento` en su próximo request; esto debe comunicarse con operaciones.
