@@ -44,7 +44,12 @@ export interface PlanResumen {
     duracion: string;
     anio: number;
     precioBaseUSD: number;
+    precioBaseCOP: number | null;
+    esFreemium: boolean;
+    usosMaximosPorCliente: number | null;
+    activo: boolean;
     descuentoAnualPct: number | null;
+    descripcion: string | null;
 }
 
 export interface SuscripcionConPlanYTitular {
@@ -137,6 +142,33 @@ export class PagosRepository {
 
     actualizarPlan(id: string, data: Prisma.PlanUncheckedUpdateInput) {
         return this.db.plan.update({ where: { id }, data });
+    }
+
+    /**
+     * SPEC-243 (002-PI-146): desactivación lógica de un plan.
+     */
+    desactivarPlan(id: string) {
+        return this.db.plan.update({ where: { id }, data: { activo: false } });
+    }
+
+    obtenerPlanPorNombreYTipoTitular(nombre: string, tipoTitular: TipoTitular) {
+        return this.db.plan.findFirst({
+            where: { nombre, tipoTitular },
+        });
+    }
+
+    /**
+     * SPEC-243 (002-PI-146): verifica si existe al menos una suscripción activa
+     * asociada al plan.
+     */
+    async existeSuscripcionActivaPorPlan(planId: string): Promise<boolean> {
+        const count = await this.db.suscripcion.count({
+            where: {
+                planActualId: planId,
+                estado: EstadoSuscripcion.ACTIVA,
+            },
+        });
+        return count > 0;
     }
 
     // ── Suscripción ──
