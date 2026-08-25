@@ -24,7 +24,8 @@ interface DefinicionLegalCardProps {
 /**
  * Card destacado con el fundamento legal de una categoría (SPEC-248, 002-PI-151).
  * Se renderiza ANTES de las preguntas de rúbrica de la categoría seleccionada
- * (D-74: color ámbar de admin backoffice, vidrio Apple).
+ * (D-74: color ámbar de admin backoffice, vidrio Apple, tokens semánticos
+ * conforme SPEC-157/FR-007).
  */
 export function DefinicionLegalCard({ categoria, definicion, puedeEditar, onGuardar }: DefinicionLegalCardProps) {
     const [editando, setEditando] = useState(false);
@@ -52,7 +53,7 @@ export function DefinicionLegalCard({ categoria, definicion, puedeEditar, onGuar
     }
 
     return (
-        <GlassCard className="border-l-4 border-l-amber-400 bg-amber-50/60 p-6 space-y-3 dark:border-l-amber-500 dark:bg-amber-950/20">
+        <GlassCard className="border-l-4 border-l-ambar bg-ambar/10 p-6 space-y-3">
             <div className="flex items-start justify-between gap-3">
                 <Badge variant="warning">{formatCategoria(categoria)}</Badge>
                 {puedeEditar && (
@@ -63,23 +64,23 @@ export function DefinicionLegalCard({ categoria, definicion, puedeEditar, onGuar
             </div>
 
             <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">Conducta legal</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-estado-ambar">Conducta legal</p>
                 <p className="text-body">{definicion.conductaLegal}</p>
             </div>
 
             <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">Referencia normativa</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-estado-ambar">Referencia normativa</p>
                 <p className="text-body">{definicion.referenciaNormativa}</p>
             </div>
 
             <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">Definición literal</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-estado-ambar">Definición literal</p>
                 <p className="italic text-body">&ldquo;{definicion.definicionLiteral}&rdquo;</p>
             </div>
 
             {definicion.rolDentroDeConducta && (
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                    <p className="text-xs font-medium uppercase tracking-wide text-estado-ambar">
                         Rol dentro de la conducta
                     </p>
                     <p className="text-body">{definicion.rolDentroDeConducta}</p>
@@ -87,10 +88,10 @@ export function DefinicionLegalCard({ categoria, definicion, puedeEditar, onGuar
             )}
 
             {editando && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/40 p-4">
                     <GlassCard className="w-full max-w-lg space-y-4 p-6">
                         <h4 className="text-lg font-semibold text-body">Editar definición legal — {formatCategoria(categoria)}</h4>
-                        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                        {error && <p className="text-sm text-estado-rubi">{error}</p>}
                         <Input
                             label="Conducta legal"
                             value={form.conductaLegal}
@@ -107,7 +108,7 @@ export function DefinicionLegalCard({ categoria, definicion, puedeEditar, onGuar
                                 value={form.definicionLiteral}
                                 onChange={(e) => setForm((f) => ({ ...f, definicionLiteral: e.target.value }))}
                                 rows={4}
-                                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-body placeholder:text-subtle focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-900/80 dark:focus:border-cyan-500 dark:focus:ring-sky-900"
+                                className="glass-input w-full rounded-xl px-3 py-2 text-sm text-body placeholder:text-subtle"
                             />
                         </div>
                         <Input
