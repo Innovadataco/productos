@@ -3,6 +3,7 @@ import { createToken, verifyToken, setSessionCookie } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { verificarCompletarSchema } from "@/lib/validators";
 import { AutenticacionService } from "@/lib/dal/services/autenticacion";
+import { RegistroColegioService } from "@/lib/dal/services/registro-colegio";
 
 export async function POST(request: Request) {
     try {
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
-        const { token, password, nombre } = parsed.data;
+        const { token, password, nombre, nombreColegio, rol } = parsed.data;
 
         const payload = await verifyToken(token);
         if (!payload || payload.type !== "verification" || !payload.sub) {
@@ -27,17 +28,41 @@ export async function POST(request: Request) {
 
         const email = payload.sub as string;
 
-        // SPEC-053: unicidad y creación del usuario viven en el DAL; la ruta no toca prisma.
-        const resultado = await new AutenticacionService().completarRegistro(email, password, nombre);
+        let user: { id: string; email: string; nombre: string | null; rol: string };
 
-        if (!resultado.ok) {
-            return NextResponse.json(
-                { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
-                { status: 409 }
+        if (nombreColegio && rol === "SCHOOL_ADMIN") {
+            // SPEC-240 (002-PI-143): registro público de colegio desde /registro-colegio.
+            const resultado = await new RegistroColegioService().registrarPublico(
+                email,
+                password,
+                nombre || email,
+                nombreColegio
             );
+            if (!resultado.ok) {
+                if (resultado.tipo === "ubicacion_no_configurada") {
+                    return NextResponse.json(
+                        { error: { message: "Ubicación default no configurada", code: ERROR_CODES.INTERNAL_ERROR } },
+                        { status: 500 }
+                    );
+                }
+                return NextResponse.json(
+                    { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
+                    { status: 409 }
+                );
+            }
+            user = resultado.user;
+        } else {
+            // SPEC-053: unicidad y creación del usuario viven en el DAL; la ruta no toca prisma.
+            const resultado = await new AutenticacionService().completarRegistro(email, password, nombre);
+            if (!resultado.ok) {
+                return NextResponse.json(
+                    { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
+                    { status: 409 }
+                );
+            }
+            user = resultado.user;
         }
 
-        const { user } = resultado;
         const sessionToken = await createToken({ sub: user.id, rol: user.rol });
         await setSessionCookie(request, sessionToken);
 

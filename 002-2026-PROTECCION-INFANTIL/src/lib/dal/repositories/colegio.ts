@@ -153,6 +153,15 @@ export class ColegioRepository {
         return this.db.colegio.create({ data });
     }
 
+    /**
+     * SPEC-240 (002-PI-143): alta de colegio con datos mínimos (registro público o
+     * pre-registro admin). Los valores por defecto (ubicación, representante legal,
+     * inicio de servicio) los resuelve el servicio; este método solo materializa.
+     */
+    crearMinimo(data: Prisma.ColegioUncheckedCreateInput) {
+        return this.db.colegio.create({ data });
+    }
+
     /** E-8 (admin global): actualización de datos/vigencia/estado del colegio. */
     actualizar(id: string, data: Prisma.ColegioUncheckedUpdateInput) {
         return this.db.colegio.update({ where: { id }, data });

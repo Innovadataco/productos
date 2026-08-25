@@ -586,6 +586,8 @@ async function seedParametrosPagos() {
         { clave: "pagos.contrato_obligatorio_padres", valor: "false", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "El contrato firmado es obligatorio para padres" },
         { clave: "pagos.comprobante_tamaño_max_mb", valor: "10", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Tamaño máximo del comprobante de pago en MB" },
         { clave: "pagos.comprobante_formatos_permitidos", valor: "image/png,image/jpeg,application/pdf", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Formatos MIME permitidos para comprobantes" },
+        // SPEC-240 (002-PI-143): vigencia del link de activación enviado al rector.
+        { clave: "pagos.invitacion.token_vigencia_horas", valor: "48", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Horas de vigencia del link de activación de cuenta de rector" },
     ];
 
     for (const p of pagosParams) {
@@ -596,6 +598,78 @@ async function seedParametrosPagos() {
         });
     }
     console.log(`[SEED] ${pagosParams.length} parámetros pagos.* listos`);
+}
+
+// ── SPEC-240 (002-PI-143): catálogo Motor Notif de la invitación de activación
+// enviada al rector. Idempotente (patrón I-100): plantilla con upsert por clave,
+// regla con findFirst→update/create.
+async function seedInvitacionColegio() {
+    const evento = "colegio.invitacion.enviada";
+    const plantillaClave = `${evento}.email`;
+    const asunto = "Activa tu cuenta de Protección Infantil";
+    const cuerpoMarkdown =
+        "Hola {{nombreRector}},\n\n" +
+        "Has sido registrado como rector de **{{nombreColegio}}** en Protección Infantil.\n\n" +
+        "Para activar tu cuenta y definir tu contraseña, haz clic en el siguiente link:\n\n" +
+        "{{linkActivacion}}\n\n" +
+        "Este link es de un solo uso y expira en 48 horas. Si no solicitaste este registro, ignora este mensaje.";
+
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave: plantillaClave },
+        update: {
+            canal: "EMAIL",
+            asunto,
+            cuerpoMarkdown,
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    nombreRector: { type: "string" },
+                    nombreColegio: { type: "string" },
+                    linkActivacion: { type: "string" },
+                },
+            },
+            activa: true,
+        },
+        create: {
+            clave: plantillaClave,
+            canal: "EMAIL",
+            asunto,
+            cuerpoMarkdown,
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    nombreRector: { type: "string" },
+                    nombreColegio: { type: "string" },
+                    linkActivacion: { type: "string" },
+                },
+            },
+            activa: true,
+        },
+    });
+
+    const reglaExistente = await prisma.notificacionRegla.findFirst({
+        where: { evento, rol: "SCHOOL_ADMIN", canal: "EMAIL" },
+        orderBy: { createdAt: "desc" },
+    });
+    if (reglaExistente) {
+        await prisma.notificacionRegla.update({
+            where: { id: reglaExistente.id },
+            data: { offset: "+0m", plantillaClave, obligatoria: true, activa: true },
+        });
+    } else {
+        await prisma.notificacionRegla.create({
+            data: {
+                evento,
+                rol: "SCHOOL_ADMIN",
+                offset: "+0m",
+                canal: "EMAIL",
+                plantillaClave,
+                obligatoria: true,
+                activa: true,
+            },
+        });
+    }
+    console.log("[SEED] Catálogo Motor Notif colegio.invitacion.enviada listo (SPEC-240)");
 }
 
 // ── SPEC-220 (002-PI-121): parámetros del dominio Análisis dinero-vs-valor ──
@@ -1586,6 +1660,9 @@ async function main() {
         console.log("[SEED] No hay admin en BD; se omite seed de planes de pagos.");
     }
     await seedParametrosPagos();
+
+    // SPEC-240 (002-PI-143): evento/plantilla de invitación al rector.
+    await seedInvitacionColegio();
 
     // Nuevos parámetros del módulo de reportes (fase 2)
     const reportesParams = [
@@ -3151,7 +3228,7 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio };
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como

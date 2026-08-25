@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/Button";
 export function VerificacionForm({
     email,
     onCompletar,
+    requiereNombre = true,
 }: {
     email: string;
-    onCompletar: (data: { email: string; codigo: string; password: string; nombre: string }) => Promise<void>;
+    onCompletar: (data: { email: string; codigo: string; password: string; nombre?: string }) => Promise<void>;
+    requiereNombre?: boolean;
 }) {
     const [codigo, setCodigo] = useState("");
     const [password, setPassword] = useState("");
@@ -19,14 +21,19 @@ export function VerificacionForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (codigo.length !== 6 || !password || password.length < 8 || !nombre.trim()) {
-            setError("Completa todos los campos. La contraseña debe tener al menos 8 caracteres.");
+        const nombreValido = !requiereNombre || nombre.trim().length > 0;
+        if (codigo.length !== 6 || !password || password.length < 8 || !nombreValido) {
+            setError(
+                requiereNombre
+                    ? "Completa todos los campos. La contraseña debe tener al menos 8 caracteres."
+                    : "Completa el código y la contraseña (mínimo 8 caracteres)."
+            );
             return;
         }
         setError("");
         setIsLoading(true);
         try {
-            await onCompletar({ email, codigo, password, nombre: nombre.trim() });
+            await onCompletar({ email, codigo, password, ...(requiereNombre ? { nombre: nombre.trim() } : {}) });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error al crear cuenta");
         } finally {
@@ -46,12 +53,14 @@ export function VerificacionForm({
                 value={codigo}
                 onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
             />
-            <Input
-                label="Tu nombre"
-                placeholder="Ej: María García"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-            />
+            {requiereNombre && (
+                <Input
+                    label="Tu nombre"
+                    placeholder="Ej: María García"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                />
+            )}
             <Input
                 label="Contraseña"
                 type="password"

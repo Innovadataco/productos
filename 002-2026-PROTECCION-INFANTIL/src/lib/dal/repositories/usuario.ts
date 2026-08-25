@@ -6,6 +6,17 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
+export type CrearRectorConTokenInput = {
+    email: string;
+    nombre?: string | undefined;
+    passwordHash: string;
+    colegioId: string;
+    tenantId: string;
+    estadoActivacion: "REGISTRADO" | "INVITADO";
+    tokenInvitacion?: string | undefined;
+    tokenInvitacionExpiraEn?: Date | undefined;
+};
+
 export class UsuarioRepository {
     private readonly db: DbClient;
 
@@ -15,6 +26,14 @@ export class UsuarioRepository {
 
     findByEmail(email: string) {
         return this.db.usuario.findUnique({ where: { email } });
+    }
+
+    /** SPEC-240 (002-PI-143): usuario por token de invitación (incluye colegio/tenant para activación). */
+    findByTokenInvitacion(token: string) {
+        return this.db.usuario.findUnique({
+            where: { tokenInvitacion: token },
+            include: { colegio: true, tenant: true },
+        });
     }
 
     findById(id: string) {
@@ -292,6 +311,39 @@ export class UsuarioRepository {
         return this.db.usuario.findFirst({
             where: { rol: "COMITE_VALIDACION", estado: "activo" },
             include: { perfilOperador: true },
+        });
+    }
+
+    /** SPEC-240 (002-PI-143): alta del rector vinculado a colegio/tenant con token de invitación. */
+    crearRectorConToken(data: CrearRectorConTokenInput) {
+        return this.db.usuario.create({
+            data: {
+                email: data.email.toLowerCase(),
+                nombre: data.nombre || null,
+                passwordHash: data.passwordHash,
+                rol: "SCHOOL_ADMIN",
+                estado: "activo",
+                estadoActivacion: data.estadoActivacion,
+                tenantId: data.tenantId,
+                colegioId: data.colegioId,
+                ...(data.tokenInvitacion ? { tokenInvitacion: data.tokenInvitacion } : {}),
+                ...(data.tokenInvitacionExpiraEn ? { tokenInvitacionExpiraEn: data.tokenInvitacionExpiraEn } : {}),
+            },
+            include: { colegio: true, tenant: true },
+        });
+    }
+
+    /** SPEC-240 (002-PI-143): consume token de invitación definiendo contraseña y pasando a REGISTRADO. */
+    consumirTokenInvitacion(token: string, passwordHash: string) {
+        return this.db.usuario.update({
+            where: { tokenInvitacion: token },
+            data: {
+                passwordHash,
+                estadoActivacion: "REGISTRADO",
+                tokenInvitacion: null,
+                tokenInvitacionExpiraEn: null,
+            },
+            include: { colegio: true, tenant: true },
         });
     }
 }
