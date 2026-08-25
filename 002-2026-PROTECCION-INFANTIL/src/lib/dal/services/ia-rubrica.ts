@@ -8,12 +8,19 @@ import type { CategoriaConducta, Prisma } from "@prisma/client";
 import { logAudit } from "@/lib/audit";
 import { getParametroSistema } from "@/lib/parametros";
 import { invalidateCache } from "@/lib/config-cache";
-import { RUBRICA_SEMILLA, type PreguntaRubrica, type SetsRubrica } from "@/lib/ai/rubrica-semilla";
+import {
+    RUBRICA_SEMILLA,
+    DEFINICIONES_CATEGORIA,
+    type PreguntaRubrica,
+    type SetsRubrica,
+    type DefinicionCategoria,
+} from "@/lib/ai/rubrica-semilla";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { ParametroRepository } from "../repositories/parametro";
 import type { InfoClienteDto } from "../types/operador";
 
 const CLAVE_PREGUNTAS = "ia.rubrica.preguntas";
+const CLAVE_DEFINICIONES = "ia.rubrica.definiciones";
 
 const CLAVES = {
     modelos: "ia.rubrica.modelos",
@@ -135,5 +142,65 @@ export class IaRubricaService {
         });
 
         invalidateCache("public_params");
+    }
+
+    /**
+     * SPEC-248 (002-PI-151): fundamento legal por categoría. `ia.rubrica.definiciones`
+     * es informativo para el editor admin — no entra al prompt de clasificación.
+     */
+    async obtenerDefiniciones(): Promise<Record<string, DefinicionCategoria>> {
+        const param = await getParametroSistema(CLAVE_DEFINICIONES);
+        if (!param) return DEFINICIONES_CATEGORIA;
+        try {
+            return JSON.parse(param.valor) as Record<string, DefinicionCategoria>;
+        } catch {
+            throw new AppError("El parámetro ia.rubrica.definiciones tiene JSON inválido", ERROR_CODES.INTERNAL_ERROR, 500);
+        }
+    }
+
+    /** PATCH /api/admin/ia/rubrica/definiciones/[categoria] — actualiza UNA definición (con auditoría). */
+    async actualizarDefinicion(
+        categoria: CategoriaConducta,
+        definicion: DefinicionCategoria,
+        usuarioId: string,
+        info: InfoClienteDto
+    ) {
+        const definiciones = await this.obtenerDefiniciones();
+        if (!definiciones[categoria]) {
+            throw new AppError(`Categoría desconocida: ${categoria}`, ERROR_CODES.NOT_FOUND, 404);
+        }
+
+        const valorAnteriorCategoria = JSON.stringify(definiciones[categoria]);
+        const nuevas = { ...definiciones, [categoria]: definicion };
+        const valorNuevo = JSON.stringify(nuevas);
+
+        const existing = await this.parametros.findByClave(CLAVE_DEFINICIONES);
+        const guardado = existing
+            ? await this.parametros.actualizar(CLAVE_DEFINICIONES, { valor: valorNuevo, actualizadoPorId: usuarioId })
+            : await this.parametros.crear({
+                clave: CLAVE_DEFINICIONES,
+                valor: valorNuevo,
+                tipo: "JSON",
+                categoria: "SYSTEM",
+                esPublico: false,
+                actualizadoPorId: usuarioId,
+            });
+
+        await logAudit({
+            accion: "RUBRICA_DEFINICION_UPDATE",
+            tipoRecurso: "parametro",
+            recursoId: guardado.id,
+            parametroId: guardado.id,
+            usuarioId,
+            valorAnterior: valorAnteriorCategoria,
+            valorNuevo: JSON.stringify(definicion),
+            metadatos: { clave: CLAVE_DEFINICIONES, categoria },
+            ipAddress: info.ipAddress,
+            userAgent: info.userAgent,
+        });
+
+        invalidateCache("public_params");
+
+        return definicion;
     }
 }

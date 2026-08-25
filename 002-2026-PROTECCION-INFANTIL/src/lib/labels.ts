@@ -10,6 +10,10 @@ export const CATEGORIAS_LABELS: Record<string, string> = {
     DIFUSION_NO_CONSENTIDA: "Difusión no consentida",
     DOXING: "Doxing",
     OTRO: "Otro",
+    // SPEC-248 (002-PI-151): Ley 2564 de 2026 art. 6.
+    CIBERACOSO: "Ciberacoso",
+    HAPPY_SLAPPING: "Happy slapping",
+    STALKING: "Stalking",
 };
 
 export function formatCategoria(categoria: string) {

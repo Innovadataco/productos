@@ -100,7 +100,7 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
                     </div>
                 )}
                 {activeTab === "simulacion" && <IaEvalManager />}
-                {activeTab === "rubrica" && <RubricaTab />}
+                {activeTab === "rubrica" && <RubricaTab rol={acceso.rol} />}
                 {activeTab === "configuracion" && <ConfigPanel />}
             </Suspense>
         </div>
