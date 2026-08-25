@@ -1,16 +1,29 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
-import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
+import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { ColegioSideNav } from "@/components/modules/colegio/ColegioSideNav";
 import { BuscadorGlobal } from "@/components/modules/colegio/BuscadorGlobal";
 import { CentroNotificaciones } from "@/components/modules/colegio/CentroNotificaciones";
+import { Alerta } from "@/components/ui/Alerta";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
+import {
+    resolverEstadoVigencia,
+    esRutaExenta,
+    redireccionSuscripcion,
+    debeMostrarBanner,
+} from "@/lib/pagos/vigencia-middleware";
+import type { RolUsuario } from "@prisma/client";
 
-const ROLES_COLEGIO = new Set(["SCHOOL_ADMIN", "COMITE_CONVIVENCIA"]);
+const ROLES_COLEGIO = new Set<RolUsuario>(["SCHOOL_ADMIN", "COMITE_CONVIVENCIA"]);
 
+/**
+ * Layout del área del colegio (`/dashboard/colegio/*`).
+ * SPEC-129/148: navegación lateral + buscador global.
+ * SPEC-242 (002-PI-145): guarda de vigencia basada en Suscripcion.estado.
+ * Reemplaza el bloqueo full-screen legacy por redirección a /dashboard/colegio/suscripcion.
+ */
 export default async function ColegioLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();
     const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
@@ -20,7 +33,7 @@ export default async function ColegioLayout({ children }: { children: React.Reac
     }
 
     const payload = await verifyToken(token);
-    const rol = payload?.rol as string | undefined;
+    const rol = payload?.rol as RolUsuario | undefined;
     if (!payload?.sub || !rol || !ROLES_COLEGIO.has(rol)) {
         redirect("/login");
     }
@@ -41,33 +54,20 @@ export default async function ColegioLayout({ children }: { children: React.Reac
         redirect("/cambiar-password");
     }
 
-    const vigencia = await verificarVigenciaColegio(usuario.id);
+    const pathname = (await headers()).get("x-invoke-path") ?? "";
+    const esExenta = esRutaExenta(pathname, rol);
 
-    if (!vigencia.vigente) {
-        return (
-            <div className="theme-colegio min-h-screen bg-page">
-                <main className="flex min-h-screen flex-col items-center justify-center px-4">
-                    <div className="w-full max-w-md rounded-2xl glass p-8 text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full accent-gradient text-white text-2xl font-bold">
-                            🏫
-                        </div>
-                        <h1 className="text-2xl font-bold text-body">Servicio no vigente</h1>
-                        <p className="mt-4 text-muted">
-                            {vigencia.mensaje || "El acceso institucional no está disponible en este momento. Contacta al administrador de tu colegio para más información."}
-                        </p>
-                        <ColegioLogoutButton
-                            className="mt-6 inline-flex rounded-xl accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-lg hover:opacity-90 transition"
-                        />
-                    </div>
-                </main>
-            </div>
-        );
+    // SPEC-242: la vigencia del colegio ahora se consume desde Suscripcion,
+    // no desde fechas de servicio legacy.
+    const suscripcionActiva = await new PagosRepository().obtenerSuscripcionActivaPorUsuarioId(usuario.id);
+    const estadoVigencia = resolverEstadoVigencia(suscripcionActiva);
+
+    if (!esExenta && estadoVigencia !== "ACTIVA" && estadoVigencia !== "EN_GRACIA") {
+        redirect(redireccionSuscripcion(rol));
     }
 
     const permitidos = await modulosPermitidosParaRol(usuario.rol);
 
-    // SPEC-129 (C3): navegación lateral única patrón AdminNav (antes ColegioNav, tabs).
-    // SPEC-148 (US2): buscador global ⌘K montado UNA vez para toda el área.
     return (
         <div className="theme-colegio flex min-h-screen bg-page">
             <ColegioSideNav rol={usuario.rol} modulosPermitidos={[...permitidos]} />
@@ -76,7 +76,16 @@ export default async function ColegioLayout({ children }: { children: React.Reac
                 <header className="flex items-center justify-end gap-3 border-b border-tinta/10 px-4 py-3 sm:px-6">
                     <CentroNotificaciones />
                 </header>
-                <main className="min-w-0 flex-1">{children}</main>
+                <main className="min-w-0 flex-1">
+                    {debeMostrarBanner(estadoVigencia) && (
+                        <div className="px-4 pt-4 sm:px-6">
+                            <Alerta tono="advertencia">
+                                Tu plan vence pronto. Renueva para no perder el acceso.
+                            </Alerta>
+                        </div>
+                    )}
+                    {children}
+                </main>
             </div>
         </div>
     );

@@ -1,22 +1,34 @@
-import { verifyAuth } from "@/lib/auth";
-import { obtenerVistaSuscripcion } from "@/lib/pagos/suscripcion-vista.service";
-import { SuscripcionVista } from "@/components/modules/cliente/suscripcion/SuscripcionVista";
-import { SinSuscripcion } from "@/components/modules/cliente/suscripcion/SinSuscripcion";
+import type { Metadata } from "next";
+import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
+
+export const metadata: Metadata = {
+    title: "Suscripción",
+    description: "Gestiona la suscripción institucional de Protección Infantil.",
+};
 
 /**
- * SPEC-211 (002-PI-111): vista de suscripción del rector (color pino).
- * La guarda de sesión/rol/vigencia la hace el layout `/dashboard/colegio`;
- * aquí se carga el DTO vía el servicio (frontera DAL, SC-005: sin `@/lib/prisma`
- * en la página) y se renderizan los 7 bloques estándar.
+ * Placeholder de /dashboard/colegio/suscripcion.
+ * SPEC-242 (002-PI-145): página exenta de la guarda de vigencia.
+ * El diseño completo del selector de planes llega en SPEC-244 (Lote 2).
  */
-export default async function ColegioSuscripcionPage() {
-    const usuario = await verifyAuth(["SCHOOL_ADMIN"]);
-    const vista = await obtenerVistaSuscripcion(usuario);
-
-    if (!vista) {
-        return <SinSuscripcion />;
-    }
-
-    // Contrato: para colegios el bloque siempre se muestra (obligatorio por defecto).
-    return <SuscripcionVista vista={vista} color="pino" mostrarContrato={true} />;
+export default function ColegioSuscripcionPage() {
+    return (
+        <main className="flex min-h-screen flex-col items-center justify-center px-4">
+            <div className="w-full max-w-md rounded-2xl glass p-8 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full accent-gradient text-white text-2xl font-bold">
+                    🏫
+                </div>
+                <h1 className="text-2xl font-bold text-body">Suscripción institucional</h1>
+                <p className="mt-4 text-muted">
+                    Aquí podrás elegir o renovar el plan del colegio. Esta funcionalidad estará disponible próximamente.
+                </p>
+                <div className="mt-6 flex justify-center">
+                    <ColegioLogoutButton
+                        className="inline-flex rounded-xl accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-lg hover:opacity-90 transition"
+                        label="Cerrar sesión"
+                    />
+                </div>
+            </div>
+        </main>
+    );
 }

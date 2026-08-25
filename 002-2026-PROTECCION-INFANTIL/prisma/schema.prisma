@@ -299,6 +299,8 @@ enum AccionAudit {
   ANALISIS_ACCION_REVERTIDA
   // SPEC-248 (002-PI-151): edición admin de definiciones legales de rúbrica.
   RUBRICA_DEFINICION_UPDATE
+  // SPEC-242 (002-PI-145): acceso de padre a /reportar sin suscripción activa.
+  REPORTE_SIN_SUSCRIPCION
 }
 
 enum TipoPeriodoServicio {
@@ -319,6 +321,8 @@ enum EstadoSuscripcion {
   EN_GRACIA
   SUSPENDIDA
   CANCELADA
+  // SPEC-242 (002-PI-145): suscripción creada pero aún no activada por admin/pago.
+  PENDIENTE_AUTORIZACION
 }
 
 // SPEC-235 (002-PI-135): estados del ciclo de vida de una guía de acción.
