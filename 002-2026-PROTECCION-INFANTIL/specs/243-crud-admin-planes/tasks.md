@@ -56,14 +56,16 @@
 - [x] T016 Crear `specs/243-crud-admin-planes/quickstart.md`.
 - [x] T017 Crear `specs/243-crud-admin-planes/contracts/planes.md`.
 - [x] T018 Crear `specs/243-crud-admin-planes/contracts/parametros.md`.
-- [x] T019 Actualizar `specs/243-crud-admin-planes/spec.md` con sección de implementación y estado `IMPLEMENTADO`.
+- [x] T019 Crear `specs/243-crud-admin-planes/checklists/requirements.md`.
+- [x] T020 Actualizar `specs/243-crud-admin-planes/spec.md` con sección de implementación y estado `IMPLEMENTADO`.
+- [x] T021 Crear `specs/243-crud-admin-planes/cierre.md`.
 
 ## Fase 7 — Gates
 
-- [x] T020 `npx prisma generate`.
-- [x] T021 `npx tsc --noEmit`.
-- [x] T022 `npm run lint` (0 errores).
-- [x] T023 `npm run test:unit`.
-- [x] T024 `npm run test:integration` para tests nuevos.
-- [x] T025 `npm run build`.
-- [x] T026 `npm run arch:check`.
+- [x] T022 `npx prisma generate`.
+- [x] T023 `npx tsc --noEmit`.
+- [x] T024 `npm run lint` (0 errores).
+- [x] T025 `npm run test:unit`.
+- [x] T026 `npm run test:integration` para tests nuevos.
+- [x] T027 `npm run build`.
+- [x] T028 `npm run arch:check`.
