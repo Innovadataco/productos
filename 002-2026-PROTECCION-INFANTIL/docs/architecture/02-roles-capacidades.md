@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 414 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2898 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 415 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2905 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -157,6 +157,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
 | `/api/admin/pagos/mora` | api | permitir | permite | sí |
+| `/api/admin/pagos/parametros` | api | permitir | permite | sí |
 | `/api/admin/pagos/pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/pendientes/[id]/autorizar` | api | permitir | permite | sí |
 | `/api/admin/pagos/pendientes/[id]/rechazar` | api | permitir | permite | sí |
@@ -576,6 +577,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
 | `/api/admin/pagos/mora` | api | permitir | permite | sí |
+| `/api/admin/pagos/parametros` | api | permitir | permite | sí |
 | `/api/admin/pagos/pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/pendientes/[id]/autorizar` | api | permitir | permite | sí |
 | `/api/admin/pagos/pendientes/[id]/rechazar` | api | permitir | permite | sí |
@@ -995,6 +997,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
 | `/api/admin/pagos/mora` | api | permitir | permite | sí |
+| `/api/admin/pagos/parametros` | api | permitir | permite | sí |
 | `/api/admin/pagos/pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/pendientes/[id]/autorizar` | api | permitir | permite | sí |
 | `/api/admin/pagos/pendientes/[id]/rechazar` | api | permitir | permite | sí |
@@ -1414,6 +1417,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/parametros` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/pendientes/[id]/autorizar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/pendientes/[id]/rechazar` | api | HTTP 403 | no permite | sí |
@@ -1833,6 +1837,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/parametros` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/pendientes/[id]/autorizar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/pendientes/[id]/rechazar` | api | HTTP 403 | no permite | sí |
@@ -2252,6 +2257,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/parametros` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/pendientes/[id]/autorizar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/pendientes/[id]/rechazar` | api | HTTP 403 | no permite | sí |
@@ -2671,6 +2677,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/mora` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/parametros` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/pendientes` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/pendientes/[id]/autorizar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/pendientes/[id]/rechazar` | api | HTTP 401 | permite | **NO** |
@@ -3091,6 +3098,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/pagos/cliente/[id]` | HTTP 401 | permite |
 | `/api/admin/pagos/cliente/[id]/extender` | HTTP 401 | permite |
 | `/api/admin/pagos/mora` | HTTP 401 | permite |
+| `/api/admin/pagos/parametros` | HTTP 401 | permite |
 | `/api/admin/pagos/pendientes` | HTTP 401 | permite |
 | `/api/admin/pagos/pendientes/[id]/autorizar` | HTTP 401 | permite |
 | `/api/admin/pagos/pendientes/[id]/rechazar` | HTTP 401 | permite |

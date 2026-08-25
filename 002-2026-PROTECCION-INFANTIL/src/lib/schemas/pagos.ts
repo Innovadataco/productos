@@ -10,6 +10,14 @@ export const pagosQuerySchema = z.object({
     q: z.string().trim().min(2).max(120).optional(),
 });
 
+// SPEC-243 (002-PI-146): listado paginado de planes con filtros por rol y año.
+export const pagosPlanesQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    tipoTitular: z.enum(["COLEGIO", "PADRE"]).optional(),
+    anio: z.coerce.number().int().min(2000).max(2100).optional(),
+});
+
 export const pagosVencimientosQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
@@ -43,12 +51,56 @@ export const pagosBonoUpdateSchema = pagosBonoBodySchema.partial().refine(
 );
 
 export const pagosPlanUpdateSchema = z.object({
+    nombre: z.string().min(2).max(120).optional(),
+    precioBaseCOP: z.coerce.number().min(0).optional(),
     precioBaseUSD: z.coerce.number().positive().optional(),
     descuentoAnualPct: z.coerce.number().min(0).max(100).nullable().optional(),
+    descripcion: z.string().max(500).nullable().optional(),
+    activo: z.boolean().optional(),
+    usosMaximosPorCliente: z.coerce.number().int().min(1).nullable().optional(),
+    esFreemium: z.boolean().optional(),
 }).refine(
     (data) => Object.keys(data).length > 0,
     { message: "Debe enviar al menos un campo para actualizar", path: ["root"] }
 );
+
+const DURACIONES_PLAN = ["MES_1", "MES_2", "MES_3", "MES_6", "MES_12"] as const;
+const TIPOS_TITULAR = ["COLEGIO", "PADRE"] as const;
+
+export const pagosPlanCreateSchema = z.object({
+    nombre: z.string().min(2).max(120),
+    precioBaseCOP: z.coerce.number().min(0),
+    precioBaseUSD: z.coerce.number().positive(),
+    duracion: z.enum(DURACIONES_PLAN),
+    tipoTitular: z.enum(TIPOS_TITULAR),
+    anio: z.coerce.number().int().min(2020).max(2100).default(new Date().getFullYear()),
+    descripcion: z.string().max(500).optional(),
+    activo: z.boolean().default(true),
+    usosMaximosPorCliente: z.coerce.number().int().min(1).nullable().optional(),
+    esFreemium: z.boolean().default(false),
+    descuentoAnualPct: z.coerce.number().min(0).max(100).nullable().optional(),
+}).refine(
+    (data) => {
+        if (data.esFreemium) {
+            return data.precioBaseCOP === 0 && (data.usosMaximosPorCliente ?? 0) >= 1;
+        }
+        return data.precioBaseCOP > 0;
+    },
+    {
+        message: "Plan freemium requiere precio 0 y al menos 1 uso máximo; planes pagos requieren precio mayor a 0",
+        path: ["precioBaseCOP"],
+    }
+);
+
+export const pagosParametrosUpdateSchema = z.object({
+    "pagos.iva.porcentaje": z.coerce.number().min(0).max(100),
+    "pagos.iva.aplica_a": z.enum(["todos", "solo_colegios", "solo_padres", "ninguno"]),
+    "pagos.freemium.activo": z.boolean(),
+    "pagos.freemium.duracion_dias": z.coerce.number().int().min(1),
+    "pagos.recompensa.activa": z.boolean(),
+    "pagos.recompensa.meses_gratis": z.coerce.number().int().min(0).max(12),
+    "pagos.recompensa.max_por_año": z.coerce.number().int().min(0).max(100),
+});
 
 export const pagosReembolsoBodySchema = z.object({
     montoReembolsoUSD: z.coerce.number().positive(),

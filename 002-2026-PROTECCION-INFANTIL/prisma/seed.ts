@@ -4,6 +4,7 @@ import { REGLAS_SEMILLA } from "../src/lib/analisis/reglas/seed-reglas";
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { formatInTimeZone } from "date-fns-tz";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -653,29 +654,43 @@ async function seedGuiasAccion(adminEmail: string) {
     }
 }
 
-// SPEC-210 (002-PI-110): seed de planes base del módulo de pagos.
-// EXCEPCIÓN DOCUMENTADA: los planes son estructurales del motor de pagos.
-// Cuando cambia el catálogo, duración o año base, el seed debe propagar el
-// cambio con update explícito (anti-I-100). El primer seed es INSERT limpio.
+// SPEC-243 (002-PI-146): seed idempotente del catálogo de planes.
+// 4 planes por rol (PADRE/COLEGIO): Freemium 30 días, 3 meses, 6 meses y Anual.
+// Se usa upsert({ create, update: {} }) para no pisar ediciones manuales del admin.
 async function seedPlanesPagos(adminId: string) {
+    const ZONA_BOGOTA = "America/Bogota";
+    const anioActual = Number(formatInTimeZone(new Date(), ZONA_BOGOTA, "yyyy"));
+
+    const planesPorRol: Record<TipoTitular, Array<{ duracion: DuracionPlan; nombre: string; precioBaseCOP: number; esFreemium: boolean; usosMaximosPorCliente: number | null; descripcion: string }>> = {
+        [TipoTitular.PADRE]: [
+            { duracion: DuracionPlan.MES_1, nombre: "Prueba gratis 30 días", precioBaseCOP: 0, esFreemium: true, usosMaximosPorCliente: 1, descripcion: "Plan gratuito de 30 días para padres" },
+            { duracion: DuracionPlan.MES_3, nombre: "Padre · 3 meses", precioBaseCOP: 39_900, esFreemium: false, usosMaximosPorCliente: null, descripcion: "Suscripción de 3 meses para padres" },
+            { duracion: DuracionPlan.MES_6, nombre: "Padre · 6 meses", precioBaseCOP: 69_900, esFreemium: false, usosMaximosPorCliente: null, descripcion: "Suscripción de 6 meses para padres" },
+            { duracion: DuracionPlan.MES_12, nombre: "Padre · Anual", precioBaseCOP: 119_900, esFreemium: false, usosMaximosPorCliente: null, descripcion: "Suscripción anual para padres" },
+        ],
+        [TipoTitular.COLEGIO]: [
+            { duracion: DuracionPlan.MES_1, nombre: "Colegio · Prueba gratis 30 días", precioBaseCOP: 0, esFreemium: true, usosMaximosPorCliente: 1, descripcion: "Plan gratuito de 30 días para colegios" },
+            { duracion: DuracionPlan.MES_3, nombre: "Colegio · 3 meses", precioBaseCOP: 199_000, esFreemium: false, usosMaximosPorCliente: null, descripcion: "Suscripción de 3 meses para colegios" },
+            { duracion: DuracionPlan.MES_6, nombre: "Colegio · 6 meses", precioBaseCOP: 349_000, esFreemium: false, usosMaximosPorCliente: null, descripcion: "Suscripción de 6 meses para colegios" },
+            { duracion: DuracionPlan.MES_12, nombre: "Colegio · Anual", precioBaseCOP: 599_000, esFreemium: false, usosMaximosPorCliente: null, descripcion: "Suscripción anual para colegios" },
+        ],
+    };
+
     const planesBase = [];
     for (const tipo of [TipoTitular.COLEGIO, TipoTitular.PADRE]) {
-        for (const duracion of [
-            DuracionPlan.MES_1,
-            DuracionPlan.MES_2,
-            DuracionPlan.MES_3,
-            DuracionPlan.MES_6,
-            DuracionPlan.MES_12,
-        ]) {
+        for (const cfg of planesPorRol[tipo]) {
             planesBase.push({
                 tipoTitular: tipo,
-                duracion,
-                anio: 2026,
-                nombre: `${tipo} · ${duracion} · 2026`,
+                duracion: cfg.duracion,
+                anio: anioActual,
+                nombre: cfg.nombre,
                 precio: 0, // legacy placeholder; no usar en lógica nueva
                 precioBaseUSD: 0,
+                precioBaseCOP: cfg.precioBaseCOP,
+                esFreemium: cfg.esFreemium,
+                usosMaximosPorCliente: cfg.usosMaximosPorCliente,
                 activo: true,
-                descripcion: `Plan ${tipo} ${duracion} 2026 (precio placeholder)`,
+                descripcion: cfg.descripcion,
                 creadoPorAdminId: adminId,
             });
         }
@@ -690,19 +705,15 @@ async function seedPlanesPagos(adminId: string) {
                     anio: plan.anio,
                 },
             },
-            update: {
-                precioBaseUSD: plan.precioBaseUSD,
-                activo: plan.activo,
-                descripcion: plan.descripcion,
-                creadoPorAdminId: plan.creadoPorAdminId,
-            },
+            update: {},
             create: plan,
         });
     }
     console.log(`[SEED] ${planesBase.length} planes de pagos listos`);
 }
 
-// SPEC-210 (002-PI-110): parámetros del módulo de pagos.
+// SPEC-210/243 (002-PI-110/146): parámetros del módulo de pagos.
+// Las 7 claves de §6.3 se siembran con update: {} para no pisar ajustes manuales.
 async function seedParametrosPagos() {
     const pagosParams = [
         { clave: "pagos.descuento_anual_pct_default", valor: "15", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "% descuento aplicable a duración MES_12 salvo override en Plan" },
@@ -723,12 +734,28 @@ async function seedParametrosPagos() {
         { clave: "pagos.comprobante_formatos_permitidos", valor: "image/png,image/jpeg,application/pdf", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Formatos MIME permitidos para comprobantes" },
         // SPEC-240 (002-PI-143): vigencia del link de activación enviado al rector.
         { clave: "pagos.invitacion.token_vigencia_horas", valor: "48", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Horas de vigencia del link de activación de cuenta de rector" },
+        // ── SPEC-243: parámetros globales de IVA, freemium y recompensa (§6.3).
+        { clave: "pagos.iva.porcentaje", valor: "19", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Porcentaje de IVA aplicado a los planes pagos" },
+        { clave: "pagos.iva.aplica_a", valor: "todos", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Ámbito de aplicación del IVA: todos, solo_colegios, solo_padres, ninguno" },
+        { clave: "pagos.recompensa.activa", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Indica si el programa de recompensas por referidos está activo" },
+        { clave: "pagos.recompensa.meses_gratis", valor: "1", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Meses gratis otorgados como recompensa por referido exitoso" },
+        { clave: "pagos.recompensa.max_por_año", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Máximo de recompensas por referido al año por cliente" },
     ];
+
+    const clavesNoPisar = new Set([
+        "pagos.iva.porcentaje",
+        "pagos.iva.aplica_a",
+        "pagos.freemium.activo",
+        "pagos.freemium.duracion_dias",
+        "pagos.recompensa.activa",
+        "pagos.recompensa.meses_gratis",
+        "pagos.recompensa.max_por_año",
+    ]);
 
     for (const p of pagosParams) {
         await prisma.parametroSistema.upsert({
             where: { clave: p.clave },
-            update: { valor: p.valor, descripcion: p.descripcion },
+            update: clavesNoPisar.has(p.clave) ? {} : { valor: p.valor, descripcion: p.descripcion },
             create: p,
         });
     }

@@ -308,6 +308,10 @@ enum AccionAudit {
   RUBRICA_DEFINICION_UPDATE
   // SPEC-242 (002-PI-145): acceso de padre a /reportar sin suscripción activa.
   REPORTE_SIN_SUSCRIPCION
+  // SPEC-243 (002-PI-146): CRUD admin de planes + parámetros IVA/freemium.
+  PLAN_CREATE
+  PLAN_UPDATE
+  PLAN_TOGGLE
 }
 
 enum TipoPeriodoServicio {
@@ -796,6 +800,9 @@ model Plan {
   duracion          DuracionPlan
   anio              Int
   precioBaseUSD     Float
+  precioBaseCOP     Float?
+  esFreemium        Boolean      @default(false)
+  usosMaximosPorCliente Int?
   descuentoAnualPct Float?
   activo            Boolean      @default(true)
   descripcion       String?

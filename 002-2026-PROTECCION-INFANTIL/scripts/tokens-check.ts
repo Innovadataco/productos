@@ -23,8 +23,11 @@ import * as path from "node:path";
 // 2026-08-04 SPEC-146: el wizard reemplaza los PageClients de nuevo/ y carga/
 // (redirects) — el conteo baja a 1135 y el piso baja con él (ratchet).
 // 2026-08-25 SPEC-241: ModalConsentimiento migra dark:bg-slate-900/50 → dark:bg-tinta/50
-// y accent-sky-600 ×2 → accent-cielo (D-74 · Padre = cielo) — piso baja a 1092.
-const PISO = 1092;
+// y accent-sky-600 ×2 → accent-cielo (D-74 · Padre = cielo).
+// 2026-08-25 SPEC-243: PlanesAdminCRUD migra text-emerald-600/text-red-600 → text-pino/text-rubi
+// y PlanesPagosTabs migra border-sky-600/text-sky-600 → border-ambar/text-ambar (Admin = ambar).
+// Medición tras rebase sobre SPEC-241: 1083 ocurrencias en 121 archivos.
+const PISO = 1083;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
