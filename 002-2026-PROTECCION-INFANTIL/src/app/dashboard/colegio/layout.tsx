@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
+import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
 import { ColegioSideNav } from "@/components/modules/colegio/ColegioSideNav";
 import { BuscadorGlobal } from "@/components/modules/colegio/BuscadorGlobal";
 import { CentroNotificaciones } from "@/components/modules/colegio/CentroNotificaciones";
@@ -46,6 +47,12 @@ export default async function ColegioLayout({ children }: { children: React.Reac
 
     if (!usuario || usuario.estado !== "activo" || usuario.rol !== rol) {
         redirect("/login");
+    }
+
+    // SPEC-241 (002-PI-144): guardia de consentimiento informado antes de vigencia.
+    const requiereConsentimiento = await requiereConsentimientoActual(payload.sub as string);
+    if (requiereConsentimiento) {
+        redirect("/consentimiento");
     }
 
     // Enforcement central: cualquier usuario con contraseña temporal debe cambiarla

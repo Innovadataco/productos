@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
+import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
 import { PadreSideNav } from "@/components/modules/padre/PadreSideNav";
 import { Alerta } from "@/components/ui/Alerta";
 import {
@@ -36,6 +37,12 @@ export default async function PadreLayout({ children }: { children: React.ReactN
 
     if (!usuario || usuario.estado !== "activo" || usuario.rol !== "PARENT") {
         redirect("/login");
+    }
+
+    // SPEC-241 (002-PI-144): guardia de consentimiento informado.
+    const requiereConsentimiento = await requiereConsentimientoActual(payload.sub as string);
+    if (requiereConsentimiento) {
+        redirect("/consentimiento");
     }
 
     if (usuario.debeCambiarPassword) {

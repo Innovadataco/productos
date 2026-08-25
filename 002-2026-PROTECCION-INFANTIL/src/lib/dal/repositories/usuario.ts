@@ -285,6 +285,50 @@ export class UsuarioRepository {
         });
     }
 
+    /** SPEC-241 (002-PI-144): usuario con campos de consentimiento vigente. */
+    findConConsentimiento(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                email: true,
+                nombre: true,
+                rol: true,
+                estado: true,
+                consentimientoAceptadoEn: true,
+                consentimientoVersion: true,
+                consentimientoDocumentoHash: true,
+                consentimientoIP: true,
+            },
+        });
+    }
+
+    /** SPEC-241 (002-PI-144): actualiza los campos de consentimiento tras aceptación. */
+    actualizarConsentimiento(
+        id: string,
+        data: {
+            consentimientoAceptadoEn: Date;
+            consentimientoVersion: string;
+            consentimientoDocumentoHash: string;
+            consentimientoIP: string;
+        }
+    ) {
+        return this.db.usuario.update({
+            where: { id },
+            data,
+            select: {
+                id: true,
+                email: true,
+                nombre: true,
+                rol: true,
+                consentimientoAceptadoEn: true,
+                consentimientoVersion: true,
+                consentimientoDocumentoHash: true,
+                consentimientoIP: true,
+            },
+        });
+    }
+
     /** E-8: usuario con su colegio y ubicación completa (home del panel colegio). */
     findConColegioYUbicacion(id: string) {
         return this.db.usuario.findUnique({

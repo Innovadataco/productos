@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 412 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2884 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 414 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2898 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -289,6 +289,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consentimiento/aceptar` | api | permitir | permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/consulta/evento` | api | permitir | permite | sí |
@@ -331,6 +332,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/session/ping` | api | permitir | permite | sí |
 | `/api/webhooks/resend` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
+| `/consentimiento` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard-publico` | página | permitir | permite | sí |
@@ -706,6 +708,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consentimiento/aceptar` | api | permitir | permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/consulta/evento` | api | permitir | permite | sí |
@@ -748,6 +751,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/session/ping` | api | permitir | permite | sí |
 | `/api/webhooks/resend` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
+| `/consentimiento` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard-publico` | página | permitir | permite | sí |
@@ -1123,6 +1127,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consentimiento/aceptar` | api | permitir | permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/consulta/evento` | api | permitir | permite | sí |
@@ -1165,6 +1170,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/session/ping` | api | permitir | permite | sí |
 | `/api/webhooks/resend` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
+| `/consentimiento` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard-publico` | página | permitir | permite | sí |
@@ -1540,6 +1546,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/publicos` | api | HTTP 403 | no permite | sí |
+| `/api/consentimiento/aceptar` | api | HTTP 403 | no permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/consulta/evento` | api | permitir | permite | sí |
@@ -1582,6 +1589,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/session/ping` | api | HTTP 403 | no permite | sí |
 | `/api/webhooks/resend` | api | HTTP 403 | no permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
+| `/consentimiento` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/consulta` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard-publico` | página | permitir | permite | sí |
@@ -1957,6 +1965,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | HTTP 403 | no permite | sí |
 | `/api/config/parametros/publicos` | api | HTTP 403 | no permite | sí |
+| `/api/consentimiento/aceptar` | api | HTTP 403 | no permite | sí |
 | `/api/consulta` | api | HTTP 403 | no permite | sí |
 | `/api/consulta/detalle` | api | HTTP 403 | no permite | sí |
 | `/api/consulta/evento` | api | HTTP 403 | no permite | sí |
@@ -1999,6 +2008,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/session/ping` | api | HTTP 403 | no permite | sí |
 | `/api/webhooks/resend` | api | HTTP 403 | no permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
+| `/consentimiento` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/consulta` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard-publico` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -2374,6 +2384,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/[clave]` | api | permitir | permite | sí |
 | `/api/config/parametros/[clave]/revelar` | api | permitir | permite | sí |
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consentimiento/aceptar` | api | permitir | permite | sí |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/consulta/evento` | api | permitir | permite | sí |
@@ -2416,6 +2427,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/session/ping` | api | permitir | permite | sí |
 | `/api/webhooks/resend` | api | permitir | permite | sí |
 | `/cambiar-password` | página | permitir | permite | sí |
+| `/consentimiento` | página | permitir | permite | sí |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | permitir | permite | sí |
 | `/dashboard-publico` | página | permitir | permite | sí |
@@ -2791,6 +2803,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/config/parametros/[clave]` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros/[clave]/revelar` | api | HTTP 401 | permite | **NO** |
 | `/api/config/parametros/publicos` | api | permitir | permite | sí |
+| `/api/consentimiento/aceptar` | api | HTTP 401 | permite | **NO** |
 | `/api/consulta` | api | permitir | permite | sí |
 | `/api/consulta/detalle` | api | permitir | permite | sí |
 | `/api/consulta/evento` | api | permitir | permite | sí |
@@ -2833,6 +2846,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/session/ping` | api | HTTP 401 | permite | **NO** |
 | `/api/webhooks/resend` | api | HTTP 401 | permite | **NO** |
 | `/cambiar-password` | página | redirigir→/login | permite | **NO** |
+| `/consentimiento` | página | redirigir→/login | permite | **NO** |
 | `/consulta` | página | permitir | permite | sí |
 | `/dashboard` | página | redirigir→/login | permite | **NO** |
 | `/dashboard-publico` | página | permitir | permite | sí |
@@ -3194,6 +3208,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/config/parametros` | HTTP 401 | permite |
 | `/api/config/parametros/[clave]` | HTTP 401 | permite |
 | `/api/config/parametros/[clave]/revelar` | HTTP 401 | permite |
+| `/api/consentimiento/aceptar` | HTTP 401 | permite |
 | `/api/interno/expediente/[id]/transicionar` | HTTP 401 | permite |
 | `/api/me` | HTTP 401 | permite |
 | `/api/me/colegio` | HTTP 401 | permite |
@@ -3218,6 +3233,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/session/ping` | HTTP 401 | permite |
 | `/api/webhooks/resend` | HTTP 401 | permite |
 | `/cambiar-password` | redirigir→/login | permite |
+| `/consentimiento` | redirigir→/login | permite |
 | `/dashboard` | redirigir→/login | permite |
 | `/dashboard/apelaciones` | redirigir→/login | permite |
 | `/dashboard/circulo-confianza` | redirigir→/login | permite |

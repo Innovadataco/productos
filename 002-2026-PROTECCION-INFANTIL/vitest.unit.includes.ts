@@ -9,6 +9,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/dashboard/admin/estadisticas/components/EstadisticasSubNav.test.tsx",
     "src/app/dashboard/colegio/alertas/AlertasColegioPageClient.test.tsx",
     "src/components/modules/config-panel/MantenimientoLogsPanel.test.tsx",
+    // SPEC-241 (002-PI-144): modal de consentimiento informado (sin BD).
+    "src/components/modules/ModalConsentimiento.test.tsx",
     "src/app/dashboard/colegio/cursos/CursosPageClient.test.tsx",
     "src/app/dashboard/colegio/configuracion/ConfiguracionPageClient.test.tsx",
     "src/app/dashboard/colegio/profesores/ProfesoresPageClient.test.tsx",

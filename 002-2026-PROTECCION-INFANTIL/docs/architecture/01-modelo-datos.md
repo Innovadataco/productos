@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **94** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **95** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -483,7 +483,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (46)
+### Otros (sin regla de dominio) (47)
 
 #### `AclaracionExpediente`
 
@@ -518,6 +518,21 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | resueltaEn | DateTime | opcional |
 | resueltaPorAdminId | String | opcional |
 | resueltaPor | Usuario | opcional, relación (FK) |
+
+#### `AuditConsentimiento`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| usuarioId | String | — |
+| version | String | — |
+| documentoTipo | String | — |
+| documentoHash | String | — |
+| aceptadoEn | DateTime | — |
+| ip | String | — |
+| userAgent | String | opcional |
+| esRepresentanteLegal | Boolean | — |
+| usuario | Usuario | relación (FK) |
 
 #### `BlockList`
 
@@ -1729,6 +1744,10 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | comiteColegioId | String | único, opcional |
 | inicioServicio | DateTime | opcional |
 | finServicio | DateTime | opcional |
+| consentimientoAceptadoEn | DateTime | opcional |
+| consentimientoVersion | String | opcional |
+| consentimientoDocumentoHash | String | opcional |
+| consentimientoIP | String | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | tenant | Tenant | opcional, relación (FK) |
@@ -1771,6 +1790,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | simulacionesAbuso | SimulacionAbusoRun | lista, relación |
 | expedientes | Expediente | lista, relación |
 | sesionesLog | SesionLog | lista, relación |
+| auditConsentimientos | AuditConsentimiento | lista, relación |
 | informesConsolidados | InformeConsolidado | lista, relación |
 | guiasAccionCreadas | GuiaAccionCategoria | lista, relación |
 | suscripciones | Suscripcion | lista, relación |
@@ -1892,6 +1912,7 @@ erDiagram
     Usuario ||--o{ AlertaColegio : "asignadoA (opcional)"
     Usuario ||--o{ AlertaSuscripcion : "usuario"
     Usuario ||--o{ Anomalia : "resueltaPor (opcional)"
+    Usuario ||--o{ AuditConsentimiento : "usuario"
     Usuario ||--o{ AuditLog : "usuario (opcional)"
     Usuario ||--o{ BlockList : "creadoPor"
     Usuario ||--o{ BonoPromocional : "creadoPor"
