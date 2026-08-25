@@ -3,7 +3,7 @@
 **Feature Branch**: `work/002-PI-152`
 **SPEC**: 249
 **Created**: 2026-08-25
-**Status**: PLANEADO
+**Status**: DESARROLLO
 **Input**: INSTRUCTIVO-002-PI-152 · SPEC-240 US1/US2 (rutas públicas de registro y activación de colegio) · D-37
 
 Impacto en arquitectura: modifica únicamente `src/lib/proxy.ts` para extender `PUBLIC_ROUTES` con `/registro-colegio` y `/activar`, y agrega test de regresión en `src/lib/e2e/journeys/aislamiento.test.ts` (o `src/lib/proxy.test.ts`) para garantizar que un usuario anónimo alcanza ambas rutas sin redirect. Sin cambios de schema, sin migraciones, sin tocar `src/lib/ai/**`.
