@@ -1583,6 +1583,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | duracion | DuracionPlan | — |
 | anio | Int | — |
 | precioBaseUSD | Float | — |
+| precioBaseCOP | Float | opcional |
+| esFreemium | Boolean | — |
+| usosMaximosPorCliente | Int | opcional |
 | descuentoAnualPct | Float | opcional |
 | activo | Boolean | — |
 | descripcion | String | opcional |

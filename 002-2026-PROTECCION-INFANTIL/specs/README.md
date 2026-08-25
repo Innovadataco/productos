@@ -139,6 +139,7 @@
 | [209](209-log-modal-contraste/spec.md) | SPEC-209 — LogContextoModal contraste (002-PI-142) | 🔵 Planeado |
 | [212](212-panel-admin-pagos/spec.md) | SPEC-212 — Panel admin de pagos (002-PI-112) | 🟢 Implementado |
 | [214](214-multi-moneda-pagos/spec.md) | SPEC-214 — Multi-moneda pagos (002-PI-113) | 🟢 Implementado |
+| [243](243-crud-admin-planes/spec.md) | SPEC-243 — CRUD admin de Planes + parámetros IVA/freemium (002-PI-146) | 🟢 Implementado |
 | [230](230-padre-v2-modelos-expediente-evento/spec.md) | SPEC-230 — Padre v2: modelos Expediente y EventoExpediente (002-PI-130) | 🟢 Implementado |
 | [231](231-sidebar-padre-rutas-base/spec.md) | SPEC-231 — Sidebar padre + rutas base (002-PI-131) | 🔵 Planeado |
 | [232](232-vista-padre-expedientes/spec.md) | SPEC-232 — Vista padre expedientes (lista + detalle + agregar evento) (002-PI-132) | 🔵 Planeado |
@@ -361,6 +362,7 @@
 | [209](209-log-modal-contraste/spec.md) | SPEC-209 — LogContextoModal contraste (002-PI-142) | 🔵 Planeado |
 | [212](212-panel-admin-pagos/spec.md) | SPEC-212 — Panel admin de pagos (002-PI-112) | 🟢 Implementado |
 | [214](214-multi-moneda-pagos/spec.md) | SPEC-214 — Multi-moneda pagos (002-PI-113) | 🟢 Implementado |
+| [243](243-crud-admin-planes/spec.md) | SPEC-243 — CRUD admin de Planes + parámetros IVA/freemium (002-PI-146) | 🟢 Implementado |
 | [230](230-padre-v2-modelos-expediente-evento/spec.md) | SPEC-230 — Padre v2: modelos Expediente y EventoExpediente (002-PI-130) | 🟢 Implementado |
 | [231](231-sidebar-padre-rutas-base/spec.md) | SPEC-231 — Sidebar padre + rutas base (002-PI-131) | 🔵 Planeado |
 | [232](232-vista-padre-expedientes/spec.md) | SPEC-232 — Vista padre expedientes (lista + detalle + agregar evento) (002-PI-132) | 🔵 Planeado |

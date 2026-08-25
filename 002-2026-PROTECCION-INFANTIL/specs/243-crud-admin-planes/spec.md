@@ -3,7 +3,7 @@
 **Feature Branch**: `work/002-PI-146`  
 **SPEC**: 243  
 **Created**: 2026-08-25  
-**Status**: PLANEADO  
+**Status**: IMPLEMENTADO  
 **Input**: INSTRUCTIVO-002-PI-146 · BRIEF-ACTIVACION-Y-COBROS §4/§6.3/§8/§10/§11 Lote 1 fila #4 · D-52/D-69/D-72/D-74
 
 Impacto en arquitectura: extiende `Plan` aditivamente con 3 campos (`precioBaseCOP Float?`, `esFreemium Boolean @default(false)`, `usosMaximosPorCliente Int?`), extiende enum `AccionAudit` +3 valores (`PLAN_CREATE`/`PLAN_UPDATE`/`PLAN_TOGGLE`), nuevo `PlanesAdminCRUD` en `/dashboard/admin/pagos/planes` (reutiliza GlassCard/Input/Button/Alerta, D-72), `GET`/`POST`/`PATCH`/`DELETE` `/api/admin/pagos/planes` con `AuditLog`, `PATCH /api/admin/pagos/parametros` batch para `pagos.iva.*` + `pagos.freemium.*` + `pagos.recompensa.*`, seed idempotente de 8 planes (4 PADRE + 4 COLEGIO) + parámetros §6.3 con `upsert(update:{})`. Se conserva `precioBaseUSD` de SPEC-210 sin modificar.
@@ -126,4 +126,22 @@ Al ejecutar `npx prisma db seed` el sistema garantiza que existan 4 planes por r
 
 ## Implementación
 
-*(Por completar tras aprobación de ZEUS en compuerta §4.)*
+La implementación de SPEC-243 siguió el plan aprobado. Los cambios principales fueron:
+
+- **Modelo de datos**: extensión aditiva de `Plan` con `precioBaseCOP`, `esFreemium` y `usosMaximosPorCliente`; extensión de `AccionAudit` con `PLAN_CREATE`, `PLAN_UPDATE` y `PLAN_TOGGLE`; migración SQL manual `20260825004336_crud_admin_planes`.
+- **Seed**: `prisma/seed.ts` siembra idempotentemente 8 planes (4 PADRE + 4 COLEGIO) y los 7 parámetros globales de §6.3 usando `upsert(update: {})`.
+- **DAL**: `PagosRepository` añadió `desactivarPlan`, `existeSuscripcionActivaPorPlan` y `obtenerPlanPorNombreYTipoTitular`; se creó `PagosParametrosService` para el batch transaccional de parámetros.
+- **Schemas Zod**: `pagosPlanesQuerySchema`, `pagosPlanCreateSchema`, `pagosPlanUpdateSchema` y `pagosParametrosUpdateSchema`.
+- **API Routes**:
+  - `GET/POST /api/admin/pagos/planes`.
+  - `PATCH/DELETE /api/admin/pagos/planes/:id` (DELETE lógico, 409 si hay suscripciones activas).
+  - `PATCH /api/admin/pagos/parametros`.
+- **Tests**: `src/app/api/admin/pagos/planes/route.test.ts` y `src/app/api/admin/pagos/parametros/route.test.ts` cubren CRUD, guards, validaciones y auditoría.
+- **UI**: `PlanesAdminCRUD`, `ParametrosPagosForm` y `PlanesPagosTabs`; la página `dashboard/admin/pagos/planes` expone dos tabs (catálogo / configuración global) reutilizando `GlassCard`, `Input`, `Select`, `Textarea`, `Button` y `Alerta`.
+- **Documentación**: `tasks.md`, `data-model.md`, `quickstart.md`, `contracts/planes.md` y `contracts/parametros.md`.
+
+### Deuda técnica / notas
+
+- El campo legacy `precio` sigue siendo requerido a nivel de BD actual; las rutas lo envían como `0` mientras el modelo comercial opera en `precioBaseCOP`.
+- El `PATCH` de plan no permite cambiar `tipoTitular`, `duracion` ni `anio` (son la clave natural del plan); para esos cambios se recomienda crear un nuevo plan y desactivar el anterior.
+- La UI no implementa drag-and-drop de ordenamiento; el orden visual del seed y el listado se controlan por `duracion`.
