@@ -105,6 +105,141 @@ async function seedParametrosSenalComunitaria() {
     console.log("Parámetro padre.senal_comunitaria.refresh_min (SPEC-234) listo");
 }
 
+// ── SPEC-241 (002-PI-144): parámetros de consentimiento informado + evento/plantillas
+// del Motor Notif. Idempotente (patrón I-100): upsert de parámetros y plantillas;
+// reglas con findFirst→update/create. Las rutas apuntan a los documentos legales
+// copiados en public/legal/; ODIN no redacta contenido legal.
+async function seedConsentimiento() {
+    const parametros = [
+        {
+            clave: "consentimiento.version_actual",
+            valor: "v0.4",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.LEGAL,
+            descripcion: "Versión vigente del consentimiento informado (SPEC-241)",
+        },
+        {
+            clave: "consentimiento.padre.documento_ruta",
+            valor: "public/legal/POLITICA-TRATAMIENTO-DATOS-v0.4.md",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.LEGAL,
+            descripcion: "Ruta del documento legal para padres/tutores (SPEC-241)",
+        },
+        {
+            clave: "consentimiento.colegio.documento_ruta",
+            valor: "public/legal/CONVENIO-TRATAMIENTO-DATOS-COLEGIOS.md",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.LEGAL,
+            descripcion: "Ruta del convenio institucional para colegios (SPEC-241)",
+        },
+    ];
+
+    for (const p of parametros) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {
+                valor: p.valor,
+                tipo: p.tipo,
+                categoria: p.categoria,
+                descripcion: p.descripcion,
+            },
+            create: {
+                clave: p.clave,
+                valor: p.valor,
+                tipo: p.tipo,
+                categoria: p.categoria,
+                esPublico: false,
+                esSecreto: false,
+                descripcion: p.descripcion,
+            },
+        });
+    }
+    console.log("[SEED] Parámetros de consentimiento (SPEC-241) listos");
+
+    const evento = "consentimiento.aceptado";
+    const asunto = "Confirmación de aceptación de términos";
+    const cuerpoEmail =
+        "Hola {{nombreUsuario}},\n\n" +
+        "Confirmamos que aceptaste la versión {{version}} de los términos de tratamiento de datos personales el {{fechaAceptacion}}.\n\n" +
+        "Puedes consultar tu expediente y configuración en {{urlDashboard}}.";
+    const cuerpoInApp = "Aceptaste los términos de tratamiento de datos personales (versión {{version}}).";
+
+    const plantillas = [
+        { clave: `${evento}.email`, canal: "EMAIL" as const, asunto, cuerpoMarkdown: cuerpoEmail },
+        { clave: `${evento}.in_app`, canal: "IN_APP" as const, asunto: undefined, cuerpoMarkdown: cuerpoInApp },
+    ];
+
+    for (const pl of plantillas) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {
+                canal: pl.canal,
+                asunto: pl.asunto ?? null,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: {
+                    type: "object",
+                    properties: {
+                        nombreUsuario: { type: "string" },
+                        version: { type: "string" },
+                        fechaAceptacion: { type: "string" },
+                        urlDashboard: { type: "string" },
+                    },
+                },
+                activa: true,
+            },
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto ?? null,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: {
+                    type: "object",
+                    properties: {
+                        nombreUsuario: { type: "string" },
+                        version: { type: "string" },
+                        fechaAceptacion: { type: "string" },
+                        urlDashboard: { type: "string" },
+                    },
+                },
+                activa: true,
+            },
+        });
+    }
+
+    const roles = ["PARENT", "SCHOOL_ADMIN", "ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA"] as const;
+    for (const rol of roles) {
+        for (const canal of ["EMAIL", "IN_APP"] as const) {
+            const existente = await prisma.notificacionRegla.findFirst({
+                where: { evento, rol, canal },
+                orderBy: { createdAt: "desc" },
+            });
+            const data = {
+                evento,
+                rol,
+                offset: "+0m",
+                canal,
+                plantillaClave: `${evento}.${canal.toLowerCase()}`,
+                obligatoria: false,
+                activa: true,
+            };
+            if (existente) {
+                await prisma.notificacionRegla.update({
+                    where: { id: existente.id },
+                    data: {
+                        offset: data.offset,
+                        plantillaClave: data.plantillaClave,
+                        obligatoria: data.obligatoria,
+                        activa: true,
+                    },
+                });
+            } else {
+                await prisma.notificacionRegla.create({ data });
+            }
+        }
+    }
+    console.log("[SEED] Evento consentimiento.aceptado (SPEC-241) listo");
+}
+
 // ── SPEC-236 (002-PI-mega-cola): parámetros del motor de expediente + 11 eventos
 // y plantillas de Motor Notif. Idempotente (patrón I-100 de SPEC-201: upsert con
 // update explícito para propagar cambios de default definidos en código).
@@ -3177,6 +3312,9 @@ async function main() {
     // ── Parámetros del módulo Padre (SPEC-230) ─────────────────────────────
     await seedParametrosPadre();
 
+    // ── Parámetros y evento de consentimiento informado (SPEC-241) ─────────
+    await seedConsentimiento();
+
     // ── Parámetros de señal comunitaria (SPEC-234) ─────────────────────────
     await seedParametrosSenalComunitaria();
 
@@ -3228,7 +3366,7 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio };
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como

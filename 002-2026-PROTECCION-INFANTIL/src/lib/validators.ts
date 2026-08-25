@@ -229,6 +229,13 @@ export const recuperarValidarQuerySchema = z.object({
     token: z.string({ error: "Token requerido" }).min(1, "Token requerido"),
 });
 
+// SPEC-241 (002-PI-144): aceptación de consentimiento informado.
+export const consentimientoAceptarSchema = z.object({
+    documentoTipo: z.enum(["POLITICA_DATOS", "CONVENIO_INSTITUCIONAL"]),
+    esRepresentanteLegal: z.boolean(),
+}).strict();
+export type ConsentimientoAceptarInput = z.infer<typeof consentimientoAceptarSchema>;
+
 // Endpoints consumidos solo por el worker (scripts/worker-reportes.mjs).
 export const procesarReporteSchema = z.object({
     reporteId: z.string({ error: "reporteId requerido" }).min(1, "reporteId requerido"),

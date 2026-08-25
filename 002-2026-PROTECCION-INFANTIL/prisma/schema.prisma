@@ -522,6 +522,11 @@ model Usuario {
   // definida = acceso permitido. Para SCHOOL_ADMIN la ventana es la del Colegio.
   inicioServicio      DateTime?
   finServicio         DateTime?
+  // SPEC-241 (002-PI-144): campos de consentimiento informado (aditivos).
+  consentimientoAceptadoEn    DateTime?
+  consentimientoVersion       String?
+  consentimientoDocumentoHash String?
+  consentimientoIP            String?
   creadoEn            DateTime      @default(now())
   actualizadoEn       DateTime      @updatedAt
 
@@ -568,6 +573,8 @@ model Usuario {
   expedientes                  Expediente[]
   // SPEC-206 (002-PI-120): sesiones activas del usuario.
   sesionesLog                  SesionLog[]
+  // SPEC-241 (002-PI-144): traza inmutable de aceptaciones de consentimiento.
+  auditConsentimientos         AuditConsentimiento[]
   // SPEC-234 (002-PI-134): informes consolidados generados por el usuario/worker.
   informesConsolidados         InformeConsolidado[]
   // SPEC-235 (002-PI-135): guías de acción creadas por el admin.
@@ -748,6 +755,25 @@ model SesionLog {
   @@index([cerradaEn, ultimaActividadEn])
   @@index([creadoEn])
   @@map("sesiones_log")
+}
+
+// SPEC-241 (002-PI-144): registro inmutable de aceptación de consentimiento informado.
+model AuditConsentimiento {
+  id                  String   @id @default(cuid())
+  usuarioId           String
+  version             String
+  documentoTipo       String
+  documentoHash       String
+  aceptadoEn          DateTime @default(now())
+  ip                  String
+  userAgent           String?
+  esRepresentanteLegal Boolean @default(false)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, aceptadoEn])
+  @@index([version])
+  @@map("audit_consentimientos")
 }
 
 model Tenant {
