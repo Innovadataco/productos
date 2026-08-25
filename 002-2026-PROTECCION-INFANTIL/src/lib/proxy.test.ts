@@ -181,3 +181,27 @@ describe("proxy — home por rol (SPEC-127, I-40/D-42)", () => {
         expect(new URL(schoolAdmin.headers.get("location")!).pathname).toBe("/dashboard/colegio");
     });
 });
+
+describe("PUBLIC_ROUTES — SPEC-249 hotfix /registro-colegio + /activar", () => {
+    function requestAnonima(pathname: string): NextRequest {
+        return new NextRequest(`http://localhost:5005${pathname}`);
+    }
+
+    it("anónimo alcanza /registro-colegio sin redirect", async () => {
+        const res = await proxy(requestAnonima("/registro-colegio"));
+        expect(res.status, "anónimo → /registro-colegio no redirige").not.toBe(307);
+        expect(res.status, "anónimo → /registro-colegio no redirige").not.toBe(302);
+    });
+
+    it("anónimo alcanza /activar con token sin redirect", async () => {
+        const res = await proxy(requestAnonima("/activar?token=TOKEN-DE-PRUEBA"));
+        expect(res.status, "anónimo → /activar?token no redirige").not.toBe(307);
+        expect(res.status, "anónimo → /activar?token no redirige").not.toBe(302);
+    });
+
+    it("anónimo sigue bloqueado en /dashboard", async () => {
+        const res = await proxy(requestAnonima("/dashboard"));
+        expect(res.status, "anónimo → /dashboard sigue cerrado").toBe(307);
+        expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+    });
+});

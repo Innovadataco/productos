@@ -2549,7 +2549,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | --- | --- | --- | --- | --- |
 | `/` | página | permitir | permite | sí |
 | `//` | página | permitir | permite | sí |
-| `/activar` | página | redirigir→/login | permite | **NO** |
+| `/activar` | página | permitir | permite | sí |
 | `/api/` | api | HTTP 401 | permite | **NO** |
 | `/api/admin` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/analisis/anomalias` | api | HTTP 401 | permite | **NO** |
@@ -2958,7 +2958,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
-| `/registro-colegio` | página | redirigir→/login | permite | **NO** |
+| `/registro-colegio` | página | permitir | permite | sí |
 | `/reportar` | página | permitir | permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -2970,7 +2970,6 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 
 | Ruta | Puerta (anónimo) | Predicado (anónimo) |
 | --- | --- | --- |
-| `/activar` | redirigir→/login | permite |
 | `/api/` | HTTP 401 | permite |
 | `/api/admin` | HTTP 401 | permite |
 | `/api/admin/analisis/anomalias` | HTTP 401 | permite |
@@ -3283,7 +3282,6 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/perfil` | redirigir→/login | permite |
 | `/dashboard/perfil/notificaciones` | redirigir→/login | permite |
 | `/mis-reportes` | redirigir→/login | permite |
-| `/registro-colegio` | redirigir→/login | permite |
 
 ## Eje de módulos (BD): módulo → ruta → rol
 
