@@ -433,6 +433,10 @@ enum CategoriaConducta {
   DIFUSION_NO_CONSENTIDA
   DOXING
   SPAM
+  // SPEC-248 (002-PI-151): Ley 2564 de 2026 art. 6 · migración aditiva.
+  CIBERACOSO
+  HAPPY_SLAPPING
+  STALKING
 }
 
 enum EstadoReporte {

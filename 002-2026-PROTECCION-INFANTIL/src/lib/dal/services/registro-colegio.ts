@@ -42,9 +42,9 @@ function generarTokenOpaco(): string {
 }
 
 function expiracionDesdeAhora(horas: number): Date {
-    const ahoraUtc = new Date();
-    const ahoraBogota = toZonedTime(ahoraUtc, TIMEZONE_BOGOTA);
-    return addHours(ahoraBogota, horas);
+    // La vigencia del token se mide en tiempo absoluto (UTC) para que el
+    // cálculo de expiración sea determinista independientemente del TZ del runner.
+    return addHours(new Date(), horas);
 }
 
 export class RegistroColegioService {
@@ -206,8 +206,8 @@ export class RegistroColegioService {
         if (user.estadoActivacion !== "INVITADO" || !user.tokenInvitacionExpiraEn) {
             return { ok: false, tipo: "ya_usado" };
         }
-        const ahoraBogota = toZonedTime(new Date(), TIMEZONE_BOGOTA);
-        if (user.tokenInvitacionExpiraEn < ahoraBogota) {
+        const ahoraUtc = new Date();
+        if (user.tokenInvitacionExpiraEn < ahoraUtc) {
             return { ok: false, tipo: "expirado" };
         }
 
@@ -232,8 +232,8 @@ export class RegistroColegioService {
         if (user.estadoActivacion !== "INVITADO" || !user.tokenInvitacionExpiraEn) {
             return { valido: false, razon: "ya_usado" };
         }
-        const ahoraBogota = toZonedTime(new Date(), TIMEZONE_BOGOTA);
-        if (user.tokenInvitacionExpiraEn < ahoraBogota) {
+        const ahoraUtc = new Date();
+        if (user.tokenInvitacionExpiraEn < ahoraUtc) {
             return { valido: false, razon: "expirado" };
         }
         return { valido: true, email: user.email };
