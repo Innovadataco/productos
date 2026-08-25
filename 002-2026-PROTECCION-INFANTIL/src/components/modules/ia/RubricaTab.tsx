@@ -6,7 +6,6 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { formatCategoria } from "@/lib/labels";
-import { DefinicionLegalCard, type DefinicionCategoriaView } from "./DefinicionLegalCard";
 
 interface Pregunta {
     texto: string;
@@ -19,23 +18,16 @@ interface ConfigRubricaResponse {
     temperatura: number;
     umbralPresencia: number;
     modeloEmbudo: string;
-    definiciones: Record<string, DefinicionCategoriaView>;
 }
 
 type Message = { type: "success" | "error"; text: string } | null;
 
-interface RubricaTabProps {
-    /** Rol del usuario autenticado (server-side, page.tsx); gatea el botón de edición (spec 248). */
-    rol?: string | null;
-}
-
 /**
  * Tab "Rúbrica" del Centro de Control IA (spec 090, US3-bis).
  * Edita las preguntas factuales por categoría y los parámetros operativos
- * del motor de rúbrica (ia.rubrica.*). SPEC-248 (002-PI-151): agrega el
- * fundamento legal editable por categoría (<DefinicionLegalCard/>).
+ * del motor de rúbrica (ia.rubrica.*).
  */
-export function RubricaTab({ rol }: RubricaTabProps) {
+export function RubricaTab() {
     const [config, setConfig] = useState<ConfigRubricaResponse | null>(null);
     const [categoria, setCategoria] = useState("");
     const [preguntasEdit, setPreguntasEdit] = useState<Pregunta[]>([]);
@@ -128,21 +120,7 @@ export function RubricaTab({ rol }: RubricaTabProps) {
         }
     }
 
-    async function guardarDefinicion(definicion: DefinicionCategoriaView) {
-        const res = await fetch(`/api/admin/ia/rubrica/definiciones/${categoria}`, {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(definicion),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error?.message || "Error guardando la definición legal");
-        setConfig((cfg) => (cfg ? { ...cfg, definiciones: { ...cfg.definiciones, [categoria]: data } } : cfg));
-        setMessage({ type: "success", text: `Definición legal de ${formatCategoria(categoria)} guardada.` });
-    }
-
     const categorias = config ? Object.keys(config.preguntas).sort() : [];
-    const definicionActual = config?.definiciones?.[categoria];
 
     return (
         <div className="space-y-6">
@@ -169,14 +147,6 @@ export function RubricaTab({ rol }: RubricaTabProps) {
                             onChange={(e) => setCategoria(e.target.value)}
                             options={categorias.map((c) => ({ value: c, label: formatCategoria(c) }))}
                         />
-                        {definicionActual && (
-                            <DefinicionLegalCard
-                                categoria={categoria}
-                                definicion={definicionActual}
-                                puedeEditar={rol === "ADMIN"}
-                                onGuardar={guardarDefinicion}
-                            />
-                        )}
                         <div className="space-y-3">
                             {preguntasEdit.map((p, i) => (
                                 <div key={i} className="flex items-center gap-3">

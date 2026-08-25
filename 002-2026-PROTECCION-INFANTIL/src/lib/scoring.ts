@@ -57,10 +57,6 @@ const CATEGORIAS_DEFAULT: CategoriaConducta[] = [
     "DOXING",
     "SPAM",
     "OTRO",
-    // SPEC-248 (002-PI-151): Ley 2564 de 2026 art. 6.
-    "CIBERACOSO",
-    "HAPPY_SLAPPING",
-    "STALKING",
 ];
 
 function getDefaultSeverity(): Record<CategoriaConducta, number> {
@@ -77,9 +73,6 @@ function getDefaultSeverity(): Record<CategoriaConducta, number> {
         DOXING: 85,
         SPAM: 0,
         OTRO: 20,
-        CIBERACOSO: 60,
-        HAPPY_SLAPPING: 75,
-        STALKING: 70,
     };
 }
 

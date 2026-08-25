@@ -1,4 +1,4 @@
-import { RUBRICA_SEMILLA, DEFINICIONES_CATEGORIA } from "../src/lib/ai/rubrica-semilla";
+import { RUBRICA_SEMILLA } from "../src/lib/ai/rubrica-semilla";
 import { normalizarNombreGeografico } from "../src/lib/normalizar";
 import { REGLAS_SEMILLA } from "../src/lib/analisis/reglas/seed-reglas";
 import { syncModulosYGrants } from "./seed-modulos-grants";
@@ -1401,19 +1401,9 @@ async function main() {
                         categorias: ["CONTENIDO_GENERADO_IA"],
                     },
                     {
-                        // SPEC-248 (002-PI-151): Ley 2564 de 2026 art. 6. Solo aplica en
-                        // instalaciones nuevas (idempotente-respetuoso, `update: {}` abajo);
-                        // si el CEO ya editó este parámetro en un ambiente vivo, esta
-                        // agrupación NO se aplica ahí — ver plan.md Decisión 3.
-                        clave: "acoso_digital",
-                        nombre: "Acoso digital",
-                        orden: 5,
-                        categorias: ["CIBERACOSO", "HAPPY_SLAPPING", "STALKING"],
-                    },
-                    {
                         clave: "otro",
                         nombre: "Otro",
-                        orden: 6,
+                        orden: 5,
                         categorias: ["OTRO"],
                     },
                 ],
@@ -2433,10 +2423,6 @@ async function main() {
         ["DOXING", 85],
         ["SPAM", 0],
         ["OTRO", 20],
-        // SPEC-248 (002-PI-151): Ley 2564 de 2026 art. 6.
-        ["CIBERACOSO", 60],
-        ["HAPPY_SLAPPING", 75],
-        ["STALKING", 70],
     ];
     for (const [cat, valor] of severidadesSeed) {
         await prisma.parametroSistema.upsert({
@@ -2485,24 +2471,6 @@ async function main() {
         });
     }
     console.log("Rúbrica de clasificación (spec 090 / SPEC-199) lista");
-
-    // ── Definiciones legales de rúbrica (SPEC-248 / 002-PI-151) ────────────
-    // Idempotente-respetuosa (`update: {}`): a diferencia de ia.rubrica.preguntas,
-    // este parámetro SÍ se edita desde admin (ADMIN → RubricaTab) y esas ediciones
-    // NO deben perderse en cada deploy. Solo se siembra si el parámetro aún no existe.
-    await prisma.parametroSistema.upsert({
-        where: { clave: "ia.rubrica.definiciones" },
-        update: {},
-        create: {
-            clave: "ia.rubrica.definiciones",
-            valor: JSON.stringify(DEFINICIONES_CATEGORIA),
-            tipo: TipoParametro.JSON,
-            categoria: CategoriaParametro.SYSTEM,
-            esPublico: false,
-            descripcion: "Fundamento legal (conducta, referencia normativa, texto literal) editable por categoría",
-        },
-    });
-    console.log("Definiciones legales de rúbrica (spec 248) listas");
 
     // ── Expediente del reporte (spec 096) ──────────────────────────────────
     const ETAPAS_EXPEDIENTE = [

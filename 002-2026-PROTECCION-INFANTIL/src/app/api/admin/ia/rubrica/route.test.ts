@@ -3,7 +3,7 @@ import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
-import { RUBRICA_SEMILLA, DEFINICIONES_CATEGORIA } from "@/lib/ai/rubrica-semilla";
+import { RUBRICA_SEMILLA } from "@/lib/ai/rubrica-semilla";
 import * as auth from "@/lib/auth";
 
 describe("GET /api/admin/ia/rubrica", () => {
@@ -24,22 +24,6 @@ describe("GET /api/admin/ia/rubrica", () => {
         expect(body.temperatura).toBe(0.2);
         expect(body.umbralPresencia).toBe(0.6);
         expect(body.modeloEmbudo).toBe("qwen2.5:14b");
-        // SPEC-248 (002-PI-151): definiciones con fallback a la constante cuando no hay parámetro.
-        expect(body.definiciones).toEqual(DEFINICIONES_CATEGORIA);
-        expect(Object.keys(body.definiciones)).toHaveLength(14);
-    });
-
-    it("SPEC-248: devuelve las definiciones guardadas en ParametroSistema cuando existen", async () => {
-        const definicionesCustom = { ...DEFINICIONES_CATEGORIA, CIBERACOSO: { ...DEFINICIONES_CATEGORIA.CIBERACOSO, definicionLiteral: "Texto editado por el comité." } };
-        await prisma.parametroSistema.create({
-            data: { clave: "ia.rubrica.definiciones", valor: JSON.stringify(definicionesCustom), tipo: "JSON", categoria: "SYSTEM" },
-        });
-
-        const res = await GET();
-        const body = await res.json();
-        expect(body.definiciones.CIBERACOSO.definicionLiteral).toBe("Texto editado por el comité.");
-        // Cero breaking change en los campos previos.
-        expect(body.preguntas).toEqual(RUBRICA_SEMILLA);
     });
 
     it("devuelve los valores guardados en ParametroSistema cuando existen", async () => {

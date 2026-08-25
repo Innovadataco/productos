@@ -3,15 +3,11 @@ import { RolUsuario } from "@prisma/client";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { cargarConfigRubrica } from "@/lib/ai/rubrica";
-import { IaRubricaService } from "@/lib/dal/services/ia-rubrica";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 /**
  * GET /api/admin/ia/rubrica — configuración actual de la rúbrica (spec 090, US3-bis).
  * Lee los parámetros ia.rubrica.* (con defaults de la semilla si no existen).
- * SPEC-248 (002-PI-151): agrega `definiciones` (fundamento legal por categoría);
- * se resuelve aparte de `cargarConfigRubrica()` (candado I-101: `src/lib/ai/rubrica.ts`
- * es intocable) para no tocar el motor de clasificación.
  */
 export async function GET() {
     try {
@@ -19,14 +15,12 @@ export async function GET() {
         await assertModulo(user, "ia_rubrica");
 
         const cfg = await cargarConfigRubrica();
-        const definiciones = await new IaRubricaService().obtenerDefiniciones();
         return NextResponse.json({
             preguntas: cfg.preguntas,
             modelos: cfg.modelos,
             temperatura: cfg.temperatura,
             umbralPresencia: cfg.umbralPresencia,
             modeloEmbudo: cfg.modeloEmbudo,
-            definiciones,
         });
     } catch (error) {
         if (error instanceof AppError) {

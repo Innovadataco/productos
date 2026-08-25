@@ -33,10 +33,6 @@ const SEVERIDAD_CATEGORIA: Record<CategoriaConducta, number> = {
     DOXING: 85,
     SPAM: 0,
     OTRO: 20,
-    // SPEC-248 (002-PI-151): Ley 2564 de 2026 art. 6.
-    CIBERACOSO: 60,
-    HAPPY_SLAPPING: 75,
-    STALKING: 70,
 };
 
 function factorCantidad(total: number): number {
