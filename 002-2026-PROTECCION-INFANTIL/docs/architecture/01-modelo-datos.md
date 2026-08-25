@@ -1717,6 +1717,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | passwordHash | String | — |
 | rol | RolUsuario | — |
 | estado | EstadoUsuario | — |
+| estadoActivacion | EstadoActivacion | — |
+| tokenInvitacion | String | único, opcional |
+| tokenInvitacionExpiraEn | DateTime | opcional |
 | debeCambiarPassword | Boolean | — |
 | intentosFallidos | Int | — |
 | bloqueadoHasta | DateTime | opcional |

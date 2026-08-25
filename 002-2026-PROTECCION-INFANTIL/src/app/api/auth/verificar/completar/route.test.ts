@@ -72,4 +72,27 @@ describe("POST /api/auth/verificar/completar", { timeout: 30_000 }, () => {
         const user = await prisma.usuario.findUnique({ where: { email: "completar-ok@example.com" } });
         expect(user?.nombre).toBe("Padre Prueba");
     });
+
+    it("crea colegio y rector SCHOOL_ADMIN cuando viene nombreColegio (SPEC-240)", async () => {
+        const token = await tokenVerificacion("rector-colegio@example.com");
+        const res = await POST(makeRequest({
+            token,
+            password: "Clave1234",
+            nombre: "Rector Prueba",
+            nombreColegio: "Colegio Nuevo",
+            rol: "SCHOOL_ADMIN",
+        }));
+        expect(res.status).toBe(201);
+        const data = await res.json();
+        expect(data.user.email).toBe("rector-colegio@example.com");
+        expect(data.user.rol).toBe("SCHOOL_ADMIN");
+
+        const user = await prisma.usuario.findUnique({
+            where: { email: "rector-colegio@example.com" },
+            include: { colegio: true },
+        });
+        expect(user?.rol).toBe("SCHOOL_ADMIN");
+        expect(user?.estadoActivacion).toBe("REGISTRADO");
+        expect(user?.colegio?.nombre).toBe("Colegio Nuevo");
+    });
 });

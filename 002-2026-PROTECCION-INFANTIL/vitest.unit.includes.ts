@@ -239,4 +239,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/analisis/acciones/handlers/crear-bono.test.ts",
     "src/lib/analisis/acciones/handlers/crear-alerta.test.ts",
     "src/lib/analisis/acciones/handlers/asignar-operador.test.ts",
+    // SPEC-240 (002-PI-143): pre-registro simplificado de colegio (sin BD).
+    "src/app/dashboard/admin/colegios/nuevo/NuevoColegioPageClient.test.tsx",
+    "src/components/modules/InvitacionEnviadaModal.test.tsx",
 ];

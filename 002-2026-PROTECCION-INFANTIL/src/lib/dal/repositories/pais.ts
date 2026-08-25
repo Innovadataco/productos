@@ -26,4 +26,9 @@ export class PaisRepository {
     findById(id: string) {
         return this.db.pais.findUnique({ where: { id } });
     }
+
+    /** SPEC-240 (002-PI-143): país por código ISO (defaults de registro de colegio). */
+    findByCodigo(codigo: string) {
+        return this.db.pais.findUnique({ where: { codigo } });
+    }
 }

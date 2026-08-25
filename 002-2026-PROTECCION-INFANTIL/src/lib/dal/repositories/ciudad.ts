@@ -26,6 +26,24 @@ export class CiudadRepository {
         return this.db.ciudad.findUnique({ where: { id } });
     }
 
+    /** SPEC-240 (002-PI-143): ciudad por nombre y código de país (fallback ubicación default). */
+    findByNombreYPaisCodigo(nombre: string, paisCodigo: string) {
+        return this.db.ciudad.findFirst({
+            where: {
+                nombre,
+                esActivo: true,
+                pais: { codigo: paisCodigo },
+            },
+        });
+    }
+
+    /** SPEC-240 (002-PI-143): ciudad por nombre y país (defaults de registro de colegio). */
+    findByNombreYPais(nombre: string, paisId: string) {
+        return this.db.ciudad.findFirst({
+            where: { nombre, paisId },
+        });
+    }
+
     /** GET /api/ciudades: activas del país (filtro opcional por departamento), alfabéticas. */
     listarActivasPorPais(paisId: string, departamentoId?: string) {
         return this.db.ciudad.findMany({

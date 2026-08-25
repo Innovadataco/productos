@@ -26,6 +26,13 @@ enum EstadoUsuario {
   bloqueado
 }
 
+// SPEC-240 (002-PI-143): ciclo de vida de activación de cuentas institucionales.
+enum EstadoActivacion {
+  REGISTRADO
+  INVITADO
+  ACTIVO
+}
+
 enum TipoParametro {
   STRING
   INTEGER
@@ -499,6 +506,10 @@ model Usuario {
   passwordHash        String
   rol                 RolUsuario
   estado              EstadoUsuario @default(activo)
+  // SPEC-240 (002-PI-143): estado de activación institucional.
+  estadoActivacion    EstadoActivacion @default(REGISTRADO)
+  tokenInvitacion     String?          @unique
+  tokenInvitacionExpiraEn DateTime?    @db.Timestamptz(6)
   debeCambiarPassword Boolean       @default(false)
   intentosFallidos    Int           @default(0)
   bloqueadoHasta      DateTime?

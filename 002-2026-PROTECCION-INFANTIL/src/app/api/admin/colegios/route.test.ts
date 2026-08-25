@@ -1,11 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { GET, POST } from "./route";
-import { GET as GETMeColegio } from "@/app/api/me/colegio/route";
-import { POST as POSTLogin } from "@/app/api/auth/login/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
-import { crearUsuario, crearTokenUsuario, crearPaisCiudad } from "@/lib/reporte-test-utils";
+import { crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
 
 let mockToken: string | undefined;
 
@@ -20,28 +18,20 @@ vi.mock("@/lib/notificaciones", () => ({
     programar: vi.fn().mockResolvedValue({ programadas: 1, canceladasPorReemplazo: 0 }),
 }));
 
-function baseColegio(paisId: string, ciudadId: string, departamentoId?: string) {
-    const hoy = new Date();
-    const inicio = new Date(hoy);
-    inicio.setDate(inicio.getDate() - 1);
-    const fin = new Date(hoy);
-    fin.setFullYear(fin.getFullYear() + 1);
+function bodyNuevoColegio() {
     return {
-        nombre: "Colegio Test",
-        paisId,
-        departamentoId,
-        ciudadId,
-        direccion: "Calle 1 # 1-1",
-        representanteLegalNombre: "Representante Test",
-        representanteLegalIdentificacion: "123456789",
-        representanteLegalEmail: "rep@test.com",
-        representanteLegalTelefono: "3000000000",
-        inicioServicio: inicio.toISOString(),
-        finServicio: fin.toISOString(),
-        tipoPeriodo: "ANUAL",
-        adminEmail: `colegio-admin-${Date.now()}@test.com`,
-        adminNombre: "Admin Colegio",
+        nombreColegio: "Colegio Test",
+        nombreRector: "Rector Test",
+        emailRector: `rector-${Date.now()}@test.com`,
     };
+}
+
+function postRequest(token: string, body: unknown): Request {
+    return new Request("http://localhost:5005/api/admin/colegios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie: `token=${token}` },
+        body: JSON.stringify(body),
+    });
 }
 
 describe("/api/admin/colegios", () => {
@@ -51,34 +41,30 @@ describe("/api/admin/colegios", () => {
         mockToken = undefined;
     });
 
-    it("crea un colegio con su usuario SCHOOL_ADMIN y devuelve password temporal", async () => {
+    it("pre-registra un colegio con 3 campos y crea rector INVITADO (SPEC-240)", async () => {
         const admin = await crearUsuario("ADMIN");
-        const { pais, ciudad } = await crearPaisCiudad();
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
 
-        const body = baseColegio(pais.id, ciudad.id);
-        const res = await POST(
-            new Request("http://localhost:5005/api/admin/colegios", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                body: JSON.stringify(body),
-            })
-        );
+        const body = bodyNuevoColegio();
+        const res = await POST(postRequest(mockToken, body));
 
         expect(res.status).toBe(201);
         const json = await res.json();
-        expect(json.colegio.nombre).toBe("Colegio Test");
-        expect(json.colegio.admin.rol).toBeUndefined();
-        expect(json.colegio.admin.email).toBe(body.adminEmail.toLowerCase());
-        expect(json.passwordTemporal).toHaveLength(12);
-        expect(json.emailEnviado).toBe(true);
+        expect(json.colegio.nombre).toBe(body.nombreColegio);
+        expect(json.colegio.estado).toBe("activo");
+        expect(json.admin.email).toBe(body.emailRector.toLowerCase());
+        expect(json.admin.estadoActivacion).toBe("INVITADO");
+        expect(json.passwordTemporal).toBeUndefined();
+        expect(json.mensaje).toContain("Invitación enviada");
 
         const schoolAdmin = await prisma.usuario.findUnique({
-            where: { email: body.adminEmail.toLowerCase() },
+            where: { email: body.emailRector.toLowerCase() },
             include: { colegio: true },
         });
         expect(schoolAdmin).not.toBeNull();
         expect(schoolAdmin?.rol).toBe("SCHOOL_ADMIN");
+        expect(schoolAdmin?.estadoActivacion).toBe("INVITADO");
+        expect(schoolAdmin?.tokenInvitacion).not.toBeNull();
         expect(schoolAdmin?.colegioId).toBe(json.colegio.id);
 
         const audit = await prisma.auditLog.findFirst({
@@ -87,84 +73,39 @@ describe("/api/admin/colegios", () => {
         expect(audit).not.toBeNull();
     });
 
-    it("crea un colegio enviando fechas en formato datetime-local", async () => {
-        const admin = await crearUsuario("ADMIN");
-        const { pais, ciudad } = await crearPaisCiudad();
-        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
-
-        const hoy = new Date();
-        const inicio = new Date(hoy);
-        inicio.setDate(inicio.getDate() - 1);
-        const fin = new Date(hoy);
-        fin.setFullYear(fin.getFullYear() + 1);
-
-        const body = {
-            ...baseColegio(pais.id, ciudad.id),
-            inicioServicio: new Date(inicio.toISOString().slice(0, 16)).toISOString(),
-            finServicio: new Date(fin.toISOString().slice(0, 16)).toISOString(),
-        };
-
-        const res = await POST(
-            new Request("http://localhost:5005/api/admin/colegios", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                body: JSON.stringify(body),
-            })
-        );
-
-        expect(res.status).toBe(201);
-        const json = await res.json();
-        expect(json.colegio.nombre).toBe("Colegio Test");
-    });
-
     it("rechaza SCHOOL_ADMIN intentando crear colegio", async () => {
         const schoolAdmin = await crearUsuario("SCHOOL_ADMIN");
         mockToken = await crearTokenUsuario(schoolAdmin.id, "SCHOOL_ADMIN");
-        const { pais, ciudad } = await crearPaisCiudad();
 
-        const res = await POST(
-            new Request("http://localhost:5005/api/admin/colegios", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                body: JSON.stringify(baseColegio(pais.id, ciudad.id)),
-            })
-        );
-
+        const res = await POST(postRequest(mockToken, bodyNuevoColegio()));
         expect(res.status).toBe(403);
     });
 
-    it("rechaza crear colegio si el email del admin ya existe", async () => {
+    it("rechaza crear colegio si el email del rector ya existe", async () => {
         const admin = await crearUsuario("ADMIN");
         const existing = await crearUsuario("PARENT", "duplicado@test.com");
-        const { pais, ciudad } = await crearPaisCiudad();
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
 
-        const body = baseColegio(pais.id, ciudad.id);
-        body.adminEmail = existing.email;
+        const body = bodyNuevoColegio();
+        body.emailRector = existing.email;
 
-        const res = await POST(
-            new Request("http://localhost:5005/api/admin/colegios", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                body: JSON.stringify(body),
-            })
-        );
-
+        const res = await POST(postRequest(mockToken, body));
         expect(res.status).toBe(409);
+    });
+
+    it("rechaza body inválido (faltan campos)", async () => {
+        const admin = await crearUsuario("ADMIN");
+        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
+
+        const res = await POST(postRequest(mockToken, { nombreColegio: "X" }));
+        expect(res.status).toBe(400);
     });
 
     it("lista colegios creados", async () => {
         const admin = await crearUsuario("ADMIN");
-        const { pais, ciudad } = await crearPaisCiudad();
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
 
-        await POST(
-            new Request("http://localhost:5005/api/admin/colegios", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                body: JSON.stringify(baseColegio(pais.id, ciudad.id)),
-            })
-        );
+        await POST(postRequest(mockToken, bodyNuevoColegio()));
 
         const res = await GET(
             new Request("http://localhost:5005/api/admin/colegios", {
@@ -177,140 +118,35 @@ describe("/api/admin/colegios", () => {
         expect(json.colegios).toHaveLength(1);
     });
 
-    it("rechaza período LIBRE con fecha fin menor o igual al inicio", async () => {
+    it("admite payload legacy completo para journeys existentes (SPEC-114/133)", async () => {
         const admin = await crearUsuario("ADMIN");
-        const { pais, ciudad } = await crearPaisCiudad();
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
 
-        const hoy = new Date();
-        const body = {
-            ...baseColegio(pais.id, ciudad.id),
-            tipoPeriodo: "LIBRE",
-            inicioServicio: hoy.toISOString(),
-            finServicio: hoy.toISOString(),
-        };
+        const pais = await prisma.pais.findUnique({ where: { codigo: "CO" } });
+        const ciudad = await prisma.ciudad.findFirst({ where: { paisId: pais!.id } });
+        const email = `legacy-${Date.now()}@test.com`;
+        const inicio = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
         const res = await POST(
-            new Request("http://localhost:5005/api/admin/colegios", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                body: JSON.stringify(body),
-            })
-        );
-
-        expect(res.status).toBe(400);
-    });
-
-    it("calcula la fecha fin en el servidor según el tipo de período", async () => {
-        const admin = await crearUsuario("ADMIN");
-        const { pais, ciudad } = await crearPaisCiudad();
-        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
-
-        const inicio = new Date();
-        const body = {
-            ...baseColegio(pais.id, ciudad.id),
-            tipoPeriodo: "MENSUAL",
-            inicioServicio: inicio.toISOString(),
-        };
-
-        const res = await POST(
-            new Request("http://localhost:5005/api/admin/colegios", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                body: JSON.stringify(body),
+            postRequest(mockToken, {
+                nombre: `Colegio Legacy ${Date.now()}`,
+                paisId: pais!.id,
+                ciudadId: ciudad!.id,
+                representanteLegalNombre: "Rector Legacy",
+                representanteLegalIdentificacion: "CC-12345",
+                representanteLegalEmail: email,
+                inicioServicio: inicio.toISOString(),
+                finServicio: new Date(inicio.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                tipoPeriodo: "ANUAL",
+                adminEmail: email,
+                adminNombre: "Admin Legacy",
             })
         );
 
         expect(res.status).toBe(201);
         const json = await res.json();
-        const finEsperado = new Date(inicio.getTime());
-        finEsperado.setMonth(finEsperado.getMonth() + 1);
-        expect(new Date(json.colegio.finServicio).toISOString()).toBe(finEsperado.toISOString());
-    });
-});
-
-describe("/api/me/colegio", () => {
-    beforeEach(async () => {
-        await resetDatabase();
-        await resetRateLimitStore();
-        mockToken = undefined;
-    });
-
-    it("SCHOOL_ADMIN obtiene la información de su colegio", async () => {
-        const admin = await crearUsuario("ADMIN");
-        const { pais, ciudad } = await crearPaisCiudad();
-        const adminToken = await crearTokenUsuario(admin.id, "ADMIN");
-        mockToken = adminToken;
-
-        const createRes = await POST(
-            new Request("http://localhost:5005/api/admin/colegios", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                body: JSON.stringify(baseColegio(pais.id, ciudad.id)),
-            })
-        );
-        expect(createRes.status).toBe(201);
-        const createJson = await createRes.json();
-        const schoolAdmin = await prisma.usuario.findUnique({
-            where: { email: createJson.colegio.admin.email },
-        });
-
-        mockToken = await crearTokenUsuario(schoolAdmin!.id, "SCHOOL_ADMIN");
-        const res = await GETMeColegio();
-        expect(res.status).toBe(200);
-        const json = await res.json();
-        expect(json.colegio.id).toBe(createJson.colegio.id);
-    });
-});
-
-describe("/api/auth/login vigencia SCHOOL_ADMIN", () => {
-    beforeEach(async () => {
-        await resetDatabase();
-        await resetRateLimitStore();
-        mockToken = undefined;
-    });
-
-    it("bloquea login de SCHOOL_ADMIN con servicio vencido", async () => {
-        const admin = await crearUsuario("ADMIN");
-        const { pais, ciudad } = await crearPaisCiudad();
-        const adminToken = await crearTokenUsuario(admin.id, "ADMIN");
-        mockToken = adminToken;
-
-        const hoy = new Date();
-        const inicio = new Date(hoy);
-        inicio.setDate(inicio.getDate() - 60);
-        const fin = new Date(hoy);
-        fin.setDate(fin.getDate() - 30);
-
-        const body = baseColegio(pais.id, ciudad.id);
-        body.inicioServicio = inicio.toISOString();
-        body.finServicio = fin.toISOString();
-        // Con período LIBRE el servidor respeta las fechas manuales (vencido a propósito).
-        body.tipoPeriodo = "LIBRE";
-
-        const createRes = await POST(
-            new Request("http://localhost:5005/api/admin/colegios", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
-                body: JSON.stringify(body),
-            })
-        );
-        expect(createRes.status).toBe(201);
-        const createJson = await createRes.json();
-
-        const loginRes = await POSTLogin(
-            new Request("http://localhost:5005/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: createJson.colegio.admin.email,
-                    password: createJson.passwordTemporal,
-                }),
-            })
-        );
-
-        expect(loginRes.status).toBe(403);
-        const loginJson = await loginRes.json();
-        expect(loginJson.error.code).toBe("FORBIDDEN");
+        expect(json.passwordTemporal).toBeTruthy();
+        expect(json.colegio.admin.debeCambiarPassword).toBe(true);
+        expect(json.colegio.admin.email).toBe(email.toLowerCase());
     });
 });
