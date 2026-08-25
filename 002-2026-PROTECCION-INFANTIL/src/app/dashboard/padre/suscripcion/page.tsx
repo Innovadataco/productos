@@ -12,6 +12,7 @@ import { obtenerTasaIva, ivaAplicaA } from "@/lib/pagos/parametros-pagos";
 import { SuscripcionVista } from "@/components/modules/cliente/suscripcion/SuscripcionVista";
 import { PlanesSelector } from "@/components/modules/pagos/PlanesSelector";
 import { EsperandoAutorizacion } from "@/components/modules/pagos/EsperandoAutorizacion";
+import { obtenerCuponesRecompensaDelUsuario } from "@/lib/pagos/entregar-cupones-recompensa.service";
 import type { PlanSelectorDTO } from "@/lib/pagos/planes-selector.types";
 
 export const metadata: Metadata = {
@@ -97,15 +98,18 @@ export default async function PadreSuscripcionPage() {
     });
 
     if (suscripcion && (suscripcion.estado === "ACTIVA" || suscripcion.estado === "EN_GRACIA")) {
-        const vista = await obtenerVistaSuscripcion({
-            id: usuario.id,
-            rol: usuario.rol,
-            colegioId: usuario.colegioId,
-        });
+        const [vista, cupones] = await Promise.all([
+            obtenerVistaSuscripcion({
+                id: usuario.id,
+                rol: usuario.rol,
+                colegioId: usuario.colegioId,
+            }),
+            obtenerCuponesRecompensaDelUsuario(usuario.id),
+        ]);
         if (vista) {
             return (
                 <main className="min-h-screen bg-page py-4">
-                    <SuscripcionVista vista={vista} color="cielo" mostrarContrato={false} />
+                    <SuscripcionVista vista={vista} color="cielo" mostrarContrato={false} cupones={cupones} />
                 </main>
             );
         }

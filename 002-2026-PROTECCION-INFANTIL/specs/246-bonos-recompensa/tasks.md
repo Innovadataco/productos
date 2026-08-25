@@ -4,26 +4,26 @@
 - [x] Escribir `spec.md`, `plan.md`, `tasks.md`.
 
 ## Fase 2 · Schema
-- [ ] Extender `BonoPromocional` y crear enum `OrigenBono`.
+- [x] Extender `BonoPromocional` y crear enum `OrigenBono` (migración compartida del mega-lote).
 
 ## Fase 3 · Servicios
-- [ ] Extender `bono-promocional-repository.ts`.
-- [ ] Crear `entregar-cupones-recompensa.service.ts`.
+- [x] Extender `PagosRepository` con métodos de recompensa.
+- [x] Crear `entregar-cupones-recompensa.service.ts`.
 
 ## Fase 4 · Trigger
-- [ ] Cablear entrega en autorización SPEC-245.
+- [x] Cablear entrega en `admin-activacion-manual.service.ts` y `admin-autorizar-solicitud.service.ts`.
 
 ## Fase 5 · UI
-- [ ] Crear `MisCuponesCard`.
-- [ ] Integrar en `/dashboard/padre/suscripcion`.
-- [ ] Filtro `origen` en admin `/dashboard/admin/bonos`.
+- [x] Crear `MisCuponesCard`.
+- [x] Integrar en `/dashboard/padre/suscripcion`.
+- [x] Filtro `origen` en admin `/dashboard/admin/bonos`.
 
 ## Fase 6 · Aplicación
-- [ ] Ajustar `AplicarBonoCard` para `transferible`.
+- [x] Ajustar `validarCodigoBono` y `aplicarBonoPromocional` para `transferible`.
 
 ## Fase 7 · Seed/eventos
-- [ ] Sembrar `pagos.recompensa.*` y `bono.entregado_recompensa`.
+- [x] Sembrar plantillas/reglas de `bono.entregado_recompensa` (parámetros ya sembrados en SPEC-244/245).
 
 ## Fase 8 · Validate
-- [ ] Tests.
-- [ ] Gate local.
+- [x] Tests (integración + unitarios).
+- [x] Gate local: `tsc`, `lint`, `tokens:check` verdes; `arch:check` rojo por drift (se regenera en SPEC-247).

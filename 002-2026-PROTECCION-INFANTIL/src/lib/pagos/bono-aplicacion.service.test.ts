@@ -49,6 +49,9 @@ function bonoBase(overrides: Partial<{ tipo: TipoBono; valor: number; aplicaSolo
         activo: true,
         descripcion: null,
         creadoPorAdminId: "admin-1",
+        origen: "PROMOCION_ADMIN" as const,
+        beneficiarioUsuarioId: null,
+        transferible: true,
         createdAt: ahora,
         updatedAt: ahora,
     };
@@ -246,6 +249,44 @@ describe("aplicarBonoPromocional", () => {
         expect(mockLogAudit).toHaveBeenCalledWith(
             expect.objectContaining({ ipAddress: "1.2.3.4", userAgent: "jest" })
         );
+    });
+
+    it("rechaza un cupón no transferible usado por otro usuario (SPEC-246)", async () => {
+        mockRepo.obtenerBonoPromocionalPorId.mockResolvedValue({
+            ...bonoBase(),
+            beneficiarioUsuarioId: "user-1",
+            transferible: false,
+        });
+
+        await expect(
+            aplicarBonoPromocional({
+                suscripcionId: "sub-1",
+                bonoId: "bono-1",
+                montoBaseUSD: 100,
+                usuarioId: "user-2",
+            })
+        ).rejects.toMatchObject({
+            message: "El cupón no es transferible y no pertenece a tu cuenta",
+            code: ERROR_CODES.FORBIDDEN,
+            statusCode: 403,
+        });
+    });
+
+    it("aplica un cupón transferible aunque el usuario no sea el beneficiario (SPEC-246)", async () => {
+        mockRepo.obtenerBonoPromocionalPorId.mockResolvedValue({
+            ...bonoBase(),
+            beneficiarioUsuarioId: "user-1",
+            transferible: true,
+        });
+
+        const resultado = await aplicarBonoPromocional({
+            suscripcionId: "sub-1",
+            bonoId: "bono-1",
+            montoBaseUSD: 100,
+            usuarioId: "user-2",
+        });
+
+        expect(resultado.descuentoUSD).toBe(20);
     });
 });
 

@@ -121,3 +121,31 @@ export async function ivaAplicaA(tipoTitular: TipoTitular): Promise<boolean> {
     const aplicaA = await getParametroSistemaValor("pagos.iva.aplica_a");
     return ivaAplicaATitular(aplicaA, tipoTitular);
 }
+
+// SPEC-246 (002-PI-149): parámetros del programa de cupones de recompensa.
+
+export interface ParametrosRecompensa {
+    cuponesPorPago: number;
+    vigenciaDias: number;
+    porcentajeDescuento: number;
+    topeMaxCOP: number | null;
+}
+
+/** Lee los parámetros de generación de cupones de recompensa con defaults defensivos. */
+export async function obtenerParametrosRecompensa(): Promise<ParametrosRecompensa> {
+    const [cuponesPorPago, vigenciaDias, porcentajeDescuento, topeMaxCOPRaw] = await Promise.all([
+        getParametroSistemaValor("pagos.recompensa.cupones_por_pago"),
+        getParametroSistemaValor("pagos.recompensa.vigencia_dias"),
+        getParametroSistemaValor("pagos.recompensa.porcentaje_descuento"),
+        getParametroSistemaValor("pagos.recompensa.tope_max_cop"),
+    ]);
+
+    const topeMaxCOP = topeMaxCOPRaw?.trim() ? parseFloatNoNegativo(topeMaxCOPRaw, 0) || null : null;
+
+    return {
+        cuponesPorPago: parseEnteroPositivo(cuponesPorPago, 5),
+        vigenciaDias: parseEnteroPositivo(vigenciaDias, 90),
+        porcentajeDescuento: Math.min(100, parseFloatNoNegativo(porcentajeDescuento, 20)),
+        topeMaxCOP,
+    };
+}

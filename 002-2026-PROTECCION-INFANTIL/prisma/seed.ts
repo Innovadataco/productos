@@ -1835,6 +1835,9 @@ async function main() {
     // SPEC-244 (002-PI-147): eventos/plantillas del ciclo de vida de suscripción.
     await seedEventosSuscripcion();
 
+    // SPEC-246 (002-PI-149): eventos/plantillas de cupones de recompensa.
+    await seedEventosRecompensa();
+
     // SPEC-240 (002-PI-143): evento/plantilla de invitación al rector.
     await seedInvitacionColegio();
 
@@ -3405,7 +3408,7 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedEventosSuscripcion };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedEventosSuscripcion, seedEventosRecompensa };
 
 // ── SPEC-244 (002-PI-147): catálogo Motor Notif del ciclo de vida de suscripción ──
 // Idempotente: plantillas con upsert por clave; reglas con findFirst→update/create
@@ -3569,6 +3572,107 @@ async function seedEventosSuscripcion() {
         }
     }
     console.log("[SEED] Catálogo Motor Notif suscripcion.solicitada/activada listo (SPEC-244)");
+}
+
+// ── SPEC-246 (002-PI-149): catálogo Motor Notif de cupones de recompensa ──
+async function seedEventosRecompensa() {
+    const variablesSchema = {
+        type: "object",
+        properties: {
+            nombre: { type: "string" },
+            codigos: { type: "string" },
+            porcentaje: { type: "number" },
+            vigenciaHasta: { type: "string" },
+        },
+    };
+
+    const plantillas = [
+        {
+            clave: "bono.entregado_recompensa.email",
+            canal: "EMAIL" as const,
+            asunto: "Tus cupones de recompensa llegaron 🎁",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "Gracias por tu suscripción. Recibiste estos cupones de descuento para compartir:\n\n" +
+                "{{codigos}}\n\n" +
+                "Cada uno aplica un {{porcentaje}}% de descuento y es válido hasta {{vigenciaHasta}}.",
+            variablesSchema,
+        },
+        {
+            clave: "bono.entregado_recompensa.in_app",
+            canal: "IN_APP" as const,
+            asunto: null,
+            cuerpoMarkdown: "Recibiste cupones de recompensa: {{codigos}}. Válidos hasta {{vigenciaHasta}}.",
+            variablesSchema,
+        },
+    ];
+
+    for (const pl of plantillas) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: pl.variablesSchema,
+                activa: true,
+            },
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: pl.variablesSchema,
+                activa: true,
+            },
+        });
+    }
+
+    const reglas: Array<{
+        evento: string;
+        rol: string;
+        canal: "EMAIL" | "IN_APP";
+        plantillaClave: string;
+        obligatoria: boolean;
+    }> = [
+        { evento: "bono.entregado_recompensa", rol: "PARENT", canal: "EMAIL", plantillaClave: "bono.entregado_recompensa.email", obligatoria: true },
+        { evento: "bono.entregado_recompensa", rol: "PARENT", canal: "IN_APP", plantillaClave: "bono.entregado_recompensa.in_app", obligatoria: false },
+    ];
+
+    for (const regla of reglas) {
+        const existente = await prisma.notificacionRegla.findFirst({
+            where: {
+                evento: regla.evento,
+                rol: regla.rol,
+                canal: regla.canal,
+            },
+            orderBy: { createdAt: "desc" },
+        });
+        if (existente) {
+            await prisma.notificacionRegla.update({
+                where: { id: existente.id },
+                data: {
+                    offset: "+0m",
+                    plantillaClave: regla.plantillaClave,
+                    obligatoria: regla.obligatoria,
+                    activa: true,
+                },
+            });
+        } else {
+            await prisma.notificacionRegla.create({
+                data: {
+                    evento: regla.evento,
+                    rol: regla.rol,
+                    offset: "+0m",
+                    canal: regla.canal,
+                    plantillaClave: regla.plantillaClave,
+                    obligatoria: regla.obligatoria,
+                    activa: true,
+                },
+            });
+        }
+    }
+    console.log("[SEED] Catálogo Motor Notif bono.entregado_recompensa listo (SPEC-246)");
 }
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de

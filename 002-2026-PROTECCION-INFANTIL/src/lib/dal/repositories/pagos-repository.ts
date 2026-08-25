@@ -4,7 +4,7 @@
  * clase en lugar de importar `@/lib/prisma` directamente.
  */
 import type { Prisma } from "@prisma/client";
-import { TipoTitular, DuracionPlan, EstadoPago, EstadoSuscripcion, OrigenSuscripcion, RolUsuario, MetodoPagoManual } from "@prisma/client";
+import { TipoTitular, DuracionPlan, EstadoPago, EstadoSuscripcion, OrigenSuscripcion, OrigenBono, RolUsuario, MetodoPagoManual, BonoPromocional } from "@prisma/client";
 import { toZonedTime, formatInTimeZone } from "date-fns-tz";
 import { addDays, startOfDay, endOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
@@ -86,6 +86,7 @@ export interface BonoPromocionalResumen {
     vigenciaInicio: Date;
     vigenciaFin: Date;
     activo: boolean;
+    origen: OrigenBono;
 }
 
 export interface TargetSinSuscripcion {
@@ -408,14 +409,18 @@ export class PagosRepository {
 
     /**
      * SPEC-212: listado paginado de bonos con filtro por activo/inactivo.
+     * SPEC-246: filtro adicional por origen (PROMOCION_ADMIN / RECOMPENSA_PAGO).
      */
     async listarBonos(
-        filtros: { activo?: boolean | undefined },
+        filtros: { activo?: boolean | undefined; origen?: OrigenBono | undefined },
         paginacion: PaginacionParams
     ): Promise<ResultadoPaginado<BonoPromocionalResumen>> {
         const where: Prisma.BonoPromocionalWhereInput = {};
         if (filtros.activo !== undefined) {
             where.activo = filtros.activo;
+        }
+        if (filtros.origen !== undefined) {
+            where.origen = filtros.origen;
         }
 
         const [items, total] = await Promise.all([
@@ -433,6 +438,35 @@ export class PagosRepository {
 
     actualizarBonoPromocional(id: string, data: Prisma.BonoPromocionalUncheckedUpdateInput) {
         return this.db.bonoPromocional.update({ where: { id }, data });
+    }
+
+    /**
+     * SPEC-246 (002-PI-149): cuenta cuántos bonos de recompensa ya tiene un padre.
+     * Se usa como guard de idempotencia (una entrega por padre por vida).
+     */
+    contarBonosRecompensaPorBeneficiario(usuarioId: string): Promise<number> {
+        return this.db.bonoPromocional.count({
+            where: { origen: OrigenBono.RECOMPENSA_PAGO, beneficiarioUsuarioId: usuarioId },
+        });
+    }
+
+    /**
+     * SPEC-246 (002-PI-149): bonos de un beneficiario con conteo de usos para
+     * determinar estado (vigente / usado / vencido) en MisCuponesCard.
+     */
+    async listarBonosPorBeneficiario(
+        usuarioId: string,
+        origen?: OrigenBono
+    ): Promise<Array<BonoPromocional & { _count: { usos: number } }>> {
+        const where: Prisma.BonoPromocionalWhereInput = { beneficiarioUsuarioId: usuarioId };
+        if (origen) {
+            where.origen = origen;
+        }
+        return this.db.bonoPromocional.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            include: { _count: { select: { usos: true } } },
+        });
     }
 
     // ── Bono aplicado ──

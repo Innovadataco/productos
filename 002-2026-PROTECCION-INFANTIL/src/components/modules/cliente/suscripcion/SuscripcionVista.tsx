@@ -11,6 +11,8 @@ import { AplicarBonoCard } from "./AplicarBonoCard";
 import { ContratoCard } from "./ContratoCard";
 import { CancelarSuscripcion } from "./CancelarSuscripcion";
 import { RenovacionForm } from "./RenovacionForm";
+import { MisCuponesCard } from "./MisCuponesCard";
+import type { CuponRecompensaDTO } from "@/lib/pagos/entregar-cupones-recompensa.service";
 
 /**
  * SPEC-211 (002-PI-111): composición de los 7 bloques estándar de la vista de
@@ -22,10 +24,12 @@ export function SuscripcionVista({
     vista,
     color,
     mostrarContrato,
+    cupones,
 }: {
     vista: VistaSuscripcion;
     color: ColorRol;
     mostrarContrato: boolean;
+    cupones?: CuponRecompensaDTO[] | undefined;
 }) {
     const acento = ACENTOS[color];
     const [mostrarRenovacion, setMostrarRenovacion] = useState(false);
@@ -63,6 +67,9 @@ export function SuscripcionVista({
                 />
                 <AplicarBonoCard suscripcionId={vista.id} montoBaseUSD={vista.plan.precioBaseUSD} acento={acento} />
             </div>
+
+            {/* 5.5. Cupones de recompensa (SPEC-246) */}
+            {cupones && cupones.length > 0 && <MisCuponesCard cupones={cupones} acento={acento} />}
 
             {/* 3. Historial de pagos */}
             <HistorialPagos pagos={vista.pagos} monedaLocal={vista.monedaLocal} />

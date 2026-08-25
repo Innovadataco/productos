@@ -25,6 +25,7 @@ import { generarCodigoReferidoUnico } from "./referido.service";
 import { mesesDeDuracion } from "./freemium-calculos";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import type { DbClient } from "@/lib/dal/unit-of-work";
+import { entregarCuponesRecompensa } from "./entregar-cupones-recompensa.service";
 
 const ZONA_BOGOTA = "America/Bogota";
 
@@ -234,5 +235,25 @@ export async function activarSuscripcionManual(input: ActivarSuscripcionManualIn
     });
 
     await emitirEventoActivada(resultado.suscripcion, resultado.plan, resultado.titular);
+
+    // SPEC-246 (002-PI-149): entrega cupones de recompensa al padre tras primer pago pagado.
+    if (
+        resultado.suscripcion.tipoTitular === TipoTitular.PADRE &&
+        !resultado.plan.esFreemium &&
+        resultado.suscripcion.usuarioId
+    ) {
+        try {
+            await entregarCuponesRecompensa({
+                padreUsuarioId: resultado.suscripcion.usuarioId,
+                adminId: input.adminId,
+                email: resultado.titular?.email,
+                nombre: resultado.titular?.nombre,
+            });
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(`[AdminActivacionManual] Entrega de cupones de recompensa falló (${msg}); se continúa`);
+        }
+    }
+
     return resultado.suscripcion;
 }

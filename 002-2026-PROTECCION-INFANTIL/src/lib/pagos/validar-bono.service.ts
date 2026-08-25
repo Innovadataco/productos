@@ -45,6 +45,11 @@ export async function validarCodigoBono(
         throw new AppError("El bono no está vigente", ERROR_CODES.VALIDATION_ERROR, 400);
     }
 
+    // SPEC-246: cupón con beneficiario y no transferible solo puede usar el beneficiario.
+    if (bono.beneficiarioUsuarioId && !bono.transferible && bono.beneficiarioUsuarioId !== usuario.id) {
+        throw new AppError("El cupón no es transferible y no pertenece a tu cuenta", ERROR_CODES.FORBIDDEN, 403);
+    }
+
     if (bono.aplicaSoloA && bono.aplicaSoloA !== suscripcion.tipoTitular) {
         throw new AppError("El bono no aplica a tu tipo de suscripción", ERROR_CODES.VALIDATION_ERROR, 400);
     }
