@@ -6,6 +6,8 @@
 **Status**: PLANEADO  
 **Input**: INSTRUCTIVO-002-PI-145 · BRIEF-ACTIVACION-Y-COBROS §5.4/§9.2/§11 Lote 1 fila #3 · D-52/D-69/D-72/D-74
 
+Impacto en arquitectura: agrega valor `PENDIENTE_AUTORIZACION` al enum `EstadoSuscripcion` de forma aditiva, crea helper puro `src/lib/pagos/vigencia-middleware.ts` con cálculo de vigencia en timezone `America/Bogota` vía `date-fns-tz`, modifica layouts `src/app/dashboard/padre/layout.tsx` y `src/app/dashboard/colegio/layout.tsx` para aplicar guarda de suscripción (permitir `ACTIVA`, banner ámbar en `EN_GRACIA`, redirigir a `/dashboard/<rol>/suscripcion` en otros estados), crea `src/app/reportar/layout.tsx` para registrar `AuditLog` `reporte-sin-suscripcion` sin bloquear, y provee tests unitarios del helper + integración de layouts + 3 escenarios de frontera de medianoche Bogotá.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
