@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 407 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2849 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 409 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2863 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -102,6 +102,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/ollama/probar` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica/config` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/definiciones` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/definiciones/[categoria]` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica/preguntas` | api | permitir | permite | sí |
 | `/api/admin/ia/sandbox` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones` | api | permitir | permite | sí |
@@ -514,6 +516,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/ollama/probar` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica/config` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/definiciones` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/definiciones/[categoria]` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica/preguntas` | api | permitir | permite | sí |
 | `/api/admin/ia/sandbox` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones` | api | permitir | permite | sí |
@@ -926,6 +930,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/ollama/probar` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica/config` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/definiciones` | api | permitir | permite | sí |
+| `/api/admin/ia/rubrica/definiciones/[categoria]` | api | permitir | permite | sí |
 | `/api/admin/ia/rubrica/preguntas` | api | permitir | permite | sí |
 | `/api/admin/ia/sandbox` | api | permitir | permite | sí |
 | `/api/admin/ia/simulaciones` | api | permitir | permite | sí |
@@ -1338,6 +1344,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/ollama/probar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica/config` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/definiciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/definiciones/[categoria]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica/preguntas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/sandbox` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones` | api | HTTP 403 | no permite | sí |
@@ -1750,6 +1758,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/ollama/probar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica/config` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/definiciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/definiciones/[categoria]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica/preguntas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/sandbox` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones` | api | HTTP 403 | no permite | sí |
@@ -2162,6 +2172,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/ollama/probar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica/config` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/definiciones` | api | HTTP 403 | no permite | sí |
+| `/api/admin/ia/rubrica/definiciones/[categoria]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/rubrica/preguntas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/sandbox` | api | HTTP 403 | no permite | sí |
 | `/api/admin/ia/simulaciones` | api | HTTP 403 | no permite | sí |
@@ -2574,6 +2586,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/ia/ollama/probar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/rubrica` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/rubrica/config` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/rubrica/definiciones` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/ia/rubrica/definiciones/[categoria]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/rubrica/preguntas` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/sandbox` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/ia/simulaciones` | api | HTTP 401 | permite | **NO** |
@@ -2987,6 +3001,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/ia/ollama/probar` | HTTP 401 | permite |
 | `/api/admin/ia/rubrica` | HTTP 401 | permite |
 | `/api/admin/ia/rubrica/config` | HTTP 401 | permite |
+| `/api/admin/ia/rubrica/definiciones` | HTTP 401 | permite |
+| `/api/admin/ia/rubrica/definiciones/[categoria]` | HTTP 401 | permite |
 | `/api/admin/ia/rubrica/preguntas` | HTTP 401 | permite |
 | `/api/admin/ia/sandbox` | HTTP 401 | permite |
 | `/api/admin/ia/simulaciones` | HTTP 401 | permite |
