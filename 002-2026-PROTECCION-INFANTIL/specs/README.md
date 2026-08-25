@@ -141,6 +141,10 @@
 | [214](214-multi-moneda-pagos/spec.md) | SPEC-214 — Multi-moneda pagos (002-PI-113) | 🟢 Implementado |
 | [243](243-crud-admin-planes/spec.md) | SPEC-243 — CRUD admin de Planes + parámetros IVA/freemium (002-PI-146) | 🟢 Implementado |
 | [249](249-hotfix-public-routes-registro-colegio-activar/spec.md) | SPEC-249 — Hotfix PUBLIC_ROUTES /registro-colegio + /activar (002-PI-152) | 🔴 Crítica |
+| [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
+| [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
+| [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
+| [247](247-refresh-dedup-arch/spec.md) | SPEC-247 — Refresh + dedup + deprecar + arch (002-PI-150) | 🔵 Planeado |
 | [230](230-padre-v2-modelos-expediente-evento/spec.md) | SPEC-230 — Padre v2: modelos Expediente y EventoExpediente (002-PI-130) | 🟢 Implementado |
 | [231](231-sidebar-padre-rutas-base/spec.md) | SPEC-231 — Sidebar padre + rutas base (002-PI-131) | 🔵 Planeado |
 | [232](232-vista-padre-expedientes/spec.md) | SPEC-232 — Vista padre expedientes (lista + detalle + agregar evento) (002-PI-132) | 🔵 Planeado |
@@ -365,6 +369,10 @@
 | [214](214-multi-moneda-pagos/spec.md) | SPEC-214 — Multi-moneda pagos (002-PI-113) | 🟢 Implementado |
 | [243](243-crud-admin-planes/spec.md) | SPEC-243 — CRUD admin de Planes + parámetros IVA/freemium (002-PI-146) | 🟢 Implementado |
 | [249](249-hotfix-public-routes-registro-colegio-activar/spec.md) | SPEC-249 — Hotfix PUBLIC_ROUTES /registro-colegio + /activar (002-PI-152) | 🔴 Crítica |
+| [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
+| [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
+| [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
+| [247](247-refresh-dedup-arch/spec.md) | SPEC-247 — Refresh + dedup + deprecar + arch (002-PI-150) | 🔵 Planeado |
 | [230](230-padre-v2-modelos-expediente-evento/spec.md) | SPEC-230 — Padre v2: modelos Expediente y EventoExpediente (002-PI-130) | 🟢 Implementado |
 | [231](231-sidebar-padre-rutas-base/spec.md) | SPEC-231 — Sidebar padre + rutas base (002-PI-131) | 🔵 Planeado |
 | [232](232-vista-padre-expedientes/spec.md) | SPEC-232 — Vista padre expedientes (lista + detalle + agregar evento) (002-PI-132) | 🔵 Planeado |

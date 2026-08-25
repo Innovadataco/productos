@@ -38,6 +38,49 @@ const prisma = new Proxy({} as PrismaClient, {
     },
 });
 
+// SPEC-247 (002-PI-150): upsert idempotente de NotificacionRegla por clave canónica
+// (evento, canal, plantillaClave). Reemplaza el patrón findFirst→update/create y
+// garantiza cero duplicados tras múltiples ejecuciones del seed.
+async function upsertNotificacionRegla(
+    data: {
+        evento: string;
+        rol: string;
+        canal: "EMAIL" | "IN_APP";
+        plantillaClave: string;
+        offset?: string;
+        obligatoria?: boolean;
+        activa?: boolean;
+    },
+    options: { preservarExistente?: boolean } = {}
+) {
+    const updateData: Record<string, unknown> = {};
+    if (!options.preservarExistente) {
+        updateData.rol = data.rol;
+        updateData.offset = data.offset ?? "+0m";
+        updateData.obligatoria = data.obligatoria ?? false;
+        updateData.activa = data.activa ?? true;
+    }
+    await prisma.notificacionRegla.upsert({
+        where: {
+            evento_canal_plantillaClave: {
+                evento: data.evento,
+                canal: data.canal,
+                plantillaClave: data.plantillaClave,
+            },
+        },
+        update: updateData,
+        create: {
+            evento: data.evento,
+            rol: data.rol,
+            canal: data.canal,
+            plantillaClave: data.plantillaClave,
+            offset: data.offset ?? "+0m",
+            obligatoria: data.obligatoria ?? false,
+            activa: data.activa ?? true,
+        },
+    });
+}
+
 // SPEC-230 (002-PI-130): parámetros del módulo Padre.
 // Idempotencia anti-I-100: upsert por clave, propaga cambios de default definidos en código.
 async function seedParametrosPadre() {
@@ -108,7 +151,7 @@ async function seedParametrosSenalComunitaria() {
 
 // ── SPEC-241 (002-PI-144): parámetros de consentimiento informado + evento/plantillas
 // del Motor Notif. Idempotente (patrón I-100): upsert de parámetros y plantillas;
-// reglas con findFirst→update/create. Las rutas apuntan a los documentos legales
+// reglas con upsertNotificacionRegla por clave canónica (SPEC-247). Las rutas apuntan a los documentos legales
 // copiados en public/legal/; ODIN no redacta contenido legal.
 async function seedConsentimiento() {
     const parametros = [
@@ -207,36 +250,17 @@ async function seedConsentimiento() {
         });
     }
 
-    const roles = ["PARENT", "SCHOOL_ADMIN", "ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA"] as const;
-    for (const rol of roles) {
-        for (const canal of ["EMAIL", "IN_APP"] as const) {
-            const existente = await prisma.notificacionRegla.findFirst({
-                where: { evento, rol, canal },
-                orderBy: { createdAt: "desc" },
-            });
-            const data = {
-                evento,
-                rol,
-                offset: "+0m",
-                canal,
-                plantillaClave: `${evento}.${canal.toLowerCase()}`,
-                obligatoria: false,
-                activa: true,
-            };
-            if (existente) {
-                await prisma.notificacionRegla.update({
-                    where: { id: existente.id },
-                    data: {
-                        offset: data.offset,
-                        plantillaClave: data.plantillaClave,
-                        obligatoria: data.obligatoria,
-                        activa: true,
-                    },
-                });
-            } else {
-                await prisma.notificacionRegla.create({ data });
-            }
-        }
+    // SPEC-247: una sola regla por (evento, canal, plantillaClave); el motor no usa
+    // `rol` para filtrar destinatarios, así que el representante del evento basta.
+    for (const canal of ["EMAIL", "IN_APP"] as const) {
+        await upsertNotificacionRegla({
+            evento,
+            rol: "PARENT",
+            canal,
+            plantillaClave: `${evento}.${canal.toLowerCase()}`,
+            obligatoria: false,
+            activa: true,
+        });
     }
     console.log("[SEED] Evento consentimiento.aceptado (SPEC-241) listo");
 }
@@ -382,35 +406,16 @@ async function seedMotorExpediente() {
             });
         }
 
-        for (const rol of e.roles) {
-            for (const canal of ["EMAIL", "IN_APP"] as const) {
-                const existente = await prisma.notificacionRegla.findFirst({
-                    where: { evento: e.evento, rol, canal },
-                    orderBy: { createdAt: "desc" },
-                });
-                const data = {
-                    evento: e.evento,
-                    rol,
-                    offset: "+0m",
-                    canal,
-                    plantillaClave: `${e.evento}.${canal.toLowerCase()}`,
-                    obligatoria: false,
-                    activa: true,
-                };
-                if (existente) {
-                    await prisma.notificacionRegla.update({
-                        where: { id: existente.id },
-                        data: {
-                            offset: data.offset,
-                            plantillaClave: data.plantillaClave,
-                            obligatoria: data.obligatoria,
-                            activa: true,
-                        },
-                    });
-                } else {
-                    await prisma.notificacionRegla.create({ data });
-                }
-            }
+        const rolRepresentativo = e.roles[0] ?? "PARENT";
+        for (const canal of ["EMAIL", "IN_APP"] as const) {
+            await upsertNotificacionRegla({
+                evento: e.evento,
+                rol: rolRepresentativo,
+                canal,
+                plantillaClave: `${e.evento}.${canal.toLowerCase()}`,
+                obligatoria: false,
+                activa: true,
+            });
         }
     }
     console.log("Eventos y plantillas del motor de expediente (SPEC-236) listos");
@@ -740,6 +745,11 @@ async function seedParametrosPagos() {
         { clave: "pagos.recompensa.activa", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Indica si el programa de recompensas por referidos está activo" },
         { clave: "pagos.recompensa.meses_gratis", valor: "1", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Meses gratis otorgados como recompensa por referido exitoso" },
         { clave: "pagos.recompensa.max_por_año", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Máximo de recompensas por referido al año por cliente" },
+        // SPEC-244 (002-PI-147): parámetros del programa de recompensas por pago manual.
+        { clave: "pagos.recompensa.cupones_por_pago", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cupones de recompensa generados por cada pago manual autorizado" },
+        { clave: "pagos.recompensa.porcentaje_descuento", valor: "20", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "% de descuento de cada cupón de recompensa" },
+        { clave: "pagos.recompensa.vigencia_dias", valor: "90", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días de vigencia de un cupón de recompensa desde su generación" },
+        { clave: "pagos.recompensa.tope_max_cop", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Tope máximo en COP del descuento de un cupón (vacío = sin tope)" },
     ];
 
     const clavesNoPisar = new Set([
@@ -750,6 +760,10 @@ async function seedParametrosPagos() {
         "pagos.recompensa.activa",
         "pagos.recompensa.meses_gratis",
         "pagos.recompensa.max_por_año",
+        "pagos.recompensa.cupones_por_pago",
+        "pagos.recompensa.porcentaje_descuento",
+        "pagos.recompensa.vigencia_dias",
+        "pagos.recompensa.tope_max_cop",
     ]);
 
     for (const p of pagosParams) {
@@ -764,7 +778,7 @@ async function seedParametrosPagos() {
 
 // ── SPEC-240 (002-PI-143): catálogo Motor Notif de la invitación de activación
 // enviada al rector. Idempotente (patrón I-100): plantilla con upsert por clave,
-// regla con findFirst→update/create.
+// regla con upsertNotificacionRegla por clave canónica (SPEC-247).
 async function seedInvitacionColegio() {
     const evento = "colegio.invitacion.enviada";
     const plantillaClave = `${evento}.email`;
@@ -809,28 +823,14 @@ async function seedInvitacionColegio() {
         },
     });
 
-    const reglaExistente = await prisma.notificacionRegla.findFirst({
-        where: { evento, rol: "SCHOOL_ADMIN", canal: "EMAIL" },
-        orderBy: { createdAt: "desc" },
+    await upsertNotificacionRegla({
+        evento,
+        rol: "SCHOOL_ADMIN",
+        canal: "EMAIL",
+        plantillaClave,
+        obligatoria: true,
+        activa: true,
     });
-    if (reglaExistente) {
-        await prisma.notificacionRegla.update({
-            where: { id: reglaExistente.id },
-            data: { offset: "+0m", plantillaClave, obligatoria: true, activa: true },
-        });
-    } else {
-        await prisma.notificacionRegla.create({
-            data: {
-                evento,
-                rol: "SCHOOL_ADMIN",
-                offset: "+0m",
-                canal: "EMAIL",
-                plantillaClave,
-                obligatoria: true,
-                activa: true,
-            },
-        });
-    }
     console.log("[SEED] Catálogo Motor Notif colegio.invitacion.enviada listo (SPEC-240)");
 }
 
@@ -868,8 +868,8 @@ async function seedParametrosAnalisis() {
 // `analisis.anomalia.detectada` del Motor Notif (alerta inmediata al CEO, D-78).
 // Las 3 claves `mora_dias_umbral_*`/`crecimiento_pct_umbral` ya las siembra
 // SPEC-220; aquí van las 7 restantes. Idempotente: parámetros con `update: {}`
-// (nunca pisan el tuning del admin); regla con findFirst→update/create (patrón
-// I-100 de SPEC-201); plantillas con upsert por clave.
+// (nunca pisan el tuning del admin); regla con upsertNotificacionRegla (patrón
+// I-100 de SPEC-201 + SPEC-247); plantillas con upsert por clave.
 async function seedAnomalias() {
     const params = [
         { clave: "analisis.anomalias.tick_min", valor: "60", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Minutos entre ticks del worker de anomalías (SPEC-225)" },
@@ -931,27 +931,14 @@ async function seedAnomalias() {
     }
 
     for (const canal of ["EMAIL", "IN_APP"] as const) {
-        const existente = await prisma.notificacionRegla.findFirst({
-            where: { evento, rol: "ADMIN", canal },
-            orderBy: { createdAt: "desc" },
-        });
-        const data = {
+        await upsertNotificacionRegla({
             evento,
             rol: "ADMIN",
-            offset: "+0m",
             canal,
             plantillaClave: `${evento}.${canal.toLowerCase()}`,
             obligatoria: true,
             activa: true,
-        };
-        if (existente) {
-            await prisma.notificacionRegla.update({
-                where: { id: existente.id },
-                data: { offset: data.offset, plantillaClave: data.plantillaClave, obligatoria: true, activa: true },
-            });
-        } else {
-            await prisma.notificacionRegla.create({ data });
-        }
+        });
     }
     console.log("[SEED] Evento analisis.anomalia.detectada (regla + plantillas) listo");
 }
@@ -1045,23 +1032,17 @@ async function seedDigestSemanal() {
     }
 
     for (const canal of ["EMAIL", "IN_APP"] as const) {
-        const existente = await prisma.notificacionRegla.findFirst({
-            where: { evento, rol: "ADMIN", canal },
-            orderBy: { createdAt: "desc" },
-        });
-        if (!existente) {
-            await prisma.notificacionRegla.create({
-                data: {
-                    evento,
-                    rol: "ADMIN",
-                    offset: "+0m",
-                    canal,
-                    plantillaClave: `${evento}.${canal.toLowerCase()}`,
-                    obligatoria: false,
-                    activa: true,
-                },
-            });
-        }
+        await upsertNotificacionRegla(
+            {
+                evento,
+                rol: "ADMIN",
+                canal,
+                plantillaClave: `${evento}.${canal.toLowerCase()}`,
+                obligatoria: false,
+                activa: true,
+            },
+            { preservarExistente: true }
+        );
     }
     console.log("[SEED] Evento analisis.digest.semanal (reglas + plantillas) listo (SPEC-223)");
 }
@@ -1271,28 +1252,14 @@ async function seedEmergenciaExpediente() {
         },
     });
 
-    const reglaExistente = await prisma.notificacionRegla.findFirst({
-        where: { evento, rol: "CONTACTO_EMERGENCIA", canal: "EMAIL" },
-        orderBy: { createdAt: "desc" },
+    await upsertNotificacionRegla({
+        evento,
+        rol: "CONTACTO_EMERGENCIA",
+        canal: "EMAIL",
+        plantillaClave,
+        obligatoria: true,
+        activa: true,
     });
-    if (reglaExistente) {
-        await prisma.notificacionRegla.update({
-            where: { id: reglaExistente.id },
-            data: { offset: "+0m", plantillaClave, obligatoria: true, activa: true },
-        });
-    } else {
-        await prisma.notificacionRegla.create({
-            data: {
-                evento,
-                rol: "CONTACTO_EMERGENCIA",
-                offset: "+0m",
-                canal: "EMAIL",
-                plantillaClave,
-                obligatoria: true,
-                activa: true,
-            },
-        });
-    }
     console.log("[SEED] Catálogo Motor Notif expediente.emergencia.activada listo (SPEC-239)");
 }
 
@@ -1300,7 +1267,7 @@ async function seedEmergenciaExpediente() {
 // (rate-limit por regla, scope `analisis_accion`) + catálogo Motor Notif de los
 // eventos `analisis.alerta.admin` y `analisis.operador.asignacion` (FR-014).
 // Idempotente: parámetros con `update: {}` (nunca pisan el tuning del admin);
-// plantillas con upsert por clave; reglas con findFirst→update/create (I-100).
+// plantillas con upsert por clave; reglas con upsertNotificacionRegla (I-100 + SPEC-247).
 async function seedEjecucionAcciones() {
     const params = [
         { clave: "ratelimit.analisis_accion.window_seconds", valor: "3600", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, esSecreto: false, descripcion: "Ventana (s) del rate-limit por regla del ejecutor de acciones (SPEC-226)" },
@@ -1353,28 +1320,14 @@ async function seedEjecucionAcciones() {
             activa: true,
         },
     });
-    const reglaAlerta = await prisma.notificacionRegla.findFirst({
-        where: { evento: eventoAlerta, rol: "ADMIN", canal: "EMAIL" },
-        orderBy: { createdAt: "desc" },
+    await upsertNotificacionRegla({
+        evento: eventoAlerta,
+        rol: "ADMIN",
+        canal: "EMAIL",
+        plantillaClave: `${eventoAlerta}.email`,
+        obligatoria: true,
+        activa: true,
     });
-    if (reglaAlerta) {
-        await prisma.notificacionRegla.update({
-            where: { id: reglaAlerta.id },
-            data: { offset: "+0m", plantillaClave: `${eventoAlerta}.email`, obligatoria: true, activa: true },
-        });
-    } else {
-        await prisma.notificacionRegla.create({
-            data: {
-                evento: eventoAlerta,
-                rol: "ADMIN",
-                offset: "+0m",
-                canal: "EMAIL",
-                plantillaClave: `${eventoAlerta}.email`,
-                obligatoria: true,
-                activa: true,
-            },
-        });
-    }
 
     // Evento 2: asignación de una recomendación a un operador (acción asignar_operador).
     const eventoOperador = "analisis.operador.asignacion";
@@ -1425,28 +1378,14 @@ async function seedEjecucionAcciones() {
         });
     }
     for (const canal of ["EMAIL", "IN_APP"] as const) {
-        const existente = await prisma.notificacionRegla.findFirst({
-            where: { evento: eventoOperador, rol: "OPERADOR", canal },
-            orderBy: { createdAt: "desc" },
+        await upsertNotificacionRegla({
+            evento: eventoOperador,
+            rol: "OPERADOR",
+            canal,
+            plantillaClave: `${eventoOperador}.${canal.toLowerCase()}`,
+            obligatoria: false,
+            activa: true,
         });
-        if (existente) {
-            await prisma.notificacionRegla.update({
-                where: { id: existente.id },
-                data: { offset: "+0m", plantillaClave: `${eventoOperador}.${canal.toLowerCase()}`, obligatoria: false, activa: true },
-            });
-        } else {
-            await prisma.notificacionRegla.create({
-                data: {
-                    evento: eventoOperador,
-                    rol: "OPERADOR",
-                    offset: "+0m",
-                    canal,
-                    plantillaClave: `${eventoOperador}.${canal.toLowerCase()}`,
-                    obligatoria: false,
-                    activa: true,
-                },
-            });
-        }
     }
     console.log("[SEED] Eventos analisis.alerta.admin y analisis.operador.asignacion listos (SPEC-226)");
 }
@@ -1822,6 +1761,12 @@ async function main() {
         console.log("[SEED] No hay admin en BD; se omite seed de planes de pagos.");
     }
     await seedParametrosPagos();
+
+    // SPEC-244 (002-PI-147): eventos/plantillas del ciclo de vida de suscripción.
+    await seedEventosSuscripcion();
+
+    // SPEC-246 (002-PI-149): eventos/plantillas de cupones de recompensa.
+    await seedEventosRecompensa();
 
     // SPEC-240 (002-PI-143): evento/plantilla de invitación al rector.
     await seedInvitacionColegio();
@@ -3058,34 +3003,16 @@ async function main() {
     ];
 
     for (const r of reglasSeed) {
-        const existente = await prisma.notificacionRegla.findFirst({
-            where: { evento: r.evento, rol: r.rol, canal: r.canal },
-            orderBy: { createdAt: "desc" },
-        });
         const plantillaClave = `${r.evento}.${r.canal.toLowerCase()}`;
-        const data = {
+        await upsertNotificacionRegla({
             evento: r.evento,
             rol: r.rol,
-            offset: r.offset,
             canal: r.canal,
             plantillaClave,
+            offset: r.offset,
             obligatoria: r.obligatoria,
             activa: true,
-        };
-        if (existente) {
-            await prisma.notificacionRegla.update({
-                where: { id: existente.id },
-                data: {
-                    offset: data.offset,
-                    canal: data.canal,
-                    plantillaClave: data.plantillaClave,
-                    obligatoria: data.obligatoria,
-                    activa: true,
-                },
-            });
-        } else {
-            await prisma.notificacionRegla.create({ data });
-        }
+        });
     }
     console.log("Reglas semilla del motor de notificaciones (SPEC-201) creadas");
 
@@ -3393,7 +3320,226 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedEventosSuscripcion, seedEventosRecompensa };
+
+// ── SPEC-244 (002-PI-147): catálogo Motor Notif del ciclo de vida de suscripción ──
+// Idempotente: plantillas con upsert por clave; reglas con upsertNotificacionRegla
+// por la clave @@unique([evento, canal, plantillaClave]) de SPEC-247.
+async function seedEventosSuscripcion() {
+    const variablesSchemaSolicitada = {
+        type: "object",
+        properties: {
+            nombre: { type: "string" },
+            email: { type: "string" },
+            planNombre: { type: "string" },
+            totalCOP: { type: "string" },
+            suscripcionId: { type: "string" },
+        },
+    };
+    const variablesSchemaActivada = {
+        type: "object",
+        properties: {
+            nombre: { type: "string" },
+            suscripcionId: { type: "string" },
+            plan: { type: "string" },
+            monto: { type: "number" },
+            fechaInicio: { type: "string" },
+            fechaFin: { type: "string" },
+        },
+    };
+
+    const plantillas = [
+        {
+            clave: "suscripcion.solicitada.in_app",
+            canal: "IN_APP" as const,
+            asunto: null,
+            cuerpoMarkdown: "Nueva solicitud de suscripción: {{planNombre}} por {{nombre}} ({{email}}). Total: ${{totalCOP}}.",
+            variablesSchema: variablesSchemaSolicitada,
+        },
+        {
+            clave: "suscripcion.solicitada.email",
+            canal: "EMAIL" as const,
+            asunto: "Solicitud de suscripción recibida · {{planNombre}}",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "Recibimos tu solicitud de suscripción al plan **{{planNombre}}**.\n\n" +
+                "Total estimado: ${{totalCOP}} COP.\n\n" +
+                "Un administrador revisará y autorizará tu pago. Te avisaremos por este medio.",
+            variablesSchema: variablesSchemaSolicitada,
+        },
+        {
+            clave: "suscripcion.solicitada.email.colegio",
+            canal: "EMAIL" as const,
+            asunto: "Solicitud de suscripción recibida · {{planNombre}}",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "Recibimos la solicitud de suscripción institucional al plan **{{planNombre}}**.\n\n" +
+                "Total estimado: ${{totalCOP}} COP.\n\n" +
+                "Un administrador revisará y autorizará el pago. Te avisaremos por este medio.",
+            variablesSchema: variablesSchemaSolicitada,
+        },
+        {
+            clave: "suscripcion.activada.in_app",
+            canal: "IN_APP" as const,
+            asunto: null,
+            cuerpoMarkdown: "Tu suscripción al plan {{plan}} está activa ({{fechaInicio}} – {{fechaFin}}).",
+            variablesSchema: variablesSchemaActivada,
+        },
+        {
+            clave: "suscripcion.activada.email",
+            canal: "EMAIL" as const,
+            asunto: "Tu suscripción está activa · {{plan}}",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "Tu suscripción al plan **{{plan}}** está activa.\n\n" +
+                "Inicia: {{fechaInicio}}\n" +
+                "Finaliza: {{fechaFin}}\n" +
+                "Monto pagado: ${{monto}} COP.\n\n" +
+                "Gracias por confiar en Protección Infantil.",
+            variablesSchema: variablesSchemaActivada,
+        },
+        {
+            clave: "suscripcion.activada.email.colegio",
+            canal: "EMAIL" as const,
+            asunto: "Suscripción activada para tu colegio · {{plan}}",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "La suscripción institucional al plan **{{plan}}** está activa.\n\n" +
+                "Inicia: {{fechaInicio}}\n" +
+                "Finaliza: {{fechaFin}}\n" +
+                "Monto pagado: ${{monto}} COP.\n\n" +
+                "Gracias por confiar en Protección Infantil.",
+            variablesSchema: variablesSchemaActivada,
+        },
+    ];
+
+    for (const pl of plantillas) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: pl.variablesSchema,
+                activa: true,
+            },
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: pl.variablesSchema,
+                activa: true,
+            },
+        });
+    }
+
+    const reglas: Array<{
+        evento: string;
+        rol: string;
+        canal: "EMAIL" | "IN_APP";
+        plantillaClave: string;
+        obligatoria: boolean;
+    }> = [
+        { evento: "suscripcion.solicitada", rol: "ADMIN", canal: "IN_APP", plantillaClave: "suscripcion.solicitada.in_app", obligatoria: false },
+        { evento: "suscripcion.solicitada", rol: "PARENT", canal: "EMAIL", plantillaClave: "suscripcion.solicitada.email", obligatoria: true },
+        { evento: "suscripcion.solicitada", rol: "SCHOOL_ADMIN", canal: "EMAIL", plantillaClave: "suscripcion.solicitada.email.colegio", obligatoria: true },
+        { evento: "suscripcion.activada", rol: "PARENT", canal: "IN_APP", plantillaClave: "suscripcion.activada.in_app", obligatoria: false },
+        { evento: "suscripcion.activada", rol: "PARENT", canal: "EMAIL", plantillaClave: "suscripcion.activada.email", obligatoria: true },
+        { evento: "suscripcion.activada", rol: "SCHOOL_ADMIN", canal: "IN_APP", plantillaClave: "suscripcion.activada.in_app", obligatoria: false },
+        { evento: "suscripcion.activada", rol: "SCHOOL_ADMIN", canal: "EMAIL", plantillaClave: "suscripcion.activada.email.colegio", obligatoria: true },
+    ];
+
+    for (const regla of reglas) {
+        await upsertNotificacionRegla({
+            evento: regla.evento,
+            rol: regla.rol,
+            canal: regla.canal,
+            plantillaClave: regla.plantillaClave,
+            obligatoria: regla.obligatoria,
+            activa: true,
+        });
+    }
+    console.log("[SEED] Catálogo Motor Notif suscripcion.solicitada/activada listo (SPEC-244)");
+}
+
+// ── SPEC-246 (002-PI-149): catálogo Motor Notif de cupones de recompensa ──
+async function seedEventosRecompensa() {
+    const variablesSchema = {
+        type: "object",
+        properties: {
+            nombre: { type: "string" },
+            codigos: { type: "string" },
+            porcentaje: { type: "number" },
+            vigenciaHasta: { type: "string" },
+        },
+    };
+
+    const plantillas = [
+        {
+            clave: "bono.entregado_recompensa.email",
+            canal: "EMAIL" as const,
+            asunto: "Tus cupones de recompensa llegaron 🎁",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "Gracias por tu suscripción. Recibiste estos cupones de descuento para compartir:\n\n" +
+                "{{codigos}}\n\n" +
+                "Cada uno aplica un {{porcentaje}}% de descuento y es válido hasta {{vigenciaHasta}}.",
+            variablesSchema,
+        },
+        {
+            clave: "bono.entregado_recompensa.in_app",
+            canal: "IN_APP" as const,
+            asunto: null,
+            cuerpoMarkdown: "Recibiste cupones de recompensa: {{codigos}}. Válidos hasta {{vigenciaHasta}}.",
+            variablesSchema,
+        },
+    ];
+
+    for (const pl of plantillas) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: pl.variablesSchema,
+                activa: true,
+            },
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: pl.variablesSchema,
+                activa: true,
+            },
+        });
+    }
+
+    const reglas: Array<{
+        evento: string;
+        rol: string;
+        canal: "EMAIL" | "IN_APP";
+        plantillaClave: string;
+        obligatoria: boolean;
+    }> = [
+        { evento: "bono.entregado_recompensa", rol: "PARENT", canal: "EMAIL", plantillaClave: "bono.entregado_recompensa.email", obligatoria: true },
+        { evento: "bono.entregado_recompensa", rol: "PARENT", canal: "IN_APP", plantillaClave: "bono.entregado_recompensa.in_app", obligatoria: false },
+    ];
+
+    for (const regla of reglas) {
+        await upsertNotificacionRegla({
+            evento: regla.evento,
+            rol: regla.rol,
+            canal: regla.canal,
+            plantillaClave: regla.plantillaClave,
+            obligatoria: regla.obligatoria,
+            activa: true,
+        });
+    }
+    console.log("[SEED] Catálogo Motor Notif bono.entregado_recompensa listo (SPEC-246)");
+}
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como

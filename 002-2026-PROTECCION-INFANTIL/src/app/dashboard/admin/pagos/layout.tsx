@@ -4,6 +4,7 @@ import { verificarAccesoPagina } from "@/lib/permisos-modulos";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 
 const TABS = [
+    { href: "/dashboard/admin/pagos/sin-suscripcion", label: "Sin suscripción" },
     { href: "/dashboard/admin/pagos/pendientes", label: "Pendientes" },
     { href: "/dashboard/admin/pagos/vencimientos", label: "Vencimientos" },
     { href: "/dashboard/admin/pagos/mora", label: "Mora" },

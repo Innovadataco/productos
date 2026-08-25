@@ -4,7 +4,7 @@
  * clase en lugar de importar `@/lib/prisma` directamente.
  */
 import type { Prisma } from "@prisma/client";
-import { TipoTitular, DuracionPlan, EstadoPago, EstadoSuscripcion } from "@prisma/client";
+import { TipoTitular, DuracionPlan, EstadoPago, EstadoSuscripcion, OrigenSuscripcion, OrigenBono, RolUsuario, MetodoPagoManual, BonoPromocional } from "@prisma/client";
 import { toZonedTime, formatInTimeZone } from "date-fns-tz";
 import { addDays, startOfDay, endOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
@@ -86,6 +86,15 @@ export interface BonoPromocionalResumen {
     vigenciaInicio: Date;
     vigenciaFin: Date;
     activo: boolean;
+    origen: OrigenBono;
+}
+
+export interface TargetSinSuscripcion {
+    id: string;
+    tipo: "PADRE" | "COLEGIO";
+    nombre: string | null;
+    email: string;
+    identificacion: string | null;
 }
 
 export class PagosRepository {
@@ -400,14 +409,18 @@ export class PagosRepository {
 
     /**
      * SPEC-212: listado paginado de bonos con filtro por activo/inactivo.
+     * SPEC-246: filtro adicional por origen (PROMOCION_ADMIN / RECOMPENSA_PAGO).
      */
     async listarBonos(
-        filtros: { activo?: boolean | undefined },
+        filtros: { activo?: boolean | undefined; origen?: OrigenBono | undefined },
         paginacion: PaginacionParams
     ): Promise<ResultadoPaginado<BonoPromocionalResumen>> {
         const where: Prisma.BonoPromocionalWhereInput = {};
         if (filtros.activo !== undefined) {
             where.activo = filtros.activo;
+        }
+        if (filtros.origen !== undefined) {
+            where.origen = filtros.origen;
         }
 
         const [items, total] = await Promise.all([
@@ -425,6 +438,35 @@ export class PagosRepository {
 
     actualizarBonoPromocional(id: string, data: Prisma.BonoPromocionalUncheckedUpdateInput) {
         return this.db.bonoPromocional.update({ where: { id }, data });
+    }
+
+    /**
+     * SPEC-246 (002-PI-149): cuenta cuántos bonos de recompensa ya tiene un padre.
+     * Se usa como guard de idempotencia (una entrega por padre por vida).
+     */
+    contarBonosRecompensaPorBeneficiario(usuarioId: string): Promise<number> {
+        return this.db.bonoPromocional.count({
+            where: { origen: OrigenBono.RECOMPENSA_PAGO, beneficiarioUsuarioId: usuarioId },
+        });
+    }
+
+    /**
+     * SPEC-246 (002-PI-149): bonos de un beneficiario con conteo de usos para
+     * determinar estado (vigente / usado / vencido) en MisCuponesCard.
+     */
+    async listarBonosPorBeneficiario(
+        usuarioId: string,
+        origen?: OrigenBono
+    ): Promise<Array<BonoPromocional & { _count: { usos: number } }>> {
+        const where: Prisma.BonoPromocionalWhereInput = { beneficiarioUsuarioId: usuarioId };
+        if (origen) {
+            where.origen = origen;
+        }
+        return this.db.bonoPromocional.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            include: { _count: { select: { usos: true } } },
+        });
     }
 
     // ── Bono aplicado ──
@@ -458,6 +500,42 @@ export class PagosRepository {
         return this.db.bonoAplicado
             .count({ where: { bonoId, suscripcionId } })
             .then((count) => count > 0);
+    }
+
+    // ── Suscripción (extensiones SPEC-244) ──
+
+    /**
+     * SPEC-244 (002-PI-147): true si el titular (usuario padre o colegio) tiene
+     * una suscripción en estado ACTIVA, EN_GRACIA o PENDIENTE_AUTORIZACION.
+     */
+    async existeSuscripcionVigenteParaTitular(filtro: { usuarioId?: string | undefined; colegioId?: string | undefined }): Promise<boolean> {
+        const OR: Prisma.SuscripcionWhereInput[] = [];
+        if (filtro.usuarioId) OR.push({ usuarioId: filtro.usuarioId });
+        if (filtro.colegioId) OR.push({ colegioId: filtro.colegioId });
+        if (OR.length === 0) return false;
+
+        const count = await this.db.suscripcion.count({
+            where: {
+                OR,
+                estado: {
+                    in: [EstadoSuscripcion.ACTIVA, EstadoSuscripcion.EN_GRACIA, EstadoSuscripcion.PENDIENTE_AUTORIZACION],
+                },
+            },
+        });
+        return count > 0;
+    }
+
+    /**
+     * SPEC-244 (002-PI-147): cuenta suscripciones con origen FREEMIUM_AUTO de un
+     * usuario padre (anti-doble freemium autónomo).
+     */
+    async contarSuscripcionesFreemiumPorUsuario(usuarioId: string): Promise<number> {
+        return this.db.suscripcion.count({
+            where: {
+                usuarioId,
+                origen: OrigenSuscripcion.FREEMIUM_AUTO,
+            },
+        });
     }
 
     // ── Código de referido ──
@@ -564,6 +642,156 @@ export class PagosRepository {
         ]);
 
         return { suscripcion, pagos, eventos };
+    }
+
+    // ── SPEC-245: activación manual de suscripciones ──
+
+    /**
+     * SPEC-245 (002-PI-148): usuarios PADRE y/o colegios que NO tienen una
+     * suscripción en estado ACTIVA, EN_GRACIA o PENDIENTE_AUTORIZACION.
+     */
+    async listarSinSuscripcion(
+        filtros: { tipo?: "PADRE" | "COLEGIO"; q?: string | undefined },
+        paginacion: PaginacionParams
+    ): Promise<ResultadoPaginado<TargetSinSuscripcion>> {
+        const q = filtros.q?.trim();
+        const incluirPadres = filtros.tipo !== "COLEGIO";
+        const incluirColegios = filtros.tipo !== "PADRE";
+
+        const estadosVigentes: EstadoSuscripcion[] = [
+            EstadoSuscripcion.ACTIVA,
+            EstadoSuscripcion.EN_GRACIA,
+            EstadoSuscripcion.PENDIENTE_AUTORIZACION,
+        ];
+
+        const [idsVigentesPadre, idsVigentesColegio] = await Promise.all([
+            incluirPadres
+                ? this.db.suscripcion
+                    .findMany({
+                        where: { estado: { in: estadosVigentes }, usuarioId: { not: null } },
+                        select: { usuarioId: true },
+                        distinct: ["usuarioId"],
+                    })
+                    .then((rows) => rows.map((r) => r.usuarioId).filter((id): id is string => id !== null))
+                : Promise.resolve([]),
+            incluirColegios
+                ? this.db.suscripcion
+                    .findMany({
+                        where: { estado: { in: estadosVigentes }, colegioId: { not: null } },
+                        select: { colegioId: true },
+                        distinct: ["colegioId"],
+                    })
+                    .then((rows) => rows.map((r) => r.colegioId).filter((id): id is string => id !== null))
+                : Promise.resolve([]),
+        ]);
+
+        const wherePadre: Prisma.UsuarioWhereInput = { rol: RolUsuario.PARENT };
+        if (q) {
+            wherePadre.OR = [
+                { nombre: { contains: q, mode: "insensitive" } },
+                { email: { contains: q, mode: "insensitive" } },
+            ];
+        }
+        if (idsVigentesPadre.length > 0) {
+            wherePadre.id = { notIn: idsVigentesPadre };
+        }
+
+        const whereColegio: Prisma.ColegioWhereInput = {};
+        if (q) {
+            whereColegio.OR = [
+                { nombre: { contains: q, mode: "insensitive" } },
+                { representanteLegalEmail: { contains: q, mode: "insensitive" } },
+                { representanteLegalIdentificacion: { contains: q, mode: "insensitive" } },
+            ];
+        }
+        if (idsVigentesColegio.length > 0) {
+            whereColegio.id = { notIn: idsVigentesColegio };
+        }
+
+        const [padres, colegios, totalPadres, totalColegios] = await Promise.all([
+            incluirPadres
+                ? this.db.usuario.findMany({
+                    where: wherePadre,
+                    select: { id: true, nombre: true, email: true },
+                    orderBy: { email: "asc" },
+                })
+                : Promise.resolve([]),
+            incluirColegios
+                ? this.db.colegio.findMany({
+                    where: whereColegio,
+                    select: {
+                        id: true,
+                        nombre: true,
+                        representanteLegalEmail: true,
+                        representanteLegalIdentificacion: true,
+                    },
+                    orderBy: { nombre: "asc" },
+                })
+                : Promise.resolve([]),
+            incluirPadres ? this.db.usuario.count({ where: wherePadre }) : Promise.resolve(0),
+            incluirColegios ? this.db.colegio.count({ where: whereColegio }) : Promise.resolve(0),
+        ]);
+
+        const targetsPadre: TargetSinSuscripcion[] = padres.map((u) => ({
+            id: u.id,
+            tipo: "PADRE",
+            nombre: u.nombre,
+            email: u.email,
+            identificacion: null,
+        }));
+        const targetsColegio: TargetSinSuscripcion[] = colegios.map((c) => ({
+            id: c.id,
+            tipo: "COLEGIO",
+            nombre: c.nombre,
+            email: c.representanteLegalEmail,
+            identificacion: c.representanteLegalIdentificacion,
+        }));
+
+        const merged = [...targetsPadre, ...targetsColegio].sort((a, b) => {
+            const nombreA = (a.nombre ?? a.email).toLowerCase();
+            const nombreB = (b.nombre ?? b.email).toLowerCase();
+            return nombreA.localeCompare(nombreB);
+        });
+
+        const items = merged.slice(paginacion.skip, paginacion.skip + paginacion.take);
+        return { items, total: totalPadres + totalColegios };
+    }
+
+    /**
+     * SPEC-245 (002-PI-148): suscripciones en PENDIENTE_AUTORIZACION con plan y titular.
+     */
+    async listarSolicitudesPendientes(
+        filtros: { q?: string | undefined },
+        paginacion: PaginacionParams
+    ): Promise<ResultadoPaginado<SuscripcionConPlanYTitular>> {
+        const where: Prisma.SuscripcionWhereInput = {
+            estado: EstadoSuscripcion.PENDIENTE_AUTORIZACION,
+        };
+        if (filtros.q) {
+            const query = filtros.q.trim();
+            where.OR = [
+                { colegio: { nombre: { contains: query, mode: "insensitive" } } },
+                { usuario: { nombre: { contains: query, mode: "insensitive" } } },
+                { usuario: { email: { contains: query, mode: "insensitive" } } },
+            ];
+        }
+
+        const [items, total] = await Promise.all([
+            this.db.suscripcion.findMany({
+                where,
+                orderBy: { createdAt: "desc" },
+                skip: paginacion.skip,
+                take: paginacion.take,
+                include: {
+                    planActual: true,
+                    colegio: { select: { id: true, nombre: true } },
+                    usuario: { select: { id: true, nombre: true, email: true } },
+                },
+            }),
+            this.db.suscripcion.count({ where }),
+        ]);
+
+        return { items, total };
     }
 
 }

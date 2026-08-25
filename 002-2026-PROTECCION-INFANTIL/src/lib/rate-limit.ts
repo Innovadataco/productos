@@ -47,6 +47,8 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     ciudades_buscar: { windowSeconds: 60, maxRequests: 60 },
     // SPEC-216 (002-PI-116): escrituras del módulo de pagos (aplicar bono, etc.).
     pagos_write: { windowSeconds: 60, maxRequests: 30 },
+    // SPEC-244 (002-PI-147): activación autónoma de freemium por padre.
+    freemium_activacion: { windowSeconds: 3600, maxRequests: 5 },
     session_ping: { windowSeconds: 60, maxRequests: 60 },
     verificar_pdf: { windowSeconds: 60, maxRequests: 30 },
     // SPEC-235 (002-PI-135): consulta pública de guías de acción.

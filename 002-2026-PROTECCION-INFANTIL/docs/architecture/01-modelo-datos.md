@@ -581,9 +581,13 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | activo | Boolean | — |
 | descripcion | String | opcional |
 | creadoPorAdminId | String | — |
+| origen | OrigenBono | — |
+| beneficiarioUsuarioId | String | opcional |
+| transferible | Boolean | — |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
 | creadoPor | Usuario | relación (FK) |
+| beneficiario | Usuario | opcional, relación (FK) |
 | usos | BonoAplicado | lista, relación |
 
 #### `CargaRosterSesion`
@@ -1267,8 +1271,16 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | motivoCancelacion | String | opcional |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
+| origen | OrigenSuscripcion | — |
+| autorizadoPorAdminId | String | opcional |
+| autorizadoEn | DateTime | opcional |
+| metodoPagoManual | MetodoPagoManual | opcional |
+| referenciaPagoManual | String | opcional |
+| montoRealPagado | Float | opcional |
+| fechaPagoReal | DateTime | opcional |
 | colegio | Colegio | opcional, relación (FK) |
 | usuario | Usuario | opcional, relación (FK) |
+| autorizadoPor | Usuario | opcional, relación (FK) |
 | planActual | Plan | relación (FK) |
 | pagos | Pago | lista, relación |
 | bonosAplicados | BonoAplicado | lista, relación |
@@ -1771,6 +1783,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | anonimizacionesValidadas | Reporte | lista, relación |
 | perfilOperador | PerfilOperador | opcional, relación |
 | operadoresCreados | PerfilOperador | lista, relación |
+| suscripcionesAutorizadas | Suscripcion | lista, relación |
+| bonosBeneficiario | BonoPromocional | lista, relación |
 | contactosConfianza | ContactoConfianza | lista, relación |
 | notificacionesCirculo | Boolean | — |
 | ultimaNotificacionCirculoEn | DateTime | opcional |
@@ -1918,6 +1932,7 @@ erDiagram
     Usuario ||--o{ AuditConsentimiento : "usuario"
     Usuario ||--o{ AuditLog : "usuario (opcional)"
     Usuario ||--o{ BlockList : "creadoPor"
+    Usuario ||--o{ BonoPromocional : "beneficiario (opcional)"
     Usuario ||--o{ BonoPromocional : "creadoPor"
     Usuario ||--o{ CodigoReferidoUso : "revisadaPor (opcional)"
     Usuario ||--o{ CodigoVerificacion : "usuario (opcional)"
@@ -1952,6 +1967,7 @@ erDiagram
     Usuario ||--o{ SolicitudComite : "comite (opcional)"
     Usuario ||--o{ SolicitudComite : "creadoPor (opcional)"
     Usuario ||--o{ SolicitudComite : "operador (opcional)"
+    Usuario ||--o{ Suscripcion : "autorizadoPor (opcional)"
     Usuario ||--o{ Suscripcion : "usuario (opcional)"
     Usuario ||--o{ TasaCambio : "ingresadoPor (opcional)"
     Usuario ||--o{ TokenRecuperacion : "usuario (opcional)"

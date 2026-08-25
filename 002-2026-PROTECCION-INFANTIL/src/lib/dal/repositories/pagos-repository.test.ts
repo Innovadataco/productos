@@ -11,9 +11,11 @@ import {
     MetodoPago,
     TipoBono,
     FuenteTasa,
+    OrigenSuscripcion,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
+import { crearColegioConAdmin } from "@/lib/reporte-test-utils";
 import { PagosRepository } from "./pagos-repository";
 
 function nuevoEmail() {
@@ -404,6 +406,78 @@ describe("PagosRepository", () => {
         expect(cop).toBeDefined();
         expect(cop?.desactualizada).toBe(false);
         expect(cop?.horasDesdeActualizacion).toBe(0);
+    });
+
+    it("detecta suscripción vigente para titular (usuario y colegio)", async () => {
+        const admin = await crearAdmin();
+        const padre = await crearUsuarioPadre();
+        const { colegio } = await crearColegioConAdmin();
+        const planPadre = await crearPlan(admin.id);
+        const repo = new PagosRepository();
+
+        expect(await repo.existeSuscripcionVigenteParaTitular({ usuarioId: padre.id })).toBe(false);
+
+        await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.PADRE,
+            usuarioId: padre.id,
+            estado: EstadoSuscripcion.ACTIVA,
+            planActualId: planPadre.id,
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-VIG-001",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        expect(await repo.existeSuscripcionVigenteParaTitular({ usuarioId: padre.id })).toBe(true);
+
+        const planColegio = await repo.crearPlan({
+            tipoTitular: TipoTitular.COLEGIO,
+            duracion: DuracionPlan.MES_12,
+            anio: 2026,
+            nombre: "Plan colegio",
+            precioBaseUSD: 100,
+            precio: 0,
+            creadoPorAdminId: admin.id,
+        });
+        await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.COLEGIO,
+            colegioId: colegio.id,
+            estado: EstadoSuscripcion.PENDIENTE_AUTORIZACION,
+            planActualId: planColegio.id,
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-VIG-002",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        expect(await repo.existeSuscripcionVigenteParaTitular({ colegioId: colegio.id })).toBe(true);
+    });
+
+    it("cuenta suscripciones freemium por usuario", async () => {
+        const admin = await crearAdmin();
+        const padre = await crearUsuarioPadre();
+        const plan = await crearPlan(admin.id);
+        const repo = new PagosRepository();
+
+        expect(await repo.contarSuscripcionesFreemiumPorUsuario(padre.id)).toBe(0);
+
+        await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.PADRE,
+            usuarioId: padre.id,
+            estado: EstadoSuscripcion.ACTIVA,
+            origen: OrigenSuscripcion.FREEMIUM_AUTO,
+            esFreemium: true,
+            planActualId: plan.id,
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-FREE-001",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        expect(await repo.contarSuscripcionesFreemiumPorUsuario(padre.id)).toBe(1);
     });
 
     it("obtiene ficha de cliente", async () => {

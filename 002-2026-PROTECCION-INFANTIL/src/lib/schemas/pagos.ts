@@ -149,3 +149,53 @@ export const pagosAplicarReferidoBodySchema = z.object({
     suscripcionId: z.string().cuid(),
     codigoReferido: z.string().trim().min(1).max(20),
 });
+
+// SPEC-244 (002-PI-147): solicitud de plan por cliente (padre o colegio).
+export const pagosSolicitarPlanBodySchema = z.object({
+    planId: z.string().cuid(),
+    codigoBono: z.string().trim().max(100).optional(),
+});
+
+// SPEC-244 (002-PI-147): activación autónoma de freemium por padre.
+export const pagosActivarFreemiumBodySchema = z.object({
+    aceptaTerminos: z.boolean().refine((v) => v === true, {
+        message: "Debe aceptar los términos de la prueba gratis",
+    }),
+});
+
+// SPEC-245 (002-PI-148): listado de targets sin suscripción vigente.
+export const pagosSinSuscripcionQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    tipo: z.enum(["PADRE", "COLEGIO"]).optional(),
+    q: z.string().trim().min(2).max(120).optional(),
+});
+
+// SPEC-245 (002-PI-148): listado de solicitudes PENDIENTE_AUTORIZACION.
+export const pagosSolicitudesPendientesQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(2).max(120).optional(),
+});
+
+// SPEC-245 (002-PI-148): activación manual de suscripción por admin.
+export const pagosActivarManualBodySchema = z.object({
+    usuarioObjetivoId: z.string().cuid().optional(),
+    colegioObjetivoId: z.string().cuid().optional(),
+    planId: z.string().cuid(),
+    metodoPagoManual: z.enum(["TRANSFERENCIA_BANCARIA", "EFECTIVO", "CHEQUE", "OTRO"]),
+    referenciaPagoManual: z.string().trim().min(1).max(200),
+    montoRealPagado: z.coerce.number().min(0),
+    fechaPagoReal: z.string().datetime().optional(),
+}).refine(
+    (data) => Boolean(data.usuarioObjetivoId) !== Boolean(data.colegioObjetivoId),
+    { message: "Debe especificar usuarioObjetivoId O colegioObjetivoId, no ambos ni ninguno", path: ["root"] }
+);
+
+// SPEC-245 (002-PI-148): autorización de solicitud pendiente por admin.
+export const pagosAutorizarSolicitudBodySchema = z.object({
+    metodoPagoManual: z.enum(["TRANSFERENCIA_BANCARIA", "EFECTIVO", "CHEQUE", "OTRO"]),
+    referenciaPagoManual: z.string().trim().min(1).max(200),
+    montoRealPagado: z.coerce.number().min(0),
+    fechaPagoReal: z.string().datetime().optional(),
+});

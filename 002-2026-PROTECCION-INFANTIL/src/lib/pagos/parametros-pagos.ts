@@ -98,3 +98,54 @@ export async function esFreemiumActivo(): Promise<boolean> {
 export async function obtenerDuracionFreemiumDias(): Promise<number> {
     return parseEnteroPositivo(await getParametroSistemaValor("pagos.freemium.duracion_dias"), 30);
 }
+
+// SPEC-244 (002-PI-147): parámetros de IVA para el selector de planes.
+
+/** % de IVA aplicado a planes pagos (`pagos.iva.porcentaje`). Default 19. */
+export async function obtenerTasaIva(): Promise<number> {
+    return parseFloatNoNegativo(await getParametroSistemaValor("pagos.iva.porcentaje"), 19);
+}
+
+/** Determina si el IVA aplica a un tipo de titular según `pagos.iva.aplica_a`. Default true. */
+export function ivaAplicaATitular(aplicaA: string | null | undefined, tipoTitular: TipoTitular): boolean {
+    const valor = (aplicaA ?? "todos").trim().toLowerCase();
+    if (valor === "todos") return true;
+    if (valor === "ninguno") return false;
+    if (valor === "solo_colegios") return tipoTitular === "COLEGIO";
+    if (valor === "solo_padres") return tipoTitular === "PADRE";
+    return true;
+}
+
+/** Resuelve si el IVA aplica al tipo de titular leyendo el parámetro del sistema. */
+export async function ivaAplicaA(tipoTitular: TipoTitular): Promise<boolean> {
+    const aplicaA = await getParametroSistemaValor("pagos.iva.aplica_a");
+    return ivaAplicaATitular(aplicaA, tipoTitular);
+}
+
+// SPEC-246 (002-PI-149): parámetros del programa de cupones de recompensa.
+
+export interface ParametrosRecompensa {
+    cuponesPorPago: number;
+    vigenciaDias: number;
+    porcentajeDescuento: number;
+    topeMaxCOP: number | null;
+}
+
+/** Lee los parámetros de generación de cupones de recompensa con defaults defensivos. */
+export async function obtenerParametrosRecompensa(): Promise<ParametrosRecompensa> {
+    const [cuponesPorPago, vigenciaDias, porcentajeDescuento, topeMaxCOPRaw] = await Promise.all([
+        getParametroSistemaValor("pagos.recompensa.cupones_por_pago"),
+        getParametroSistemaValor("pagos.recompensa.vigencia_dias"),
+        getParametroSistemaValor("pagos.recompensa.porcentaje_descuento"),
+        getParametroSistemaValor("pagos.recompensa.tope_max_cop"),
+    ]);
+
+    const topeMaxCOP = topeMaxCOPRaw?.trim() ? parseFloatNoNegativo(topeMaxCOPRaw, 0) || null : null;
+
+    return {
+        cuponesPorPago: parseEnteroPositivo(cuponesPorPago, 5),
+        vigenciaDias: parseEnteroPositivo(vigenciaDias, 90),
+        porcentajeDescuento: Math.min(100, parseFloatNoNegativo(porcentajeDescuento, 20)),
+        topeMaxCOP,
+    };
+}
