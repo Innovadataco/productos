@@ -1,8 +1,10 @@
+import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { verificarVigenciaCliente } from "@/lib/colegio/vigencia";
 import { ServicioVencidoScreen } from "@/components/modules/ServicioVencidoScreen";
 import { SessionPingProvider } from "@/components/providers/SessionPingProvider";
+import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
 
 /**
  * Layout raíz de /dashboard (SPEC-119): aplica la guarda de vigencia al área del padre
@@ -17,6 +19,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     if (token) {
         const payload = await verifyToken(token);
         if (payload?.sub && payload.rol === "PARENT") {
+            // SPEC-241 (002-PI-144): consentimiento informado antes de vigencia.
+            const requiereConsentimiento = await requiereConsentimientoActual(payload.sub as string);
+            if (requiereConsentimiento) {
+                redirect("/consentimiento");
+            }
+
             const vigencia = await verificarVigenciaCliente(payload.sub as string);
             if (!vigencia.vigente) {
                 return <ServicioVencidoScreen mensaje={vigencia.mensaje} />;

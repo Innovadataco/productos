@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
 import { AdminNav } from "@/components/modules/AdminNav";
 import { AdminVersionBadge } from "@/components/modules/AdminVersionBadge";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
@@ -19,18 +20,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
     const payload = await verifyToken(token);
     const rol = payload?.rol as string | undefined;
-    if (!rol || !ADMIN_ROLES.has(rol)) {
+    const userId = payload?.sub as string | undefined;
+    if (!userId || !rol || !ADMIN_ROLES.has(rol)) {
         redirect("/");
+    }
+
+    // SPEC-241 (002-PI-144): guardia de consentimiento informado.
+    const requiereConsentimiento = await requiereConsentimientoActual(userId);
+    if (requiereConsentimiento) {
+        redirect("/consentimiento");
     }
 
     // Enforcement central: cualquier rol interno con contraseña temporal debe
     // cambiarla antes de usar el panel (igual que SCHOOL_ADMIN en su layout).
-    if (payload?.sub) {
-        // E-8: la consulta vive en el repo; el componente no toca prisma.
-        const usuario = await new UsuarioRepository().findDebeCambiarPassword(payload.sub as string);
-        if (usuario?.debeCambiarPassword) {
-            redirect("/cambiar-password");
-        }
+    const usuario = await new UsuarioRepository().findDebeCambiarPassword(userId);
+    if (usuario?.debeCambiarPassword) {
+        redirect("/cambiar-password");
     }
 
     const permitidos = await modulosPermitidosParaRol(rol);
