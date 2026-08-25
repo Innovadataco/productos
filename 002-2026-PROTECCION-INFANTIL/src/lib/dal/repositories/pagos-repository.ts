@@ -4,7 +4,7 @@
  * clase en lugar de importar `@/lib/prisma` directamente.
  */
 import type { Prisma } from "@prisma/client";
-import { TipoTitular, DuracionPlan, EstadoPago, EstadoSuscripcion } from "@prisma/client";
+import { TipoTitular, DuracionPlan, EstadoPago, EstadoSuscripcion, OrigenSuscripcion } from "@prisma/client";
 import { toZonedTime, formatInTimeZone } from "date-fns-tz";
 import { addDays, startOfDay, endOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
@@ -458,6 +458,42 @@ export class PagosRepository {
         return this.db.bonoAplicado
             .count({ where: { bonoId, suscripcionId } })
             .then((count) => count > 0);
+    }
+
+    // ── Suscripción (extensiones SPEC-244) ──
+
+    /**
+     * SPEC-244 (002-PI-147): true si el titular (usuario padre o colegio) tiene
+     * una suscripción en estado ACTIVA, EN_GRACIA o PENDIENTE_AUTORIZACION.
+     */
+    async existeSuscripcionVigenteParaTitular(filtro: { usuarioId?: string | undefined; colegioId?: string | undefined }): Promise<boolean> {
+        const OR: Prisma.SuscripcionWhereInput[] = [];
+        if (filtro.usuarioId) OR.push({ usuarioId: filtro.usuarioId });
+        if (filtro.colegioId) OR.push({ colegioId: filtro.colegioId });
+        if (OR.length === 0) return false;
+
+        const count = await this.db.suscripcion.count({
+            where: {
+                OR,
+                estado: {
+                    in: [EstadoSuscripcion.ACTIVA, EstadoSuscripcion.EN_GRACIA, EstadoSuscripcion.PENDIENTE_AUTORIZACION],
+                },
+            },
+        });
+        return count > 0;
+    }
+
+    /**
+     * SPEC-244 (002-PI-147): cuenta suscripciones con origen FREEMIUM_AUTO de un
+     * usuario padre (anti-doble freemium autónomo).
+     */
+    async contarSuscripcionesFreemiumPorUsuario(usuarioId: string): Promise<number> {
+        return this.db.suscripcion.count({
+            where: {
+                usuarioId,
+                origen: OrigenSuscripcion.FREEMIUM_AUTO,
+            },
+        });
     }
 
     // ── Código de referido ──

@@ -740,6 +740,11 @@ async function seedParametrosPagos() {
         { clave: "pagos.recompensa.activa", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Indica si el programa de recompensas por referidos está activo" },
         { clave: "pagos.recompensa.meses_gratis", valor: "1", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Meses gratis otorgados como recompensa por referido exitoso" },
         { clave: "pagos.recompensa.max_por_año", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Máximo de recompensas por referido al año por cliente" },
+        // SPEC-244 (002-PI-147): parámetros del programa de recompensas por pago manual.
+        { clave: "pagos.recompensa.cupones_por_pago", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cupones de recompensa generados por cada pago manual autorizado" },
+        { clave: "pagos.recompensa.porcentaje_descuento", valor: "20", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "% de descuento de cada cupón de recompensa" },
+        { clave: "pagos.recompensa.vigencia_dias", valor: "90", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días de vigencia de un cupón de recompensa desde su generación" },
+        { clave: "pagos.recompensa.tope_max_cop", valor: "", tipo: TipoParametro.STRING, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Tope máximo en COP del descuento de un cupón (vacío = sin tope)" },
     ];
 
     const clavesNoPisar = new Set([
@@ -750,6 +755,10 @@ async function seedParametrosPagos() {
         "pagos.recompensa.activa",
         "pagos.recompensa.meses_gratis",
         "pagos.recompensa.max_por_año",
+        "pagos.recompensa.cupones_por_pago",
+        "pagos.recompensa.porcentaje_descuento",
+        "pagos.recompensa.vigencia_dias",
+        "pagos.recompensa.tope_max_cop",
     ]);
 
     for (const p of pagosParams) {
@@ -1822,6 +1831,9 @@ async function main() {
         console.log("[SEED] No hay admin en BD; se omite seed de planes de pagos.");
     }
     await seedParametrosPagos();
+
+    // SPEC-244 (002-PI-147): eventos/plantillas del ciclo de vida de suscripción.
+    await seedEventosSuscripcion();
 
     // SPEC-240 (002-PI-143): evento/plantilla de invitación al rector.
     await seedInvitacionColegio();
@@ -3393,7 +3405,162 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedEventosSuscripcion };
+
+// ── SPEC-244 (002-PI-147): catálogo Motor Notif del ciclo de vida de suscripción ──
+// Idempotente: plantillas con upsert por clave; reglas con findFirst→update/create
+// respetando la clave @@unique([evento, canal, plantillaClave]) de SPEC-247.
+async function seedEventosSuscripcion() {
+    const variablesSchemaSolicitada = {
+        type: "object",
+        properties: {
+            nombre: { type: "string" },
+            email: { type: "string" },
+            planNombre: { type: "string" },
+            totalCOP: { type: "string" },
+            suscripcionId: { type: "string" },
+        },
+    };
+    const variablesSchemaActivada = {
+        type: "object",
+        properties: {
+            nombre: { type: "string" },
+            duracionDias: { type: "string" },
+            suscripcionId: { type: "string" },
+        },
+    };
+
+    const plantillas = [
+        {
+            clave: "suscripcion.solicitada.in_app",
+            canal: "IN_APP" as const,
+            asunto: null,
+            cuerpoMarkdown: "Nueva solicitud de suscripción: {{planNombre}} por {{nombre}} ({{email}}). Total: ${{totalCOP}}.",
+            variablesSchema: variablesSchemaSolicitada,
+        },
+        {
+            clave: "suscripcion.solicitada.email",
+            canal: "EMAIL" as const,
+            asunto: "Solicitud de suscripción recibida · {{planNombre}}",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "Recibimos tu solicitud de suscripción al plan **{{planNombre}}**.\n\n" +
+                "Total estimado: ${{totalCOP}} COP.\n\n" +
+                "Un administrador revisará y autorizará tu pago. Te avisaremos por este medio.",
+            variablesSchema: variablesSchemaSolicitada,
+        },
+        {
+            clave: "suscripcion.solicitada.email.colegio",
+            canal: "EMAIL" as const,
+            asunto: "Solicitud de suscripción recibida · {{planNombre}}",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "Recibimos la solicitud de suscripción institucional al plan **{{planNombre}}**.\n\n" +
+                "Total estimado: ${{totalCOP}} COP.\n\n" +
+                "Un administrador revisará y autorizará el pago. Te avisaremos por este medio.",
+            variablesSchema: variablesSchemaSolicitada,
+        },
+        {
+            clave: "suscripcion.activada.in_app",
+            canal: "IN_APP" as const,
+            asunto: null,
+            cuerpoMarkdown: "Tu prueba gratis está activa por {{duracionDias}} días.",
+            variablesSchema: variablesSchemaActivada,
+        },
+        {
+            clave: "suscripcion.activada.email",
+            canal: "EMAIL" as const,
+            asunto: "Tu prueba gratis está activa",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "Tu prueba gratis está activa por **{{duracionDias}} días**.\n\n" +
+                "Gracias por confiar en Protección Infantil.",
+            variablesSchema: variablesSchemaActivada,
+        },
+        {
+            clave: "suscripcion.activada.email.colegio",
+            canal: "EMAIL" as const,
+            asunto: "Prueba gratis activada para tu colegio",
+            cuerpoMarkdown:
+                "Hola {{nombre}},\n\n" +
+                "La prueba gratis para tu colegio está activa por **{{duracionDias}} días**.\n\n" +
+                "Gracias por confiar en Protección Infantil.",
+            variablesSchema: variablesSchemaActivada,
+        },
+    ];
+
+    for (const pl of plantillas) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: pl.variablesSchema,
+                activa: true,
+            },
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema: pl.variablesSchema,
+                activa: true,
+            },
+        });
+    }
+
+    const reglas: Array<{
+        evento: string;
+        rol: string;
+        canal: "EMAIL" | "IN_APP";
+        plantillaClave: string;
+        obligatoria: boolean;
+    }> = [
+        { evento: "suscripcion.solicitada", rol: "ADMIN", canal: "IN_APP", plantillaClave: "suscripcion.solicitada.in_app", obligatoria: false },
+        { evento: "suscripcion.solicitada", rol: "PARENT", canal: "EMAIL", plantillaClave: "suscripcion.solicitada.email", obligatoria: true },
+        { evento: "suscripcion.solicitada", rol: "SCHOOL_ADMIN", canal: "EMAIL", plantillaClave: "suscripcion.solicitada.email.colegio", obligatoria: true },
+        { evento: "suscripcion.activada", rol: "PARENT", canal: "IN_APP", plantillaClave: "suscripcion.activada.in_app", obligatoria: false },
+        { evento: "suscripcion.activada", rol: "PARENT", canal: "EMAIL", plantillaClave: "suscripcion.activada.email", obligatoria: true },
+        { evento: "suscripcion.activada", rol: "SCHOOL_ADMIN", canal: "IN_APP", plantillaClave: "suscripcion.activada.in_app", obligatoria: false },
+        { evento: "suscripcion.activada", rol: "SCHOOL_ADMIN", canal: "EMAIL", plantillaClave: "suscripcion.activada.email.colegio", obligatoria: true },
+    ];
+
+    for (const regla of reglas) {
+        const existente = await prisma.notificacionRegla.findFirst({
+            where: {
+                evento: regla.evento,
+                rol: regla.rol,
+                canal: regla.canal,
+            },
+            orderBy: { createdAt: "desc" },
+        });
+        if (existente) {
+            await prisma.notificacionRegla.update({
+                where: { id: existente.id },
+                data: {
+                    offset: "+0m",
+                    plantillaClave: regla.plantillaClave,
+                    obligatoria: regla.obligatoria,
+                    activa: true,
+                },
+            });
+        } else {
+            await prisma.notificacionRegla.create({
+                data: {
+                    evento: regla.evento,
+                    rol: regla.rol,
+                    offset: "+0m",
+                    canal: regla.canal,
+                    plantillaClave: regla.plantillaClave,
+                    obligatoria: regla.obligatoria,
+                    activa: true,
+                },
+            });
+        }
+    }
+    console.log("[SEED] Catálogo Motor Notif suscripcion.solicitada/activada listo (SPEC-244)");
+}
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de
 // entrada (p. ej. `tsx prisma/seed.ts` o `prisma db seed`). Al importarse como
