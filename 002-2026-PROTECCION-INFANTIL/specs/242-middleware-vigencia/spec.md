@@ -3,7 +3,7 @@
 **Feature Branch**: `work/002-PI-145`  
 **SPEC**: 242  
 **Created**: 2026-08-25  
-**Status**: PLANEADO  
+**Status**: IMPLEMENTADO  
 **Input**: INSTRUCTIVO-002-PI-145 · BRIEF-ACTIVACION-Y-COBROS §5.4/§9.2/§11 Lote 1 fila #3 · D-52/D-69/D-72/D-74
 
 Impacto en arquitectura: agrega valor `PENDIENTE_AUTORIZACION` al enum `EstadoSuscripcion` de forma aditiva, crea helper puro `src/lib/pagos/vigencia-middleware.ts` con cálculo de vigencia en timezone `America/Bogota` vía `date-fns-tz`, modifica layouts `src/app/dashboard/padre/layout.tsx` y `src/app/dashboard/colegio/layout.tsx` para aplicar guarda de suscripción (permitir `ACTIVA`, banner ámbar en `EN_GRACIA`, redirigir a `/dashboard/<rol>/suscripcion` en otros estados), crea `src/app/reportar/layout.tsx` para registrar `AuditLog` `reporte-sin-suscripcion` sin bloquear, y provee tests unitarios del helper + integración de layouts + 3 escenarios de frontera de medianoche Bogotá.
@@ -88,4 +88,14 @@ El sistema debe bloquear el acceso a las funciones de pago del dashboard cuando 
 
 ## Implementación
 
-*(Por completar tras aprobación de ZEUS en compuerta §4.)*
+- `prisma/schema.prisma`: extensión aditiva de `EstadoSuscripcion` (+`PENDIENTE_AUTORIZACION`) y `AccionAudit` (+`REPORTE_SIN_SUSCRIPCION`).
+- `prisma/migrations/20260825054000_spec_242_vigencia_middleware/migration.sql`: `ALTER TYPE ... ADD VALUE IF NOT EXISTS` idempotente para ambos enums.
+- `src/lib/dal/repositories/pagos-repository.ts`: métodos `obtenerSuscripcionPorUsuarioId` y `obtenerSuscripcionActivaPorUsuarioId`.
+- `src/lib/pagos/vigencia-middleware.ts`: helper puro con `resolverEstadoVigencia`, `esRutaExenta`, `redireccionSuscripcion`, `debeMostrarBanner`, `mensajeParaEstado` y `ahoraBogota` (timezone `America/Bogota`).
+- `src/lib/pagos/vigencia-middleware.test.ts`: 12 tests unitarios por estado, exenciones y 3 escenarios de frontera de medianoche Bogotá.
+- `src/app/dashboard/padre/layout.tsx` y `src/app/dashboard/colegio/layout.tsx`: guarda de vigencia server-side, banner ámbar para `EN_GRACIA`, redirección a `/suscripcion` en estados bloqueados, respetando `/consentimiento`, `/perfil`, `/suscripcion` y `/reportar`.
+- `src/app/reportar/layout.tsx`: Server Component que permite siempre el acceso y audita `REPORTE_SIN_SUSCRIPCION` cuando un padre autenticado no tiene suscripción activa.
+- `src/app/dashboard/padre/suscripcion/page.tsx` y `src/app/dashboard/colegio/suscripcion/page.tsx`: placeholders exentos de la guarda.
+- `src/components/modules/PadreLogoutButton.tsx`: botón de cierre de sesión reutilizable para el placeholder padre.
+- Documentación Spec-Kit: `tasks.md`, `data-model.md`, `quickstart.md`, `contracts/vigencia.md`.
+- Gate local: `npx tsc --noEmit` ✅, `npm run lint` ✅ (0 errores, 47 warnings preexistentes), tests focus ✅ (36 passed), `npm run build` ✅, `npm run arch:check` ✅.

@@ -164,6 +164,31 @@ export class PagosRepository {
         return this.db.suscripcion.findMany({ where: { usuarioId } });
     }
 
+    /**
+     * SPEC-242: última suscripción de un usuario (cualquier estado).
+     */
+    obtenerSuscripcionPorUsuarioId(usuarioId: string) {
+        return this.db.suscripcion.findFirst({
+            where: { usuarioId },
+            orderBy: { fechaInicio: "desc" },
+            include: { planActual: true },
+        });
+    }
+
+    /**
+     * SPEC-242: suscripción vigente del usuario (ACTIVA o EN_GRACIA), más reciente primero.
+     */
+    obtenerSuscripcionActivaPorUsuarioId(usuarioId: string) {
+        return this.db.suscripcion.findFirst({
+            where: {
+                usuarioId,
+                estado: { in: [EstadoSuscripcion.ACTIVA, EstadoSuscripcion.EN_GRACIA] },
+            },
+            orderBy: [{ estado: "asc" }, { fechaInicio: "desc" }],
+            include: { planActual: true },
+        });
+    }
+
     actualizarSuscripcion(id: string, data: Prisma.SuscripcionUncheckedUpdateInput) {
         return this.db.suscripcion.update({ where: { id }, data });
     }
