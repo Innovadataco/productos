@@ -117,4 +117,36 @@ describe("/api/admin/colegios", () => {
         const json = await res.json();
         expect(json.colegios).toHaveLength(1);
     });
+
+    it("admite payload legacy completo para journeys existentes (SPEC-114/133)", async () => {
+        const admin = await crearUsuario("ADMIN");
+        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
+
+        const pais = await prisma.pais.findUnique({ where: { codigo: "CO" } });
+        const ciudad = await prisma.ciudad.findFirst({ where: { paisId: pais!.id } });
+        const email = `legacy-${Date.now()}@test.com`;
+        const inicio = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const res = await POST(
+            postRequest(mockToken, {
+                nombre: `Colegio Legacy ${Date.now()}`,
+                paisId: pais!.id,
+                ciudadId: ciudad!.id,
+                representanteLegalNombre: "Rector Legacy",
+                representanteLegalIdentificacion: "CC-12345",
+                representanteLegalEmail: email,
+                inicioServicio: inicio.toISOString(),
+                finServicio: new Date(inicio.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                tipoPeriodo: "ANUAL",
+                adminEmail: email,
+                adminNombre: "Admin Legacy",
+            })
+        );
+
+        expect(res.status).toBe(201);
+        const json = await res.json();
+        expect(json.passwordTemporal).toBeTruthy();
+        expect(json.colegio.admin.debeCambiarPassword).toBe(true);
+        expect(json.colegio.admin.email).toBe(email.toLowerCase());
+    });
 });

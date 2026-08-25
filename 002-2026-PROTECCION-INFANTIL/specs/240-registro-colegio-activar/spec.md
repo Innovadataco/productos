@@ -6,6 +6,8 @@
 **Status**: PLANEADO  
 **Input**: INSTRUCTIVO-002-PI-143 · BRIEF-ACTIVACION-Y-COBROS §5.2/§5.3/§6.1/§6.3/§8/§10/§11 · D-52/D-69/D-72/D-74
 
+Impacto en arquitectura: agrega enum `EstadoActivacion` + 3 campos aditivos en `Usuario` (`estadoActivacion`, `tokenInvitacion`, `tokenInvitacionExpiraEn`), nueva ruta pública `/registro-colegio`, nueva ruta `/activar?token=XYZ`, simplifica admin pre-registro (14→3 campos, fix BUG-01) con modal en vez de banner, nuevo evento `colegio.invitacion.enviada` + parámetro `pagos.invitacion.token_vigencia_horas` en seed idempotente, extensión aditiva de `/api/auth/verificar/completar` para crear Colegio+SCHOOL_ADMIN. El endpoint `POST /api/admin/colegios` conserva compatibilidad legacy con payload completo para journeys existentes.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
