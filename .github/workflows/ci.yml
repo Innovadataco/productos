@@ -196,7 +196,20 @@ jobs:
           pattern: coverage-blob-*
           path: 002-2026-PROTECCION-INFANTIL/blobs
           merge-multiple: true
-      - run: npx vitest run --config vitest.config.ts --mergeReports blobs --coverage.enabled --coverage.reporter=text
+      # SPEC-280 (002-PI-180): además de texto, emite JSON de tests y coverage
+      # (json-summary) para que el job `resumen` los consuma.
+      - run: npx vitest run --config vitest.config.ts --mergeReports blobs --coverage.enabled --coverage.reporter=text --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=vitest-summary.json
+      - uses: actions/upload-artifact@v4
+        # SPEC-280: los suministros del resumen se suben incluso si el merge falló
+        # (para pintar "resumen parcial" en vez de perder la pestaña Summary).
+        if: ${{ !cancelled() }}
+        with:
+          name: resumen-inputs
+          path: |
+            002-2026-PROTECCION-INFANTIL/vitest-summary.json
+            002-2026-PROTECCION-INFANTIL/coverage/coverage-summary.json
+          retention-days: 1
+          if-no-files-found: warn
 
   journeys:
     runs-on: ubuntu-latest
@@ -317,6 +330,39 @@ jobs:
           EMAIL_FROM: build@ci.local
           ANTI_ABUSO_SALT: build-placeholder-salt-min-32-chars
           DATABASE_URL: postgresql://build:build@localhost:5432/build
+
+  # SPEC-280 (002-PI-180): resumen legible al final de cada corrida. Corre siempre
+  # que el CI haya arrancado (verde, rojo o cancelado) — la pestaña "Summary" debe
+  # existir aunque un shard se cayera. Nunca rompe el gate.
+  resumen:
+    runs-on: ubuntu-latest
+    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build]
+    if: ${{ needs.should-skip.outputs.skip != 'true' && always() }}
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: resumen-inputs
+          path: 002-2026-PROTECCION-INFANTIL
+        continue-on-error: true
+      - name: Consultar duración de los jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" > jobs.json || echo '{"jobs":[]}' > jobs.json
+      - name: Escribir resumen en la pestaña Summary
+        run: |
+          VITEST_JSON=""
+          COVERAGE_JSON=""
+          test -f vitest-summary.json && VITEST_JSON="--vitest-json vitest-summary.json" || true
+          test -f coverage-summary.json && COVERAGE_JSON="--coverage-json coverage-summary.json" || true
+          node scripts/ci/resumen.mjs --jobs-json jobs.json --piso-lineas 36 $VITEST_JSON $COVERAGE_JSON >> "$GITHUB_STEP_SUMMARY"
 
   gate:
     runs-on: ubuntu-latest

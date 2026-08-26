@@ -8,6 +8,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/arch/no-prisma-mocks.test.ts",
     // SPEC-284 (002-PI-184 · I-130): compuerta de IDs de advisory lock únicos.
     "scripts/locks-check.test.ts",
+    // SPEC-280 (002-PI-180): constructor puro del resumen del CI, sin BD ni red.
+    "scripts/ci/resumen.test.mjs",
     "src/app/dashboard/admin/estadisticas/components/EstadisticasSubNav.test.tsx",
     "src/app/dashboard/colegio/alertas/AlertasColegioPageClient.test.tsx",
     "src/components/modules/config-panel/MantenimientoLogsPanel.test.tsx",
