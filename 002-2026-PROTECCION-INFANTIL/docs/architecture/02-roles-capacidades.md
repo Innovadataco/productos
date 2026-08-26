@@ -3373,7 +3373,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | analisis_admin | `/dashboard/admin/analisis/reglas` | ADMIN |
 | analisis_recomendaciones | `/dashboard/admin/analisis/recomendaciones` | ADMIN |
 | anti_abuso | `/dashboard/admin/anti-abuso` | ADMIN |
-| bandeja_reportes | `/dashboard/admin` | ADMIN, COMITE_VALIDACION, OPERADOR |
+| bandeja_reportes | `/dashboard/admin` | ADMIN, OPERADOR |
 | centro_control_ia | `/dashboard/admin/ia` | ADMIN |
 | colegios | `/dashboard/colegio` | ADMIN, COMITE_CONVIVENCIA, SCHOOL_ADMIN |
 | colegios | `/dashboard/colegio/suscripcion` | ADMIN, COMITE_CONVIVENCIA, SCHOOL_ADMIN |

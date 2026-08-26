@@ -18,9 +18,7 @@ function getClientInfo(request: Request) {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        await assertModulo(user, "bandeja_reportes");
-        // Spec 096-US5: el permiso es un módulo del catálogo (default solo ADMIN),
-        // ya no un chequeo de rol duro.
+        // Spec 096-US5 + SPEC-266: módulo específico; bandeja_reportes era redundante.
         await assertModulo(user, "expediente_revelar_original");
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });

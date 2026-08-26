@@ -1,14 +1,15 @@
 /**
  * SPEC-263 (002-PI-164) — revoca el grant pagos_admin del rol OPERADOR en
  * bases de datos existentes.
+ * SPEC-266 (002-PI-169) — revoca bandeja_reportes y denuncia_formal del rol
+ * COMITE_VALIDACION (I-128: grants indebidos).
  *
- * Contexto: seed-modulos-grants.ts era aditivo y sembró pagos_admin para OPERADOR
- * (SPEC-212, D-43). El nuevo seed ya NO lo incluye, pero sync-modulos-grants.ts
- * NUNCA revoca: las BD vivas conservan el grant activo. Este script lo desactiva
- * de forma idempotente y NO destructiva:
+ * Contexto: seed-modulos-grants.ts es aditivo y NUNCA revoca (CANDADO §5.5).
+ * Las BD vivas conservan grants activos aunque el seed los haya eliminado.
+ * Este script los desactiva de forma idempotente y NO destructiva:
  *   - NO borra filas de PermisoModulo (quedan revocadas, restaurables por ADMIN).
- *   - NO borra el módulo del catálogo (ADMIN lo sigue usando).
- *   - NO toca ningún otro rol.
+ *   - NO borra módulos del catálogo.
+ *   - Solo toca los roles y módulos explicitados abajo.
  *
  * Uso (cargar el DATABASE_URL del entorno correspondiente):
  *   node --env-file=.env --import tsx scripts/revocar-grants-pagos-operador.ts
@@ -53,42 +54,102 @@ export async function revocarGrantsPagosOperador(client: PrismaClient = prisma):
     return { revocados: resultado.count, yaInactivos };
 }
 
+// SPEC-266 (002-PI-169): bandeja_reportes y denuncia_formal eran indebidos para COMITE (I-128).
+const ROL_COMITE = "COMITE_VALIDACION";
+const MODULOS_INDEBIDOS_COMITE = ["bandeja_reportes", "denuncia_formal"] as const;
+
+export async function revocarGrantsComiteIndebidos(client: PrismaClient = prisma): Promise<ResultadoRevocacion> {
+    const modulos = await client.moduloPermisible.findMany({
+        where: { clave: { in: [...MODULOS_INDEBIDOS_COMITE] } },
+        select: { id: true, clave: true },
+    });
+    if (modulos.length !== MODULOS_INDEBIDOS_COMITE.length) {
+        const halladas = modulos.map((m) => m.clave).join(", ") || "(ninguna)";
+        throw new Error(
+            `[RevocacionComiteIndebidos] Catálogo incompleto: se esperaba ${MODULOS_INDEBIDOS_COMITE.join(", ")} y existe ${halladas}. ` +
+            "Corre el seed primero; el script no crea ni borra módulos."
+        );
+    }
+    const ids = modulos.map((m) => m.id);
+
+    const yaInactivos = await client.permisoModulo.count({
+        where: { rol: ROL_COMITE, moduloId: { in: ids }, activo: false },
+    });
+    const resultado = await client.permisoModulo.updateMany({
+        where: { rol: ROL_COMITE, moduloId: { in: ids }, activo: true },
+        data: { activo: false },
+    });
+    return { revocados: resultado.count, yaInactivos };
+}
+
 async function main() {
-    const ids = (
+    // --- OPERADOR: pagos_admin ---
+    const idsOperador = (
         await prisma.moduloPermisible.findMany({
             where: { clave: { in: [...MODULOS_MUERTOS] } },
             select: { id: true },
         })
     ).map((m) => m.id);
 
-    const antes = await prisma.permisoModulo.findMany({
+    const antesOperador = await prisma.permisoModulo.findMany({
         where: { rol: ROL },
         include: { modulo: { select: { clave: true } } },
     });
     console.log(
-        `[RevocacionPagosOperador] Antes: ${antes.length} grants del OPERADOR ` +
-        `(${antes.filter((p) => p.activo).map((p) => p.modulo.clave).join(", ") || "ninguno activo"})`
+        `[RevocacionPagosOperador] Antes: ${antesOperador.length} grants del OPERADOR ` +
+        `(${antesOperador.filter((p) => p.activo).map((p) => p.modulo.clave).join(", ") || "ninguno activo"})`
     );
 
-    const resultado = await revocarGrantsPagosOperador();
+    const resOperador = await revocarGrantsPagosOperador();
     console.log(
-        `[RevocacionPagosOperador] Revocación: completada — ${resultado.revocados} grants desactivados ` +
-        `(${MODULOS_MUERTOS.join(", ")}), ${resultado.yaInactivos} ya estaban inactivos`
+        `[RevocacionPagosOperador] Revocación: completada — ${resOperador.revocados} grants desactivados ` +
+        `(${MODULOS_MUERTOS.join(", ")}), ${resOperador.yaInactivos} ya estaban inactivos`
     );
 
-    const despues = await prisma.permisoModulo.findMany({
-        where: { rol: ROL, activo: true, moduloId: { notIn: ids } },
+    const despuesOperador = await prisma.permisoModulo.findMany({
+        where: { rol: ROL, activo: true, moduloId: { notIn: idsOperador } },
         include: { modulo: { select: { clave: true } } },
     });
     console.log(
-        `[RevocacionPagosOperador] Después: grants activos del OPERADOR = ${despues.map((p) => p.modulo.clave).join(", ") || "(ninguno)"}`
+        `[RevocacionPagosOperador] Después: grants activos del OPERADOR = ${despuesOperador.map((p) => p.modulo.clave).join(", ") || "(ninguno)"}`
+    );
+
+    // --- COMITE_VALIDACION: bandeja_reportes, denuncia_formal ---
+    const idsComite = (
+        await prisma.moduloPermisible.findMany({
+            where: { clave: { in: [...MODULOS_INDEBIDOS_COMITE] } },
+            select: { id: true },
+        })
+    ).map((m) => m.id);
+
+    const antesComite = await prisma.permisoModulo.findMany({
+        where: { rol: ROL_COMITE },
+        include: { modulo: { select: { clave: true } } },
+    });
+    console.log(
+        `[RevocacionComiteIndebidos] Antes: ${antesComite.length} grants del COMITE_VALIDACION ` +
+        `(${antesComite.filter((p) => p.activo).map((p) => p.modulo.clave).join(", ") || "ninguno activo"})`
+    );
+
+    const resComite = await revocarGrantsComiteIndebidos();
+    console.log(
+        `[RevocacionComiteIndebidos] Revocación: completada — ${resComite.revocados} grants desactivados ` +
+        `(${MODULOS_INDEBIDOS_COMITE.join(", ")}), ${resComite.yaInactivos} ya estaban inactivos`
+    );
+
+    const despuesComite = await prisma.permisoModulo.findMany({
+        where: { rol: ROL_COMITE, activo: true, moduloId: { notIn: idsComite } },
+        include: { modulo: { select: { clave: true } } },
+    });
+    console.log(
+        `[RevocacionComiteIndebidos] Después: grants activos del COMITE_VALIDACION = ${despuesComite.map((p) => p.modulo.clave).join(", ") || "(ninguno)"}`
     );
 }
 
 if (process.argv[1]?.endsWith("revocar-grants-pagos-operador.ts")) {
     main()
         .catch((err: unknown) => {
-            console.error("[RevocacionPagosOperador] Error:", err instanceof Error ? err.message : err);
+            console.error("[Revocacion] Error:", err instanceof Error ? err.message : err);
             process.exitCode = 1;
         })
         .finally(() => prisma.$disconnect());

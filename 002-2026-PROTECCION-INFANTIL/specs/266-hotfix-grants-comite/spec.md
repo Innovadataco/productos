@@ -2,8 +2,9 @@
 
 **Radicado**: 002-PI-169  
 **Tipo**: Hotfix  
-**Estado**: ESPECIFICADO  
+**Estado**: IMPLEMENTADO  
 **Fecha**: 2026-08-26  
+**Impacto en arquitectura:** Módulo `expediente_revelar_original` pasa a standalone (sin padre en catálogo). Puerta `revelar-original` simplificada a un solo `assertModulo`. Grants COMITE_VALIDACION reducidos de 6 a 4.
 
 ---
 
