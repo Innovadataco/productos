@@ -63,8 +63,8 @@ export async function borrarColegio(
         seguimientos: await client.seguimientoCaso.count({ where: { colegioId } }),
         notas: await client.notaSeguimiento.count({ where: { colegioId } }),
         integrantesComite: colegio.comiteConvivencia
-    ? await client.integranteComite.count({ where: { comiteId: colegio.comiteConvivencia.id } })
-    : 0,
+            ? await client.integranteComite.count({ where: { comiteId: colegio.comiteConvivencia.id } })
+            : 0,
         cursoMaterias: await client.cursoMateria.count({ where: { colegioId } }),
         cursos: await client.curso.count({ where: { colegioId } }),
         materias: await client.materia.count({ where: { colegioId } }),
