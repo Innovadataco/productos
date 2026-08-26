@@ -53,10 +53,20 @@ const COMITE_INTEGRANTES_SOLO_RECTOR = ["/dashboard/colegio/comite/integrantes",
 
 // Rutas de sesión propias de cualquier rol autenticado: datos del usuario actual
 // (el header las consulta para reconocer la sesión), el cambio de contraseña
-// (obligatorio cuando debeCambiarPassword=true) y el cierre de sesión.
+// (obligatorio cuando debeCambiarPassword=true), el cierre de sesión y el
+// consentimiento informado (SPEC-250 / I-111).
 // I-35/I-35b: la página /cambiar-password llama a /api/auth/cambiar-password y el botón
 // de cerrar sesión a /api/auth/logout — sin ambos endpoints el colegio queda atrapado.
-const SESION_ROUTES = ["/api/me", "/cambiar-password", "/api/auth/cambiar-password", "/api/auth/logout"];
+// I-111: /consentimiento y /api/consentimiento deben ser alcanzables para todo rol
+// autenticado; si no, el guard de SPEC-241 provoca ERR_TOO_MANY_REDIRECTS.
+const SESION_ROUTES = [
+    "/api/me",
+    "/cambiar-password",
+    "/api/auth/cambiar-password",
+    "/api/auth/logout",
+    "/consentimiento",
+    "/api/consentimiento",
+];
 
 // SPEC-118 (D-37, decisión ZEUS): rutas públicas de SOLO LECTURA abiertas también al
 // SCHOOL_ADMIN. El aislamiento total no aportaba seguridad (son estadísticas públicas

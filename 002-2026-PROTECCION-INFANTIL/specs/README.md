@@ -10,7 +10,7 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **215** |
+| **Total de specs** | **216** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **52** |
@@ -141,6 +141,7 @@
 | [214](214-multi-moneda-pagos/spec.md) | SPEC-214 — Multi-moneda pagos (002-PI-113) | 🟢 Implementado |
 | [243](243-crud-admin-planes/spec.md) | SPEC-243 — CRUD admin de Planes + parámetros IVA/freemium (002-PI-146) | 🟢 Implementado |
 | [249](249-hotfix-public-routes-registro-colegio-activar/spec.md) | SPEC-249 — Hotfix PUBLIC_ROUTES /registro-colegio + /activar (002-PI-152) | 🔴 Crítica |
+| [250](250-consentimiento-loop-hotfix/spec.md) | SPEC-250 — Hotfix loop /consentimiento (002-PI-153) | 🔴 Crítica |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
@@ -179,7 +180,7 @@
 | [242](242-middleware-vigencia/spec.md) | SPEC-242 · Middleware de vigencia + guardas por layout + banner ámbar EN_GRACIA (002-PI-145) | 🟢 Implementado |
 | [248](248-categorias-ley-2564/spec.md) | SPEC-248 · Categorías Ley 2564 completas + Definiciones legales editables (002-PI-151) | 🟡 Pendiente de prueba |
 
-## Tabla completa (217 specs)
+## Tabla completa (218 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
@@ -369,6 +370,7 @@
 | [214](214-multi-moneda-pagos/spec.md) | SPEC-214 — Multi-moneda pagos (002-PI-113) | 🟢 Implementado |
 | [243](243-crud-admin-planes/spec.md) | SPEC-243 — CRUD admin de Planes + parámetros IVA/freemium (002-PI-146) | 🟢 Implementado |
 | [249](249-hotfix-public-routes-registro-colegio-activar/spec.md) | SPEC-249 — Hotfix PUBLIC_ROUTES /registro-colegio + /activar (002-PI-152) | 🔴 Crítica |
+| [250](250-consentimiento-loop-hotfix/spec.md) | SPEC-250 — Hotfix loop /consentimiento (002-PI-153) | 🔴 Crítica |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
