@@ -2,6 +2,7 @@ import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { EstadoReporte, RolUsuario } from "@prisma/client";
+import { esEstadoCargaOperador } from "./estados";
 
 export type ReasignarReporteInput = {
     reporteId: string;
@@ -36,8 +37,8 @@ export async function reasignarReporte(input: ReasignarReporteInput): Promise<Re
     if (!reporte) {
         throw new AppError("Reporte no encontrado", ERROR_CODES.NOT_FOUND, 404);
     }
-    if (reporte.estado !== "REVISION_MANUAL") {
-        throw new AppError("El reporte no está en revisión manual", ERROR_CODES.VALIDATION_ERROR, 400);
+    if (!esEstadoCargaOperador(reporte.estado)) {
+        throw new AppError("El reporte no está en la bandeja del operador", ERROR_CODES.VALIDATION_ERROR, 400);
     }
 
     const operadorActual = reporte.operadorId;

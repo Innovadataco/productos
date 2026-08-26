@@ -119,7 +119,7 @@ const SELECT_BANDEJA_SPAM = {
     operadorId: true,
     operador: { select: { id: true, nombre: true, email: true } },
     clasificacion: {
-        select: { categoria: true, confianza: true },
+        select: { categoria: true, confianza: true, categoriasSecundarias: true },
     },
 } satisfies Prisma.ReporteSelect;
 

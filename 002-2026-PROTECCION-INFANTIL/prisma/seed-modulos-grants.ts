@@ -58,9 +58,11 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
         // COMITE_VALIDACION; como es hijo de bandeja_reportes (jerarquía AND), el comité
         // también recibe el padre.
         // SPEC-235 (002-PI-135): el comité de validación aprueba/rechaza guías de acción.
-        COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_guias_accion", "bandeja_reportes", "denuncia_formal"],
-        // SPEC-212 (002-PI-112): panel de pagos también para operadores por defecto.
-        OPERADOR: ["bandeja_reportes", "pagos_admin"],
+        // SPEC-263 (002-PI-164): expediente_revelar_original otorgado al comité para revisar texto en casos escalados.
+        COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_guias_accion", "bandeja_reportes", "denuncia_formal", "expediente_revelar_original"],
+        // SPEC-263 (002-PI-164): pagos_admin quitado de OPERADOR (la revocación en BD viva requiere scripts/revocar-grants-pagos-operador.ts).
+        // expediente_revelar_original añadido para que el operador valide spam o dudas de contexto.
+        OPERADOR: ["bandeja_reportes", "expediente_revelar_original"],
     };
     let permisosCreados = 0;
     for (const [rol, claves] of Object.entries(clavesPorRol)) {

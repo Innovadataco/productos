@@ -54,7 +54,7 @@ describe("GET /api/admin/reportes-revision/[id]", () => {
         }
     });
 
-    it("no expone textoOriginal ni datos del denunciante al operador", async () => {
+    it("no expone textoOriginal ni datos del denunciante al operador, pero sí puedeRevelarOriginal (SPEC-263)", async () => {
         const operador = await crearUsuario("OPERADOR");
         const reporte = await crearReporteDePrueba({ operadorId: operador.id });
         activeToken = await crearTokenUsuario(operador.id, "OPERADOR");
@@ -70,7 +70,10 @@ describe("GET /api/admin/reportes-revision/[id]", () => {
         expect(body.reporte.textoOriginal).toBeUndefined();
         expect(body.reporte.usuarioId).toBeUndefined();
         expect(body.reporte.usuario).toBeUndefined();
-        expect(body.puedeRevelarOriginal).toBe(false);
+        // SPEC-263 (002-PI-164): el operador ahora tiene puedeRevelarOriginal=true
+        // via expediente_revelar_original; el texto solo se entrega por el endpoint
+        // POST /api/admin/reportes/:id/revelar-original (auditado con AuditLog).
+        expect(body.puedeRevelarOriginal).toBe(true);
     });
 
     it("indica al admin que puede revelar el original", async () => {

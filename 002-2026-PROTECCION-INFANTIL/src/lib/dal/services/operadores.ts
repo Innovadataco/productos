@@ -12,7 +12,8 @@ import { hashPassword } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { getParametroSistema, descifrarValorParametro } from "@/lib/parametros";
 import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
-import { whereReporteVigente, whereReporteEnEstado } from "@/lib/reportes-acceso";
+import { whereReporteVigente, whereReporteEnEstado, whereReporteEnEstados } from "@/lib/reportes-acceso";
+import { ESTADOS_CARGA_OPERADOR } from "@/lib/operadores/estados";
 import type { EstrategiaAsignacion } from "@/lib/operadores/asignador";
 import { UsuarioRepository } from "../repositories/usuario";
 import { PerfilOperadorRepository } from "../repositories/perfil-operador";
@@ -72,7 +73,7 @@ export class OperadorService {
         return Promise.all(
             operadores.map(async (op) => {
                 const casosAbiertos = op.rol === "OPERADOR"
-                    ? await this.reportes.countWhere(whereReporteEnEstado("REVISION_MANUAL", { operadorId: op.id }))
+                    ? await this.reportes.countWhere(whereReporteEnEstados(ESTADOS_CARGA_OPERADOR, { operadorId: op.id }))
                     : await this.solicitudes.countPorComite(op.id, ["PENDIENTE", "ASIGNADA"]);
                 const casosTotales = op.rol === "OPERADOR"
                     ? await this.reportes.countWhere(whereReporteVigente({ operadorId: op.id }))
@@ -360,9 +361,9 @@ export class OperadorService {
     /** GET /api/admin/operadores/asignacion — panel de distribución de casos. */
     async panelAsignacion(): Promise<PanelAsignacionDto> {
         const [sinAsignar, operadoresRaw, distribucion, config] = await Promise.all([
-            this.reportes.countWhere(whereReporteEnEstado("REVISION_MANUAL", { operadorId: null })),
+            this.reportes.countWhere(whereReporteEnEstados(ESTADOS_CARGA_OPERADOR, { operadorId: null })),
             this.usuarios.findOperadoresActivosAsignacion(),
-            this.reportes.groupByOperador(whereReporteEnEstado("REVISION_MANUAL", { operadorId: { not: null } })),
+            this.reportes.groupByOperador(whereReporteEnEstados(ESTADOS_CARGA_OPERADOR, { operadorId: { not: null } })),
             obtenerConfigAsignacion(),
         ]);
 

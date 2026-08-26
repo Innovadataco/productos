@@ -390,9 +390,11 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                                             <Button onClick={() => setSelectedReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
                                                     Ver detalle
                                             </Button>
-                                            <Button onClick={() => setExpedienteReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                                            {!esRolConBandejaPropia && (
+                                                <Button onClick={() => setExpedienteReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
                                                     Ver proceso
-                                            </Button>
+                                                </Button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

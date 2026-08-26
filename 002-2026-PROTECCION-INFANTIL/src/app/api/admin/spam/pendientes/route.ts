@@ -8,6 +8,8 @@ import { esAdminRol, esComiteRol, esOperadorRol } from "@/lib/operadores/permiso
 import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { getParametroSistema } from "@/lib/parametros";
+import { derivarMotivoIngreso } from "@/lib/spam/motivo-ingreso";
 import type { Prisma } from "@prisma/client";
 
 export async function GET(req: Request) {
@@ -71,17 +73,46 @@ export async function GET(req: Request) {
             where.operadorId = user.id;
         }
 
-        // E-8: las lecturas viven en los repos; la ruta no toca prisma.
-        const [reportes, total] = await new ReporteRepository().findBandejaSpam(where, { skip, take: pageSize }, orden);
+        // Parámetros para derivar el motivo de ingreso real de cada POSIBLE_SPAM.
+        const [umbralSpamRaw, umbralDominanciaRaw, dominiosRaw, [reportes, total]] = await Promise.all([
+            getParametroSistema("clasificacion.umbral_spam"),
+            getParametroSistema("spam.dominancia_umbral"),
+            getParametroSistema("spam.dominios_acortadores"),
+            // E-8: las lecturas viven en los repos; la ruta no toca prisma.
+            new ReporteRepository().findBandejaSpam(where, { skip, take: pageSize }, orden),
+        ]);
+
+        const umbralSpam = parseFloat(umbralSpamRaw?.valor ?? "0.7");
+        const umbralDominancia = parseFloat(umbralDominanciaRaw?.valor ?? "0.33");
+        const dominiosAcortadores: string[] = (() => {
+            try {
+                return dominiosRaw?.valor ? (JSON.parse(dominiosRaw.valor) as string[]) : [];
+            } catch {
+                return [];
+            }
+        })();
 
         return NextResponse.json({
-            reportes: reportes.map((r) => ({
-                ...r,
-                // SPEC-130 (BL-4, O-2): texto descifrado solo en este camino autorizado.
-                texto: descifrarTextoReporte(r.texto),
-                confianzaSpam: r.clasificacion?.categoria === "SPAM" ? r.clasificacion.confianza : 0,
-                asignadoA: r.operador ?? null,
-            })),
+            reportes: reportes.map((r) => {
+                const secundarias = (r.clasificacion?.categoriasSecundarias as { categoria: string; score: number }[] | null) ?? null;
+                const { motivo, confianzaSpam } = derivarMotivoIngreso({
+                    categoria: r.clasificacion?.categoria ?? null,
+                    confianza: r.clasificacion?.confianza ?? null,
+                    categoriasSecundarias: secundarias,
+                    texto: r.texto,
+                    umbralSpam,
+                    umbralDominancia,
+                    dominiosAcortadores,
+                });
+                return {
+                    ...r,
+                    // SPEC-130 (BL-4, O-2): texto descifrado solo en este camino autorizado.
+                    texto: descifrarTextoReporte(r.texto),
+                    motivoIngreso: motivo,
+                    confianzaSpam,
+                    asignadoA: r.operador ?? null,
+                };
+            }),
             pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
         });
     } catch (error) {
