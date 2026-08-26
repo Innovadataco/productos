@@ -143,6 +143,7 @@
 | [249](249-hotfix-public-routes-registro-colegio-activar/spec.md) | SPEC-249 — Hotfix PUBLIC_ROUTES /registro-colegio + /activar (002-PI-152) | 🔴 Crítica |
 | [250](250-consentimiento-loop-hotfix/spec.md) | SPEC-250 — Hotfix loop /consentimiento (002-PI-153) | 🔴 Crítica |
 | [251](251-guardian-indices-i49/spec.md) | SPEC-251 · Guardián de índices críticos (002-PI-154 · cierra I-49) | 🟢 Implementado |
+| [284](284-ids-advisory-lock-i130-i137/spec.md) | SPEC-284 · IDs de advisory lock únicos (002-PI-184 · cierra I-130, I-137) | 🟢 Implementado |
 | [261](261-ciclo-operador-estados/spec.md) | SPEC-261 — ESTADOS_CARGA_OPERADOR: propaga POSIBLE_SPAM a 6 superficies (002-PI-164) | 🟢 Implementado |
 | [262](262-panel-spam-motivo/spec.md) | SPEC-262 — Panel spam motivo de ingreso real (002-PI-164) | 🟢 Implementado |
 | [263](263-permisos-operador/spec.md) | SPEC-263 — Barrido de permisos: operador limpio, revelación auditada (002-PI-164) | 🟢 Implementado |

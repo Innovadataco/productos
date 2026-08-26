@@ -11,7 +11,9 @@ import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import pg from "pg";
 
 const { Client } = pg;
-const ADVISORY_LOCK_ID = 123456790;
+// SPEC-284 (I-130): ID único — antes 123456790 colisionaba con monitor-probes.
+// Fuente de verdad: scripts/ADVISORY-LOCKS.md.
+const ADVISORY_LOCK_ID = 123456798;
 const DEFAULT_CRON = "0 6 * * *";
 
 const DATABASE_URL = process.env.DATABASE_URL;

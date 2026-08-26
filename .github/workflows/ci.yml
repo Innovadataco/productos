@@ -58,6 +58,8 @@ jobs:
       - run: npm run tokens:check
       # SPEC-126: compuerta de la línea base de arquitectura.
       - run: npm run arch:check
+      # SPEC-284 (002-PI-184 · I-130): compuerta de IDs de advisory lock únicos.
+      - run: npm run locks:check
 
   test-unit:
     runs-on: ubuntu-latest

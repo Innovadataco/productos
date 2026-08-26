@@ -30,7 +30,8 @@
     "a11y:audit": "node scripts/a11y_audit.js",
     "a11y:contrast": "node scripts/contrast_check.js",
     "tokens:check": "tsx scripts/tokens-check.ts",
-    "arch:check": "tsx scripts/arch/arch-check.ts"
+    "arch:check": "tsx scripts/arch/arch-check.ts",
+    "locks:check": "tsx scripts/locks-check.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

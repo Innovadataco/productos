@@ -71,6 +71,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `dev` | `next dev -p 5005` |
 | `indices:check` | `tsx scripts/verify-hnsw-indexes.ts` |
 | `lint` | `eslint .` |
+| `locks:check` | `tsx scripts/locks-check.ts` |
 | `start` | `next start -p 5005` |
 | `test` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run` |
 | `test:coverage` | `npm run test:unit && npm run test:integration` |
