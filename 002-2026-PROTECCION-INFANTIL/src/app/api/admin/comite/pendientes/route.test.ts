@@ -193,6 +193,9 @@ describe("Flujo de comité de validación", () => {
         expect(body.reporte.textoOriginal).toBeUndefined();
         expect(body.reporte.usuarioId).toBeUndefined();
         expect(body.reporte.usuario).toBeUndefined();
-        expect(body.puedeRevelarOriginal).toBe(false);
+        // SPEC-263 (002-PI-164): el comité ahora tiene puedeRevelarOriginal=true
+        // via expediente_revelar_original; el texto solo se entrega por el endpoint
+        // POST /api/admin/reportes/:id/revelar-original (auditado con AuditLog).
+        expect(body.puedeRevelarOriginal).toBe(true);
     });
 });

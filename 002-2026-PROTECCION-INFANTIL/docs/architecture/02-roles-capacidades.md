@@ -3396,7 +3396,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | estadisticas | `/dashboard/admin/estadisticas` | ADMIN |
 | operadores | `/dashboard/admin/operadores` | ADMIN |
 | padres | `/dashboard/admin/padres` | ADMIN |
-| pagos_admin | `/dashboard/admin/pagos` | ADMIN, OPERADOR |
+| pagos_admin | `/dashboard/admin/pagos` | ADMIN |
 | revision_spam | `/dashboard/admin/spam` | ADMIN |
 | usuarios_admin | `/dashboard/admin/usuarios` | ADMIN |
 

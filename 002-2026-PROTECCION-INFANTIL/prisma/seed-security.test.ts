@@ -76,7 +76,8 @@ describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", (
         // verifyAuth("ADMIN") antes — concederlo no abre nada al comité.
         // SPEC-235 (002-PI-135): el comité de validación aprueba/rechaza guías de acción;
         // comite_guias_accion es hijo de comite (padre ya concedido arriba).
-        expect(claves).toEqual(['"comite"', '"comite_bandeja"', '"comite_guias_accion"', '"bandeja_reportes"', '"denuncia_formal"']);
+        // SPEC-263 (002-PI-164): expediente_revelar_original añadido al comité.
+        expect(claves).toEqual(['"comite"', '"comite_bandeja"', '"comite_guias_accion"', '"bandeja_reportes"', '"denuncia_formal"', '"expediente_revelar_original"']);
     });
 
     it("ADMIN deriva sus grants del catálogo completo (conserva comite y comite_auditoria)", () => {
