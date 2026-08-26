@@ -3,25 +3,16 @@ import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { ActivarSuscripcionManual } from "@/components/modules/pagos/ActivarSuscripcionManual";
+import { Alerta } from "@/components/ui/Alerta";
+import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import type {
     SolicitudPendienteDTO,
     PaginacionDTO,
 } from "@/lib/pagos/admin-activacion-manual.types";
-
-interface PagoPendiente {
-    id: string;
-    estado: string;
-    montoNetoUSD: number;
-    monedaLocal: string;
-    montoLocalPagado: number;
-    metodoDeclarado: string;
-    fechaReporte: string;
-    suscripcionId: string;
-    suscripcion: {
-        colegio: { id: string; nombre: string } | null;
-        usuario: { id: string; nombre: string | null; email: string } | null;
-    };
-}
+import type {
+    PagoConSuscripcion,
+    SuscripcionConPlanYTitular,
+} from "@/lib/dal/repositories/pagos-repository";
 
 interface PageProps {
     searchParams: Promise<{ page?: string; pageSize?: string; q?: string }>;
@@ -42,17 +33,24 @@ function toQueryString(params: Record<string, string | number | undefined>): str
     return qs ? `?${qs}` : "";
 }
 
-async function fetchJson<T>(url: string): Promise<T | null> {
-    try {
-        const res = await fetch(url, { credentials: "include" });
-        if (!res.ok) return null;
-        return (await res.json()) as T;
-    } catch {
-        return null;
-    }
+function mapSolicitud(s: SuscripcionConPlanYTitular): SolicitudPendienteDTO {
+    const titular = s.usuario
+        ? { id: s.usuario.id, tipo: "PADRE" as const, nombre: s.usuario.nombre ?? "—", email: s.usuario.email }
+        : s.colegio
+            ? { id: s.colegio.id, tipo: "COLEGIO" as const, nombre: s.colegio.nombre }
+            : { id: "", tipo: "PADRE" as const, nombre: "—" };
+    return {
+        id: s.id,
+        estado: s.estado,
+        tipoTitular: titular.tipo,
+        fechaInicio: s.fechaInicio.toISOString(),
+        fechaFin: s.fechaFin.toISOString(),
+        plan: { id: s.planActual.id, nombre: s.planActual.nombre, duracion: s.planActual.duracion },
+        titular,
+    };
 }
 
-function clienteNombre(pago: PagoPendiente) {
+function clienteNombre(pago: PagoConSuscripcion) {
     if (pago.suscripcion.usuario) {
         return {
             tipo: "PADRE",
@@ -75,19 +73,45 @@ export default async function PendientesPage({ searchParams }: PageProps) {
     const { page, pageSize } = parsePagination(params);
     const q = params.q?.trim() ?? "";
 
-    const [pagosRes, solicitudesRes] = await Promise.all([
-        fetchJson<{ items: PagoPendiente[]; pagination: PaginacionDTO }>(
-            `/api/admin/pagos/pendientes${toQueryString({ page, pageSize, q })}`
-        ),
-        fetchJson<{ items: SolicitudPendienteDTO[]; pagination: PaginacionDTO }>(
-            `/api/admin/pagos/solicitudes-pendientes${toQueryString({ page, pageSize, q })}`
-        ),
-    ]);
+    let pagos: PagoConSuscripcion[] = [];
+    let pagosPagination: PaginacionDTO = { page, pageSize, total: 0, totalPages: 1 };
+    let solicitudes: SolicitudPendienteDTO[] = [];
+    let solicitudesPagination: PaginacionDTO = { page, pageSize, total: 0, totalPages: 1 };
+    let errorPagos: string | null = null;
+    let errorSolicitudes: string | null = null;
 
-    const pagos = pagosRes?.items ?? [];
-    const pagosPagination = pagosRes?.pagination ?? { page, pageSize, total: 0, totalPages: 1 };
-    const solicitudes = solicitudesRes?.items ?? [];
-    const solicitudesPagination = solicitudesRes?.pagination ?? { page, pageSize, total: 0, totalPages: 1 };
+    const repo = new PagosRepository();
+
+    await Promise.all([
+        repo.listarPagosPendientes(
+            { q: q || undefined },
+            { skip: (page - 1) * pageSize, take: pageSize }
+        ).then((r) => {
+            pagos = r.items;
+            pagosPagination = {
+                page,
+                pageSize,
+                total: r.total,
+                totalPages: Math.max(1, Math.ceil(r.total / pageSize)),
+            };
+        }).catch(() => {
+            errorPagos = "No se pudieron cargar los pagos pendientes. Intenta de nuevo.";
+        }),
+        repo.listarSolicitudesPendientes(
+            { q: q || undefined },
+            { skip: (page - 1) * pageSize, take: pageSize }
+        ).then((r) => {
+            solicitudes = r.items.map(mapSolicitud);
+            solicitudesPagination = {
+                page,
+                pageSize,
+                total: r.total,
+                totalPages: Math.max(1, Math.ceil(r.total / pageSize)),
+            };
+        }).catch(() => {
+            errorSolicitudes = "No se pudieron cargar las solicitudes pendientes. Intenta de nuevo.";
+        }),
+    ]);
 
     return (
         <div className="space-y-8">
@@ -98,6 +122,12 @@ export default async function PendientesPage({ searchParams }: PageProps) {
                 </div>
                 <span className="text-sm text-muted">{pagosPagination.total} registro(s)</span>
             </div>
+
+            {errorPagos && (
+                <Alerta tono="error" role="alert">
+                    {errorPagos}
+                </Alerta>
+            )}
 
             <div className="overflow-x-auto rounded-xl border border-tinta/10 dark:border-tinta/20">
                 <table className="min-w-full text-sm">
@@ -127,7 +157,7 @@ export default async function PendientesPage({ searchParams }: PageProps) {
                                         {pago.monedaLocal} {pago.montoLocalPagado.toLocaleString("es-CO")}
                                     </td>
                                     <td className="px-4 py-3">{pago.metodoDeclarado}</td>
-                                    <td className="px-4 py-3">{new Date(pago.fechaReporte).toLocaleDateString("es-CO")}</td>
+                                    <td className="px-4 py-3">{pago.fechaReporte.toLocaleDateString("es-CO")}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex gap-2">
                                             <Link
@@ -193,6 +223,12 @@ export default async function PendientesPage({ searchParams }: PageProps) {
                 </div>
                 <span className="text-sm text-muted">{solicitudesPagination.total} registro(s)</span>
             </div>
+
+            {errorSolicitudes && (
+                <Alerta tono="error" role="alert">
+                    {errorSolicitudes}
+                </Alerta>
+            )}
 
             <div className="overflow-x-auto rounded-xl border border-tinta/10 dark:border-tinta/20">
                 <table className="min-w-full text-sm">

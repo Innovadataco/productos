@@ -183,8 +183,15 @@
 | [241](241-consentimiento-modal-audit/spec.md) | SPEC-241 · Consentimiento informado + modal legal + AuditConsentimiento (002-PI-144) | 🟢 Implementado |
 | [242](242-middleware-vigencia/spec.md) | SPEC-242 · Middleware de vigencia + guardas por layout + banner ámbar EN_GRACIA (002-PI-145) | 🟢 Implementado |
 | [248](248-categorias-ley-2564/spec.md) | SPEC-248 · Categorías Ley 2564 completas + Definiciones legales editables (002-PI-151) | 🟡 Pendiente de prueba |
+| [254](254-contrato-precio-cop/spec.md) | SPEC-254 · Rescate Pagos — Contrato precioBaseUSD ≥ 0 (002-PI-157) | 🟢 Implementado |
+| [255](255-scroll-highlight-plan-edit/spec.md) | SPEC-255 · Rescate Pagos — Scroll+highlight al editar plan (002-PI-157) | 🟢 Implementado |
+| [256](256-pagos-server-dal/spec.md) | SPEC-256 · Rescate Pagos — DAL directo en sin-suscripcion y pendientes (002-PI-157) | 🟢 Implementado |
+| [257](257-bonos-filtro-cliente/spec.md) | SPEC-257 · Rescate Pagos — FiltroBonos client component (002-PI-157) | 🟢 Implementado |
+| [258](258-plantillas-onboarding-colegio/spec.md) | SPEC-258 · Onboarding — Plantilla colegio.creado.email en seed (002-PI-157) | 🟢 Implementado |
+| [259](259-puerta-entrada-familia-colegio/spec.md) | SPEC-259 · Onboarding — Puerta /registro/inicio familia vs colegio (002-PI-157) | 🟢 Implementado |
+| [260](260-tests-humo-pagos/spec.md) | SPEC-260 · Tests de humo de las 4 pantallas Pagos (002-PI-157) | 🟢 Implementado |
 
-## Tabla completa (218 specs)
+## Tabla completa (225 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
