@@ -10,6 +10,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/locks-check.test.ts",
     // SPEC-280 (002-PI-180): constructor puro del resumen del CI, sin BD ni red.
     "scripts/ci/resumen.test.mjs",
+    // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
+    "scripts/ci/reparto-shards.test.mjs",
     "src/app/dashboard/admin/estadisticas/components/EstadisticasSubNav.test.tsx",
     "src/app/dashboard/colegio/alertas/AlertasColegioPageClient.test.tsx",
     "src/components/modules/config-panel/MantenimientoLogsPanel.test.tsx",
