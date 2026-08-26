@@ -54,12 +54,10 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
         // mapean a rutas ADMIN_ONLY (proxy.ts) que la puerta le niega: el seed ya no dice
         // SÍ donde la puerta dice NO. Los módulos siguen en el catálogo (ADMIN los usa) y
         // las BD existentes se reconcilian con scripts/revocar-grants-comite-muertos.ts.
-        // SPEC-140 (decisión ZEUS): denuncia_formal por defecto para ADMIN y
-        // COMITE_VALIDACION; como es hijo de bandeja_reportes (jerarquía AND), el comité
-        // también recibe el padre.
         // SPEC-235 (002-PI-135): el comité de validación aprueba/rechaza guías de acción.
         // SPEC-263 (002-PI-164): expediente_revelar_original otorgado al comité para revisar texto en casos escalados.
-        COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_guias_accion", "bandeja_reportes", "denuncia_formal", "expediente_revelar_original"],
+        // SPEC-266 (002-PI-169): bandeja_reportes y denuncia_formal eran indebidos (I-128); revocados en BD viva por revocar-grants-pagos-operador.ts.
+        COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_guias_accion", "expediente_revelar_original"],
         // SPEC-263 (002-PI-164): pagos_admin quitado de OPERADOR (la revocación en BD viva requiere scripts/revocar-grants-pagos-operador.ts).
         // expediente_revelar_original añadido para que el operador valide spam o dudas de contexto.
         OPERADOR: ["bandeja_reportes", "expediente_revelar_original"],

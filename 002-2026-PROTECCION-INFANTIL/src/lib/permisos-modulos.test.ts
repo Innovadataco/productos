@@ -76,39 +76,32 @@ describe("permisos-modulos", () => {
         expect(roles).toContain("ADMIN");
     });
 
-    // Spec 096: expediente_revelar_original (padre bandeja_reportes).
-    // resetDatabase + otorgarTodosLosPermisos recrean el catálogo y lo otorgan
-    // a todos los roles; aquí se reproduce el backfill real del seed
-    // (ADMIN = todos, OPERADOR = solo bandeja_reportes) ajustando los permisos.
-    it("expediente_revelar_original: ADMIN sí, OPERADOR no (denegar por defecto)", async () => {
+    // Spec 096 + SPEC-266 (002-PI-169): expediente_revelar_original es módulo
+    // STANDALONE (sin padre). Antes tenía padre bandeja_reportes; SPEC-266 lo
+    // desancló para que COMITE_VALIDACION pueda revelar el original sin recibir
+    // toda la bandeja del operador (I-128).
+    it("expediente_revelar_original: standalone, ADMIN sí, OPERADOR denegar por defecto", async () => {
         const catalogoRevelar = CATALOGO_MODULOS.find((m) => m.clave === "expediente_revelar_original");
         expect(catalogoRevelar).toBeDefined();
-        expect(catalogoRevelar?.padre).toBe("bandeja_reportes");
+        expect(catalogoRevelar?.padre).toBeUndefined();
         expect(catalogoRevelar?.esCritico).toBe(true);
         expect(catalogoRevelar?.categoria).toBe("operador");
         expect(catalogoRevelar?.orden).toBe(31);
 
-        const padre = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave: "bandeja_reportes" } });
         const revelar = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave: "expediente_revelar_original" } });
-        expect(revelar.padreId).toBe(padre.id);
+        expect(revelar.padreId).toBeNull();
 
         // Backfill del seed: ADMIN recibe todos los módulos del catálogo
-        await setPermiso("ADMIN", padre.id, true);
         await setPermiso("ADMIN", revelar.id, true);
         expect(await puedeAccederAModulo("ADMIN", "expediente_revelar_original")).toBe(true);
 
-        // OPERADOR conserva solo bandeja_reportes → sin revelación por defecto
-        await setPermiso("OPERADOR", padre.id, true);
+        // OPERADOR sin el grant → denegar por defecto
         await setPermiso("OPERADOR", revelar.id, false);
         expect(await puedeAccederAModulo("OPERADOR", "expediente_revelar_original")).toBe(false);
 
-        // Otorgarlo manualmente a OPERADOR sí habilita (padre activo AND propio activo)
+        // Otorgarlo manualmente a OPERADOR habilita (ya no depende de padre)
         await setPermiso("OPERADOR", revelar.id, true);
         expect(await puedeAccederAModulo("OPERADOR", "expediente_revelar_original")).toBe(true);
-
-        // Jerarquía AND: sin el padre, el submódulo se deniega aunque esté activo
-        await setPermiso("OPERADOR", padre.id, false);
-        expect(await puedeAccederAModulo("OPERADOR", "expediente_revelar_original")).toBe(false);
     });
 
     it("I-57 (SPEC-175): COMITE_CONVIVENCIA obtiene su bandeja con los grants REALES del seed y nada del rector", async () => {

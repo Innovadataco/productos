@@ -147,6 +147,7 @@
 | [262](262-panel-spam-motivo/spec.md) | SPEC-262 — Panel spam motivo de ingreso real (002-PI-164) | 🟢 Implementado |
 | [263](263-permisos-operador/spec.md) | SPEC-263 — Barrido de permisos: operador limpio, revelación auditada (002-PI-164) | 🟢 Implementado |
 | [264](264-sla-spam/spec.md) | SPEC-264 — SLA spam 48h configurable anti-I-100 (002-PI-164) | 🟢 Implementado |
+| [266](266-hotfix-grants-comite/spec.md) | SPEC-266 — Hotfix grants COMITE_VALIDACION: quitar bandeja_reportes y denuncia_formal (002-PI-169) | 🟢 Implementado |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
