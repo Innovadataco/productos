@@ -1687,6 +1687,21 @@ async function main() {
         });
     }
 
+    // SPEC-251 (002-PI-154 · I-49): frecuencia del guardián de índices en pi-monitor.
+    // Patrón anti-I-100: update:{} para no pisar la configuración del CEO.
+    await prisma.parametroSistema.upsert({
+        where: { clave: "monitoreo.indices.frecuencia_horas" },
+        create: {
+            clave: "monitoreo.indices.frecuencia_horas",
+            valor: "24",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Cada cuántas horas pi-monitor verifica los 5 índices críticos (SPEC-251 · I-49)",
+        },
+        update: {},
+    });
+
     // SPEC-199 + SPEC-207: parámetros de la guarda de dominancia SPAM y hard-rule.
     // EXCEPCIÓN DOCUMENTADA (SPEC-207): spam.dominancia_umbral se fuerza a 0.33
     // por decisión de diseño de esta SPEC; spam.dominios_acortadores se fuerza con

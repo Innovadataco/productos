@@ -67,8 +67,9 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `db:migrate` | `prisma migrate deploy` |
 | `db:seed` | `tsx prisma/seed.ts` |
 | `db:studio` | `prisma studio` |
-| `db:verify:hnsw` | `tsx scripts/verify-hnsw-indexes.ts` |
+| `db:verify:hnsw` | `npm run indices:check` |
 | `dev` | `next dev -p 5005` |
+| `indices:check` | `tsx scripts/verify-hnsw-indexes.ts` |
 | `lint` | `eslint .` |
 | `start` | `next start -p 5005` |
 | `test` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run` |
