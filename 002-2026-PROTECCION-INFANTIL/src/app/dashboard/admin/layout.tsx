@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
-import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
 import { AdminNav } from "@/components/modules/AdminNav";
 import { AdminVersionBadge } from "@/components/modules/AdminVersionBadge";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
@@ -23,12 +22,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const userId = payload?.sub as string | undefined;
     if (!userId || !rol || !ADMIN_ROLES.has(rol)) {
         redirect("/");
-    }
-
-    // SPEC-241 (002-PI-144): guardia de consentimiento informado.
-    const requiereConsentimiento = await requiereConsentimientoActual(userId);
-    if (requiereConsentimiento) {
-        redirect("/consentimiento");
     }
 
     // Enforcement central: cualquier rol interno con contraseña temporal debe
