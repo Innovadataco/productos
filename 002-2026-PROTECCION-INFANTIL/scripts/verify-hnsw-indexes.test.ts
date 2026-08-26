@@ -101,12 +101,12 @@ describe("verificarIndices — índice faltante", () => {
         const p = await getPrisma();
         p.__setRows(
             todasSanas().filter(
-                (r) => r.indexname !== "patrones_institucionales_colegioId_periodo_grado_conducta__key"
+                (r) => r.indexname !== "patrones_institucionales_colegioId_periodo_grado_conducta_p_key"
             )
         );
         const res = await verificarIndices();
         expect(res.ok).toBe(false);
-        expect(res.missing).toContain("patrones_institucionales_colegioId_periodo_grado_conducta__key");
+        expect(res.missing).toContain("patrones_institucionales_colegioId_periodo_grado_conducta_p_key");
     });
 });
 
@@ -146,7 +146,7 @@ describe("verificarIndices — tipo incorrecto", () => {
     it("detecta unique convertido a no-unique (SC-003)", async () => {
         const p = await getPrisma();
         const filas = todasSanas().map((r) => {
-            if (r.indexname === "patrones_institucionales_colegioId_periodo_grado_conducta__key") {
+            if (r.indexname === "patrones_institucionales_colegioId_periodo_grado_conducta_p_key") {
                 return { ...r, isunique: false };
             }
             return r;
@@ -155,7 +155,7 @@ describe("verificarIndices — tipo incorrecto", () => {
         const res = await verificarIndices();
         expect(res.ok).toBe(false);
         expect(res.wrongType.map((w) => w.name)).toContain(
-            "patrones_institucionales_colegioId_periodo_grado_conducta__key"
+            "patrones_institucionales_colegioId_periodo_grado_conducta_p_key"
         );
     });
 });
@@ -190,7 +190,7 @@ describe("REQUIRED constante", () => {
 
     it("incluye el índice truncado de patrones_institucionales con nombre real", () => {
         const truncado = REQUIRED.find(
-            (r) => r.name === "patrones_institucionales_colegioId_periodo_grado_conducta__key"
+            (r) => r.name === "patrones_institucionales_colegioId_periodo_grado_conducta_p_key"
         );
         expect(truncado).toBeDefined();
         expect(truncado!.type).toBe("unique");

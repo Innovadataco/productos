@@ -46,7 +46,7 @@ describe("probeIndices — BD de test con todas las migraciones (SC-001, SC-008)
             "EmbeddingDataset_vector_idx",
             "EmbeddingReporte_vector_idx",
             "AlertaColegio_patronInstitucionalId_idx",
-            "patrones_institucionales_colegioId_periodo_grado_conducta__key",
+            "patrones_institucionales_colegioId_periodo_grado_conducta_p_key",
         ];
 
         for (const nombre of esperados) {
@@ -76,7 +76,7 @@ describe("probeIndices — BD de test con todas las migraciones (SC-001, SC-008)
         const repo = new MonitoreoRepository();
         const filas = await repo.leerIndicesPublicos();
         const idx = filas.find(
-            (f) => f.indexname === "patrones_institucionales_colegioId_periodo_grado_conducta__key"
+            (f) => f.indexname === "patrones_institucionales_colegioId_periodo_grado_conducta_p_key"
         );
         expect(idx, "índice unique de patrones debe existir").toBeDefined();
         expect(idx!.isunique, "debe ser unique").toBe(true);

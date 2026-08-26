@@ -65,11 +65,11 @@ export const REQUIRED: IndiceRequerido[] = [
         migracion: "20260802170000_f5_evento_match_f6_patrones",
     },
     {
-        // Nombre truncado a 63 caracteres por PostgreSQL. El nombre completo sería:
-        // "patrones_institucionales_colegioId_periodo_grado_conducta_plataformaId_key" (74 chars).
-        // NO renombrar este índice — es riesgoso y sin beneficio inmediato (brief §9 de SPEC-251).
-        // Declarar siempre el nombre real que PostgreSQL guardó, no el ideal.
-        name: "patrones_institucionales_colegioId_periodo_grado_conducta__key",
+        // Nombre normalizado por migración 20260826180000 (SPEC-251):
+        // las BDs creadas por 20260802170000 tenían "__key" (62 chars);
+        // la migración de normalización las renombra a "_p_key" (63 chars).
+        // Producción ya tenía "_p_key". Después de 20260826180000 ambos entornos son iguales.
+        name: "patrones_institucionales_colegioId_periodo_grado_conducta_p_key",
         table: "patrones_institucionales",
         type: "unique",
         sostiene: "unicidad de patrón institucional por (colegio, periodo, grado, conducta, plataforma)",

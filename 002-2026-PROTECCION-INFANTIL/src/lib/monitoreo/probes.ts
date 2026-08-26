@@ -243,8 +243,8 @@ const INDICES_REQUERIDOS = [
     { name: "EmbeddingDataset_vector_idx",                                 type: "hnsw"   },
     { name: "EmbeddingReporte_vector_idx",                                 type: "hnsw"   },
     { name: "AlertaColegio_patronInstitucionalId_idx",                     type: "btree"  },
-    // nombre truncado a 63 chars por PostgreSQL — NO corregir (ver SPEC-251 §Edge Cases)
-    { name: "patrones_institucionales_colegioId_periodo_grado_conducta__key", type: "unique" },
+    // normalizado por migración 20260826180000 (SPEC-251) — ambos entornos tienen _p_key
+    { name: "patrones_institucionales_colegioId_periodo_grado_conducta_p_key", type: "unique" },
 ] as const;
 
 /**
