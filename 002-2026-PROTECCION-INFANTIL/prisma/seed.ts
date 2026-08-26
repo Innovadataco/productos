@@ -1704,6 +1704,21 @@ async function main() {
         });
     }
 
+    // SPEC-264 (002-PI-164): SLA configurable para POSIBLE_SPAM.
+    // update: {} — candado anti-I-100: nunca pisamos lo que el ADMIN haya editado en producción.
+    await prisma.parametroSistema.upsert({
+        where: { clave: "spam.sla_horas" },
+        update: {},
+        create: {
+            clave: "spam.sla_horas",
+            valor: "48",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Horas máximas para resolver un POSIBLE_SPAM antes de alertar al admin (revisarSlaSpam, monitor cada 15 min)",
+        },
+    });
+
     // SPEC-193 (Fase 1): parámetros de la bitácora de logs de workers.
     const monitoreoLogsParams = [
         { clave: "monitoreo.logs.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar la persistencia de logs de worker en base de datos" },
