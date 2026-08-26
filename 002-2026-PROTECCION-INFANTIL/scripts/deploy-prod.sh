@@ -26,6 +26,12 @@ $COMPOSE up -d
 echo "==> Migraciones (aditivas)"
 $COMPOSE exec -T app npx prisma migrate deploy
 
+# SPEC-251 (002-PI-154 · I-49): guardián de índices — verifica los 5 índices críticos
+# justo después de aplicar migraciones. Si falta algún índice o el tipo no coincide,
+# el deploy para aquí con error. NO hace rollback automático — el CEO decide.
+echo "==> Guardián de índices (SPEC-251)"
+$COMPOSE exec -T app npm run indices:check
+
 # 002-PI-085 (I-67): seed idempotente de parámetros y catálogos. Respeta los
 # valores custom del CEO (update: {} por defecto; solo los parámetros cuyo
 # default cambió por decisión de una SPEC usan update explícito, documentado).

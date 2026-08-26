@@ -137,6 +137,10 @@ jobs:
       - run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # SPEC-251 (I-49): guardián de índices críticos — PR rojo si alguno falta o tiene tipo incorrecto.
+      - run: npm run indices:check
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
       - run: node scripts/ensure-pgboss.mjs
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
@@ -234,6 +238,10 @@ jobs:
       - run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # SPEC-251 (I-49): guardián de índices críticos.
+      - run: npm run indices:check
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
       - run: node scripts/ensure-pgboss.mjs
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
@@ -290,6 +298,10 @@ jobs:
           EMAIL_FROM=test@ci.local
           ENV_EOF
       - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # SPEC-251 (I-49): guardián de índices críticos.
+      - run: npm run indices:check
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
       - run: node scripts/ensure-pgboss.mjs
