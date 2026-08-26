@@ -9,6 +9,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { esAdminRol } from "@/lib/operadores/permisos";
+import { esEstadoCargaOperador } from "@/lib/operadores/estados";
 import { notificarComiteSiCorresponde } from "@/lib/operadores/notificacion-comite";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
@@ -85,9 +86,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        if (reporte.estado !== "REVISION_MANUAL") {
+        if (!esEstadoCargaOperador(reporte.estado)) {
             return NextResponse.json(
-                { error: { message: "Solo se pueden escalar casos en revisión manual", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: "Solo se pueden escalar casos en la bandeja del operador", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 409 }
             );
         }

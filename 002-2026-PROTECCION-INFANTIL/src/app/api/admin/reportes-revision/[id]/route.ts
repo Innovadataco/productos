@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
+import { esEstadoCargaOperador } from "@/lib/operadores/estados";
 import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 
@@ -74,8 +75,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         // autorizado (bandeja/expediente del operador); purgado → marcador tal cual.
         return NextResponse.json({
             reporte: { ...reporte, texto: descifrarTextoReporte(reporte.texto) },
-            puedeRevelarOriginal: user.rol === "ADMIN",
-            puedeEscalar: (user.rol === "OPERADOR" && reporte?.operador?.id === user.id && reporte.estado === "REVISION_MANUAL") || esAdminRol(user.rol),
+            puedeRevelarOriginal: esAdminRol(user.rol) || user.rol === "OPERADOR" || esComiteRol(user.rol),
+            puedeEscalar: (user.rol === "OPERADOR" && reporte?.operador?.id === user.id && esEstadoCargaOperador(reporte.estado)) || esAdminRol(user.rol),
         });
     } catch (error) {
         if (error instanceof AppError) {

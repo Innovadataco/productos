@@ -2,6 +2,7 @@ import { logAudit } from "@/lib/audit";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { asignarOperadorAReporte } from "./asignador";
+import { ESTADOS_CARGA_OPERADOR } from "./estados";
 
 type ResumenReconciliacion = {
     encontrados: number;
@@ -24,7 +25,7 @@ export async function reconciliarHuerfanos(): Promise<ResumenReconciliacion> {
 
     const reportesRepo = new ReporteRepository();
     const huerfanos = await reportesRepo.findIdsWhere({
-        estado: "REVISION_MANUAL",
+        estado: { in: [...ESTADOS_CARGA_OPERADOR] },
         operadorId: null,
         eliminado: false,
     });
