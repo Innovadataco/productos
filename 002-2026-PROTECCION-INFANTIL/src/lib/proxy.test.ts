@@ -205,3 +205,40 @@ describe("PUBLIC_ROUTES — SPEC-249 hotfix /registro-colegio + /activar", () =>
         expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
     });
 });
+
+describe("SESION_ROUTES — SPEC-250 hotfix /consentimiento (I-111)", () => {
+    function requestAnonima(pathname: string): NextRequest {
+        return new NextRequest(`http://localhost:5005${pathname}`);
+    }
+
+    it("SCHOOL_ADMIN alcanza /consentimiento sin redirect", async () => {
+        const res = await proxy(requestConSesion("/consentimiento", await tokenParaRol("SCHOOL_ADMIN")));
+        expect(res.status, "SCHOOL_ADMIN → /consentimiento no redirige").toBe(200);
+    });
+
+    it("PARENT alcanza /consentimiento sin redirect", async () => {
+        const res = await proxy(requestConSesion("/consentimiento", await tokenParaRol("PARENT")));
+        expect(res.status, "PARENT → /consentimiento no redirige").toBe(200);
+    });
+
+    it("COMITE_CONVIVENCIA alcanza /consentimiento sin redirect", async () => {
+        const res = await proxy(requestConSesion("/consentimiento", await tokenParaRol("COMITE_CONVIVENCIA")));
+        expect(res.status, "COMITE_CONVIVENCIA → /consentimiento no redirige").toBe(200);
+    });
+
+    it("ADMIN alcanza /consentimiento sin redirect", async () => {
+        const res = await proxy(requestConSesion("/consentimiento", await tokenParaRol("ADMIN")));
+        expect(res.status, "ADMIN → /consentimiento no redirige").toBe(200);
+    });
+
+    it("cualquier rol autenticado alcanza /api/consentimiento/aceptar sin redirect del proxy", async () => {
+        const res = await proxy(requestConSesion("/api/consentimiento/aceptar", await tokenParaRol("SCHOOL_ADMIN")));
+        expect(res.status, "SCHOOL_ADMIN → /api/consentimiento/aceptar no redirige").toBe(200);
+    });
+
+    it("anónimo NO alcanza /consentimiento (redirige a /login)", async () => {
+        const res = await proxy(requestAnonima("/consentimiento"));
+        expect(res.status, "anónimo → /consentimiento redirige").toBe(307);
+        expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+    });
+});
