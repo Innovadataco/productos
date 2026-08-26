@@ -31,6 +31,7 @@ import {
     probeOllamaPing,
     probeOllamaSmoke,
     probeTailscale,
+    probeIndices,
 } from "../src/lib/monitoreo/probes.ts";
 import { registrarProbe, evaluarSenal, confirmarRojo } from "../src/lib/monitoreo/incidentes.ts";
 import { revisarSlaSpam } from "../src/lib/spam/sla.ts";
@@ -48,7 +49,8 @@ const ADVISORY_LOCK_ID = 123456790;
 const TICK_MS = 5000;
 const LIMPIEZA_CADA_MS = 60 * 60 * 1000;
 const SLA_SPAM_INTERVALO_MS = 15 * 60 * 1000;
-const SENALES = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale"];
+// SPEC-251 (I-49): se agrega "indices" al pool de señales del monitor.
+const SENALES = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices"];
 
 // --- Advisory lock (instancia única, patrón de worker-reportes.mjs) ---
 const { Client } = pg;
@@ -118,6 +120,8 @@ async function leerConfig() {
         tailscaleUrl: (tailscaleParam?.valor ?? "").trim(),
         tailscaleIntervaloSeg: await entero("monitoreo.tailscale.intervalo_seg", 60),
         reprobeSeg: await entero("monitoreo.reprobe.segundos", 60),
+        // SPEC-251 (I-49): frecuencia del guardián de índices (default: 1×/día).
+        indicesIntervaloSeg: (await entero("monitoreo.indices.frecuencia_horas", 24)) * 3600,
     };
 }
 
@@ -126,6 +130,7 @@ function intervaloDe(senal, config) {
         case "ollama_ping": return config.ollamaPingIntervaloSeg;
         case "ollama_smoke": return config.ollamaSmokeIntervaloSeg;
         case "tailscale": return config.tailscaleIntervaloSeg;
+        case "indices": return config.indicesIntervaloSeg; // SPEC-251: 1×/día por defecto
         default: return config.appIntervaloSeg; // app, worker y bd comparten la cadencia base
     }
 }
@@ -144,6 +149,8 @@ async function correrProbe(senal, config) {
                 intervaloMin: config.ollamaSmokeIntervaloSeg / 60,
             });
             case "tailscale": return await probeTailscale({ url: config.tailscaleUrl });
+            // SPEC-251 (I-49): guardián de índices. NUNCA reinicia nada.
+            case "indices": return await probeIndices();
             default: throw new Error(`Señal desconocida: ${senal}`);
         }
     } catch (err) {

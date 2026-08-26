@@ -17,7 +17,7 @@ import { ClasificacionIARepository } from "../dal/repositories/clasificacion-ia.
 import { getParametroSistema } from "../parametros.ts";
 import { leerHeartbeatWorker } from "../worker-heartbeat.ts";
 
-export const SENALES_MONITOREO = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale"] as const;
+export const SENALES_MONITOREO = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices"] as const;
 export type SenalMonitoreo = (typeof SENALES_MONITOREO)[number];
 
 export const METODOS_PROBE = ["PING", "PIGGYBACK", "SMOKE"] as const;
@@ -231,5 +231,69 @@ export async function probeTailscale({ url, timeoutMs = 8000 }: { url: string; t
             : { ok: false, latenciaMs, detalle: `HTTP ${res.status}`, metodo: "PING" };
     } catch (error) {
         return { ok: false, latenciaMs: Date.now() - inicio, detalle: mensajeError(error), metodo: "PING" };
+    }
+}
+
+// SPEC-251 (I-49): lista de índices que el probe debe verificar.
+// Espejo intencionado de REQUIRED en scripts/verify-hnsw-indexes.ts — ambos
+// deben mantenerse sincronizados al agregar un índice nuevo por SQL crudo.
+// La fuente operativa (CLI + CI + deploy) es el script; esta lista es solo para pi-monitor.
+const INDICES_REQUERIDOS = [
+    { name: "Ciudad_nombreNormalizado_trgm_idx",                           type: "gin"    },
+    { name: "EmbeddingDataset_vector_idx",                                 type: "hnsw"   },
+    { name: "EmbeddingReporte_vector_idx",                                 type: "hnsw"   },
+    { name: "AlertaColegio_patronInstitucionalId_idx",                     type: "btree"  },
+    // nombre truncado a 63 chars por PostgreSQL — NO corregir (ver SPEC-251 §Edge Cases)
+    { name: "patrones_institucionales_colegioId_periodo_grado_conducta__key", type: "unique" },
+] as const;
+
+/**
+ * SPEC-251 (I-49): verifica los 5 índices críticos via MonitoreoRepository (Q-3).
+ * Nunca reinicia nada. El resultado es solo observación.
+ */
+export async function probeIndices({
+    repo = new MonitoreoRepository(),
+}: { repo?: MonitoreoRepository } = {}): Promise<ResultadoProbe> {
+    const inicio = Date.now();
+    try {
+        const rows = await repo.leerIndicesPublicos();
+        const byName = new Map(rows.map((r) => [r.indexname, r]));
+
+        const missing: string[] = [];
+        const wrongType: string[] = [];
+
+        for (const req of INDICES_REQUERIDOS) {
+            const row = byName.get(req.name);
+            if (!row) {
+                missing.push(req.name);
+                continue;
+            }
+            const def = row.indexdef.toLowerCase();
+            let tipoOk = false;
+            if (req.type === "hnsw")        tipoOk = def.includes("using hnsw");
+            else if (req.type === "gin")    tipoOk = def.includes("using gin");
+            else if (req.type === "btree")  tipoOk = def.includes("using btree") || !def.includes("using ");
+            else if (req.type === "unique") tipoOk = Boolean(row.isunique);
+            if (!tipoOk) wrongType.push(req.name);
+        }
+
+        const ok = missing.length === 0 && wrongType.length === 0;
+        const partes: string[] = [];
+        if (missing.length > 0) partes.push(`faltantes: ${missing.join(", ")}`);
+        if (wrongType.length > 0) partes.push(`tipo incorrecto: ${wrongType.join(", ")}`);
+
+        return {
+            ok,
+            latenciaMs: Date.now() - inicio,
+            detalle: ok ? `${INDICES_REQUERIDOS.length} índices presentes` : partes.join(" | "),
+            metodo: "PING",
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            latenciaMs: Date.now() - inicio,
+            detalle: `error verificando índices: ${mensajeError(error)}`,
+            metodo: "PING",
+        };
     }
 }

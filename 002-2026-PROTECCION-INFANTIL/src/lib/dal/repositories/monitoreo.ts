@@ -163,4 +163,22 @@ export class MonitoreoRepository {
         }
         return { pings, piggybacks, smokes, fallos };
     }
+
+    /**
+     * SPEC-251 (I-49): consulta los índices del schema public para que probeIndices()
+     * pueda verificarlos sin importar prisma directamente desde probes.ts (Q-3).
+     * Solo lectura de catálogos — no toca datos, no bloquea.
+     * isunique se determina leyendo indexdef (PG siempre emite "CREATE UNIQUE INDEX ...").
+     */
+    async leerIndicesPublicos(): Promise<{ indexname: string; indexdef: string; isunique: boolean }[]> {
+        return this.db.$queryRaw<{ indexname: string; indexdef: string; isunique: boolean }[]>`
+            SELECT
+                indexname,
+                indexdef,
+                (indexdef ILIKE 'CREATE UNIQUE INDEX%') AS isunique
+            FROM pg_indexes
+            WHERE schemaname = 'public'
+              AND indexname NOT LIKE 'pg_%'
+        `;
+    }
 }
