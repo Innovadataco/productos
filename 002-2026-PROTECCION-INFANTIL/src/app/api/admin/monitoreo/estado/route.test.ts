@@ -39,14 +39,14 @@ describe("GET /api/admin/monitoreo/estado (SPEC-171)", () => {
         expect(res.status).toBe(403);
     });
 
-    it("devuelve las 6 señales en verde (tailscale no-aplica sin URL) y metadatos del tablero", async () => {
+    it("devuelve las 7 señales en verde (tailscale no-aplica sin URL) y metadatos del tablero", async () => {
         await autenticarAdmin();
 
         const res = await GET(new Request(URL));
         expect(res.status).toBe(200);
         const body = await res.json();
 
-        expect(Object.keys(body.senales).sort()).toEqual(["app", "bd", "ollama_ping", "ollama_smoke", "tailscale", "worker"]);
+        expect(Object.keys(body.senales).sort()).toEqual(["app", "bd", "indices", "ollama_ping", "ollama_smoke", "tailscale", "worker"]);
         expect(body.senales.app).toEqual({ estado: "verde", ultimoProbeEn: null, detalle: null });
         expect(body.senales.ollama_ping.estado).toBe("verde");
         expect(body.senales.tailscale.estado).toBe("no-aplica");
