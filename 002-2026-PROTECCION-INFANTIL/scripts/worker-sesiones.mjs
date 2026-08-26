@@ -19,7 +19,11 @@ if (!DATABASE_URL) {
 }
 
 const { Client } = pg;
-const ADVISORY_LOCK_ID = 123456790;
+// SPEC-284 (I-130): ID único — antes 123456790 era bomba latente y colisionaba
+// con monitor-probes. Fuente de verdad: scripts/ADVISORY-LOCKS.md.
+// 🔒 CANDADO DE ORDEN (D-004 §candados): NO levantar este worker como servicio
+// del compose hasta que I-132 lo decida. Metería un tercer contendiente al lock.
+const ADVISORY_LOCK_ID = 123456797;
 let lockClient = null;
 
 async function acquireAdvisoryLock() {

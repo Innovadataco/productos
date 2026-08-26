@@ -17,7 +17,10 @@ import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import { refrescarSenalComunitariaPendientes } from "../src/lib/expediente/senal-comunitaria/refrescar-pendientes.ts";
 
 const { Client } = pg;
-const ADVISORY_LOCK_ID = 123_456_790;
+// SPEC-284 (I-130): ID único y sin separadores JS para que sea greppeable.
+// Antes 123_456_790 colisionaba con monitor-probes (mismo número, formato distinto);
+// tres semanas de PRs no lo detectaron por el `_`. Fuente de verdad: scripts/ADVISORY-LOCKS.md.
+const ADVISORY_LOCK_ID = 123456796;
 const DEFAULT_REFRESH_MIN = 60;
 const DEFAULT_LIMITE = 100;
 const MIN_INTERVALO_SEG = 10;
