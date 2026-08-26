@@ -8,6 +8,7 @@ import {
     pagosMoraQuerySchema,
     pagosBonoBodySchema,
     pagosBonoUpdateSchema,
+    pagosPlanCreateSchema,
     pagosPlanUpdateSchema,
     pagosReembolsoBodySchema,
     pagosExtenderBodySchema,
@@ -108,6 +109,33 @@ describe("pagosBonoUpdateSchema", () => {
 
     it("rechaza valor no positivo en actualización parcial", () => {
         expect(() => pagosBonoUpdateSchema.parse({ valor: -5 })).toThrow();
+    });
+});
+
+describe("pagosPlanCreateSchema (SPEC-254)", () => {
+    const baseValido = {
+        nombre: "Plan de prueba",
+        precioBaseCOP: 0,
+        precioBaseUSD: 0,
+        duracion: "MES_3",
+        tipoTitular: "PADRE",
+        esFreemium: true,
+        usosMaximosPorCliente: 1,
+    };
+
+    it("acepta precioBaseUSD: 0 (body real de PlanesAdminCRUD)", () => {
+        const resultado = pagosPlanCreateSchema.parse(baseValido);
+        expect(resultado.precioBaseUSD).toBe(0);
+    });
+
+    it("acepta precioBaseUSD omitido (opcional)", () => {
+        const { precioBaseUSD: _, ...sinUSD } = baseValido;
+        const resultado = pagosPlanCreateSchema.parse(sinUSD);
+        expect(resultado.precioBaseUSD).toBeUndefined();
+    });
+
+    it("rechaza precioBaseUSD negativo", () => {
+        expect(() => pagosPlanCreateSchema.parse({ ...baseValido, precioBaseUSD: -1 })).toThrow();
     });
 });
 

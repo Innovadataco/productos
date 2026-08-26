@@ -2,6 +2,7 @@ import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
+import { FiltroBonos } from "@/components/modules/pagos/FiltroBonos";
 import { OrigenBono } from "@prisma/client";
 
 interface PageProps {
@@ -39,19 +40,11 @@ export default async function BonosPage({ searchParams }: PageProps) {
                 <h2 className="text-lg font-semibold text-body">Bonos promocionales</h2>
                 <div className="flex items-center gap-3">
                     <span className="text-sm text-muted">{total} registro(s)</span>
-                    <form method="get" className="flex items-center gap-2">
-                        <input type="hidden" name="activo" value={activo?.toString() ?? ""} />
-                        <select
-                            name="origen"
-                            defaultValue={origen ?? ""}
-                            aria-label="Filtrar por origen"
-                            className="rounded-xl border border-tinta/10 bg-papel px-3 py-1.5 text-sm text-body dark:border-tinta/20"
-                            onChange={(e) => e.currentTarget.form?.submit()}
-                        >
-                            <option value="">Todos los orígenes</option>
-                            <option value={OrigenBono.RECOMPENSA_PAGO}>Recompensa por pago</option>
-                        </select>
-                    </form>
+                    <FiltroBonos
+                        activo={activo}
+                        origen={origen}
+                        recompensaValue={OrigenBono.RECOMPENSA_PAGO}
+                    />
                 </div>
             </div>
 

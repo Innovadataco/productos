@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -55,6 +55,7 @@ export function PlanesAdminCRUD() {
     const [editing, setEditing] = useState<PlanItem | null>(null);
     const [filtroRol, setFiltroRol] = useState<string>("");
     const [filtroAnio, setFiltroAnio] = useState<string>("");
+    const formRef = useRef<HTMLFormElement>(null);
 
     const [form, setForm] = useState({
         nombre: "",
@@ -116,6 +117,7 @@ export function PlanesAdminCRUD() {
 
     function editar(plan: PlanItem) {
         setEditing(plan);
+        setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
         setForm({
             nombre: plan.nombre,
             precioBaseCOP: plan.precioBaseCOP === null ? "" : String(plan.precioBaseCOP),
@@ -224,7 +226,7 @@ export function PlanesAdminCRUD() {
                 <h3 className="mb-4 text-base font-semibold text-body">
                     {editing ? "Editar plan" : "Nuevo plan"}
                 </h3>
-                <form onSubmit={guardar} className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <form ref={formRef} onSubmit={guardar} className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <Input
                         label="Nombre"
                         required
@@ -317,7 +319,7 @@ export function PlanesAdminCRUD() {
                         </thead>
                         <tbody className="divide-y divide-tinta/10 dark:divide-tinta/20">
                             {items.map((plan) => (
-                                <tr key={plan.id} className="hover:bg-tinta/5 dark:hover:bg-tinta/10">
+                                <tr key={plan.id} className={`hover:bg-tinta/5 dark:hover:bg-tinta/10${editing?.id === plan.id ? " ring-2 ring-inset ring-cielo" : ""}`}>
                                     <td className="px-4 py-3 font-medium text-body">{plan.nombre}</td>
                                     <td className="px-4 py-3">{plan.tipoTitular}</td>
                                     <td className="px-4 py-3">{plan.duracion}</td>

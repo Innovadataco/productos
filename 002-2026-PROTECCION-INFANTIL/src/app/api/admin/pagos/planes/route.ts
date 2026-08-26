@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         const plan = await repo.crearPlan({
             nombre: body.nombre,
             precioBaseCOP: body.precioBaseCOP,
-            precioBaseUSD: body.precioBaseUSD,
+            precioBaseUSD: body.precioBaseUSD ?? 0,
             duracion: body.duracion,
             tipoTitular: body.tipoTitular,
             anio: body.anio,

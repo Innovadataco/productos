@@ -4,13 +4,12 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { ActivarSuscripcionManual } from "@/components/modules/pagos/ActivarSuscripcionManual";
 import { Alerta } from "@/components/ui/Alerta";
+import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import type {
     TargetSinSuscripcion,
     PlanManualDTO,
     PaginacionDTO,
 } from "@/lib/pagos/admin-activacion-manual.types";
-
-const API_BASE = "/api/admin/pagos";
 
 interface PageProps {
     searchParams: Promise<{ page?: string; pageSize?: string; q?: string; tipo?: string }>;
@@ -31,16 +30,6 @@ function parsePagination(params: Awaited<PageProps["searchParams"]>) {
     return { page, pageSize };
 }
 
-async function fetchJson<T>(url: string): Promise<T | null> {
-    try {
-        const res = await fetch(url, { credentials: "include" });
-        if (!res.ok) return null;
-        return (await res.json()) as T;
-    } catch {
-        return null;
-    }
-}
-
 export default async function SinSuscripcionPage({ searchParams }: PageProps) {
     const admin = await verifyAuth("ADMIN").catch(() => null);
     if (!admin) return <SinAccesoModulo />;
@@ -52,18 +41,34 @@ export default async function SinSuscripcionPage({ searchParams }: PageProps) {
     const tipo = params.tipo === "PADRE" || params.tipo === "COLEGIO" ? params.tipo : undefined;
     const anioActual = new Date().getFullYear();
 
-    const [listado, catalogo] = await Promise.all([
-        fetchJson<{ items: TargetSinSuscripcion[]; pagination: PaginacionDTO }>(
-            `${API_BASE}/sin-suscripcion${toQueryString({ page, pageSize, q, tipo })}`
-        ),
-        fetchJson<{ items: PlanManualDTO[]; pagination: PaginacionDTO }>(
-            `${API_BASE}/planes${toQueryString({ anio: anioActual, pageSize: 100 })}`
-        ),
-    ]);
+    let items: TargetSinSuscripcion[] = [];
+    let pagination: PaginacionDTO = { page, pageSize, total: 0, totalPages: 1 };
+    let planes: PlanManualDTO[] = [];
+    let errorMensaje: string | null = null;
 
-    const items = listado?.items ?? [];
-    const pagination = listado?.pagination ?? { page, pageSize, total: 0, totalPages: 1 };
-    const planes = catalogo?.items ?? [];
+    try {
+        const repo = new PagosRepository();
+        const [sinSusc, catalogo] = await Promise.all([
+            repo.listarSinSuscripcion(
+                { ...(tipo !== undefined ? { tipo } : {}), q: q || undefined },
+                { skip: (page - 1) * pageSize, take: pageSize }
+            ),
+            repo.listarPlanesPaginados(
+                { anio: anioActual },
+                { skip: 0, take: 100 }
+            ),
+        ]);
+        items = sinSusc.items as unknown as TargetSinSuscripcion[];
+        pagination = {
+            page,
+            pageSize,
+            total: sinSusc.total,
+            totalPages: Math.max(1, Math.ceil(sinSusc.total / pageSize)),
+        };
+        planes = catalogo.items as unknown as PlanManualDTO[];
+    } catch {
+        errorMensaje = "No se pudo cargar el listado. Intenta de nuevo.";
+    }
 
     return (
         <div className="space-y-4">
@@ -120,9 +125,9 @@ export default async function SinSuscripcionPage({ searchParams }: PageProps) {
                 </form>
             </div>
 
-            {!listado && (
+            {errorMensaje && (
                 <Alerta tono="error" role="alert">
-                    No se pudo cargar el listado. Intenta de nuevo.
+                    {errorMensaje}
                 </Alerta>
             )}
 

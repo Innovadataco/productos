@@ -2949,6 +2949,41 @@ async function main() {
     }
     console.log("Plantillas del motor de notificaciones (SPEC-201) creadas");
 
+    // SPEC-258 (002-PI-157): plantilla de onboarding que faltaba para colegio.creado.
+    // La regla ya existía (seed SPEC-204, línea ~2990) pero apuntaba a una plantilla
+    // inexistente → el email nunca se enviaba. Anti-I-100 (update:{}) porque el admin
+    // puede editar el cuerpo desde /dashboard/admin/notificaciones después del deploy.
+    // Variables reales que envía api/admin/colegios/route.ts:
+    //   {{nombreColegio}}, {{emailAdmin}}, {{passwordTemporal}}, {{urlLogin}}
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave: "colegio.creado.email" },
+        update: {},
+        create: {
+            clave: "colegio.creado.email",
+            canal: "EMAIL",
+            asunto: "Tu cuenta institucional en Protección Infantil está lista",
+            cuerpoMarkdown:
+                "Hola {{nombreColegio}},\n\n" +
+                "Se registró tu institución en Protección Infantil.\n\n" +
+                "**Acceso inicial**\n" +
+                "- Usuario: {{emailAdmin}}\n" +
+                "- Contraseña temporal: {{passwordTemporal}}\n\n" +
+                "Ingresa en {{urlLogin}} y cambia tu contraseña lo antes posible.\n\n" +
+                "Si no solicitaste este registro, contáctanos de inmediato.",
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    nombreColegio: { type: "string" },
+                    emailAdmin: { type: "string" },
+                    passwordTemporal: { type: "string" },
+                    urlLogin: { type: "string" },
+                },
+            },
+            activa: true,
+        },
+    });
+    console.log("[SEED] Plantilla colegio.creado.email (SPEC-258) lista");
+
     type ReglaSeed = {
         evento: string;
         rol: string;

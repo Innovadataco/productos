@@ -53,7 +53,7 @@ export const pagosBonoUpdateSchema = pagosBonoBodySchema.partial().refine(
 export const pagosPlanUpdateSchema = z.object({
     nombre: z.string().min(2).max(120).optional(),
     precioBaseCOP: z.coerce.number().min(0).optional(),
-    precioBaseUSD: z.coerce.number().positive().optional(),
+    precioBaseUSD: z.coerce.number().min(0).optional(),
     descuentoAnualPct: z.coerce.number().min(0).max(100).nullable().optional(),
     descripcion: z.string().max(500).nullable().optional(),
     activo: z.boolean().optional(),
@@ -70,7 +70,7 @@ const TIPOS_TITULAR = ["COLEGIO", "PADRE"] as const;
 export const pagosPlanCreateSchema = z.object({
     nombre: z.string().min(2).max(120),
     precioBaseCOP: z.coerce.number().min(0),
-    precioBaseUSD: z.coerce.number().positive(),
+    precioBaseUSD: z.coerce.number().min(0).optional(),
     duracion: z.enum(DURACIONES_PLAN),
     tipoTitular: z.enum(TIPOS_TITULAR),
     anio: z.coerce.number().int().min(2020).max(2100).default(new Date().getFullYear()),
