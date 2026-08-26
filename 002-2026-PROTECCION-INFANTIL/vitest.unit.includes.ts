@@ -6,6 +6,8 @@
 export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/seed-security.test.ts",
     "scripts/arch/no-prisma-mocks.test.ts",
+    // SPEC-284 (002-PI-184 · I-130): compuerta de IDs de advisory lock únicos.
+    "scripts/locks-check.test.ts",
     "src/app/dashboard/admin/estadisticas/components/EstadisticasSubNav.test.tsx",
     "src/app/dashboard/colegio/alertas/AlertasColegioPageClient.test.tsx",
     "src/components/modules/config-panel/MantenimientoLogsPanel.test.tsx",
