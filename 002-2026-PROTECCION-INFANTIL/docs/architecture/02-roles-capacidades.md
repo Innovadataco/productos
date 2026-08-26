@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 425 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2975 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 426 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2982 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -449,6 +449,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
+| `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -879,6 +880,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
+| `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -1309,6 +1311,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
+| `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -1739,6 +1742,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar/[token]` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/registro` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/registro-colegio` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/registro/inicio` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/reportar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -2169,6 +2173,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar/[token]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/registro` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/registro-colegio` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/registro/inicio` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/reportar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/seguimiento` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/terminos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -2599,6 +2604,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
+| `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | permitir | permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
@@ -3029,6 +3035,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
+| `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | permitir | permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
