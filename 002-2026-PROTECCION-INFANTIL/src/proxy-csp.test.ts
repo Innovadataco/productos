@@ -9,7 +9,9 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { SignJWT } from "jose";
 import { NextRequest } from "next/server";
-import { proxy } from "./proxy";
+// SPEC-287 (002-PI-187): el CSP con nonce se fusionó en middleware.ts en la raíz;
+// src/proxy.ts fue eliminado. El test sigue verificando el mismo contrato.
+import { middleware as proxy } from "../middleware";
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? "test-secret-key-32-chars-long-12345678");
 

@@ -69,8 +69,8 @@ const nextConfig: NextConfig = {
             },
             {
                 // E-6 P4c: el CSP estático NO aplica a /dashboard/** — esa área lo
-                // sirve el middleware (src/proxy.ts) con nonce por request (prod).
-                // Si ambos emitieran el mismo header habría duplicado/conflicto.
+                // sirve el middleware (middleware.ts en la raíz, SPEC-287) con nonce por
+                // request (prod). Si ambos emitieran el mismo header habría duplicado.
                 source: "/((?!dashboard).*)",
                 headers: [
                     {
