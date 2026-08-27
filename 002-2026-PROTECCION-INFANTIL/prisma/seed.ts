@@ -702,6 +702,26 @@ async function seedPlanesPagos(adminId: string) {
     }
 
     for (const plan of planesBase) {
+        // SPEC-293 (002-PI-194 · cierra I-156): las filas freemium (PADRE MES_1,
+        // COLEGIO MES_1) tienen 5 campos canónicos que el seed DEBE curar en cada
+        // corrida — no son negociables por el admin (freemium siempre es gratis,
+        // activo, 1 uso por cliente). Los 6 planes pagos siguen con update:{}
+        // (anti-I-100) para no pisar ediciones de `precioBaseCOP`.
+        //
+        // Causa raíz del I-156: hasta este SPEC, `update:{}` literal para TODAS
+        // las filas dejaba varados los planes MES_1 heredados con esFreemium=false
+        // (rename cosmético post-SPEC-289). Para desactivar el freemium en prod,
+        // el switch correcto es `pagos.freemium.activo=false` en ParametroSistema,
+        // ya soportado por freemium-activacion.service.ts (SPEC-217).
+        const updateFreemium = plan.esFreemium
+            ? {
+                esFreemium: true,
+                activo: true,
+                precioBaseCOP: 0,
+                usosMaximosPorCliente: 1,
+                nombre: plan.nombre,
+            }
+            : {};
         await prisma.plan.upsert({
             where: {
                 tipoTitular_duracion_anio: {
@@ -710,7 +730,7 @@ async function seedPlanesPagos(adminId: string) {
                     anio: plan.anio,
                 },
             },
-            update: {},
+            update: updateFreemium,
             create: plan,
         });
     }
