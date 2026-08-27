@@ -45,12 +45,19 @@ services:
       # SPEC-291 (002-PI-191): docker socket para acciones admin sobre servicios.
       # Whitelist estricta en src/lib/servicios/docker-adapter.ts (3 cmds × 10 conts).
       - /var/run/docker.sock:/var/run/docker.sock
+    # SPEC-291: el user `nextjs` (uid 100, gid 101) del contenedor NO puede
+    # leer /var/run/docker.sock (root:988, mode 660). Añadimos el gid 988
+    # (grupo `docker` del host) como grupo suplementario para que el proceso
+    # tenga permiso sobre el socket sin correr como root.
+    group_add:
+      - "988"
     ports:
       # Solo localhost: lo publica cloudflared (pi.innovadataco.com).
       - "127.0.0.1:5005:3000"
-    # SPEC-291: healthcheck HTTP contra /api/health (endpoint existente).
+    # SPEC-291: healthcheck HTTP contra /api/health (liveness). 127.0.0.1 en vez
+    # de `localhost` porque el DNS de Alpine no siempre resuelve `localhost` a IPv4.
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -231,6 +238,11 @@ services:
     command: node --import tsx scripts/worker-vigencia-pagos.mjs
     environment:
       TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-vigencia").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     depends_on:
       db:
         condition: service_healthy
@@ -254,6 +266,11 @@ services:
     command: node --import tsx scripts/worker-analisis-reglas.mjs
     environment:
       TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-analisis-reglas").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     depends_on:
       db:
         condition: service_healthy
@@ -279,6 +296,11 @@ services:
     command: node --import tsx scripts/worker-expediente-motor.mjs
     environment:
       TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-expediente-motor").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     depends_on:
       db:
         condition: service_healthy
@@ -304,6 +326,11 @@ services:
     command: node --import tsx scripts/worker-anomalias.mjs
     environment:
       TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-anomalias").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     depends_on:
       db:
         condition: service_healthy

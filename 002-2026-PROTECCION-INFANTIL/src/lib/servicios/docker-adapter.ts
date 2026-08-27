@@ -4,37 +4,19 @@
  * Guardas (los 3 obligatorios, verificados por tests):
  *  1. Whitelist HARD-CODED de comandos: solo `start | stop | restart`.
  *  2. Whitelist HARD-CODED de contenedores: 10 servicios (los 12 menos `db` y `pi-app`).
- *  3. `execFile("docker", [cmd, container])` — NUNCA shell (evita interpolación).
+ *  3. Habla con la Docker Engine API por HTTP sobre `/var/run/docker.sock` —
+ *     NUNCA shell, NUNCA `docker` CLI (evita interpolación y no requiere binary
+ *     en la imagen `app`, que solo tenía Node/Next.js).
  *
  * Excluidos absolutos:
- *  - `db`   → reinicio catastrófico (pérdida de conexiones activas).
+ *  - `pi-db`  → reinicio catastrófico (pérdida de conexiones activas).
  *  - `pi-app` → auto-referencia (el request se corta y el admin queda sin sesión).
- *  - `up | down | exec | kill | rm | ...` → cambian estado más allá de "operación".
  */
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import http from "node:http";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
-// Runner reemplazable (inyección para tests). En producción llama al `execFile`
-// real; los tests pueden hacer `setDockerRunner(...)` para inspeccionar/simular.
-export type DockerRunner = (
-    cmd: string,
-    args: string[],
-    opts: { timeout: number },
-) => Promise<{ stdout: string; stderr: string }>;
-
-const defaultRunner: DockerRunner = (cmd, args, opts) =>
-    promisify(execFile)(cmd, args, opts) as unknown as Promise<{ stdout: string; stderr: string }>;
-
-let currentRunner: DockerRunner = defaultRunner;
-
-export function setDockerRunner(runner: DockerRunner | null): void {
-    currentRunner = runner ?? defaultRunner;
-}
-
-function execFileP(cmd: string, args: string[], opts: { timeout: number }): Promise<{ stdout: string; stderr: string }> {
-    return currentRunner(cmd, args, opts);
-}
+const DOCKER_SOCKET = "/var/run/docker.sock";
+const REQUEST_TIMEOUT_MS = 30_000;
 
 export const COMANDOS_SERVICIO = ["start", "stop", "restart"] as const;
 export type ComandoServicio = (typeof COMANDOS_SERVICIO)[number];
@@ -64,10 +46,49 @@ export function esContenedorPermitido(container: string): container is Contenedo
     return CONTS.has(container);
 }
 
+// Runner reemplazable (inyección para tests). En producción llama a la Docker
+// Engine API por HTTP sobre unix socket; los tests reemplazan con setDockerRunner.
+export type DockerRunner = (
+    method: "GET" | "POST",
+    path: string,
+) => Promise<{ status: number; body: string }>;
+
+function defaultRunner(method: "GET" | "POST", path: string): Promise<{ status: number; body: string }> {
+    return new Promise((resolve, reject) => {
+        const req = http.request(
+            {
+                socketPath: DOCKER_SOCKET,
+                method,
+                path,
+                timeout: REQUEST_TIMEOUT_MS,
+                headers: { "content-type": "application/json" },
+            },
+            (res) => {
+                let body = "";
+                res.setEncoding("utf8");
+                res.on("data", (chunk) => (body += chunk));
+                res.on("end", () => resolve({ status: res.statusCode ?? 0, body }));
+            },
+        );
+        req.on("error", (err) => reject(err));
+        req.on("timeout", () => {
+            req.destroy();
+            reject(new Error(`Docker API timeout after ${REQUEST_TIMEOUT_MS}ms`));
+        });
+        req.end();
+    });
+}
+
+let currentRunner: DockerRunner = defaultRunner;
+
+export function setDockerRunner(runner: DockerRunner | null): void {
+    currentRunner = runner ?? defaultRunner;
+}
+
 /**
- * Ejecuta `docker <cmd> <container>` con doble validación de whitelist y sin shell.
- * Timeout de 30s (más que suficiente para start/stop/restart de un contenedor).
- * Lanza AppError con status 400 si algún argumento no está en whitelist.
+ * Ejecuta `docker <cmd> <container>` vía Docker Engine API. Doble validación
+ * de whitelist + sin shell (nunca ejecuta ningún binario). AppError 400 si
+ * algún argumento no está en whitelist; AppError 502 si Docker respondió mal.
  */
 export async function ejecutarAccionDocker(cmd: string, container: string): Promise<{ ok: true }> {
     if (!esComandoPermitido(cmd)) {
@@ -76,19 +97,25 @@ export async function ejecutarAccionDocker(cmd: string, container: string): Prom
     if (!esContenedorPermitido(container)) {
         throw new AppError(`Contenedor no permitido: ${container}`, ERROR_CODES.VALIDATION_ERROR, 400);
     }
-    await execFileP("docker", [cmd, container], { timeout: 30_000 });
+    // POST /containers/{name}/{cmd}  → 204 No Content en éxito.
+    // 304 Not Modified si el contenedor ya está en el estado deseado (aceptable).
+    const path = `/containers/${encodeURIComponent(container)}/${cmd}`;
+    const res = await currentRunner("POST", path);
+    if (res.status !== 204 && res.status !== 304) {
+        throw new AppError(
+            `Docker API ${cmd} ${container}: HTTP ${res.status} ${res.body.slice(0, 300)}`,
+            ERROR_CODES.INTERNAL_ERROR,
+            502,
+        );
+    }
     return { ok: true };
 }
 
 /**
- * Devuelve el estado observado (via `docker ps -a`) de los 12 contenedores conocidos
- * (los 10 permitidos + db + pi-app). Útil para el endpoint GET /api/admin/servicios/estado.
+ * Devuelve el estado observado (via `GET /containers/json?all=true`) de los 12
+ * contenedores conocidos (los 10 permitidos + pi-db + pi-app).
  */
-const TODOS_LOS_CONTENEDORES = [
-    "pi-db",
-    "pi-app",
-    ...CONTENEDORES_PERMITIDOS,
-] as const;
+const TODOS_LOS_CONTENEDORES = ["pi-db", "pi-app", ...CONTENEDORES_PERMITIDOS] as const;
 
 export interface EstadoServicio {
     nombre: string;
@@ -97,30 +124,36 @@ export interface EstadoServicio {
     permiteAccion: boolean;
 }
 
+interface DockerContainer {
+    Names: string[];
+    State: string;
+    Status: string;
+}
+
 export async function inspeccionarEstado(): Promise<EstadoServicio[]> {
-    const { stdout } = await execFileP(
-        "docker",
-        ["ps", "-a", "--format", "{{.Names}}\t{{.State}}\t{{.Status}}"],
-        { timeout: 10_000 },
-    );
-    const filas = stdout
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .map((l) => {
-            const [nombre, estado, status] = l.split("\t");
-            return { nombre, estado, status };
-        });
-    const porNombre = new Map(filas.map((f) => [f.nombre, f]));
+    const res = await currentRunner("GET", "/containers/json?all=true");
+    if (res.status !== 200) {
+        throw new AppError(
+            `Docker API list: HTTP ${res.status} ${res.body.slice(0, 300)}`,
+            ERROR_CODES.INTERNAL_ERROR,
+            502,
+        );
+    }
+    const filas: DockerContainer[] = JSON.parse(res.body);
+    // Docker prefija los nombres con "/". Normalizamos.
+    const porNombre = new Map<string, DockerContainer>();
+    for (const f of filas) {
+        for (const n of f.Names) porNombre.set(n.replace(/^\//, ""), f);
+    }
     return TODOS_LOS_CONTENEDORES.map((nombre) => {
         const f = porNombre.get(nombre);
         let salud: EstadoServicio["salud"] = null;
-        if (f?.status?.includes("(healthy)")) salud = "healthy";
-        else if (f?.status?.includes("(unhealthy)")) salud = "unhealthy";
-        else if (f?.status?.includes("(health: starting)")) salud = "starting";
+        if (f?.Status?.includes("(healthy)")) salud = "healthy";
+        else if (f?.Status?.includes("(unhealthy)")) salud = "unhealthy";
+        else if (f?.Status?.includes("(health: starting)")) salud = "starting";
         return {
             nombre,
-            estado: f?.estado ?? "missing",
+            estado: f?.State ?? "missing",
             salud,
             permiteAccion: CONTS.has(nombre),
         };

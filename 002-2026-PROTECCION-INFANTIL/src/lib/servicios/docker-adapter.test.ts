@@ -17,7 +17,8 @@ import { AppError } from "../errors";
 let mockRunner: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
-    mockRunner = vi.fn(async () => ({ stdout: "", stderr: "" }));
+    // Docker API responde 204 No Content en start/stop/restart exitosos.
+    mockRunner = vi.fn(async () => ({ status: 204, body: "" }));
     setDockerRunner(mockRunner as unknown as DockerRunner);
 });
 
@@ -26,13 +27,13 @@ afterEach(() => {
 });
 
 describe("docker-adapter · whitelist", () => {
-    it("acepta las 3 combinaciones canónicas del brief", async () => {
+    it("acepta las 3 combinaciones canónicas del brief (usando la Docker Engine API por HTTP)", async () => {
         await ejecutarAccionDocker("restart", "pi-analisis-score");
         await ejecutarAccionDocker("stop", "pi-monitor");
         await ejecutarAccionDocker("start", "pi-worker");
         expect(mockRunner).toHaveBeenCalledTimes(3);
-        expect(mockRunner.mock.calls[0][0]).toBe("docker");
-        expect(mockRunner.mock.calls[0][1]).toEqual(["restart", "pi-analisis-score"]);
+        expect(mockRunner.mock.calls[0][0]).toBe("POST");
+        expect(mockRunner.mock.calls[0][1]).toBe("/containers/pi-analisis-score/restart");
     });
 
     it("acepta las 30 combinaciones de whitelist (3 cmds × 10 contenedores)", async () => {
@@ -76,7 +77,7 @@ describe("docker-adapter · whitelist", () => {
         expect(esComandoPermitido("kill")).toBe(false);
     });
 
-    it("errores son AppError con statusCode 400 y code VALIDATION_ERROR", async () => {
+    it("errores de whitelist son AppError con statusCode 400 y code VALIDATION_ERROR", async () => {
         try {
             await ejecutarAccionDocker("hack", "pi-worker");
             expect.fail("debió lanzar");
@@ -84,6 +85,22 @@ describe("docker-adapter · whitelist", () => {
             expect(err).toBeInstanceOf(AppError);
             expect((err as AppError).statusCode).toBe(400);
             expect((err as AppError).code).toBe("VALIDATION_ERROR");
+        }
+    });
+
+    it("aceptable Docker 304 (contenedor ya en el estado deseado)", async () => {
+        setDockerRunner((async () => ({ status: 304, body: "" })) as unknown as DockerRunner);
+        await expect(ejecutarAccionDocker("start", "pi-worker")).resolves.toEqual({ ok: true });
+    });
+
+    it("Docker 5xx lanza AppError 502 con detalle acotado", async () => {
+        setDockerRunner((async () => ({ status: 500, body: "no such container".repeat(50) })) as unknown as DockerRunner);
+        try {
+            await ejecutarAccionDocker("restart", "pi-worker");
+            expect.fail("debió lanzar");
+        } catch (err) {
+            expect(err).toBeInstanceOf(AppError);
+            expect((err as AppError).statusCode).toBe(502);
         }
     });
 });

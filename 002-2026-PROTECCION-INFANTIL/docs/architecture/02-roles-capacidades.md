@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 427 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2989 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 428 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2996 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -304,6 +304,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/interno/expediente/[id]/transicionar` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
@@ -736,6 +737,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/interno/expediente/[id]/transicionar` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
@@ -1168,6 +1170,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/interno/expediente/[id]/transicionar` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
@@ -1600,6 +1603,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/departamentos` | api | HTTP 403 | no permite | sí |
 | `/api/docs/indice` | api | HTTP 403 | no permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | HTTP 403 | no permite | sí |
 | `/api/health/worker` | api | HTTP 403 | no permite | sí |
 | `/api/interno/expediente/[id]/transicionar` | api | HTTP 403 | no permite | sí |
 | `/api/me` | api | permitir | permite | sí |
@@ -2032,6 +2036,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/departamentos` | api | HTTP 403 | no permite | sí |
 | `/api/docs/indice` | api | HTTP 403 | no permite | sí |
 | `/api/estadisticas-publicas` | api | HTTP 403 | no permite | sí |
+| `/api/health` | api | HTTP 403 | no permite | sí |
 | `/api/health/worker` | api | HTTP 403 | no permite | sí |
 | `/api/interno/expediente/[id]/transicionar` | api | HTTP 403 | no permite | sí |
 | `/api/me` | api | permitir | permite | sí |
@@ -2464,6 +2469,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/interno/expediente/[id]/transicionar` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
@@ -2896,6 +2902,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
+| `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
 | `/api/interno/expediente/[id]/transicionar` | api | HTTP 401 | permite | **NO** |
 | `/api/me` | api | HTTP 401 | permite | **NO** |
