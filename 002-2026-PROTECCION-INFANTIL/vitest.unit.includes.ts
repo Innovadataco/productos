@@ -6,6 +6,11 @@
 export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/seed-security.test.ts",
     "scripts/arch/no-prisma-mocks.test.ts",
+    // SPEC-287 (002-PI-187): fuente única de guardias + cookie firmada de vigencia + 4 ratchets estáticos.
+    "src/lib/routing/guardias.test.ts",
+    "src/lib/routing/vigencia-cookie.test.ts",
+    "src/lib/routing/middleware.test.ts",
+    "scripts/lint/ratchets.test.ts",
     // SPEC-284 (002-PI-184 · I-130): compuerta de IDs de advisory lock únicos.
     "scripts/locks-check.test.ts",
     // SPEC-280 (002-PI-180): constructor puro del resumen del CI, sin BD ni red.
