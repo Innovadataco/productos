@@ -16,8 +16,29 @@ import { MonitoreoRepository } from "../dal/repositories/monitoreo.ts";
 import { ClasificacionIARepository } from "../dal/repositories/clasificacion-ia.ts";
 import { getParametroSistema } from "../parametros.ts";
 import { leerHeartbeatWorker } from "../worker-heartbeat.ts";
+import { leerAntiguedadTickSeg } from "./tick-vida.ts";
 
-export const SENALES_MONITOREO = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices"] as const;
+// SPEC-291 (002-PI-191): 7 nuevas señales por tick-vida (workers y app propios).
+export const SENALES_TICK_VIDA = [
+    "notificaciones", "senal_comunitaria", "analisis_score",
+    "vigencia", "analisis_reglas", "expediente_motor", "anomalias",
+] as const;
+export type SenalTickVida = (typeof SENALES_TICK_VIDA)[number];
+
+const NOMBRE_CONTENEDOR_POR_SENAL: Record<SenalTickVida, string> = {
+    notificaciones: "pi-notificaciones",
+    senal_comunitaria: "pi-senal-comunitaria",
+    analisis_score: "pi-analisis-score",
+    vigencia: "pi-vigencia",
+    analisis_reglas: "pi-analisis-reglas",
+    expediente_motor: "pi-expediente-motor",
+    anomalias: "pi-anomalias",
+};
+
+export const SENALES_MONITOREO = [
+    "app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices",
+    ...SENALES_TICK_VIDA,
+] as const;
 export type SenalMonitoreo = (typeof SENALES_MONITOREO)[number];
 
 export const METODOS_PROBE = ["PING", "PIGGYBACK", "SMOKE"] as const;
@@ -296,4 +317,27 @@ export async function probeIndices({
             metodo: "PING",
         };
     }
+}
+
+/**
+ * SPEC-291 (002-PI-191): probe genérico basado en tick-vida.
+ * Ok si el touchfile `${WORKER_RUN_DIR}/tick-vida-<contenedor>` fue actualizado
+ * hace menos de `maxAntiguedadSeg` (default 90s, coherente con healthcheck docker).
+ * Detecta bucle silencioso: si el event loop del worker se bloquea, el interval
+ * no dispara y el tick envejece.
+ */
+export function probeTickVida(senal: SenalTickVida, maxAntiguedadSeg: number = 90): ResultadoProbe {
+    const contenedor = NOMBRE_CONTENEDOR_POR_SENAL[senal];
+    const seg = leerAntiguedadTickSeg(contenedor);
+    if (seg === null) {
+        return { ok: false, latenciaMs: 0, detalle: `tick-vida ausente para ${contenedor}`, metodo: "PING" };
+    }
+    return seg <= maxAntiguedadSeg
+        ? { ok: true, latenciaMs: 0, metodo: "PING" }
+        : {
+            ok: false,
+            latenciaMs: 0,
+            detalle: `tick-vida ${contenedor} tiene ${seg}s (>${maxAntiguedadSeg})`,
+            metodo: "PING",
+        };
 }

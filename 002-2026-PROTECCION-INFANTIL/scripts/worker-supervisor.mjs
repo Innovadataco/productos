@@ -11,6 +11,9 @@ import { spawn } from "node:child_process";
 import { writeFileSync, unlinkSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
+
+iniciarTickVida("pi-worker"); // SPEC-291: healthcheck externo + monitor
 
 const WORKER_SCRIPT = resolve(import.meta.dirname, "worker-reportes.mjs");
 // Spec 097: en contenedores app y worker son procesos separados; el heartbeat compartido

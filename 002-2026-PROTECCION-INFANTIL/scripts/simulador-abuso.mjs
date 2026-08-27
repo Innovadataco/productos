@@ -18,6 +18,9 @@ import { generarPayloads } from "../src/lib/anti-abuso/simulador.ts";
 import { logAudit } from "../src/lib/audit.ts";
 import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
 import pg from "pg";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
+
+iniciarTickVida("pi-simulador-abuso"); // SPEC-291: healthcheck externo + monitor
 
 const { Client } = pg;
 const ADVISORY_LOCK_ID = 923456789;

@@ -53,6 +53,10 @@ const SIN_PANTALLA_PROPIA = new Set([
     // SPEC-202: salud del motor de notificaciones es una sub-página del área
     // Estadísticas (sub-nav); no tiene ítem de menú lateral propio.
     "estadisticas_salud_motor",
+    // SPEC-291 (002-PI-191): administración del sistema (start/stop/restart de
+    // servicios docker) es un módulo de acción endpoint-only; no tiene ítem de
+    // menú lateral propio en este SPEC — el tablero de servicios lo agrega D-83.
+    "sistema_admin",
 ]);
 
 // SPEC-173 (FASE-C): los nodos expandibles (p. ej. "Usuarios") declaran hijos;

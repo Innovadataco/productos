@@ -35,6 +35,11 @@ import {
 } from "../src/lib/monitoreo/probes.ts";
 import { registrarProbe, evaluarSenal, confirmarRojo } from "../src/lib/monitoreo/incidentes.ts";
 import { revisarSlaSpam } from "../src/lib/spam/sla.ts";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
+// SPEC-291 (002-PI-191): probe genérico basado en tick-vida para los 7 workers.
+import { probeTickVida, SENALES_TICK_VIDA } from "../src/lib/monitoreo/probes.ts";
+
+iniciarTickVida("pi-monitor"); // SPEC-291: healthcheck externo del propio monitor
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -50,7 +55,7 @@ const TICK_MS = 5000;
 const LIMPIEZA_CADA_MS = 60 * 60 * 1000;
 const SLA_SPAM_INTERVALO_MS = 15 * 60 * 1000;
 // SPEC-251 (I-49): se agrega "indices" al pool de señales del monitor.
-const SENALES = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices"];
+const SENALES = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices", ...SENALES_TICK_VIDA];
 
 // --- Advisory lock (instancia única, patrón de worker-reportes.mjs) ---
 const { Client } = pg;
@@ -122,6 +127,8 @@ async function leerConfig() {
         reprobeSeg: await entero("monitoreo.reprobe.segundos", 60),
         // SPEC-251 (I-49): frecuencia del guardián de índices (default: 1×/día).
         indicesIntervaloSeg: (await entero("monitoreo.indices.frecuencia_horas", 24)) * 3600,
+        // SPEC-291 (002-PI-191): antigüedad máxima aceptada del tick-vida antes de marcar rojo.
+        tickVidaMaxSeg: await entero("monitoreo.tickVida.maxAntiguedadSeg", 90),
     };
 }
 
@@ -131,7 +138,9 @@ function intervaloDe(senal, config) {
         case "ollama_smoke": return config.ollamaSmokeIntervaloSeg;
         case "tailscale": return config.tailscaleIntervaloSeg;
         case "indices": return config.indicesIntervaloSeg; // SPEC-251: 1×/día por defecto
-        default: return config.appIntervaloSeg; // app, worker y bd comparten la cadencia base
+        default:
+            // SPEC-291: las 7 señales tick-vida usan la cadencia base (app/worker/bd).
+            return config.appIntervaloSeg;
     }
 }
 
@@ -151,7 +160,12 @@ async function correrProbe(senal, config) {
             case "tailscale": return await probeTailscale({ url: config.tailscaleUrl });
             // SPEC-251 (I-49): guardián de índices. NUNCA reinicia nada.
             case "indices": return await probeIndices();
-            default: throw new Error(`Señal desconocida: ${senal}`);
+            default:
+                // SPEC-291: 7 señales por tick-vida (workers propios).
+                if (SENALES_TICK_VIDA.includes(senal)) {
+                    return probeTickVida(senal, config.tickVidaMaxSeg);
+                }
+                throw new Error(`Señal desconocida: ${senal}`);
         }
     } catch (err) {
         // Un probe que lanza (p.ej. URL de Ollama inválida) cuenta como fallo.

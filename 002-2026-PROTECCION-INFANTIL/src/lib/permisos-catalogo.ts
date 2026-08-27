@@ -69,4 +69,8 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "anti_abuso", nombre: "Anti-abuso", categoria: "admin", orden: 100 },
     { clave: "monitoreo_worker", nombre: "Monitoreo del worker", categoria: "admin", orden: 105 },
     { clave: "dataset_entrenamiento", nombre: "Dataset de entrenamiento", categoria: "admin", orden: 120 },
+    // SPEC-291 (002-PI-191): acciones admin sobre servicios docker (start/stop/restart).
+    // Default: SOLO rol ADMIN (por `ADMIN: modulosSeed.map(...)` en seed-modulos-grants.ts).
+    // NUNCA otorgar a OPERADOR/COMITE/SCHOOL_ADMIN sin auditoría explícita de CEO.
+    { clave: "sistema_admin", nombre: "Administración del sistema (servicios docker)", categoria: "admin", esCritico: true, orden: 200 },
 ];

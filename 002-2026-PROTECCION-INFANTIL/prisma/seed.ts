@@ -1702,6 +1702,22 @@ async function main() {
         update: {},
     });
 
+    // SPEC-291 (002-PI-191): antigüedad máxima aceptada del tick-vida antes de marcar rojo.
+    // Debe alinearse con el `< 90s` del healthcheck docker de los 7 workers.
+    // Patrón anti-I-100: update:{} para no pisar la configuración del CEO.
+    await prisma.parametroSistema.upsert({
+        where: { clave: "monitoreo.tickVida.maxAntiguedadSeg" },
+        create: {
+            clave: "monitoreo.tickVida.maxAntiguedadSeg",
+            valor: "90",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion: "Segundos máximos aceptados desde el último tick-vida de un worker antes de marcar señal en rojo (SPEC-291)",
+        },
+        update: {},
+    });
+
     // SPEC-199 + SPEC-207: parámetros de la guarda de dominancia SPAM y hard-rule.
     // EXCEPCIÓN DOCUMENTADA (SPEC-207): spam.dominancia_umbral se fuerza a 0.33
     // por decisión de diseño de esta SPEC; spam.dominios_acortadores se fuerza con

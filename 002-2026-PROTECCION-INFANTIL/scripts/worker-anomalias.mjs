@@ -24,7 +24,10 @@
 
 import { ejecutarDeteccion } from "../src/lib/analisis/anomalias/detector.ts";
 import { obtenerTickMinAnomalias } from "../src/lib/analisis/anomalias/parametros.ts";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
 import pg from "pg";
+
+iniciarTickVida("pi-anomalias"); // SPEC-291: healthcheck externo + monitor
 
 const { Client } = pg;
 const ADVISORY_LOCK_ID = 123456795;
