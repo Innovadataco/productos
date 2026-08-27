@@ -10,7 +10,6 @@ const PUBLIC_ROUTES = [
     "/activar",
     "/recuperar",
     "/seguimiento",
-    "/consulta",
     "/reportar",
     "/privacidad",
     "/terminos",

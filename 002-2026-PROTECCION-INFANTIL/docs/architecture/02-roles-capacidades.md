@@ -2929,7 +2929,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/webhooks/resend` | api | HTTP 401 | permite | **NO** |
 | `/cambiar-password` | página | redirigir→/login | permite | **NO** |
 | `/consentimiento` | página | redirigir→/login | permite | **NO** |
-| `/consulta` | página | permitir | permite | sí |
+| `/consulta` | página | redirigir→/login | permite | **NO** |
 | `/dashboard` | página | redirigir→/login | permite | **NO** |
 | `/dashboard-publico` | página | permitir | permite | sí |
 | `/dashboard/admin` | página | redirigir→/login | no permite | sí |
@@ -3327,6 +3327,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/webhooks/resend` | HTTP 401 | permite |
 | `/cambiar-password` | redirigir→/login | permite |
 | `/consentimiento` | redirigir→/login | permite |
+| `/consulta` | redirigir→/login | permite |
 | `/dashboard` | redirigir→/login | permite |
 | `/dashboard/apelaciones` | redirigir→/login | permite |
 | `/dashboard/circulo-confianza` | redirigir→/login | permite |
