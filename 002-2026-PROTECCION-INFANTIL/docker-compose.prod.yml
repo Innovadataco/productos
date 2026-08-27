@@ -48,9 +48,10 @@ services:
     ports:
       # Solo localhost: lo publica cloudflared (pi.innovadataco.com).
       - "127.0.0.1:5005:3000"
-    # SPEC-291: healthcheck HTTP contra /api/health (endpoint existente).
+    # SPEC-291: healthcheck HTTP contra /api/health (liveness). 127.0.0.1 en vez
+    # de `localhost` porque el DNS de Alpine no siempre resuelve `localhost` a IPv4.
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
