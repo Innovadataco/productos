@@ -1,7 +1,7 @@
 /**
  * SPEC-201 (BRIEF §5.4): repositorio de NotificacionPreferencia.
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../prisma";
 import type { DbClient } from "../unit-of-work";
 import type { Prisma } from "@prisma/client";
 

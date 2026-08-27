@@ -100,20 +100,37 @@ describe("privacidad URL del identificador (spec 091 fix)", () => {
     });
 
     it("el email a suscriptores NUNCA lleva el identificador ni 'score' (S-2, 002-PI-052)", () => {
-        const fuente = fs.readFileSync(path.join(SRC, "lib", "email.ts"), "utf-8");
-        const inicio = fuente.indexOf("export async function enviarAlertasSuscriptores");
-        expect(inicio).toBeGreaterThan(-1);
-        // Solo el bloque del template (subject/text), sin comentarios del código.
-        const envio = fuente.slice(inicio);
-        const inicioTemplate = envio.indexOf("resend.emails.send({");
-        expect(inicioTemplate).toBeGreaterThan(-1);
-        const plantilla = envio.slice(inicioTemplate);
+        // SPEC-296 (002-PI-197): el envío pasó al motor de notificaciones.
+        // La protección S-2 vive ahora en dos capas: (a) el wrapper en email.ts
+        // NO pasa el identificador como variable al motor, (b) la plantilla
+        // "suscriptores.reporte_publicado.email" del seed NO menciona identificador
+        // ni "score" en asunto ni cuerpo.
 
-        // Ni en el asunto ni en URLs (la consulta pública es por POST, spec 091).
-        expect(/subject:\s*`[^`]*identificador/.test(plantilla)).toBe(false);
+        // (a) Wrapper: dentro del bloque `variables: { ... }` NO aparece "identificador".
+        // El identificador sí se usa en el `where` de Prisma (para buscar suscripciones),
+        // pero JAMÁS viaja como variable de plantilla al motor de notificaciones.
+        const wrapper = fs.readFileSync(path.join(SRC, "lib", "email.ts"), "utf-8");
+        const inicioWrap = wrapper.indexOf("export async function enviarAlertasSuscriptores");
+        expect(inicioWrap).toBeGreaterThan(-1);
+        const finWrap = wrapper.indexOf("export async function", inicioWrap + 1);
+        const cuerpoWrap = wrapper.slice(inicioWrap, finWrap === -1 ? undefined : finWrap);
+        // Extrae SOLO el bloque `variables: {…}` del wrapper para chequear su contenido.
+        const matchVars = cuerpoWrap.match(/variables:\s*\{[\s\S]*?\n\s*\},/);
+        expect(matchVars, "wrapper debe declarar un bloque variables: {…}").not.toBeNull();
+        const bloqueVars = matchVars ? matchVars[0] : "";
+        expect(/identificador/i.test(bloqueVars)).toBe(false);
+        expect(/score/i.test(bloqueVars)).toBe(false);
+
+        // (b) Plantilla seed: la plantilla suscriptores.reporte_publicado.email
+        // puede mencionar la palabra "identificador" como contexto del copy, pero
+        // NO puede interpolar `{{identificador}}` (el valor real jamás sale) ni
+        // mencionar "score" ni "consulta=" en URL.
+        const seed = fs.readFileSync(path.join(SRC, "..", "prisma", "seed.ts"), "utf-8");
+        const idxPlantilla = seed.indexOf('clave: "suscriptores.reporte_publicado.email"');
+        expect(idxPlantilla).toBeGreaterThan(-1);
+        const plantilla = seed.slice(idxPlantilla, idxPlantilla + 800);
+        expect(plantilla).not.toContain("{{identificador}}");
         expect(plantilla).not.toContain("consulta=");
-        expect(plantilla).not.toContain("encodeURIComponent(payload.identificador)");
-        // Presunción de inocencia (§1.3): nunca "score" de cara al usuario.
         expect(/score/i.test(plantilla)).toBe(false);
     });
 });

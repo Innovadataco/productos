@@ -1,7 +1,7 @@
 /**
  * SPEC-201 (BRIEF §5.2): repositorio de NotificacionPlantilla.
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../prisma";
 import type { DbClient } from "../unit-of-work";
 import type { CanalNotificacion, Prisma } from "@prisma/client";
 

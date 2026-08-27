@@ -5,14 +5,17 @@
  * nada más. Prohibido escribir en `Notificacion` desde fuera del módulo.
  */
 import type { CanalNotificacion, Prisma } from "@prisma/client";
-import { NotificacionRepository } from "@/lib/dal/repositories/notificacion";
-import { NotificacionPlantillaRepository } from "@/lib/dal/repositories/notificacion-plantilla";
-import { NotificacionReglaRepository } from "@/lib/dal/repositories/notificacion-regla";
-import { NotificacionPreferenciaRepository } from "@/lib/dal/repositories/notificacion-preferencia";
-import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+// SPEC-296 (002-PI-197): imports relativos. Este módulo es alcanzable desde
+// scripts/worker-reportes.mjs vía email.ts (thin wrapper) → programar(),
+// por lo que el ratchet anti-alias (SPEC-197 · I-88) lo obliga.
+import { NotificacionRepository } from "../dal/repositories/notificacion";
+import { NotificacionPlantillaRepository } from "../dal/repositories/notificacion-plantilla";
+import { NotificacionReglaRepository } from "../dal/repositories/notificacion-regla";
+import { NotificacionPreferenciaRepository } from "../dal/repositories/notificacion-preferencia";
+import { UsuarioRepository } from "../dal/repositories/usuario";
 import { aplicarOffset } from "./offset";
 import { aplicarQuietHours } from "./quiet-hours";
-import { sendNotificacionEnvio } from "@/lib/queue";
+import { sendNotificacionEnvio } from "../queue";
 
 export interface ProgramarInput {
     evento: string;

@@ -64,6 +64,22 @@ jobs:
       # bucle de guardián en layout (x-invoke-path, redirect en layout, self-redirect
       # en action, invariante destino ∈ exentas).
       - run: npm run ratchets:check
+      # SPEC-296 (002-PI-197 · cierra I-152): impide bypass del motor de notificaciones.
+      # Solo se permite `resend.emails.send()` bajo `src/lib/notificaciones/`
+      # (envío real del motor) y `src/lib/email/` (notificacion-spam.ts, ya en el motor).
+      - name: Ratchet Resend fuera del motor
+        run: |
+          set -e
+          BYPASS=$(grep -rn "resend\.emails\.send" src/ --include="*.ts" --include="*.tsx" \
+              | grep -v "src/lib/notificaciones/" \
+              | grep -v "src/lib/email/" \
+              | grep -v "\.test\." || true)
+          if [ -n "$BYPASS" ]; then
+              echo "❌ Nuevo callsite Resend directo fuera del motor:"
+              echo "$BYPASS"
+              exit 1
+          fi
+          echo "✅ Cero bypasses Resend fuera del motor."
 
   test-unit:
     runs-on: ubuntu-latest
