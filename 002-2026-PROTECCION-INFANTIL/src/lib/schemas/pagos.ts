@@ -70,7 +70,9 @@ const TIPOS_TITULAR = ["COLEGIO", "PADRE"] as const;
 export const pagosPlanCreateSchema = z.object({
     nombre: z.string().min(2).max(120),
     precioBaseCOP: z.coerce.number().min(0),
-    precioBaseUSD: z.coerce.number().min(0).optional(),
+    // SPEC-289 (002-PI-189 · Fase 1): default(0) para que el CRUD no tenga que
+    // enviarlo. Fase 2 (ARQ_16) retirará el campo completo del schema.
+    precioBaseUSD: z.coerce.number().min(0).optional().default(0),
     duracion: z.enum(DURACIONES_PLAN),
     tipoTitular: z.enum(TIPOS_TITULAR),
     anio: z.coerce.number().int().min(2020).max(2100).default(new Date().getFullYear()),
@@ -113,12 +115,24 @@ export const pagosExtenderBodySchema = z.object({
     motivo: z.string().min(10).max(500),
 });
 
-// SPEC-216 (002-PI-116): aplicación de bono promocional a una suscripción.
-export const pagosAplicarBonoBodySchema = z.object({
-    suscripcionId: z.string().min(1),
-    bonoId: z.string().min(1),
-    montoBaseUSD: z.coerce.number().positive(),
-});
+// SPEC-216 (002-PI-116) + SPEC-289 (002-PI-189 · Fase 1):
+// aplicación de bono promocional a una suscripción. `montoBase` es el nombre
+// canónico neutral de moneda; `montoBaseUSD` queda como shim retrocompatible
+// por Fase 1 (se retira en Fase 2 / ARQ_16). Al menos uno debe ser positivo.
+export const pagosAplicarBonoBodySchema = z
+    .object({
+        suscripcionId: z.string().min(1),
+        bonoId: z.string().min(1),
+        montoBase: z.coerce.number().positive().optional(),
+        montoBaseUSD: z.coerce.number().positive().optional(),
+    })
+    .refine(
+        (data) => (data.montoBase ?? 0) > 0 || (data.montoBaseUSD ?? 0) > 0,
+        {
+            message: "Se requiere montoBase (o montoBaseUSD como alias legacy) mayor a 0",
+            path: ["montoBase"],
+        },
+    );
 
 // SPEC-214 (002-PI-114): tasas de cambio.
 export const pagosTasaManualBodySchema = z.object({

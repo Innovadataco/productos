@@ -13,6 +13,7 @@ import {
     pagosReembolsoBodySchema,
     pagosExtenderBodySchema,
     pagosTasaManualBodySchema,
+    pagosAplicarBonoBodySchema,
 } from "./pagos";
 
 const fechaInicio = new Date().toISOString();
@@ -128,14 +129,39 @@ describe("pagosPlanCreateSchema (SPEC-254)", () => {
         expect(resultado.precioBaseUSD).toBe(0);
     });
 
-    it("acepta precioBaseUSD omitido (opcional)", () => {
+    it("acepta precioBaseUSD omitido — default 0 (SPEC-289 Fase 1)", () => {
         const { precioBaseUSD: _, ...sinUSD } = baseValido;
         const resultado = pagosPlanCreateSchema.parse(sinUSD);
-        expect(resultado.precioBaseUSD).toBeUndefined();
+        expect(resultado.precioBaseUSD).toBe(0);
     });
 
     it("rechaza precioBaseUSD negativo", () => {
         expect(() => pagosPlanCreateSchema.parse({ ...baseValido, precioBaseUSD: -1 })).toThrow();
+    });
+
+    // SPEC-289 (002-PI-189 · Fase 1): SC-005/SC-006
+    it("SPEC-289 SC-005: create sin USD, con COP positivo → OK con precioBaseUSD=0 por default", () => {
+        const resultado = pagosPlanCreateSchema.parse({
+            nombre: "Colegio Anual COP",
+            precioBaseCOP: 50000,
+            duracion: "MES_12",
+            tipoTitular: "COLEGIO",
+            esFreemium: false,
+        });
+        expect(resultado.precioBaseUSD).toBe(0);
+        expect(resultado.precioBaseCOP).toBe(50000);
+    });
+
+    it("SPEC-289 SC-006: no-freemium con precioBaseCOP=0 → error", () => {
+        expect(() =>
+            pagosPlanCreateSchema.parse({
+                nombre: "Malo",
+                precioBaseCOP: 0,
+                duracion: "MES_12",
+                tipoTitular: "COLEGIO",
+                esFreemium: false,
+            }),
+        ).toThrow();
     });
 });
 
@@ -219,5 +245,43 @@ describe("pagosTasaManualBodySchema", () => {
 
     it("rechaza tasa no positiva", () => {
         expect(() => pagosTasaManualBodySchema.parse({ ...datosValidos, tasa: 0 })).toThrow();
+    });
+});
+
+// SPEC-289 (002-PI-189 · Fase 1)
+describe("pagosAplicarBonoBodySchema (SPEC-289)", () => {
+    it("acepta montoBase canónico", () => {
+        const r = pagosAplicarBonoBodySchema.parse({
+            suscripcionId: "sus-1",
+            bonoId: "bono-1",
+            montoBase: 50000,
+        });
+        expect(r.montoBase).toBe(50000);
+    });
+
+    it("acepta montoBaseUSD legacy (shim retrocompatible)", () => {
+        const r = pagosAplicarBonoBodySchema.parse({
+            suscripcionId: "sus-1",
+            bonoId: "bono-1",
+            montoBaseUSD: 25,
+        });
+        expect(r.montoBaseUSD).toBe(25);
+    });
+
+    it("acepta ambos (canónico gana en el consumidor por convención)", () => {
+        const r = pagosAplicarBonoBodySchema.parse({
+            suscripcionId: "sus-1",
+            bonoId: "bono-1",
+            montoBase: 50000,
+            montoBaseUSD: 25,
+        });
+        expect(r.montoBase).toBe(50000);
+        expect(r.montoBaseUSD).toBe(25);
+    });
+
+    it("rechaza cuando ambos faltan o son 0", () => {
+        expect(() =>
+            pagosAplicarBonoBodySchema.parse({ suscripcionId: "sus-1", bonoId: "bono-1" }),
+        ).toThrow();
     });
 });

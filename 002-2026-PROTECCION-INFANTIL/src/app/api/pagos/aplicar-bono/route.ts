@@ -59,10 +59,14 @@ export async function POST(request: Request) {
         }
 
         const { ipAddress, userAgent } = getClientInfo(request);
+        // SPEC-289 (002-PI-189 · Fase 1): `montoBase` es el nombre canónico
+        // neutral de moneda; `montoBaseUSD` queda como alias legacy hasta Fase 2.
+        // El schema garantiza que al menos uno viene positivo (refine).
+        const montoBase = body.montoBase ?? body.montoBaseUSD ?? 0;
         const resultado = await aplicarBonoPromocional({
             suscripcionId: body.suscripcionId,
             bonoId: body.bonoId,
-            montoBaseUSD: body.montoBaseUSD,
+            montoBaseUSD: montoBase,
             usuarioId: usuario.id,
             ipAddress,
             userAgent,

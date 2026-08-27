@@ -7,6 +7,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { validarBonoParaCheckout } from "./validar-bono.service";
+import { calcularDescuentoBonoCOP } from "./pagos-calculos.service";
 
 export interface DesglosePago {
     subtotal: number;
@@ -80,10 +81,13 @@ export async function calcularTotales(
     plan: Pick<Plan, "id" | "nombre" | "precioBaseUSD" | "precioBaseCOP">,
     tipoTitular: TipoTitular,
     codigoBono?: string | undefined,
-    usuarioId?: string | undefined
+    usuarioId?: string | undefined,
+    // SPEC-289 (002-PI-189 · Fase 1): bifurcación por moneda de la suscripción.
+    // Default "COP" — nuevos consumidores no requieren cambiar la llamada; los
+    // pocos que pasan otra moneda entran por el camino histórico USD.
+    monedaLocal: string = "COP"
 ): Promise<DesglosePago> {
     const parametrosIva = await obtenerParametrosIva();
-    const tasa = await obtenerTasaUSDCOP();
 
     const subtotal = plan.precioBaseCOP ?? 0;
     if (subtotal < 0) {
@@ -97,7 +101,20 @@ export async function calcularTotales(
         }
         const bono = await validarBonoParaCheckout(codigoBono.trim(), tipoTitular, usuarioId, plan.precioBaseUSD);
         if (bono) {
-            descuentoBono = redondearCents(bono.descuentoUSD * tasa);
+            if (monedaLocal === "COP") {
+                // SPEC-289: descuento en COP puro. tasaFallback solo aplica para
+                // bonos DESCUENTO_FIJO_USD (histórico); tipos PCT y MESES_GRATIS
+                // van sin tasa. Se lee la tasa como fallback graceful (1:1 si no hay).
+                const tasaFallback = await obtenerTasaUSDCOP();
+                descuentoBono = calcularDescuentoBonoCOP(
+                    subtotal,
+                    { tipo: bono.tipo as import("@prisma/client").TipoBono, valor: bono.valor },
+                    tasaFallback,
+                );
+            } else {
+                const tasa = await obtenerTasaUSDCOP();
+                descuentoBono = redondearCents(bono.descuentoUSD * tasa);
+            }
         }
     }
 
