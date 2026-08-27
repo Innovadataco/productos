@@ -232,6 +232,11 @@ services:
     command: node --import tsx scripts/worker-vigencia-pagos.mjs
     environment:
       TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-vigencia").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     depends_on:
       db:
         condition: service_healthy
@@ -255,6 +260,11 @@ services:
     command: node --import tsx scripts/worker-analisis-reglas.mjs
     environment:
       TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-analisis-reglas").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     depends_on:
       db:
         condition: service_healthy
@@ -280,6 +290,11 @@ services:
     command: node --import tsx scripts/worker-expediente-motor.mjs
     environment:
       TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-expediente-motor").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     depends_on:
       db:
         condition: service_healthy
@@ -305,6 +320,11 @@ services:
     command: node --import tsx scripts/worker-anomalias.mjs
     environment:
       TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-anomalias").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
     depends_on:
       db:
         condition: service_healthy
