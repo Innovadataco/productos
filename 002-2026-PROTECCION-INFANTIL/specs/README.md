@@ -150,6 +150,7 @@
 | [264](264-sla-spam/spec.md) | SPEC-264 — SLA spam 48h configurable anti-I-100 (002-PI-164) | 🟢 Implementado |
 | [265](265-scripts-limpieza/spec.md) | SPEC-265 — Scripts reutilizables de limpieza de data de prueba (002-PI-168) | 🟢 Implementado |
 | [266](266-hotfix-grants-comite/spec.md) | SPEC-266 — Hotfix grants COMITE_VALIDACION: quitar bandeja_reportes y denuncia_formal (002-PI-169) | 🟢 Implementado |
+| [285](285-borrar-modulos-muertos/spec.md) | SPEC-285 — Borrar 3 módulos muertos del catálogo + revocación explícita (002-PI-185, I-135) | 🟢 Implementado |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
