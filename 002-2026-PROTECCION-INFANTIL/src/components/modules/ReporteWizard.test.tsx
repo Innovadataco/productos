@@ -113,4 +113,49 @@ describe("ReporteWizard", () => {
         fireEvent.change(area, { target: { value: "a".repeat(31) } });
         await waitFor(() => expect(botonSiguiente()).toHaveProperty("disabled", false));
     });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SPEC-295 (002-PI-196 · I-146): modo autenticado del panel padre.
+    // ─────────────────────────────────────────────────────────────────────
+    describe("SPEC-295 · modoAutenticado", () => {
+        it("muestra banner de identidad cuando el padre está autenticado", async () => {
+            mockFetch({ id: "u4", email: "parent@test.com", nombre: "Juan Padre", rol: "PARENT" });
+            render(<ReporteWizard modoAutenticado />);
+
+            await waitFor(() => {
+                expect(document.body.textContent).toContain("Reportando como");
+                expect(document.body.textContent).toContain("Juan Padre");
+                expect(document.body.textContent).toContain("parent@test.com");
+            });
+        });
+
+        it("muestra checkbox 'Reportar de forma anónima' en modo autenticado", async () => {
+            mockFetch({ id: "u4", email: "parent@test.com", nombre: "Juan Padre", rol: "PARENT" });
+            render(<ReporteWizard modoAutenticado />);
+
+            await waitFor(() => {
+                expect(document.body.textContent).toContain("Reportar de forma anónima");
+            });
+            const checkbox = screen.getByRole("checkbox");
+            expect((checkbox as HTMLInputElement).checked).toBe(false);
+        });
+
+        it("NO muestra banner en modo público anónimo (sin modoAutenticado)", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard />);
+
+            await waitFor(() => {
+                expect(document.body.textContent).not.toContain("Reportando como");
+            });
+        });
+
+        it("NO muestra banner cuando modoAutenticado pero sin sesión (edge case)", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard modoAutenticado />);
+
+            await waitFor(() => {
+                expect(document.body.textContent).not.toContain("Reportando como");
+            });
+        });
+    });
 });
