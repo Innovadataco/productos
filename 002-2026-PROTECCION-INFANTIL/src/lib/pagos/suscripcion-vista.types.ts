@@ -44,7 +44,11 @@ export interface VistaSuscripcion {
     diasRestantes: number;
     fechaInicio: string;
     fechaFin: string;
-    plan: { nombre: string; duracion: string; precioBaseUSD: number };
+    // SPEC-289 (002-PI-189 · Fase 1): agrega `precioBaseCOP` como campo opcional
+    // (aditivo, backward-compatible) para que la vista pueda pasar el monto base
+    // en COP a `AplicarBonoCard` sin depender del legacy USD. Fase 2 (ARQ_16)
+    // eliminará `precioBaseUSD`.
+    plan: { nombre: string; duracion: string; precioBaseUSD: number; precioBaseCOP?: number | null };
     totalPagadoUSD: number;
     totalPagadoLocal: number;
     monedaLocal: string;

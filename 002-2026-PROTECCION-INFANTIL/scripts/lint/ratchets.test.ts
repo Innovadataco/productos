@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { buscarXInvokePath } from "./no-x-invoke-path";
 import { buscarRedirectsEnLayouts } from "./no-redirect-en-layout-de-dashboard";
 import { buscarSelfRedirects, rutaDePagina } from "./no-self-redirect-server-actions";
+import { buscarUsosPrecioUSD } from "./no-usd-en-vistas-suscripcion";
 
 let raiz: string;
 
@@ -163,5 +164,56 @@ describe("no-self-redirect-server-actions", () => {
             "function nadaAction() { redirect(\"/dashboard/padre/suscripcion\"); }\nexport default function() { return <div/>; }\n",
         );
         expect(buscarSelfRedirects(join(raiz, "app"), join(raiz, "app", "dashboard"))).toHaveLength(0);
+    });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Ratchet 5 — no-usd-en-vistas-suscripcion (SPEC-289)
+// ────────────────────────────────────────────────────────────────────────────
+describe("no-usd-en-vistas-suscripcion", () => {
+    function crearVista(subpath: string, contenido: string): string {
+        const dir = join(raiz, subpath);
+        mkdirSync(dir, { recursive: true });
+        const file = join(dir, "page.tsx");
+        writeFileSync(file, contenido);
+        return dir;
+    }
+
+    it("caso feliz: solo mención como KEY de objeto literal (permitido)", () => {
+        crearVista(
+            "app/dashboard/colegio/suscripcion",
+            "export default function() { return { precioBaseUSD: 0, precioBaseCOP: 50000 }; }",
+        );
+        expect(buscarUsosPrecioUSD([join(raiz, "app/dashboard/colegio/suscripcion")])).toHaveLength(0);
+    });
+
+    it("detecta acceso a propiedad plan.precioBaseUSD", () => {
+        const dir = crearVista(
+            "app/dashboard/padre/suscripcion",
+            "export default function() { const x: number = plan.precioBaseUSD; return x; }",
+        );
+        const hits = buscarUsosPrecioUSD([dir]);
+        expect(hits.length).toBeGreaterThanOrEqual(1);
+        expect(hits[0].text).toContain("precioBaseUSD");
+    });
+
+    it("detecta patrón destructor { precioBaseUSD }", () => {
+        const dir = crearVista(
+            "app/dashboard/colegio/suscripcion",
+            "export default function() { const { precioBaseUSD } = plan; return precioBaseUSD; }",
+        );
+        expect(buscarUsosPrecioUSD([dir]).length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("NO detecta strings/comentarios que mencionan precioBaseUSD", () => {
+        const dir = crearVista(
+            "app/dashboard/padre/suscripcion",
+            "// TODO retirar precioBaseUSD en Fase 2\nexport default function() { const msg = 'no leer precioBaseUSD aquí'; return msg; }",
+        );
+        expect(buscarUsosPrecioUSD([dir])).toHaveLength(0);
+    });
+
+    it("directorio inexistente → sin error, cero hits", () => {
+        expect(buscarUsosPrecioUSD([join(raiz, "no-existe")])).toHaveLength(0);
     });
 });

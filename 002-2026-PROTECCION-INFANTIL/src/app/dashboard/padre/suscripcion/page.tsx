@@ -23,13 +23,15 @@ interface PageProps {
     searchParams: Promise<{ bienvenida?: string }>;
 }
 
+// SPEC-289 (002-PI-189 · Fase 1): idem colegio — el DTO conserva `precioBaseUSD`
+// (candado §4 brief) pero lo cero-emitimos. La vista del cliente colombiano NO
+// lee el precio USD.
 function planToSelectorDTO(plan: {
     id: string;
     nombre: string;
     descripcion: string | null;
     duracion: string;
     precioBaseCOP: number | null;
-    precioBaseUSD: number;
     descuentoAnualPct: number | null;
     esFreemium: boolean;
     activo: boolean;
@@ -40,7 +42,7 @@ function planToSelectorDTO(plan: {
         descripcion: plan.descripcion,
         duracion: plan.duracion,
         precioBaseCOP: plan.precioBaseCOP ?? 0,
-        precioBaseUSD: plan.precioBaseUSD,
+        precioBaseUSD: 0,
         descuentoAnualPct: plan.descuentoAnualPct,
         esFreemium: plan.esFreemium,
         activo: plan.activo,

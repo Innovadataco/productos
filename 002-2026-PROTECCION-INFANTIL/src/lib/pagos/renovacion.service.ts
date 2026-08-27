@@ -154,51 +154,73 @@ export async function registrarRenovacion(input: RenovacionInput): Promise<Renov
     const plan = await obtenerPlanRenovacion(repo, suscripcion, input.duracion);
     await validarComprobanteConParametros(input.comprobante);
 
-    // Precio: base del plan menos descuento anual (si aplica).
-    const montoBaseUSD = plan.precioBaseUSD;
+    // SPEC-289 (002-PI-189 · Fase 1): bifurcación por moneda de la suscripción.
+    // Modo COP nativo: cero llamadas a TasaCambio; los bonos guardan valor
+    // numérico en `BonoAplicado.descuentoUSD` (nombre legacy, valor COP).
+    // Modo USD (histórico): flujo intacto, base→descuentos→conversión al local.
+    const esCOP = suscripcion.monedaLocal === "COP";
     const descuentoAnualPct =
         input.duracion === "MES_12" ? plan.descuentoAnualPct ?? (await obtenerDescuentoAnualDefaultPct()) : 0;
-    const descuentoAnualUSD = calcularDescuentoAnualUSD(montoBaseUSD, descuentoAnualPct);
-    const baseTrasAnualUSD = montoBaseUSD - descuentoAnualUSD;
 
-    await aplicarBonoOpcional(repo, suscripcion, input, baseTrasAnualUSD);
+    // Elegimos la unidad de trabajo: en modo COP la variable "base" es COP puro.
+    const montoBase = esCOP ? plan.precioBaseCOP ?? 0 : plan.precioBaseUSD;
+    const descuentoAnual = calcularDescuentoAnualUSD(montoBase, descuentoAnualPct);
+    const baseTrasAnual = montoBase - descuentoAnual;
+
+    await aplicarBonoOpcional(repo, suscripcion, input, baseTrasAnual);
 
     // Todos los bonos pre-aplicados (incluido el recién aplicado) se consumen en este pago.
     const bonosPendientes = await clienteRepo.listarBonosPendientesDePago(suscripcion.id);
-    const descuentoBonosUSD = bonosPendientes.reduce((acc, b) => acc + b.descuentoUSD, 0);
+    const descuentoBonos = bonosPendientes.reduce((acc, b) => acc + b.descuentoUSD, 0);
     const todosCombinables = bonosPendientes.every((b) => b.bono.combinableConCodigoPersonal);
 
-    const referido = await resolverReferido(clienteRepo, suscripcion, input.codigoReferido, baseTrasAnualUSD);
+    const referido = await resolverReferido(clienteRepo, suscripcion, input.codigoReferido, baseTrasAnual);
 
-    const { descuentoTotalUSD, montoNetoUSD } = resolverDescuentoTotal({
-        baseUSD: baseTrasAnualUSD,
-        descuentoBonosUSD,
+    const { descuentoTotalUSD: descuentoTotal, montoNetoUSD: montoNeto } = resolverDescuentoTotal({
+        baseUSD: baseTrasAnual,
+        descuentoBonosUSD: descuentoBonos,
         descuentoReferidoUSD: referido.descuentoUSD,
         todosBonosCombinables: todosCombinables,
     });
 
-    const local = await calcularMontoLocal(montoNetoUSD, suscripcion.monedaLocal);
-    if (!local) {
-        throw new AppError(
-            `No hay tasa de cambio vigente para ${suscripcion.monedaLocal}`,
-            ERROR_CODES.SERVICE_UNAVAILABLE,
-            503
-        );
+    // Modo USD: convertir a moneda local con TasaCambio. Modo COP: bypass total.
+    let tasaAplicada: number;
+    let montoLocalPagado: number;
+    if (esCOP) {
+        tasaAplicada = 1;
+        montoLocalPagado = Math.max(0, Math.round(montoNeto));
+    } else {
+        const local = await calcularMontoLocal(montoNeto, suscripcion.monedaLocal);
+        if (!local) {
+            throw new AppError(
+                `No hay tasa de cambio vigente para ${suscripcion.monedaLocal}`,
+                ERROR_CODES.SERVICE_UNAVAILABLE,
+                503
+            );
+        }
+        tasaAplicada = local.tasaAplicada;
+        montoLocalPagado = local.montoLocal;
     }
 
     // Comprobante cifrado en disco (fail-closed si no hay clave de cifrado).
     const guardado = await guardarComprobanteCifrado(input.comprobante.buffer);
+
+    // Campos del Pago con nombre legacy USD; en modo COP guardan valor COP para
+    // preservar el schema (candado Fase 2). Fase 2 (ARQ_16) los renombrará.
+    const montoBaseParaPago = esCOP ? 0 : montoBase;
+    const descuentoAplicadoParaPago = esCOP ? 0 : descuentoAnual + descuentoTotal;
+    const montoNetoParaPago = esCOP ? 0 : montoNeto;
 
     let pago;
     try {
         pago = await repo.crearPago({
             suscripcionId: suscripcion.id,
             duracionCubierta: input.duracion,
-            montoBaseUSD,
-            descuentoAplicadoUSD: descuentoAnualUSD + descuentoTotalUSD,
-            montoNetoUSD,
-            tasaCambioAplicada: local.tasaAplicada,
-            montoLocalPagado: local.montoLocal,
+            montoBaseUSD: montoBaseParaPago,
+            descuentoAplicadoUSD: descuentoAplicadoParaPago,
+            montoNetoUSD: montoNetoParaPago,
+            tasaCambioAplicada: tasaAplicada,
+            montoLocalPagado: montoLocalPagado,
             monedaLocal: suscripcion.monedaLocal,
             metodoDeclarado: input.metodoDeclarado,
             comprobanteAdjuntoUrl: guardado.ruta,
@@ -230,7 +252,7 @@ export async function registrarRenovacion(input: RenovacionInput): Promise<Renov
             suscripcionId: suscripcion.id,
             duracion: input.duracion,
             metodoDeclarado: input.metodoDeclarado,
-            montoNetoUSD,
+            montoNetoUSD: montoNeto,
             monedaLocal: suscripcion.monedaLocal,
             codigoReferidoUsado: referido.codigo ?? null,
             bonosConsumidos: bonosPendientes.length,
@@ -242,15 +264,15 @@ export async function registrarRenovacion(input: RenovacionInput): Promise<Renov
     await emitirEventoPagoReportado({
         pagoId: pago.id,
         suscripcionId: suscripcion.id,
-        montoNetoUSD,
+        montoNetoUSD: montoNeto,
         monedaLocal: suscripcion.monedaLocal,
     });
 
     return {
         pagoId: pago.id,
         estado: pago.estado,
-        montoNetoUSD,
-        montoLocalPagado: local.montoLocal,
+        montoNetoUSD: montoNeto,
+        montoLocalPagado,
         monedaLocal: suscripcion.monedaLocal,
         comprobanteHashSha256: guardado.hashSha256,
     };

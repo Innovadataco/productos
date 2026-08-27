@@ -3,7 +3,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { TipoBono } from "@prisma/client";
-import { calcularDescuentoBono, aplicarMayorDescuento } from "./pagos-calculos.service";
+import { calcularDescuentoBono, calcularDescuentoBonoCOP, aplicarMayorDescuento } from "./pagos-calculos.service";
 
 describe("calcularDescuentoBono", () => {
     it("calcula descuento por porcentaje", () => {
@@ -55,5 +55,54 @@ describe("aplicarMayorDescuento", () => {
     it("soporta valores no finitos", () => {
         expect(aplicarMayorDescuento(NaN, 15)).toBe(15);
         expect(aplicarMayorDescuento(10, NaN)).toBe(10);
+    });
+});
+
+// SPEC-289 (002-PI-189 · Fase 1)
+describe("calcularDescuentoBonoCOP", () => {
+    it("DESCUENTO_PCT: 20% × 100000 = 20000 (cero tasa)", () => {
+        expect(calcularDescuentoBonoCOP(100000, { tipo: TipoBono.DESCUENTO_PCT, valor: 20 })).toBe(20000);
+    });
+
+    it("DESCUENTO_PCT: limita al 100%", () => {
+        expect(calcularDescuentoBonoCOP(100000, { tipo: TipoBono.DESCUENTO_PCT, valor: 150 })).toBe(100000);
+    });
+
+    it("MESES_GRATIS: 2 × 100000 = 200000 pero capado al precio base", () => {
+        // El descuento nunca supera el precio base para no dejar cobros negativos.
+        expect(calcularDescuentoBonoCOP(100000, { tipo: TipoBono.MESES_GRATIS, valor: 2 })).toBe(100000);
+    });
+
+    it("MESES_GRATIS: 0.5 meses × 100000 = 50000 (cero tasa)", () => {
+        expect(calcularDescuentoBonoCOP(100000, { tipo: TipoBono.MESES_GRATIS, valor: 0.5 })).toBe(50000);
+    });
+
+    it("DESCUENTO_FIJO_USD con tasaFallback=4000: 5 USD × 4000 = 20000 COP", () => {
+        expect(calcularDescuentoBonoCOP(100000, { tipo: TipoBono.DESCUENTO_FIJO_USD, valor: 5 }, 4000)).toBe(20000);
+    });
+
+    it("DESCUENTO_FIJO_USD sin tasa: fallback 1:1 → 5 (no 503)", () => {
+        expect(calcularDescuentoBonoCOP(100000, { tipo: TipoBono.DESCUENTO_FIJO_USD, valor: 5 })).toBe(5);
+    });
+
+    it("DESCUENTO_FIJO_USD cap: no supera el precio base", () => {
+        expect(calcularDescuentoBonoCOP(100, { tipo: TipoBono.DESCUENTO_FIJO_USD, valor: 500 }, 4000)).toBe(100);
+    });
+
+    it("precioBaseCOP inválido → 0", () => {
+        expect(calcularDescuentoBonoCOP(0, { tipo: TipoBono.DESCUENTO_PCT, valor: 20 })).toBe(0);
+        expect(calcularDescuentoBonoCOP(-100, { tipo: TipoBono.DESCUENTO_PCT, valor: 20 })).toBe(0);
+        expect(calcularDescuentoBonoCOP(NaN, { tipo: TipoBono.DESCUENTO_PCT, valor: 20 })).toBe(0);
+    });
+
+    it("bono.valor inválido → 0", () => {
+        expect(calcularDescuentoBonoCOP(100000, { tipo: TipoBono.DESCUENTO_PCT, valor: -1 })).toBe(0);
+        expect(calcularDescuentoBonoCOP(100000, { tipo: TipoBono.DESCUENTO_PCT, valor: NaN })).toBe(0);
+    });
+
+    it("resultado siempre no-negativo y entero COP", () => {
+        const r = calcularDescuentoBonoCOP(100000, { tipo: TipoBono.DESCUENTO_PCT, valor: 33 });
+        expect(r).toBeGreaterThanOrEqual(0);
+        expect(Number.isInteger(r)).toBe(true);
     });
 });
