@@ -11,6 +11,10 @@
 import pg from "pg";
 import { boss, ensureStarted } from "../src/lib/queue.ts";
 import { getParametroSistemaValor } from "../src/lib/parametros.ts";
+// SPEC-290 (002-PI-190): heartbeat de vida para el healthcheck del contenedor
+// pi-sesiones. El helper es puro (módulo aparte) para que el test unitario
+// no arrastre pg ni queue.ts. Ver worker-sesiones-heartbeat.mjs.
+import { touchAliveFile, HEARTBEAT_INTERVAL_MS } from "./worker-sesiones-heartbeat.mjs";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -86,6 +90,12 @@ async function start() {
         : "*/5 * * * *";
 
     console.log(`[WORKER-SESIONES] Iniciado. timeout=${timeoutMin}min, intervalo=${intervaloMin}min, cron=${cron}`);
+    // SPEC-290: heartbeat inicial + cada 30 s para alimentar el healthcheck.
+    // Se conserva el touch dentro del handler del tick (belt & suspenders):
+    // si el tick corre, la marca queda fresca aun si el intervalo del setInterval
+    // deriva por carga.
+    touchAliveFile();
+    setInterval(touchAliveFile, HEARTBEAT_INTERVAL_MS).unref();
 
     await boss.schedule("sesion-cierre-inactividad", cron, {}, { tz: "America/Bogota" });
     await boss.work("sesion-cierre-inactividad", async (jobs) => {
@@ -96,6 +106,8 @@ async function start() {
             const { SessionLogService } = await import("../src/lib/dal/services/session-log.ts");
             const cerradas = await new SessionLogService().cerrarPorInactividad(timeoutMin);
             console.log(`[WORKER-SESIONES] Cerradas ${cerradas} sesiones inactivas`);
+            // SPEC-290 (002-PI-190): marca vida para el healthcheck del contenedor.
+            touchAliveFile();
             return { success: true, cerradas };
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
@@ -105,7 +117,12 @@ async function start() {
     });
 }
 
-start().catch((err) => {
-    console.error("[WORKER-SESIONES] Error fatal:", err.message);
-    process.exit(1);
-});
+// SPEC-290: guard para poder importar el módulo desde un test unitario sin
+// arrancar el worker. Cuando se ejecuta como script directo (node worker-sesiones.mjs)
+// import.meta.url coincide con process.argv[1]; cuando se importa desde un test, no.
+if (import.meta.url === `file://${process.argv[1]}`) {
+    start().catch((err) => {
+        console.error("[WORKER-SESIONES] Error fatal:", err.message);
+        process.exit(1);
+    });
+}

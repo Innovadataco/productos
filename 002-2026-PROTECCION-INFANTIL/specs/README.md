@@ -155,6 +155,7 @@
 | [266](266-hotfix-grants-comite/spec.md) | SPEC-266 — Hotfix grants COMITE_VALIDACION: quitar bandeja_reportes y denuncia_formal (002-PI-169) | 🟢 Implementado |
 | [285](285-borrar-modulos-muertos/spec.md) | SPEC-285 — Borrar 3 módulos muertos del catálogo + revocación explícita (002-PI-185, I-135) | 🟢 Implementado |
 | [288](288-seed-e2e-multi-tenant/spec.md) | SPEC-288 — Seed E2E multi-tenant: 2 colegios + 2 rectores + siembra mínima idempotente (002-PI-188) | 🟢 Implementado |
+| [290](290-levantar-worker-sesiones/spec.md) | SPEC-290 · Levantar `worker-sesiones` como servicio (`pi-sesiones`) + panel Sesiones (002-PI-190) | 🟢 Implementado |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
