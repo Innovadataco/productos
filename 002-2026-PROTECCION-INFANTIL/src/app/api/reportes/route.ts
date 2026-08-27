@@ -129,6 +129,10 @@ export async function POST(request: Request) {
                 edadVictima,
                 esAnonimo,
                 usuarioId,
+                // SPEC-295 (002-PI-196 · I-146): marca el rol del origen del
+                // reporte. "PARENT" cuando el padre autenticado reporta desde
+                // /dashboard/padre/reportar; null para anónimos e históricos.
+                origenRol: user?.rol === "PARENT" ? "PARENT" : null,
                 tenantId: user?.tenantId ?? null,
                 estadoInicial,
                 prioridadAlta,

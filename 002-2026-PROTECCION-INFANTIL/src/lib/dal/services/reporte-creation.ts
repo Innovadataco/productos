@@ -34,6 +34,9 @@ export interface CrearReporteInput {
     edadVictima?: number | undefined;
     esAnonimo: boolean;
     usuarioId: string | null;
+    // SPEC-295 (002-PI-196 · I-146): rol del origen del reporte. "PARENT" para
+    // padre autenticado; null para anónimos y otros orígenes.
+    origenRol?: string | null;
     tenantId: string | null;
     estadoInicial: EstadoInicialReporte;
     prioridadAlta: boolean;
@@ -124,6 +127,7 @@ export class ReporteCreationService {
             edadVictima: input.edadVictima ?? null,
             esAnonimo: input.esAnonimo,
             usuarioId,
+            origenRol: input.origenRol ?? null,
             numeroSeguimiento,
             tenantId: input.tenantId,
             estado: input.estadoInicial,
