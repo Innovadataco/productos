@@ -197,7 +197,7 @@
 | [280](280-resumen-legible-ci/spec.md) | SPEC-280 · Velocidad CI — Resumen legible al final de cada corrida (002-PI-180) | 🟢 Implementado |
 | [281](281-reparto-shards-por-peso/spec.md) | SPEC-281 · Velocidad CI — Reparto de las 4 partes por peso medido (002-PI-181) | 🟢 Implementado |
 | [282](282-reset-selectivo-tablas/spec.md) | SPEC-282 · Velocidad CI — resetDatabase() selectivo por tablas (002-PI-182) | 🟢 Implementado |
-| [283](283-migrar-archivos-caros-beforeall/spec.md) | SPEC-283 · Velocidad CI — Migrar los 8 archivos más caros a beforeAll (002-PI-183) | 🔵 Planeado |
+| [283](283-migrar-archivos-caros-beforeall/spec.md) | SPEC-283 · Velocidad CI — Migrar los 8 archivos más caros a beforeAll (002-PI-183) | 🟢 Implementado (parcial · SC-008 activado) |
 
 ## Tabla completa (229 specs)
 

@@ -106,6 +106,9 @@ async function crearParametrosColegio() {
 }
 
 describe("/api/colegio/alertas", () => {
+    // SPEC-283 (002-PI-180): reset POR PRUEBA. Migración a beforeAll rota por
+    // concurrencia entre archivos (vitest 3.2.x, ver test-setup.ts). Aislado
+    // pasaba en < 6 s; en la suite completa 10 tests fallan determinísticamente.
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();

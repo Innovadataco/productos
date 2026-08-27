@@ -112,6 +112,9 @@ async function seedBonoYSubColegio() {
 }
 
 describe("POST /api/pagos/aplicar-bono", () => {
+    // SPEC-283 (002-PI-180): reset POR PRUEBA porque el modelo Plan tiene
+    // @@unique([tipoTitular, duracion, anio]) y cada test crea un Plan con
+    // (PADRE, MES_1, 2026) → colisión unique determinista al migrar a beforeAll.
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();

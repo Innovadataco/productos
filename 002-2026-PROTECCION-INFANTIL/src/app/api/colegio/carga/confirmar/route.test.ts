@@ -49,6 +49,9 @@ function requestConfirmar(tokenConfirmacion: string, token?: string): Request {
 }
 
 describe("POST /api/colegio/carga/confirmar (SPEC-132)", () => {
+    // SPEC-283 (002-PI-180): reset POR PRUEBA. Idem colegio-resumen: la
+    // concurrencia entre archivos rompe el beforeAll (mutex por test, no por
+    // archivo). Ver comentario largo en test-setup.ts sobre vitest 3.2.x.
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();

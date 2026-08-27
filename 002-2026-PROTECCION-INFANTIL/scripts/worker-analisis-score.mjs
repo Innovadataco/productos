@@ -9,7 +9,7 @@
  */
 
 import { recalcularScoresPeriodo, purgarSnapshotsAntiguos } from "../src/lib/analisis/score.ts";
-import { boss, ensureStarted } from "../src/lib/queue.ts";
+import { boss, ensureStarted, ensureQueue } from "../src/lib/queue.ts";
 import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import pg from "pg";
 
@@ -76,6 +76,11 @@ async function getCron() {
 async function start() {
     await acquireAdvisoryLock();
     await ensureStarted();
+
+    // AMP I-131 (002-PI-180): crear la cola antes de agendar/consumirla.
+    // Sin esto el worker se caía en bucle contra una BD recién creada
+    // (D-003 §4: todo worker con cola propia crea su cola antes de usarla).
+    await ensureQueue("analisis-score-recalculo");
 
     const cron = await getCron();
     console.log(`[ANALISIS-SCORE] Programando recálculo con cron: ${cron} (tz America/Bogota)`);

@@ -135,6 +135,11 @@ function digestsDe(destinatarioId: string) {
     return prisma.digestSemanal.findMany({ where: { periodo: PERIODO, destinatarioId } });
 }
 
+// SPEC-283 (002-PI-180): NO se migra. Este archivo tiene 40 tests con
+// costo por prueba ya bajo (~1,7 s) porque el reset se diluye entre muchas
+// pruebas. Además, el describe "seedDigestSemanal" hace count() global sobre
+// parametroSistema/notificacionRegla esperando valores exactos (1, 2) → migrar
+// a beforeAll acumularía estado y rompería los conteos determinísticamente.
 beforeEach(async () => {
     await resetDatabase();
     await seedDigestSemanal();

@@ -64,8 +64,11 @@ async function crearNotificacion(proveedorId: string, estado: EstadoNotificacion
 }
 
 describe("POST /api/webhooks/resend (SPEC-202)", () => {
+    // SPEC-283 (002-PI-180): reset SELECTIVO por prueba. El archivo solo toca
+    // Notificacion; vaciar 1 tabla en lugar de 96 baja el costo por prueba
+    // sin cambiar aislamiento.
     beforeEach(async () => {
-        await resetDatabase();
+        await resetDatabase(["notificaciones"]);
         process.env.RESEND_WEBHOOK_SECRET = SECRET;
     });
 
