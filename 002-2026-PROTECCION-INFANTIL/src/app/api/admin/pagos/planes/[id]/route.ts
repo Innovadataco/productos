@@ -36,6 +36,24 @@ export async function PATCH(request: Request, context: RouteContext) {
             throw new AppError("Plan no encontrado", ERROR_CODES.NOT_FOUND, 404);
         }
 
+        const esFreemiumEfectivo = body.esFreemium ?? actual.esFreemium;
+        const precioEfectivo = body.precioBaseCOP ?? actual.precioBaseCOP ?? 0;
+
+        if (esFreemiumEfectivo && precioEfectivo > 0) {
+            throw new AppError(
+                "Plan freemium requiere precio 0. Desactive freemium o cambie el precio.",
+                ERROR_CODES.VALIDATION_ERROR,
+                400
+            );
+        }
+        if (!esFreemiumEfectivo && precioEfectivo === 0) {
+            throw new AppError(
+                "Plan pago requiere precio mayor a 0. Marque freemium o suba el precio.",
+                ERROR_CODES.VALIDATION_ERROR,
+                400
+            );
+        }
+
         if (body.nombre && body.nombre !== actual.nombre) {
             const existenteNombre = await repo.obtenerPlanPorNombreYTipoTitular(body.nombre, actual.tipoTitular);
             if (existenteNombre && existenteNombre.id !== id) {

@@ -252,3 +252,114 @@ describe("/api/admin/pagos/planes", () => {
         expect(json.pagination.total).toBe(1);
     });
 });
+
+describe("PATCH /api/admin/pagos/planes/[id] · validación freemium/precio", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        mockToken = undefined;
+    });
+
+    async function seedAdmin() {
+        return crearUsuario(RolUsuario.ADMIN, `admin-patch-fr-${Date.now()}@test.co`);
+    }
+
+    async function crearPlanFreemium(adminId: string) {
+        return prisma.plan.create({
+            data: {
+                nombre: `Freemium-${Date.now()}`,
+                precioBaseCOP: 0,
+                precioBaseUSD: 0,
+                precio: 0,
+                duracion: DuracionPlan.MES_1,
+                tipoTitular: TipoTitular.COLEGIO,
+                anio: 2026,
+                activo: true,
+                esFreemium: true,
+                usosMaximosPorCliente: 1,
+                creadoPorAdminId: adminId,
+            },
+        });
+    }
+
+    async function crearPlanPago(adminId: string) {
+        return prisma.plan.create({
+            data: {
+                nombre: `Pago-${Date.now()}`,
+                precioBaseCOP: 39900,
+                precioBaseUSD: 10,
+                precio: 0,
+                duracion: DuracionPlan.MES_3,
+                tipoTitular: TipoTitular.COLEGIO,
+                anio: 2026,
+                activo: true,
+                esFreemium: false,
+                creadoPorAdminId: adminId,
+            },
+        });
+    }
+
+    function patchReq(id: string, body: unknown) {
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (mockToken) headers.cookie = `token=${mockToken}`;
+        return new Request(`http://localhost/api/admin/pagos/planes/${id}`, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify(body),
+        });
+    }
+
+    it("rechaza precio > 0 en plan freemium existente (bug Jelkin)", async () => {
+        const admin = await seedAdmin();
+        mockToken = await crearTokenUsuario(admin.id, RolUsuario.ADMIN);
+        const plan = await crearPlanFreemium(admin.id);
+
+        const res = await PATCH(
+            patchReq(plan.id, { precioBaseCOP: 500_000 }),
+            { params: Promise.resolve({ id: plan.id }) }
+        );
+
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toMatch(/freemium requiere precio 0/i);
+    });
+
+    it("rechaza precio 0 en plan pago existente", async () => {
+        const admin = await seedAdmin();
+        mockToken = await crearTokenUsuario(admin.id, RolUsuario.ADMIN);
+        const plan = await crearPlanPago(admin.id);
+
+        const res = await PATCH(
+            patchReq(plan.id, { precioBaseCOP: 0 }),
+            { params: Promise.resolve({ id: plan.id }) }
+        );
+
+        expect(res.status).toBe(400);
+    });
+
+    it("acepta cambiar precio en plan pago", async () => {
+        const admin = await seedAdmin();
+        mockToken = await crearTokenUsuario(admin.id, RolUsuario.ADMIN);
+        const plan = await crearPlanPago(admin.id);
+
+        const res = await PATCH(
+            patchReq(plan.id, { precioBaseCOP: 99_900 }),
+            { params: Promise.resolve({ id: plan.id }) }
+        );
+
+        expect(res.status).toBe(200);
+    });
+
+    it("acepta cambiar de freemium a pago con precio > 0 en un solo PATCH", async () => {
+        const admin = await seedAdmin();
+        mockToken = await crearTokenUsuario(admin.id, RolUsuario.ADMIN);
+        const plan = await crearPlanFreemium(admin.id);
+
+        const res = await PATCH(
+            patchReq(plan.id, { esFreemium: false, precioBaseCOP: 99_900 }),
+            { params: Promise.resolve({ id: plan.id }) }
+        );
+
+        expect(res.status).toBe(200);
+    });
+});
