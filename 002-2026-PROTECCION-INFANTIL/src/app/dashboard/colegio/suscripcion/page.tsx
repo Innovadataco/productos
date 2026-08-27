@@ -20,13 +20,16 @@ interface PageProps {
     searchParams: Promise<{ bienvenida?: string }>;
 }
 
+// SPEC-289 (002-PI-189 · Fase 1): el precio USD del plan deja de usarse en la
+// vista del cliente colombiano. El DTO conserva el campo `precioBaseUSD` (candado
+// §4 brief: PlanSelectorDTO intacto) pero lo cero-emitimos aquí para no leer el
+// valor del plan. Fase 2 (ARQ_16) retirará el campo del DTO.
 function planToSelectorDTO(plan: {
     id: string;
     nombre: string;
     descripcion: string | null;
     duracion: string;
     precioBaseCOP: number | null;
-    precioBaseUSD: number;
     descuentoAnualPct: number | null;
     esFreemium: boolean;
     activo: boolean;
@@ -37,7 +40,7 @@ function planToSelectorDTO(plan: {
         descripcion: plan.descripcion,
         duracion: plan.duracion,
         precioBaseCOP: plan.precioBaseCOP ?? 0,
-        precioBaseUSD: plan.precioBaseUSD,
+        precioBaseUSD: 0,
         descuentoAnualPct: plan.descuentoAnualPct,
         esFreemium: plan.esFreemium,
         activo: plan.activo,

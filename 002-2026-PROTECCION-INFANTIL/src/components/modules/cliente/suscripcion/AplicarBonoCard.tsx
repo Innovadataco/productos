@@ -19,13 +19,16 @@ interface BonoValidado {
  * descuento estimado) y luego aplica de verdad vía POST /api/pagos/aplicar-bono
  * (SPEC-216). El bono queda pre-aplicado y se consume en la próxima renovación.
  */
+// SPEC-289 (002-PI-189 · Fase 1): `montoBase` es el nombre canónico neutral de
+// moneda (COP para Colombia, USD histórico). El API `pagosAplicarBonoBodySchema`
+// acepta `montoBase` (canónico) o `montoBaseUSD` (alias legacy) por Fase 1.
 export function AplicarBonoCard({
     suscripcionId,
-    montoBaseUSD,
+    montoBase,
     acento,
 }: {
     suscripcionId: string;
-    montoBaseUSD: number;
+    montoBase: number;
     acento: Acento;
 }) {
     const router = useRouter();
@@ -72,7 +75,7 @@ export function AplicarBonoCard({
             const res = await fetch("/api/pagos/aplicar-bono", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ suscripcionId, bonoId: validado.bonoId, montoBaseUSD }),
+                body: JSON.stringify({ suscripcionId, bonoId: validado.bonoId, montoBase }),
             });
             if (!res.ok) {
                 setError(await leerError(res));

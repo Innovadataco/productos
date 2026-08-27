@@ -138,7 +138,8 @@ export function PlanesAdminCRUD() {
         const body = {
             nombre: form.nombre,
             precioBaseCOP: Number(form.precioBaseCOP),
-            precioBaseUSD: 0,
+            // SPEC-289 (002-PI-189 · Fase 1): sin hardcode USD; el schema Zod
+            // resuelve el default a 0 (pagosPlanCreateSchema).
             duracion: form.duracion,
             tipoTitular: form.tipoTitular,
             descripcion: form.descripcion || undefined,

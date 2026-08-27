@@ -143,6 +143,9 @@ export async function obtenerVistaSuscripcion(usuario: UsuarioTitular): Promise<
             nombre: suscripcion.planActual.nombre,
             duracion: suscripcion.planActual.duracion,
             precioBaseUSD: suscripcion.planActual.precioBaseUSD,
+            // SPEC-289 (002-PI-189 · Fase 1): consumido por AplicarBonoCard como
+            // fuente única del monto base para bonos en suscripciones COP.
+            precioBaseCOP: suscripcion.planActual.precioBaseCOP,
         },
         totalPagadoUSD: totales._sum.montoNetoUSD ?? 0,
         totalPagadoLocal: totales._sum.montoLocalPagado ?? 0,

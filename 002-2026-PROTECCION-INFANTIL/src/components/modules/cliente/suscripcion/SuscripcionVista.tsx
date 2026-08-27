@@ -71,7 +71,8 @@ export function SuscripcionVista({
                     referidosExitososEsteAnio={vista.referidosExitososEsteAnio}
                     acento={acento}
                 />
-                <AplicarBonoCard suscripcionId={vista.id} montoBaseUSD={vista.plan.precioBaseUSD} acento={acento} />
+                {/* SPEC-289 (002-PI-189 · Fase 1): monto base en COP (moneda del titular). */}
+                <AplicarBonoCard suscripcionId={vista.id} montoBase={vista.plan.precioBaseCOP ?? 0} acento={acento} />
             </div>
 
             {/* 5.5. Cupones de recompensa (SPEC-246) */}
