@@ -1622,6 +1622,10 @@ model Reporte {
   esAnonimo                  Boolean            @default(true)
   edadVictima                Int?
   usuarioId                  String?
+  // SPEC-295 (002-PI-196 · I-146): rol del origen del reporte. NULL para
+  // anónimos (histórico y nuevos). "PARENT" cuando el padre autenticado
+  // reporta desde /dashboard/padre/reportar. Fase 2 puede migrar a enum.
+  origenRol                  String?
   operadorId                 String?
   comiteId                   String?
   reporteOrigenId            String?
