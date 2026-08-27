@@ -17,15 +17,13 @@
 import { PgBoss } from "pg-boss";
 import pg from "pg";
 import { enviarEmailNotificacion } from "../src/lib/email.ts";
-import { prisma } from "../src/lib/prisma.ts";
 import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
 import { NotificacionRepository } from "../src/lib/dal/repositories/notificacion.ts";
-import { NotificacionContactoBloqueadoRepository } from "../src/lib/dal/repositories/notificacion-contacto-bloqueado.ts";
 import { NotificacionPlantillaRepository } from "../src/lib/dal/repositories/notificacion-plantilla.ts";
-import { renderizarPlantilla } from "../src/lib/notificaciones/renderer.ts";
-import { registrarBounce, emailBloqueado } from "../src/lib/notificaciones/bounces.ts";
-import { aplicarQuietHours } from "../src/lib/notificaciones/quiet-hours.ts";
+// SPEC-292 (002-PI-192 · cierra I-147): la lógica del ciclo vive en un módulo
+// TS puro para poder testearla con Vitest sin arrancar pg-boss.
+import { procesarLote } from "../src/lib/notificaciones/procesar-lote.ts";
 import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
 
 iniciarTickVida("pi-notificaciones"); // SPEC-291: healthcheck externo + monitor
@@ -44,11 +42,13 @@ const boss = new PgBoss(DATABASE_URL);
 const logger = workerLogger.child({ servicio: "pi-notificaciones" });
 
 const repoNotif = new NotificacionRepository();
-const repoBloqueado = new NotificacionContactoBloqueadoRepository();
 const repoPlantilla = new NotificacionPlantillaRepository();
 
 const PARAM_TTL_MS = 60_000;
 let configCache = null;
+// SPEC-292 (I-147): elevado a scope de módulo para que `shutdown()` pueda
+// `clearInterval`. Sin esto, quitar `.unref()` deja el proceso colgado en SIGTERM.
+let pollInterval = null;
 
 async function acquireAdvisoryLock() {
     lockClient = new Client({ connectionString: DATABASE_URL });
@@ -83,6 +83,12 @@ async function releaseAdvisoryLock() {
 async function shutdown(signal) {
     logger.warn("Worker de notificaciones cerrándose por señal", { signal });
     console.log(`[PI-NOTIFICACIONES] Señal ${signal} recibida; liberando lock...`);
+    // SPEC-292 (I-147): el pollInterval ya NO tiene `.unref()` — hay que
+    // limpiarlo explícitamente para que node no quede colgado.
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
     await releaseAdvisoryLock();
     process.exit(0);
 }
@@ -132,108 +138,38 @@ async function leerConfig() {
     return configCache;
 }
 
-function calcularBackoff(intentos, backoffSegundos) {
-    const idx = Math.min(intentos, backoffSegundos.length) - 1;
-    const segundos = backoffSegundos[Math.max(0, idx)] ?? backoffSegundos[backoffSegundos.length - 1] ?? 60;
-    return new Date(Date.now() + segundos * 1000);
+// SPEC-292 (I-147): la lógica de `procesarNotificacion` y `procesarLote`
+// vive en `src/lib/notificaciones/procesar-lote.ts` (módulo TS puro,
+// testeable con Vitest). Este worker solo orquesta arranque, lock, pg-boss
+// y polling. Las dependencias inyectables se arman en `start()`.
+function armarDepsProcesarLote() {
+    return {
+        repoNotif,
+        repoPlantilla,
+        enviarEmail: enviarEmailNotificacion,
+        logger: {
+            info: (msg, meta) => {
+                logger.info(msg, meta).catch(() => {});
+            },
+            warn: (msg, meta) => {
+                logger.warn(msg, meta).catch(() => {});
+            },
+        },
+    };
 }
 
-async function procesarNotificacion(notificacion, config) {
-    const ahora = new Date();
-
-    // Quiet hours: si la notificación fue programada dentro de la ventana de
-    // silencio, el motor ya debería haberla diferido al programar. Este segundo
-    // chequeo protege contra cambios de regla/parámetro en caliente.
-    if (notificacion.enviarEn && aplicarQuietHours(notificacion.enviarEn, config.quietHours).getTime() > ahora.getTime()) {
-        return { accion: "diferida_quiet_hours" };
-    }
-
-    if (notificacion.canal === "EMAIL") {
-        if (await emailBloqueado(notificacion.destinatarioEmail)) {
-            await repoNotif.marcarCancelada(notificacion.id, "contacto_bloqueado");
-            return { accion: "cancelada_por_bloqueo" };
-        }
-    }
-
-    const plantilla = await repoPlantilla.findByClaveYCanal(notificacion.plantillaClave, notificacion.canal);
-    if (!plantilla) {
-        await repoNotif.marcarFallida(notificacion.id, "Plantilla no encontrada");
-        return { accion: "fallida_sin_plantilla" };
-    }
-
-    await repoNotif.marcarEnviando(notificacion.id);
-
-    try {
-        if (notificacion.canal === "EMAIL") {
-            const variables = (notificacion.variables ?? {}) ;
-            const renderizado = renderizarPlantilla(plantilla.cuerpoMarkdown, plantilla.asunto, variables);
-            const { id: proveedorId } = await enviarEmailNotificacion(
-                notificacion.destinatarioEmail,
-                renderizado.asunto ?? "Notificación",
-                renderizado.cuerpo
-            );
-            await repoNotif.marcarEnviada(notificacion.id, proveedorId);
-            return { accion: "enviada_email", proveedorId };
-        }
-
-        if (notificacion.canal === "IN_APP") {
-            await repoNotif.marcarEnviada(notificacion.id);
-            return { accion: "enviada_in_app" };
-        }
-
-        return { accion: "canal_desconocido" };
-    } catch (err) {
-        const mensaje = err instanceof Error ? err.message : "Error desconocido";
-        console.error(`[PI-NOTIFICACIONES] Error enviando notificación ${notificacion.id}: ${mensaje}`);
-
-        // Detectar bounces sintéticos (la mayoría son asíncronos vía webhook).
-        const esBounce = /bounce|rejected|invalid|hard.?bounce/i.test(mensaje);
-        if (esBounce) {
-            await registrarBounce(notificacion.destinatarioEmail, "hard_bounce");
-        }
-
-        const nuevoIntento = notificacion.intentos + 1;
-        if (nuevoIntento >= config.maxIntentos) {
-            await prisma.notificacion.update({
-                where: { id: notificacion.id },
-                data: {
-                    estado: "FALLIDA",
-                    intentos: nuevoIntento,
-                    ultimoError: mensaje,
-                },
-            });
-            return { accion: "fallida_final" };
-        }
-
-        const proximoIntento = calcularBackoff(nuevoIntento, config.backoffSegundos);
-        await repoNotif.marcarFallida(notificacion.id, mensaje, proximoIntento);
-        return { accion: "reintentando" };
-    }
+function armarConfigProcesarLote(config) {
+    return {
+        quietHours: config.quietHours,
+        maxIntentos: config.maxIntentos,
+        backoffSegundos: config.backoffSegundos,
+        loteSize: config.loteSize,
+    };
 }
 
-async function procesarLote() {
+async function correrLote() {
     const config = await leerConfig();
-    const ahora = new Date();
-
-    const pendientes = await repoNotif.listarPendientesParaEnvio(ahora, config.loteSize);
-    if (pendientes.length === 0) return { procesadas: 0 };
-
-    logger.info("Procesando lote de notificaciones", { pendientes: pendientes.length });
-    let procesadas = 0;
-
-    for (const notificacion of pendientes) {
-        try {
-            await procesarNotificacion(notificacion, config);
-            procesadas++;
-        } catch (err) {
-            const mensaje = err instanceof Error ? err.message : "Error desconocido";
-            console.error(`[PI-NOTIFICACIONES] Error crítico procesando notificación ${notificacion.id}: ${mensaje}`);
-            await repoNotif.marcarFallida(notificacion.id, mensaje);
-        }
-    }
-
-    logger.info("Lote procesado", { procesadas });
-    return { procesadas };
+    return procesarLote(armarDepsProcesarLote(), armarConfigProcesarLote(config));
 }
 
 async function start() {
@@ -258,20 +194,23 @@ async function start() {
         const job = Array.isArray(jobs) ? jobs[0] : jobs;
         const jobId = job?.id;
         logger.info("Job de notificacion-envio recibido", { jobId }).catch(() => {});
-        await procesarLote();
+        await correrLote();
     });
 
     // Polling de respaldo para reintentos y jobs perdidos.
+    // SPEC-292 (I-147): SIN `.unref()`. Con `.unref()` el timer no cuenta
+    // contra keep-alive de libuv y no dispara cuando pg-boss queda en espera
+    // silenciosa — dejando la cola de Notificacion sin procesar. El
+    // `shutdown()` llama a `clearInterval(pollInterval)` para cerrar limpio.
     const intervaloMs = Math.max(1, config.intervaloSegundos) * 1000;
-    const pollInterval = setInterval(() => {
-        procesarLote().catch((err) => {
+    pollInterval = setInterval(() => {
+        correrLote().catch((err) => {
             console.error("[PI-NOTIFICACIONES] Error en polling periódico:", err instanceof Error ? err.message : err);
         });
     }, intervaloMs);
-    pollInterval.unref();
 
     // Primer poll inmediato.
-    await procesarLote();
+    await correrLote();
 }
 
 start().catch(async (err) => {

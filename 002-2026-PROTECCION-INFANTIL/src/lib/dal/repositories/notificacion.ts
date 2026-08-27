@@ -205,6 +205,22 @@ export class NotificacionRepository {
         });
     }
 
+    /**
+     * SPEC-292 (002-PI-192): marca la notificación como FALLIDA definitiva
+     * (superó `maxIntentos`). Antes vivía inline en el worker vía prisma
+     * directo; ahora reside en el DAL (Q-3).
+     */
+    marcarFallidaDefinitiva(id: string, intentos: number, error: string) {
+        return this.db.notificacion.update({
+            where: { id },
+            data: {
+                estado: "FALLIDA",
+                intentos,
+                ultimoError: error,
+            },
+        });
+    }
+
     async marcarBounce(id: string, bouncedAt?: Date) {
         const timestamp = bouncedAt ?? new Date();
         await this.db.$executeRaw`
