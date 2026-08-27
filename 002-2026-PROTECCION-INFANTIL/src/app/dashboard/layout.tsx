@@ -1,37 +1,11 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
-import { verificarVigenciaCliente } from "@/lib/colegio/vigencia";
-import { ServicioVencidoScreen } from "@/components/modules/ServicioVencidoScreen";
 import { SessionPingProvider } from "@/components/providers/SessionPingProvider";
-import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
 
 /**
- * Layout raíz de /dashboard (SPEC-119): aplica la guarda de vigencia al área del padre
- * (/dashboard, /dashboard/mis-reportes, /dashboard/circulo-confianza, ...). Solo actúa
- * con token PARENT; SCHOOL_ADMIN y roles internos pasan a sus propios layouts anidados
- * (dashboard/colegio ya tiene su guarda de vigencia, dashboard/admin la suya de rol).
+ * SPEC-287 (002-PI-187): layout raíz UI puro. La guarda de consentimiento y
+ * vigencia (SPEC-119/SPEC-241) se mudó al `middleware.ts` en la raíz. Este
+ * layout NO ejecuta `redirect(...)` — el ratchet estático lo bloquea.
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
-
-    if (token) {
-        const payload = await verifyToken(token);
-        if (payload?.sub && payload.rol === "PARENT") {
-            // SPEC-241 (002-PI-144): consentimiento informado antes de vigencia.
-            const requiereConsentimiento = await requiereConsentimientoActual(payload.sub as string);
-            if (requiereConsentimiento) {
-                redirect("/consentimiento");
-            }
-
-            const vigencia = await verificarVigenciaCliente(payload.sub as string);
-            if (!vigencia.vigente) {
-                return <ServicioVencidoScreen mensaje={vigencia.mensaje} />;
-            }
-        }
-    }
-
     return (
         <SessionPingProvider>
             <div className="min-h-screen">{children}</div>

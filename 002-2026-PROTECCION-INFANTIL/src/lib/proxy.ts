@@ -1,36 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { GUARDIAS_ACCESO } from "@/lib/routing/guardias";
 
-const PUBLIC_ROUTES = [
-    "/",
-    "/login",
-    "/registro",
-    "/registro-colegio",
-    "/activar",
-    "/recuperar",
-    "/seguimiento",
-    "/reportar",
-    "/privacidad",
-    "/terminos",
-    "/offline",
-    "/dashboard-publico",
-    "/api/auth",
-    "/api/config/parametros/publicos",
-    "/api/plataformas",
-    "/api/paises",
-    "/api/departamentos",
-    "/api/ciudades",
-    "/api/consulta",
-    "/api/reportes",
-    "/api/estadisticas-publicas",
-    "/api/health",
-    // SPEC-017: el visor de documentación es semi-público; la puerta deja pasar y
-    // CADA CAPA se enforcea en su página/API (capa 1 sin login, capa 2 autenticado,
-    // capa 3 ADMIN/SCHOOL_ADMIN). La allowlist de documentos vive en lib/docs/indice.
-    "/docs",
-    "/api/docs",
-];
+// SPEC-287 (002-PI-187): PUBLIC_ROUTES y SESION_ROUTES son alias a GUARDIAS_ACCESO
+// (fuente única). El motor de autorización de este archivo (esDestinoPermitidoPorRol,
+// proxy) sigue consumiéndolas por el mismo nombre.
+const PUBLIC_ROUTES: readonly string[] = GUARDIAS_ACCESO.publicas;
 
 // Rutas de usuario final: solo PARENT (o anónimo) puede usarlas; internos no.
 const USER_FINAL_ROUTES = ["/dashboard", "/mis-reportes"];
@@ -50,22 +26,10 @@ const COMITE_CONVIVENCIA_ROUTES = ["/dashboard/colegio/comite", "/api/colegio/co
 // rector (SCHOOL_ADMIN); el rol COMITE_CONVIVENCIA no puede administrarse a sí mismo.
 const COMITE_INTEGRANTES_SOLO_RECTOR = ["/dashboard/colegio/comite/integrantes", "/api/colegio/comite/integrantes"];
 
-// Rutas de sesión propias de cualquier rol autenticado: datos del usuario actual
-// (el header las consulta para reconocer la sesión), el cambio de contraseña
-// (obligatorio cuando debeCambiarPassword=true), el cierre de sesión y el
-// consentimiento informado (SPEC-250 / I-111).
-// I-35/I-35b: la página /cambiar-password llama a /api/auth/cambiar-password y el botón
-// de cerrar sesión a /api/auth/logout — sin ambos endpoints el colegio queda atrapado.
-// I-111: /consentimiento y /api/consentimiento deben ser alcanzables para todo rol
-// autenticado; si no, el guard de SPEC-241 provoca ERR_TOO_MANY_REDIRECTS.
-const SESION_ROUTES = [
-    "/api/me",
-    "/cambiar-password",
-    "/api/auth/cambiar-password",
-    "/api/auth/logout",
-    "/consentimiento",
-    "/api/consentimiento",
-];
+// SPEC-287 (002-PI-187): SESION_ROUTES viene de GUARDIAS_ACCESO. Docstring histórico:
+// I-35/I-35b (cambio contraseña + logout), I-111 (consentimiento), SPEC-287 (refresh
+// de sesión_estado). El único punto de decisión operativa vive en middleware.ts.
+const SESION_ROUTES: readonly string[] = GUARDIAS_ACCESO.sesion;
 
 // SPEC-118 (D-37, decisión ZEUS): rutas públicas de SOLO LECTURA abiertas también al
 // SCHOOL_ADMIN. El aislamiento total no aportaba seguridad (son estadísticas públicas
