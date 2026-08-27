@@ -8,7 +8,9 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci
+# SPEC-294 (002-PI-195): cache mount de BuildKit para reutilizar tarballs entre
+# stages y entre builds. Compartido con `prod-deps` (mismo lock hash).
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
 
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -38,7 +40,10 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev && npx prisma generate
+# SPEC-294 (002-PI-195): cache mount compartido con `deps` (mismo lock hash) para
+# reutilizar tarballs. Elimina `prisma generate` duplicado (el cliente generado en
+# `builder` se copia al runner por layer; ver runner abajo).
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -57,7 +62,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Worker (corre con --import tsx sobre src/) + Prisma CLI para migrate/seed.
 # node_modules de PRODUCCIÓN (sin devDependencies).
 COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/src ./src
+# SPEC-294 (002-PI-195): reutilizar el cliente Prisma generado en `builder`
+# (donde ya es necesario para `next build`) en vez de regenerarlo en `prod-deps`.
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# SPEC-294 (002-PI-195): los workers .mjs solo importan de ../src/lib/*.ts
+# (grep exhaustivo sobre scripts/*.mjs). El resto (src/app, src/components,
+# src/hooks) ya está empaquetado en .next/standalone.
+COPY --from=builder /app/src/lib ./src/lib
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json /app/tsconfig.json /app/next.config.ts ./
