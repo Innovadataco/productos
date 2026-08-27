@@ -76,16 +76,21 @@ export const COMITE_COLEGIO_NAV_ITEMS: NavItem[] = [
 ];
 
 // SPEC-231 (002-PI-131): menú del padre — 7 entradas planas, sin grupos expandibles.
-// El campo `modulo` es informativo en v1: el área padre no usa permisos granulares
-// por módulo; el proxy controla el acceso por rol.
-export const PADRE_NAV_ITEMS: NavItem[] = [
-    { href: "/dashboard/padre", label: "Inicio", modulo: "padre" },
-    { href: "/dashboard/padre/expedientes", label: "Mis expedientes", modulo: "padre" },
-    { href: "/dashboard/padre/reportar", label: "Reportar", modulo: "padre" },
-    { href: "/dashboard/padre/suscripcion", label: "Suscripción", modulo: "padre" },
-    { href: "/dashboard/padre/circulo-confianza", label: "Círculo confianza", modulo: "padre" },
-    { href: "/dashboard/padre/notificaciones", label: "Notificaciones", modulo: "padre" },
-    { href: "/dashboard/padre/perfil", label: "Mi perfil", modulo: "padre" },
+// SPEC-285 (002-PI-185, I-135): sin campo `modulo` — el área padre no usa permisos
+// granulares por módulo; el proxy controla el acceso por rol (`padre` fue retirado
+// del catálogo por 0 usos como candado real).
+export interface PadreNavItem {
+    href: string;
+    label: string;
+}
+export const PADRE_NAV_ITEMS: PadreNavItem[] = [
+    { href: "/dashboard/padre", label: "Inicio" },
+    { href: "/dashboard/padre/expedientes", label: "Mis expedientes" },
+    { href: "/dashboard/padre/reportar", label: "Reportar" },
+    { href: "/dashboard/padre/suscripcion", label: "Suscripción" },
+    { href: "/dashboard/padre/circulo-confianza", label: "Círculo confianza" },
+    { href: "/dashboard/padre/notificaciones", label: "Notificaciones" },
+    { href: "/dashboard/padre/perfil", label: "Mi perfil" },
 ];
 
 /** Tabs del Centro de Control IA filtradas por submódulo (null = visible con la raíz). */

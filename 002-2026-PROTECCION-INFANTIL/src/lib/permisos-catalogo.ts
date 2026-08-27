@@ -19,9 +19,6 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "ia_rubrica", nombre: "Rúbrica de clasificación", categoria: "admin", orden: 15, padre: "centro_control_ia" },
     { clave: "operadores", nombre: "Gestión de operadores", categoria: "admin", esCritico: true, orden: 20 },
     { clave: "padres", nombre: "Gestión de padres", categoria: "admin", esCritico: true, orden: 25 },
-    // SPEC-231 (002-PI-131): área del padre. No se usa para filtrar el sidebar en v1;
-    // existe para mantener consistencia con el catálogo y permitir granularidad futura.
-    { clave: "padre", nombre: "Área del padre", categoria: "padre", orden: 40 },
     // SPEC-194 (002-PI-088): vista unificada de usuarios por rol (Padres default).
     { clave: "usuarios_admin", nombre: "Usuarios", categoria: "admin", esCritico: true, orden: 27 },
     // SPEC-141 (N-1, decisión ZEUS): visibilidad de soporte SOLO LECTURA sobre datos
