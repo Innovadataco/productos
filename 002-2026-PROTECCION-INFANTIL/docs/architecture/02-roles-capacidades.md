@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 423 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2961 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 427 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 2989 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -188,6 +188,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/servicios/[nombre]/restart` | api | permitir | permite | sí |
+| `/api/admin/servicios/[nombre]/start` | api | permitir | permite | sí |
+| `/api/admin/servicios/[nombre]/stop` | api | permitir | permite | sí |
+| `/api/admin/servicios/estado` | api | permitir | permite | sí |
 | `/api/admin/sesiones` | api | permitir | permite | sí |
 | `/api/admin/sesiones/[id]/cerrar` | api | permitir | permite | sí |
 | `/api/admin/spam/analitica` | api | permitir | permite | sí |
@@ -616,6 +620,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/servicios/[nombre]/restart` | api | permitir | permite | sí |
+| `/api/admin/servicios/[nombre]/start` | api | permitir | permite | sí |
+| `/api/admin/servicios/[nombre]/stop` | api | permitir | permite | sí |
+| `/api/admin/servicios/estado` | api | permitir | permite | sí |
 | `/api/admin/sesiones` | api | permitir | permite | sí |
 | `/api/admin/sesiones/[id]/cerrar` | api | permitir | permite | sí |
 | `/api/admin/spam/analitica` | api | permitir | permite | sí |
@@ -1044,6 +1052,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | permitir | permite | sí |
+| `/api/admin/servicios/[nombre]/restart` | api | permitir | permite | sí |
+| `/api/admin/servicios/[nombre]/start` | api | permitir | permite | sí |
+| `/api/admin/servicios/[nombre]/stop` | api | permitir | permite | sí |
+| `/api/admin/servicios/estado` | api | permitir | permite | sí |
 | `/api/admin/sesiones` | api | permitir | permite | sí |
 | `/api/admin/sesiones/[id]/cerrar` | api | permitir | permite | sí |
 | `/api/admin/spam/analitica` | api | permitir | permite | sí |
@@ -1472,6 +1484,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/[nombre]/restart` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/[nombre]/start` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/[nombre]/stop` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/sesiones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/sesiones/[id]/cerrar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/analitica` | api | HTTP 403 | no permite | sí |
@@ -1900,6 +1916,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/[nombre]/restart` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/[nombre]/start` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/[nombre]/stop` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/sesiones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/sesiones/[id]/cerrar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/analitica` | api | HTTP 403 | no permite | sí |
@@ -2328,6 +2348,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/[nombre]/restart` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/[nombre]/start` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/[nombre]/stop` | api | HTTP 403 | no permite | sí |
+| `/api/admin/servicios/estado` | api | HTTP 403 | no permite | sí |
 | `/api/admin/sesiones` | api | HTTP 403 | no permite | sí |
 | `/api/admin/sesiones/[id]/cerrar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/spam/analitica` | api | HTTP 403 | no permite | sí |
@@ -2756,6 +2780,10 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/reportes/[id]/revelar-original` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/transiciones` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/servicios/[nombre]/restart` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/servicios/[nombre]/start` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/servicios/[nombre]/stop` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/servicios/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/sesiones` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/sesiones/[id]/cerrar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/spam/analitica` | api | HTTP 401 | permite | **NO** |
@@ -3184,6 +3212,10 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/reportes/[id]/revelar-original` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/transiciones` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/validar-anonimizacion` | HTTP 401 | permite |
+| `/api/admin/servicios/[nombre]/restart` | HTTP 401 | permite |
+| `/api/admin/servicios/[nombre]/start` | HTTP 401 | permite |
+| `/api/admin/servicios/[nombre]/stop` | HTTP 401 | permite |
+| `/api/admin/servicios/estado` | HTTP 401 | permite |
 | `/api/admin/sesiones` | HTTP 401 | permite |
 | `/api/admin/sesiones/[id]/cerrar` | HTTP 401 | permite |
 | `/api/admin/spam/analitica` | HTTP 401 | permite |

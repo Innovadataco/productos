@@ -26,6 +26,9 @@ import { NotificacionPlantillaRepository } from "../src/lib/dal/repositories/not
 import { renderizarPlantilla } from "../src/lib/notificaciones/renderer.ts";
 import { registrarBounce, emailBloqueado } from "../src/lib/notificaciones/bounces.ts";
 import { aplicarQuietHours } from "../src/lib/notificaciones/quiet-hours.ts";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
+
+iniciarTickVida("pi-notificaciones"); // SPEC-291: healthcheck externo + monitor
 
 const { Client } = pg;
 const DATABASE_URL = process.env.DATABASE_URL;

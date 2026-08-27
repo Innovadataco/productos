@@ -30,6 +30,9 @@ import {
 // SPEC-238 (002-PI-mega-cola): vigilancia del SLA de aclaraciones padre-comité
 // en el MISMO worker (sin worker nuevo, D-72).
 import { cerrarAclaracionesSlaVencidas } from "../src/lib/expediente/motor/tareas-aclaracion.ts";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
+
+iniciarTickVida("pi-expediente-motor"); // SPEC-291: healthcheck externo + monitor
 
 const { Client } = pg;
 // SPEC-236: lock propio del motor de expediente. En uso por otras specs del

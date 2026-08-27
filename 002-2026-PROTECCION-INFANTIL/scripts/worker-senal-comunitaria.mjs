@@ -15,6 +15,9 @@ import pg from "pg";
 import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
 import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import { refrescarSenalComunitariaPendientes } from "../src/lib/expediente/senal-comunitaria/refrescar-pendientes.ts";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
+
+iniciarTickVida("pi-senal-comunitaria"); // SPEC-291: healthcheck externo + monitor
 
 const { Client } = pg;
 // SPEC-284 (I-130): ID único y sin separadores JS para que sea greppeable.

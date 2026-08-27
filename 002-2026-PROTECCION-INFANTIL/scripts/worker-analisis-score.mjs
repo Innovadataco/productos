@@ -12,6 +12,9 @@ import { recalcularScoresPeriodo, purgarSnapshotsAntiguos } from "../src/lib/ana
 import { boss, ensureStarted, ensureQueue } from "../src/lib/queue.ts";
 import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import pg from "pg";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
+
+iniciarTickVida("pi-analisis-score"); // SPEC-291: healthcheck externo + monitor
 
 const { Client } = pg;
 const ADVISORY_LOCK_ID = 123456791;

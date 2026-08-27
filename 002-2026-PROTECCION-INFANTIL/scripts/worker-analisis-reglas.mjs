@@ -22,6 +22,9 @@ import {
     expirarRecomendacionesVencidas,
 } from "../src/lib/analisis/reglas/motor.ts";
 import pg from "pg";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
+
+iniciarTickVida("pi-analisis-reglas"); // SPEC-291: healthcheck externo + monitor
 
 const { Client } = pg;
 const ADVISORY_LOCK_ID = 123456794;

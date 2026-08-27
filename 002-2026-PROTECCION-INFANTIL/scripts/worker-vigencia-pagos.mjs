@@ -18,6 +18,9 @@ import { ejecutarCorrida, horaCorridaACron } from "../src/lib/pagos/vigencia.ser
 import { boss, ensureStarted } from "../src/lib/queue.ts";
 import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import pg from "pg";
+import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
+
+iniciarTickVida("pi-vigencia"); // SPEC-291: healthcheck externo + monitor
 
 const { Client } = pg;
 // SPEC-213: id exclusivo del worker de vigencia (789 reportes, 790 tasas/sesiones/señal/monitor,

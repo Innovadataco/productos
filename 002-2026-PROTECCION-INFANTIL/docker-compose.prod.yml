@@ -42,9 +42,18 @@ services:
       - pi_worker_run:/app/run
       # SPEC-110: evidencia cifrada de apelaciones (persistente entre deploys).
       - pi_apelaciones_storage:/app/storage
+      # SPEC-291 (002-PI-191): docker socket para acciones admin sobre servicios.
+      # Whitelist estricta en src/lib/servicios/docker-adapter.ts (3 cmds × 10 conts).
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       # Solo localhost: lo publica cloudflared (pi.innovadataco.com).
       - "127.0.0.1:5005:3000"
+    # SPEC-291: healthcheck HTTP contra /api/health (endpoint existente).
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
@@ -64,6 +73,12 @@ services:
       - pi_worker_run:/app/run
       # SPEC-110: el job diario de retención borra evidencia en el mismo storage.
       - pi_apelaciones_storage:/app/storage
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-worker") en el supervisor.
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-worker && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-worker))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
@@ -86,6 +101,12 @@ services:
       API_BASE_URL: http://app:3000
     volumes:
       - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-monitor") en monitor-probes.mjs.
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-monitor && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-monitor))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
@@ -106,6 +127,12 @@ services:
       TZ: America/Bogota
     volumes:
       - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-simulador-abuso").
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-simulador-abuso && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-simulador-abuso))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
@@ -126,6 +153,12 @@ services:
       TZ: America/Bogota
     volumes:
       - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-notificaciones").
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-notificaciones && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-notificaciones))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
@@ -143,8 +176,18 @@ services:
     command: node --import tsx scripts/worker-senal-comunitaria.mjs
     environment:
       TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR necesario para tick-vida compartido.
+      WORKER_RUN_DIR: /app/run
     volumes:
       - pi_informes_storage:/data/informes:ro
+      # SPEC-291: pi_worker_run compartido para que monitor lea el tick-vida.
+      - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-senal-comunitaria").
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-senal-comunitaria && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-senal-comunitaria))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
@@ -164,6 +207,12 @@ services:
       TZ: America/Bogota
     volumes:
       - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-analisis-score").
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-analisis-score && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-analisis-score))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
