@@ -36,7 +36,8 @@
     "ratchets:no-redirect-layout": "tsx scripts/lint/no-redirect-en-layout-de-dashboard.ts",
     "ratchets:no-self-redirect": "tsx scripts/lint/no-self-redirect-server-actions.ts",
     "ratchets:guardia-invariante": "tsx scripts/lint/guardia-invariante.ts",
-    "ratchets:check": "npm run ratchets:no-x-invoke-path && npm run ratchets:no-redirect-layout && npm run ratchets:no-self-redirect && npm run ratchets:guardia-invariante"
+    "ratchets:no-usd-vistas": "tsx scripts/lint/no-usd-en-vistas-suscripcion.ts",
+    "ratchets:check": "npm run ratchets:no-x-invoke-path && npm run ratchets:no-redirect-layout && npm run ratchets:no-self-redirect && npm run ratchets:guardia-invariante && npm run ratchets:no-usd-vistas"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
