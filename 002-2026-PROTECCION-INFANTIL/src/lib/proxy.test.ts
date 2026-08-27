@@ -242,3 +242,20 @@ describe("SESION_ROUTES — SPEC-250 hotfix /consentimiento (I-111)", () => {
         expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
     });
 });
+
+// SPEC-286 (002-PI-186 · I-136): la línea "/consulta" en PUBLIC_ROUTES apuntaba
+// a una página que no existe (la consulta pública vive en el home "/"). Al
+// quitarla, el proxy la trata como ruta privada y sin sesión redirige a /login.
+// La API /api/consulta sigue siendo pública (línea aparte en PUBLIC_ROUTES) y no
+// se ve afectada.
+describe("PUBLIC_ROUTES — SPEC-286 (I-136) quitar /consulta", () => {
+    function requestAnonima(pathname: string): NextRequest {
+        return new NextRequest(`http://localhost:5005${pathname}`);
+    }
+
+    it("anónimo NO alcanza /consulta (redirige a /login, 307)", async () => {
+        const res = await proxy(requestAnonima("/consulta"));
+        expect(res.status, "anónimo → /consulta redirige a login").toBe(307);
+        expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+    });
+});
