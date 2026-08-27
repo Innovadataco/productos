@@ -17,6 +17,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/ci/resumen.test.mjs",
     // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
     "scripts/ci/reparto-shards.test.mjs",
+    // SPEC-290 (002-PI-190): heartbeat de vida del worker-sesiones (helper puro).
+    "scripts/worker-sesiones.test.mjs",
+    // SPEC-290 (002-PI-190): mapeo sesion.* → sección "sesiones" del ConfigPanel.
+    "src/components/modules/config-panel/types.test.ts",
     "src/app/dashboard/admin/estadisticas/components/EstadisticasSubNav.test.tsx",
     "src/app/dashboard/colegio/alertas/AlertasColegioPageClient.test.tsx",
     "src/components/modules/config-panel/MantenimientoLogsPanel.test.tsx",

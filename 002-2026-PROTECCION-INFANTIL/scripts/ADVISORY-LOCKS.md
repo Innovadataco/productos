@@ -18,7 +18,7 @@ esta tabla y los `scripts/*.mjs` estén 1:1.
 | `123456794` | `scripts/worker-analisis-reglas.mjs` | `pi-analisis-reglas` | Ejecutor de reglas de análisis | SPEC-232 |
 | `123456795` | `scripts/worker-anomalias.mjs` | `pi-anomalias` | Detector de anomalías | SPEC-235 |
 | `123456796` | `scripts/worker-senal-comunitaria.mjs` | `pi-senal-comunitaria` | Refresco de señal comunitaria pendiente | SPEC-284 (antes `123_456_790`) |
-| `123456797` | `scripts/worker-sesiones.mjs` | — sin servicio (I-132 pendiente) | Corte de sesiones expiradas (latente) | SPEC-284 (antes `123456790`) |
+| `123456797` | `scripts/worker-sesiones.mjs` | `pi-sesiones` | Corte de sesiones expiradas | SPEC-284 · SPEC-290 |
 | `123456798` | `scripts/worker-tasas.mjs` | — sin servicio (I-132 pendiente) | Actualización periódica de tasas (latente) | SPEC-284 (antes `123456790`) |
 | `923456789` | `scripts/simulador-abuso.mjs` | `simulador-abuso` | Simulador de abuso (banco de pruebas) | inicial |
 | `987654321` | `scripts/worker-notificaciones.mjs` | `pi-notificaciones` | Envío diferido de notificaciones | SPEC-186 |
