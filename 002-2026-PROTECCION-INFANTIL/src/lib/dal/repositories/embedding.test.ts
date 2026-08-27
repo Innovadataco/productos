@@ -40,6 +40,9 @@ async function leerEmbedding(reporteId: string) {
     return rows;
 }
 
+// SPEC-283 (002-PI-180): reset POR PRUEBA porque varios tests dentro del mismo
+// describe crean Reporte con el mismo numeroSeguimiento (`RPT-${TAG}` sin sufijo)
+// y TAG es constante en el módulo → colisión unique al migrar a beforeAll.
 describe("EmbeddingRepository (E-8 LOTE 2)", () => {
     beforeEach(async () => {
         await resetDatabase();
@@ -71,6 +74,7 @@ describe("EmbeddingRepository (E-8 LOTE 2)", () => {
 });
 
 describe("EmbeddingRepository (E-8 LOTE 4: búsquedas pgvector del motor)", () => {
+    // SPEC-283: idem describe anterior — TAG compartido + numeroSeguimiento unique.
     beforeEach(async () => {
         await resetDatabase();
         await crearPlataforma();

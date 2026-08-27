@@ -80,6 +80,12 @@ async function sembrarAlerta(
 }
 
 describe("ColegioResumenRepository.homeRector", () => {
+    // SPEC-283 (002-PI-180): reset POR PRUEBA. La migración a beforeAll rompe
+    // con la suite completa porque vitest 3.2.x corre archivos concurrentemente
+    // a pesar de fileParallelism:false: el mutex TestMutex serializa por test
+    // (afterEach) → un beforeEach(reset) de OTRO archivo en otro fork limpia
+    // los seeds del beforeAll antes de que corra el primer it. Aislado pasa,
+    // en la suite falla (10 tests rojos, corridas 1 y 2 idénticas).
     beforeEach(async () => {
         await resetDatabase();
     });

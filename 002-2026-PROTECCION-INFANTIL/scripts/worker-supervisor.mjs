@@ -25,7 +25,10 @@ let restartCount = 0;
 let worker = null;
 let shuttingDown = false;
 
-const logger = workerLogger.child({ servicio: "pi-monitor" });
+// AMP I-134 (002-PI-180): el supervisor supervisa worker-reportes.mjs
+// (etiqueta "pi-worker"). Etiquetarse "pi-monitor" era una pista falsa en
+// el filtro de logs por servicio. Se alinea con el servicio que supervisa.
+const logger = workerLogger.child({ servicio: "pi-worker" });
 
 function log(msg) {
     console.log(`[SUPERVISOR] ${msg}`);

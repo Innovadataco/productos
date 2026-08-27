@@ -92,6 +92,8 @@ const llamadasEstudianteRepetido = () =>
     vi.mocked(sendAvisoColegio).mock.calls.filter((c) => (c[0] as { tipoEvento: string }).tipoEvento === "ESTUDIANTE_REPETIDO");
 
 describe("evaluarUmbralesPorAlerta con observación especial (SPEC-150)", () => {
+    // SPEC-283 (002-PI-180): reset POR PRUEBA. Migración a beforeAll rota por
+    // concurrencia entre archivos (ver test-setup.ts).
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();

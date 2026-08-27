@@ -69,20 +69,61 @@ async function asegurarPlataformas() {
     }
 }
 
-export async function resetDatabase() {
-    // El aislamiento real lo proporciona test-setup.ts con un mutex en BD;
-    // este reset solo limpia y re-seedea de forma atómica con TRUNCATE CASCADE.
+async function truncateAtomic(tablas: string[]): Promise<void> {
+    if (tablas.length === 0) return;
+    const listado = tablas.map((t) => `"${t}"`).join(", ");
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${listado} CASCADE`);
+}
+
+async function obtenerTablasDePGTables(): Promise<string[]> {
     const rows: { tablename: string }[] = await prisma.$queryRaw`
         SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     `;
-    const tables = rows
-        .map((r) => r.tablename)
-        .filter((t) => !EXCLUDED_TABLES.has(t))
-        .map((t) => `"${t}"`)
-        .join(", ");
-    if (tables) {
-        await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables} CASCADE`);
+    return rows.map((r) => r.tablename).filter((t) => !EXCLUDED_TABLES.has(t));
+}
+
+/**
+ * SPEC-282 (002-PI-180): variante con lista explícita de tablas.
+ *
+ * - `resetDatabase()` (sin args): vacía las 96 tablas de `pg_tables` menos las
+ *   excluidas (comportamiento actual, sin cambios).
+ * - `resetDatabase(["Usuario", "Reporte"])`: vacía SOLO esas tablas (más las que
+ *   caen por CASCADE). Ignora silenciosamente las que estén en `EXCLUDED_TABLES`.
+ *   Lanza error si alguna no existe en `pg_tables`.
+ * - `resetDatabase([])`: NO trunca nada, pero SÍ ejecuta seed de permisos y
+ *   plataformas (mantiene la parte determinista del reset).
+ *
+ * En los tres casos, ejecuta `otorgarTodosLosPermisos()` + `asegurarPlataformas()`
+ * al final para mantener el mismo contrato de estado inicial.
+ */
+export async function resetDatabase(tablas?: string[]): Promise<void> {
+    // El aislamiento real lo proporciona test-setup.ts con un mutex en BD;
+    // este reset solo limpia y re-seedea de forma atómica con TRUNCATE CASCADE.
+    if (tablas === undefined) {
+        await truncateAtomic(await obtenerTablasDePGTables());
+    } else if (tablas.length > 0) {
+        const efectivas: string[] = [];
+        for (const t of tablas) {
+            if (EXCLUDED_TABLES.has(t)) {
+                console.error(`[resetDatabase] tabla excluida ignorada: ${t}`);
+                continue;
+            }
+            efectivas.push(t);
+        }
+        if (efectivas.length > 0) {
+            const rows: { tablename: string }[] = await prisma.$queryRaw`
+                SELECT tablename FROM pg_tables
+                WHERE schemaname = 'public' AND tablename = ANY(${efectivas})
+            `;
+            const existentes = new Set(rows.map((r) => r.tablename));
+            const faltantes = efectivas.filter((t) => !existentes.has(t));
+            if (faltantes.length > 0) {
+                throw new Error(`Tabla no encontrada en pg_tables: ${faltantes.join(", ")}`);
+            }
+            await truncateAtomic(efectivas);
+        }
     }
+    // tablas === [] → salta el TRUNCATE, cae directo a los seeds.
     await otorgarTodosLosPermisos();
     // Algunos tests dan por sentado que ciertos catálogos estáticos existen
     // (ej. plataforma "whatsapp" en asignador.test.ts). Se aseguran aquí para

@@ -195,8 +195,12 @@
 | [258](258-plantillas-onboarding-colegio/spec.md) | SPEC-258 · Onboarding — Plantilla colegio.creado.email en seed (002-PI-157) | 🟢 Implementado |
 | [259](259-puerta-entrada-familia-colegio/spec.md) | SPEC-259 · Onboarding — Puerta /registro/inicio familia vs colegio (002-PI-157) | 🟢 Implementado |
 | [260](260-tests-humo-pagos/spec.md) | SPEC-260 · Tests de humo de las 4 pantallas Pagos (002-PI-157) | 🟢 Implementado |
+| [280](280-resumen-legible-ci/spec.md) | SPEC-280 · Velocidad CI — Resumen legible al final de cada corrida (002-PI-180) | 🟢 Implementado |
+| [281](281-reparto-shards-por-peso/spec.md) | SPEC-281 · Velocidad CI — Reparto de las 4 partes por peso medido (002-PI-181) | 🟢 Implementado |
+| [282](282-reset-selectivo-tablas/spec.md) | SPEC-282 · Velocidad CI — resetDatabase() selectivo por tablas (002-PI-182) | 🟢 Implementado |
+| [283](283-migrar-archivos-caros-beforeall/spec.md) | SPEC-283 · Velocidad CI — Migrar los 8 archivos más caros a beforeAll (002-PI-183) | 🟢 Implementado (parcial · SC-008 activado) |
 
-## Tabla completa (225 specs)
+## Tabla completa (229 specs)
 
 | Nº | Nombre | Estado |
 |----|--------|--------|
