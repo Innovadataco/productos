@@ -57,7 +57,7 @@ describe("calcularTotales", () => {
         expect(desglose.total).toBe(119_000);
     });
 
-    it("aplica descuento de bono y convierte USD→COP con tasa", async () => {
+    it("aplica descuento de bono y convierte USD→COP con tasa (regresión USD histórico, SPEC-289 SC-003)", async () => {
         const { padre, plan, repo } = await crearPlanYContexto();
         await crearParametrosIva("19", "todos");
         await repo.crearTasaCambio({
@@ -76,13 +76,40 @@ describe("calcularTotales", () => {
             creadoPorAdminId: (await prisma.usuario.findFirst({ where: { rol: "ADMIN" } }))!.id,
         });
 
-        const desglose = await calcularTotales(plan, TipoTitular.PADRE, "BONO20", padre.id);
+        // SPEC-289 (002-PI-189 · Fase 1): explícito monedaLocal="USD" para
+        // asegurar que el camino histórico USD→tasa→COP sigue intacto.
+        const desglose = await calcularTotales(plan, TipoTitular.PADRE, "BONO20", padre.id, "USD");
 
         // 10 USD * 20% = 2 USD descuento → 2 * 4000 = 8000 COP
         expect(desglose.descuentoBono).toBe(8_000);
         expect(desglose.baseGravable).toBe(92_000);
         expect(desglose.iva).toBe(17_480);
         expect(desglose.total).toBe(109_480);
+    });
+
+    // SPEC-289 (002-PI-189 · Fase 1 · SC-002): modo COP nativo.
+    it("modo COP: descuento del bono se calcula sobre precioBaseCOP directo (cero tasa)", async () => {
+        const { padre, plan, repo } = await crearPlanYContexto();
+        await crearParametrosIva("19", "todos");
+        // NO se crea TasaCambio: el modo COP no debe consumirla.
+        await repo.crearBonoPromocional({
+            nombre: "BONO20",
+            tipo: TipoBono.DESCUENTO_PCT,
+            valor: 20,
+            vigenciaInicio: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            vigenciaFin: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            creadoPorAdminId: (await prisma.usuario.findFirst({ where: { rol: "ADMIN" } }))!.id,
+        });
+
+        // monedaLocal="COP" (default). El descuento del bono es 20% sobre
+        // el precio COP, sin depender de tasa.
+        const desglose = await calcularTotales(plan, TipoTitular.PADRE, "BONO20", padre.id);
+
+        // 100000 COP * 20% = 20000 COP
+        expect(desglose.descuentoBono).toBe(20_000);
+        expect(desglose.baseGravable).toBe(80_000);
+        expect(desglose.iva).toBe(15_200);
+        expect(desglose.total).toBe(95_200);
     });
 
     it("excluye IVA para padres cuando aplica_a=solo_colegios", async () => {

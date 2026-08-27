@@ -67,6 +67,10 @@ async function seedSuscripcionActiva(estado: EstadoSuscripcion = EstadoSuscripci
         duracion: DuracionPlan.MES_1,
         anio,
         nombre: "Plan padre mensual",
+        // SPEC-289 (002-PI-189 · Fase 1): plan con precio COP nativo. La
+        // suscripción abajo va como monedaLocal="COP", entonces el motor
+        // ignora precioBaseUSD y cobra 40000 COP directo.
+        precioBaseCOP: 40000,
         precioBaseUSD: 10,
         precio: 0,
         creadoPorAdminId: admin.id,
@@ -130,7 +134,10 @@ describe("POST /api/pagos/renovacion", () => {
         expect(res.status).toBe(201);
         const json = await res.json();
         expect(json.estado).toBe(EstadoPago.PENDIENTE_AUTORIZACION);
-        expect(json.montoNetoUSD).toBe(10);
+        // SPEC-289 (002-PI-189 · Fase 1): suscripción COP → montoNetoUSD=0 en el
+        // registro histórico (columna legacy) y montoLocalPagado = precioBaseCOP.
+        // Fase 2 (ARQ_16) renombrará el campo del schema.
+        expect(json.montoNetoUSD).toBe(0);
         expect(json.montoLocalPagado).toBe(40000);
         expect(json.monedaLocal).toBe("COP");
         expect(json.comprobanteHashSha256).toMatch(/^[0-9a-f]{64}$/);
