@@ -159,6 +159,7 @@
 | [290](290-levantar-worker-sesiones/spec.md) | SPEC-290 · Levantar `worker-sesiones` como servicio (`pi-sesiones`) + panel Sesiones (002-PI-190) | 🟢 Implementado |
 | [291](291-instrumentacion-acciones-servicios/spec.md) | SPEC-291 — Healthchecks + tick-vida + monitor extendido + endpoints admin de servicios (002-PI-191) | 🟢 Implementado |
 | [293](293-fix-seed-freemium-padre-colegio/spec.md) | SPEC-293 · Fix seed freemium PADRE+COLEGIO (I-156 · onboarding padre roto en prod) (002-PI-194) | 🟢 Implementado |
+| [294](294-deploy-lento/spec.md) | SPEC-294 — Deploy lento: reducir 9m30s → <5min (BuildKit cache + COPY src/lib + prisma consolidado + ratchet CI) (002-PI-195) | 🟢 Implementado |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |

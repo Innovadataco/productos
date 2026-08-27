@@ -6,6 +6,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# SPEC-294 (002-PI-195): BuildKit obligatorio para respetar `RUN --mount=type=cache`
+# del Dockerfile (npm ci cache mount, prisma consolidado). Compose-plugin ya lo usa
+# por default; docker-compose classic (v1/v2 legacy) requiere estas dos vars.
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
 COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
 
 if [[ "${1:-}" != "--skip-pull" ]]; then
@@ -17,8 +23,23 @@ export PI_APP_TAG="$(git rev-parse --short HEAD)"
 # Sello de versión (spec 102): el mismo SHA se hornea en la imagen vía build-arg.
 export APP_BUILD_SHA="${PI_APP_TAG}"
 echo "==> Build pi-app:${PI_APP_TAG}"
+BUILD_START=$(date +%s)
 $COMPOSE build
+BUILD_END=$(date +%s)
+BUILD_SECONDS="${PI_BUILD_SECONDS_OVERRIDE:-$((BUILD_END - BUILD_START))}"
 docker tag "pi-app:${PI_APP_TAG}" pi-app:latest
+
+# SPEC-294 (002-PI-195): ratchet contra regresión del tiempo de build.
+# Umbrales del brief §4: warn > 480s (5min), fail > 720s (8min).
+# PI_BUILD_SECONDS_OVERRIDE permite testear el ratchet sin construir realmente.
+echo "==> Build tardó ${BUILD_SECONDS}s"
+if [ "$BUILD_SECONDS" -gt 720 ]; then
+    echo "❌ FAIL: build tardó ${BUILD_SECONDS}s (> 8 min · umbral duro SPEC-294)"
+    exit 1
+fi
+if [ "$BUILD_SECONDS" -gt 480 ]; then
+    echo "⚠️  WARN: build tardó ${BUILD_SECONDS}s (> 5 min · umbral blando SPEC-294)"
+fi
 
 echo "==> Up (app + worker + db)"
 $COMPOSE up -d
