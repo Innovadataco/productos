@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { verifyAuth } from "@/lib/auth";
@@ -89,8 +88,10 @@ async function actionActivarFreemium() {
         userAgent,
     });
 
+    // SPEC-287 (I-141): la Server Action NO termina con redirect(<misma ruta>);
+    // el POST-redirect-GET lo hace el navegador. revalidatePath re-renderiza
+    // la página con el nuevo estado de vigencia (freemium ya ACTIVA).
     revalidatePath("/dashboard/padre/suscripcion");
-    redirect("/dashboard/padre/suscripcion");
 }
 
 export default async function PadreSuscripcionPage({ searchParams }: PageProps) {

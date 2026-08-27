@@ -60,6 +60,10 @@ jobs:
       - run: npm run arch:check
       # SPEC-284 (002-PI-184 · I-130): compuerta de IDs de advisory lock únicos.
       - run: npm run locks:check
+      # SPEC-287 (002-PI-187 · I-25/I-111/I-141): 4 ratchets anti-recaída del
+      # bucle de guardián en layout (x-invoke-path, redirect en layout, self-redirect
+      # en action, invariante destino ∈ exentas).
+      - run: npm run ratchets:check
 
   test-unit:
     runs-on: ubuntu-latest

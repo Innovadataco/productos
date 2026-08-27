@@ -1,36 +1,21 @@
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
-import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { AdminNav } from "@/components/modules/AdminNav";
 import { AdminVersionBadge } from "@/components/modules/AdminVersionBadge";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
-const ADMIN_ROLES = new Set(["ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
 type AdminRol = "ADMIN" | "OPERADOR" | "COMITE_VALIDACION";
 
+/**
+ * SPEC-287 (002-PI-187): layout UI puro. Todos los guardianes de acceso
+ * (sesión, permisos de rol, cambiar-password) viven ahora en `middleware.ts`.
+ * Este layout NO ejecuta `redirect(...)` — el ratchet estático lo bloquea.
+ */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();
     const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
-
-    if (!token) {
-        redirect("/login");
-    }
-
-    const payload = await verifyToken(token);
-    const rol = payload?.rol as string | undefined;
-    const userId = payload?.sub as string | undefined;
-    if (!userId || !rol || !ADMIN_ROLES.has(rol)) {
-        redirect("/");
-    }
-
-    // Enforcement central: cualquier rol interno con contraseña temporal debe
-    // cambiarla antes de usar el panel (igual que SCHOOL_ADMIN en su layout).
-    const usuario = await new UsuarioRepository().findDebeCambiarPassword(userId);
-    if (usuario?.debeCambiarPassword) {
-        redirect("/cambiar-password");
-    }
-
+    const payload = token ? await verifyToken(token) : null;
+    const rol = (payload?.rol as string | undefined) ?? "ADMIN";
     const permitidos = await modulosPermitidosParaRol(rol);
 
     return (

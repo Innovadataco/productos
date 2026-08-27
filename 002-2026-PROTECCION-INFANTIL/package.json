@@ -31,7 +31,12 @@
     "a11y:contrast": "node scripts/contrast_check.js",
     "tokens:check": "tsx scripts/tokens-check.ts",
     "arch:check": "tsx scripts/arch/arch-check.ts",
-    "locks:check": "tsx scripts/locks-check.ts"
+    "locks:check": "tsx scripts/locks-check.ts",
+    "ratchets:no-x-invoke-path": "tsx scripts/lint/no-x-invoke-path.ts",
+    "ratchets:no-redirect-layout": "tsx scripts/lint/no-redirect-en-layout-de-dashboard.ts",
+    "ratchets:no-self-redirect": "tsx scripts/lint/no-self-redirect-server-actions.ts",
+    "ratchets:guardia-invariante": "tsx scripts/lint/guardia-invariante.ts",
+    "ratchets:check": "npm run ratchets:no-x-invoke-path && npm run ratchets:no-redirect-layout && npm run ratchets:no-self-redirect && npm run ratchets:guardia-invariante"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

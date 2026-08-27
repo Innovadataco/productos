@@ -1,63 +1,38 @@
-import { redirect } from "next/navigation";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
-import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
 import { PadreSideNav } from "@/components/modules/padre/PadreSideNav";
 import { Alerta } from "@/components/ui/Alerta";
-import {
-    resolverEstadoVigencia,
-    esRutaExenta,
-    redireccionSuscripcion,
-    debeMostrarBanner,
-} from "@/lib/pagos/vigencia-middleware";
+import { resolverEstadoVigencia, debeMostrarBanner } from "@/lib/pagos/vigencia-middleware";
 
 /**
- * Layout del área del padre (`/dashboard/padre/*`).
- * SPEC-231 (002-PI-131): sidebar padre + guarda de sesión PARENT.
- * SPEC-242 (002-PI-145): guarda de vigencia basada en Suscripcion.estado.
- * Encadenamiento: auth → consentimiento (SPEC-241) → vigencia.
+ * SPEC-287 (002-PI-187): layout UI puro. Todos los guardianes de acceso
+ * (sesión, consentimiento, cambiar-password, vigencia) viven ahora en
+ * `middleware.ts` — este layout NO ejecuta `redirect(...)`. El ratchet
+ * `no-redirect-en-layout-de-dashboard` bloquea el merge si vuelve a nacer.
+ *
+ * Este componente solo:
+ *  - lee el usuario (para el sidebar y el banner)
+ *  - muestra banner ámbar cuando la vigencia está EN_GRACIA
+ *  - renderiza el sidebar y los hijos
+ *
+ * Si llega hasta aquí sin sesión válida, es un bug del middleware. En ese caso
+ * el layout renderiza sin sidebar (usuario null) — mejor que 500 en cascada.
  */
 export default async function PadreLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();
     const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
 
-    if (!token) {
-        redirect("/login");
-    }
+    const payload = token ? await verifyToken(token) : null;
+    const usuario = payload?.sub
+        ? await new UsuarioRepository().findSesionPadre(payload.sub as string)
+        : null;
 
-    const payload = await verifyToken(token);
-    const rol = payload?.rol as string | undefined;
-    if (!payload?.sub || rol !== "PARENT") {
-        redirect("/login");
-    }
-
-    const usuario = await new UsuarioRepository().findSesionPadre(payload.sub as string);
-
-    if (!usuario || usuario.estado !== "activo" || usuario.rol !== "PARENT") {
-        redirect("/login");
-    }
-
-    // SPEC-241 (002-PI-144): guardia de consentimiento informado.
-    const requiereConsentimiento = await requiereConsentimientoActual(payload.sub as string);
-    if (requiereConsentimiento) {
-        redirect("/consentimiento");
-    }
-
-    if (usuario.debeCambiarPassword) {
-        redirect("/cambiar-password");
-    }
-
-    const pathname = (await headers()).get("x-invoke-path") ?? "";
-    const esExenta = esRutaExenta(pathname, "PARENT");
-
-    const suscripcionActiva = await new PagosRepository().obtenerSuscripcionActivaPorUsuarioId(usuario.id);
+    const suscripcionActiva = usuario
+        ? await new PagosRepository().obtenerSuscripcionActivaPorUsuarioId(usuario.id)
+        : null;
     const estadoVigencia = resolverEstadoVigencia(suscripcionActiva);
-
-    if (!esExenta && estadoVigencia !== "ACTIVA" && estadoVigencia !== "EN_GRACIA") {
-        redirect(redireccionSuscripcion("PARENT"));
-    }
 
     return (
         <div className="theme-padre flex min-h-screen bg-page">
