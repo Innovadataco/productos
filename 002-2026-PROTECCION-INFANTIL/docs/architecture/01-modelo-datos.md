@@ -1490,6 +1490,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | esAnonimo | Boolean | — |
 | edadVictima | Int | opcional |
 | usuarioId | String | opcional |
+| origenRol | String | opcional |
 | operadorId | String | opcional |
 | comiteId | String | opcional |
 | reporteOrigenId | String | opcional |
