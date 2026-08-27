@@ -72,10 +72,11 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `indices:check` | `tsx scripts/verify-hnsw-indexes.ts` |
 | `lint` | `eslint .` |
 | `locks:check` | `tsx scripts/locks-check.ts` |
-| `ratchets:check` | `npm run ratchets:no-x-invoke-path && npm run ratchets:no-redirect-layout && npm run ratchets:no-self-redirect && npm run ratchets:guardia-invariante` |
+| `ratchets:check` | `npm run ratchets:no-x-invoke-path && npm run ratchets:no-redirect-layout && npm run ratchets:no-self-redirect && npm run ratchets:guardia-invariante && npm run ratchets:no-usd-vistas` |
 | `ratchets:guardia-invariante` | `tsx scripts/lint/guardia-invariante.ts` |
 | `ratchets:no-redirect-layout` | `tsx scripts/lint/no-redirect-en-layout-de-dashboard.ts` |
 | `ratchets:no-self-redirect` | `tsx scripts/lint/no-self-redirect-server-actions.ts` |
+| `ratchets:no-usd-vistas` | `tsx scripts/lint/no-usd-en-vistas-suscripcion.ts` |
 | `ratchets:no-x-invoke-path` | `tsx scripts/lint/no-x-invoke-path.ts` |
 | `start` | `next start -p 5005` |
 | `test` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run` |

@@ -145,6 +145,7 @@
 | [251](251-guardian-indices-i49/spec.md) | SPEC-251 · Guardián de índices críticos (002-PI-154 · cierra I-49) | 🟢 Implementado |
 | [284](284-ids-advisory-lock-i130-i137/spec.md) | SPEC-284 · IDs de advisory lock únicos (002-PI-184 · cierra I-130, I-137) | 🟢 Implementado |
 | [287](287-ratchet-vigencia-middleware/spec.md) | SPEC-287 · Ratchet estructural — guardián en middleware.ts (002-PI-187 · cierra I-25, I-111, I-141) | 🟢 Implementado |
+| [289](289-cop-fuente-unica-fase-1/spec.md) | SPEC-289 · COP fuente única de precio (Fase 1) (002-PI-189 · cierra I-126 · inicia D-88) | 🟢 Implementado |
 | [286](286-quitar-consulta-public-routes/spec.md) | SPEC-286 · Quitar `/consulta` de PUBLIC_ROUTES (002-PI-186 · cierra I-136) | 🟢 Implementado |
 | [261](261-ciclo-operador-estados/spec.md) | SPEC-261 — ESTADOS_CARGA_OPERADOR: propaga POSIBLE_SPAM a 6 superficies (002-PI-164) | 🟢 Implementado |
 | [262](262-panel-spam-motivo/spec.md) | SPEC-262 — Panel spam motivo de ingreso real (002-PI-164) | 🟢 Implementado |
