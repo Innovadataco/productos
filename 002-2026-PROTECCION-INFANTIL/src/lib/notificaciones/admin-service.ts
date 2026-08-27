@@ -17,7 +17,7 @@ import { NotificacionPlantillaRepository } from "@/lib/dal/repositories/notifica
 import { NotificacionReglaRepository } from "@/lib/dal/repositories/notificacion-regla";
 import { ParametroRepository } from "@/lib/dal/repositories/parametro";
 import { ConfiguracionService } from "@/lib/dal/services/configuracion";
-import { enviarEmailNotificacion } from "@/lib/email";
+import { enviarEmailNotificacion } from "@/lib/notificaciones/enviar-email";
 import { logAudit } from "@/lib/audit";
 import { sendNotificacionEnvio } from "@/lib/queue";
 import * as motor from "./motor";

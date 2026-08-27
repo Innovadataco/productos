@@ -2,7 +2,7 @@ import { RUBRICA_SEMILLA, DEFINICIONES_CATEGORIA } from "../src/lib/ai/rubrica-s
 import { normalizarNombreGeografico } from "../src/lib/normalizar";
 import { REGLAS_SEMILLA } from "../src/lib/analisis/reglas/seed-reglas";
 import { syncModulosYGrants } from "./seed-modulos-grants";
-import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion } from "@prisma/client";
+import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { formatInTimeZone } from "date-fns-tz";
 import fs from "fs/promises";
@@ -794,6 +794,188 @@ async function seedParametrosPagos() {
         });
     }
     console.log(`[SEED] ${pagosParams.length} parámetros pagos.* listos`);
+}
+
+// ── SPEC-296 (002-PI-197 · cierra I-152): 19 eventos + plantillas + reglas para
+// los emails migrados desde src/lib/email.ts al motor. Cada uno tiene texto
+// equivalente al `text:` que hoy vive inline en email.ts (copia literal con
+// placeholders {{var}}). `enviarEmailNotificacion` no está aquí — sigue siendo
+// el proveedor real del motor (vive en src/lib/notificaciones/enviar-email.ts).
+// Idempotente: plantilla con upsert; regla con upsertNotificacionRegla.
+async function seedEventosEmailMigrados() {
+    const plantillas: Array<{
+        clave: string;
+        asunto: string;
+        cuerpoMarkdown: string;
+        variablesSchema?: Record<string, unknown>;
+    }> = [
+        {
+            clave: "auth.codigo_verificacion.email",
+            asunto: "Código de verificación",
+            cuerpoMarkdown: "Tu código de verificación es: {{codigo}}\n\nVálido por 15 minutos.",
+            variablesSchema: { type: "object", properties: { codigo: { type: "string" } } },
+        },
+        {
+            clave: "auth.password_recuperacion.email",
+            asunto: "Restablece tu contraseña",
+            cuerpoMarkdown:
+                "Hola,\n\nRecibimos una solicitud para restablecer tu contraseña. Haz clic en el siguiente enlace:\n\n{{url}}\n\nEste enlace expira en 1 hora y solo puede usarse una vez. Si no solicitaste este cambio, ignora este mensaje.",
+        },
+        {
+            clave: "usuario.bienvenida.operador.email",
+            asunto: "Tu cuenta de operador está lista",
+            cuerpoMarkdown:
+                "Hola,\n\nSe creó tu cuenta de operador en Protección Infantil.\n\nUsuario: {{email}}\nContraseña temporal: {{tempPassword}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible desde tu perfil o usando \"Olvidé mi contraseña\".\n\nEsta contraseña temporal no se volverá a mostrar.",
+        },
+        {
+            clave: "usuario.bienvenida.comite.email",
+            asunto: "Tu cuenta de comité de validación está lista",
+            cuerpoMarkdown:
+                "Hola,\n\nSe creó tu cuenta de comité de validación en Protección Infantil.\n\nUsuario: {{email}}\nContraseña temporal: {{tempPassword}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible desde tu perfil o usando \"Olvidé mi contraseña\".\n\nEsta contraseña temporal no se volverá a mostrar.",
+        },
+        {
+            clave: "usuario.credenciales.padre.email",
+            asunto: "Tu cuenta en Protección Infantil",
+            cuerpoMarkdown:
+                "Hola,\n\nEl equipo de la plataforma gestionó el acceso a tu cuenta en Protección Infantil.\n\nUsuario: {{email}}\nContraseña temporal: {{tempPassword}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible.\n\nEsta contraseña temporal no se volverá a mostrar.",
+        },
+        {
+            clave: "comite.pendientes.alerta.email",
+            asunto: "Tienes {{cantidad}} casos pendientes de revisión",
+            cuerpoMarkdown:
+                "Tienes {{cantidad}} {{plural}} pendientes de revisión en el comité de validación. Ingresa para revisar:\n\n{{urlBandeja}}",
+        },
+        {
+            clave: "comite.apelaciones.plazo.email",
+            asunto: "{{cantidad}} {{plural}} {{pluralVencer}}",
+            cuerpoMarkdown:
+                "Hay {{cantidad}} {{plural}} sin resolver que se acercan al plazo de respuesta (15 días hábiles, Ley 1581):\n\n{{lineas}}\n\nRevisa la bandeja de apelaciones:\n{{urlBandeja}}",
+        },
+        {
+            clave: "reporte.revision.requerida.email",
+            asunto: "Reporte {{numeroSeguimiento}}{{prioridadTag}} requiere revisión manual",
+            cuerpoMarkdown:
+                "El reporte {{numeroSeguimiento}} ({{identificador}}) requirió revisión manual con estado {{estado}}.{{notaPrioridad}}\n\nVer en el panel de administración: {{urlPanel}}",
+        },
+        {
+            clave: "reporte.score_critico.email",
+            asunto: "Score crítico: {{identificador}}",
+            cuerpoMarkdown:
+                "El identificador {{identificador}} en {{plataforma}} alcanzó un score de {{score}} ({{nivelRiesgo}}).\n\nVer en el panel de administración: {{urlPanel}}",
+        },
+        {
+            clave: "padre.circulo_confianza.pendientes.email",
+            asunto: "Tienes {{novedadTexto}} en tu Círculo de Confianza",
+            cuerpoMarkdown:
+                "Tienes {{novedadTexto}} en tu Círculo de Confianza. Ingresa para revisar:\n\n{{urlPanel}}",
+        },
+        {
+            clave: "colegio.reporte_nuevo.email",
+            asunto: "Te avisamos: tienes un reporte nuevo para revisar",
+            cuerpoMarkdown:
+                "Hola,\n\nTe avisamos que llegó un reporte nuevo relacionado con tu colegio. Ingresa a tu panel para revisarlo:\n\n{{urlAlertas}}\n\nEste aviso no incluye datos del reporte; toda la información está en tu panel.",
+        },
+        {
+            clave: "colegio.curso.umbral.email",
+            asunto: "Te avisamos: un curso de tu colegio acumula reportes",
+            cuerpoMarkdown:
+                "Hola,\n\nTe avisamos que un curso de tu colegio acumula {{reportes}} reportes en los últimos {{dias}} días. Ingresa a tu panel para ver el panorama completo:\n\n{{urlPanel}}\n\nEste aviso no incluye nombres ni datos de los reportes; toda la información está en tu panel.",
+        },
+        {
+            clave: "colegio.estudiante.repetido.email",
+            asunto: "Te avisamos: un estudiante de tu colegio acumula reportes",
+            cuerpoMarkdown:
+                "Hola,\n\nTe avisamos que un estudiante de tu colegio acumula {{reportes}} reportes en los últimos {{dias}} días. Ingresa a tu panel para revisar el caso:\n\n{{urlAlertas}}\n\nEste aviso no incluye el nombre del estudiante ni datos de los reportes; toda la información está en tu panel.",
+        },
+        {
+            clave: "colegio.resumen_semanal.email",
+            asunto: "Tu resumen de la semana",
+            cuerpoMarkdown:
+                "Hola,\n\n{{cuerpo}}\n\nIngresa a tu panel para ver el detalle:\n\n{{urlPanel}}\n\nEste resumen solo muestra conteos; toda la información está en tu panel.",
+        },
+        {
+            clave: "colegio.alerta.pendientes.email",
+            asunto: "Tiene {{novedadTexto}} para revisar en su panel de colegio",
+            cuerpoMarkdown:
+                "Tiene {{novedadTexto}} para revisar en su panel de colegio. Ingrese y valide.\n\n{{urlAlertas}}",
+        },
+        {
+            clave: "suscriptores.reporte_publicado.email",
+            asunto: "Nuevo reporte en un identificador que sigues",
+            cuerpoMarkdown:
+                "Hola,\n\nSe registró un nuevo reporte para un identificador que sigues en {{plataforma}}.\n\nTotal de reportes registrados: {{totalReportes}}\n\nIngresa a la plataforma para consultarlo: {{urlHome}}\n\nRecibirás como máximo un email cada 24 horas por este identificador.",
+        },
+        {
+            clave: "infra.alerta.email",
+            asunto: "[PI-ALERTA] Infra: {{senal}} en rojo",
+            cuerpoMarkdown:
+                "Señal en rojo: {{senal}}\nDesde: {{inicio}}\n{{detalle}}\n\nEl sistema reintenta solo; si persiste, revisa el servidor.",
+        },
+        {
+            clave: "infra.rate_limit.email",
+            asunto: "[PI-ALERTA] Posible abuso: {{senal}}",
+            cuerpoMarkdown:
+                "Señal de posible abuso: {{senal}}\nDesde: {{inicio}}\n{{detalle}}\n\nRevisar el tablero Anti-abuso en el panel de administración.",
+        },
+        {
+            clave: "motor.deriva.alerta.email",
+            asunto: "[PI-MOTOR] Deriva del motor: {{sobreUmbral}} categorías sobre el umbral",
+            cuerpoMarkdown: "{{cuerpo}}",
+        },
+    ];
+
+    for (const p of plantillas) {
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: {
+                clave: p.clave,
+                canal: "EMAIL",
+                asunto: p.asunto,
+                cuerpoMarkdown: p.cuerpoMarkdown,
+                variablesSchema: (p.variablesSchema ?? { type: "object" }) as Prisma.InputJsonValue,
+                activa: true,
+            },
+        });
+    }
+
+    // Mapeo evento → (plantilla, rol representativo, obligatoria).
+    // El `rol` es metadata para el panel admin; el motor no filtra por él en programar().
+    // `obligatoria=true`: auth/credenciales/bienvenida/infra/deriva (no se permite opt-out).
+    const reglas: Array<{ evento: string; plantillaClave: string; rol: string; obligatoria: boolean }> = [
+        { evento: "auth.codigo_verificacion", plantillaClave: "auth.codigo_verificacion.email", rol: "PARENT", obligatoria: true },
+        { evento: "auth.password_recuperacion", plantillaClave: "auth.password_recuperacion.email", rol: "PARENT", obligatoria: true },
+        { evento: "usuario.bienvenida.operador", plantillaClave: "usuario.bienvenida.operador.email", rol: "OPERADOR", obligatoria: true },
+        { evento: "usuario.bienvenida.comite", plantillaClave: "usuario.bienvenida.comite.email", rol: "COMITE_VALIDACION", obligatoria: true },
+        { evento: "usuario.credenciales.padre", plantillaClave: "usuario.credenciales.padre.email", rol: "PARENT", obligatoria: true },
+        { evento: "comite.pendientes.alerta", plantillaClave: "comite.pendientes.alerta.email", rol: "COMITE_VALIDACION", obligatoria: false },
+        { evento: "comite.apelaciones.plazo", plantillaClave: "comite.apelaciones.plazo.email", rol: "COMITE_VALIDACION", obligatoria: false },
+        { evento: "reporte.revision.requerida", plantillaClave: "reporte.revision.requerida.email", rol: "ADMIN", obligatoria: false },
+        { evento: "reporte.score_critico", plantillaClave: "reporte.score_critico.email", rol: "ADMIN", obligatoria: false },
+        { evento: "padre.circulo_confianza.pendientes", plantillaClave: "padre.circulo_confianza.pendientes.email", rol: "PARENT", obligatoria: false },
+        { evento: "colegio.reporte_nuevo", plantillaClave: "colegio.reporte_nuevo.email", rol: "SCHOOL_ADMIN", obligatoria: false },
+        { evento: "colegio.curso.umbral", plantillaClave: "colegio.curso.umbral.email", rol: "SCHOOL_ADMIN", obligatoria: false },
+        { evento: "colegio.estudiante.repetido", plantillaClave: "colegio.estudiante.repetido.email", rol: "SCHOOL_ADMIN", obligatoria: false },
+        { evento: "colegio.resumen_semanal", plantillaClave: "colegio.resumen_semanal.email", rol: "SCHOOL_ADMIN", obligatoria: false },
+        { evento: "colegio.alerta.pendientes", plantillaClave: "colegio.alerta.pendientes.email", rol: "SCHOOL_ADMIN", obligatoria: false },
+        { evento: "suscriptores.reporte_publicado", plantillaClave: "suscriptores.reporte_publicado.email", rol: "PARENT", obligatoria: false },
+        { evento: "infra.alerta", plantillaClave: "infra.alerta.email", rol: "ADMIN", obligatoria: true },
+        { evento: "infra.rate_limit", plantillaClave: "infra.rate_limit.email", rol: "ADMIN", obligatoria: true },
+        { evento: "motor.deriva.alerta", plantillaClave: "motor.deriva.alerta.email", rol: "ADMIN", obligatoria: true },
+    ];
+
+    for (const r of reglas) {
+        await upsertNotificacionRegla({
+            evento: r.evento,
+            rol: r.rol,
+            canal: "EMAIL",
+            plantillaClave: r.plantillaClave,
+            offset: "+0m",
+            obligatoria: r.obligatoria,
+        });
+    }
+
+    console.log(`[SEED] ${plantillas.length} plantillas + ${reglas.length} reglas de email migradas listas (SPEC-296)`);
 }
 
 // ── SPEC-240 (002-PI-143): catálogo Motor Notif de la invitación de activación
@@ -1836,6 +2018,10 @@ async function main() {
 
     // SPEC-240 (002-PI-143): evento/plantilla de invitación al rector.
     await seedInvitacionColegio();
+
+    // SPEC-296 (002-PI-197 · cierra I-152): eventos + plantillas + reglas de los
+    // 19 emails migrados desde src/lib/email.ts al motor de notificaciones.
+    await seedEventosEmailMigrados();
 
     // Nuevos parámetros del módulo de reportes (fase 2)
     const reportesParams = [

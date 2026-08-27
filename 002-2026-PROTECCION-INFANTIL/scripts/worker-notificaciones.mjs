@@ -16,7 +16,8 @@
 
 import { PgBoss } from "pg-boss";
 import pg from "pg";
-import { enviarEmailNotificacion } from "../src/lib/email.ts";
+// SPEC-296 (002-PI-197): la función de envío real vive en el motor, no en email.ts.
+import { enviarEmailNotificacion } from "../src/lib/notificaciones/enviar-email.ts";
 import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
 import { NotificacionRepository } from "../src/lib/dal/repositories/notificacion.ts";

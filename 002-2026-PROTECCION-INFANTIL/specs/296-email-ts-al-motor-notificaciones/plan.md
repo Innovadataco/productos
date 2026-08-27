@@ -4,11 +4,20 @@
 
 Convertir `src/lib/email.ts` (20 funciones exportadas) en un thin wrapper del motor de notificaciones. Los 16 callsites externos no cambian. Se crean 20 eventos + 20 plantillas + 20 reglas en el seed. Se añade el ratchet grep-based al CI.
 
+## Hallazgo durante implementación
+
+`enviarEmailNotificacion(email, asunto, cuerpo)` NO puede migrarse a `programar()` porque **es el proveedor real de envío del motor**: `scripts/worker-notificaciones.mjs:149` la inyecta como `enviarEmail` en `procesarLote()`. Es la función que hace `resend.emails.send()` cuando el motor procesa un job de su cola.
+
+**Ajuste**: la función se **mueve** de `src/lib/email.ts` a `src/lib/notificaciones/enviar-email.ts` (ubicación bajo el paraguas del motor, satisface el grep ratchet). Los 3 callsites (`worker-notificaciones.mjs`, `notificaciones/admin-service.ts`, `dal/services/notificacion-admin.ts`) actualizan su import. Las otras 19 funciones sí se convierten en wrappers de `programar()`.
+
 ## Archivos que se tocan
 
 | Archivo | Cambio |
 |---|---|
-| `src/lib/email.ts` | Cada función pasa de llamar `resend.emails.send(...)` a `programar({evento, sujetoTipo?, sujetoId?, destinatarios: [{email, usuarioId?, variables}]})`. Se elimina el import de `resend` (ya no queda ninguna llamada directa). |
+| `src/lib/email.ts` | 19 funciones (todas excepto `enviarEmailNotificacion`) pasan a llamar `programar({evento, destinatarios: [{email, usuarioId?, variables}]})`. La 20ª (`enviarEmailNotificacion`) **se mueve** al motor. Se elimina el import de `Resend`. |
+| `src/lib/notificaciones/enviar-email.ts` (nuevo) | Alberga `enviarEmailNotificacion`. Único callsite legítimo de `resend.emails.send()` en la carpeta permitida. |
+| `scripts/worker-notificaciones.mjs` | Actualiza el import de `@/lib/email` a `@/lib/notificaciones/enviar-email`. |
+| `src/lib/notificaciones/admin-service.ts` + `src/lib/dal/services/notificacion-admin.ts` | Actualizan el mismo import. |
 | `prisma/seed.ts` | Nueva función `seedEventosEmailMigrados()` invocada desde `main()`. Crea idempotentemente los 20 eventos con plantilla + regla EMAIL. |
 | `.github/workflows/ci-002-proteccion-infantil.yml` | Nuevo step `Ratchet Resend fuera del motor` en el job `verificaciones` (comando grep-based). |
 | `src/lib/email.migracion.test.ts` (nuevo) | Integration test: seed + wrappers → filas en `Notificacion`. |

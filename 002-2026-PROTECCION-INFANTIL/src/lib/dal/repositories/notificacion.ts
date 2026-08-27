@@ -3,7 +3,7 @@
  * Todo acceso a la tabla vive aquí. Endpoints/servicios llaman a este repo,
  * jamás importan `@/lib/prisma` directo (frontera DAL Q-3).
  */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../prisma";
 import type { DbClient } from "../unit-of-work";
 import type { CanalNotificacion, EstadoNotificacion, Prisma } from "@prisma/client";
 
