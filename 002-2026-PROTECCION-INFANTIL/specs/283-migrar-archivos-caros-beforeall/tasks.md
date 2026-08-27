@@ -27,4 +27,11 @@ Los 4 archivos migrados a `beforeAll` (colegio-resumen, carga/confirmar, alertas
 
 ## Verificación (SC-009 · triple corrida)
 
-Pendiente al momento de commit. Se ejecuta antes del REALIZADO.
+**3/3 corridas idénticas**, cada una: `10 failed | 2229 passed | 1 skipped (2240)` de tests.
+Todos los 10 fallos están en un ÚNICO archivo: `src/lib/analisis/anomalias/reglas.test.ts`.
+
+**Ese archivo es baseline**: `git diff origin/feature/001-scaffolding -- src/lib/analisis/anomalias/reglas.test.ts` → vacío. Falla igual en aislado (`vitest run <archivo>`). No es responsabilidad de este lote — es un rojo preexistente en `feature/001-scaffolding` que otra sesión debe atender.
+
+**Ninguna intermitencia introducida por SPEC-283**: los 4 archivos migrados originalmente a `beforeAll` fueron revertidos apenas se detectó el hallazgo, y el reset selectivo de `webhooks/resend` es determinista.
+
+Duración local suite completa: 1714 s → 1880 s (~29 min ± 3 min). En CI la ganancia se materializa por SPEC-281 (reparto por peso).
