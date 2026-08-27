@@ -37,18 +37,28 @@ function baseUrl(): string {
 }
 
 export async function enviarCodigoVerificacion(email: string, codigo: string): Promise<void> {
-    await programar({
+    const result = await programar({
         evento: "auth.codigo_verificacion",
         destinatarios: [{ email, variables: { codigo } }],
     });
+    // SPEC-296: fail-closed si el motor no encuentra reglas (0 filas encoladas).
+    // BL-3 (auth): en prod la ruta cae en catch y responde 202 con emailSent=false
+    // (sin devCode); en dev/CI la misma ruta expone devCode para el journey.
+    // En prod real siempre habrá regla activa (verificado por email.migracion.test.ts).
+    if (result.programadas === 0) {
+        throw new Error("Sin reglas activas para auth.codigo_verificacion");
+    }
 }
 
 export async function enviarTokenRecuperacion(email: string, token: string): Promise<void> {
     const url = `${baseUrl()}/recuperar/${token}`;
-    await programar({
+    const result = await programar({
         evento: "auth.password_recuperacion",
         destinatarios: [{ email, variables: { url } }],
     });
+    if (result.programadas === 0) {
+        throw new Error("Sin reglas activas para auth.password_recuperacion");
+    }
 }
 
 export async function enviarEmailBienvenidaOperador(email: string, tempPassword: string): Promise<void> {
