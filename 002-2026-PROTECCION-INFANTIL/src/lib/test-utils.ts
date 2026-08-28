@@ -99,7 +99,7 @@ async function obtenerTablasDePGTables(): Promise<string[]> {
 export async function resetDatabase(tablas?: string[]): Promise<void> {
     // El aislamiento real lo proporciona test-setup.ts con un mutex en BD;
     // este reset solo limpia y re-seedea de forma atómica con TRUNCATE CASCADE.
-    if (tablas === undefined) {
+    if (!Array.isArray(tablas)) {
         await truncateAtomic(await obtenerTablasDePGTables());
     } else if (tablas.length > 0) {
         const efectivas: string[] = [];
