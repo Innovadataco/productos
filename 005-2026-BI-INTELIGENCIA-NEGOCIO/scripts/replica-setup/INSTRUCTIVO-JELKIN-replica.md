@@ -39,6 +39,16 @@ para referencia histórica · no ejecutar sin coordinar.
 
 > Pre-requisito: Fase A completa Y Fase B REALIZADO con push.
 
+**Paso 0 · Clone inicial del repo BI en VPS** (solo primera vez · si el repo no existe aún)
+
+```bash
+git clone --branch feature/bi-scaffolding git@github.com:Innovadataco/productos.git /opt/proteccion-infantil/bi-repo
+```
+
+El `.env.bi.production` creado por Fábrica en Fase A vive en:
+`/opt/proteccion-infantil/bi-repo/.env.bi.production` (permisos 600).
+Los deploy posteriores usan `git reset --hard origin/<branch>` — el `.env.bi.production` no está en git y no se sobreescribe.
+
 **Uso de `.env.bi.production`:** el archivo ya está en `/opt/proteccion-infantil/bi-repo/.env.bi.production`
 con `PI_REPLICA_USER=bi_replica` y `PI_REPLICA_PASSWORD=...` seteados por Fábrica en Fase A (2026-08-28).
 NO recrear el archivo. Fase C solo AGREGA las variables restantes al mismo archivo:
@@ -58,6 +68,35 @@ bash /opt/proteccion-infantil/bi-repo/005-2026-BI-INTELIGENCIA-NEGOCIO/scripts/d
 docker compose -f /opt/proteccion-infantil/bi-repo/005-2026-BI-INTELIGENCIA-NEGOCIO/docker-compose.bi.yml \
   ps bi-db-replica
 # Esperado: Up (healthy)
+```
+
+**Paso C-2b · Aplicar schema de pi-db en bi-db-replica (OBLIGATORIO antes de CREATE SUBSCRIPTION)**
+
+> pg_logical replica DATOS no SCHEMA. Sin este paso, `CREATE SUBSCRIPTION` falla con `relation Tenant does not exist`.
+
+```bash
+# 1. Volcar schema de pi-db (sin datos · sin permisos · sin ACL)
+docker exec $(docker compose -f /opt/proteccion-infantil/docker-compose.prod.yml ps -q pi-db) \
+  pg_dump -U proteccion -d proteccion_infantil -n public \
+  --schema-only --no-owner --no-privileges --no-acl \
+  > /tmp/pi_schema.sql
+
+# 2. Nombre del contenedor bi-db-replica (adaptar si difiere)
+BI_REPLICA=$(docker compose -f /opt/proteccion-infantil/bi-repo/005-2026-BI-INTELIGENCIA-NEGOCIO/docker-compose.bi.yml ps -q bi-db-replica)
+
+# 3. Copiar schema al contenedor réplica
+docker cp /tmp/pi_schema.sql ${BI_REPLICA}:/tmp/
+
+# 4. Instalar extensión pgvector (necesaria si schema PI la usa)
+docker exec ${BI_REPLICA} psql -U ${REPLICA_DB_USER} -d proteccion_infantil \
+  -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+# 5. Aplicar schema
+docker exec ${BI_REPLICA} psql -U ${REPLICA_DB_USER} -d proteccion_infantil \
+  -f /tmp/pi_schema.sql
+
+# 6. Limpiar
+rm /tmp/pi_schema.sql
 ```
 
 **Paso C-3:** Crear usuario bi_reader y suscripción en bi-db-replica

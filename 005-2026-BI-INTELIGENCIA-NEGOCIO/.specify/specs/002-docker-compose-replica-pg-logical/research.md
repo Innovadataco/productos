@@ -105,6 +105,19 @@ Todos los puertos expuestos en `127.0.0.1:XXXX` (solo localhost · Cloudflare Tu
 
 ---
 
+## Gaps Fase C · aprendizajes · candidatos candados informales (2026-08-28)
+
+| # | Gap | Aprendizaje |
+|---|---|---|
+| Candado 20 (candidato) | Imagen `apache/superset:4.1.0` inexistente en Docker Hub | Verificar disponibilidad antes de commit: `curl -sfL -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/<img>/tags/<v>/"` → 200=existe, 404=no existe |
+| Candado 21 (candidato) | `bi-vanna` stub no arrancaba uvicorn — 11 restart loops | Todo stub docker debe pasar smoke test: arranca · escucha puerto · responde `/health` antes de commit |
+| Candado 22 (candidato) | `curl` no existe en `python:3.12-slim` ni en `node:22-alpine` — healthchecks fallaban | No asumir binarios de imagen base en healthcheck. python-slim: usar `urllib.request`. node-alpine: usar `require('http')` |
+| Extra Next.js | Next.js standalone ignora `0.0.0.0` como host por defecto — solo escucha en `127.0.0.1` dentro del contenedor | Requiere `HOSTNAME: "0.0.0.0"` explícito en environment del servicio bi-next |
+| Extra arquitectural | `bi_reader` definido como `POSTGRES_USER` = superuser implícito — anula restricciones read-only | Fase 2: cambiar a `POSTGRES_USER=bi_admin` + crear `bi_reader` con `GRANT SELECT` en script init. Sin riesgo en Fase 1 (máquina privada) |
+| Schema + réplica | `pg_logical` replica DATOS no SCHEMA — `CREATE SUBSCRIPTION` falla con `relation Tenant does not exist` | Aplicar `pg_dump --schema-only` de pi-db en bi-db-replica ANTES de `CREATE SUBSCRIPTION` |
+
+---
+
 ## Gap Fase C · bi-vanna uvicorn no arrancaba (2026-08-28)
 
 `docker/vanna/main.py` definía FastAPI app pero no ejecutaba `uvicorn.run`. `python main.py` terminaba exit=0 sin abrir el puerto 8001 → 11 restart loops en VPS. Fix: añadir bloque `if __name__ == "__main__": uvicorn.run(app, host="0.0.0.0", port=8001)`.

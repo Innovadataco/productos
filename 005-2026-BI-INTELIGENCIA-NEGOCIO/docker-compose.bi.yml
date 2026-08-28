@@ -1,6 +1,8 @@
 services:
   bi-superset:
-    image: apache/superset:4.1.4  # última rama 4.1 · verificado Docker Hub 2026-08-28
+    build:
+      context: .
+      dockerfile: docker/superset/Dockerfile.superset
     env_file: .env.bi.production
     environment:
       SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
@@ -46,7 +48,9 @@ services:
       bi-db-replica:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request as u; u.urlopen('http://localhost:8001/health').read()"
       interval: 30s
       timeout: 10s
       retries: 5
@@ -131,6 +135,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       PI_BASE_URL: ${PI_BASE_URL}
       ENABLE_HTTPS_HEADERS: "true"
+      HOSTNAME: "0.0.0.0"
     ports:
       - "127.0.0.1:3001:3000"
     networks:
@@ -139,7 +144,9 @@ services:
       bi-vanna:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test:
+        - CMD-SHELL
+        - node -e "require('http').get('http://localhost:3000/api/health', r => process.exit(r.statusCode===200?0:1)).on('error', () => process.exit(1))"
       interval: 30s
       timeout: 10s
       retries: 5
