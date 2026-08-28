@@ -22,6 +22,11 @@ tsconfig.tsbuildinfo
 .env.bi.staging
 .env.*.local
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
 # misc
 .DS_Store
 *.log

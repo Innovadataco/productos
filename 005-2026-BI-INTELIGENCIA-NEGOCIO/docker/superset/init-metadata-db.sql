@@ -1,0 +1,3 @@
+-- Superset crea su propio schema al primer arranque.
+-- Este archivo existe para cumplir con el punto de montaje del compose.
+-- No contiene DDL: Superset inicializa su metadata DB automáticamente.

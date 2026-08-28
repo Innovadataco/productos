@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+    output: "standalone",
     async headers() {
         const enableHttpsHeaders = process.env.ENABLE_HTTPS_HEADERS === "true";
         const cspDirectives = [
