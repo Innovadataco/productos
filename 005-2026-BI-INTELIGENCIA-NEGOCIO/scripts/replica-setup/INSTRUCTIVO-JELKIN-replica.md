@@ -134,6 +134,38 @@ psql -h localhost -p 5433 -U bi_reader -d proteccion_infantil -c 'SELECT count(*
 # Criterio: counts iguales o réplica ≤ master con lag < 10s
 ```
 
+**Paso C-5b · Aplicar migraciones Prisma del catálogo BI (SPEC-007 + SPEC-009)**
+
+> El schema del catálogo BI (`bi_catalogo_*` + 5 vistas materializadas) se aplica con Prisma migrate deploy. Usa el rol `bi_admin` (variable `BI_ADMIN_DATABASE_URL` en `.env.bi.production`).
+
+```bash
+cd /opt/proteccion-infantil/bi-repo/005-2026-BI-INTELIGENCIA-NEGOCIO
+
+# 1. Crear rol bi_admin (solo primera vez)
+docker compose -f docker-compose.bi.yml exec bi-db-replica \
+  psql -U ${REPLICA_DB_USER} -d ${REPLICA_DB_NAME} \
+  -c "CREATE USER bi_admin WITH PASSWORD '${BI_ADMIN_PASSWORD}';"
+
+docker compose -f docker-compose.bi.yml exec bi-db-replica \
+  psql -U ${REPLICA_DB_USER} -d ${REPLICA_DB_NAME} <<'SQL'
+GRANT USAGE ON SCHEMA public TO bi_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO bi_admin;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bi_admin;
+SQL
+
+# 2. Aplicar migraciones desde el host (con DATABASE_URL apuntando a bi-db-replica)
+export DATABASE_URL="$(grep '^BI_ADMIN_DATABASE_URL=' .env.bi.production | sed 's/^BI_ADMIN_DATABASE_URL=//')"
+npx prisma migrate deploy
+
+# 3. Seed idempotente del catálogo (SPEC-008)
+npx prisma db seed
+```
+
+Esperado:
+- `20260828120000_schema_catalogo_bi_inicial` aplicada · 6 tablas `bi_catalogo_*`
+- `20260828120100_mv_fact_bi` aplicada · 5 vistas materializadas
+- Seed: 15 tablas, 81 columnas, 15 métricas, 30 ejemplos
+
 **Paso C-6: TEST 8 · INSERT rechazado** ⚠️ REGLA DE ABORTO (pegar output en `cierre.md`)
 
 ```bash

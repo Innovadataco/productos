@@ -125,6 +125,30 @@ services:
       retries: 10
     restart: unless-stopped
 
+  bi-mv-refresh:
+    build:
+      context: .
+      dockerfile: docker/mv-refresh/Dockerfile.mv-refresh
+    env_file: .env.bi.production
+    environment:
+      PGHOST: bi-db-replica
+      PGUSER: ${REPLICA_DB_USER}
+      PGPASSWORD: ${REPLICA_DB_PASSWORD}
+      PGDATABASE: ${REPLICA_DB_NAME}
+    volumes:
+      - ./scripts/refresh-mv.sh:/usr/local/bin/refresh-mv.sh:ro
+    networks:
+      - bi-net
+    depends_on:
+      bi-db-replica:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pgrep", "crond"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
   bi-next:
     build:
       context: .

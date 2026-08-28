@@ -12,6 +12,8 @@
 | `SUPERSET_ADMIN_PASSWORD` | Contraseña del usuario admin del panel Superset | compose: bi-superset (init) |
 | `REPLICA_DB_PASSWORD` | Contraseña del usuario `bi_reader` en bi-db-replica | compose: bi-db-replica · bi-vanna |
 | `PI_REPLICA_PASSWORD` | Contraseña del usuario `bi_replica` en pi-db (rol de replicación) | SQL: `01-pi-db-crear-usuario-replica.sql` · Jelkin ejecuta |
+| `BI_ADMIN_DATABASE_URL` | URL completa de conexión de `bi_admin` (write en `bi_catalogo_*` · SPEC-007) | Prisma migrate/seed · `scripts/catalogo-cli.mjs` |
+| `BI_ADMIN_PASSWORD` | Contraseña del usuario `bi_admin` en `bi-db-replica` (SPEC-007) | INSTRUCTIVO Paso C-5b · CREATE USER bi_admin |
 | `TELEGRAM_BOT_TOKEN` | Token del bot de Telegram (generado por @BotFather) | compose: bi-telegram |
 | `TELEGRAM_AUTHORIZED_CHATS` | IDs de chats autorizados (chat_id de Jelkin) | compose: bi-telegram |
 

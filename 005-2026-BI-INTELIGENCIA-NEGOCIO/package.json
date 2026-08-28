@@ -11,7 +11,11 @@
     "test:unit": "node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run tests/unit",
     "ratchets:check": "bash scripts/ratchets/run-all.sh"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed-catalogo.ts"
+  },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "jose": "^6.0.10",
     "next": "16.2.10",
     "react": "19.2.4",
@@ -29,6 +33,7 @@
     "eslint-config-next": "16.2.10",
     "jsdom": "^26.1.0",
     "postcss": "^8.5.6",
+    "prisma": "^6.19.3",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3"
