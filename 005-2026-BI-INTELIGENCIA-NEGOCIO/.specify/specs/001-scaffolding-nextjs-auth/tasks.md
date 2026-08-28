@@ -1,4 +1,7 @@
-# SPEC-001 · tasks
+# SPEC-001 · tasks.md
+
+> Estado real: todas las tareas completadas en commit `23c5100e`.
+> Paso 15 corregido de `[ ]` a `[x]` · cierra I-07 (inconsistencia documental).
 
 - [x] Paso 1 · package.json + tsconfig + postcss + tailwind + vitest + next.config
 - [x] Paso 2 · globals.css copiado de PI
@@ -14,4 +17,10 @@
 - [x] Paso 12 · Gate local: typecheck OK · tests 6/6 · build OK · ratchets OK
 - [x] Paso 13 · Verificación en vivo: /api/health 200 · / 200 · /login 307 a PI
 - [x] Paso 14 · cierre.md + tasks.md + .gitignore
-- [ ] Paso 15 · Push único a origin feature/bi-scaffolding
+- [x] Paso 15 · Push único a origin feature/bi-scaffolding (`23c5100e`)
+
+---
+
+## Nota I-07 (corregida aquí)
+
+El `tasks.md` original tenía el Paso 15 sin marcar `[ ]` aunque el código estaba commiteado y pusheado en `23c5100e`. Era inconsistencia documental. Corregido en SPEC-005 (reescritura post-mortem). Ver `research.md` de esta SPEC para el detalle.
