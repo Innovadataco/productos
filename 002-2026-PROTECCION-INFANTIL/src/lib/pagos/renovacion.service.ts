@@ -271,7 +271,7 @@ export async function registrarRenovacion(input: RenovacionInput): Promise<Renov
     return {
         pagoId: pago.id,
         estado: pago.estado,
-        montoNetoUSD: montoNeto,
+        montoNetoUSD: montoNetoParaPago,
         montoLocalPagado,
         monedaLocal: suscripcion.monedaLocal,
         comprobanteHashSha256: guardado.hashSha256,

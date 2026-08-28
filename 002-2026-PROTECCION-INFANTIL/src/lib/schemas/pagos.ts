@@ -62,6 +62,18 @@ export const pagosPlanUpdateSchema = z.object({
 }).refine(
     (data) => Object.keys(data).length > 0,
     { message: "Debe enviar al menos un campo para actualizar", path: ["root"] }
+).refine(
+    (data) => {
+        if (data.esFreemium !== undefined && data.precioBaseCOP !== undefined) {
+            if (data.esFreemium && data.precioBaseCOP > 0) return false;
+            if (!data.esFreemium && data.precioBaseCOP === 0) return false;
+        }
+        return true;
+    },
+    {
+        message: "Plan freemium requiere precio 0 · plan pago requiere precio > 0",
+        path: ["precioBaseCOP"],
+    }
 );
 
 const DURACIONES_PLAN = ["MES_1", "MES_2", "MES_3", "MES_6", "MES_12"] as const;

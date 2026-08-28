@@ -183,6 +183,16 @@ describe("pagosPlanUpdateSchema", () => {
     it("rechaza payload vacío", () => {
         expect(() => pagosPlanUpdateSchema.parse({})).toThrow();
     });
+
+    it("rechaza esFreemium=true con precioBaseCOP > 0 juntos", () => {
+        const r = pagosPlanUpdateSchema.safeParse({ esFreemium: true, precioBaseCOP: 500_000 });
+        expect(r.success).toBe(false);
+    });
+
+    it("rechaza esFreemium=false con precioBaseCOP === 0 juntos", () => {
+        const r = pagosPlanUpdateSchema.safeParse({ esFreemium: false, precioBaseCOP: 0 });
+        expect(r.success).toBe(false);
+    });
 });
 
 describe("pagosReembolsoBodySchema", () => {
