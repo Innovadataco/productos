@@ -47,7 +47,25 @@ export function tieneMetricasCompletas(metricasJson: unknown): boolean {
 export async function actualizarProgresoYEstado(runId: string): Promise<{ progreso: number; estado: string }> {
     const run = await prisma.simulacionRun.findUnique({ where: { id: runId } });
     if (!run) throw new Error(`Run ${runId} no encontrado`);
-    if (["COMPLETADA", "FALLIDA", "CANCELADA"].includes(run.estado)) {
+    if (["COMPLETADA", "CANCELADA"].includes(run.estado)) {
+        return { progreso: run.progreso, estado: run.estado };
+    }
+
+    if (run.estado === "FALLIDA") {
+        const progreso = await calcularProgresoSimulacion(runId);
+        const casosFallidos = leerCasosFallidos(run.metricasJson);
+        const totalEfectivo = Math.max(0, run.totalCasos - casosFallidos);
+        if (totalEfectivo > 0 && progreso >= totalEfectivo) {
+            await prisma.simulacionRun.update({
+                where: { id: runId },
+                data: { progreso, estado: "COMPLETADA", fechaFin: new Date() },
+            });
+            await refrescarMetricasSimulacion(runId);
+            logger.info(
+                `[SIMULACION] Run ${runId} rescatada de FALLIDA a COMPLETADA (${progreso}/${totalEfectivo}).`
+            );
+            return { progreso, estado: "COMPLETADA" };
+        }
         return { progreso: run.progreso, estado: run.estado };
     }
 
