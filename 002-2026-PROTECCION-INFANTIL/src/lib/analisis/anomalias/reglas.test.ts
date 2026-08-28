@@ -59,8 +59,8 @@ async function suscripcionPuntual(planId: string, fechaFin: Date) {
 }
 
 describe("regla PAGO_ATRASADO_CLIENTE_HISTORICAMENTE_PUNTUAL", () => {
-    beforeEach(resetDatabase);
-    afterEach(resetDatabase);
+    beforeEach(() => resetDatabase());
+    afterEach(() => resetDatabase());
 
     it("a favor: mora de 16 días con 2 pagos puntuales → candidato MEDIA", async () => {
         const admin = await crearAdmin();
@@ -126,8 +126,8 @@ describe("regla PAGO_ATRASADO_CLIENTE_HISTORICAMENTE_PUNTUAL", () => {
 });
 
 describe("regla CRECIMIENTO_ANOMALO_CIUDAD", () => {
-    beforeEach(resetDatabase);
-    afterEach(resetDatabase);
+    beforeEach(() => resetDatabase());
+    afterEach(() => resetDatabase());
 
     it("a favor: altas 3 → 4 (+33%) en la misma ciudad → candidato BAJA", async () => {
         const admin = await crearAdmin();
@@ -178,8 +178,8 @@ describe("regla CRECIMIENTO_ANOMALO_CIUDAD", () => {
 });
 
 describe("regla USO_CAIDO_ABRUPTO", () => {
-    beforeEach(resetDatabase);
-    afterEach(resetDatabase);
+    beforeEach(() => resetDatabase());
+    afterEach(() => resetDatabase());
 
     it("a favor: sesiones 10 → 4 (-60%) → candidato MEDIA", async () => {
         const { colegio, admin, tenant } = await crearColegioConAdmin();
@@ -214,8 +214,8 @@ describe("regla USO_CAIDO_ABRUPTO", () => {
 });
 
 describe("regla CANCELACION_COLEGIO_GRANDE", () => {
-    beforeEach(resetDatabase);
-    afterEach(resetDatabase);
+    beforeEach(() => resetDatabase());
+    afterEach(() => resetDatabase());
 
     it("a favor: colegio con más reportes que el umbral cancela en 24h → ALTA", async () => {
         const admin = await crearAdmin();
@@ -265,8 +265,8 @@ describe("regla CANCELACION_COLEGIO_GRANDE", () => {
 });
 
 describe("regla CAIDA_RECAUDO_CIUDAD", () => {
-    beforeEach(resetDatabase);
-    afterEach(resetDatabase);
+    beforeEach(() => resetDatabase());
+    afterEach(() => resetDatabase());
 
     it("a favor: recaudo 1000 → 500 USD (-50%) → candidato ALTA", async () => {
         const admin = await crearAdmin();
@@ -321,8 +321,8 @@ describe("regla CAIDA_RECAUDO_CIUDAD", () => {
 });
 
 describe("regla CANCELACIONES_MASIVAS_24H", () => {
-    beforeEach(resetDatabase);
-    afterEach(resetDatabase);
+    beforeEach(() => resetDatabase());
+    afterEach(() => resetDatabase());
 
     it("a favor: 6 cancelaciones en 24h (umbral 5) → 1 candidato ALTA global", async () => {
         const admin = await crearAdmin();
