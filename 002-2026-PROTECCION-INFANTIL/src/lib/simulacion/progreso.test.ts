@@ -169,6 +169,69 @@ describe("progreso.ts — actualizarProgresoYEstado", () => {
 
         expect(result.estado).toBe("PENDIENTE");
     });
+
+    it("I-161 rescata FALLIDA a COMPLETADA cuando progreso alcanza totalEfectivo", async () => {
+        // 1ª lectura: FALLIDA con progreso previo desactualizado; los reportes ya terminaron.
+        // 2ª lectura (refrescarMetricasSimulacion): ya COMPLETADA para permitir recalcular métricas.
+        mockRunFindUnique
+            .mockResolvedValueOnce(
+                runBase({
+                    estado: "FALLIDA",
+                    totalCasos: 3,
+                    progreso: 1,
+                    metricasJson: { casosFallidos: 0 },
+                })
+            )
+            .mockResolvedValue(
+                runBase({
+                    estado: "COMPLETADA",
+                    totalCasos: 3,
+                    progreso: 3,
+                    metricasJson: { casosFallidos: 0 },
+                })
+            );
+        mockVinculosYReportes(["CLASIFICADO", "CLASIFICADO", "CLASIFICADO"]);
+
+        const result = await actualizarProgresoYEstado("run-1");
+
+        expect(result.estado).toBe("COMPLETADA");
+        expect(result.progreso).toBe(3);
+        const rescate = mockRunUpdate.mock.calls.find(
+            (c) => c[0]?.data?.estado === "COMPLETADA" && c[0]?.data?.fechaFin instanceof Date
+        );
+        expect(rescate).toBeTruthy();
+    });
+
+    it("I-161 no rescata FALLIDA si el progreso real no alcanza totalEfectivo", async () => {
+        mockRunFindUnique.mockResolvedValue(
+            runBase({
+                estado: "FALLIDA",
+                totalCasos: 3,
+                progreso: 1,
+                metricasJson: { casosFallidos: 0 },
+            })
+        );
+        mockVinculosYReportes(["CLASIFICADO", "PENDIENTE", "PENDIENTE"]);
+
+        const result = await actualizarProgresoYEstado("run-1");
+
+        expect(result.estado).toBe("FALLIDA");
+        expect(result.progreso).toBe(1);
+        expect(mockRunUpdate).not.toHaveBeenCalled();
+    });
+
+    it("I-161 CANCELADA intacta: no relee vínculos ni escribe en BD", async () => {
+        mockRunFindUnique.mockResolvedValue(
+            runBase({ estado: "CANCELADA", progreso: 2, totalCasos: 3 })
+        );
+
+        const result = await actualizarProgresoYEstado("run-1");
+
+        expect(result).toEqual({ progreso: 2, estado: "CANCELADA" });
+        expect(mockRunUpdate).not.toHaveBeenCalled();
+        expect(mockSimRepFindMany).not.toHaveBeenCalled();
+        expect(mockReporteFindMany).not.toHaveBeenCalled();
+    });
 });
 
 describe("progreso.ts — tieneMetricasCompletas", () => {

@@ -1,7 +1,7 @@
 import { getParametroSistema } from "../parametros";
 import { MODELO_EMBEDDING_DEFAULT } from "./defaults";
 
-const FALLBACK_OLLAMA_BASE_URL = "http://localhost:11434";
+const FALLBACK_OLLAMA_BASE_URL = "http://localhost:11435";
 
 /**
  * E-6: validación fail-fast de la URL base de Ollama. Antes una URL malformada
