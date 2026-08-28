@@ -35,7 +35,7 @@
 ## Scripts réplica pg_logical (referencia · Jelkin ejecuta)
 
 - [ ] T-21 · Escribir `scripts/replica-setup/01-pi-db-crear-usuario-replica.sql` (CREATE USER bi_replica · GRANT SELECT · placeholder `<password>`)
-- [ ] T-22 · Escribir `scripts/replica-setup/02-pi-db-publicacion.sql` (CREATE PUBLICATION bi_replica · 14 tablas OPERATIVAS · sin Usuario/Password/Session)
+- [ ] T-22 · Escribir `scripts/replica-setup/02-pi-db-publicacion.sql` (CREATE PUBLICATION bi_replica · 23 tablas OPERATIVAS verificadas en schema PI · sin Usuario/Password/Session)
 - [ ] T-23 · Escribir `scripts/replica-setup/03-bi-db-replica-suscripcion.sql` (CREATE SUBSCRIPTION · placeholder `<password>`)
 - [ ] T-24 · Escribir `scripts/replica-setup/04-verificar-replica.sql` (SELECT pg_stat_subscription + Tests 7 y 8 como comentarios guía)
 - [ ] T-25 · Escribir `scripts/replica-setup/INSTRUCTIVO-JELKIN-replica.md` (orden exacto · sin valores de contraseñas)

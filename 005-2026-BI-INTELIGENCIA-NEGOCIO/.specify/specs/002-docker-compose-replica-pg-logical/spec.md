@@ -53,18 +53,20 @@ scripts/replica-setup/
   INSTRUCTIVO-JELKIN-replica.md         ← orden de pasos · sin valores de contraseñas
 ```
 
-### Tablas incluidas en la publicación (D-20 · sin PII)
+### Tablas incluidas en la publicación (D-20 · sin PII · 23 tablas · verificadas en schema PI)
 
 ```sql
 CREATE PUBLICATION bi_replica FOR TABLE
-  "Reporte", "ClasificacionIA", "EmbeddingReporte",
-  "Expediente", "EventoExpediente",
-  "Notificacion", "Suscripcion", "Pago", "Bono",
-  "Colegio", "Comuna", "Ciudad",
-  "clasificacion_rubrica_votos", "AuditLog";
+  "Reporte", "ClasificacionIA", "ClasificacionRubricaVoto", "CorreccionAdmin",
+  "EmbeddingReporte", "TransicionReporte", "SolicitudComite", "FuenteReporte",
+  "Subscription", "BillingCycle", "Plan", "Tenant",
+  "Colegio", "Curso", "Alumno", "IdentificadorAlumno",
+  "AlertaColegio", "AlertaSuscripcion", "Plataforma",
+  "Pais", "Departamento", "Ciudad", "AuditLog";
 ```
 
 **Excluidas explícitamente:** `Usuario` · `Password` · `Session` (PII · Ley 1581 · D-20).
+**Nota ajuste:** lista v1 (BRIEF-A-01) tenía 14 tablas con nombres inexistentes en schema PI. Corregido en ajuste spec+plan 2026-08-28 tras verificación con `grep "^model" schema.prisma` (candado 15).
 
 ### Otros entregables
 

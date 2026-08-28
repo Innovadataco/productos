@@ -22,11 +22,14 @@
 - `Password` — hash de contraseña
 - `Session` — tokens de sesión activos
 
-**Tablas INCLUIDAS (14 · solo operativas):**
+**Tablas INCLUIDAS (23 · solo operativas · verificadas en schema PI 2026-08-28):**
 ```
-Reporte · ClasificacionIA · EmbeddingReporte · Expediente · EventoExpediente ·
-Notificacion · Suscripcion · Pago · Bono · Colegio · Comuna · Ciudad ·
-clasificacion_rubrica_votos · AuditLog
+Reporte · ClasificacionIA · ClasificacionRubricaVoto · CorreccionAdmin ·
+EmbeddingReporte · TransicionReporte · SolicitudComite · FuenteReporte ·
+Subscription · BillingCycle · Plan · Tenant ·
+Colegio · Curso · Alumno · IdentificadorAlumno ·
+AlertaColegio · AlertaSuscripcion · Plataforma ·
+Pais · Departamento · Ciudad · AuditLog
 ```
 
 **Razón legal:** Ley 1581 de 2012 (Colombia) · datos personales de menores requieren protección especial. El BI solo necesita datos operativos (cuántos reportes, qué categorías, qué colegios) no datos de identidad.
@@ -68,6 +71,27 @@ Todos los puertos expuestos en `127.0.0.1:XXXX` (solo localhost · Cloudflare Tu
 | Auth propio BI | Independencia total | Segundo login · gestión de usuarios separada · sobredimensionado para Fase 1 interno (2 usuarios) |
 
 **Conclusión:** JWT compartido con PI es lo correcto para Fase 1. Jelkin y Fábrica ya tienen sesión PI. En Fase 2 (módulos comerciales en PI) el JWT ya viene integrado naturalmente.
+
+---
+
+## Ajuste spec+plan · tablas PUBLICATION corregidas (2026-08-28)
+
+**Detectado en:** bi-dev-2 lectura INSTRUCTIVO-002 v2 vs schema PI (`grep "^model" schema.prisma`).
+
+**Gap:** spec.md v1 (escrita en SPEC-005 D3 sin verificar schema) tenía 14 tablas copiadas del BRIEF-A-01 v1:
+`"Expediente"`, `"EventoExpediente"`, `"Notificacion"`, `"Suscripcion"`, `"Pago"`, `"Bono"`, `"Comuna"`, `"clasificacion_rubrica_votos"` — NINGUNA existe en el schema real de PI. Habrían causado error SQL en runtime.
+
+**Corrección:** 23 tablas verificadas con `grep "^model" productos/002-2026-PROTECCION-INFANTIL/prisma/schema.prisma`. Todas existen ✅. Lista actualizada en spec.md y tasks.md (T-22).
+
+**Resolución:** Candado 17 modificado → ajuste spec+plan commiteado y pusheado ANTES de implementar.
+
+---
+
+## Gap operativo · PI_NET_NAME no verificable en local (2026-08-28)
+
+**Situación:** El docker-compose.yml de PI (dev) no define red nombrada explícita. La red de producción en el VPS es desconocida sin SSH. El INSTRUCTIVO-002 v2 indica que el nombre típico es `proteccion-infantil_pi-net` pero ordena verificar con `docker network ls | grep -i pi` en el VPS.
+
+**Acción:** `.env.bi.example` usará placeholder `PI_NET_NAME=VERIFICAR_CON_DOCKER_NETWORK_LS_EN_VPS`. Jelkin verifica y completa en `.env.bi.production` en VPS. Placeholder anotado en `INVENTARIO-DE-SECRETOS.md`.
 
 ---
 
