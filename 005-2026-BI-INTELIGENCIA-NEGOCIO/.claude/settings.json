@@ -1,0 +1,57 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(prisma migrate reset:*)",
+      "Bash(npx prisma migrate reset:*)",
+      "Bash(pnpm prisma migrate reset:*)",
+      "Bash(yarn prisma migrate reset:*)",
+      "Bash(rm -rf ~:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ../:*)",
+      "Bash(DROP DATABASE:*)",
+      "Bash(TRUNCATE:*)",
+      "Bash(./scripts/deploy-bi-prod.sh:*)",
+      "Bash(./scripts/deploy-prod.sh:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push origin main --force:*)",
+      "Bash(git reset --hard origin:*)",
+      "Bash(git branch -D main:*)",
+      "Bash(git branch -D feature/bi-scaffolding:*)",
+      "Bash(psql .* -c \"DROP:*)",
+      "Bash(psql .* -c \"DELETE FROM:*)",
+      "Bash(psql .* -c \"TRUNCATE:*)",
+      "Bash(psql .* -c \"UPDATE:*)"
+    ],
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push origin feature/bi-scaffolding:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx prisma migrate deploy:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker compose:*)",
+      "Bash(rm -rf .next:*)",
+      "Bash(rm -rf node_modules:*)",
+      "Bash(rm -rf dist:*)",
+      "Bash(psql .* -c \"SELECT:*)",
+      "Bash(psql .* -c \"\\\\d:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh run:*)",
+      "Bash(gh workflow:*)"
+    ]
+  },
+  "comment": [
+    "Reglas duras de agente IA para el repo 005-2026-BI-INTELIGENCIA-NEGOCIO",
+    "Origen: aprendizajes de PI (I-50 casi-catástrofe prisma migrate reset, I-109 dos IA mismo clone).",
+    "deny: cualquier operación destructiva sobre BD, ramas, deploys - Jelkin ejecuta manualmente.",
+    "allow: operaciones cotidianas seguras de lectura/escritura local + git commits + prisma no-destructivo.",
+    "Modificable solo con aprobación explícita del CEO + Jelkin y registro en 05-DECISIONES.md del proyecto BI."
+  ]
+}
