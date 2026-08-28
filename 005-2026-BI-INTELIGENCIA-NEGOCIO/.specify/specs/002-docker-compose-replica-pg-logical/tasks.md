@@ -61,7 +61,7 @@
   psql -h pi-db      -U proteccion -d proteccion_infantil -c 'SELECT count(*) FROM "Reporte";'
   psql -h localhost -p 5433 -U bi_reader -d proteccion_infantil -c 'SELECT count(*) FROM "Reporte";'
   # → ambos counts iguales o réplica ≤ master · lag < 10s
-  # Repetir para "Colegio" y "Suscripcion"
+  # Repetir para "Colegio" y "Subscription"
   # INSERT en master → esperar 10s → verificar que aparece en réplica
   ```
 

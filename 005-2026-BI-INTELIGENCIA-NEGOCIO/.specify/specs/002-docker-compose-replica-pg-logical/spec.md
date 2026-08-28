@@ -68,6 +68,24 @@ CREATE PUBLICATION bi_replica FOR TABLE
 **Excluidas explícitamente:** `Usuario` · `Password` · `Session` (PII · Ley 1581 · D-20).
 **Nota ajuste:** lista v1 (BRIEF-A-01) tenía 14 tablas con nombres inexistentes en schema PI. Corregido en ajuste spec+plan 2026-08-28 tras verificación con `grep "^model" schema.prisma` (candado 15).
 
+### Hallazgo Fase A · @@map en schema PI
+
+Durante ejecución de Fase A (2026-08-28) se detectó que `grep "^model" schema.prisma`
+no revela el nombre real en BD cuando el modelo Prisma tiene `@@map(...)`. En el schema PI
+hay 3 modelos con esta anotación:
+
+| Modelo Prisma | Nombre real BD |
+|---|---|
+| `ClasificacionRubricaVoto` | `clasificacion_rubrica_votos` |
+| `SimulacionRun` | `simulacion_runs` |
+| `SimulacionReporte` | `simulacion_reportes` |
+
+Solo el primero afecta la PUBLICATION D-20 · corregido en 02-pi-db-publicacion.sql.
+
+**Regla dura actualizada (candado 15 profundo):**
+verificación en fuente = `grep '^model'` **más** `grep '@@map'` **más** cross-check
+`psql -c '\dt'` cuando corresponda.
+
 ### Otros entregables
 
 - `INVENTARIO-DE-SECRETOS.md` en raíz del repo BI (lista nombres · sin valores)
@@ -91,7 +109,7 @@ CREATE PUBLICATION bi_replica FOR TABLE
 ```bash
 psql -h pi-db -U proteccion -d proteccion_infantil -c 'SELECT count(*) FROM "Reporte";'
 psql -h localhost -p 5433 -U bi_reader -d proteccion_infantil -c 'SELECT count(*) FROM "Reporte";'
-# → ambos counts iguales (lag < 10s). Repetir para "Colegio" y "Suscripcion".
+# → ambos counts iguales (lag < 10s). Repetir para "Colegio" y "Subscription".
 # → INSERT en master → esperar 10s → verificar en réplica
 ```
 

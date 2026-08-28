@@ -8,74 +8,43 @@
 
 ## Resumen de fases
 
-| Fase | Quién | Dónde | Duración |
+| Fase | Quién | Dónde | Estado |
 |---|---|---|---|
-| **Fase A** · Habilitar wal_level=logical | Jelkin | pi-db (VPS) | ~60 seg downtime |
-| **Fase B** · Código BI | BI-DEV-2 | Mac / GitHub | 2 días |
-| **Fase C** · Deploy + replica + tests | Jelkin | VPS | ~30 min |
+| **Fase A** · Habilitar wal_level=logical | Fábrica BI-2 | pi-db (VPS) | ✅ COMPLETADA 2026-08-28 |
+| **Fase B** · Código BI | BI-DEV-2 | Mac / GitHub | ⏳ en progreso |
+| **Fase C** · Deploy + replica + tests | Jelkin | VPS | ⏳ espera Fase B |
 
-Fase A y Fase B corren EN PARALELO. Fase C requiere ambas completas.
+Fase A ✅ COMPLETA. Fase C requiere Fase B REALIZADO.
 
 ---
 
-## FASE A · Habilitar replicación lógica en pi-db (~60 seg downtime)
+## Fase A · ✅ COMPLETADA POR FÁBRICA BI-2 · 2026-08-28
 
-> Madrugada recomendada (bajo tráfico). Avisa a Fábrica antes de ejecutar.
+**NO RE-EJECUTAR.** Fábrica BI-2 completó Fase A en vivo con Jelkin el 2026-08-28:
+- `wal_level=logical` activo en pi-db (verificado con `SHOW wal_level`)
+- Usuario `bi_replica` creado con REPLICATION + SELECT ALL + DEFAULT PRIVILEGES
+- PUBLICATION `bi_replica` creada con 23 tablas D-20 (nombre `clasificacion_rubrica_votos` con @@map corregido)
+- Password de `bi_replica` guardado en `/opt/proteccion-infantil/bi-repo/.env.bi.production`
+  (permisos 600 · variable `PI_REPLICA_PASSWORD`)
+- Downtime real: ~2-3 seg (mucho menor a los 60 seg estimados)
+- Evidencia: REPORTE-017 en `06-COMUNICACIONES/REPORTES-A-CEO/`
 
-**Paso A-1:** Modificar `postgresql.conf` de pi-db
-
-```bash
-# En VPS, con acceso al contenedor pi-db
-docker compose -f /opt/proteccion-infantil/docker-compose.prod.yml exec pi-db bash -c "
-  echo 'wal_level = logical' >> /var/lib/postgresql/data/postgresql.conf
-  echo 'max_replication_slots = 10' >> /var/lib/postgresql/data/postgresql.conf
-  echo 'max_wal_senders = 10' >> /var/lib/postgresql/data/postgresql.conf
-"
-```
-
-**Paso A-2:** Reiniciar pi-db (~60 seg downtime)
-
-```bash
-docker compose -f /opt/proteccion-infantil/docker-compose.prod.yml restart pi-db
-```
-
-**Paso A-3:** Verificar WAL level
-
-```bash
-docker compose -f /opt/proteccion-infantil/docker-compose.prod.yml exec -T pi-db \
-  psql -U proteccion -d proteccion_infantil -c "SHOW wal_level;"
-# Esperado: logical
-```
-
-**Paso A-4:** Crear usuario bi_replica (reemplazar `<password_bi_replica>` con el valor del gestor de contraseñas)
-
-```bash
-docker compose -f /opt/proteccion-infantil/docker-compose.prod.yml exec -T pi-db \
-  psql -U proteccion -d proteccion_infantil \
-  -f /opt/proteccion-infantil/bi-repo/005-2026-BI-INTELIGENCIA-NEGOCIO/scripts/replica-setup/01-pi-db-crear-usuario-replica.sql
-```
-
-> Editar el SQL antes de ejecutar: reemplazar `<password_bi_replica>`.
-
-**Paso A-5:** Crear publicación de 23 tablas operativas
-
-```bash
-docker compose -f /opt/proteccion-infantil/docker-compose.prod.yml exec -T pi-db \
-  psql -U proteccion -d proteccion_infantil \
-  -f /opt/proteccion-infantil/bi-repo/005-2026-BI-INTELIGENCIA-NEGOCIO/scripts/replica-setup/02-pi-db-publicacion.sql
-```
-
-**Paso A-6:** Señal a Fábrica BI-2 vía Jelkin
-
-```
-jelkin: Fase A completa · wal_level=logical + bi_replica user + PUBLICATION bi_replica · listo para Fase C
-```
+**Si por alguna razón hay que re-ejecutar Fase A (rollback · migración · siniestro):**
+consultar con Fábrica BI-2 antes · los pasos originales están en el REPORTE-017 §2
+para referencia histórica · no ejecutar sin coordinar.
 
 ---
 
 ## FASE C · Deploy + réplica + Tests 7 y 8
 
 > Pre-requisito: Fase A completa Y Fase B REALIZADO con push.
+
+**Uso de `.env.bi.production`:** el archivo ya está en `/opt/proteccion-infantil/bi-repo/.env.bi.production`
+con `PI_REPLICA_USER=bi_replica` y `PI_REPLICA_PASSWORD=...` seteados por Fábrica en Fase A (2026-08-28).
+NO recrear el archivo. Fase C solo AGREGA las variables restantes al mismo archivo:
+JWT_SECRET · SUPERSET_DB_PASSWORD · SUPERSET_SECRET_KEY · SUPERSET_ADMIN_PASSWORD ·
+REPLICA_DB_PASSWORD (bi_reader) · TELEGRAM_BOT_TOKEN · TELEGRAM_AUTHORIZED_CHATS.
+Usar `>>` (append), no `>` (overwrite).
 
 **Paso C-1:** Deploy del stack BI
 

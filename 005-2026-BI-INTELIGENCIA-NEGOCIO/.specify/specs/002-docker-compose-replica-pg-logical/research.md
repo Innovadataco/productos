@@ -105,6 +105,43 @@ Todos los puertos expuestos en `127.0.0.1:XXXX` (solo localhost · Cloudflare Tu
 
 ---
 
+## Hallazgo Fase A · candado 15 profundo (@@map)
+
+| Modelo Prisma | Nombre real BD |
+|---|---|
+| `ClasificacionRubricaVoto` | `clasificacion_rubrica_votos` |
+| `SimulacionRun` | `simulacion_runs` |
+| `SimulacionReporte` | `simulacion_reportes` |
+
+**Qué falló:** `grep "^model" schema.prisma` devuelve el nombre del modelo Prisma, no el nombre real de la tabla en BD cuando existe `@@map(...)`. El nombre del modelo se usó directamente en la PUBLICATION SQL con comillas dobles (`"ClasificacionRubricaVoto"`), que es incorrecto.
+
+**Cómo se detectó:** Fábrica BI-2 ejecutó Fase A en VPS y `CREATE PUBLICATION ... "ClasificacionRubricaVoto"` falló con `ERROR: relation "ClasificacionRubricaVoto" does not exist` en pi-db producción.
+
+**Corrección aplicada:** Fábrica corrigió en vivo con `clasificacion_rubrica_votos` sin comillas (snake_case · Postgres lo trata como identificador lowercase). SQL actualizado en 02-pi-db-publicacion.sql.
+
+**Regla dura (candado 15 profundo):** verificar con `grep '^model'` **más** `grep '@@map'` **más** cross-check `psql -c '\dt'` cuando corresponda.
+
+---
+
+## Hallazgo Fase A · candidato candado 19 · secretos aleatorios sin stdout
+
+Durante Fase A se expusieron 2 secretos en el chat (POSTGRES_PASSWORD de pi-db y
+un password aleatorio v1 de bi_replica). El patrón corregido, propuesto como
+candado 19 informal:
+
+```bash
+umask 077
+openssl rand -base64 32 > ~/.tmp_secret
+chmod 600 ~/.tmp_secret
+# consumir en el mismo comando · nunca imprimir a pantalla:
+PASS=$(cat ~/.tmp_secret) && [comando que usa $PASS] && unset PASS
+shred -u ~/.tmp_secret
+```
+
+CEO decide formalización en CONSTITUTION.md v1.1 tras SPEC-002 CUMPLE.
+
+---
+
 ## 📋 Control
 
 | Campo | Valor |
