@@ -93,6 +93,7 @@
 | [089](089-presentacion-usuario/spec.md) | Presentación al usuario: estados, categorías y consulta pública | 🟢 Finalizada (pendiente ACTA) |
 | [090](090-clasificacion-rubrica-multimodelo/spec.md) | Clasificación por rúbrica multi-etiqueta + multi-modelo | 🟢 Finalizada (pendiente ACTA) |
 | [091](091-ux-privacidad-consulta-seguimiento/spec.md) | UX y privacidad de la consulta + seguimiento | 🟢 Finalizada (pendiente ACTA) |
+| [092](092-fix-panel-admin-ia-simulacion/spec.md) | Fix panel admin IA + rescate simulación FALLIDA + puerto Ollama 11435 (002-PI-300) | 🟠 En desarrollo |
 | [087](087-saneamiento-speckit-fase2/spec.md) | Saneamiento Spec Kit, fase 2 | 🟢 Finalizada (pendiente ACTA) |
 | [088](088-pendientes-afinamiento/spec.md) | Pendientes de afinamiento (registro vivo) | 🔵 Planeado |
 

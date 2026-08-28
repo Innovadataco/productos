@@ -28,7 +28,7 @@ export default function ConfigPanel() {
         }
 
         Promise.all([
-            fetch("/api/config/parametros", { credentials: "include" }).then((r) => r.json()),
+            fetch("/api/config/parametros/todos", { credentials: "include" }).then((r) => r.json()),
             fetch("/api/admin/audit-logs?accion=PARAM_UPDATE&page=1&pageSize=50", { credentials: "include" }).then((r) => r.json()),
         ])
             .then(([data, auditData]) => {
