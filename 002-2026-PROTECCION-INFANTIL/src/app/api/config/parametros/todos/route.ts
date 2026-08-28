@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { ParametroRepository } from "@/lib/dal/repositories/parametro";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { RolUsuario } from "@prisma/client";
@@ -9,9 +9,7 @@ export async function GET() {
     try {
         await assertModulo(await verifyAuth(RolUsuario.ADMIN), "configuracion_sistema");
 
-        const items = await prisma.parametroSistema.findMany({
-            orderBy: [{ categoria: "asc" }, { clave: "asc" }],
-        });
+        const items = await new ParametroRepository().findTodosOrdenados();
 
         const sanitizedItems = items.map((p) => ({
             ...p,

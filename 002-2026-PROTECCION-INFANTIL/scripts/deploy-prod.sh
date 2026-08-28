@@ -15,8 +15,15 @@ export COMPOSE_DOCKER_CLI_BUILD=1
 COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
 
 if [[ "${1:-}" != "--skip-pull" ]]; then
-    echo "==> git pull (feature/001-scaffolding)"
-    git pull --ff-only origin feature/001-scaffolding
+    COMMIT_ANTES=$(git rev-parse HEAD)
+    git fetch origin main
+    COMMIT_REMOTO=$(git rev-parse origin/main)
+    if [ "$COMMIT_ANTES" = "$COMMIT_REMOTO" ]; then
+        echo "==> Ya estás en la punta de main ($COMMIT_ANTES)."
+    else
+        echo "==> Actualizando local $COMMIT_ANTES → remoto $COMMIT_REMOTO"
+        git reset --hard origin/main
+    fi
 fi
 
 export PI_APP_TAG="$(git rev-parse --short HEAD)"
@@ -76,4 +83,29 @@ $COMPOSE exec -T app node --import tsx scripts/geo-import-si-falta.ts
 echo "==> Healthcheck"
 sleep 5
 curl -sf http://127.0.0.1:5005/api/health/worker && echo "  <- app+worker OK"
+
+# A-47 (candado 4): verificar que la imagen desplegada coincide con el commit.
+COMMIT_DESPUES=$(git rev-parse HEAD)
+IMAGEN=$(docker inspect pi-app --format '{{.Config.Image}}' 2>/dev/null || echo "unknown")
+echo ""
+echo "================================================================"
+echo "  DEPLOY VERIFICADO"
+echo "  Commit desplegado: $COMMIT_DESPUES"
+echo "  Imagen contenedor: $IMAGEN"
+echo "================================================================"
+if ! echo "$IMAGEN" | grep -q "$(echo "$COMMIT_DESPUES" | cut -c1-8)"; then
+    echo "🚨 ALERTA: imagen $IMAGEN NO coincide con commit $COMMIT_DESPUES"
+    echo "   El deploy puede haber reusado imagen vieja. Verificar manualmente."
+    exit 1
+fi
+
+# A-47 (candado 6): limpiar worktrees > 7 días.
+git worktree list | awk 'NR>1 {print $1}' | while read wt; do
+    if [ -d "$wt" ] && [ "$(( ($(date +%s) - $(stat -c %Y "$wt" 2>/dev/null || stat -f %m "$wt" 2>/dev/null || echo 0)) / 86400 ))" -gt 7 ]; then
+        echo "🗑  Eliminando worktree viejo: $wt"
+        git worktree remove --force "$wt" 2>/dev/null || true
+    fi
+done
+git worktree prune
+
 echo "==> Listo. Tag desplegado: ${PI_APP_TAG}"

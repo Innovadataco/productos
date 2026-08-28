@@ -4,7 +4,9 @@
 **Radicado gestión:** 002-PI-300 · INSTRUCTIVO-002-PI-200
 **Brief origen:** `05-ENTREGABLES/BRIEF-A-46-FIX-PANEL-ADMIN-IA-SIMULACION.md`
 **Rama:** `work/002-PI-300`
-**Numeración código:** 092 (siguiente disponible tras 091). El instructivo mencionó `SPEC-300-fix-panel-admin-ia` en ruta `.specify/specs/`; se sigue la convención vigente del repo (`specs/NNN-slug/`) documentada en `AGENTS.md`.
+**Numeración código:** 297 (siguiente disponible tras 296 · el `092` inicial chocó con `092-motor-logica-corregida` ya integrado en `feature/001-scaffolding` HEAD; renumerada al mover el fix a `main`). El instructivo mencionó `SPEC-300-fix-panel-admin-ia` en ruta `.specify/specs/`; se sigue la convención vigente del repo (`specs/NNN-slug/`) documentada en `AGENTS.md`.
+
+**Impacto en arquitectura:** Ninguno estructural. Tres cambios acotados: (a) `progreso.ts` gana una rama de rescate `FALLIDA → COMPLETADA` que reusa el repositorio `SimulacionRunRepository` existente (no nuevos DAL, no nuevos endpoints); (b) nuevo endpoint admin `GET /api/config/parametros/todos` sin paginación, sanitiza `esSecreto` — no cambia contratos existentes; (c) `ollama-config.ts` cambia el default de fallback de `11434` a `11435` (parámetro `system.ollama_base_url` y env `OLLAMA_BASE_URL` siguen mandando). Sin nuevas dependencias, sin migraciones de BD, sin cambios de perfilamiento.
 
 ---
 
