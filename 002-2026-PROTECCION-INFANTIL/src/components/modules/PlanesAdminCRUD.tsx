@@ -234,14 +234,20 @@ export function PlanesAdminCRUD() {
                         value={form.nombre}
                         onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                     />
-                    <Input
-                        label="Precio COP"
-                        type="number"
-                        required
-                        min={0}
-                        value={form.precioBaseCOP}
-                        onChange={(e) => setForm({ ...form, precioBaseCOP: e.target.value })}
-                    />
+                    <div>
+                        <Input
+                            label="Precio COP"
+                            type="number"
+                            required
+                            min={0}
+                            value={form.precioBaseCOP}
+                            disabled={form.esFreemium}
+                            onChange={(e) => setForm({ ...form, precioBaseCOP: e.target.value })}
+                        />
+                        {form.esFreemium && (
+                            <p className="mt-1 text-xs text-muted">Los planes freemium siempre tienen precio 0.</p>
+                        )}
+                    </div>
                     <Select
                         label="Duración"
                         options={duraciones}
@@ -276,7 +282,14 @@ export function PlanesAdminCRUD() {
                             <input
                                 type="checkbox"
                                 checked={form.esFreemium}
-                                onChange={(e) => setForm({ ...form, esFreemium: e.target.checked })}
+                                onChange={(e) => {
+                                    const esFreemium = e.target.checked;
+                                    setForm({
+                                        ...form,
+                                        esFreemium,
+                                        precioBaseCOP: esFreemium ? "0" : form.precioBaseCOP,
+                                    });
+                                }}
                                 className="h-4 w-4 rounded border-tinta/20"
                             />
                             Freemium
