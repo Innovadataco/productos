@@ -1,0 +1,34 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# testing
+coverage/
+
+# typescript incremental
+tsconfig.tsbuildinfo
+
+# env (bi.example y .env.test SÍ se commitean · el resto no)
+.env
+.env.local
+.env.production
+.env.bi.production
+.env.bi.staging
+.env.*.local
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ide
+.vscode/
+.idea/

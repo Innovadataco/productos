@@ -1,17 +1,21 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 
-type Theme = "light" | "dark" | "system";
+type Theme = "light" | "dark";
 
 interface ThemeContextValue {
     theme: Theme;
     setTheme: (t: Theme) => void;
+    toggleTheme: () => void;
+    mounted: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-    theme: "system",
+    theme: "light",
     setTheme: () => {},
+    toggleTheme: () => {},
+    mounted: false,
 });
 
 export function useTheme() {
@@ -19,29 +23,43 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setThemeState] = useState<Theme>("system");
+    const [theme, setThemeState] = useState<Theme>("light");
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
+        let initial: Theme = "light";
         try {
             const stored = localStorage.getItem("bi-theme") as Theme | null;
-            if (stored) setThemeState(stored);
+            if (stored === "dark" || stored === "light") {
+                initial = stored;
+            } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+                initial = "dark";
+            }
         } catch {}
+        setThemeState(initial);
     }, []);
 
     useEffect(() => {
-        const root = document.documentElement;
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const isDark = theme === "dark" || (theme === "system" && prefersDark);
-        root.classList.toggle("dark", isDark);
-    }, [theme]);
+        if (!mounted) return;
+        document.documentElement.classList.toggle("dark", theme === "dark");
+    }, [theme, mounted]);
 
-    function setTheme(t: Theme) {
+    const setTheme = useCallback((t: Theme) => {
         setThemeState(t);
         try { localStorage.setItem("bi-theme", t); } catch {}
-    }
+    }, []);
+
+    const toggleTheme = useCallback(() => {
+        setThemeState((prev) => {
+            const next: Theme = prev === "dark" ? "light" : "dark";
+            try { localStorage.setItem("bi-theme", next); } catch {}
+            return next;
+        });
+    }, []);
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme }}>
+        <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, mounted }}>
             {children}
         </ThemeContext.Provider>
     );
