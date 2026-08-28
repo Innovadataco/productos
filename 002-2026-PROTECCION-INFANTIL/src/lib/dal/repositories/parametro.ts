@@ -57,6 +57,17 @@ export class ParametroRepository {
         });
     }
 
+    /**
+     * SPEC-297 (I-160): listado admin completo sin paginar, ordenado por
+     * categoría y clave. El endpoint que lo consume aplica sanitizado de
+     * `esSecreto` antes de responder.
+     */
+    findTodosOrdenados() {
+        return this.db.parametroSistema.findMany({
+            orderBy: [{ categoria: "asc" }, { clave: "asc" }],
+        });
+    }
+
     /** Detalle con historial de cambios (últimos 10 PARAM_UPDATE con email del autor). */
     findByClaveConHistorial(clave: string) {
         return this.db.parametroSistema.findUnique({

@@ -54,9 +54,10 @@ export async function actualizarProgresoYEstado(runId: string): Promise<{ progre
         const casosFallidos = leerCasosFallidos(run.metricasJson);
         const totalEfectivo = Math.max(0, run.totalCasos - casosFallidos);
         if (totalEfectivo > 0 && progreso >= totalEfectivo) {
-            await prisma.simulacionRun.update({
-                where: { id: runId },
-                data: { progreso, estado: "COMPLETADA", fechaFin: new Date() },
+            await new SimulacionRunRepository().actualizar(runId, {
+                progreso,
+                estado: "COMPLETADA",
+                fechaFin: new Date(),
             });
             await refrescarMetricasSimulacion(runId);
             logger.info(
