@@ -16,14 +16,11 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
-// Evita llamadas HTTP reales a Resend en CI; el endpoint maneja el fallo y expone
-// la contraseña temporal exactamente una vez (I-37 / 002-PI-051 B3).
-vi.mock("resend", () => ({
-    Resend: vi.fn().mockImplementation(() => ({
-        emails: {
-            send: vi.fn().mockResolvedValue({ error: { message: "mock email failure" } }),
-        },
-    })),
+// SPEC-296 migró email.ts a programar() del motor; ya no llama a Resend directamente.
+// Mockeamos la función pública del módulo para simular fallo de envío: el endpoint
+// expone passwordTemporal una sola vez (I-37 / 002-PI-051 B3) cuando emailEnviado=false.
+vi.mock("@/lib/email", () => ({
+    enviarEmailCredencialesPadre: vi.fn().mockRejectedValue(new Error("mock email failure")),
 }));
 
 function llamar(padreId: string) {
