@@ -105,6 +105,18 @@ Todos los puertos expuestos en `127.0.0.1:XXXX` (solo localhost · Cloudflare Tu
 
 ---
 
+## Gap Fase C · Superset 4.1.0 → 4.1.4 · imagen inexistente (2026-08-28)
+
+Apache Superset: la versión 4.1.0 del BRIEF-A-01 nunca existió en Docker Hub. Actualizado a 4.1.4 (última rama 4.1 · patches estables · sin breaking). Verificado con: `curl https://hub.docker.com/v2/repositories/apache/superset/tags/4.1.4/ → HTTP 200`. Gap Fase C 2026-08-28.
+
+**Aprendizaje (candado 15 profundo):** cuando BRIEF menciona versión específica de imagen pública, verificar disponibilidad ANTES de commit:
+```bash
+curl -sfL -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/<img>/tags/<version>/"
+# 200 = existe · 404 = no existe
+```
+
+---
+
 ## Gap Fase C · public/.gitkeep · Dockerfile.next (2026-08-28)
 
 `public/.gitkeep` — Next.js 15+ no genera `public/` por default pero `Dockerfile.next` lo copia con `COPY --from=builder /app/public ./public`. Sin el directorio el build falla en VPS. Placeholder mantiene el path en git. Gap detectado en Fase C SPEC-002 2026-08-28. Fix: `mkdir -p public && touch public/.gitkeep`.

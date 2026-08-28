@@ -1,6 +1,6 @@
 services:
   bi-superset:
-    image: apache/superset:4.1.0
+    image: apache/superset:4.1.4  # última rama 4.1 · verificado Docker Hub 2026-08-28
     env_file: .env.bi.production
     environment:
       SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
