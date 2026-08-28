@@ -1,5 +1,31 @@
 # RESEARCH-009 · Vistas materializadas BI
 
+## Hallazgo Fase C · JOINs contra schema PI (candado 15) · 2026-08-28
+
+**Origen:** R-020 · NO CUMPLE sobre commit `927e7fb7`. Fábrica BI-2 aplicó `prisma migrate deploy` en VPS y la 2ª migración falló con `ERROR: column ca.reporteId does not exist`. Gate local previo no lo detectó porque se corrió contra stubs manuales de PI, no contra el schema real generado desde `002-2026-PROTECCION-INFANTIL/prisma/schema.prisma`.
+
+**Causa raíz:** 3 JOINs asumieron nombres de columnas que NO existen en el schema PI real:
+
+| MV | JOIN escrito (bug) | Realidad schema PI | Fix aplicado |
+|---|---|---|---|
+| mv_fact_reporte_diario | `LEFT JOIN "CorreccionAdmin" ca ON ca."reporteId" = r.id` | `CorreccionAdmin` no tiene `reporteId`; solo `clasificacionId @unique` | `ca."clasificacionId" = c.id` |
+| mv_fact_motor_ia_diario | `LEFT JOIN "CorreccionAdmin" ca ON ca."reporteId" = c."reporteId"` | idem | `ca."clasificacionId" = c.id` |
+| mv_fact_comercial_mensual | `LEFT JOIN "Subscription" s ON s."tenantId" = bc."tenantId"` | `BillingCycle` no tiene `tenantId`; solo `subscriptionId` | `s.id = bc."subscriptionId"` |
+
+**Bonus (detectado por el ratchet nuevo):** `AuditLog.accion` es enum `AccionAudit`, no `String`. `COALESCE(al.accion, 'desconocida')` viola el enum. Fix: `COALESCE(al.accion::text, 'desconocida')`.
+
+**Contramedida sistemática (candado 14 aplicado):** ratchet `scripts/ratchets/mv-schema-check.sh` que:
+1. Levanta `pgvector/pgvector:pg16` efímero (mismo image de producción).
+2. Aplica el schema PI **real** (dump generado con `prisma migrate diff` desde `002-2026-PROTECCION-INFANTIL/prisma/schema.prisma`).
+3. Aplica la migración de MVs contra ese schema.
+4. Verifica que las 5 MVs se creen y refresquen con `REFRESH CONCURRENTLY`.
+
+El ratchet se incorpora a `scripts/ratchets/run-all.sh` y corre en `npm run ratchets:check`.
+
+---
+
+
+
 ## D-25 · pg_cron no disponible en pgvector:pg16 alpine
 
 **Investigación:**

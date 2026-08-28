@@ -25,8 +25,8 @@ SELECT
   avg(c."confianza")                                   AS confianza_promedio,
   avg(c."latenciaMs")                                  AS latencia_ms_promedio
 FROM "Reporte" r
-LEFT JOIN "ClasificacionIA" c   ON c."reporteId"  = r.id
-LEFT JOIN "CorreccionAdmin" ca  ON ca."reporteId" = r.id
+LEFT JOIN "ClasificacionIA" c   ON c."reporteId"       = r.id
+LEFT JOIN "CorreccionAdmin" ca  ON ca."clasificacionId" = c.id
 WHERE r."eliminado" = false
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8;
 
@@ -44,7 +44,7 @@ SELECT
   avg(c."confianza")                                   AS confianza_promedio,
   avg(c."latenciaMs")                                  AS latencia_ms_promedio
 FROM "ClasificacionIA" c
-LEFT JOIN "CorreccionAdmin" ca ON ca."reporteId" = c."reporteId"
+LEFT JOIN "CorreccionAdmin" ca ON ca."clasificacionId" = c.id
 GROUP BY 1, 2, 3;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_fact_motor_ia_diario_uniq
@@ -78,7 +78,7 @@ SELECT
   sum(bc.monto)                                        AS monto_total,
   avg(bc.monto)                                        AS monto_promedio
 FROM "BillingCycle" bc
-LEFT JOIN "Subscription" s ON s."tenantId" = bc."tenantId"
+LEFT JOIN "Subscription" s ON s.id  = bc."subscriptionId"
 LEFT JOIN "Plan" p         ON p.id = s."planId"
 GROUP BY 1, 2, 3;
 
@@ -89,7 +89,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_fact_comercial_mensual_uniq
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_fact_salud_sistema AS
 SELECT
   date_trunc('day', al."creadoEn")                     AS dia,
-  COALESCE(al.accion, 'desconocida')                   AS accion,
+  COALESCE(al.accion::text, 'desconocida')             AS accion,
   count(*)                                             AS total_eventos_audit,
   count(ace.id)                                        AS total_alertas_colegio,
   count(ase.id)                                        AS total_alertas_suscripcion
