@@ -105,6 +105,14 @@ Todos los puertos expuestos en `127.0.0.1:XXXX` (solo localhost · Cloudflare Tu
 
 ---
 
+## Gap Fase C · public/.gitkeep · Dockerfile.next (2026-08-28)
+
+`public/.gitkeep` — Next.js 15+ no genera `public/` por default pero `Dockerfile.next` lo copia con `COPY --from=builder /app/public ./public`. Sin el directorio el build falla en VPS. Placeholder mantiene el path en git. Gap detectado en Fase C SPEC-002 2026-08-28. Fix: `mkdir -p public && touch public/.gitkeep`.
+
+**Aprendizaje:** no asumir dirs opcionales en COPY. Si es necesario para el runtime pero opcional en source, usar `.gitkeep`.
+
+---
+
 ## Hallazgo Fase A · candado 15 profundo (@@map)
 
 | Modelo Prisma | Nombre real BD |
