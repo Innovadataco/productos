@@ -105,6 +105,14 @@ Todos los puertos expuestos en `127.0.0.1:XXXX` (solo localhost · Cloudflare Tu
 
 ---
 
+## Gap Fase C · bi-vanna uvicorn no arrancaba (2026-08-28)
+
+`docker/vanna/main.py` definía FastAPI app pero no ejecutaba `uvicorn.run`. `python main.py` terminaba exit=0 sin abrir el puerto 8001 → 11 restart loops en VPS. Fix: añadir bloque `if __name__ == "__main__": uvicorn.run(app, host="0.0.0.0", port=8001)`.
+
+**Aprendizaje (candado 14 profundo):** cualquier stub docker debe pasar smoke test local antes de commit — arranca, escucha puerto, responde `/health`. No basta definir `@app.get`; el proceso debe quedar vivo.
+
+---
+
 ## Gap Fase C · Superset 4.1.0 → 4.1.4 · imagen inexistente (2026-08-28)
 
 Apache Superset: la versión 4.1.0 del BRIEF-A-01 nunca existió en Docker Hub. Actualizado a 4.1.4 (última rama 4.1 · patches estables · sin breaking). Verificado con: `curl https://hub.docker.com/v2/repositories/apache/superset/tags/4.1.4/ → HTTP 200`. Gap Fase C 2026-08-28.
