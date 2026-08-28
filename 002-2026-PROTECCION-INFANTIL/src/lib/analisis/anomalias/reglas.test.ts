@@ -81,6 +81,7 @@ describe("regla PAGO_ATRASADO_CLIENTE_HISTORICAMENTE_PUNTUAL", () => {
     });
 
     it("mora de 31 días → severidad ALTA (umbral alto)", async () => {
+        await resetDatabase();
         const admin = await crearAdmin();
         const plan = await crearPlan(admin.id);
         await suscripcionPuntual(plan.id, new Date(AHORA.getTime() - 31 * DIA_MS));
