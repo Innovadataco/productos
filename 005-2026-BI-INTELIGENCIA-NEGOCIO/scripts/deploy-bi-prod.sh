@@ -58,6 +58,29 @@ docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} build bi-telegram
 echo "⬆️  Levantando servicios..."
 docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} up -d
 
+echo "==> Bootstrap Superset (idempotente · I-17)"
+# db upgrade + init son seguros de re-correr (no destructivos). create-admin
+# falla si el usuario ya existe — se ignora ese caso puntual, no todo el paso.
+docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-superset superset db upgrade
+docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-superset \
+    superset fab create-admin \
+    --username "\${SUPERSET_ADMIN_USERNAME}" \
+    --firstname Admin --lastname BI \
+    --email "\${SUPERSET_ADMIN_EMAIL}" \
+    --password "\${SUPERSET_ADMIN_PASSWORD}" \
+    || echo "==> create-admin: usuario ya existe o sin cambios (esperado en re-deploys)"
+docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-superset superset init
+
+echo "==> Import bundle Superset (datasets + charts + dashboards · I-19)"
+# El bundle vive como carpeta en el repo (superset/), no como zip — se empaqueta
+# aquí mismo antes de importar. import-dashboards es upsert por uuid: reimportar
+# el mismo bundle no duplica nada.
+(cd superset && zip -qr /tmp/bi-superset-bundle.zip .)
+docker cp /tmp/bi-superset-bundle.zip "\$(docker compose -f ${COMPOSE_FILE} ps -q bi-superset)":/tmp/bundle.zip
+docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-superset \
+    superset import-dashboards -p /tmp/bundle.zip -u "\${SUPERSET_ADMIN_USERNAME}"
+rm -f /tmp/bi-superset-bundle.zip
+
 echo "==> Migraciones (aditivas)"
 # Pin explícito (mismo bug I-09 de mv-schema-check.sh): npx sin pin resuelve
 # "latest" del registro npm (hoy prisma@8.0.0-rc.12, roto) en vez del devDependency
