@@ -15,6 +15,18 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+# El standalone output de Next.js solo traza lo que el servidor importa en
+# runtime — nunca incluye prisma/ ni scripts sueltos (seed, guardián de
+# índices) ni la CLI de prisma/tsx. deploy-bi-prod.sh corre migrate/seed/
+# guardián dentro de este contenedor, así que hace falta copiarlos a mano
+# desde el stage builder (ya tiene todo, npm ci sin poda). Bug I-14.
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
+COPY --from=builder /app/node_modules/.bin/tsx ./node_modules/.bin/tsx
 RUN chown -R nextjs:nodejs /app
 USER nextjs
 EXPOSE 3000
