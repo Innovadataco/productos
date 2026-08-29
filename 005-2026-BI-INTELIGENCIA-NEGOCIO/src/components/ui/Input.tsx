@@ -1,38 +1,14 @@
-import { useId, forwardRef } from "react";
+import { forwardRef } from "react";
 
-type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
-    label?: string;
-    error?: string;
-};
+type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-    ({ label, error, id: externalId, className = "", ...props }, ref) => {
-        const generatedId = useId();
-        const id = externalId || generatedId;
-
-        return (
-            <div className="w-full">
-                {label && (
-                    <label htmlFor={id} className="block text-sm font-medium text-body mb-1.5">
-                        {label}
-                    </label>
-                )}
-                <input
-                    ref={ref}
-                    id={id}
-                    className={`w-full rounded-xl px-4 py-3 text-sm text-body placeholder:text-subtle outline-none transition glass-input ring-accent-input ${className}`}
-                    aria-invalid={error ? "true" : undefined}
-                    aria-describedby={error ? `${id}-error` : undefined}
-                    {...props}
-                />
-                {error && (
-                    <p id={`${id}-error`} className="mt-1.5 text-sm text-red-600 dark:text-red-400">
-                        {error}
-                    </p>
-                )}
-            </div>
-        );
-    }
+    ({ className = "", ...props }, ref) => (
+        <input
+            ref={ref}
+            className={`w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 ${className}`.trim()}
+            {...props}
+        />
+    ),
 );
-
 Input.displayName = "Input";

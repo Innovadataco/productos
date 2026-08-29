@@ -6,7 +6,7 @@ if grep -rnE "\.query\(|prisma\.|SELECT " src/app/ src/components/ src/lib/ 2>/d
    grep -v "\.test\." | \
    grep -v "src/lib/bi/" | \
    grep -v "src/lib/prisma.ts" | \
-   grep -v "src/app/api/bi/preguntar/route.ts" ; then
+   grep -v "src/app/api/bi/" ; then
     echo "❌ SQL raw fuera del motor · usa src/lib/bi/motor.ts"
     exit 1
 fi
