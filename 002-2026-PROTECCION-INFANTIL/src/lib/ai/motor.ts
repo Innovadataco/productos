@@ -56,11 +56,12 @@ export function leerPosibleAgresorPar(r: ResultadoRubrica | undefined): boolean 
  * esta función solo adapta el resultado a la forma común del pipeline.
  */
 export async function clasificarConMotorActivo(texto: string, opciones: OpcionesMotor = {}): Promise<ResultadoMotor> {
-    const r = await clasificarConRubrica(
-        texto,
-        opciones.configRubrica,
-        opciones.modeloClasificacion ? { modeloClasificacion: opciones.modeloClasificacion } : undefined
-    );
+    // Se omite el 3er argumento por completo (no se pasa `undefined` explícito) para no alterar
+    // la forma de llamada cuando no hay override — call-sites/tests existentes que aseguran
+    // arity exacta de 2 argumentos siguen intactos (NF-4).
+    const r = opciones.modeloClasificacion
+        ? await clasificarConRubrica(texto, opciones.configRubrica, { modeloClasificacion: opciones.modeloClasificacion })
+        : await clasificarConRubrica(texto, opciones.configRubrica);
     return {
         categoria: r.categoria,
         confianza: r.confianza,
