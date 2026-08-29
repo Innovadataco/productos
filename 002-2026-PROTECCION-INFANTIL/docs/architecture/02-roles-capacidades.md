@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 430 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3010 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 431 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3017 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -315,6 +315,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
@@ -750,6 +751,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
@@ -1185,6 +1187,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
@@ -1620,6 +1623,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/padre/circulo-confianza/semaforo` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
@@ -2055,6 +2059,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/padre/circulo-confianza/semaforo` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
@@ -2490,6 +2495,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
+| `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
@@ -2925,6 +2931,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/notificaciones/preferencias` | api | HTTP 401 | permite | **NO** |
 | `/api/notificaciones/resumen` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/circulo-confianza/semaforo` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/contacto-emergencia` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 401 | permite | **NO** |
@@ -3337,6 +3344,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/notificaciones/[id]` | HTTP 401 | permite |
 | `/api/notificaciones/preferencias` | HTTP 401 | permite |
 | `/api/notificaciones/resumen` | HTTP 401 | permite |
+| `/api/padre/circulo-confianza/semaforo` | HTTP 401 | permite |
 | `/api/padre/contacto-emergencia` | HTTP 401 | permite |
 | `/api/padre/contacto-emergencia/[id]` | HTTP 401 | permite |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | HTTP 401 | permite |
