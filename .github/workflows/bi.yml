@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - "005-2026-BI-INTELIGENCIA-NEGOCIO/**"
+      - ".github/workflows/**"
   pull_request:
     paths:
       - "005-2026-BI-INTELIGENCIA-NEGOCIO/**"
+      - ".github/workflows/**"
 
 defaults:
   run:
@@ -70,3 +72,25 @@ jobs:
           JWT_SECRET: test-secret-local-bi-spec001
           PI_BASE_URL: https://pi.innovadataco.com
           PORT: "3001"
+
+  # Sentinel multi-producto (SPEC-299 / BRIEF A-49). Ver .github/workflows/README.md.
+  # Reporta un veredicto agregado único al ruleset "Gate CI - main":
+  # - Cualquier `needs.*.result` == failure o cancelled  → sentinel falla.
+  # - Todos success o skipped (mezcla incluida)          → sentinel pasa.
+  bi-gate:
+    runs-on: ubuntu-latest
+    needs: [verify, typecheck, test-unit, build]
+    if: always()
+    steps:
+      - name: Evaluar veredicto agregado
+        run: |
+          set -euo pipefail
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "❌ bi-gate: al menos un job requerido falló."
+            exit 1
+          fi
+          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "❌ bi-gate: al menos un job requerido fue cancelado."
+            exit 1
+          fi
+          echo "✅ bi-gate: todos los jobs requeridos pasaron o fueron skipped."
