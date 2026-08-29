@@ -7,9 +7,28 @@ slug: motor_ia
 published: true
 position:
   DASHBOARD_VERSION_KEY: v2
+  ROOT_ID:
+    type: ROOT
+    id: ROOT_ID
+    children:
+      - GRID_ID
+  GRID_ID:
+    type: GRID
+    id: GRID_ID
+    children:
+      - CHART-motor_clasificaciones_24h_v1
+      - CHART-motor_latencia_p50p95_v1
+      - CHART-motor_distribucion_categorias_v1
+      - CHART-motor_tasa_acuerdo_jurado_v1
+      - CHART-motor_uso_cascada_v1
+      - CHART-motor_correcciones_admin_30d_v1
+      - CHART-motor_latencia_timeline_v1
+    parents:
+      - ROOT_ID
   CHART-motor_clasificaciones_24h_v1:
     type: CHART
     id: CHART-motor_clasificaciones_24h_v1
+    children: []
     meta:
       uuid: 8ccb2bf8-095b-508d-aee6-3cd31c6b24ea
       chartId: null
@@ -22,6 +41,7 @@ position:
   CHART-motor_latencia_p50p95_v1:
     type: CHART
     id: CHART-motor_latencia_p50p95_v1
+    children: []
     meta:
       uuid: c2204bd3-083d-554e-a990-2ec437354282
       chartId: null
@@ -34,6 +54,7 @@ position:
   CHART-motor_distribucion_categorias_v1:
     type: CHART
     id: CHART-motor_distribucion_categorias_v1
+    children: []
     meta:
       uuid: 06adb40e-5566-581b-ae9b-0f7374893f09
       chartId: null
@@ -46,6 +67,7 @@ position:
   CHART-motor_tasa_acuerdo_jurado_v1:
     type: CHART
     id: CHART-motor_tasa_acuerdo_jurado_v1
+    children: []
     meta:
       uuid: 4bd011ea-6f5d-50d8-976a-0b396f532568
       chartId: null
@@ -58,6 +80,7 @@ position:
   CHART-motor_uso_cascada_v1:
     type: CHART
     id: CHART-motor_uso_cascada_v1
+    children: []
     meta:
       uuid: dac72bae-d15a-56b6-8548-92951be0a84c
       chartId: null
@@ -70,6 +93,7 @@ position:
   CHART-motor_correcciones_admin_30d_v1:
     type: CHART
     id: CHART-motor_correcciones_admin_30d_v1
+    children: []
     meta:
       uuid: 4270614c-adc0-5da5-8ee6-fbaaa1c5fda3
       chartId: null
@@ -82,6 +106,7 @@ position:
   CHART-motor_latencia_timeline_v1:
     type: CHART
     id: CHART-motor_latencia_timeline_v1
+    children: []
     meta:
       uuid: 888c9ce9-4d07-55f9-8cb9-755e18060e33
       chartId: null

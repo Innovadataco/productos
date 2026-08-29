@@ -5,7 +5,7 @@ uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
 version: 1.0.0
 cache_timeout: null
 expose_in_sqllab: true
-allow_run_async: true
+allow_run_async: false
 allow_ctas: false
 allow_cvas: false
 allow_dml: false

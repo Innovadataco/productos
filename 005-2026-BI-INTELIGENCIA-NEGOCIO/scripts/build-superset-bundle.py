@@ -176,7 +176,14 @@ def write_databases() -> None:
             "version": IMPORT_VERSION,
             "cache_timeout": None,
             "expose_in_sqllab": True,
-            "allow_run_async": True,
+            # `allow_run_async: false` porque el stack BI no tiene worker
+            # Celery/Redis configurado (no hay ningún servicio de ese tipo en
+            # docker-compose.bi.yml). Con true, SQL Lab falla con
+            # "Issue 1035 - Failed to start remote query on a worker" y los
+            # charts individuales también fallan al pedir datos porque
+            # /chart/data respeta el mismo flag del database (I-27 · Fábrica
+            # BI-2 · 2026-08-29). Cuando se agregue worker, volver a true.
+            "allow_run_async": False,
             "allow_ctas": False,
             "allow_cvas": False,
             "allow_dml": False,
@@ -926,15 +933,39 @@ def write_dashboards() -> None:
         dashboard_uuid = det_uuid(f"dashboards/{slug}")
         chart_slugs = [c["slug"] for c in CHARTS if c["dashboard"] == slug]
         chart_uuids = [det_uuid(f"charts/{s}") for s in chart_slugs]
-        # position: grid vertical simple 12-col, cada chart 6-col × 6-row.
-        position = {"DASHBOARD_VERSION_KEY": "v2"}
-        row = 0
-        col = 0
+
+        # position_json necesita los nodos contenedores ROOT_ID y GRID_ID
+        # definidos como entradas propias, y cada CHART-* necesita
+        # `children: []`. Sin eso, el frontend de Superset 4.1.4 crashea al
+        # hidratar con `Cannot read properties of undefined (reading
+        # 'children')` en findFirstParentContainer.js (I-24 · verificado
+        # contra el ejemplo oficial `/app/superset/examples/configs/
+        # dashboards/Slack_Dashboard.yaml` de la imagen apache/superset:4.1.4
+        # y contra el crash observado por Fábrica BI-2 · 2026-08-29).
+        #
+        # Layout: GRID → CHART directo (sin fila intermedia ROW-*). Superset
+        # lo acepta; los ROW son opcionales para agrupar visualmente.
+        chart_keys = [f"CHART-{cs}" for cs in chart_slugs]
+        position = {
+            "DASHBOARD_VERSION_KEY": "v2",
+            "ROOT_ID": {
+                "type": "ROOT",
+                "id": "ROOT_ID",
+                "children": ["GRID_ID"],
+            },
+            "GRID_ID": {
+                "type": "GRID",
+                "id": "GRID_ID",
+                "children": chart_keys,
+                "parents": ["ROOT_ID"],
+            },
+        }
         for idx, cs in enumerate(chart_slugs):
             key = f"CHART-{cs}"
             position[key] = {
                 "type": "CHART",
                 "id": key,
+                "children": [],
                 "meta": {
                     "uuid": chart_uuids[idx],
                     "chartId": None,
@@ -944,10 +975,6 @@ def write_dashboards() -> None:
                 },
                 "parents": ["ROOT_ID", "GRID_ID"],
             }
-            col += 6
-            if col >= 12:
-                col = 0
-                row += 30
 
         metadata = {
             "refresh_frequency": refresh,

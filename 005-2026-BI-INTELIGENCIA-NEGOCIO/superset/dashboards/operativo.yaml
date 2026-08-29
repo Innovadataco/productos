@@ -7,9 +7,28 @@ slug: operativo
 published: true
 position:
   DASHBOARD_VERSION_KEY: v2
+  ROOT_ID:
+    type: ROOT
+    id: ROOT_ID
+    children:
+      - GRID_ID
+  GRID_ID:
+    type: GRID
+    id: GRID_ID
+    children:
+      - CHART-op_reportes_en_flujo_v1
+      - CHART-op_comite_pendientes_v1
+      - CHART-op_comite_horas_promedio_v1
+      - CHART-op_distribucion_estado_reporte_v1
+      - CHART-op_revision_manual_gt_7d_v1
+      - CHART-op_transiciones_por_responsable_v1
+      - CHART-op_vencimientos_suscripciones_30d_v1
+    parents:
+      - ROOT_ID
   CHART-op_reportes_en_flujo_v1:
     type: CHART
     id: CHART-op_reportes_en_flujo_v1
+    children: []
     meta:
       uuid: 6d7e590d-a69c-5247-9d36-2c66aeda7dba
       chartId: null
@@ -22,6 +41,7 @@ position:
   CHART-op_comite_pendientes_v1:
     type: CHART
     id: CHART-op_comite_pendientes_v1
+    children: []
     meta:
       uuid: 7d97ac97-b0c5-572f-ae5d-9dde36bec77f
       chartId: null
@@ -34,6 +54,7 @@ position:
   CHART-op_comite_horas_promedio_v1:
     type: CHART
     id: CHART-op_comite_horas_promedio_v1
+    children: []
     meta:
       uuid: dc85dcb4-ff0e-5ff2-a670-78c72a7e83a5
       chartId: null
@@ -46,6 +67,7 @@ position:
   CHART-op_distribucion_estado_reporte_v1:
     type: CHART
     id: CHART-op_distribucion_estado_reporte_v1
+    children: []
     meta:
       uuid: 0db114f3-d79f-501a-8296-110bfbb7d28f
       chartId: null
@@ -58,6 +80,7 @@ position:
   CHART-op_revision_manual_gt_7d_v1:
     type: CHART
     id: CHART-op_revision_manual_gt_7d_v1
+    children: []
     meta:
       uuid: ff02c5c9-3089-549f-a650-590680ce3645
       chartId: null
@@ -70,6 +93,7 @@ position:
   CHART-op_transiciones_por_responsable_v1:
     type: CHART
     id: CHART-op_transiciones_por_responsable_v1
+    children: []
     meta:
       uuid: 8f1de9e6-3b5e-58ac-9819-82bbec6b0445
       chartId: null
@@ -82,6 +106,7 @@ position:
   CHART-op_vencimientos_suscripciones_30d_v1:
     type: CHART
     id: CHART-op_vencimientos_suscripciones_30d_v1
+    children: []
     meta:
       uuid: 591609a3-062f-588e-9034-ddca4962e2d3
       chartId: null
