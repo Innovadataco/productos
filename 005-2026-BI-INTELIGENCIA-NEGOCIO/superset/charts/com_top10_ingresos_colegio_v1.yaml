@@ -16,7 +16,7 @@ params:
       sqlExpression: "SELECT c.nombre AS colegio, SUM(bc.monto) AS ingresos_cop FROM \"BillingCycle\" bc JOIN \"Subscription\" s ON s.id = bc.\"subscriptionId\" JOIN \"Colegio\"      c ON c.\"tenantId\" = s.\"tenantId\" WHERE bc.\"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND bc.estado = 'pagado' GROUP BY c.nombre ORDER BY ingresos_cop DESC LIMIT 10"
       label: valor
       hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"a15e0d8f-ec1e-5b0e-8b04-d6da7ef3769b\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT c.nombre AS colegio, SUM(bc.monto) AS ingresos_cop FROM \\\"BillingCycle\\\" bc JOIN \\\"Subscription\\\" s ON s.id = bc.\\\"subscriptionId\\\" JOIN \\\"Colegio\\\"      c ON c.\\\"tenantId\\\" = s.\\\"tenantId\\\" WHERE bc.\\\"creadoEn\\\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND bc.estado = 'pagado' GROUP BY c.nombre ORDER BY ingresos_cop DESC LIMIT 10\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null

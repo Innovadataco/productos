@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT p.nombre AS plan, count(s.id) AS suscripciones FROM \"Subscription\" s JOIN \"Plan\" p ON p.id = s.\"planId\" WHERE s.estado = 'activo' GROUP BY p.nombre ORDER BY suscripciones DESC"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"13fe285a-459f-5e3c-8c24-b94fb236aaeb\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT p.nombre AS plan, count(s.id) AS suscripciones FROM \\\"Subscription\\\" s JOIN \\\"Plan\\\" p ON p.id = s.\\\"planId\\\" WHERE s.estado = 'activo' GROUP BY p.nombre ORDER BY suscripciones DESC\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null

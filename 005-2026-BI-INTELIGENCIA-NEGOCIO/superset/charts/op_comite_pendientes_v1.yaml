@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT count(*) AS comite_pendientes FROM \"SolicitudComite\" WHERE estado = 'PENDIENTE'"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"c30c3b31-0c3a-5011-baef-9ea44e98d32e\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) AS comite_pendientes FROM \\\"SolicitudComite\\\" WHERE estado = 'PENDIENTE'\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 900
 is_managed_externally: true
 external_url: null

@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT COALESCE(SUM(monto_total), 0) AS mrr_cop FROM mv_fact_comercial_mensual WHERE mes = date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND ciclo_estado = 'pagado'"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"55db0c80-af92-5888-8c29-569716b98aac\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT COALESCE(SUM(monto_total), 0) AS mrr_cop FROM mv_fact_comercial_mensual WHERE mes = date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND ciclo_estado = 'pagado'\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null

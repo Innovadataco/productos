@@ -13,7 +13,7 @@ params:
   dashboards: []
   query_mode: raw
   all_columns: []
-query_context: "{\"datasource\": {\"uuid\": \"f60299e2-9300-59c7-b3bb-f0515a66f4e2\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT scope, SUM(count) AS activaciones FROM \\\"RateLimit\\\" WHERE \\\"windowStart\\\" >= date_trunc('day', NOW() AT TIME ZONE 'America/Bogota') GROUP BY scope ORDER BY activaciones DESC\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null
