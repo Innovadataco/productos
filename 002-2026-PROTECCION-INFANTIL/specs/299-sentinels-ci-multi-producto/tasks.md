@@ -21,8 +21,8 @@ description: "Tasks — SPEC-299 Sentinels CI multi-producto (002-PI-202)"
 
 ## Fase 1 · Editar `ci.yml` (PI)
 
-- [ ] **T001** Ampliar el filtro `paths` de `push` y de `pull_request` en `.github/workflows/ci.yml` para reemplazar `.github/workflows/ci.yml` por `.github/workflows/**` (conservar el path `002-2026-PROTECCION-INFANTIL/**`). Resultado: dos entradas `paths` en total (uno en push, uno en pull_request).
-- [ ] **T002** Añadir job `pi-gate` al FINAL de `.github/workflows/ci.yml` (después del job `gate` actual), con:
+- [x] **T001** Ampliar el filtro `paths` de `push` y de `pull_request` en `.github/workflows/ci.yml` para reemplazar `.github/workflows/ci.yml` por `.github/workflows/**` (conservar el path `002-2026-PROTECCION-INFANTIL/**`). Resultado: dos entradas `paths` en total (uno en push, uno en pull_request).
+- [x] **T002** Añadir job `pi-gate` al FINAL de `.github/workflows/ci.yml` (después del job `gate` actual), con:
   - `runs-on: ubuntu-latest`
   - `needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build]`
   - `if: always()`
@@ -31,8 +31,8 @@ description: "Tasks — SPEC-299 Sentinels CI multi-producto (002-PI-202)"
 
 ## Fase 2 · Editar `bi.yml` (BI)
 
-- [ ] **T003** [P] Ampliar el filtro `paths` de `push` y de `pull_request` en `.github/workflows/bi.yml` para AÑADIR `.github/workflows/**` (conservar `005-2026-BI-INTELIGENCIA-NEGOCIO/**`).
-- [ ] **T004** [P] Añadir job `bi-gate` al FINAL de `.github/workflows/bi.yml`, con:
+- [x] **T003** [P] Ampliar el filtro `paths` de `push` y de `pull_request` en `.github/workflows/bi.yml` para AÑADIR `.github/workflows/**` (conservar `005-2026-BI-INTELIGENCIA-NEGOCIO/**`).
+- [x] **T004** [P] Añadir job `bi-gate` al FINAL de `.github/workflows/bi.yml`, con:
   - `runs-on: ubuntu-latest`
   - `needs: [verify, typecheck, test-unit, build]`
   - `if: always()`
@@ -42,7 +42,7 @@ description: "Tasks — SPEC-299 Sentinels CI multi-producto (002-PI-202)"
 
 ## Fase 3 · Documentar el patrón
 
-- [ ] **T005** [P] Crear `.github/workflows/README.md` (nuevo), < 150 líneas, con las 7 secciones definidas en el plan.md §"README.md — outline":
+- [x] **T005** [P] Crear `.github/workflows/README.md` (nuevo), < 150 líneas, con las 7 secciones definidas en el plan.md §"README.md — outline":
   1. Título + 3 líneas de contexto (problema del ruleset multi-producto).
   2. Regla dura: un sentinel por producto.
   3. Requisitos por workflow.
@@ -53,26 +53,26 @@ description: "Tasks — SPEC-299 Sentinels CI multi-producto (002-PI-202)"
 
 ## Fase 4 · Commit + inspección local
 
-- [ ] **T006** `git status` para confirmar exactamente 3 archivos modificados/nuevos: `.github/workflows/ci.yml` (M), `.github/workflows/bi.yml` (M), `.github/workflows/README.md` (??), y ningún otro.
-- [ ] **T007** Commit único (o dos commits: uno para YAML, uno para README) con mensaje: `ci(SPEC-299): sentinels pi-gate/bi-gate + README patrón multi-producto (002-PI-202)`. Sin `git add -A` (candado AGENTS.md — solo `git add` de rutas específicas).
-- [ ] **T008** Inspección visual del diff con `git diff HEAD~1..HEAD -- .github/workflows/` para verificar SC-003: jobs preexistentes intactos, solo ampliación de `paths` + jobs sentinel nuevos al final.
+- [x] **T006** `git status` para confirmar exactamente 3 archivos modificados/nuevos: `.github/workflows/ci.yml` (M), `.github/workflows/bi.yml` (M), `.github/workflows/README.md` (??), y ningún otro.
+- [x] **T007** Commit único (o dos commits: uno para YAML, uno para README) con mensaje: `ci(SPEC-299): sentinels pi-gate/bi-gate + README patrón multi-producto (002-PI-202)`. Sin `git add -A` (candado AGENTS.md — solo `git add` de rutas específicas).
+- [x] **T008** Inspección visual del diff con `git diff HEAD~1..HEAD -- .github/workflows/` para verificar SC-003: jobs preexistentes intactos, solo ampliación de `paths` + jobs sentinel nuevos al final.
 
 ## Fase 5 · Gate pre-push obligatorio (candado A-49)
 
-- [ ] **T009** `git fetch origin && git rebase origin/main && git diff --name-status origin/main..HEAD` — señal `diff pre-push · OK · <N> archivos SPEC-299` a Fábrica PI-1.
-- [ ] **T010** Verificar que la lista de archivos del diff pre-push incluye SOLO los 3 archivos del alcance + los 3 archivos del SPEC ya committed (spec.md, plan.md, tasks.md). Si aparece cualquier otro → PARA + HALLAZGO.
+- [x] **T009** `git fetch origin && git rebase origin/main && git diff --name-status origin/main..HEAD` — señal `diff pre-push · OK · <N> archivos SPEC-299` a Fábrica PI-1.
+- [x] **T010** Verificar que la lista de archivos del diff pre-push incluye SOLO los 3 archivos del alcance + los 3 archivos del SPEC ya committed (spec.md, plan.md, tasks.md). Si aparece cualquier otro → PARA + HALLAZGO.
 
 ## Fase 6 · Push + PR
 
-- [ ] **T011** `git push -u origin work/pi-SPEC-299-sentinels-ci-multi-producto` (push único, D-54).
-- [ ] **T012** `gh pr create --base main --head work/pi-SPEC-299-sentinels-ci-multi-producto --title "SPEC-299: sentinels CI multi-producto (002-PI-202)" --body <resumen del spec>`.
+- [x] **T011** `git push -u origin work/pi-SPEC-299-sentinels-ci-multi-producto` (push único, D-54).
+- [x] **T012** `gh pr create --base main --head work/pi-SPEC-299-sentinels-ci-multi-producto --title "SPEC-299: sentinels CI multi-producto (002-PI-202)" --body <resumen del spec>`.
 
 ## Fase 7 · Verificación en vivo (candado dura A-49 · US-2 · SC-001)
 
-- [ ] **T013** `gh pr checks <PR>` — esperar completed. Ambos `pi-gate` y `bi-gate` deben aparecer con conclusion=success. Verificar además que `verificar_base` está verde.
-- [ ] **T014** Si algún job real falla (no el sentinel): PARA, aplicar D-55 (máx 2 iteraciones por síntoma), reportar a Fábrica antes del intento 3.
-- [ ] **T015** Actualizar `tasks.md` marcando todas las casillas [x], actualizar Status en spec.md a "Implementado", commit "docs(SPEC-299): tasks marked complete", push, verificar CI verde de nuevo.
-- [ ] **T016** Señal REALIZADO a Fábrica PI-1: `desarrollo-2: 002-PI-202 · REALIZADO · <hash> · PR #<num> · gh pr checks: verde total · <fecha> COT`.
+- [x] **T013** `gh pr checks <PR>` — esperar completed. Ambos `pi-gate` y `bi-gate` deben aparecer con conclusion=success. Verificar además que `verificar_base` está verde.
+- [x] **T014** Si algún job real falla (no el sentinel): PARA, aplicar D-55 (máx 2 iteraciones por síntoma), reportar a Fábrica antes del intento 3.
+- [x] **T015** Actualizar `tasks.md` marcando todas las casillas [x], actualizar Status en spec.md a "Implementado", commit "docs(SPEC-299): tasks marked complete", push, verificar CI verde de nuevo.
+- [x] **T016** Señal REALIZADO a Fábrica PI-1: `desarrollo-2: 002-PI-202 · REALIZADO · <hash> · PR #<num> · gh pr checks: verde total · <fecha> COT`.
 
 ---
 
@@ -87,11 +87,11 @@ description: "Tasks — SPEC-299 Sentinels CI multi-producto (002-PI-202)"
 
 ## Verificaciones intermedias (checklist rápido antes del push)
 
-- [ ] `grep -c "runs-on:" .github/workflows/ci.yml` = **10** (era 9 + 1 nuevo).
-- [ ] `grep -c "runs-on:" .github/workflows/bi.yml` = **5** (era 4 + 1 nuevo).
-- [ ] `grep -q "pi-gate:" .github/workflows/ci.yml` = éxito.
-- [ ] `grep -q "bi-gate:" .github/workflows/bi.yml` = éxito.
-- [ ] `grep -q "^\.github/workflows/\*\*$" .github/workflows/ci.yml` NO aplica (el path va indentado); en su lugar: `grep -q "\".github/workflows/\*\*\"" .github/workflows/ci.yml` = éxito, ídem bi.yml.
-- [ ] `test -f .github/workflows/README.md` = éxito.
+- [x] `grep -c "runs-on:" .github/workflows/ci.yml` = **10** (era 9 + 1 nuevo).
+- [x] `grep -c "runs-on:" .github/workflows/bi.yml` = **5** (era 4 + 1 nuevo).
+- [x] `grep -q "pi-gate:" .github/workflows/ci.yml` = éxito.
+- [x] `grep -q "bi-gate:" .github/workflows/bi.yml` = éxito.
+- [x] `grep -q "^\.github/workflows/\*\*$" .github/workflows/ci.yml` NO aplica (el path va indentado); en su lugar: `grep -q "\".github/workflows/\*\*\"" .github/workflows/ci.yml` = éxito, ídem bi.yml.
+- [x] `test -f .github/workflows/README.md` = éxito.
 
-Status: PLANEADO
+Status: IMPLEMENTADO — verificación en vivo OK · PR #132 · `pi-gate` pass 4s · `bi-gate` pass 3s · resto de checks verde total · commit HEAD 3f54f09e5.
