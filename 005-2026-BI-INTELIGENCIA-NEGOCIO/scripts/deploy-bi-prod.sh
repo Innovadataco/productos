@@ -33,6 +33,13 @@ ssh pi-vps << REMOTE
 set -e
 cd ${BI_REPO_PATH}
 
+# Carga las vars de ${ENV_FILE} al shell remoto (no solo a los contenedores
+# via --env-file) — hace falta para el sed del bundle Superset más abajo
+# (I-23). Nunca se imprimen: set -a/+a solo exporta, no hace echo de nada.
+set -a
+source ${ENV_FILE}
+set +a
+
 echo "📥 Actualizando código..."
 COMMIT_ANTES=\$(git rev-parse HEAD)
 git fetch origin ${BRANCH}
@@ -74,8 +81,35 @@ docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-superset sup
 echo "==> Import bundle Superset (datasets + charts + dashboards · I-19)"
 # El bundle vive como carpeta en el repo (superset/), no como zip — se empaqueta
 # aquí mismo antes de importar. import-dashboards es upsert por uuid: reimportar
-# el mismo bundle no duplica nada.
-(cd superset && zip -qr /tmp/bi-superset-bundle.zip .)
+# el mismo bundle no duplica nada. Usa python3 -m zipfile (no 'zip' — no viene
+# instalado por defecto en el VPS, I-21) con rutas relativas a superset/ para
+# que el zip tenga la misma estructura que produciría 'cd superset && zip -qr'.
+# I-23: el YAML exportado enmascara el password real como "XXXXXXXXXXXX"
+# (correcto para no commitear secretos a git). Sustituido aquí solo en una
+# copia temporal en /tmp, leyendo el valor real de REPLICA_DB_PASSWORD del
+# propio .env.bi.production ya cargado en el entorno remoto — nunca se
+# imprime, nunca se commitea, se borra al final.
+rm -rf /tmp/bi-superset-export
+cp -r superset /tmp/bi-superset-export
+sed -i "s/XXXXXXXXXXXX/\${REPLICA_DB_PASSWORD}/g" /tmp/bi-superset-export/databases/bi_db_replica.yaml
+
+rm -f /tmp/bi-superset-bundle.zip
+# I-22: Superset's get_contents_from_bundle() SIEMPRE hace remove_root() —
+# asume que el zip tiene una única carpeta raíz envolvente (el formato real
+# de export de Superset la incluye, ej. dashboard_export_<timestamp>/) y le
+# quita ese primer segmento a CADA ruta. Un zip sin esa carpeta raíz pierde
+# "metadata.yaml" (queda vacío tras el strip) -> IncorrectVersionError ->
+# el dispatcher cae al importador v0 legacy (JSON) -> JSONDecodeError sobre
+# YAML. Por eso el zip necesita el prefijo "bi_export/" en cada ruta.
+python3 -c "
+import zipfile, os
+with zipfile.ZipFile('/tmp/bi-superset-bundle.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+    for root, dirs, files in os.walk('/tmp/bi-superset-export'):
+        for f in files:
+            full = os.path.join(root, f)
+            z.write(full, 'bi_export/' + os.path.relpath(full, '/tmp/bi-superset-export'))
+"
+rm -rf /tmp/bi-superset-export
 docker cp /tmp/bi-superset-bundle.zip "\$(docker compose -f ${COMPOSE_FILE} ps -q bi-superset)":/tmp/bundle.zip
 docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-superset \
     superset import-dashboards -p /tmp/bundle.zip -u "\${SUPERSET_ADMIN_USERNAME}"
