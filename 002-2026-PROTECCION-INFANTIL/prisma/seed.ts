@@ -1974,6 +1974,10 @@ async function main() {
         { clave: "analytics.colegios.spam_alerta_pct", valor: "0.5", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Porcentaje de reportes SPAM que dispara hallazgo negativo (0.5 = 50%)" },
         { clave: "analytics.colegios.resolucion_comite_ok_pct", valor: "0.8", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Tasa mínima de resolución del comité para generar hallazgo positivo (0.8 = 80%)" },
         { clave: "analytics.colegios.periodo_default_dias", valor: "30", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Ventana temporal por defecto de las series de reportes en la ficha de colegio" },
+        // SPEC-303 (002-PI-209): 3 umbrales adicionales del semáforo del listado admin (I-104).
+        { clave: "analytics.colegios.casos_abiertos_alto", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Umbral: si un colegio supera este número de casos abiertos, el semáforo tira a rojo" },
+        { clave: "analytics.colegios.casos_sin_movimiento_dias", valor: "14", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Umbral: alertas del colegio sin cambio de estado en más de N días disparan hallazgo negativo" },
+        { clave: "analytics.colegios.porcentaje_procesado_min", valor: "0.7", tipo: TipoParametro.FLOAT, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Umbral: si el porcentaje de reportes procesados cae bajo este ratio, el semáforo tira a amarillo/rojo (0.7 = 70%)" },
     ];
     for (const p of analyticsColegiosParams) {
         await prisma.parametroSistema.upsert({
