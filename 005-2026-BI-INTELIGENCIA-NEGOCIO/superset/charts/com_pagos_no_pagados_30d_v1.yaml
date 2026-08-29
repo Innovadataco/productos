@@ -1,0 +1,22 @@
+slice_name: 6 · Pagos con estado ≠ 'pagado' (30 d)
+viz_type: table
+uuid: 7d8f99f2-6bc2-552b-9f8a-20d4853f7bdb
+version: 1.0.0
+dataset_uuid: a15e0d8f-ec1e-5b0e-8b04-d6da7ef3769b
+description: Chart del dashboard 'comercial' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: Aprobado en compuerta §4 · SPEC-019..023 · F3C 2026-08-29
+params:
+  viz_type: table
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  query_mode: raw
+  all_columns: []
+query_context: "{\"datasource\": {\"uuid\": \"a15e0d8f-ec1e-5b0e-8b04-d6da7ef3769b\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT bc.id, bc.estado, bc.monto, bc.\\\"creadoEn\\\", bc.\\\"periodoInicio\\\" FROM \\\"BillingCycle\\\" bc WHERE bc.estado <> 'pagado' AND bc.\\\"creadoEn\\\" >= NOW() - INTERVAL '30 days' ORDER BY bc.\\\"creadoEn\\\" DESC LIMIT 200\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 3600
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - comercial

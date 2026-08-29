@@ -31,63 +31,63 @@ position:
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-op_tiempo_resolucion_v1:
+  CHART-op_comite_horas_promedio_v1:
     type: CHART
-    id: CHART-op_tiempo_resolucion_v1
+    id: CHART-op_comite_horas_promedio_v1
     meta:
-      uuid: 855bcfbd-1e8e-5bac-8708-80712a120367
+      uuid: dc85dcb4-ff0e-5ff2-a670-78c72a7e83a5
       chartId: null
       width: 6
       height: 30
-      sliceName: op_tiempo_resolucion_v1
+      sliceName: op_comite_horas_promedio_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-op_backlog_v1:
+  CHART-op_distribucion_estado_reporte_v1:
     type: CHART
-    id: CHART-op_backlog_v1
+    id: CHART-op_distribucion_estado_reporte_v1
     meta:
-      uuid: 7af358c9-9317-5054-8e88-01fcebbb395a
+      uuid: 0db114f3-d79f-501a-8296-110bfbb7d28f
       chartId: null
       width: 6
       height: 30
-      sliceName: op_backlog_v1
+      sliceName: op_distribucion_estado_reporte_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-op_revision_manual_detalle_v1:
+  CHART-op_revision_manual_gt_7d_v1:
     type: CHART
-    id: CHART-op_revision_manual_detalle_v1
+    id: CHART-op_revision_manual_gt_7d_v1
     meta:
-      uuid: 2d77bf38-6a95-569a-bdf8-82b909566177
+      uuid: ff02c5c9-3089-549f-a650-590680ce3645
       chartId: null
       width: 6
       height: 30
-      sliceName: op_revision_manual_detalle_v1
+      sliceName: op_revision_manual_gt_7d_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-op_transiciones_responsable_v1:
+  CHART-op_transiciones_por_responsable_v1:
     type: CHART
-    id: CHART-op_transiciones_responsable_v1
+    id: CHART-op_transiciones_por_responsable_v1
     meta:
-      uuid: a4fea736-b1f6-5b14-8cce-20b90035f155
+      uuid: 8f1de9e6-3b5e-58ac-9819-82bbec6b0445
       chartId: null
       width: 6
       height: 30
-      sliceName: op_transiciones_responsable_v1
+      sliceName: op_transiciones_por_responsable_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-op_vencimientos_suscripciones_v1:
+  CHART-op_vencimientos_suscripciones_30d_v1:
     type: CHART
-    id: CHART-op_vencimientos_suscripciones_v1
+    id: CHART-op_vencimientos_suscripciones_30d_v1
     meta:
-      uuid: f4202613-375d-58d6-8391-9175cc0aa400
+      uuid: 591609a3-062f-588e-9034-ddca4962e2d3
       chartId: null
       width: 6
       height: 30
-      sliceName: op_vencimientos_suscripciones_v1
+      sliceName: op_vencimientos_suscripciones_30d_v1
     parents:
       - ROOT_ID
       - GRID_ID

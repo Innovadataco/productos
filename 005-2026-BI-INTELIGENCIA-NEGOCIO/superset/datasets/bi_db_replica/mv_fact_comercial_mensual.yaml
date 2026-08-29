@@ -20,7 +20,7 @@ always_filter_main_dttm: false
 columns:
   - column_name: mes
     verbose_name: null
-    type: DATE
+    type: TIMESTAMP
     is_dttm: true
     is_active: true
     groupby: true
@@ -28,7 +28,37 @@ columns:
     expression: null
     description: null
     uuid: 5c739382-4cbc-564c-9175-7af6011c1937
-  - column_name: mrr
+  - column_name: plan_nombre
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 2040d168-4628-5f61-b4b2-9c52e790c3f6
+  - column_name: ciclo_estado
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 148983f3-822c-5e82-a882-f3f0b89bd494
+  - column_name: total_ciclos
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 1960cda2-a055-5d06-aaf7-f0031773c575
+  - column_name: monto_total
     verbose_name: null
     type: DOUBLE PRECISION
     is_dttm: false
@@ -37,27 +67,17 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: ea579823-fc5c-5f97-927b-57a4603b452b
-  - column_name: activas
+    uuid: 4745bd28-0746-59c8-8f21-956632db844c
+  - column_name: monto_promedio
     verbose_name: null
-    type: BIGINT
+    type: DOUBLE PRECISION
     is_dttm: false
     is_active: true
     groupby: true
     filterable: true
     expression: null
     description: null
-    uuid: e5c3d27a-6a17-586a-99dd-7796c31c1b13
-  - column_name: churn
-    verbose_name: null
-    type: BIGINT
-    is_dttm: false
-    is_active: true
-    groupby: true
-    filterable: true
-    expression: null
-    description: null
-    uuid: 1d2ce234-b097-5612-99d6-77d51550a44a
+    uuid: a703b852-b04c-5d1e-a28f-087ca90c24e1
 metrics:
   - metric_name: count
     verbose_name: Filas

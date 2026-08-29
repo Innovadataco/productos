@@ -28,7 +28,7 @@ columns:
     expression: null
     description: null
     uuid: f869c0b3-1548-544c-8c50-4a7fc1b80c49
-  - column_name: clasificacionIAId
+  - column_name: clasificacionId
     verbose_name: null
     type: VARCHAR
     is_dttm: false
@@ -37,7 +37,27 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 198a25ea-a77b-5900-9007-d772d3cf86d4
+    uuid: a596617f-a7f9-5b23-b208-0aaab7c47dce
+  - column_name: categoriaOriginal
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 012bf874-09fb-5362-9d16-1d6a4adaa803
+  - column_name: categoriaCorregida
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: e7a56401-0497-5a41-ae28-52159799fb4d
   - column_name: creadoEn
     verbose_name: null
     type: TIMESTAMP

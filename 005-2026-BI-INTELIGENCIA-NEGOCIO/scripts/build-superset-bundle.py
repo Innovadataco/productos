@@ -201,7 +201,10 @@ DATASETS = [
     ("bi_db_replica", "ClasificacionIA", "public", [
         ("id", "VARCHAR", False, False),
         ("reporteId", "VARCHAR", False, True),
+        ("categoria", "VARCHAR", False, True),
         ("modeloUsado", "VARCHAR", False, True),
+        ("usoCascada", "BOOLEAN", False, True),
+        ("confianza", "DOUBLE PRECISION", False, True),
         ("latenciaMs", "INTEGER", False, True),
         ("creadoEn", "TIMESTAMP", True, True),
     ]),
@@ -215,7 +218,9 @@ DATASETS = [
     ]),
     ("bi_db_replica", "CorreccionAdmin", "public", [
         ("id", "VARCHAR", False, False),
-        ("clasificacionIAId", "VARCHAR", False, True),
+        ("clasificacionId", "VARCHAR", False, True),
+        ("categoriaOriginal", "VARCHAR", False, True),
+        ("categoriaCorregida", "VARCHAR", False, True),
         ("creadoEn", "TIMESTAMP", True, True),
     ]),
     ("bi_db_replica", "Subscription", "public", [
@@ -286,35 +291,53 @@ DATASETS = [
         ("error", "TEXT", False, True),
         ("creadoEn", "TIMESTAMP", True, True),
     ]),
+    # MVs · columnas exactas de la migración 20260828120100_mv_fact_bi/migration.sql
     ("bi_db_replica", "mv_fact_reporte_diario", "public", [
-        ("dia", "DATE", True, True),
-        ("reportes", "BIGINT", False, True),
-        ("prioridad_alta", "BIGINT", False, True),
-        ("por_tenant", "JSONB", False, True),
+        ("dia", "TIMESTAMP", True, True),
+        ("pais", "VARCHAR", False, True),
+        ("ciudad", "VARCHAR", False, True),
+        ("estado", "VARCHAR", False, True),
+        ("categoria", "VARCHAR", False, True),
+        ("prioridad_alta", "BOOLEAN", False, True),
+        ("es_rafaga", "BOOLEAN", False, True),
+        ("es_anonimo", "BOOLEAN", False, True),
+        ("total_reportes", "BIGINT", False, True),
+        ("total_clasificados", "BIGINT", False, True),
+        ("total_corregidos", "BIGINT", False, True),
+        ("confianza_promedio", "DOUBLE PRECISION", False, True),
+        ("latencia_ms_promedio", "DOUBLE PRECISION", False, True),
     ]),
     ("bi_db_replica", "mv_fact_motor_ia_diario", "public", [
-        ("dia", "DATE", True, True),
-        ("clasificaciones", "BIGINT", False, True),
-        ("aciertos", "BIGINT", False, True),
-        ("latencia_p50_ms", "DOUBLE PRECISION", False, True),
-        ("latencia_p95_ms", "DOUBLE PRECISION", False, True),
+        ("dia", "TIMESTAMP", True, True),
+        ("categoria", "VARCHAR", False, True),
+        ("modelo", "VARCHAR", False, True),
+        ("total", "BIGINT", False, True),
+        ("total_corregidos", "BIGINT", False, True),
+        ("confianza_promedio", "DOUBLE PRECISION", False, True),
+        ("latencia_ms_promedio", "DOUBLE PRECISION", False, True),
     ]),
     ("bi_db_replica", "mv_fact_operativo", "public", [
-        ("dia", "DATE", True, True),
-        ("por_estado", "JSONB", False, True),
-        ("comite_pendientes", "BIGINT", False, True),
-        ("transiciones", "JSONB", False, True),
+        ("dia", "TIMESTAMP", True, True),
+        ("estado_anterior", "VARCHAR", False, True),
+        ("estado_nuevo", "VARCHAR", False, True),
+        ("responsable_tipo", "VARCHAR", False, True),
+        ("total_transiciones", "BIGINT", False, True),
+        ("total_solicitudes_comite", "BIGINT", False, True),
     ]),
     ("bi_db_replica", "mv_fact_comercial_mensual", "public", [
-        ("mes", "DATE", True, True),
-        ("mrr", "DOUBLE PRECISION", False, True),
-        ("activas", "BIGINT", False, True),
-        ("churn", "BIGINT", False, True),
+        ("mes", "TIMESTAMP", True, True),
+        ("plan_nombre", "VARCHAR", False, True),
+        ("ciclo_estado", "VARCHAR", False, True),
+        ("total_ciclos", "BIGINT", False, True),
+        ("monto_total", "DOUBLE PRECISION", False, True),
+        ("monto_promedio", "DOUBLE PRECISION", False, True),
     ]),
     ("bi_db_replica", "mv_fact_salud_sistema", "public", [
-        ("captura", "TIMESTAMP", True, True),
-        ("lag_segundos", "DOUBLE PRECISION", False, True),
-        ("reintentos_fallidos", "BIGINT", False, True),
+        ("dia", "TIMESTAMP", True, True),
+        ("accion", "VARCHAR", False, True),
+        ("total_eventos_audit", "BIGINT", False, True),
+        ("total_alertas_colegio", "BIGINT", False, True),
+        ("total_alertas_suscripcion", "BIGINT", False, True),
     ]),
     ("bi_superset_db", "logs", "public", [
         ("id", "BIGINT", False, False),
@@ -441,6 +464,13 @@ def chart_params(viz_type: str, sql: str, extra: dict | None = None) -> dict:
                 "hasCustomLabel": True,
             }
         ]
+    elif viz_type == "pie":
+        base["metric"] = {
+            "expressionType": "SQL",
+            "sqlExpression": sql,
+            "label": "valor",
+            "hasCustomLabel": True,
+        }
     elif viz_type == "table":
         base["query_mode"] = "raw"
         base["all_columns"] = extra.get("all_columns", []) if extra else []
@@ -522,148 +552,191 @@ CHARTS = [
              "GROUP BY c.nombre ORDER BY reportes DESC LIMIT 5"),
     ),
 
-    # ────── SPEC-020 · MOTOR IA (7) ──────
+    # ────── SPEC-020 · MOTOR IA (7 KPIs · SQLs son cita literal del spec.md §Alcance) ──────
     dict(
         slug="motor_clasificaciones_24h_v1", dashboard="motor_ia", viz="big_number_total",
-        dataset="bi_db_replica/ClasificacionIA", refresh=300, name="1 · Clasificaciones 24 h",
-        sql=("SELECT count(*) FROM \"ClasificacionIA\" "
+        dataset="bi_db_replica/ClasificacionIA", refresh=300,
+        name="1 · Clasificaciones últimas 24 h",
+        sql=("SELECT count(*) AS total FROM \"ClasificacionIA\" "
              "WHERE \"creadoEn\" >= NOW() - INTERVAL '24 hours'"),
     ),
     dict(
-        slug="motor_latencia_p95_v1", dashboard="motor_ia", viz="big_number_total",
-        dataset="bi_db_replica/ClasificacionIA", refresh=300, name="2 · Latencia p95 (ms)",
-        sql=("SELECT ROUND(percentile_cont(0.95) WITHIN GROUP "
-             "(ORDER BY \"latenciaMs\")::numeric, 0) AS p95_ms "
+        slug="motor_latencia_p50p95_v1", dashboard="motor_ia", viz="table",
+        dataset="bi_db_replica/ClasificacionIA", refresh=900,
+        name="2 · Latencia p50/p95 por modelo (7 d)",
+        sql=("SELECT \"modeloUsado\", "
+             "percentile_cont(0.5)  WITHIN GROUP (ORDER BY \"latenciaMs\") AS p50_ms, "
+             "percentile_cont(0.95) WITHIN GROUP (ORDER BY \"latenciaMs\") AS p95_ms, "
+             "count(*) AS clasificaciones "
              "FROM \"ClasificacionIA\" "
-             "WHERE \"creadoEn\" >= NOW() - INTERVAL '24 hours' "
-             "AND \"latenciaMs\" IS NOT NULL"),
+             "WHERE \"creadoEn\" >= NOW() - INTERVAL '7 days' "
+             "GROUP BY \"modeloUsado\" ORDER BY p95_ms DESC"),
     ),
     dict(
-        slug="motor_correcciones_admin_7d_v1", dashboard="motor_ia", viz="big_number_total",
-        dataset="bi_db_replica/CorreccionAdmin", refresh=900, name="3 · Correcciones admin 7 d",
-        sql=("SELECT count(*) FROM \"CorreccionAdmin\" "
+        slug="motor_distribucion_categorias_v1", dashboard="motor_ia", viz="bar",
+        dataset="bi_db_replica/ClasificacionIA", refresh=1800,
+        name="3 · Distribución de categorías (7 d)",
+        sql=("SELECT categoria::text AS categoria, count(*) AS total "
+             "FROM \"ClasificacionIA\" "
+             "WHERE \"creadoEn\" >= NOW() - INTERVAL '7 days' "
+             "GROUP BY categoria ORDER BY total DESC"),
+    ),
+    dict(
+        slug="motor_tasa_acuerdo_jurado_v1", dashboard="motor_ia", viz="big_number_total",
+        dataset="bi_db_replica/clasificacion_rubrica_votos", refresh=900,
+        name="4 · Tasa de acuerdo del jurado (7 d)",
+        sql=("WITH votos_por_categoria AS ("
+             "SELECT \"clasificacionIAId\", categoria, "
+             "count(*) FILTER (WHERE cumple = true) AS votos_a_favor, "
+             "count(*) AS votos_totales "
+             "FROM \"clasificacion_rubrica_votos\" "
+             "WHERE \"creadoEn\" >= NOW() - INTERVAL '7 days' "
+             "GROUP BY \"clasificacionIAId\", categoria), "
+             "consenso_por_clasificacion AS ("
+             "SELECT \"clasificacionIAId\", "
+             "bool_or(votos_a_favor >= 2 AND votos_totales >= 2) AS hay_consenso "
+             "FROM votos_por_categoria GROUP BY \"clasificacionIAId\") "
+             "SELECT ROUND(100.0 * count(*) FILTER (WHERE hay_consenso) "
+             "/ NULLIF(count(*), 0), 2) AS tasa_acuerdo_pct "
+             "FROM consenso_por_clasificacion"),
+    ),
+    dict(
+        slug="motor_uso_cascada_v1", dashboard="motor_ia", viz="big_number_total",
+        dataset="bi_db_replica/ClasificacionIA", refresh=1800,
+        name="5 · Uso de cascada (7 d · %)",
+        sql=("SELECT ROUND(100.0 * count(*) FILTER (WHERE \"usoCascada\" = true) "
+             "/ NULLIF(count(*), 0), 2) AS pct_cascada "
+             "FROM \"ClasificacionIA\" "
              "WHERE \"creadoEn\" >= NOW() - INTERVAL '7 days'"),
     ),
     dict(
-        slug="motor_acuerdo_jurado_v1", dashboard="motor_ia", viz="big_number_total",
-        dataset="bi_db_replica/clasificacion_rubrica_votos", refresh=900,
-        name="4 · Acuerdo jurado ≥2/3 (%)",
-        sql=("WITH votos_por_categoria AS ("
-             "SELECT \"clasificacionIAId\", categoria, "
-             "count(*) FILTER (WHERE cumple) AS a_favor, count(*) AS votos_totales "
-             "FROM clasificacion_rubrica_votos "
-             "WHERE \"creadoEn\" >= NOW() - INTERVAL '7 days' "
-             "GROUP BY \"clasificacionIAId\", categoria) "
-             "SELECT ROUND(100.0 * count(*) FILTER (WHERE a_favor >= 2 AND votos_totales >= 2) "
-             "/ NULLIF(count(*), 0), 2) AS tasa_acuerdo_pct FROM votos_por_categoria"),
+        slug="motor_correcciones_admin_30d_v1", dashboard="motor_ia", viz="big_number_total",
+        dataset="bi_db_replica/CorreccionAdmin", refresh=3600,
+        name="6 · Correcciones admin (30 d)",
+        sql=("SELECT count(*) AS correcciones_30d FROM \"CorreccionAdmin\" "
+             "WHERE \"creadoEn\" >= NOW() - INTERVAL '30 days'"),
     ),
     dict(
-        slug="motor_modelos_activos_v1", dashboard="motor_ia", viz="bar",
-        dataset="bi_db_replica/ClasificacionIA", refresh=3600, name="5 · Modelos activos (30 d)",
-        sql=("SELECT \"modeloUsado\" AS modelo, count(*) AS uso "
+        slug="motor_latencia_timeline_v1", dashboard="motor_ia", viz="line",
+        dataset="bi_db_replica/ClasificacionIA", refresh=900,
+        name="7 · Latencia motor timeline (72 h · por hora · por modelo)",
+        sql=("SELECT date_trunc('hour', \"creadoEn\") AS hora, \"modeloUsado\", "
+             "percentile_cont(0.5)  WITHIN GROUP (ORDER BY \"latenciaMs\") AS p50_ms, "
+             "percentile_cont(0.95) WITHIN GROUP (ORDER BY \"latenciaMs\") AS p95_ms "
              "FROM \"ClasificacionIA\" "
-             "WHERE \"creadoEn\" >= NOW() - INTERVAL '30 days' "
-             "GROUP BY \"modeloUsado\" ORDER BY uso DESC LIMIT 6"),
-    ),
-    dict(
-        slug="motor_precision_ia_v1", dashboard="motor_ia", viz="big_number_total",
-        dataset="bi_db_replica/mv_fact_motor_ia_diario", refresh=900, name="6 · Precisión 7 d (%)",
-        sql=("SELECT ROUND(100.0 * SUM(aciertos)::numeric / NULLIF(SUM(clasificaciones), 0), 2) "
-             "AS precision_pct FROM mv_fact_motor_ia_diario "
-             "WHERE dia >= (NOW() AT TIME ZONE 'America/Bogota')::date - 7"),
-    ),
-    dict(
-        slug="motor_volumen_horario_v1", dashboard="motor_ia", viz="line",
-        dataset="bi_db_replica/ClasificacionIA", refresh=900, name="7 · Volumen por hora (24 h)",
-        sql=("SELECT date_trunc('hour', \"creadoEn\" AT TIME ZONE 'America/Bogota') AS hora, "
-             "count(*) AS clasificaciones FROM \"ClasificacionIA\" "
-             "WHERE \"creadoEn\" >= NOW() - INTERVAL '24 hours' "
-             "GROUP BY hora ORDER BY hora"),
+             "WHERE \"creadoEn\" >= NOW() - INTERVAL '3 days' "
+             "GROUP BY hora, \"modeloUsado\" ORDER BY hora"),
     ),
 
-    # ────── SPEC-021 · COMERCIAL (6) ──────
+    # ────── SPEC-021 · COMERCIAL (6 KPIs · SQLs cita literal del spec.md §Alcance) ──────
+    # KPI 1 tiene Big Number + Line 12 meses (2 charts, 1 KPI).
     dict(
-        slug="com_mrr_mes_v1", dashboard="comercial", viz="big_number_total",
-        dataset="bi_db_replica/BillingCycle", refresh=900, name="1 · MRR mes (COP)",
-        sql=("SELECT COALESCE(SUM(monto), 0) FROM \"BillingCycle\" "
-             "WHERE estado = 'pagado' "
-             "AND \"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota')"),
+        slug="com_mrr_mes_actual_v1", dashboard="comercial", viz="big_number_total",
+        dataset="bi_db_replica/mv_fact_comercial_mensual", refresh=3600,
+        name="1a · MRR mes actual (COP)",
+        sql=("SELECT COALESCE(SUM(monto_total), 0) AS mrr_cop "
+             "FROM mv_fact_comercial_mensual "
+             "WHERE mes = date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') "
+             "AND ciclo_estado = 'pagado'"),
     ),
     dict(
-        slug="com_suscripciones_activas_v1", dashboard="comercial", viz="big_number_total",
-        dataset="bi_db_replica/Subscription", refresh=900, name="2 · Suscripciones activas",
-        sql="SELECT count(*) FROM \"Subscription\" WHERE estado = 'activo'",
+        slug="com_mrr_12m_line_v1", dashboard="comercial", viz="line",
+        dataset="bi_db_replica/mv_fact_comercial_mensual", refresh=3600,
+        name="1b · MRR línea 12 meses (COP)",
+        sql=("SELECT mes, SUM(monto_total) AS mrr_cop "
+             "FROM mv_fact_comercial_mensual "
+             "WHERE mes >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') "
+             "- INTERVAL '11 months' AND ciclo_estado = 'pagado' "
+             "GROUP BY mes ORDER BY mes"),
+    ),
+    dict(
+        slug="com_nuevas_suscripciones_v1", dashboard="comercial", viz="big_number_total",
+        dataset="bi_db_replica/Subscription", refresh=3600,
+        name="2 · Nuevas suscripciones mes vs anterior",
+        sql=("WITH por_mes AS ("
+             "SELECT date_trunc('month', \"creadoEn\" AT TIME ZONE 'America/Bogota') AS mes, "
+             "count(*) AS nuevas FROM \"Subscription\" "
+             "WHERE \"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') "
+             "- INTERVAL '1 month' GROUP BY mes) "
+             "SELECT mes, nuevas FROM por_mes ORDER BY mes"),
     ),
     dict(
         slug="com_churn_mes_v1", dashboard="comercial", viz="big_number_total",
-        dataset="bi_db_replica/Subscription", refresh=3600, name="3 · Churn mes (bajas)",
-        sql=("SELECT count(*) FROM \"Subscription\" "
+        dataset="bi_db_replica/Subscription", refresh=3600,
+        name="3 · Churn mes actual",
+        sql=("SELECT count(*) AS churn_mes FROM \"Subscription\" "
              "WHERE estado <> 'activo' "
              "AND \"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota')"),
     ),
     dict(
-        slug="com_arpu_v1", dashboard="comercial", viz="big_number_total",
-        dataset="bi_db_replica/BillingCycle", refresh=3600, name="4 · ARPU (COP)",
-        sql=("SELECT COALESCE(SUM(bc.monto), 0) / NULLIF(count(DISTINCT s.id), 0) AS arpu "
-             "FROM \"BillingCycle\" bc "
-             "JOIN \"Subscription\" s ON s.id = bc.\"subscriptionId\" "
-             "WHERE bc.estado = 'pagado' AND s.estado = 'activo' "
-             "AND bc.\"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota')"),
-    ),
-    dict(
-        slug="com_ingresos_por_plan_v1", dashboard="comercial", viz="bar",
-        dataset="bi_db_replica/BillingCycle", refresh=3600, name="5 · Ingresos por plan (mes · COP)",
-        sql=("SELECT p.nombre AS plan, COALESCE(SUM(bc.monto), 0) AS ingresos "
-             "FROM \"BillingCycle\" bc "
-             "JOIN \"Subscription\" s ON s.id = bc.\"subscriptionId\" "
+        slug="com_distribucion_por_plan_v1", dashboard="comercial", viz="pie",
+        dataset="bi_db_replica/Subscription", refresh=3600,
+        name="4 · Distribución por plan",
+        sql=("SELECT p.nombre AS plan, count(s.id) AS suscripciones "
+             "FROM \"Subscription\" s "
              "JOIN \"Plan\" p ON p.id = s.\"planId\" "
-             "WHERE bc.estado = 'pagado' "
-             "AND bc.\"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') "
-             "GROUP BY p.nombre ORDER BY ingresos DESC"),
+             "WHERE s.estado = 'activo' "
+             "GROUP BY p.nombre ORDER BY suscripciones DESC"),
     ),
     dict(
-        slug="com_evolucion_mrr_v1", dashboard="comercial", viz="line",
-        dataset="bi_db_replica/mv_fact_comercial_mensual", refresh=3600,
-        name="6 · Evolución MRR (12 meses)",
-        sql=("SELECT mes, mrr FROM mv_fact_comercial_mensual "
-             "WHERE mes >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') - INTERVAL '12 months' "
-             "ORDER BY mes"),
+        slug="com_top10_ingresos_colegio_v1", dashboard="comercial", viz="bar",
+        dataset="bi_db_replica/BillingCycle", refresh=3600,
+        name="5 · Top 10 colegios por ingresos (mes · COP)",
+        sql=("SELECT c.nombre AS colegio, SUM(bc.monto) AS ingresos_cop "
+             "FROM \"BillingCycle\" bc "
+             "JOIN \"Subscription\" s ON s.id = bc.\"subscriptionId\" "
+             "JOIN \"Colegio\"      c ON c.\"tenantId\" = s.\"tenantId\" "
+             "WHERE bc.\"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') "
+             "AND bc.estado = 'pagado' "
+             "GROUP BY c.nombre ORDER BY ingresos_cop DESC LIMIT 10"),
+    ),
+    dict(
+        slug="com_pagos_no_pagados_30d_v1", dashboard="comercial", viz="table",
+        dataset="bi_db_replica/BillingCycle", refresh=3600,
+        name="6 · Pagos con estado ≠ 'pagado' (30 d)",
+        sql=("SELECT bc.id, bc.estado, bc.monto, bc.\"creadoEn\", bc.\"periodoInicio\" "
+             "FROM \"BillingCycle\" bc "
+             "WHERE bc.estado <> 'pagado' "
+             "AND bc.\"creadoEn\" >= NOW() - INTERVAL '30 days' "
+             "ORDER BY bc.\"creadoEn\" DESC LIMIT 200"),
     ),
 
-    # ────── SPEC-022 · OPERATIVO (7) ──────
+    # ────── SPEC-022 · OPERATIVO (7 KPIs · SQLs cita literal del spec.md §Alcance) ──────
     dict(
-        slug="op_reportes_en_flujo_v1", dashboard="operativo", viz="bar",
-        dataset="bi_db_replica/Reporte", refresh=300, name="1 · Reportes en flujo (no cerrados)",
-        sql=("SELECT estado, count(*) AS total FROM \"Reporte\" "
-             "WHERE \"eliminado\" = false GROUP BY estado ORDER BY total DESC"),
+        slug="op_reportes_en_flujo_v1", dashboard="operativo", viz="big_number_total",
+        dataset="bi_db_replica/Reporte", refresh=900,
+        name="1 · Reportes en flujo (no cerrados)",
+        sql=("SELECT count(*) AS en_flujo FROM \"Reporte\" "
+             "WHERE estado NOT IN ('CLASIFICADO', 'CORREGIDO') "
+             "AND \"eliminado\" = false"),
     ),
     dict(
         slug="op_comite_pendientes_v1", dashboard="operativo", viz="big_number_total",
         dataset="bi_db_replica/SolicitudComite", refresh=900,
         name="2 · Solicitudes comité pendientes",
-        sql=("SELECT count(*) FROM \"SolicitudComite\" WHERE estado = 'PENDIENTE'"),
+        sql=("SELECT count(*) AS comite_pendientes FROM \"SolicitudComite\" "
+             "WHERE estado = 'PENDIENTE'"),
     ),
     dict(
-        slug="op_tiempo_resolucion_v1", dashboard="operativo", viz="big_number_total",
-        dataset="bi_db_replica/SolicitudComite", refresh=900,
-        name="3 · Tiempo medio resolución (h)",
-        sql=("SELECT ROUND(AVG(EXTRACT(EPOCH FROM (\"resueltoEn\" - \"creadoEn\")) / 3600)::numeric, 2) "
-             "AS horas FROM \"SolicitudComite\" "
+        slug="op_comite_horas_promedio_v1", dashboard="operativo", viz="big_number_total",
+        dataset="bi_db_replica/SolicitudComite", refresh=3600,
+        name="3 · Tiempo promedio resolución comité (30 d · horas)",
+        sql=("SELECT ROUND(AVG(EXTRACT(EPOCH FROM (\"resueltoEn\" - \"creadoEn\")) / 3600)"
+             "::numeric, 2) AS horas_promedio FROM \"SolicitudComite\" "
              "WHERE \"resueltoEn\" IS NOT NULL "
              "AND \"resueltoEn\" >= NOW() - INTERVAL '30 days'"),
     ),
     dict(
-        slug="op_backlog_v1", dashboard="operativo", viz="big_number_total",
-        dataset="bi_db_replica/Reporte", refresh=300,
-        name="4 · Backlog REVISION_MANUAL > 7 d",
-        sql=("SELECT count(*) FROM \"Reporte\" "
-             "WHERE estado = 'REVISION_MANUAL' "
-             "AND \"creadoEn\" < NOW() - INTERVAL '7 days' "
-             "AND \"eliminado\" = false"),
+        slug="op_distribucion_estado_reporte_v1", dashboard="operativo", viz="pie",
+        dataset="bi_db_replica/Reporte", refresh=900,
+        name="4 · Distribución por estado Reporte",
+        sql=("SELECT estado::text AS estado, count(*) AS total FROM \"Reporte\" "
+             "WHERE \"eliminado\" = false GROUP BY estado ORDER BY total DESC"),
     ),
     dict(
-        slug="op_revision_manual_detalle_v1", dashboard="operativo", viz="table",
-        dataset="bi_db_replica/Reporte", refresh=300, name="5 · Reportes REVISION_MANUAL > 7 d",
+        slug="op_revision_manual_gt_7d_v1", dashboard="operativo", viz="table",
+        dataset="bi_db_replica/Reporte", refresh=900,
+        name="5 · Reportes REVISION_MANUAL > 7 d",
         sql=("SELECT r.id, r.\"numeroSeguimiento\", p.nombre AS plataforma, "
              "r.\"creadoEn\", c.nombre AS colegio FROM \"Reporte\" r "
              "LEFT JOIN \"Colegio\" c ON c.\"tenantId\" = r.\"tenantId\" "
@@ -674,8 +747,8 @@ CHARTS = [
              "ORDER BY r.\"creadoEn\" ASC LIMIT 500"),
     ),
     dict(
-        slug="op_transiciones_responsable_v1", dashboard="operativo", viz="bar",
-        dataset="bi_db_replica/TransicionReporte", refresh=900,
+        slug="op_transiciones_por_responsable_v1", dashboard="operativo", viz="bar",
+        dataset="bi_db_replica/TransicionReporte", refresh=1800,
         name="6 · Transiciones por responsable (7 d)",
         sql=("SELECT \"responsableTipo\"::text AS responsable, count(*) AS transiciones "
              "FROM \"TransicionReporte\" "
@@ -683,9 +756,9 @@ CHARTS = [
              "GROUP BY \"responsableTipo\" ORDER BY transiciones DESC"),
     ),
     dict(
-        slug="op_vencimientos_suscripciones_v1", dashboard="operativo", viz="table",
+        slug="op_vencimientos_suscripciones_30d_v1", dashboard="operativo", viz="table",
         dataset="bi_db_replica/Subscription", refresh=3600,
-        name="7 · Vencimientos próximos 30 d",
+        name="7 · Vencimientos suscripciones próximos 30 d",
         sql=("SELECT s.id, c.nombre AS colegio, s.\"terminaEn\" FROM \"Subscription\" s "
              "JOIN \"Colegio\" c ON c.\"tenantId\" = s.\"tenantId\" "
              "WHERE s.\"terminaEn\" IS NOT NULL "
@@ -726,9 +799,14 @@ CHARTS = [
     dict(
         slug="salud_uptime_servicios_v1", dashboard="salud", viz="line",
         dataset="bi_db_replica/mv_fact_salud_sistema", refresh=900,
-        name="5 · Uptime servicios (placeholder)",
-        sql=("SELECT captura, lag_segundos FROM mv_fact_salud_sistema "
-             "WHERE captura >= NOW() - INTERVAL '24 hours' ORDER BY captura"),
+        name="5 · Actividad sistema (placeholder de uptime hasta INSTRUCTIVO-008)",
+        # mv_fact_salud_sistema (SPEC-009) agrega AuditLog + AlertaColegio + AlertaSuscripcion
+        # por día. Placeholder de uptime = flujo de eventos audit. INSTRUCTIVO-008 sustituye
+        # por métrica de healthcheck real (bot Telegram).
+        sql=("SELECT dia, SUM(total_eventos_audit) AS eventos_audit "
+             "FROM mv_fact_salud_sistema "
+             "WHERE dia >= (NOW() AT TIME ZONE 'America/Bogota')::date - 7 "
+             "GROUP BY dia ORDER BY dia"),
     ),
     dict(
         slug="salud_cache_hit_vanna_v1", dashboard="salud", viz="big_number_total",

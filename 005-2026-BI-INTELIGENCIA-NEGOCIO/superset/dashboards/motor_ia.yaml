@@ -19,75 +19,75 @@ position:
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-motor_latencia_p95_v1:
+  CHART-motor_latencia_p50p95_v1:
     type: CHART
-    id: CHART-motor_latencia_p95_v1
+    id: CHART-motor_latencia_p50p95_v1
     meta:
-      uuid: d43afcbf-2d9e-5375-abaf-4afeb35c0e97
+      uuid: c2204bd3-083d-554e-a990-2ec437354282
       chartId: null
       width: 6
       height: 30
-      sliceName: motor_latencia_p95_v1
+      sliceName: motor_latencia_p50p95_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-motor_correcciones_admin_7d_v1:
+  CHART-motor_distribucion_categorias_v1:
     type: CHART
-    id: CHART-motor_correcciones_admin_7d_v1
+    id: CHART-motor_distribucion_categorias_v1
     meta:
-      uuid: fa69a55b-67e6-5f0d-bf9b-3b5e55be7145
+      uuid: 06adb40e-5566-581b-ae9b-0f7374893f09
       chartId: null
       width: 6
       height: 30
-      sliceName: motor_correcciones_admin_7d_v1
+      sliceName: motor_distribucion_categorias_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-motor_acuerdo_jurado_v1:
+  CHART-motor_tasa_acuerdo_jurado_v1:
     type: CHART
-    id: CHART-motor_acuerdo_jurado_v1
+    id: CHART-motor_tasa_acuerdo_jurado_v1
     meta:
-      uuid: cdfe3f07-fed1-5375-9274-31055413c442
+      uuid: 4bd011ea-6f5d-50d8-976a-0b396f532568
       chartId: null
       width: 6
       height: 30
-      sliceName: motor_acuerdo_jurado_v1
+      sliceName: motor_tasa_acuerdo_jurado_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-motor_modelos_activos_v1:
+  CHART-motor_uso_cascada_v1:
     type: CHART
-    id: CHART-motor_modelos_activos_v1
+    id: CHART-motor_uso_cascada_v1
     meta:
-      uuid: 9ea88220-778d-5802-b3f1-f7cc29690a7c
+      uuid: dac72bae-d15a-56b6-8548-92951be0a84c
       chartId: null
       width: 6
       height: 30
-      sliceName: motor_modelos_activos_v1
+      sliceName: motor_uso_cascada_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-motor_precision_ia_v1:
+  CHART-motor_correcciones_admin_30d_v1:
     type: CHART
-    id: CHART-motor_precision_ia_v1
+    id: CHART-motor_correcciones_admin_30d_v1
     meta:
-      uuid: 438023e2-a5a0-5b7a-9680-e7ddd2ae5d80
+      uuid: 4270614c-adc0-5da5-8ee6-fbaaa1c5fda3
       chartId: null
       width: 6
       height: 30
-      sliceName: motor_precision_ia_v1
+      sliceName: motor_correcciones_admin_30d_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-motor_volumen_horario_v1:
+  CHART-motor_latencia_timeline_v1:
     type: CHART
-    id: CHART-motor_volumen_horario_v1
+    id: CHART-motor_latencia_timeline_v1
     meta:
-      uuid: 8ee9fd3f-a941-5bb6-85ee-76c771ff7af3
+      uuid: 888c9ce9-4d07-55f9-8cb9-755e18060e33
       chartId: null
       width: 6
       height: 30
-      sliceName: motor_volumen_horario_v1
+      sliceName: motor_latencia_timeline_v1
     parents:
       - ROOT_ID
       - GRID_ID

@@ -1,6 +1,6 @@
-slice_name: 7 · Vencimientos próximos 30 d
+slice_name: 7 · Vencimientos suscripciones próximos 30 d
 viz_type: table
-uuid: f4202613-375d-58d6-8391-9175cc0aa400
+uuid: 591609a3-062f-588e-9034-ddca4962e2d3
 version: 1.0.0
 dataset_uuid: 13fe285a-459f-5e3c-8c24-b94fb236aaeb
 description: Chart del dashboard 'operativo' · fuente SQL en spec.md.

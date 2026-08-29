@@ -1,5 +1,5 @@
 slice_name: 1 · Reportes en flujo (no cerrados)
-viz_type: bar
+viz_type: big_number_total
 uuid: 6d7e590d-a69c-5247-9d36-2c66aeda7dba
 version: 1.0.0
 dataset_uuid: 6b6f513c-cb2a-5145-9666-6bdc1b3432d3
@@ -7,17 +7,17 @@ description: Chart del dashboard 'operativo' · fuente SQL en spec.md.
 certified_by: Fábrica BI-2
 certification_details: Aprobado en compuerta §4 · SPEC-019..023 · F3C 2026-08-29
 params:
-  viz_type: bar
+  viz_type: big_number_total
   adhoc_filters: []
   extra_form_data: {}
   dashboards: []
-  metrics:
-    - expressionType: SQL
-      sqlExpression: "SELECT estado, count(*) AS total FROM \"Reporte\" WHERE \"eliminado\" = false GROUP BY estado ORDER BY total DESC"
-      label: valor
-      hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"6b6f513c-cb2a-5145-9666-6bdc1b3432d3\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT estado, count(*) AS total FROM \\\"Reporte\\\" WHERE \\\"eliminado\\\" = false GROUP BY estado ORDER BY total DESC\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
-cache_timeout: 300
+  metric:
+    expressionType: SQL
+    sqlExpression: "SELECT count(*) AS en_flujo FROM \"Reporte\" WHERE estado NOT IN ('CLASIFICADO', 'CORREGIDO') AND \"eliminado\" = false"
+    label: valor
+    hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"6b6f513c-cb2a-5145-9666-6bdc1b3432d3\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) AS en_flujo FROM \\\"Reporte\\\" WHERE estado NOT IN ('CLASIFICADO', 'CORREGIDO') AND \\\"eliminado\\\" = false\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 900
 is_managed_externally: true
 external_url: null
 tags:

@@ -7,27 +7,39 @@ slug: comercial
 published: true
 position:
   DASHBOARD_VERSION_KEY: v2
-  CHART-com_mrr_mes_v1:
+  CHART-com_mrr_mes_actual_v1:
     type: CHART
-    id: CHART-com_mrr_mes_v1
+    id: CHART-com_mrr_mes_actual_v1
     meta:
-      uuid: 33323eeb-14d2-57bb-ac41-68f06a7040cd
+      uuid: 61844a66-fff0-523d-8a62-e17152663d52
       chartId: null
       width: 6
       height: 30
-      sliceName: com_mrr_mes_v1
+      sliceName: com_mrr_mes_actual_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-com_suscripciones_activas_v1:
+  CHART-com_mrr_12m_line_v1:
     type: CHART
-    id: CHART-com_suscripciones_activas_v1
+    id: CHART-com_mrr_12m_line_v1
     meta:
-      uuid: a04a8a8c-7f9d-5447-a1f2-801730df12f4
+      uuid: f2f61934-c0e5-5273-aa06-416c209e19f8
       chartId: null
       width: 6
       height: 30
-      sliceName: com_suscripciones_activas_v1
+      sliceName: com_mrr_12m_line_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-com_nuevas_suscripciones_v1:
+    type: CHART
+    id: CHART-com_nuevas_suscripciones_v1
+    meta:
+      uuid: 5cc1736a-28cd-5e9e-addb-d91a21a80086
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: com_nuevas_suscripciones_v1
     parents:
       - ROOT_ID
       - GRID_ID
@@ -43,39 +55,39 @@ position:
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-com_arpu_v1:
+  CHART-com_distribucion_por_plan_v1:
     type: CHART
-    id: CHART-com_arpu_v1
+    id: CHART-com_distribucion_por_plan_v1
     meta:
-      uuid: ebea5078-4827-56aa-b1cd-274f93a324da
+      uuid: 34950387-5f65-50d8-80b7-590644da1106
       chartId: null
       width: 6
       height: 30
-      sliceName: com_arpu_v1
+      sliceName: com_distribucion_por_plan_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-com_ingresos_por_plan_v1:
+  CHART-com_top10_ingresos_colegio_v1:
     type: CHART
-    id: CHART-com_ingresos_por_plan_v1
+    id: CHART-com_top10_ingresos_colegio_v1
     meta:
-      uuid: ab551c8f-f158-516f-84e0-b0727f06651c
+      uuid: 430b9dd6-1707-56e3-89a4-00bfbf5406d8
       chartId: null
       width: 6
       height: 30
-      sliceName: com_ingresos_por_plan_v1
+      sliceName: com_top10_ingresos_colegio_v1
     parents:
       - ROOT_ID
       - GRID_ID
-  CHART-com_evolucion_mrr_v1:
+  CHART-com_pagos_no_pagados_30d_v1:
     type: CHART
-    id: CHART-com_evolucion_mrr_v1
+    id: CHART-com_pagos_no_pagados_30d_v1
     meta:
-      uuid: f147f154-5c8f-5bb7-b2eb-8818f00032c1
+      uuid: 7d8f99f2-6bc2-552b-9f8a-20d4853f7bdb
       chartId: null
       width: 6
       height: 30
-      sliceName: com_evolucion_mrr_v1
+      sliceName: com_pagos_no_pagados_30d_v1
     parents:
       - ROOT_ID
       - GRID_ID

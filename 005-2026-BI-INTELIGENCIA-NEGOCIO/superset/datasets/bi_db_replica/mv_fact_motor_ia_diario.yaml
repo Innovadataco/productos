@@ -20,7 +20,7 @@ always_filter_main_dttm: false
 columns:
   - column_name: dia
     verbose_name: null
-    type: DATE
+    type: TIMESTAMP
     is_dttm: true
     is_active: true
     groupby: true
@@ -28,7 +28,27 @@ columns:
     expression: null
     description: null
     uuid: ee72da80-1f1b-5cc1-9572-2aa0b33ad982
-  - column_name: clasificaciones
+  - column_name: categoria
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 8c32b9de-b59c-5218-8fce-090431ac5747
+  - column_name: modelo
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 9096d589-cf2f-58db-ba60-78a3b6b22ad5
+  - column_name: total
     verbose_name: null
     type: BIGINT
     is_dttm: false
@@ -37,8 +57,8 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 0d2008d5-d42c-53d9-b64d-f0614abcb023
-  - column_name: aciertos
+    uuid: 236d00a7-7995-5477-9af2-4d29a44ccba4
+  - column_name: total_corregidos
     verbose_name: null
     type: BIGINT
     is_dttm: false
@@ -47,8 +67,8 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 27ab3cd1-86de-5927-9216-c4d6ee6725d0
-  - column_name: latencia_p50_ms
+    uuid: a860b8b4-5dbe-5d3b-8157-2acaa7fcca0e
+  - column_name: confianza_promedio
     verbose_name: null
     type: DOUBLE PRECISION
     is_dttm: false
@@ -57,8 +77,8 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: df14132e-4da9-51da-933f-d57e9081b4c9
-  - column_name: latencia_p95_ms
+    uuid: 062a686b-f845-505c-8e44-58aca0dfd2ae
+  - column_name: latencia_ms_promedio
     verbose_name: null
     type: DOUBLE PRECISION
     is_dttm: false
@@ -67,7 +87,7 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 03996732-5418-5635-b876-8feef7a6a61a
+    uuid: ed682d73-1885-55eb-9ed3-367d2d4f3f06
 metrics:
   - metric_name: count
     verbose_name: Filas

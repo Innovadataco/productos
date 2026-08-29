@@ -38,6 +38,16 @@ columns:
     expression: null
     description: null
     uuid: de5f635f-a3f5-5ada-8253-38caca665080
+  - column_name: categoria
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 5bf48627-b389-5126-8604-d8fbd3b6f2f6
   - column_name: modeloUsado
     verbose_name: null
     type: VARCHAR
@@ -48,6 +58,26 @@ columns:
     expression: null
     description: null
     uuid: 14fdae90-755f-5cdf-9672-f6da2fd5da50
+  - column_name: usoCascada
+    verbose_name: null
+    type: BOOLEAN
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 344d737b-789c-55d5-82d1-ae7ad1fe102a
+  - column_name: confianza
+    verbose_name: null
+    type: DOUBLE PRECISION
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 94b969bd-6656-5f58-b1d7-055fbb7886f6
   - column_name: latenciaMs
     verbose_name: null
     type: INTEGER

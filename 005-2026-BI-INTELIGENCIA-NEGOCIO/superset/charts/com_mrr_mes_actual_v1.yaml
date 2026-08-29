@@ -1,0 +1,25 @@
+slice_name: 1a · MRR mes actual (COP)
+viz_type: big_number_total
+uuid: 61844a66-fff0-523d-8a62-e17152663d52
+version: 1.0.0
+dataset_uuid: 55db0c80-af92-5888-8c29-569716b98aac
+description: Chart del dashboard 'comercial' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: Aprobado en compuerta §4 · SPEC-019..023 · F3C 2026-08-29
+params:
+  viz_type: big_number_total
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metric:
+    expressionType: SQL
+    sqlExpression: "SELECT COALESCE(SUM(monto_total), 0) AS mrr_cop FROM mv_fact_comercial_mensual WHERE mes = date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND ciclo_estado = 'pagado'"
+    label: valor
+    hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"55db0c80-af92-5888-8c29-569716b98aac\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT COALESCE(SUM(monto_total), 0) AS mrr_cop FROM mv_fact_comercial_mensual WHERE mes = date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND ciclo_estado = 'pagado'\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 3600
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - comercial
