@@ -268,3 +268,58 @@ describe("spec 104 — cumplimiento por índices (adiós verbatim)", () => {
         expect(res.estado).toBe("REVISION_MANUAL");
     });
 });
+
+// SPEC-298 (I-163): override de modelo de clasificación. El sandbox/simulación pide un modelo
+// puntual; el pipeline lo propaga y la rúbrica debe votar SOLO con ese modelo (mono-voz).
+describe("clasificarConRubrica — override modeloClasificacion (SPEC-298 / I-163)", () => {
+    beforeEach(() => {
+        mockLlamar.mockReset();
+        mockParametroFindUnique.mockReset();
+        mockParametroFindUnique.mockResolvedValue(null);
+    });
+
+    it("RF-A · con override → una sola llamada de votación al modelo indicado", async () => {
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["SOLICITUD_ENCUENTRO", "CONTACTO_INSISTENTE"]));
+        mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: true, CONTACTO_INSISTENTE: true }));
+
+        const res = await clasificarConRubrica("texto", CONFIG_TEST, { modeloClasificacion: "gemma2:27b" });
+
+        // 1 llamada al embudo (modelo "qwen2.5:14b") + 1 llamada de voto (modelo override "gemma2:27b").
+        // Filtrar por índice (embudo = 0, votos = 1..); no por nombre — el modeloEmbudo puede
+        // coincidir con un modelo del comité (aquí "qwen2.5:14b" está en ambos).
+        expect(mockLlamar).toHaveBeenCalledTimes(2);
+        const modelosVoto = mockLlamar.mock.calls.slice(1).map((c) => c[0] as string);
+        expect(modelosVoto).toEqual(["gemma2:27b"]);
+        expect(res.votosModelos).toHaveLength(1);
+        expect(res.votosModelos[0].modelo).toBe("gemma2:27b");
+    });
+
+    it("RF-B · sin override → comité completo (una llamada por cada modelo de cfg.modelos)", async () => {
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["SOLICITUD_ENCUENTRO", "CONTACTO_INSISTENTE"]));
+        for (let i = 0; i < CONFIG_TEST.modelos.length; i++) {
+            mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: true, CONTACTO_INSISTENTE: true }));
+        }
+
+        const res = await clasificarConRubrica("texto", CONFIG_TEST);
+
+        const modelosVoto = mockLlamar.mock.calls.slice(1).map((c) => c[0] as string);
+        expect(modelosVoto).toEqual(CONFIG_TEST.modelos);
+        expect(res.votosModelos.map((v) => v.modelo)).toEqual(CONFIG_TEST.modelos);
+    });
+
+    it("RF-6 · metrics.modelo refleja el modelo real (override) — no el comité", async () => {
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["SOLICITUD_ENCUENTRO"]));
+        mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: true }));
+
+        const conOverride = await clasificarConRubrica("texto", CONFIG_TEST, { modeloClasificacion: "qwen2.5:14b" });
+        expect(conOverride.metrics.modelo).toBe("rubrica:qwen2.5:14b");
+
+        mockLlamar.mockReset();
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["SOLICITUD_ENCUENTRO"]));
+        for (let i = 0; i < CONFIG_TEST.modelos.length; i++) {
+            mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: true }));
+        }
+        const sinOverride = await clasificarConRubrica("texto", CONFIG_TEST);
+        expect(sinOverride.metrics.modelo).toBe(`rubrica:${CONFIG_TEST.modelos.join("+")}`);
+    });
+});

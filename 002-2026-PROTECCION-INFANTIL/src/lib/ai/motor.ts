@@ -30,6 +30,12 @@ export interface ResultadoMotor {
 export interface OpcionesMotor {
     /** Overrides puntuales de la config de la rúbrica (sandbox/eval). */
     configRubrica?: Partial<ConfigRubrica> | undefined;
+    /**
+     * SPEC-298 (I-163): override quirúrgico del comité de votación. Si viene, el motor vota
+     * con ese único modelo (mono-voz) en lugar del comité `cfg.modelos`. Poblado desde
+     * `parametros.modeloClasificacion` en el pipeline real y desde el selector del sandbox.
+     */
+    modeloClasificacion?: string | undefined;
 }
 
 /**
@@ -50,7 +56,11 @@ export function leerPosibleAgresorPar(r: ResultadoRubrica | undefined): boolean 
  * esta función solo adapta el resultado a la forma común del pipeline.
  */
 export async function clasificarConMotorActivo(texto: string, opciones: OpcionesMotor = {}): Promise<ResultadoMotor> {
-    const r = await clasificarConRubrica(texto, opciones.configRubrica);
+    const r = await clasificarConRubrica(
+        texto,
+        opciones.configRubrica,
+        opciones.modeloClasificacion ? { modeloClasificacion: opciones.modeloClasificacion } : undefined
+    );
     return {
         categoria: r.categoria,
         confianza: r.confianza,
