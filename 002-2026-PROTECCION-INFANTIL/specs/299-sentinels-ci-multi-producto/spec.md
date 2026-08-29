@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-28
 
-**Status**: Draft — compuerta §4 pendiente
+**Status**: `DESARROLLO`
+
+**Impacto en arquitectura:** sin impacto estructural sobre el código de producto — el cambio es puramente infra de GitHub Actions bajo `.github/workflows/`. No toca `src/**` de ningún producto, no altera schema/migraciones/DAL/repos/proxy, no cambia contratos HTTP ni navegación, no requiere regenerar `docs/architecture/**` y no mueve `arch:check`. Solo introduce un patrón operativo transversal (job sentinel `<slug>-gate` por producto + README canónico) que reemplaza la señalización agregada de CI hacia el ruleset "Gate CI - main" sin modificar jobs preexistentes de `ci.yml`/`bi.yml`. Efecto observable posterior al merge (cuando Jelkin registre los sentinels como required checks): PRs que solo tocan un producto dejan de quedar bloqueados por checks del otro producto que nunca disparaban.
 
 **Input**: INSTRUCTIVO 002-PI-202 (BRIEF A-49). Fábrica BI-2 detectó que el ruleset "Gate CI - main" exige checks PI-específicos que nunca disparan en PRs que solo tocan BI (y viceversa) — el check queda "pendiente" para siempre y GitHub lo trata como bloqueante. Jelkin puso un parche temporal (solo `verificar_base` required). Este radicado construye la solución durable: cada producto expone un job "sentinel" (`pi-gate`, `bi-gate`, …) que SIEMPRE reporta un veredicto — éxito trivial si el PR no toca ese producto, éxito real si corrió y pasó, fallo si algo se rompió.
 
