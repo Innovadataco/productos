@@ -8,7 +8,7 @@ El BRIEF-A-05 §3.1 pone el jurado dentro de `bi-vanna` (FastAPI). Motivos:
 2. La fachada Next.js debe permanecer estateless y I/O-bound; el jurado hace 3 llamadas Ollama y comparación AST → mejor aislado.
 3. Un solo lugar de contacto con Ollama para SQL → candado 1 más limpio.
 
-Fachada Next.js SOLO toca Ollama para `nomic-embed-text` (embedding cache · candado 7). Ratchet `imports-llm-solo-motor.sh` se ajusta a whitelist: `motor.ts`, `vanna-client.ts`, `embedding.ts`.
+Fachada Next.js SOLO toca Ollama para `nomic-embed-text` (embedding cache · candado 7). El ratchet `imports-llm-solo-motor.sh` se ENDURECE (no solo se amplía whitelist): la regex agrega `VANNA_BASE_URL` para cazar `fetch(process.env.VANNA_BASE_URL + ...)` fuera de `vanna-client.ts`. Whitelist explícita: `motor.ts`, `vanna-client.ts`, `embedding.ts` + tests. Test del propio ratchet inyecta violación y valida exit 1. Candado 1 queda sostenido por regla automatizada, no por convención.
 
 ### D-011-02 · Post-validator con regex, no AST
 El BRIEF pide validación post-LLM (whitelist tablas · LIMIT · sin cross-join sin ON · sin PII). Opciones:
@@ -58,7 +58,7 @@ Toda la fachada usa `fetch` nativo + `@prisma/client`. `react-vega` entra en SPE
 | 1 · enum cerrado JSON Schema | ✅ `catalogo.ts` construye schema | consumido por SPEC-012 |
 | 2 · structured outputs · temp 0 · seed 42 | — | ✅ SPEC-012 (ollama-client Python) |
 | 3 · índices numéricos | — | ✅ SPEC-012 |
-| 4 · checks atómicos deny-by-default | parcial (Zod en endpoint) | ✅ SPEC-012 (prompt engineering) |
+| 4 · checks atómicos deny-by-default | parcial (Zod en endpoint) | ✅ SPEC-012 (prompt engineering + test dedicado "sin métrica → REVISION") |
 | 5 · jurado 2/3 | — | ✅ SPEC-012 |
 | 6a · pre-LLM guard | ✅ `pre-guard.ts` | — |
 | 6b · post-LLM validator | ✅ `post-validator.ts` | — |

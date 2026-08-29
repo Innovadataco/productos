@@ -57,7 +57,10 @@
   - [ ] test: 400 con body inválido (falta `preguntaNL`)
   - [ ] test: 500 con motor throw · `consultaLogId` en body
 - [ ] `scripts/ratchets/motor-plantillas-completas.sh`
-- [ ] Actualizar whitelist en `scripts/ratchets/imports-llm-solo-motor.sh` para incluir `vanna-client.ts` y `embedding.ts`
+- [ ] Endurecer `scripts/ratchets/imports-llm-solo-motor.sh`:
+  - [ ] Ampliar regex para incluir `VANNA_BASE_URL` (además de `from 'ollama'|from 'openai'|http://.*11434|http://.*11435`)
+  - [ ] Whitelist explícita: `motor.ts`, `vanna-client.ts`, `embedding.ts`, más tests (`.test.`/`.spec.`)
+  - [ ] Test del propio ratchet: `tests/ratchets/imports-llm-solo-motor.test.sh` con violación inyectada + limpieza (exit 1 → exit 0)
 - [ ] `research.md` con tabla candado→archivo→test + notas de decisiones
 
 ## Gate LOCAL

@@ -5,7 +5,7 @@
 > **Rama:** `work/bi-SPEC-011-vanna-motor` (mismo PR)
 > **Depende de:** SPEC-011 CUMPLE · SPEC-012 CUMPLE · SPEC-013 CUMPLE
 > **Sub-SPECs hermanas:** SPEC-011 · SPEC-012 · SPEC-013
-> **Constitución:** aplica candados 4 (checks atómicos) · 9 (no inventa) · 14 (verificación en vivo) · 15 (verificar en fuente)
+> **Constitución:** aplica candados 9 (no inventa) · 14 (verificación en vivo) · 15 (verificar en fuente). El candado 4 (checks atómicos deny-by-default) queda **exclusivamente** en SPEC-012 (definición + tests dedicados en `jurado.py`). SPEC-014 ya no lo reclama.
 
 ---
 

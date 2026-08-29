@@ -5,7 +5,7 @@
 > **Rama:** `work/bi-SPEC-011-vanna-motor` (mismo PR)
 > **Depende de:** SPEC-011 spec+plan (misma cola) · Ollama Mac Studio 100.91.87.86:11435 · KEEP_ALIVE=24h
 > **Sub-SPECs hermanas:** SPEC-011 · SPEC-013 · SPEC-014
-> **Constitución:** aplica candados 2 · 3 · 5 · 15
+> **Constitución:** aplica candados 2 · 3 · 4 · 5 · 15 (candado 4 · checks atómicos deny-by-default · absorbido aquí desde SPEC-014)
 
 ---
 

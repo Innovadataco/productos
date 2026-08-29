@@ -96,9 +96,32 @@ Copia adaptada del patrón validado en PI (`src/lib/ai/` · candados 1-7 · guar
   - Llamar `motor.preguntar()` y `NextResponse.json(resultado)`.
 - Test: 3 casos (200 OK, 400 body inválido, 500 fallo motor).
 
-### Capa 11 · Ratchet nuevo
-- `scripts/ratchets/motor-plantillas-completas.sh` — `grep -q "sin-datos\|un-numero\|tabla\|grafico" src/lib/bi/plantillas.ts` × 4 · fail si falta alguna.
+### Capa 11 · Ratchets
+
+**11.1 · Ratchet nuevo `motor-plantillas-completas.sh`**
+- `grep -q "sin-datos\|un-numero\|tabla\|grafico" src/lib/bi/plantillas.ts` × 4 · fail si falta alguna.
 - Añadir a `run-all.sh`.
+
+**11.2 · Endurecer `imports-llm-solo-motor.sh` (Candado 1 · fachada única)**
+- Ampliar la regex actual (que solo caza `from 'ollama'|from 'openai'|http://.*11434|http://.*11435`) para incluir referencias a `VANNA_BASE_URL` fuera de la whitelist. Diseño concreto:
+  ```bash
+  #!/bin/bash
+  PATRON="from 'ollama'|from 'openai'|http://.*11434|http://.*11435|VANNA_BASE_URL"
+  if grep -rnE "$PATRON" src/ 2>/dev/null | \
+     grep -v "src/lib/bi/motor.ts" | \
+     grep -v "src/lib/bi/vanna-client.ts" | \
+     grep -v "src/lib/bi/embedding.ts" | \
+     grep -v "\.test\." | grep -v "\.spec\." ; then
+      echo "❌ Import LLM/Vanna directo · usa src/lib/bi/motor.ts, vanna-client.ts o embedding.ts"
+      exit 1
+  fi
+  echo "✅ imports-llm-solo-motor OK"
+  ```
+- Cualquier archivo nuevo que llame `fetch(process.env.VANNA_BASE_URL + ...)` fuera de `vanna-client.ts` hace fallar el ratchet. Esto sostiene Candado 1 por regla automatizada · NO por convención.
+- Test de la propia regla: crear `tests/ratchets/imports-llm-solo-motor.test.sh` que:
+  1. Introduce un archivo temporal `src/tmp-viola.ts` con `fetch(process.env.VANNA_BASE_URL + '/x')`.
+  2. Corre el ratchet · aserta exit code 1.
+  3. Elimina el archivo · corre otra vez · aserta exit 0.
 
 ## Dependencias externas nuevas
 
@@ -136,7 +159,7 @@ Todos verdes → commit + push.
 | 12 (traza) | `motor.ts` | `bi_consulta_log` tiene fila por request | rechazo pre-guard también deja fila con `error` |
 | 13 (sanitizer) | `sanitizer.ts` | teléfono/email/cédula enmascarados | fila con nombre en columna arbitraria queda intacta (no sobre-actuación) |
 
-Los candados 2, 3, 5 (structured outputs · índices · jurado) viven en SPEC-012 (Python). Los candados 4 (checks atómicos) y 14 (verificación en vivo) se cubren en SPEC-014 con las 5 preguntas obligatorias.
+Los candados 2, 3, 4, 5 (structured outputs · índices numéricos · checks atómicos deny-by-default · jurado) viven en SPEC-012 (Python · prompt engineering + tests dedicados). El candado 14 (verificación en vivo) se cubre en SPEC-014 con las 5 preguntas obligatorias.
 
 ## Compuerta §4 · candado 17
 

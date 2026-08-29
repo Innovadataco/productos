@@ -41,10 +41,11 @@
   - `schema_respuesta_json` con `additionalProperties: false` en cada nivel · enums cerrados para `tabla_idx` (0..N-1) y `columnas_idx` (array de enum).
 - Test: catálogo de 2 tablas · pregunta simple · assert schema tiene `additionalProperties: false` y enums cerrados.
 
-### Capa 3 · Traductor idx → SQL
-- Como el LLM devuelve `{tabla_idx, columnas_idx, filtros: [...], agregacion, limit}`, el servidor construye el SQL string usando los nombres canónicos del catálogo (candado 3). Nunca confía en `.strip()` de nombres textuales del LLM.
+### Capa 3 · Traductor idx → SQL + checks atómicos deny-by-default
+- Como el LLM devuelve `{tabla_idx, columnas_idx, filtros: [...], agregacion, limit, nota}`, el servidor construye el SQL string usando los nombres canónicos del catálogo (candado 3). Nunca confía en `.strip()` de nombres textuales del LLM.
 - Función `def construir_sql(respuesta_llm: dict, catalogo: dict) -> str`.
-- Rechaza si un `idx` está fuera de rango → excepción `IdxFueraDeRango` → jurado registra voto inválido.
+- **Candado 3 · rechazo por idx fuera de rango:** si `tabla_idx >= len(catalogo.tablas)`, `tabla_idx < 0`, o cualquier `columnas_idx[i]` fuera de rango de la tabla elegida → eleva excepción `IdxFueraDeRango(campo, valor, max)` → jurado registra voto inválido (no construye SQL).
+- **Candado 4 · checks atómicos deny-by-default:** los 4 slots del schema son (métrica/agregacion, dimensión temporal, filtros, agrupación). Cualquier slot que venga `null` con `nota != ""` es señal de "falta información". Si ≥1 slot es null-con-nota en ≥2/3 modelos del jurado → no se ejecuta SQL · estado `REVISION` con razón `checks_atomicos_incompletos` · Next.js muestra la `nota` al usuario pidiendo clarificación. Nunca completa con supuestos (integra Candado 9). El prompt del schema_builder explicita: *"Ante duda → deja el slot nulo y explica en `nota`. Nunca inventes columna, tabla o filtro."*
 
 ### Capa 4 · Canonizador AST
 - `docker/vanna/canonizador.py`:
