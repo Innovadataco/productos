@@ -13,7 +13,7 @@ params:
   dashboards: []
   query_mode: raw
   all_columns: []
-query_context: "{\"datasource\": {\"uuid\": \"a15e0d8f-ec1e-5b0e-8b04-d6da7ef3769b\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT bc.id, bc.estado, bc.monto, bc.\\\"creadoEn\\\", bc.\\\"periodoInicio\\\" FROM \\\"BillingCycle\\\" bc WHERE bc.estado <> 'pagado' AND bc.\\\"creadoEn\\\" >= NOW() - INTERVAL '30 days' ORDER BY bc.\\\"creadoEn\\\" DESC LIMIT 200\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null

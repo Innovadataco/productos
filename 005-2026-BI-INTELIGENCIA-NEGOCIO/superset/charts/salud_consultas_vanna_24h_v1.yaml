@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT count(*) FROM bi_consulta_log WHERE \"creadoEn\" >= NOW() - INTERVAL '24 hours'"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"4783b36e-e6e1-5970-8329-268db5431187\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) FROM bi_consulta_log WHERE \\\"creadoEn\\\" >= NOW() - INTERVAL '24 hours'\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 900
 is_managed_externally: true
 external_url: null

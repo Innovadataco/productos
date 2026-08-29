@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp()))::numeric, 1) AS lag_segundos"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"d228f999-b7b3-5b92-ac81-d6e67bf06a0f\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp()))::numeric, 1) AS lag_segundos\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 60
 is_managed_externally: true
 external_url: null

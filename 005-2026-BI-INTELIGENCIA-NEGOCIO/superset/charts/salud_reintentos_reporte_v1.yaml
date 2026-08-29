@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT count(*) FROM \"ReintentoReporte\" WHERE \"creadoEn\" >= NOW() - INTERVAL '24 hours' AND exitoso = false"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"fa73218e-3e08-5ea0-8f24-e24263737312\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) FROM \\\"ReintentoReporte\\\" WHERE \\\"creadoEn\\\" >= NOW() - INTERVAL '24 hours' AND exitoso = false\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 1800
 is_managed_externally: true
 external_url: null

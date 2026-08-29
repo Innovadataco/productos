@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT estado::text AS estado, count(*) AS total FROM \"Reporte\" WHERE \"eliminado\" = false GROUP BY estado ORDER BY total DESC"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"6b6f513c-cb2a-5145-9666-6bdc1b3432d3\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT estado::text AS estado, count(*) AS total FROM \\\"Reporte\\\" WHERE \\\"eliminado\\\" = false GROUP BY estado ORDER BY total DESC\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 900
 is_managed_externally: true
 external_url: null

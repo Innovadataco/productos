@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT count(*) AS churn_mes FROM \"Subscription\" WHERE estado <> 'activo' AND \"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota')"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"13fe285a-459f-5e3c-8c24-b94fb236aaeb\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) AS churn_mes FROM \\\"Subscription\\\" WHERE estado <> 'activo' AND \\\"creadoEn\\\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota')\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null

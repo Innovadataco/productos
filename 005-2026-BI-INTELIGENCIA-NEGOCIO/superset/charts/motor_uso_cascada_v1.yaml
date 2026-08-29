@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT ROUND(100.0 * count(*) FILTER (WHERE \"usoCascada\" = true) / NULLIF(count(*), 0), 2) AS pct_cascada FROM \"ClasificacionIA\" WHERE \"creadoEn\" >= NOW() - INTERVAL '7 days'"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"c9f282db-83b4-56a4-b846-9e9b0fa35c7e\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT ROUND(100.0 * count(*) FILTER (WHERE \\\"usoCascada\\\" = true) / NULLIF(count(*), 0), 2) AS pct_cascada FROM \\\"ClasificacionIA\\\" WHERE \\\"creadoEn\\\" >= NOW() - INTERVAL '7 days'\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 1800
 is_managed_externally: true
 external_url: null

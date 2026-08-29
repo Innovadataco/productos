@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT count(*) FROM logs WHERE dttm >= NOW() - INTERVAL '24 hours' AND action IN ('log', 'error')"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"d473ea33-3bff-520f-b6f2-3a74bcf888c1\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) FROM logs WHERE dttm >= NOW() - INTERVAL '24 hours' AND action IN ('log', 'error')\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 900
 is_managed_externally: true
 external_url: null

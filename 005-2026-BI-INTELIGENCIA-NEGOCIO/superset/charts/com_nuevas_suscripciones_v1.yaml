@@ -16,7 +16,7 @@ params:
     sqlExpression: "WITH por_mes AS (SELECT date_trunc('month', \"creadoEn\" AT TIME ZONE 'America/Bogota') AS mes, count(*) AS nuevas FROM \"Subscription\" WHERE \"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') - INTERVAL '1 month' GROUP BY mes) SELECT mes, nuevas FROM por_mes ORDER BY mes"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"13fe285a-459f-5e3c-8c24-b94fb236aaeb\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"WITH por_mes AS (SELECT date_trunc('month', \\\"creadoEn\\\" AT TIME ZONE 'America/Bogota') AS mes, count(*) AS nuevas FROM \\\"Subscription\\\" WHERE \\\"creadoEn\\\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') - INTERVAL '1 month' GROUP BY mes) SELECT mes, nuevas FROM por_mes ORDER BY mes\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null

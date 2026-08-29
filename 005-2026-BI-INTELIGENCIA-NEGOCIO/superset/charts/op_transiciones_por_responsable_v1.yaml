@@ -16,7 +16,7 @@ params:
       sqlExpression: "SELECT \"responsableTipo\"::text AS responsable, count(*) AS transiciones FROM \"TransicionReporte\" WHERE \"creadoEn\" >= NOW() - INTERVAL '7 days' GROUP BY \"responsableTipo\" ORDER BY transiciones DESC"
       label: valor
       hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"327350d1-1261-52db-a3bc-966257d50c37\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT \\\"responsableTipo\\\"::text AS responsable, count(*) AS transiciones FROM \\\"TransicionReporte\\\" WHERE \\\"creadoEn\\\" >= NOW() - INTERVAL '7 days' GROUP BY \\\"responsableTipo\\\" ORDER BY transiciones DESC\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 1800
 is_managed_externally: true
 external_url: null

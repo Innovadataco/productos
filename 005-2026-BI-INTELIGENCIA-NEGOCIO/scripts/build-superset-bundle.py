@@ -531,25 +531,18 @@ def chart_params(viz_type: str, sql: str, extra: dict | None = None) -> dict:
     return base
 
 
-def query_context(sql: str, dataset_uuid: str) -> str:
-    """query_context como JSON string; Superset lo re-hidrata al importar."""
-    payload = {
-        "datasource": {"uuid": dataset_uuid, "type": "table"},
-        "force": False,
-        "queries": [
-            {
-                "custom_form_data": {},
-                "extras": {"having": "", "where": ""},
-                "annotation_layers": [],
-                "row_limit": 10000,
-                "orderby": [],
-                "sql": sql,
-            }
-        ],
-        "result_format": "json",
-        "result_type": "full",
-    }
-    return json.dumps(payload, ensure_ascii=False)
+# NOTA · query_context precacheado se removió deliberadamente (I-29).
+# `ChartDataDatasourceSchema` de Superset 4.1.4 exige `id` numérico en
+# `datasource`, NO acepta `uuid` (Unknown field). El id numérico solo se
+# conoce después del import, así que un query_context escrito por el
+# generador es siempre inválido y `POST /api/v1/chart/data` devuelve 400.
+#
+# Solución: dejar `query_context: null` en el YAML. El frontend construye
+# el payload correcto la primera vez que se corre el chart, usando el
+# `datasource_id` numérico real y los `params` del chart.
+#
+# El chart mantiene su asociación al dataset vía el campo top-level
+# `dataset_uuid`; el importador lo resuelve a `datasource_id` numérico.
 
 
 # Definición de los 34 charts. Los SQLs son citas literales del spec.md
@@ -905,7 +898,7 @@ def write_charts() -> None:
                 "certified_by": CERTIFIED_BY,
                 "certification_details": CERTIFIED_DETAILS,
                 "params": params,
-                "query_context": query_context(chart["sql"], dataset_uuid),
+                "query_context": None,  # I-29 · el frontend lo construye
                 "cache_timeout": chart["refresh"],
                 "is_managed_externally": True,
                 "external_url": None,

@@ -13,7 +13,7 @@ params:
   dashboards: []
   query_mode: raw
   all_columns: []
-query_context: "{\"datasource\": {\"uuid\": \"13fe285a-459f-5e3c-8c24-b94fb236aaeb\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT s.id, c.nombre AS colegio, s.\\\"terminaEn\\\" FROM \\\"Subscription\\\" s JOIN \\\"Colegio\\\" c ON c.\\\"tenantId\\\" = s.\\\"tenantId\\\" WHERE s.\\\"terminaEn\\\" IS NOT NULL AND s.\\\"terminaEn\\\" BETWEEN NOW() AND NOW() + INTERVAL '30 days' AND s.estado = 'activo' ORDER BY s.\\\"terminaEn\\\" ASC\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null

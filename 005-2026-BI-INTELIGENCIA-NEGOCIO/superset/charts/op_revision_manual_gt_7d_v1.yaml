@@ -13,7 +13,7 @@ params:
   dashboards: []
   query_mode: raw
   all_columns: []
-query_context: "{\"datasource\": {\"uuid\": \"6b6f513c-cb2a-5145-9666-6bdc1b3432d3\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT r.id, r.\\\"numeroSeguimiento\\\", p.nombre AS plataforma, r.\\\"creadoEn\\\", c.nombre AS colegio FROM \\\"Reporte\\\" r LEFT JOIN \\\"Colegio\\\" c ON c.\\\"tenantId\\\" = r.\\\"tenantId\\\" LEFT JOIN \\\"Plataforma\\\" p ON p.id = r.\\\"plataformaId\\\" WHERE r.estado = 'REVISION_MANUAL' AND r.\\\"creadoEn\\\" < NOW() - INTERVAL '7 days' AND r.\\\"eliminado\\\" = false ORDER BY r.\\\"creadoEn\\\" ASC LIMIT 500\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 900
 is_managed_externally: true
 external_url: null

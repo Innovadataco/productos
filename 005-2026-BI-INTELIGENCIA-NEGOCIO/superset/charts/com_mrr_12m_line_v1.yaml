@@ -16,7 +16,7 @@ params:
       sqlExpression: "SELECT mes, SUM(monto_total) AS mrr_cop FROM mv_fact_comercial_mensual WHERE mes >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') - INTERVAL '11 months' AND ciclo_estado = 'pagado' GROUP BY mes ORDER BY mes"
       label: serie
       hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"55db0c80-af92-5888-8c29-569716b98aac\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT mes, SUM(monto_total) AS mrr_cop FROM mv_fact_comercial_mensual WHERE mes >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') - INTERVAL '11 months' AND ciclo_estado = 'pagado' GROUP BY mes ORDER BY mes\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null

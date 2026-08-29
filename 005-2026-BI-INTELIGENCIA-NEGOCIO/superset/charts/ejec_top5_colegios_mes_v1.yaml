@@ -16,7 +16,7 @@ params:
       sqlExpression: "SELECT c.nombre AS colegio, count(*) AS reportes FROM \"Reporte\" r INNER JOIN \"Colegio\" c ON c.\"tenantId\" = r.\"tenantId\" WHERE r.\"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND r.\"eliminado\" = false GROUP BY c.nombre ORDER BY reportes DESC LIMIT 5"
       label: valor
       hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"6b6f513c-cb2a-5145-9666-6bdc1b3432d3\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT c.nombre AS colegio, count(*) AS reportes FROM \\\"Reporte\\\" r INNER JOIN \\\"Colegio\\\" c ON c.\\\"tenantId\\\" = r.\\\"tenantId\\\" WHERE r.\\\"creadoEn\\\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND r.\\\"eliminado\\\" = false GROUP BY c.nombre ORDER BY reportes DESC LIMIT 5\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null

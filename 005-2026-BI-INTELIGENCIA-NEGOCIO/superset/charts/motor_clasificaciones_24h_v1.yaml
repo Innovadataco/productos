@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT count(*) AS total FROM \"ClasificacionIA\" WHERE \"creadoEn\" >= NOW() - INTERVAL '24 hours'"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"c9f282db-83b4-56a4-b846-9e9b0fa35c7e\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) AS total FROM \\\"ClasificacionIA\\\" WHERE \\\"creadoEn\\\" >= NOW() - INTERVAL '24 hours'\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 300
 is_managed_externally: true
 external_url: null

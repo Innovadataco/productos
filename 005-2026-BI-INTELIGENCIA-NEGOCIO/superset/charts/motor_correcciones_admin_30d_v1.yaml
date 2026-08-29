@@ -16,7 +16,7 @@ params:
     sqlExpression: "SELECT count(*) AS correcciones_30d FROM \"CorreccionAdmin\" WHERE \"creadoEn\" >= NOW() - INTERVAL '30 days'"
     label: valor
     hasCustomLabel: true
-query_context: "{\"datasource\": {\"uuid\": \"512df11c-2611-5f38-a63c-9e6cbf3e5f8e\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) AS correcciones_30d FROM \\\"CorreccionAdmin\\\" WHERE \\\"creadoEn\\\" >= NOW() - INTERVAL '30 days'\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+query_context: null
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null
