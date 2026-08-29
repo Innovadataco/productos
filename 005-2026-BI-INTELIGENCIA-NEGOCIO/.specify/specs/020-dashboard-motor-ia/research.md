@@ -30,26 +30,33 @@ model ClasificacionRubricaVoto {
 
 ## Verificación de vocabulario (candado 15)
 
-Diferida al PASO 5. Comandos a ejecutar contra `bi-db-replica` con `bi_reader`:
+**Ejecutado** contra la fuente upstream `002-2026-proteccion-infantil-db-1` (misma columna/tipo que la réplica BI). F3C observación: 2026-08-29 00:0x COT. La réplica `bi-db-replica` no está levantada en este worktree; se re-consulta en PASO 5 sobre la réplica cuando esté arriba, para confirmar que pg_logical entrega los mismos valores.
+
+```
+$ docker exec 002-2026-proteccion-infantil-db-1 \
+    psql -U proteccion -d proteccion_infantil -Atc "<query>"
+
+-- ClasificacionIA              (2 filas)
+--   modeloUsado observado:      seed-e2e
+--   modelos jurado esperados:   ver JSON "votos" · aún sin volumen productivo
+-- clasificacion_rubrica_votos  (0 filas)  → jurado nuevo aún sin datos
+-- ClasificacionIA.latenciaMs   (2 filas)  → distribución no significativa
+```
+
+**Nota de muestra baja:** el ambiente de dev sólo tiene el seed `seed-e2e`; el jurado (`clasificacion_rubrica_votos`) está vacío. La lógica del jurado ≥2/3 se validará contra volumen productivo cuando se levante `bi-db-replica`. Queries que se re-corren en PASO 5:
 
 ```sql
--- 1. Estructura confirmada
-\d public.clasificacion_rubrica_votos
-
--- 2. Volumen del jurado últimos 7 días
 SELECT count(*) AS votos_totales,
        count(DISTINCT "clasificacionIAId") AS clasificaciones_votadas
-FROM "clasificacion_rubrica_votos"
+FROM clasificacion_rubrica_votos
 WHERE "creadoEn" >= NOW() - INTERVAL '7 days';
 
--- 3. Catálogo de modelos activos
 SELECT "modeloUsado", count(*) AS uso, min("creadoEn"), max("creadoEn")
 FROM "ClasificacionIA"
 WHERE "creadoEn" >= NOW() - INTERVAL '30 days'
 GROUP BY "modeloUsado"
 ORDER BY uso DESC;
 
--- 4. Rango de latencias observado
 SELECT min("latenciaMs"), max("latenciaMs"),
        percentile_cont(0.5)  WITHIN GROUP (ORDER BY "latenciaMs") AS p50,
        percentile_cont(0.95) WITHIN GROUP (ORDER BY "latenciaMs") AS p95
@@ -57,13 +64,7 @@ FROM "ClasificacionIA"
 WHERE "creadoEn" >= NOW() - INTERVAL '7 days';
 ```
 
-Resultados a anotar aquí en PASO 5:
-```
--- votos_totales:         [pendiente]
--- clasificaciones_votadas: [pendiente]
--- modelos activos top-6:   [pendiente]
--- p50 / p95 latencia:      [pendiente]
-```
+Si en la réplica productiva `clasificacion_rubrica_votos` sigue en 0, se activa el fallback JSON descrito en D-020.2.
 
 ---
 

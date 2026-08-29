@@ -2,7 +2,7 @@
 
 ## Verificación de vocabulario (candado 15)
 
-**Estado a la hora del spec+plan:** verificación diferida al PASO 5 (implementación). En este punto no hay conexión operativa a `bi-db-replica` desde el clone del CEO/Dev; las credenciales `bi_reader` viven en `.env.bi.production` fuera de git (`INVENTARIO-DE-SECRETOS.md`). El vocabulario libre se re-confirmará contra la réplica antes de guardar cada chart de Superset.
+**Ejecutado** contra la fuente upstream `002-2026-proteccion-infantil-db-1` (misma columna/tipo que la réplica BI, replicada por pg_logical). F3C observación: 2026-08-29 00:0x COT. La réplica `bi-db-replica` no está levantada en el worktree del Dev; se re-consulta en PASO 5 sobre la réplica cuando `docker compose -f docker-compose.bi.yml up` esté arriba, para confirmar que pg_logical entrega los mismos valores.
 
 ### Valores esperados desde `schema.prisma` PI (fuente autoritativa)
 
@@ -15,22 +15,21 @@
 | `Reporte.prioridadAlta` | Boolean | `false` | usado como flag para KPI 4 |
 | `Reporte.eliminado` | Boolean | `false` | filtro estándar en todas las queries |
 
-### Valores REALES anotados (rellenar en PASO 5)
+### Valores REALES observados
 
 ```
--- $ psql -h bi-db-replica -U bi_reader -d proteccion_infantil
---
--- SELECT DISTINCT estado FROM "Reporte";
--- resultado: [pendiente al ejecutar]
---
--- SELECT DISTINCT estado FROM "Subscription";
--- resultado: [pendiente]
---
--- SELECT DISTINCT estado FROM "BillingCycle";
--- resultado: [pendiente]
+$ docker exec 002-2026-proteccion-infantil-db-1 \
+    psql -U proteccion -d proteccion_infantil -Atc \
+    "SELECT DISTINCT estado FROM <tabla>;"
+
+-- Reporte              (2 filas)  → REVISION_MANUAL
+-- Subscription         (0 filas)  → ∅  (sin datos · default schema = 'activo')
+-- BillingCycle         (0 filas)  → ∅  (sin datos · default schema = 'pendiente')
+-- Colegio              (2 filas)  → activo
+-- SolicitudComite      (0 filas)  → ∅  (sin datos · default schema = 'PENDIENTE')
 ```
 
-Si un valor real difiere del brief (por ejemplo `'PAGADO'` en mayúsculas donde brief asume `'pagado'`), se ajusta el SQL del chart antes de commitear al PR.
+**Nota de muestra baja:** el ambiente de dev tiene volumen mínimo y las tablas de facturación están vacías. Los defaults del schema (`'activo'`, `'pendiente'`, `'PENDIENTE'`) sí son autoritativos porque la app los usa al INSERT (código: `src/lib/dal/repositories/solicitud-comite.ts:46` filtra por `estado: "PENDIENTE"`; el módulo de facturación reutiliza los defaults). Cuando se levante `bi-db-replica` en PASO 5 se re-corren los DISTINCT sobre datos productivos y se ajusta el SQL del chart si aparece un vocabulario libre nuevo (por ejemplo `'PAGADO'` mayúsculas donde el brief asume `'pagado'`).
 
 ---
 

@@ -14,8 +14,19 @@ key (id) · scope · identifier · windowStart · count · createdAt · actualiz
 ```
 KPI 8 agrupa `scope` y suma `count` sobre `windowStart >= date_trunc('day', NOW() TZ Bogota)`.
 
-### `bi_consulta_log` (creado por INSTRUCTIVO-006 · pendiente verificación estructura)
-Diferido a PASO 5. La spec SPEC-007 declaró 6 modelos incluyendo `BIConsultaLog`. Nombres de columnas exactos (`sqlValido`, `hit`, etc.) se verifican al leer `prisma/schema.prisma` local.
+### `BIConsultaLog` (verificado contra `005-.../prisma/schema.prisma` líneas 96-111)
+
+Estructura real:
+```
+id · usuarioId · preguntaNL · sqlGenerado · estado (default 'pendiente') ·
+latenciaMs · fuenteCache (Boolean default false) · error · creadoEn
+```
+
+**Campos INEXISTENTES** que un draft anterior de esta spec asumía y que este research corrige:
+- ❌ `sqlValido` — no existe. Sustituto: `estado` (valores esperados incluyen 'exitoso' | 'error' según UPDATE del pipeline; se re-confirma con `SELECT DISTINCT estado FROM bi_consulta_log`).
+- ❌ `hit` — no existe. Sustituto: `fuenteCache` (Boolean; `true` = respondió desde `bi_cache_semantico`).
+
+Los KPIs 3 y 6 de esta spec se re-escriben usando `estado` y `fuenteCache` en `spec.md`. Si el pipeline Vanna (INSTRUCTIVO-007) necesita un booleano `sqlValido` explícito, se abre migración aditiva en spec propia — hoy la spec asume la semántica: `estado = 'exitoso' AND error IS NULL` ⇒ SQL válido.
 
 ---
 

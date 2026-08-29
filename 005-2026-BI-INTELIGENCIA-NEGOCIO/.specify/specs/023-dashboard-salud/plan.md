@@ -11,17 +11,20 @@ Nuevos datasets a agregar (adicional a SPEC-019 F1):
 - **Segunda conexión Superset** a `bi-superset-db:5432` con usuario read-only `superset_reader` (usuario nuevo · documentar en `INVENTARIO-DE-SECRETOS.md`) para leer tabla `logs` (KPI 4).
 
 ### F2 · Verificación de estructura en fuente (candado 15)
-```sql
--- En bi-db-replica
-\d "ReintentoReporte"                                             -- confirmar columnas exitoso, creadoEn
-\d "RateLimit"                                                    -- confirmar scope, count, windowStart
-SELECT to_regclass('public.bi_consulta_log') AS existe;           -- verificar si la tabla ya está desplegada
-\d public.bi_consulta_log                                         -- si existe, listar columnas para KPIs 2, 3, 6
 
--- En bi-superset-db (con superset_reader)
-\d public.logs                                                    -- estructura de la tabla de logs Superset
+Estructuras autoritativas ya verificadas en el schema (ver `research.md` para citas de línea):
+- `ReintentoReporte` (schema PI 1739-1751): `id · reporteId · intento · exitoso · error · creadoEn`.
+- `RateLimit` (schema PI 2051-2061): `key · scope · identifier · windowStart · count · createdAt · actualizadoEn`.
+- `bi_consulta_log` (schema BI 96-111): `id · usuarioId · preguntaNL · sqlGenerado · estado · latenciaMs · fuenteCache · error · creadoEn`. Campos `sqlValido` y `hit` NO existen — se sustituyen por `estado = 'exitoso' AND error IS NULL` y `fuenteCache = true` respectivamente (documentado en spec.md KPIs 3 y 6).
+
+Chequeos que sí se corren contra la réplica en F5:
+```sql
+-- En bi-db-replica (bi_reader)
+SELECT to_regclass('public.bi_consulta_log') AS existe;
+SELECT DISTINCT estado FROM bi_consulta_log;    -- vocabulario libre del pipeline Vanna
 ```
-Anotar en research.md.
+
+En `bi-superset-db` como `superset_reader`, confirmar estructura de `logs` (Superset v3+ · columnas típicas `id · action · user_id · dttm · json · dashboard_id · slice_id`). Anotar valores observados en `research.md` antes de mergear.
 
 ### F3 · GRANT superset_reader
 En `bi-superset-db`:

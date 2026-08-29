@@ -9,14 +9,23 @@ POSIBLE_SPAM · DUPLICADO · REQUIERE_ANONIMIZACION · CORREGIDO
 ```
 
 ### `SolicitudComite.estado` (String libre · default `'PENDIENTE'` · línea 1691)
-Vocabulario esperado (candidato): `PENDIENTE` · `EN_REVISION` · `RESUELTA` · `ARCHIVADA`. Se re-confirma en PASO 5 con:
-```sql
-SELECT DISTINCT estado, count(*) FROM "SolicitudComite" GROUP BY estado;
+
+**Ejecutado** contra `002-2026-proteccion-infantil-db-1`. F3C observación: 2026-08-29 00:0x COT. Re-consulta en PASO 5 sobre `bi-db-replica` cuando esté arriba.
+
 ```
-Rellenar:
+$ docker exec 002-2026-proteccion-infantil-db-1 \
+    psql -U proteccion -d proteccion_infantil -Atc "SELECT DISTINCT estado FROM \"SolicitudComite\";"
+
+-- SolicitudComite       (0 filas) → ∅
+-- Reporte.estado        (2 filas) → REVISION_MANUAL
+-- TransicionReporte     (0 filas) → ∅
 ```
--- resultado: [pendiente]
-```
+
+**Nota de muestra baja:** las tablas de flujo operativo (SolicitudComite · TransicionReporte) están vacías en dev. Vocabulario autoritativo por defaults y uso en código:
+- `SolicitudComite.estado`: default schema `'PENDIENTE'`; el código app usa: `"PENDIENTE"`, `"ASIGNADA"`, `"REVISION_MANUAL"`, `"RESUELTA"` (evidencia: `src/lib/dal/repositories/solicitud-comite.ts:46`, `src/lib/dal/services/comite-bandeja.ts:159`, `src/lib/dal/repositories/comite-convivencia-solicitudes.ts:94`).
+- `TransicionReporte.responsableTipo`: enum cerrado (arriba).
+
+Se re-confirma en réplica productiva antes de mergear si aparece un valor nuevo.
 
 ### `TransicionReporte.responsableTipo` (enum · verificado línea 488-495)
 ```

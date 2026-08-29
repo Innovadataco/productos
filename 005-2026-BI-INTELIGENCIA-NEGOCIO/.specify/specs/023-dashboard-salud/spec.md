@@ -47,13 +47,17 @@ WHERE "creadoEn" >= NOW() - INTERVAL '24 hours';
 ```
 Superset muestra "0" o "No data" hasta que Vanna emita.
 
-**3 · Precisión Vanna primera pasada** — placeholder:
+**3 · Precisión Vanna primera pasada** — placeholder. Campos reales de `bi_consulta_log` (schema BI líneas 96-111): `estado` · `sqlGenerado` · `error` · `fuenteCache` · `latenciaMs`. Semántica adoptada: SQL válido ⇔ `estado = 'exitoso' AND error IS NULL`.
 ```sql
-SELECT ROUND(100.0 * count(*) FILTER (WHERE "sqlValido" = true) / NULLIF(count(*), 0), 2) AS precision_pct
+SELECT ROUND(
+  100.0 * count(*) FILTER (WHERE estado = 'exitoso' AND error IS NULL)
+  / NULLIF(count(*), 0),
+  2
+) AS precision_pct
 FROM bi_consulta_log
 WHERE "creadoEn" >= NOW() - INTERVAL '7 days';
 ```
-Nombre exacto de columna `sqlValido` se confirma en PASO 5 leyendo `prisma/schema.prisma` local (SPEC-007 creó `BIConsultaLog`).
+Si el pipeline Vanna termina requiriendo un booleano `sqlValido` explícito distinto de esta semántica, se abre migración aditiva en spec propia — no se difiere aquí.
 
 **4 · Errores Superset 24h** — vive en la BD metadata `bi-superset-db:5432`, NO en `bi-db-replica`:
 ```sql
@@ -67,13 +71,16 @@ Estructura exacta de la tabla `logs` de Superset se confirma en PASO 5 (Superset
 
 **5 · Uptime servicios BI** — placeholder hasta INSTRUCTIVO-008.
 
-**6 · Cache hit rate Vanna** — placeholder hasta INSTRUCTIVO-007. Referencia: `bi_cache_semantico` tabla creada por INSTRUCTIVO-006. Query planeada:
+**6 · Cache hit rate Vanna** — placeholder hasta INSTRUCTIVO-007. Referencia: `bi_cache_semantico` tabla creada por INSTRUCTIVO-006. Campo real en `bi_consulta_log`: `fuenteCache` (Boolean · default `false` · schema BI línea 103; `true` = respondido desde cache semántico).
 ```sql
-SELECT ROUND(100.0 * count(*) FILTER (WHERE hit = true) / NULLIF(count(*), 0), 2) AS cache_hit_pct
+SELECT ROUND(
+  100.0 * count(*) FILTER (WHERE "fuenteCache" = true)
+  / NULLIF(count(*), 0),
+  2
+) AS cache_hit_pct
 FROM bi_consulta_log
 WHERE "creadoEn" >= NOW() - INTERVAL '7 days';
 ```
-Campo `hit` a confirmar al leer schema `BIConsultaLog`.
 
 **7 · Reintentos Reporte 24h fallidos**
 ```sql

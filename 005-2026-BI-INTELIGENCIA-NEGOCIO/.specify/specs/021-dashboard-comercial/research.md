@@ -2,18 +2,17 @@
 
 ## Vocabulario real esperado (candado 15)
 
-Diferido a PASO 5. Comandos:
+**Ejecutado** contra `002-2026-proteccion-infantil-db-1` (misma columna/tipo que la réplica BI). F3C observación: 2026-08-29 00:0x COT. Re-consulta en PASO 5 sobre `bi-db-replica` cuando esté arriba.
 
-```sql
-SELECT DISTINCT estado FROM "Subscription";                            -- esperado: 'activo' + otros
-SELECT DISTINCT estado, count(*) FROM "BillingCycle" GROUP BY estado;  -- esperado: 'pendiente' + 'pagado' + 'rechazado'
+```
+$ docker exec 002-2026-proteccion-infantil-db-1 \
+    psql -U proteccion -d proteccion_infantil -Atc "SELECT DISTINCT estado FROM <tabla>;"
+
+-- Subscription     (0 filas) → ∅  · default schema línea 855 = 'activo'
+-- BillingCycle     (0 filas) → ∅  · default schema línea 865 = 'pendiente'
 ```
 
-Rellenar en PASO 5:
-```
--- Subscription.estado observado: [pendiente]
--- BillingCycle.estado observado: [pendiente]
-```
+**Nota de muestra baja:** el módulo comercial no tiene volumen en dev. Los defaults del schema (`'activo'` y `'pendiente'`) son autoritativos porque la app los usa en INSERT. El vocabulario adicional (`'pagado'`, `'rechazado'`, `'cancelado'`) se re-confirma en PASO 5 sobre datos productivos de la réplica; si aparece un valor no anticipado, se ajusta el SQL del chart y se documenta aquí antes de mergear.
 
 ---
 

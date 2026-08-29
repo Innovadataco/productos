@@ -9,12 +9,27 @@
 4. Export JSON de cada dataset en `superset/datasets/*.yaml` (Superset usa YAML para import/export).
 
 ### F2 · Verificación GRANT PII (candado 20 · transversal)
-En la réplica ejecutar `\dp public."Reporte"` `\dp public."Colegio"` `\dp public."Usuario"` y confirmar que `bi_reader` NO tiene SELECT sobre:
-- `Usuario.password`
-- `Colegio.representanteLegalNombre` · `representanteLegalIdentificacion` · `representanteLegalEmail` · `representanteLegalTelefono`
-- `Reporte.texto` · `Reporte.textoOriginal`
 
-Si existen GRANTs sobre esas columnas → PARA · escala a Fábrica BI-2 (candado 20 rompe).
+**Método: prueba activa** (no `\dp` de inspección). Autenticado como `bi_reader` intentar el SELECT prohibido y confirmar `ERROR: permission denied for column ...`. `\dp` se acepta solo como diagnóstico complementario, nunca como veredicto.
+
+```bash
+export PGPASSWORD="$BI_READER_PASSWORD"
+for q in \
+  'SELECT "passwordHash" FROM public."Usuario" LIMIT 1;' \
+  'SELECT "representanteLegalNombre" FROM public."Colegio" LIMIT 1;' \
+  'SELECT "representanteLegalIdentificacion" FROM public."Colegio" LIMIT 1;' \
+  'SELECT "representanteLegalEmail" FROM public."Colegio" LIMIT 1;' \
+  'SELECT "representanteLegalTelefono" FROM public."Colegio" LIMIT 1;' \
+  'SELECT texto FROM public."Reporte" LIMIT 1;' \
+  'SELECT "textoOriginal" FROM public."Reporte" LIMIT 1;' \
+  ; do
+  out=$(psql -h bi-db-replica -U bi_reader -d proteccion_infantil -c "$q" 2>&1 || true)
+  echo "$q → $out"
+  [[ "$out" == *"permission denied"* ]] || { echo "CANDADO 20 ROTO: $q devolvió datos"; exit 2; }
+done
+```
+
+Si CUALQUIER query no devuelve `permission denied` → PARA · escala a Fábrica BI-2 (candado 20 rompe · GRANT mal configurado). El `passwordHash` es el nombre real del campo (schema PI línea 534) — no `password`.
 
 ### F3 · Verificación vocabulario real (candado 15 · transversal)
 Contra `bi-db-replica` con `bi_reader`:

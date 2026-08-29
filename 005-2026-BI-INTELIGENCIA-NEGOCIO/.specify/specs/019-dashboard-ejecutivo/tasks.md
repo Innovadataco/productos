@@ -20,10 +20,15 @@ Casillas marcadas al completar. Al 3er rojo del mismo síntoma → PARA + escala
 - [ ] Dataset `mv_fact_comercial_mensual` importado · export YAML
 - [ ] Dataset `mv_fact_salud_sistema` importado · export YAML
 
-## F2 · Verificación GRANT PII (candado 20)
-- [ ] `\dp public."Reporte"` · confirmar `bi_reader` sin acceso a `texto` · `textoOriginal`
-- [ ] `\dp public."Colegio"` · confirmar sin acceso a 4 columnas representante legal
-- [ ] `\dp public."Usuario"` · confirmar sin acceso a `password`
+## F2 · Verificación GRANT PII (candado 20) — prueba activa como `bi_reader`
+- [ ] `SELECT texto FROM public."Reporte" LIMIT 1;` como `bi_reader` → `permission denied for column texto`
+- [ ] `SELECT "textoOriginal" FROM public."Reporte" LIMIT 1;` → `permission denied`
+- [ ] `SELECT "representanteLegalNombre" FROM public."Colegio" LIMIT 1;` → `permission denied`
+- [ ] `SELECT "representanteLegalIdentificacion" FROM public."Colegio" LIMIT 1;` → `permission denied`
+- [ ] `SELECT "representanteLegalEmail" FROM public."Colegio" LIMIT 1;` → `permission denied`
+- [ ] `SELECT "representanteLegalTelefono" FROM public."Colegio" LIMIT 1;` → `permission denied`
+- [ ] `SELECT "passwordHash" FROM public."Usuario" LIMIT 1;` → `permission denied for column passwordHash` (campo real · schema PI línea 534 · NO `password`)
+- [ ] Si CUALQUIER query devuelve datos → PARA + escala a Fábrica BI-2
 
 ## F3 · Verificación vocabulario real (candado 15)
 - [ ] `SELECT DISTINCT estado FROM "Reporte"` · anotar en research.md

@@ -65,14 +65,19 @@ GROUP BY estado
 ORDER BY total DESC;
 ```
 
-**5 · Reportes REVISION_MANUAL > 7 días**
+**5 · Reportes REVISION_MANUAL > 7 días** (candado 13 · sin PII)
+
+`Reporte.identificador` es PII (handle de la persona reportada; mismo campo que `IdentificadorReportado`; el schema PI lo trata como PII en `PatronInstitucional`: "SIN PII por construcción... nunca identificador"). No se expone en la tabla — se muestra el `numeroSeguimiento` (identificador de expediente, no de persona) y `plataforma.nombre` para orientar al operador.
+
 ```sql
 SELECT r.id,
-       r.identificador,
+       r."numeroSeguimiento",
+       p.nombre AS plataforma,
        r."creadoEn",
        c.nombre AS colegio
 FROM "Reporte" r
 LEFT JOIN "Colegio" c ON c."tenantId" = r."tenantId"
+LEFT JOIN "Plataforma" p ON p.id = r."plataformaId"
 WHERE r.estado = 'REVISION_MANUAL'
   AND r."creadoEn" < NOW() - INTERVAL '7 days'
   AND r."eliminado" = false
@@ -120,7 +125,7 @@ Big Number contador: `SELECT count(*) FROM "Subscription" WHERE "terminaEn" BETW
 |---|---|---|
 | 9 | Sin datos → "No data" | Superset default |
 | 11 | Multi-tenancy | Fase 1 solo ADMIN · row-level Fase 2 |
-| 13 | Sanitizer PII | KPI 5 no expone `Reporte.texto` · solo id · identificador · colegio.nombre |
+| 13 | Sanitizer PII | KPI 5 no expone `Reporte.texto` NI `Reporte.identificador` (handle de la persona reportada · PII). Se muestran solo `id` interno · `numeroSeguimiento` de expediente · `plataforma.nombre` · `colegio.nombre` |
 | 14 | Verificación en vivo | Fábrica valida definición "no cerrado" con Jelkin antes de acusar CUMPLE |
 | 15 | Verificar en fuente | Enum `EstadoReporte` y `ResponsableTransicion` verificados líneas 470-495 |
 | 17 | spec+plan commiteado | Aplicado |

@@ -1,11 +1,10 @@
 # TASKS-023 · Dashboard SALUD
 
-## F2 · Verificación fuentes
-- [ ] `\d "ReintentoReporte"` · confirmar `exitoso · creadoEn`
-- [ ] `\d "RateLimit"` · confirmar `scope · count · windowStart`
-- [ ] `SELECT to_regclass('public.bi_consulta_log')` · anotar si existe
-- [ ] Si existe → `\d bi_consulta_log` · listar columnas para KPIs 2, 3, 6
-- [ ] `\d public.logs` en bi-superset-db · confirmar estructura
+## F2 · Verificación fuentes (schema ya citado en research.md)
+- [ ] `SELECT to_regclass('public.bi_consulta_log')` · confirmar existencia en la réplica
+- [ ] `SELECT DISTINCT estado FROM bi_consulta_log` · anotar vocabulario libre observado
+- [ ] Confirmar contra `005-.../prisma/schema.prisma` líneas 96-111 que columnas usadas son `estado`, `error`, `fuenteCache`, `latenciaMs` (NO `sqlValido`/`hit`)
+- [ ] En `bi-superset-db` con `superset_reader`: `SELECT column_name FROM information_schema.columns WHERE table_name='logs';` · confirmar `action`, `dttm`, `json`, `user_id`
 
 ## F3 · GRANT superset_reader (Jelkin ejecuta)
 - [ ] SQL propuesto a Jelkin (Fábrica coordina)
