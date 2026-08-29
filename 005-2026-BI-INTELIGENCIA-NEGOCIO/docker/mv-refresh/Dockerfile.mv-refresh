@@ -1,0 +1,13 @@
+# Dockerfile.mv-refresh · Alpine + crond + psql para bi-mv-refresh
+# SPEC-009 · F3C 2026-08-28 · Autor: bi-dev-2
+# Corre REFRESH MATERIALIZED VIEW CONCURRENTLY cada 10 min sobre bi-db-replica.
+FROM postgres:16-alpine
+
+# Cron cada 10 minutos. Log a /var/log/refresh-mv.log (persiste solo en el contenedor).
+RUN mkdir -p /etc/crontabs && \
+    echo '*/10 * * * * /usr/local/bin/refresh-mv.sh >> /var/log/refresh-mv.log 2>&1' \
+      > /etc/crontabs/root && \
+    touch /var/log/refresh-mv.log
+
+# crond -f (foreground) -l 2 (log level info) -L /dev/stdout (log a stdout ademas)
+CMD ["crond", "-f", "-l", "2", "-L", "/dev/stdout"]

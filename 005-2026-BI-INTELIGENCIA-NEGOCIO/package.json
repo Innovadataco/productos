@@ -1,0 +1,41 @@
+{
+  "name": "bi-inteligencia-negocio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test:unit": "node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run tests/unit",
+    "ratchets:check": "bash scripts/ratchets/run-all.sh"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed-catalogo.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "jose": "^6.0.10",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.15.17",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.5",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.26.0",
+    "eslint-config-next": "16.2.10",
+    "jsdom": "^26.1.0",
+    "postcss": "^8.5.6",
+    "prisma": "^6.19.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.3"
+  }
+}
