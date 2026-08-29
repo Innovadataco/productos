@@ -65,7 +65,9 @@ echo "==> Migraciones (aditivas)"
 docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-next npx --yes prisma@6.19.3 migrate deploy
 
 echo "==> Seed idempotente (catálogo BI)"
-docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-next npm run seed
+# "seed" vive en package.json bajo la clave "prisma" (convención de Prisma para
+# `prisma db seed`), NO bajo "scripts" — "npm run seed" nunca existió. I-16.
+docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-next npx --yes prisma@6.19.3 db seed
 
 echo "==> Guardián de índices"
 docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-next node scripts/verificar-indices-post-migrate.mjs
