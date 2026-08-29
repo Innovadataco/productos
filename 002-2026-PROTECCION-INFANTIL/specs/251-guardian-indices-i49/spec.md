@@ -3,7 +3,17 @@
 **Feature Branch**: `work/002-PI-154` (SPEC-251)
 **SPEC**: 251
 **Created**: 2026-08-26
-**Status**: PLANEADO
+**Status**: FINALIZADO
+**Deployed:** 2026-08-26 (merge PR SPEC-251 · commit `d3a62e561`)
+**Commits clave:**
+- `b2903167e` — spec + plan inicial
+- `939d7e9f7` — extender guardián de 2 a 5 índices
+- `0fd80254c` — normalizar nombre truncado 63 chars
+- `c0bd163cd` — cablear a CI (3 ratchets) + `deploy-prod.sh:57-61`
+- `90322846d` — 7ª señal pi-monitor + seed anti-I-100
+- `b6cdaf383` — tests unitarios + integración
+- `d3a62e561` — merge a main
+**Cierra:** I-49 (deriva schema vs migraciones · guardián HNSW/GIN/UNIQUE)
 **Input**: INSTRUCTIVO-002-PI-154-GUARDIAN-INDICES-I49 · BRIEF-GUARDIAN-INDICES-I49 v1.1 · I-49 · D-72
 
 Impacto en arquitectura: **cero cambios funcionales al motor** (`src/lib/ai/**` intacto). Se extiende `scripts/verify-hnsw-indexes.ts` (ya existe, cubre 2 de 5 índices, no está cableado) para convertirlo en el guardián de los 5 índices en riesgo, con verificación de tipo generalizada y detección de huérfanos. Se cablea a **tres compuertas**: CI (paso nuevo tras `prisma migrate deploy`), `scripts/deploy-prod.sh` (entre L27 `migrate deploy` y L41 `sync-modulos-grants`), y `pi-monitor` (probe nuevo con frecuencia parametrizable). Migración aditiva única: `monitoreo.indices.frecuencia_horas` (default 24) en `ParametroSistema`. Nuevo alias `indices:check` conservando `db:verify:hnsw`.
