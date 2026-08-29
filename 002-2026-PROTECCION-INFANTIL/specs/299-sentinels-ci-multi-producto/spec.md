@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-28
 
-**Status**: `DESARROLLO`
+**Status**: `IMPLEMENTADO`
 
 **Impacto en arquitectura:** sin impacto estructural sobre el código de producto — el cambio es puramente infra de GitHub Actions bajo `.github/workflows/`. No toca `src/**` de ningún producto, no altera schema/migraciones/DAL/repos/proxy, no cambia contratos HTTP ni navegación, no requiere regenerar `docs/architecture/**` y no mueve `arch:check`. Solo introduce un patrón operativo transversal (job sentinel `<slug>-gate` por producto + README canónico) que reemplaza la señalización agregada de CI hacia el ruleset "Gate CI - main" sin modificar jobs preexistentes de `ci.yml`/`bi.yml`. Efecto observable posterior al merge (cuando Jelkin registre los sentinels como required checks): PRs que solo tocan un producto dejan de quedar bloqueados por checks del otro producto que nunca disparaban.
 
