@@ -56,9 +56,12 @@ done
 # 1. Generar schema PI real desde su schema.prisma
 PI_SCHEMA_SQL="$(mktemp -t pi_schema_XXXXXX.sql)"
 trap 'rm -f "$PI_SCHEMA_SQL"; docker rm -f "$CONTAINER" >/dev/null 2>&1 || true' EXIT
+# Pin explícito a la versión de PI (5.22.0). Sin este pin, `npx prisma` en un
+# job de CI sin `npm ci` previo resuelve "latest" del registro npm y puede
+# caer en pre-releases rotos (p.ej. 8.0.0-rc.12 cuelga ~60s y sale 2).
 (
   cd "$PI_REPO"
-  npx prisma migrate diff \
+  npx --yes prisma@5.22.0 migrate diff \
     --from-empty \
     --to-schema-datamodel prisma/schema.prisma \
     --script > "$PI_SCHEMA_SQL"
