@@ -1,0 +1,69 @@
+table_name: mv_fact_comercial_mensual
+uuid: 55db0c80-af92-5888-8c29-569716b98aac
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: mes
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.mv_fact_comercial_mensual."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: mes
+    verbose_name: null
+    type: DATE
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 5c739382-4cbc-564c-9175-7af6011c1937
+  - column_name: mrr
+    verbose_name: null
+    type: DOUBLE PRECISION
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: ea579823-fc5c-5f97-927b-57a4603b452b
+  - column_name: activas
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: e5c3d27a-6a17-586a-99dd-7796c31c1b13
+  - column_name: churn
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 1d2ce234-b097-5612-99d6-77d51550a44a
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: c4604eb2-a29d-54a4-a797-c07b8250c157

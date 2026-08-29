@@ -1,0 +1,79 @@
+table_name: mv_fact_motor_ia_diario
+uuid: 386c3986-ee39-5f04-8967-ca8534b7a368
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: dia
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.mv_fact_motor_ia_diario."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: dia
+    verbose_name: null
+    type: DATE
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: ee72da80-1f1b-5cc1-9572-2aa0b33ad982
+  - column_name: clasificaciones
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 0d2008d5-d42c-53d9-b64d-f0614abcb023
+  - column_name: aciertos
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 27ab3cd1-86de-5927-9216-c4d6ee6725d0
+  - column_name: latencia_p50_ms
+    verbose_name: null
+    type: DOUBLE PRECISION
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: df14132e-4da9-51da-933f-d57e9081b4c9
+  - column_name: latencia_p95_ms
+    verbose_name: null
+    type: DOUBLE PRECISION
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 03996732-5418-5635-b876-8feef7a6a61a
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: b8bde8cd-9038-571c-88d5-649872b1fc49

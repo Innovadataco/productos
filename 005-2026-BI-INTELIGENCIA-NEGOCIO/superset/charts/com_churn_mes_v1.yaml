@@ -1,0 +1,25 @@
+slice_name: 3 · Churn mes (bajas)
+viz_type: big_number_total
+uuid: 9a7235f5-db21-5bed-b808-52f082b81f5e
+version: 1.0.0
+dataset_uuid: 13fe285a-459f-5e3c-8c24-b94fb236aaeb
+description: Chart del dashboard 'comercial' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: Aprobado en compuerta §4 · SPEC-019..023 · F3C 2026-08-29
+params:
+  viz_type: big_number_total
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metric:
+    expressionType: SQL
+    sqlExpression: "SELECT count(*) FROM \"Subscription\" WHERE estado <> 'activo' AND \"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota')"
+    label: valor
+    hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"13fe285a-459f-5e3c-8c24-b94fb236aaeb\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) FROM \\\"Subscription\\\" WHERE estado <> 'activo' AND \\\"creadoEn\\\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota')\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 3600
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - comercial

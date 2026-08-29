@@ -1,0 +1,22 @@
+slice_name: 8 · Rate limits activados hoy
+viz_type: table
+uuid: 153c79d5-1822-5eb0-954a-303adfd65557
+version: 1.0.0
+dataset_uuid: f60299e2-9300-59c7-b3bb-f0515a66f4e2
+description: Chart del dashboard 'salud' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: Aprobado en compuerta §4 · SPEC-019..023 · F3C 2026-08-29
+params:
+  viz_type: table
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  query_mode: raw
+  all_columns: []
+query_context: "{\"datasource\": {\"uuid\": \"f60299e2-9300-59c7-b3bb-f0515a66f4e2\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT scope, SUM(count) AS activaciones FROM \\\"RateLimit\\\" WHERE \\\"windowStart\\\" >= date_trunc('day', NOW() AT TIME ZONE 'America/Bogota') GROUP BY scope ORDER BY activaciones DESC\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 3600
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - salud

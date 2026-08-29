@@ -1,0 +1,15 @@
+database_name: bi-db-replica
+sqlalchemy_uri: "postgresql+psycopg2://bi_reader:XXXXXXXXXXXX@bi-db-replica:5432/proteccion_infantil"
+password: null
+uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+version: 1.0.0
+cache_timeout: null
+expose_in_sqllab: true
+allow_run_async: true
+allow_ctas: false
+allow_cvas: false
+allow_dml: false
+allow_csv_upload: false
+impersonate_user: false
+extra: "{\"metadata_params\": {}, \"engine_params\": {}, \"schemas_allowed_for_csv_upload\": []}"
+masked_encrypted_extra: "{}"

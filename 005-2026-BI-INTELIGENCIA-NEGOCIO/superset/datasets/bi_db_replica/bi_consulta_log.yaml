@@ -1,0 +1,99 @@
+table_name: bi_consulta_log
+uuid: 4783b36e-e6e1-5970-8329-268db5431187
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: creadoEn
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.bi_consulta_log."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: id
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: false
+    filterable: true
+    expression: null
+    description: null
+    uuid: 06fc568a-e44a-50b8-af37-23039018493d
+  - column_name: usuarioId
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 123044e2-92d1-5a40-9eb7-9ff3733a6973
+  - column_name: estado
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: f65ca780-b1f1-5d71-8dd3-24b47496ab9a
+  - column_name: fuenteCache
+    verbose_name: null
+    type: BOOLEAN
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: ffb4188f-cb90-5913-9d9b-cb79e117bd02
+  - column_name: latenciaMs
+    verbose_name: null
+    type: INTEGER
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 2a206028-13f5-519d-9488-992e2c3277ab
+  - column_name: error
+    verbose_name: null
+    type: TEXT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: cb6b8af8-43cf-5647-b557-406abdd00235
+  - column_name: creadoEn
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: f26ed0f1-3ce7-53d1-a784-5a049bcf49f1
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: 504fe71a-de32-53aa-bb33-153bd5b4b96a

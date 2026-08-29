@@ -1,0 +1,108 @@
+dashboard_title: OPERATIVO
+uuid: d242e1e1-3782-5ffc-95c0-7f5b84d2f4d4
+version: 1.0.0
+description: Flujo operativo (Fábrica+Jelkin) · 7 KPIs · SPEC-022
+css: null
+slug: operativo
+published: true
+position:
+  DASHBOARD_VERSION_KEY: v2
+  CHART-op_reportes_en_flujo_v1:
+    type: CHART
+    id: CHART-op_reportes_en_flujo_v1
+    meta:
+      uuid: 6d7e590d-a69c-5247-9d36-2c66aeda7dba
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: op_reportes_en_flujo_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-op_comite_pendientes_v1:
+    type: CHART
+    id: CHART-op_comite_pendientes_v1
+    meta:
+      uuid: 7d97ac97-b0c5-572f-ae5d-9dde36bec77f
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: op_comite_pendientes_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-op_tiempo_resolucion_v1:
+    type: CHART
+    id: CHART-op_tiempo_resolucion_v1
+    meta:
+      uuid: 855bcfbd-1e8e-5bac-8708-80712a120367
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: op_tiempo_resolucion_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-op_backlog_v1:
+    type: CHART
+    id: CHART-op_backlog_v1
+    meta:
+      uuid: 7af358c9-9317-5054-8e88-01fcebbb395a
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: op_backlog_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-op_revision_manual_detalle_v1:
+    type: CHART
+    id: CHART-op_revision_manual_detalle_v1
+    meta:
+      uuid: 2d77bf38-6a95-569a-bdf8-82b909566177
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: op_revision_manual_detalle_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-op_transiciones_responsable_v1:
+    type: CHART
+    id: CHART-op_transiciones_responsable_v1
+    meta:
+      uuid: a4fea736-b1f6-5b14-8cce-20b90035f155
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: op_transiciones_responsable_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-op_vencimientos_suscripciones_v1:
+    type: CHART
+    id: CHART-op_vencimientos_suscripciones_v1
+    meta:
+      uuid: f4202613-375d-58d6-8391-9175cc0aa400
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: op_vencimientos_suscripciones_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+metadata:
+  refresh_frequency: 300
+  color_scheme: supersetColors
+  shared_label_colors: {}
+  cross_filters_enabled: true
+  label_colors: {}
+  timed_refresh_immune_slices: []
+  expanded_slices: {}
+  chart_configuration: {}
+certified_by: Fábrica BI-2
+certification_details: Aprobado compuerta §4 · SPEC-019..023 · F3C 2026-08-29
+is_managed_externally: true
+tags:
+  - bi-mvp
+  - operativo

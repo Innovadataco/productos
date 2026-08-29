@@ -1,0 +1,108 @@
+dashboard_title: MOTOR IA
+uuid: 32bbd01d-ce0e-53b4-ab09-9b2667399ec1
+version: 1.0.0
+description: Salud del motor IA (Fábrica) · 7 KPIs · jurado ≥2/3 · SPEC-020
+css: null
+slug: motor_ia
+published: true
+position:
+  DASHBOARD_VERSION_KEY: v2
+  CHART-motor_clasificaciones_24h_v1:
+    type: CHART
+    id: CHART-motor_clasificaciones_24h_v1
+    meta:
+      uuid: 8ccb2bf8-095b-508d-aee6-3cd31c6b24ea
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: motor_clasificaciones_24h_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-motor_latencia_p95_v1:
+    type: CHART
+    id: CHART-motor_latencia_p95_v1
+    meta:
+      uuid: d43afcbf-2d9e-5375-abaf-4afeb35c0e97
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: motor_latencia_p95_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-motor_correcciones_admin_7d_v1:
+    type: CHART
+    id: CHART-motor_correcciones_admin_7d_v1
+    meta:
+      uuid: fa69a55b-67e6-5f0d-bf9b-3b5e55be7145
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: motor_correcciones_admin_7d_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-motor_acuerdo_jurado_v1:
+    type: CHART
+    id: CHART-motor_acuerdo_jurado_v1
+    meta:
+      uuid: cdfe3f07-fed1-5375-9274-31055413c442
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: motor_acuerdo_jurado_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-motor_modelos_activos_v1:
+    type: CHART
+    id: CHART-motor_modelos_activos_v1
+    meta:
+      uuid: 9ea88220-778d-5802-b3f1-f7cc29690a7c
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: motor_modelos_activos_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-motor_precision_ia_v1:
+    type: CHART
+    id: CHART-motor_precision_ia_v1
+    meta:
+      uuid: 438023e2-a5a0-5b7a-9680-e7ddd2ae5d80
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: motor_precision_ia_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-motor_volumen_horario_v1:
+    type: CHART
+    id: CHART-motor_volumen_horario_v1
+    meta:
+      uuid: 8ee9fd3f-a941-5bb6-85ee-76c771ff7af3
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: motor_volumen_horario_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+metadata:
+  refresh_frequency: 300
+  color_scheme: supersetColors
+  shared_label_colors: {}
+  cross_filters_enabled: true
+  label_colors: {}
+  timed_refresh_immune_slices: []
+  expanded_slices: {}
+  chart_configuration: {}
+certified_by: Fábrica BI-2
+certification_details: Aprobado compuerta §4 · SPEC-019..023 · F3C 2026-08-29
+is_managed_externally: true
+tags:
+  - bi-mvp
+  - motor_ia

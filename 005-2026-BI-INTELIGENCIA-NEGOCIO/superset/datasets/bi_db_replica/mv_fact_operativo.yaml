@@ -1,0 +1,69 @@
+table_name: mv_fact_operativo
+uuid: 5852d98a-9cef-5a25-a9e6-554dc828eb6b
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: dia
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.mv_fact_operativo."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: dia
+    verbose_name: null
+    type: DATE
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 206f256e-b1df-5c86-a9f5-d1b08182ed51
+  - column_name: por_estado
+    verbose_name: null
+    type: JSONB
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 64097b94-29d7-5db0-840b-d4896e433a08
+  - column_name: comite_pendientes
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: dd1db872-2950-5e15-af2f-15d13f697d13
+  - column_name: transiciones
+    verbose_name: null
+    type: JSONB
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 9257a615-2f42-509b-8b0e-41768847c5b1
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: cf61416d-3f05-5602-ada9-635dd8283c48

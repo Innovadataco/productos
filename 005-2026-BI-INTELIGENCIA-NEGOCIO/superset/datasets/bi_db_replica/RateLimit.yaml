@@ -1,0 +1,79 @@
+table_name: RateLimit
+uuid: f60299e2-9300-59c7-b3bb-f0515a66f4e2
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: windowStart
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.RateLimit."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: key
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: false
+    filterable: true
+    expression: null
+    description: null
+    uuid: f5582171-9189-5c45-a01c-97af5774378c
+  - column_name: scope
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: e84f1066-79d8-573a-ba36-7f7014d55770
+  - column_name: identifier
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: e6297638-3b68-504d-b992-69dad2a1a868
+  - column_name: windowStart
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 88b2c912-ad10-5067-9134-5fe9b2f726a3
+  - column_name: count
+    verbose_name: null
+    type: INTEGER
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 26b9773e-981c-5805-b37e-f9d081085cb1
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: 66c902ba-9b98-5236-a28e-b841500d9a12

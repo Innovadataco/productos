@@ -1,0 +1,25 @@
+slice_name: 7 · Volumen por hora (24 h)
+viz_type: line
+uuid: 8ee9fd3f-a941-5bb6-85ee-76c771ff7af3
+version: 1.0.0
+dataset_uuid: c9f282db-83b4-56a4-b846-9e9b0fa35c7e
+description: Chart del dashboard 'motor_ia' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: Aprobado en compuerta §4 · SPEC-019..023 · F3C 2026-08-29
+params:
+  viz_type: line
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metrics:
+    - expressionType: SQL
+      sqlExpression: "SELECT date_trunc('hour', \"creadoEn\" AT TIME ZONE 'America/Bogota') AS hora, count(*) AS clasificaciones FROM \"ClasificacionIA\" WHERE \"creadoEn\" >= NOW() - INTERVAL '24 hours' GROUP BY hora ORDER BY hora"
+      label: serie
+      hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"c9f282db-83b4-56a4-b846-9e9b0fa35c7e\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT date_trunc('hour', \\\"creadoEn\\\" AT TIME ZONE 'America/Bogota') AS hora, count(*) AS clasificaciones FROM \\\"ClasificacionIA\\\" WHERE \\\"creadoEn\\\" >= NOW() - INTERVAL '24 hours' GROUP BY hora ORDER BY hora\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 900
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - motor_ia
