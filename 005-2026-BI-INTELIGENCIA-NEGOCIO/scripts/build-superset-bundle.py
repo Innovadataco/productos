@@ -176,7 +176,14 @@ def write_databases() -> None:
             "version": IMPORT_VERSION,
             "cache_timeout": None,
             "expose_in_sqllab": True,
-            "allow_run_async": True,
+            # `allow_run_async: false` porque el stack BI no tiene worker
+            # Celery/Redis configurado (no hay ningún servicio de ese tipo en
+            # docker-compose.bi.yml). Con true, SQL Lab falla con
+            # "Issue 1035 - Failed to start remote query on a worker" y los
+            # charts individuales también fallan al pedir datos porque
+            # /chart/data respeta el mismo flag del database (I-27 · Fábrica
+            # BI-2 · 2026-08-29). Cuando se agregue worker, volver a true.
+            "allow_run_async": False,
             "allow_ctas": False,
             "allow_cvas": False,
             "allow_dml": False,
