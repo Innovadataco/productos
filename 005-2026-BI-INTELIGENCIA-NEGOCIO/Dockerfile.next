@@ -1,33 +1,70 @@
+# syntax=docker/dockerfile:1
+# Imagen de producción de BI-next — Next.js standalone + Prisma CLI + tsx.
+# Patrón replicado del Dockerfile de PI (002-2026-PROTECCION-INFANTIL, en
+# producción) para cerrar I-14/I-15: los COPY piecemeal anteriores no traían
+# las transitivas de prisma/tsx ni sus symlinks/bins, así que `npx prisma
+# migrate deploy` y `npx tsx seed-catalogo.ts` fallaban con MODULE_NOT_FOUND
+# al arrancar el contenedor.
+#
+# Fix nano I-15: `prisma` y `tsx` viven en dependencies (no dev), y el runner
+# copia node_modules COMPLETO desde un stage `prod-deps` que corre real
+# `npm ci --omit=dev` (esto sí crea symlinks/.bin y trae transitivas).
+
+FROM node:22-alpine AS deps
+WORKDIR /app
+# OpenSSL 3 para que Prisma detecte y descargue el engine linux-musl-openssl-3.0.x
+RUN apk add --no-cache openssl
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
+
 FROM node:22-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+RUN apk add --no-cache openssl
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# Placeholders solo de build: el init de Prisma exige DATABASE_URL al
+# evaluar los módulos durante `next build` (Collecting page data). Los
+# valores reales llegan en runtime vía env_file. NUNCA secretos en la imagen.
+ARG APP_BUILD_SHA
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build \
+    APP_BUILD_SHA=$APP_BUILD_SHA
+RUN npx prisma generate && npm run build
+
+FROM node:22-alpine AS prod-deps
+WORKDIR /app
+# Deps de PRODUCCIÓN solamente (sin devDependencies). prisma y tsx son
+# runtime (migrate/seed/guardián de índices) por eso viven en dependencies.
+RUN apk add --no-cache openssl
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev
 
 FROM node:22-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+ARG APP_BUILD_SHA
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 APP_BUILD_SHA=$APP_BUILD_SHA
+RUN apk add --no-cache openssl && addgroup -S nodejs && adduser -S nextjs -G nodejs
+
+# App standalone (server.js en la raíz del standalone)
 COPY --from=builder /app/public ./public
-# El standalone output de Next.js solo traza lo que el servidor importa en
-# runtime — nunca incluye prisma/ ni scripts sueltos (seed, guardián de
-# índices) ni la CLI de prisma/tsx. deploy-bi-prod.sh corre migrate/seed/
-# guardián dentro de este contenedor, así que hace falta copiarlos a mano
-# desde el stage builder (ya tiene todo, npm ci sin poda). Bug I-14.
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# node_modules de PRODUCCIÓN (con symlinks/.bin correctos, transitivas
+# completas de prisma+tsx). Reutilizamos el cliente Prisma generado en
+# `builder` en vez de regenerarlo aquí (era necesario para `next build`).
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
-COPY --from=builder /app/node_modules/.bin/tsx ./node_modules/.bin/tsx
-RUN chown -R nextjs:nodejs /app
+
+# Scripts (seed catálogo, ratchets, guardián de índices) + schema Prisma
+# + package.json para que `npx prisma` y `npx tsx` los encuentren.
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json /app/tsconfig.json /app/next.config.ts ./
+
 USER nextjs
 EXPOSE 3000
+# Next standalone honra PORT y HOSTNAME (compose los fija: 3001 / 0.0.0.0)
 CMD ["node", "server.js"]
