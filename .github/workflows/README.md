@@ -29,6 +29,14 @@ Reemplazá `<slug>` (ej. `pi`, `bi`, `mod`, `idc`, `sicov`, `sarlaft`) y `<todos
     runs-on: ubuntu-latest
     needs: [<todos los jobs del workflow, separados por coma>]
     if: always()
+    # Override defensivo: si el workflow declara `defaults.run.working-directory`
+    # a nivel workflow (ej. la carpeta del producto), el sentinel lo hereda pero
+    # NO hace `actions/checkout`, así que ese cwd no existe y bash falla al iniciar.
+    # Con `working-directory: .` corre siempre en la raíz del checkout (o donde
+    # GitHub deje al runner) — inofensivo cuando no hay defaults a nivel workflow.
+    defaults:
+      run:
+        working-directory: .
     steps:
       - name: Evaluar veredicto agregado
         run: |

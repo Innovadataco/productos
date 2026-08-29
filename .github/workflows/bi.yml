@@ -81,6 +81,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [verify, typecheck, test-unit, build]
     if: always()
+    # Override del `defaults.run.working-directory` heredado del workflow.
+    # El sentinel no hace `actions/checkout`, así que la carpeta del producto no existe
+    # en el runner; sin este override, bash falla al iniciar (ENOENT en cwd).
+    defaults:
+      run:
+        working-directory: .
     steps:
       - name: Evaluar veredicto agregado
         run: |
