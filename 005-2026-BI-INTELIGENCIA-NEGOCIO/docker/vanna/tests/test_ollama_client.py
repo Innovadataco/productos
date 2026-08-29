@@ -80,6 +80,28 @@ async def test_candado_2_keep_alive_configurable():
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_keep_alive_h_cero_manda_string_cero_para_descarga_inmediata():
+    """keep_alive_h=0 → "0" (no "0h") para que Ollama descargue el modelo
+    inmediatamente después del request (libera RAM entre modelos del jurado)."""
+    body_capturado = {}
+
+    def side_effect(request: httpx.Request) -> httpx.Response:
+        body_capturado.update(json.loads(request.content))
+        return httpx.Response(200, json={"response": json.dumps({"x": 1})})
+
+    respx.post("http://x/api/generate").mock(side_effect=side_effect)
+    await generar_estructurado(
+        modelo="qwen2.5:14b",
+        prompt="p",
+        schema={"type": "object"},
+        base_url="http://x",
+        keep_alive_h=0,
+    )
+    assert body_capturado["keep_alive"] == "0"
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_timeout_eleva_ollama_error():
     respx.post("http://x/api/generate").mock(
         side_effect=httpx.TimeoutException("boom")

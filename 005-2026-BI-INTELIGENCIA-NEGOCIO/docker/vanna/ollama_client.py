@@ -56,7 +56,10 @@ async def generar_estructurado(
     opts = {"temperature": 0, "seed": 42}
     if options:
         opts.update(options)
-    keep_alive = f"{keep_alive_h if keep_alive_h is not None else DEFAULT_KEEP_ALIVE_H}h"
+    keep_alive_raw = keep_alive_h if keep_alive_h is not None else DEFAULT_KEEP_ALIVE_H
+    # keep_alive_h=0 → "0" para que Ollama descargue el modelo inmediatamente tras el request
+    # (libera RAM entre modelos del jurado en máquinas con memoria escasa).
+    keep_alive = "0" if keep_alive_raw == 0 else f"{keep_alive_raw}h"
     body: dict[str, Any] = {
         "model": modelo,
         "prompt": prompt,
