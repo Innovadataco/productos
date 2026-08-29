@@ -74,8 +74,18 @@ docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-superset sup
 echo "==> Import bundle Superset (datasets + charts + dashboards · I-19)"
 # El bundle vive como carpeta en el repo (superset/), no como zip — se empaqueta
 # aquí mismo antes de importar. import-dashboards es upsert por uuid: reimportar
-# el mismo bundle no duplica nada.
-(cd superset && zip -qr /tmp/bi-superset-bundle.zip .)
+# el mismo bundle no duplica nada. Usa python3 -m zipfile (no 'zip' — no viene
+# instalado por defecto en el VPS, I-21) con rutas relativas a superset/ para
+# que el zip tenga la misma estructura que produciría 'cd superset && zip -qr'.
+rm -f /tmp/bi-superset-bundle.zip
+python3 -c "
+import zipfile, os
+with zipfile.ZipFile('/tmp/bi-superset-bundle.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+    for root, dirs, files in os.walk('superset'):
+        for f in files:
+            full = os.path.join(root, f)
+            z.write(full, os.path.relpath(full, 'superset'))
+"
 docker cp /tmp/bi-superset-bundle.zip "\$(docker compose -f ${COMPOSE_FILE} ps -q bi-superset)":/tmp/bundle.zip
 docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-superset \
     superset import-dashboards -p /tmp/bundle.zip -u "\${SUPERSET_ADMIN_USERNAME}"
