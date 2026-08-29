@@ -151,3 +151,24 @@ Estándar de comunicación fijado en ACTA_ARQ_06. Fuente: Metodología Operativa
 - No cerrar hasta completar TODAS las tareas del prompt y todos los artefactos.
 - Reporte final CONCISO, sin gastar tokens.
 - Setup inicial: `cp .env.example .env`, `docker compose up -d db`, `npm install`, `npx prisma migrate dev`, `npx prisma db seed`, `npm run dev`.
+
+## Índices críticos fuera del schema Prisma
+
+Cinco índices críticos del motor IA se crean con SQL crudo en migraciones y **no están declarados en `schema.prisma`**. Cualquier migración futura que los toque DEBE ser aditiva o preservar el índice.
+
+| Tabla | Índice | Tipo | Uso |
+|---|---|---|---|
+| `Ciudad` | `Ciudad_nombreNormalizado_trgm_idx` | GIN gin_trgm_ops | Búsqueda trigram ciudades (I-45) |
+| `EmbeddingDataset` | `EmbeddingDataset_vector_idx` | HNSW vector_cosine_ops | Motor IA · dedup |
+| `EmbeddingReporte` | `EmbeddingReporte_vector_idx` | HNSW vector_cosine_ops | Motor IA · cache semántico + RAG |
+| `AlertaColegio` | `AlertaColegio_patronInstitucionalId_idx` | B-tree | Búsqueda alertas por patrón institucional |
+| `patrones_institucionales` | `patrones_institucionales_colegioId_periodo_grado_conducta_p_key` | UNIQUE | Constraint composite · **nombre truncado por PostgreSQL a 63 chars** · excepción documentada |
+
+**Guardián:** `scripts/verify-hnsw-indexes.ts` (SPEC-251 · cierra I-49) valida existencia + tipo de los 5 en `pg_indexes`. Alias: `npm run indices:check` (o `npm run db:verify:hnsw`).
+
+**Compuertas donde corre:**
+- `scripts/deploy-prod.sh:57-61` — post `prisma migrate deploy` · deploy falla si falta índice.
+- `.github/workflows/ci.yml:162,303,365` — 3 ratchets CI · PR rojo si falta índice o tipo incorrecto.
+- `pi-monitor` (7ª señal SPEC-251) — vigilancia continua en producción.
+
+**Regla:** si añades una nueva `CREATE INDEX ... USING (hnsw|gin|gist|trgm|WITH (m, ...))` crudo en migración, DEBES actualizar la lista `REQUIRED` en `scripts/verify-hnsw-indexes.ts` en el MISMO PR. El guardián B (futuro brief · aún sin radicar) automatizará esta detección.
