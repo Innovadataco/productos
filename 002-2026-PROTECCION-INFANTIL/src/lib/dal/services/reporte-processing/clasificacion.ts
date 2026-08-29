@@ -66,8 +66,12 @@ export async function clasificarReporte({
     // SPEC-138 (E-7): el único motor activo es la rúbrica, configurada desde
     // los parámetros ia.rubrica.*. El mismo selector vive en src/lib/ai/motor.ts
     // y lo ejercita el sandbox.
+    // SPEC-298 (I-163): propagar `parametros.modeloClasificacion` al motor para que la rúbrica
+    // vote con ese único modelo (mono-voz). El fallback en parametros.ts:68 garantiza cadena
+    // no vacía; sin este pase, el override del sandbox se descartaba y toda simulación votaba
+    // con el mismo comité → misma accuracy.
     const [resultado, piiResult] = await Promise.all([
-        clasificarConMotorActivo(texto, {}),
+        clasificarConMotorActivo(texto, { modeloClasificacion: parametros.modeloClasificacion }),
         detectarPiiCombinado(parametros.modeloAnonimizacion, texto),
     ]);
 

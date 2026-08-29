@@ -277,9 +277,25 @@ export async function evaluarEmbudo(
     }
 }
 
-export async function clasificarConRubrica(texto: string, config?: Partial<ConfigRubrica>): Promise<ResultadoRubrica> {
+export async function clasificarConRubrica(
+    texto: string,
+    config?: Partial<ConfigRubrica>,
+    override?: { modeloClasificacion?: string }
+): Promise<ResultadoRubrica> {
     const cfg: ConfigRubrica = { ...(await cargarConfigRubrica()), ...config };
     const categoriasPosibles = Object.keys(cfg.preguntas).filter((cat) => preguntasActivas(cfg.preguntas, cat).length > 0);
+
+    // SPEC-298 (I-163): lista efectiva de votantes. Sin override = comité (comportamiento actual);
+    // con override = mono-modelo (el sandbox/simulación pide un modelo puntual y el pipeline debe
+    // respetarlo). El override no muta cfg.modelos: cambia sólo el conjunto de votantes de esta llamada.
+    let modelosVotantes: string[] = cfg.modelos;
+    if (override?.modeloClasificacion) {
+        if (!cfg.modelos.includes(override.modeloClasificacion)) {
+            logger.warn(`[RUBRICA] modelo override no listado en cfg.modelos: ${override.modeloClasificacion}`);
+        }
+        modelosVotantes = [override.modeloClasificacion];
+    }
+
     const inicio = Date.now();
     let promptTokens = 0;
     let responseTokens = 0;
@@ -311,8 +327,10 @@ export async function clasificarConRubrica(texto: string, config?: Partial<Confi
 
     const votosModelos: VotoRubricaModelo[] = [];
     if (plausibles.length > 0) {
-        // Votación multi-modelo SECUENCIAL (1 voto por modelo; cuida la RAM)
-        for (const modelo of cfg.modelos) {
+        // Votación multi-modelo SECUENCIAL (1 voto por modelo; cuida la RAM).
+        // SPEC-298 (I-163): itera sobre `modelosVotantes` (que es `cfg.modelos` sin override,
+        // o `[override.modeloClasificacion]` con override).
+        for (const modelo of modelosVotantes) {
             try {
                 const voto = await llamarOllamaStructured<VotoModeloResponse>(
                     modelo,
@@ -390,7 +408,10 @@ export async function clasificarConRubrica(texto: string, config?: Partial<Confi
         estado: fallback ? "REVISION_MANUAL" : estado,
         votosModelos,
         metrics: {
-            modelo: `rubrica:${cfg.modelos.join("+")}`,
+            // SPEC-298 (I-163): `modelo` refleja los votantes reales. Sin override queda como
+            // "rubrica:m1+m2+m3" (comité); con override queda como "rubrica:<override>" — así
+            // ClasificacionIA.modeloUsado no miente cuando el sandbox/simulación cambia el modelo.
+            modelo: `rubrica:${modelosVotantes.join("+")}`,
             latenciaMs,
             promptTokens: promptTokens || null,
             responseTokens: responseTokens || null,

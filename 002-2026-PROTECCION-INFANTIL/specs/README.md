@@ -163,6 +163,7 @@
 | [295](295-padre-autenticado-reportar/spec.md) | SPEC-295 · Padre autenticado puede reportar (002-PI-196 · cierra I-146) | 🟢 Implementado |
 | [296](296-email-ts-al-motor-notificaciones/spec.md) | SPEC-296 · Migrar email.ts al Motor de Notificaciones (I-152 · 19 wrappers + ratchet CI) (002-PI-197) | 🟢 Implementado |
 | [297](297-fix-panel-admin-ia-simulacion/spec.md) | SPEC-297 · Fix panel admin IA + rescate simulación FALLIDA + puerto Ollama 11435 (002-PI-300 · I-160+I-161+I-162) | 🟡 En desarrollo |
+| [298](298-fix-i163-rubrica-modelo/spec.md) | SPEC-298 · Fix I-163: rúbrica respeta `modeloClasificacion` (002-PI-201) | 🟡 En desarrollo |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
