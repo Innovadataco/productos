@@ -7,9 +7,29 @@ slug: salud
 published: true
 position:
   DASHBOARD_VERSION_KEY: v2
+  ROOT_ID:
+    type: ROOT
+    id: ROOT_ID
+    children:
+      - GRID_ID
+  GRID_ID:
+    type: GRID
+    id: GRID_ID
+    children:
+      - CHART-salud_lag_replica_v1
+      - CHART-salud_consultas_vanna_24h_v1
+      - CHART-salud_precision_vanna_v1
+      - CHART-salud_errores_superset_24h_v1
+      - CHART-salud_uptime_servicios_v1
+      - CHART-salud_cache_hit_vanna_v1
+      - CHART-salud_reintentos_reporte_v1
+      - CHART-salud_rate_limits_hoy_v1
+    parents:
+      - ROOT_ID
   CHART-salud_lag_replica_v1:
     type: CHART
     id: CHART-salud_lag_replica_v1
+    children: []
     meta:
       uuid: af483da2-469d-5b79-a7de-86011d34b6fe
       chartId: null
@@ -22,6 +42,7 @@ position:
   CHART-salud_consultas_vanna_24h_v1:
     type: CHART
     id: CHART-salud_consultas_vanna_24h_v1
+    children: []
     meta:
       uuid: 2da94fc3-b5c4-5c7b-8473-980745b943c0
       chartId: null
@@ -34,6 +55,7 @@ position:
   CHART-salud_precision_vanna_v1:
     type: CHART
     id: CHART-salud_precision_vanna_v1
+    children: []
     meta:
       uuid: 90e8d873-0bd2-5136-87db-79d69137a008
       chartId: null
@@ -46,6 +68,7 @@ position:
   CHART-salud_errores_superset_24h_v1:
     type: CHART
     id: CHART-salud_errores_superset_24h_v1
+    children: []
     meta:
       uuid: 73b11b70-1ddd-5b37-a7d6-04885065bf5b
       chartId: null
@@ -58,6 +81,7 @@ position:
   CHART-salud_uptime_servicios_v1:
     type: CHART
     id: CHART-salud_uptime_servicios_v1
+    children: []
     meta:
       uuid: 20afbeba-4f91-549b-baef-45fa3c3e2e6a
       chartId: null
@@ -70,6 +94,7 @@ position:
   CHART-salud_cache_hit_vanna_v1:
     type: CHART
     id: CHART-salud_cache_hit_vanna_v1
+    children: []
     meta:
       uuid: eb060f49-e77f-5ff4-895a-c8c992b6f2ae
       chartId: null
@@ -82,6 +107,7 @@ position:
   CHART-salud_reintentos_reporte_v1:
     type: CHART
     id: CHART-salud_reintentos_reporte_v1
+    children: []
     meta:
       uuid: 7d049ee9-da85-5166-8a07-1d10a0f14877
       chartId: null
@@ -94,6 +120,7 @@ position:
   CHART-salud_rate_limits_hoy_v1:
     type: CHART
     id: CHART-salud_rate_limits_hoy_v1
+    children: []
     meta:
       uuid: 153c79d5-1822-5eb0-954a-303adfd65557
       chartId: null

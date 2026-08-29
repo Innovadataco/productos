@@ -7,9 +7,28 @@ slug: comercial
 published: true
 position:
   DASHBOARD_VERSION_KEY: v2
+  ROOT_ID:
+    type: ROOT
+    id: ROOT_ID
+    children:
+      - GRID_ID
+  GRID_ID:
+    type: GRID
+    id: GRID_ID
+    children:
+      - CHART-com_mrr_mes_actual_v1
+      - CHART-com_mrr_12m_line_v1
+      - CHART-com_nuevas_suscripciones_v1
+      - CHART-com_churn_mes_v1
+      - CHART-com_distribucion_por_plan_v1
+      - CHART-com_top10_ingresos_colegio_v1
+      - CHART-com_pagos_no_pagados_30d_v1
+    parents:
+      - ROOT_ID
   CHART-com_mrr_mes_actual_v1:
     type: CHART
     id: CHART-com_mrr_mes_actual_v1
+    children: []
     meta:
       uuid: 61844a66-fff0-523d-8a62-e17152663d52
       chartId: null
@@ -22,6 +41,7 @@ position:
   CHART-com_mrr_12m_line_v1:
     type: CHART
     id: CHART-com_mrr_12m_line_v1
+    children: []
     meta:
       uuid: f2f61934-c0e5-5273-aa06-416c209e19f8
       chartId: null
@@ -34,6 +54,7 @@ position:
   CHART-com_nuevas_suscripciones_v1:
     type: CHART
     id: CHART-com_nuevas_suscripciones_v1
+    children: []
     meta:
       uuid: 5cc1736a-28cd-5e9e-addb-d91a21a80086
       chartId: null
@@ -46,6 +67,7 @@ position:
   CHART-com_churn_mes_v1:
     type: CHART
     id: CHART-com_churn_mes_v1
+    children: []
     meta:
       uuid: 9a7235f5-db21-5bed-b808-52f082b81f5e
       chartId: null
@@ -58,6 +80,7 @@ position:
   CHART-com_distribucion_por_plan_v1:
     type: CHART
     id: CHART-com_distribucion_por_plan_v1
+    children: []
     meta:
       uuid: 34950387-5f65-50d8-80b7-590644da1106
       chartId: null
@@ -70,6 +93,7 @@ position:
   CHART-com_top10_ingresos_colegio_v1:
     type: CHART
     id: CHART-com_top10_ingresos_colegio_v1
+    children: []
     meta:
       uuid: 430b9dd6-1707-56e3-89a4-00bfbf5406d8
       chartId: null
@@ -82,6 +106,7 @@ position:
   CHART-com_pagos_no_pagados_30d_v1:
     type: CHART
     id: CHART-com_pagos_no_pagados_30d_v1
+    children: []
     meta:
       uuid: 7d8f99f2-6bc2-552b-9f8a-20d4853f7bdb
       chartId: null
