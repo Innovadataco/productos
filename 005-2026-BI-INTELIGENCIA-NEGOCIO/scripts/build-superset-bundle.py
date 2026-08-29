@@ -934,18 +934,31 @@ def write_dashboards() -> None:
         chart_slugs = [c["slug"] for c in CHARTS if c["dashboard"] == slug]
         chart_uuids = [det_uuid(f"charts/{s}") for s in chart_slugs]
 
-        # position_json necesita los nodos contenedores ROOT_ID y GRID_ID
-        # definidos como entradas propias, y cada CHART-* necesita
-        # `children: []`. Sin eso, el frontend de Superset 4.1.4 crashea al
-        # hidratar con `Cannot read properties of undefined (reading
-        # 'children')` en findFirstParentContainer.js (I-24 · verificado
-        # contra el ejemplo oficial `/app/superset/examples/configs/
-        # dashboards/Slack_Dashboard.yaml` de la imagen apache/superset:4.1.4
-        # y contra el crash observado por Fábrica BI-2 · 2026-08-29).
+        # position_json necesita los nodos contenedores ROOT_ID, GRID_ID y al
+        # menos una ROW-* intermedia. Sin la ROW, cada CHART cuelga directo
+        # de GRID que NO tiene `meta`; el frontend crashea al leer
+        # `parentComponent.meta.width` en `ChartHolder.tsx:188` con
+        # "Cannot read properties of undefined (reading 'width')"
+        # (I-28 · verificado contra el source map de ChartHolder.tsx en
+        # apache/superset:4.1.4 · Fábrica BI-2 · 2026-08-29).
         #
-        # Layout: GRID → CHART directo (sin fila intermedia ROW-*). Superset
-        # lo acepta; los ROW son opcionales para agrupar visualmente.
-        chart_keys = [f"CHART-{cs}" for cs in chart_slugs]
+        # I-24 (previo) resolvió que ROOT_ID/GRID_ID/children fueran
+        # entradas propias; I-28 agrega la capa ROW-* con `meta` (aunque sea
+        # `{background: BACKGROUND_TRANSPARENT}`), tal como el ejemplo
+        # oficial `/app/superset/examples/configs/dashboards/
+        # Slack_Dashboard.yaml`.
+        #
+        # Layout: filas de 3 charts (width=4 c/u sobre grid de 12 columnas).
+        # Superset ignora `width` para el chart cuando no cabe en la fila,
+        # así que la fila arma cuadrícula automáticamente.
+        CHARTS_PER_ROW = 3
+        rows: list[list[str]] = []
+        for i, cs in enumerate(chart_slugs):
+            if i % CHARTS_PER_ROW == 0:
+                rows.append([])
+            rows[-1].append(f"CHART-{cs}")
+        row_keys = [f"ROW-{slug}-{idx + 1}" for idx in range(len(rows))]
+
         position = {
             "DASHBOARD_VERSION_KEY": "v2",
             "ROOT_ID": {
@@ -956,12 +969,21 @@ def write_dashboards() -> None:
             "GRID_ID": {
                 "type": "GRID",
                 "id": "GRID_ID",
-                "children": chart_keys,
+                "children": row_keys,
                 "parents": ["ROOT_ID"],
             },
         }
+        for row_key, row_children in zip(row_keys, rows):
+            position[row_key] = {
+                "type": "ROW",
+                "id": row_key,
+                "children": row_children,
+                "meta": {"background": "BACKGROUND_TRANSPARENT"},
+                "parents": ["ROOT_ID", "GRID_ID"],
+            }
         for idx, cs in enumerate(chart_slugs):
             key = f"CHART-{cs}"
+            row_key = row_keys[idx // CHARTS_PER_ROW]
             position[key] = {
                 "type": "CHART",
                 "id": key,
@@ -969,11 +991,11 @@ def write_dashboards() -> None:
                 "meta": {
                     "uuid": chart_uuids[idx],
                     "chartId": None,
-                    "width": 6,
+                    "width": 4,
                     "height": 30,
                     "sliceName": cs,
                 },
-                "parents": ["ROOT_ID", "GRID_ID"],
+                "parents": ["ROOT_ID", "GRID_ID", row_key],
             }
 
         metadata = {

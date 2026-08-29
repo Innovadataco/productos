@@ -16,14 +16,34 @@ position:
     type: GRID
     id: GRID_ID
     children:
+      - ROW-ejecutivo-1
+      - ROW-ejecutivo-2
+    parents:
+      - ROOT_ID
+  ROW-ejecutivo-1:
+    type: ROW
+    id: ROW-ejecutivo-1
+    children:
       - CHART-ejec_reportes_24h_v1
       - CHART-ejec_suscripciones_activas_v1
       - CHART-ejec_mrr_mes_v1
+    meta:
+      background: BACKGROUND_TRANSPARENT
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  ROW-ejecutivo-2:
+    type: ROW
+    id: ROW-ejecutivo-2
+    children:
       - CHART-ejec_prioridad_alta_abiertos_v1
       - CHART-ejec_tendencia_reportes_30d_v1
       - CHART-ejec_top5_colegios_mes_v1
+    meta:
+      background: BACKGROUND_TRANSPARENT
     parents:
       - ROOT_ID
+      - GRID_ID
   CHART-ejec_reportes_24h_v1:
     type: CHART
     id: CHART-ejec_reportes_24h_v1
@@ -31,12 +51,13 @@ position:
     meta:
       uuid: 39a0c0e8-27a3-5400-b2b5-7fa35af5bfab
       chartId: null
-      width: 6
+      width: 4
       height: 30
       sliceName: ejec_reportes_24h_v1
     parents:
       - ROOT_ID
       - GRID_ID
+      - ROW-ejecutivo-1
   CHART-ejec_suscripciones_activas_v1:
     type: CHART
     id: CHART-ejec_suscripciones_activas_v1
@@ -44,12 +65,13 @@ position:
     meta:
       uuid: 5a73d48d-26f5-5dba-87c7-95fe4a38f7fe
       chartId: null
-      width: 6
+      width: 4
       height: 30
       sliceName: ejec_suscripciones_activas_v1
     parents:
       - ROOT_ID
       - GRID_ID
+      - ROW-ejecutivo-1
   CHART-ejec_mrr_mes_v1:
     type: CHART
     id: CHART-ejec_mrr_mes_v1
@@ -57,12 +79,13 @@ position:
     meta:
       uuid: 493054e6-d280-57b2-819a-e7b5bcd22d28
       chartId: null
-      width: 6
+      width: 4
       height: 30
       sliceName: ejec_mrr_mes_v1
     parents:
       - ROOT_ID
       - GRID_ID
+      - ROW-ejecutivo-1
   CHART-ejec_prioridad_alta_abiertos_v1:
     type: CHART
     id: CHART-ejec_prioridad_alta_abiertos_v1
@@ -70,12 +93,13 @@ position:
     meta:
       uuid: 25d224b7-57ca-5bdc-98cf-c5a9d99f66a6
       chartId: null
-      width: 6
+      width: 4
       height: 30
       sliceName: ejec_prioridad_alta_abiertos_v1
     parents:
       - ROOT_ID
       - GRID_ID
+      - ROW-ejecutivo-2
   CHART-ejec_tendencia_reportes_30d_v1:
     type: CHART
     id: CHART-ejec_tendencia_reportes_30d_v1
@@ -83,12 +107,13 @@ position:
     meta:
       uuid: c0637e47-f51a-5405-91a8-0c51cf9edb66
       chartId: null
-      width: 6
+      width: 4
       height: 30
       sliceName: ejec_tendencia_reportes_30d_v1
     parents:
       - ROOT_ID
       - GRID_ID
+      - ROW-ejecutivo-2
   CHART-ejec_top5_colegios_mes_v1:
     type: CHART
     id: CHART-ejec_top5_colegios_mes_v1
@@ -96,12 +121,13 @@ position:
     meta:
       uuid: c0018cec-58bb-5ad2-a0b6-802b45ccf755
       chartId: null
-      width: 6
+      width: 4
       height: 30
       sliceName: ejec_top5_colegios_mes_v1
     parents:
       - ROOT_ID
       - GRID_ID
+      - ROW-ejecutivo-2
 metadata:
   refresh_frequency: 300
   color_scheme: supersetColors
