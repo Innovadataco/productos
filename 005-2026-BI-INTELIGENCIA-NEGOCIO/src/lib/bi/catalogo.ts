@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import type { Rol, SchemaJSON, CatalogoTablaResuelto } from "./tipos";
+import type { CatalogoParaVanna, Rol, SchemaJSON, CatalogoTablaResuelto } from "./tipos";
 
 export async function construirSchemaJSON(
     prisma: PrismaClient,
@@ -33,6 +33,31 @@ export async function construirSchemaJSON(
         tablasPermitidas,
         columnasPorTabla,
         columnasExcluidas,
+    };
+
+    const metricas = await prisma.bICatalogoMetrica.findMany({
+        where: { activa: true },
+        select: { nombre: true, nombreLegible: true, formulaSQL: true, categoria: true },
+    });
+    const ejemplos = await prisma.bICatalogoEjemplo.findMany({
+        select: { preguntaNL: true, sql: true },
+        take: 8,
+    });
+
+    const catalogoParaVanna: CatalogoParaVanna = {
+        tablas: tablas.map((t) => ({
+            nombre_fuente: t.nombreFuente,
+            columnas: t.columnas
+                .filter((c) => !c.excluida)
+                .map((c) => ({ nombre_fuente: c.nombreFuente, tipo: c.tipo })),
+        })),
+        metricas: metricas.map((m) => ({
+            nombre: m.nombre,
+            nombre_legible: m.nombreLegible,
+            formula_sql: m.formulaSQL,
+            categoria: m.categoria,
+        })),
+        ejemplos: ejemplos.map((e) => ({ pregunta: e.preguntaNL, sql: e.sql })),
     };
 
     const tablasSchema = tablas.map((t) => ({
@@ -93,5 +118,5 @@ export async function construirSchemaJSON(
         additionalProperties: false,
     };
 
-    return { schema, catalogoResuelto };
+    return { schema, catalogoResuelto, catalogoParaVanna };
 }

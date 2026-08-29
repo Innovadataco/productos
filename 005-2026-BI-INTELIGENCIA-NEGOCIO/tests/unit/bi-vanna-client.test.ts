@@ -20,7 +20,7 @@ describe("generarSql (vanna-client)", () => {
                 { status: 200 },
             ),
         );
-        const r = await generarSql({ preguntaNL: "q", schemaJSON: {} });
+        const r = await generarSql({ preguntaNL: "q", catalogo: { tablas: [] } });
         expect(r.consenso).toBe(true);
         expect(r.sqlGenerado).toContain("SELECT 1");
         expect(r.votosJurado).toHaveLength(3);
@@ -37,21 +37,21 @@ describe("generarSql (vanna-client)", () => {
                 { status: 200 },
             ),
         );
-        const r = await generarSql({ preguntaNL: "q", schemaJSON: {} });
+        const r = await generarSql({ preguntaNL: "q", catalogo: { tablas: [] } });
         expect(r.consenso).toBe(false);
         expect(r.razon).toBe("sin_consenso");
     });
 
     it("http 500 marca error vanna_http_500", async () => {
         fetchSpy.mockResolvedValueOnce(new Response("boom", { status: 500 }));
-        const r = await generarSql({ preguntaNL: "q", schemaJSON: {} });
+        const r = await generarSql({ preguntaNL: "q", catalogo: { tablas: [] } });
         expect(r.consenso).toBe(false);
         expect(r.error).toContain("vanna_http_500");
     });
 
     it("timeout / network error marca vanna_unreachable", async () => {
         fetchSpy.mockRejectedValueOnce(new Error("The operation was aborted"));
-        const r = await generarSql({ preguntaNL: "q", schemaJSON: {} });
+        const r = await generarSql({ preguntaNL: "q", catalogo: { tablas: [] } });
         expect(r.consenso).toBe(false);
         expect(r.error).toContain("vanna_unreachable");
     });

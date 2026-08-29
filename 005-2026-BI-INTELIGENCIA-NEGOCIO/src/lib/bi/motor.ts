@@ -114,10 +114,10 @@ export async function preguntar(
         sqlEjecutar = hit.sqlAprobado;
         cacheHit = true;
     } else {
-        const { schema, catalogoResuelto } = await schemaFn(prisma, input.usuario.rol);
+        const { catalogoResuelto, catalogoParaVanna } = await schemaFn(prisma, input.usuario.rol);
         const resVanna = await vannaFn({
             preguntaNL: input.preguntaNL,
-            schemaJSON: schema,
+            catalogo: catalogoParaVanna,
         });
         llamadasLlm = resVanna.votosJurado?.length ?? 0;
         votosJurado = resVanna.votosJurado;

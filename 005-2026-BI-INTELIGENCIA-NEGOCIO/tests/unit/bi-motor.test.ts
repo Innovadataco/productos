@@ -25,6 +25,23 @@ function makePrisma(rows: Array<Record<string, unknown>> = []) {
     return { prisma, updates };
 }
 
+function schemaFake(over: { tablasPermitidas?: string[]; columnasPorTabla?: Record<string, string[]>; columnasExcluidas?: Record<string, string[]> } = {}) {
+    return {
+        schema: {},
+        catalogoResuelto: {
+            tablasPermitidas: over.tablasPermitidas ?? ["bi_reporte_diario"],
+            columnasPorTabla: over.columnasPorTabla ?? {},
+            columnasExcluidas: over.columnasExcluidas ?? {},
+        },
+        catalogoParaVanna: {
+            tablas: (over.tablasPermitidas ?? ["bi_reporte_diario"]).map((t) => ({
+                nombre_fuente: t,
+                columnas: (over.columnasPorTabla?.[t] ?? []).map((c) => ({ nombre_fuente: c, tipo: "text" })),
+            })),
+        },
+    };
+}
+
 const USER_ADMIN = { id: "u1", rol: "ADMIN" as const };
 
 describe("preguntar (motor orquestador)", () => {
@@ -75,14 +92,9 @@ describe("preguntar (motor orquestador)", () => {
                 prisma,
                 vectorizarFn: vi.fn(async () => null),
                 buscarSimilarFn: vi.fn(async () => null),
-                construirSchemaFn: vi.fn(async () => ({
-                    schema: {},
-                    catalogoResuelto: {
-                        tablasPermitidas: ["bi_reporte_diario"],
-                        columnasPorTabla: { bi_reporte_diario: ["total"] },
-                        columnasExcluidas: {},
-                    },
-                })),
+                construirSchemaFn: vi.fn(async () =>
+                    schemaFake({ columnasPorTabla: { bi_reporte_diario: ["total"] } }),
+                ),
                 vannaGenerarFn: vi.fn(async () => ({
                     consenso: true,
                     sqlGenerado: "SELECT total FROM bi_reporte_diario LIMIT 5",
@@ -103,14 +115,7 @@ describe("preguntar (motor orquestador)", () => {
                 prisma,
                 vectorizarFn: vi.fn(async () => null),
                 buscarSimilarFn: vi.fn(async () => null),
-                construirSchemaFn: vi.fn(async () => ({
-                    schema: {},
-                    catalogoResuelto: {
-                        tablasPermitidas: ["bi_reporte_diario"],
-                        columnasPorTabla: {},
-                        columnasExcluidas: {},
-                    },
-                })),
+                construirSchemaFn: vi.fn(async () => schemaFake()),
                 vannaGenerarFn: vi.fn(async () => ({
                     consenso: true,
                     sqlGenerado: "SELECT * FROM tabla_prohibida LIMIT 10",
@@ -130,14 +135,7 @@ describe("preguntar (motor orquestador)", () => {
                 prisma,
                 vectorizarFn: vi.fn(async () => null),
                 buscarSimilarFn: vi.fn(async () => null),
-                construirSchemaFn: vi.fn(async () => ({
-                    schema: {},
-                    catalogoResuelto: {
-                        tablasPermitidas: [],
-                        columnasPorTabla: {},
-                        columnasExcluidas: {},
-                    },
-                })),
+                construirSchemaFn: vi.fn(async () => schemaFake({ tablasPermitidas: [] })),
                 vannaGenerarFn: vi.fn(async () => ({
                     consenso: false,
                     razon: "checks_atomicos_incompletos",
@@ -173,14 +171,9 @@ describe("preguntar (motor orquestador)", () => {
                 prisma,
                 vectorizarFn: vi.fn(async () => null),
                 buscarSimilarFn: vi.fn(async () => null),
-                construirSchemaFn: vi.fn(async () => ({
-                    schema: {},
-                    catalogoResuelto: {
-                        tablasPermitidas: ["bi_reporte_diario"],
-                        columnasPorTabla: {},
-                        columnasExcluidas: {},
-                    },
-                })),
+                construirSchemaFn: vi.fn(async () =>
+                    schemaFake({ columnasPorTabla: { bi_reporte_diario: ["total"] } }),
+                ),
                 vannaGenerarFn: vi.fn(async () => ({
                     consenso: true,
                     sqlGenerado: "SELECT total FROM bi_reporte_diario LIMIT 5",
@@ -190,5 +183,31 @@ describe("preguntar (motor orquestador)", () => {
         );
         expect(r.estado).toBe("OK");
         expect(r.plantilla).toBe("sin-datos");
+    });
+
+    it("H · motor pasa catalogoParaVanna (no schemaJSON) al cliente", async () => {
+        const { prisma } = makePrisma([{ total: 1 }]);
+        const vannaFn = vi.fn(async () => ({
+            consenso: true,
+            sqlGenerado: "SELECT total FROM bi_reporte_diario LIMIT 1",
+            votosJurado: [{ modelo: "a" }, { modelo: "b" }],
+        }));
+        await preguntar(
+            { preguntaNL: "algo", usuario: USER_ADMIN },
+            {
+                prisma,
+                vectorizarFn: vi.fn(async () => null),
+                buscarSimilarFn: vi.fn(async () => null),
+                construirSchemaFn: vi.fn(async () =>
+                    schemaFake({ columnasPorTabla: { bi_reporte_diario: ["total"] } }),
+                ),
+                vannaGenerarFn: vannaFn,
+            },
+        );
+        const calls = vannaFn.mock.calls as unknown as Array<[{ preguntaNL: string; catalogo: unknown; schemaJSON?: unknown }]>;
+        const arg = calls[0][0];
+        expect(arg).toHaveProperty("catalogo");
+        expect(arg).not.toHaveProperty("schemaJSON");
+        expect((arg.catalogo as { tablas: unknown[] }).tablas).toBeDefined();
     });
 });

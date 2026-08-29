@@ -44,7 +44,22 @@ export interface CatalogoTablaResuelto {
     columnasExcluidas: Record<string, string[]>;
 }
 
+export interface CatalogoParaVanna {
+    tablas: Array<{
+        nombre_fuente: string;
+        columnas: Array<{ nombre_fuente: string; tipo: string }>;
+    }>;
+    metricas?: Array<{
+        nombre: string;
+        nombre_legible: string;
+        formula_sql: string;
+        categoria: string;
+    }>;
+    ejemplos?: Array<{ pregunta: string; sql: string }>;
+}
+
 export interface SchemaJSON {
     schema: object;
     catalogoResuelto: CatalogoTablaResuelto;
+    catalogoParaVanna: CatalogoParaVanna;
 }

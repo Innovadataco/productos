@@ -89,7 +89,7 @@ def construir_prompt_generacion(
 ) -> tuple[str, dict[str, Any]]:
     """Devuelve (prompt, schema_respuesta_json).
 
-    `catalogo`: {"tablas": [{"nombre_fuente": str, "columnas": [{"nombre_fuente": str, "tipo": str}]}]}
+    `catalogo`: {"tablas":[...], "metricas":[...opcional], "ejemplos":[...opcional]}
     """
     tablas = catalogo.get("tablas", [])
     lineas = []
@@ -100,15 +100,43 @@ def construir_prompt_generacion(
             lineas.append(f"    - Columna {j}: {c.get('nombre_fuente', '?')} ({tipo})")
     catalogo_txt = "\n".join(lineas) if lineas else "(sin tablas disponibles)"
 
+    metricas = catalogo.get("metricas") or []
+    metricas_txt = ""
+    if metricas:
+        m_lineas = ["\nMétricas pre-definidas del negocio (úsalas cuando la pregunta encaje):"]
+        for m in metricas[:20]:
+            m_lineas.append(
+                f"- {m.get('nombre', '?')} ({m.get('categoria', 'general')}): "
+                f"{m.get('nombre_legible', '')} · SQL: {m.get('formula_sql', '')[:120]}"
+            )
+        metricas_txt = "\n".join(m_lineas)
+
+    ejemplos = catalogo.get("ejemplos") or []
+    ejemplos_txt = ""
+    if ejemplos:
+        e_lineas = ["\nEjemplos NL→SQL humanos aprobados:"]
+        for e in ejemplos[:6]:
+            e_lineas.append(
+                f"- Pregunta: \"{e.get('pregunta', '')[:120]}\"\n  SQL: {e.get('sql', '')[:200]}"
+            )
+        ejemplos_txt = "\n".join(e_lineas)
+
     ctx_txt = ""
     if contexto:
         pares = [f"{k}={v}" for k, v in contexto.items()]
         ctx_txt = "\nContexto: " + ", ".join(pares)
 
     prompt = (
-        f"Catálogo:\n{catalogo_txt}\n\n"
+        f"Catálogo:\n{catalogo_txt}"
+        f"{metricas_txt}"
+        f"{ejemplos_txt}\n\n"
         f"Pregunta del usuario: \"{pregunta}\"{ctx_txt}\n\n"
-        "Devuelve SOLO el objeto JSON con los slots definidos. "
-        "Si algún slot es ambiguo, DÉJALO nulo y explica en `nota` qué falta."
+        "INSTRUCCIONES DECISIVAS:\n"
+        "- Si la pregunta empieza por 'cuántos/cuántas/número de', usa agregacion={fn:'COUNT'} (con columna_idx=null para COUNT(*)).\n"
+        "- Si la pregunta menciona 'hoy/semana/mes/año', agrega un filtro por columna temporal (creadoEn, fecha) con el operador y valor apropiado.\n"
+        "- Si la pregunta empieza por 'top N', usa agregacion COUNT/SUM + agrupacion + limite=N.\n"
+        "- Si una métrica pre-definida encaja exactamente, úsala referenciando su nombre en `nota` (por ejemplo: 'metrica:reportes_hoy').\n"
+        "- Solo deja slots null cuando NO exista información en el catálogo para decidir. Nunca inventes columnas.\n"
+        "- Devuelve SOLO el objeto JSON con los slots definidos."
     )
     return prompt, _slot_schema(catalogo)

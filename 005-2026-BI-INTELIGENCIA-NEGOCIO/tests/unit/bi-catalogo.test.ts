@@ -15,6 +15,8 @@ function stubPrisma(tablas: Array<{
                 );
             },
         },
+        bICatalogoMetrica: { findMany: async () => [] },
+        bICatalogoEjemplo: { findMany: async () => [] },
     } as unknown as import("@prisma/client").PrismaClient;
 }
 
