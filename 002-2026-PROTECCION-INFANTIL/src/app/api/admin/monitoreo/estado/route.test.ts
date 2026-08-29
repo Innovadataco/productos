@@ -39,7 +39,7 @@ describe("GET /api/admin/monitoreo/estado (SPEC-171)", () => {
         expect(res.status).toBe(403);
     });
 
-    it("devuelve las 14 señales en verde (tailscale no-aplica sin URL) y metadatos del tablero", async () => {
+    it("devuelve las 15 señales en verde (tailscale no-aplica sin URL) y metadatos del tablero", async () => {
         await autenticarAdmin();
 
         const res = await GET(new Request(URL));
@@ -47,6 +47,7 @@ describe("GET /api/admin/monitoreo/estado (SPEC-171)", () => {
         const body = await res.json();
 
         // SPEC-291 (002-PI-191): 7 heredadas + 7 nuevas por tick-vida (workers propios).
+        // SPEC-302 (002-PI-208): + notif_pendientes_vencidas (métrica R-022 §1.3 punto a).
         expect(Object.keys(body.senales).sort()).toEqual([
             "analisis_reglas",
             "analisis_score",
@@ -55,6 +56,7 @@ describe("GET /api/admin/monitoreo/estado (SPEC-171)", () => {
             "bd",
             "expediente_motor",
             "indices",
+            "notif_pendientes_vencidas",
             "notificaciones",
             "ollama_ping",
             "ollama_smoke",

@@ -16,6 +16,26 @@ import { UsuarioRepository } from "../dal/repositories/usuario";
 import { aplicarOffset } from "./offset";
 import { aplicarQuietHours } from "./quiet-hours";
 import { sendNotificacionEnvio } from "../queue";
+import { logger, LEVELS, type LogLevel } from "../logger";
+
+/**
+ * SPEC-302 (002-PI-208 · R-022 §1.3 punto c): nivel configurable propio del
+ * motor, independiente de `LOG_LEVEL` global. `logger.*` sigue siendo la
+ * salida real (mismo formato `[NIVEL]`); esto solo decide qué nivel se emite
+ * desde este módulo, vía `LEVELS`/`LogLevel` ya exportados por `../logger`.
+ */
+function getMotorLogLevel(): LogLevel {
+    const env = process.env.LOG_LEVEL_NOTIFICACIONES?.toLowerCase() as LogLevel | undefined;
+    if (env && env in LEVELS) return env;
+    return process.env.NODE_ENV === "production" ? "warn" : "info";
+}
+
+const motorLevel = getMotorLogLevel();
+
+function logMotor(level: Exclude<LogLevel, "debug">, message: string, ...args: unknown[]) {
+    if (LEVELS[level] < LEVELS[motorLevel]) return;
+    logger[level](message, ...args);
+}
 
 export interface ProgramarInput {
     evento: string;
@@ -82,7 +102,7 @@ async function resolverEmail(
 export async function programar(input: ProgramarInput): Promise<ProgramarResult> {
     const reglas = await repoRegla.findByEventoActivo(input.evento);
     if (reglas.length === 0) {
-        console.warn(`[MotorNotificaciones] Sin reglas activas para evento=${input.evento}`);
+        logMotor("info", `[MotorNotificaciones] Sin reglas activas para evento=${input.evento}`);
         return { programadas: 0, canceladasPorReemplazo: 0 };
     }
 
@@ -93,7 +113,7 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
     for (const destinatario of input.destinatarios) {
         const email = await resolverEmail(destinatario);
         if (!email) {
-            console.warn(`[MotorNotificaciones] Destinatario sin email para evento=${input.evento}`);
+            logMotor("warn", `[MotorNotificaciones] Destinatario sin email para evento=${input.evento}`);
             continue;
         }
 
@@ -104,7 +124,8 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
                 ? await repoPref.estaHabilitada(destinatario.usuarioId, eventoRegla, regla.obligatoria)
                 : true;
             if (!habilitada) {
-                console.warn(
+                logMotor(
+                    "info",
                     `[MotorNotificaciones] omitida_por_preferencia evento=${input.evento} canal=${regla.canal} usuario=${destinatario.usuarioId}`
                 );
                 continue;
@@ -112,7 +133,8 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
 
             const plantilla = await repoPlantilla.findByClaveYCanal(regla.plantillaClave, regla.canal);
             if (!plantilla) {
-                console.warn(
+                logMotor(
+                    "warn",
                     `[MotorNotificaciones] Plantilla no encontrada: clave=${regla.plantillaClave}, canal=${regla.canal}`
                 );
                 continue;
@@ -153,7 +175,8 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
             });
             // Disparar el worker de envío en el momento programado (o inmediato).
             await sendNotificacionEnvio(notificacion.id, enviarEn).catch((err: unknown) => {
-                console.warn(
+                logMotor(
+                    "warn",
                     `[MotorNotificaciones] No se pudo encolar envío para notificación ${notificacion.id}:`,
                     err instanceof Error ? err.message : err
                 );

@@ -466,4 +466,18 @@ export class NotificacionRepository {
         const count = await this.db.notificacion.count({ where: { proveedorId } });
         return count > 0;
     }
+
+    /**
+     * SPEC-302 (002-PI-208 · R-022 §1.3 punto a): cuenta ENCOLADAs cuyo
+     * `enviarEn` ya pasó — señal temprana de un worker atascado (patrón I-147).
+     * Query indexada por `@@index([estado, enviarEn])`.
+     */
+    async contarEncoladasVencidas(umbral: Date): Promise<number> {
+        return this.db.notificacion.count({
+            where: {
+                estado: "ENCOLADA",
+                enviarEn: { lt: umbral },
+            },
+        });
+    }
 }

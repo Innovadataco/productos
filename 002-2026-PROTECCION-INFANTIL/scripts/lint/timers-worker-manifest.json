@@ -1,0 +1,62 @@
+{
+    "_comentario": "SPEC-302 (002-PI-208 · R-022 §1.3 punto b). Manifiesto de TODOS los setInterval/setTimeout en scripts/worker-*.mjs, con su justificación. El ratchet (no-unref-timer-nuevo.ts) falla SOLO si aparece una ocurrencia (archivo + texto de línea) que no está aquí — protege contra timers nuevos sin revisar, sin exigirle .unref() a los que legítimamente no deben tenerlo. Actualizar este archivo es la forma correcta de aprobar un timer nuevo o modificado.",
+    "_advertencia_worker_notificaciones": "scripts/worker-notificaciones.mjs:207 NO debe tener .unref(). Es el fix real de SPEC-292 (I-147): con .unref() el pollInterval no cuenta como keep-alive de libuv y pg-boss lo deja sin disparar cuando la cola queda en espera silenciosa, atascando Notificacion sin procesar. El shutdown() de ese worker llama clearInterval(pollInterval) explícito para cerrar limpio sin el .unref(). Si alguien 'arregla' esta línea agregando .unref() para pasar un ratchet ingenuo, REINTRODUCE I-147 en producción.",
+    "ocurrencias": [
+        {
+            "archivo": "scripts/worker-anomalias.mjs",
+            "linea_referencia": 89,
+            "texto": "await new Promise((resolve) => setTimeout(resolve, tramo));",
+            "motivo": "sleep-en-promise",
+            "justificacion": "Espera acotada de un solo disparo dentro de una Promise; se resuelve sola y no debe contar como keep-alive persistente."
+        },
+        {
+            "archivo": "scripts/worker-reportes.mjs",
+            "linea_referencia": 404,
+            "texto": "await new Promise((r) => setTimeout(r, POLL_MS));",
+            "motivo": "sleep-en-promise",
+            "justificacion": "Espera acotada de un solo disparo dentro de una Promise; se resuelve sola."
+        },
+        {
+            "archivo": "scripts/worker-analisis-reglas.mjs",
+            "linea_referencia": 83,
+            "texto": "return new Promise((resolve) => setTimeout(resolve, ms));",
+            "motivo": "sleep-en-promise",
+            "justificacion": "Espera acotada de un solo disparo dentro de una Promise; se resuelve sola."
+        },
+        {
+            "archivo": "scripts/worker-notificaciones.mjs",
+            "linea_referencia": 207,
+            "texto": "pollInterval = setInterval(() => {",
+            "motivo": "spec-292-sin-unref-a-proposito",
+            "justificacion": "Fix real de I-147 (ver _advertencia_worker_notificaciones arriba). SIN .unref() a propósito; shutdown() hace clearInterval(pollInterval) explícito."
+        },
+        {
+            "archivo": "scripts/worker-sesiones.mjs",
+            "linea_referencia": 98,
+            "texto": "setInterval(touchAliveFile, HEARTBEAT_INTERVAL_MS).unref();",
+            "motivo": "unref-misma-linea",
+            "justificacion": ".unref() encadenado en la misma línea — heartbeat de liveness, no debe mantener vivo el proceso por sí solo."
+        },
+        {
+            "archivo": "scripts/worker-supervisor.mjs",
+            "linea_referencia": 85,
+            "texto": "setTimeout(startWorker, RESTART_DELAY_MS);",
+            "motivo": "setTimeout-reinicio-transitorio",
+            "justificacion": "Retraso antes de reiniciar el worker hijo tras un crash; el supervisor debe permanecer vivo para ejecutar el reinicio, por eso NO lleva .unref()."
+        },
+        {
+            "archivo": "scripts/worker-supervisor.mjs",
+            "linea_referencia": 105,
+            "texto": "setTimeout(() => {",
+            "motivo": "setTimeout-cierre-forzado-transitorio",
+            "justificacion": "Timeout de 10s para forzar SIGKILL si el worker hijo no cierra limpio tras la señal; debe ejecutarse aunque no quede otro trabajo pendiente, por eso NO lleva .unref()."
+        },
+        {
+            "archivo": "scripts/worker-supervisor.mjs",
+            "linea_referencia": 120,
+            "texto": "const heartbeat = setInterval(() => {",
+            "motivo": "unref-linea-posterior",
+            "justificacion": ".unref() se llama en la línea 128 (heartbeat.unref()), varias líneas después de la declaración — no detectable por un grep de una sola línea, cubierto aquí manualmente."
+        }
+    ]
+}

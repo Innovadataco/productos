@@ -12,6 +12,7 @@ import { buscarXInvokePath } from "./no-x-invoke-path";
 import { buscarRedirectsEnLayouts } from "./no-redirect-en-layout-de-dashboard";
 import { buscarSelfRedirects, rutaDePagina } from "./no-self-redirect-server-actions";
 import { buscarUsosPrecioUSD } from "./no-usd-en-vistas-suscripcion";
+import { buscarTimersEnWorkers, buscarInfractores } from "./no-unref-timer-nuevo";
 
 let raiz: string;
 
@@ -215,5 +216,107 @@ describe("no-usd-en-vistas-suscripcion", () => {
 
     it("directorio inexistente → sin error, cero hits", () => {
         expect(buscarUsosPrecioUSD([join(raiz, "no-existe")])).toHaveLength(0);
+    });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Ratchet 5 — no-unref-timer-nuevo (SPEC-302 · 002-PI-208 · I-147)
+// ────────────────────────────────────────────────────────────────────────────
+describe("no-unref-timer-nuevo", () => {
+    function crearWorker(nombre: string, contenido: string) {
+        writeFileSync(join(raiz, nombre), contenido);
+    }
+
+    it("caso feliz: timer manifestado no cuenta como infractor", () => {
+        crearWorker("worker-ok.mjs", "setInterval(tick, 1000).unref();\n");
+        const ocurrencias = buscarTimersEnWorkers(raiz);
+        expect(ocurrencias).toHaveLength(1);
+
+        const manifiesto = {
+            ocurrencias: [
+                { archivo: ocurrencias[0].archivo, texto: ocurrencias[0].texto, motivo: "test", justificacion: "test" },
+            ],
+        };
+        expect(buscarInfractores(ocurrencias, manifiesto)).toHaveLength(0);
+    });
+
+    it("detecta un timer NUEVO no manifestado", () => {
+        crearWorker("worker-nuevo.mjs", "setInterval(tick, 1000);\n");
+        const ocurrencias = buscarTimersEnWorkers(raiz);
+        const infractores = buscarInfractores(ocurrencias, { ocurrencias: [] });
+        expect(infractores).toHaveLength(1);
+        expect(infractores[0].texto).toBe("setInterval(tick, 1000);");
+    });
+
+    it("NO exige .unref() en la misma línea — reproduce el caso worker-notificaciones sin falso positivo", () => {
+        // Réplica del patrón real: SPEC-292 (I-147) — este timer NO debe tener
+        // .unref() y el ratchet naif original lo marcaba como falso positivo.
+        crearWorker("worker-notificaciones.mjs", "pollInterval = setInterval(() => {\n  hacerAlgo();\n}, 1000);\n");
+        const ocurrencias = buscarTimersEnWorkers(raiz);
+        const manifiesto = {
+            ocurrencias: [
+                {
+                    archivo: ocurrencias[0].archivo,
+                    texto: "pollInterval = setInterval(() => {",
+                    motivo: "spec-292-sin-unref-a-proposito",
+                    justificacion: "I-147",
+                },
+            ],
+        };
+        expect(buscarInfractores(ocurrencias, manifiesto)).toHaveLength(0);
+    });
+
+    it("timer con .unref() varias líneas después — cubierto por texto de la línea de declaración, no por .unref() adyacente", () => {
+        // Réplica del patrón real: worker-supervisor.mjs — heartbeat.unref() 7
+        // líneas después de la declaración. El grep naif original lo marcaba
+        // como falso positivo por no tener .unref() en la MISMA línea.
+        crearWorker(
+            "worker-supervisor.mjs",
+            "const heartbeat = setInterval(() => {\n  tick();\n}, 15000);\nheartbeat.unref();\n"
+        );
+        const ocurrencias = buscarTimersEnWorkers(raiz);
+        expect(ocurrencias).toHaveLength(1); // solo la línea con setInterval( cuenta, no la del .unref()
+        const manifiesto = {
+            ocurrencias: [
+                {
+                    archivo: ocurrencias[0].archivo,
+                    texto: "const heartbeat = setInterval(() => {",
+                    motivo: "unref-linea-posterior",
+                    justificacion: "línea 128",
+                },
+            ],
+        };
+        expect(buscarInfractores(ocurrencias, manifiesto)).toHaveLength(0);
+    });
+
+    it("multiset: dos ocurrencias idénticas requieren dos entradas en el manifiesto", () => {
+        crearWorker("worker-doble.mjs", "setTimeout(cb, 100);\nsetTimeout(cb, 100);\n");
+        const ocurrencias = buscarTimersEnWorkers(raiz);
+        expect(ocurrencias).toHaveLength(2);
+
+        const unaSola = {
+            ocurrencias: [
+                { archivo: ocurrencias[0].archivo, texto: "setTimeout(cb, 100);", motivo: "test", justificacion: "test" },
+            ],
+        };
+        expect(buscarInfractores(ocurrencias, unaSola)).toHaveLength(1);
+
+        const dos = {
+            ocurrencias: [
+                { archivo: ocurrencias[0].archivo, texto: "setTimeout(cb, 100);", motivo: "test", justificacion: "test" },
+                { archivo: ocurrencias[0].archivo, texto: "setTimeout(cb, 100);", motivo: "test", justificacion: "test" },
+            ],
+        };
+        expect(buscarInfractores(ocurrencias, dos)).toHaveLength(0);
+    });
+
+    it("ignora archivos que no matchean worker-*.mjs", () => {
+        crearWorker("no-es-worker.mjs", "setInterval(tick, 1000);\n");
+        crearWorker("worker-helper.ts", "setInterval(tick, 1000);\n");
+        expect(buscarTimersEnWorkers(raiz)).toHaveLength(0);
+    });
+
+    it("directorio inexistente → sin error, cero ocurrencias", () => {
+        expect(buscarTimersEnWorkers(join(raiz, "no-existe"))).toHaveLength(0);
     });
 });
