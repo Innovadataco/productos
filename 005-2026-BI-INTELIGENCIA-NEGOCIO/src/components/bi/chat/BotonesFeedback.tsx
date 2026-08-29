@@ -17,7 +17,8 @@ export function BotonesFeedback({ usuario, consultaLogId }: Props) {
         try {
             const res = await fetch(path, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "x-user-rol": usuario.rol, "x-user-id": usuario.id },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ consultaLogId, ...extra }),
             });
             if (!res.ok) throw new Error(String(res.status));

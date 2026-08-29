@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-function extraerUsuario(req: Request): { id: string; rol: string } {
-    return {
-        id: req.headers.get("x-user-id") || "dev-local",
-        rol: req.headers.get("x-user-rol") || "GUEST",
-    };
-}
+import { sesionDeRequest } from "@/lib/auth/sesion";
 
 export async function POST(req: Request) {
-    const usuario = extraerUsuario(req);
-    if (usuario.rol !== "ADMIN") {
+    const sesion = await sesionDeRequest(req);
+    if (!sesion || sesion.rol !== "ADMIN") {
         return NextResponse.json({ error: "no_autorizado" }, { status: 401 });
     }
     let body: unknown;
