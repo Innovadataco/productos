@@ -78,13 +78,20 @@ echo "==> Import bundle Superset (datasets + charts + dashboards · I-19)"
 # instalado por defecto en el VPS, I-21) con rutas relativas a superset/ para
 # que el zip tenga la misma estructura que produciría 'cd superset && zip -qr'.
 rm -f /tmp/bi-superset-bundle.zip
+# I-22: Superset's get_contents_from_bundle() SIEMPRE hace remove_root() —
+# asume que el zip tiene una única carpeta raíz envolvente (el formato real
+# de export de Superset la incluye, ej. dashboard_export_<timestamp>/) y le
+# quita ese primer segmento a CADA ruta. Un zip sin esa carpeta raíz pierde
+# "metadata.yaml" (queda vacío tras el strip) -> IncorrectVersionError ->
+# el dispatcher cae al importador v0 legacy (JSON) -> JSONDecodeError sobre
+# YAML. Por eso el zip necesita el prefijo "bi_export/" en cada ruta.
 python3 -c "
 import zipfile, os
 with zipfile.ZipFile('/tmp/bi-superset-bundle.zip', 'w', zipfile.ZIP_DEFLATED) as z:
     for root, dirs, files in os.walk('superset'):
         for f in files:
             full = os.path.join(root, f)
-            z.write(full, os.path.relpath(full, 'superset'))
+            z.write(full, 'bi_export/' + os.path.relpath(full, 'superset'))
 "
 docker cp /tmp/bi-superset-bundle.zip "\$(docker compose -f ${COMPOSE_FILE} ps -q bi-superset)":/tmp/bundle.zip
 docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-superset \
