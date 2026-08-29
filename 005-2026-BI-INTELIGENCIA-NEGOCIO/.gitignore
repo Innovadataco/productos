@@ -37,3 +37,10 @@ yarn-error.log*
 # ide
 .vscode/
 .idea/
+
+# Python venvs para tests locales (SPEC-012 bi-vanna)
+.venv/
+docker/*/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
