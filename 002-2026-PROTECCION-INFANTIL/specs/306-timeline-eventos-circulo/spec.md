@@ -68,6 +68,13 @@ Como frontend del área del padre, quiero consumir el timeline desde un endpoint
 - **FR-010**: El botón "abrir expediente" DEBE navegar a `/dashboard/padre/expedientes/[expedienteId]`.
 - **FR-011**: El cálculo DEBE ser determinista y basado únicamente en queries a la BD; PROHIBIDO usar LLM.
 
+### Impacto en arquitectura:
+
+- **Nueva API Route**: `GET /api/padre/circulo-confianza/timeline` en la capa de API del rol PARENT.
+- **Nueva lógica de dominio**: `src/lib/padre/timeline-circulo.ts` reutiliza el repositorio DAL existente y la utilidad `obtenerGruposCategoria`; no altera `src/lib/ai/**` ni `src/lib/notificaciones/motor.ts`.
+- **Nuevos componentes UI**: `TimelineEventosCirculo` y `TimelineEventoItem` bajo `src/components/modules/padre/`, consumidos desde el home padre (SPEC-304).
+- **Datos**: solo lectura sobre `ContactoConfianza`, `IdentificadorContacto`, `Reporte`, `Expediente` y `EventoExpediente`; sin migraciones destructivas.
+
 ### Key Entities
 
 - **ContactoConfianza**: contacto del círculo del padre. Atributos relevantes: `id`, `usuarioId`, `etiqueta`, `activo`.
