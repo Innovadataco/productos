@@ -150,6 +150,7 @@ services:
     restart: unless-stopped
 
   bi-next:
+    image: bi-next:${BI_APP_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile.next
