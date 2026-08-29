@@ -10,13 +10,7 @@ name: ci-002-proteccion-infantil
 on:
   push:
     branches: [feature/001-scaffolding]
-    paths:
-      - "002-2026-PROTECCION-INFANTIL/**"
-      - ".github/workflows/**"
   pull_request:
-    paths:
-      - "002-2026-PROTECCION-INFANTIL/**"
-      - ".github/workflows/**"
   workflow_dispatch:
 
 jobs:
