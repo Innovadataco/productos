@@ -1,6 +1,6 @@
 # MODELO — Clasificación de reportes (flujo post-090)
 
-> **Versión:** 1.1.0 · **Fecha:** 2026-07-24 · **Autor:** ODIN (micro-fix spec 090)
+> **Versión:** 1.2.0 · **Fecha:** 2026-07-24 · **Autor:** ODIN (spec 092)
 >
 > Explica **cómo decide** el sistema cuando entra un reporte. Los valores exactos
 > (modelos, umbrales, sets de preguntas, temperatura, pesos) viven en
@@ -17,11 +17,12 @@ Reporte entrante (API anónima o PARENT)
    ├─ 2. Cola async (pg-boss) → worker (procesa en segundo plano)
    ├─ 3. Embedding del texto (modelo de embeddings local)
    ├─ 4. Deduplicación por similitud de embeddings (mismo identificador+plataforma)
-   ├─ 5. RAG: ejemplos corregidos por humanos semánticamente similares
-   ├─ 6. RÚBRICA multi-etiqueta / multi-modelo (clasificación)
-   ├─ 7. PII: detección de datos personales (patrones + LLM) → anonimización
-   ├─ 8. Guardas determinísticas (DOXING, keywords críticas, ráfaga, spam)
-   └─ 9. Decisión de estado → revisión humana si aplica → agregación pública
+   ├─ 5. GUARDAS BARATAS PREVIAS (ráfaga, doxing — cortan sin gastar modelos)
+   ├─ 6. RAG: ejemplos corregidos por humanos semánticamente similares
+   ├─ 7. RÚBRICA multi-etiqueta / multi-modelo (clasificación)
+   ├─ 8. PII: detección de datos personales (patrones + LLM) → anonimización
+   ├─ 9. Guardas posteriores (spam del modelo, keywords+OTRO)
+   └─ 10. Decisión de estado → revisión humana si aplica → agregación pública
 ```
 
 Principio: **la IA es cara y falible**; las capas baratas filtran antes y las
@@ -49,12 +50,15 @@ decisiones con evidencia insuficiente o contradictoria van a un humano.
 Objetiva (preguntas factuales), multi-etiqueta (0/1 por categoría) y multi-modelo
 (N modelos diversos, 1 voto c/u, **secuencial** por RAM):
 
-1. **Embudo**: un pase barato (`ia.rubrica.modelo_embudo`) descarta categorías sin
-   señal; la rúbrica completa solo corre en las plausibles. Sin plausibles → OTRO.
+1. **Embudo permisivo** (`ia.rubrica.modelo_embudo`): lista categorías plausibles.
+   Su trabajo es NO descartar de más (medición: la versión estricta mataba la
+   categoría correcta en el 35% del banco, spec 092-US2); el filtro estricto viene
+   después. Red de seguridad: si devuelve menos de 2, se evalúan todas.
 2. **Votación**: cada modelo aplica el SET DE PREGUNTAS de cada categoría plausible
-   (`ia.rubrica.preguntas`, editable por expertos en el tab "Rúbrica" del Centro de
-   Control IA). Marca 1 solo si TODAS las preguntas activas se cumplen con
-   **evidencia clara**; ante la duda, 0.
+   (`ia.rubrica.preguntas`, editable por expertos en el tab "Rúbrica"). Cada pregunta
+   es **DECISIVA** (obligatoria, el núcleo de la conducta) o de **CONTEXTO** (suma al
+   análisis, no bloquea). Marca 1 solo si TODAS las decisivas se cumplen con
+   **evidencia clara**; ante la duda en una decisiva, 0.
 3. **% por categoría** = modelos que marcaron 1 / N.
 4. **Persistencia auditable**: la matriz categoría × modelo × 0/1 y las preguntas
    cumplidas quedan en `clasificacion_rubrica_votos`.
@@ -82,8 +86,9 @@ Motor: `src/lib/ai/rubrica.ts`. Config: parámetros `ia.rubrica.*`
 
 ### 2.6 Decisión de estado
 
-- **Conducta principal** = la de MAYOR GRAVEDAD (severidad de `scoring.severity.*`)
-  entre las categorías que superan el umbral de presencia.
+- Se muestran **TODAS las conductas** que superan el umbral de presencia (ya no se
+  elige una "principal" por gravedad, spec 092-US3). La gravedad solo prioriza la
+  bandeja del operador (interno).
 - Ninguna presente (desacuerdo), resultado OTRO, o guardas disparadas →
   **REVISION_MANUAL** (un humano reclasifica o descarta).
 - Con categoría real y sin guardas → CLASIFICADO; un operador puede corregir
@@ -119,6 +124,7 @@ Motor: `src/lib/ai/rubrica.ts`. Config: parámetros `ia.rubrica.*`
 |---------|-------|--------|
 | 1.0.0 | 2026-07-1x | Flujo original (guardas, clasificador, score) |
 | 1.1.0 | 2026-07-24 | Post-090: rúbrica multi-etiqueta/multi-modelo, deduplicación explícita, decisión por gravedad+umbral, desacuerdo→humano, sin score público |
+| 1.2.0 | 2026-07-24 | Post-092: guardas baratas previas, RAG tras dedup, embudo permisivo con red de seguridad, preguntas decisivas/contexto, todas las conductas sin principal |
 
 > **Nota:** La documentación operativa para administradores del motor vive también
 > en el tab "Documentación" del Centro de Control IA (`IaDocsPanel`). Mantener ambas

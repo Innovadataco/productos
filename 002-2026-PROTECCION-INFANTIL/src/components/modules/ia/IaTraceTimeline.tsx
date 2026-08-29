@@ -47,7 +47,7 @@ export function IaTraceTimeline({ trace }: IaTraceTimelineProps) {
     const pii = etapas.pii;
     const guardas = etapas.guardas;
 
-    const voteChartData = votos.distribucion.map((d) => ({
+    const voteChartData = votos.votos.map((d) => ({
         label: d.categoria,
         value: d.count,
     }));
@@ -69,9 +69,9 @@ export function IaTraceTimeline({ trace }: IaTraceTimelineProps) {
                 <p className="text-xs text-muted">
                     {rag.ejemplos.length > 0
                         ? `Distancia media: ${(
-                              rag.ejemplos.reduce((acc, e) => acc + (1 - (e.similitud || 0)), 0) /
+                            rag.ejemplos.reduce((acc, e) => acc + (1 - (e.similitud || 0)), 0) /
                               Math.max(rag.ejemplos.length, 1)
-                          ).toFixed(3)}`
+                        ).toFixed(3)}`
                         : "Sin ejemplos similares en el dataset."}
                 </p>
             </Stage>
@@ -83,9 +83,9 @@ export function IaTraceTimeline({ trace }: IaTraceTimelineProps) {
                             Categoría: <Badge variant="info">{votos.categoria}</Badge>
                         </p>
                         <p>Confianza: {(votos.confianza * 100).toFixed(0)}%</p>
-                        <p>Votos: {parametrosEfectivos.nVotos}</p>
+                        <p>Modelos: {votos.modelos}</p>
                     </div>
-                    <BarChart ariaLabel="Distribución de votos" data={voteChartData} />
+                    <BarChart ariaLabel="Distribución por modelo" data={voteChartData} />
                 </div>
             </Stage>
 

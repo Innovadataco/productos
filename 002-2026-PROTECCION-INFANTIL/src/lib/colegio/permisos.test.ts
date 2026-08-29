@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { crearColegioConAdmin, crearCurso, crearAlumno, crearIdentificadorAlumno } from "@/lib/reporte-test-utils";
+import { crearColegioConAdmin, crearCurso, crearEstudiante, crearIdentificadorEstudiante } from "@/lib/reporte-test-utils";
 import {
     verificarPropiedadCurso,
-    verificarPropiedadAlumno,
+    verificarPropiedadEstudiante,
     verificarPropiedadIdentificador,
 } from "./permisos";
 
@@ -30,29 +30,29 @@ describe("src/lib/colegio/permisos", () => {
         await expect(verificarPropiedadCurso(admin.id, otroCurso.id)).rejects.toThrow("Curso no encontrado");
     });
 
-    it("verificarPropiedadAlumno devuelve el alumno cuando pertenece al colegio del usuario", async () => {
+    it("verificarPropiedadEstudiante devuelve el alumno cuando pertenece al colegio del usuario", async () => {
         const { admin, colegio } = await crearColegioConAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "María" });
+        const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "María" });
 
-        const result = await verificarPropiedadAlumno(admin.id, alumno.id);
+        const result = await verificarPropiedadEstudiante(admin.id, alumno.id);
         expect(result.id).toBe(alumno.id);
     });
 
-    it("verificarPropiedadAlumno falla para alumno de otro colegio", async () => {
+    it("verificarPropiedadEstudiante falla para alumno de otro colegio", async () => {
         const { admin } = await crearColegioConAdmin();
         const { colegio: otroColegio } = await crearColegioConAdmin();
         const otroCurso = await crearCurso(otroColegio.id, { nombre: "Otro" });
-        const otroAlumno = await crearAlumno(otroCurso.id, otroColegio.id, { nombre: "Ajeno" });
+        const otroEstudiante = await crearEstudiante(otroCurso.id, otroColegio.id, { nombre: "Ajeno" });
 
-        await expect(verificarPropiedadAlumno(admin.id, otroAlumno.id)).rejects.toThrow("Alumno no encontrado");
+        await expect(verificarPropiedadEstudiante(admin.id, otroEstudiante.id)).rejects.toThrow("Alumno no encontrado");
     });
 
     it("verificarPropiedadIdentificador devuelve el identificador cuando pertenece al colegio del usuario", async () => {
         const { admin, colegio } = await crearColegioConAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "6A" });
-        const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "María" });
-        const identificador = await crearIdentificadorAlumno(alumno.id, { tipo: "telefono", valor: "+573001234567" });
+        const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "María" });
+        const identificador = await crearIdentificadorEstudiante(alumno.id, { tipo: "telefono", valor: "+573001234567" });
 
         const result = await verificarPropiedadIdentificador(admin.id, identificador.id);
         expect(result.id).toBe(identificador.id);
@@ -62,8 +62,8 @@ describe("src/lib/colegio/permisos", () => {
         const { admin } = await crearColegioConAdmin();
         const { colegio: otroColegio } = await crearColegioConAdmin();
         const otroCurso = await crearCurso(otroColegio.id, { nombre: "Otro" });
-        const otroAlumno = await crearAlumno(otroCurso.id, otroColegio.id, { nombre: "Ajeno" });
-        const otroIdentificador = await crearIdentificadorAlumno(otroAlumno.id, { tipo: "telefono", valor: "+573001234567" });
+        const otroEstudiante = await crearEstudiante(otroCurso.id, otroColegio.id, { nombre: "Ajeno" });
+        const otroIdentificador = await crearIdentificadorEstudiante(otroEstudiante.id, { tipo: "telefono", valor: "+573001234567" });
 
         await expect(verificarPropiedadIdentificador(admin.id, otroIdentificador.id)).rejects.toThrow("Identificador no encontrado");
     });

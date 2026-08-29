@@ -12,11 +12,14 @@ export function AuditLogViewer({
     title,
     subtitle,
     endpoint = "/api/admin/audit-logs",
+    legible = false,
 }: {
-    defaultActions?: AccionAudit[];
+    defaultActions?: AccionAudit[] | undefined;
     title: string;
     subtitle: string;
-    endpoint?: string;
+    endpoint?: string | undefined;
+    /** SPEC-129 (C6): frases naturales y detalle sin JSON crudo (rector no técnico). */
+    legible?: boolean | undefined;
 }) {
     const [filters, setFilters] = useState<Filters>({
         selectedActions: defaultActions ?? [],
@@ -117,6 +120,7 @@ export function AuditLogViewer({
                     expandedIds={expandedIds}
                     onToggle={toggleExpand}
                     onPageChange={setPage}
+                    legible={legible}
                 />
             </GlassCard>
         </div>

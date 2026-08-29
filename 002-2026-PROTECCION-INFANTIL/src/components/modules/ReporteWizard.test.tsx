@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ReporteWizard } from "./ReporteWizard";
 
 function mockFetch(response: unknown, ok = true) {
@@ -64,5 +64,98 @@ describe("ReporteWizard", () => {
             expect(document.body.textContent).not.toContain("Las cuentas internas no pueden crear reportes");
         });
         expect(document.body.textContent).toContain("¿Qué identificador está asociado a la situación?");
+    });
+
+    // Test de EFECTO (I-14): el botón "Siguiente" del paso 2 obedece el parámetro
+    // reportes.spam.min_text_length, no un literal. Con el parámetro en 30, un texto
+    // de 29 caracteres bloquea el avance y uno de 31 lo habilita.
+    it("el botón Siguiente del paso 2 obedece reportes.spam.min_text_length (test de efecto)", async () => {
+        vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+            const url = String(input);
+            const json = (body: unknown, ok = true) => ({ ok, json: async () => body }) as Response;
+            if (url.includes("/api/me")) return json({ error: { message: "No autenticado" } }, false);
+            if (url.includes("/api/config/parametros/publicos")) {
+                return json({ "reportes.spam.min_text_length": { valor: "30" } });
+            }
+            if (url.includes("/api/plataformas")) {
+                return json({ plataformas: [{ id: "p1", clave: "whatsapp", nombre: "WhatsApp" }] });
+            }
+            if (url.includes("/api/paises")) return json({ paises: [{ id: "co", nombre: "Colombia" }] });
+            // SPEC-115: la ciudad se elige con buscador en servidor
+            if (url.includes("/api/ciudades/buscar")) {
+                return json({ ciudades: [{ id: "bog", nombre: "Bogotá", paisId: "co", departamentoId: null, departamento: null }] });
+            }
+            return json({});
+        });
+        render(<ReporteWizard />);
+
+        // Paso 1: identificador + plataforma
+        fireEvent.change(await screen.findByLabelText(/Número, nick o usuario/i), { target: { value: "+573001234567" } });
+        await screen.findByRole("option", { name: "WhatsApp" });
+        fireEvent.change(screen.getByLabelText(/Plataforma/i), { target: { value: "whatsapp" } });
+        fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+
+        // Paso 2: país + ciudad (buscador con debounce en servidor)
+        await screen.findByText("Detalles del incidente");
+        await screen.findByRole("option", { name: "Colombia" });
+        fireEvent.change(screen.getByLabelText(/País/i), { target: { value: "co" } });
+        fireEvent.change(screen.getByRole("combobox", { name: /Ciudad/i }), { target: { value: "Bog" } });
+        fireEvent.click(await screen.findByRole("option", { name: /Bogotá/ }));
+
+        const area = screen.getByPlaceholderText(/Describe la conducta observada/i);
+        const botonSiguiente = () => screen.getByRole("button", { name: /Siguiente/i });
+
+        // N-1 = 29 caracteres → avance bloqueado
+        fireEvent.change(area, { target: { value: "a".repeat(29) } });
+        await waitFor(() => expect(botonSiguiente()).toHaveProperty("disabled", true));
+
+        // N+1 = 31 caracteres → avance habilitado
+        fireEvent.change(area, { target: { value: "a".repeat(31) } });
+        await waitFor(() => expect(botonSiguiente()).toHaveProperty("disabled", false));
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SPEC-295 (002-PI-196 · I-146): modo autenticado del panel padre.
+    // ─────────────────────────────────────────────────────────────────────
+    describe("SPEC-295 · modoAutenticado", () => {
+        it("muestra banner de identidad cuando el padre está autenticado", async () => {
+            mockFetch({ id: "u4", email: "parent@test.com", nombre: "Juan Padre", rol: "PARENT" });
+            render(<ReporteWizard modoAutenticado />);
+
+            await waitFor(() => {
+                expect(document.body.textContent).toContain("Reportando como");
+                expect(document.body.textContent).toContain("Juan Padre");
+                expect(document.body.textContent).toContain("parent@test.com");
+            });
+        });
+
+        it("muestra checkbox 'Reportar de forma anónima' en modo autenticado", async () => {
+            mockFetch({ id: "u4", email: "parent@test.com", nombre: "Juan Padre", rol: "PARENT" });
+            render(<ReporteWizard modoAutenticado />);
+
+            await waitFor(() => {
+                expect(document.body.textContent).toContain("Reportar de forma anónima");
+            });
+            const checkbox = screen.getByRole("checkbox");
+            expect((checkbox as HTMLInputElement).checked).toBe(false);
+        });
+
+        it("NO muestra banner en modo público anónimo (sin modoAutenticado)", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard />);
+
+            await waitFor(() => {
+                expect(document.body.textContent).not.toContain("Reportando como");
+            });
+        });
+
+        it("NO muestra banner cuando modoAutenticado pero sin sesión (edge case)", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard modoAutenticado />);
+
+            await waitFor(() => {
+                expect(document.body.textContent).not.toContain("Reportando como");
+            });
+        });
     });
 });

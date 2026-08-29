@@ -9,6 +9,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Cargando } from "@/components/ui/Cargando";
 import type { BadgeVariant } from "@/components/ui/Badge";
 import { CATEGORIAS_LABELS } from "@/lib/labels";
 import { EstadoTransicion } from "./EstadoTransicion";
@@ -19,7 +20,6 @@ type ClasificacionData = {
     categoriaGrupo: string;
     categoriasSecundarias?: string[];
     contienePii: boolean;
-    piiDetectada: string[];
 };
 
 type RankingData = {
@@ -150,8 +150,7 @@ export function SeguimientoClient() {
 
             {isLoading && (
                 <div className="glass rounded-2xl p-8 text-center">
-                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-600 dark:border-sky-800 dark:border-t-sky-400" />
-                    <p className="mt-3 text-sm text-muted">Consultando...</p>
+                    <Cargando texto="Consultando..." />
                 </div>
             )}
 
@@ -184,7 +183,7 @@ export function SeguimientoClient() {
                     <div className={infoBox}>
                         <p className="text-sm font-medium text-body">{data.mensaje}</p>
                         <p className="mt-1 text-xs text-subtle">
-                            Reportado el {new Date(data.creadoEn).toLocaleDateString("es-CO")}
+                            Reportado el {new Date(data.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                         </p>
                         <p className="mt-2 text-xs font-medium text-body">Gracias por reportar.</p>
                     </div>

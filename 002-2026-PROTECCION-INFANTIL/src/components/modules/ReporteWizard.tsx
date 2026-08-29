@@ -6,6 +6,7 @@ import { ReporteStepDetalle } from "./ReporteStepDetalle";
 import { ReporteStepConfirmar } from "./ReporteStepConfirmar";
 import { ConfirmacionReporte } from "./ConfirmacionReporte";
 import { Button } from "@/components/ui/Button";
+import { useMinTextoReporte } from "./use-min-texto-reporte";
 
 type WizardData = {
     identificador: string;
@@ -30,12 +31,23 @@ type SessionUser = {
 
 const ROLES_BLOQUEADOS = ["ADMIN", "OPERADOR", "SCHOOL_ADMIN"];
 
-export function ReporteWizard() {
+// SPEC-295 (002-PI-196 · I-146): destino post-envío cuando el padre reporta
+// desde su panel autenticado. La ruta pública sigue mostrando ConfirmacionReporte.
+const REDIRECT_PADRE_POST_ENVIO = "/dashboard/padre/mis-reportes";
+
+export function ReporteWizard({
+    identificadorInicial,
+    modoAutenticado = false,
+}: {
+    identificadorInicial?: string | undefined;
+    modoAutenticado?: boolean;
+} = {}) {
     const [step, setStep] = useState(1);
     const [user, setUser] = useState<SessionUser>(null);
     const [checkingSession, setCheckingSession] = useState(true);
     const [data, setData] = useState<WizardData>({
-        identificador: "",
+        // F3 (N-5): valor inicial desde el CTA de la consulta vacía (ya sanitizado por la página).
+        identificador: identificadorInicial ?? "",
         plataforma: "",
         otraPlataforma: "",
         ciudad: "",
@@ -45,11 +57,16 @@ export function ReporteWizard() {
         fechaIncidente: "",
         edadVictima: "",
         texto: "",
-        esAnonimo: true,
+        // SPEC-295: en modo autenticado el default es NO anónimo — el padre
+        // reporta con su identidad. Checkbox opcional para volver a anónimo.
+        esAnonimo: !modoAutenticado,
     });
     const [resultado, setResultado] = useState<{ numeroSeguimiento: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+    // I-14: la longitud mínima del texto es un parámetro (reportes.spam.min_text_length),
+    // no un literal — el botón Siguiente obedece el mismo valor que el backend.
+    const minTexto = useMinTextoReporte();
 
     const update = (partial: Partial<WizardData>) => setData((d) => ({ ...d, ...partial }));
 
@@ -103,6 +120,12 @@ export function ReporteWizard() {
                 setIsSubmitting(false);
                 return;
             }
+            // SPEC-295 (002-PI-196 · I-146): en modo autenticado, redirect al
+            // listado del padre en vez de mostrar ConfirmacionReporte inline.
+            if (modoAutenticado) {
+                window.location.href = REDIRECT_PADRE_POST_ENVIO;
+                return;
+            }
             setResultado({ numeroSeguimiento: json.reporte.numeroSeguimiento });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error de conexión");
@@ -142,6 +165,26 @@ export function ReporteWizard() {
 
     return (
         <div className="mx-auto max-w-xl">
+            {/* SPEC-295 (I-146): banner de identidad + checkbox anónimo opcional. */}
+            {modoAutenticado && user && user.rol === "PARENT" && (
+                <div className="mb-4 rounded-2xl border border-tinta/10 bg-papel/60 p-4 text-sm">
+                    <p className="text-tinta">
+                        Reportando como{" "}
+                        <span className="font-semibold">{user.nombre ?? user.email}</span>
+                        {user.nombre ? ` <${user.email}>` : ""}
+                    </p>
+                    <label className="mt-2 flex items-center gap-2 text-xs text-muted">
+                        <input
+                            type="checkbox"
+                            checked={data.esAnonimo}
+                            onChange={(e) => update({ esAnonimo: e.target.checked })}
+                            className="h-4 w-4 rounded border-tinta/20"
+                        />
+                        Reportar de forma anónima (el sistema no vinculará este reporte a tu cuenta en el pipeline).
+                    </label>
+                </div>
+            )}
+
             <div className="mb-6 flex items-center justify-between">
                 {[1, 2, 3].map((s) => (
                     <div key={s} className="flex flex-1 items-center">
@@ -149,14 +192,14 @@ export function ReporteWizard() {
                             className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${s <= step
                                 ? "bg-primary-600 text-white"
                                 : "bg-slate-200 text-slate-500"
-                                }`}
+                            }`}
                         >
                             {s}
                         </div>
                         {s < 3 && (
                             <div
                                 className={`mx-2 h-1 flex-1 rounded transition ${s < step ? "bg-primary-600" : "bg-slate-200"
-                                    }`}
+                                }`}
                             />
                         )}
                     </div>
@@ -208,7 +251,7 @@ export function ReporteWizard() {
                                 (!data.paisId ||
                                     !data.ciudadId ||
                                     (data.ciudadId === "otra" && !data.ciudad) ||
-                                    data.texto.length < 20))
+                                    data.texto.length < minTexto))
                         }
                     >
                         Siguiente

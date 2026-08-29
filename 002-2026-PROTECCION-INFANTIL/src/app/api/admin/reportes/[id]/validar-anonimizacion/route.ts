@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
 import { generarEmbedding } from "@/lib/ai/embedder";
+import { MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { ParametroRepository } from "@/lib/dal/repositories/parametro";
+import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
 import { z } from "zod";
 
 const validarSchema = z.object({
@@ -32,33 +38,15 @@ function getClientInfo(request: Request) {
 
 async function regenerarEmbedding(reporteId: string, texto: string) {
     try {
-        const paramEmbedding = await prisma.parametroSistema.findUnique({
-            where: { clave: "reportes.embedding_model" },
-        });
-        const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+        // E-8 (D3): parámetro por el repo; upsert del embedding en el adaptador.
+        const paramEmbedding = await new ParametroRepository().findByClave("reportes.embedding_model");
+        const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
         const vector = await generarEmbedding(modeloEmbedding, texto);
-        const vectorStr = "[" + vector.join(",") + "]";
 
-        const embeddingExistente = await prisma.embeddingReporte.findUnique({
-            where: { reporteId },
-        });
-
-        if (embeddingExistente) {
-            await prisma.$executeRaw`
-                UPDATE "EmbeddingReporte"
-                SET vector = ${vectorStr}::vector, "modeloUsado" = ${modeloEmbedding}
-                WHERE "reporteId" = ${reporteId}
-            `;
-        } else {
-            const embeddingId = crypto.randomUUID();
-            await prisma.$executeRaw`
-                INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
-                VALUES (${embeddingId}, ${reporteId}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-            `;
-        }
+        await new EmbeddingRepository().upsertReporteEmbedding(reporteId, modeloEmbedding, vector);
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error("[VALIDAR-ANONIMIZACION] Embedding falló (no crítico):", msg);
+        logger.error("[VALIDAR-ANONIMIZACION] Embedding falló (no crítico):", msg);
         // No fallamos la validación; el embedding se puede regenerar después.
     }
 }
@@ -97,10 +85,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const { valida, observaciones } = parsed.data;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-            include: { clasificacion: true },
-        });
+        // E-8: la lectura vive en el repo; la ruta no toca prisma.
+        const reporte = await new ReporteRepository().findByIdConClasificacion(reporteId);
         if (!reporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -133,7 +119,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
 
         if (valida) {
-            await prisma.$transaction(async (tx) => {
+            await withUnitOfWork(async (tx) => {
                 await registrarTransicion({
                     reporteId,
                     estadoAnterior: "REQUIERE_ANONIMIZACION",
@@ -143,13 +129,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                     motivo: observaciones || "Anonimización validada",
                     tx,
                 });
-                await tx.reporte.update({
-                    where: { id: reporteId },
-                    data: {
-                        estado: "CLASIFICADO",
-                        anonimizacionValidadaPorId: user.id,
-                        anonimizacionValidadaEn: new Date(),
-                    },
+                await new ReporteRepository(tx).actualizarEstado(reporteId, {
+                    estado: "CLASIFICADO",
+                    anonimizacionValidadaPorId: user.id,
+                    anonimizacionValidadaEn: new Date(),
                 });
                 await logAudit({
                     accion: "ANONIMIZACION_VALIDADA",
@@ -163,7 +146,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 });
             });
 
-            await regenerarEmbedding(reporteId, reporte.texto);
+            await regenerarEmbedding(reporteId, descifrarTextoReporte(reporte.texto));
             await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
 
             return NextResponse.json({

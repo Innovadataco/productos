@@ -1,8 +1,8 @@
 import { useId, forwardRef } from "react";
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
-    label?: string;
-    error?: string;
+    label?: string | undefined;
+    error?: string | undefined;
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(

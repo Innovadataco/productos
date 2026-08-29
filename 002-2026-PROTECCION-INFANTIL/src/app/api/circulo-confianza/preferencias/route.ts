@@ -5,7 +5,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import {
     toggleNotificacionesCirculo,
     obtenerPreferenciasCirculo,
-} from "@/lib/circulo-confianza";
+} from "@/lib/dal/services/circulo-confianza";
 
 const schema = z.object({
     notificacionesCirculo: z.boolean(),

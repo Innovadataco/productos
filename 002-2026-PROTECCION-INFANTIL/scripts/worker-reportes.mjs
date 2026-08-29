@@ -22,10 +22,15 @@ import { procesarBackfillEmbedding } from "../src/lib/ai/dataset-embedding-backf
 import { getOllamaBaseUrl } from "../src/lib/ai/ollama-config.ts";
 import { prisma } from "../src/lib/prisma.ts";
 import { logAudit } from "../src/lib/audit.ts";
-import { notificarCambioCirculoSiCorresponde } from "../src/lib/circulo-confianza.ts";
+import { notificarCambioCirculoSiCorresponde } from "../src/lib/dal/services/circulo-confianza/index.ts";
 import { notificarColegioSiCorresponde } from "../src/lib/colegio/alertas.ts";
+import { detectarYRegistrarMatch } from "../src/lib/dal/services/evento-match.ts";
+import { agregarPatronPorReporte } from "../src/lib/colegio/patrones.ts";
 import { boss, getWorkerParams, drainPending, ensureStarted } from "../src/lib/queue.ts";
 import { guardarReintento } from "../src/lib/reporte-reintentos.ts";
+import { getParametroSistemaValor } from "../src/lib/parametros.ts";
+import { registrarScheduleDigestSemanal } from "./digest-semanal-schedule.mjs";
+import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -42,6 +47,8 @@ if (!WORKER_SECRET) {
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5005";
 const MAX_FETCH_RETRY = 3;
 const BASE_DELAY_MS = 1000;
+
+const logger = workerLogger.child({ servicio: "pi-worker" });
 
 boss.on("error", (error) => {
     console.error("[WORKER] pg-boss error:", error.message);
@@ -120,27 +127,35 @@ async function releaseAdvisoryLock() {
     }
 }
 
-async function shutdown() {
+async function shutdown(signal) {
+    logger.warn("Worker cerrándose por señal", { signal });
     console.log("[WORKER] Señal de terminación recibida; liberando lock...");
     await releaseAdvisoryLock();
     process.exit(0);
 }
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 
 async function start() {
     await acquireAdvisoryLock();
+    await logger.info("Worker iniciado y lock adquirido", { pid: process.pid });
     await ensureStarted();
     await ensureQueue("reporte-procesamiento");
     await ensureQueue("dataset-anonimizacion-backfill");
     await ensureQueue("dataset-embedding-backfill");
-    await ensureQueue("eval-classifier-run");
     await ensureQueue("simulacion-run");
+    await ensureQueue("simulacion-lote");
+    await ensureQueue("apelacion-mantenimiento");
+    await ensureQueue("carga-roster-limpieza");
+    await ensureQueue("reportes-reconciliacion");
+    await ensureQueue("operadores-reconciliacion-huerfanos");
+    await ensureQueue("colegio-aviso");
+    await ensureQueue("colegio-resumen-semanal");
 
     const { maxReintentos, retryDelaySegundos, concurrencia } = await getWorkerParams();
 
-    console.log("[WORKER] Iniciado. Escuchando colas 'reporte-procesamiento', 'dataset-anonimizacion-backfill', 'dataset-embedding-backfill', 'eval-classifier-run' y 'simulacion-run'...");
+    console.log("[WORKER] Iniciado. Escuchando colas 'reporte-procesamiento', 'dataset-anonimizacion-backfill', 'dataset-embedding-backfill', 'simulacion-run' y 'simulacion-lote'...");
     console.log(`[WORKER] Config: max_reintentos=${maxReintentos}, retry_delay=${retryDelaySegundos}s, concurrencia=${concurrencia}, backoff=exponencial`);
 
     const ollamaOk = await checkOllamaHealth();
@@ -162,7 +177,7 @@ async function start() {
             const intento = retryCount + 1;
             const esUltimoIntento = retryCount >= retryLimit;
 
-            console.log(`[WORKER] Procesando reporte ${reporteId} (job ${job.id}, intento ${intento}/${retryLimit + 1})`);
+            await logger.info("Procesando job", { cola: "reporte-procesamiento", jobId: job.id, reporteId, intento });
 
             await guardarReintento({ reporteId, intento, exitoso: false, error: undefined });
 
@@ -203,7 +218,6 @@ async function start() {
                 }
 
                 const data = await res.json();
-                console.log(`[WORKER] OK reporte=${reporteId} estado=${data.estado} latencia=${latencia}ms`);
 
                 await guardarReintento({ reporteId, intento, exitoso: true, error: undefined });
 
@@ -211,15 +225,29 @@ async function start() {
                     console.error(`[WORKER] Error notificando círculo reporte=${reporteId}:`, err.message);
                 });
 
-                notificarColegioSiCorresponde(reporteId).catch((err) => {
-                    console.error(`[WORKER] Error notificando colegio reporte=${reporteId}:`, err.message);
+                notificarColegioSiCorresponde(reporteId)
+                    .catch((err) => {
+                        console.error(`[WORKER] Error notificando colegio reporte=${reporteId}:`, err.message);
+                    })
+                    .finally(() => {
+                        // SPEC-142 (F6): la agregación de patrones usa las alertas como
+                        // marcador de idempotencia — corre DESPUÉS del hook de alertas.
+                        agregarPatronPorReporte(reporteId).catch((err) => {
+                            console.error(`[WORKER] Error agregando patrón institucional reporte=${reporteId}:`, err.message);
+                        });
+                    });
+
+                // SPEC-139 (F5): post-hook aditivo del match (fail-open, FR-005).
+                detectarYRegistrarMatch(reporteId).catch((err) => {
+                    console.error(`[WORKER] Error registrando match reporte=${reporteId}:`, err.message);
                 });
 
                 // Drenar reportes pendientes cuando baja la carga
                 drainPending().catch((err) => {
-                    console.error(`[WORKER] Error drenando pendientes:`, err.message);
+                    console.error("[WORKER] Error drenando pendientes:", err.message);
                 });
 
+                await logger.info("Job completado", { cola: "reporte-procesamiento", jobId: job.id, reporteId, estado: data.estado });
                 return { success: true, estado: data.estado };
             } catch (err) {
                 const latencia = Date.now() - startMs;
@@ -227,6 +255,7 @@ async function start() {
                 console.error(
                     `[WORKER] ERROR reporte=${reporteId} latencia=${latencia}ms intento=${intento} ultimoIntento=${esUltimoIntento} error=${msg}`
                 );
+                await logger.error("Job falló", { cola: "reporte-procesamiento", jobId: job.id, reporteId, error: msg });
                 await guardarReintento({ reporteId, intento, exitoso: false, error: msg });
                 if (esUltimoIntento) {
                     try {
@@ -249,7 +278,7 @@ async function start() {
         const datasetId = job.data.datasetId;
         const retryCount = job.retryCount || 0;
 
-        console.log(`[WORKER] Backfill anonimización dataset ${datasetId} (job ${job.id}, intento ${retryCount + 1})`);
+        await logger.info("Procesando job", { cola: "dataset-anonimizacion-backfill", jobId: job.id, datasetId, intento: retryCount + 1 });
 
         const ollamaHealthy = await checkOllamaHealth();
         if (!ollamaHealthy) {
@@ -259,11 +288,12 @@ async function start() {
 
         try {
             await procesarBackfillAnonimizacion(datasetId);
-            console.log(`[WORKER] OK dataset=${datasetId} anonimizado`);
+            await logger.info("Job completado", { cola: "dataset-anonimizacion-backfill", jobId: job.id, datasetId });
             return { success: true };
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[WORKER] ERROR dataset=${datasetId} intento=${retryCount + 1} error=${msg}`);
+            await logger.error("Job falló", { cola: "dataset-anonimizacion-backfill", jobId: job.id, datasetId, error: msg });
             throw err;
         }
     });
@@ -277,7 +307,7 @@ async function start() {
         const datasetId = job.data.datasetId;
         const retryCount = job.retryCount || 0;
 
-        console.log(`[WORKER] Backfill embedding dataset ${datasetId} (job ${job.id}, intento ${retryCount + 1})`);
+        await logger.info("Procesando job", { cola: "dataset-embedding-backfill", jobId: job.id, datasetId, intento: retryCount + 1 });
 
         const ollamaHealthy = await checkOllamaHealth();
         if (!ollamaHealthy) {
@@ -287,109 +317,12 @@ async function start() {
 
         try {
             await procesarBackfillEmbedding(datasetId);
-            console.log(`[WORKER] OK dataset=${datasetId} embedding generado`);
+            await logger.info("Job completado", { cola: "dataset-embedding-backfill", jobId: job.id, datasetId });
             return { success: true };
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[WORKER] ERROR dataset=${datasetId} intento=${retryCount + 1} error=${msg}`);
-            throw err;
-        }
-    });
-
-    await boss.work("eval-classifier-run", async (jobs) => {
-        const job = Array.isArray(jobs) ? jobs[0] : jobs;
-        if (!job || !job.data) {
-            console.error("[WORKER] Job inválido:", JSON.stringify(jobs));
-            return;
-        }
-        const { runId } = job.data;
-        console.log(`[WORKER] Iniciando eval run ${runId} (job ${job.id})`);
-
-        const {
-            loadActiveEvalCases,
-            runF7Eval,
-            buildF7Report,
-            persistEvalRun,
-            saveEvalReportToFile,
-            markEvalRunFailed,
-            updateEvalRunProgress,
-        } = await import("../src/lib/ai/eval-runner.ts");
-
-        try {
-            const run = await prisma.evalRun.update({ where: { id: runId }, data: { estado: "EN_PROGRESO" } });
-
-            const ollamaHealthy = await checkOllamaHealth();
-            if (!ollamaHealthy) {
-                throw new Error("Ollama no disponible");
-            }
-
-            const snapshot = run.configSnapshot || {};
-            const modeloClasificacion = snapshot.modeloClasificacion || "ornith:9b";
-            const ollamaBaseUrl = await getOllamaBaseUrl();
-            const tagsRes = await fetch(`${ollamaBaseUrl}/api/tags`, { signal: AbortSignal.timeout(10000) });
-            if (tagsRes.ok) {
-                const tagsData = await tagsRes.json();
-                const installed = (tagsData.models || []).map((m) => m.name || m.model);
-                if (!installed.includes(modeloClasificacion)) {
-                    throw new Error(`El modelo ${modeloClasificacion} no está instalado en Ollama`);
-                }
-            }
-
-            const { examples, fixtureVersion } = await loadActiveEvalCases();
-            const start = Date.now();
-            const results = await runF7Eval(examples, {
-                config: {
-                    modeloClasificacion,
-                    modeloEmbedding: snapshot.modeloEmbedding || "nomic-embed-text",
-                    umbralRevision: snapshot.umbralRevision ?? 1.0,
-                    nVotos: snapshot.nVotos ?? 5,
-                    temperaturaVotos: snapshot.temperaturaVotos ?? 0.7,
-                    ragTopK: snapshot.ragTopK ?? 3,
-                    ollamaBaseUrl,
-                    fixtureVersion,
-                },
-                onProgress: (done, total) => updateEvalRunProgress(runId, done, total),
-            });
-            const duracionTotalMs = Date.now() - start;
-
-            const report = buildF7Report(results, fixtureVersion, {
-                modeloClasificacion,
-                modeloEmbedding: snapshot.modeloEmbedding || "nomic-embed-text",
-                duracionTotalMs,
-            });
-
-            const resultados = examples
-                .map((ex, i) => (ex.id && results[i] ? { casoEvalId: ex.id, result: results[i] } : null))
-                .filter(Boolean);
-
-            await persistEvalRun(runId, report, { resultados });
-            const outFile = await saveEvalReportToFile(report);
-
-            await logAudit({
-                accion: "EXPERIMENT_COMPLETE",
-                tipoRecurso: "EvalRun",
-                recursoId: runId,
-                usuarioId: run.creadoPorId ?? undefined,
-                valorNuevo: JSON.stringify({
-                    nombre: run.nombre,
-                    fixtureVersion,
-                    metrics: report.metrics,
-                    operational: report.operational,
-                }),
-                ipAddress: "worker",
-                userAgent: "worker",
-            });
-
-            console.log(`[WORKER] OK eval run=${runId} fixtureVersion=${fixtureVersion} reporte=${outFile}`);
-            return { success: true, runId };
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : "Error desconocido";
-            console.error(`[WORKER] ERROR eval run=${runId} error=${msg}`);
-            try {
-                await markEvalRunFailed(runId, msg);
-            } catch (markErr) {
-                console.error(`[WORKER] ERROR no se pudo marcar eval run=${runId} como fallido:`, markErr);
-            }
+            await logger.error("Job falló", { cola: "dataset-embedding-backfill", jobId: job.id, datasetId, error: msg });
             throw err;
         }
     });
@@ -401,15 +334,16 @@ async function start() {
             return;
         }
         const { runId, modeloClasificacion } = job.data;
-        console.log(`[WORKER] Iniciando simulación run ${runId} modelo ${modeloClasificacion} (job ${job.id})`);
+        await logger.info("Procesando job", { cola: "simulacion-run", jobId: job.id, runId, modeloClasificacion });
         try {
             const { runSimulacionBatchCreator } = await import("../src/lib/simulacion/executor.ts");
             await runSimulacionBatchCreator(runId, modeloClasificacion);
-            console.log(`[WORKER] OK simulacion-run=${runId}`);
+            await logger.info("Job completado", { cola: "simulacion-run", jobId: job.id, runId });
             return { success: true, runId };
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error desconocido";
             console.error(`[WORKER] ERROR simulacion-run=${runId} error=${msg}`);
+            await logger.error("Job falló", { cola: "simulacion-run", jobId: job.id, runId, error: msg });
             try {
                 await prisma.simulacionRun.update({
                     where: { id: runId },
@@ -432,72 +366,230 @@ async function start() {
             return;
         }
         const { runIds } = job.data;
-        console.log(`[WORKER] Iniciando lote de simulación: ${runIds.length} run(s) (job ${job.id})`);
+        await logger.info("Procesando job", { cola: "simulacion-lote", jobId: job.id, totalRuns: runIds.length });
 
-        const { runSimulacionBatchCreator } = await import("../src/lib/simulacion/executor.ts");
-        const { actualizarProgresoYEstado } = await import("../src/lib/simulacion/progreso.ts");
+        try {
+            const { runSimulacionBatchCreator } = await import("../src/lib/simulacion/executor.ts");
+            const { actualizarProgresoYEstado } = await import("../src/lib/simulacion/progreso.ts");
 
-        const paramTimeout = await prisma.parametroSistema.findUnique({
-            where: { clave: "ia.simulacion_timeout_minutos" },
-        });
-        const timeoutMin = Number(paramTimeout?.valor) > 0 ? Number(paramTimeout.valor) : 60;
-        const esperaMaxMs = timeoutMin * 60_000 + 10 * 60_000; // timeout del run + margen
-        const POLL_MS = 10_000;
+            const paramTimeout = await prisma.parametroSistema.findUnique({
+                where: { clave: "ia.simulacion_timeout_minutos" },
+            });
+            const timeoutMin = Number(paramTimeout?.valor) > 0 ? Number(paramTimeout.valor) : 60;
+            const esperaMaxMs = timeoutMin * 60_000 + 10 * 60_000; // timeout del run + margen
+            const POLL_MS = 10_000;
 
-        const ESTADOS_FINALES_RUN = ["COMPLETADA", "FALLIDA", "CANCELADA"];
+            const ESTADOS_FINALES_RUN = ["COMPLETADA", "FALLIDA", "CANCELADA"];
 
-        for (const runId of runIds) {
-            let run = await prisma.simulacionRun.findUnique({ where: { id: runId } });
-            if (!run) {
-                console.error(`[WORKER] Lote: run ${runId} no encontrado; se salta.`);
-                continue;
-            }
-            if (ESTADOS_FINALES_RUN.includes(run.estado)) {
-                console.log(`[WORKER] Lote: run ${runId} ya está ${run.estado}; se salta.`);
-                continue;
-            }
-
-            try {
-                if (run.estado === "PENDIENTE") {
-                    console.log(`[WORKER] Lote: creando reportes de run ${runId} modelo ${run.modelo}`);
-                    await runSimulacionBatchCreator(runId, run.modelo);
+            for (const runId of runIds) {
+                let run = await prisma.simulacionRun.findUnique({ where: { id: runId } });
+                if (!run) {
+                    console.error(`[WORKER] Lote: run ${runId} no encontrado; se salta.`);
+                    continue;
+                }
+                if (ESTADOS_FINALES_RUN.includes(run.estado)) {
+                    console.log(`[WORKER] Lote: run ${runId} ya está ${run.estado}; se salta.`);
+                    continue;
                 }
 
-                // Esperar completitud (poll de estado; el cierre lo fija el hook de progreso)
-                const inicio = Date.now();
-                for (;;) {
-                    await new Promise((r) => setTimeout(r, POLL_MS));
-                    const { estado } = await actualizarProgresoYEstado(runId);
-                    if (ESTADOS_FINALES_RUN.includes(estado)) {
-                        console.log(`[WORKER] Lote: run ${runId} terminó con estado ${estado}.`);
-                        break;
+                try {
+                    if (run.estado === "PENDIENTE") {
+                        console.log(`[WORKER] Lote: creando reportes de run ${runId} modelo ${run.modelo}`);
+                        await runSimulacionBatchCreator(runId, run.modelo);
                     }
-                    if (Date.now() - inicio > esperaMaxMs) {
-                        console.error(`[WORKER] Lote: run ${runId} excedió la espera máxima; se marca FALLIDA y se continúa.`);
+
+                    // Esperar completitud (poll de estado; el cierre lo fija el hook de progreso)
+                    const inicio = Date.now();
+                    for (;;) {
+                        await new Promise((r) => setTimeout(r, POLL_MS));
+                        const { estado } = await actualizarProgresoYEstado(runId);
+                        if (ESTADOS_FINALES_RUN.includes(estado)) {
+                            console.log(`[WORKER] Lote: run ${runId} terminó con estado ${estado}.`);
+                            break;
+                        }
+                        if (Date.now() - inicio > esperaMaxMs) {
+                            console.error(`[WORKER] Lote: run ${runId} excedió la espera máxima; se marca FALLIDA y se continúa.`);
+                            await prisma.simulacionRun.update({
+                                where: { id: runId },
+                                data: { estado: "FALLIDA", fechaFin: new Date() },
+                            });
+                            break;
+                        }
+                    }
+                } catch (err) {
+                    const msg = err instanceof Error ? err.message : "Error desconocido";
+                    console.error(`[WORKER] Lote: error en run ${runId}: ${msg}; se continúa con el siguiente.`);
+                    try {
                         await prisma.simulacionRun.update({
                             where: { id: runId },
                             data: { estado: "FALLIDA", fechaFin: new Date() },
                         });
-                        break;
+                    } catch (markErr) {
+                        console.error(`[WORKER] Lote: no se pudo marcar run ${runId} como fallido:`, markErr);
                     }
                 }
-            } catch (err) {
-                const msg = err instanceof Error ? err.message : "Error desconocido";
-                console.error(`[WORKER] Lote: error en run ${runId}: ${msg}; se continúa con el siguiente.`);
-                try {
-                    await prisma.simulacionRun.update({
-                        where: { id: runId },
-                        data: { estado: "FALLIDA", fechaFin: new Date() },
-                    });
-                } catch (markErr) {
-                    console.error(`[WORKER] Lote: no se pudo marcar run ${runId} como fallido:`, markErr);
-                }
             }
-        }
 
-        console.log(`[WORKER] OK lote de simulación (${runIds.length} run(s))`);
-        return { success: true, runIds };
+            await logger.info("Job completado", { cola: "simulacion-lote", jobId: job.id, totalRuns: runIds.length });
+            return { success: true, runIds };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            await logger.error("Job falló", { cola: "simulacion-lote", jobId: job.id, totalRuns: runIds.length, error: msg });
+            throw err;
+        }
     });
+
+    // SPEC-110: mantenimiento diario de apelaciones (aviso de plazo al comité +
+    // purga de evidencia a los N días de resuelta). Programado a las 06:00
+    // America/Bogota; el supervisor mantiene vivo este worker.
+    await boss.schedule("apelacion-mantenimiento", "0 6 * * *", {}, { tz: "America/Bogota" });
+    await boss.work("apelacion-mantenimiento", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        const jobId = job?.id;
+        await logger.info("Procesando job", { cola: "apelacion-mantenimiento", jobId });
+        try {
+            const { ejecutarMantenimientoApelaciones } = await import("../src/lib/apelacion-mantenimiento.ts");
+            const { avisos, purgados } = await ejecutarMantenimientoApelaciones();
+            await logger.info("Job completado", { cola: "apelacion-mantenimiento", jobId, avisos, purgados });
+            return { success: true, avisos, purgados };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR mantenimiento de apelaciones: ${msg}`);
+            await logger.error("Job falló", { cola: "apelacion-mantenimiento", jobId, error: msg });
+            throw err;
+        }
+    });
+
+    // SPEC-132 (S-4): limpieza backstop de sesiones de carga vencidas (el roster
+    // vive server-side; single-use al confirmar, el TTL es solo el respaldo).
+    await boss.schedule("carga-roster-limpieza", "*/15 * * * *", {}, { tz: "America/Bogota" });
+    await boss.work("carga-roster-limpieza", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        const jobId = job?.id;
+        await logger.info("Procesando job", { cola: "carga-roster-limpieza", jobId });
+        try {
+            const { purgarSesionesRosterVencidas } = await import("../src/lib/colegio/carga/sesion-roster.ts");
+            const purgadas = await purgarSesionesRosterVencidas();
+            await logger.info("Job completado", { cola: "carga-roster-limpieza", jobId, purgadas });
+            return { success: true, purgadas };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR limpieza de sesiones de carga: ${msg}`);
+            await logger.error("Job falló", { cola: "carga-roster-limpieza", jobId, error: msg });
+            throw err;
+        }
+    });
+
+    // SPEC-137 (E-5, FR-003): reconciliación del encolado — re-encola reportes
+    // PENDIENTE sin job (huérfanos de un fallo transitorio de la cola al crear).
+    await boss.schedule("reportes-reconciliacion", "*/15 * * * *", {}, { tz: "America/Bogota" });
+    await boss.work("reportes-reconciliacion", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        const jobId = job?.id;
+        await logger.info("Procesando job", { cola: "reportes-reconciliacion", jobId });
+        try {
+            const { reencolarPendientesSinJob } = await import("../src/lib/queue.ts");
+            const { encontrados, encolados, saltados } = await reencolarPendientesSinJob();
+            await logger.info("Job completado", { cola: "reportes-reconciliacion", jobId, encontrados, encolados, saltados });
+            return { success: true, encontrados, encolados, saltados };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR reconciliación de reportes: ${msg}`);
+            await logger.error("Job falló", { cola: "reportes-reconciliacion", jobId, error: msg });
+            throw err;
+        }
+    });
+
+    // SPEC-182 (I-60): reconciliación de reportes REVISION_MANUAL sin operador.
+    // El intervalo se lee de ParametroSistema al arrancar; un restart aplica cambios.
+    const intervaloMin = Number.parseInt(
+        (await getParametroSistemaValor("operadores.reconciliacion_intervalo_min")) ?? "15",
+        10
+    );
+    const cronReconciliacionHuerfanos =
+        Number.isFinite(intervaloMin) && intervaloMin >= 1 && intervaloMin <= 59
+            ? `*/${intervaloMin} * * * *`
+            : "*/15 * * * *";
+    await boss.schedule("operadores-reconciliacion-huerfanos", cronReconciliacionHuerfanos, {}, { tz: "America/Bogota" });
+    await boss.work("operadores-reconciliacion-huerfanos", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        const jobId = job?.id;
+        await logger.info("Procesando job", { cola: "operadores-reconciliacion-huerfanos", jobId });
+        try {
+            const { reconciliarHuerfanos } = await import("../src/lib/operadores/reconciliacion-huerfanos.ts");
+            const resumen = await reconciliarHuerfanos();
+            await logger.info("Job completado", { cola: "operadores-reconciliacion-huerfanos", jobId, ...resumen });
+            return { success: true, ...resumen };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR reconciliación de huérfanos: ${msg}`);
+            await logger.error("Job falló", { cola: "operadores-reconciliacion-huerfanos", jobId, error: msg });
+            throw err;
+        }
+    });
+
+    // SPEC-149 (FR-002): avisos del colegio encolados por el hook de alertas
+    // (el retry lo da pg-boss; un fallo NO consume la idempotencia).
+    await boss.work("colegio-aviso", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        if (!job || !job.data) return;
+        const { procesarEnvioAviso } = await import("../src/lib/colegio/avisos.ts");
+        await logger.info("Procesando job", { cola: "colegio-aviso", jobId: job.id, tipoEvento: job.data.tipoEvento });
+        try {
+            const resultado = await procesarEnvioAviso(job.data);
+            await logger.info("Job completado", { cola: "colegio-aviso", jobId: job.id, enviado: resultado.enviado, motivo: resultado.motivo });
+            return { success: true, ...resultado };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            await logger.error("Job falló", { cola: "colegio-aviso", jobId: job.id, error: msg });
+            throw err;
+        }
+    });
+
+    // SPEC-149 (FR-005): resumen del lunes 07:00 America/Bogota (molde
+    // apelacion-mantenimiento; idempotente por semana vía RegistroAvisoColegio).
+    await boss.schedule("colegio-resumen-semanal", "0 7 * * 1", {}, { tz: "America/Bogota" });
+    await boss.work("colegio-resumen-semanal", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        const jobId = job?.id;
+        await logger.info("Procesando job", { cola: "colegio-resumen-semanal", jobId });
+        try {
+            const { enviarResumenesSemanales } = await import("../src/lib/colegio/avisos-resumen.ts");
+            const resumen = await enviarResumenesSemanales();
+            await logger.info("Job completado", { cola: "colegio-resumen-semanal", jobId, ...resumen });
+            return { success: true, ...resumen };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            await logger.error("Job falló", { cola: "colegio-resumen-semanal", jobId, error: msg });
+            throw err;
+        }
+    });
+
+    // SPEC-172 (Pilar D.5): deriva del motor en producción — lunes 07:00
+    // America/Bogota, misma franja que el resumen de colegios. La lógica vive
+    // en src/lib/motor/deriva-semanal.ts (script delgado, handler importable).
+    await ensureQueue("motor-deriva-semanal");
+    await boss.schedule("motor-deriva-semanal", "0 7 * * 1", {}, { tz: "America/Bogota" });
+    await boss.work("motor-deriva-semanal", async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        const jobId = job?.id;
+        await logger.info("Procesando job", { cola: "motor-deriva-semanal", jobId });
+        try {
+            const { ejecutarDerivaSemanal } = await import("../src/lib/motor/deriva-semanal.ts");
+            const resultado = await ejecutarDerivaSemanal();
+            await logger.info("Job completado", { cola: "motor-deriva-semanal", jobId, ...resultado });
+            return { success: true, ...resultado };
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Error desconocido";
+            console.error(`[WORKER] ERROR deriva del motor: ${msg}`);
+            await logger.error("Job falló", { cola: "motor-deriva-semanal", jobId, error: msg });
+            throw err;
+        }
+    });
+
+    // SPEC-223 (002-PI-124): digest semanal al CEO — schedule registrado desde
+    // scripts/digest-semanal-schedule.mjs (extraído por la regla max-lines 500).
+    await registrarScheduleDigestSemanal(boss, logger, ensureQueue);
 }
 
 start().catch((err) => {

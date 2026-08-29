@@ -50,6 +50,11 @@ const MODELOS = [
   "partidaPresupuesto",
   "proyecto",
   "entregable",
+  "hitoProyecto",
+  "partidaProyecto",
+  "recursoProyecto",
+  "leccionAprendida",
+  "riesgoProyecto",
   "documentoChunk",
   "moduleSetting",
 ] as const;

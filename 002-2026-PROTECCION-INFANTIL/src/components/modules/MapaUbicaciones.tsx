@@ -167,11 +167,14 @@ export function MapaUbicaciones({
     paises,
     center,
     zoom,
+    sinUbicacion = 0,
 }: {
     puntos: PuntoMapa[];
     paises?: PaisMapa[];
     center?: [number, number];
     zoom?: number;
+    /** SPEC-115: reportes que el mapa no puede pintar por falta de coordenadas. */
+    sinUbicacion?: number;
 }) {
     const validos = puntos.filter((p) => typeof p.lat === "number" && typeof p.lng === "number");
     const [geoData, setGeoData] = useState<GeoJSON.GeoJsonObject | null>(null);
@@ -315,6 +318,14 @@ export function MapaUbicaciones({
                 <div className="absolute bottom-3 left-3 z-[1000] rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
                     No se pudieron cargar los contornos geográficos.
                 </div>
+            )}
+
+            {/* SPEC-115: degradación honesta — el mapa admite lo que no puede pintar
+                en vez de callar (el dato de texto de la ciudad nunca se pierde). */}
+            {sinUbicacion > 0 && (
+                <p className="mt-2 text-xs text-muted">
+                    {sinUbicacion} reporte(s) sin ubicación en el mapa (su ciudad no tiene coordenadas).
+                </p>
             )}
         </div>
     );

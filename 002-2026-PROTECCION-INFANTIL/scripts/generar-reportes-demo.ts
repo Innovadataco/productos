@@ -38,7 +38,7 @@ interface DemoReporte {
     ciudad: string;
     pais: string;
     esAnonimo: boolean;
-    usuarioId?: string;
+    usuarioId?: string | undefined;
     edadVictima: number;
     fechaIncidente: Date;
     categoriaEsperada: Categoria;
@@ -155,7 +155,7 @@ async function insertarReportes(reportes: DemoReporte[]) {
                 ciudadId: r.ciudadId,
                 esAnonimo: r.esAnonimo,
                 edadVictima: r.edadVictima,
-                usuarioId: r.usuarioId,
+                usuarioId: r.usuarioId ?? null,
                 numeroSeguimiento,
                 estado: "PENDIENTE",
             },

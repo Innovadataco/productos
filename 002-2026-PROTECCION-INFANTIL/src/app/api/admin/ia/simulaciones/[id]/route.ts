@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { actualizarProgresoYEstado, refrescarMetricasSimulacion, tieneMetricasCompletas } from "@/lib/simulacion/progreso";
+import { IaSimulacionesService } from "@/lib/dal/services/ia-simulaciones";
 import { RolUsuario } from "@prisma/client";
 import { z } from "zod";
 
@@ -31,23 +30,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const run = await prisma.simulacionRun.findUnique({
-            where: { id: parsedId.data },
-            include: { creadoPor: { select: { email: true, nombre: true } } },
-        });
-        if (!run) {
-            throw new AppError("Simulación no encontrada", ERROR_CODES.NOT_FOUND, 404);
-        }
-
-        const { progreso, estado } = await actualizarProgresoYEstado(run.id);
-        if (estado === "COMPLETADA" && !tieneMetricasCompletas(run.metricasJson)) {
-            await refrescarMetricasSimulacion(run.id);
-        }
-
-        const runActualizada = await prisma.simulacionRun.findUnique({
-            where: { id: run.id },
-            include: { creadoPor: { select: { email: true, nombre: true } } },
-        });
+        // SPEC-053: refresco de progreso/métricas y re-lectura viven en el DAL.
+        const runActualizada = await new IaSimulacionesService().obtener(parsedId.data);
 
         return NextResponse.json(runActualizada);
     } catch (error) {

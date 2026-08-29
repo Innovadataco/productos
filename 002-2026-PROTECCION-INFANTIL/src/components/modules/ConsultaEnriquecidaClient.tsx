@@ -6,8 +6,12 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Alerta } from "@/components/ui/Alerta";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
+import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
 import { formatPlataformasResumen } from "@/lib/plataforma";
 import { CATEGORIAS_LABELS } from "@/lib/labels";
+import { ConsultaVaciaBloque, type ConsultaVaciaBloqueData } from "./ConsultaVaciaBloque";
 
 const MapaUbicaciones = dynamic(
     () => import("./MapaUbicaciones").then((mod) => mod.MapaUbicaciones),
@@ -16,7 +20,7 @@ const MapaUbicaciones = dynamic(
 
 function formatFecha(iso: string | null | undefined) {
     if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("es-CO", { dateStyle: "medium" });
+    return new Date(iso).toLocaleDateString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium" });
 }
 
 type ReporteDetalle = {
@@ -49,6 +53,8 @@ type DetalleResponse = {
     identificador: string;
     tieneReportes: boolean;
     mensaje?: string;
+    // F3 (N-5): contenido curado del estado vacío (parámetros, sin IA).
+    bloqueVacia?: ConsultaVaciaBloqueData;
     actividad?: "alta" | "baja";
     totalReportes?: number;
     reportesAutenticados?: number;
@@ -79,7 +85,7 @@ export function ConsultaEnriquecidaClient() {
         setError("");
         setData(null);
         try {
-            const res = await fetch(`/api/consulta/detalle`, {
+            const res = await fetch("/api/consulta/detalle", {
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
@@ -107,6 +113,11 @@ export function ConsultaEnriquecidaClient() {
             total: u.total,
         }));
 
+    // SPEC-115: degradación honesta — contar los reportes que el mapa no puede pintar
+    const sinUbicacion = (data?.ubicaciones ?? [])
+        .filter((u) => typeof u.lat !== "number" || typeof u.lng !== "number")
+        .reduce((sum, u) => sum + u.total, 0);
+
     return (
         <div className="space-y-5">
             <form onSubmit={handleSubmit}>
@@ -126,14 +137,17 @@ export function ConsultaEnriquecidaClient() {
             </form>
 
             {error && (
-                <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                <Alerta tono="error" className="p-4">
                     {error}
-                </div>
+                </Alerta>
             )}
 
             {data && !data.tieneReportes && (
-                <div className="rounded-xl glass p-6 text-center">
-                    <p className="text-body">{data.mensaje || "Sin reportes registrados para este identificador."}</p>
+                <div className="space-y-4">
+                    <div className="rounded-xl glass p-6 text-center">
+                        <p className="text-body">{data.mensaje || "Sin reportes registrados para este identificador."}</p>
+                    </div>
+                    {data.bloqueVacia && <ConsultaVaciaBloque bloque={data.bloqueVacia} identificador={data.identificador} />}
                 </div>
             )}
 
@@ -161,40 +175,38 @@ export function ConsultaEnriquecidaClient() {
                     </GlassCard>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <MetricCard label="Total reportes" value={data.totalReportes ?? 0} />
-                        <MetricCard label="Último reporte" value={formatFecha(data.ultimoReporte)} />
-                        <MetricCard label="Reportes autenticados" value={data.reportesAutenticados ?? 0} />
+                        <TarjetaMetrica mono label="Total reportes" value={data.totalReportes ?? 0} />
+                        <TarjetaMetrica mono label="Último reporte" value={formatFecha(data.ultimoReporte)} />
+                        <TarjetaMetrica mono label="Reportes autenticados" value={data.reportesAutenticados ?? 0} />
                     </div>
 
                     <GlassCard>
                         <h3 className="text-base font-semibold text-body mb-4">Reportes clasificados</h3>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-100/70 text-subtle dark:bg-slate-800/60">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">Plataforma</th>
-                                        <th className="px-4 py-3 font-medium">Fecha</th>
-                                        <th className="px-4 py-3 font-medium">Clasificación</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {(data.reportes ?? []).map((r) => (
-                                        <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                                            <td className="px-4 py-3 text-body">
-                                                {r.plataforma}
-                                                {r.esAnonimo && (
-                                                    <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-muted dark:bg-slate-800">
+                        <Tabla sinContenedor>
+                            <TablaHead>
+                                <tr>
+                                    <th className="px-4 py-3 font-medium">Plataforma</th>
+                                    <th className="px-4 py-3 font-medium">Fecha</th>
+                                    <th className="px-4 py-3 font-medium">Clasificación</th>
+                                </tr>
+                            </TablaHead>
+                            <TablaBody>
+                                {(data.reportes ?? []).map((r) => (
+                                    <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                                        <td className="px-4 py-3 text-body">
+                                            {r.plataforma}
+                                            {r.esAnonimo && (
+                                                <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-muted dark:bg-slate-800">
                                                         Anónimo
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-body">{formatFecha(r.fecha)}</td>
-                                            <td className="px-4 py-3 text-body">{r.categoriaGrupo}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-body">{formatFecha(r.fecha)}</td>
+                                        <td className="px-4 py-3 text-body">{r.categoriaGrupo}</td>
+                                    </tr>
+                                ))}
+                            </TablaBody>
+                        </Tabla>
                     </GlassCard>
 
                     {data.timeline && data.timeline.length > 0 && (
@@ -221,20 +233,13 @@ export function ConsultaEnriquecidaClient() {
                             <p className="text-xs text-subtle mb-3">
                                 Ciudades con reportes. Sin direcciones exactas ni datos personales.
                             </p>
-                            <MapaUbicaciones puntos={puntosMapa} />
+                            {/* U1 (002-PI-051): el mapa arranca en vista general (zoom 3,
+                                sin acercar); el usuario acerca manualmente. */}
+                            <MapaUbicaciones puntos={puntosMapa} zoom={3} sinUbicacion={sinUbicacion} />
                         </GlassCard>
                     )}
                 </div>
             )}
-        </div>
-    );
-}
-
-function MetricCard({ label, value }: { label: string; value: string | number }) {
-    return (
-        <div className="glass rounded-2xl p-5 text-center">
-            <p className="text-2xl font-bold text-body font-mono">{value}</p>
-            <p className="mt-1 text-xs text-subtle">{label}</p>
         </div>
     );
 }

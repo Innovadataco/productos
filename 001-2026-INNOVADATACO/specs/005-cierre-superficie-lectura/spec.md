@@ -5,8 +5,9 @@ de pruebas `feature/001-scaffolding`; no se abren ramas por feature — AGENTS.m
 
 **Created**: 2026-07-23 · **Revisada tras la aprobación de ZEUS**: 2026-07-23
 
-**Status**: **Approved por ZEUS** (2026-07-23, sobre `62736c2d`, con la ampliación de
-alcance aprobada y repriorizada). No se implementa hasta que ZEUS apruebe el plan.
+**Status**: **Terminada (ACTA-VALIDACION 004, 2026-07-23)** — cierra I-008, I-009 e I-010.
+Approved por ZEUS (2026-07-23, sobre `62736c2d`, con la ampliación de alcance aprobada y
+repriorizada).
 
 **Input**: Incidencias **I-010** (escritura anónima: borrado y modificación sin sesión —
 **crítica**), **I-009** (toda la superficie de lectura es pública) e **I-008** (no existe

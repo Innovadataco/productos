@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { MisReportesList } from "@/components/modules/MisReportesList";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Cargando } from "@/components/ui/Cargando";
 
 type MisReporteItem = {
     id: string;
@@ -21,7 +22,7 @@ type MisReporteItem = {
     esAnonimo: boolean;
     creadoEn: string;
     clasificacion: { categoria: string; categoriaLabel: string; categoriaGrupo: string; confianza: number } | null;
-    ranking: { score: number; nivelRiesgo: "BAJO" | "MEDIO" | "ALTO"; totalReportes: number } | null;
+    ranking: { totalReportes: number } | null;
 };
 
 export default function MisReportesPage() {
@@ -43,8 +44,8 @@ export default function MisReportesPage() {
                 user.rol === "COMITE_VALIDACION"
                     ? "/dashboard/admin/comite"
                     : user.rol === "OPERADOR"
-                      ? "/dashboard/admin/operadores"
-                      : "/dashboard/admin";
+                        ? "/dashboard/admin/operadores"
+                        : "/dashboard/admin";
             router.push(target);
             return;
         }
@@ -73,8 +74,7 @@ export default function MisReportesPage() {
     if (authLoading || (!user && isLoading)) {
         return (
             <main className="mx-auto max-w-3xl px-4 py-12 text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                <p className="mt-3 text-sm text-subtle">Cargando...</p>
+                <Cargando />
             </main>
         );
     }
@@ -88,8 +88,7 @@ export default function MisReportesPage() {
 
             {isLoading ? (
                 <div className="glass rounded-2xl p-8 text-center animate-pulse">
-                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                    <p className="mt-3 text-sm text-subtle">Cargando reportes...</p>
+                    <Cargando texto="Cargando reportes..." />
                 </div>
             ) : error ? (
                 <ErrorState

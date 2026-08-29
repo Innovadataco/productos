@@ -1,7 +1,26 @@
 # Spec 017 — Módulo de documentación navegable
 
-> **Status**: PLANEADO (antes "EN DISEÑO", normalizado por spec 087-US1) — índice propuesto en [`plan.md`](plan.md). Se espera aprobación del esqueleto antes de generar contenido o UI.
+> **Status**: IMPLEMENTADO (2026-07-30, cola nocturna 002-PI-046) — índice de 3 capas y
+> viewer implementados. Pendiente de auditoría de ZEUS para el cierre formal.
 > Fecha: 2026-07-18.
+
+## Implementación (cierre)
+
+- **Índice maestro** (`src/lib/docs/indice.ts`): los temas de las 3 capas del `plan.md`
+  aprobado, cada uno apuntando SOLO a documentos reales del repo (guarda de tests: toda
+  ruta del índice existe en disco). Lector con allowlist + anti-traversal
+  (`src/lib/docs/documentos.ts`).
+- **Viewer** (`src/lib/docs/markdown.tsx`): renderizador Markdown → JSX server-safe
+  (sin `dangerouslySetInnerHTML`): encabezados, tablas, listas, citas, código y enlaces
+  seguros (solo http/https y relativos internos).
+- **Rutas de lectura**: `/docs` (capa 1 pública), `/docs/operar` (capa 2 autenticada) y
+  `/docs/tecnico` (capa 3 ADMIN/SCHOOL_ADMIN); enforcement server-side por capa (el proxy
+  solo abre el prefijo, con comentario). Endpoint `GET /api/docs/indice` con índice JSON
+  filtrado por rol (divulgación progresiva).
+- **Fuera de alcance de esta entrega** (queda documentado): enlaces contextuales desde el
+  panel admin ("¿Qué es esto?") — sección Alcance del spec; edición desde la UI.
+- Gates: suite 1248+22 tests verdes, `tsc`, build y `arch:check` verdes (artefactos
+  `02-roles-capacidades.md` y `03-pantallas.md` regenerados por el prefijo nuevo).
 
 ## Objetivo
 

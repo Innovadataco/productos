@@ -34,7 +34,7 @@ describe("GET /api/admin/ia/modelos", () => {
         expect(body.models.find((m: { name: string }) => m.name === "nomic-embed-text")).toBeDefined();
     });
 
-    it("returns error when Ollama is unreachable", async () => {
+    it("degrada a 503 estructurado cuando Ollama es inalcanzable (mismo patrón que el sondeo de I-24)", async () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
 
@@ -42,8 +42,12 @@ describe("GET /api/admin/ia/modelos", () => {
 
         const req = crearRequestAutenticado("GET", "http://localhost/api/admin/ia/modelos", null);
         const res = await GET(req);
-        expect(res.status).toBe(500);
+        // Un cerebro caído no es un 500: el Centro de Control recibe la respuesta
+        // degradada del contrato hermano (/api/admin/ia/ollama/probar).
+        expect(res.status).toBe(503);
         const body = await res.json();
-        expect(body.error.message).toContain("Ollama");
+        expect(body.ok).toBe(false);
+        expect(body.error.code).toBe("SERVICE_UNAVAILABLE");
+        expect(body.error.message).toContain("Ollama inalcanzable");
     });
 });

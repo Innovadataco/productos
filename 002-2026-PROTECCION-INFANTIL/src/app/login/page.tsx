@@ -5,15 +5,18 @@ import Link from "next/link";
 import { LoginForm } from "@/components/modules/LoginForm";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Alerta } from "@/components/ui/Alerta";
 
 export default function LoginPage() {
     const { login } = useAuth();
     const [error, setError] = useState("");
 
     const handleLogin = async (email: string, password: string) => {
-        const { ok, user } = await login(email, password);
+        const { ok, user, error: serverError } = await login(email, password);
         if (!ok) {
-            setError("Credenciales incorrectas. Verifica tu email y contraseña.");
+            // SPEC-119: si el servidor explica el motivo (servicio vencido, cuenta
+            // desactivada), se muestra tal cual; si no, genérico de credenciales.
+            setError(serverError || "Credenciales incorrectas. Verifica tu email y contraseña.");
             return;
         }
 
@@ -54,15 +57,15 @@ export default function LoginPage() {
                 <GlassCard>
                     <LoginForm onLogin={handleLogin} />
                     {error && (
-                        <div className="mt-4 rounded-xl bg-red-50 dark:bg-red-950/30 p-3 text-center text-sm text-red-600 dark:text-red-400">
+                        <Alerta tono="error" className="mt-4 text-center">
                             {error}
-                        </div>
+                        </Alerta>
                     )}
                 </GlassCard>
 
                 <p className="mt-6 text-center text-sm text-muted">
                     ¿No tienes cuenta?{" "}
-                    <Link href="/registro" className="font-semibold text-accent hover:underline">
+                    <Link href="/registro/inicio" className="font-semibold text-accent hover:underline">
                         Regístrate
                     </Link>
                 </p>

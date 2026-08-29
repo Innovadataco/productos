@@ -18,6 +18,43 @@ const STATUS_CANONICOS = new Set([
     "CERRADA",
 ]);
 
+/**
+ * SPEC-107 (cola 025, B3): specs históricas incompletas (sin plan.md y/o tasks.md) a la
+ * fecha de activación de esta regla. La lista SOLO PUEDE ENCOGER, NUNCA CRECER:
+ * toda spec nueva o fuera de esta lista DEBE tener plan.md y tasks.md o el gate falla.
+ * Para sacar una spec de la lista hay que completar sus artefactos (backfill), no borrarla.
+ */
+const DEUDA_HEREDADA = new Set([
+    "009-dashboard-publico",
+    "011-centro-control-ia",
+    "012-baja-reportes",
+    "013-admin-motor-ia",
+    "014-laboratorio-ia",
+    "015-anti-abuso",
+    "017-documentacion",
+    "018-operadores-casos",
+    "022-expediente-transiciones",
+    "023-estados-usuario-sla",
+    "024-comite-validacion",
+    "025-anonimizacion-reforzada",
+    "026-pipeline-spam-prioridad",
+    "027-motor-encolamiento",
+    "028-redisenio-home",
+    "029-redisenio-consulta-panel-usuario",
+    "030-circulo-confianza-multiples-identificadores",
+    "031-mejoras-ui-agrupacion-categorias",
+    "088-pendientes-afinamiento",
+]);
+
+/**
+ * SPEC-126 (US3, FR-008): toda spec NUEVA (numeración >= 126) DEBE declarar su
+ * "Impacto en arquitectura:" en spec.md. Las históricas (< 126) quedan fuera por
+ * número; esta lista es para excepciones explícitas dentro de las nuevas y, como
+ * DEUDA_HEREDADA, SOLO PUEDE ENCOGER (hoy está vacía y el tope duro es 0).
+ */
+const SIN_IMPACTO_HEREDADO = new Set<string>([]);
+const DESDE_SPEC_IMPACTO = 126;
+
 function carpetasSpecs(): string[] {
     return fs
         .readdirSync(SPECS_DIR, { withFileTypes: true })
@@ -46,11 +83,11 @@ describe("disciplina Spec-Kit (spec 087)", () => {
         expect(violaciones, violaciones.join("; ")).toEqual([]);
     });
 
-    it("specs >021 CERRADA tienen cierre (carpeta o docs/)", () => {
+    it("specs CERRADA tienen cierre (carpeta o docs/) — SIN exenciones (auditoría §3.2a)", () => {
         const violaciones: string[] = [];
         for (const carpeta of carpetas) {
             const num = parseInt(carpeta.split("-")[0], 10);
-            if (Number.isNaN(num) || num <= 21) continue;
+            if (Number.isNaN(num)) continue;
             const status = statusDe(path.join(SPECS_DIR, carpeta, "spec.md"));
             if (status !== "CERRADA") continue;
             const archivos = fs.readdirSync(path.join(SPECS_DIR, carpeta));
@@ -71,6 +108,49 @@ describe("disciplina Spec-Kit (spec 087)", () => {
         }
         const duplicados = [...numeros.entries()].filter(([, v]) => v.length > 1);
         expect(duplicados.map(([n, v]) => `${n}: ${v.join(" vs ")}`)).toEqual([]);
+    });
+
+    it("toda spec tiene plan.md y tasks.md (salvo DEUDA_HEREDADA, que solo encoge)", () => {
+        const violaciones: string[] = [];
+        for (const carpeta of carpetas) {
+            if (DEUDA_HEREDADA.has(carpeta)) continue;
+            const archivos = fs.readdirSync(path.join(SPECS_DIR, carpeta));
+            const faltan = ["plan.md", "tasks.md"].filter((f) => !archivos.includes(f));
+            if (faltan.length > 0) {
+                violaciones.push(`${carpeta}: falta ${faltan.join(" y ")}`);
+            }
+        }
+        expect(violaciones, violaciones.join("; ")).toEqual([]);
+    });
+
+    it("DEUDA_HEREDADA no crece (tope duro: añadir una entrada pone la suite en rojo)", () => {
+        // Auditoría §3.2b: la lista SOLO PUEDE ENCOGER. Tope duro en el valor actual (19);
+        // al sanear una spec (completar sus artefactos) se baja el tope a mano en el mismo commit.
+        expect(DEUDA_HEREDADA.size).toBeLessThanOrEqual(19);
+        // Consistencia: toda carpeta de la lista sigue existiendo (si se sana una spec, hay
+        // que sacarla de la lista, no borrar la carpeta).
+        const inexistentes = [...DEUDA_HEREDADA].filter((c) => !carpetas.includes(c));
+        expect(inexistentes, inexistentes.join("; ")).toEqual([]);
+    });
+
+    it("toda spec nueva (>= 126) declara 'Impacto en arquitectura:' (SPEC-126, FR-008)", () => {
+        const violaciones: string[] = [];
+        for (const carpeta of carpetas) {
+            const num = parseInt(carpeta.split("-")[0], 10);
+            if (Number.isNaN(num) || num < DESDE_SPEC_IMPACTO) continue;
+            if (SIN_IMPACTO_HEREDADO.has(carpeta)) continue;
+            const contenido = fs.readFileSync(path.join(SPECS_DIR, carpeta, "spec.md"), "utf-8");
+            if (!contenido.includes("Impacto en arquitectura:")) {
+                violaciones.push(`${carpeta}: falta la línea "Impacto en arquitectura:"`);
+            }
+        }
+        expect(violaciones, violaciones.join("; ")).toEqual([]);
+    });
+
+    it("SIN_IMPACTO_HEREDADO no crece (tope duro 0: eximir una spec nueva pone la suite en rojo)", () => {
+        expect(SIN_IMPACTO_HEREDADO.size).toBeLessThanOrEqual(0);
+        const inexistentes = [...SIN_IMPACTO_HEREDADO].filter((c) => !carpetas.includes(c));
+        expect(inexistentes, inexistentes.join("; ")).toEqual([]);
     });
 
     it("el índice specs/README.md cubre todas las carpetas reales", () => {

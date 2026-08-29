@@ -5,7 +5,8 @@
 
 **Created**: 2026-07-23
 
-**Status**: **Aprobada (2026-07-23, D-056)** por ZEUS (arquitecto) y Jelkin (CEO). Habilita
+**Status**: **Terminada (ACTA-VALIDACION 006, 2026-07-24)**. Aprobada (2026-07-23, D-056)
+por ZEUS (arquitecto) y Jelkin (CEO). Habilita
 `/speckit-plan`, `/speckit-analyze` e `/speckit-implement`. Primera de tres specs de la hoja
 de ruta de evolución de módulos (D-054, D-055). El Kanban de estados es **SPEC-007** y **no**
 entra aquí.

@@ -1,9 +1,13 @@
 import { SignJWT, jwtVerify } from "jose";
 import { requireEnv } from "@/lib/env";
-import type { FilaCargaAlumno } from "./parser";
 
+/**
+ * SPEC-132 (S-4): el token de confirmación firma SOLO el id de la sesión de
+ * carga (+ colegioId para la guarda de aislamiento). El roster de alumnos
+ * (PII de menores) NUNCA viaja en el JWT: vive server-side en CargaRosterSesion.
+ */
 type CargaTokenPayload = {
-    filas: FilaCargaAlumno[];
+    sesionId: string;
     colegioId: string;
 };
 
@@ -14,7 +18,7 @@ function getSecret(): Uint8Array {
 }
 
 export async function generarTokenCarga(payload: CargaTokenPayload): Promise<string> {
-    return new SignJWT({ filas: payload.filas, colegioId: payload.colegioId })
+    return new SignJWT({ sesionId: payload.sesionId, colegioId: payload.colegioId })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
         .setExpirationTime(TTL_CARGA)
@@ -25,9 +29,9 @@ export async function verificarTokenCarga(token: string): Promise<CargaTokenPayl
     try {
         const { payload } = await jwtVerify(token, getSecret(), { clockTolerance: 60 });
         if (!payload || typeof payload !== "object") return null;
-        const { filas, colegioId } = payload as Record<string, unknown>;
-        if (!Array.isArray(filas) || typeof colegioId !== "string") return null;
-        return { filas: filas as FilaCargaAlumno[], colegioId };
+        const { sesionId, colegioId } = payload as Record<string, unknown>;
+        if (typeof sesionId !== "string" || typeof colegioId !== "string") return null;
+        return { sesionId, colegioId };
     } catch {
         return null;
     }

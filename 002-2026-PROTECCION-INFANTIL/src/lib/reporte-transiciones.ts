@@ -10,7 +10,7 @@ export interface RegistrarTransicionParams {
     responsableId?: string | null;
     motivo?: string | null;
     metadatos?: Record<string, unknown> | null;
-    tx?: Prisma.TransactionClient;
+    tx?: Prisma.TransactionClient | undefined;
 }
 
 /**
@@ -49,7 +49,8 @@ export async function registrarTransicion(params: RegistrarTransicionParams) {
             responsableTipo: params.responsableTipo,
             responsableId: params.responsableId ?? null,
             motivo: params.motivo ?? null,
-            metadatos: params.metadatos ? (params.metadatos as never) : undefined,
+            // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+            ...(params.metadatos ? { metadatos: params.metadatos as never } : {}),
         },
     });
 }

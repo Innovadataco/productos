@@ -18,7 +18,16 @@ export const metadata: Metadata = {
     },
 };
 
-export default function ReportarPage() {
+export default async function ReportarPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ identificador?: string }>;
+}) {
+    // F3 (N-5): el CTA del estado vacío de la consulta prellena el identificador
+    // (sanitizado: máx 100 chars, igual que el límite del esquema de la API).
+    const { identificador } = await searchParams;
+    const identificadorInicial = typeof identificador === "string" ? identificador.slice(0, 100) : undefined;
+
     return (
         <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
             <div className="mb-8 text-center">
@@ -30,7 +39,7 @@ export default function ReportarPage() {
                 </p>
             </div>
 
-            <ReporteWizard />
+            <ReporteWizard identificadorInicial={identificadorInicial} />
             <CanalesOficiales />
         </main>
     );

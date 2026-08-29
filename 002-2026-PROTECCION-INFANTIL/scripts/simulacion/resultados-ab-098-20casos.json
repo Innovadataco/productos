@@ -1,0 +1,473 @@
+{
+ "banco": "gobernado fixtureVersion=2 (curado, 42/42 adjudicados)",
+ "casos": 20,
+ "umbralRevision": 1,
+ "nota": "confianza 0-1 en ambos motores; acierto = principal o secundaria (rúbrica también por categoriasPresentes), estado != REVISION_MANUAL",
+ "antes": {
+  "legacy": {
+   "aciertos": 20,
+   "fallos": 0,
+   "accuracy": 1,
+   "silenciosos": {
+    "count": 0,
+    "casos": []
+   },
+   "subestimaciones": {
+    "count": 0,
+    "severidadPerdida": 0
+   },
+   "esps": 0
+  },
+  "rubrica": {
+   "aciertos": 12,
+   "fallos": 8,
+   "accuracy": 0.6,
+   "silenciosos": {
+    "count": 0,
+    "casos": []
+   },
+   "subestimaciones": {
+    "count": 8,
+    "severidadPerdida": 395
+   },
+   "esps": 0
+  }
+ },
+ "despues": {
+  "legacy": {
+   "aciertos": 20,
+   "fallos": 0,
+   "accuracy": 1,
+   "silenciosos": {
+    "count": 0,
+    "casos": []
+   },
+   "subestimaciones": {
+    "count": 0,
+    "severidadPerdida": 0
+   },
+   "esps": 0
+  },
+  "rubrica": {
+   "aciertos": 12,
+   "fallos": 8,
+   "accuracy": 0.6,
+   "silenciosos": {
+    "count": 0,
+    "casos": []
+   },
+   "subestimaciones": {
+    "count": 8,
+    "severidadPerdida": 395
+   },
+   "esps": 0
+  }
+ },
+ "detalle": [
+  {
+   "indice": 1,
+   "esperada": {
+    "esperada": "CONTACTO_INSISTENTE",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "CONTACTO_INSISTENTE",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "CONTACTO_INSISTENTE",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "CONTACTO_INSISTENTE"
+    ]
+   }
+  },
+  {
+   "indice": 2,
+   "esperada": {
+    "esperada": "CONTACTO_INSISTENTE",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "CONTACTO_INSISTENTE",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OTRO",
+    "estado": "REVISION_MANUAL",
+    "confianza": 0,
+    "presentes": []
+   }
+  },
+  {
+   "indice": 3,
+   "esperada": {
+    "esperada": "CONTACTO_INSISTENTE",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "CONTACTO_INSISTENTE",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OTRO",
+    "estado": "REVISION_MANUAL",
+    "confianza": 0,
+    "presentes": []
+   }
+  },
+  {
+   "indice": 4,
+   "esperada": {
+    "esperada": "SOLICITUD_MATERIAL",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "SOLICITUD_MATERIAL",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OTRO",
+    "estado": "REVISION_MANUAL",
+    "confianza": 0,
+    "presentes": []
+   }
+  },
+  {
+   "indice": 5,
+   "esperada": {
+    "esperada": "SOLICITUD_MATERIAL",
+    "secundaria": "OFRECIMIENTO_REGALOS"
+   },
+   "legacy": {
+    "categoria": "SOLICITUD_MATERIAL",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OTRO",
+    "estado": "REVISION_MANUAL",
+    "confianza": 0,
+    "presentes": []
+   }
+  },
+  {
+   "indice": 6,
+   "esperada": {
+    "esperada": "SOLICITUD_MATERIAL",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "SOLICITUD_MATERIAL",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "SOLICITUD_MATERIAL",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "SOLICITUD_MATERIAL"
+    ]
+   }
+  },
+  {
+   "indice": 7,
+   "esperada": {
+    "esperada": "OFRECIMIENTO_REGALOS",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "OFRECIMIENTO_REGALOS",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OFRECIMIENTO_REGALOS",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "OFRECIMIENTO_REGALOS"
+    ]
+   }
+  },
+  {
+   "indice": 8,
+   "esperada": {
+    "esperada": "OFRECIMIENTO_REGALOS",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "OFRECIMIENTO_REGALOS",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OTRO",
+    "estado": "REVISION_MANUAL",
+    "confianza": 0,
+    "presentes": []
+   }
+  },
+  {
+   "indice": 9,
+   "esperada": {
+    "esperada": "OFRECIMIENTO_REGALOS",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "OFRECIMIENTO_REGALOS",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OFRECIMIENTO_REGALOS",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "OFRECIMIENTO_REGALOS"
+    ]
+   }
+  },
+  {
+   "indice": 10,
+   "esperada": {
+    "esperada": "SUPLANTACION_IDENTIDAD",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "SUPLANTACION_IDENTIDAD",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "SUPLANTACION_IDENTIDAD",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "SUPLANTACION_IDENTIDAD"
+    ]
+   }
+  },
+  {
+   "indice": 11,
+   "esperada": {
+    "esperada": "SUPLANTACION_IDENTIDAD",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "SUPLANTACION_IDENTIDAD",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "SUPLANTACION_IDENTIDAD",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "SUPLANTACION_IDENTIDAD"
+    ]
+   }
+  },
+  {
+   "indice": 12,
+   "esperada": {
+    "esperada": "SUPLANTACION_IDENTIDAD",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "SUPLANTACION_IDENTIDAD",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "SUPLANTACION_IDENTIDAD",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": [
+     "SUPLANTACION_IDENTIDAD"
+    ]
+   }
+  },
+  {
+   "indice": 13,
+   "esperada": {
+    "esperada": "SOLICITUD_ENCUENTRO",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "SOLICITUD_ENCUENTRO",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "SOLICITUD_ENCUENTRO",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "SOLICITUD_ENCUENTRO"
+    ]
+   }
+  },
+  {
+   "indice": 14,
+   "esperada": {
+    "esperada": "SOLICITUD_ENCUENTRO",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "SOLICITUD_ENCUENTRO",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "SOLICITUD_ENCUENTRO",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "SOLICITUD_ENCUENTRO"
+    ]
+   }
+  },
+  {
+   "indice": 15,
+   "esperada": {
+    "esperada": "SOLICITUD_ENCUENTRO",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "SOLICITUD_ENCUENTRO",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "SOLICITUD_ENCUENTRO",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": [
+     "SOLICITUD_ENCUENTRO"
+    ]
+   }
+  },
+  {
+   "indice": 16,
+   "esperada": {
+    "esperada": "COMPARTIMIENTO_SEXUAL",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "COMPARTIMIENTO_SEXUAL",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OTRO",
+    "estado": "REVISION_MANUAL",
+    "confianza": 0,
+    "presentes": []
+   }
+  },
+  {
+   "indice": 17,
+   "esperada": {
+    "esperada": "COMPARTIMIENTO_SEXUAL",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "COMPARTIMIENTO_SEXUAL",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "COMPARTIMIENTO_SEXUAL",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "COMPARTIMIENTO_SEXUAL"
+    ]
+   }
+  },
+  {
+   "indice": 18,
+   "esperada": {
+    "esperada": "COMPARTIMIENTO_SEXUAL",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "COMPARTIMIENTO_SEXUAL",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OTRO",
+    "estado": "REVISION_MANUAL",
+    "confianza": 0,
+    "presentes": []
+   }
+  },
+  {
+   "indice": 19,
+   "esperada": {
+    "esperada": "EXTORSION",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "EXTORSION",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "DIFUSION_NO_CONSENTIDA",
+    "estado": "CLASIFICADO",
+    "confianza": 0.6666666666666666,
+    "presentes": [
+     "DIFUSION_NO_CONSENTIDA",
+     "EXTORSION"
+    ]
+   }
+  },
+  {
+   "indice": 20,
+   "esperada": {
+    "esperada": "EXTORSION",
+    "secundaria": null
+   },
+   "legacy": {
+    "categoria": "EXTORSION",
+    "estado": "CLASIFICADO",
+    "confianza": 1,
+    "presentes": []
+   },
+   "rubrica": {
+    "categoria": "OTRO",
+    "estado": "REVISION_MANUAL",
+    "confianza": 0,
+    "presentes": []
+   }
+  }
+ ]
+}

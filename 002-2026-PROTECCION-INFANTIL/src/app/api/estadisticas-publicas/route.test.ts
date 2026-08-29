@@ -14,8 +14,13 @@ async function crearReporteAgregado(
     esAnonimo: boolean
 ) {
     const numeroSeguimiento = `RPT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const ciudadRecord = await prisma.ciudad.findUnique({
-        where: { nombre_paisId: { nombre: ciudad, paisId: (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!.id } },
+    // Fixture autocontenido: la ciudad del reporte debe existir en el catálogo
+    // (en CI la BD arranca vacía; localmente sobrevivía del seed de desarrollo).
+    const paisCO = (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!;
+    const ciudadRecord = await prisma.ciudad.upsert({
+        where: { nombre_paisId: { nombre: ciudad, paisId: paisCO.id } },
+        update: {},
+        create: { nombre: ciudad, paisId: paisCO.id },
     });
     const reporte = await prisma.reporte.create({
         data: {
@@ -82,6 +87,15 @@ describe("GET /api/estadisticas-publicas", () => {
         await crearReporteAgregado("+57300PUBLIC", instagram.id, "CONTACTO_INSISTENTE", "Bogotá", "Colombia", false);
         await crearReporteAgregado("+57300OTRO", plataforma!.id, "EXTORSION", "Medellín", "Colombia", false);
 
+        // SPEC-115: fixture determinista — Medellín SIN coordenadas (la BD de test
+        // local puede conservar un seed previo con coords; el conteo honesto del
+        // mapa no puede depender de ese residuo).
+        const paisCO = (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!;
+        await prisma.ciudad.updateMany({
+            where: { nombre: "Medellín", paisId: paisCO.id },
+            data: { lat: null, lng: null },
+        });
+
         await crearIdentificador("+57300PUBLIC", plataforma!.id, 75, "ALTO");
         await crearIdentificador("+57300OTRO", plataforma!.id, 45, "MEDIO");
 
@@ -93,7 +107,9 @@ describe("GET /api/estadisticas-publicas", () => {
         expect(body.totales.identificadoresUnicos).toBe(2);
         expect(body.totales.reportesAutenticados).toBe(4);
         expect(body.totales.reportesAnonimos).toBe(1);
-        expect(body.totales.scorePromedio).toBe(60);
+        // I-29 (SPEC-108): la API pública NO debe traer scorePromedio en ningún nivel
+        expect(body.totales.scorePromedio).toBeUndefined();
+        expect(JSON.stringify(body)).not.toContain("scorePromedio");
 
         expect(body.porPlataforma).toHaveLength(2);
         const whatsappEntry = body.porPlataforma.find((p: { plataforma: string }) => p.plataforma === "WhatsApp");
@@ -108,6 +124,10 @@ describe("GET /api/estadisticas-publicas", () => {
         expect(bogota.count).toBe(4);
         expect(bogota.lat).toBe(4.711);
         expect(bogota.lng).toBe(-74.0721);
+
+        // SPEC-115: Medellín (fixture sin coordenadas) cuenta 1 reporte sin ubicación
+        // en el mapa; Bogotá tiene coords y no se cuenta. Degradación honesta.
+        expect(body.sinUbicacion).toBe(1);
 
         // spec 089-US6: la distribución por nivel de riesgo ya no se expone públicamente
         expect(body.porNivelRiesgo).toBeUndefined();
@@ -138,6 +158,7 @@ describe("GET /api/estadisticas-publicas", () => {
         expect(body.porPlataforma).toEqual([]);
         expect(body.porCiudad).toEqual([]);
         expect(body.porGrupoCategoria).toEqual([]);
+        expect(body.sinUbicacion).toBe(0);
         expect(body.ultimosIdentificadores).toBeUndefined();
     });
 });

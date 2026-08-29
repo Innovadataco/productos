@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { enviarTokenRecuperacion } from "@/lib/email";
-import { generarTokenRecuperacion, hashToken } from "@/lib/token-recuperacion";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { recuperarSolicitarSchema } from "@/lib/validators";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 
 const MENSAJE_EXITO = "Si el email está registrado, recibirás un enlace para restablecer tu contraseña.";
-const LIMITE_SOLICITUDES = 3;
-const VENTANA_MS = 60 * 60 * 1000;
-const EXPIRACION_TOKEN_MS = 60 * 60 * 1000;
 
 function buildRateLimitResponse(retryAfter: number, headers: Record<string, string>) {
     return NextResponse.json(
@@ -49,71 +46,46 @@ export async function POST(request: Request) {
             return buildRateLimitResponse(retryAfter, rateEmail.headers);
         }
 
-        const usuario = await prisma.usuario.findUnique({ where: { email } });
+        // SPEC-053: usuario, límite de solicitudes y creación del token viven en el DAL;
+        // la ruta no toca prisma. El envío del email queda en su adaptador (src/lib/email.ts).
+        const resultado = await new AutenticacionService().solicitarRecuperacion(email);
 
-        if (usuario) {
-            const desde = new Date(Date.now() - VENTANA_MS);
-            const activosRecientes = await prisma.tokenRecuperacion.count({
-                where: {
-                    email,
-                    creadoEn: { gte: desde },
-                    usado: false,
-                    expiraEn: { gt: new Date() },
-                },
-            });
-
-            if (activosRecientes >= LIMITE_SOLICITUDES) {
-                return NextResponse.json(
-                    { error: { message: "Límite de solicitudes excedido. Intenta más tarde.", code: ERROR_CODES.RATE_LIMITED } },
-                    { status: 429 }
-                );
-            }
-
-            // Invalidar tokens previos no usados para este usuario/email
-            await prisma.tokenRecuperacion.updateMany({
-                where: { email, usado: false },
-                data: { usado: true },
-            });
-
-            const token = generarTokenRecuperacion();
-            const tokenHash = await hashToken(token);
-
-            await prisma.tokenRecuperacion.create({
-                data: {
-                    email,
-                    tokenHash,
-                    expiraEn: new Date(Date.now() + EXPIRACION_TOKEN_MS),
-                    usuarioId: usuario.id,
-                },
-            });
-
-            let emailSent = false;
-            let emailError: string | null = null;
-            try {
-                await enviarTokenRecuperacion(email, token);
-                emailSent = true;
-            } catch (err) {
-                const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
-                emailError = err instanceof Error ? err.message : String(err);
-                console.error("Failed to send recovery email to:", masked, "error:", emailError);
-            }
-
-            const response: Record<string, unknown> = {
-                message: MENSAJE_EXITO,
-                emailSent,
-            };
-
-            // Si no se pudo enviar el email, exponemos el token para que el usuario pueda continuar
-            // (útil en entornos sin Resend configurado o en modo desarrollo).
-            // Nunca exponemos el mensaje de error del proveedor de email.
-            if (!emailSent) {
-                response.devToken = token;
-            }
-            return NextResponse.json(response, { status: 200 });
+        if (!resultado.ok) {
+            return NextResponse.json(
+                { error: { message: "Límite de solicitudes excedido. Intenta más tarde.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429 }
+            );
         }
 
-        // Email no registrado: respuesta idéntica para evitar enumeración
-        return NextResponse.json({ message: MENSAJE_EXITO, emailSent: false }, { status: 200 });
+        if (resultado.tipo === "sin_usuario") {
+            // Email no registrado: respuesta idéntica para evitar enumeración
+            return NextResponse.json({ message: MENSAJE_EXITO, emailSent: false }, { status: 200 });
+        }
+
+        const token = resultado.token;
+        let emailSent = false;
+        let emailError: string | null = null;
+        try {
+            await enviarTokenRecuperacion(email, token);
+            emailSent = true;
+        } catch (err) {
+            const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
+            emailError = err instanceof Error ? err.message : String(err);
+            logger.error(`[RECUPERAR] Envío de email de recuperación: fallido — ${masked}: ${emailError}`);
+        }
+
+        const response: Record<string, unknown> = {
+            message: MENSAJE_EXITO,
+            emailSent,
+        };
+
+        // BL-3 (002-PI-052): el token de desarrollo NUNCA se expone en producción
+        // (toma de cuenta). Solo en entornos no productivos, cuando el email falla;
+        // en prod el email falla = fail-closed, sin token en el body.
+        if (!emailSent && process.env.NODE_ENV !== "production") {
+            response.devToken = token;
+        }
+        return NextResponse.json(response, { status: 200 });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

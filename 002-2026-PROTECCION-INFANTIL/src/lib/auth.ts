@@ -5,6 +5,8 @@ import { prisma } from "./prisma";
 import { AppError, ERROR_CODES } from "./errors";
 import { requireEnv } from "./env";
 import type { RolUsuario } from "@prisma/client";
+import { getParametroSistema } from "./parametros";
+import { SessionLogService } from "./dal/services/session-log";
 
 const LEGACY_COOKIE_NAME = "token";
 const HOST_COOKIE_NAME = "__Host-token";
@@ -17,7 +19,15 @@ function getSecret(): Uint8Array {
     return new TextEncoder().encode(requireEnv("JWT_SECRET", 32));
 }
 
-const JWT_TTL = "24h";
+// Spec 095-US2 (D-21): el TTL del JWT es un parámetro (security.jwt_ttl_hours), no un literal.
+// Fallback seguro: 24h si el parámetro no existe o es inválido.
+const JWT_TTL_FALLBACK_HOURS = 24;
+
+async function obtenerJwtTtlSegundos(): Promise<number> {
+    const param = await getParametroSistema("security.jwt_ttl_hours");
+    const horas = param ? parseInt(param.valor, 10) : NaN;
+    return (Number.isFinite(horas) && horas > 0 ? horas : JWT_TTL_FALLBACK_HOURS) * 3600;
+}
 
 export function isSecureRequest(request: Request): boolean {
     // Permite forzar el comportamiento desde variables de entorno.
@@ -52,7 +62,7 @@ export async function createToken(payload: Record<string, unknown>): Promise<str
     return new SignJWT(payload)
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
-        .setExpirationTime(JWT_TTL)
+        .setExpirationTime(`${(await obtenerJwtTtlSegundos()) / 3600}h`)
         .sign(getSecret());
 }
 
@@ -111,6 +121,16 @@ export async function verifyAuth(requiredRol?: RolUsuario | RolUsuario[]) {
         throw new AppError("Usuario no activo", ERROR_CODES.AUTH_INVALID, 401);
     }
 
+    // SPEC-206 (002-PI-120): si el JWT trae sesionLogId, la sesión debe seguir abierta.
+    // Tokens previos sin el campo siguen funcionando (retrocompatibilidad).
+    const sesionLogId = payload.sesionLogId;
+    if (typeof sesionLogId === "string") {
+        const sesionActiva = await new SessionLogService().estaSesionActiva(sesionLogId);
+        if (!sesionActiva) {
+            throw new AppError("Sesión cerrada", ERROR_CODES.AUTH_EXPIRED, 401);
+        }
+    }
+
     if (requiredRol) {
         const roles = Array.isArray(requiredRol) ? requiredRol : [requiredRol];
         if (!roles.includes(user.rol)) {
@@ -145,14 +165,23 @@ export function requireSchoolAdmin() {
     return () => verifyAuth("SCHOOL_ADMIN");
 }
 
+// Spec 106: fuente única de atributos de la cookie de sesión. La creación (login) y el
+// borrado (logout) DEBEN usar los mismos atributos: un Set-Cookie de borrado sin ellos es
+// rechazado por el navegador (prefijo __Host- exige Secure + Path=/).
+export function sessionCookieAttributes(secure: boolean) {
+    return {
+        httpOnly: true,
+        secure,
+        sameSite: secure ? ("strict" as const) : ("lax" as const),
+        path: "/",
+    };
+}
+
 export async function setSessionCookie(request: Request, token: string): Promise<void> {
     const secure = isSecureRequest(request);
     const cookieStore = await cookies();
     cookieStore.set(getCookieName(secure), token, {
-        httpOnly: true,
-        secure,
-        sameSite: secure ? "strict" : "lax",
+        ...sessionCookieAttributes(secure),
         maxAge: 60 * 60 * 24,
-        path: "/",
     });
 }

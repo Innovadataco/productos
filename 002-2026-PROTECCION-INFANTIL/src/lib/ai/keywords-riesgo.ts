@@ -15,7 +15,7 @@
 export interface KeywordsRiesgoResult {
     tieneMatch: boolean;
     keywords: string[]; // términos/frases detectadas (texto original)
-    categoriaSugerida?: string;
+    categoriaSugerida?: string | undefined;
 }
 
 interface KeywordRule {

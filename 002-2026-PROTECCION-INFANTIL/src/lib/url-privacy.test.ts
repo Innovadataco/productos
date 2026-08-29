@@ -10,6 +10,25 @@ import path from "node:path";
 
 const SRC = path.resolve(__dirname, "..");
 
+/**
+ * SPEC-233 (002-PI-133, diseño aprobado por ZEUS en compuerta): las vistas
+ * autenticadas de búsqueda por identificador (`/dashboard/padre/identificador/[nick]`
+ * y `/dashboard/admin/identificador/[nick]`) llevan en la URL el nick que el propio
+ * usuario autenticado digitó — no es una fuga del área pública (spec 091 protegía
+ * /consulta y /seguimiento). Estos 3 archivos quedan exentos SOLO de los checks de
+ * href/router.push con el literal "identificador"; el resto de la guardia sigue
+ * aplicándoles (fetch, área padre 093, email S-2). La lista SOLO ENCOGE.
+ */
+const EXENTOS_SPEC_233 = new Set([
+    "components/modules/padre/IdentificadorBusquedaClient.tsx",
+    "components/modules/admin/IdentificadorAdminClient.tsx",
+    "components/modules/padre/ExpedienteDetalleClient.tsx",
+]);
+
+function esExentoSpec233(archivo: string): boolean {
+    return EXENTOS_SPEC_233.has(path.relative(SRC, archivo).split(path.sep).join("/"));
+}
+
 function archivos(dir: string): string[] {
     const salida: string[] = [];
     for (const entrada of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -33,6 +52,7 @@ describe("privacidad URL del identificador (spec 091 fix)", () => {
     it("ningún href deja el identificador en la URL", () => {
         const violaciones: string[] = [];
         for (const archivo of archivos(SRC)) {
+            if (esExentoSpec233(archivo)) continue;
             const contenido = fs.readFileSync(archivo, "utf-8");
             if (/href=\{[^}]*identificador/.test(contenido) || /href="[^"]*identificador=/.test(contenido)) {
                 violaciones.push(archivo);
@@ -53,14 +73,64 @@ describe("privacidad URL del identificador (spec 091 fix)", () => {
         expect(violaciones).toEqual([]);
     });
 
+    it("área del padre: ningún href/push/fetch deja identificador ni RPT en la URL (spec 093-US4)", () => {
+        const areasPadre = ["src/app/dashboard/mis-reportes", "src/app/dashboard/circulo-confianza", "src/app/dashboard/page.tsx", "src/components/modules/MisReporte", "src/components/modules/DashboardUsuario", "src/components/modules/SeguimientoClient", "src/components/modules/CirculoConfianza"];
+        const violaciones: string[] = [];
+        for (const archivo of archivos(SRC)) {
+            if (!areasPadre.some((a) => archivo.includes(a))) continue;
+            if (archivo.includes("/admin/")) continue; // el área ADMIN no es el área del padre
+            const contenido = fs.readFileSync(archivo, "utf-8");
+            if (/href=\{[^}]*\?[^}]*\$\{/.test(contenido) || /router\.push\(`[^`]*\?[^`]*\$\{/.test(contenido)) {
+                violaciones.push(archivo);
+            }
+        }
+        expect(violaciones).toEqual([]);
+    });
+
     it("ningún router.push deja el identificador en la URL", () => {
         const violaciones: string[] = [];
         for (const archivo of archivos(SRC)) {
+            if (esExentoSpec233(archivo)) continue;
             const contenido = fs.readFileSync(archivo, "utf-8");
             if (/router\.push\([^)]*identificador/.test(contenido)) {
                 violaciones.push(archivo);
             }
         }
         expect(violaciones).toEqual([]);
+    });
+
+    it("el email a suscriptores NUNCA lleva el identificador ni 'score' (S-2, 002-PI-052)", () => {
+        // SPEC-296 (002-PI-197): el envío pasó al motor de notificaciones.
+        // La protección S-2 vive ahora en dos capas: (a) el wrapper en email.ts
+        // NO pasa el identificador como variable al motor, (b) la plantilla
+        // "suscriptores.reporte_publicado.email" del seed NO menciona identificador
+        // ni "score" en asunto ni cuerpo.
+
+        // (a) Wrapper: dentro del bloque `variables: { ... }` NO aparece "identificador".
+        // El identificador sí se usa en el `where` de Prisma (para buscar suscripciones),
+        // pero JAMÁS viaja como variable de plantilla al motor de notificaciones.
+        const wrapper = fs.readFileSync(path.join(SRC, "lib", "email.ts"), "utf-8");
+        const inicioWrap = wrapper.indexOf("export async function enviarAlertasSuscriptores");
+        expect(inicioWrap).toBeGreaterThan(-1);
+        const finWrap = wrapper.indexOf("export async function", inicioWrap + 1);
+        const cuerpoWrap = wrapper.slice(inicioWrap, finWrap === -1 ? undefined : finWrap);
+        // Extrae SOLO el bloque `variables: {…}` del wrapper para chequear su contenido.
+        const matchVars = cuerpoWrap.match(/variables:\s*\{[\s\S]*?\n\s*\},/);
+        expect(matchVars, "wrapper debe declarar un bloque variables: {…}").not.toBeNull();
+        const bloqueVars = matchVars ? matchVars[0] : "";
+        expect(/identificador/i.test(bloqueVars)).toBe(false);
+        expect(/score/i.test(bloqueVars)).toBe(false);
+
+        // (b) Plantilla seed: la plantilla suscriptores.reporte_publicado.email
+        // puede mencionar la palabra "identificador" como contexto del copy, pero
+        // NO puede interpolar `{{identificador}}` (el valor real jamás sale) ni
+        // mencionar "score" ni "consulta=" en URL.
+        const seed = fs.readFileSync(path.join(SRC, "..", "prisma", "seed.ts"), "utf-8");
+        const idxPlantilla = seed.indexOf('clave: "suscriptores.reporte_publicado.email"');
+        expect(idxPlantilla).toBeGreaterThan(-1);
+        const plantilla = seed.slice(idxPlantilla, idxPlantilla + 800);
+        expect(plantilla).not.toContain("{{identificador}}");
+        expect(plantilla).not.toContain("consulta=");
+        expect(/score/i.test(plantilla)).toBe(false);
     });
 });

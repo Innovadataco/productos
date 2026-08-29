@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
+import { ComiteBandejaService } from "@/lib/dal/services/comite-bandeja";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
 
 const querySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
@@ -41,52 +40,14 @@ export async function GET(request: Request) {
             );
         }
         const { page, limit } = parsedQuery.data;
-        const skip = (page - 1) * limit;
 
-        let where: Prisma.SolicitudComiteWhereInput;
+        // SPEC-053: filtro por rol y paginación viven en el DAL.
+        const resultado = await new ComiteBandejaService().listarSolicitudes(
+            { id: user.id, esAdmin: esAdminRol(user.rol) },
+            { page, limit }
+        );
 
-        if (esAdminRol(user.rol)) {
-            where = {
-                estado: { in: ["PENDIENTE", "ASIGNADA", "RESUELTA"] },
-            };
-        } else {
-            where = {
-                estado: { in: ["PENDIENTE", "ASIGNADA", "RESUELTA"] },
-                OR: [
-                    { estado: "PENDIENTE", comiteId: null },
-                    { comiteId: user.id },
-                ],
-            };
-        }
-
-        const [solicitudes, total] = await Promise.all([
-            prisma.solicitudComite.findMany({
-                where,
-                orderBy: { creadoEn: "desc" },
-                skip,
-                take: limit,
-                select: {
-                    id: true,
-                    numero: true,
-                    reporteId: true,
-                    estado: true,
-                    motivo: true,
-                    creadoEn: true,
-                    comiteId: true,
-                },
-            }),
-            prisma.solicitudComite.count({ where }),
-        ]);
-
-        return NextResponse.json({
-            solicitudes,
-            paginacion: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
-        });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

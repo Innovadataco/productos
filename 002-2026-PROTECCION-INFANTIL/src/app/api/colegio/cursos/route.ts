@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { CursoRepository } from "@/lib/dal/repositories/curso";
+import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
@@ -40,20 +42,14 @@ export async function GET(request: Request) {
             return NextResponse.json({ cursos: [] });
         }
 
-        const cursos = await prisma.curso.findMany({
-            where: { colegioId: user.colegioId ?? undefined, estado: "activo" },
-            orderBy: { nombre: "asc" },
-        });
+        // SPEC-134 (E-1): la consulta vive en el repo (tenant obligatorio); la ruta no toca prisma.
+        // SPEC-176: ?incluirInactivos=true trae también los desactivados (toggle de la página).
+        const incluirInactivos = new URL(request.url).searchParams.get("incluirInactivos") === "true";
+        const cursos = await new CursoRepository().listarPorColegio(user.colegioId, { incluirInactivos });
 
         return NextResponse.json({ cursos });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/CURSOS]");
     }
 }
 
@@ -85,15 +81,26 @@ export async function POST(request: Request) {
         }
 
         const body = await withValidation.body(cursoBodySchema)(request);
-        const { nombre, grado, anioLectivo } = body;
+        const { nombre, grado, anioLectivo, profesorTitularId } = body;
 
-        const existente = await prisma.curso.findFirst({
-            where: {
-                colegioId: user.colegioId ?? undefined,
-                nombre,
-                grado: grado ?? null,
-                anioLectivo: anioLectivo ?? null,
-            },
+        // SPEC-145 (D1=A, COND-1): el titular debe existir y ser del MISMO colegio
+        // (propiedad de seguridad cross-tenant — un profesor de OTRO colegio → 404).
+        if (profesorTitularId) {
+            const titular = await new ProfesorRepository().obtenerPorId(user.colegioId, profesorTitularId);
+            if (!titular) {
+                return NextResponse.json(
+                    { error: { message: "Profesor no encontrado", code: ERROR_CODES.NOT_FOUND } },
+                    { status: 404 }
+                );
+            }
+        }
+
+        // SPEC-134 (E-1): duplicado y creación viven en el repo (tenant obligatorio).
+        const cursos = new CursoRepository();
+        const existente = await cursos.buscarPorDatos(user.colegioId, {
+            nombre,
+            grado: grado ?? null,
+            anioLectivo: anioLectivo ?? null,
         });
         if (existente) {
             return NextResponse.json(
@@ -102,15 +109,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const curso = await prisma.curso.create({
-            data: {
-                colegioId: user.colegioId ?? undefined,
-                nombre,
-                grado,
-                anioLectivo,
-                estado: "activo",
-            },
-        });
+        const curso = await cursos.crear(user.colegioId, { nombre, grado, anioLectivo, profesorTitularId });
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
@@ -119,22 +118,13 @@ export async function POST(request: Request) {
             recursoId: curso.id,
             usuarioId: user.id,
             colegioId: user.colegioId ?? undefined,
-            valorNuevo: JSON.stringify({ nombre, grado, anioLectivo, colegioId: user.colegioId }),
+            valorNuevo: JSON.stringify({ nombre, grado, anioLectivo, profesorTitularId: profesorTitularId ?? null, colegioId: user.colegioId }),
             ipAddress,
             userAgent,
         });
 
         return NextResponse.json({ curso }, { status: 201 });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/CURSOS]");
     }
 }

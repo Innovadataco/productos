@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { ADMIN_NAV_ITEMS, COLEGIO_NAV_ITEMS, COMITE_NAV_TABS, IA_TABS } from "./nav-items";
+import { ADMIN_NAV_ITEMS, COLEGIO_NAV_ITEMS, COMITE_COLEGIO_NAV_ITEMS, COMITE_NAV_TABS, IA_TABS } from "./nav-items";
+import type { NavItem } from "./nav-items";
 import { CATALOGO_MODULOS } from "./permisos-catalogo";
 
 /**
@@ -16,14 +17,58 @@ const SIN_PANTALLA_PROPIA = new Set([
     "comite",
     "ia_playground",
     "ia_rubrica",
-    "ia_eval",
     "ia_simulaciones",
     "ia_configuracion",
     "configuracion_permisos",
     "audit_logs",
+    // Permiso de acción (spec 096): revelar texto original dentro del expediente, sin pantalla propia
+    "expediente_revelar_original",
+    // SPEC-140 (F2): generar la denuncia formal es una acción dentro del expediente
+    // (botón + descarga), sin pantalla propia.
+    "denuncia_formal",
+    // SPEC-141 (N-1): las pantallas de solo lectura se abren en contexto desde las
+    // vistas de padres/colegios (enlace directo), sin ítem de menú propio.
+    "soporte_lectura",
+    // SPEC-169 (Fase G): las notificaciones in-app se consumen desde el centro de
+    // notificaciones en el header; no tienen ítem de menú lateral propio.
+    "colegios_notificaciones",
+    // SPEC-173 (FASE-C): el onboarding salió del menú lateral; sigue accesible por
+    // su flujo (URL directa / reactivación), sin ítem de menú propio.
+    "colegios_onboarding",
+    // SPEC-180: la página Monitoreo worker salió del menú (redundante con el
+    // tablero operativo de SPEC-171); la ruta redirige a operación.
+    "monitoreo_worker",
+    // SPEC-194 (002-PI-088): analítica de colegios es un sub-tab dentro de
+    // `/dashboard/admin/estadisticas/operacion`; no tiene ítem de menú lateral propio.
+    "analytics_colegios",
+    // SPEC-206 (002-PI-120): sesiones activas es un sub-tab dentro de
+    // `/dashboard/admin/estadisticas/operacion`; no tiene ítem de menú lateral propio.
+    "sesiones_admin",
+    // SPEC-235 (002-PI-135): guías de acción parametrizables es un sub-tab dentro de
+    // `/dashboard/admin/configuracion`; no tiene ítem de menú lateral propio.
+    "guias_accion_admin",
+    // SPEC-202/203: el panel de notificaciones es un tab dentro de
+    // `/dashboard/admin/configuracion`; no tiene ítem de menú lateral propio.
+    "configuracion_notificaciones",
+    // SPEC-202: salud del motor de notificaciones es una sub-página del área
+    // Estadísticas (sub-nav); no tiene ítem de menú lateral propio.
+    "estadisticas_salud_motor",
+    // SPEC-291 (002-PI-191): administración del sistema (start/stop/restart de
+    // servicios docker) es un módulo de acción endpoint-only; no tiene ítem de
+    // menú lateral propio en este SPEC — el tablero de servicios lo agrega D-83.
+    "sistema_admin",
 ]);
 
-const TODOS_LOS_ITEMS = [...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS];
+// SPEC-173 (FASE-C): los nodos expandibles (p. ej. "Usuarios") declaran hijos;
+// el test valida tanto padres como children contra el catálogo.
+function aplanar(items: NavItem[]): NavItem[] {
+    return items.flatMap((item) => [item, ...aplanar(item.children ?? [])]);
+}
+
+// SPEC-285 (002-PI-185, I-135): PADRE_NAV_ITEMS ya no lleva `modulo` (el área padre
+// no usa permisos granulares por módulo; el proxy controla por rol). Por eso queda
+// fuera de la verificación menú↔catálogo — se cubre por proxy.test.ts.
+const TODOS_LOS_ITEMS = aplanar([...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS]);
 
 describe("estructura menú ↔ catálogo", () => {
     it("todo ítem de menú referencia un módulo existente en el catálogo", () => {

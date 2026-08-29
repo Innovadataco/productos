@@ -2,8 +2,8 @@
 
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
-import { MetricCard } from "../eval/MetricCard";
-import { formatPct } from "../eval/format";
+import { MetricCard } from "./MetricCard";
+import { formatPct } from "./format";
 import type { MetricasSimulacionUI } from "./types";
 
 interface MetricasSimulacionProps {

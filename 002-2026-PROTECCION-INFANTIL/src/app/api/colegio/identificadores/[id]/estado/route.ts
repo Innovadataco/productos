@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { identificadorAlumnoIdParamsSchema, estadoActivoSchema } from "@/lib/schemas";
+import { identificadorEstudianteIdParamsSchema, estadoActivoSchema } from "@/lib/schemas";
 import { verificarPropiedadIdentificador } from "@/lib/colegio/permisos";
 
 function getClientInfo(request: Request) {
@@ -37,7 +38,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const { id } = withValidation.params(identificadorAlumnoIdParamsSchema)(await params);
+        const { id } = withValidation.params(identificadorEstudianteIdParamsSchema)(await params);
         const body = await withValidation.body(estadoActivoSchema)(request);
 
         const identificador = await verificarPropiedadIdentificador(user.id, id);
@@ -48,11 +49,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const actualizado = await prisma.identificadorAlumno.update({
-            where: { id },
-            data: { estado: body },
-            include: { plataforma: { select: { id: true, clave: true, nombre: true } } },
-        });
+        const actualizado = await new IdentificadorEstudianteRepository().cambiarEstado(
+            // verificarPropiedadIdentificador ya garantizó usuario vinculado a un colegio.
+            user.colegioId!,
+            id,
+            body
+        );
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
@@ -69,21 +71,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         return NextResponse.json({ identificador: actualizado });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
         if (error instanceof Error && error.message === "Identificador no encontrado") {
             return NextResponse.json(
                 { error: { message: "Identificador no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/IDENTIFICADORES]");
     }
 }

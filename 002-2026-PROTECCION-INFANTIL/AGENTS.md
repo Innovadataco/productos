@@ -48,7 +48,7 @@ Definidas en `.specify/memory/constitution.md`; tienen prioridad absoluta:
 
 ## Arquitectura en runtime
 
-Cinco capas (detalle completo en `docs/ARCHITECTURE.md`):
+Cinco capas (detalle completo en `docs/architecture/00-INDICE.md`, línea base generada):
 
 1. **UI/App Router** (`src/app/**`, `src/components/**`): páginas y layouts; los layouts de admin verifican rol antes de renderizar.
 2. **API Routes** (`src/app/api/**/route.ts`): un `route.ts` por endpoint; validan entrada, autentican y delegan a servicios. Rutas de admin bajo `src/app/api/admin/**`.
@@ -75,7 +75,7 @@ scripts/            # workers, dev-restart.sh, evals de clasificador, auditoría
 tests/e2e/          # Playwright
 specs/              # Specs Spec-Kit (NNN-nombre/), una por feature
 .specify/           # Config y memoria de Spec-Kit (constitution.md, feature.json)
-docs/               # ARCHITECTURE.md, cierres, evidencia
+docs/               # architecture/ (línea base generada), cierres, evidencia
 ```
 
 ## Convenciones de código
@@ -100,7 +100,8 @@ docs/               # ARCHITECTURE.md, cierres, evidencia
 
 ## Seguridad
 
-- Cifrado en reposo del texto original del reporte con AES-256-GCM (`src/lib/param-encryption.ts`); claves solo en variables de entorno.
+- **REGLA DURA (I-22, spec 099): NUNCA escribir valores de secretos en commits, `cierre.md`, specs, docs ni en el chat** — ni siquiera "para entregar al CEO". Los valores viven SOLO en: (a) `.env` fuera de git (dev en la Mac, prod en el VPS) y (b) el gestor de contraseñas del CEO. En documentos y chat se escribe SIEMPRE un puntero: "entregado al CEO por canal seguro; ver `INVENTARIO-DE-SECRETOS.md` (repo de gestión)". Si una clave se expone, se rota de inmediato y se reporta.
+- Cifrado en reposo del texto original del reporte con AES-256-GCM (`src/lib/param-encryption.ts`); claves solo en variables de entorno. `PARAM_ENCRYPTION_KEY` acepta base64 de 32 bytes o string UTF-8 de 32 chars (NO hex).
 - Rate limiting en PostgreSQL con scopes configurables vía `ParametroSistema` (`ratelimit.{scope}.*`); fail-open con log si el limitador falla.
 - Headers de seguridad en `next.config.ts` (CSP, X-Frame-Options, etc.); HSTS y `upgrade-insecure-requests` solo con `ENABLE_HTTPS_HEADERS=true`.
 - Cookies `httpOnly`, `secure` en HTTPS, `SameSite`; JWT de 24 h.
@@ -124,8 +125,26 @@ Cada spec vive en `specs/NNN-nombre/` con el MISMO set y formato que `specs/001-
 4. Probar con el `quickstart.md`.
 5. Documentar: `cierre.md` (en `specs/NNN/` o histórico en `docs/cierre-NNN.md`) + sección Implementación en `spec.md` + deuda técnica.
 
+## Protocolo de señales (ZEUS ↔ ODIN)
+
+Estándar de comunicación fijado en ACTA_ARQ_06. Fuente: Metodología Operativa §6 R3 (v2.1) — repo `Metodologias` → `Desarrollo de software/METODOLOGIA-OPERATIVA-FABRICA-SOFTWARE-v1.0.md`. Esto es un resumen operativo; el texto canónico vive allá.
+
+- **Vocabulario del ciclo:** `RADICADA → REVISADA → REALIZADO → REVISO → CUMPLE/NO CUMPLE`. Cada señal es UNA línea, un verbo de acción.
+- **Al recibir un instructivo (OBLIGATORIO):** `002-PI-XXX · REVISADA · arranco` — el CEO nunca se queda sin saber si ODIN arrancó. Si algo bloquea: `002-PI-XXX · REVISADA · dudas: <…> → PARA`.
+- **Al cerrar:** `002-PI-XXX · REALIZADO · <hash> · <media línea>`, más `Nota:` SOLO si hay algo que el diff no muestra (desviación, hallazgo preexistente, riesgo asumido).
+- **Cuándo va Nota — test binario:** antes de escribir una Nota, pregúntate *"¿cambiaría el veredicto de ZEUS si no la lee?"*. No → no hay Nota.
+
+  | SÍ Nota (cambia el veredicto) | NO Nota (el diff ya lo dice) |
+  |---|---|
+  | Me desvié de lo pedido | "No toqué X" / "respeté el candado" |
+  | Hallazgo que afecta lo auditado | Estado del working tree ajeno |
+  | Riesgo asumido en este cambio | "Cumplí los checkpoints" |
+  | Supuesto que tomé para desempatar | Descripción de lo hecho |
+- **Regla:** nada de tablas, listas de commits ni descripciones de lo hecho — eso vive en el repo y en `tasks.md`. La señal reporta acción, no silencio.
+
 ## Reglas de oro
 
+- **Antes de tocar `src/`, leer `docs/architecture/`** (línea base generada desde el código, SPEC-126; nunca editada a mano). Si el cambio altera el schema, el proxy, la navegación o el stack, regenerar los artefactos y dejar `npm run arch:check` en VERDE en el mismo PR (el CI lo exige).
 - Migraciones SIEMPRE aditivas y NO destructivas. Nunca `prisma migrate reset` ni nada que borre datos.
 - Nunca confiar en una build sin `rm -rf .next` antes (aparecen builds viejas).
 - Un solo worker a la vez (el advisory lock hace que un segundo worker termine con código 2).

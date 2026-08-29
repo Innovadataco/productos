@@ -17,6 +17,7 @@ export default function ColegioAuditoriaPageClient() {
                 subtitle="Solo se muestran las acciones registradas para tu colegio."
                 defaultActions={COLEGIO_AUDIT_ACTIONS}
                 endpoint="/api/colegio/auditoria"
+                legible
             />
         </div>
     );

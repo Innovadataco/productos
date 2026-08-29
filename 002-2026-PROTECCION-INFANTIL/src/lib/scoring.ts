@@ -57,6 +57,10 @@ const CATEGORIAS_DEFAULT: CategoriaConducta[] = [
     "DOXING",
     "SPAM",
     "OTRO",
+    // SPEC-248 (002-PI-151): Ley 2564 de 2026 art. 6.
+    "CIBERACOSO",
+    "HAPPY_SLAPPING",
+    "STALKING",
 ];
 
 function getDefaultSeverity(): Record<CategoriaConducta, number> {
@@ -73,6 +77,9 @@ function getDefaultSeverity(): Record<CategoriaConducta, number> {
         DOXING: 85,
         SPAM: 0,
         OTRO: 20,
+        CIBERACOSO: 60,
+        HAPPY_SLAPPING: 75,
+        STALKING: 70,
     };
 }
 
@@ -323,6 +330,10 @@ export async function recalcularYGuardarScore(
             totalReportes: resultado.totalReportes,
             reportesAutenticados: resultado.reportesAutenticados,
             reportesAnonimos: resultado.reportesAnonimos,
+            // SPEC-131 (BL-5): contadores aprobados (escritor único de la base de
+            // visibilidad) — calcularScore ya computa sobre whereReporteAprobado.
+            reportesAprobados: resultado.totalReportes,
+            autenticadosAprobados: resultado.reportesAutenticados,
             score: resultado.score,
             scoreAnonimo: resultado.scoreAnonimo,
             scoreAutenticado: resultado.scoreAutenticado,
@@ -336,6 +347,8 @@ export async function recalcularYGuardarScore(
             totalReportes: resultado.totalReportes,
             reportesAutenticados: resultado.reportesAutenticados,
             reportesAnonimos: resultado.reportesAnonimos,
+            reportesAprobados: resultado.totalReportes,
+            autenticadosAprobados: resultado.reportesAutenticados,
             score: resultado.score,
             scoreAnonimo: resultado.scoreAnonimo,
             scoreAutenticado: resultado.scoreAutenticado,

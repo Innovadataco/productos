@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { MisReportesList } from "@/components/modules/MisReportesList";
 import { ConsultaEnriquecidaClient } from "@/components/modules/ConsultaEnriquecidaClient";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Cargando } from "@/components/ui/Cargando";
 
 type MisReporteItem = {
     id: string;
@@ -22,7 +24,7 @@ type MisReporteItem = {
     esAnonimo: boolean;
     creadoEn: string;
     clasificacion: { categoria: string; categoriaLabel: string; categoriaGrupo: string; confianza: number } | null;
-    ranking: { score: number; nivelRiesgo: "BAJO" | "MEDIO" | "ALTO"; totalReportes: number } | null;
+    ranking: { totalReportes: number } | null;
 };
 
 export function DashboardUsuarioClient() {
@@ -58,8 +60,7 @@ export function DashboardUsuarioClient() {
     if (authLoading || (!user && isLoading)) {
         return (
             <main className="mx-auto max-w-6xl px-4 py-12 text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                <p className="mt-3 text-sm text-subtle">Cargando...</p>
+                <Cargando />
             </main>
         );
     }
@@ -67,10 +68,29 @@ export function DashboardUsuarioClient() {
     return (
         <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-body">Panel de reportes</h1>
-                <p className="mt-1 text-sm text-muted">
-                    Consulta el estado de tus reportes y busca información agregada de cualquier identificador.
-                </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h1 className="text-2xl font-bold text-body">Panel de reportes</h1>
+                        <p className="mt-1 text-sm text-muted">
+                            Consulta el estado de tus reportes y busca información agregada de cualquier identificador.
+                        </p>
+                    </div>
+                    {/* I-38 (SPEC-114): el camino a la función central del producto desde el área del padre */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                            href="/dashboard/apelaciones"
+                            className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-body transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/60"
+                        >
+                            Apelar un identificador
+                        </Link>
+                        <Link
+                            href="/reportar"
+                            className="rounded-xl accent-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
+                        >
+                            Reportar un riesgo
+                        </Link>
+                    </div>
+                </div>
             </div>
 
             <div className="space-y-8">
@@ -78,8 +98,7 @@ export function DashboardUsuarioClient() {
                     <h2 className="text-lg font-semibold text-body mb-3">Mis reportes</h2>
                     {isLoading ? (
                         <div className="glass rounded-2xl p-8 text-center animate-pulse">
-                            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                            <p className="mt-3 text-sm text-subtle">Cargando reportes...</p>
+                            <Cargando texto="Cargando reportes..." />
                         </div>
                     ) : error ? (
                         <ErrorState

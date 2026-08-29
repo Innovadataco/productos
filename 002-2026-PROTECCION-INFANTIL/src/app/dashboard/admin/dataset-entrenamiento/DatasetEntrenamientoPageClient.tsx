@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 
 const PAGE_SIZE_OPTIONS = ["10", "25", "50"];
 
@@ -113,6 +116,17 @@ export default function DatasetEntrenamientoPageClient() {
                 </p>
             </div>
 
+            {/* SPEC-180: el CEO preguntó "¿para qué sirve esta página?" — propósito explicado en criollo. */}
+            <div className="rounded-2xl border border-cielo/30 bg-cielo/10 p-4 text-sm text-body">
+                <p className="font-semibold">¿Qué es esto y para qué sirve?</p>
+                <p className="mt-1 text-muted">
+                    Cada vez que una persona operadora corrige la clasificación que hizo la IA de un reporte, esa corrección
+                    (ya anonimizada, sin datos de nadie) queda guardada aquí. Es la memoria de aprendizaje del clasificador:
+                    con estos ejemplos medimos qué tan bien está clasificando y afinamos sus reglas en la sección de
+                    Simulación del Centro de Control IA. No hay nada que operar en esta página — es solo consulta.
+                </p>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="glass rounded-2xl p-4">
                     <p className="text-xs font-medium text-subtle uppercase tracking-wide">Total registros</p>
@@ -129,76 +143,73 @@ export default function DatasetEntrenamientoPageClient() {
             </div>
 
             {error && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-700 dark:text-red-300">
+                <Alerta tono="error" className="p-4">
                     {error}
-                </div>
+                </Alerta>
             )}
 
             <div className="glass rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+                <Tabla sinContenedor>
+                    <TablaHead>
+                        <tr>
+                            <th className="px-4 py-3 font-medium">Texto</th>
+                            <th className="px-4 py-3 font-medium">Clasificación</th>
+                            <th className="px-4 py-3 font-medium">Fuente</th>
+                            <th className="px-4 py-3 font-medium">Anonimización</th>
+                            <th className="px-4 py-3 font-medium">Fecha</th>
+                        </tr>
+                    </TablaHead>
+                    <TablaBody>
+                        {loading ? (
                             <tr>
-                                <th className="px-4 py-3 font-medium">Texto</th>
-                                <th className="px-4 py-3 font-medium">Clasificación</th>
-                                <th className="px-4 py-3 font-medium">Fuente</th>
-                                <th className="px-4 py-3 font-medium">Anonimización</th>
-                                <th className="px-4 py-3 font-medium">Fecha</th>
+                                <td colSpan={5} className="px-4 py-2 text-center text-subtle">
+                                    <Cargando tamano="sm" />
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-subtle">
-                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                                        <p className="mt-2 text-xs">Cargando...</p>
-                                    </td>
-                                </tr>
-                            ) : items.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-subtle">
+                        ) : items.length === 0 ? (
+                            <tr>
+                                <td colSpan={5} className="px-4 py-8 text-center text-subtle">
                                         No hay registros anonimizados en el dataset todavía. Los registros pendientes se procesan en segundo plano.
+                                </td>
+                            </tr>
+                        ) : (
+                            items.map((item) => (
+                                <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                    <td className="px-4 py-3 max-w-md">
+                                        <p className="truncate text-body" title={item.texto}>
+                                            {item.texto}
+                                        </p>
+                                    </td>
+                                    <td className="px-4 py-3 text-body">
+                                        {formatCategoria(item.clasificacionCorrecta)}
+                                        {item.correccion && (
+                                            <span className="ml-2 text-xs text-subtle">
+                                                    (corregido desde {formatCategoria(item.correccion.categoriaOriginal)})
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-subtle">{FUENTES[item.fuente] || item.fuente}</td>
+                                    <td className="px-4 py-3">
+                                        {item.textoAnonimizado ? (
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                                <ShieldCheckIcon className="h-3.5 w-3.5" />
+                                                    Anonimizado
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                                <ExclamationIcon className="h-3.5 w-3.5" />
+                                                    Sin anonimizar
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-subtle whitespace-nowrap">
+                                        {new Date(item.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}
                                     </td>
                                 </tr>
-                            ) : (
-                                items.map((item) => (
-                                    <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                        <td className="px-4 py-3 max-w-md">
-                                            <p className="truncate text-body" title={item.texto}>
-                                                {item.texto}
-                                            </p>
-                                        </td>
-                                        <td className="px-4 py-3 text-body">
-                                            {formatCategoria(item.clasificacionCorrecta)}
-                                            {item.correccion && (
-                                                <span className="ml-2 text-xs text-subtle">
-                                                    (corregido desde {formatCategoria(item.correccion.categoriaOriginal)})
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-subtle">{FUENTES[item.fuente] || item.fuente}</td>
-                                        <td className="px-4 py-3">
-                                            {item.textoAnonimizado ? (
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                                                    <ShieldCheckIcon className="h-3.5 w-3.5" />
-                                                    Anonimizado
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                                                    <ExclamationIcon className="h-3.5 w-3.5" />
-                                                    Sin anonimizar
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-subtle whitespace-nowrap">
-                                            {new Date(item.creadoEn).toLocaleString()}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            ))
+                        )}
+                    </TablaBody>
+                </Tabla>
 
                 {totalPages > 1 && (
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">

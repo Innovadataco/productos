@@ -1,5 +1,6 @@
 .clinerules/
 node_modules/
+node_modules
 .next/
 dist/
 build/
@@ -22,9 +23,13 @@ Thumbs.db
 
 # Worker runtime
 worker.pid
+worker.heartbeat
 
 # Backups de migraciones de secretos (contienen texto plano)
 backups/
+
+# Demo credentials (generado localmente por sembrar-demo.ts; nunca en repo)
+scripts/demo-prod/.demo-credenciales.json
 
 # Archivos generados durante ensayos de despliegue
 .env.ensayo
@@ -33,3 +38,8 @@ cookies.txt
 # Resultados de evaluaciones locales (no commitear; usar git add -f si es necesario)
 eval-results/
 
+# SPEC-107 (cola 025, B3-d): artefactos pesados fuera del índice (el historial los conserva como deuda registrada)
+.venv-presidio/
+prisma/dev.db
+storage/
+scripts/.geonames-cache/

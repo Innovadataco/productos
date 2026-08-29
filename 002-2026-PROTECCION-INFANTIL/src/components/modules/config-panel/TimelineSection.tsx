@@ -15,7 +15,7 @@ export function TimelineSection({ timeline }: TimelineSectionProps) {
                         <div key={String(log.id)} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
                             <div className="flex items-center justify-between">
                                 <span className="font-medium text-body">{String(log.accion)}</span>
-                                <span className="text-xs text-muted">{new Date(String(log.creadoEn)).toLocaleString()}</span>
+                                <span className="text-xs text-muted">{new Date(String(log.creadoEn)).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</span>
                             </div>
                             <p className="text-xs text-muted">
                                 {((log.usuario as Record<string, string>)?.email) || "sistema"} · {String(log.tipoRecurso)}

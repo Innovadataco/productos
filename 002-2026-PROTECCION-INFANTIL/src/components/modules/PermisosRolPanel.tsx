@@ -98,12 +98,12 @@ export function PermisosRolPanel() {
             setData((prev) =>
                 prev
                     ? {
-                          ...prev,
-                          permisos: [
-                              ...prev.permisos.filter((p) => !cambios.some((c) => c.rol === p.rol && c.moduloId === p.moduloId)),
-                              ...cambios,
-                          ],
-                      }
+                        ...prev,
+                        permisos: [
+                            ...prev.permisos.filter((p) => !cambios.some((c) => c.rol === p.rol && c.moduloId === p.moduloId)),
+                            ...cambios,
+                        ],
+                    }
                     : prev
             );
         } catch (err) {

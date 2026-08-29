@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { CiudadRepository } from "@/lib/dal/repositories/ciudad";
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const paisId = searchParams.get("paisId");
+        const departamentoId = searchParams.get("departamentoId");
 
         if (!paisId) {
             return NextResponse.json(
@@ -14,11 +15,8 @@ export async function GET(request: Request) {
             );
         }
 
-        const ciudades = await prisma.ciudad.findMany({
-            where: { paisId, esActivo: true },
-            orderBy: { nombre: "asc" },
-            select: { id: true, nombre: true, paisId: true },
-        });
+        // E-8: la consulta vive en el repo; la ruta no toca prisma.
+        const ciudades = await new CiudadRepository().listarActivasPorPais(paisId, departamentoId ?? undefined);
 
         const resultado = [
             ...ciudades,

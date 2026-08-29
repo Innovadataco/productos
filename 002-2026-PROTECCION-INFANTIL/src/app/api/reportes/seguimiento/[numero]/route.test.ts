@@ -121,6 +121,28 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(body.ranking).not.toBeNull();
     });
 
+    it("no expone piiDetectada en la respuesta y sí contienePii (I-28)", async () => {
+        await prisma.parametroSistema.updateMany({ where: { clave: "visibility.report_threshold" }, data: { valor: "1" } });
+        await prisma.parametroSistema.updateMany({ where: { clave: "visibility.min_authenticated_ratio" }, data: { valor: "0" } });
+
+        await crearReporteClasificadoVisible("RPT-NOPII1", "+57300NOPII");
+
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-NOPII1"),
+            { params: Promise.resolve({ numero: "RPT-NOPII1" }) }
+        );
+        expect(res.status).toBe(200);
+        const body = await res.json();
+
+        expect(body.clasificacion).not.toBeNull();
+        expect(body.clasificacion.contienePii).toBe(true);
+        // La PII cruda del menor nunca debe salir por el endpoint público,
+        // ni como campo de clasificacion ni en ningún otro nivel de la respuesta.
+        const serializado = JSON.stringify(body);
+        expect(serializado).not.toContain("piiDetectada");
+        expect(serializado).not.toContain("María");
+    });
+
     it("mapea DUPLICADO a 'Procesado' con badge muted", async () => {
         await crearReporteBase("RPT-DUPLIC", "+57300DUP", "DUPLICADO");
 

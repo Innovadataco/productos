@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
 import { Input } from "@/components/ui/Input";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { GRUPOS_CATEGORIA_FALLBACK, type CategoriaGrupo } from "@/lib/categoria-grupos";
@@ -175,26 +177,15 @@ export function CategoriaGruposEditor() {
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center gap-3 py-4 text-muted">
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                Cargando grupos de categoría...
-            </div>
-        );
+        return <Cargando inline texto="Cargando grupos de categoría..." className="py-4" />;
     }
 
     return (
         <div className="space-y-4">
             {message && (
-                <div
-                    className={`rounded-lg px-4 py-2 text-sm ${
-                        message.type === "error"
-                            ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
-                            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-                    }`}
-                >
+                <Alerta tono={message.type === "error" ? "error" : "exito"}>
                     {message.text}
-                </div>
+                </Alerta>
             )}
 
             <div className="flex items-start justify-between gap-3 sm:items-center">

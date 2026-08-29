@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -28,23 +29,23 @@ type Colegio = {
     representanteLegalTelefono?: string | null;
     inicioServicio: string;
     finServicio: string;
-    tipoPeriodo: "MENSUAL" | "SEMESTRAL" | "ANUAL";
+    tipoPeriodo: "MENSUAL" | "SEMESTRAL" | "ANUAL" | "LIBRE";
     estado: "activo" | "inactivo";
     admin: AdminUsuario;
     tenantId: string;
 };
 
 type ColegioFormEdit = {
-    nombre?: string;
-    paisId?: string;
-    ciudadId?: string;
-    representanteLegalNombre?: string;
-    representanteLegalEmail?: string;
-    representanteLegalTelefono?: string;
-    inicioServicio?: string;
-    finServicio?: string;
-    tipoPeriodo?: "MENSUAL" | "SEMESTRAL" | "ANUAL";
-    estado?: "activo" | "inactivo";
+    nombre?: string | undefined;
+    paisId?: string | undefined;
+    ciudadId?: string | undefined;
+    representanteLegalNombre?: string | undefined;
+    representanteLegalEmail?: string | undefined;
+    representanteLegalTelefono?: string | undefined;
+    inicioServicio?: string | undefined;
+    finServicio?: string | undefined;
+    tipoPeriodo?: "MENSUAL" | "SEMESTRAL" | "ANUAL" | "LIBRE" | undefined;
+    estado?: "activo" | "inactivo" | undefined;
 };
 
 type Mensaje = { type: "success" | "error"; text: string } | null;
@@ -53,12 +54,12 @@ const tipoPeriodoLabels: Record<string, string> = {
     MENSUAL: "Mensual",
     SEMESTRAL: "Semestral",
     ANUAL: "Anual",
+    LIBRE: "Libre",
 };
 
 function formatDate(iso: string) {
     try {
-        return new Date(iso).toLocaleString("es-CO", {
-            year: "numeric",
+        return new Date(iso).toLocaleString("es-CO", { timeZone: "America/Bogota", year: "numeric",
             month: "short",
             day: "numeric",
             hour: "2-digit",
@@ -420,6 +421,12 @@ export default function ColegiosPageClient() {
                                                 </td>
                                                 <td className="py-3 text-right">
                                                     <div className="flex flex-wrap justify-end gap-2">
+                                                        <Link
+                                                            href={`/dashboard/admin/colegios/${colegio.id}/estructura`}
+                                                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                        >
+                                                            Ver estructura
+                                                        </Link>
                                                         <Button
                                                             variant="outline"
                                                             className="px-3 py-1.5 text-xs"
@@ -580,6 +587,7 @@ function EditRow({
                             label="Fin servicio"
                             type="datetime-local"
                             required
+                            min={values.inicioServicio || undefined}
                             value={values.finServicio || ""}
                             onChange={(e) => setValues({ ...values, finServicio: e.target.value })}
                         />
@@ -595,6 +603,7 @@ function EditRow({
                                 <option value="MENSUAL">Mensual</option>
                                 <option value="SEMESTRAL">Semestral</option>
                                 <option value="ANUAL">Anual</option>
+                                <option value="LIBRE">Libre (fechas manuales)</option>
                             </select>
                         </div>
                         <div>

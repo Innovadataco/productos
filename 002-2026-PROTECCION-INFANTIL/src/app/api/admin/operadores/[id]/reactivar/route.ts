@@ -1,23 +1,17 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { logAudit } from "@/lib/audit";
 import { withValidation } from "@/lib/validation";
 import { operadorIdParamsSchema } from "@/lib/schemas";
+import { OperadorService } from "@/lib/dal/services/operadores";
 
 function getClientInfo(request: Request) {
     return {
         ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
     };
-}
-
-async function getOperador(id: string) {
-    const where: Record<string, unknown> = { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } };
-    return prisma.usuario.findFirst({ where, include: { perfilOperador: true } });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -32,7 +26,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
         const { id } = withValidation.params(operadorIdParamsSchema)(await params);
-        const operador = await getOperador(id);
+
+        // SPEC-053: búsqueda, reactivación y auditoría viven en el DAL; la ruta no toca prisma.
+        const service = new OperadorService();
+        const operador = await service.obtenerOperador(id);
         if (!operador) {
             return NextResponse.json(
                 { error: { message: "Operador no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -44,19 +41,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             return NextResponse.json({ operador });
         }
 
-        await prisma.usuario.update({ where: { id }, data: { estado: "activo" } });
-        const { ipAddress, userAgent } = getClientInfo(request);
-        const accionAudit = operador.rol === "COMITE_VALIDACION" ? "COMITE_ACTIVADO" : "OPERADOR_ACTIVADO";
-        await logAudit({
-            accion: accionAudit,
-            tipoRecurso: "Usuario",
-            recursoId: id,
-            usuarioId: admin.id,
-            valorAnterior: JSON.stringify({ estado: operador.estado }),
-            valorNuevo: JSON.stringify({ estado: "activo" }),
-            ipAddress,
-            userAgent,
-        });
+        await service.reactivar(operador, admin.id, getClientInfo(request));
 
         return NextResponse.json({ operador: { ...operador, estado: "activo" } });
     } catch (error) {

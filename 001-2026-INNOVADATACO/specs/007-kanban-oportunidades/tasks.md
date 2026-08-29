@@ -89,6 +89,44 @@ explícito por ruta (prohibido `git add -A`). **No es trabajo pesado: sin turno.
 
 ---
 
+## Phase 7: Defecto I-014 — el tablero no cabe (turno D-068)
+
+> Reportado por el CEO sobre la app **ya desplegada**: en ambos tableros la última columna
+> quedaba fuera de pantalla. Entra aquí porque el componente es de esta spec y su acta sigue
+> abierta. **Es que el tablero se pueda usar, no un rediseño** (eso es SPEC-012).
+
+- [x] T016 Medir la causa antes de tocar: columna `w-72` (288 px) + `gap-4` (16 px) → 4
+      columnas piden 1200 px y 5 piden 1504 px; el área real de contenido son **1184 px**
+      (`max-w-7xl` − `p-12`). Desbordaba **siempre**, no a cierto ancho. → research D6
+- [x] T017 `src/lib/kanban.ts`: `seRepartenLasColumnas` y `plantillaDeColumnas`, con
+      `MAX_COLUMNAS_REPARTIDAS = 6`. La decisión de maquetado se saca a función **pura** para
+      poder probarla sin navegador. → FR-012
+- [x] T018 `src/lib/kanban.test.ts`: reparte con 4 y con 5 (los dos tableros reales), reparte
+      hasta el umbral, por encima vuelve al desplazamiento, y la plantilla usa `minmax(0,1fr)`
+      para que una palabra larga no estire su columna. → FR-012
+- [x] T019 `KanbanBoard.tsx`: rejilla que reparte el ancho en vez de `flex` con ancho fijo;
+      `min-w-0` en la columna; sin `pb-4` de barra de desplazamiento (era la franja muerta bajo
+      el tablero). → FR-012
+- [x] T020 `RootLayoutContent.tsx`: la barra de submódulos envuelve en vez de empujar y el
+      botón *Cerrar* no se encoge — con seis submódulos apretaba contra el borde. → FR-013
+- [x] T021 `scripts/verify-tableros.mjs`: mide **en la app desplegada**, con navegador real, a
+      1280/1440/1920: `scrollWidth` vs `clientWidth`, columnas enteras y desborde de página.
+      → SC-012
+- [x] T022 **Gate RZ-1 / SC-013**: `KanbanBoard.tsx` sigue importando solo React y
+      `@/lib/kanban`.
+
+**Commit** — I-014. Push.
+
+---
+
+## Documentación Spec Kit (D-066, turno D-068)
+
+- [x] T023 `research.md`: las decisiones de la spec con sus alternativas descartadas, incluida
+      la medición de I-014 y por qué **no** se tocó el ancho global de `main`.
+- [x] T024 `quickstart.md`: cómo verificar la spec paso a paso, contra la app **desplegada**.
+
+---
+
 ## Resultado (2026-07-24, turno nocturno D-060)
 
 | Gate | Resultado |

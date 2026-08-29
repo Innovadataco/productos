@@ -99,3 +99,32 @@ describe("GET /api/reportes/mis-reportes", () => {
         expect(body.items[0].mensaje).toBe("Tu reporte está en proceso — puede tardar hasta 24 horas");
     });
 });
+
+describe("GET /api/reportes/mis-reportes — vigencia del padre (SPEC-119)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await crearParametrosReportes();
+        await crearPlataforma();
+        await crearPaisCiudad();
+        await setupParent();
+    });
+
+    it("padre vencido recibe 403 con mensaje claro y sus reportes quedan intactos", async () => {
+        await crearReporteUsuario("+57300VENCIDO", "CLASIFICADO");
+        const ayer = new Date();
+        ayer.setDate(ayer.getDate() - 1);
+        await prisma.usuario.update({
+            where: { id: parentUser.id },
+            data: { finServicio: ayer },
+        });
+
+        const res = await GET(new Request("http://localhost:5005/api/reportes/mis-reportes"));
+        expect(res.status).toBe(403);
+        const body = await res.json();
+        expect(body.error.message).toMatch(/vencido/i);
+        expect(body.error.message).toMatch(/soporte/i);
+
+        const intactos = await prisma.reporte.count({ where: { usuarioId: parentUser.id } });
+        expect(intactos).toBe(1);
+    });
+});

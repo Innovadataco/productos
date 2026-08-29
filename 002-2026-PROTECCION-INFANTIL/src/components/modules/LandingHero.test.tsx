@@ -83,8 +83,8 @@ describe("LandingHero — UN SOLO formato de resultado (spec 091-A)", () => {
         // Sin ciudad (fuga 089) ni "(undefined)"
         expect(body).not.toContain("Bogotá");
         expect(body).not.toContain("undefined");
-        // El chip de reportes es consistente (siempre visible)
-        expect(body).toContain(`${n} reportes`);
+        // El chip de reportes es consistente (siempre visible, con singular correcto)
+        expect(body).toContain(n === 1 ? "1 reporte" : `${n} reportes`);
     });
 
     it("no muestra 'Nivel de riesgo' ni link a /consulta", () => {

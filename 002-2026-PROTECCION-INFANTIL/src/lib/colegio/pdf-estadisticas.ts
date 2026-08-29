@@ -1,6 +1,6 @@
 import type { EstadisticasColegio, EstadisticasCurso } from "./estadisticas";
-import pdfMake from "pdfmake/build/pdfmake";
-import * as pdfFonts from "pdfmake/build/vfs_fonts";
+import { formatoFechaHoraBogota } from "@/lib/fechas/formato-bogota";
+import { renderPdfBuffer } from "@/lib/pdf/pdfmake-node";
 import type {
     TDocumentDefinitions,
     Content,
@@ -8,9 +8,6 @@ import type {
     TableCell,
     Alignment,
 } from "pdfmake/interfaces";
-
-// pdfmake requiere registrar las fuentes virtuales en Node
-(pdfMake as unknown as { vfs: Record<string, string> }).vfs = (pdfFonts as unknown as { vfs: Record<string, string> }).vfs;
 
 const COLOR_PRIMARIO = "#10b981"; // emerald-500
 const COLOR_TEXTO = "#1f2937"; // gray-800
@@ -64,7 +61,7 @@ const estilos: EstilosPdf = {
 };
 
 function formatoFechaColombia(fecha: Date): string {
-    return fecha.toLocaleDateString("es-CO", {
+    return formatoFechaHoraBogota(fecha, {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -164,12 +161,7 @@ export function generarPdfEstadisticas(datos: EstadisticasColegio): Promise<Buff
         pageMargins: [40, 40, 40, 40],
     };
 
-    return (((pdfMake as unknown as { createPdf: (...args: unknown[]) => { getBuffer: () => Promise<Buffer> } }).createPdf(
-        docDefinition,
-        undefined,
-        undefined,
-        (pdfFonts as unknown as { vfs: Record<string, string> }).vfs
-    ).getBuffer()) as Promise<Buffer>);
+    return renderPdfBuffer(docDefinition);
 }
 
 function construirTablaPorCurso(cursos: EstadisticasCurso[]): Content {

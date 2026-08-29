@@ -1,0 +1,830 @@
+{
+ "fixtureVersion": 2,
+ "nota": "banco gobernado ANTES de la adjudicación 095 (reconstruido: SEMILLA v2 activos+desactivados)",
+ "casos": [
+  {
+   "texto": "Un adulto desconocido contacto a mi hija insistiendo en hablar todos los dias pese a que ella no responde.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "El usuario le escribe a mi hijo varias veces al dia pidiendo que le conteste y se molesta cuando no lo hace.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Una cuenta insiste en agregar a mi sobrina a pesar de haber sido bloqueada dos veces.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un adulto le pidio a mi hija que le enviara fotografias personales en privado.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "El contacto solicito imagenes intimas al menor a cambio de creditos del juego.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Reporto que un usuario pidio reiteradamente material fotografico privado a un adolescente.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Un desconocido ofrecio regalos y dinero a mi hijo a cambio de mantener conversaciones en secreto.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "El usuario prometio enviar una consola de videojuegos si el menor aceptaba hablar por privado.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Una cuenta ofrecio tarjetas de regalo al menor para ganar su confianza.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Alguien creo un perfil haciendose pasar por un companiero de colegio de mi hija para contactarla.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Reporto una cuenta que finge ser una menor de la misma edad para acercarse a otros ninios.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Un adulto se hace pasar por reclutador de un equipo deportivo juvenil para contactar menores.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Un desconocido insiste en encontrarse en persona con mi hijo y le pide que no avise a nadie.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "El usuario propuso verse en un centro comercial y ofrecio pasar a buscar al menor.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Reporto que un adulto intento coordinar una cita a solas con una adolescente que conocio en linea.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un usuario envio contenido de tipo sexual a mi hijo sin que el lo solicitara.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "El contacto compartio imagenes inapropiadas de caracter sexual con una menor.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "Reporto el envio de material sexual explicito dirigido a un adolescente en un chat de grupo.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "Un desconocido amenaza a mi hija con difundir fotos suyas si no le envia mas imagenes.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "El usuario exige dinero al menor a cambio de no publicar capturas de sus conversaciones.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Reporto un caso donde amenazan a un adolescente con exponer su informacion si no coopera.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Circula un video manipulado con inteligencia artificial que pone el rostro de una menor en otro cuerpo.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Reporto imagenes creadas con IA que falsifican la apariencia de un adolescente de forma inapropiada.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Un perfil publica montajes generados por IA usando la cara de mi hijo sin autorizacion.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Alguien difundio fotos privadas de mi hija en un grupo sin su consentimiento.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Reporto la publicacion de imagenes privadas de una menor compartidas sin permiso.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Un usuario reenvio capturas intimas de una adolescente a varios contactos.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "Publicaron la direccion del colegio y la rutina diaria de mi hijo para que otros lo identifiquen.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Reporto que expusieron datos personales y el telefono de una menor en un foro publico.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Alguien recopilo y publico informacion privada de una adolescente incluyendo su domicilio.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Recibimos mensajes masivos de publicidad de una tienda de ropa con enlaces de descuento.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Un bot envia repetidamente enlaces a un sorteo de celulares sin relacion con menores.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Llegan mensajes automaticos promocionando criptomonedas varias veces al dia.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Mi hijo conversa con sus companieros de clase sobre la tarea de matematicas para maniana.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Un grupo de amigos coordina a que hora se juntan a jugar futbol el sabado en el parque.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Mi hija comparte con su prima fotos del cumpleanios familiar del fin de semana.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Companieros del equipo comentan una jugada de un partido de videojuegos que jugaron juntos.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Una profesora envia un recordatorio del horario de la reunion de padres del colegio.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Mi hijo pregunta a un amigo si puede prestarle un libro de la biblioteca escolar.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Dos primos adolescentes conversan sobre que pelicula ver en el cine el domingo.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Un usuario mayor pregunta la edad de mi hija y en que colegio estudia desde el primer mensaje.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "El contacto pide al menor que borre los mensajes y mantenga la charla en secreto de sus padres.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un adulto solicito una videollamada privada a un menor insistiendo en que activara la camara.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "El usuario ofrecio dinero para que la menor le enviara fotos usando cierta ropa.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Reporto a alguien que se hizo pasar por una agencia de modelaje para citar a una menor a solas.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD",
+   "secundariaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un desconocido propuso recoger a mi hijo cerca del colegio sin conocimiento de la familia.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Amenazan a una adolescente con enviar sus fotos a sus companieros si bloquea la cuenta.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Circulan capturas privadas de un menor reenviadas en varios grupos sin su permiso.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Mi hija y sus amigas organizan un trabajo grupal para la clase de ciencias por chat.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Llegan mensajes repetidos de una promocion de comida rapida con cupones de descuento.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Un hombre desconocido le escribe a mi hija de 13 años todos los días por WhatsApp desde hace dos semanas. Ella nunca le contesta y ya lo bloqueó dos veces, pero vuelve a escribirle desde números distintos.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Soy docente y una estudiante de sexto me contó que un perfil de Instagram que dice conocerla le escribe todas las noches desde hace un mes. Ella no le responde pero los mensajes siguen llegando.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Mi sobrino de 15 años recibe mensajes y llamadas de un número que no conoce a cualquier hora, incluso de madrugada. Ya le dijo que no quiere hablar y la persona sigue insistiendo.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Una vecina me comentó que un perfil de Facebook le manda solicitudes de amistad todos los días a su niña de 10 años. Las rechaza y vuelve a crear cuentas para insistir.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Me escribe una persona mayor todos los días por Discord. Le dije que no quería hablar con él y sigue mandándome mensajes en todos los servidores donde estoy.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un hombre le escribe todas las noches a mi hija preguntándole qué hace, dónde está y con quién anda. Nunca la ha citado en persona, pero no para de controlarla por chat y eso nos asusta mucho.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un señor le manda mensajes todos los días a mi nieta diciéndole que es muy linda y que por favor le mande un saludo. No le pide fotos ni nada más, pero es un desconocido y no deja de escribir aunque ella no contesta.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un exprofesor del colegio les escribe con frecuencia a varias exalumnas por Instagram con halagos sobre cómo han crecido. Dicen que solo saluda, pero les escribe todas las semanas aunque le dejan los mensajes en visto.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un vecino del barrio le escribe todos los días por Snapchat a mi hijo de 14 años para saludarlo y preguntarle cómo le fue en el colegio. Mi hijo casi no le contesta porque le parece raro, pero el señor insiste.",
+   "categoriaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un tipo le escribe a mi hermana menor todos los días sin parar desde hace semanas y ahora además le ofrece recargas del celular si le contesta los mensajes. Ella no le responde pero él no se rinde.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un perfil le escribió a mi hija de 12 años pidiéndole fotos sin ropa. Le dijo que era para un concurso de modelaje y que todas las niñas de su edad lo hacían.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Mi estudiante me mostró mensajes de un hombre que le pedía videos en ropa interior diciendo que la iba a hacer famosa en TikTok. Ella tiene 13 años y estaba muy asustada.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Un desconocido en un chat de videojuegos le pidió a mi hijo de 11 años que le mandara fotos de su cuerpo a cambio de ayudarlo a subir de nivel. Menos mal mi hijo me contó de una vez.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Hay un juego de retos que circula por WhatsApp donde un contacto desconocido empieza pidiendo cosas inocentes y termina pidiéndoles a las niñas fotos en ropa interior. A mi prima de 15 años ya le llegó.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Un hombre me escribió por Telegram diciendo que le mandara fotos mías desnuda y que si no lo hacía me iba a dejar de hablar. Tengo 16 años y no sé quién es.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Un perfil le pide a mi hija fotos de cómo le quedó el uniforme nuevo del colegio y le insiste en que se tome las fotos sola en su cuarto. Dice que es diseñador, pero nos parece muy sospechoso que insista tanto en fotos de ella.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Lleva días escribiéndole a mi sobrina que le mande una foto de ella para saber que es real y poder seguir hablando. No le ha pedido nada explícito todavía, pero es un adulto desconocido insistiendo en fotos de una niña de 12 años.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Una cuenta de TikTok le escribió a mi hija de 10 años diciendo que la iban a escoger para un concurso de baile y que debía grabar videos bailando con ropa ajustada para la audición. El perfil no tiene ninguna empresa detrás.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "Un hombre no para de escribirle a mi hija de 14 años desde hace un mes y en los últimos mensajes empezó a pedirle fotos sin blusa. Ella lo bloqueó pero apareció con otra cuenta.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un perfil con nombre y foto de una compañera del curso le pidió a mi hijo fotos íntimas, pero esa compañera dice que la cuenta no es suya y que ya le pidieron fotos a varios niños haciéndose pasar por ella.",
+   "categoriaEsperada": "SOLICITUD_MATERIAL",
+   "secundariaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Un desconocido le ofreció a mi hijo de 12 años recargas de dinero y saldo para el celular si le mandaba fotos y le contestaba los mensajes todos los días.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Un jugador adulto del clan de mi hijo le regaló un pase de batalla y ahora le está ofreciendo skins caros a cambio de que hablen por videollamada a solas. Mi hijo tiene 11 años.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Un perfil de Instagram le escribió a mi sobrina de 14 años ofreciéndole un iPhone nuevo si salía con él un fin de semana. Dijo que era empresario y que podía darle todo lo que quisiera.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Una señora que dice ser madrina de un programa de becas le ofrece a mi nieta de 13 años mercados y útiles escolares si habla con ella por WhatsApp todas las noches y le cuenta su rutina. No existe ningún programa con ese nombre.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Un hombre me ofreció dinero por Nequi si le mandaba videos míos y le escribía todas las tardes. Me dijo que no le contara a mis papás porque era un secreto entre los dos. Tengo 15 años.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Un desconocido le escribió a mi hijo de 13 años ofreciéndole skins gratis de su juego favorito sin pedirle nada todavía, pero le dice que es su amigo especial y que quiere seguir consintiéndolo. Nos preocupa porque ningún adulto regala cosas así sin querer algo a cambio.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Un hombre le ofrece recargas del celular a mi hija de 16 años diciéndole que es muy especial para él y que quiere ayudarla porque es muy bonita. Le escribe todos los días con la misma oferta.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Un adulto del chat de un juego en línea les ha regalado pases y monedas a varios niños del grupo, todos entre 9 y 12 años, y ahora les pide que hablen con él por privado para seguir recibiendo regalos.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Un tipo le escribe a mi hermanita de 12 años todos los días sin que ella le conteste y le ofrece dinero para que compre lo que quiera si acepta ser su novia a distancia. No para de insistir con las dos cosas.",
+   "categoriaEsperada": "OFRECIMIENTO_REGALOS",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un perfil que se hace pasar por un influencer juvenil muy conocido les ofrece regalos y salidas exclusivas a menores que lo contacten por privado. Verificamos y el influencer real denunció que no es su cuenta.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD",
+   "secundariaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Crearon un perfil de Instagram con el nombre y las fotos de mi hija de 13 años y están escribiéndole a sus compañeros haciéndose pasar por ella. Mi hija no tiene cuenta en esa red.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Alguien abrió una cuenta de Facebook con el nombre y la foto de mi hermano de 15 años y desde ahí le escribe a niñas de su colegio diciendo cosas inapropiadas. Mi hermano está siendo culpado de algo que no hizo.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Un hombre se hace pasar por un primo mío en WhatsApp y le escribió a mi hija de 11 años diciendo que era familia y que le mandara fotos de ella. Confirmamos con la familia y nadie le escribió.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "En el grupo del curso entró un contacto que decía ser una niña nueva del colegio y empezó a pedirles fotos a las compañeras. La rectoría confirmó que no hay ninguna estudiante nueva con ese nombre.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Un perfil de TikTok usa el nombre y las fotos de mi sobrino de 14 años para pedirles dinero y recargas a sus seguidores. Él ya denunció pero la cuenta sigue activa.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Apareció una cuenta con el nombre completo y la foto del perfil de una compañera de mi hija, pero la niña dice que no es suya. La cuenta le escribe a los compañeros del curso preguntándoles cosas personales, y no sabemos si es una broma o algo peor.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Un hombre le escribió a mi hijo de 12 años diciendo que era amigo de su tío y que por eso conocía su nombre y su colegio. El tío dice que no conoce a nadie con ese perfil, así que la identidad que dio es falsa.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Una cuenta con el nombre del colegio les escribió a varios padres pidiendo datos de los estudiantes para supuestas actualizaciones de la plataforma. El colegio aclaró que la cuenta no es oficial y que nunca piden datos por redes.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Un perfil falso de un cantante famoso le escribe a mi hija de 13 años diciendo que la escogió entre sus fans y que quiere conocerla mejor. El equipo del artista ya desmintió esas cuentas, pero este perfil sigue contactando menores.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD"
+  },
+  {
+   "texto": "Un desconocido se hace pasar por un chico de 14 años en Snapchat y le escribe todos los días a mi hija de 12 años insistiendo en que sean novios. Comparando las fotos con otros perfiles vimos que son robadas de otro niño.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Una cuenta con la foto y el nombre de una compañera del curso les ofrece a los niños premios y saldo si hablan por privado con ella. La compañera denunció que la cuenta no es suya y que alguien está usando su identidad para engañar menores.",
+   "categoriaEsperada": "SUPLANTACION_IDENTIDAD",
+   "secundariaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Un hombre le propuso a mi hija de 15 años encontrarse en un centro comercial este sábado. Le dijo que no le contara a nadie y que él la reconocería por la foto de su perfil.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un desconocido que habla con mi hijo de 13 años por un juego en línea le dijo que viaja a nuestra ciudad la próxima semana y que quiere conocerlo en persona en el parque cerca de la casa.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un hombre mayor me escribió por Facebook diciendo que quiere invitarme a comer helado y conocerme en persona. Me preguntó a qué hora salgo del colegio y por dónde me recogen. Tengo 12 años y no lo conozco.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un tipo le escribió a mi sobrina de 16 años diciendo que le tiene una sorpresa y que lo espere sola a la salida del gimnasio donde entrena. Le insistió varias veces en que vaya sin avisarle a su mamá.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un hombre que dice tener 20 años le propuso a una estudiante de octavo verse en un hotel de la ciudad. La niña le mostró los mensajes a la orientadora y están tomando cartas en el asunto.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un desconocido le escribe a mi hija diciéndole que algún día se van a ver y que ya sabe en qué barrio vivimos. No ha dado fecha ni lugar concreto, pero insiste cada semana en que quiere conocerla en persona.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un señor le comenta en todas sus publicaciones de TikTok a mi nieta de 14 años que la quiere ver salir del colegio para conocerla. Le ha preguntado varias veces a qué hora sale y qué ruta coge para la casa.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un hombre le pregunta a mi hijo de 12 años a qué parque va los fines de semana con sus amigos y le dice que le gustaría coincidir con él algún día para jugar juntos. Nunca ha propuesto un plan concreto pero la intención de encontrarse es clara.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Un desconocido le escribe a mi hija de 15 años todos los días desde hace un mes y esta semana le propuso verse en persona en la estación de TransMilenio cerca de la casa. La insistencia era constante y ahora la cita es concreta.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO",
+   "secundariaEsperada": "CONTACTO_INSISTENTE"
+  },
+  {
+   "texto": "Un hombre le dijo a mi sobrina de 13 años que le tiene un regalo de cumpleaños pero que solo se lo puede entregar en persona, que lo espere sola el sábado en la entrada del centro comercial.",
+   "categoriaEsperada": "SOLICITUD_ENCUENTRO",
+   "secundariaEsperada": "OFRECIMIENTO_REGALOS"
+  },
+  {
+   "texto": "Unas fotos íntimas de una estudiante de noveno están circulando por los grupos de WhatsApp del colegio. La niña está destrozada y los compañeros las siguen reenviando a pesar de las advertencias.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "El exnovio de mi hija de 16 años publicó en sus historias de Instagram fotos privadas que ella le había enviado cuando eran novios. Las borró a las horas pero ya varios las habían guardado y compartido.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "Un grupo de Telegram está compartiendo imágenes íntimas de niñas de varios colegios de la ciudad, algunas aparentemente menores de edad. Mi hijo me mostró el grupo y salí espantada.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "Un compañero de curso le tomó capturas a un video íntimo que mi hija de 15 años le envió en confianza por Snapchat y las repartió entre los amigos del grado. Ahora la amenazan con publicarlas si habla.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "Un hombre adulto le reenvió a mi hijo de 13 años fotos íntimas de una niña que dice ser de su edad y le pide que él también mande fotos suyas para intercambiar. Mi hijo me contó asustado.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "El novio de mi sobrina de 17 años guardó las fotos íntimas que ella le enviaba y se las mostró a sus amigos en el celular sin publicarlas en internet. Ella se enteró por una amiga y está muy afectada.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "Después de terminar con mi hija de 16 años, su ex le escribió diciendo que si no volvía con él iba a publicar las fotos privadas que tiene de ella. Aún no publica nada pero la amenaza es explícita.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "Hay un grupo de Discord donde varios jóvenes piden y reparten packs de niñas de los colegios de la zona, con nombres y cursos. Algunas de las mencionadas tienen 13 y 14 años.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL"
+  },
+  {
+   "texto": "Un hombre le dice a mi hija de 14 años que si no le manda más fotos íntimas va a difundir las que ella ya le envió por error creyendo que era un chico de su edad. Está atrapada y no sabe qué hacer.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+   "secundariaEsperada": "SOLICITUD_MATERIAL"
+  },
+  {
+   "texto": "El exnovio de mi hermana de 17 años la amenaza con subir sus fotos íntimas a internet si no acepta verse con él una última vez. Ella está aterrada porque él sí tiene ese material.",
+   "categoriaEsperada": "COMPARTIMIENTO_SEXUAL",
+   "secundariaEsperada": "SOLICITUD_ENCUENTRO"
+  },
+  {
+   "texto": "Mi primo de 16 años creó un perfil con mi nombre y mi foto como broma entre la familia y me escribió cosas graciosas al chat. Fue de mal gusto pero ya se disculpó y borró todo, no hubo mala intención.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Mi hijo de 9 años y un amiguito del barrio juegan por chat a adivinar dónde vive el otro y qué estudia. Son dos niños de la misma edad jugando entre ellos, sin ningún adulto de por medio.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Un señor del conjunto me escribió preguntándome si conozco un buen tutor de matemáticas para su hijo y si puedo recomendarle a alguien del colegio. Es un vecino conocido buscando una recomendación, nada más.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "En el álbum familiar de Facebook compartimos las fotos del cumpleaños de mi hija en la piscina con sus primos. Una vecina comentó que era peligroso, pero son fotos familiares normales compartidas por nosotros mismos en un grupo cerrado.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "El profesor de mi hijo escribe todas las noches al grupo de padres recordando las tareas y las entregas de la semana. Algunos padres se quejan de la insistencia, pero es el canal oficial del colegio y solo habla de temas académicos.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Un compañero de curso le escribe a mi hija todos los días pidiéndole que le pase los apuntes y las tareas. Es intenso y canson, pero es un niño de su mismo salón y solo habla de estudio.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "El primo mayor de mi hijo le regaló unos skins de su videojuego favorito por su cumpleaños. Es familia cercana y fue un regalo de cumpleaños normal, sin pedirle nada a cambio.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Un compañero del curso invitó a mi hija y a varios niños a su fiesta de cumpleaños este sábado por el grupo de WhatsApp del salón. Es una invitación normal de un niño conocido, con los papás enterados.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Mi cuñada creó un perfil de Facebook con fotos de mi sobrino de 7 años para llevar el álbum familiar y la cuenta lleva el nombre del niño. Es la propia mamá administrando la cuenta, aunque nos parece mala idea.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "El rector del colegio les escribió por WhatsApp a varios padres de familia para confirmar la reunión de entrega de boletines. Algunos no tenían el número registrado y se alarmaron, pero es el número oficial de la institución.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Mi tío insiste todas las semanas en hacer videollamadas familiares con mis hijos para saludarlos porque vive en otra ciudad. Es insistente pero es familia directa y las llamadas son con nosotros presentes.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Una cuenta de Instagram que se hace pasar por una tienda de tenis famosa anuncia sorteos falsos y les pide a los seguidores que compartan sus datos. Es pura publicidad engañosa para robar datos de adultos y niños por igual.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "El perfil de mi hijo recibe todos los días comentarios con enlaces de casas de apuestas y casinos en línea. Es publicidad masiva que le llega a miles de cuentas, no algo dirigido a él.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "A mi hija le llega una cadena por WhatsApp que dice que si no la reenvía a diez amigos le pasará algo malo, y trae enlaces a páginas de premios falsos. Es la típica cadena que circula por todos los grupos.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Un número desconocido le escribió a mi hijo exigiéndole doscientos mil pesos y diciendo que si no consigna va a publicar unas fotos que le sacaron de su perfil.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "A mi sobrina le llegaron mensajes pidiendo dinero a cambio de no difundir unos videos íntimos que dicen tener de ella. Está muy asustada y no quiere salir de la casa.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Un usuario del servidor le exige a mi hijo recargas semanales para el juego y lo amenaza con filtrar las conversaciones privadas del grupo si no paga.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Un compañero mayor le cobra plata todos los lunes a mi hijo y le dice que si no lleva la plata le va a pegar a la salida. Ya van tres semanas de lo mismo.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Le hackearon la cuenta a mi hija y ahora le piden plata para devolvérsela. Dicen que si no paga borran todo y usan su nombre para estafar a sus seguidores.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Recibí mensajes diciendo que tenían a mi hijo afuera del colegio y que debía consignar de inmediato o le harían daño. Mi hijo estaba en clase, pero siguen escribiendo y pidiendo plata.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Un niño del curso le dice al mío que si no le pasa las tareas le va a contar a la profesora que él copió en el examen y lo va a publicar en el grupo del salón.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Le piden a mi hija cincuenta mil pesos o publican un video donde ella se cae en una fiesta y todos se ríen. No es íntimo, pero la tiene muy mal y le da miedo ir al colegio.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Un jugador mayor le dice a mi hijo que si no le regala sus skins lo va a denunciar con pruebas falsas y le van a cerrar la cuenta del juego.",
+   "categoriaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Un perfil falso le exige a mi hija trescientos mil pesos; ya compartió una foto íntima de ella en un grupo para demostrar que habla en serio y amenaza con publicar las demás.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Le montaron la cara de mi hija en imágenes generadas con inteligencia artificial y le piden plata para no repartirlas por todo el colegio.",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Un hombre le escribió a mi hija diciendo que sabe dónde vive y dónde estudia, y que si no le manda plata publica la dirección completa y las fotos de la casa.",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "DOXING"
+  },
+  {
+   "texto": "Le llamaron a mi hija con una voz igualita a la de su mamá, hecha con inteligencia artificial, pidiéndole que consignara una plata urgente a un número. Ella reconoció la voz y por poco cae.",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "En un grupo del colegio están repartiendo imágenes falsas de una compañera hechas con una aplicación de inteligencia artificial que le quita la ropa en las fotos.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Alumnos de un colegio crearon un video falso con inteligencia artificial donde una profesora aparece diciendo cosas que nunca dijo, y ya tiene miles de reproducciones.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Unos compañeros usaron inteligencia artificial para crear imágenes de mi hija como si estuviera en ropa interior y las andan mostrando entre ellos.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Una cuenta anónima generó con inteligencia artificial fotos comprometedoras de varias niñas del grado y las está ofreciendo por internet.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Le hicieron a mi hijo un video con inteligencia artificial donde aparece en situaciones humillantes; parece tan real que ya lo creyeron varios compañeros.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Mi hija denuncia que un conocido crea imágenes íntimas falsas de menores con inteligencia artificial y las guarda en su celular; lo vio una amiga por accidente.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Mi hija lleva semanas hablando con un supuesto chico que resultó ser un bot de inteligencia artificial manejado por alguien; las respuestas eran demasiado perfectas y al final le pidió fotos.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Usaron una herramienta de voz con inteligencia artificial para hacerse pasar por un compañero y pedirle a mi hijo datos del curso y de los grupos del colegio.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Editaron con una aplicación de inteligencia artificial una foto de mi hija para ponerla en ridículo delante de todo el salón; no es íntima, pero la deformaron y parece real.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Un creador de contenido local publica videos hechos con inteligencia artificial donde usa la cara de niños del barrio sin permiso de los padres para hacer chistes.",
+   "categoriaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Crearon con inteligencia artificial imágenes íntimas de mi hija y ya las compartieron en varios grupos del colegio. Ella no se ha tomado ninguna foto así en la vida.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Una cuenta pública publica imágenes íntimas falsas de mi hija hechas con inteligencia artificial; ya las vieron sus compañeros y la señalan en el colegio.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "Fabricaron con inteligencia artificial unas imágenes falsas de mi hija y con eso la están chantajeando para que les dé plata a cambio de borrarlas.",
+   "categoriaEsperada": "EXTORSION",
+   "secundariaEsperada": "CONTENIDO_GENERADO_IA"
+  },
+  {
+   "texto": "El ex novio de mi hija repartió en el grupo del curso unas fotos íntimas que ella le había enviado en confianza cuando andaban.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Grabaron a escondidas a mi hijo en el baño del colegio y el video anda rodando por varias cuentas. Él no quiere volver a clases de la vergüenza.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Mi hija envió una foto privada por la aplicación, que se supone se borra sola, pero le hicieron captura sin permiso y la están reenviando entre conocidos.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Le sacaron fotos del perfil privado a mi hermana menor y las publicaron en páginas sin su autorización, con comentarios sobre su cuerpo.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Un video íntimo de una menor del barrio está circulando en grupos de desconocidos; varias personas del sector ya lo recibieron y nadie sabe quién lo subió primero.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Una cuenta subió un video donde graban a mi hija sin que ella supiera mientras se cambiaba en una pijamada; quien grabó era otra menor de la fiesta.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Subieron sin permiso un video de mi hijo llorando después de una pelea en el colegio y lo usan para burlarse de él; no es íntimo, pero no lo quieren bajar.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Una compañera publicó fotos de mi hija en una fiesta donde sale en una situación comprometedora, sin preguntarle, y se niega a borrarlas aunque se lo pedimos.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Filtraron un audio privado de mi hija contando algo muy personal de su vida y ya lo escuchó medio colegio; lo mandan de grupo en grupo.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Un conocido transmitió en vivo desde una salida donde aparecía mi hija sin que ella lo supiera ni autorizara, y la grabación sigue disponible en su perfil.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA"
+  },
+  {
+   "texto": "Ya publicaron una foto íntima de mi hija en un grupo y ahora le escriben que si no paga una plata publican las demás que dicen tener.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "EXTORSION"
+  },
+  {
+   "texto": "Publicaron fotos íntimas de mi hermana menor junto con su nombre completo, el colegio donde estudia y el barrio donde vivimos.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "DOXING"
+  },
+  {
+   "texto": "Compartieron un video íntimo de una amiga de mi hija en un canal, y en los comentarios alguien dio su dirección y la hora a la que sale del colegio.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "DOXING"
+  },
+  {
+   "texto": "Después de una discusión en el juego, un usuario publicó en el servidor la dirección de nuestra casa y el nombre del colegio de mi hijo para que todos lo vieran.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Le hicieron doxeo a mi hija en un en vivo: revelaron su nombre real, el barrio y el colegio donde estudia frente a cientos de personas que estaban viendo.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "En un grupo de compra y venta alguien publicó el teléfono y la dirección de mi hija acusándola de algo que no hizo; ya recibió llamadas de desconocidos.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Publicaron en un canal el colegio y la ruta que toma mi hija todos los días para ir y volver, acompañado de mensajes intimidantes.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Le enviaron a mi hija una captura de la fachada de nuestra casa con la dirección exacta y la compartieron en el grupo del barrio diciendo que ahí vive ella.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Una cuenta expuso los datos de mi hijo y de nuestra familia: nombres completos, dónde trabajamos los papás y a qué horas queda solo en la casa.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "En los comentarios de un video dieron el nombre completo y el colegio de mi hija sin su permiso; no pusieron dirección, pero con eso ya varios la ubicaron.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Pasaron el número de mi hijo a un grupo grande sin permiso y ahora le escriben desconocidos a todas horas, unos en broma y otros insistiendo.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Descubrieron quién era mi hijo detrás de su usuario anónimo en el juego y lo revelaron públicamente con su nombre real y la ciudad donde vive.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Un conocido comparte capturas de la ubicación en tiempo real de mi hija en varios grupos sin que ella lo sepa; se enteró por una amiga.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Publicaron una foto de mi hija con el uniforme puesto y en los comentarios varios identificaron el colegio, el grado y hasta el nombre del profesor.",
+   "categoriaEsperada": "DOXING"
+  },
+  {
+   "texto": "Además de publicar dónde vive y dónde estudia mi hija, compartieron fotos de ella tomadas sin permiso mientras caminaba por la calle.",
+   "categoriaEsperada": "DIFUSION_NO_CONSENTIDA",
+   "secundariaEsperada": "DOXING"
+  },
+  {
+   "texto": "Un número desconocido entró al grupo de padres del colegio y llena el chat de publicidad de tenis y ropa todos los días, a cualquier hora.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Un perfil le escribe a mi hijo todos los días ofreciéndole ganar plata fácil con inversiones; es publicidad masiva de esas que le mandan a todo el mundo.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Le llegan mensajes de cuentas que dicen que se ganó un celular y le piden sus datos para reclamarlo; es el típico engaño masivo que circula siempre.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Cuentas desconocidas le escriben a mi hija pidiéndole votos y likes para concursos, varias veces al día y siempre con el mismo mensaje copiado.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "A mi hija le llegan cadenas que dicen que si no reenvía el mensaje a veinte personas le va a pasar algo muy malo; es de esas cadenas masivas que asustan a los niños.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Le escribieron a mi hijo que su cuenta será cerrada en veinticuatro horas si no confirma sus datos en un enlace; es un mensaje masivo que les llegó a varios compañeros igual.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "A mi hijo de quince años le llegan promociones de casas de apuestas con bonos de bienvenida y frases dirigidas a jóvenes; son mensajes masivos de publicidad.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Le ofrecen a mi hija trabajar desde el celular ganando millones por semana si invita a más amigos; es la típica pirámide que spamean en todos lados.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Unas cuentas que ofrecen hacer las tareas y los trabajos por plata le escriben a mi hijo constantemente con el mismo anuncio; puro correo no deseado.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Unos bots agregaron a mi hijo a como diez grupos de ventas de zapatos y suplementos sin que él aceptara; le llegan notificaciones todo el día.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Le dicen a mi hija que quedó seleccionada para un premio y que solo debe dar nombre, colegio y dirección para recibirlo; el mismo mensaje les llegó a varias amigas.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Le llenan a mi hijo la bandeja con encuestas que prometen regalos y recargas si responde y comparte con diez contactos; pura publicidad en cadena.",
+   "categoriaEsperada": "SPAM"
+  },
+  {
+   "texto": "Mi hijo se peleó con un amigo por una partida en línea y se bloquearon mutuamente; hablamos con la otra mamá y no pasó a mayores, solo quería dejar constancia.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "A mi hijo le salió recomendado un video de una pelea real y quedó muy impresionado; no involucra a nadie conocido, pero no debió verlo a su edad.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Un compañero insultó a mi hijo una sola vez durante una partida; fue un episodio aislado y no se ha repetido, pero él quedó muy dolido.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Sacaron a mi hija del grupo de amigas y ahora la ignoran en el colegio; no hay amenazas ni insultos, pero está muy triste y no entiende por qué.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Un vecino adulto saluda con mucha confianza a los niños del parque y a veces les regala dulces delante de los papás; algunos lo ven raro, pero nunca ha pasado nada concreto.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Mi sobrino le dijo a mi hija en broma, delante de toda la familia, que si no le daba su postre le contaría a la mamá su secreto; son primos y juegan así todo el tiempo.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Mi hijo y un amigo del curso juegan en el chat a eso de adivinar dónde vives; son niños del mismo barrio, se conocen de siempre y las casas quedan a dos cuadras.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Un vecino adulto le escribió a mi hija pidiéndole el contacto de su profesora de inglés porque busca tutor para su sobrina; el mensaje fue respetuoso y con copia a la esposa de él.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Mi cuñada publicó las fotos del cumpleaños de mi hija en la piscina donde salen varios niños de la familia en vestido de baño; las tomamos nosotros mismos en la fiesta con todos los papás presentes.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "El colegio publicó en su cuenta las fotos del evento deportivo donde aparece mi hijo; en la matrícula firmamos la autorización de uso de imagen, así que es algo esperado.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "El profesor le escribe a mi hija por las noches, pero solo para recordar entregas de tareas y los mensajes van al grupo completo del curso, siempre formales.",
+   "categoriaEsperada": "OTRO"
+  },
+  {
+   "texto": "Una amiga le puso stickers y filtros graciosos a una foto de mi hija y la subió a su historia; a ella también le dio risa y no hubo mala intención de nadie.",
+   "categoriaEsperada": "OTRO"
+  }
+ ]
+}

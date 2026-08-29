@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { createToken, hashPassword } from "./auth";
+import { normalizarNombreGeografico } from "./normalizar";
 import type { RolUsuario } from "@prisma/client";
 
 export async function crearUsuario(rol: RolUsuario = "PARENT", email?: string, password = "TestPass123") {
@@ -32,7 +33,8 @@ export function crearRequestAutenticado(
     return new Request(url, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        // Sin body cuando no hay (undefined explícito ≡ omitir en RequestInit).
+        ...(body ? { body: JSON.stringify(body) } : {}),
     });
 }
 
@@ -85,7 +87,7 @@ export async function crearColegioConAdmin() {
 
 export async function crearCurso(
     colegioId: string,
-    data: { nombre?: string; grado?: string; anioLectivo?: string; estado?: string } = {}
+    data: { nombre?: string; grado?: string; anioLectivo?: string; estado?: string; profesorTitularId?: string | null } = {}
 ) {
     return prisma.curso.create({
         data: {
@@ -94,36 +96,109 @@ export async function crearCurso(
             grado: data.grado ?? null,
             anioLectivo: data.anioLectivo ?? null,
             estado: data.estado ?? "activo",
+            profesorTitularId: data.profesorTitularId ?? null,
         },
     });
 }
 
-export async function crearAlumno(
-    cursoId: string,
+// SPEC-145: fixture de profesor del colegio (mínimo: nombre + apellidos).
+export async function crearProfesor(
     colegioId: string,
-    data: { nombre?: string; estado?: string } = {}
+    data: { nombre?: string; apellidos?: string; email?: string; telefono?: string; estado?: string } = {}
 ) {
-    return prisma.alumno.create({
+    return prisma.profesor.create({
         data: {
-            cursoId,
             colegioId,
-            nombre: data.nombre ?? `Alumno ${Date.now()}`,
+            nombre: data.nombre ?? `Profesor ${Date.now()}`,
+            apellidos: data.apellidos ?? "De Prueba",
+            email: data.email ?? null,
+            telefono: data.telefono ?? null,
             estado: data.estado ?? "activo",
         },
     });
 }
 
-export async function crearIdentificadorAlumno(
-    alumnoId: string,
+export async function crearEstudiante(
+    cursoId: string,
+    colegioId: string,
+    data: { nombre?: string; apellidos?: string; estado?: string } = {}
+) {
+    return prisma.estudiante.create({
+        data: {
+            cursoId,
+            colegioId,
+            nombre: data.nombre ?? `Estudiante ${Date.now()}`,
+            apellidos: data.apellidos ?? "De Prueba",
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
+export async function crearIdentificadorEstudiante(
+    estudianteId: string,
     data: { tipo?: string; valor?: string; plataformaId?: string | null; etiquetaRelacion?: string; estado?: string } = {}
 ) {
-    return prisma.identificadorAlumno.create({
+    return prisma.identificadorEstudiante.create({
         data: {
-            alumnoId,
+            estudianteId,
             tipo: data.tipo ?? "telefono",
             valor: data.valor ?? `+57${Date.now()}`,
             plataformaId: data.plataformaId ?? null,
-            etiquetaRelacion: (data.etiquetaRelacion as never) ?? "ALUMNO",
+            etiquetaRelacion: (data.etiquetaRelacion as never) ?? "ESTUDIANTE",
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
+// SPEC-163: fixture de acudiente del estudiante.
+export async function crearAcudienteEstudiante(
+    estudianteId: string,
+    data: { orden?: 1 | 2; nombre?: string; relacion?: string; telefono?: string | null; email?: string | null; estado?: string } = {}
+) {
+    return prisma.acudienteEstudiante.create({
+        data: {
+            estudianteId,
+            orden: data.orden ?? 1,
+            nombre: data.nombre ?? `Acudiente ${Date.now()}`,
+            relacion: data.relacion ?? "madre",
+            telefono: data.telefono ?? null,
+            email: data.email ?? null,
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
+// SPEC-163: fixture de identificador de acudiente (colegioId denormalizado).
+export async function crearIdentificadorAcudiente(
+    acudienteId: string,
+    colegioId: string,
+    data: { tipo?: string; valor?: string; plataformaId?: string | null; estado?: string } = {}
+) {
+    return prisma.identificadorAcudiente.create({
+        data: {
+            acudienteId,
+            colegioId,
+            tipo: data.tipo ?? "telefono",
+            valor: data.valor ?? `+57${Date.now()}`,
+            plataformaId: data.plataformaId ?? null,
+            estado: data.estado ?? "activo",
+        },
+    });
+}
+
+// SPEC-164: fixture de identificador de profesor (colegioId denormalizado).
+export async function crearIdentificadorProfesor(
+    profesorId: string,
+    colegioId: string,
+    data: { tipo?: string; valor?: string; plataformaId?: string | null; estado?: string } = {}
+) {
+    return prisma.identificadorProfesor.create({
+        data: {
+            profesorId,
+            colegioId,
+            tipo: data.tipo ?? "telefono",
+            valor: data.valor ?? `+57${Date.now()}`,
+            plataformaId: data.plataformaId ?? null,
             estado: data.estado ?? "activo",
         },
     });
@@ -137,8 +212,8 @@ export async function crearPaisCiudad() {
     });
     const ciudad = await prisma.ciudad.upsert({
         where: { nombre_paisId: { nombre: "Bogotá", paisId: pais.id } },
-        update: { lat: 4.711, lng: -74.0721 },
-        create: { nombre: "Bogotá", paisId: pais.id, lat: 4.711, lng: -74.0721 },
+        update: { lat: 4.711, lng: -74.0721, nombreNormalizado: normalizarNombreGeografico("Bogotá") },
+        create: { nombre: "Bogotá", paisId: pais.id, lat: 4.711, lng: -74.0721, nombreNormalizado: normalizarNombreGeografico("Bogotá") },
     });
     return { pais, ciudad };
 }
@@ -188,6 +263,8 @@ export async function crearParametrosReportes() {
         { clave: "anti_abuso.retencion_fuente_dias", valor: "90", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "operadores.cupo_maximo_default", valor: "10", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "operadores.estrategia_asignacion", valor: "ponderado_carga_inversa", tipo: "STRING" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "operadores.reconciliacion_intervalo_min", valor: "15", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
+        { clave: "operadores.reconciliacion_enabled", valor: "true", tipo: "BOOLEAN" as const, categoria: "SYSTEM" as const, esPublico: false },
         { clave: "ratelimit.report.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.report.max_requests", valor: "5", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.login.window_seconds", valor: "300", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
@@ -203,11 +280,8 @@ export async function crearParametrosReportes() {
         { clave: "ratelimit.report_identificador.spam_threshold", valor: "20", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.report_fingerprint.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.report_fingerprint.max_requests", valor: "5", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
-        { clave: "anti_abuso.apelacion_pausa_dias", valor: "7", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
-        { clave: "ratelimit.apelacion.window_seconds", valor: "86400", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
-        { clave: "ratelimit.apelacion.max_requests", valor: "3", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
-        { clave: "ratelimit.apelacion_sms.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
-        { clave: "ratelimit.apelacion_sms.max_requests", valor: "3", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        // SPEC-185: id de usuario PARENT de prueba para el escenario denunciante_spam.
+        { clave: "simulacion.spam.usuario_id", valor: "", tipo: "STRING" as const, categoria: "SYSTEM" as const, esPublico: false },
         { clave: "ratelimit.recuperar_solicitar.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.recuperar_solicitar.max_requests", valor: "5", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "ratelimit.verificacion_solicitar.window_seconds", valor: "3600", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
@@ -242,4 +316,64 @@ export function bodyToRequest(body: unknown): Request {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
     });
+}
+
+/**
+ * Spec 096: siembra los parámetros del expediente (10 etapas, canales del
+ * mensaje al padre) y una rúbrica mínima de prueba. Misma estructura que el
+ * seed real (`prisma/seed.ts`), versión compacta para tests.
+ */
+export async function crearParametrosExpediente() {
+    const etapas = [
+        { orden: 1, fase: "A", faseNombre: "Ingesta", clave: "recepcion", nombre: "Recepción", icono: "inbox", capa: 1, gated: false,
+            campos: ["creadoEn", "numeroSeguimiento", "plataforma", "pais", "ciudad", "esAnonimo", "edadVictima", "estado"] },
+        { orden: 2, fase: "A", faseNombre: "Ingesta", clave: "peso_fuente", nombre: "Peso de fuente", icono: "scale", capa: 1, gated: false,
+            campos: ["pesoAplicado", "cuentaDiasAntiguedad", "reportesPrevios", "reportesConfirmados", "reportesDescartados"],
+            camposGated: ["ipHash", "fingerprintHash"] },
+        { orden: 3, fase: "B", faseNombre: "Preparación", clave: "embedding", nombre: "Embedding", icono: "vector", capa: 1, gated: false,
+            campos: ["modeloUsado", "creadoEn", "latenciaMs"] },
+        { orden: 4, fase: "B", faseNombre: "Preparación", clave: "deduplicacion", nombre: "Deduplicación", icono: "copy", capa: 2, gated: false,
+            campos: ["reporteOrigenId", "scoreSimilitud"] },
+        { orden: 5, fase: "B", faseNombre: "Preparación", clave: "guardas", nombre: "Guardas baratas", icono: "shield", capa: 2, gated: false,
+            campos: ["esRafaga", "keywordsDetectadas", "prioridadAlta"] },
+        { orden: 6, fase: "C", faseNombre: "Evaluación", clave: "contexto_rag", nombre: "Contexto RAG", icono: "book", capa: 2, gated: false,
+            campos: ["casosSimilares", "categoriasVecinas"] },
+        { orden: 7, fase: "C", faseNombre: "Evaluación", clave: "clasificacion", nombre: "Clasificación por rúbrica", icono: "brain", capa: 1, gated: false,
+            campos: ["categorias", "confianza", "usoCascada", "modeloCascada", "latenciaMs", "promptTokens", "responseTokens"],
+            camposGated: ["rawResponse"] },
+        { orden: 8, fase: "D", faseNombre: "Cierre", clave: "anonimizacion", nombre: "Anonimización PII", icono: "mask", capa: 1, gated: false,
+            campos: ["contienePii", "piiDetectada", "anonimizacionValidadaPorId", "anonimizacionValidadaEn"],
+            camposGated: ["textoOriginal"] },
+        { orden: 9, fase: "D", faseNombre: "Cierre", clave: "decision", nombre: "Decisión", icono: "gavel", capa: 2, gated: false,
+            campos: ["transiciones"] },
+        { orden: 10, fase: "D", faseNombre: "Cierre", clave: "finalizacion", nombre: "Finalización", icono: "flag", capa: 1, gated: false,
+            campos: ["estado", "reintentos", "processingError"] },
+    ];
+    const canales = [
+        { nombre: "Línea 141 ICBF", contacto: "141",
+            descripcion: "Línea gratuita del ICBF para reportar riesgos contra niños, niñas y adolescentes" },
+        { nombre: "Te Protejo", contacto: "https://teprotejo.org",
+            descripcion: "Canal para reportar material de abuso sexual infantil en internet" },
+    ];
+    const preguntasRubrica = {
+        SOLICITUD_MATERIAL: [
+            { texto: "¿Alguien pide fotos, videos o material visual a otra persona?", activo: true, tipo: "decisiva" },
+            { texto: "¿La persona a quien se le pide es menor de edad?", activo: true, tipo: "contexto" },
+        ],
+        CONTACTO_INSISTENTE: [
+            { texto: "¿Hay mensajes o llamadas repetidas a pesar de no recibir respuesta?", activo: true, tipo: "decisiva" },
+        ],
+    };
+    const params = [
+        { clave: "admin.expediente.etapas", valor: JSON.stringify(etapas) },
+        { clave: "mensaje.padre.canales", valor: JSON.stringify(canales) },
+        { clave: "ia.rubrica.preguntas", valor: JSON.stringify(preguntasRubrica) },
+    ];
+    for (const p of params) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor },
+            create: { clave: p.clave, valor: p.valor, tipo: "JSON", categoria: "SYSTEM", esPublico: false },
+        });
+    }
 }

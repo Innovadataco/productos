@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -8,7 +9,7 @@ import {
     agregarContacto,
     obtenerTopeContactos,
     contarContactosActivos,
-} from "@/lib/circulo-confianza";
+} from "@/lib/dal/services/circulo-confianza";
 
 const createSchema = z.object({
     etiqueta: z.string().max(100).optional(),
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        console.error("[CIRCULO-CONFIANZA] Error creando contacto:", error);
+        logger.error("[CIRCULO-CONFIANZA] Error creando contacto:", error);
         return NextResponse.json(
             { error: { message: safeErrorMessage(error), code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

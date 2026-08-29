@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { RolUsuario } from "@prisma/client";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
-import { logAudit } from "@/lib/audit";
-import { invalidateCache } from "@/lib/config-cache";
+import { IaRubricaService } from "@/lib/dal/services/ia-rubrica";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const configBodySchema = z
@@ -18,20 +16,6 @@ const configBodySchema = z
     .refine((obj) => Object.values(obj).some((v) => v !== undefined), {
         message: "Debe enviar al menos un parámetro a actualizar",
     });
-
-const CLAVES = {
-    modelos: "ia.rubrica.modelos",
-    temperatura: "ia.rubrica.temperatura",
-    umbralPresencia: "ia.rubrica.umbral_presencia",
-    modeloEmbudo: "ia.rubrica.modelo_embudo",
-} as const;
-
-const TIPOS = {
-    modelos: "JSON",
-    temperatura: "FLOAT",
-    umbralPresencia: "FLOAT",
-    modeloEmbudo: "STRING",
-} as const;
 
 function getClientInfo(request: Request) {
     return {
@@ -56,51 +40,13 @@ export async function PATCH(request: Request) {
             throw new AppError(first?.message || "Datos inválidos", ERROR_CODES.VALIDATION_ERROR, 400);
         }
 
-        const cambios = parsed.data;
-        const actualizados: Record<string, string> = {};
-        const { ipAddress, userAgent } = getClientInfo(request);
-
-        for (const campo of Object.keys(CLAVES) as Array<keyof typeof CLAVES>) {
-            const valor = cambios[campo];
-            if (valor === undefined) continue;
-
-            const clave = CLAVES[campo];
-            const valorStr = campo === "modelos" ? JSON.stringify(valor) : String(valor);
-
-            const existing = await prisma.parametroSistema.findUnique({ where: { clave } });
-            const guardado = existing
-                ? await prisma.parametroSistema.update({
-                      where: { clave },
-                      data: { valor: valorStr, actualizadoPorId: user.id },
-                  })
-                : await prisma.parametroSistema.create({
-                      data: {
-                          clave,
-                          valor: valorStr,
-                          tipo: TIPOS[campo],
-                          categoria: "SYSTEM",
-                          esPublico: false,
-                          actualizadoPorId: user.id,
-                      },
-                  });
-
-            await logAudit({
-                accion: "PARAM_UPDATE",
-                tipoRecurso: "parametro",
-                recursoId: guardado.id,
-                parametroId: guardado.id,
-                usuarioId: user.id,
-                valorAnterior: existing?.valor,
-                valorNuevo: valorStr,
-                metadatos: { clave },
-                ipAddress,
-                userAgent,
-            });
-
-            actualizados[clave] = valorStr;
-        }
-
-        invalidateCache("public_params");
+        // SPEC-053: upsert por parámetro, auditoría e invalidación de caché
+        // viven en el DAL.
+        const { actualizados } = await new IaRubricaService().actualizarConfig(
+            parsed.data,
+            user.id,
+            getClientInfo(request)
+        );
 
         return NextResponse.json({ actualizados });
     } catch (error) {

@@ -25,6 +25,8 @@ Queda **estrictamente prohibido** subir, almacenar, procesar o transmitir fotogr
 - Identificador reportado (número telefónico, nick, nombre de usuario)
 - Metadatos contextuales (ciudad, país, fecha, plataforma)
 
+> **Excepción única a la regla de solo texto.** Se admite un documento de evidencia **exclusivamente** en el flujo de apelación, **subido por el propio titular sobre sí mismo**, cifrado en reposo, accesible **solo al comité de validación** y **eliminado automáticamente 30 días** después de resolverse el caso. No es contenido reportado: es prueba de identidad. **Ningún tercero puede subir archivo alguno sobre un menor**, y esa prohibición no admite excepción. *(SPEC-110)*
+
 ### 1.3 Presunción de inocencia en el lenguaje
 Las consultas públicas nunca afirman culpabilidad ni emiten juicios de valor sobre personas. El lenguaje permitido es descriptivo y estadístico:
 

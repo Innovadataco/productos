@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -12,6 +12,7 @@ import {
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
 import { sendReporte } from "@/lib/queue";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 
 vi.mock("@/lib/queue", () => ({
     sendReporte: vi.fn().mockResolvedValue({ encolado: true }),
@@ -46,7 +47,10 @@ describe("POST /api/reportes", () => {
         const body = await res.json();
         const reporte = await prisma.reporte.findUnique({ where: { id: body.reporte.id } });
         expect(reporte?.textoOriginal).toMatch(/^enc:/);
-        expect(reporte?.texto).toBe(reporteValido.texto);
+        // SPEC-130 (BL-4): el texto de trabajo también va cifrado en reposo;
+        // el contenido se conserva íntegro al descifrar (la evidencia no se altera).
+        expect(reporte?.texto).toMatch(/^enc:/);
+        expect(descifrarTextoReporte(reporte!.texto)).toBe(reporteValido.texto);
     });
 
     it("crea un reporte anónimo y retorna 201 con número de seguimiento", async () => {
@@ -79,6 +83,45 @@ describe("POST /api/reportes", () => {
         expect(res.status).toBe(400);
         const body = await res.json();
         expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    // Test de EFECTO (I-14, ADR_004): el guarda real es la validación de creación en
+    // POST /api/reportes — con el parámetro en N, un texto de N-1 caracteres (trim)
+    // se RECHAZA con 400 y uno de N+1 se acepta.
+    it("aplica la longitud mínima desde reportes.spam.min_text_length (test de efecto)", async () => {
+        if (!process.env.PARAM_ENCRYPTION_KEY) {
+            process.env.PARAM_ENCRYPTION_KEY = "a".repeat(32);
+        }
+        await prisma.parametroSistema.upsert({
+            where: { clave: "reportes.spam.min_text_length" },
+            update: { valor: "30" },
+            create: {
+                clave: "reportes.spam.min_text_length",
+                valor: "30",
+                tipo: "INTEGER",
+                categoria: "SECURITY",
+                esPublico: true,
+            },
+        });
+
+        // N-1 = 29 caracteres → 400 con el valor del parámetro en el mensaje
+        const reqCorto = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            texto: "a".repeat(29),
+        });
+        const resCorto = await POST(reqCorto);
+        expect(resCorto.status).toBe(400);
+        const bodyCorto = await resCorto.json();
+        expect(bodyCorto.error.code).toBe("VALIDATION_ERROR");
+        expect(bodyCorto.error.message).toContain("30");
+
+        // N+1 = 31 caracteres → 201
+        const reqLargo = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            texto: "a".repeat(31),
+        });
+        const resLargo = await POST(reqLargo);
+        expect(resLargo.status).toBe(201);
     });
 
     it("rechaza reporte con fecha futura", async () => {
@@ -312,5 +355,165 @@ describe("POST /api/reportes", () => {
         expect(reporte?.prioridadAlta).toBe(true);
         expect(reporte?.keywordsDetectadas).toContain("doxear");
         expect(sendReporte).toHaveBeenCalledWith(body.reporte.id, { prioridadAlta: true });
+    });
+});
+
+describe("POST /api/reportes — bypass fingerprint simulador (SPEC-192 I-71)", () => {
+    const TEST_SECRET = "test-simulador-abuso-secret-32bytes";
+    let originalSimuladorSecret: string | undefined;
+
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        await crearParametrosReportes();
+        await crearPlataforma();
+        await crearPaisCiudad();
+        originalSimuladorSecret = process.env.SIMULADOR_ABUSO_SECRET;
+        process.env.SIMULADOR_ABUSO_SECRET = TEST_SECRET;
+    });
+
+    afterEach(() => {
+        process.env.SIMULADOR_ABUSO_SECRET = originalSimuladorSecret;
+    });
+
+    const baseFingerprintHeaders = {
+        "Content-Type": "application/json",
+        "user-agent": "SimuladorAbuso/1.0",
+        "accept-language": "es-CO",
+    };
+
+    it("secret correcto permite superar el límite por fingerprint", async () => {
+        const originalDisableRateLimit = process.env.DISABLE_RATE_LIMIT;
+        process.env.DISABLE_RATE_LIMIT = "false";
+        const secret = TEST_SECRET;
+
+        try {
+            for (let i = 0; i < 6; i++) {
+                const req = new Request("http://localhost:5005/api/reportes", {
+                    method: "POST",
+                    headers: {
+                        ...baseFingerprintHeaders,
+                        "x-forwarded-for": `10.9.0.${i + 1}`,
+                        "x-simulacion-secret": secret,
+                    },
+                    body: JSON.stringify({ ...reporteValido, identificador: `+57300BY${i}` }),
+                });
+                const res = await POST(req);
+                expect(res.status).toBe(201);
+            }
+        } finally {
+            process.env.DISABLE_RATE_LIMIT = originalDisableRateLimit;
+        }
+    });
+
+    it("sin header el sexto reporte con igual fingerprint es 429", async () => {
+        const originalDisableRateLimit = process.env.DISABLE_RATE_LIMIT;
+        process.env.DISABLE_RATE_LIMIT = "false";
+
+        try {
+            for (let i = 0; i < 5; i++) {
+                const req = new Request("http://localhost:5005/api/reportes", {
+                    method: "POST",
+                    headers: {
+                        ...baseFingerprintHeaders,
+                        "x-forwarded-for": `10.10.0.${i + 1}`,
+                    },
+                    body: JSON.stringify({ ...reporteValido, identificador: `+57300NO${i}` }),
+                });
+                const res = await POST(req);
+                expect(res.status).toBe(201);
+            }
+
+            const req6 = new Request("http://localhost:5005/api/reportes", {
+                method: "POST",
+                headers: {
+                    ...baseFingerprintHeaders,
+                    "x-forwarded-for": "10.10.0.6",
+                },
+                body: JSON.stringify({ ...reporteValido, identificador: "+57300NO5" }),
+            });
+            const res6 = await POST(req6);
+            expect(res6.status).toBe(429);
+            const body6 = await res6.json();
+            expect(body6.error.code).toBe("RATE_LIMITED");
+        } finally {
+            process.env.DISABLE_RATE_LIMIT = originalDisableRateLimit;
+        }
+    });
+
+    it("header falso no bypassa el rate limit por fingerprint", async () => {
+        const originalDisableRateLimit = process.env.DISABLE_RATE_LIMIT;
+        process.env.DISABLE_RATE_LIMIT = "false";
+
+        try {
+            for (let i = 0; i < 5; i++) {
+                const req = new Request("http://localhost:5005/api/reportes", {
+                    method: "POST",
+                    headers: {
+                        ...baseFingerprintHeaders,
+                        "x-forwarded-for": `10.11.0.${i + 1}`,
+                        "x-simulacion-secret": "test-simulador-abuso-secret-32bytes-FALSO",
+                    },
+                    body: JSON.stringify({ ...reporteValido, identificador: `+57300FA${i}` }),
+                });
+                const res = await POST(req);
+                expect(res.status).toBe(201);
+            }
+
+            const req6 = new Request("http://localhost:5005/api/reportes", {
+                method: "POST",
+                headers: {
+                    ...baseFingerprintHeaders,
+                    "x-forwarded-for": "10.11.0.6",
+                    "x-simulacion-secret": "test-simulador-abuso-secret-32bytes-FALSO",
+                },
+                body: JSON.stringify({ ...reporteValido, identificador: "+57300FA5" }),
+            });
+            const res6 = await POST(req6);
+            expect(res6.status).toBe(429);
+            const body6 = await res6.json();
+            expect(body6.error.code).toBe("RATE_LIMITED");
+        } finally {
+            process.env.DISABLE_RATE_LIMIT = originalDisableRateLimit;
+        }
+    });
+});
+
+describe("POST /api/reportes — vigencia del padre (SPEC-119)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        await crearParametrosReportes();
+        await crearPlataforma();
+        await crearPaisCiudad();
+        if (!process.env.PARAM_ENCRYPTION_KEY) {
+            process.env.PARAM_ENCRYPTION_KEY = "a".repeat(32);
+        }
+    });
+
+    it("padre vencido recibe 403 con mensaje claro y NO se crea el reporte", async () => {
+        const user = await crearUsuario("PARENT");
+        const ayer = new Date();
+        ayer.setDate(ayer.getDate() - 1);
+        await prisma.usuario.update({ where: { id: user.id }, data: { finServicio: ayer } });
+        const token = await crearTokenUsuario(user.id, "PARENT");
+
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const res = await POST(req);
+        expect(res.status).toBe(403);
+        const body = await res.json();
+        expect(body.error.message).toMatch(/vencido/i);
+        expect(body.error.message).toMatch(/soporte/i);
+
+        const creados = await prisma.reporte.count({ where: { usuarioId: user.id } });
+        expect(creados).toBe(0);
+    });
+
+    it("padre sin vigencia definida reporta con normalidad (201)", async () => {
+        const user = await crearUsuario("PARENT");
+        const token = await crearTokenUsuario(user.id, "PARENT");
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const res = await POST(req);
+        expect(res.status).toBe(201);
     });
 });

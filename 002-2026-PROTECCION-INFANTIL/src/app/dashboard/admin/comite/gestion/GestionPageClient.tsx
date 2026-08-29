@@ -81,8 +81,6 @@ export default function GestionPageClient() {
     const [editingIntegranteId, setEditingIntegranteId] = useState<string | null>(null);
     const [savingIntegrante, setSavingIntegrante] = useState(false);
 
-    const hayCuenta = Boolean(cuenta);
-
     const cargarIntegrantes = useCallback(async (comiteId: string) => {
         setLoadingIntegrantes(true);
         try {
@@ -396,10 +394,12 @@ export default function GestionPageClient() {
                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
                     Cargando cuenta del comité...
                 </div>
-            ) : !hayCuenta ? (
+            ) : !cuenta ? (
                 <GlassCard>
-                    <h2 className="text-lg font-semibold text-body">Crear cuenta del comité</h2>
-                    <p className="text-sm text-muted">Se genera una contraseña temporal y se envía por email.</p>
+                    <h2 className="text-lg font-semibold text-body">Cuenta de acceso del comité</h2>
+                    <p className="text-sm text-muted">
+                        Es la única credencial con acceso al panel del comité. El sistema genera una contraseña temporal y la envía por email.
+                    </p>
                     <form onSubmit={crearCuenta} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <Input
                             label="Email"
@@ -424,12 +424,12 @@ export default function GestionPageClient() {
             ) : (
                 <>
                     <CuentaComiteCard
-                        cuenta={cuenta!}
-                        onRegenerarPassword={() => regenerarPassword(cuenta!.id)}
-                        onReenviarEmail={() => reenviarEmail(cuenta!.id)}
-                        onActivar={() => reactivarCuenta(cuenta!.id)}
-                        onDesactivar={() => desactivarCuenta(cuenta!.id)}
-                        onActualizarNombre={(nombre) => actualizarNombreCuenta(cuenta!.id, nombre)}
+                        cuenta={cuenta}
+                        onRegenerarPassword={() => regenerarPassword(cuenta.id)}
+                        onReenviarEmail={() => reenviarEmail(cuenta.id)}
+                        onActivar={() => reactivarCuenta(cuenta.id)}
+                        onDesactivar={() => desactivarCuenta(cuenta.id)}
+                        onActualizarNombre={(nombre) => actualizarNombreCuenta(cuenta.id, nombre)}
                     />
 
                     <section className="space-y-4" aria-labelledby="comite-resumen-title">
@@ -446,75 +446,78 @@ export default function GestionPageClient() {
                             <h2 id="comite-integrante-title" className="text-lg font-semibold text-body">
                                 {editingIntegranteId ? "Editar integrante" : "Nuevo integrante"}
                             </h2>
-                        <p className="text-sm text-muted">
-                            Los datos del integrante son privados. El número de identificación se guarda cifrado.
-                        </p>
-                        <form onSubmit={guardarIntegrante} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            <Input
-                                label="Nombres"
-                                required
-                                value={integranteForm.nombres}
-                                onChange={(e) => setIntegranteForm((f) => ({ ...f, nombres: e.target.value }))}
-                            />
-                            <Input
-                                label="Apellidos"
-                                required
-                                value={integranteForm.apellidos}
-                                onChange={(e) => setIntegranteForm((f) => ({ ...f, apellidos: e.target.value }))}
-                            />
-                            <Select
-                                label="Tipo de identificación"
-                                options={tiposIdentificacion}
-                                value={integranteForm.tipoIdentificacion}
-                                onChange={(e) => setIntegranteForm((f) => ({ ...f, tipoIdentificacion: e.target.value }))}
-                            />
-                            <Input
-                                label="Número de identificación"
-                                required
-                                value={integranteForm.numeroIdentificacion}
-                                onChange={(e) => setIntegranteForm((f) => ({ ...f, numeroIdentificacion: e.target.value }))}
-                            />
-                            <Input
-                                label="Email"
-                                type="email"
-                                required
-                                value={integranteForm.email}
-                                onChange={(e) => setIntegranteForm((f) => ({ ...f, email: e.target.value }))}
-                            />
-                            <Input
-                                label="Fecha de inicio"
-                                type="date"
-                                required
-                                value={integranteForm.fechaInicio}
-                                onChange={(e) => setIntegranteForm((f) => ({ ...f, fechaInicio: e.target.value }))}
-                            />
-                            {editingIntegranteId && (
-                                <Select
-                                    label="Estado"
-                                    options={estadosIntegrante}
-                                    value={integranteForm.estado}
-                                    onChange={(e) =>
-                                        setIntegranteForm((f) => ({ ...f, estado: e.target.value as "ACTIVO" | "INACTIVO" }))
-                                    }
+                            <p className="text-sm text-muted">
+                            Los integrantes son solo el roster del comité: no tienen acceso a la plataforma y el email registrado es únicamente de contacto. El número de identificación se guarda cifrado.
+                            </p>
+                            <form onSubmit={guardarIntegrante} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                <Input
+                                    label="Nombres"
+                                    required
+                                    value={integranteForm.nombres}
+                                    onChange={(e) => setIntegranteForm((f) => ({ ...f, nombres: e.target.value }))}
                                 />
-                            )}
-                            <div className="flex items-end gap-2">
+                                <Input
+                                    label="Apellidos"
+                                    required
+                                    value={integranteForm.apellidos}
+                                    onChange={(e) => setIntegranteForm((f) => ({ ...f, apellidos: e.target.value }))}
+                                />
+                                <Select
+                                    label="Tipo de identificación"
+                                    options={tiposIdentificacion}
+                                    value={integranteForm.tipoIdentificacion}
+                                    onChange={(e) => setIntegranteForm((f) => ({ ...f, tipoIdentificacion: e.target.value }))}
+                                />
+                                <Input
+                                    label="Número de identificación"
+                                    required
+                                    value={integranteForm.numeroIdentificacion}
+                                    onChange={(e) => setIntegranteForm((f) => ({ ...f, numeroIdentificacion: e.target.value }))}
+                                />
+                                <Input
+                                    label="Email"
+                                    type="email"
+                                    required
+                                    value={integranteForm.email}
+                                    onChange={(e) => setIntegranteForm((f) => ({ ...f, email: e.target.value }))}
+                                />
+                                <Input
+                                    label="Fecha de inicio"
+                                    type="date"
+                                    required
+                                    value={integranteForm.fechaInicio}
+                                    onChange={(e) => setIntegranteForm((f) => ({ ...f, fechaInicio: e.target.value }))}
+                                />
                                 {editingIntegranteId && (
-                                    <Button type="button" variant="outline" onClick={cancelarEdicion} className="w-full">
-                                        Cancelar
-                                    </Button>
+                                    <Select
+                                        label="Estado"
+                                        options={estadosIntegrante}
+                                        value={integranteForm.estado}
+                                        onChange={(e) =>
+                                            setIntegranteForm((f) => ({ ...f, estado: e.target.value as "ACTIVO" | "INACTIVO" }))
+                                        }
+                                    />
                                 )}
-                                <Button type="submit" isLoading={savingIntegrante} className="w-full">
-                                    {editingIntegranteId ? "Guardar cambios" : "Registrar integrante"}
-                                </Button>
-                            </div>
-                        </form>
-                    </GlassCard>
+                                <div className="flex items-end gap-2">
+                                    {editingIntegranteId && (
+                                        <Button type="button" variant="outline" onClick={cancelarEdicion} className="w-full">
+                                        Cancelar
+                                        </Button>
+                                    )}
+                                    <Button type="submit" isLoading={savingIntegrante} className="w-full">
+                                        {editingIntegranteId ? "Guardar cambios" : "Registrar integrante"}
+                                    </Button>
+                                </div>
+                            </form>
+                        </GlassCard>
                     </section>
 
                     <section className="space-y-4" aria-labelledby="comite-listado-title">
                         <GlassCard>
-                            <h2 id="comite-listado-title" className="text-lg font-semibold text-body">Integrantes del comité</h2>
+                            <h2 id="comite-listado-title" className="text-lg font-semibold text-body">Integrantes del comité (roster, sin acceso)</h2>
+                            <p className="mt-1 text-sm text-muted">
+                                Listado informativo de las personas que conforman el comité. El ingreso a la plataforma se hace solo con la cuenta de acceso del comité.
+                            </p>
                             {loadingIntegrantes ? (
                                 <div className="flex items-center gap-3 py-8 text-muted">
                                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
@@ -526,63 +529,63 @@ export default function GestionPageClient() {
                                     description="Registra los integrantes que formarán parte del comité de validación."
                                 />
                             ) : (
-                            <div className="mt-4 overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="border-b border-slate-200 dark:border-slate-800">
-                                        <tr className="text-subtle">
-                                            <th className="pb-3 font-medium">Nombres</th>
-                                            <th className="pb-3 font-medium">Apellidos</th>
-                                            <th className="pb-3 font-medium">Identificación</th>
-                                            <th className="pb-3 font-medium">Email</th>
-                                            <th className="pb-3 font-medium">Inicio</th>
-                                            <th className="pb-3 font-medium">Estado</th>
-                                            <th className="pb-3 font-medium text-right">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {integrantes.map((integrante) => (
-                                            <tr key={integrante.id} className="align-top">
-                                                <td className="py-3 pr-3 text-body">{integrante.nombres}</td>
-                                                <td className="py-3 pr-3 text-body">{integrante.apellidos}</td>
-                                                <td className="py-3 pr-3 text-muted">
-                                                    {labelTipoIdentificacion(integrante.tipoIdentificacion)} · {integrante.numeroIdentificacion}
-                                                </td>
-                                                <td className="py-3 pr-3 text-muted">{integrante.email}</td>
-                                                <td className="py-3 pr-3 text-muted">
-                                                    {new Date(integrante.fechaInicio).toLocaleDateString("es-CO")}
-                                                </td>
-                                                <td className="py-3 pr-3">
-                                                    <Badge variant={integrante.estado === "ACTIVO" ? "success" : "neutral"}>
-                                                        {integrante.estado === "ACTIVO" ? "Activo" : "Inactivo"}
-                                                    </Badge>
-                                                </td>
-                                                <td className="py-3 text-right">
-                                                    <div className="flex flex-wrap justify-end gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            className="px-3 py-1.5 text-xs"
-                                                            onClick={() => iniciarEdicion(integrante)}
-                                                        >
-                                                            Editar
-                                                        </Button>
-                                                        {integrante.estado === "ACTIVO" && (
-                                                            <Button
-                                                                variant="danger"
-                                                                className="px-3 py-1.5 text-xs"
-                                                                onClick={() => inactivarIntegrante(integrante.id)}
-                                                            >
-                                                                Inactivar
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </td>
+                                <div className="mt-4 overflow-x-auto">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="border-b border-slate-200 dark:border-slate-800">
+                                            <tr className="text-subtle">
+                                                <th className="pb-3 font-medium">Nombres</th>
+                                                <th className="pb-3 font-medium">Apellidos</th>
+                                                <th className="pb-3 font-medium">Identificación</th>
+                                                <th className="pb-3 font-medium">Email</th>
+                                                <th className="pb-3 font-medium">Inicio</th>
+                                                <th className="pb-3 font-medium">Estado</th>
+                                                <th className="pb-3 font-medium text-right">Acciones</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </GlassCard>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {integrantes.map((integrante) => (
+                                                <tr key={integrante.id} className="align-top">
+                                                    <td className="py-3 pr-3 text-body">{integrante.nombres}</td>
+                                                    <td className="py-3 pr-3 text-body">{integrante.apellidos}</td>
+                                                    <td className="py-3 pr-3 text-muted">
+                                                        {labelTipoIdentificacion(integrante.tipoIdentificacion)} · {integrante.numeroIdentificacion}
+                                                    </td>
+                                                    <td className="py-3 pr-3 text-muted">{integrante.email}</td>
+                                                    <td className="py-3 pr-3 text-muted">
+                                                        {new Date(integrante.fechaInicio).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
+                                                    </td>
+                                                    <td className="py-3 pr-3">
+                                                        <Badge variant={integrante.estado === "ACTIVO" ? "success" : "neutral"}>
+                                                            {integrante.estado === "ACTIVO" ? "Activo" : "Inactivo"}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="py-3 text-right">
+                                                        <div className="flex flex-wrap justify-end gap-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                className="px-3 py-1.5 text-xs"
+                                                                onClick={() => iniciarEdicion(integrante)}
+                                                            >
+                                                            Editar
+                                                            </Button>
+                                                            {integrante.estado === "ACTIVO" && (
+                                                                <Button
+                                                                    variant="danger"
+                                                                    className="px-3 py-1.5 text-xs"
+                                                                    onClick={() => inactivarIntegrante(integrante.id)}
+                                                                >
+                                                                Inactivar
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </GlassCard>
                     </section>
                 </>
             )}
@@ -629,7 +632,10 @@ function CuentaComiteCard({
         <GlassCard>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
-                    <h2 className="text-lg font-semibold text-body">Cuenta del comité</h2>
+                    <h2 className="text-lg font-semibold text-body">Cuenta de acceso del comité</h2>
+                    <p className="text-sm text-muted">
+                        Credencial única de ingreso al panel del comité, con contraseña temporal generada por el sistema. Los integrantes del roster no usan esta cuenta.
+                    </p>
                     <div className="flex items-center gap-2">
                         {editando ? (
                             <div className="flex items-center gap-2">

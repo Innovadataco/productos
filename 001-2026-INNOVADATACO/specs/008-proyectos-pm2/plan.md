@@ -193,6 +193,15 @@ suma `{ id: "fases", title: "Fases PM²" }`.
 - **R-04 · `ProjectForm` sirviendo dos modos se enreda.** Mitigación: un solo formulario, el
   modo lo decide la presencia de la prop `proyecto`; el texto del botón y el título lo reflejan.
 
+## Artefactos de esta spec (D-066)
+
+| Artefacto | Estado |
+|---|---|
+| `spec.md`, `plan.md`, `tasks.md`, `checklists/` | sí |
+| `research.md` | **sí** — añadido en el turno D-068 |
+| `quickstart.md` | **sí** — añadido en el turno D-068 |
+| `data-model.md` | **no aplica para US1 y US2** (no tocan el esquema). US3 sí añadió la entidad `Entregable`, documentada en el esquema Prisma y en su migración; si entran US4–US6, con sus tablas, este artefacto **pasa a ser obligatorio**. |
+
 ## Complexity Tracking
 
 Sin violaciones. La única decisión que podría parecer desviación —fases fijas en código en vez

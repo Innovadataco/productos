@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { AlertaService } from "@/lib/dal/services/alertas";
 
 /**
  * GET /api/alertas
@@ -10,11 +10,8 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 export async function GET() {
     try {
         const user = await verifyAuth();
-        const suscripciones = await prisma.alertaSuscripcion.findMany({
-            where: { usuarioId: user.id, activa: true },
-            include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
-            orderBy: { creadoEn: "desc" },
-        });
+        // SPEC-053: la consulta vive en el DAL; la ruta no toca prisma.
+        const suscripciones = await new AlertaService().listar(user.id);
         return NextResponse.json({ suscripciones });
     } catch (error) {
         if (error instanceof AppError) {

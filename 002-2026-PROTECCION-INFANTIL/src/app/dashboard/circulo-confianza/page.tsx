@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { MetricCard } from "@/components/modules/MetricCard";
+import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
 import { MiniList } from "@/components/modules/MiniList";
 import { ChartCard } from "@/components/modules/ChartCard";
 import { BarChart } from "@/components/modules/BarChart";
@@ -181,8 +181,8 @@ export default function CirculoConfianzaPage() {
                 user.rol === "COMITE_VALIDACION"
                     ? "/dashboard/admin/comite"
                     : user.rol === "OPERADOR"
-                      ? "/dashboard/admin/operadores"
-                      : "/dashboard/admin";
+                        ? "/dashboard/admin/operadores"
+                        : "/dashboard/admin";
             router.push(target);
             return;
         }
@@ -351,10 +351,10 @@ export default function CirculoConfianzaPage() {
             )}
 
             <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <MetricCard label="Sin reportes" value={resumen.sinReportes} sub={resumen.activos > 0 ? "activos" : undefined} />
-                <MetricCard label="En proceso" value={resumen.enRevision} />
-                <MetricCard label="Procesado" value={resumen.clasificado} />
-                <MetricCard label="Contactos activos" value={resumen.activos} />
+                <TarjetaMetrica label="Sin reportes" value={resumen.sinReportes} sub={resumen.activos > 0 ? "activos" : undefined} />
+                <TarjetaMetrica label="En proceso" value={resumen.enRevision} />
+                <TarjetaMetrica label="Procesado" value={resumen.clasificado} />
+                <TarjetaMetrica label="Contactos activos" value={resumen.activos} />
             </div>
 
             <GlassCard className="mb-6">
@@ -535,10 +535,10 @@ export default function CirculoConfianzaPage() {
                             {detalle.agregado ? (
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                                        <MetricCard label="Total reportes" value={detalle.agregado.totalReportes} />
-                                        <MetricCard label="Autenticados" value={detalle.agregado.reportesAutenticados} />
-                                        <MetricCard label="Anónimos" value={detalle.agregado.reportesAnonimos} />
-                                        <MetricCard label="Estado" value={formatEstadoCirculo(detalle.estado)} />
+                                        <TarjetaMetrica label="Total reportes" value={detalle.agregado.totalReportes} />
+                                        <TarjetaMetrica label="Autenticados" value={detalle.agregado.reportesAutenticados} />
+                                        <TarjetaMetrica label="Anónimos" value={detalle.agregado.reportesAnonimos} />
+                                        <TarjetaMetrica label="Estado" value={formatEstadoCirculo(detalle.estado)} />
                                     </div>
                                     {detalle.agregado.porGrupoCategoria.length > 0 && (
                                         <div>
@@ -595,10 +595,10 @@ export default function CirculoConfianzaPage() {
                             ) : agregado && !agregado.insuficiente ? (
                                 <>
                                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                                        <MetricCard label="Reportes de mi círculo" value={agregado.totalReportes} />
-                                        <MetricCard label="Contactos con reportes" value={agregado.contactosConReportes} />
-                                        <MetricCard label="Países" value={agregado.porPais.length} />
-                                        <MetricCard label="Ciudades" value={agregado.porCiudad.length} />
+                                        <TarjetaMetrica label="Reportes de mi círculo" value={agregado.totalReportes} />
+                                        <TarjetaMetrica label="Contactos con reportes" value={agregado.contactosConReportes} />
+                                        <TarjetaMetrica label="Países" value={agregado.porPais.length} />
+                                        <TarjetaMetrica label="Ciudades" value={agregado.porCiudad.length} />
                                     </div>
                                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                                         <ChartCard title="Por país" subtitle="Reportes de mis contactos">

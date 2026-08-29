@@ -138,16 +138,64 @@ de empezar el siguiente.
 | Migración | **ninguna** |
 | Puertos 5005/5433/5010/5434 + RAG | intactos |
 
+## Phase 9: La deuda declarada, ya con red (turno D-068, radicado 001-IDC-014)
+
+> Regla 3 en su forma estricta: **primero el test que fija el comportamiento actual, después el
+> cambio**. El motivo de haber frenado en el turno anterior era correcto —no había red—, así que
+> la red se construyó primero.
+
+- [x] **T-a** `ThemeContext` → `useSyncExternalStore`.
+      `src/context/ThemeContext.test.tsx` (7 casos) se escribió **contra la implementación
+      vieja** y pasó; luego se refactorizó y **pasó igual**. Cubre justo lo que el efecto
+      evitaba: el servidor pinta `dark` aunque el navegador tenga `light` guardado, e hidratar
+      no produce ninguna queja de desajuste de React. **Primer test de componente del
+      proyecto** (`jsdom` por archivo, como `vitest.config.ts` ya contemplaba).
+      De regalo, el tema ahora se sincroniza entre pestañas: sale del patrón, no se buscó.
+- [x] **T-b** Grafo de `BaseTab`. **Sí se pudo**, y sin tocar el arrastre a ciegas: se separó lo
+      que estaba mezclado en un solo estado — la **disposición inicial**, que es función pura de
+      los documentos, y las **posiciones que el usuario movió**, que es lo único que es estado.
+      `src/lib/grafoPosiciones.ts` + 10 tests. El efecto sembrador desaparece.
+      Corrige además un defecto que nadie había nombrado: al llegar un documento nuevo se
+      **perdían todas las posiciones arrastradas**, porque el efecto reescribía el estado
+      entero. Ahora se conservan.
+- [x] **T-c** `exhaustive-deps`: de 6 a **2 declarados**.
+      Arreglados los cuatro donde la equivalencia es demostrable: `configuracion/page.tsx`,
+      `ParametrizacionTab.tsx` y `Repositorio` de `BaseTab` estabilizan sus cargas con
+      `useCallback`, de modo que declarar la dependencia **no cambia cuándo corre el efecto** —
+      sigue siendo una vez al montar (o al cambiar el filtro), pero ahora la lista dice la
+      verdad.
+- [x] **Errores `refs` y `purity`**, que no estaban en el encargo pero bloqueaban SC-001:
+      `queueRef.current = queue` se escribía **durante el render** (prohibido); pasa a un
+      efecto. `Date.now()` en render se sustituye por el momento de la última lectura, que
+      además es más honesto: la antigüedad que se muestra es "según la última consulta", no una
+      cuenta que cambia sola en cada repintado.
+
+### Estado del lint tras esta fase
+
+`npx eslint src` → **0 problemas** (antes 64 en la medición D-063).
+
+> **Qué significa ese 0 exactamente**, para que nadie lo lea de más: **62 se arreglaron** y
+> **2 son supresiones declaradas** con su razón escrita en el propio sitio
+> (`eslint-disable-next-line` + justificación). No son un olvido silenciado; son las dos que
+> ZEUS anticipó como peligrosas:
+>
+> | Sitio | Por qué se declara |
+> |---|---|
+> | `BaseTab.tsx` efecto de **sondeo** | `startPolling` se recrea en cada render: declararlo haría correr la limpieza `stopPolling()` en **cada repintado**, parando y arrancando el sondeo sin descanso y relanzando dos peticiones por render. Es **el bucle** que ZEUS advirtió. Arreglarlo es estabilizar cuatro funciones encadenadas del monitor de ingesta, que no tiene ni un test. |
+> | `BaseTab.tsx` efecto de **cola de subida** | Declarar `queue` haría reentrar en el motor de la cola con **cada cambio de estado de un elemento** —y la subida los cambia: pending → uploading → processing → done— mientras suben ficheros reales. El guarda `processingRef` probablemente lo contendría, pero "probablemente" no es criterio para algo que mueve documentos del CEO. |
+>
+> Ambas entran con el **troceado** de `BaseTab.tsx`, que es su frente natural.
+
+---
+
 ### Lo que NO se hizo, y por qué
 
-1. **`ThemeContext.tsx:13`** — la corrección real es `useSyncExternalStore`; sin test de
-   componente no puedo probar que no rompo el tema. **Para ZEUS.**
-2. **`BaseTab.tsx:729`** — posiciones del grafo que luego se arrastran; convertirlo a `useMemo`
-   rompería el arrastre. Es rediseño. **Para ZEUS.**
-3. **`exhaustive-deps` (6)** — añadir dependencias cambia **cuándo** corre el efecto; en el
-   polling y la cola de subida de `BaseTab` eso puede provocar bucles de peticiones. Son
-   warnings. **Recomendado tratarlos junto al troceado.**
-4. **`react-hooks/refs` y `purity`** — dentro del componente que RZ-2 protege.
+1. ~~`ThemeContext.tsx`~~ — **hecho** en el turno D-068 (T-a), con red de tests primero.
+2. ~~Grafo de `BaseTab`~~ — **hecho** en el turno D-068 (T-b), separando disposición inicial
+   (pura) de posiciones arrastradas (estado).
+3. **`exhaustive-deps`**: 4 de 6 hechos; **2 declarados** (sondeo y cola de subida de
+   `BaseTab`), con su razón en el código y en la tabla de arriba.
+4. ~~`react-hooks/refs` y `purity`~~ — **hechos** en el turno D-068.
 5. **`scripts/` (7 problemas)** — decisión de ZEUS si `scripts/` va bajo la misma vara.
 6. **Zod en el resto de rutas** — acotado a propósito (FR-008). Ver la nota de
    `POST /api/licitaciones` en la auditoría: su migración exige cuidado con la coerción de

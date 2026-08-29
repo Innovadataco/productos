@@ -88,23 +88,39 @@ async function makeCookieForRol(rol: RolUsuario) {
     return `token=${token}`;
 }
 
-describe("ComiteSubNav (filtrada por módulo, spec 086)", () => {
-    it("con solo comite_bandeja permitido solo ve 'Bandeja'", () => {
-        render(<ComiteSubNav modulosPermitidos={["comite_bandeja"]} />);
+describe("ComiteSubNav (módulo de BD ∧ predicado del proxy, spec 086 + D-41/SPEC-126)", () => {
+    it("con solo comite_bandeja permitido solo ve 'Bandeja' y 'Apelaciones'", () => {
+        render(<ComiteSubNav rol="COMITE_VALIDACION" modulosPermitidos={["comite_bandeja"]} />);
         expect(screen.getByText("Bandeja")).toBeTruthy();
+        expect(screen.getByText("Apelaciones")).toBeTruthy();
         expect(screen.queryByText("Gestión")).toBeNull();
         expect(screen.queryByText("Auditoría")).toBeNull();
     });
 
-    it("con los 3 módulos permitidos ve las 3 pestañas", () => {
-        render(<ComiteSubNav modulosPermitidos={["comite_bandeja", "comite", "comite_auditoria"]} />);
+    it("ADMIN con los 3 módulos permitidos ve las 4 pestañas", () => {
+        render(<ComiteSubNav rol="ADMIN" modulosPermitidos={["comite_bandeja", "comite", "comite_auditoria"]} />);
         expect(screen.getByText("Bandeja")).toBeTruthy();
+        expect(screen.getByText("Apelaciones")).toBeTruthy();
         expect(screen.getByText("Gestión")).toBeTruthy();
         expect(screen.getByText("Auditoría")).toBeTruthy();
     });
 
+    it("D-41: COMITE_VALIDACION con los 3 módulos NO ve 'Gestión' ni 'Auditoría' (la puerta las redirige)", () => {
+        // Decisión D-41 (SPEC-126, ZEUS), NO ablandamiento: el módulo de BD decide QUÉ
+        // se ofrece, pero el predicado del proxy tiene la ÚLTIMA palabra sobre si se
+        // pinta. /dashboard/admin/comite/{gestion,auditoria} son ADMIN_ONLY_ROUTES:
+        // el proxy redirige al COMITE a su bandeja (ver los tests del proxy más abajo,
+        // que NO cambian: la puerta sigue bloqueando). Pintar esas tabs era un clic
+        // muerto (I-39, detectado por la aserción B de la línea base).
+        render(<ComiteSubNav rol="COMITE_VALIDACION" modulosPermitidos={["comite_bandeja", "comite", "comite_auditoria"]} />);
+        expect(screen.getByText("Bandeja")).toBeTruthy();
+        expect(screen.getByText("Apelaciones")).toBeTruthy();
+        expect(screen.queryByText("Gestión")).toBeNull();
+        expect(screen.queryByText("Auditoría")).toBeNull();
+    });
+
     it("sin módulos permitidos no ve pestañas", () => {
-        render(<ComiteSubNav modulosPermitidos={[]} />);
+        render(<ComiteSubNav rol="ADMIN" modulosPermitidos={[]} />);
         expect(screen.queryByText("Bandeja")).toBeNull();
         expect(screen.queryByText("Gestión")).toBeNull();
         expect(screen.queryByText("Auditoría")).toBeNull();

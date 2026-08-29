@@ -1,9 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { unmockPrisma } from "@/lib/test-mocks/unmock-prisma";
 import {
     clasificarConRubrica,
     calcularPorcentajes,
     resolverPresentesYPrincipal,
     generarAnalisisRubrica,
+    cumpleCategoria,
+    filtrarYTraducirIndices,
+    indicesDecisivas,
     type VotoRubricaModelo,
 } from "./rubrica";
 
@@ -22,12 +26,14 @@ vi.mock("@/lib/prisma", () => ({
     },
 }));
 
+afterAll(async () => await unmockPrisma());
+
 const CONFIG_TEST = {
     enabled: true,
     preguntas: {
-        SOLICITUD_ENCUENTRO: [{ texto: "¿Alguien propone verse?", activo: true }],
-        CONTACTO_INSISTENTE: [{ texto: "¿Hay mensajes repetidos?", activo: true }],
-        OFRECIMIENTO_REGALOS: [{ texto: "¿Se ofrece algo de valor?", activo: true }],
+        SOLICITUD_ENCUENTRO: [{ texto: "¿Alguien propone verse?", activo: true, tipo: "decisiva" as const }],
+        CONTACTO_INSISTENTE: [{ texto: "¿Hay mensajes repetidos?", activo: true, tipo: "decisiva" as const }],
+        OFRECIMIENTO_REGALOS: [{ texto: "¿Se ofrece algo de valor?", activo: true, tipo: "decisiva" as const }],
     },
     modelos: ["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"],
     temperatura: 0.2,
@@ -43,13 +49,35 @@ function respuestaEmbudo(categorias: string[]) {
     };
 }
 
+const PREGUNTAS_TEST: Record<string, string> = {
+    SOLICITUD_ENCUENTRO: "¿Alguien propone verse?",
+    CONTACTO_INSISTENTE: "¿Hay mensajes repetidos?",
+    OFRECIMIENTO_REGALOS: "¿Se ofrece algo de valor?",
+};
+
+function respuestaVotoConIndices(categorias: Record<string, number[]>) {
+    return {
+        data: {
+            categorias: Object.fromEntries(
+                Object.entries(categorias).map(([cat, indices]) => [
+                    cat,
+                    { cumple: indices.length > 0 ? 1 : 0, preguntasCumplidas: indices },
+                ])
+            ),
+        },
+        rawResponse: "{}",
+        metrics: { modelo: "m", latenciaMs: 10, promptTokens: 1, responseTokens: 1, totalDuration: 10, loadDuration: null },
+    };
+}
+
 function respuestaVoto(cumplimientos: Record<string, boolean>) {
     return {
         data: {
             categorias: Object.fromEntries(
                 Object.entries(cumplimientos).map(([cat, cumple]) => [
                     cat,
-                    { cumple: cumple ? 1 : 0, preguntasCumplidas: cumple ? ["pregunta 1"] : [] },
+                    // Spec 104: el modelo devuelve ÍNDICES (1-based), no textos.
+                    { cumple: cumple ? 1 : 0, preguntasCumplidas: cumple ? [1] : [] },
                 ])
             ),
         },
@@ -130,9 +158,14 @@ describe("clasificarConRubrica — flujo completo (mocks)", () => {
         expect(res.votosModelos[0].categorias.SOLICITUD_ENCUENTRO.cumple).toBe(true);
         expect(res.porcentajes.SOLICITUD_ENCUENTRO).toBeCloseTo(2 / 3);
         expect(res.porcentajes.CONTACTO_INSISTENTE).toBe(1);
-        // Gravedad: SOLICITUD_ENCUENTRO (90) > CONTACTO_INSISTENTE (30)
+        // Spec 098: `categoria` (uso interno) = la de MAYOR GRAVEDAD entre las presentes
+        // (SOLICITUD_ENCUENTRO), aunque CONTACTO_INSISTENTE tenga mayor % (100%).
+        // La presentación sigue mostrando todas (D-13); severidades = defaults (mock null).
         expect(res.categoria).toBe("SOLICITUD_ENCUENTRO");
+        expect(res.confianza).toBeCloseTo(2 / 3);
+        expect(res.categoriasPresentes).toContain("SOLICITUD_ENCUENTRO");
         expect(res.estado).toBe("CLASIFICADO");
+        // Con SOLICITUD_ENCUENTRO como principal, la secundaria es CONTACTO_INSISTENTE
         expect(res.categoriasSecundarias.map((c) => c.categoria)).toContain("CONTACTO_INSISTENTE");
     });
 
@@ -150,13 +183,143 @@ describe("clasificarConRubrica — flujo completo (mocks)", () => {
         expect(res.estado).toBe("REVISION_MANUAL");
     });
 
-    it("embudo sin plausibles → OTRO → revisión, sin llamadas a los modelos", async () => {
+    it("embudo vacío → red de seguridad evalúa todas las categorías (spec 092-US2) y sigue sin presentes", async () => {
         mockLlamar.mockResolvedValueOnce(respuestaEmbudo([]));
+        // Los 3 modelos votan "no cumple" en todas
+        for (let i = 0; i < 3; i++) {
+            mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: false, CONTACTO_INSISTENTE: false, OFRECIMIENTO_REGALOS: false }));
+        }
 
         const res = await clasificarConRubrica("texto sin señal", CONFIG_TEST);
 
-        expect(mockLlamar).toHaveBeenCalledTimes(1);
+        // Con la red de seguridad (plausibles < 2 → todas), se llama embudo + 3 modelos
+        expect(mockLlamar).toHaveBeenCalledTimes(4);
+        expect(res.categoriasPresentes).toEqual([]);
         expect(res.categoria).toBe("OTRO");
         expect(res.estado).toBe("REVISION_MANUAL");
+    });
+});
+
+// Spec 104: votación por ÍNDICES — el cumplimiento no depende del formato del texto.
+describe("spec 104 — cumplimiento por índices (adiós verbatim)", () => {
+    const SETS = {
+        GROOMING: [
+            { texto: "¿Se ofrece algo de valor?", activo: true, tipo: "decisiva" as const },
+            { texto: "¿El ofrecimiento es personal, dirigido específicamente a este menor?", activo: true, tipo: "decisiva" as const },
+            { texto: "¿Viene de un adulto o desconocido?", activo: true },
+        ],
+        BENIGNA: [{ texto: "¿Es de día?", activo: true }],
+    };
+
+    it("cumpleCategoria: todas las decisivas presentes por índice → true; falta una → false", () => {
+        expect(cumpleCategoria(SETS, "GROOMING", [1, 2], true)).toBe(true);
+        expect(cumpleCategoria(SETS, "GROOMING", [1], true)).toBe(false);
+        expect(cumpleCategoria(SETS, "GROOMING", [2], true)).toBe(false);
+        expect(cumpleCategoria(SETS, "GROOMING", [1, 2], false)).toBe(false);
+        // Sin decisivas activas: basta el 0/1 del modelo
+        expect(cumpleCategoria(SETS, "BENIGNA", [], true)).toBe(true);
+    });
+
+    it("indicesDecisivas: posiciones 1-based dentro del set activo", () => {
+        expect(indicesDecisivas(SETS, "GROOMING")).toEqual([1, 2]);
+        expect(indicesDecisivas(SETS, "BENIGNA")).toEqual([]);
+    });
+
+    it("filtrarYTraducirIndices: fuera de rango y duplicados descartados; textos canónicos", () => {
+        const { validos, textos } = filtrarYTraducirIndices(SETS, "GROOMING", [1, 99, 1, -3, 3, 0]);
+        expect(validos).toEqual([1, 3]);
+        expect(textos).toEqual(["¿Se ofrece algo de valor?", "¿Viene de un adulto o desconocido?"]);
+    });
+
+    it("ACEPTACIÓN B1: el resultado no depende del formato — índices con ruido (duplicados/fuera de rango) dan el MISMO veredicto", async () => {
+        // El modo viejo (verbatim) moría con "1. [DECISIVA] …" o sin "¿": el modelo
+        // entendía pero la cadena no coincidía. Con índices, el texto ya no participa.
+        const config = { ...CONFIG_TEST, preguntas: SETS };
+        for (const indices of [[1, 2], [1, 2, 99, 1], [2, 1]]) {
+            mockLlamar.mockReset();
+            mockParametroFindUnique.mockResolvedValue(null);
+            mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["GROOMING"]));
+            for (let m = 0; m < 3; m++) {
+                mockLlamar.mockResolvedValueOnce(respuestaVotoConIndices({ GROOMING: indices }));
+            }
+            const res = await clasificarConRubrica("texto con señal", config);
+            expect(res.categoriasPresentes).toEqual(["GROOMING"]);
+            expect(res.estado).toBe("CLASIFICADO");
+            // Persistencia: textos CANÓNICOS (traducidos desde índice), no los del modelo
+            for (const v of res.votosModelos) {
+                expect(v.categorias.GROOMING.preguntasCumplidas).toEqual([
+                    "¿Se ofrece algo de valor?",
+                    "¿El ofrecimiento es personal, dirigido específicamente a este menor?",
+                ]);
+            }
+        }
+    });
+
+    it("índice de decisiva ausente en 2/3 modelos → no presente (bloqueo decisivo intacto)", async () => {
+        const config = { ...CONFIG_TEST, preguntas: SETS };
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["GROOMING"]));
+        mockLlamar.mockResolvedValueOnce(respuestaVotoConIndices({ GROOMING: [1, 2] }));
+        mockLlamar.mockResolvedValueOnce(respuestaVotoConIndices({ GROOMING: [1] })); // falta decisiva 2
+        mockLlamar.mockResolvedValueOnce(respuestaVotoConIndices({ GROOMING: [1] }));
+
+        const res = await clasificarConRubrica("texto con señal", config);
+        // Solo 1/3 cumple todas las decisivas → 0.33 < 0.6 → no presente
+        expect(res.categoriasPresentes).toEqual([]);
+        expect(res.estado).toBe("REVISION_MANUAL");
+    });
+});
+
+// SPEC-298 (I-163): override de modelo de clasificación. El sandbox/simulación pide un modelo
+// puntual; el pipeline lo propaga y la rúbrica debe votar SOLO con ese modelo (mono-voz).
+describe("clasificarConRubrica — override modeloClasificacion (SPEC-298 / I-163)", () => {
+    beforeEach(() => {
+        mockLlamar.mockReset();
+        mockParametroFindUnique.mockReset();
+        mockParametroFindUnique.mockResolvedValue(null);
+    });
+
+    it("RF-A · con override → una sola llamada de votación al modelo indicado", async () => {
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["SOLICITUD_ENCUENTRO", "CONTACTO_INSISTENTE"]));
+        mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: true, CONTACTO_INSISTENTE: true }));
+
+        const res = await clasificarConRubrica("texto", CONFIG_TEST, { modeloClasificacion: "gemma2:27b" });
+
+        // 1 llamada al embudo (modelo "qwen2.5:14b") + 1 llamada de voto (modelo override "gemma2:27b").
+        // Filtrar por índice (embudo = 0, votos = 1..); no por nombre — el modeloEmbudo puede
+        // coincidir con un modelo del comité (aquí "qwen2.5:14b" está en ambos).
+        expect(mockLlamar).toHaveBeenCalledTimes(2);
+        const modelosVoto = mockLlamar.mock.calls.slice(1).map((c) => c[0] as string);
+        expect(modelosVoto).toEqual(["gemma2:27b"]);
+        expect(res.votosModelos).toHaveLength(1);
+        expect(res.votosModelos[0].modelo).toBe("gemma2:27b");
+    });
+
+    it("RF-B · sin override → comité completo (una llamada por cada modelo de cfg.modelos)", async () => {
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["SOLICITUD_ENCUENTRO", "CONTACTO_INSISTENTE"]));
+        for (let i = 0; i < CONFIG_TEST.modelos.length; i++) {
+            mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: true, CONTACTO_INSISTENTE: true }));
+        }
+
+        const res = await clasificarConRubrica("texto", CONFIG_TEST);
+
+        const modelosVoto = mockLlamar.mock.calls.slice(1).map((c) => c[0] as string);
+        expect(modelosVoto).toEqual(CONFIG_TEST.modelos);
+        expect(res.votosModelos.map((v) => v.modelo)).toEqual(CONFIG_TEST.modelos);
+    });
+
+    it("RF-6 · metrics.modelo refleja el modelo real (override) — no el comité", async () => {
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["SOLICITUD_ENCUENTRO"]));
+        mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: true }));
+
+        const conOverride = await clasificarConRubrica("texto", CONFIG_TEST, { modeloClasificacion: "qwen2.5:14b" });
+        expect(conOverride.metrics.modelo).toBe("rubrica:qwen2.5:14b");
+
+        mockLlamar.mockReset();
+        mockLlamar.mockResolvedValueOnce(respuestaEmbudo(["SOLICITUD_ENCUENTRO"]));
+        for (let i = 0; i < CONFIG_TEST.modelos.length; i++) {
+            mockLlamar.mockResolvedValueOnce(respuestaVoto({ SOLICITUD_ENCUENTRO: true }));
+        }
+        const sinOverride = await clasificarConRubrica("texto", CONFIG_TEST);
+        expect(sinOverride.metrics.modelo).toBe(`rubrica:${CONFIG_TEST.modelos.join("+")}`);
     });
 });

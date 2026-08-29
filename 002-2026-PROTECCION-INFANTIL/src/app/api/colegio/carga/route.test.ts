@@ -77,6 +77,7 @@ const COLUMNAS = [
     "grado",
     "anio_lectivo",
     "nombre_alumno",
+    "apellidos_alumno",
     "tipo_identificador",
     "valor_identificador",
     "etiqueta_relacion",
@@ -85,13 +86,20 @@ const COLUMNAS = [
 
 const CSV_VALIDO = [
     COLUMNAS.join(","),
-    "6A,Sexto,2026,María Gómez,telefono,+573001234567,ALUMNO,",
-    "6A,Sexto,2026,Carlos Ruiz,email,carlos@example.com,PADRE,",
+    "6A,Sexto,2026,María,Gómez,telefono,+573001234567,ESTUDIANTE,",
+    "6A,Sexto,2026,Carlos,Ruiz,email,carlos@example.com,PADRE,",
 ].join("\n");
 
 const CSV_INVALIDO = [
     COLUMNAS.join(","),
-    "6A,Sexto,2026,,telefono,+573001234567,ALUMNO,",
+    "6A,Sexto,2026,,Gómez,telefono,+573001234567,ESTUDIANTE,",
+].join("\n");
+
+// SPEC-144 (D4): plantilla vieja SIN columna de apellidos — el archivo se acepta
+// pero TODA fila sin apellidos queda marcada como "fila con problema".
+const CSV_SIN_COLUMNA_APELLIDOS = [
+    ["nombre_curso", "grado", "anio_lectivo", "nombre_alumno", "tipo_identificador", "valor_identificador", "etiqueta_relacion", "plataforma"].join(","),
+    "6A,Sexto,2026,María Gómez,telefono,+573001234567,ALUMNO,",
 ].join("\n");
 
 describe("/api/colegio/carga", () => {
@@ -109,7 +117,9 @@ describe("/api/colegio/carga", () => {
             expect(res.headers.get("content-type")).toContain("text/csv");
             const text = await res.text();
             expect(text).toContain("nombre_curso");
-            expect(text).toContain("María Gómez");
+            // SPEC-144 (D4): la plantilla generada ya trae la columna de apellidos.
+            expect(text).toContain("apellidos_alumno");
+            expect(text).toContain("Gómez Pérez");
         });
 
         it("ADMIN no puede descargar plantilla", async () => {
@@ -157,6 +167,28 @@ describe("/api/colegio/carga", () => {
             expect(json.errores).toHaveLength(1);
             expect(json.errores[0].campos).toContain("nombre_alumno");
             expect(json.tokenConfirmacion).toBeNull();
+        });
+
+        it("SPEC-144 (D4): plantilla vieja sin columna de apellidos marca la fila como problema y NO la crea al confirmar", async () => {
+            const { colegio } = await setupSchoolAdmin();
+            const req = buildMultipartRequest(
+                "http://localhost:5005/api/colegio/carga/validar",
+                [{ name: "archivo", filename: "carga.csv", contentType: "text/csv", value: CSV_SIN_COLUMNA_APELLIDOS }],
+                mockToken
+            );
+
+            const res = await POSTValidar(req);
+            expect(res.status).toBe(200);
+            const json = await res.json();
+            // El archivo NUNCA se rechaza entero: la fila queda en "con problemas".
+            expect(json.valido).toBe(false);
+            expect(json.errores).toHaveLength(1);
+            expect(json.errores[0].campos).toContain("apellidos_alumno");
+            expect(json.errores[0].mensaje).toContain("Falta el apellido del estudiante");
+            expect(json.filasValidas).toBe(0);
+
+            // Nada que confirmar: no se crea ningún estudiante sin apellidos.
+            expect(await prisma.estudiante.count({ where: { colegioId: colegio.id } })).toBe(0);
         });
 
         it("rechaza archivo con extensión no soportada", async () => {
@@ -258,7 +290,7 @@ describe("/api/colegio/carga", () => {
             expect(res.status).toBe(403);
         });
 
-        it("segunda confirmación es idempotente", async () => {
+        it("segunda confirmación es rechazada (single-use) y no duplica (SPEC-132 O-2)", async () => {
             const { colegio } = await setupSchoolAdmin();
             const reqValidar = buildMultipartRequest(
                 "http://localhost:5005/api/colegio/carga/validar",
@@ -269,20 +301,19 @@ describe("/api/colegio/carga", () => {
             const validarRes = await POSTValidar(reqValidar);
             const validarJson = await validarRes.json();
 
-            await POSTConfirmar(
+            // Primera confirmación: importa y consume la sesión de roster.
+            const res1 = await POSTConfirmar(
                 request("POST", "http://localhost:5005/api/colegio/carga/confirmar", { tokenConfirmacion: validarJson.tokenConfirmacion }, mockToken)
             );
+            expect(res1.status).toBe(201);
+
+            // Segunda con el MISMO token: la sesión ya no existe (single-use); no duplica.
             const res2 = await POSTConfirmar(
                 request("POST", "http://localhost:5005/api/colegio/carga/confirmar", { tokenConfirmacion: validarJson.tokenConfirmacion }, mockToken)
             );
-            expect(res2.status).toBe(201);
-            const json2 = await res2.json();
-            expect(json2.resumen.cursosReutilizados).toBe(1);
-            expect(json2.resumen.alumnosReutilizados).toBe(2);
-            expect(json2.resumen.identificadoresReutilizados).toBe(2);
-            expect(json2.resumen.alumnosCreados).toBe(0);
+            expect(res2.status).toBe(400);
 
-            const alumnos = await prisma.alumno.findMany({ where: { colegioId: colegio.id } });
+            const alumnos = await prisma.estudiante.findMany({ where: { colegioId: colegio.id } });
             expect(alumnos).toHaveLength(2);
         });
     });

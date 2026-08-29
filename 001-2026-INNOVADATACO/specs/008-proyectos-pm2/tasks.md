@@ -103,10 +103,29 @@ ya basta para editar y mover fases.
       Aplicada a la viva con el mismo conteo antes/después (proyectos 1, licitaciones 2,
       DocumentoChunk 84). Rutas `GET`/`POST /api/projects/[id]/entregables` y
       `PATCH`/`DELETE .../[entregableId]`, con UI en el formulario de edición.
-- [ ] T021 [US5] Presupuesto por partidas (planeado/ejecutado/desviación) y recursos (P2).
+- [x] T021 [US5] Presupuesto por partidas (planeado/ejecutado/desviación) y recursos (P2).
       → FR-012, FR-013
-- [ ] T022 [US4] Cronograma de hitos (P3). → FR-011
-- [ ] T023 [US6] Lecciones aprendidas (P3). → FR-014
+- [x] T022 [US4] Cronograma de hitos (P3). → FR-011
+- [x] T023 [US6] Lecciones aprendidas (P3). → FR-014
+
+**Hechas en el turno D-068**, con una **única migración aditiva** para las cuatro tablas
+(`hitos_proyecto`, `partidas_proyecto`, `recursos_proyecto`, `lecciones_aprendidas`),
+ensayada en BD desechable antes de la viva (D-039):
+
+| Ensayo | Resultado |
+|---|---|
+| Cero pérdida | proyectos 1 → 1, entregables 1 → 1 |
+| CASCADE de las 5 hijas | borrado el proyecto: 0 huérfanos en las cinco |
+| Desviación con sobrecoste | planeado 1000, ejecutado 1250.50 → **+250.50** (se muestra, no se impide) |
+| Viva, antes/después | proyectos 1, entregables 0, licitaciones 2, DocumentoChunk 69 — idénticos |
+
+8 rutas nuevas (colección + elemento por cada colección) con `verifyAuth`, `apiError` y
+auditoría. El `GET` del presupuesto devuelve además el **resumen** calculado al leer, para que
+la pantalla no pueda sumar distinto que la API.
+
+UI: pestañas dentro de la edición del proyecto (`GestionPm2`), con un panel genérico para
+cronograma/recursos/lecciones y uno propio para el presupuesto, que es el único que muestra
+totales y desviación.
 
 ---
 

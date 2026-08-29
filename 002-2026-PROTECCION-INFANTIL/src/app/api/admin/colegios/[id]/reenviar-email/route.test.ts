@@ -5,13 +5,13 @@ import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 import { crearColegioConAdmin, crearUsuario, crearRequestAutenticado } from "@/lib/reporte-test-utils";
 import * as auth from "@/lib/auth";
-import { enviarEmailBienvenidaColegio } from "@/lib/email";
+import { programar as programarNotificacion } from "@/lib/notificaciones";
 
-vi.mock("@/lib/email", () => ({
-    enviarEmailBienvenidaColegio: vi.fn(),
+vi.mock("@/lib/notificaciones", () => ({
+    programar: vi.fn(),
 }));
 
-const mockEmail = enviarEmailBienvenidaColegio as unknown as ReturnType<typeof vi.fn>;
+const mockProgramar = programarNotificacion as unknown as ReturnType<typeof vi.fn>;
 
 function ctx(id: string) {
     return { params: Promise.resolve({ id }) };
@@ -27,7 +27,7 @@ describe("POST /api/admin/colegios/[id]/reenviar-email", () => {
     it("envía el email con nueva contraseña temporal y NO la expone en la respuesta", async () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
-        mockEmail.mockResolvedValue(undefined);
+        mockProgramar.mockResolvedValue({ programadas: 1, canceladasPorReemplazo: 0 });
         const { colegio, admin: schoolAdmin } = await crearColegioConAdmin();
 
         const req = crearRequestAutenticado("POST", `http://localhost/api/admin/colegios/${colegio.id}/reenviar-email`, null);
@@ -37,7 +37,15 @@ describe("POST /api/admin/colegios/[id]/reenviar-email", () => {
         const body = await res.json();
         expect(body.emailEnviado).toBe(true);
         expect(body.passwordTemporal).toBeUndefined();
-        expect(mockEmail).toHaveBeenCalledWith(schoolAdmin.email, expect.stringMatching(/^[0-9a-f]{12}$/));
+        expect(mockProgramar).toHaveBeenCalledWith(expect.objectContaining({
+            evento: "colegio.creado",
+            sujetoTipo: "Colegio",
+            sujetoId: colegio.id,
+            destinatarios: [expect.objectContaining({
+                email: schoolAdmin.email,
+                variables: expect.objectContaining({ passwordTemporal: expect.stringMatching(/^[0-9a-f]{12}$/) }),
+            })],
+        }));
 
         const actualizado = await prisma.usuario.findUnique({ where: { id: schoolAdmin.id } });
         expect(actualizado?.debeCambiarPassword).toBe(true);
@@ -49,7 +57,7 @@ describe("POST /api/admin/colegios/[id]/reenviar-email", () => {
     it("si el email falla, devuelve la contraseña temporal para copia manual", async () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
-        mockEmail.mockRejectedValue(new Error("Resend caído"));
+        mockProgramar.mockRejectedValue(new Error("Resend caído"));
         const { colegio } = await crearColegioConAdmin();
 
         const req = crearRequestAutenticado("POST", `http://localhost/api/admin/colegios/${colegio.id}/reenviar-email`, null);

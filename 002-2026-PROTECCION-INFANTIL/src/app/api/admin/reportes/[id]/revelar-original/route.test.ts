@@ -11,6 +11,7 @@ import {
     crearPaisCiudad,
 } from "@/lib/reporte-test-utils";
 import { encryptParameter } from "@/lib/param-encryption";
+import type { RolUsuario } from "@prisma/client";
 
 let activeToken: string | null = null;
 
@@ -21,6 +22,15 @@ vi.mock("next/headers", () => ({
         set: vi.fn(),
     }),
 }));
+
+/** resetDatabase otorga TODOS los módulos a TODOS los roles: para probar el gating hay que quitar el módulo explícitamente. */
+async function revocarModulo(rol: RolUsuario, clave: string) {
+    const modulo = await prisma.moduloPermisible.findUnique({ where: { clave } });
+    await prisma.permisoModulo.update({
+        where: { rol_moduloId: { rol, moduloId: modulo!.id } },
+        data: { activo: false },
+    });
+}
 
 async function crearReporteConOriginalCifrado() {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
@@ -76,8 +86,9 @@ describe("POST /api/admin/reportes/[id]/revelar-original", () => {
         expect(audit).not.toBeNull();
     });
 
-    it("bloquea a OPERADOR", async () => {
+    it("bloquea a OPERADOR sin el módulo expediente_revelar_original", async () => {
         const operador = await crearUsuario("OPERADOR");
+        await revocarModulo("OPERADOR", "expediente_revelar_original");
         const reporte = await crearReporteConOriginalCifrado();
         activeToken = await crearTokenUsuario(operador.id, "OPERADOR");
 
@@ -89,6 +100,24 @@ describe("POST /api/admin/reportes/[id]/revelar-original", () => {
         );
         const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
         expect(res.status).toBe(403);
+    });
+
+    it("permite a OPERADOR con el módulo expediente_revelar_original otorgado", async () => {
+        // Spec 096-US5: el acceso lo gobierna el módulo, no el rol duro.
+        const operador = await crearUsuario("OPERADOR");
+        const reporte = await crearReporteConOriginalCifrado();
+        activeToken = await crearTokenUsuario(operador.id, "OPERADOR");
+
+        const req = crearRequestAutenticado(
+            "POST",
+            `http://localhost:5005/api/admin/reportes/${reporte.id}/revelar-original`,
+            {},
+            activeToken
+        );
+        const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.textoOriginal).toContain("María");
     });
 
     it("devuelve 404 si el reporte no tiene texto original", async () => {

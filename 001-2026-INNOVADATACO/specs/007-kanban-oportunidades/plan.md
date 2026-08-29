@@ -228,6 +228,23 @@ el servidor, no solo en la UI).
 - **R-05 · Dos usuarios mueven la misma tarjeta** (Edge Case). El último persistido gana y la
   auditoría registra ambos movimientos; no se añade bloqueo optimista (fuera de alcance).
 
+## Artefactos de esta spec (D-066)
+
+| Artefacto | Estado |
+|---|---|
+| `spec.md` | sí |
+| `plan.md` | este archivo |
+| `tasks.md` | sí |
+| `checklists/requirements.md` | sí |
+| `research.md` | **sí** — añadido en el turno D-068 |
+| `quickstart.md` | **sí** — añadido en el turno D-068 |
+| `data-model.md` | **no aplica**: esta spec **no toca el esquema**. No hay entidad nueva ni migración; el tablero se apoya en `Licitacion.estadoId` y `LicitacionStatus`, que ya existían y están documentados en el `data-model.md` de la spec 006. |
+
+> `research.md` y `quickstart.md` faltaron en la entrega original y el plan no decía por qué.
+> ZEUS lo señaló (D-066) con razón: un artefacto ausente **y sin declarar** es indistinguible
+> de un olvido. Ambos existen ya; `data-model.md` queda declarado como no aplicable, que es
+> distinto de faltar.
+
 ## Complexity Tracking
 
 Sin violaciones. La partición en tres capas (en vez de las dos que nombra la spec) **no añade

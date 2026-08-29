@@ -64,6 +64,14 @@ export default function PrivacidadPage() {
                         Puedes solicitar la eliminación de tu cuenta o de datos personales escribiendo al administrador de la
                         plataforma.
                     </p>
+
+                    <h2 className="text-lg font-semibold text-slate-900">7. Datos geográficos</h2>
+                    <p>
+                        El catálogo de países, departamentos y ciudades (nombres, coordenadas aproximadas y población) proviene
+                        de GeoNames (https://www.geonames.org), disponible bajo licencia Creative Commons Attribution 4.0
+                        (CC-BY 4.0). Las coordenadas se usan únicamente para ubicar ciudades en mapas agregados; nunca
+                        representan direcciones exactas ni datos personales.
+                    </p>
                 </section>
             </article>
         </main>

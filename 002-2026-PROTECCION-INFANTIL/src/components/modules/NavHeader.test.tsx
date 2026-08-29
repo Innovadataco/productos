@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { NavHeader } from "./NavHeader";
 
+let mockPathname = "/";
+
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ push: vi.fn() }),
-    usePathname: () => "/",
+    usePathname: () => mockPathname,
 }));
 
 vi.mock("@/components/ui/ThemeToggle", () => ({
@@ -32,6 +34,28 @@ function mockAuth(user: { id: string; email: string; nombre: string; rol: string
 describe("NavHeader", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockPathname = "/";
+    });
+
+    it("logo va al home público aunque haya sesión de ADMIN en ruta pública (SPEC-106)", () => {
+        mockAuth({ id: "1", email: "admin@test.com", nombre: "Admin", rol: "ADMIN" });
+        render(<NavHeader />);
+        const logo = screen.getByText("Infantil").closest("a");
+        expect(logo?.getAttribute("href")).toBe("/");
+    });
+
+    it("logo va al panel del rol desde OTRA página del área (SPEC-106); en el home del rol va al home público (I-38, nunca clic muerto)", () => {
+        mockPathname = "/dashboard/admin/reportes";
+        mockAuth({ id: "1", email: "admin@test.com", nombre: "Admin", rol: "ADMIN" });
+        const { unmount } = render(<NavHeader />);
+        let logo = screen.getByText("Infantil").closest("a");
+        expect(logo?.getAttribute("href")).toBe("/dashboard/admin");
+        unmount();
+
+        mockPathname = "/dashboard/admin";
+        render(<NavHeader />);
+        logo = screen.getByText("Infantil").closest("a");
+        expect(logo?.getAttribute("href")).toBe("/");
     });
 
     it("botón Dashboard apunta a /dashboard para padre autenticado", () => {
@@ -48,6 +72,24 @@ describe("NavHeader", () => {
         expect(dashboard?.getAttribute("href")).toBe("/dashboard-publico");
     });
 
+    it("SCHOOL_ADMIN NO ve las entradas del área de padres en el menú (I-36)", () => {
+        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
+        render(<NavHeader />);
+        const toggle = screen.getByText("Colegio").closest("button");
+        if (toggle) fireEvent.click(toggle);
+        expect(screen.queryByText("Círculo de Confianza")).toBeNull();
+        expect(screen.queryByText("Mis reportes")).toBeNull();
+    });
+
+    it("PARENT sí ve las entradas de su área en el menú (I-36)", () => {
+        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
+        render(<NavHeader />);
+        const toggle = screen.getByText("Padre").closest("button");
+        if (toggle) fireEvent.click(toggle);
+        expect(screen.getByText("Círculo de Confianza").closest("a")?.getAttribute("href")).toBe("/dashboard/circulo-confianza");
+        expect(screen.getByText("Mis reportes").closest("a")?.getAttribute("href")).toBe("/mis-reportes");
+    });
+
     it("menú desplegable de padre muestra enlace a Mi panel", () => {
         mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
@@ -55,5 +97,53 @@ describe("NavHeader", () => {
         if (toggle) fireEvent.click(toggle);
         const link = screen.getByText("Mi panel").closest("a");
         expect(link?.getAttribute("href")).toBe("/dashboard");
+    });
+
+    // SPEC-118 (D-37, decisión ZEUS): ningún elemento de navegación ofrece un
+    // destino que el proxy bloquea o que es la página actual — para TODOS los roles.
+    it("D-37: el botón Dashboard NO se ofrece al colegio estando en /dashboard/colegio (clic muerto puro)", () => {
+        mockPathname = "/dashboard/colegio";
+        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
+        render(<NavHeader />);
+        expect(screen.queryByText("Dashboard")).toBeNull();
+    });
+
+    it("D-37: el botón Dashboard SÍ se ofrece al colegio fuera de su panel (destino vivo)", () => {
+        mockPathname = "/dashboard-publico";
+        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
+        render(<NavHeader />);
+        const dashboard = screen.getByText("Dashboard").closest("a");
+        expect(dashboard?.getAttribute("href")).toBe("/dashboard/colegio");
+    });
+
+    it("D-37: el botón Dashboard NO se ofrece al padre estando en /dashboard", () => {
+        mockPathname = "/dashboard";
+        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
+        render(<NavHeader />);
+        expect(screen.queryByText("Dashboard")).toBeNull();
+    });
+
+    it("D-37: el botón Dashboard NO se ofrece al anónimo estando en /dashboard-publico", () => {
+        mockPathname = "/dashboard-publico";
+        mockAuth(null);
+        render(<NavHeader />);
+        expect(screen.queryByText("Dashboard")).toBeNull();
+    });
+
+    it("D-37: el menú de usuario no ofrece la página actual (Mi colegio abierto en /dashboard/colegio)", () => {
+        mockPathname = "/dashboard/colegio";
+        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
+        const { unmount } = render(<NavHeader />);
+        const toggle = screen.getByText("Colegio").closest("button");
+        if (toggle) fireEvent.click(toggle);
+        expect(screen.queryByText("Mi colegio")).toBeNull();
+        unmount();
+
+        // ...pero sí lo ofrece fuera de esa página
+        mockPathname = "/dashboard-publico";
+        render(<NavHeader />);
+        const toggle2 = screen.getByText("Colegio").closest("button");
+        if (toggle2) fireEvent.click(toggle2);
+        expect(screen.getByText("Mi colegio").closest("a")?.getAttribute("href")).toBe("/dashboard/colegio");
     });
 });

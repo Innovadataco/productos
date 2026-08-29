@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
+import { useMinTextoReporte } from "./use-min-texto-reporte";
 
 type PaisOption = { id: string; nombre: string };
-type CiudadOption = { id: string; nombre: string; paisId: string };
 
 export function ReporteStepDetalle({
     ciudad,
@@ -35,7 +36,6 @@ export function ReporteStepDetalle({
     }) => void;
 }) {
     const [paises, setPaises] = useState<PaisOption[]>([]);
-    const [ciudades, setCiudades] = useState<CiudadOption[]>([]);
     const [otraCiudad, setOtraCiudad] = useState(ciudadId === "otra" ? ciudad : "");
     const hoy = new Date().toISOString().split("T")[0];
 
@@ -45,14 +45,6 @@ export function ReporteStepDetalle({
             .then((json) => setPaises(json.paises || []))
             .catch(() => setPaises([]));
     }, []);
-
-    useEffect(() => {
-        if (!paisId) return;
-        fetch(`/api/ciudades?paisId=${encodeURIComponent(paisId)}`, { credentials: "include" })
-            .then((r) => r.json())
-            .then((json) => setCiudades(json.ciudades || []))
-            .catch(() => setCiudades([]));
-    }, [paisId]);
 
     const esOtraCiudad = ciudadId === "otra";
 
@@ -71,9 +63,20 @@ export function ReporteStepDetalle({
         setOtraCiudad("");
     };
 
-    const handleCiudadChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedId = e.target.value;
-        if (selectedId === "otra") {
+    // SPEC-115: la ciudad se elige con buscador en servidor (el catálogo ya no cabe
+    // en un <select>). "Otra ciudad o municipio" conserva el texto libre como antes:
+    // el dato nunca se pierde aunque la ciudad no tenga coordenadas.
+    const ciudadSeleccionada: CiudadOpcion | null =
+        ciudadId && ciudadId !== "otra"
+            ? { id: ciudadId, nombre: ciudad, paisId, departamentoId: null, departamento: null }
+            : null;
+
+    const handleCiudadSelect = (opcion: CiudadOpcion | null) => {
+        if (!opcion) {
+            onChange({ ciudadId: "", ciudad: "", pais, paisId, fechaIncidente, edadVictima, texto });
+            return;
+        }
+        if (opcion.id === "otra") {
             onChange({
                 ciudadId: "otra",
                 ciudad: otraCiudad || "",
@@ -84,10 +87,9 @@ export function ReporteStepDetalle({
                 texto,
             });
         } else {
-            const selectedNombre = ciudades.find((c) => c.id === selectedId)?.nombre || "";
             onChange({
-                ciudadId: selectedId,
-                ciudad: selectedNombre,
+                ciudadId: opcion.id,
+                ciudad: opcion.nombre,
                 pais,
                 paisId,
                 fechaIncidente,
@@ -115,7 +117,7 @@ export function ReporteStepDetalle({
     };
 
     const chars = texto.length;
-    const min = 20;
+    const min = useMinTextoReporte();
     const max = 5000;
     const isValid = chars >= min && chars <= max;
 
@@ -138,16 +140,12 @@ export function ReporteStepDetalle({
                     onChange={handlePaisChange}
                 />
 
-                <Select
-                    label="Ciudad"
-                    options={[
-                        { value: "", label: "Selecciona una ciudad" },
-                        ...ciudades.map((c) => ({ value: c.id, label: c.nombre })),
-                        { value: "otra", label: "Otra ciudad" },
-                    ]}
-                    value={ciudadId}
-                    onChange={handleCiudadChange}
+                <CiudadSearchSelect
+                    paisId={paisId}
+                    value={ciudadSeleccionada}
+                    onSelect={handleCiudadSelect}
                     disabled={!paisId}
+                    permitirOtra
                 />
 
                 <Input

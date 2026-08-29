@@ -1,0 +1,21 @@
+{
+    "descripcion": "SPEC-126: modelos sin relaciones entrantes ni salientes tolerados (SaaS aún sin consumidores propios: Plan, Subscription, BillingCycle; RateLimit es tabla clave-valor de ventanas fijas sin FK por diseño, verificado 2026-07-29 — el oráculo inicial del brief citaba 3, prevalece el conteo real documentado según Assumptions de la spec). La lista solo cambia por decisión explícita de ZEUS; un huérfano nuevo fuera de esta lista pone arch:check en ROJO. SPEC-171: HealthProbe e IncidenteInfra son tablas de monitoreo de infraestructura, sin FK a entidades de negocio por diseño (aislamiento del vigilante). SPEC-172: DerivaMotorSnapshot es tabla de agregados semanales por categoría (clave semanaInicio+categoria), sin FK a entidades de negocio por diseño — el tablero la lee entera y el job la reescribe por upsert. SPEC-193 (Fase 1): WorkerLog es la bitácora de logs de workers y servicios; no tiene FK a entidades de negocio por diseño (aislamiento del log). SPEC-201: Notificacion, NotificacionPlantilla, NotificacionRegla, NotificacionPreferencia y NotificacionContactoBloqueado son tablas del motor de notificaciones; no usan FK a entidades de negocio por diseño (cola de envío desacoplada, auditoría de bounces y preferencias de opt-out)."
+,
+    "huerfanosPermitidos": [
+        "BillingCycle",
+        "DemoMarcado",
+        "DerivaMotorSnapshot",
+        "HealthProbe",
+        "IncidenteInfra",
+        "Notificacion",
+        "NotificacionContactoBloqueado",
+        "NotificacionPlantilla",
+        "NotificacionPreferencia",
+        "NotificacionRegla",
+        "Plan",
+        "RateLimit",
+        "SenalComunitariaCache",
+        "Subscription",
+        "WorkerLog"
+    ]
+}

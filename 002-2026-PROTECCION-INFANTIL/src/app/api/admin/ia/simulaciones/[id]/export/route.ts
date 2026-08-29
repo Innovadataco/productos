@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { calcularMetricasSimulacion, canonizarCategoria } from "@/lib/simulacion/metricas";
+import { IaSimulacionesService } from "@/lib/dal/services/ia-simulaciones";
 import { RolUsuario } from "@prisma/client";
 import { z } from "zod";
 
@@ -55,55 +54,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             throw new AppError("Formato inválido. Use csv o json", ERROR_CODES.VALIDATION_ERROR, 400);
         }
 
-        const run = await prisma.simulacionRun.findUnique({ where: { id: parsedId.data } });
-        if (!run) {
-            throw new AppError("Simulación no encontrada", ERROR_CODES.NOT_FOUND, 404);
-        }
-
-        if (run.estado === "PENDIENTE" || run.estado === "EN_PROGRESO") {
-            throw new AppError(
-                "La exportación solo está disponible para corridas finalizadas",
-                ERROR_CODES.CONFLICT,
-                409
-            );
-        }
-
-        const metricas = await calcularMetricasSimulacion(run.id);
-
-        const relacionados = await prisma.simulacionReporte.findMany({
-            where: { simulacionRunId: run.id },
-            orderBy: { indice: "asc" },
-        });
-        const reportes = await prisma.reporte.findMany({
-            where: { id: { in: relacionados.map((r) => r.reporteId) } },
-            select: { id: true, identificador: true, estado: true },
-        });
-        const clasificaciones = await prisma.clasificacionIA.findMany({
-            where: { reporteId: { in: relacionados.map((r) => r.reporteId) } },
-            select: { reporteId: true, categoria: true, confianza: true, latenciaMs: true, modeloUsado: true },
-        });
-
-        const reporteMap = new Map(reportes.map((r) => [r.id, r]));
-        const clasifMap = new Map(clasificaciones.map((c) => [c.reporteId, c]));
-
-        const filas = relacionados.map((rel) => {
-            const rep = reporteMap.get(rel.reporteId);
-            const clasif = clasifMap.get(rel.reporteId);
-            const esperado = canonizarCategoria(rel.categoriaEsperada);
-            const asignado = clasif ? String(clasif.categoria) : "DESCONOCIDA";
-            const acierto = rel.categoriaEsperada && esperado !== "DESCONOCIDA" ? (esperado === asignado ? "SI" : "NO") : "N/A";
-            return {
-                indice: rel.indice,
-                identificador: rep?.identificador ?? "",
-                categoriaEsperada: rel.categoriaEsperada ?? "N/A",
-                categoriaAsignada: asignado,
-                confianza: clasif?.confianza ?? "N/A",
-                estado: rep?.estado ?? "DESCONOCIDO",
-                latenciaMs: clasif?.latenciaMs ?? "N/A",
-                modeloUsado: clasif?.modeloUsado ?? "N/A",
-                acierto,
-            };
-        });
+        // SPEC-053: corrida, métricas y filas (join reportes + clasificaciones)
+        // viven en el DAL; la ruta solo serializa a CSV o JSON.
+        const { run, metricas, filas } = await new IaSimulacionesService().prepararExport(parsedId.data);
 
         if (formato === "json") {
             return NextResponse.json(

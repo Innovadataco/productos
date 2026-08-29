@@ -50,6 +50,8 @@ curl -X PATCH http://localhost:5005/api/config/parametros/visibility.report_thre
 | `scoring.*` | Sistema de score F1 actual |
 | `ratelimit.*` | Límites de peticiones por ventana de tiempo |
 | `alerts.*` | Envío de alertas por email |
+| `admin.*` | Vistas de administración (expediente del reporte) |
+| `mensaje.*` | Textos de mensajes generados por plantilla (mensaje al padre) |
 
 ---
 
@@ -86,7 +88,7 @@ curl -X PATCH http://localhost:5005/api/config/parametros/visibility.report_thre
 | `reportes.classification_model` | `STRING` | `ornith:9b` | `SECURITY` | ❌ | ✅ | Modelo de Ollama usado para clasificar conductas y anonimizar PII | 1. Cambia el modelo a otro disponible en Ollama. 2. Envía un reporte a `/api/reportes/procesar`. 3. Revisa `ClasificacionIA.modeloUsado` en BD. |
 | `reportes.embedding_model` | `STRING` | `nomic-embed-text` | `SECURITY` | ❌ | ✅ | Modelo de Ollama usado para generar embeddings de similitud | 1. Cambia el modelo. 2. Procesa un reporte. 3. Verifica `EmbeddingReporte.modeloUsado`. También se usa en `/api/admin/reportes/{id}/anonimizar`. |
 | `reportes.duplicate.similarity_threshold` | `FLOAT` | `0.92` | `SECURITY` | ❌ | ✅ | Umbral de similitud coseno para marcar reportes anónimos como duplicados | 1. Crea dos reportes anónimos con texto casi idéntico para el mismo identificador+plataforma. 2. Procesa ambos. 3. Con umbral alto (`0.99`) no deben marcarse duplicados; con umbral bajo (`0.5`) sí. |
-| `reportes.spam.min_text_length` | `INTEGER` | `20` | `SECURITY` | ✅ | ❌ | Longitud mínima de texto para no marcar como spam | **No implementado en runtime.** La heurística de spam está hardcodeada a `< 30` caracteres. |
+| `reportes.spam.min_text_length` | `INTEGER` | `20` | `SECURITY` | ✅ | ✅ | Longitud mínima del texto del reporte en la creación | El guarda real es la validación de `POST /api/reportes` (`src/app/api/reportes/route.ts`): `texto.trim().length < N` → 400 (spec 092-US5; leído vía `getParametroSistema`). El wizard lo aplica en el botón Siguiente vía `useMinTextoReporte`. 1. Cambia el valor a `30`. 2. Envía un reporte de 29 caracteres → 400; uno de 31 → 201. 3. Restaura el valor. |
 | `reportes.worker.max_retries` | `INTEGER` | `3` | `SECURITY` | ❌ | ❌ | Máximo de reintentos de procesamiento por job | **No implementado en runtime.** |
 | `reportes.worker.stalled_threshold_minutes` | `INTEGER` | `5` | `SECURITY` | ❌ | ❌ | Minutos antes de alertar cola estancada | **No implementado en runtime.** |
 | `reportes.anonymization_model` | `STRING` | `ornith:9b` | `SECURITY` | ❌ | ❌ | Modelo de Ollama para anonimización automática de PII | **No implementado en runtime.** La anonimización reutiliza `reportes.classification_model`. |
@@ -153,6 +155,17 @@ Cada scope lee dos claves: `{scope}.window_seconds` y `{scope}.max_requests`.
 |-------|------|---------|-----------|---------|-------|-------------|-------------|
 | `system.maintenance_mode` | `BOOLEAN` | `false` | `SYSTEM` | ✅ | ❌ | Modo mantenimiento de la plataforma | **No implementado en runtime.** No hay middleware ni página que lo consulte. |
 
+### 3.9 Expediente del reporte (spec 096)
+
+Estos parámetros gobiernan el expediente del reporte (traza del pipeline, vista admin vía `GET /api/admin/reportes/{id}/expediente` y botón "Ver proceso" en la Bandeja). Se leen en vivo en cada petición: un cambio se refleja sin desplegar.
+
+| Clave | Tipo | Default | Categoría | Público | Usado | Descripción | Cómo probar |
+|-------|------|---------|-----------|---------|-------|-------------|-------------|
+| `admin.expediente.etapas` | `JSON` | Array de 10 etapas (ver seed) | `SYSTEM` | ❌ | ✅ | Definición de las etapas del expediente: `orden`, `fase`/`faseNombre`, `clave`, `nombre`, `icono`, `capa` (1 = modelos Prisma, 2 = `PasoProcesamiento`), `campos` y `camposGated` (solo visibles con el módulo `expediente_revelar_original` + `?revelar=true`). Nada de etiquetas de etapa está quemado en código (ADR_004) | 1. Renombra una etapa o cambia su orden vía PATCH `/api/config/parametros/admin.expediente.etapas` o directo en BD. 2. Recarga `GET /api/admin/reportes/{id}/expediente` (o el modal "Ver proceso"). 3. El nombre/orden nuevo aparece sin redeploy. Restaura el valor después. |
+| `mensaje.padre.canales` | `JSON` | Línea 141 ICBF / Te Protejo / CAI Virtual 123 (ver seed) | `SYSTEM` | ❌ | ✅ | Canales oficiales que aparecen en el borrador del mensaje al padre del expediente (array de `{ nombre, contacto, descripcion }`; revisable por legal, editable sin desplegar) | 1. Edita un canal (nombre o contacto) vía PATCH o en BD. 2. Recarga el expediente: la sección "Mensaje al padre" muestra los canales nuevos sin redeploy. 3. Restaura el valor. |
+
+> **Nota**: los campos listados en `camposGated` (p. ej. `textoOriginal`, `ipHash`, `fingerprintHash`, `rawResponse`) solo se incluyen cuando el usuario tiene el módulo `expediente_revelar_original` y pide `?revelar=true`; cada revelación registra `TEXTO_ORIGINAL_REVELADO` en `AuditLog`.
+
 ---
 
 ## 4. Parámetros huérfanos (en seed pero no usados)
@@ -162,7 +175,6 @@ Cada scope lee dos claves: `{scope}.window_seconds` y `{scope}.max_requests`.
 | `security.password_min_length` | Implementar en registro/verificación o eliminar del seed |
 | `security.jwt_ttl_hours` | Usar para calcular `JWT_TTL` o eliminar del seed |
 | `system.maintenance_mode` | Implementar middleware/página o eliminar del seed |
-| `reportes.spam.min_text_length` | Unificar con la heurística hardcodeada o eliminar |
 | `reportes.worker.max_retries` | Implementar en worker o eliminar |
 | `reportes.worker.stalled_threshold_minutes` | Implementar health check de cola o eliminar |
 | `reportes.anonymization_model` | Usar en `anonimizarTexto` o eliminar |
@@ -249,4 +261,4 @@ curl -X POST http://localhost:5005/api/reportes \
 
 ---
 
-*Documento generado automáticamente a partir del schema Prisma y el código fuente. Última actualización: 2026-07-15.*
+*Documento generado automáticamente a partir del schema Prisma y el código fuente. Última actualización: 2026-07-25.*

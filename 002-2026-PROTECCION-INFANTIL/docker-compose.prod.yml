@@ -1,0 +1,374 @@
+# Spec 097 (US3): stack de producción de PI en el VPS.
+# Convive con Gesmovil: NO usa 5432 ni 80; la app solo escucha en 127.0.0.1:5005
+# (la publica el Cloudflare Tunnel). Interpolación de variables vía
+# `docker compose --env-file .env.production -f docker-compose.prod.yml ...`.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: pi-db
+    restart: always
+    environment:
+      POSTGRES_USER: proteccion
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: proteccion_infantil
+    volumes:
+      - pi_postgres_data:/var/lib/postgresql/data
+    # SIN publicación de puerto al host (refuerzo 097-seguridad-1): la BD de PI vive
+    # SOLO en la red interna de Docker; la app y el worker le hablan por `db:5432`.
+    # Nunca como el Postgres de Gesmovil (0.0.0.0:5432). Backups/debug: `docker compose exec db ...`.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U proteccion"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Sello de versión (spec 102): deploy-prod.sh exporta APP_BUILD_SHA.
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-}
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-app
+    restart: always
+    env_file: .env.production
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
+      # SPEC-110: evidencia cifrada de apelaciones (persistente entre deploys).
+      - pi_apelaciones_storage:/app/storage
+      # SPEC-291 (002-PI-191): docker socket para acciones admin sobre servicios.
+      # Whitelist estricta en src/lib/servicios/docker-adapter.ts (3 cmds × 10 conts).
+      - /var/run/docker.sock:/var/run/docker.sock
+    # SPEC-291: el user `nextjs` (uid 100, gid 101) del contenedor NO puede
+    # leer /var/run/docker.sock (root:988, mode 660). Añadimos el gid 988
+    # (grupo `docker` del host) como grupo suplementario para que el proceso
+    # tenga permiso sobre el socket sin correr como root.
+    group_add:
+      - "988"
+    ports:
+      # Solo localhost: lo publica cloudflared (pi.innovadataco.com).
+      - "127.0.0.1:5005:3000"
+    # SPEC-291: healthcheck HTTP contra /api/health (liveness). 127.0.0.1 en vez
+    # de `localhost` porque el DNS de Alpine no siempre resuelve `localhost` a IPv4.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-worker
+    restart: always
+    env_file: .env.production
+    # Supervisor: levanta UN worker-reportes (advisory lock en Postgres).
+    command: node scripts/worker-supervisor.mjs
+    environment:
+      WORKER_RUN_DIR: /app/run
+      # En la red interna de Docker la app es `app:3000` (no localhost:5005).
+      API_BASE_URL: http://app:3000
+    volumes:
+      - pi_worker_run:/app/run
+      # SPEC-110: el job diario de retención borra evidencia en el mismo storage.
+      - pi_apelaciones_storage:/app/storage
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-worker") en el supervisor.
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-worker && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-worker))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # SPEC-171/178 (I-58): el vigilante de infraestructura (6 probes → HealthProbe,
+  # incidentes + email throttled, cero acciones destructivas). Sin este servicio
+  # los semáforos del tablero operativo salen vacíos. Advisory lock en Postgres:
+  # si se levanta dos veces, la segunda instancia sale con código 2.
+  monitor:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-monitor
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/monitor-probes.mjs
+    environment:
+      WORKER_RUN_DIR: /app/run
+      # En la red interna de Docker la app es `app:3000` (no localhost:5005).
+      API_BASE_URL: http://app:3000
+    volumes:
+      - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-monitor") en monitor-probes.mjs.
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-monitor && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-monitor))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # SPEC-184 (002-PI-079): simulador de abusos. Worker separado con advisory lock
+  # propio; envía reportes reales al endpoint público inyectando IPs de test RFC 5737.
+  simulador-abuso:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-simulador-abuso
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/simulador-abuso.mjs
+    environment:
+      WORKER_RUN_DIR: /app/run
+      API_BASE_URL: http://app:3000
+      TZ: America/Bogota
+    volumes:
+      - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-simulador-abuso").
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-simulador-abuso && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-simulador-abuso))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # SPEC-201 (002-PI-098): worker del motor de notificaciones. Instancia única
+  # vía advisory lock; envía EMAIL por Resend e IN_APP localmente.
+  pi-notificaciones:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-notificaciones
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-notificaciones.mjs
+    environment:
+      WORKER_RUN_DIR: /app/run
+      API_BASE_URL: http://app:3000
+      TZ: America/Bogota
+    volumes:
+      - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-notificaciones").
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-notificaciones && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-notificaciones))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # SPEC-234 (002-PI-134): refresco periódico de la caché de señal comunitaria.
+  # Advisory lock propio; una sola instancia activa. Solo lectura de /data/informes
+  # (montado por consistencia; no genera PDFs).
+  pi-senal-comunitaria:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-senal-comunitaria
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-senal-comunitaria.mjs
+    environment:
+      TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR necesario para tick-vida compartido.
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_informes_storage:/data/informes:ro
+      # SPEC-291: pi_worker_run compartido para que monitor lea el tick-vida.
+      - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-senal-comunitaria").
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-senal-comunitaria && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-senal-comunitaria))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # SPEC-220 (002-PI-121): recálculo diario del score de valor de cliente y
+  # purga de retención de snapshots. Advisory lock propio (instancia única).
+  pi-analisis-score:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-analisis-score
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-analisis-score.mjs
+    environment:
+      WORKER_RUN_DIR: /app/run
+      TZ: America/Bogota
+    volumes:
+      - pi_worker_run:/app/run
+    # SPEC-291: tick-vida escrito por iniciarTickVida("pi-analisis-score").
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-analisis-score && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-analisis-score))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # SPEC-213 (002-PI-113): motor de vigencia de pagos. Corrida diaria de
+  # transiciones ACTIVA → EN_GRACIA → SUSPENDIDA y corte freemium (hora en
+  # ParametroSistema `pagos.vigencia.hora_corrida`, default 01:00 Bogotá).
+  # Advisory lock propio: una segunda instancia sale con código 2.
+  pi-vigencia:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-vigencia
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-vigencia-pagos.mjs
+    environment:
+      TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-vigencia").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      # El proceso principal del contenedor ES el worker (PID 1).
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # SPEC-221 (002-PI-122): motor de reglas de recomendación (dinero-vs-valor).
+  # Tick loop 30s (override ANALISIS_REGLAS_TICK_MS); cadencia real por regla
+  # (frecuenciaMin). Advisory lock propio: instancia única.
+  pi-analisis-reglas:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-analisis-reglas
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-analisis-reglas.mjs
+    environment:
+      TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-analisis-reglas").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      # El proceso principal del contenedor ES el worker (PID 1).
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # SPEC-236 (002-PI-mega-cola): motor de estados del expediente padre.
+  # Tick periódico (padre.expediente.motor.tick_min): auto-cierre por
+  # inactividad, vigilancia de SLA del comité, recálculo de gravedad 24h y
+  # purga de retención ([retenido], sin borrar filas). Advisory lock propio
+  # (123456793): una segunda instancia sale con código 2.
+  pi-expediente-motor:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-expediente-motor
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-expediente-motor.mjs
+    environment:
+      TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-expediente-motor").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      # El proceso principal del contenedor ES el worker (PID 1).
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # SPEC-225 (002-PI-126): detector de anomalías dinero-vs-valor. Tick cada
+  # `analisis.anomalias.tick_min` (default 60 min, releído en cada ciclo):
+  # 6 reglas SQL deterministas + alerta inmediata al CEO (severidad ALTA) vía
+  # Motor Notif. Cortes semanales America/Bogota (TZ). Advisory lock propio
+  # (123456795): una segunda instancia sale con código 2.
+  pi-anomalias:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-anomalias
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-anomalias.mjs
+    environment:
+      TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run necesarios para que el monitor
+      # lea el tick-vida escrito por iniciarTickVida("pi-anomalias").
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      # El proceso principal del contenedor ES el worker (PID 1).
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # SPEC-290 (002-PI-190 · cierra parte de I-132 · implementa D-86): worker de
+  # cierre automático de sesiones por inactividad. Ya construido en SPEC-206;
+  # advisory lock único desde SPEC-284 (123456797). Healthcheck de archivo con
+  # edad: el worker toca /tmp/pi-sesiones-alive al final de cada tick (~5 min);
+  # si el archivo tiene > 90 s se marca unhealthy y restart:always recicla.
+  pi-sesiones:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-sesiones
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-sesiones.mjs
+    environment:
+      TZ: America/Bogota
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/pi-sesiones-alive && test $(($(date +%s) - $(stat -c %Y /tmp/pi-sesiones-alive))) -lt 90 || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  pi_postgres_data:
+  pi_worker_run:
+  pi_apelaciones_storage:
+  pi_informes_storage:

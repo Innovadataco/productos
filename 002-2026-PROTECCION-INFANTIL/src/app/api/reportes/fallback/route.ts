@@ -1,76 +1,51 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { requireEnv } from "@/lib/env";
 import { ERROR_CODES } from "@/lib/errors";
-import { registrarTransicion } from "@/lib/reporte-transiciones";
+import { verificarWorkerSecret } from "@/lib/worker-auth";
+import { fallbackReporteSchema } from "@/lib/validators";
+import { logger } from "@/lib/logger";
 import { asignarOperadorAReporte } from "@/lib/operadores/asignador";
+import { registrarFallbackWorker } from "@/lib/dal/services/reporte-processing/fallback-worker";
 
 export async function POST(request: Request) {
     try {
-        const secret = request.headers.get("x-worker-secret");
-        if (secret !== requireEnv("WORKER_SECRET", 8)) {
-            return NextResponse.json(
-                { error: { message: "Unauthorized", code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
+        // SPEC-125: una sola verificación del secreto del worker (src/lib/worker-auth.ts).
+        const secretResult = verificarWorkerSecret(request);
+        if (!secretResult.ok) return secretResult.response;
 
-        const body = (await request.json()) as { reporteId?: string; error?: string; errorCode?: string };
-        const reporteId = body.reporteId;
-        const errorCode = body.errorCode ?? ERROR_CODES.INTERNAL_ERROR;
-
-        if (!reporteId) {
+        // SPEC-125: esquema Zod; JSON malformado → 400 (antes caía al catch → 500).
+        const bodyRaw = await request.json().catch(() => undefined);
+        const parsed = fallbackReporteSchema.safeParse(bodyRaw);
+        if (!parsed.success) {
             return NextResponse.json(
-                { error: { message: "reporteId requerido", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: bodyRaw === undefined ? "Body inválido" : "reporteId requerido", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
+        const reporteId = parsed.data.reporteId;
+        const errorCode = parsed.data.errorCode ?? ERROR_CODES.INTERNAL_ERROR;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-            select: { id: true, estado: true, numeroSeguimiento: true, identificador: true },
-        });
+        // SPEC-053: la transición a REVISION_MANUAL vive en el DAL; la ruta no toca prisma.
+        const resultado = await registrarFallbackWorker(reporteId, errorCode);
 
-        if (!reporte) {
+        if (!resultado.ok) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
 
-        if (reporte.estado === "REVISION_MANUAL") {
+        if (resultado.yaEnRevision) {
             return NextResponse.json({ reporteId, estado: "REVISION_MANUAL", message: "Ya estaba en revisión manual" });
         }
 
-        const mensajeGenerico = "Reintentos agotados procesando el reporte";
-
-        await prisma.$transaction(async (tx) => {
-            await registrarTransicion({
-                reporteId,
-                estadoAnterior: reporte.estado,
-                estadoNuevo: "REVISION_MANUAL",
-                responsableTipo: "WORKER",
-                motivo: mensajeGenerico,
-                metadatos: { errorCode },
-                tx,
-            });
-            await tx.reporte.update({
-                where: { id: reporteId },
-                data: {
-                    estado: "REVISION_MANUAL",
-                    processingError: `${mensajeGenerico} (código: ${errorCode})`,
-                },
-            });
-        });
-
         asignarOperadorAReporte(reporteId).catch((err) =>
-            console.error("[FALLBACK] Error asignando operador:", err)
+            logger.error("[FALLBACK] Asignación de operador: fallida", err)
         );
 
         return NextResponse.json({ reporteId, estado: "REVISION_MANUAL" });
     } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        console.error("[FALLBACK] Error:", msg);
+        logger.error(`[FALLBACK] Procesamiento de fallback: fallido — ${msg}`);
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

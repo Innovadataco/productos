@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -8,8 +8,21 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { generarEmbedding } from "@/lib/ai/embedder";
+import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { recalcularYGuardarScore } from "@/lib/scoring";
+import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { CorreccionAdminRepository } from "@/lib/dal/repositories/correccion-admin";
+import { ClasificacionIARepository } from "@/lib/dal/repositories/clasificacion-ia";
+import { DatasetEntrenamientoRepository } from "@/lib/dal/repositories/dataset-entrenamiento";
+import { ParametroRepository } from "@/lib/dal/repositories/parametro";
+import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
+import { detectarYRegistrarMatch } from "@/lib/dal/services/evento-match";
+import { agregarPatronPorReporte } from "@/lib/colegio/patrones";
 import { z } from "zod";
 
 type CategoriaConducta =
@@ -81,16 +94,16 @@ export async function POST(request: Request) {
 
         const { reporteId, categoriaCorregida, comentario } = parsed.data;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-            include: { clasificacion: true },
-        });
-        if (!reporte) {
+        // E-8: las consultas viven en los repos del DAL; la ruta no toca prisma.
+        const reporteRow = await new ReporteRepository().findByIdConClasificacion(reporteId);
+        if (!reporteRow) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
+        // SPEC-130 (BL-4): el texto va cifrado en reposo; el plano solo en memoria (O-3).
+        const reporte = { ...reporteRow, texto: descifrarTextoReporte(reporteRow.texto) };
 
         if (!puedeGestionarReporte(user, reporte)) {
             return NextResponse.json(
@@ -106,11 +119,20 @@ export async function POST(request: Request) {
             );
         }
 
-        const categoriaAnterior = reporte.clasificacion?.categoria || "OTRO";
+        // Invariante de BD: solo se corrige un reporte CON clasificación (la crea el
+        // motor en el procesamiento). Sin ella no hay nada que corregir (409 canónico,
+        // nunca un TypeError por acceso a null).
+        const clasificacion = reporte.clasificacion;
+        if (!clasificacion) {
+            return NextResponse.json(
+                { error: { message: "El reporte no tiene clasificación que corregir", code: ERROR_CODES.CONFLICT } },
+                { status: 409 }
+            );
+        }
 
-        const correccionExistente = await prisma.correccionAdmin.findUnique({
-            where: { clasificacionId: reporte.clasificacion!.id },
-        });
+        const categoriaAnterior = clasificacion.categoria;
+
+        const correccionExistente = await new CorreccionAdminRepository().findByClasificacionId(clasificacion.id);
         if (correccionExistente) {
             return NextResponse.json(
                 { error: { message: "Este reporte ya fue confirmado o corregido", code: ERROR_CODES.CONFLICT } },
@@ -119,31 +141,26 @@ export async function POST(request: Request) {
         }
 
         // Guardar corrección usando Prisma ORM
-        const correccion = await prisma.correccionAdmin.create({
-            data: {
-                clasificacionId: reporte.clasificacion!.id,
-                categoriaOriginal: categoriaAnterior,
-                categoriaCorregida: categoriaCorregida,
-                adminId: user.id,
-                motivo: comentario || null,
-            },
+        const correccion = await new CorreccionAdminRepository().crear({
+            clasificacionId: clasificacion.id,
+            categoriaOriginal: categoriaAnterior,
+            categoriaCorregida: categoriaCorregida,
+            adminId: user.id,
+            motivo: comentario || null,
         });
 
         // Actualizar clasificación con la corrección
         if (reporte.clasificacion) {
-            await prisma.clasificacionIA.update({
-                where: { reporteId },
-                data: {
-                    categoria: categoriaCorregida,
-                    confianza: 1.0,
-                },
+            await new ClasificacionIARepository().actualizarPorReporteId(reporteId, {
+                categoria: categoriaCorregida,
+                confianza: 1.0,
             });
         }
 
         // Actualizar estado del reporte y registrar transición atómicamente
         const estadoAnterior = reporte.estado;
         const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
-        await prisma.$transaction(async (tx) => {
+        await withUnitOfWork(async (tx) => {
             await registrarTransicion({
                 reporteId,
                 estadoAnterior,
@@ -153,10 +170,22 @@ export async function POST(request: Request) {
                 motivo: comentario || "Caso corregido por operador/admin",
                 tx,
             });
-            await tx.reporte.update({
-                where: { id: reporteId },
-                data: { estado: "CORREGIDO" },
-            });
+            await new ReporteRepository(tx).actualizarEstado(reporteId, { estado: "CORREGIDO" });
+        });
+
+        // SPEC-131 (O-2): la corrección puede mover la categoría hacia/desde SPAM/OTRO
+        // y cambiar la aprobación — el escritor único recalcula contadores y visibilidad.
+        await recalcularYGuardarScore(reporte.identificador, reporte.plataformaId);
+        await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
+
+        // SPEC-139/142 (ZEUS D-1): el paso a APROBADO por corrección humana dispara
+        // el match y la agregación de patrones. Await + catch: fail-open (un error
+        // aquí NUNCA rompe la corrección ya persistida).
+        await detectarYRegistrarMatch(reporteId).catch((err) => {
+            logger.error(`[CORRECCIONES] Error registrando match reporte=${reporteId}:`, err);
+        });
+        await agregarPatronPorReporte(reporteId).catch((err) => {
+            logger.error(`[CORRECCIONES] Error agregando patrón institucional reporte=${reporteId}:`, err);
         });
 
         // Registrar auditoría (solo metadata, nunca texto)
@@ -192,58 +221,49 @@ export async function POST(request: Request) {
                 textoDataset = reporte.texto;
                 datasetAnonimizado = true;
             } else if (reporte.clasificacion?.contienePii) {
-                const paramModelo = await prisma.parametroSistema.findUnique({
-                    where: { clave: "reportes.classification_model" },
-                });
-                const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || "ornith:9b";
+                const paramModelo = await new ParametroRepository().findByClave("reportes.classification_model");
+                const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || MODELO_ANONIMIZACION_DEFAULT;
                 const resultado = await anonimizarTexto(modelo, reporte.texto);
                 textoDataset = resultado.textoAnonimizado;
                 datasetAnonimizado = true;
             }
         } catch (err) {
-            console.error("[CORRECCION] Fallo anonimización para dataset, guardando texto sin anonimizar y encolando backfill:", err);
+            logger.error("[CORRECCION] Fallo anonimización para dataset, guardando texto sin anonimizar y encolando backfill:", err);
             textoDataset = reporte.texto;
             datasetAnonimizado = false;
             requiereBackfill = true;
         }
 
         // Guardar en dataset de entrenamiento
-        const datasetRegistro = await prisma.datasetEntrenamiento.create({
-            data: {
-                texto: textoDataset,
-                clasificacionCorrecta: categoriaCorregida,
-                fuente: "correccion_admin",
-                correccionId: correccion.id,
-                textoAnonimizado: datasetAnonimizado,
-            },
+        const datasetRegistro = await new DatasetEntrenamientoRepository().crear({
+            texto: textoDataset,
+            clasificacionCorrecta: categoriaCorregida,
+            fuente: "correccion_admin",
+            correccionId: correccion.id,
+            textoAnonimizado: datasetAnonimizado,
         });
 
         if (requiereBackfill) {
             try {
                 await publishDatasetAnonimizacionBackfill(datasetRegistro.id);
             } catch (queueErr) {
-                console.error("[CORRECCION] No se pudo encolar backfill de anonimización:", queueErr);
+                logger.error("[CORRECCION] No se pudo encolar backfill de anonimización:", queueErr);
             }
         }
 
         // Generar embedding para RAG (F5). Si falla, no bloquear la corrección.
         try {
-            const paramEmbedding = await prisma.parametroSistema.findUnique({
-                where: { clave: "reportes.embedding_model" },
-            });
-            const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+            const paramEmbedding = await new ParametroRepository().findByClave("reportes.embedding_model");
+            const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
             const vector = await generarEmbedding(modeloEmbedding, datasetRegistro.texto);
-            const vectorStr = "[" + vector.join(",") + "]";
-            await prisma.$executeRaw`
-                INSERT INTO "EmbeddingDataset" (id, "datasetId", vector, "modeloUsado", "creadoEn")
-                VALUES (${crypto.randomUUID()}, ${datasetRegistro.id}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-            `;
+            // E-8 (D3): la raw de inserción vive en el adaptador EmbeddingRepository.
+            await new EmbeddingRepository().insertDatasetEmbedding(datasetRegistro.id, modeloEmbedding, vector);
         } catch (embedErr) {
-            console.error("[CORRECCION] Fallo embedding para dataset, encolando backfill:", embedErr);
+            logger.error("[CORRECCION] Fallo embedding para dataset, encolando backfill:", embedErr);
             try {
                 await publishDatasetEmbeddingBackfill(datasetRegistro.id);
             } catch (queueErr) {
-                console.error("[CORRECCION] No se pudo encolar backfill de embedding:", queueErr);
+                logger.error("[CORRECCION] No se pudo encolar backfill de embedding:", queueErr);
             }
         }
 

@@ -33,7 +33,7 @@ export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
                 </div>
                 <div>
                     <span className="font-medium text-subtle">Fecha del incidente</span>
-                    <p>{new Date(reporte.fechaIncidente).toLocaleDateString()}</p>
+                    <p>{new Date(reporte.fechaIncidente).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}</p>
                 </div>
                 <div>
                     <span className="font-medium text-subtle">Origen</span>
@@ -41,7 +41,7 @@ export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
                 </div>
                 <div>
                     <span className="font-medium text-subtle">Recibido</span>
-                    <p>{new Date(reporte.creadoEn).toLocaleString()}</p>
+                    <p>{new Date(reporte.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</p>
                 </div>
             </div>
 
@@ -111,7 +111,7 @@ export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
                                     )}
                                 </div>
                                 {r.error && <p className="text-red-600 dark:text-red-400 text-xs">{r.error}</p>}
-                                <p className="text-xs text-subtle">{new Date(r.creadoEn).toLocaleString()}</p>
+                                <p className="text-xs text-subtle">{new Date(r.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</p>
                             </li>
                         ))}
                     </ul>

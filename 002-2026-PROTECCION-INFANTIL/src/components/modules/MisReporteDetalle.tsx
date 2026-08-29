@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { formatCategoria } from "@/lib/labels";
+import { Cargando } from "@/components/ui/Cargando";
+import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 
 type BadgeVisual = "warning" | "success" | "muted";
 
@@ -21,22 +22,17 @@ interface DetalleReporte {
     enProceso: boolean;
 }
 
-interface VotoModelo {
-    modelo: string;
-    categorias: Array<{ categoria: string; cumple: boolean; preguntasCumplidas: string[] }>;
+interface ConductaConfirmada {
+    categoria: string;
+    label: string;
 }
 
 interface DetalleResponse {
     reporte: DetalleReporte;
     clasificacion: {
-        categoria: string;
-        categoriaLabel: string;
-        confianza: number;
-        categoriasSecundarias: Array<{ categoria: string; score: number }>;
+        conductas: ConductaConfirmada[];
+        mensaje: string;
     } | null;
-    votosModelos: VotoModelo[];
-    porcentajes: Record<string, number>;
-    analisis: string | null;
 }
 
 function estadoBadgeClass(badge: BadgeVisual): string {
@@ -53,9 +49,12 @@ function estadoBadgeClass(badge: BadgeVisual): string {
 }
 
 /**
- * Detalle PRIVADO de un reporte del usuario (spec 090, US3).
- * Muestra la matriz de la rúbrica (categorías × modelos) y el análisis
- * determinista. Sin "% de riesgo" global: solo presencia por categoría.
+ * Detalle PRIVADO de un reporte del usuario (spec 090 US3; vista rehecha en
+ * spec 116). El padre ve SOLO tres cosas: qué conductas se identificaron
+ * (SOLO las confirmadas por el motor; ninguna descartada), qué significan
+ * (mensaje de plantilla determinista, D-23) y qué puede hacer (canales
+ * oficiales). La traza técnica del motor (modelos, votos, porcentajes,
+ * umbrales) es superficie del admin (D-22) y vive en el expediente (spec 096).
  */
 export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
     const router = useRouter();
@@ -84,8 +83,7 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
     if (loading) {
         return (
             <div className="glass rounded-2xl p-8 text-center animate-pulse">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                <p className="mt-3 text-sm text-subtle">Cargando detalle...</p>
+                <Cargando texto="Cargando detalle..." />
             </div>
         );
     }
@@ -100,12 +98,7 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
         );
     }
 
-    const { reporte, clasificacion, votosModelos, porcentajes, analisis } = data;
-    const modelos = votosModelos.map((v) => v.modelo);
-    const categorias = Object.keys(porcentajes).sort();
-    const cumplePorModelo = new Map<string, Map<string, boolean>>(
-        votosModelos.map((v) => [v.modelo, new Map(v.categorias.map((c) => [c.categoria, c.cumple]))])
-    );
+    const { reporte, clasificacion } = data;
 
     return (
         <div className="space-y-6">
@@ -124,23 +117,20 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
                             {reporte.plataforma} · {reporte.ciudad}, {reporte.pais}
                         </p>
                         <p className="mt-0.5 text-xs text-subtle">
-                            Reportado el {new Date(reporte.creadoEn).toLocaleDateString("es-CO")}
+                            Reportado el {new Date(reporte.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                         </p>
                     </div>
                     <span className={estadoBadgeClass(reporte.badge)}>{reporte.estadoVisual}</span>
                 </div>
-                {clasificacion && (
+                {clasificacion && clasificacion.conductas.length > 0 && (
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-muted">Categoría principal:</span>
-                        <span className="rounded-full bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 text-xs font-medium text-accent">
-                            {clasificacion.categoriaLabel}
-                        </span>
-                        {clasificacion.categoriasSecundarias.map((s) => (
+                        <span className="text-xs text-muted">Conductas identificadas:</span>
+                        {clasificacion.conductas.map((c) => (
                             <span
-                                key={s.categoria}
-                                className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-muted"
+                                key={c.categoria}
+                                className="rounded-full bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 text-xs font-medium text-accent"
                             >
-                                {formatCategoria(s.categoria)}
+                                {c.label}
                             </span>
                         ))}
                     </div>
@@ -150,69 +140,18 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
             {!clasificacion ? (
                 <GlassCard className="p-6">
                     <p className="text-sm text-muted">
-                        Tu reporte aún está en proceso. Cuando la clasificación termine, aquí verás el detalle de la
-                        evaluación por categoría.
+                        Tu reporte aún está en proceso. Cuando termine la revisión, aquí verás qué conductas se
+                        identificaron y qué puedes hacer.
                     </p>
                 </GlassCard>
             ) : (
-                <>
-                    <GlassCard className="p-6">
-                        <h3 className="text-lg font-semibold text-body">Evaluación por categoría</h3>
-                        <p className="mt-1 text-xs text-muted">
-                            Cada modelo evalúa el texto con una rúbrica de preguntas factuales. La columna final
-                            indica en cuántos modelos la categoría estuvo presente.
-                        </p>
-                        <div className="mt-4 overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-slate-200 dark:border-slate-700">
-                                        <th className="py-2 pr-3 text-left font-medium text-muted">Categoría</th>
-                                        {modelos.map((m) => (
-                                            <th key={m} className="py-2 px-2 text-center font-medium text-muted">
-                                                {m}
-                                            </th>
-                                        ))}
-                                        <th className="py-2 pl-3 text-right font-medium text-muted">Presencia</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {categorias.map((cat) => (
-                                        <tr key={cat} className="border-b border-slate-100 dark:border-slate-800">
-                                            <td className="py-2 pr-3 text-body">{formatCategoria(cat)}</td>
-                                            {modelos.map((m) => {
-                                                const cumple = cumplePorModelo.get(m)?.get(cat);
-                                                return (
-                                                    <td key={m} className="py-2 px-2 text-center">
-                                                        {cumple ? (
-                                                            <span className="text-emerald-600 dark:text-emerald-400" aria-label={`${m}: cumple`}>
-                                                                ✓
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-subtle" aria-label={`${m}: no cumple`}>
-                                                                —
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                );
-                                            })}
-                                            <td className="py-2 pl-3 text-right font-mono text-body">
-                                                {Math.round((porcentajes[cat] ?? 0) * 100)}%
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </GlassCard>
-
-                    {analisis && (
-                        <GlassCard className="p-6">
-                            <h3 className="text-lg font-semibold text-body">Análisis</h3>
-                            <p className="mt-2 text-sm text-muted">{analisis}</p>
-                        </GlassCard>
-                    )}
-                </>
+                <GlassCard className="p-6">
+                    <h3 className="text-lg font-semibold text-body">Qué significa esto</h3>
+                    <p className="mt-2 text-sm text-muted whitespace-pre-line">{clasificacion.mensaje}</p>
+                </GlassCard>
             )}
+
+            <CanalesOficiales />
         </div>
     );
 }

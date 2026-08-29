@@ -1,313 +1,138 @@
-import { createHash, randomBytes } from "crypto";
+import { randomBytes } from "crypto";
+import { addDays, getDay } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "./prisma";
-import { getParametroSistema } from "./parametros";
-import { getSmsProvider, generarCodigoOtp, hashCodigo } from "./sms";
-import { darDeBajaReporte } from "./reporte-lifecycle";
-import { logAudit } from "./audit";
-import { asignarOperadorAApelacion } from "./operadores/asignador";
-import { MotivoBajaReporte, EstadoApelacion } from "@prisma/client";
-import type { Prisma } from "@prisma/client";
-import { logger } from "@/lib/logger";
+import { getParametroSistemaValor, type ParametroClient } from "./parametros";
+import type { EstadoApelacion } from "@prisma/client";
 
-const DEFAULT_PAUSA_DIAS = 7;
+/**
+ * SPEC-110 — Dominio de la apelación del identificador reportado.
+ *
+ * Reglas duras del diseño cerrado (CEO):
+ * - Apelar NO cambia la visibilidad; solo la resolución del comité.
+ * - El apelante NO ve contenido de reportes: solo el número N de reportes asociados.
+ *
+ * Días hábiles = lunes a viernes (sin calendario de festivos; ver spec.md Assumptions).
+ */
 
-function hashToken(token: string): string {
-    return createHash("sha256").update(token).digest("hex");
+export const APELACION_DEFAULTS = {
+    plazoRespuestaDiasHabiles: 15,
+    avisoPrevioDias: 10,
+    retencionDocumentoDias: 30,
+    maxTamanoDocumentoMb: 5,
+} as const;
+
+const ESTADOS_ABIERTOS: EstadoApelacion[] = ["RECIBIDA", "EN_REVISION"];
+
+async function getParamEntero(clave: string, fallback: number, client?: ParametroClient): Promise<number> {
+    const valor = await getParametroSistemaValor(clave, client);
+    const n = parseInt(valor ?? "", 10);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-function generateToken(): string {
-    return randomBytes(32).toString("hex");
+export function getPlazoRespuestaDiasHabiles(client?: ParametroClient): Promise<number> {
+    return getParamEntero("apelacion.plazo_respuesta_dias_habiles", APELACION_DEFAULTS.plazoRespuestaDiasHabiles, client);
 }
 
-export async function getApelacionPausaDias(tx?: Prisma.TransactionClient): Promise<number> {
-    const db = tx ?? prisma;
-    const param = await getParametroSistema("anti_abuso.apelacion_pausa_dias", db);
-    const value = parseInt(param?.valor ?? String(DEFAULT_PAUSA_DIAS), 10);
-    return Number.isNaN(value) ? DEFAULT_PAUSA_DIAS : value;
+export function getAvisoPrevioDias(client?: ParametroClient): Promise<number> {
+    return getParamEntero("apelacion.aviso_previo_dias", APELACION_DEFAULTS.avisoPrevioDias, client);
 }
 
-export interface CrearApelacionInput {
-    identificador: string;
-    plataformaId: string;
-    motivoSolicitud: string;
-    evidenciaUrl?: string | null;
-    tipoVerificacion: "SMS" | "NICK";
-    contacto?: string | null;
-    request?: Request;
+export function getRetencionDocumentoDias(client?: ParametroClient): Promise<number> {
+    return getParamEntero("apelacion.retencion_documento_dias", APELACION_DEFAULTS.retencionDocumentoDias, client);
 }
 
-export async function crearApelacion(input: CrearApelacionInput, tx?: Prisma.TransactionClient) {
-    const db = tx ?? prisma;
-    const {
-        identificador,
-        plataformaId,
-        motivoSolicitud,
-        evidenciaUrl,
-        tipoVerificacion,
-        contacto,
-        request,
-    } = input;
+export function getMaxTamanoDocumentoMb(client?: ParametroClient): Promise<number> {
+    return getParamEntero("apelacion.max_tamano_documento_mb", APELACION_DEFAULTS.maxTamanoDocumentoMb, client);
+}
 
-    // Verificar que no haya apelación activa y que el derecho esté vigente
-    const existente = await db.apelacionIdentificador.findFirst({
-        where: {
-            identificador,
-            plataformaId,
-            estado: { in: [EstadoApelacion.RECIBIDA, EstadoApelacion.EN_REVISION] },
-        },
-    });
-    if (existente) {
-        throw new Error("APELACION_ACTIVA_EXISTENTE");
+const TZ = "America/Bogota";
+
+function isoDiaBogota(fecha: Date): string {
+    return formatInTimeZone(fecha, TZ, "yyyy-MM-dd");
+}
+
+/** Medianoche UTC del día calendario en Bogotá. */
+function inicioDeDiaBogota(fecha: Date): Date {
+    const [y, m, d] = isoDiaBogota(fecha).split("-").map(Number);
+    return new Date(Date.UTC(y!, m! - 1, d!));
+}
+
+export function esDiaHabil(fecha: Date): boolean {
+    const dia = getDay(inicioDeDiaBogota(fecha));
+    return dia >= 1 && dia <= 5;
+}
+
+/**
+ * Suma N días hábiles a una fecha (la fecha de inicio no cuenta; se cuentan los
+ * días hábiles siguientes). Conserva la hora de la fecha de inicio.
+ */
+export function sumarDiasHabiles(fecha: Date, dias: number): Date {
+    const base = inicioDeDiaBogota(fecha);
+    const offsetMs = fecha.getTime() - base.getTime();
+    let cursor = base;
+    let restantes = dias;
+    while (restantes > 0) {
+        cursor = addDays(cursor, 1);
+        if (esDiaHabil(cursor)) restantes--;
     }
-
-    const ultimaRechazada = await db.apelacionIdentificador.findFirst({
-        where: { identificador, plataformaId, estado: EstadoApelacion.RECHAZADA },
-        orderBy: { actualizadoEn: "desc" },
-    });
-    if (ultimaRechazada && !ultimaRechazada.derechoApelar) {
-        throw new Error("DERECHO_APELAR_BLOQUEADO");
-    }
-
-    // Pausa de visibilidad solo en la primera apelación
-    const yaApelo = await db.apelacionIdentificador.count({ where: { identificador, plataformaId } });
-    let pausaHasta: Date | null = null;
-    if (yaApelo === 0) {
-        const dias = await getApelacionPausaDias(tx);
-        pausaHasta = new Date(Date.now() + dias * 24 * 60 * 60 * 1000);
-    }
-
-    const token = generateToken();
-    const tokenHash = hashToken(token);
-
-    let smsCodigoHash: string | null = null;
-    let smsEnviado = false;
-
-    if (tipoVerificacion === "SMS" && contacto) {
-        const codigo = generarCodigoOtp();
-        smsCodigoHash = hashCodigo(codigo);
-        const provider = getSmsProvider();
-        await provider.sendSms(contacto, `Tu código de verificación para apelar en Protección Infantil es: ${codigo}`);
-        smsEnviado = true;
-    }
-
-    const apelacion = await db.apelacionIdentificador.create({
-        data: {
-            identificador,
-            plataformaId,
-            tokenAcceso: tokenHash,
-            estado: EstadoApelacion.RECIBIDA,
-            motivoSolicitud,
-            evidenciaUrl: evidenciaUrl ?? null,
-            tipoVerificacion,
-            contacto: contacto ?? null,
-            smsCodigoHash,
-            pausaHasta,
-        },
-    });
-
-    // Pausar visibilidad pública del identificador si aplica
-    if (pausaHasta) {
-        await db.identificadorReportado.updateMany({
-            where: { identificador, plataformaId },
-            data: { esVisiblePublicamente: false },
-        });
-    }
-
-    const { ipAddress, userAgent } = extractClientInfo(request);
-    await logAudit({
-        accion: "APELACION_CREADA",
-        tipoRecurso: "ApelacionIdentificador",
-        recursoId: apelacion.id,
-        valorNuevo: JSON.stringify({ identificador, plataformaId, estado: apelacion.estado, tipoVerificacion }),
-        ipAddress,
-        userAgent,
-    });
-
-    // Fase 4: asignar automáticamente a un revisor de apelaciones del pool.
-    // Se ejecuta fuera del flujo crítico para no fallar la creación de la apelación.
-    asignarOperadorAApelacion(apelacion.id, tx).catch((err) =>
-        logger.error("[OPERADORES] Error asignando revisor a apelación", { apelacionId: apelacion.id, error: err })
-    );
-
-    return { apelacion, token, smsEnviado };
+    return new Date(cursor.getTime() + offsetMs);
 }
 
-export async function verificarOtpApelacion(token: string, codigo: string) {
-    const tokenHash = hashToken(token);
-    const apelacion = await prisma.apelacionIdentificador.findUnique({
-        where: { tokenAcceso: tokenHash },
-    });
-    if (!apelacion || !apelacion.smsCodigoHash) {
-        throw new Error("TOKEN_INVALIDO");
+/**
+ * Días hábiles transcurridos entre `desde` (excluido) y `hasta` (incluido).
+ * 0 si `hasta` es el mismo día o anterior.
+ */
+export function diasHabilesTranscurridos(desde: Date, hasta: Date): number {
+    let cursor = inicioDeDiaBogota(desde);
+    const fin = inicioDeDiaBogota(hasta);
+    let count = 0;
+    while (cursor.getTime() < fin.getTime()) {
+        cursor = addDays(cursor, 1);
+        if (esDiaHabil(cursor)) count++;
     }
-    if (apelacion.smsVerificado) {
-        throw new Error("YA_VERIFICADO");
-    }
-
-    await prisma.apelacionIdentificador.update({
-        where: { id: apelacion.id },
-        data: { smsIntentos: { increment: 1 } },
-    });
-
-    if (apelacion.smsIntentos >= 5) {
-        throw new Error("DEMASIADOS_INTENTOS");
-    }
-
-    if (hashCodigo(codigo) !== apelacion.smsCodigoHash) {
-        throw new Error("CODIGO_INVALIDO");
-    }
-
-    await prisma.apelacionIdentificador.update({
-        where: { id: apelacion.id },
-        data: { smsVerificado: true },
-    });
-
-    return { verificado: true };
+    return count;
 }
 
-export async function getApelacionByToken(token: string) {
-    const tokenHash = hashToken(token);
-    return prisma.apelacionIdentificador.findUnique({
-        where: { tokenAcceso: tokenHash },
-        include: { plataforma: true },
+export async function calcularPlazoRespuesta(desde: Date, client?: ParametroClient): Promise<Date> {
+    const dias = await getPlazoRespuestaDiasHabiles(client);
+    return sumarDiasHabiles(desde, dias);
+}
+
+export function generarNumeroApelacion(ahora: Date = new Date()): string {
+    const year = formatInTimeZone(ahora, TZ, "yyyy");
+    const sufijo = randomBytes(3).toString("hex").toUpperCase();
+    return `APL-${year}-${sufijo}`;
+}
+
+/**
+ * ÚNICO dato de reportes que puede ver el apelante: cuántos existen (no eliminados)
+ * para el identificador + plataforma declarados. Nunca texto, fechas ni plataforma.
+ */
+export async function contarReportesAsociados(
+    identificador: string,
+    plataformaId: string,
+    client?: ParametroClient
+): Promise<number> {
+    const db = client ?? prisma;
+    return db.reporte.count({
+        where: { identificador, plataformaId, eliminado: false },
     });
 }
 
-export interface ResolverApelacionInput {
-    apelacionId: string;
-    adminId: string;
-    accion: "ACEPTAR" | "RECHAZAR";
-    respuestaAdmin: string;
-    reportesSeleccionados?: string[];
-    request?: Request;
+/**
+ * Indica si una apelación abierta ya superó el umbral de aviso previo al comité
+ * (N días hábiles desde el radicado sin resolverse).
+ */
+export function estaEnAvisoPrevio(
+    apelacion: { estado: EstadoApelacion; creadoEn: Date },
+    diasAviso: number,
+    ahora: Date = new Date()
+): boolean {
+    if (!ESTADOS_ABIERTOS.includes(apelacion.estado)) return false;
+    return diasHabilesTranscurridos(apelacion.creadoEn, ahora) >= diasAviso;
 }
 
-export async function resolverApelacion(input: ResolverApelacionInput) {
-    const { apelacionId, adminId, accion, respuestaAdmin, reportesSeleccionados, request } = input;
-
-    await prisma.$transaction(async (tx) => {
-        const apelacion = await tx.apelacionIdentificador.findUnique({ where: { id: apelacionId } });
-        if (!apelacion) throw new Error("APELACION_NO_ENCONTRADA");
-        if (apelacion.estado !== EstadoApelacion.RECIBIDA && apelacion.estado !== EstadoApelacion.EN_REVISION) {
-            throw new Error("APELACION_NO_RESOLUBLE");
-        }
-
-        const nuevoEstado = accion === "ACEPTAR" ? EstadoApelacion.ACEPTADA : EstadoApelacion.RECHAZADA;
-
-        await tx.apelacionIdentificador.update({
-            where: { id: apelacionId },
-            data: {
-                estado: nuevoEstado,
-                respuestaAdmin,
-                adminId,
-                visibilidadRestaurada: true,
-                derechoApelar: accion === "RECHAZAR" ? false : undefined,
-            },
-        });
-
-        // Restaurar visibilidad pública del identificador (el recálculo posterior la ajustará si aplica)
-        await tx.identificadorReportado.updateMany({
-            where: { identificador: apelacion.identificador, plataformaId: apelacion.plataformaId },
-            data: { esVisiblePublicamente: true },
-        });
-
-        // Si acepta, dar de baja los reportes seleccionados como REPORTE_FALSO dentro de la misma transacción
-        if (accion === "ACEPTAR" && reportesSeleccionados && reportesSeleccionados.length > 0) {
-            for (const reporteId of reportesSeleccionados) {
-                await darDeBajaReporte({
-                    reporteId,
-                    motivo: MotivoBajaReporte.REPORTE_FALSO,
-                    nota: `Baja por apelación aceptada ${apelacionId}`,
-                    adminId,
-                    request,
-                    tx,
-                });
-            }
-        }
-
-        const { ipAddress, userAgent } = extractClientInfo(request);
-        await logAudit({
-            accion: "APELACION_RESUELTA",
-            tipoRecurso: "ApelacionIdentificador",
-            recursoId: apelacionId,
-            usuarioId: adminId,
-            valorAnterior: JSON.stringify({ estado: apelacion.estado }),
-            valorNuevo: JSON.stringify({ estado: nuevoEstado, accion }),
-            ipAddress,
-            userAgent,
-        });
-    });
-
-    return { ok: true };
-}
-
-export async function rehabilitarDerechoApelacion(
-    apelacionId: string,
-    adminId: string,
-    nota: string,
-    request?: Request
-) {
-    const apelacion = await prisma.apelacionIdentificador.findUnique({ where: { id: apelacionId } });
-    if (!apelacion) throw new Error("APELACION_NO_ENCONTRADA");
-
-    await prisma.apelacionIdentificador.update({
-        where: { id: apelacionId },
-        data: { derechoApelar: true, notaRehabilitacion: nota },
-    });
-
-    const { ipAddress, userAgent } = extractClientInfo(request);
-    await logAudit({
-        accion: "APELACION_REHABILITADA",
-        tipoRecurso: "ApelacionIdentificador",
-        recursoId: apelacionId,
-        usuarioId: adminId,
-        valorNuevo: JSON.stringify({ nota }),
-        ipAddress,
-        userAgent,
-    });
-
-    return { ok: true };
-}
-
-export async function vencerApelacionesPendientes() {
-    const ahora = new Date();
-    const vencidas = await prisma.apelacionIdentificador.findMany({
-        where: {
-            estado: { in: [EstadoApelacion.RECIBIDA, EstadoApelacion.EN_REVISION] },
-            pausaHasta: { lt: ahora },
-            visibilidadRestaurada: false,
-        },
-    });
-
-    for (const apelacion of vencidas) {
-        await prisma.$transaction(async (tx) => {
-            await tx.apelacionIdentificador.update({
-                where: { id: apelacion.id },
-                data: { estado: EstadoApelacion.VENCIDA, visibilidadRestaurada: true },
-            });
-
-            await tx.identificadorReportado.updateMany({
-                where: { identificador: apelacion.identificador, plataformaId: apelacion.plataformaId },
-                data: { esVisiblePublicamente: true },
-            });
-
-            await logAudit({
-                accion: "APELACION_VENCIDA",
-                tipoRecurso: "ApelacionIdentificador",
-                recursoId: apelacion.id,
-                valorNuevo: JSON.stringify({ estado: EstadoApelacion.VENCIDA }),
-                ipAddress: "system",
-                userAgent: "job-apelaciones-vencimiento",
-            });
-        });
-    }
-
-    return { vencidas: vencidas.length };
-}
-
-function extractClientInfo(request?: Request) {
-    return {
-        ipAddress: request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown",
-        userAgent: request?.headers.get("user-agent") || "unknown",
-    };
+export function esApelacionAbierta(estado: EstadoApelacion): boolean {
+    return ESTADOS_ABIERTOS.includes(estado);
 }

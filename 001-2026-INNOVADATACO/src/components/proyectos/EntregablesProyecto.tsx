@@ -17,6 +17,7 @@ interface Entregable {
   descripcion: string;
   avance: number;
   estado: string;
+  fechaInicio: string | null;
   fechaCompromiso: string | null;
   responsable: string;
 }
@@ -26,6 +27,7 @@ const FORM_INICIAL = {
   descripcion: "",
   avance: "0",
   estado: "pendiente",
+  fechaInicio: "",
   fechaCompromiso: "",
   responsable: "",
 };
@@ -166,7 +168,16 @@ export default function EntregablesProyecto({ proyectoId }: { proyectoId: string
         />
         <input
           type="date"
+          aria-label="Fecha de inicio"
+          title="Inicio (para el Gantt)"
+          value={form.fechaInicio}
+          onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })}
+          className="bg-white/5 border border-white/10 p-2 text-[10px] focus:border-neonCyan outline-none"
+        />
+        <input
+          type="date"
           aria-label="Fecha de compromiso"
+          title="Compromiso / fin"
           value={form.fechaCompromiso}
           onChange={(e) => setForm({ ...form, fechaCompromiso: e.target.value })}
           className="bg-white/5 border border-white/10 p-2 text-[10px] focus:border-neonCyan outline-none"

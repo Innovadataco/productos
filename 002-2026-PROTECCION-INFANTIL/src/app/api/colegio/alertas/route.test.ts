@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { GET } from "./route";
+import { GET, POST } from "./route";
 import { PATCH } from "./[id]/estado/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -9,10 +9,14 @@ import {
     crearUsuario,
     crearColegioConAdmin,
     crearCurso,
-    crearAlumno,
-    crearIdentificadorAlumno,
+    crearEstudiante,
+    crearIdentificadorEstudiante,
     crearPlataforma,
     crearParametrosReportes,
+    crearProfesor,
+    crearIdentificadorProfesor,
+    crearAcudienteEstudiante,
+    crearIdentificadorAcudiente,
 } from "@/lib/reporte-test-utils";
 import { notificarColegioSiCorresponde } from "@/lib/colegio/alertas";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
@@ -36,7 +40,7 @@ function request(method: string, url: string, body: unknown, token?: string): Re
     return new Request(url, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        ...(body ? { body: JSON.stringify(body) } : {}),
     });
 }
 
@@ -64,8 +68,8 @@ async function crearReporte(
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
             ciudad: "Bogotá",
             pais: "Colombia",
-            paisId: ciudad?.paisId,
-            ciudadId: ciudad?.id,
+            paisId: ciudad?.paisId ?? null,
+            ciudadId: ciudad?.id ?? null,
             esAnonimo: true,
             edadVictima: 12,
             estado,
@@ -102,6 +106,9 @@ async function crearParametrosColegio() {
 }
 
 describe("/api/colegio/alertas", () => {
+    // SPEC-283 (002-PI-180): reset POR PRUEBA. Migración a beforeAll rota por
+    // concurrencia entre archivos (vitest 3.2.x, ver test-setup.ts). Aislado
+    // pasaba en < 6 s; en la suite completa 10 tests fallan determinísticamente.
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();
@@ -115,12 +122,12 @@ describe("/api/colegio/alertas", () => {
         it("SCHOOL_ADMIN lista alertas de su colegio anonimizadas", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "6A" });
-            const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "María Gómez" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "María Gómez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, {
+            await crearIdentificadorEstudiante(alumno.id, {
                 valor: "+573001234567",
                 plataformaId: plataforma!.id,
-                etiquetaRelacion: "ALUMNO",
+                etiquetaRelacion: "ESTUDIANTE",
             });
 
             const reporte = await crearReporte("+573001234567", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
@@ -129,11 +136,11 @@ describe("/api/colegio/alertas", () => {
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas", undefined, mockToken));
             expect(res.status).toBe(200);
             const json = await res.json();
-            expect(json.alertas).toHaveLength(1);
+            expect(json.items).toHaveLength(1);
 
-            const alerta = json.alertas[0];
+            const alerta = json.items[0];
             expect(alerta.identificador).toBe("+573001234567");
-            expect(alerta.relacion).toBe("ALUMNO");
+            expect(alerta.relacion).toBe("ESTUDIANTE");
             expect(alerta.categoria).toBe("OFRECIMIENTO_REGALOS");
             expect(alerta.estadoReporte).toBe("CLASIFICADO");
             expect(alerta.estadoAlerta).toBe("nueva");
@@ -143,9 +150,9 @@ describe("/api/colegio/alertas", () => {
         it("GET no expone PII del reporte ni del denunciante", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "6A" });
-            const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "María Gómez" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "María Gómez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, {
+            await crearIdentificadorEstudiante(alumno.id, {
                 valor: "+57300PRIV",
                 plataformaId: plataforma!.id,
                 etiquetaRelacion: "MADRE",
@@ -156,7 +163,7 @@ describe("/api/colegio/alertas", () => {
 
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas", undefined, mockToken));
             const json = await res.json();
-            const alerta = json.alertas[0];
+            const alerta = json.items[0];
 
             const respuesta = JSON.stringify(json);
             expect(respuesta).not.toContain(reporte.texto);
@@ -177,9 +184,9 @@ describe("/api/colegio/alertas", () => {
         it("SCHOOL_ADMIN de otro colegio no ve alertas ajenas", async () => {
             const { colegio: colegio1 } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio1.id, { nombre: "6A" });
-            const alumno = await crearAlumno(curso.id, colegio1.id, { nombre: "María Gómez" });
+            const alumno = await crearEstudiante(curso.id, colegio1.id, { nombre: "María Gómez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, { valor: "+57300AJENO", plataformaId: plataforma!.id });
+            await crearIdentificadorEstudiante(alumno.id, { valor: "+57300AJENO", plataformaId: plataforma!.id });
 
             const reporte = await crearReporte("+57300AJENO", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
             await notificarColegioSiCorresponde(reporte.id);
@@ -190,7 +197,7 @@ describe("/api/colegio/alertas", () => {
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas", undefined, mockToken));
             expect(res.status).toBe(200);
             const json = await res.json();
-            expect(json.alertas).toHaveLength(0);
+            expect(json.items).toHaveLength(0);
         });
 
         it("ADMIN recibe 403", async () => {
@@ -224,9 +231,9 @@ describe("/api/colegio/alertas", () => {
         it("oculta alertas de reportes dados de baja", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "6A" });
-            const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "María Gómez" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "María Gómez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, { valor: "+57300BAJA", plataformaId: plataforma!.id });
+            await crearIdentificadorEstudiante(alumno.id, { valor: "+57300BAJA", plataformaId: plataforma!.id });
 
             const reporte = await crearReporte("+57300BAJA", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
             await notificarColegioSiCorresponde(reporte.id);
@@ -234,15 +241,15 @@ describe("/api/colegio/alertas", () => {
 
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas", undefined, mockToken));
             const json = await res.json();
-            expect(json.alertas).toHaveLength(0);
+            expect(json.items).toHaveLength(0);
         });
 
         it("filtra por estado de alerta", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "6A" });
-            const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "María Gómez" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "María Gómez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, { valor: "+57300FILTRO", plataformaId: plataforma!.id });
+            await crearIdentificadorEstudiante(alumno.id, { valor: "+57300FILTRO", plataformaId: plataforma!.id });
 
             const reporte = await crearReporte("+57300FILTRO", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
             await notificarColegioSiCorresponde(reporte.id);
@@ -254,8 +261,37 @@ describe("/api/colegio/alertas", () => {
 
             const res = await GET(request("GET", "http://localhost:5005/api/colegio/alertas?estado=vista", undefined, mockToken));
             const json = await res.json();
-            expect(json.alertas).toHaveLength(1);
-            expect(json.alertas[0].estadoAlerta).toBe("vista");
+            expect(json.items).toHaveLength(1);
+            expect(json.items[0].estadoAlerta).toBe("vista");
+        });
+
+        it("filtra por tipo de sujeto", async () => {
+            const { colegio } = await setupSchoolAdmin();
+            const curso = await crearCurso(colegio.id, { nombre: "6A" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "Ana" });
+            const profesor = await crearProfesor(colegio.id, { nombre: "Carlos", apellidos: "López" });
+            const acudiente = await crearAcudienteEstudiante(alumno.id, { nombre: "Lucía Pérez", relacion: "madre" });
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+
+            await crearIdentificadorEstudiante(alumno.id, { valor: "+57300EST", plataformaId: plataforma!.id });
+            await crearIdentificadorProfesor(profesor.id, colegio.id, { valor: "+57300PROF", plataformaId: plataforma!.id });
+            await crearIdentificadorAcudiente(acudiente.id, colegio.id, { valor: "+57300ACU", plataformaId: plataforma!.id });
+
+            const reporteEst = await crearReporte("+57300EST", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
+            const reporteProf = await crearReporte("+57300PROF", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
+            const reporteAcu = await crearReporte("+57300ACU", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
+
+            await notificarColegioSiCorresponde(reporteEst.id);
+            await notificarColegioSiCorresponde(reporteProf.id);
+            await notificarColegioSiCorresponde(reporteAcu.id);
+
+            const resProf = await GET(
+                request("GET", "http://localhost:5005/api/colegio/alertas?tipoSujeto=PROFESOR", undefined, mockToken)
+            );
+            const jsonProf = await resProf.json();
+            expect(jsonProf.items).toHaveLength(1);
+            expect(jsonProf.items[0].tipoSujeto).toBe("PROFESOR");
+            expect(jsonProf.items[0].sujetoNombre).toBe("Carlos López");
         });
     });
 
@@ -263,9 +299,9 @@ describe("/api/colegio/alertas", () => {
         it("SCHOOL_ADMIN marca alerta propia como vista", async () => {
             const { colegio } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio.id, { nombre: "6A" });
-            const alumno = await crearAlumno(curso.id, colegio.id, { nombre: "María Gómez" });
+            const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "María Gómez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, { valor: "+57300ESTADO", plataformaId: plataforma!.id });
+            await crearIdentificadorEstudiante(alumno.id, { valor: "+57300ESTADO", plataformaId: plataforma!.id });
 
             const reporte = await crearReporte("+57300ESTADO", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
             await notificarColegioSiCorresponde(reporte.id);
@@ -289,9 +325,9 @@ describe("/api/colegio/alertas", () => {
         it("SCHOOL_ADMIN no puede cambiar alerta de otro colegio", async () => {
             const { colegio: colegio1 } = await setupSchoolAdmin();
             const curso = await crearCurso(colegio1.id, { nombre: "6A" });
-            const alumno = await crearAlumno(curso.id, colegio1.id, { nombre: "María Gómez" });
+            const alumno = await crearEstudiante(curso.id, colegio1.id, { nombre: "María Gómez" });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await crearIdentificadorAlumno(alumno.id, { valor: "+57300AJENA", plataformaId: plataforma!.id });
+            await crearIdentificadorEstudiante(alumno.id, { valor: "+57300AJENA", plataformaId: plataforma!.id });
 
             const reporte = await crearReporte("+57300AJENA", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
             await notificarColegioSiCorresponde(reporte.id);
@@ -315,6 +351,58 @@ describe("/api/colegio/alertas", () => {
                 { params: Promise.resolve({ id: alertaId }) }
             );
             expect(res.status).toBe(400);
+        });
+    });
+
+    // SPEC-173 (H01/H06): el batch del rector solo permite "Revisar en lote"
+    // (accion "vista"); el resto de acciones salen de la superficie batch.
+    describe("POST /api/colegio/alertas (batch)", () => {
+        async function crearAlertasParaBatch(colegioId: string, cantidad: number) {
+            const curso = await crearCurso(colegioId, { nombre: "6A" });
+            const alumno = await crearEstudiante(curso.id, colegioId, { nombre: "María Gómez" });
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+
+            for (let i = 0; i < cantidad; i += 1) {
+                const valor = `+57300BATCH${i}`;
+                await crearIdentificadorEstudiante(alumno.id, { valor, plataformaId: plataforma!.id });
+                const reporte = await crearReporte(valor, plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
+                await notificarColegioSiCorresponde(reporte.id);
+            }
+
+            const alertas = await prisma.alertaColegio.findMany({ where: { colegioId } });
+            return alertas.map((a) => a.id);
+        }
+
+        it("accion 'vista' marca N alertas como vistas", async () => {
+            const { colegio } = await setupSchoolAdmin();
+            const ids = await crearAlertasParaBatch(colegio.id, 2);
+            expect(ids).toHaveLength(2);
+
+            const res = await POST(
+                request("POST", "http://localhost:5005/api/colegio/alertas", { ids, accion: "vista" }, mockToken)
+            );
+            expect(res.status).toBe(200);
+            const json = await res.json();
+            expect(json.afectadas).toBe(2);
+            expect(json.accion).toBe("vista");
+
+            const alertas = await prisma.alertaColegio.findMany({ where: { colegioId: colegio.id } });
+            expect(alertas.every((a) => a.estado === "vista")).toBe(true);
+        });
+
+        it("rechaza con 400 las acciones retiradas del batch", async () => {
+            const { colegio } = await setupSchoolAdmin();
+            const ids = await crearAlertasParaBatch(colegio.id, 1);
+
+            for (const accion of ["escalada", "gestionada", "cerrada", "asignar", "desasignar"] as const) {
+                const res = await POST(
+                    request("POST", "http://localhost:5005/api/colegio/alertas", { ids, accion }, mockToken)
+                );
+                expect(res.status).toBe(400);
+            }
+
+            const alertas = await prisma.alertaColegio.findMany({ where: { colegioId: colegio.id } });
+            expect(alertas.every((a) => a.estado === "nueva")).toBe(true);
         });
     });
 });

@@ -5,7 +5,8 @@ export default defineConfig({
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
-    workers: process.env.CI ? 1 : undefined,
+    // workers ausente en local (undefined explícito ≡ default de Playwright)
+    ...(process.env.CI ? { workers: 1 } : {}),
     reporter: "html",
     use: {
         baseURL: "http://localhost:5005",
@@ -24,6 +25,7 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
         env: {
+            NODE_ENV: "test",
             DATABASE_URL: process.env.DATABASE_URL || "",
             DISABLE_RATE_LIMIT: "true",
             NEXT_PUBLIC_DISABLE_ONBOARDING: "true",

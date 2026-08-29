@@ -6,8 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { AdminReporteDetalle } from "./AdminReporteDetalle";
+import { AdminReporteExpediente } from "./AdminReporteExpediente";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
+import type { OperadorListItemDto } from "@/lib/dal/types/operador";
 
 const ESTADOS = [
     { value: "", label: "Todos los estados" },
@@ -38,6 +42,13 @@ const CATEGORIAS = [
 
 const PAGE_SIZE_OPTIONS = ["10", "25", "50"];
 
+// SPEC-181: claves de orden validadas por `ordenBandejaSchema` (mapa cerrado en el repo).
+const ORDENES = [
+    { value: "prioridad", label: "Prioridad" },
+    { value: "recientes", label: "Más recientes" },
+    { value: "antiguos", label: "Más antiguos" },
+];
+
 type ReporteListItem = {
     id: string;
     identificador: string;
@@ -53,11 +64,14 @@ type ReporteListItem = {
     ciudad: string;
     pais: string;
     plataforma: { id: string; nombre: string; clave: string };
+    usuario?: { id: string; email: string; nombre: string | null } | null;
     clasificacion: {
         categoria: string;
         confianza: number;
         correccion: { categoriaCorregida: string } | null;
     } | null;
+    operador: { id: string; email: string; nombre: string | null } | null;
+    comite: { id: string; email: string; nombre: string | null } | null;
 };
 
 type Plataforma = { id: string; nombre: string };
@@ -70,17 +84,25 @@ function formatCategoria(categoria: string) {
     return CATEGORIAS.find((c) => c.value === categoria)?.label || categoria;
 }
 
-export function AdminReportesTable() {
+interface AdminReportesTableProps {
+    rol: string | null;
+}
+
+const OPERADOR_ROLES = new Set(["OPERADOR", "COMITE_VALIDACION"]);
+
+export function AdminReportesTable({ rol }: AdminReportesTableProps) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
     const [reportes, setReportes] = useState<ReporteListItem[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
+    const [operadores, setOperadores] = useState<OperadorListItemDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
     const [selectedReporteId, setSelectedReporteId] = useState<string | null>(null);
+    const [expedienteReporteId, setExpedienteReporteId] = useState<string | null>(null);
 
     const [estado, setEstado] = useState(searchParams.get("estado") || "");
     const [plataformaId, setPlataformaId] = useState(searchParams.get("plataformaId") || "");
@@ -90,8 +112,12 @@ export function AdminReportesTable() {
     const [incluirEliminados, setIncluirEliminados] = useState(searchParams.get("incluirEliminados") === "true");
     const [pageSize, setPageSize] = useState(searchParams.get("pageSize") || "25");
     const [q, setQ] = useState(searchParams.get("q") || "");
+    const [padre, setPadre] = useState(searchParams.get("padre") || "");
+    const [orden, setOrden] = useState(searchParams.get("orden") || "prioridad");
+    const [operadorId, setOperadorId] = useState(searchParams.get("operadorId") || "");
 
     const page = Math.max(1, Number(searchParams.get("page") || "1"));
+    const esRolConBandejaPropia = rol !== null && OPERADOR_ROLES.has(rol);
 
     useEffect(() => {
         fetch("/api/plataformas", { credentials: "include" })
@@ -99,6 +125,17 @@ export function AdminReportesTable() {
             .then((json) => setPlataformas(json.plataformas || []))
             .catch(() => setError("Error cargando plataformas"));
     }, []);
+
+    useEffect(() => {
+        if (esRolConBandejaPropia) {
+            setOperadores([]);
+            return;
+        }
+        fetch("/api/admin/operadores", { credentials: "include" })
+            .then((r) => r.json())
+            .then((json) => setOperadores((json.operadores || []).filter((op: OperadorListItemDto) => op.rol === "OPERADOR")))
+            .catch(() => setError("Error cargando operadores"));
+    }, [esRolConBandejaPropia]);
 
     const buildQueryString = useCallback(
         (override: Record<string, string> = {}) => {
@@ -110,6 +147,9 @@ export function AdminReportesTable() {
             if (fechaHasta) params.set("fechaHasta", fechaHasta);
             if (incluirEliminados) params.set("incluirEliminados", "true");
             if (q.trim()) params.set("q", q.trim());
+            if (padre.trim()) params.set("padre", padre.trim());
+            if (operadorId) params.set("operadorId", operadorId);
+            params.set("orden", orden);
             params.set("pageSize", pageSize);
             params.set("page", String(page));
             Object.entries(override).forEach(([k, v]) => {
@@ -118,7 +158,7 @@ export function AdminReportesTable() {
             });
             return params.toString();
         },
-        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page, q]
+        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page, q, padre, orden, operadorId]
     );
 
     const fetchReportes = useCallback(async () => {
@@ -159,6 +199,11 @@ export function AdminReportesTable() {
         ...plataformas.map((p) => ({ value: p.id, label: p.nombre })),
     ];
 
+    const operadorOptions = [
+        { value: "", label: "Todos los operadores" },
+        ...operadores.map((op) => ({ value: op.id, label: op.email })),
+    ];
+
     return (
         <div className="space-y-6">
             <div>
@@ -183,8 +228,37 @@ export function AdminReportesTable() {
                         />
                     </div>
                     <Select label="Estado" options={ESTADOS} value={estado} onChange={(e) => setEstado(e.target.value)} />
+                    <Input
+                        label="Padre"
+                        type="text"
+                        placeholder="email o nombre del denunciante"
+                        value={padre}
+                        onChange={(e) => setPadre(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                applyFilters();
+                            }
+                        }}
+                    />
                     <Select label="Plataforma" options={plataformaOptions} value={plataformaId} onChange={(e) => setPlataformaId(e.target.value)} />
                     <Select label="Categoría" options={CATEGORIAS} value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+                    {!esRolConBandejaPropia && (
+                        <Select
+                            label="Operador"
+                            options={operadorOptions}
+                            value={operadorId}
+                            onChange={(e) => setOperadorId(e.target.value)}
+                        />
+                    )}
+                    <Select
+                        label="Ordenar por"
+                        options={ORDENES}
+                        value={orden}
+                        onChange={(e) => {
+                            setOrden(e.target.value);
+                            router.push(`${pathname}?${buildQueryString({ page: "1", orden: e.target.value })}`);
+                        }}
+                    />
                     <div>
                         <label className="block text-sm font-medium text-body mb-1.5">Mostrar</label>
                         <div className="relative">
@@ -232,88 +306,102 @@ export function AdminReportesTable() {
             )}
 
             <div className="glass rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+                <Tabla sinContenedor>
+                    <TablaHead>
+                        <tr>
+                            <th className="px-4 py-3 font-medium">Seguimiento</th>
+                            <th className="px-4 py-3 font-medium">Plataforma</th>
+                            <th className="px-4 py-3 font-medium">Estado</th>
+                            <th className="px-4 py-3 font-medium">Señales</th>
+                            <th className="px-4 py-3 font-medium">Categoría</th>
+                            <th className="px-4 py-3 font-medium">Operador</th>
+                            <th className="px-4 py-3 font-medium">Fecha</th>
+                            <th className="px-4 py-3 font-medium">Origen</th>
+                            <th className="px-4 py-3 font-medium">Acciones</th>
+                        </tr>
+                    </TablaHead>
+                    <TablaBody>
+                        {loading ? (
                             <tr>
-                                <th className="px-4 py-3 font-medium">Seguimiento</th>
-                                <th className="px-4 py-3 font-medium">Plataforma</th>
-                                <th className="px-4 py-3 font-medium">Estado</th>
-                                <th className="px-4 py-3 font-medium">Señales</th>
-                                <th className="px-4 py-3 font-medium">Categoría</th>
-                                <th className="px-4 py-3 font-medium">Fecha</th>
-                                <th className="px-4 py-3 font-medium">Origen</th>
-                                <th className="px-4 py-3 font-medium">Acciones</th>
+                                <td colSpan={9} className="px-4 py-2 text-center text-subtle">
+                                    <Cargando tamano="sm" />
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={8} className="px-4 py-8 text-center text-subtle">
-                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                                        <p className="mt-2 text-xs">Cargando...</p>
-                                    </td>
-                                </tr>
-                            ) : reportes.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="px-4 py-2">
-                                        <EmptyState
-                                            title="No hay reportes que coincidan"
-                                            description="Prueba ajustar los filtros o vuelve más tarde."
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                reportes.map((r) => (
-                                    <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                        <td className="px-4 py-3 font-mono text-xs text-body">{r.numeroSeguimiento}</td>
-                                        <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-wrap gap-1">
-                                                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-body">
-                                                    {formatEstado(r.estado)}
-                                                </span>
-                                                {r.eliminado && (
-                                                    <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                        ) : reportes.length === 0 ? (
+                            <tr>
+                                <td colSpan={9} className="px-4 py-2">
+                                    <EmptyState
+                                        title="No hay reportes que coincidan"
+                                        description="Prueba ajustar los filtros o vuelve más tarde."
+                                    />
+                                </td>
+                            </tr>
+                        ) : (
+                            reportes.map((r) => (
+                                <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                    <td className="px-4 py-3 font-mono text-xs text-body">{r.numeroSeguimiento}</td>
+                                    <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-wrap gap-1">
+                                            <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-body">
+                                                {formatEstado(r.estado)}
+                                            </span>
+                                            {r.eliminado && (
+                                                <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
                                                         Eliminado
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-wrap gap-1">
-                                                {r.prioridadAlta && (
-                                                    <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-wrap gap-1">
+                                            {r.prioridadAlta && (
+                                                <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
                                                         Prioridad
-                                                    </span>
-                                                )}
-                                                {r.esRafaga && (
-                                                    <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                                </span>
+                                            )}
+                                            {r.esRafaga && (
+                                                <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                                                         Ráfaga
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-body">
-                                            {r.clasificacion?.correccion
-                                                ? `${formatCategoria(r.clasificacion.correccion.categoriaCorregida)} (corregido)`
-                                                : r.clasificacion
-                                                    ? formatCategoria(r.clasificacion.categoria)
-                                                    : "—"}
-                                        </td>
-                                        <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString()}</td>
-                                        <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : "Autenticado"}</td>
-                                        <td className="px-4 py-3">
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-body">
+                                        {r.clasificacion?.correccion
+                                            ? `${formatCategoria(r.clasificacion.correccion.categoriaCorregida)} (corregido)`
+                                            : r.clasificacion
+                                                ? formatCategoria(r.clasificacion.categoria)
+                                                : "—"}
+                                    </td>
+                                    <td className="px-4 py-3 text-subtle">
+                                        {r.operador ? (
+                                            <span title={r.operador.email} className="truncate max-w-[12rem] inline-block">
+                                                {r.operador.email}
+                                            </span>
+                                        ) : (
+                                            <span className="text-subtle/70">Sin asignar</span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}</td>
+                                    <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : (r.usuario?.email ?? "Autenticado")}</td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-wrap gap-2">
                                             <Button onClick={() => setSelectedReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
-                                                Ver detalle
+                                                    Ver detalle
                                             </Button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                            {!esRolConBandejaPropia && (
+                                                <Button onClick={() => setExpedienteReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                                                    Ver proceso
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </TablaBody>
+                </Tabla>
 
                 {pagination.totalPages > 1 && (
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">
@@ -337,6 +425,13 @@ export function AdminReportesTable() {
                     reporteId={selectedReporteId}
                     onClose={() => setSelectedReporteId(null)}
                     onRefresh={fetchReportes}
+                />
+            )}
+
+            {expedienteReporteId && (
+                <AdminReporteExpediente
+                    reporteId={expedienteReporteId}
+                    onClose={() => setExpedienteReporteId(null)}
                 />
             )}
         </div>

@@ -1,11 +1,13 @@
-import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
+import { MODELO_EMBEDDING_DEFAULT } from "./defaults";
 import { logger } from "@/lib/logger";
+import { DatasetEntrenamientoRepository } from "@/lib/dal/repositories/dataset-entrenamiento";
+import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
 
 async function getEmbeddingModel(): Promise<string> {
     const param = await getParametroSistema("reportes.embedding_model");
-    return param?.valor || process.env.IA_MODEL_EMBEDDING || "nomic-embed-text";
+    return param?.valor || process.env.IA_MODEL_EMBEDDING || MODELO_EMBEDDING_DEFAULT;
 }
 
 /**
@@ -17,10 +19,8 @@ async function getEmbeddingModel(): Promise<string> {
  * - Si el embedding sigue fallando, lanza error para que pg-boss reintente.
  */
 export async function procesarBackfillEmbedding(datasetId: string): Promise<void> {
-    const registro = await prisma.datasetEntrenamiento.findUnique({
-        where: { id: datasetId },
-        include: { embedding: true },
-    });
+    // E-8: la lectura vive en el repo; la raw de pgvector en el adaptador (D3).
+    const registro = await new DatasetEntrenamientoRepository().findByIdConEmbedding(datasetId);
 
     if (!registro) {
         logger.warn(`[BACKFILL_EMBEDDING] Registro ${datasetId} no encontrado`);
@@ -34,12 +34,8 @@ export async function procesarBackfillEmbedding(datasetId: string): Promise<void
 
     const modeloEmbedding = await getEmbeddingModel();
     const vector = await generarEmbedding(modeloEmbedding, registro.texto);
-    const vectorStr = "[" + vector.join(",") + "]";
 
-    await prisma.$executeRaw`
-        INSERT INTO "EmbeddingDataset" (id, "datasetId", vector, "modeloUsado", "creadoEn")
-        VALUES (${crypto.randomUUID()}, ${datasetId}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-    `;
+    await new EmbeddingRepository().insertDatasetEmbedding(datasetId, modeloEmbedding, vector);
 
     logger.info(`[BACKFILL_EMBEDDING] Registro ${datasetId} embedding generado correctamente`);
 }

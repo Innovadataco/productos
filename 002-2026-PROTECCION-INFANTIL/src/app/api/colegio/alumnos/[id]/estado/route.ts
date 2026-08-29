@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { alumnoIdParamsSchema, estadoActivoSchema } from "@/lib/schemas";
-import { verificarPropiedadAlumno } from "@/lib/colegio/permisos";
+import { estudianteIdParamsSchema, estadoActivoSchema } from "@/lib/schemas";
+import { verificarPropiedadEstudiante } from "@/lib/colegio/permisos";
 
 function getClientInfo(request: Request) {
     return {
@@ -37,21 +38,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const { id } = withValidation.params(alumnoIdParamsSchema)(await params);
+        const { id } = withValidation.params(estudianteIdParamsSchema)(await params);
         const body = await withValidation.body(estadoActivoSchema)(request);
 
-        const alumno = await verificarPropiedadAlumno(user.id, id);
-        if (alumno.estado === body) {
+        const estudiante = await verificarPropiedadEstudiante(user.id, id);
+        if (estudiante.estado === body) {
             return NextResponse.json(
                 { error: { message: `El alumno ya está ${body}`, code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
             );
         }
 
-        const actualizado = await prisma.alumno.update({
-            where: { id },
-            data: { estado: body },
-        });
+        const actualizado = await new EstudianteRepository().cambiarEstado(estudiante.colegioId, id, body);
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
@@ -60,7 +58,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             recursoId: id,
             usuarioId: user.id,
             colegioId: user.colegioId ?? undefined,
-            valorAnterior: JSON.stringify({ estado: alumno.estado }),
+            valorAnterior: JSON.stringify({ estado: estudiante.estado }),
             valorNuevo: JSON.stringify({ estado: actualizado.estado }),
             ipAddress,
             userAgent,
@@ -68,21 +66,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         return NextResponse.json({ alumno: actualizado });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
         if (error instanceof Error && error.message === "Alumno no encontrado") {
             return NextResponse.json(
                 { error: { message: "Alumno no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/ALUMNOS]");
     }
 }

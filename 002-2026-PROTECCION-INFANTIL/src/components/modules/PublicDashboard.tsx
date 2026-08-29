@@ -4,11 +4,10 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { BarChart } from "./BarChart";
 import { DonutChart } from "./DonutChart";
-import { MetricCard } from "./MetricCard";
+import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
 import { ChartCard } from "./ChartCard";
 import { MiniList } from "./MiniList";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { formatNivel, RIESGO_COLORS } from "@/lib/labels";
 import type { PuntoMapa } from "./MapaUbicaciones";
 
 const MapaUbicaciones = dynamic(
@@ -22,17 +21,26 @@ type StatsData = {
         identificadoresUnicos: number;
         reportesAutenticados: number;
         reportesAnonimos: number;
-        scorePromedio: number;
     };
     porPlataforma: { plataforma: string; count: number }[];
     porPais: { pais: string; count: number }[];
     porCiudad: { ciudad: string; pais: string; count: number; lat: number | null; lng: number | null }[];
-    porNivelRiesgo: { nivel: string; count: number }[];
     porCategoria: { categoria: string; count: number }[];
     porGrupoCategoria: { clave: string; nombre: string; orden: number; total: number }[];
+    sinUbicacion?: number;
 };
 
-export function PublicDashboard() {
+export function PublicDashboard({
+    variant = "completo",
+    titulo = "Dashboard público",
+    subtitulo = "Panorama estratégico de reportes en la plataforma. Datos agregados y anonimizados.",
+}: {
+    /** SPEC-129 (D-b): "resumen" = KPIs + origen/países para la home del colegio;
+     *  "completo" = todo (dashboard público y vista ampliada del colegio). */
+    variant?: "completo" | "resumen";
+    titulo?: string;
+    subtitulo?: string;
+}) {
     const [data, setData] = useState<StatsData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -65,9 +73,21 @@ export function PublicDashboard() {
     if (error) return <ErrorState title="No pudimos cargar las estadísticas" description="Ocurrió un problema al consultar el dashboard público. Intenta recargar la página." onRetry={() => window.location.reload()} />;
     if (!data) return null;
 
-    const totalOrigen = data.totales.reportesAutenticados + data.totales.reportesAnonimos || 1;
+    // Render defensivo: la API puede omitir campos; se usan valores por defecto.
+    const totales = data.totales ?? {
+        reportes: 0,
+        identificadoresUnicos: 0,
+        reportesAutenticados: 0,
+        reportesAnonimos: 0,
+    };
+    const porPlataforma = data.porPlataforma ?? [];
+    const porPais = data.porPais ?? [];
+    const porCiudad = data.porCiudad ?? [];
+    const porGrupoCategoria = data.porGrupoCategoria ?? [];
 
-    const puntosMapa: PuntoMapa[] = data.porCiudad
+    const totalOrigen = totales.reportesAutenticados + totales.reportesAnonimos || 1;
+
+    const puntosMapa: PuntoMapa[] = porCiudad
         .filter((c) => typeof c.lat === "number" && typeof c.lng === "number")
         .map((c) => ({
             lat: c.lat as number,
@@ -76,102 +96,99 @@ export function PublicDashboard() {
             total: c.count,
         }));
 
+    // SPEC-115: degradación honesta — el mapa admite cuántos reportes no puede pintar
+    const sinUbicacion = data.sinUbicacion ?? 0;
+
     return (
         <section className="space-y-6" aria-labelledby="public-dashboard-title">
             <div>
                 <h1 id="public-dashboard-title" className="text-2xl font-bold text-body">
-                    Dashboard público
+                    {titulo}
                 </h1>
                 <p className="text-sm text-muted">
-                    Panorama estratégico de reportes en la plataforma. Datos agregados y anonimizados.
+                    {subtitulo}
                 </p>
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <MetricCard label="Reportes registrados" value={data.totales.reportes} />
-                <MetricCard label="Identificadores visibles" value={data.totales.identificadoresUnicos} />
-                <MetricCard label="Score promedio" value={data.totales.scorePromedio} suffix="/100" />
-                <MetricCard
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <TarjetaMetrica label="Reportes registrados" value={totales.reportes} />
+                <TarjetaMetrica label="Identificadores visibles" value={totales.identificadoresUnicos} />
+                <TarjetaMetrica
                     label="Reportes autenticados"
-                    value={Math.round((data.totales.reportesAutenticados / totalOrigen) * 100)}
+                    value={Math.round((totales.reportesAutenticados / totalOrigen) * 100)}
                     suffix="%"
                 />
             </div>
 
-            {/* Origen, riesgo y países */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Origen y países */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <ChartCard title="Origen de reportes" subtitle="Autenticados vs anónimos">
                     <DonutChart
                         ariaLabel="Origen de reportes"
                         data={[
-                            { label: "Autenticados", value: data.totales.reportesAutenticados },
-                            { label: "Anónimos", value: data.totales.reportesAnonimos },
+                            { label: "Autenticados", value: totales.reportesAutenticados },
+                            { label: "Anónimos", value: totales.reportesAnonimos },
                         ]}
-                    />
-                </ChartCard>
-
-                <ChartCard title="Nivel de riesgo" subtitle="Distribución de identificadores">
-                    <MiniList
-                        items={data.porNivelRiesgo.map((n) => ({
-                            label: formatNivel(n.nivel),
-                            count: n.count,
-                            badgeColor: RIESGO_COLORS[n.nivel],
-                            badge: "dot",
-                        }))}
-                        empty="Sin clasificación de riesgo"
                     />
                 </ChartCard>
 
                 <ChartCard title="Top países" subtitle="Cantidad de reportes por país">
                     <MiniList
-                        items={data.porPais.map((p) => ({ label: p.pais, count: p.count }))}
+                        items={porPais.map((p) => ({ label: p.pais, count: p.count }))}
                         empty="Sin datos por país"
                     />
                 </ChartCard>
             </div>
 
-            {/* Mapa de calor por ciudad */}
-            <ChartCard
-                title="Reportes por ciudad / departamento"
-                subtitle="Mapa de calor aproximado por ciudad. No incluye direcciones exactas ni datos personales."
-            >
-                {puntosMapa.length === 0 && data.porPais.length === 0 ? (
-                    <p className="text-sm text-muted">Sin datos geográficos</p>
-                ) : (
-                    <MapaUbicaciones
-                        puntos={puntosMapa}
-                        paises={data.porPais.map((p) => ({ pais: p.pais, total: p.count }))}
-                        center={[4.5, -74]}
-                        zoom={3}
-                    />
-                )}
-            </ChartCard>
+            {/* SPEC-129 (D-b): la vista ampliada (mapa + gráficos) solo va en "completo";
+                la home del colegio muestra el resumen de arriba. */}
+            {variant === "completo" && (
+                <>
+                    {/* Mapa de calor por ciudad */}
+                    <ChartCard
+                        title="Reportes por ciudad / departamento"
+                        subtitle="Mapa de calor aproximado por ciudad. No incluye direcciones exactas ni datos personales."
+                    >
+                        {puntosMapa.length === 0 && porPais.length === 0 ? (
+                            <p className="text-sm text-muted">Sin datos geográficos</p>
+                        ) : (
+                            <MapaUbicaciones
+                                puntos={puntosMapa}
+                                paises={porPais.map((p) => ({ pais: p.pais, total: p.count }))}
+                                center={[4.5, -74]}
+                                zoom={3}
+                                sinUbicacion={sinUbicacion}
+                            />
+                        )}
+                    </ChartCard>
 
-            {/* Gráficos */}
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                <ChartCard title="Plataformas más reportadas" subtitle="Distribución por plataforma">
-                    {data.porPlataforma.length === 0 ? (
-                        <p className="text-sm text-muted">Sin datos</p>
-                    ) : (
-                        <BarChart
-                            ariaLabel="Distribución de reportes por plataforma"
-                            data={data.porPlataforma.map((p) => ({ label: p.plataforma, value: p.count }))}
-                        />
-                    )}
-                </ChartCard>
+                    {/* Gráficos */}
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        <ChartCard title="Plataformas más reportadas" subtitle="Distribución por plataforma">
+                            {porPlataforma.length === 0 ? (
+                                <p className="text-sm text-muted">Sin datos</p>
+                            ) : (
+                                <BarChart
+                                    ariaLabel="Distribución de reportes por plataforma"
+                                    data={porPlataforma.map((p) => ({ label: p.plataforma, value: p.count }))}
+                                />
+                            )}
+                        </ChartCard>
 
-                <ChartCard title="Categorías de conducta" subtitle="Tipo de riesgo más frecuente">
-                    {data.porGrupoCategoria.length === 0 ? (
-                        <p className="text-sm text-muted">Sin datos</p>
-                    ) : (
-                        <DonutChart
-                            ariaLabel="Distribución de reportes por categoría"
-                            data={data.porGrupoCategoria.map((g) => ({ label: g.nombre, value: g.total }))}
-                        />
-                    )}
-                </ChartCard>
-            </div>
+                        <ChartCard title="Categorías de conducta" subtitle="Categorías más frecuentes">
+                            {porGrupoCategoria.length === 0 ? (
+                                <p className="text-sm text-muted">Sin datos</p>
+                            ) : (
+                                <DonutChart
+                                    ariaLabel="Distribución de reportes por categoría"
+                                    data={porGrupoCategoria.map((g) => ({ label: g.nombre, value: g.total }))}
+                                />
+                            )}
+                        </ChartCard>
+                    </div>
+                </>
+            )}
         </section>
     );
 }

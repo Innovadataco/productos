@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES, safeErrorMessage } from "@/lib/errors";
-import { logAudit } from "@/lib/audit";
+import { ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
+import { OperadorService } from "@/lib/dal/services/operadores";
 
 const updateSchema = z.object({
     nombre: z.string().min(2).max(100).optional(),
@@ -22,11 +22,6 @@ function getClientInfo(request: Request) {
     };
 }
 
-async function getOperador(id: string) {
-    const where: Record<string, unknown> = { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } };
-    return prisma.usuario.findFirst({ where, include: { perfilOperador: true } });
-}
-
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth("ADMIN");
@@ -39,7 +34,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
         const { id } = await params;
-        const operador = await getOperador(id);
+
+        // SPEC-053: búsqueda y actualización viven en el DAL; la ruta no toca prisma.
+        const service = new OperadorService();
+        const operador = await service.obtenerOperador(id);
         if (!operador) {
             return NextResponse.json({ error: { message: "Operador no encontrado", code: ERROR_CODES.NOT_FOUND } }, { status: 404 });
         }
@@ -53,47 +51,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const { nombre, estado, ...perfilData } = parsed.data;
-        const { ipAddress, userAgent } = getClientInfo(request);
-
-        if (estado && estado !== operador.estado) {
-            await prisma.usuario.update({ where: { id }, data: { estado } });
-            const accionAudit = operador.rol === "COMITE_VALIDACION"
-                ? (estado === "activo" ? "COMITE_ACTIVADO" : "COMITE_DESACTIVADO")
-                : (estado === "activo" ? "OPERADOR_ACTIVADO" : "OPERADOR_DESACTIVADO");
-            await logAudit({
-                accion: accionAudit,
-                tipoRecurso: "Usuario",
-                recursoId: id,
-                usuarioId: admin.id,
-                valorAnterior: JSON.stringify({ estado: operador.estado }),
-                valorNuevo: JSON.stringify({ estado }),
-                ipAddress,
-                userAgent,
-            });
-        }
-
-        if (nombre) {
-            await prisma.usuario.update({ where: { id }, data: { nombre } });
-        }
-
-        if (operador.perfilOperador && Object.keys(perfilData).length > 0) {
-            await prisma.perfilOperador.update({
-                where: { usuarioId: id },
-                data: perfilData,
-            });
-        }
-
-        const actualizado = await prisma.usuario.findUnique({ where: { id }, include: { perfilOperador: true } });
+        const actualizado = await service.actualizar(operador, parsed.data, admin.id, getClientInfo(request));
         return NextResponse.json({ operador: actualizado });
     } catch (error) {
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[ADMIN/OPERADORES]");
     }
 }
 
@@ -109,7 +70,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             );
         }
         const { id } = await params;
-        const operador = await getOperador(id);
+
+        const service = new OperadorService();
+        const operador = await service.obtenerOperador(id);
         if (!operador) {
             return NextResponse.json({ error: { message: "Operador no encontrado", code: ERROR_CODES.NOT_FOUND } }, { status: 404 });
         }
@@ -118,28 +81,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             return NextResponse.json({ operador });
         }
 
-        await prisma.usuario.update({ where: { id }, data: { estado: "inactivo" } });
-        const { ipAddress, userAgent } = getClientInfo(request);
-        const accionAudit = operador.rol === "COMITE_VALIDACION" ? "COMITE_DESACTIVADO" : "OPERADOR_DESACTIVADO";
-        await logAudit({
-            accion: accionAudit,
-            tipoRecurso: "Usuario",
-            recursoId: id,
-            usuarioId: admin.id,
-            valorAnterior: JSON.stringify({ estado: operador.estado }),
-            valorNuevo: JSON.stringify({ estado: "inactivo" }),
-            ipAddress,
-            userAgent,
-        });
+        await service.desactivar(operador, admin.id, getClientInfo(request));
 
         return NextResponse.json({ operador: { ...operador, estado: "inactivo" } });
     } catch (error) {
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[ADMIN/OPERADORES]");
     }
 }

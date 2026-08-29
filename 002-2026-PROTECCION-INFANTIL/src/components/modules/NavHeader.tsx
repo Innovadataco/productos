@@ -1,13 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 
+/**
+ * Destino del logo por rol y ubicación (extraído para test de regresión, O-1 de 002-PI-051).
+ * Zona autenticada (/dashboard/**): al panel del rol. Zona pública: "/" para todos
+ * (SPEC-106: un ADMIN debe poder navegar la app pública sin que el header lo secuestre)
+ * EXCEPTO SCHOOL_ADMIN (D-a de 002-PI-051): la cuenta institucional no reporta
+ * (proxy.ts), así que su logo SIEMPRE va a su panel, también en zona pública.
+ */
+export function destinoLogo(user: { rol: string } | null, pathname: string | null): string {
+    const enAreaAutenticada = pathname?.startsWith("/dashboard") ?? false;
+    if (user?.rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
+    // SPEC-168: el comité de convivencia siempre va a su bandeja (su única área).
+    if (user?.rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite/casos";
+    if (!user || !enAreaAutenticada) return "/";
+    if (user.rol === "ADMIN" || user.rol === "OPERADOR") return "/dashboard/admin";
+    if (user.rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
+    return "/dashboard";
+}
+
 export function NavHeader() {
     const { user, isLoading, logout } = useAuth();
+    const pathname = usePathname();
     const [open, setOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -40,37 +61,55 @@ export function NavHeader() {
     const headerBorderClass = user?.rol === "ADMIN"
         ? "border-b-amber-500/40 dark:border-b-amber-400/30"
         : user?.rol === "OPERADOR"
-        ? "border-b-violet-500/40 dark:border-b-violet-400/30"
-        : user?.rol === "COMITE_VALIDACION"
-        ? "border-b-emerald-500/40 dark:border-b-emerald-400/30"
-        : "border-b-white/40 dark:border-b-white/10";
+            ? "border-b-violet-500/40 dark:border-b-violet-400/30"
+            : user?.rol === "COMITE_VALIDACION"
+                ? "border-b-emerald-500/40 dark:border-b-emerald-400/30"
+                : "border-b-white/40 dark:border-b-white/10";
 
     const avatarClass = user?.rol === "ADMIN"
         ? "bg-amber-500"
         : user?.rol === "OPERADOR"
-        ? "bg-violet-500"
-        : user?.rol === "COMITE_VALIDACION"
-        ? "bg-emerald-500"
-        : "accent-gradient";
+            ? "bg-violet-500"
+            : user?.rol === "COMITE_VALIDACION"
+                ? "bg-emerald-500"
+                : "accent-gradient";
 
     const rolBadgeClass = user?.rol === "ADMIN"
         ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
         : user?.rol === "OPERADOR"
-        ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
-        : user?.rol === "COMITE_VALIDACION"
-        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+            ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
+            : user?.rol === "COMITE_VALIDACION"
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
 
     const dashboardHref = user?.rol === "SCHOOL_ADMIN"
         ? "/dashboard/colegio"
-        : user?.rol === "PARENT"
-        ? "/dashboard"
-        : "/dashboard-publico";
+        : user?.rol === "COMITE_CONVIVENCIA"
+            ? "/dashboard/colegio/comite/casos"
+            : user?.rol === "PARENT"
+                ? "/dashboard"
+                : "/dashboard-publico";
+
+    // El logo lleva al panel del rol SOLO dentro del área autenticada (/dashboard/**).
+    // En rutas públicas va al home público aunque haya sesión (SPEC-106), EXCEPTO
+    // SCHOOL_ADMIN, cuyo logo siempre va a su panel (D-a de 002-PI-051).
+    const logoDestino = destinoLogo(user, pathname ?? null);
+    // I-38 (SPEC-114): el logo NUNCA es un clic muerto — si el destino es la página actual,
+    // va al home público (destino vivo para todos los roles desde SPEC-118/D-37).
+    const logoHref = logoDestino === pathname ? "/" : logoDestino;
+
+    // D-37 (SPEC-118): ningún elemento de navegación ofrece un destino que el proxy
+    // vaya a bloquear ni la página actual — una sola regla para TODOS los roles y
+    // todos los enlaces del header (botón Dashboard, menú de usuario, menú móvil).
+    // La única excepción es el logo en "/" (la marca siempre se muestra; apuntar al
+    // inicio estando en el inicio es convención universal y no hay destino alternativo).
+    const esEnlaceNavegable = (href: string) =>
+        href !== pathname && esDestinoPermitidoPorRol(user?.rol, href);
 
     return (
         <header className={`fixed top-0 left-0 right-0 z-50 glass ${headerBorderClass}`}>
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-                <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight text-body">
+                <Link href={logoHref} className="flex items-center gap-2 text-lg font-bold tracking-tight text-body">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg accent-gradient text-white shadow-md">
                         <ShieldIcon className="h-4 w-4" />
                     </span>
@@ -81,12 +120,14 @@ export function NavHeader() {
                 <nav className="flex items-center gap-2 sm:gap-3">
                     <ThemeToggle />
 
-                    <Link
-                        href={dashboardHref}
-                        className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
-                    >
-                        Dashboard
-                    </Link>
+                    {esEnlaceNavegable(dashboardHref) && (
+                        <Link
+                            href={dashboardHref}
+                            className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
+                        >
+                            Dashboard
+                        </Link>
+                    )}
 
                     {isLoading ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
@@ -119,43 +160,64 @@ export function NavHeader() {
                                     <div className="py-1">
                                         {user.rol === "ADMIN" && (
                                             <>
-                                                <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
-                                                    Panel de administración
-                                                </NavDropdownLink>
-                                                <NavDropdownLink href="/dashboard/admin/configuracion" onClick={() => setOpen(false)}>
-                                                    Configuración
-                                                </NavDropdownLink>
+                                                {esEnlaceNavegable("/dashboard/admin") && (
+                                                    <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
+                                                        Panel de administración
+                                                    </NavDropdownLink>
+                                                )}
+                                                {esEnlaceNavegable("/dashboard/admin/configuracion") && (
+                                                    <NavDropdownLink href="/dashboard/admin/configuracion" onClick={() => setOpen(false)}>
+                                                        Configuración
+                                                    </NavDropdownLink>
+                                                )}
                                             </>
                                         )}
-                                        {user.rol === "SCHOOL_ADMIN" && (
+                                        {user.rol === "SCHOOL_ADMIN" && esEnlaceNavegable("/dashboard/colegio") && (
                                             <NavDropdownLink href="/dashboard/colegio" onClick={() => setOpen(false)}>
                                                 Mi colegio
                                             </NavDropdownLink>
                                         )}
-                                        {user.rol === "OPERADOR" && (
+                                        {user.rol === "OPERADOR" && esEnlaceNavegable("/dashboard/admin") && (
                                             <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
                                                 Mis casos
                                             </NavDropdownLink>
                                         )}
-                                        {user.rol === "COMITE_VALIDACION" && (
+                                        {user.rol === "COMITE_VALIDACION" && esEnlaceNavegable("/dashboard/admin/comite") && (
                                             <NavDropdownLink href="/dashboard/admin/comite" onClick={() => setOpen(false)}>
+                                                Mi bandeja
+                                            </NavDropdownLink>
+                                        )}
+                                        {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
+                                            <NavDropdownLink href="/dashboard/colegio/comite/casos" onClick={() => setOpen(false)}>
                                                 Mi bandeja
                                             </NavDropdownLink>
                                         )}
                                         {!esEmpleado && (
                                             <>
-                                                <NavDropdownLink href="/dashboard" onClick={() => setOpen(false)}>
-                                                    Mi panel
-                                                </NavDropdownLink>
-                                                <NavDropdownLink href="/dashboard/circulo-confianza" onClick={() => setOpen(false)}>
-                                                    Círculo de Confianza
-                                                </NavDropdownLink>
-                                                <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
-                                                    Mis reportes
-                                                </NavDropdownLink>
+                                                {esEnlaceNavegable("/dashboard") && (
+                                                    <NavDropdownLink href="/dashboard" onClick={() => setOpen(false)}>
+                                                        Mi panel
+                                                    </NavDropdownLink>
+                                                )}
+                                                {esEnlaceNavegable("/dashboard/circulo-confianza") && (
+                                                    <NavDropdownLink href="/dashboard/circulo-confianza" onClick={() => setOpen(false)}>
+                                                        Círculo de Confianza
+                                                    </NavDropdownLink>
+                                                )}
+                                                {esEnlaceNavegable("/mis-reportes") && (
+                                                    <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
+                                                        Mis reportes
+                                                    </NavDropdownLink>
+                                                )}
                                             </>
                                         )}
                                         <hr className="my-1 border-slate-100 dark:border-slate-800" />
+                                        {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible para TODOS los roles */}
+                                        {esEnlaceNavegable("/cambiar-password") && (
+                                            <NavDropdownLink href="/cambiar-password" onClick={() => setOpen(false)}>
+                                                Cambiar contraseña
+                                            </NavDropdownLink>
+                                        )}
                                         <button
                                             onClick={async () => {
                                                 setOpen(false);
@@ -171,12 +233,14 @@ export function NavHeader() {
                             )}
                         </div>
                     ) : (
-                        <Link
-                            href="/login"
-                            className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
-                        >
-                            Iniciar sesión
-                        </Link>
+                        esEnlaceNavegable("/login") && (
+                            <Link
+                                href="/login"
+                                className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
+                            >
+                                Iniciar sesión
+                            </Link>
+                        )
                     )}
 
                     <Tooltip content="Menú">
@@ -194,31 +258,34 @@ export function NavHeader() {
             {mobileOpen && (
                 <div className="sm:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 shadow-lg">
                     <div className="flex flex-col gap-2">
-                        <MobileLink href="/" onClick={() => setMobileOpen(false)}>Inicio</MobileLink>
-                        <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Dashboard</MobileLink>
+                        {esEnlaceNavegable("/") && <MobileLink href="/" onClick={() => setMobileOpen(false)}>Inicio</MobileLink>}
+                        {esEnlaceNavegable("/dashboard-publico") && <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Dashboard</MobileLink>}
                         {user ? (
                             <>
                                 {!esEmpleado && (
                                     <>
-                                        <MobileLink href="/dashboard" onClick={() => setMobileOpen(false)}>Mi panel</MobileLink>
-                                        <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>
-                                        <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>
+                                        {esEnlaceNavegable("/dashboard") && <MobileLink href="/dashboard" onClick={() => setMobileOpen(false)}>Mi panel</MobileLink>}
+                                        {esEnlaceNavegable("/dashboard/circulo-confianza") && <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>}
+                                        {esEnlaceNavegable("/mis-reportes") && <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>}
                                     </>
                                 )}
                                 {user.rol === "ADMIN" && (
                                     <>
-                                        <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Panel admin</MobileLink>
-                                        <MobileLink href="/dashboard/admin/configuracion" onClick={() => setMobileOpen(false)}>Configuración</MobileLink>
+                                        {esEnlaceNavegable("/dashboard/admin") && <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Panel admin</MobileLink>}
+                                        {esEnlaceNavegable("/dashboard/admin/configuracion") && <MobileLink href="/dashboard/admin/configuracion" onClick={() => setMobileOpen(false)}>Configuración</MobileLink>}
                                     </>
                                 )}
-                                {user.rol === "SCHOOL_ADMIN" && (
+                                {user.rol === "SCHOOL_ADMIN" && esEnlaceNavegable("/dashboard/colegio") && (
                                     <MobileLink href="/dashboard/colegio" onClick={() => setMobileOpen(false)}>Mi colegio</MobileLink>
                                 )}
-                                {user.rol === "OPERADOR" && (
+                                {user.rol === "OPERADOR" && esEnlaceNavegable("/dashboard/admin") && (
                                     <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Mis casos</MobileLink>
                                 )}
-                                {user.rol === "COMITE_VALIDACION" && (
+                                {user.rol === "COMITE_VALIDACION" && esEnlaceNavegable("/dashboard/admin/comite") && (
                                     <MobileLink href="/dashboard/admin/comite" onClick={() => setMobileOpen(false)}>Mi bandeja</MobileLink>
+                                )}
+                                {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
+                                    <MobileLink href="/dashboard/colegio/comite/casos" onClick={() => setMobileOpen(false)}>Mi bandeja</MobileLink>
                                 )}
                                 <button
                                     onClick={async () => {
@@ -232,7 +299,7 @@ export function NavHeader() {
                                 </button>
                             </>
                         ) : (
-                            <MobileLink href="/login" onClick={() => setMobileOpen(false)}>Iniciar sesión</MobileLink>
+                            esEnlaceNavegable("/login") && <MobileLink href="/login" onClick={() => setMobileOpen(false)}>Iniciar sesión</MobileLink>
                         )}
                     </div>
                 </div>

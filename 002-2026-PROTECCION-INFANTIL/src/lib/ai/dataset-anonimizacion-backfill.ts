@@ -1,7 +1,8 @@
-import { prisma } from "@/lib/prisma";
 import { getParametroSistema } from "@/lib/parametros";
 import { anonimizarTexto } from "./anonimizador";
+import { MODELO_ANONIMIZACION_DEFAULT } from "./defaults";
 import { logger } from "@/lib/logger";
+import { DatasetEntrenamientoRepository } from "@/lib/dal/repositories/dataset-entrenamiento";
 
 /**
  * Procesa un registro del dataset de entrenamiento cuya anonimización
@@ -12,9 +13,8 @@ import { logger } from "@/lib/logger";
  * Si la anonimización sigue fallando, lanza un error para que pg-boss reintente.
  */
 export async function procesarBackfillAnonimizacion(datasetId: string): Promise<void> {
-    const registro = await prisma.datasetEntrenamiento.findUnique({
-        where: { id: datasetId },
-    });
+    // E-8: las lecturas/escrituras viven en el repo; la lógica no cambia.
+    const registro = await new DatasetEntrenamientoRepository().findById(datasetId);
 
     if (!registro) {
         logger.warn(`[BACKFILL_ANONIMIZACION] Registro ${datasetId} no encontrado`);
@@ -27,17 +27,11 @@ export async function procesarBackfillAnonimizacion(datasetId: string): Promise<
     }
 
     const paramModelo = await getParametroSistema("reportes.classification_model");
-    const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || "ornith:9b";
+    const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || MODELO_ANONIMIZACION_DEFAULT;
 
     const resultado = await anonimizarTexto(modelo, registro.texto);
 
-    await prisma.datasetEntrenamiento.update({
-        where: { id: datasetId },
-        data: {
-            texto: resultado.textoAnonimizado,
-            textoAnonimizado: true,
-        },
-    });
+    await new DatasetEntrenamientoRepository().marcarAnonimizado(datasetId, resultado.textoAnonimizado);
 
     logger.info(`[BACKFILL_ANONIMIZACION] Registro ${datasetId} anonimizado correctamente`);
 }

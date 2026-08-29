@@ -17,5 +17,74 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pi-app-dev
+    env_file: .env
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      TZ: "America/Bogota"
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
+      - pi_apelaciones_storage:/app/storage
+    ports:
+      - "5005:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # SPEC-213 (002-PI-113): motor de vigencia de pagos. Instancia única vía
+  # advisory lock (exit 2 si hay otra); corre diario a la hora configurable en
+  # ParametroSistema `pagos.vigencia.hora_corrida` (default 01:00 Bogotá).
+  pi-vigencia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pi-vigencia-dev
+    env_file: .env
+    command: node --import tsx scripts/worker-vigencia-pagos.mjs
+    environment:
+      TZ: "America/Bogota"
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      # El proceso principal del contenedor ES el worker (PID 1).
+      test: [ "CMD-SHELL", "kill -0 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # SPEC-290 (002-PI-190): worker de cierre de sesiones por inactividad.
+  # Advisory lock 123456797 (ADVISORY-LOCKS.md fila 8). Healthcheck de edad
+  # sobre /tmp/pi-sesiones-alive (touch al final de cada tick, ~5 min).
+  pi-sesiones:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pi-sesiones-dev
+    env_file: .env
+    command: node --import tsx scripts/worker-sesiones.mjs
+    environment:
+      TZ: "America/Bogota"
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "test -f /tmp/pi-sesiones-alive && test $(($(date +%s) - $(stat -c %Y /tmp/pi-sesiones-alive))) -lt 90 || exit 1" ]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
 volumes:
   postgres_data:
+  pi_worker_run:
+  pi_apelaciones_storage:

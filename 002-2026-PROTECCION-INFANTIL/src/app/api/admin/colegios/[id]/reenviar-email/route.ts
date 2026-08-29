@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
-import { enviarEmailBienvenidaColegio } from "@/lib/email";
+import { programar as programarNotificacion } from "@/lib/notificaciones";
 import { withValidation } from "@/lib/validation";
 import { colegioIdParamsSchema } from "@/lib/schemas";
+import { ColegioRepository } from "@/lib/dal/repositories/colegio";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { randomBytes } from "crypto";
 
 function getClientInfo(request: Request) {
@@ -30,10 +32,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const { id } = withValidation.params(colegioIdParamsSchema)(await params);
 
-        const colegio = await prisma.colegio.findUnique({
-            where: { id },
-            include: { admin: { select: { id: true, email: true, nombre: true } } },
-        });
+        // E-8: las lecturas/escrituras viven en los repos; la ruta no toca prisma.
+        const colegio = await new ColegioRepository().findParaReenviarEmail(id);
         if (!colegio) {
             return NextResponse.json(
                 { error: { message: "Colegio no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -53,10 +53,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const password = randomBytes(6).toString("hex");
         const passwordHash = await hashPassword(password);
 
-        await prisma.usuario.update({
-            where: { id: colegio.admin.id },
-            data: { passwordHash, debeCambiarPassword: true },
-        });
+        await new UsuarioRepository().actualizar(colegio.admin.id, { passwordHash, debeCambiarPassword: true });
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
@@ -70,12 +67,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             userAgent,
         });
 
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
         let emailEnviado = false;
         try {
-            await enviarEmailBienvenidaColegio(colegio.admin.email, password);
-            emailEnviado = true;
+            const resultado = await programarNotificacion({
+                evento: "colegio.creado",
+                sujetoTipo: "Colegio",
+                sujetoId: colegio.id,
+                destinatarios: [{
+                    email: colegio.admin.email,
+                    variables: {
+                        nombreColegio: colegio.nombre,
+                        emailAdmin: colegio.admin.email,
+                        passwordTemporal: password,
+                        urlLogin: `${baseUrl}/login`,
+                    },
+                }],
+            });
+            emailEnviado = resultado.programadas > 0;
         } catch (err) {
-            console.error("[COLEGIOS] Error reenviando email de bienvenida al colegio", err);
+            logger.error("[COLEGIOS] Error reenviando email de bienvenida al colegio", err);
         }
 
         return NextResponse.json({

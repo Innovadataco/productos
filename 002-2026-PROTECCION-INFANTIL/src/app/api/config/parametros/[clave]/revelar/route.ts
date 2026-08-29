@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { decryptParameter } from "@/lib/param-encryption";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { ConfiguracionService } from "@/lib/dal/services/configuracion";
 
 type RouteContext = { params: Promise<{ clave: string }> };
 
@@ -20,19 +19,10 @@ export async function POST(request: Request, context: RouteContext) {
         }
 
         const { clave } = await context.params;
-        const param = await prisma.parametroSistema.findUnique({ where: { clave } });
-        if (!param) {
-            throw new AppError("Parámetro no encontrado", ERROR_CODES.NOT_FOUND, 404);
-        }
-        if (!param.esSecreto) {
-            throw new AppError("Solo se pueden revelar parámetros secretos", ERROR_CODES.VALIDATION_ERROR, 400);
-        }
-        if (!param.valor) {
-            return NextResponse.json({ valor: "" });
-        }
 
-        const valor = decryptParameter(param.valor);
-        return NextResponse.json({ valor });
+        // SPEC-053: la lectura y el descifrado del secreto viven en el DAL; la ruta no toca prisma.
+        const resultado = await new ConfiguracionService().revelar(clave);
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

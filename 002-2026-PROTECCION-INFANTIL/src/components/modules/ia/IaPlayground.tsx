@@ -14,37 +14,25 @@ interface IaPlaygroundProps {
     initialOverrides?: SandboxOverrides;
 }
 
-type NumericOverrideKey = keyof Omit<SandboxOverrides, "modelo_clasificacion">;
+type NumericOverrideKey = keyof Pick<SandboxOverrides, "temperatura" | "umbral_presencia" | "rag_top_k">;
 
 const DEFAULT_OVERRIDES: Required<Record<NumericOverrideKey, number>> = {
-    umbral_revision: 1.0,
-    n_votos: 5,
-    temperatura_votos: 0.7,
-    min_score_categoria: 0.3,
+    temperatura: 0.2,
+    umbral_presencia: 0.6,
     rag_top_k: 3,
 };
 
-const PARAM_KEYS: NumericOverrideKey[] = [
-    "umbral_revision",
-    "n_votos",
-    "temperatura_votos",
-    "min_score_categoria",
-    "rag_top_k",
-];
+const PARAM_KEYS: NumericOverrideKey[] = ["temperatura", "umbral_presencia", "rag_top_k"];
 
 const PARAM_LABELS: Record<NumericOverrideKey, string> = {
-    umbral_revision: "Umbral revisión",
-    n_votos: "N votos",
-    temperatura_votos: "Temperatura votos",
-    min_score_categoria: "Score mínimo categoría",
+    temperatura: "Temperatura",
+    umbral_presencia: "Umbral presencia",
     rag_top_k: "RAG top-k",
 };
 
 const PARAM_CONFIG: Record<NumericOverrideKey, { min: number; max: number; step: number; format: (v: number) => string }> = {
-    umbral_revision: { min: 0.5, max: 1.0, step: 0.1, format: (v) => v.toFixed(1) },
-    n_votos: { min: 1, max: 7, step: 1, format: (v) => String(v) },
-    temperatura_votos: { min: 0, max: 1, step: 0.1, format: (v) => v.toFixed(1) },
-    min_score_categoria: { min: 0, max: 1, step: 0.05, format: (v) => v.toFixed(2) },
+    temperatura: { min: 0, max: 1, step: 0.1, format: (v) => v.toFixed(1) },
+    umbral_presencia: { min: 0, max: 1, step: 0.05, format: (v) => v.toFixed(2) },
     rag_top_k: { min: 0, max: 10, step: 1, format: (v) => String(v) },
 };
 
@@ -56,7 +44,7 @@ function formatLatency(ms: number) {
 }
 
 function voteData(trace: SandboxTrace) {
-    return trace.etapas.votacion.distribucion.map((d) => ({ label: d.categoria, value: d.count }));
+    return trace.etapas.votacion.votos.map((d) => ({ label: d.categoria, value: d.count }));
 }
 
 function DecisionCard({ trace, title }: { trace: SandboxTrace; title?: string }) {
@@ -70,7 +58,7 @@ function DecisionCard({ trace, title }: { trace: SandboxTrace; title?: string })
                 </Badge>
                 <Badge variant="info">{decision.categoria}</Badge>
                 <span className="text-sm text-muted">confianza {(decision.confianza * 100).toFixed(0)}%</span>
-                <span className="text-sm text-muted">umbral {trace.parametrosEfectivos.umbralRevision}</span>
+                <span className="text-sm text-muted">umbral {trace.parametrosEfectivos.umbralPresencia}</span>
                 <span className="text-sm text-muted">{formatLatency(latenciaTotalMs)}</span>
             </div>
         </GlassCard>
@@ -81,10 +69,10 @@ function VoteSummary({ trace }: { trace: SandboxTrace }) {
     const data = voteData(trace);
     return (
         <GlassCard className="p-4">
-            <h4 className="mb-2 text-sm font-semibold text-body">Distribución de votos</h4>
-            <BarChart ariaLabel="Distribución de votos" data={data} />
+            <h4 className="mb-2 text-sm font-semibold text-body">Distribución por modelo</h4>
+            <BarChart ariaLabel="Distribución por modelo" data={data} />
             <p className="mt-2 text-xs text-muted">
-                {trace.parametrosEfectivos.modeloClasificacion} · {trace.parametrosEfectivos.nVotos} votos
+                {trace.parametrosEfectivos.modelos.length} modelos · rúbrica
             </p>
         </GlassCard>
     );
@@ -101,10 +89,8 @@ async function fetchConfig(): Promise<SandboxOverrides> {
             return p ? parseFloat(p.valor) : undefined;
         };
         return {
-            umbral_revision: find("reportes.classification.umbral_revision"),
-            n_votos: find("reportes.classification.n_votos"),
-            temperatura_votos: find("reportes.classification.temperatura_votos"),
-            min_score_categoria: find("reportes.classification.min_score_categoria"),
+            temperatura: find("ia.rubrica.temperatura"),
+            umbral_presencia: find("ia.rubrica.umbral_presencia"),
             rag_top_k: find("reportes.classification.rag_top_k"),
         };
     } catch {
@@ -137,14 +123,14 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
 
     const sanitize = (o: SandboxOverrides): SandboxOverrides => {
         const out: SandboxOverrides = {};
-        if (o.modelo_clasificacion) {
-            out.modelo_clasificacion = o.modelo_clasificacion;
-        }
         for (const key of PARAM_KEYS) {
             const v = o[key];
             if (v !== undefined && Number.isFinite(v)) {
                 out[key] = v;
             }
+        }
+        if (Array.isArray(o.modelos) && o.modelos.every((m) => typeof m === "string" && m.length > 0)) {
+            out.modelos = o.modelos;
         }
         return out;
     };
@@ -189,6 +175,15 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
 
     return (
         <div className="space-y-6">
+            <GlassCard className="border-l-4 border-l-sky-500 p-4">
+                <p className="text-sm font-medium text-body">
+                    Motor activo: <span className="text-sky-600 dark:text-cyan-400">RÚBRICA</span>
+                </p>
+                <p className="text-xs text-muted">
+                    El sandbox ejecuta el mismo motor multi-modelo que producción.
+                </p>
+            </GlassCard>
+
             <div className="grid gap-6 lg:grid-cols-3">
                 <GlassCard className="p-4 lg:col-span-2">
                     <label htmlFor="sandbox-texto" className="mb-2 block text-sm font-medium text-body">

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
+import { esEstadoCargaOperador } from "@/lib/operadores/estados";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -36,10 +38,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
         const id = parsedId.data;
 
-        const permisosReporte = await prisma.reporte.findUnique({
-            where: { id },
-            select: { operadorId: true, comiteId: true, tenantId: true },
-        });
+        // E-8: las lecturas viven en el repo; la ruta no toca prisma.
+        const permisosReporte = await new ReporteRepository().findPermisosRevision(id);
 
         if (!permisosReporte) {
             return NextResponse.json(
@@ -62,46 +62,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id },
-            select: {
-                id: true,
-                identificador: true,
-                numeroSeguimiento: true,
-                estado: true,
-                texto: true,
-                esAnonimo: true,
-                prioridadAlta: true,
-                keywordsDetectadas: true,
-                esRafaga: true,
-                eliminado: true,
-                motivoBaja: true,
-                notaBaja: true,
-                eliminadoEn: true,
-                creadoEn: true,
-                fechaIncidente: true,
-                ciudad: true,
-                pais: true,
-                edadVictima: true,
-                plataforma: { select: { id: true, nombre: true, clave: true } },
-                operador: { select: { id: true, email: true, nombre: true } },
-                comite: { select: { id: true, email: true, nombre: true } },
-                reintentos: { orderBy: { intento: "asc" } },
-                clasificacion: {
-                    include: {
-                        correccion: {
-                            select: {
-                                categoriaOriginal: true,
-                                categoriaCorregida: true,
-                                motivo: true,
-                                confirmada: true,
-                                creadoEn: true,
-                            },
-                        },
-                    },
-                },
-            },
-        });
+        const reporte = await new ReporteRepository().findDetalleRevision(id);
 
         if (!reporte) {
             return NextResponse.json(
@@ -110,10 +71,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
+        // SPEC-130 (BL-4, O-2): el texto sale descifrado SOLO por este camino
+        // autorizado (bandeja/expediente del operador); purgado → marcador tal cual.
         return NextResponse.json({
-            reporte,
-            puedeRevelarOriginal: user.rol === "ADMIN",
-            puedeEscalar: (user.rol === "OPERADOR" && reporte?.operador?.id === user.id && reporte.estado === "REVISION_MANUAL") || esAdminRol(user.rol),
+            reporte: { ...reporte, texto: descifrarTextoReporte(reporte.texto) },
+            puedeRevelarOriginal: esAdminRol(user.rol) || user.rol === "OPERADOR" || esComiteRol(user.rol),
+            puedeEscalar: (user.rol === "OPERADOR" && reporte?.operador?.id === user.id && esEstadoCargaOperador(reporte.estado)) || esAdminRol(user.rol),
         });
     } catch (error) {
         if (error instanceof AppError) {

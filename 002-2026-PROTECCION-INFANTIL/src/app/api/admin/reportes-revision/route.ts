@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { reportesRevisionQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
+import { whereReporteVigente } from "@/lib/reportes-acceso";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import type { Prisma } from "@prisma/client";
 
 const MAX_PAGE_SIZE = 100;
@@ -38,12 +39,20 @@ export async function GET(req: Request) {
             );
         }
 
-        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, q } = parsedQuery.data;
+        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, padre, q, orden } = parsedQuery.data;
         const skip = (page - 1) * pageSize;
 
-        const where: Prisma.ReporteWhereInput = {};
-        if (!incluirEliminados) {
-            where.eliminado = false;
+        // SPEC-122: la bandeja excluye bajas lógicas salvo que se pidan explícitamente.
+        const where: Prisma.ReporteWhereInput = incluirEliminados ? {} : whereReporteVigente();
+
+        if (padre) {
+            // N-2 (002-PI-056): filtro por padre (email o nombre del denunciante).
+            where.usuario = {
+                OR: [
+                    { email: { contains: padre, mode: "insensitive" } },
+                    { nombre: { contains: padre, mode: "insensitive" } },
+                ],
+            };
         }
 
         if (q) {
@@ -83,50 +92,8 @@ export async function GET(req: Request) {
             where.operadorId = operadorId;
         }
 
-        const [reportes, total] = await Promise.all([
-            prisma.reporte.findMany({
-                where,
-                orderBy: [{ prioridadAlta: "desc" }, { creadoEn: "desc" }],
-                skip,
-                take: pageSize,
-                select: {
-                    id: true,
-                    identificador: true,
-                    numeroSeguimiento: true,
-                    estado: true,
-                    esAnonimo: true,
-                    prioridadAlta: true,
-                    keywordsDetectadas: true,
-                    esRafaga: true,
-                    eliminado: true,
-                    motivoBaja: true,
-                    notaBaja: true,
-                    eliminadoEn: true,
-                    creadoEn: true,
-                    fechaIncidente: true,
-                    ciudad: true,
-                    pais: true,
-                    operadorId: true,
-                    comiteId: true,
-                    operador: { select: { id: true, email: true, nombre: true } },
-                    comite: { select: { id: true, email: true, nombre: true } },
-                    plataforma: { select: { id: true, nombre: true, clave: true } },
-                    clasificacion: {
-                        include: {
-                            correccion: {
-                                select: {
-                                    categoriaOriginal: true,
-                                    categoriaCorregida: true,
-                                    motivo: true,
-                                    creadoEn: true,
-                                },
-                            },
-                        },
-                    },
-                },
-            }),
-            prisma.reporte.count({ where }),
-        ]);
+        // E-8: la bandeja vive en el repo (mismo select/orden/paginación); la ruta no toca prisma.
+        const [reportes, total] = await new ReporteRepository().findBandejaRevision(where, { skip, take: pageSize }, orden);
 
         return NextResponse.json({
             reportes,

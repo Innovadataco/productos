@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
 
 export interface SimilarityResult {
     reporteId: string;
@@ -17,20 +17,30 @@ export async function buscarReporteSimilar(
     embedding: number[],
     threshold: number
 ): Promise<SimilarityResult | null> {
-    const vectorStr = "[" + embedding.join(",") + "]";
+    // E-8 (D3): la raw de pgvector vive en el adaptador EmbeddingRepository.
+    return new EmbeddingRepository().buscarReporteSimilarPorEmbedding(embedding, {
+        reporteId,
+        identificador,
+        plataformaId,
+        threshold,
+    });
+}
 
-    const result = await prisma.$queryRaw<{ reporteId: string; similarity: number }[]>`
-        SELECT e."reporteId", 1 - (e.vector <=> ${vectorStr}::vector) AS similarity
-        FROM "EmbeddingReporte" e
-        JOIN "Reporte" r ON r.id = e."reporteId"
-        WHERE r.identificador = ${identificador}
-          AND r."plataformaId" = ${plataformaId}
-          AND r.estado NOT IN ('DUPLICADO', 'POSIBLE_SPAM')
-          AND r.id != ${reporteId}
-          AND 1 - (e.vector <=> ${vectorStr}::vector) >= ${threshold}
-        ORDER BY similarity DESC
-        LIMIT 1
-    `;
-
-    return result[0] || null;
+/**
+ * Similitud máxima contra reportes del mismo identificador + plataforma, sin filtro de
+ * umbral. Sirve para la traza del expediente (spec 096): registrar el score aunque no
+ * supere el umbral de duplicado. Devuelve null si no hay otros reportes con embedding.
+ */
+export async function buscarSimilitudMaxima(
+    reporteId: string,
+    identificador: string,
+    plataformaId: string,
+    embedding: number[]
+): Promise<number | null> {
+    // E-8 (D3): la raw de pgvector vive en el adaptador EmbeddingRepository.
+    return new EmbeddingRepository().buscarSimilitudMaximaPorEmbedding(embedding, {
+        reporteId,
+        identificador,
+        plataformaId,
+    });
 }

@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { alumnoIdParamsSchema, alumnoUpdateBodySchema } from "@/lib/schemas";
-import { verificarPropiedadAlumno } from "@/lib/colegio/permisos";
+import { estudianteIdParamsSchema, estudianteUpdateBodySchema } from "@/lib/schemas";
+import { verificarPropiedadEstudiante } from "@/lib/colegio/permisos";
 
 function getClientInfo(request: Request) {
     return {
@@ -37,27 +38,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const { id } = withValidation.params(alumnoIdParamsSchema)(await params);
-        const alumno = await verificarPropiedadAlumno(user.id, id);
+        const { id } = withValidation.params(estudianteIdParamsSchema)(await params);
+        const estudiante = await verificarPropiedadEstudiante(user.id, id);
 
-        return NextResponse.json({ alumno });
+        // La clave `alumno` de la respuesta se conserva en esta SPEC (D2/contracts).
+        return NextResponse.json({ alumno: estudiante });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
         if (error instanceof Error && error.message === "Alumno no encontrado") {
             return NextResponse.json(
                 { error: { message: "Alumno no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/ALUMNOS]");
     }
 }
 
@@ -81,20 +74,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const { id } = withValidation.params(alumnoIdParamsSchema)(await params);
-        const body = await withValidation.body(alumnoUpdateBodySchema)(request);
+        const { id } = withValidation.params(estudianteIdParamsSchema)(await params);
+        const body = await withValidation.body(estudianteUpdateBodySchema)(request);
 
-        const alumno = await verificarPropiedadAlumno(user.id, id);
+        const estudiante = await verificarPropiedadEstudiante(user.id, id);
 
-        if (body.nombre) {
-            const duplicado = await prisma.alumno.findFirst({
-                where: {
-                    id: { not: id },
-                    cursoId: alumno.cursoId,
-                    nombre: body.nombre,
-                    estado: "activo",
-                },
-            });
+        // SPEC-134 (E-1): duplicado y actualización viven en el repo (tenant obligatorio).
+        // SPEC-144: el duplicado es por nombre + apellidos (combinando lo enviado con
+        // lo ya persistido cuando solo se edita uno de los dos).
+        const estudiantes = new EstudianteRepository();
+        const nombreNuevo = body.nombre ?? estudiante.nombre;
+        const apellidosNuevos = body.apellidos ?? estudiante.apellidos;
+        if (body.nombre !== undefined || body.apellidos !== undefined) {
+            const duplicado = await estudiantes.buscarDuplicadoEnCurso(
+                estudiante.colegioId,
+                estudiante.cursoId,
+                nombreNuevo,
+                apellidosNuevos,
+                id
+            );
             if (duplicado) {
                 return NextResponse.json(
                     { error: { message: "Ya existe un alumno con ese nombre en este curso", code: ERROR_CODES.CONFLICT } },
@@ -103,9 +101,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
         }
 
-        const actualizado = await prisma.alumno.update({
-            where: { id },
-            data: { nombre: body.nombre ?? alumno.nombre },
+        const actualizado = await estudiantes.actualizar(estudiante.colegioId, id, {
+            nombre: nombreNuevo,
+            apellidos: apellidosNuevos,
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);
@@ -115,29 +113,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             recursoId: id,
             usuarioId: user.id,
             colegioId: user.colegioId ?? undefined,
-            valorAnterior: JSON.stringify({ nombre: alumno.nombre }),
-            valorNuevo: JSON.stringify({ nombre: actualizado.nombre }),
+            valorAnterior: JSON.stringify({ nombre: estudiante.nombre, apellidos: estudiante.apellidos }),
+            valorNuevo: JSON.stringify({ nombre: actualizado.nombre, apellidos: actualizado.apellidos }),
             ipAddress,
             userAgent,
         });
 
         return NextResponse.json({ alumno: actualizado });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
         if (error instanceof Error && error.message === "Alumno no encontrado") {
             return NextResponse.json(
                 { error: { message: "Alumno no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/ALUMNOS]");
     }
 }

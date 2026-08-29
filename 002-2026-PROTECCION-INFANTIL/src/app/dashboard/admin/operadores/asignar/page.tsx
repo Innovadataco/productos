@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { OperadoresSubNav } from "../components/OperadoresSubNav";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Cargando } from "@/components/ui/Cargando";
+import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 
 type OperadorAsignacion = {
     id: string;
@@ -29,7 +32,6 @@ export default function AdminOperadoresAsignarPage() {
     const [data, setData] = useState<EstadoAsignacion | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [reasingandoId, setReasignandoId] = useState<string | null>(null);
 
     async function cargar() {
         setLoading(true);
@@ -85,45 +87,42 @@ export default function AdminOperadoresAsignarPage() {
                     Cupo default: <span className="font-medium text-body">{data?.cupoDefault ?? "—"}</span>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <GlassCard className="p-5">
-                    <p className="text-xs text-muted">Casos sin asignar</p>
-                    <p className="mt-1 text-3xl font-bold text-body">{data?.sinAsignar ?? 0}</p>
-                </GlassCard>
-                <GlassCard className="p-5">
-                    <p className="text-xs text-muted">Operadores activos</p>
-                    <p className="mt-1 text-3xl font-bold text-body">{data?.operadores.length ?? 0}</p>
-                </GlassCard>
-                <GlassCard className="p-5">
-                    <p className="text-xs text-muted">Total casos en gestión</p>
-                    <p className="mt-1 text-3xl font-bold text-body">
-                        {data?.operadores.reduce((acc, o) => acc + o.casosAbiertos, 0) ?? 0}
-                    </p>
-                </GlassCard>
-                <GlassCard className="p-5">
-                    <p className="text-xs text-muted">Cupos libres</p>
-                    <p className="mt-1 text-3xl font-bold text-body">
-                        {data?.operadores.reduce((acc, o) => acc + o.libre, 0) ?? 0}
-                    </p>
-                </GlassCard>
-            </div>
+                    <GlassCard className="p-5">
+                        <p className="text-xs text-muted">Casos sin asignar</p>
+                        <p className="mt-1 text-3xl font-bold text-body">{data?.sinAsignar ?? 0}</p>
+                    </GlassCard>
+                    <GlassCard className="p-5">
+                        <p className="text-xs text-muted">Operadores activos</p>
+                        <p className="mt-1 text-3xl font-bold text-body">{data?.operadores.length ?? 0}</p>
+                    </GlassCard>
+                    <GlassCard className="p-5">
+                        <p className="text-xs text-muted">Total casos en gestión</p>
+                        <p className="mt-1 text-3xl font-bold text-body">
+                            {data?.operadores.reduce((acc, o) => acc + o.casosAbiertos, 0) ?? 0}
+                        </p>
+                    </GlassCard>
+                    <GlassCard className="p-5">
+                        <p className="text-xs text-muted">Cupos libres</p>
+                        <p className="mt-1 text-3xl font-bold text-body">
+                            {data?.operadores.reduce((acc, o) => acc + o.libre, 0) ?? 0}
+                        </p>
+                    </GlassCard>
+                </div>
             </section>
 
             <GlassCard>
                 <h2 className="text-lg font-semibold text-body">Operadores activos</h2>
                 {loading ? (
-                    <div className="flex items-center gap-3 py-8 text-muted">
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                        Cargando...
-                    </div>
+                    <Cargando inline className="py-8" />
                 ) : data?.operadores.length === 0 ? (
                     <EmptyState
                         title="No hay operadores activos"
                         description="Cuando haya operadores disponibles, podrás ver su carga de casos aquí."
                     />
                 ) : (
-                    <div className="mt-4 overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="border-b border-slate-200 dark:border-slate-800">
+                    <div className="mt-4">
+                        <Tabla sinContenedor>
+                            <TablaHead variante="borde">
                                 <tr className="text-subtle">
                                     <th className="pb-3 font-medium">Operador</th>
                                     <th className="pb-3 font-medium">Cupo</th>
@@ -132,8 +131,8 @@ export default function AdminOperadoresAsignarPage() {
                                     <th className="pb-3 font-medium">Apelaciones</th>
                                     <th className="pb-3 font-medium text-right">Uso</th>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            </TablaHead>
+                            <TablaBody>
                                 {data?.operadores.map((op) => {
                                     const uso = op.cupoMaximo > 0 ? op.casosAbiertos / op.cupoMaximo : 0;
                                     return (
@@ -157,30 +156,29 @@ export default function AdminOperadoresAsignarPage() {
                                                                 uso >= 1
                                                                     ? "bg-red-500"
                                                                     : uso >= 0.7
-                                                                      ? "bg-amber-500"
-                                                                      : "bg-emerald-500"
+                                                                        ? "bg-amber-500"
+                                                                        : "bg-emerald-500"
                                                             }`}
                                                             style={{ width: `${Math.min(100, uso * 100)}%` }}
                                                         />
                                                     </div>
-                                                    <Button
-                                                        variant="outline"
-                                                        className="px-3 py-1 text-xs"
-                                                        isLoading={reasingandoId === op.id}
-                                                        onClick={() => alert("Usar la reasignación manual desde la bandeja de casos.")}
+                                                    <Link
+                                                        href={`/dashboard/admin/operadores/${op.id}`}
+                                                        className="rounded-lg border border-slate-300 px-3 py-1 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                                                     >
-                                                        Reasignar caso
-                                                    </Button>
+                                                        Ver detalle
+                                                    </Link>
                                                 </div>
                                             </td>
                                         </tr>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </TablaBody>
+                        </Tabla>
                     </div>
                 )}
             </GlassCard>
+
         </div>
     );
 }

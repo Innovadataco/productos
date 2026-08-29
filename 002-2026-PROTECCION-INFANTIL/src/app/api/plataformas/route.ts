@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 
 export async function GET() {
-    const plataformas = await prisma.plataforma.findMany({
-        where: { esActiva: true },
-        orderBy: { nombre: "asc" },
-        select: { id: true, clave: true, nombre: true, categoria: true },
-    });
+    // E-8: la consulta vive en el repo; la ruta no toca prisma.
+    const plataformas = await new PlataformaRepository().listarActivasConCategoria();
 
     // "otro" siempre al final
     const ordenadas = [

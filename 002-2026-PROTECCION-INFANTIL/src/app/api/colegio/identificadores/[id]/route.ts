@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
+import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { identificadorAlumnoIdParamsSchema, identificadorAlumnoUpdateBodySchema } from "@/lib/schemas";
+import { identificadorEstudianteIdParamsSchema, identificadorEstudianteUpdateBodySchema } from "@/lib/schemas";
 import { verificarPropiedadIdentificador } from "@/lib/colegio/permisos";
 import { normalizarIdentificador } from "@/lib/colegio/normalizacion";
-import type { EtiquetaRelacionAlumno } from "@prisma/client";
+import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
 function getClientInfo(request: Request) {
     return {
@@ -39,8 +41,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
         }
 
-        const { id } = withValidation.params(identificadorAlumnoIdParamsSchema)(await params);
-        const body = await withValidation.body(identificadorAlumnoUpdateBodySchema)(request);
+        const { id } = withValidation.params(identificadorEstudianteIdParamsSchema)(await params);
+        const body = await withValidation.body(identificadorEstudianteUpdateBodySchema)(request);
 
         const identificador = await verificarPropiedadIdentificador(user.id, id);
 
@@ -49,9 +51,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const plataformaId = "plataformaId" in body ? body.plataformaId : identificador.plataformaId;
 
         if (body.plataformaId) {
-            const plataforma = await prisma.plataforma.findUnique({
-                where: { id: body.plataformaId },
-            });
+            const plataforma = await new PlataformaRepository().findById(body.plataformaId);
             if (!plataforma) {
                 return NextResponse.json(
                     { error: { message: "Plataforma no encontrada", code: ERROR_CODES.NOT_FOUND } },
@@ -60,33 +60,29 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
         }
 
+        // verificarPropiedadIdentificador ya garantizó usuario vinculado a un colegio.
+        const colegioId = user.colegioId!;
+        // SPEC-134 (E-1): duplicado y actualización viven en el repo (tenant vía la relación estudiante).
+        const identificadores = new IdentificadorEstudianteRepository();
         if (body.tipo !== undefined || body.valor !== undefined || body.plataformaId !== undefined) {
-            const duplicado = await prisma.identificadorAlumno.findFirst({
-                where: {
-                    id: { not: id },
-                    alumnoId: identificador.alumnoId,
-                    tipo,
-                    valor,
-                    plataformaId: plataformaId ?? null,
-                },
-            });
+            const duplicado = await identificadores.buscarDuplicado(
+                colegioId,
+                { estudianteId: identificador.estudianteId, tipo, valor, plataformaId: plataformaId ?? null },
+                id
+            );
             if (duplicado) {
                 return NextResponse.json(
-                    { error: { message: "Identificador duplicado para este alumno", code: ERROR_CODES.CONFLICT } },
+                    { error: { message: "Identificador duplicado para este estudiante", code: ERROR_CODES.CONFLICT } },
                     { status: 409 }
                 );
             }
         }
 
-        const actualizado = await prisma.identificadorAlumno.update({
-            where: { id },
-            data: {
-                tipo: body.tipo ?? identificador.tipo,
-                valor,
-                plataformaId: plataformaId ?? null,
-                etiquetaRelacion: (body.etiquetaRelacion ?? identificador.etiquetaRelacion) as EtiquetaRelacionAlumno,
-            },
-            include: { plataforma: { select: { id: true, clave: true, nombre: true } } },
+        const actualizado = await identificadores.actualizar(colegioId, id, {
+            tipo: body.tipo ?? identificador.tipo,
+            valor,
+            plataformaId: plataformaId ?? null,
+            etiquetaRelacion: (body.etiquetaRelacion ?? identificador.etiquetaRelacion) as EtiquetaRelacionEstudiante,
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);
@@ -114,21 +110,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         return NextResponse.json({ identificador: actualizado });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
         if (error instanceof Error && error.message === "Identificador no encontrado") {
             return NextResponse.json(
                 { error: { message: "Identificador no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/IDENTIFICADORES]");
     }
 }

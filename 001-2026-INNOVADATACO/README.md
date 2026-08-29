@@ -94,3 +94,16 @@ Esto asegura que el catálogo de APIs (`AgentApi`) y la cola pg-boss estén pobl
 ## Gobierno
 
 Desarrollado bajo contrato ODIN / Fábrica de Software ZEUS.
+
+El proyecto sigue Spec Kit: ninguna spec se implementa sin aprobación, y ninguna se da por
+terminada sin su acta de validación. El estado de cada una vive en su propio
+`specs/NNN-*/spec.md`, en la línea `**Status**`.
+
+### Liberaciones
+
+| Fecha | Nota | Rango |
+|---|---|---|
+| 2026-07-24 | [NOTA-LIBERACION-2026-07-24.md](./NOTA-LIBERACION-2026-07-24.md) | `febecca0` → `e5cb0012` (627 commits) |
+
+`main` es el **tronco que se mantiene al día**, no un entorno productivo (Metodología §10): de
+ahí no se despliega nada, y su actualización la autoriza el CEO (D-061).

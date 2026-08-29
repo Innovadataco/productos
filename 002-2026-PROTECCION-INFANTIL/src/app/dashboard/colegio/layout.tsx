@@ -1,63 +1,63 @@
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
-import { ColegioLogoutButton } from "@/components/modules/ColegioLogoutButton";
-import { ColegioNav } from "@/components/modules/colegio/ColegioNav";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
+import { ColegioSideNav } from "@/components/modules/colegio/ColegioSideNav";
+import { BuscadorGlobal } from "@/components/modules/colegio/BuscadorGlobal";
+import { CentroNotificaciones } from "@/components/modules/colegio/CentroNotificaciones";
+import { Alerta } from "@/components/ui/Alerta";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
+import { resolverEstadoVigencia, debeMostrarBanner } from "@/lib/pagos/vigencia-middleware";
+import type { RolUsuario } from "@prisma/client";
 
+const ROLES_COLEGIO = new Set<RolUsuario>(["SCHOOL_ADMIN", "COMITE_CONVIVENCIA"]);
+
+/**
+ * SPEC-287 (002-PI-187): layout UI puro. Todos los guardianes de acceso
+ * (sesión, consentimiento, cambiar-password, vigencia) viven ahora en
+ * `middleware.ts`. Este layout NO ejecuta `redirect(...)`.
+ */
 export default async function ColegioLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();
     const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
 
-    if (!token) {
-        redirect("/login");
-    }
+    const payload = token ? await verifyToken(token) : null;
+    const rol = payload?.rol as RolUsuario | undefined;
 
-    const payload = await verifyToken(token);
-    if (!payload?.sub || payload.rol !== "SCHOOL_ADMIN") {
-        redirect("/login");
-    }
+    const usuario =
+        payload?.sub && rol && ROLES_COLEGIO.has(rol)
+            ? rol === "COMITE_CONVIVENCIA"
+                ? await new UsuarioRepository().findSesionComite(payload.sub as string)
+                : await new UsuarioRepository().findSesionColegio(payload.sub as string)
+            : null;
 
-    const usuario = await prisma.usuario.findUnique({
-        where: { id: payload.sub as string },
-        select: { id: true, rol: true, colegioId: true, estado: true },
-    });
+    const suscripcionActiva = usuario
+        ? await new PagosRepository().obtenerSuscripcionActivaPorUsuarioId(usuario.id)
+        : null;
+    const estadoVigencia = resolverEstadoVigencia(suscripcionActiva);
 
-    if (!usuario || usuario.estado !== "activo" || usuario.rol !== "SCHOOL_ADMIN") {
-        redirect("/login");
-    }
-
-    const vigencia = await verificarVigenciaColegio(usuario.id);
-
-    if (!vigencia.vigente) {
-        return (
-            <div className="theme-colegio min-h-screen bg-page">
-                <main className="flex min-h-screen flex-col items-center justify-center px-4">
-                    <div className="w-full max-w-md rounded-2xl glass p-8 text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full accent-gradient text-white text-2xl font-bold">
-                            🏫
-                        </div>
-                        <h1 className="text-2xl font-bold text-body">Servicio no vigente</h1>
-                        <p className="mt-4 text-muted">
-                            {vigencia.mensaje || "El acceso institucional no está disponible en este momento. Contacta al administrador de tu colegio para más información."}
-                        </p>
-                        <ColegioLogoutButton
-                            className="mt-6 inline-flex rounded-xl accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-lg hover:opacity-90 transition"
-                        />
-                    </div>
-                </main>
-            </div>
-        );
-    }
-
-    const permitidos = await modulosPermitidosParaRol("SCHOOL_ADMIN");
+    const permitidos = usuario ? await modulosPermitidosParaRol(usuario.rol) : new Set<string>();
+    const rolEfectivo = (usuario?.rol ?? "SCHOOL_ADMIN") as RolUsuario;
 
     return (
-        <div className="theme-colegio min-h-screen bg-page">
-            <ColegioNav modulosPermitidos={[...permitidos]} />
-            {children}
+        <div className="theme-colegio flex min-h-screen bg-page">
+            <ColegioSideNav rol={rolEfectivo} modulosPermitidos={[...permitidos]} />
+            <BuscadorGlobal />
+            <div className="flex min-w-0 flex-1 flex-col">
+                <header className="flex items-center justify-end gap-3 border-b border-tinta/10 px-4 py-3 sm:px-6">
+                    <CentroNotificaciones />
+                </header>
+                <main className="min-w-0 flex-1">
+                    {debeMostrarBanner(estadoVigencia) && (
+                        <div className="px-4 pt-4 sm:px-6">
+                            <Alerta tono="advertencia">
+                                Tu plan vence pronto. Renueva para no perder el acceso.
+                            </Alerta>
+                        </div>
+                    )}
+                    {children}
+                </main>
+            </div>
         </div>
     );
 }

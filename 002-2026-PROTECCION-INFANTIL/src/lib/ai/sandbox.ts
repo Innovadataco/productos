@@ -1,33 +1,34 @@
-import { prisma } from "@/lib/prisma";
-import { getParametroSistema } from "@/lib/parametros";
+import { getParametroSistema, getParametroSistemaValor } from "@/lib/parametros";
 import { generarEmbedding } from "./embedder";
 import { buscarEjemplosSimilares, type EjemploRecuperado } from "./dataset-retrieval";
-import { clasificarConVotos, type ClassificationResult, type VotoIndividual } from "./classifier";
+import { clasificarConMotorActivo, type ResultadoMotor } from "./motor";
 import { detectarPiiCombinado, type PiiDetectionResult } from "./pii-detector";
-import { detectarDoxing } from "./pii-patterns";
-import { detectarKeywordsRiesgo } from "./keywords-riesgo";
 import { anonimizarTexto, type AnonimizacionResult } from "./anonimizador";
+import { decidirGuardasSeguridad, normalizarCategoriasSecundarias } from "./guardas-decision";
+import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "./defaults";
+import { workerLogger } from "@/lib/monitoreo/worker-logger";
 import type { CategoriaConducta } from "@prisma/client";
+import type { VotoRubricaModelo } from "./rubrica";
 
 export interface SandboxOverrides {
-    umbral_revision?: number;
-    n_votos?: number;
-    temperatura_votos?: number;
-    min_score_categoria?: number;
-    rag_top_k?: number;
-    modelo_clasificacion?: string;
+    temperatura?: number | undefined;
+    umbral_presencia?: number | undefined;
+    modelos?: string[] | undefined;
+    rag_top_k?: number | undefined;
 }
 
 export interface SandboxParametros {
-    modeloClasificacion: string;
+    modelos: string[];
     embeddingModel: string;
     anonymizationModel: string;
-    umbralRevision: number;
-    nVotos: number;
     temperatura: number;
-    minScoreCategoria: number;
+    umbralPresencia: number;
     ragTopK: number;
     ollamaNumParallel: number;
+    umbralSpam: number;
+    umbralSpamDominancia: number;
+    severidadMinGrave: number;
+    dominiosAcortadores: string[];
 }
 
 export interface SandboxVotoDistribucion {
@@ -50,8 +51,8 @@ export interface SandboxTrace {
         };
         votacion: {
             latenciaMs: number;
-            votos: VotoIndividual[];
-            distribucion: SandboxVotoDistribucion[];
+            votos: SandboxVotoDistribucion[];
+            modelos: number;
             categoria: CategoriaConducta;
             confianza: number;
             categoriasSecundarias: { categoria: CategoriaConducta; score: number }[];
@@ -67,7 +68,7 @@ export interface SandboxTrace {
             latenciaMs: number;
             textoAnonimizado: string;
             piiDetectada: string[];
-        };
+        } | undefined;
         guardas: {
             latenciaMs: number;
             doxing: { esDoxing: boolean; fragmentos: string[] };
@@ -75,7 +76,8 @@ export interface SandboxTrace {
             rafaga: { esRafaga: false; razon: string };
             prioridadAlta: boolean;
             keywordsDetectadas: string[];
-            estadoForzado?: string;
+            estadoForzado?: string | undefined;
+            reglasAplicadas: string[];
         };
     };
     decision: {
@@ -99,52 +101,89 @@ function parseIntParam(valor: string | undefined, defaultValue: number): number 
 
 async function leerParametros(overrides: SandboxOverrides): Promise<SandboxParametros> {
     const [
-        modeloClasificacion,
+        modelosRaw,
         embeddingModel,
         anonymizationModel,
-        umbralRevision,
-        nVotos,
         temperatura,
-        minScoreCategoria,
+        umbralPresencia,
         ragTopK,
         ollamaNumParallel,
+        umbralSpam,
+        umbralSpamDominancia,
+        severidadMinGrave,
+        dominiosAcortadoresRaw,
     ] = await Promise.all([
-        getParametroSistema("reportes.classification_model"),
+        getParametroSistema("ia.rubrica.modelos"),
         getParametroSistema("reportes.embedding_model"),
         getParametroSistema("reportes.anonymization_model"),
-        getParametroSistema("reportes.classification.umbral_revision"),
-        getParametroSistema("reportes.classification.n_votos"),
-        getParametroSistema("reportes.classification.temperatura_votos"),
-        getParametroSistema("reportes.classification.min_score_categoria"),
+        getParametroSistema("ia.rubrica.temperatura"),
+        getParametroSistema("ia.rubrica.umbral_presencia"),
         getParametroSistema("reportes.classification.rag_top_k"),
         getParametroSistema("reportes.classification.ollama_num_parallel"),
+        // Misma clave y default que producción (helpers/parametros.ts)
+        getParametroSistema("clasificacion.umbral_spam"),
+        getParametroSistema("spam.dominancia_umbral"),
+        getParametroSistema("spam.dominancia_categoria_grave_severidad_min"),
+        getParametroSistema("spam.dominios_acortadores"),
     ]);
 
+    const modelosDefault = ["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"];
+    const modelos = overrides.modelos ?? (modelosRaw ? (JSON.parse(modelosRaw.valor) as string[]) : modelosDefault);
+    const dominiosAcortadores: string[] = (() => {
+        try {
+            return dominiosAcortadoresRaw?.valor ? (JSON.parse(dominiosAcortadoresRaw.valor) as string[]) : [];
+        } catch {
+            return [];
+        }
+    })();
+
     return {
-        modeloClasificacion: overrides.modelo_clasificacion || modeloClasificacion?.valor || "ornith:9b",
-        embeddingModel: embeddingModel?.valor || "nomic-embed-text",
-        anonymizationModel: anonymizationModel?.valor || modeloClasificacion?.valor || "ornith:9b",
-        umbralRevision: overrides.umbral_revision ?? parseFloatParam(umbralRevision?.valor, 1.0),
-        nVotos: overrides.n_votos ?? parseIntParam(nVotos?.valor, 5),
-        temperatura: overrides.temperatura_votos ?? parseFloatParam(temperatura?.valor, 0.7),
-        minScoreCategoria: overrides.min_score_categoria ?? parseFloatParam(minScoreCategoria?.valor, 0.3),
+        modelos,
+        embeddingModel: embeddingModel?.valor || MODELO_EMBEDDING_DEFAULT,
+        anonymizationModel: anonymizationModel?.valor || MODELO_ANONIMIZACION_DEFAULT,
+        temperatura: overrides.temperatura ?? parseFloatParam(temperatura?.valor, 0.2),
+        umbralPresencia: overrides.umbral_presencia ?? parseFloatParam(umbralPresencia?.valor, 0.6),
         ragTopK: overrides.rag_top_k ?? parseIntParam(ragTopK?.valor, 3),
         ollamaNumParallel: parseIntParam(ollamaNumParallel?.valor, 2),
+        umbralSpam: parseFloatParam(umbralSpam?.valor, 0.7),
+        umbralSpamDominancia: parseFloatParam(umbralSpamDominancia?.valor, 0.33),
+        severidadMinGrave: parseIntParam(severidadMinGrave?.valor, 75),
+        dominiosAcortadores,
     };
 }
 
-function calcularDistribucion(votos: VotoIndividual[]): SandboxVotoDistribucion[] {
+function calcularDistribucion(votos: VotoRubricaModelo[]): SandboxVotoDistribucion[] {
     const conteo = new Map<CategoriaConducta, number>();
     for (const voto of votos) {
-        conteo.set(voto.categoria, (conteo.get(voto.categoria) || 0) + 1);
+        if (voto.fallback) continue;
+        for (const [categoria, { cumple }] of Object.entries(voto.categorias)) {
+            if (cumple) {
+                conteo.set(categoria as CategoriaConducta, (conteo.get(categoria as CategoriaConducta) || 0) + 1);
+            }
+        }
     }
     return Array.from(conteo.entries())
         .map(([categoria, count]) => ({ categoria, count }))
         .sort((a, b) => b.count - a.count);
 }
 
-function generarExplicacion(clasificacion: ClassificationResult, estadoFinal: string, prioridadAlta: boolean, guardas: { keywords: { tieneMatch: boolean }; doxing: { esDoxing: boolean } }): string {
+/** SPEC-207: loggear modelos de rúbrica que no respondieron. */
+export function logModelosSinRespuesta(votos: VotoRubricaModelo[]): void {
+    for (const voto of votos) {
+        if (voto.fallback) {
+            void workerLogger.error("Rúbrica: modelo sin respuesta", {
+                modelo: voto.modelo,
+                latenciaMs: voto.metrics.latenciaMs,
+            });
+        }
+    }
+}
+
+function generarExplicacion(clasificacion: ResultadoMotor, estadoFinal: string, prioridadAlta: boolean, guardas: { keywords: { tieneMatch: boolean }; doxing: { esDoxing: boolean } }): string {
     const base = `${clasificacion.categoria} con confianza ${(clasificacion.confianza * 100).toFixed(0)}%`;
+    if (estadoFinal === "POSIBLE_SPAM") {
+        return `${base}. Posible spam con confianza suficiente: pasa a revisión humana.`;
+    }
     if (estadoFinal === "REVISION_MANUAL") {
         if (guardas.doxing.esDoxing) return `${base}. Escalado a revisión manual por señal de DOXING.`;
         if (guardas.keywords.tieneMatch && clasificacion.categoria === "OTRO") return `${base}. Escalado a revisión manual por keyword crítica en categoría OTRO.`;
@@ -169,15 +208,14 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
     const ejemplos = await buscarEjemplosSimilares(vector, { topK: parametros.ragTopK });
     const latenciaRag = Date.now() - inicioRag;
 
-    // 3. Clasificación con votos
+    // 3. Clasificación — SPEC-138 (E-7): el único motor activo es la rúbrica.
     const inicioVotacion = Date.now();
-    const clasificacion = await clasificarConVotos(parametros.modeloClasificacion, texto, {
-        nVotos: parametros.nVotos,
-        temperatura: parametros.temperatura,
-        minScoreCategoria: parametros.minScoreCategoria,
-        umbralRevision: parametros.umbralRevision,
-        ollamaNumParallel: parametros.ollamaNumParallel,
-        ejemplos,
+    const clasificacion = await clasificarConMotorActivo(texto, {
+        configRubrica: {
+            modelos: parametros.modelos,
+            temperatura: parametros.temperatura,
+            umbralPresencia: parametros.umbralPresencia,
+        },
     });
     const latenciaVotacion = Date.now() - inicioVotacion;
 
@@ -198,37 +236,66 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
         };
     }
 
-    // 6. Guardas determinísticas (R3: nunca reclasifican)
+    // SPEC-199: severidades para la guarda de dominancia SPAM.
+    const categoriasNecesarias = [
+        clasificacion.categoria,
+        ...clasificacion.categoriasSecundarias
+            .filter((c): c is { categoria: string; score: number } => typeof c === "object" && c !== null && typeof (c as Record<string, unknown>).categoria === "string")
+            .map((c) => c.categoria),
+    ];
+    const severidades: Record<string, number> = {};
+    await Promise.all(
+        categoriasNecesarias.map(async (categoria) => {
+            const valor = await getParametroSistemaValor(`scoring.severity.${categoria}`);
+            if (valor !== null) severidades[categoria] = parseInt(valor, 10);
+        })
+    );
+
+    // 6. Guardas determinísticas: misma decisión que producción (spec 123).
+    // esRafaga=false: el sandbox procesa un solo texto; la ráfaga requiere
+    // múltiples reportes contra el mismo identificador.
     const inicioGuardas = Date.now();
-    const doxing = detectarDoxing(texto);
-    const keywords = detectarKeywordsRiesgo(texto);
+    const decision = decidirGuardasSeguridad({
+        texto,
+        clasificacion: { categoria: clasificacion.categoria, confianza: clasificacion.confianza },
+        categoriasSecundarias: normalizarCategoriasSecundarias(clasificacion.categoriasSecundarias),
+        estadoInicial: clasificacion.estado,
+        esRafaga: false,
+        umbralSpam: parametros.umbralSpam,
+        umbralSpamDominancia: parametros.umbralSpamDominancia,
+        severidadMinGrave: parametros.severidadMinGrave,
+        severidades,
+        dominiosAcortadores: parametros.dominiosAcortadores,
+    });
+    const { estadoFinal, prioridadAlta, keywordsDetectadas, doxing, keywordsRiesgo: keywords, reglasAplicadas } = decision;
 
-    let estadoFinal = clasificacion.estado;
-    let prioridadAlta = false;
-    let keywordsDetectadas: string[] = [];
+    // estadoForzado conserva la semántica anterior de la traza: qué guarda
+    // escaló a revisión manual (solo informativo, no cambia decisiones).
     let estadoForzado: string | undefined;
-
-    if (doxing.esDoxing && clasificacion.categoria !== "DOXING") {
-        estadoFinal = "REVISION_MANUAL";
-        prioridadAlta = true;
-        keywordsDetectadas = doxing.fragmentos.length > 0 ? doxing.fragmentos : ["doxing"];
+    if (reglasAplicadas.includes("doxing_no_reflejado_por_modelo")) {
         estadoForzado = "DOXING";
-    }
-
-    if (
-        keywords.tieneMatch &&
-        ((estadoFinal === "CLASIFICADO" && clasificacion.categoria === "OTRO") || estadoFinal === "REVISION_MANUAL")
+    } else if (
+        reglasAplicadas.includes("keywords_riesgo") &&
+        clasificacion.estado === "CLASIFICADO" &&
+        clasificacion.categoria === "OTRO"
     ) {
-        prioridadAlta = true;
-        keywordsDetectadas = Array.from(new Set([...keywordsDetectadas, ...keywords.keywords]));
-        if (estadoFinal === "CLASIFICADO" && clasificacion.categoria === "OTRO") {
-            estadoFinal = "REVISION_MANUAL";
-            estadoForzado = "KEYWORDS";
-        }
+        estadoForzado = "KEYWORDS";
     }
 
     const latenciaGuardas = Date.now() - inicioGuardas;
     const latenciaTotal = Date.now() - inicioTotal;
+
+    const votosModelos = (clasificacion.rubrica?.votosModelos as VotoRubricaModelo[]) ?? [];
+    const distribucion = calcularDistribucion(votosModelos);
+
+    // SPEC-207: instrumentar modelos de rúbrica que no respondieron.
+    // No altera el resultado; solo expone el modelo y latencia para diagnóstico.
+    logModelosSinRespuesta(votosModelos);
+
+    const secundariasLegacy = clasificacion.categoriasSecundarias.filter(
+        (v): v is { categoria: CategoriaConducta; score: number } =>
+            typeof v === "object" && v !== null && "categoria" in v && "score" in v
+    );
 
     return {
         texto,
@@ -238,11 +305,11 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
             rag: { latenciaMs: latenciaRag, topK: parametros.ragTopK, ejemplos },
             votacion: {
                 latenciaMs: latenciaVotacion,
-                votos: clasificacion.votos,
-                distribucion: calcularDistribucion(clasificacion.votos),
+                votos: distribucion,
+                modelos: parametros.modelos.length,
                 categoria: clasificacion.categoria,
                 confianza: clasificacion.confianza,
-                categoriasSecundarias: clasificacion.categoriasSecundarias,
+                categoriasSecundarias: secundariasLegacy,
                 posibleAgresorPar: clasificacion.posibleAgresorPar,
                 estado: clasificacion.estado,
             },
@@ -260,6 +327,7 @@ export async function ejecutarSandbox(texto: string, overrides: SandboxOverrides
                 prioridadAlta,
                 keywordsDetectadas,
                 estadoForzado,
+                reglasAplicadas,
             },
         },
         decision: {

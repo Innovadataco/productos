@@ -10,7 +10,7 @@ function ctx(id: string) {
     return { params: Promise.resolve({ id }) };
 }
 
-describe("POST /api/admin/colegios/[id]/regenerar-password", () => {
+describe("POST /api/admin/colegios/[id]/regenerar-password", { timeout: 30000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();

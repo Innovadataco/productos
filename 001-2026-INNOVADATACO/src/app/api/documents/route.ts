@@ -10,6 +10,8 @@ import { auditLog } from "@/lib/audit";
 import { verifyAuth } from "@/lib/auth";
 import { leerPaginacion, respuestaPaginada } from "@/lib/paginacion";
 import { nombreDeArchivo, validaArchivo } from "@/lib/subidaArchivos";
+import { conReintento } from "@/lib/reintento";
+import { evaluarIndexabilidad } from "@/lib/indexabilidad";
 
 const TIPO_JERARQUIA: Record<string, number> = {
   constitucion: 1,
@@ -72,11 +74,24 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
     let texto = "";
     let extractionError: string | null = null;
+    const fallosDeExtraccion: string[] = [];
     try {
-      texto = await extractPdfText(buffer);
+      // Se reintenta (spec 013, FR-001). Esta extracción ocurre DENTRO de la
+      // petición y, si falla, el documento nunca se encola: los reintentos de la
+      // cola no llegan a aplicarse jamás y un Timeout pasajero condenaba el
+      // documento para siempre. Intentos cortos: hay un usuario esperando.
+      texto = await conReintento(() => extractPdfText(buffer), {
+        intentos: 3,
+        esperaMs: 500,
+        alFallar: (intento, err) => {
+          const detalle = detalleDeError(err);
+          fallosDeExtraccion.push(`intento ${intento}: ${detalle}`);
+          console.warn(`[Documentos] Extracción de PDF: intento ${intento} falló — ${detalle}`);
+        },
+      });
     } catch (err: unknown) {
       extractionError = detalleDeError(err);
-      console.warn("[Documentos] Extracción de PDF: advertencia —", extractionError);
+      console.warn("[Documentos] Extracción de PDF: agotados los reintentos —", extractionError);
     }
 
     // Guardar archivo
@@ -114,6 +129,9 @@ export async function POST(req: NextRequest) {
       entityId: doc.id,
       status: extractionError ? "error" : "info",
       message: extractionError || "PDF subido, encolado para procesamiento",
+      // Cuántos reintentos hubo y con qué se falló (spec 013, FR-005). Si la
+      // extracción salió a la segunda, aquí queda el rastro de que costó.
+      metadata: fallosDeExtraccion.length > 0 ? { reintentos: fallosDeExtraccion } : undefined,
     });
 
     // Si hubo error de extracción, no encolar - ya está en needs_review
@@ -163,13 +181,31 @@ export async function GET(req: NextRequest) {
       prisma.documentoOficial.findMany({
         where,
         orderBy: [{ jerarquiaNivel: "asc" }, { fechaExpedicion: "desc" }],
-        include: { padre: { select: { id: true, titulo: true, tipo: true } } },
+        include: {
+          padre: { select: { id: true, titulo: true, tipo: true } },
+          // El número de fragmentos es el hecho del que se deriva si el
+          // documento se puede encontrar (spec 013, FR-002).
+          _count: { select: { chunks: true } },
+        },
         skip,
         take: pageSize,
       }),
       prisma.documentoOficial.count({ where }),
     ]);
-    return NextResponse.json(respuestaPaginada(docs, total, page, pageSize));
+
+    // Se calcula al leer y no se guarda (RZ-2): un campo persistido se
+    // desincronizaría el día que se borrara un fragmento.
+    const conIndexabilidad = docs.map((doc) => ({
+      ...doc,
+      indexabilidad: evaluarIndexabilidad({
+        status: doc.status,
+        contenidoTexto: doc.contenidoTexto,
+        processingError: doc.processingError,
+        chunks: doc._count?.chunks ?? 0,
+      }),
+    }));
+
+    return NextResponse.json(respuestaPaginada(conIndexabilidad, total, page, pageSize));
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Error listando documentos" }, { status: 500 });

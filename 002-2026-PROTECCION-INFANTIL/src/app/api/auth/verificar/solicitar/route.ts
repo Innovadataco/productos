@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { enviarCodigoVerificacion } from "@/lib/email";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
-
-function generateCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import { verificarSolicitarSchema } from "@/lib/validators";
+import { logger } from "@/lib/logger";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 
 const MENSAJE_EXITO = "Si el email es válido, recibirás un código de verificación.";
 
@@ -24,15 +21,16 @@ function buildRateLimitResponse(retryAfter: number, headers: Record<string, stri
 
 export async function POST(request: Request) {
     try {
-        const body = (await request.json()) as { email: string };
-        const email = body.email?.toLowerCase().trim();
-
-        if (!email || !email.includes("@")) {
+        // SPEC-125: esquema Zod; el mensaje es contrato del frontend (registro/page.tsx).
+        const bodyRaw = await request.json().catch(() => undefined);
+        const parsed = verificarSolicitarSchema.safeParse(bodyRaw);
+        if (!parsed.success) {
             return NextResponse.json(
                 { error: { message: "Email inválido", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
+        const email = parsed.data.email;
 
         // Rate limit por IP
         const rateIp = await checkRateLimit(request, "verificacion_solicitar");
@@ -48,38 +46,22 @@ export async function POST(request: Request) {
             return buildRateLimitResponse(retryAfter, rateEmail.headers);
         }
 
-        const existingUser = await prisma.usuario.findUnique({ where: { email } });
-        if (existingUser) {
-            return NextResponse.json({ message: MENSAJE_EXITO }, { status: 202 });
-        }
+        // SPEC-053: usuario existente, límite de códigos y creación viven en el DAL;
+        // la ruta no toca prisma. El envío del email queda en su adaptador.
+        const resultado = await new AutenticacionService().solicitarCodigo(email);
 
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        const recentCodes = await prisma.codigoVerificacion.count({
-            where: {
-                email,
-                creadoEn: { gte: oneHourAgo },
-                usado: false,
-            },
-        });
-
-        if (recentCodes >= 3) {
+        if (!resultado.ok) {
             return NextResponse.json(
                 { error: { message: "Límite de solicitudes excedido", code: ERROR_CODES.RATE_LIMITED } },
                 { status: 429 }
             );
         }
 
-        const code = generateCode();
-        const codeHash = await bcrypt.hash(code, 12);
+        if (resultado.tipo === "existente") {
+            return NextResponse.json({ message: MENSAJE_EXITO }, { status: 202 });
+        }
 
-        await prisma.codigoVerificacion.create({
-            data: {
-                email,
-                codigoHash: codeHash,
-                expiraEn: new Date(Date.now() + 15 * 60 * 1000),
-            },
-        });
-
+        const code = resultado.code;
         let emailSent = false;
         let emailError: string | null = null;
         try {
@@ -88,20 +70,26 @@ export async function POST(request: Request) {
         } catch (err) {
             const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
             emailError = err instanceof Error ? err.message : String(err);
-            console.error("Failed to send verification email to:", masked, "error:", emailError);
+            logger.error(`[VERIFICAR] Envío de email de verificación: fallido — ${masked}: ${emailError}`);
         }
 
+        // BL-3 (002-PI-052): el código de desarrollo NUNCA se expone en producción
+        // (toma de cuenta). Solo en entornos no productivos, cuando el email falla;
+        // en prod el email falla = fail-closed, sin código en el body.
+        const esProduccion = process.env.NODE_ENV === "production";
         const response: Record<string, unknown> = {
             message: emailSent
                 ? MENSAJE_EXITO
-                : "El servicio de email no está disponible; usa el código mostrado para continuar.",
+                : esProduccion
+                    ? "El servicio de email no está disponible en este momento; intenta de nuevo más tarde."
+                    : "El servicio de email no está disponible; usa el código mostrado para continuar.",
             emailSent,
         };
 
         // Si no se pudo enviar el email, exponemos el código para que el usuario pueda continuar
         // (útil en entornos sin Resend configurado o en modo desarrollo).
         // Nunca exponemos el mensaje de error del proveedor de email.
-        if (!emailSent) {
+        if (!emailSent && !esProduccion) {
             response.devCode = code;
         }
 

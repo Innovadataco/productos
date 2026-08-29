@@ -10,6 +10,16 @@ import {
     operadorIdParamsSchema,
     parametroClaveParamsSchema,
     parametroPatchBodySchema,
+    profesorBodySchema,
+    profesorPatchSchema,
+    profesoresQuerySchema,
+    cursoBodySchema,
+    cursoUpdateBodySchema,
+    bloquearIpBodySchema,
+    desbloquearIpBodySchema,
+    monitoreoLogsPurgeSchema,
+    ipv4Schema,
+    informeMensualQuerySchema,
 } from "./index";
 
 describe("schemas/index", () => {
@@ -120,5 +130,189 @@ describe("schemas/index", () => {
         expect(() =>
             parametroPatchBodySchema.parse({ valor: "x", motivo: "a".repeat(501) })
         ).toThrow();
+    });
+});
+
+// SPEC-145 (FR-005): schemas del CRUD de profesores y titular de curso (D1=A).
+describe("schemas profesor (SPEC-145)", () => {
+    it("profesorBodySchema acepta el mínimo (nombre + apellidos)", () => {
+        const parsed = profesorBodySchema.parse({ nombre: "María", apellidos: "López" });
+        expect(parsed.email).toBeUndefined();
+        expect(parsed.telefono).toBeUndefined();
+    });
+
+    it("profesorBodySchema acepta email y teléfono opcionales", () => {
+        expect(() =>
+            profesorBodySchema.parse({ nombre: "María", apellidos: "López", email: "maria@colegio.edu.co", telefono: "+573001112233" })
+        ).not.toThrow();
+    });
+
+    it("profesorBodySchema rechaza sin apellidos con mensaje humano", () => {
+        const result = profesorBodySchema.safeParse({ nombre: "María" });
+        expect(result.success).toBe(false);
+        expect(result.error?.issues[0]?.message).toBe("Falta el apellido del profesor");
+    });
+
+    it("profesorBodySchema rechaza email mal formado", () => {
+        expect(() => profesorBodySchema.parse({ nombre: "María", apellidos: "López", email: "no-es-email" })).toThrow();
+    });
+
+    it("profesorPatchSchema acepta cualquier subconjunto incluido estado", () => {
+        expect(() => profesorPatchSchema.parse({ estado: "inactivo" })).not.toThrow();
+        expect(() => profesorPatchSchema.parse({ telefono: "+573009998877" })).not.toThrow();
+        expect(() => profesorPatchSchema.parse({ email: null })).not.toThrow();
+    });
+
+    it("profesorPatchSchema rechaza estado fuera de activo|inactivo", () => {
+        expect(() => profesorPatchSchema.parse({ estado: "suspendido" })).toThrow();
+    });
+
+    it("profesorPatchSchema rechaza el body vacío", () => {
+        expect(() => profesorPatchSchema.parse({})).toThrow();
+    });
+
+    it("profesoresQuerySchema aplica defaults y cota pageSize", () => {
+        const parsed = profesoresQuerySchema.parse({});
+        expect(parsed).toEqual({ page: 1, pageSize: 25, estado: "activo" });
+        expect(profesoresQuerySchema.parse({ page: "2", pageSize: "50", estado: "todos" })).toEqual({ page: 2, pageSize: 50, estado: "todos" });
+        expect(() => profesoresQuerySchema.parse({ pageSize: "101" })).toThrow();
+        expect(() => profesoresQuerySchema.parse({ estado: "suspendido" })).toThrow();
+    });
+
+    it("cursoBodySchema y cursoUpdateBodySchema aceptan profesorTitularId (D1=A), null y ausente", () => {
+        const cuid = "cm0k5example12345678901234567890";
+        expect(() => cursoBodySchema.parse({ nombre: "6A", profesorTitularId: cuid })).not.toThrow();
+        expect(() => cursoBodySchema.parse({ nombre: "6A", profesorTitularId: null })).not.toThrow();
+        expect(() => cursoBodySchema.parse({ nombre: "6A" })).not.toThrow();
+        expect(() => cursoBodySchema.parse({ nombre: "6A", profesorTitularId: "no-es-cuid" })).toThrow();
+        expect(() => cursoUpdateBodySchema.parse({ profesorTitularId: cuid })).not.toThrow();
+        expect(() => cursoUpdateBodySchema.parse({ profesorTitularId: null })).not.toThrow();
+    });
+
+    it("bloquearIpBodySchema acepta IPv4 e IPv6 válidas", () => {
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "192.0.2.10", motivo: "Robot inundando", duracion: "24h" })
+        ).not.toThrow();
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "2001:db8::1", motivo: "Robot inundando", duracion: "7d" })
+        ).not.toThrow();
+    });
+
+    it("bloquearIpBodySchema rechaza IPs inválidas", () => {
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "999.999.999.999", motivo: "X", duracion: "24h" })
+        ).toThrow();
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "no-es-ip", motivo: "X", duracion: "24h" })
+        ).toThrow();
+    });
+
+    it("bloquearIpBodySchema rechaza motivo vacío o duración inválida", () => {
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "192.0.2.10", motivo: "", duracion: "24h" })
+        ).toThrow();
+        expect(() =>
+            bloquearIpBodySchema.parse({ ip: "192.0.2.10", motivo: "X", duracion: "1h" as "24h" })
+        ).toThrow();
+    });
+
+    it("desbloquearIpBodySchema requiere motivo de al menos 20 caracteres", () => {
+        const id = "cm0k5example12345678901234567890";
+        expect(() => desbloquearIpBodySchema.parse({ id, motivo: "Motivo suficientemente largo" })).not.toThrow();
+        expect(() => desbloquearIpBodySchema.parse({ id, motivo: "corto" })).toThrow();
+        expect(() => desbloquearIpBodySchema.parse({ id })).toThrow();
+    });
+
+    it("monitoreoLogsPurgeSchema rechaza fecha límite igual o posterior a hoy", () => {
+        const ayer = new Date();
+        ayer.setUTCDate(ayer.getUTCDate() - 1);
+        ayer.setUTCHours(23, 59, 0, 0);
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: ayer.toISOString(),
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        ).not.toThrow();
+
+        const hoy = new Date();
+        hoy.setUTCHours(12, 0, 0, 0);
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: hoy.toISOString(),
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        ).toThrow();
+    });
+
+    it("monitoreoLogsPurgeSchema requiere servicio cuando se indica nivel", () => {
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: "2026-01-01T00:00:00Z",
+                nivel: "ERROR",
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        ).toThrow();
+
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: "2026-01-01T00:00:00Z",
+                servicio: "pi-app",
+                nivel: "ERROR",
+                motivo: "Limpieza de logs antiguos por política de retención",
+            })
+        ).not.toThrow();
+    });
+
+    it("monitoreoLogsPurgeSchema rechaza motivo fuera de rango", () => {
+        expect(() =>
+            monitoreoLogsPurgeSchema.parse({
+                hasta: "2026-01-01T00:00:00Z",
+                motivo: "Corto",
+            })
+        ).toThrow();
+    });
+
+    it("ipv4Schema rechaza octetos fuera de rango", () => {
+        expect(() => ipv4Schema.parse("256.0.0.1")).toThrow();
+        expect(() => ipv4Schema.parse("192.168.1.256")).toThrow();
+        expect(() => ipv4Schema.parse("-1.0.0.1")).toThrow();
+    });
+
+    it("ipv4Schema rechaza formato inválido", () => {
+        expect(() => ipv4Schema.parse("192.168.1")).toThrow();
+        expect(() => ipv4Schema.parse("abc")).toThrow();
+    });
+
+    it("ipv4Schema acepta una IPv4 válida", () => {
+        expect(() => ipv4Schema.parse("192.0.2.10")).not.toThrow();
+    });
+
+    it("informeMensualQuerySchema acepta el mes actual", () => {
+        const ahora = new Date();
+        const mes = `${ahora.getUTCFullYear()}-${String(ahora.getUTCMonth() + 1).padStart(2, "0")}`;
+        expect(() => informeMensualQuerySchema.parse({ mes })).not.toThrow();
+    });
+
+    it("informeMensualQuerySchema rechaza mes futuro y mayor a 12 meses atrás", () => {
+        const ahora = new Date();
+        const futuro = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1));
+        const mesFuturo = `${futuro.getUTCFullYear()}-${String(futuro.getUTCMonth() + 1).padStart(2, "0")}`;
+        expect(() => informeMensualQuerySchema.parse({ mes: mesFuturo })).toThrow();
+
+        const viejo = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() - 13, 1));
+        const mesViejo = `${viejo.getUTCFullYear()}-${String(viejo.getUTCMonth() + 1).padStart(2, "0")}`;
+        expect(() => informeMensualQuerySchema.parse({ mes: mesViejo })).toThrow();
+    });
+
+    it("informeMensualQuerySchema acepta el límite de 12 meses atrás", () => {
+        const ahora = new Date();
+        const limite = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() - 11, 1));
+        const mesLimite = `${limite.getUTCFullYear()}-${String(limite.getUTCMonth() + 1).padStart(2, "0")}`;
+        expect(() => informeMensualQuerySchema.parse({ mes: mesLimite })).not.toThrow();
+    });
+
+    it("informeMensualQuerySchema rechaza formato de mes inválido", () => {
+        expect(() => informeMensualQuerySchema.parse({ mes: "2026-13" })).toThrow();
+        expect(() => informeMensualQuerySchema.parse({ mes: "2026-1" })).toThrow();
     });
 });

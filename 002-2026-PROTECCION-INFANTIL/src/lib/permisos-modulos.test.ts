@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { puedeAccederAModulo, rolesConocidos } from "./permisos-modulos";
+import { CATALOGO_MODULOS } from "./permisos-catalogo";
+import { puedeAccederAModulo, rolesConocidos, modulosPermitidosParaRol } from "./permisos-modulos";
+import { syncModulosYGrants } from "../../prisma/seed-modulos-grants";
 
 async function crearModulo(clave: string, padreId?: string) {
     return prisma.moduloPermisible.create({
@@ -36,7 +38,7 @@ describe("permisos-modulos", () => {
     });
 
     it("AND jerárquico: submódulo exige padre activo", async () => {
-        const padre = await crearModulo("padre");
+        const padre = await crearModulo("padre_test");
         const hijo = await crearModulo("hijo", padre.id);
 
         await setPermiso("ADMIN", hijo.id, true);
@@ -49,7 +51,16 @@ describe("permisos-modulos", () => {
         // Padre activo + hijo inactivo → hijo denegado, padre accesible
         await setPermiso("ADMIN", hijo.id, false);
         expect(await puedeAccederAModulo("ADMIN", "hijo")).toBe(false);
-        expect(await puedeAccederAModulo("ADMIN", "padre")).toBe(true);
+        expect(await puedeAccederAModulo("ADMIN", "padre_test")).toBe(true);
+    });
+
+    it("monitoreo_worker: ADMIN sí, OPERADOR no (módulo exclusivo de admin)", async () => {
+        const modulo = await prisma.moduloPermisible.findUnique({ where: { clave: "monitoreo_worker" } });
+        expect(modulo).not.toBeNull();
+        await setPermiso("ADMIN", modulo!.id, true);
+        await setPermiso("OPERADOR", modulo!.id, false);
+        expect(await puedeAccederAModulo("ADMIN", "monitoreo_worker")).toBe(true);
+        expect(await puedeAccederAModulo("OPERADOR", "monitoreo_worker")).toBe(false);
     });
 
     it("clave desconocida → false", async () => {
@@ -63,5 +74,50 @@ describe("permisos-modulos", () => {
         const roles = await rolesConocidos();
         expect(roles).toContain("FISCALIA");
         expect(roles).toContain("ADMIN");
+    });
+
+    // Spec 096 + SPEC-266 (002-PI-169): expediente_revelar_original es módulo
+    // STANDALONE (sin padre). Antes tenía padre bandeja_reportes; SPEC-266 lo
+    // desancló para que COMITE_VALIDACION pueda revelar el original sin recibir
+    // toda la bandeja del operador (I-128).
+    it("expediente_revelar_original: standalone, ADMIN sí, OPERADOR denegar por defecto", async () => {
+        const catalogoRevelar = CATALOGO_MODULOS.find((m) => m.clave === "expediente_revelar_original");
+        expect(catalogoRevelar).toBeDefined();
+        expect(catalogoRevelar?.padre).toBeUndefined();
+        expect(catalogoRevelar?.esCritico).toBe(true);
+        expect(catalogoRevelar?.categoria).toBe("operador");
+        expect(catalogoRevelar?.orden).toBe(31);
+
+        const revelar = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave: "expediente_revelar_original" } });
+        expect(revelar.padreId).toBeNull();
+
+        // Backfill del seed: ADMIN recibe todos los módulos del catálogo
+        await setPermiso("ADMIN", revelar.id, true);
+        expect(await puedeAccederAModulo("ADMIN", "expediente_revelar_original")).toBe(true);
+
+        // OPERADOR sin el grant → denegar por defecto
+        await setPermiso("OPERADOR", revelar.id, false);
+        expect(await puedeAccederAModulo("OPERADOR", "expediente_revelar_original")).toBe(false);
+
+        // Otorgarlo manualmente a OPERADOR habilita (ya no depende de padre)
+        await setPermiso("OPERADOR", revelar.id, true);
+        expect(await puedeAccederAModulo("OPERADOR", "expediente_revelar_original")).toBe(true);
+    });
+
+    it("I-57 (SPEC-175): COMITE_CONVIVENCIA obtiene su bandeja con los grants REALES del seed y nada del rector", async () => {
+        // resetDatabase() otorga todo a todos (aislamiento de la suite); aquí medimos
+        // los grants REALES del seed: limpiamos y aplicamos el sync de verdad.
+        await prisma.permisoModulo.deleteMany({});
+        await syncModulosYGrants(prisma);
+
+        const permitidos = await modulosPermitidosParaRol("COMITE_CONVIVENCIA");
+        // La bandeja queda concedida (padre `colegios` + hija activos: jerarquía AND).
+        expect(permitidos.has("colegios_comite_bandeja")).toBe(true);
+        // Candado: el comité NO gana los módulos del rector.
+        expect(permitidos.has("colegios_gestion")).toBe(false);
+        expect(permitidos.has("colegios_comite")).toBe(false);
+        expect(permitidos.has("colegios_auditoria")).toBe(false);
+        expect(permitidos.has("colegios_onboarding")).toBe(false);
+        expect(permitidos.has("colegios_notificaciones")).toBe(false);
     });
 });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ADMIN_NAV_ITEMS } from "@/lib/nav-items";
+import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 
 type RolNav = "ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "SCHOOL_ADMIN";
 
@@ -11,11 +12,15 @@ const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element
     "/dashboard/admin/spam": ShieldExclamationIcon,
     "/dashboard/admin/comite": ScaleIcon,
     "/dashboard/admin/estadisticas": ChartIcon,
+    // SPEC-227 (002-PI-128): historial de sugerencias del motor de reglas.
+    "/dashboard/admin/analisis/recomendaciones": LightBulbIcon,
     "/dashboard/admin/ia": BrainIcon,
     "/dashboard/admin/operadores": UsersIcon,
+    "/dashboard/admin/padres": UserCircleIcon,
+    // SPEC-212 (002-PI-112): panel de pagos.
+    "/dashboard/admin/pagos": CurrencyDollarIcon,
     "/dashboard/admin/colegios": BuildingIcon,
     "/dashboard/admin/anti-abuso": ShieldIcon,
-    "/dashboard/admin/apelaciones": ScaleIcon,
     "/dashboard/admin/dataset-entrenamiento": DatabaseIcon,
     "/dashboard/admin/configuracion": CogIcon,
 };
@@ -23,7 +28,9 @@ const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element
 export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermitidos: string[] }) {
     const pathname = usePathname();
     const permitidos = new Set(modulosPermitidos);
-    const links = ADMIN_NAV_ITEMS.filter((l) => permitidos.has(l.modulo)).map((l) => ({
+    // D-41 (SPEC-126): módulo de BD ∧ predicado del proxy — la puerta tiene la
+    // última palabra sobre si se pinta (misma regla que NavHeader.tsx).
+    const links = ADMIN_NAV_ITEMS.filter((l) => permitidos.has(l.modulo) && esDestinoPermitidoPorRol(rol, l.href)).map((l) => ({
         ...l,
         icon: ICONS[l.href] ?? InboxIcon,
     }));
@@ -42,14 +49,19 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
                     const active =
                         pathname === link.href ||
                         (link.href !== "/dashboard/admin" && (pathname?.startsWith(link.href + "/") ?? false));
+                    const isPagos = link.href === "/dashboard/admin/pagos";
                     return (
                         <li key={link.href}>
                             <Link
                                 href={link.href}
                                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                                     active
-                                        ? "accent-gradient text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20"
-                                        : "text-muted hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-body"
+                                        ? isPagos
+                                            ? "bg-ambar text-white shadow-lg shadow-ambar/25 dark:bg-ambar dark:shadow-ambar/20"
+                                            : "accent-gradient text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20"
+                                        : isPagos
+                                            ? "text-ambar hover:bg-ambar/10 dark:text-ambar dark:hover:bg-ambar/20 hover:text-ambar"
+                                            : "text-muted hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-body"
                                 }`}
                             >
                                 <link.icon className="h-4 w-4" />
@@ -59,14 +71,32 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
                     );
                 })}
             </ul>
+            {/* I-33 (SPEC-108): acceso a cambio de contraseña desde el panel admin/operador/comité */}
+            <div className="border-t border-slate-200 p-3 dark:border-slate-800">
+                <Link
+                    href="/cambiar-password"
+                    className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-muted transition hover:bg-slate-100 hover:text-body dark:hover:bg-slate-800/60"
+                >
+                    <KeyIcon className="h-4 w-4" />
+                    Cambiar contraseña
+                </Link>
+            </div>
         </nav>
+    );
+}
+
+function KeyIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+        </svg>
     );
 }
 
 function InboxIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5 0c0-4.142 3.358-7.5 7.5-7.5h6.75c4.142 0 7.5 3.358 7.5 7.5m-19.5 0v2.25a2.25 2.25 0 002.25 2.25h15a2.25-2.25V13.5m-19.5 0h19.5" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5 0c0-4.142 3.358-7.5 7.5-7.5h6.75c4.142 0 7.5 3.358 7.5 7.5m-19.5 0v2.25a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25V13.5m-19.5 0h19.5" />
         </svg>
     );
 }
@@ -75,6 +105,15 @@ function ChartIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+        </svg>
+    );
+}
+
+// SPEC-227 (002-PI-128): icono de la entrada "Sugerencias" (heroicons outline light-bulb).
+function LightBulbIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
         </svg>
     );
 }
@@ -138,12 +177,28 @@ function UsersIcon({ className }: { className?: string }) {
     );
 }
 
+function UserCircleIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+        </svg>
+    );
+}
+
 function BuildingIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 2.25h15A2.25 2.25 0 0 1 21.75 4.5v15A2.25 2.25 0 0 1 19.5 21.75h-15A2.25 2.25 0 0 1 2.25 19.5v-15A2.25 2.25 0 0 1 4.5 2.25Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Zm4.5-9h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Zm4.5-9h.75v.75h-.75V6.75Zm0 4.5h.75v.75h-.75v-.75Zm0 4.5h.75v.75h-.75v-.75Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.75V18" />
+        </svg>
+    );
+}
+
+function CurrencyDollarIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
         </svg>
     );
 }

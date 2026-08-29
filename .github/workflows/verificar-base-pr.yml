@@ -1,0 +1,25 @@
+name: Verificar rama base del PR
+on:
+    pull_request:
+        types: [opened, edited, synchronize, reopened]
+jobs:
+    verificar_base:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Rama base debe ser main
+              run: |
+                  if [ "${{ github.base_ref }}" != "main" ]; then
+                      echo "❌ PR base es '${{ github.base_ref }}' — debe ser 'main'."
+                      echo "Ver BRIEF-A-47 candado 2. Rebase el PR contra main y reabre."
+                      exit 1
+                  fi
+                  echo "✅ PR base OK (main)."
+            - name: Rama de trabajo debe cumplir convención
+              run: |
+                  BRANCH="${{ github.head_ref }}"
+                  if ! echo "$BRANCH" | grep -qE '^work/(pi|bi|mod|idc|sicov|sarlaft)-SPEC-[0-9]+-'; then
+                      echo "❌ Rama '$BRANCH' no cumple convención work/<producto>-SPEC-NNN-<slug>."
+                      echo "Ver BRIEF-A-47 candado 2."
+                      exit 1
+                  fi
+                  echo "✅ Nombre de rama OK ($BRANCH)."

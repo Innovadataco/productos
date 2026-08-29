@@ -17,8 +17,13 @@ export const SECTIONS: { key: string; label: string; description: string; prefix
     { key: "alerts", label: "Alertas por Email", description: "Activar/desactivar notificaciones a administradores y suscriptores.", prefixes: ["alerts."] },
     { key: "ratelimit", label: "Rate Limiting", description: "Límites de peticiones por ventana de tiempo.", prefixes: ["ratelimit."] },
     { key: "reportes", label: "Procesamiento de Reportes", description: "Modelos de IA, umbrales de duplicados y parámetros del worker.", prefixes: ["reportes."] },
+    { key: "monitoreo", label: "Monitoreo", description: "El vigilante del sistema: cada cuánto revisa, a quién avisa y qué tan seguido", prefixes: ["monitoreo."] },
+    { key: "motor-deriva", label: "Motor › Deriva", description: "Cuánto se desvía el motor en producción frente al banco curado y cuándo avisar", prefixes: ["motor.deriva."] },
     { key: "ui", label: "Interfaz de usuario", description: "Parámetros visibles para usuarios finales, como SLA de seguimiento.", prefixes: ["ui."] },
     { key: "security", label: "Seguridad", description: "Intentos de login, duración de bloqueo, longitud de contraseña, etc.", prefixes: ["security."] },
+    // SPEC-290 (002-PI-190): cierre por inactividad y cadencia del worker de sesiones (pi-sesiones).
+    { key: "sesiones", label: "Sesiones", description: "Cierre por inactividad, cadencia del worker, ping del cliente y retención de logs.", prefixes: ["sesion."] },
+    { key: "analytics", label: "Analítica › Colegios", description: "Umbrales de hallazgos automáticos del panel de colegios.", prefixes: ["analytics.colegios."] },
     { key: "system", label: "Sistema", description: "Parámetros generales de la aplicación.", prefixes: ["system."] },
     { key: "other", label: "Otros", description: "Parámetros adicionales no agrupados.", prefixes: [] },
 ];

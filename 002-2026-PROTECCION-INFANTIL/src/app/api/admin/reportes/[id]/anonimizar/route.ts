@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { auditAnonimizacion } from "@/lib/audit";
 import { generarEmbedding } from "@/lib/ai/embedder";
+import { MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
 import { idSchema } from "@/lib/validators";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
-import { encryptParameter, decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
+import { encryptParameter } from "@/lib/param-encryption";
+import { cifrarTextoReporte, descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { ParametroRepository } from "@/lib/dal/repositories/parametro";
+import { EmbeddingRepository } from "@/lib/dal/repositories/embedding";
 
 const anonimizarSchema = z.object({
     textoAnonimizado: z.string().min(20).max(5000),
@@ -20,13 +26,6 @@ function requireAdmin(user: { rol: string }) {
     if (String(user.rol) !== "ADMIN") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
-}
-
-function obtenerTextoOriginalPlano(textoOriginalCifrado: string | null, textoActual: string): string {
-    if (textoOriginalCifrado && isEncryptedValue(textoOriginalCifrado)) {
-        return decryptParameter(textoOriginalCifrado);
-    }
-    return textoOriginalCifrado ?? textoActual;
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -64,10 +63,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const { textoAnonimizado } = parsed.data;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-            include: { clasificacion: true, embedding: true },
-        });
+        // E-8: la lectura vive en el repo; la ruta no toca prisma.
+        const reporte = await new ReporteRepository().findByIdConClasificacionYEmbedding(reporteId);
         if (!reporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -91,12 +88,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const piiEliminada = reporte.clasificacion?.piiDetectada || [];
 
-        const originalPlano = obtenerTextoOriginalPlano(reporte.textoOriginal, reporte.texto);
+        // SPEC-130 (BL-4): el original puede venir cifrado (textoOriginal) o la copia
+        // de trabajo cifrada (texto); el plano sale SOLO por el helper único (O-3).
+        const originalPlano = reporte.textoOriginal
+            ? descifrarTextoReporte(reporte.textoOriginal)
+            : descifrarTextoReporte(reporte.texto);
         let textoOriginalCifrado: string;
         try {
             textoOriginalCifrado = encryptParameter(originalPlano);
         } catch (err) {
-            console.error("[ANONIMIZAR] Error cifrando texto original:", err);
+            logger.error("[ANONIMIZAR] Error cifrando texto original:", err);
             return NextResponse.json(
                 { error: { message: "Error de seguridad almacenando el original", code: ERROR_CODES.INTERNAL_ERROR } },
                 { status: 500 }
@@ -106,7 +107,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
 
         // Transacción: registrar transición, preservar original cifrado y actualizar texto y estado
-        await prisma.$transaction(async (tx) => {
+        await withUnitOfWork(async (tx) => {
             await registrarTransicion({
                 reporteId,
                 estadoAnterior: "REQUIERE_ANONIMIZACION",
@@ -116,41 +117,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 motivo: "Texto anonimizado por admin",
                 tx,
             });
-            await tx.reporte.update({
-                where: { id: reporteId },
-                data: {
-                    textoOriginal: textoOriginalCifrado,
-                    texto: textoAnonimizado,
-                    estado: "CLASIFICADO",
-                },
+            await new ReporteRepository(tx).actualizarEstado(reporteId, {
+                textoOriginal: textoOriginalCifrado,
+                // SPEC-130 (BL-4): el texto anonimizado también se guarda cifrado.
+                texto: cifrarTextoReporte(textoAnonimizado),
+                estado: "CLASIFICADO",
             });
         });
 
         // Regenerar embedding sobre texto anonimizado (best-effort)
         try {
-            const paramEmbedding = await prisma.parametroSistema.findUnique({
-                where: { clave: "reportes.embedding_model" },
-            });
-            const modeloEmbedding = paramEmbedding?.valor || "nomic-embed-text";
+            // E-8 (D3): parámetro por el repo; upsert del embedding en el adaptador.
+            const paramEmbedding = await new ParametroRepository().findByClave("reportes.embedding_model");
+            const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
             const vector = await generarEmbedding(modeloEmbedding, textoAnonimizado);
 
-            const vectorStr = "[" + vector.join(",") + "]";
-            if (reporte.embedding) {
-                await prisma.$executeRaw`
-                    UPDATE "EmbeddingReporte"
-                    SET vector = ${vectorStr}::vector, "modeloUsado" = ${modeloEmbedding}
-                    WHERE "reporteId" = ${reporteId}
-                `;
-            } else {
-                const embeddingId = crypto.randomUUID();
-                await prisma.$executeRaw`
-                    INSERT INTO "EmbeddingReporte" (id, "reporteId", vector, "modeloUsado", "creadoEn")
-                    VALUES (${embeddingId}, ${reporteId}, ${vectorStr}::vector, ${modeloEmbedding}, NOW())
-                `;
-            }
+            await new EmbeddingRepository().upsertReporteEmbedding(reporteId, modeloEmbedding, vector);
         } catch (embedErr) {
             const msg = embedErr instanceof Error ? embedErr.message : String(embedErr);
-            console.error("[ANONIMIZAR] Embedding falló (no crítico):", msg);
+            logger.error("[ANONIMIZAR] Embedding falló (no crítico):", msg);
             // No fallamos la anonimización; el embedding se puede regenerar después
         }
 

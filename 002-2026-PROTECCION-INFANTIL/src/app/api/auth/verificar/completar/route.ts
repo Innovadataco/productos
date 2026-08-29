@@ -1,31 +1,24 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { hashPassword, createToken, verifyToken, setSessionCookie } from "@/lib/auth";
+import { createToken, verifyToken, setSessionCookie } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { verificarCompletarSchema } from "@/lib/validators";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
+import { RegistroColegioService } from "@/lib/dal/services/registro-colegio";
 
 export async function POST(request: Request) {
     try {
-        const body = (await request.json()) as {
-            token: string;
-            password: string;
-            nombre?: string;
-        };
-
-        if (!body.token || !body.password) {
+        // SPEC-125: esquema Zod; los mensajes son contrato del frontend (registro/page.tsx).
+        const bodyRaw = await request.json().catch(() => undefined);
+        const parsed = verificarCompletarSchema.safeParse(bodyRaw);
+        if (!parsed.success) {
             return NextResponse.json(
-                { error: { message: "Token y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: parsed.error.issues[0]?.message || "Token y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
+        const { token, password, nombre, nombreColegio, rol } = parsed.data;
 
-        if (body.password.length < 8 || !/[a-zA-Z]/.test(body.password) || !/[0-9]/.test(body.password)) {
-            return NextResponse.json(
-                { error: { message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número", code: ERROR_CODES.VALIDATION_ERROR } },
-                { status: 400 }
-            );
-        }
-
-        const payload = await verifyToken(body.token);
+        const payload = await verifyToken(token);
         if (!payload || payload.type !== "verification" || !payload.sub) {
             return NextResponse.json(
                 { error: { message: "Token inválido o expirado", code: ERROR_CODES.AUTH_EXPIRED } },
@@ -34,22 +27,41 @@ export async function POST(request: Request) {
         }
 
         const email = payload.sub as string;
-        const existingUser = await prisma.usuario.findUnique({ where: { email } });
-        if (existingUser) {
-            return NextResponse.json(
-                { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
-                { status: 409 }
-            );
-        }
 
-        const user = await prisma.usuario.create({
-            data: {
+        let user: { id: string; email: string; nombre: string | null; rol: string };
+
+        if (nombreColegio && rol === "SCHOOL_ADMIN") {
+            // SPEC-240 (002-PI-143): registro público de colegio desde /registro-colegio.
+            const resultado = await new RegistroColegioService().registrarPublico(
                 email,
-                nombre: body.nombre || null,
-                passwordHash: await hashPassword(body.password),
-                rol: "PARENT",
-            },
-        });
+                password,
+                nombre || email,
+                nombreColegio
+            );
+            if (!resultado.ok) {
+                if (resultado.tipo === "ubicacion_no_configurada") {
+                    return NextResponse.json(
+                        { error: { message: "Ubicación default no configurada", code: ERROR_CODES.INTERNAL_ERROR } },
+                        { status: 500 }
+                    );
+                }
+                return NextResponse.json(
+                    { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
+                    { status: 409 }
+                );
+            }
+            user = resultado.user;
+        } else {
+            // SPEC-053: unicidad y creación del usuario viven en el DAL; la ruta no toca prisma.
+            const resultado = await new AutenticacionService().completarRegistro(email, password, nombre);
+            if (!resultado.ok) {
+                return NextResponse.json(
+                    { error: { message: "Email ya registrado", code: ERROR_CODES.CONFLICT } },
+                    { status: 409 }
+                );
+            }
+            user = resultado.user;
+        }
 
         const sessionToken = await createToken({ sub: user.id, rol: user.rol });
         await setSessionCookie(request, sessionToken);

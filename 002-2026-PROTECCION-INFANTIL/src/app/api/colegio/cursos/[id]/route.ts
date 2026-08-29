@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { CursoRepository } from "@/lib/dal/repositories/curso";
+import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
@@ -42,22 +44,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
         return NextResponse.json({ curso });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
         if (error instanceof Error && error.message === "Curso no encontrado") {
             return NextResponse.json(
                 { error: { message: "Curso no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/CURSOS]");
     }
 }
 
@@ -86,20 +79,31 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const curso = await verificarPropiedadCurso(user.id, id);
 
+        // SPEC-145 (D1=A, COND-1): el titular debe existir y ser del MISMO colegio
+        // (propiedad de seguridad cross-tenant — un profesor de OTRO colegio → 404).
+        // `null` desasigna explícitamente; ausente ≡ no tocarlo.
+        if ("profesorTitularId" in body && body.profesorTitularId) {
+            const titular = await new ProfesorRepository().obtenerPorId(curso.colegioId, body.profesorTitularId);
+            if (!titular) {
+                return NextResponse.json(
+                    { error: { message: "Profesor no encontrado", code: ERROR_CODES.NOT_FOUND } },
+                    { status: 404 }
+                );
+            }
+        }
+
         const nombre = body.nombre ?? curso.nombre;
         const grado = "grado" in body ? body.grado : curso.grado;
         const anioLectivo = "anioLectivo" in body ? body.anioLectivo : curso.anioLectivo;
 
+        // SPEC-134 (E-1): duplicado y actualización viven en el repo (tenant obligatorio).
+        const cursos = new CursoRepository();
         if (body.nombre !== undefined || body.grado !== undefined || body.anioLectivo !== undefined) {
-            const duplicado = await prisma.curso.findFirst({
-                where: {
-                    id: { not: id },
-                    colegioId: curso.colegioId,
-                    nombre,
-                    grado: grado ?? null,
-                    anioLectivo: anioLectivo ?? null,
-                },
-            });
+            const duplicado = await cursos.buscarDuplicado(
+                curso.colegioId,
+                { nombre, grado: grado ?? null, anioLectivo: anioLectivo ?? null },
+                id
+            );
             if (duplicado) {
                 return NextResponse.json(
                     { error: { message: "Ya existe un curso con ese nombre", code: ERROR_CODES.CONFLICT } },
@@ -108,13 +112,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
         }
 
-        const actualizado = await prisma.curso.update({
-            where: { id },
-            data: {
-                nombre: body.nombre ?? curso.nombre,
-                grado: "grado" in body ? body.grado : curso.grado,
-                anioLectivo: "anioLectivo" in body ? body.anioLectivo : curso.anioLectivo,
-            },
+        const actualizado = await cursos.actualizar(curso.colegioId, id, {
+            nombre: body.nombre ?? curso.nombre,
+            grado: "grado" in body ? body.grado : curso.grado,
+            anioLectivo: "anioLectivo" in body ? body.anioLectivo : curso.anioLectivo,
+            profesorTitularId: "profesorTitularId" in body ? (body.profesorTitularId ?? null) : undefined,
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);
@@ -124,29 +126,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             recursoId: id,
             usuarioId: user.id,
             colegioId: user.colegioId ?? undefined,
-            valorAnterior: JSON.stringify({ nombre: curso.nombre, grado: curso.grado, anioLectivo: curso.anioLectivo }),
-            valorNuevo: JSON.stringify({ nombre: actualizado.nombre, grado: actualizado.grado, anioLectivo: actualizado.anioLectivo }),
+            valorAnterior: JSON.stringify({ nombre: curso.nombre, grado: curso.grado, anioLectivo: curso.anioLectivo, profesorTitularId: curso.profesorTitularId }),
+            valorNuevo: JSON.stringify({ nombre: actualizado.nombre, grado: actualizado.grado, anioLectivo: actualizado.anioLectivo, profesorTitularId: actualizado.profesorTitularId }),
             ipAddress,
             userAgent,
         });
 
         return NextResponse.json({ curso: actualizado });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
         if (error instanceof Error && error.message === "Curso no encontrado") {
             return NextResponse.json(
                 { error: { message: "Curso no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/CURSOS]");
     }
 }

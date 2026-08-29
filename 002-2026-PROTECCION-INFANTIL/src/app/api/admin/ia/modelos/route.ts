@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -19,13 +20,25 @@ export async function GET(request: Request) {
             );
         }
 
-        const models = await listOllamaModels();
+        // Degradación controlada (mismo patrón que el sondeo de I-24 en
+        // /api/admin/ia/ollama/probar): un cerebro inalcanzable no es un 500 —
+        // el Centro de Control recibe 503 con error estructurado.
+        let models;
+        try {
+            models = await listOllamaModels();
+        } catch (ollamaError) {
+            logger.error("[IA-MODELOS] Ollama inalcanzable:", ollamaError);
+            return NextResponse.json(
+                { ok: false, error: { message: "Ollama inalcanzable", code: ERROR_CODES.SERVICE_UNAVAILABLE } },
+                { status: 503 }
+            );
+        }
         return NextResponse.json({ models });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        console.error("[IA-MODELOS] Error listando modelos:", error);
+        logger.error("[IA-MODELOS] Error listando modelos:", error);
         return NextResponse.json(
             { error: { message: "No se pudieron listar los modelos de Ollama", code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

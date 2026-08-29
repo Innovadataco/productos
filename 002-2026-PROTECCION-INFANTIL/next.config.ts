@@ -1,6 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+    // Spec 097: build standalone para la imagen Docker de producción (no afecta dev).
+    output: "standalone",
+    // 002-PI-051 (B2): el proxy trunca el body a 10MB por defecto y el multipart de la
+    // evidencia de apelación llegaba corrupto a request.formData() (el usuario veía
+    // "La solicitud debe ser multipart/form-data" en vez del 413 por tamaño). Con 25MB
+    // la validación real queda en la ruta (parámetro apelacion.max_tamano_documento_mb,
+    // default 5MB → 413 limpio).
+    experimental: {
+        proxyClientMaxBodySize: "25mb",
+    },
     async headers() {
         const enableHttpsHeaders = process.env.ENABLE_HTTPS_HEADERS === "true";
 
@@ -25,7 +35,7 @@ const nextConfig: NextConfig = {
             cspDirectives.push("upgrade-insecure-requests");
         }
 
-        const headers = [
+        const headersSeguridad = [
             {
                 key: "X-Frame-Options",
                 value: "DENY",
@@ -42,14 +52,10 @@ const nextConfig: NextConfig = {
                 key: "Permissions-Policy",
                 value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()",
             },
-            {
-                key: "Content-Security-Policy",
-                value: cspDirectives.join("; "),
-            },
         ];
 
         if (enableHttpsHeaders) {
-            headers.push({
+            headersSeguridad.push({
                 key: "Strict-Transport-Security",
                 value: "max-age=63072000; includeSubDomains; preload",
             });
@@ -57,8 +63,21 @@ const nextConfig: NextConfig = {
 
         return [
             {
+                // Headers de seguridad para todo (HSTS incluido si está activo).
                 source: "/:path*",
-                headers,
+                headers: headersSeguridad,
+            },
+            {
+                // E-6 P4c: el CSP estático NO aplica a /dashboard/** — esa área lo
+                // sirve el middleware (middleware.ts en la raíz, SPEC-287) con nonce por
+                // request (prod). Si ambos emitieran el mismo header habría duplicado.
+                source: "/((?!dashboard).*)",
+                headers: [
+                    {
+                        key: "Content-Security-Policy",
+                        value: cspDirectives.join("; "),
+                    },
+                ],
             },
         ];
     },

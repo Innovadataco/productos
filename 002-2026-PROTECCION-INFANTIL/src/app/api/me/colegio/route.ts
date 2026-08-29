@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 
@@ -15,16 +15,8 @@ export async function GET() {
             );
         }
 
-        const colegio = user.colegioId
-            ? await prisma.colegio.findUnique({
-                  where: { id: user.colegioId },
-                  include: {
-                      pais: { select: { id: true, nombre: true } },
-                      departamento: { select: { id: true, nombre: true } },
-                      ciudad: { select: { id: true, nombre: true } },
-                  },
-              })
-            : null;
+        // SPEC-134 (E-1): la consulta vive en el repo (tenant = propio colegio del usuario).
+        const colegio = user.colegioId ? await new ColegioRepository().obtenerConUbicacion(user.colegioId) : null;
 
         if (!colegio) {
             return NextResponse.json(

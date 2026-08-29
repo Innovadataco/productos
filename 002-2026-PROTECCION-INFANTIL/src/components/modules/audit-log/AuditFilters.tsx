@@ -6,7 +6,7 @@ import type { Filters } from "./types";
 
 interface AuditFiltersProps {
     filters: Filters;
-    defaultActions?: AccionAudit[];
+    defaultActions?: AccionAudit[] | undefined;
     onApply: (next: Partial<Filters>) => void;
     onReset: () => void;
 }

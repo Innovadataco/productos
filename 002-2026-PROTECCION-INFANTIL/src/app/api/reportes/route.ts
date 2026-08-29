@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { crearReporteSchema } from "@/lib/validators";
-import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { getUserFromToken } from "@/lib/auth";
+import { getParametroSistema } from "@/lib/parametros";
 import { sendReporte } from "@/lib/queue";
 import { detectarKeywordsRiesgo } from "@/lib/ai/keywords-riesgo";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
-import { encryptParameter } from "@/lib/param-encryption";
-
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+import { validarSecretoSimulacion } from "@/lib/anti-abuso/simulador-secreto";
+import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
+import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 
 export async function POST(request: Request) {
     try {
@@ -26,6 +26,16 @@ export async function POST(request: Request) {
 
         const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima } = parsed.data;
 
+        // Spec 092-US5: la longitud mínima es un parámetro (ADR_004), no un literal.
+        const paramMinTexto = await getParametroSistema("reportes.spam.min_text_length");
+        const minTexto = parseInt(paramMinTexto?.valor ?? "20", 10);
+        if (texto.trim().length < minTexto) {
+            return NextResponse.json(
+                { error: { message: `El texto del reporte debe tener al menos ${minTexto} caracteres`, code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+
         // Obtener usuario autenticado (puede ser null)
         const user = await getUserFromToken(request);
         if (user && user.rol !== "PARENT") {
@@ -35,6 +45,13 @@ export async function POST(request: Request) {
             );
         }
         const esAnonimo = !user;
+
+        // SPEC-119: un padre con el servicio vencido no puede crear reportes nuevos
+        // (los ya enviados siguen su curso; el reporte anónimo no se toca).
+        if (user) {
+            const { assertVigenciaCliente } = await import("@/lib/colegio/vigencia");
+            await assertVigenciaCliente(user.id);
+        }
 
         // Rate limiting por IP (anónimo) o por usuario autenticado
         const identifier = user?.id ?? undefined;
@@ -48,10 +65,11 @@ export async function POST(request: Request) {
 
         const usuarioId = user?.id ?? null;
 
+        // SPEC-053: el acceso a datos vive en el DAL; la ruta no toca prisma.
+        const creationService = new ReporteCreationService();
+
         // Verificar plataforma
-        const plataforma = await prisma.plataforma.findUnique({
-            where: { clave: plataformaClave },
-        });
+        const plataforma = await creationService.resolverPlataforma(plataformaClave);
         if (!plataforma) {
             return NextResponse.json(
                 { error: { message: "Plataforma no válida", code: ERROR_CODES.VALIDATION_ERROR } },
@@ -60,14 +78,20 @@ export async function POST(request: Request) {
         }
 
         // Rate limiting por fuente (Fase B)
+        // SPEC-192: el worker del simulador envía un secret compartido para saltar
+        // el rate-limit por fingerprint, que satura por /24 con IPs RFC 5737.
+        // Solo se salta este scope; report (IP) e report_identificador siguen activos.
+        const bypassFingerprint = validarSecretoSimulacion(request);
         const fingerprintHash = calcularFingerprintServerSide(request);
 
-        const rateFingerprint = await checkRateLimit(request, "report_fingerprint", { identifier: fingerprintHash });
-        if (!rateFingerprint.allowed) {
-            return NextResponse.json(
-                { error: { message: "Demasiados reportes desde este dispositivo. Espere un momento.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rateFingerprint.resetAt - Date.now()) / 1000) } },
-                { status: 429, headers: rateFingerprint.headers }
-            );
+        if (!bypassFingerprint) {
+            const rateFingerprint = await checkRateLimit(request, "report_fingerprint", { identifier: fingerprintHash });
+            if (!rateFingerprint.allowed) {
+                return NextResponse.json(
+                    { error: { message: "Demasiados reportes desde este dispositivo. Espere un momento.", code: ERROR_CODES.RATE_LIMITED, retryAfter: Math.ceil((rateFingerprint.resetAt - Date.now()) / 1000) } },
+                    { status: 429, headers: rateFingerprint.headers }
+                );
+            }
         }
 
         const rateIdentificador = await checkRateLimit(request, "report_identificador", {
@@ -86,112 +110,65 @@ export async function POST(request: Request) {
         const prioridadAlta = !esAnonimo || (esAnonimo && keywordsRiesgo.tieneMatch);
         const keywordsDetectadas = keywordsRiesgo.tieneMatch ? keywordsRiesgo.keywords : [];
 
-        // Deduplicación autenticada: mismo usuario + identificador en 30 días
-        if (usuarioId) {
-            const desde = new Date(Date.now() - THIRTY_DAYS_MS);
-            const existente = await prisma.reporte.findFirst({
-                where: {
-                    usuarioId,
-                    identificador,
-                    creadoEn: { gte: desde },
-                },
-                orderBy: { creadoEn: "desc" },
-            });
-            if (existente) {
+        // SPEC-137 (E-5): dedup + create + upsert del identificador en UNA
+        // transacción (con advisory lock por usuario+identificador dentro — cierra
+        // la carrera de deduplicación). La fuente anti-abuso y el encolado quedan
+        // FUERA, como hasta ahora (FR-004).
+        const resultado = await withUnitOfWork((tx) =>
+            new ReporteCreationService(tx).crear({
+                identificador,
+                plataformaId: plataforma.id,
+                plataformaClave,
+                texto,
+                fechaIncidente,
+                ciudad,
+                pais,
+                paisId,
+                ciudadId,
+                otraPlataforma,
+                edadVictima,
+                esAnonimo,
+                usuarioId,
+                // SPEC-295 (002-PI-196 · I-146): marca el rol del origen del
+                // reporte. "PARENT" cuando el padre autenticado reporta desde
+                // /dashboard/padre/reportar; null para anónimos e históricos.
+                origenRol: user?.rol === "PARENT" ? "PARENT" : null,
+                tenantId: user?.tenantId ?? null,
+                estadoInicial,
+                prioridadAlta,
+                keywordsDetectadas,
+            })
+        );
+
+        if (!resultado.ok) {
+            if (resultado.tipo === "duplicado") {
                 return NextResponse.json(
-                    { error: { message: "Ya reportaste este identificador recientemente", code: "DUPLICATE_REPORT", reporteExistenteId: existente.id } },
+                    { error: { message: "Ya reportaste este identificador recientemente", code: "DUPLICATE_REPORT", reporteExistenteId: resultado.reporteExistenteId } },
                     { status: 429 }
                 );
             }
-        }
-
-        // Generar número de seguimiento único
-        let numeroSeguimiento: string;
-        let intentos = 0;
-        do {
-            numeroSeguimiento = generarNumeroSeguimiento();
-            const existente = await prisma.reporte.findUnique({
-                where: { numeroSeguimiento },
-            });
-            if (!existente) break;
-            intentos++;
-        } while (intentos < 10);
-
-        if (intentos >= 10) {
-            return NextResponse.json(
-                { error: { message: "Error generando número de seguimiento", code: ERROR_CODES.INTERNAL_ERROR } },
-                { status: 500 }
-            );
-        }
-
-        // Crear reporte. El texto original se cifra inmediatamente; la copia
-        // anonimizada se genera en el worker de procesamiento asíncrono.
-        let textoOriginalCifrado: string;
-        try {
-            textoOriginalCifrado = encryptParameter(texto);
-        } catch (err) {
-            console.error("[REPORTES] Error cifrando texto original:", err);
+            if (resultado.tipo === "error_numero") {
+                return NextResponse.json(
+                    { error: { message: "Error generando número de seguimiento", code: ERROR_CODES.INTERNAL_ERROR } },
+                    { status: 500 }
+                );
+            }
             return NextResponse.json(
                 { error: { message: "Error de seguridad almacenando el reporte", code: ERROR_CODES.INTERNAL_ERROR } },
                 { status: 500 }
             );
         }
 
-        const reporte = await prisma.reporte.create({
-            data: {
-                identificador,
-                plataformaId: plataforma.id,
-                texto,
-                textoOriginal: textoOriginalCifrado,
-                fechaIncidente: new Date(fechaIncidente),
-                ciudad,
-                pais,
-                paisId: ciudadId === "otra" ? null : (paisId || null),
-                ciudadId: ciudadId === "otra" ? null : (ciudadId || null),
-                otraPlataforma: plataformaClave === "otro" ? (otraPlataforma || null) : null,
-                edadVictima: edadVictima ?? null,
-                esAnonimo,
-                usuarioId,
-                numeroSeguimiento,
-                tenantId: user?.tenantId ?? null,
-                estado: estadoInicial,
-                prioridadAlta,
-                keywordsDetectadas,
-            },
-        });
+        const { reporte } = resultado;
 
         // Registrar señal de fuente para anti-abuso (Fase A)
         try {
             await crearFuenteReporte(reporte.id, { request, usuario: user, identificador, plataformaId: plataforma.id });
         } catch (fuenteErr) {
             const msg = fuenteErr instanceof Error ? fuenteErr.message : "Error desconocido";
-            console.error("[REPORTES] Error registrando fuente:", msg);
+            logger.error("[REPORTES] Error registrando fuente:", msg);
             // No fallamos la creación del reporte si falla el registro de fuente.
         }
-
-        // Actualizar o crear IdentificadorReportado
-        await prisma.identificadorReportado.upsert({
-            where: {
-                identificador_plataformaId: {
-                    identificador,
-                    plataformaId: plataforma.id,
-                },
-            },
-            update: {
-                totalReportes: { increment: 1 },
-                reportesAutenticados: esAnonimo ? undefined : { increment: 1 },
-                reportesAnonimos: esAnonimo ? { increment: 1 } : undefined,
-                ultimoReporteEn: new Date(),
-            },
-            create: {
-                identificador,
-                plataformaId: plataforma.id,
-                totalReportes: 1,
-                reportesAutenticados: esAnonimo ? 0 : 1,
-                reportesAnonimos: esAnonimo ? 1 : 0,
-                ultimoReporteEn: new Date(),
-            },
-        });
 
         // Publicar en cola para procesamiento asíncrono (solo si queda en PENDIENTE)
         if (estadoInicial === "PENDIENTE") {
@@ -199,7 +176,7 @@ export async function POST(request: Request) {
                 await sendReporte(reporte.id, { prioridadAlta });
             } catch (queueErr) {
                 const msg = queueErr instanceof Error ? queueErr.message : "Error desconocido";
-                console.error("[REPORTES] Error publicando en cola:", msg);
+                logger.error("[REPORTES] Error publicando en cola:", msg);
                 // No fallamos la creación del reporte si la cola falla
             }
         }
@@ -211,7 +188,7 @@ export async function POST(request: Request) {
                     numeroSeguimiento: reporte.numeroSeguimiento,
                     estado: reporte.estado,
                 },
-                mensaje: "Reporte recibido. Tu número de seguimiento es " + numeroSeguimiento + ".",
+                mensaje: "Reporte recibido. Tu número de seguimiento es " + reporte.numeroSeguimiento + ".",
             },
             { status: 201 }
         );

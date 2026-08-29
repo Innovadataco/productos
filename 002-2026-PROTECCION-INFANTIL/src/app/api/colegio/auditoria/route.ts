@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma, AccionAudit } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -82,16 +82,12 @@ export async function GET(request: Request) {
             if (fechaHasta) where.creadoEn.lte = new Date(`${fechaHasta}T23:59:59.999Z`);
         }
 
-        const [items, total] = await Promise.all([
-            prisma.auditLog.findMany({
-                where,
-                orderBy: { creadoEn: "desc" },
-                skip,
-                take: pageSize,
-                include: { usuario: { select: { nombre: true, email: true } } },
-            }),
-            prisma.auditLog.count({ where }),
-        ]);
+        // SPEC-134 (E-1): la consulta paginada vive en el repo; el where se construye
+        // aquí SIEMPRE con el tenant (colegioId del usuario autenticado).
+        const [items, total] = await new AuditLogRepository().findPaginadosConUsuario(where, {
+            skip,
+            take: pageSize,
+        });
 
         return NextResponse.json({
             items,

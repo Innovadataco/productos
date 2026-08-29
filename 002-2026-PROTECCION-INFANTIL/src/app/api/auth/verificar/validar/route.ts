@@ -1,56 +1,44 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { createToken } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { verificarValidarSchema } from "@/lib/validators";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 
 export async function POST(request: Request) {
     try {
-        const body = (await request.json()) as { email: string; codigo: string };
-        const email = body.email?.toLowerCase().trim();
-
-        if (!email || !body.codigo || body.codigo.length !== 6) {
+        // SPEC-125: esquema Zod; el mensaje es contrato del frontend (registro/page.tsx).
+        const bodyRaw = await request.json().catch(() => undefined);
+        const parsed = verificarValidarSchema.safeParse(bodyRaw);
+        if (!parsed.success) {
             return NextResponse.json(
                 { error: { message: "Email y código de 6 dígitos requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
+        const { email, codigo } = parsed.data;
 
-        const codeRecord = await prisma.codigoVerificacion.findFirst({
-            where: { email, usado: false },
-            orderBy: { creadoEn: "desc" },
-        });
+        // SPEC-053: búsqueda, comparación y marcado del código viven en el DAL;
+        // la ruta no toca prisma.
+        const resultado = await new AutenticacionService().validarCodigo(email, codigo);
 
-        if (!codeRecord || new Date() > codeRecord.expiraEn) {
+        if (!resultado.ok) {
+            if (resultado.tipo === "max_intentos") {
+                return NextResponse.json(
+                    { error: { message: "Máximo de intentos excedido", code: ERROR_CODES.AUTH_INVALID } },
+                    { status: 400 }
+                );
+            }
+            if (resultado.tipo === "incorrecto") {
+                return NextResponse.json(
+                    { error: { message: "Código incorrecto", code: ERROR_CODES.AUTH_INVALID } },
+                    { status: 400 }
+                );
+            }
             return NextResponse.json(
                 { error: { message: "Código inválido o expirado", code: ERROR_CODES.AUTH_INVALID } },
                 { status: 400 }
             );
         }
-
-        if (codeRecord.intentosFallidos >= 5) {
-            return NextResponse.json(
-                { error: { message: "Máximo de intentos excedido", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 400 }
-            );
-        }
-
-        const valid = await bcrypt.compare(body.codigo, codeRecord.codigoHash);
-        if (!valid) {
-            await prisma.codigoVerificacion.update({
-                where: { id: codeRecord.id },
-                data: { intentosFallidos: { increment: 1 } },
-            });
-            return NextResponse.json(
-                { error: { message: "Código incorrecto", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 400 }
-            );
-        }
-
-        await prisma.codigoVerificacion.update({
-            where: { id: codeRecord.id },
-            data: { usado: true },
-        });
 
         const tempToken = await createToken({
             sub: email,

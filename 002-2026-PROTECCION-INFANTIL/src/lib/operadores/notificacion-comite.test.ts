@@ -4,17 +4,16 @@ import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
 import { notificarComiteSiCorresponde } from "./notificacion-comite";
 import { encryptParameter } from "@/lib/param-encryption";
+import * as email from "@/lib/email";
 
+// SPEC-296 (002-PI-197): post-migración al motor, `enviarAlertaComitePendientes`
+// llama `programar()` en vez de Resend. Se mockea el wrapper directamente para
+// aislar la lógica de la ruta (parámetros, cooldown, timestamp) sin depender
+// de que el seed de reglas esté disponible.
 const sendMock = vi.fn();
 let parametroEnabled = "true";
 let parametroFrecuencia = "24";
 let ultimoEnvio: Date | null = null;
-
-vi.mock("resend", () => ({
-    Resend: vi.fn(() => ({
-        emails: { send: (...args: unknown[]) => sendMock(...args) },
-    })),
-}));
 
 vi.mock("@/lib/parametros", () => ({
     getParametroSistemaValor: vi.fn((clave: string) => {
@@ -57,7 +56,8 @@ async function crearReporteOperador(plataformaId: string, operadorId: string) {
 describe("notificarComiteSiCorresponde", () => {
     beforeEach(async () => {
         await resetDatabase();
-        sendMock.mockReset().mockResolvedValue({ id: "email-id" });
+        sendMock.mockReset().mockResolvedValue(undefined);
+        vi.spyOn(email, "enviarAlertaComitePendientes").mockImplementation(sendMock);
         parametroEnabled = "true";
         parametroFrecuencia = "24";
         ultimoEnvio = null;
@@ -103,10 +103,9 @@ describe("notificarComiteSiCorresponde", () => {
         await notificarComiteSiCorresponde();
 
         expect(sendMock).toHaveBeenCalledOnce();
-        const args = sendMock.mock.calls[0][0];
-        expect(args.to).toBe("comite@example.com");
-        expect(args.subject).toContain("1 casos pendientes");
-        expect(args.text).toContain("/dashboard/admin/comite");
+        const [emailArg, cantidad] = sendMock.mock.calls[0];
+        expect(emailArg).toBe("comite@example.com");
+        expect(cantidad).toBe(1);
 
         const perfil = await prisma.perfilOperador.findUnique({ where: { usuarioId: comite.id } });
         expect(perfil?.ultimoEmailNotificacionEn).not.toBeNull();

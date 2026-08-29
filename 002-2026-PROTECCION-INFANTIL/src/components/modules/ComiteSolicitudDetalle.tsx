@@ -164,7 +164,7 @@ export function ComiteSolicitudDetalle({
                         </div>
                         <div>
                             <span className="font-medium text-subtle">Recibido</span>
-                            <p>{new Date(reporte.creadoEn).toLocaleString()}</p>
+                            <p>{new Date(reporte.creadoEn).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</p>
                         </div>
                     </div>
 

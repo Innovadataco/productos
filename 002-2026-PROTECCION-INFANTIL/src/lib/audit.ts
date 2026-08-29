@@ -1,19 +1,33 @@
-import { prisma } from "./prisma";
+import { prisma } from "./prisma.ts";
+import { hashConSalt } from "./anti-abuso/fuente-reporte.ts";
 import type { AccionAudit, CategoriaConducta, EstadoReporte, Prisma } from "@prisma/client";
+
+/**
+ * E-6 (ADITIVO): la IP en AuditLog deja de guardarse en claro — se persiste
+ * `sha256:` + HMAC-SHA256 con ANTI_ABUSO_SALT (el mismo helper del fingerprint
+ * anti-abuso: misma IP → mismo hash, correlación preservada sin reversibilidad).
+ * Las filas existentes NO se reescriben (el prefijo distingue nuevas de viejas);
+ * "unknown"/"worker"/"job" (no son IPs) y valores ya hasheados quedan iguales.
+ */
+function protegerIp(ipAddress: string): string {
+    if (ipAddress === "unknown" || ipAddress === "worker" || ipAddress === "job") return ipAddress;
+    if (ipAddress.startsWith("sha256:")) return ipAddress;
+    return `sha256:${hashConSalt(ipAddress)}`;
+}
 
 export async function logAudit(params: {
     accion: AccionAudit;
     tipoRecurso: string;
-    recursoId?: string;
-    parametroId?: string;
-    usuarioId?: string;
-    colegioId?: string;
-    valorAnterior?: string;
-    valorNuevo?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    metadatos?: Record<string, unknown>;
-    tx?: Prisma.TransactionClient;
+    recursoId?: string | undefined;
+    parametroId?: string | undefined;
+    usuarioId?: string | undefined;
+    colegioId?: string | undefined;
+    valorAnterior?: string | undefined;
+    valorNuevo?: string | undefined;
+    ipAddress?: string | undefined;
+    userAgent?: string | undefined;
+    metadatos?: Record<string, unknown> | undefined;
+    tx?: Prisma.TransactionClient | undefined;
 }): Promise<void> {
     const db = params.tx ?? prisma;
     await db.auditLog.create({
@@ -26,9 +40,10 @@ export async function logAudit(params: {
             colegioId: params.colegioId ?? null,
             valorAnterior: params.valorAnterior ?? null,
             valorNuevo: params.valorNuevo ?? null,
-            ipAddress: params.ipAddress ?? "unknown",
+            ipAddress: protegerIp(params.ipAddress ?? "unknown"),
             userAgent: params.userAgent ?? "unknown",
-            metadatos: params.metadatos ? (params.metadatos as never) : undefined,
+            // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+            ...(params.metadatos ? { metadatos: params.metadatos as never } : {}),
         },
     });
 }
@@ -96,5 +111,27 @@ export async function auditAccesoAdmin(params: {
         usuarioId: params.usuarioId,
         ipAddress,
         userAgent,
+    });
+}
+
+/**
+ * E-7 (SPEC-193 Fase 5): registra intentos de acceso a recursos administrativos
+ * denegados por rol insuficiente. El usuarioId puede ser undefined si el intento
+ * fue anónimo o con token inválido.
+ */
+export async function auditAccesoDenegado(params: {
+    request?: Request;
+    usuarioId?: string;
+    recurso: string;
+    metadatos?: Record<string, unknown>;
+}): Promise<void> {
+    const { ipAddress, userAgent } = extractClientInfo(params.request);
+    await logAudit({
+        accion: "ACCESO_DENEGADO",
+        tipoRecurso: params.recurso,
+        usuarioId: params.usuarioId,
+        ipAddress,
+        userAgent,
+        metadatos: params.metadatos,
     });
 }

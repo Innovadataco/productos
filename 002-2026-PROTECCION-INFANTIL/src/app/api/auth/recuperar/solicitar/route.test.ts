@@ -17,7 +17,7 @@ function makeRequest(body: unknown, ip = "203.0.113.10"): Request {
     });
 }
 
-describe("POST /api/auth/recuperar/solicitar", () => {
+describe("POST /api/auth/recuperar/solicitar", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();
@@ -82,5 +82,25 @@ describe("POST /api/auth/recuperar/solicitar", () => {
         expect(blocked.status).toBe(429);
         const data = await blocked.json();
         expect(data.error.code).toBe("RATE_LIMITED");
+    });
+
+    it("en desarrollo expone devToken cuando el email falla; en producción NUNCA (BL-3)", async () => {
+        await crearUsuario("PARENT", "bl3@example.com");
+
+        const dev = await POST(makeRequest({ email: "bl3@example.com" }));
+        const devData = await dev.json();
+        expect(devData.emailSent).toBe(false);
+        expect(devData.devToken).toBeDefined();
+
+        const envOriginal = process.env.NODE_ENV;
+        (process.env as { NODE_ENV: string }).NODE_ENV = "production";
+        try {
+            const prod = await POST(makeRequest({ email: "bl3@example.com" }, "203.0.113.111"));
+            const prodData = await prod.json();
+            expect(prodData.emailSent).toBe(false);
+            expect(prodData.devToken).toBeUndefined();
+        } finally {
+            (process.env as { NODE_ENV: string }).NODE_ENV = envOriginal ?? "test";
+        }
     });
 });

@@ -61,10 +61,10 @@ export function TablaResultadosSimulacion({ resultados }: TablaResultadosSimulac
                                             r.estado === "CLASIFICADO"
                                                 ? "success"
                                                 : r.estado === "REVISION_MANUAL" || r.estado === "POSIBLE_SPAM"
-                                                  ? "warning"
-                                                  : r.estado === "FALLIDA"
-                                                    ? "danger"
-                                                    : "neutral"
+                                                    ? "warning"
+                                                    : r.estado === "FALLIDA"
+                                                        ? "danger"
+                                                        : "neutral"
                                         }
                                     >
                                         {r.estado}

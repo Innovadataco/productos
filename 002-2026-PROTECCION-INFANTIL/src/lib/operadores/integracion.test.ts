@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { hashPassword } from "@/lib/auth";
-import { asignarOperadorAReporte, asignarOperadorAApelacion } from "./asignador";
+import { asignarOperadorAReporte } from "./asignador";
 
 async function crearAdmin() {
     return prisma.usuario.create({
@@ -52,28 +52,6 @@ async function crearReporteRevisionManual(identificador = "3000999999") {
     });
 }
 
-async function crearApelacion() {
-    const plataforma = await prisma.plataforma.findFirst({ where: { clave: "whatsapp" } });
-    if (!plataforma) throw new Error("Plataforma whatsapp no encontrada");
-    const identificadorReportado = await prisma.identificadorReportado.create({
-        data: {
-            identificador: "3000999999",
-            plataformaId: plataforma.id,
-            esVisiblePublicamente: true,
-        },
-    });
-    return prisma.apelacionIdentificador.create({
-        data: {
-            identificador: identificadorReportado.identificador,
-            plataformaId: identificadorReportado.plataformaId,
-            tokenAcceso: `token-${Date.now()}`,
-            estado: "RECIBIDA",
-            motivoSolicitud: "prueba",
-            tipoVerificacion: "NICK",
-        },
-    });
-}
-
 describe("integración operadores", () => {
     beforeEach(async () => {
         await resetDatabase();
@@ -93,34 +71,6 @@ describe("integración operadores", () => {
         // Verificar que el reporte quedó asignado
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.operadorId).toBe(asignacion.operadorId);
-    });
-
-    it("asigna apelación a revisor de apelaciones", async () => {
-        const admin = await crearAdmin();
-        const revisor = await crearOperador(admin.id, "revisor", { revisorApelaciones: true });
-        const noRevisor = await crearOperador(admin.id, "norevisor");
-        const apelacion = await crearApelacion();
-
-        const resultado = await asignarOperadorAApelacion(apelacion.id);
-        expect(resultado.asignado).toBe(true);
-        if (!resultado.asignado) return;
-        expect(resultado.operadorId).toBe(revisor.id);
-
-        const actualizada = await prisma.apelacionIdentificador.findUnique({ where: { id: apelacion.id } });
-        expect(actualizada?.operadorId).toBe(revisor.id);
-        expect(actualizada?.estado).toBe("EN_REVISION");
-    });
-
-    it("no asigna apelación si no hay revisores de apelaciones", async () => {
-        const admin = await crearAdmin();
-        await crearOperador(admin.id, "normal");
-        const apelacion = await crearApelacion();
-
-        const resultado = await asignarOperadorAApelacion(apelacion.id);
-        expect(resultado.asignado).toBe(false);
-        if (!resultado.asignado) {
-            expect(resultado.razon).toContain("No hay revisores");
-        }
     });
 
     it("reparto ponderado por carga inversa", async () => {

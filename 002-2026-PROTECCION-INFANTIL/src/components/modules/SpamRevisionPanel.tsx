@@ -1,60 +1,63 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
-import { Modal } from "@/components/ui/Modal";
-import { AdminReporteDetalle } from "./AdminReporteDetalle";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { Alerta } from "@/components/ui/Alerta";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { EmptyState } from "@/components/ui/EmptyState";
-
-const CATEGORIAS = [
-    { value: "CONTACTO_INSISTENTE", label: "Contacto insistente" },
-    { value: "SOLICITUD_MATERIAL", label: "Solicitud de material" },
-    { value: "OFRECIMIENTO_REGALOS", label: "Ofrecimiento de regalos" },
-    { value: "SUPLANTACION_IDENTIDAD", label: "Suplantación de identidad" },
-    { value: "SOLICITUD_ENCUENTRO", label: "Solicitud de encuentro" },
-    { value: "COMPARTIMIENTO_SEXUAL", label: "Compartimiento sexual" },
-    { value: "EXTORSION", label: "Extorsión" },
-    { value: "CONTENIDO_GENERADO_IA", label: "Contenido generado por IA" },
-    { value: "DIFUSION_NO_CONSENTIDA", label: "Difusión no consentida" },
-    { value: "DOXING", label: "Doxing" },
-    { value: "OTRO", label: "Otro" },
-];
-
-type SpamReporteItem = {
-    id: string;
-    identificador: string;
-    plataforma: { id: string; nombre: string; clave: string };
-    texto: string;
-    estado: string;
-    creadoEn: string;
-    prioridadAlta: boolean;
-    operadorId: string | null;
-    asignadoA: { id: string; nombre: string | null; email: string } | null;
-    clasificacion: { categoria: string; confianza: number } | null;
-    confianzaSpam: number;
-};
-
-function formatCategoria(value: string) {
-    return CATEGORIAS.find((c) => c.value === value)?.label || value;
-}
+import { SpamAnaliticaPanel } from "./spam/SpamAnaliticaPanel";
+import { SpamFiltros } from "./spam/SpamFiltros";
+import { SpamReportesTabla } from "./spam/SpamReportesTabla";
+import { SpamResolucionModal } from "./spam/SpamResolucionModal";
+import type { SpamReporteItem, Analitica, VentanaDias } from "./spam/types";
 
 export function SpamRevisionPanel() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
     const [reportes, setReportes] = useState<SpamReporteItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [categoria, setCategoria] = useState("OTRO");
     const [motivo, setMotivo] = useState("");
     const [resolviendo, setResolviendo] = useState(false);
     const [success, setSuccess] = useState("");
 
+    const [analitica, setAnalitica] = useState<Analitica | null>(null);
+    const [loadingAnalitica, setLoadingAnalitica] = useState(true);
+    const [errorAnalitica, setErrorAnalitica] = useState("");
+    const [ventanaActiva, setVentanaActiva] = useState<VentanaDias>(7);
+    const [descargandoBanco, setDescargandoBanco] = useState(false);
+
+    const [q, setQ] = useState(searchParams.get("q") || "");
+    const [estado, setEstado] = useState(searchParams.get("estado") || "");
+    const [orden, setOrden] = useState(searchParams.get("orden") || "prioridad");
+
+    const page = Math.max(1, Number(searchParams.get("page") || "1"));
+
+    const buildQueryString = useCallback(
+        (override: Record<string, string> = {}) => {
+            const params = new URLSearchParams();
+            if (q.trim()) params.set("q", q.trim());
+            if (estado) params.set("estado", estado);
+            params.set("orden", orden);
+            params.set("page", String(page));
+            Object.entries(override).forEach(([k, v]) => {
+                if (v) params.set(k, v);
+                else params.delete(k);
+            });
+            return params.toString();
+        },
+        [q, estado, orden, page]
+    );
+
     const fetchReportes = useCallback(async () => {
         setLoading(true);
         setError("");
         try {
-            const res = await fetch("/api/admin/spam/pendientes", { credentials: "include" });
+            const res = await fetch(`/api/admin/spam/pendientes?${buildQueryString()}`, { credentials: "include" });
             if (res.status === 401) {
                 window.location.href = "/login";
                 return;
@@ -62,22 +65,53 @@ export function SpamRevisionPanel() {
             if (!res.ok) throw new Error("Error cargando pendientes");
             const json = await res.json();
             setReportes(json.reportes || []);
+            setPagination(json.pagination);
         } catch {
             setError("Error cargando reportes en revisión de spam");
         } finally {
             setLoading(false);
         }
+    }, [buildQueryString]);
+
+    const fetchAnalitica = useCallback(async () => {
+        setLoadingAnalitica(true);
+        setErrorAnalitica("");
+        try {
+            const res = await fetch("/api/admin/spam/analitica", { credentials: "include" });
+            if (res.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+            if (!res.ok) throw new Error("Error cargando analítica");
+            const json = await res.json();
+            setAnalitica(json);
+        } catch {
+            setErrorAnalitica("Error cargando analítica de spam");
+        } finally {
+            setLoadingAnalitica(false);
+        }
     }, []);
 
     useEffect(() => {
         fetchReportes();
-    }, [fetchReportes]);
+        fetchAnalitica();
+    }, [fetchReportes, fetchAnalitica]);
 
-    const selected = reportes.find((r) => r.id === selectedId);
+    const applyFilters = () => {
+        router.push(`${pathname}?${buildQueryString({ page: "1" })}`);
+    };
 
-    const resolver = async (esSpam: boolean) => {
+    const goToPage = (newPage: number) => {
+        router.push(`${pathname}?${buildQueryString({ page: String(newPage) })}`);
+    };
+
+    const handleOrdenChange = (nuevoOrden: string) => {
+        router.push(`${pathname}?${buildQueryString({ page: "1", orden: nuevoOrden })}`);
+    };
+
+    const resolver = async (decision: "es_spam" | "corregir" | "procesar_como_acoso") => {
         if (!selectedId) return;
-        if (!esSpam && !categoria) {
+        if (decision === "corregir" && !categoria) {
             setError("Seleccione una categoría para el reporte válido.");
             return;
         }
@@ -85,13 +119,13 @@ export function SpamRevisionPanel() {
         setError("");
         setSuccess("");
         try {
-            const res = await fetch(`/api/admin/spam/${selectedId}/resolver`, {
+            const res = await fetch(`/api/admin/reportes/${selectedId}/resolver-spam`, {
                 method: "POST",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    esSpam,
-                    categoria: esSpam ? undefined : categoria,
+                    decision,
+                    categoria: decision === "corregir" ? categoria : undefined,
                     motivo: motivo || undefined,
                 }),
             });
@@ -100,11 +134,17 @@ export function SpamRevisionPanel() {
                 setError(json.error?.message || "Error al resolver");
                 return;
             }
-            setSuccess(esSpam ? "Confirmado como spam y dado de baja." : "Marcado como reporte válido.");
+            const mensajes: Record<typeof decision, string> = {
+                es_spam: "Confirmado como spam y dado de baja.",
+                corregir: "Marcado como reporte válido.",
+                procesar_como_acoso: "Procesado como acoso.",
+            };
+            setSuccess(mensajes[decision]);
             setSelectedId(null);
             setMotivo("");
             setCategoria("OTRO");
             await fetchReportes();
+            await fetchAnalitica();
         } catch {
             setError("Error al resolver el caso");
         } finally {
@@ -112,109 +152,89 @@ export function SpamRevisionPanel() {
         }
     };
 
+    const sugerirAlBanco = async () => {
+        setDescargandoBanco(true);
+        try {
+            const res = await fetch("/api/admin/spam/banco-sugerencias?limit=100", { credentials: "include" });
+            if (!res.ok) throw new Error("Error generando sugerencias");
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `banco-spam-sugerido-${new Date().toISOString().slice(0, 10)}.jsonl`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch {
+            setError("Error descargando sugerencias para el banco");
+        } finally {
+            setDescargandoBanco(false);
+        }
+    };
+
+    const selected = reportes.find((r) => r.id === selectedId);
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div>
                 <h1 className="text-2xl font-bold text-body">Revisión de spam</h1>
                 <p className="text-sm text-muted">Reportes marcados como posible spam por la IA esperando validación humana.</p>
             </div>
 
+            <SpamAnaliticaPanel
+                analitica={analitica}
+                loading={loadingAnalitica}
+                error={errorAnalitica}
+                ventanaActiva={ventanaActiva}
+                descargandoBanco={descargandoBanco}
+                onVentanaChange={setVentanaActiva}
+                onSugerirBanco={sugerirAlBanco}
+                onRetry={fetchAnalitica}
+            />
+
+            <SpamFiltros
+                q={q}
+                setQ={setQ}
+                estado={estado}
+                setEstado={setEstado}
+                orden={orden}
+                setOrden={setOrden}
+                onApply={applyFilters}
+                onOrdenChange={handleOrdenChange}
+            />
+
             {error && (
                 <ErrorState
                     title="No pudimos cargar los reportes en revisión"
-                    description="Ocurrió un problema al consultar la cola de spam. Intenta de nuevo."
+                    description={error}
                     onRetry={fetchReportes}
                 />
             )}
-            {success && <div className="rounded-xl bg-green-50 dark:bg-green-950/30 p-4 text-sm text-green-700 dark:text-green-300">{success}</div>}
+            {success && <Alerta tono="exito" role="status" className="p-4">{success}</Alerta>}
 
-            <div className="glass rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Identificador</th>
-                                <th className="px-4 py-3 font-medium">Plataforma</th>
-                                <th className="px-4 py-3 font-medium">Confianza SPAM</th>
-                                <th className="px-4 py-3 font-medium">Asignado a</th>
-                                <th className="px-4 py-3 font-medium">Recibido</th>
-                                <th className="px-4 py-3 font-medium">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-subtle">
-                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
-                                        <p className="mt-2 text-xs">Cargando...</p>
-                                    </td>
-                                </tr>
-                            ) : reportes.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-4 py-2">
-                                        <EmptyState
-                                            title="No hay reportes en revisión de spam"
-                                            description="Cuando la IA marque un reporte como posible spam, aparecerá aquí para validación humana."
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                reportes.map((r) => (
-                                    <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                        <td className="px-4 py-3 text-body">{r.identificador}</td>
-                                        <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
-                                        <td className="px-4 py-3 text-body">{(r.confianzaSpam * 100).toFixed(1)}%</td>
-                                        <td className="px-4 py-3 text-body">{r.asignadoA?.nombre || r.asignadoA?.email || "—"}</td>
-                                        <td className="px-4 py-3 text-subtle">{new Date(r.creadoEn).toLocaleString()}</td>
-                                        <td className="px-4 py-3">
-                                            <Button onClick={() => setSelectedId(r.id)} variant="outline" className="py-2 px-3 text-xs">
-                                                Revisar
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <SpamReportesTabla
+                reportes={reportes}
+                loading={loading}
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                onReview={setSelectedId}
+                onPageChange={goToPage}
+            />
 
             {selectedId && selected && (
-                <Modal isOpen onClose={() => setSelectedId(null)} title="Revisar posible spam">
-                    <AdminReporteDetalle
-                        reporteId={selectedId}
-                        onClose={() => setSelectedId(null)}
-                        onRefresh={fetchReportes}
-                        inline
-                    />
-
-                    <div className="mt-6 space-y-4 rounded-2xl glass p-4">
-                        <h3 className="font-medium text-body">Resolución</h3>
-                        <div>
-                            <label className="block text-sm font-medium text-body mb-1.5">Categoría si es válido</label>
-                            <Select
-                                options={CATEGORIAS.map((c) => ({ value: c.value, label: c.label }))}
-                                value={categoria}
-                                onChange={(e) => setCategoria(e.target.value)}
-                            />
-                        </div>
-                        <textarea
-                            className="w-full rounded-lg glass-input ring-accent-input p-2 text-body"
-                            rows={3}
-                            placeholder="Motivo de la resolución (opcional)"
-                            value={motivo}
-                            onChange={(e) => setMotivo(e.target.value)}
-                        />
-                        <div className="flex flex-wrap gap-2">
-                            <Button onClick={() => resolver(false)} disabled={resolviendo} variant="secondary">
-                                {resolviendo ? "Resolviendo..." : "Marcar como válido"}
-                            </Button>
-                            <Button onClick={() => resolver(true)} disabled={resolviendo}>
-                                {resolviendo ? "Resolviendo..." : "Confirmar spam"}
-                            </Button>
-                        </div>
-                    </div>
-                </Modal>
+                <SpamResolucionModal
+                    reporteId={selectedId}
+                    categoria={categoria}
+                    motivo={motivo}
+                    resolviendo={resolviendo}
+                    onClose={() => setSelectedId(null)}
+                    onCategoriaChange={setCategoria}
+                    onMotivoChange={setMotivo}
+                    onResolve={resolver}
+                    onRefresh={fetchReportes}
+                />
             )}
         </div>
     );

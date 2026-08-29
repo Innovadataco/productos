@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
-import { actualizarContacto, obtenerDetalleContacto } from "@/lib/circulo-confianza";
+import { actualizarContacto, obtenerDetalleContacto } from "@/lib/dal/services/circulo-confianza";
 
 const updateSchema = z.object({
     etiqueta: z.string().max(100).optional(),
@@ -69,7 +70,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 { status: 404 }
             );
         }
-        console.error("[CIRCULO-CONFIANZA] Error actualizando contacto:", error);
+        logger.error("[CIRCULO-CONFIANZA] Error actualizando contacto:", error);
         return NextResponse.json(
             { error: { message: safeErrorMessage(error), code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

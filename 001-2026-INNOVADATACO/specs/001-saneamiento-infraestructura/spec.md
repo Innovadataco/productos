@@ -4,7 +4,8 @@
 
 **Created**: 2026-07-22
 
-**Status**: Approved — aprobada por ZEUS (arquitecto) y Jelkin (CEO) el 2026-07-22.
+**Status**: **Terminada (ACTA-VALIDACION 001, 2026-07-23)**. Aprobada por ZEUS (arquitecto)
+y Jelkin (CEO) el 2026-07-22.
 Enmendada el 2026-07-22 con FR-010 (decisión ZEUS D-008) y FR-011 (decisión ZEUS
 D-009); D-010 confirma el enfoque de Dockerfile (target builder + prisma generate)
 y D-011 la recreación del volumen propio sin dump.

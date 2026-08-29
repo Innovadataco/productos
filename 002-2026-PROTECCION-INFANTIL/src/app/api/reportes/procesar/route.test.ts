@@ -5,6 +5,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
 import type { CategoriaConducta } from "@prisma/client";
 import { decryptParameter } from "@/lib/param-encryption";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 
 const mockClasificar = vi.fn();
 const mockPii = vi.fn();
@@ -14,18 +15,21 @@ const mockEnviarAlertaRevision = vi.fn();
 const mockEnviarAlertaScoreCritico = vi.fn();
 const mockEnviarAlertasSuscriptores = vi.fn();
 
-vi.mock("@/lib/ai/classifier", () => ({
-    clasificarConVotos: (...args: unknown[]) => mockClasificar(...args),
-}));
-
-// Spec 090: el pipeline usa el motor rúbrica cuando está habilitado; en estos tests
-// se ejerce el MISMO mock del clasificador legacy (los tests validan el pipeline, no el motor).
+// Spec 090 / 002-PI-068 Fase 3: el pipeline usa SOLO el motor rúbrica.
+// En estos tests se ejerce un mock del motor rúbrica; los tests validan el
+// pipeline, no el motor en sí.
 vi.mock("@/lib/ai/rubrica", () => ({
     clasificarConRubrica: async (...args: unknown[]) => {
         const r = await mockClasificar(...args);
         return { ...r, votosModelos: [], porcentajes: {} };
     },
-    cargarConfigRubrica: async () => ({ enabled: true }),
+    cargarConfigRubrica: async () => ({
+        preguntas: {},
+        modelos: ["m1", "m2", "m3"],
+        temperatura: 0.2,
+        umbralPresencia: 0.6,
+        modeloEmbudo: "embudo:test",
+    }),
     generarAnalisisRubrica: () => "",
 }));
 
@@ -221,7 +225,9 @@ describe("POST /api/reportes/procesar", () => {
         expect(actualizado?.estado).toBe("CLASIFICADO");
         expect(actualizado?.textoOriginal).toMatch(/^enc:/);
         expect(decryptParameter(actualizado!.textoOriginal!)).toBe("Mi hija María del colegio San José recibió mensajes.");
-        expect(actualizado?.texto).toBe("Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.");
+        // SPEC-130 (BL-4): el texto anonimizado también queda cifrado en reposo.
+        expect(actualizado?.texto).toMatch(/^enc:/);
+        expect(descifrarTextoReporte(actualizado!.texto)).toBe("Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.");
     });
 
     it("no muta estado en errores transitorios de anonimización (reintentable)", async () => {
@@ -541,7 +547,7 @@ describe("POST /api/reportes/procesar", () => {
         expect(clasif?.posibleAgresorPar).toBe(true);
     });
 
-    it("escala a revisión manual cuando detectarDoxing dispara y el LLM no incluye DOXING", async () => {
+    it("guarda previa: doxing CORTA a revisión manual SIN clasificar (spec 092-US4)", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const reporte = await prisma.reporte.create({
             data: {
@@ -557,46 +563,18 @@ describe("POST /api/reportes/procesar", () => {
             },
         });
 
-        mockClasificar.mockResolvedValue({
-            categoria: "OTRO" as CategoriaConducta,
-            confianza: 0.6,
-            categoriasSecundarias: [],
-            posibleAgresorPar: false,
-            estado: "CLASIFICADO",
-            rawResponse: "{}",
-            metrics: { modelo: "ornith:9b", latenciaMs: 1000 },
-            fallback: false,
-            votos: [{ categoria: "OTRO" as CategoriaConducta, confianza: 0.6, posibleAgresorPar: false }],
-        });
-        mockPii.mockResolvedValueOnce({
-            contienePii: true,
-            contienePiiDeterministico: true,
-            contienePiiLLM: false,
-            piiDetectada: ["mi dirección", "mi número"],
-            piiDetectadaDeterministica: ["mi dirección", "mi número"],
-            piiDetectadaLLM: [],
-            metrics: { modelo: "ornith:9b", latenciaMs: 0, promptTokens: null, responseTokens: null },
-            rawResponse: "{}",
-        });
-        mockAnonimizar.mockResolvedValueOnce({
-            textoAnonimizado: "Publicó [DIRECCION] exacta y [TELEFONO] para que otros me acosen",
-            piiDetectada: ["mi dirección", "mi número"],
-            metrics: { modelo: "ornith:9b", latenciaMs: 800 },
-        });
         mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
 
         const res = await POST(crearRequestProcesar(reporte.id));
         expect(res.status).toBe(200);
         const body = await res.json();
+        // La guarda previa corta antes de gastar los modelos: no hay clasificación
         expect(body.estado).toBe("REVISION_MANUAL");
-
+        expect(body.corteGuardaPrevia).toBe(true);
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("REVISION_MANUAL");
         expect(actualizado?.prioridadAlta).toBe(true);
-        expect(actualizado?.keywordsDetectadas.length).toBeGreaterThan(0);
-
-        const clasif = await prisma.clasificacionIA.findUnique({ where: { reporteId: reporte.id } });
-        expect(clasif?.categoria).toBe("OTRO");
+        expect(mockClasificar).not.toHaveBeenCalled();
     });
 
     it("detecta ráfaga de reportes y fuerza revisión manual con prioridad alta", async () => {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mensajeDeError } from "@/lib/mensajeError";
+import { combinarPosiciones, posicionesEnCirculo, type Punto } from "@/lib/grafoPosiciones";
 import { itemsDeCuerpo } from "@/lib/respuestaApi";
 import {
   Database,
@@ -52,6 +53,8 @@ type Doc = {
   padreId?: string | null;
   padre?: { id: string; titulo: string; tipo: string } | null;
   createdAt: string;
+  /** Derivada por la API (spec 013): ¿puede la búsqueda encontrar este documento? */
+  indexabilidad?: { buscable: boolean; enProceso: boolean; motivo: string | null };
 };
 
 type QueueItem = {
@@ -229,8 +232,14 @@ function useQueue() {
   const processingRef = useRef(false);
   const queueRef = useRef(queue);
 
-  // Sincronizar ref con estado
-  queueRef.current = queue;
+  // Sincronizar ref con estado DESPUÉS del render, no durante: escribir un ref
+  // en el cuerpo del componente es una escritura en render, que React prohíbe
+  // (react-hooks/refs). El ref solo se lee dentro de `processQueue`, que es
+  // asíncrona y corre después del commit, así que el momento de la copia no
+  // cambia lo que ve.
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
 
   const addFiles = (files: FileList | null) => {
     console.log("[useQueue] addFiles llamado", files?.length, "archivos");
@@ -320,6 +329,12 @@ function useQueue() {
 function useProcessingDocs() {
   const [processingDocs, setProcessingDocs] = useState<Doc[]>([]);
   const [activeModel, setActiveModel] = useState<{ name: string; isLarge: boolean } | null>(null);
+  // Momento de la última lectura. Sirve para medir cuánto lleva un documento en
+  // cola SIN llamar a Date.now() durante el render, que es una impureza que
+  // React prohíbe (react-hooks/purity). Además es más honesto: lo que se
+  // muestra es la antigüedad "según la última consulta", no una cuenta que
+  // cambia sola en cada repintado.
+  const [medidoEn, setMedidoEn] = useState<number>(0);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchProcessingDocs = async () => {
@@ -339,6 +354,7 @@ function useProcessingDocs() {
         const filtered = [...enCola, ...procesando];
         console.log("[useProcessingDocs] Documentos en proceso:", filtered.length);
         setProcessingDocs(filtered);
+        setMedidoEn(Date.now());
       }
     } catch (err) {
       console.error("[useProcessingDocs] Error fetching:", err);
@@ -386,6 +402,17 @@ function useProcessingDocs() {
     // Siempre iniciar polling para detectar nuevos documentos
     startPolling();
     return () => stopPolling();
+    // DECLARADO, no olvidado (spec 009, T-c del radicado 001-IDC-014).
+    // `startPolling` se recrea en cada render, así que declararlo haría que la
+    // limpieza `stopPolling()` corriera en CADA repintado: el sondeo se pararía
+    // y arrancaría sin descanso y, peor, cada vuelta relanzaría
+    // fetchActiveModel + fetchProcessingDocs — una petición por render. Ése es
+    // el bucle de peticiones que ZEUS advirtió.
+    // Arreglarlo de verdad es estabilizar cuatro funciones encadenadas
+    // (fetchProcessingDocs, fetchActiveModel, startPolling, stopPolling) del
+    // monitor de ingesta, que no tiene ni un test. Es rediseño con red, no
+    // limpieza: entra con el troceado de este componente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -393,12 +420,12 @@ function useProcessingDocs() {
     console.log("[useProcessingDocs] hasProcessing:", hasProcessing, "polling activo:", !!pollingRef.current);
   }, [processingDocs]);
 
-  return { processingDocs, activeModel, refresh: fetchProcessingDocs };
+  return { processingDocs, activeModel, medidoEn, refresh: fetchProcessingDocs };
 }
 
 function CargaDocumental() {
   const { queue, addFiles, processQueue, removeItem, clearCompleted } = useQueue();
-  const { processingDocs, activeModel, refresh: refreshProcessing } = useProcessingDocs();
+  const { processingDocs, activeModel, medidoEn, refresh: refreshProcessing } = useProcessingDocs();
   const [editingResult, setEditingResult] = useState<Doc | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<{ show: boolean; count: number }>({ show: false, count: 0 });
   const [showLargeModelWarning, setShowLargeModelWarning] = useState(false);
@@ -443,6 +470,13 @@ function CargaDocumental() {
   useEffect(() => {
     const pending = queue.some((i) => i.status === "pending");
     if (pending) processQueue();
+    // DECLARADO, no olvidado (spec 009, T-c). Declarar `queue` haría que el
+    // efecto corriera con CADA cambio de estado de un elemento —y la propia
+    // subida los cambia: pending → uploading → processing → done—, es decir,
+    // reentrar en el motor de la cola mientras sube ficheros reales. El guarda
+    // `processingRef` probablemente lo contendría, pero "probablemente" no es
+    // un criterio: esto mueve documentos del CEO y no tiene test.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue.length]);
 
   useEffect(() => {
@@ -646,7 +680,7 @@ function CargaDocumental() {
           </div>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {processingDocs.map((doc) => {
-              const minutosEnCola = Math.floor((Date.now() - new Date(doc.createdAt).getTime()) / 60000);
+              const minutosEnCola = Math.floor((medidoEn - new Date(doc.createdAt).getTime()) / 60000);
               const estaEstancado = doc.status === "queued" && minutosEnCola > 10;
               return (
                 <div
@@ -715,19 +749,16 @@ function GraphView({ docs }: { docs: Doc[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [nodes, setNodes] = useState<Record<string, { x: number; y: number }>>({});
+  // Estado: SOLO lo que el usuario ha movido (spec 009, T-b). La disposición
+  // inicial es una función pura de los documentos, así que se calcula, no se
+  // guarda: sembrar estado desde un efecto incumplía §6.2 y, de paso, perdía
+  // las posiciones arrastradas cada vez que llegaba un documento nuevo.
+  const [movidos, setMovidos] = useState<Record<string, Punto>>({});
 
-  useEffect(() => {
-    const initial: Record<string, { x: number; y: number }> = {};
-    const centerX = 400;
-    const centerY = 250;
-    docs.forEach((doc, i) => {
-      const angle = (i / Math.max(1, docs.length)) * Math.PI * 2;
-      const radius = 180;
-      initial[doc.id] = { x: centerX + Math.cos(angle) * radius, y: centerY + Math.sin(angle) * radius };
-    });
-    setNodes(initial);
-  }, [docs.length]);
+  const nodes = useMemo(
+    () => combinarPosiciones(posicionesEnCirculo(docs.map((d) => d.id)), movidos),
+    [docs, movidos],
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -783,7 +814,7 @@ function GraphView({ docs }: { docs: Doc[] }) {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left - offset.x;
     const y = e.clientY - rect.top - offset.y;
-    setNodes((n) => ({ ...n, [dragging]: { x, y } }));
+    setMovidos((previos) => ({ ...previos, [dragging]: { x, y } }));
   };
 
   return (
@@ -1092,7 +1123,10 @@ function Repositorio() {
   const [showInactive, setShowInactive] = useState(false);
   const [editing, setEditing] = useState<Doc | null>(null);
 
-  const fetchDocs = async () => {
+  // Depende de `showInactive` y de nada más, así que el efecto puede declararla
+  // y sigue recargando exactamente cuando cambia ese filtro: mismo momento que
+  // con `[showInactive]`, pero dicho de verdad.
+  const fetchDocs = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/documents?includeInactive=${showInactive}`);
@@ -1103,7 +1137,7 @@ function Repositorio() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showInactive]);
 
   useEffect(() => {
     // Las cargas van dentro de una función asíncrona propia: así el efecto no
@@ -1111,7 +1145,7 @@ function Repositorio() {
     void (async () => {
       await fetchDocs();
     })();
-  }, [showInactive]);
+  }, [fetchDocs]);
 
   const toggleActivo = async (doc: Doc) => {
     const res = await fetch("/api/documents", {
@@ -1256,8 +1290,27 @@ function Repositorio() {
                     {statusLabels[doc.status] || doc.status}
                   </Badge>
                   {!doc.activo && <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Inactivo</Badge>}
+                  {/* Un documento que la búsqueda no puede encontrar tiene que
+                      decirlo (spec 013, FR-003): antes se veía igual que los
+                      demás y el usuario creía tenerlo. */}
+                  {doc.indexabilidad && !doc.indexabilidad.buscable && (
+                    <Badge
+                      className={
+                        doc.indexabilidad.enProceso
+                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                          : "bg-orange-500/10 text-orange-300 border-orange-500/30"
+                      }
+                    >
+                      {doc.indexabilidad.enProceso ? "Indexando" : "No buscable"}
+                    </Badge>
+                  )}
                 </div>
                 <h3 className="text-sm font-bold uppercase tracking-tight">{doc.titulo}</h3>
+                {doc.indexabilidad?.motivo && (
+                  <p className="text-[10px] text-orange-300/70 normal-case tracking-normal">
+                    {doc.indexabilidad.motivo}
+                  </p>
+                )}
               </button>
               <div className="flex items-center gap-2 shrink-0">
                 <button

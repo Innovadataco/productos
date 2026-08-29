@@ -1,25 +1,19 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { verifyAuth, hashPassword } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { logAudit } from "@/lib/audit";
 import { enviarEmailBienvenidaOperador, enviarEmailBienvenidaComite } from "@/lib/email";
 import { withValidation } from "@/lib/validation";
 import { operadorIdParamsSchema } from "@/lib/schemas";
-import { randomBytes } from "crypto";
+import { OperadorService } from "@/lib/dal/services/operadores";
 
 function getClientInfo(request: Request) {
     return {
         ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
         userAgent: request.headers.get("user-agent") || "unknown",
     };
-}
-
-async function getOperador(id: string) {
-    const where: Record<string, unknown> = { id, rol: { in: ["OPERADOR", "COMITE_VALIDACION"] } };
-    return prisma.usuario.findFirst({ where, include: { perfilOperador: true } });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -34,7 +28,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
         const { id } = withValidation.params(operadorIdParamsSchema)(await params);
-        const operador = await getOperador(id);
+
+        // SPEC-053: búsqueda, regeneración del password temporal y auditoría viven en
+        // el DAL; la ruta no toca prisma. El email queda en su adaptador.
+        const service = new OperadorService();
+        const operador = await service.obtenerOperador(id);
         if (!operador) {
             return NextResponse.json(
                 { error: { message: "Operador no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -42,33 +40,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const password = randomBytes(6).toString("hex");
-        const passwordHash = await hashPassword(password);
+        const { password } = await service.regenerarPassword(operador, admin.id, getClientInfo(request), "reenviar");
 
-        await prisma.usuario.update({
-            where: { id },
-            data: { passwordHash, debeCambiarPassword: true },
-        });
-
-        const { ipAddress, userAgent } = getClientInfo(request);
         const esComite = operador.rol === "COMITE_VALIDACION";
-        const accionAudit = esComite ? "COMITE_EMAIL_REENVIADO" : "OPERADOR_EMAIL_REENVIADO";
-        await logAudit({
-            accion: accionAudit,
-            tipoRecurso: "Usuario",
-            recursoId: id,
-            usuarioId: admin.id,
-            valorNuevo: JSON.stringify({ email: operador.email }),
-            ipAddress,
-            userAgent,
-        });
-
         let emailEnviado = false;
         try {
             await (esComite ? enviarEmailBienvenidaComite : enviarEmailBienvenidaOperador)(operador.email, password);
             emailEnviado = true;
         } catch (err) {
-            console.error(`[OPERADORES] Error reenviando email de bienvenida a ${esComite ? "comité" : "operador"}`, err);
+            logger.error(`[OPERADORES] Error reenviando email de bienvenida a ${esComite ? "comité" : "operador"}`, err);
         }
 
         return NextResponse.json({

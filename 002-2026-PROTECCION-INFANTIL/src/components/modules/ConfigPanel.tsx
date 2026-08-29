@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
+import { Alerta } from "@/components/ui/Alerta";
+import { Cargando } from "@/components/ui/Cargando";
 import { CategoriaGruposEditor } from "./CategoriaGruposEditor";
 import { ConfigSection } from "./config-panel/ConfigSection";
 import { TimelineSection } from "./config-panel/TimelineSection";
+import { MantenimientoLogsPanel } from "./config-panel/MantenimientoLogsPanel";
 import { validateValue, SECTIONS, sectionForParam, type Param } from "./config-panel/types";
 
 export default function ConfigPanel() {
@@ -28,7 +31,7 @@ export default function ConfigPanel() {
         }
 
         Promise.all([
-            fetch("/api/config/parametros", { credentials: "include" }).then((r) => r.json()),
+            fetch("/api/config/parametros/todos", { credentials: "include" }).then((r) => r.json()),
             fetch("/api/admin/audit-logs?accion=PARAM_UPDATE&page=1&pageSize=50", { credentials: "include" }).then((r) => r.json()),
         ])
             .then(([data, auditData]) => {
@@ -236,8 +239,7 @@ export default function ConfigPanel() {
     if (loading) {
         return (
             <div className="flex items-center justify-center p-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-accent" />
-                <span className="ml-3 text-muted">Cargando parámetros...</span>
+                <Cargando inline texto="Cargando parámetros..." />
             </div>
         );
     }
@@ -245,26 +247,20 @@ export default function ConfigPanel() {
     return (
         <div className="space-y-8">
             {messages.global && (
-                <div
-                    className={`rounded-xl p-4 text-sm ${
-                        messages.global.type === "error"
-                            ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                            : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
-                    }`}
-                >
+                <Alerta tono={messages.global.type === "error" ? "error" : "exito"} className="p-4">
                     {messages.global.text}
-                </div>
+                </Alerta>
             )}
 
             {pendingConfig && (
-                <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
+                <Alerta tono="info" role="status" className="border border-sky-200 p-4 dark:border-sky-800">
                     <div className="flex items-center justify-between">
                         <p>Configuración precargada desde un experimento. Revisa los valores y guarda para activarla.</p>
                         <Button variant="ghost" className="text-xs" onClick={dismissPendingConfig}>
                             Descartar
                         </Button>
                     </div>
-                </div>
+                </Alerta>
             )}
 
             {SECTIONS.map((section) => (
@@ -282,6 +278,8 @@ export default function ConfigPanel() {
                     onSaveSection={saveSection}
                 />
             ))}
+
+            <MantenimientoLogsPanel />
 
             <section className="glass rounded-2xl p-5 sm:p-6">
                 <div className="mb-4">

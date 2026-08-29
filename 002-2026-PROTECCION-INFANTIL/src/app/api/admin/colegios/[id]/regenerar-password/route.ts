@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -7,6 +6,8 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { withValidation } from "@/lib/validation";
 import { colegioIdParamsSchema } from "@/lib/schemas";
+import { ColegioRepository } from "@/lib/dal/repositories/colegio";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { randomBytes } from "crypto";
 
 function getClientInfo(request: Request) {
@@ -29,10 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const { id } = withValidation.params(colegioIdParamsSchema)(await params);
 
-        const colegio = await prisma.colegio.findUnique({
-            where: { id },
-            include: { admin: { select: { id: true, email: true, nombre: true, estado: true, debeCambiarPassword: true } } },
-        });
+        // E-8: las lecturas/escrituras viven en los repos; la ruta no toca prisma.
+        const colegio = await new ColegioRepository().findParaRegenerarPassword(id);
         if (!colegio) {
             return NextResponse.json(
                 { error: { message: "Colegio no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -51,10 +50,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const password = randomBytes(6).toString("hex");
         const passwordHash = await hashPassword(password);
 
-        await prisma.usuario.update({
-            where: { id: colegio.admin.id },
-            data: { passwordHash, debeCambiarPassword: true },
-        });
+        await new UsuarioRepository().actualizar(colegio.admin.id, { passwordHash, debeCambiarPassword: true });
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({

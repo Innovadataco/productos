@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -9,6 +9,7 @@ import { getParametroSistemaValor } from "@/lib/parametros";
 import { parseArchivoCarga } from "@/lib/colegio/carga/parser";
 import { validarFilasCarga } from "@/lib/colegio/carga/validator";
 import { generarTokenCarga } from "@/lib/colegio/carga/token";
+import { crearSesionRoster } from "@/lib/colegio/carga/sesion-roster";
 
 const DEFAULT_MAX_FILAS = 500;
 
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
         }
 
         const buffer = await archivoBlob.arrayBuffer();
-        const parseado = parseArchivoCarga(buffer, extension);
+        const parseado = await parseArchivoCarga(buffer, extension);
 
         if (parseado.errores.length > 0) {
             return NextResponse.json(
@@ -112,10 +113,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const plataformas = await prisma.plataforma.findMany({
-            where: { esActiva: true },
-            select: { id: true, nombre: true },
-        });
+        const plataformas = await new PlataformaRepository().findActivas();
         const plataformasMap = new Map(plataformas.map((p) => [p.nombre.toLowerCase(), p.id]));
 
         const validacion = validarFilasCarga(parseado.filas, plataformasMap);
@@ -131,7 +129,10 @@ export async function POST(request: Request) {
             });
         }
 
-        const token = await generarTokenCarga({ filas: validacion.filasValidas, colegioId: user.colegioId });
+        // SPEC-132 (S-4): el roster se persiste server-side (TTL 15 min); el token
+        // firma SOLO el id de la sesión — ningún dato de alumnos viaja en el JWT.
+        const sesionId = await crearSesionRoster(user.colegioId, validacion.filasValidas);
+        const token = await generarTokenCarga({ sesionId, colegioId: user.colegioId });
 
         return NextResponse.json({
             valido: true,

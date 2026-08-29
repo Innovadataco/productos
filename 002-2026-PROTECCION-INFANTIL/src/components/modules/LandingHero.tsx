@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ConsultaForm } from "./ConsultaForm";
+import { ConsultaVaciaBloque, type ConsultaVaciaBloqueData } from "./ConsultaVaciaBloque";
 import { formatPlataformasResumen } from "@/lib/plataforma";
 import { RPT_STORAGE_KEY } from "./HomePageClient";
 
@@ -21,6 +22,8 @@ export type ResultadoConsulta = {
     plataformas?: Plataforma[];
     ubicaciones?: Ubicacion[];
     mensaje?: string;
+    // F3 (N-5): contenido curado del estado vacío (parámetros, sin IA).
+    bloqueVacia?: ConsultaVaciaBloqueData;
 };
 
 function ShieldIcon({ className }: { className?: string }) {
@@ -52,7 +55,7 @@ function SearchIcon({ className }: { className?: string }) {
 function formatearFecha(fecha?: string | null): string {
     if (!fecha) return "";
     try {
-        return new Date(fecha).toLocaleDateString("es-LA", { day: "2-digit", month: "2-digit", year: "numeric" });
+        return new Date(fecha).toLocaleDateString("es-LA", { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "numeric" });
     } catch {
         return fecha;
     }
@@ -194,9 +197,14 @@ export function LandingHero({
                                 )}
 
                                 {!isLoading && buscado && !error && !resultado?.tieneReportes && (
-                                    <p className="text-sm text-white/90">
-                                        {resultado?.mensaje || "Sin reportes registrados para este identificador."}
-                                    </p>
+                                    <div className="space-y-4">
+                                        <p className="text-sm text-white/90">
+                                            {resultado?.mensaje || "Sin reportes registrados para este identificador."}
+                                        </p>
+                                        {resultado?.bloqueVacia && (
+                                            <ConsultaVaciaBloque bloque={resultado.bloqueVacia} identificador={resultado.identificador} />
+                                        )}
+                                    </div>
                                 )}
 
                                 {!isLoading && resultado?.tieneReportes && (
@@ -204,7 +212,7 @@ export function LandingHero({
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="text-sm font-semibold text-white">{resultado.identificador}</span>
                                             <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white">
-                                                {resultado.totalReportes} reportes
+                                                {resultado.totalReportes === 1 ? "1 reporte" : `${resultado.totalReportes} reportes`}
                                             </span>
                                             <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white">
                                                 Actividad {resultado.actividad ?? "baja"} de reportes

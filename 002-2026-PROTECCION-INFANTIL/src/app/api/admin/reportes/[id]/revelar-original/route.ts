@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -7,12 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
 import { decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
-
-function requireAdmin(user: { rol: string }) {
-    if (String(user.rol) !== "ADMIN") {
-        throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
-    }
-}
+import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 
 function getClientInfo(request: Request) {
     return {
@@ -24,8 +18,8 @@ function getClientInfo(request: Request) {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        await assertModulo(user, "bandeja_reportes");
-        requireAdmin(user);
+        // Spec 096-US5 + SPEC-266: módulo específico; bandeja_reportes era redundante.
+        await assertModulo(user, "expediente_revelar_original");
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });
         if (!rate.allowed) {
@@ -45,10 +39,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const reporteId = parsedId.data;
 
-        const reporte = await prisma.reporte.findUnique({
-            where: { id: reporteId },
-            select: { textoOriginal: true },
-        });
+        // E-8: la lectura (solo textoOriginal cifrado) vive en el repo; el
+        // descifrado sigue por el helper autorizado de SPEC-130.
+        const reporte = await new ReporteRepository().findTextoOriginalCifrado(reporteId);
         if (!reporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },

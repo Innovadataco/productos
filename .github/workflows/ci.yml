@@ -1,0 +1,420 @@
+# SPEC-107 (cola 025, B3-c): CI mínimo como compuerta real — tsc + lint + test + build.
+# Alcance: SOLO el producto 002-2026-PROTECCION-INFANTIL (monorepo por productos).
+# Fix 002-PI-027 (§3.1 auditoría): .env.test generado en CI (no está en git),
+# placeholders de build (email.ts/Prisma los exige en page-data) y `prisma generate`
+# explícito antes de tsc.
+# 002-PI-063: jobs paralelos (verificaciones, test, journeys, build) + gate agregador.
+# 002-PI-068: split del job test en test-unit (sin BD) + test-integration (con BD).
+name: ci-002-proteccion-infantil
+
+on:
+  push:
+    branches: [feature/001-scaffolding]
+    paths:
+      - "002-2026-PROTECCION-INFANTIL/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "002-2026-PROTECCION-INFANTIL/**"
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
+
+jobs:
+  # Mega-lote 002-PI: skip de CI en commits doc-only (specs/**, docs/**, *.md).
+  # Un job skipped reporta conclusión "skipped", que GitHub trata como éxito en
+  # required checks (a diferencia de paths-ignore, que deja el check pendiente).
+  should-skip:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.detect.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - id: detect
+        run: |
+          files_changed=$(git diff --name-only HEAD^ HEAD || true)
+          code_files=$(echo "$files_changed" | grep -vE '(^002-2026-PROTECCION-INFANTIL/(docs|specs)/|^docs/|^specs/|\.md$)' || true)
+          if [ -z "$code_files" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
+
+  verificaciones:
+    runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      # SPEC-157 (D2): ratchet anti color crudo.
+      - run: npm run tokens:check
+      # SPEC-126: compuerta de la línea base de arquitectura.
+      - run: npm run arch:check
+      # SPEC-284 (002-PI-184 · I-130): compuerta de IDs de advisory lock únicos.
+      - run: npm run locks:check
+      # SPEC-287 (002-PI-187 · I-25/I-111/I-141): 4 ratchets anti-recaída del
+      # bucle de guardián en layout (x-invoke-path, redirect en layout, self-redirect
+      # en action, invariante destino ∈ exentas).
+      - run: npm run ratchets:check
+      # SPEC-296 (002-PI-197 · cierra I-152): impide bypass del motor de notificaciones.
+      # Solo se permite `resend.emails.send()` bajo `src/lib/notificaciones/`
+      # (envío real del motor) y `src/lib/email/` (notificacion-spam.ts, ya en el motor).
+      - name: Ratchet Resend fuera del motor
+        run: |
+          set -e
+          BYPASS=$(grep -rn "resend\.emails\.send" src/ --include="*.ts" --include="*.tsx" \
+              | grep -v "src/lib/notificaciones/" \
+              | grep -v "src/lib/email/" \
+              | grep -v "\.test\." || true)
+          if [ -n "$BYPASS" ]; then
+              echo "❌ Nuevo callsite Resend directo fuera del motor:"
+              echo "$BYPASS"
+              exit 1
+          fi
+          echo "✅ Cero bypasses Resend fuera del motor."
+
+  test-unit:
+    runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - name: Generar .env.test (dummy, solo CI)
+        run: |
+          cat > .env.test <<'ENV_EOF'
+          DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
+          NEXT_PUBLIC_APP_URL=http://localhost:5005
+          OLLAMA_BASE_URL=http://localhost:11434
+          EMAIL_FROM=test@ci.local
+          ENV_EOF
+      - run: npx prisma generate
+      # 002-PI-068: tests sin base de datos, paralelizables.
+      - run: npm run test:unit
+
+  test-integration:
+    runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
+    # Mega-lote 002-PI: shard 4 vías (~28min → ~7min por shard). Cada shard corre en
+    # su propio runner con su propio Postgres: no hay BD compartida entre shards.
+    # Los umbrales de cobertura se evalúan en el job agregador (test-integration-coverage).
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: proteccion
+          POSTGRES_PASSWORD: proteccion_dev
+          POSTGRES_DB: proteccion_infantil_test
+        ports:
+          - "5433:5432"
+        options: >-
+          --health-cmd "pg_isready -U proteccion"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - name: Generar .env.test (dummy, solo CI)
+        run: |
+          cat > .env.test <<'ENV_EOF'
+          DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
+          NEXT_PUBLIC_APP_URL=http://localhost:5005
+          OLLAMA_BASE_URL=http://localhost:11434
+          EMAIL_FROM=test@ci.local
+          ENV_EOF
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # SPEC-251 (I-49): guardián de índices críticos — PR rojo si alguno falta o tiene tipo incorrecto.
+      - run: npm run indices:check
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: node scripts/ensure-pgboss.mjs
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: npx prisma generate
+      # 002-PI-068: tests con base de datos y singleFork (mutex TestMutex).
+      # Mega-lote: shard N/4. Umbrales de cobertura en 0 aquí (se evalúan al mergear
+      # los 4 blobs en test-integration-coverage); blob = resultados + cobertura.
+      # SPEC-281 (002-PI-180): reparto por peso medido (test-durations.json).
+      # Si el JSON existe → se pasan los archivos como positional args (sin --shard).
+      # Si NO existe → fallback a --shard=N/4 original (el script sale sin imprimir).
+      - name: Correr shard ${{ matrix.shard }}/4 (SPEC-281 reparto por peso o fallback)
+        run: |
+          ARCHIVOS="$(node scripts/ci/reparto-shards.mjs --shard=${{ matrix.shard }}/4 --durations test-durations.json)"
+          if [ -n "$ARCHIVOS" ]; then
+            echo "[ci] reparto por peso activo (SPEC-281): $(echo $ARCHIVOS | wc -w) archivos"
+            node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json $ARCHIVOS
+          else
+            echo "[ci] fallback a --shard=${{ matrix.shard }}/4 (SPEC-281 no aplicó)"
+            node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --shard=${{ matrix.shard }}/4 --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json
+          fi
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - uses: actions/upload-artifact@v4
+        # Sube el blob incluso si el shard falló: el job agregador mergea los 4 y
+        # reporta los tests fallidos con detalle (y el ratchet se evalúa sobre la
+        # suite completa cuando todo va verde). Sin esto, un shard rojo dejaba al
+        # agregador sin blobs y fallaba por umbrales parciales (ruido).
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-blob-${{ matrix.shard }}
+          path: 002-2026-PROTECCION-INFANTIL/blobs/
+          retention-days: 1
+
+  test-integration-coverage:
+    runs-on: ubuntu-latest
+    needs: [should-skip, test-integration]
+    # Agrega los 4 shards: re-reporta resultados (fallos de tests salen aquí con
+    # detalle) y aplica el ratchet de cobertura global de 002-PI-068.
+    if: ${{ needs.should-skip.outputs.skip != 'true' && !cancelled() }}
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - name: Generar .env.test (dummy, solo CI)
+        run: |
+          cat > .env.test <<'ENV_EOF'
+          DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
+          NEXT_PUBLIC_APP_URL=http://localhost:5005
+          OLLAMA_BASE_URL=http://localhost:11434
+          EMAIL_FROM=test@ci.local
+          ENV_EOF
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-blob-*
+          path: 002-2026-PROTECCION-INFANTIL/blobs
+          merge-multiple: true
+      # SPEC-280 (002-PI-180): además de texto, emite JSON de tests y coverage
+      # (json-summary) para que el job `resumen` los consuma.
+      - run: npx vitest run --config vitest.config.ts --mergeReports blobs --coverage.enabled --coverage.reporter=text --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=vitest-summary.json
+      - uses: actions/upload-artifact@v4
+        # SPEC-280: los suministros del resumen se suben incluso si el merge falló
+        # (para pintar "resumen parcial" en vez de perder la pestaña Summary).
+        if: ${{ !cancelled() }}
+        with:
+          name: resumen-inputs
+          path: |
+            002-2026-PROTECCION-INFANTIL/vitest-summary.json
+            002-2026-PROTECCION-INFANTIL/coverage/coverage-summary.json
+          retention-days: 1
+          if-no-files-found: warn
+      # SPEC-281 (002-PI-180): actualiza test-durations.json con media móvil de
+      # esta corrida. Solo en la rama base (feature/001-scaffolding). Nunca falla el CI.
+      - name: Actualizar test-durations.json (SPEC-281, solo rama base)
+        if: ${{ github.ref == 'refs/heads/feature/001-scaffolding' && !cancelled() }}
+        run: |
+          node scripts/ci/actualizar-duraciones.mjs --vitest-json vitest-summary.json --durations test-durations.json || echo "[ci] actualizar-duraciones falló; sigo"
+      - uses: actions/upload-artifact@v4
+        # El JSON actualizado se sube siempre como artifact para que Fábrica lo
+        # commitee a mano si el bot no puede pushear a la rama base.
+        if: ${{ !cancelled() }}
+        with:
+          name: test-durations-actualizado
+          path: 002-2026-PROTECCION-INFANTIL/test-durations.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+  journeys:
+    runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: proteccion
+          POSTGRES_PASSWORD: proteccion_dev
+          POSTGRES_DB: proteccion_infantil_test
+        ports:
+          - "5433:5432"
+        options: >-
+          --health-cmd "pg_isready -U proteccion"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - name: Generar .env.test (dummy, solo CI)
+        run: |
+          cat > .env.test <<'ENV_EOF'
+          DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
+          NEXT_PUBLIC_APP_URL=http://localhost:5005
+          OLLAMA_BASE_URL=http://localhost:11434
+          EMAIL_FROM=test@ci.local
+          ENV_EOF
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # SPEC-251 (I-49): guardián de índices críticos.
+      - run: npm run indices:check
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: node scripts/ensure-pgboss.mjs
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: npx prisma generate
+      # SPEC-133 (Q-1): journeys por rol como paso propio.
+      - run: npm run test:journeys
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: proteccion
+          POSTGRES_PASSWORD: proteccion_dev
+          POSTGRES_DB: proteccion_infantil_test
+        ports:
+          - "5433:5432"
+        options: >-
+          --health-cmd "pg_isready -U proteccion"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - name: Cache .next
+        uses: actions/cache@v4
+        with:
+          path: 002-2026-PROTECCION-INFANTIL/.next/cache
+          key: ${{ runner.os }}-next-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-next-
+      - run: npm ci
+      - name: Generar .env.test (dummy, solo CI)
+        run: |
+          cat > .env.test <<'ENV_EOF'
+          DATABASE_URL=postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          PARAM_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+          ANTI_ABUSO_SALT=test-anti-abuso-salt-min-32-chars
+          NEXT_PUBLIC_APP_URL=http://localhost:5005
+          OLLAMA_BASE_URL=http://localhost:11434
+          EMAIL_FROM=test@ci.local
+          ENV_EOF
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # SPEC-251 (I-49): guardián de índices críticos.
+      - run: npm run indices:check
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: node scripts/ensure-pgboss.mjs
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      - run: npx prisma generate
+      # Placeholders SOLO de build.
+      - run: npm run build
+        env:
+          RESEND_API_KEY: build-placeholder
+          EMAIL_FROM: build@ci.local
+          ANTI_ABUSO_SALT: build-placeholder-salt-min-32-chars
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+
+  # SPEC-280 (002-PI-180): resumen legible al final de cada corrida. Corre siempre
+  # que el CI haya arrancado (verde, rojo o cancelado) — la pestaña "Summary" debe
+  # existir aunque un shard se cayera. Nunca rompe el gate.
+  resumen:
+    runs-on: ubuntu-latest
+    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build]
+    if: ${{ needs.should-skip.outputs.skip != 'true' && always() }}
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: resumen-inputs
+          path: 002-2026-PROTECCION-INFANTIL
+        continue-on-error: true
+      - name: Consultar duración de los jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" > jobs.json || echo '{"jobs":[]}' > jobs.json
+      - name: Escribir resumen en la pestaña Summary
+        run: |
+          VITEST_JSON=""
+          COVERAGE_JSON=""
+          test -f vitest-summary.json && VITEST_JSON="--vitest-json vitest-summary.json" || true
+          test -f coverage-summary.json && COVERAGE_JSON="--coverage-json coverage-summary.json" || true
+          node scripts/ci/resumen.mjs --jobs-json jobs.json --piso-lineas 36 $VITEST_JSON $COVERAGE_JSON >> "$GITHUB_STEP_SUMMARY"
+
+  gate:
+    runs-on: ubuntu-latest
+    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build]
+    if: needs.should-skip.outputs.skip != 'true'
+    steps:
+      - name: Gate passed
+        run: echo "All checks passed"

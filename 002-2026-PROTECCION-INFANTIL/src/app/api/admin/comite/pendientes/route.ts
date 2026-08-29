@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol } from "@/lib/operadores/permisos";
+import { ComiteBandejaService } from "@/lib/dal/services/comite-bandeja";
 import { z } from "zod";
 
 const querySchema = z.object({
@@ -40,36 +40,11 @@ export async function GET(request: Request) {
             );
         }
         const { page, limit } = parsedQuery.data;
-        const skip = (page - 1) * limit;
 
-        const where = { estado: "PENDIENTE", comiteId: null };
-        const [solicitudes, total] = await Promise.all([
-            prisma.solicitudComite.findMany({
-                where,
-                orderBy: { creadoEn: "desc" },
-                skip,
-                take: limit,
-                select: {
-                    id: true,
-                    numero: true,
-                    reporteId: true,
-                    estado: true,
-                    motivo: true,
-                    creadoEn: true,
-                },
-            }),
-            prisma.solicitudComite.count({ where }),
-        ]);
+        // SPEC-053: acceso a datos y paginación viven en el DAL.
+        const resultado = await new ComiteBandejaService().listarPendientes({ page, limit });
 
-        return NextResponse.json({
-            solicitudes,
-            paginacion: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
-        });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

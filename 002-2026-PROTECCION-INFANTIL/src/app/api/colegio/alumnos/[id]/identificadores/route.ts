@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
+import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
+import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
+import { ERROR_CODES } from "@/lib/errors";
+import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { alumnoIdParamsSchema, identificadorAlumnoBodySchema } from "@/lib/schemas";
-import { verificarPropiedadAlumno } from "@/lib/colegio/permisos";
-import { normalizarIdentificador } from "@/lib/colegio/normalizacion";
-import type { EtiquetaRelacionAlumno } from "@prisma/client";
+import { estudianteIdParamsSchema, identificadorEstudianteBodySchema } from "@/lib/schemas";
+import { verificarPropiedadEstudiante } from "@/lib/colegio/permisos";
+import { normalizarIdentificador, inferirTipoIdentificador } from "@/lib/colegio/normalizacion";
+import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
 function getClientInfo(request: Request) {
     return {
@@ -39,33 +41,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const { id } = withValidation.params(alumnoIdParamsSchema)(await params);
-        await verificarPropiedadAlumno(user.id, id);
+        const { id } = withValidation.params(estudianteIdParamsSchema)(await params);
+        const estudiante = await verificarPropiedadEstudiante(user.id, id);
 
-        const identificadores = await prisma.identificadorAlumno.findMany({
-            where: { alumnoId: id, estado: "activo" },
-            include: { plataforma: { select: { id: true, clave: true, nombre: true } } },
-            orderBy: { createdAt: "desc" },
-        });
+        // SPEC-134 (E-1): la consulta vive en el repo (tenant vía la relación estudiante).
+        const identificadores = await new IdentificadorEstudianteRepository().listarPorEstudiante(estudiante.colegioId, id);
 
         return NextResponse.json({ identificadores });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
         if (error instanceof Error && error.message === "Alumno no encontrado") {
             return NextResponse.json(
                 { error: { message: "Alumno no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/ALUMNOS]");
     }
 }
 
@@ -89,17 +79,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        const { id } = withValidation.params(alumnoIdParamsSchema)(await params);
-        const body = await withValidation.body(identificadorAlumnoBodySchema)(request);
+        const { id } = withValidation.params(estudianteIdParamsSchema)(await params);
+        const body = await withValidation.body(identificadorEstudianteBodySchema)(request);
 
-        await verificarPropiedadAlumno(user.id, id);
+        const estudiante = await verificarPropiedadEstudiante(user.id, id);
 
-        const valorNormalizado = normalizarIdentificador(body.valor, body.tipo);
+        // El tipo ya no se pide en el formulario: si no viene, se infiere del valor.
+        const tipo = body.tipo?.trim() || inferirTipoIdentificador(body.valor);
+        const valorNormalizado = normalizarIdentificador(body.valor, tipo);
 
         if (body.plataformaId) {
-            const plataforma = await prisma.plataforma.findUnique({
-                where: { id: body.plataformaId },
-            });
+            const plataforma = await new PlataformaRepository().findById(body.plataformaId);
             if (!plataforma) {
                 return NextResponse.json(
                     { error: { message: "Plataforma no encontrada", code: ERROR_CODES.NOT_FOUND } },
@@ -108,31 +98,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             }
         }
 
-        const duplicado = await prisma.identificadorAlumno.findFirst({
-            where: {
-                alumnoId: id,
-                tipo: body.tipo,
-                valor: valorNormalizado,
-                plataformaId: body.plataformaId ?? null,
-            },
+        // SPEC-134 (E-1): duplicado y creación viven en el repo (tenant vía la relación estudiante).
+        const identificadores = new IdentificadorEstudianteRepository();
+        const duplicado = await identificadores.buscarDuplicado(estudiante.colegioId, {
+            estudianteId: id,
+            tipo,
+            valor: valorNormalizado,
+            plataformaId: body.plataformaId ?? null,
         });
         if (duplicado) {
             return NextResponse.json(
-                { error: { message: "Identificador duplicado para este alumno", code: ERROR_CODES.CONFLICT } },
+                { error: { message: "Identificador duplicado para este estudiante", code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
             );
         }
 
-        const identificador = await prisma.identificadorAlumno.create({
-            data: {
-                alumnoId: id,
-                tipo: body.tipo,
-                valor: valorNormalizado,
-                plataformaId: body.plataformaId ?? null,
-                etiquetaRelacion: (body.etiquetaRelacion ?? "ALUMNO") as EtiquetaRelacionAlumno,
-                estado: "activo",
-            },
-            include: { plataforma: { select: { id: true, clave: true, nombre: true } } },
+        const identificador = await identificadores.crear(estudiante.colegioId, {
+            estudianteId: id,
+            tipo,
+            valor: valorNormalizado,
+            plataformaId: body.plataformaId ?? null,
+            etiquetaRelacion: (body.etiquetaRelacion ?? "ESTUDIANTE") as EtiquetaRelacionEstudiante,
         });
 
         const { ipAddress, userAgent } = getClientInfo(request);
@@ -143,11 +129,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             usuarioId: user.id,
             colegioId: user.colegioId ?? undefined,
             valorNuevo: JSON.stringify({
-                alumnoId: id,
-                tipo: body.tipo,
+                estudianteId: id,
+                tipo,
                 valor: valorNormalizado,
                 plataformaId: body.plataformaId ?? null,
-                etiquetaRelacion: body.etiquetaRelacion ?? "ALUMNO",
+                etiquetaRelacion: body.etiquetaRelacion ?? "ESTUDIANTE",
             }),
             ipAddress,
             userAgent,
@@ -155,21 +141,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         return NextResponse.json({ identificador }, { status: 201 });
     } catch (error) {
-        if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
-        }
         if (error instanceof Error && error.message === "Alumno no encontrado") {
             return NextResponse.json(
                 { error: { message: "Alumno no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-        if (error instanceof Error && "code" in error && typeof error.code === "string") {
-            return NextResponse.json({ error: { message: safeErrorMessage(error), code: error.code } }, { status: 403 });
-        }
-        return NextResponse.json(
-            { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },
-            { status: 500 }
-        );
+        return errorToResponse(error, "[COLEGIO/ALUMNOS]");
     }
 }

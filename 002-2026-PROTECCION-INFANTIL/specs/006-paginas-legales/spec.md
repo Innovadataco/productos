@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: IMPLEMENTADO
+**Status**: FINALIZADO (pendiente ACTA)
 
 **Input**: User description: "Crear páginas legales accesibles (/terminos y /privacidad) e integrar un footer global con enlaces a términos, privacidad y canales oficiales de denuncia."
 

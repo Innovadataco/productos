@@ -1,0 +1,16 @@
+{
+    "_meta": {
+        "spec": "SPEC-281 · Reparto de shards por peso",
+        "descripcion": "Duraciones en ms por archivo de test-integration. Seed inicial con los 8 archivos del brief §4.5 (corrida 33000563200). El resto se rellena automáticamente por scripts/ci/actualizar-duraciones.mjs. Los archivos sin dato reciben la mediana en el reparto.",
+        "updatedAt": "2026-08-26T00:00:00.000Z",
+        "corridas": 0
+    },
+    "src/app/api/pagos/aplicar-bono/route.test.ts": 99000,
+    "src/app/api/colegio/alertas/route.test.ts": 98000,
+    "src/lib/analisis/digest-semanal.test.ts": 67000,
+    "src/lib/colegio/avisos-observacion.test.ts": 62000,
+    "src/app/api/webhooks/resend/route.test.ts": 61000,
+    "src/lib/dal/repositories/colegio-resumen.test.ts": 52000,
+    "src/app/api/colegio/carga/confirmar/route.test.ts": 51000,
+    "src/lib/dal/repositories/embedding.test.ts": 49000
+}

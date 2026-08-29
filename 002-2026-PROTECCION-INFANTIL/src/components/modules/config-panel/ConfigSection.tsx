@@ -30,6 +30,7 @@ export function ConfigSection({
     if (items.length === 0) return null;
 
     const hasUnsaved = items.some((p) => !p.esSecreto && editValues[p.clave] !== (p.valor ?? ""));
+    const message = messages[section.key];
 
     return (
         <section key={section.key} className="glass rounded-2xl p-5 sm:p-6">
@@ -48,15 +49,15 @@ export function ConfigSection({
                 </Button>
             </div>
 
-            {messages[section.key] && (
+            {message && (
                 <div
                     className={`mb-4 rounded-lg px-4 py-2 text-sm ${
-                        messages[section.key]!.type === "error"
+                        message.type === "error"
                             ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
                             : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
                     }`}
                 >
-                    {messages[section.key]!.text}
+                    {message.text}
                 </div>
             )}
 

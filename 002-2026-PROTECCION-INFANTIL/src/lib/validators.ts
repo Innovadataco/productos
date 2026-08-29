@@ -16,7 +16,9 @@ export type ReactivarReporteInput = z.infer<typeof reactivarReporteSchema>;
 export const crearReporteSchema = z.object({
     identificador: z.string().min(3).max(100),
     plataforma: z.string().min(1),
-    texto: z.string().min(20).max(5000),
+    // La longitud mínima efectiva se valida en la route desde ParametroSistema
+    // (reportes.spam.min_text_length, spec 092-US5); aquí solo se exige no vacío.
+    texto: z.string().min(1).max(5000),
     fechaIncidente: z.string().datetime().refine(
         (val) => new Date(val) <= new Date(),
         { message: "La fecha del incidente no puede ser futura" }
@@ -90,8 +92,53 @@ export const auditLogsQuerySchema = z.object({
     fechaHasta: z.string().date().optional(),
 });
 
+// Admin padres (spec 117, I-37): listado paginado con búsqueda por email/nombre
+export const padresQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(2).max(120).optional(),
+});
+
+// SPEC-194 (002-PI-088): listado admin de usuarios por rol (empieza por PARENT).
+export const usuariosQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    rol: z.enum(["PARENT", "SCHOOL_ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA", "ADMIN"]).default("PARENT"),
+    q: z.string().trim().min(2).max(120).optional(),
+    estado: z.enum(["activo", "inactivo", "bloqueado"]).optional(),
+    desde: z.string().date().optional(),
+    hasta: z.string().date().optional(),
+    conReportes: z.enum(["true", "false"]).optional().transform((v) => (v === undefined ? undefined : v === "true")),
+    colegioId: idSchema.optional(),
+});
+export type UsuariosQueryInput = z.infer<typeof usuariosQuerySchema>;
+
+// SPEC-194 (002-PI-088): resumen de analítica por colegio.
+export const analyticsColegiosQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(2).max(120).optional(),
+    ciudadId: idSchema.optional(),
+    estado: z.enum(["activo", "inactivo"]).optional(),
+    orden: z.enum(["nombre", "reportesTotal", "reportesUltimos30Dias", "alertasEscaladas", "casosProcesadosPct", "fechaRegistro"]).optional().default("nombre"),
+    direccion: z.enum(["asc", "desc"]).optional().default("asc"),
+});
+export type AnalyticsColegiosQueryInput = z.infer<typeof analyticsColegiosQuerySchema>;
+
+// SPEC-171 (Pilar B): incidentes de infraestructura, paginación estándar + filtro por estado
+export const incidentesInfraQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    estado: z.enum(["ABIERTO", "RESUELTO"]).optional(),
+});
+
 const estadosPermitidos = Object.values(EstadoReporte) as [string, ...string[]];
 const categoriasPermitidas = Object.values(CategoriaConducta) as [string, ...string[]];
+
+// SPEC-181: orden cerrado de las bandejas del admin. El orderBy real vive en
+// ORDENES_BANDEJA (repositorio de reportes); aquí solo se valida la clave.
+export const ordenBandejaSchema = z.enum(["prioridad", "recientes", "antiguos"]).optional().default("prioridad");
+export type OrdenBandeja = z.infer<typeof ordenBandejaSchema>;
 
 export const reportesRevisionQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
@@ -103,5 +150,109 @@ export const reportesRevisionQuerySchema = z.object({
     fechaHasta: z.string().date().optional(),
     incluirEliminados: z.coerce.boolean().default(false),
     operadorId: idSchema.optional(),
+    // N-2 (002-PI-056): filtro por padre (email o nombre del usuario denunciante).
+    padre: z.string().min(3).max(120).optional(),
     q: z.string().min(3).max(120).optional(),
+    orden: ordenBandejaSchema,
 });
+
+// SPEC-181 (Tarea B): bandeja de spam con barra completa (búsqueda, estado, orden, paginación).
+export const spamPendientesQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+    q: z.string().trim().min(3).max(120).optional(),
+    estado: z.enum(["POSIBLE_SPAM", "REVISION_MANUAL"]).optional(),
+    orden: ordenBandejaSchema,
+    asignadoAMi: z.coerce.boolean().default(false),
+});
+
+// ---------------------------------------------------------------------------
+// SPEC-125 (bloque R6): una sola forma de validar.
+// Los mensajes de estos esquemas son CONTRATO del frontend
+// (AuthContext.tsx y registro/page.tsx leen `error.message`): no cambiarlos.
+// ---------------------------------------------------------------------------
+
+// Nota Zod 4: un campo AUSENTE o de otro tipo produce `invalid_type` con el
+// mensaje por defecto de Zod; el `error` a nivel de campo conserva el mensaje
+// de contrato también en ese caso.
+export const loginSchema = z.object({
+    email: z.string({ error: "Email y contraseña requeridos" }).trim().toLowerCase().min(1, "Email y contraseña requeridos"),
+    password: z.string({ error: "Email y contraseña requeridos" }).min(1, "Email y contraseña requeridos"),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
+
+export const verificarSolicitarSchema = z.object({
+    email: z.string({ error: "Email inválido" }).trim().toLowerCase().min(1, "Email inválido")
+        .refine((val) => val.includes("@"), { message: "Email inválido" }),
+});
+export type VerificarSolicitarInput = z.infer<typeof verificarSolicitarSchema>;
+
+export const verificarValidarSchema = z.object({
+    email: z.string({ error: "Email y código de 6 dígitos requeridos" }).trim().toLowerCase().min(1, "Email y código de 6 dígitos requeridos"),
+    codigo: z.string({ error: "Email y código de 6 dígitos requeridos" }).length(6, "Email y código de 6 dígitos requeridos"),
+});
+export type VerificarValidarInput = z.infer<typeof verificarValidarSchema>;
+
+export const verificarCompletarSchema = z.object({
+    token: z.string({ error: "Token y contraseña requeridos" }).min(1, "Token y contraseña requeridos"),
+    password: z.string({ error: "Token y contraseña requeridos" })
+        .min(1, "Token y contraseña requeridos")
+        .refine((val) => val.length >= 8 && /[a-zA-Z]/.test(val) && /[0-9]/.test(val), {
+            message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número",
+        }),
+    nombre: z.string({ error: "Token y contraseña requeridos" }).optional(),
+    // SPEC-240 (002-PI-143): registro público de colegio (paso 2 de verificación).
+    nombreColegio: z.string().min(2, "Nombre del colegio: mínimo 2 caracteres").max(150).optional(),
+    rol: z.enum(["PARENT", "SCHOOL_ADMIN"]).optional(),
+});
+export type VerificarCompletarInput = z.infer<typeof verificarCompletarSchema>;
+
+export const activarSchema = z.object({
+    token: z.string({ error: "Token requerido" }).min(1, "Token requerido"),
+    password: z.string({ error: "Contraseña requerida" })
+        .min(8, "Contraseña: mínimo 8 caracteres")
+        .max(100, "Contraseña: máximo 100 caracteres")
+        .refine((val) => /[a-zA-Z]/.test(val) && /[0-9]/.test(val), {
+            message: "Contraseña: al menos 1 letra y 1 número",
+        }),
+}).strict();
+export type ActivarInput = z.infer<typeof activarSchema>;
+
+export const adminColegioNuevoSchema = z.object({
+    nombreColegio: z.string().min(2, "Nombre del colegio: mínimo 2 caracteres").max(150),
+    nombreRector: z.string().min(2, "Nombre del rector: mínimo 2 caracteres").max(150),
+    emailRector: z.string().email("Email inválido").max(255, "Email: máximo 255 caracteres"),
+}).strict();
+export type AdminColegioNuevoInput = z.infer<typeof adminColegioNuevoSchema>;
+
+export const recuperarValidarQuerySchema = z.object({
+    token: z.string({ error: "Token requerido" }).min(1, "Token requerido"),
+});
+
+// SPEC-241 (002-PI-144): aceptación de consentimiento informado.
+export const consentimientoAceptarSchema = z.object({
+    documentoTipo: z.enum(["POLITICA_DATOS", "CONVENIO_INSTITUCIONAL"]),
+    esRepresentanteLegal: z.boolean(),
+}).strict();
+export type ConsentimientoAceptarInput = z.infer<typeof consentimientoAceptarSchema>;
+
+// Endpoints consumidos solo por el worker (scripts/worker-reportes.mjs).
+export const procesarReporteSchema = z.object({
+    reporteId: z.string({ error: "reporteId requerido" }).min(1, "reporteId requerido"),
+    modeloClasificacion: z.string().optional(),
+});
+export type ProcesarReporteInput = z.infer<typeof procesarReporteSchema>;
+
+export const fallbackReporteSchema = z.object({
+    reporteId: z.string({ error: "reporteId requerido" }).min(1, "reporteId requerido"),
+    error: z.string().optional(),
+    errorCode: z.string().optional(),
+});
+export type FallbackReporteInput = z.infer<typeof fallbackReporteSchema>;
+
+// Consulta pública (spec 091): el body NUNCA produce 400 — un body inválido
+// equivale a identificador vacío. Por eso `.catch({})` y no safeParse + 400.
+export const consultaBodySchema = z.object({
+    identificador: z.string().optional(),
+}).catch({});
+export type ConsultaBodyInput = z.infer<typeof consultaBodySchema>;

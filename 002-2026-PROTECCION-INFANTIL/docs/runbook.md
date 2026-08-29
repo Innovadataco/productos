@@ -629,12 +629,134 @@ Los valores deben ser legibles (no comenzar con `enc:`). Si no lo son, revisar b
 
 ---
 
+## 12b. Rotación de la credencial del admin inicial (spec 105, I-31)
+
+> **Quién**: la ejecuta el CEO personalmente (Metodología §7). Este documento es solo el
+> procedimiento; no contiene valores.
+
+Contexto: el seed crea el admin inicial SOLO desde `SEED_ADMIN_PASSWORD` (sin default) y
+SOLO si no existe; nunca pisa una credencial ya rotada (`create` puro, sin `update:`).
+
+### Si el admin de producción quedó con una contraseña comprometida (publicada en el repo)
+
+1. **Rotar la credencial viva** (elige una):
+   - Desde la UI: entrar con la contraseña actual y usar el flujo de cambio de contraseña
+     (si el admin quedó con `debeCambiarPassword=true`, el sistema lo fuerza en el primer
+     ingreso); o
+   - Como otro ADMIN: forzar restablecimiento desde el panel de usuarios, si está
+     disponible; o
+   - Directo en BD (último recurso): generar hash nuevo con bcrypt(12) y actualizar
+     `passwordHash` + `debeCambiarPassword=true` para ese usuario.
+2. **Verificar** que el hash en BD cambió y que el login viejo ya no entra.
+3. **Guardar la nueva contraseña** en el gestor del CEO (respaldo maestro). Nunca en git,
+   nunca en el chat (regla I-22).
+4. **La contraseña vieja queda muerta**: si estuvo expuesta en git, el historial la conserva
+   pero ya no sirve; la limpieza del historial es higiene secundaria (decisión de ZEUS).
+
+### Antes de correr el seed en producción (p.ej. en un deploy con seed)
+
+- Definir `SEED_ADMIN_PASSWORD` en el entorno del VPS SOLO si se quiere crear el admin
+  inicial en una base vacía. En una base ya operada, el seed dirá "existente, sin cambios"
+  y no tocará la credencial rotada — no hace falta definirla.
+- Sin `SEED_ADMIN_PASSWORD`, el seed omite el admin con log y completa el resto sin error.
+
+---
+
+## 12c. Reversión en caliente del motor de rúbrica a legacy (D-28, SPEC-111)
+
+> Si algo sale mal en producción con la rúbrica activa (`ia.rubrica.enabled=true`), se
+> vuelve a legacy EN CALIENTE: un parámetro, sin reiniciar ni desplegar. El parámetro se
+> lee en cada procesamiento, así que el cambio aplica desde el siguiente reporte.
+
+1. **Revertir** (elige una):
+   - Panel de admin → Parámetros → `ia.rubrica.enabled` = `false`; o
+   - SQL directo:
+     ```bash
+     docker exec pi-db psql -U proteccion -d proteccion_infantil -c \
+       "UPDATE \"ParametroSistema\" SET valor='false', \"actualizadoEn\"=NOW() WHERE clave='ia.rubrica.enabled';"
+     ```
+2. **Verificar** que el siguiente reporte se clasifica por LEGACY:
+   ```bash
+   # Procesar un reporte de prueba y comprobar que NO se crean votos de rúbrica:
+   docker exec pi-db psql -U proteccion -d proteccion_infantil -tAc \
+     "SELECT count(*) FROM \"ClasificacionRubricaVoto\" v JOIN \"ClasificacionIA\" c ON v.\"clasificacionIAId\"=c.id WHERE c.\"creadoEn\" > NOW() - interval '10 minutes';"
+   # Esperado: 0 (legacy no genera votos de rúbrica).
+   ```
+3. **Volver a rúbrica** cuando ZEUS lo autorice: mismo paso con `valor='true'` (o
+   `npx tsx scripts/aplicar-rubrica-default-111.ts`, idempotente).
+
+**Evidencia de que el cambio es en caliente (sin reinicio)**: medición 2026-07-28
+(`scripts/medicion-capacidad-111.ts`) — dos procesamientos seguidos en el mismo proceso:
+`enabled=false` → legacy (37.7 s) y `enabled=true` → rúbrica (52.0 s), sin reiniciar nada.
+
+---
+
+## 12d. Smoke prod-safe por rol (verificación post-deploy, SPEC-120)
+
+> Runner seguro para producción: a diferencia de la suite E2E (`src/lib/e2e/`),
+> **nunca ejecuta `resetDatabase` ni borrados masivos**. Crea cuentas efímeras
+> propias (`smoke-<ts>-<rol>@test.invalid`), hace solo lecturas HTTP y borra
+> EXACTAMENTE las filas que creó (por ID, en orden FK-seguro), incluso si falla.
+> Detalle y garantías en la cabecera de `scripts/smoke-prod-safe.ts` y en
+> `specs/120-smoke-prod-safe/`.
+
+Por cada rol (padre, colegio, admin, operador, comité) comprueba: login 200 →
+endpoint principal del rol 200 → logout 200 con Set-Cookie de borrado
+(`Path=/`, `Max-Age=0`, `Secure` en la cookie `__Host-`) → endpoint 401 sin cookie.
+
+```bash
+# Plan sin tocar nada (dry-run):
+node --env-file=.env.production --import tsx scripts/smoke-prod-safe.ts --dry-run
+
+# Solo ciclo de cuentas en BD (crear/verificar/borrar, sin HTTP):
+node --env-file=.env.production --import tsx scripts/smoke-prod-safe.ts --db-only
+
+# Contra producción (URL no-loopback exige --confirm-prod):
+SMOKE_BASE_URL=https://pi.innovadataco.com \
+  node --env-file=.env.production --import tsx scripts/smoke-prod-safe.ts --confirm-prod
+```
+
+- Requiere `DATABASE_URL` de la BD del entorno objetivo (la misma que usa la app).
+- Salida: tabla PASS/FAIL por rol; exit `0` todo verde, `1` algún fallo,
+  `2` error de uso/guarda. Nunca imprime contraseñas, tokens ni cookies.
+- Frecuencia: el login tiene rate limit por IP (default 10/5 min); una corrida
+  hace 5 logins. No encadenar corridas seguidas desde la misma IP.
+- Residual conocido y aceptado: contadores de ventana de `RateLimit` por IP
+  (login), compartidos con el tráfico real y efímeros por ventana. Los contadores
+  `admin_read` de las cuentas efímeras SÍ se borran en la limpieza.
+- Limitación deliberada: NO crea reportes de prueba (encolar un job pg-boss que
+  el worker procesaría no se puede deshacer de forma FK-completa sin carrera).
+  La cobertura de escritura sigue siendo la de `scripts/smoke-e2e.ts` (solo dev/ensayo).
+- Si una corrida muere de forma abrupta (SIGKILL, corte de energía), el residuo
+  es identificable: `SELECT * FROM "Usuario" WHERE email LIKE 'smoke-%@test.invalid';`
+  (borrar esas filas y sus `PerfilOperador`/`Colegio`/`Tenant` `smoke-%` asociados).
+
+---
+
 ## 13. Contacto y escalamiento
 
 - Si reiniciar Ollama/worker/app no resuelve el problema: revisar `app.log` y `worker.log`.
 - Si hay errores de base de datos: verificar conexión, espacio en disco y que `pgvector` esté habilitado.
 - Para decisiones sobre ajustes de parámetros de IA: consultar con el equipo de producto antes de cambiar valores en producción.
 - Para activar `scoring.source_weight.enabled` o cambiar de modelo: requerir simulación/evaluación previa documentada.
+
+---
+
+## 14. Gate de merge (CI) — branch protection · ACCIÓN DEL CEO
+
+El workflow `ci-002-proteccion-infantil` (tsc + lint + suite con cobertura + journeys por
+rol + arch:check + build) corre en todo push y PR a `feature/001-scaffolding`. Para que
+sea GATE de merge real (no solo informativo), el CEO debe activar la protección de rama
+en GitHub (ODIN no tiene ese permiso):
+
+1. Repo `Innovadataco/productos` → **Settings → Branches → Add branch ruleset** (o editar la regla existente).
+2. Target: `feature/001-scaffolding`.
+3. Activar **Require status checks to pass before merging** y marcar el check **`gate`**
+   (job del workflow `ci-002-proteccion-infantil`).
+4. Guardar. Desde ese momento ningún PR entra con el gate en rojo.
+
+Referencia: SPEC-133 (Q-1, 002-PI-056). El paso `Journeys por rol` del workflow corre
+`npm run test:journeys` por separado para atribución inmediata de fallos.
 
 ---
 

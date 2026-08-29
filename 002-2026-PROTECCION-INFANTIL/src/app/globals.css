@@ -2,13 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   SPEC-157 — Sistema de diseño de Protección Infantil (BRIEF v3.0 §4)
+   Tokens reales en :root/.dark + capa semántica reescrita sobre ellos.
+   Los DOS temas son el mismo HTML con distintos valores de token (§4.2).
+   ========================================================================== */
+
 @layer base {
     :root {
         color-scheme: light;
+
+        /* §4.2 Paleta con nombre — canales RGB (admiten alpha sin color crudo) */
+        --pino-rgb: 11 110 90; /* #0b6e5a — protección, acento primario */
+        --cielo-rgb: 90 162 234; /* #5aa2ea — reacción, segundo anillo */
+        --ambar-rgb: 169 112 12; /* #a9700c — atención */
+        --rubi-rgb: 184 57 90; /* #b8395a — urgente, nunca rojo puro */
+        --papel-rgb: 238 241 239; /* #eef1ef — neutro con sesgo verde */
+        --tinta-rgb: 15 24 21; /* #0f1815 */
+
+        /* Derivados de texto (contraste AA verificado sobre papel, T012):
+           muted = tinta 72% sobre papel → #4d5552 (6.75:1)
+           subtle = tinta 62% sobre papel → #646a68 (4.85:1; 60% daba 4.53, sin margen) */
+        --tinta-muted-rgb: 77 85 82;
+        --tinta-subtle-rgb: 100 106 104;
+
+        /* Tinta de estado: color del token apto como TEXTO (≥4.5:1 sobre papel).
+           §4.2 ambar claro (#a9700c) da 3.69:1 como texto: se usa para trazos/rellenos
+           y se deriva ambar-ink #8a5c06 (5.11:1) para texto de estado. */
+        --pino-ink-rgb: 11 110 90; /* 5.44:1 */
+        --ambar-ink-rgb: 138 92 6; /* 5.11:1 */
+        --rubi-ink-rgb: 184 57 90; /* 4.90:1 */
+
+        /* Escala derivada para el mapeo legacy primary→cielo / accent→pino
+           (los 9 usos existentes de primary-N y accent-N siguen resolviendo) */
+        --cielo-100-rgb: 208 225 238; /* #d0e1ee — tinte de cielo sobre papel */
+        --cielo-600-rgb: 53 116 187; /* #3574bb — cielo oscurecido (texto/botón) */
+        --cielo-700-rgb: 44 95 153; /* #2c5f99 */
+        --pino-100-rgb: 204 221 217; /* #ccddd9 — tinte de pino sobre papel */
+        --pino-600-rgb: 11 110 90; /* = pino (ya es oscuro en claro) */
+        --pino-700-rgb: 8 74 60; /* #084a3c */
+
+        /* Luz ambiental (bg-page / LuzAmbiental): alphas del campo de luz */
+        --luz-a: 0.12;
+        --luz-b: 0.1;
+        --luz-c: 0.08;
+
+        /* §4.7 Espaciado y radios */
+        --radio-card: 16px;
+        --radio-input: 12px;
+        --radio-hero: 22px;
+        --esp-card: 24px;
+        --esp-card-desktop: 32px;
+        --esp-gap: 16px;
+        --esp-gap-desktop: 24px;
+
+        /* Sombras derivadas de tinta (en oscuro manda la luz interior, §4.6) */
+        --sombra-sm: 0 1px 2px rgb(var(--tinta-rgb) / 0.08);
+        --sombra-md: 0 4px 12px rgb(var(--tinta-rgb) / 0.12);
+
+        /* §4.5 Movimiento — una sola curva en todo el producto */
+        --curva: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .dark {
         color-scheme: dark;
+
+        --pino-rgb: 79 224 184; /* #4fe0b8 */
+        --cielo-rgb: 111 182 245; /* #6fb6f5 */
+        --ambar-rgb: 240 180 85; /* #f0b455 */
+        --rubi-rgb: 245 128 155; /* #f5809b */
+        --papel-rgb: 6 11 10; /* #060b0a */
+        --tinta-rgb: 242 247 244; /* #f2f7f4 */
+
+        /* muted = tinta 72% sobre papel → #b0b5b2 (9.53:1)
+           subtle = tinta 60% sobre papel → #949996 (6.85:1) */
+        --tinta-muted-rgb: 176 181 178;
+        --tinta-subtle-rgb: 148 153 150;
+
+        /* En oscuro los tres tokens de estado ya dan AA como texto */
+        --pino-ink-rgb: 79 224 184; /* 11.97:1 */
+        --ambar-ink-rgb: 240 180 85; /* 10.72:1 */
+        --rubi-ink-rgb: 245 128 155; /* 7.97:1 */
+
+        /* Escala derivada invertida para el mapeo legacy primary/accent */
+        --cielo-100-rgb: 18 40 63; /* #12283f */
+        --cielo-600-rgb: 111 182 245; /* #6fb6f5 */
+        --cielo-700-rgb: 156 201 245; /* #9cc9f5 */
+        --pino-100-rgb: 13 42 34; /* #0d2a22 */
+        --pino-600-rgb: 79 224 184; /* #4fe0b8 */
+        --pino-700-rgb: 159 236 209; /* #9fecd1 */
+
+        --luz-a: 0.18;
+        --luz-b: 0.12;
+        --luz-c: 0.08;
+
+        --sombra-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+        --sombra-md: 0 4px 12px rgb(0 0 0 / 0.5);
     }
 
     body {
@@ -17,71 +106,226 @@
 }
 
 @layer utilities {
-    /* Page background with subtle mesh gradient */
+    /* ---------- Capa semántica (mismos nombres y contrato, ahora por tokens) ---------- */
+
+    /* Fondo de página: campo de luz ambiental (cielo/pino) sobre papel */
     .bg-page {
         background:
-            radial-gradient(1200px 800px at 10% -10%, rgba(14, 165, 233, 0.12) 0%, transparent 50%),
-            radial-gradient(1000px 700px at 90% 10%, rgba(6, 182, 212, 0.10) 0%, transparent 45%),
-            radial-gradient(900px 600px at 50% 110%, rgba(14, 165, 233, 0.08) 0%, transparent 50%),
-            #f8fafc;
-    }
-
-    .dark .bg-page {
-        background:
-            radial-gradient(1200px 800px at 10% -10%, rgba(6, 182, 212, 0.18) 0%, transparent 50%),
-            radial-gradient(1000px 700px at 90% 10%, rgba(14, 165, 233, 0.12) 0%, transparent 45%),
-            radial-gradient(900px 600px at 50% 110%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
-            #020617;
+            radial-gradient(1200px 800px at 10% -10%, rgb(var(--cielo-rgb) / var(--luz-a)) 0%, transparent 50%),
+            radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
+            radial-gradient(900px 600px at 50% 110%, rgb(var(--cielo-rgb) / var(--luz-c)) 0%, transparent 50%),
+            rgb(var(--papel-rgb));
     }
 
     .text-body {
-        @apply text-slate-900 dark:text-slate-50;
+        color: rgb(var(--tinta-rgb));
     }
 
     .text-muted {
-        @apply text-slate-600 dark:text-slate-400;
+        color: rgb(var(--tinta-muted-rgb));
     }
 
     .text-subtle {
-        @apply text-slate-500 dark:text-slate-400;
+        color: rgb(var(--tinta-subtle-rgb));
     }
 
     .text-accent {
-        @apply text-sky-700 dark:text-cyan-400;
+        color: rgb(var(--pino-rgb));
     }
 
-    /* Glass surfaces */
+    /* Vidrio §4.6: saturate(185%) blur(22px); en oscuro luz interior en vez de sombras */
     .glass {
-        @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-sm;
+        background: rgb(var(--papel-rgb) / 0.7);
+        backdrop-filter: saturate(185%) blur(22px);
+        -webkit-backdrop-filter: saturate(185%) blur(22px);
+        border: 1px solid rgb(var(--tinta-rgb) / 0.08);
+        box-shadow: var(--sombra-sm);
+    }
+
+    .dark .glass {
+        background: rgb(var(--papel-rgb) / 0.6);
+        border-color: rgb(var(--tinta-rgb) / 0.1);
+        box-shadow:
+            var(--sombra-sm),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .glass-strong {
-        @apply bg-white/90 dark:bg-slate-900/85 backdrop-blur-2xl border border-white/50 dark:border-white/15 shadow-lg;
+        background: rgb(var(--papel-rgb) / 0.9);
+        backdrop-filter: saturate(185%) blur(22px);
+        -webkit-backdrop-filter: saturate(185%) blur(22px);
+        border: 1px solid rgb(var(--tinta-rgb) / 0.1);
+        box-shadow: var(--sombra-md);
+    }
+
+    .dark .glass-strong {
+        background: rgb(var(--papel-rgb) / 0.85);
+        border-color: rgb(var(--tinta-rgb) / 0.15);
+        box-shadow:
+            var(--sombra-md),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .glass-dark {
-        @apply bg-slate-900/40 dark:bg-black/40 backdrop-blur-xl border border-white/15 dark:border-white/10 shadow-xl;
+        background: rgb(var(--tinta-rgb) / 0.4);
+        backdrop-filter: saturate(185%) blur(22px);
+        -webkit-backdrop-filter: saturate(185%) blur(22px);
+        border: 1px solid rgb(255 255 255 / 0.15);
+        box-shadow: var(--sombra-md);
+    }
+
+    .dark .glass-dark {
+        background: rgb(0 0 0 / 0.4);
+        border-color: rgb(255 255 255 / 0.1);
+        box-shadow:
+            var(--sombra-md),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .glass-input {
-        @apply bg-white/60 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200/70 dark:border-slate-700/70;
+        background: rgb(var(--papel-rgb) / 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgb(var(--tinta-rgb) / 0.15);
     }
 
     .text-gradient {
-        @apply bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-cyan-500 dark:from-sky-400 dark:to-cyan-300;
+        background-image: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb)));
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
     }
 
     .accent-gradient {
-        @apply bg-gradient-to-r from-sky-500 to-cyan-500 dark:from-sky-400 dark:to-cyan-400;
+        background-image: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb)));
     }
 
     .ring-accent {
-        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc] dark:focus-visible:ring-offset-[#020617];
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pino focus-visible:ring-offset-2 focus-visible:ring-offset-papel;
     }
 
     /* Utility for focus within inputs/selects */
     .ring-accent-input {
-        @apply focus:border-sky-400 dark:focus:border-cyan-400 focus:ring-2 focus:ring-sky-200/50 dark:focus:ring-cyan-400/30;
+        @apply focus:border-pino focus:ring-2 focus:ring-pino/30;
+    }
+
+    /* ---------- Escala tipográfica §4.1 (Instrument) ---------- */
+
+    /* Titular de estado: la voz del sistema */
+    .titular-estado {
+        font-family: var(--font-instrument-serif), Georgia, serif;
+        font-size: clamp(38px, 6.4vw, 70px);
+        letter-spacing: -0.022em;
+        line-height: 1.02;
+    }
+
+    .titular-h1 {
+        font-family: var(--font-instrument-serif), Georgia, serif;
+        font-size: 46px;
+        letter-spacing: -0.022em;
+        line-height: 1.05;
+    }
+
+    .titular-seccion {
+        font-family: var(--font-instrument-serif), Georgia, serif;
+        font-size: 22px;
+        line-height: 1.25;
+    }
+
+    .cuerpo {
+        font-size: 16.5px;
+        line-height: 1.65;
+    }
+
+    .microetiqueta {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: rgb(var(--tinta-subtle-rgb));
+    }
+
+    /* Toda cifra del sistema lleva tabular-nums */
+    .cifra {
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* La palabra del estado: cursiva serif en el color del estado (§4.1) */
+    .palabra-estado {
+        font-family: var(--font-instrument-serif), Georgia, serif;
+        font-style: italic;
+    }
+
+    .text-estado-pino {
+        color: rgb(var(--pino-ink-rgb));
+    }
+
+    .text-estado-ambar {
+        color: rgb(var(--ambar-ink-rgb));
+    }
+
+    .text-estado-rubi {
+        color: rgb(var(--rubi-ink-rgb));
+    }
+
+    /* ---------- Movimiento §4.5 — curva única, pulso como ÚNICO bucle ---------- */
+
+    /* Entrada escalonada: translateY(16px) + opacidad; retardo por --anim-retardo (60-80ms entre bloques) */
+    .anim-entrada {
+        animation: entrada 0.6s var(--curva) both;
+        animation-delay: var(--anim-retardo, 0ms);
+    }
+
+    /* Dibujo de anillos/gráficos: el trazo se dibuja al entrar (stroke-dashoffset) */
+    .anim-dibujo {
+        animation: dibujo 0.9s var(--curva) both;
+        animation-delay: var(--anim-retardo, 0ms);
+    }
+
+    /* El punto de estado late cada 3,4 s — único bucle permitido */
+    .anim-pulso {
+        animation: pulso 3.4s var(--curva) infinite;
+    }
+}
+
+@keyframes entrada {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes dibujo {
+    from {
+        stroke-dashoffset: var(--dash-inicial, 0);
+    }
+    to {
+        stroke-dashoffset: var(--dash-final, 0);
+    }
+}
+
+@keyframes pulso {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.55;
+        transform: scale(0.82);
+    }
+}
+
+/* §4.5: prefers-reduced-motion apaga TODO, sin excepción */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
     }
 }
 
@@ -104,23 +348,22 @@
     }
 
     ::-webkit-scrollbar-thumb {
-        @apply rounded-full bg-slate-300/60 dark:bg-slate-700/60;
+        border-radius: 9999px;
+        background: rgb(var(--tinta-rgb) / 0.22);
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        @apply bg-slate-400/80 dark:bg-slate-600/80;
+        background: rgb(var(--tinta-rgb) / 0.38);
     }
 }
 
-/* Tema institucional para colegios (SCHOOL_ADMIN) */
+/* ==========================================================================
+   Tema institucional para colegios (SCHOOL_ADMIN) — capa de compatibilidad
+   re-mapeada a tokens (pino ya ES el verde institucional: alias semántico).
+   ========================================================================== */
 .theme-colegio .text-accent,
 .theme-colegio.text-accent {
-    color: #047857;
-}
-
-.dark .theme-colegio .text-accent,
-.dark .theme-colegio.text-accent {
-    color: #34d399;
+    color: rgb(var(--pino-rgb));
 }
 
 .theme-colegio .text-gradient,
@@ -128,22 +371,12 @@
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
-    background-image: linear-gradient(to right, #059669, #14b8a6);
-}
-
-.dark .theme-colegio .text-gradient,
-.dark .theme-colegio.text-gradient {
-    background-image: linear-gradient(to right, #34d399, #2dd4bf);
+    background-image: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb)));
 }
 
 .theme-colegio .accent-gradient,
 .theme-colegio.accent-gradient {
-    background-image: linear-gradient(to right, #10b981, #14b8a6);
-}
-
-.dark .theme-colegio .accent-gradient,
-.dark .theme-colegio.accent-gradient {
-    background-image: linear-gradient(to right, #34d399, #2dd4bf);
+    background-image: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb)));
 }
 
 .theme-colegio .ring-accent,
@@ -153,45 +386,69 @@
 
 .theme-colegio .ring-accent:focus-visible,
 .theme-colegio.ring-accent:focus-visible {
-    outline: 2px solid #10b981;
+    outline: 2px solid rgb(var(--pino-rgb));
     outline-offset: 2px;
-}
-
-.dark .theme-colegio .ring-accent:focus-visible,
-.dark .theme-colegio.ring-accent:focus-visible {
-    outline-color: #34d399;
-}
-
-.theme-colegio .ring-accent-input,
-.theme-colegio.ring-accent-input {
-    --tw-ring-color: rgb(16 185 129 / 0.5);
 }
 
 .theme-colegio .ring-accent-input:focus,
 .theme-colegio.ring-accent-input:focus {
-    border-color: #10b981;
-    box-shadow: 0 0 0 2px var(--tw-ring-color);
-}
-
-.dark .theme-colegio .ring-accent-input:focus,
-.dark .theme-colegio.ring-accent-input:focus {
-    border-color: #34d399;
+    border-color: rgb(var(--pino-rgb));
+    box-shadow: 0 0 0 2px rgb(var(--pino-rgb) / 0.5);
 }
 
 .theme-colegio .bg-page,
 .theme-colegio.bg-page {
     background:
-        radial-gradient(1200px 800px at 10% -10%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-        radial-gradient(1000px 700px at 90% 10%, rgba(20, 184, 166, 0.10) 0%, transparent 45%),
-        radial-gradient(900px 600px at 50% 110%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-        #f8fafc;
+        radial-gradient(1200px 800px at 10% -10%, rgb(var(--pino-rgb) / var(--luz-a)) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 90% 10%, rgb(var(--cielo-rgb) / var(--luz-b)) 0%, transparent 45%),
+        radial-gradient(900px 600px at 50% 110%, rgb(var(--pino-rgb) / var(--luz-c)) 0%, transparent 50%),
+        rgb(var(--papel-rgb));
 }
 
-.dark .theme-colegio .bg-page,
-.dark .theme-colegio.bg-page {
+/* ==========================================================================
+   Tema padre (PARENT) — capa de compatibilidad re-mapeada a tokens cielo.
+   SPEC-231 (002-PI-131): área del padre usa la familia cielo como acento.
+   ========================================================================== */
+.theme-padre .text-accent,
+.theme-padre.text-accent {
+    color: rgb(var(--cielo-rgb));
+}
+
+.theme-padre .text-gradient,
+.theme-padre.text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    background-image: linear-gradient(to right, rgb(var(--cielo-rgb)), rgb(var(--pino-rgb)));
+}
+
+.theme-padre .accent-gradient,
+.theme-padre.accent-gradient {
+    background-image: linear-gradient(to right, rgb(var(--cielo-rgb)), rgb(var(--pino-rgb)));
+}
+
+.theme-padre .ring-accent,
+.theme-padre.ring-accent {
+    outline: none;
+}
+
+.theme-padre .ring-accent:focus-visible,
+.theme-padre.ring-accent:focus-visible {
+    outline: 2px solid rgb(var(--cielo-rgb));
+    outline-offset: 2px;
+}
+
+.theme-padre .ring-accent-input:focus,
+.theme-padre.ring-accent-input:focus {
+    border-color: rgb(var(--cielo-rgb));
+    box-shadow: 0 0 0 2px rgb(var(--cielo-rgb) / 0.5);
+}
+
+.theme-padre .bg-page,
+.theme-padre.bg-page {
     background:
-        radial-gradient(1200px 800px at 10% -10%, rgba(16, 185, 129, 0.18) 0%, transparent 50%),
-        radial-gradient(1000px 700px at 90% 10%, rgba(20, 184, 166, 0.12) 0%, transparent 45%),
-        radial-gradient(900px 600px at 50% 110%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-        #020617;
+        radial-gradient(1200px 800px at 10% -10%, rgb(var(--cielo-rgb) / var(--luz-a)) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
+        radial-gradient(900px 600px at 50% 110%, rgb(var(--cielo-rgb) / var(--luz-c)) 0%, transparent 50%),
+        rgb(var(--papel-rgb));
 }

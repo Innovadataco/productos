@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { verifyPassword, createToken, setSessionCookie } from "@/lib/auth";
+import { createToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { loginSchema } from "@/lib/validators";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
+import { SessionLogService } from "@/lib/dal/services/session-log";
+import { RolUsuario } from "@prisma/client";
 
 export async function POST(request: Request) {
     try {
@@ -14,66 +17,47 @@ export async function POST(request: Request) {
             );
         }
 
-        const body = (await request.json()) as { email: string; password: string };
-        const email = body.email?.toLowerCase().trim();
-
-        if (!email || !body.password) {
+        // SPEC-125: esquema Zod; el mensaje es contrato del frontend (AuthContext).
+        const bodyRaw = await request.json().catch(() => undefined);
+        const parsed = loginSchema.safeParse(bodyRaw);
+        if (!parsed.success) {
             return NextResponse.json(
-                { error: { message: "Email y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: parsed.error.issues[0]?.message || "Email y contraseña requeridos", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
+        const { email, password } = parsed.data;
 
-        const user = await prisma.usuario.findUnique({ where: { email } });
-        if (!user) {
-            return NextResponse.json(
-                { error: { message: "Credenciales inválidas", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 401 }
-            );
-        }
+        // SPEC-053: credenciales, lockout y actualizaciones de cuenta viven en el DAL;
+        // la ruta no toca prisma.
+        const resultado = await new AutenticacionService().login(email, password);
 
-        if (user.estado === "bloqueado" && user.bloqueadoHasta && user.bloqueadoHasta > new Date()) {
-            return NextResponse.json(
-                { error: { message: "Cuenta bloqueada temporalmente", code: ERROR_CODES.AUTH_INVALID } },
-                { status: 401 }
-            );
-        }
-
-        const valid = await verifyPassword(body.password, user.passwordHash);
-        if (!valid) {
-            const newAttempts = user.intentosFallidos + 1;
-            const maxAttempts = parseInt((await prisma.parametroSistema.findUnique({
-                where: { clave: "security.max_login_attempts" },
-            }))?.valor || "5", 10);
-            const lockoutMinutes = parseInt((await prisma.parametroSistema.findUnique({
-                where: { clave: "security.lockout_duration_minutes" },
-            }))?.valor || "30", 10);
-
-            const updates: { intentosFallidos: number; estado?: never; bloqueadoHasta?: Date } = {
-                intentosFallidos: newAttempts,
-            };
-
-            if (newAttempts >= maxAttempts) {
-                (updates as Record<string, unknown>).estado = "bloqueado";
-                (updates as Record<string, unknown>).bloqueadoHasta = new Date(Date.now() + lockoutMinutes * 60 * 1000);
+        if (!resultado.ok) {
+            if (resultado.tipo === "bloqueada") {
+                return NextResponse.json(
+                    { error: { message: "Cuenta bloqueada temporalmente", code: ERROR_CODES.AUTH_INVALID } },
+                    { status: 401 }
+                );
             }
-
-            await prisma.usuario.update({ where: { id: user.id }, data: updates });
+            if (resultado.tipo === "inactiva") {
+                return NextResponse.json(
+                    { error: { message: "Cuenta desactivada. Contacta con el soporte para reactivarla.", code: ERROR_CODES.AUTH_INVALID } },
+                    { status: 401 }
+                );
+            }
             return NextResponse.json(
                 { error: { message: "Credenciales inválidas", code: ERROR_CODES.AUTH_INVALID } },
                 { status: 401 }
             );
         }
 
-        await prisma.usuario.update({
-            where: { id: user.id },
-            data: { intentosFallidos: 0, estado: "activo", bloqueadoHasta: null, ultimaSesion: new Date() },
-        });
+        const user = resultado.user;
 
-        // Verificar vigencia del servicio para cuentas institucionales
-        if (user.rol === "SCHOOL_ADMIN") {
-            const { verificarVigenciaColegio } = await import("@/lib/colegio/vigencia");
-            const vigencia = await verificarVigenciaColegio(user.id);
+        // Verificar vigencia del servicio del cliente (SPEC-119: padres y colegios;
+        // SPEC-168: también el Comité de Convivencia). Vencer NO borra nada: solo corta el acceso.
+        if (user.rol === "SCHOOL_ADMIN" || user.rol === "PARENT" || user.rol === "COMITE_CONVIVENCIA") {
+            const { verificarVigenciaCliente } = await import("@/lib/colegio/vigencia");
+            const vigencia = await verificarVigenciaCliente(user.id);
             if (!vigencia.vigente) {
                 return NextResponse.json(
                     { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
@@ -82,7 +66,11 @@ export async function POST(request: Request) {
             }
         }
 
-        const token = await createToken({ sub: user.id, rol: user.rol });
+        const sesionLogId = await new SessionLogService().registrarInicioSesion(request, {
+            id: user.id,
+            rol: user.rol as RolUsuario,
+        });
+        const token = await createToken({ sub: user.id, rol: user.rol as RolUsuario, sesionLogId });
         await setSessionCookie(request, token);
 
         return NextResponse.json({

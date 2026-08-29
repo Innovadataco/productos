@@ -1,5 +1,5 @@
-import { prisma } from "./prisma";
-import { decryptParameter, isEncryptedValue } from "./param-encryption";
+import { prisma } from "./prisma.ts";
+import { decryptParameter, isEncryptedValue } from "./param-encryption.ts";
 import type { ParametroSistema, Prisma, PrismaClient } from "@prisma/client";
 
 export type ParametroClient = PrismaClient | Prisma.TransactionClient;

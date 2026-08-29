@@ -1,6 +1,8 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
+  // Spec 097: imagen Docker Alpine (musl + OpenSSL 3) además del nativo (macOS/Linux glibc).
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -15,12 +17,20 @@ enum RolUsuario {
   PARENT
   OPERADOR
   COMITE_VALIDACION
+  COMITE_CONVIVENCIA
 }
 
 enum EstadoUsuario {
   activo
   inactivo
   bloqueado
+}
+
+// SPEC-240 (002-PI-143): ciclo de vida de activación de cuentas institucionales.
+enum EstadoActivacion {
+  REGISTRADO
+  INVITADO
+  ACTIVO
 }
 
 enum TipoParametro {
@@ -48,6 +58,10 @@ enum AccionAudit {
   USER_UPDATE
   USER_DELETE
   CODE_REQUEST
+  // SPEC-171 (Pilar B): ciclo de vida de incidentes de infraestructura.
+  INFRA_INCIDENTE_ABIERTO
+  INFRA_INCIDENTE_RESUELTO
+  INFRA_EMAIL_ENVIADO
   CODE_VERIFY
   CODE_COMPLETE
   REPORT_DEACTIVATE
@@ -61,6 +75,9 @@ enum AccionAudit {
   APELACION_RESUELTA
   APELACION_VENCIDA
   APELACION_REHABILITADA
+  APELACION_DOCUMENTO_ACCESO
+  APELACION_DOCUMENTO_PURGADO
+  APELACION_AVISO_PLAZO
   CIRCULO_CONTACT_CREATE
   CIRCULO_CONTACT_UPDATE
   CIRCULO_CONTACT_DISABLE
@@ -69,8 +86,11 @@ enum AccionAudit {
   OPERADOR_DESACTIVADO
   OPERADOR_ASIGNADO
   OPERADOR_REASIGNADO
+  OPERADOR_DESASIGNADO
   OPERADOR_PASSWORD_REGENERADA
   OPERADOR_EMAIL_REENVIADO
+  // SPEC-182 (I-60): reconciliación periódica de reportes huérfanos sin operador.
+  RECONCILIACION_HUERFANOS
   COMITE_CREADO
   COMITE_ACTIVADO
   COMITE_DESACTIVADO
@@ -82,6 +102,10 @@ enum AccionAudit {
   CASO_CONFIRMADO
   CASO_CORREGIDO
   CASO_DADO_DE_BAJA
+  // SPEC-195 (002-PI-089): decisiones humanas en revisión de spam.
+  SPAM_CONFIRMADO
+  SPAM_CORREGIDO
+  SPAM_PROCESADO_COMO_ACOSO
   CASO_ESCALADO
   CASO_RESUELTO_POR_COMITE
   CASO_REASIGNADO
@@ -100,6 +124,14 @@ enum AccionAudit {
   COLEGIO_CURSO_CREADO
   COLEGIO_CURSO_EDITADO
   COLEGIO_CURSO_DESACTIVADO
+  COLEGIO_CURSO_ACTIVADO
+  // SPEC-162: auditoría del catálogo de materias y su vínculo con cursos.
+  COLEGIO_MATERIA_CREADA
+  COLEGIO_MATERIA_EDITADA
+  COLEGIO_MATERIA_DESACTIVADA
+  COLEGIO_MATERIA_REACTIVADA
+  COLEGIO_CURSO_MATERIA_CREADA
+  COLEGIO_CURSO_MATERIA_DESACTIVADA
   COLEGIO_ALUMNO_CREADO
   COLEGIO_ALUMNO_EDITADO
   COLEGIO_ALUMNO_DESACTIVADO
@@ -109,30 +141,279 @@ enum AccionAudit {
   COLEGIO_CARGA_MASIVA
   COLEGIO_ALERTA_CREADA
   COLEGIO_ALERTA_ESTADO
+  // SPEC-172 (Pilar D.5): recálculo bajo demanda de la deriva del motor.
+  MOTOR_DERIVA_RECALCULO
   COLEGIO_ESTADISTICAS_PDF_DESCARGADO
+  // SPEC-140 (F2/N-4): denuncia formal y exportación forense (eventos sin contenido).
+  DENUNCIA_FORMAL_GENERADA
+  EXPEDIENTE_FORENSE_EXPORTADO
+  // SPEC-141 (N-1): acceso de soporte admin (solo lectura) a datos sensibles.
+  CIRCULO_CONFIANZA_ACCESO_ADMIN
+  COLEGIO_ROSTER_ACCESO_ADMIN
+  MATCH_DETECTADO
+  CONSULTA_SIN_RESULTADOS
+  CONSULTA_VACIA_CTA_REPORTAR
+  // SPEC-234 (002-PI-134): auditoría de compilación de informes y generación de PDFs.
+  INFORME_CONSOLIDADO_CREADO
+  PDF_GENERADO
+  // SPEC-145: CRUD de profesores del colegio.
+  COLEGIO_PROFESOR_CREADO
+  COLEGIO_PROFESOR_EDITADO
+  COLEGIO_PROFESOR_DESACTIVADO
+  // SPEC-163: gestión completa de acudientes e identificadores de acudiente.
+  COLEGIO_ACUDIENTE_CREADO
+  COLEGIO_ACUDIENTE_EDITADO
+  COLEGIO_ACUDIENTE_DESACTIVADO
+  COLEGIO_ACUDIENTE_REACTIVADO
+  COLEGIO_IDENTIFICADOR_ACUDIENTE_CREADO
+  COLEGIO_IDENTIFICADOR_ACUDIENTE_EDITADO
+  COLEGIO_IDENTIFICADOR_ACUDIENTE_DESACTIVADO
+  COLEGIO_IDENTIFICADOR_ACUDIENTE_REACTIVADO
+  // SPEC-164: identificadores de profesor para alertas futuras (Fase C).
+  COLEGIO_IDENTIFICADOR_PROFESOR_CREADO
+  COLEGIO_IDENTIFICADOR_PROFESOR_EDITADO
+  COLEGIO_IDENTIFICADOR_PROFESOR_DESACTIVADO
+  COLEGIO_IDENTIFICADOR_PROFESOR_REACTIVADO
+  // SPEC-149: avisos por email del colegio (envío + cambio de preferencias).
+  COLEGIO_AVISO_ENVIADO
+  COLEGIO_AVISO_PREFERENCIA_ACTUALIZADA
+  // SPEC-159: bitácora del caso del colegio (nota de seguimiento agregada).
+  COLEGIO_CASO_NOTA_AGREGADA
+  // SPEC-168 (Fase F): Comité de Convivencia por colegio.
+  COLEGIO_COMITE_CREADO
+  COLEGIO_COMITE_PASSWORD_REGENERADA
+  COLEGIO_COMITE_INTEGRANTE_CREADO
+  COLEGIO_COMITE_INTEGRANTE_ACTUALIZADO
+  COLEGIO_COMITE_INTEGRANTE_INACTIVADO
+  COLEGIO_CASO_ESCALADO_A_COMITE
+  COLEGIO_CASO_RESUELTO_POR_COMITE
+  // SPEC-150: observación especial del estudiante (marca auditable, Ley 1581).
+  COLEGIO_OBSERVACION_MARCADA
+  COLEGIO_OBSERVACION_DESMARCADA
+  // SPEC-151: informe PDF mensual determinístico del colegio.
+  COLEGIO_INFORME_MENSUAL_PDF_DESCARGADO
+  // SPEC-152: duplicar curso al año siguiente.
+  COLEGIO_CURSO_DUPLICADO
+  // SPEC-153: descarga de comparativa entre cursos en Excel.
+  COLEGIO_COMPARATIVA_EXCEL_DESCARGADO
+  // SPEC-169 (Fase G): onboarding, cobertura y notificaciones in-app del colegio.
+  COLEGIO_ONBOARDING_OMITIDO
+  COLEGIO_ONBOARDING_REACTIVADO
+  COLEGIO_ONBOARDING_COMPLETADO
+  COLEGIO_NOTIFICACION_CREADA
+  COLEGIO_NOTIFICACION_LEIDA
+  COLEGIO_NOTIFICACION_ARCHIVADA
+  // SPEC-184 (002-PI-079): anti-abuso operativo + simulador de abusos.
+  IP_BLOQUEADA
+  IP_DESBLOQUEADA
+  // SPEC-196 (002-PI-090): desbloqueo manual de IP con motivo obligatorio.
+  IP_DESBLOQUEADA_MANUAL
+  SIMULACION_ABUSO_INICIADA
+  SIMULACION_ABUSO_CANCELADA
+  SIMULACION_ABUSO_COMPLETADA
+  // SPEC-193 (Fase 1): mantenimiento de logs y reasignación manual de reportes.
+  LOGS_MANTENIMIENTO_PURGA
+  REPORTE_REASIGNADO_MANUAL
+  // SPEC-193 (Fase 5): auditoría de intentos de acceso no autorizado a recursos admin.
+  ACCESO_DENEGADO
+  // SPEC-212 (002-PI-112): auditoría del módulo de pagos.
+  PAGO_AUTORIZADO
+  PAGO_RECHAZADO
+  PAGO_REEMBOLSADO
+  BONO_CREADO
+  BONO_ACTUALIZADO
+  BONO_DESACTIVADO
+  // SPEC-216 (002-PI-116): aplicación de bonos promocionales.
+  BONO_APLICADO
+  PLAN_ACTUALIZADO
+  SUSCRIPCION_EXTENSION_MANUAL
+  // SPEC-214 (002-PI-114): tasas de cambio.
+  TASA_MANUAL_CREADA
+  // SPEC-206 (002-PI-120): auditoría de cierre de sesiones.
+  SESION_FORZADA_CIERRE
+  SESION_CIERRE_INACTIVIDAD
+  // SPEC-235 (002-PI-135): auditoría del ciclo de vida de guías de acción.
+  GUIA_ACCION_CREADA
+  GUIA_ACCION_EDITADA
+  GUIA_ACCION_ENVIADA_COMITE
+  GUIA_ACCION_APROBADA
+  GUIA_ACCION_RECHAZADA
+  GUIA_ACCION_PUBLICADA
+  GUIA_ACCION_REEMPLAZADA
+  // SPEC-202 (002-PI-099): auditoría de cambios en reglas del motor de notificaciones.
+  NOTIFICACION_REGLA_ACTUALIZADA
+  NOTIFICACION_PLANTILLA_ACTUALIZADA
+  NOTIFICACION_PARAMETRO_ACTUALIZADO
+  // SPEC-203 (002-PI-100): auditoría de preferencias y lectura de notificaciones del usuario final.
+  NOTIFICACION_PREFERENCIA_ACTUALIZADA
+  NOTIFICACION_USUARIO_LEIDA
+  // SPEC-213 (002-PI-113): transición automática de estado de suscripción (worker de vigencia).
+  SUSCRIPCION_TRANSICION_AUTOMATICA
+  // SPEC-220 (002-PI-121): purga de retención de snapshots de score de valor.
+  ANALISIS_SCORE_PURGA
+  // SPEC-236 (002-PI-mega-cola): ciclo de vida del motor de estados del expediente padre.
+  EXPEDIENTE_TRANSICION_ESTADO
+  EXPEDIENTE_RETENIDO
+  EXPEDIENTE_SLA_VENCIDO
+  EXPEDIENTE_GRAVEDAD_SUBIO_A_ROJO
+  // SPEC-211 (002-PI-111): renovación reportada por el cliente y cancelación de su suscripción.
+  PAGO_REPORTADO
+  SUSCRIPCION_CANCELADA
+  // SPEC-237 (002-PI-mega-cola): aprobación colegiada, corrección y devolución de informes consolidados.
+  INFORME_CONSOLIDADO_APROBADO
+  INFORME_CONSOLIDADO_CORREGIDO
+  INFORME_CONSOLIDADO_DEVUELTO
+  // SPEC-221 (002-PI-122): resolución humana de una recomendación del motor de reglas.
+  RECOMENDACION_RESUELTA
+  // SPEC-215 (002-PI-115): uso de código de referido y recompensa otorgada al referidor.
+  REFERIDO_REGISTRADO
+  REFERIDO_RECOMPENSA_OTORGADA
+  // SPEC-217 (002-PI-117): activación del freemium y conversión por pago durante el periodo gratuito.
+  SUSCRIPCION_FREEMIUM_ACTIVADA
+  SUSCRIPCION_FREEMIUM_CONVERTIDA
+  // SPEC-225 (002-PI-126): resolución humana de una anomalía detectada por reglas.
+  ANOMALIA_RESUELTA
+  // SPEC-238 (002-PI-mega-cola): ciclo de vida de la aclaración padre-comité.
+  ACLARACION_SOLICITADA
+  ACLARACION_RESPONDIDA
+  ACLARACION_CERRADA_FORZOSAMENTE
+  // SPEC-223 (002-PI-124): trazabilidad SYSTEM del digest semanal al CEO.
+  ANALISIS_DIGEST_GENERADO
+  ANALISIS_DIGEST_ENVIADO
+  ANALISIS_DIGEST_FALLIDO
+  // SPEC-239 (002-PI-mega-cola): escalación ROJO, SLA 12h y contactos de emergencia.
+  CONTACTO_EMERGENCIA_CREADO
+  CONTACTO_EMERGENCIA_ACTUALIZADO
+  CONTACTO_EMERGENCIA_ELIMINADO
+  CONTACTO_EMERGENCIA_FALLBACK_USADO
+  EXPEDIENTE_ESCALADO_A_ROJO
+  EXPEDIENTE_EMERGENCIA_ACTIVADA
+  EXPEDIENTE_EMERGENCIA_SIN_CONTACTOS
+  EXPEDIENTE_COMITE_SLA_VENCIDO
+  // SPEC-227 (002-PI-128): export CSV pseudonimizado del historial de recomendaciones.
+  RECOMENDACIONES_EXPORT_CSV
+  // SPEC-224 (002-PI-125): ciclo de vida y promoción de reglas de recomendación (panel admin).
+  REGLA_CREADA
+  REGLA_ACTUALIZADA
+  REGLA_ACTIVADA
+  REGLA_DESACTIVADA
+  REGLA_PROMOVIDA_EJECUTA
+  REGLA_REVERTIDA_RECOMIENDA
+  REGLA_SQL_TEST
+  // SPEC-226 (002-PI-mega-cola): trazabilidad de acciones automáticas de reglas EJECUTA.
+  ANALISIS_ACCION_EJECUTADA
+  ANALISIS_ACCION_FALLIDA
+  ANALISIS_ACCION_REVERTIDA
+  // SPEC-248 (002-PI-151): edición admin de definiciones legales de rúbrica.
+  RUBRICA_DEFINICION_UPDATE
+  // SPEC-242 (002-PI-145): acceso de padre a /reportar sin suscripción activa.
+  REPORTE_SIN_SUSCRIPCION
+  // SPEC-243 (002-PI-146): CRUD admin de planes + parámetros IVA/freemium.
+  PLAN_CREATE
+  PLAN_UPDATE
+  PLAN_TOGGLE
+  // SPEC-245 (002-PI-148): activación/autorización manual de suscripción por admin.
+  SUSCRIPCION_ACTIVADA_MANUAL
 }
 
 enum TipoPeriodoServicio {
   MENSUAL
   SEMESTRAL
   ANUAL
+  LIBRE
 }
 
-enum EstadoApelacion {
-  RECIBIDA
-  EN_REVISION
-  ACEPTADA
-  RECHAZADA
-  VENCIDA
+// SPEC-210 (002-PI-110): enums del módulo de pagos.
+enum TipoTitular {
+  COLEGIO
+  PADRE
 }
 
-enum EtiquetaRelacionAlumno {
-  ALUMNO
+enum EstadoSuscripcion {
+  ACTIVA
+  EN_GRACIA
+  SUSPENDIDA
+  CANCELADA
+  // SPEC-242 (002-PI-145): suscripción creada pero aún no activada por admin/pago.
+  PENDIENTE_AUTORIZACION
+}
+
+// SPEC-244/245 (002-PI-147/148): origen de la suscripción.
+enum OrigenSuscripcion {
+  SOLICITADA_CLIENTE
+  ACTIVADA_MANUAL_ADMIN
+  FREEMIUM_AUTO
+  INVITACION_ADMIN
+}
+
+// SPEC-245 (002-PI-148): métodos de pago admitidos en activación manual.
+enum MetodoPagoManual {
+  TRANSFERENCIA_BANCARIA
+  EFECTIVO
+  CHEQUE
+  OTRO
+}
+
+// SPEC-235 (002-PI-135): estados del ciclo de vida de una guía de acción.
+enum EstadoGuiaAccion {
+  BORRADOR
+  PENDIENTE_APROBACION_COMITE
+  ACTIVA
+  REEMPLAZADA
+}
+
+enum DuracionPlan {
+  MES_1
+  MES_2
+  MES_3
+  MES_6
+  MES_12
+}
+
+enum EstadoPago {
+  PENDIENTE_AUTORIZACION
+  AUTORIZADO
+  RECHAZADO
+  // SPEC-212 (002-PI-112): estado aditivo para reembolsos.
+  REEMBOLSADO
+}
+
+enum MetodoPago {
+  TRANSFERENCIA
+  NEQUI
+  DAVIPLATA
+  PSE_MANUAL
+  EFECTIVO
+  CHEQUE
+  OTRO
+}
+
+enum TipoBono {
+  DESCUENTO_PCT
+  DESCUENTO_FIJO_USD
+  MESES_GRATIS
+}
+
+// SPEC-246 (002-PI-149): origen del bono (promoción admin vs recompensa automática).
+enum OrigenBono {
+  PROMOCION_ADMIN
+  RECOMPENSA_PAGO
+}
+
+enum FuenteTasa {
+  API
+  ADMIN_MANUAL
+}
+
+enum EtiquetaRelacionEstudiante {
+  ESTUDIANTE @map("ALUMNO")
   MADRE
   PADRE
   PRIMO
   TUTOR
   OTRO
+
+  @@map("EtiquetaRelacionAlumno")
 }
 
 enum TipoIdentificacionIntegrante {
@@ -153,6 +434,20 @@ enum MotivoBajaReporte {
   ORDEN_LEGAL
 }
 
+// SPEC-206 (002-PI-120): motivos de cierre de una sesión activa.
+enum MotivoCierreSesion {
+  LOGOUT
+  INACTIVIDAD
+  FORZADA
+}
+
+enum NivelLog {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}
+
 enum CategoriaConducta {
   CONTACTO_INSISTENTE
   SOLICITUD_MATERIAL
@@ -166,6 +461,10 @@ enum CategoriaConducta {
   DIFUSION_NO_CONSENTIDA
   DOXING
   SPAM
+  // SPEC-248 (002-PI-151): Ley 2564 de 2026 art. 6 · migración aditiva.
+  CIBERACOSO
+  HAPPY_SLAPPING
+  STALKING
 }
 
 enum EstadoReporte {
@@ -179,6 +478,13 @@ enum EstadoReporte {
   CORREGIDO
 }
 
+enum EstadoApelacion {
+  RECIBIDA
+  EN_REVISION
+  ACEPTADA
+  RECHAZADA
+}
+
 enum ResponsableTransicion {
   IA
   WORKER
@@ -188,6 +494,39 @@ enum ResponsableTransicion {
   ADMIN
 }
 
+// SPEC-230 (002-PI-130): estados del expediente padre.
+enum EstadoExpediente {
+  ACTIVO
+  CONSOLIDANDO
+  PENDIENTE_COMITE
+  EN_APROBACION_PADRE
+  EN_ACLARACION
+  CERRADO
+  ESCALADO
+}
+
+// SPEC-230 (002-PI-130): score de gravedad agregado del expediente padre.
+enum ScoreGravedad {
+  VERDE
+  AMARILLO
+  ROJO
+}
+
+// SPEC-230 (002-PI-130): tipos de revisión del comité. Se crea con ambos valores
+// porque no existía previamente en el schema (ZEUS confirmó).
+enum TipoRevisionComite {
+  REVISION_REPORTE
+  CONSOLIDACION_EXPEDIENTE
+}
+
+// SPEC-234 (002-PI-134): tipos de patrón N1 detectados en la compilación de expedientes.
+enum TipoPatronExpediente {
+  ACELERACION
+  PROGRESION
+  PERPETRADOR_SERIAL
+  MULTIPLATAFORMA
+}
+
 model Usuario {
   id                  String        @id @default(cuid())
   email               String        @unique
@@ -195,46 +534,103 @@ model Usuario {
   passwordHash        String
   rol                 RolUsuario
   estado              EstadoUsuario @default(activo)
+  // SPEC-240 (002-PI-143): estado de activación institucional.
+  estadoActivacion    EstadoActivacion @default(REGISTRADO)
+  tokenInvitacion     String?          @unique
+  tokenInvitacionExpiraEn DateTime?    @db.Timestamptz(6)
   debeCambiarPassword Boolean       @default(false)
   intentosFallidos    Int           @default(0)
   bloqueadoHasta      DateTime?
   ultimaSesion        DateTime?
   tenantId            String?
   colegioId           String?       @unique
+  // SPEC-168: cuenta compartida del Comité de Convivencia del colegio (una por colegio).
+  comiteColegioId     String?       @unique
+  // SPEC-119: ventana de servicio del cliente padre (PARENT). null = sin vigencia
+  // definida = acceso permitido. Para SCHOOL_ADMIN la ventana es la del Colegio.
+  /// @deprecated · usar Suscripcion.fechaInicio/fechaFin
+  inicioServicio      DateTime?
+  /// @deprecated · usar Suscripcion.fechaInicio/fechaFin
+  finServicio         DateTime?
+  // SPEC-241 (002-PI-144): campos de consentimiento informado (aditivos).
+  consentimientoAceptadoEn    DateTime?
+  consentimientoVersion       String?
+  consentimientoDocumentoHash String?
+  consentimientoIP            String?
   creadoEn            DateTime      @default(now())
   actualizadoEn       DateTime      @updatedAt
 
-  tenant                       Tenant?                  @relation(fields: [tenantId], references: [id])
-  colegio                      Colegio?                 @relation(fields: [colegioId], references: [id])
+  tenant                       Tenant?                    @relation(fields: [tenantId], references: [id])
+  colegio                      Colegio?                   @relation(fields: [colegioId], references: [id])
+  comiteConvivenciaColegio     Colegio?                   @relation(name: "ComiteConvivenciaColegio", fields: [comiteColegioId], references: [id])
   parametros                   ParametroSistema[]
   auditLogs                    AuditLog[]
   permisosModuloActualizados   PermisoModulo[]
   codigos                      CodigoVerificacion[]
   tokensRecuperacion           TokenRecuperacion[]
   reportes                     Reporte[]
-  reportesDadosDeBaja          Reporte[]                @relation("ReportesDadosDeBaja")
+  reportesDadosDeBaja          Reporte[]                  @relation("ReportesDadosDeBaja")
   correcciones                 CorreccionAdmin[]
   alertasSuscripcion           AlertaSuscripcion[]
-  casosEval                    CasoEval[]
-  evalRuns                     EvalRun[]
   simulaciones                 SimulacionRun[]
-  apelaciones                  ApelacionIdentificador[]
-  casosAsignados               Reporte[]                @relation("CasosOperador")
-  casosComiteAsignados         Reporte[]                @relation("CasosComite")
-  apelacionesAsignadas         ApelacionIdentificador[] @relation("ApelacionesOperador")
-  anonimizacionesValidadas     Reporte[]                @relation("AnonimizacionesValidadas")
+  casosAsignados               Reporte[]                  @relation("CasosOperador")
+  casosComiteAsignados         Reporte[]                  @relation("CasosComite")
+  anonimizacionesValidadas     Reporte[]                  @relation("AnonimizacionesValidadas")
   perfilOperador               PerfilOperador?
-  operadoresCreados            PerfilOperador[]         @relation("OperadoresCreados")
+  operadoresCreados            PerfilOperador[]           @relation("OperadoresCreados")
+  // SPEC-245 (002-PI-148): suscripciones que este admin autorizó manualmente.
+  suscripcionesAutorizadas     Suscripcion[]              @relation("SuscripcionesAutorizadasPorAdmin")
+  // SPEC-246 (002-PI-149): cupones de recompensa de los que este usuario es beneficiario.
+  bonosBeneficiario            BonoPromocional[]          @relation("BonosBeneficiario")
   contactosConfianza           ContactoConfianza[]
-  notificacionesCirculo        Boolean                  @default(true)
-  ultimaNotificacionCirculoEn    DateTime?
-  ultimaNotificacionColegioEn    DateTime?
+  notificacionesCirculo        Boolean                    @default(true)
+  ultimaNotificacionCirculoEn  DateTime?
+  ultimaNotificacionColegioEn  DateTime?
   transicionesReporte          TransicionReporte[]
-  solicitudesComite            SolicitudComite[]        @relation("SolicitudesComite")
-  solicitudesEscaladas         SolicitudComite[]        @relation("SolicitudesEscaladas")
-  integrantesComite            IntegranteComite[]       @relation("IntegrantesComite")
-  integrantesComiteCreados     IntegranteComite[]       @relation("IntegrantesComiteCreados")
-  integrantesComiteModificados IntegranteComite[]       @relation("IntegrantesComiteModificados")
+  solicitudesComite            SolicitudComite[]          @relation("SolicitudesComite")
+  solicitudesEscaladas         SolicitudComite[]          @relation("SolicitudesEscaladas")
+  solicitudesComiteCreadas     SolicitudComite[]          @relation("SolicitudesCreadasPorColegio")
+  notasSeguimiento             NotaSeguimiento[]
+  integrantesComite            IntegranteComite[]         @relation("IntegrantesComite")
+  integrantesComiteCreados     IntegranteComite[]         @relation("IntegrantesComiteCreados")
+  integrantesComiteModificados IntegranteComite[]         @relation("IntegrantesComiteModificados")
+  apelaciones                  Apelacion[]                @relation("ApelacionesUsuario")
+  apelacionesAsignadas         Apelacion[]                @relation("ApelacionesAsignadasComite")
+  apelacionesResueltas         Apelacion[]                @relation("ApelacionesResueltas")
+  accesosDocumentoApelacion    AccesoDocumentoApelacion[]
+  alertasAsignadas             AlertaColegio[]
+  notificacionesInApp          NotificacionInApp[]
+  // SPEC-184 (002-PI-079): blocklist y simulador de abusos.
+  bloqueosCreados              BlockList[]
+  simulacionesAbuso            SimulacionAbusoRun[]
+  // SPEC-230 (002-PI-130): expedientes del padre.
+  expedientes                  Expediente[]
+  // SPEC-206 (002-PI-120): sesiones activas del usuario.
+  sesionesLog                  SesionLog[]
+  // SPEC-241 (002-PI-144): traza inmutable de aceptaciones de consentimiento.
+  auditConsentimientos         AuditConsentimiento[]
+  // SPEC-234 (002-PI-134): informes consolidados generados por el usuario/worker.
+  informesConsolidados         InformeConsolidado[]
+  // SPEC-235 (002-PI-135): guías de acción creadas por el admin.
+  guiasAccionCreadas           GuiaAccionCategoria[]
+  // SPEC-210 (002-PI-110): módulo de pagos.
+  suscripciones                Suscripcion[]
+  planesCreados                Plan[]                     @relation("PlanesCreados")
+  bonosCreados                 BonoPromocional[]          @relation("BonosCreados")
+  pagosAutorizados             Pago[]                     @relation("PagosAutorizados")
+  referidosRevisados           CodigoReferidoUso[]        @relation("ReferidosRevisados")
+  tasasIngresadas              TasaCambio[]               @relation("TasasIngresadas")
+  // SPEC-220 (002-PI-121): dominio Análisis (reglas, recomendaciones, anomalías, digest).
+  reglasRecomendacionCreadas     ReglaRecomendacion[]
+  recomendacionesResueltas       Recomendacion[]
+  anomaliasResueltas             Anomalia[]
+  digestsSemanal                 DigestSemanal[]
+  // SPEC-238 (002-PI-mega-cola): aclaraciones respondidas por el miembro del comité.
+  aclaracionesRespondidas        AclaracionExpediente[]
+  // SPEC-239 (002-PI-mega-cola): contactos de emergencia administrados por el padre.
+  contactosEmergencia            ContactoEmergencia[]
+  // SPEC-224 (002-PI-125): versiones de reglas de recomendación cambiadas por el admin.
+  reglasHistorialCambiadas       ReglaRecomendacionHistorial[]
 
   @@index([email])
   @@index([rol])
@@ -269,7 +665,9 @@ model IntegranteComite {
   apellidos            String
   tipoIdentificacion   TipoIdentificacionIntegrante
   numeroIdentificacion String
+  hashIdentificacion   String
   email                String
+  cargo                String?
   fechaInicio          DateTime                     @default(now())
   fechaFin             DateTime?
   estado               EstadoIntegranteComite       @default(ACTIVO)
@@ -282,6 +680,7 @@ model IntegranteComite {
   creadoPor     Usuario  @relation(fields: [creadoPorId], references: [id], name: "IntegrantesComiteCreados")
   modificadoPor Usuario? @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
 
+  @@unique([comiteId, hashIdentificacion])
   @@index([comiteId])
   @@index([estado])
   @@index([tipoIdentificacion])
@@ -367,6 +766,50 @@ model AuditLog {
   @@index([creadoEn])
 }
 
+// SPEC-206 (002-PI-120): bitácora de sesiones activas para instrumentación de uso.
+model SesionLog {
+  id                String              @id @default(cuid())
+  usuarioId         String
+  tenantId          String?
+  rol               RolUsuario
+  iniciadaEn        DateTime            @db.Timestamptz(6)
+  ultimaActividadEn DateTime            @db.Timestamptz(6)
+  cerradaEn         DateTime?           @db.Timestamptz(6)
+  motivoCierre      MotivoCierreSesion?
+  duracionMin       Int?
+  ipHash            String
+  userAgent         String?
+  creadoEn          DateTime            @default(now())
+  actualizadoEn     DateTime            @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, iniciadaEn(sort: Desc)])
+  @@index([tenantId, iniciadaEn(sort: Desc)])
+  @@index([cerradaEn, ultimaActividadEn])
+  @@index([creadoEn])
+  @@map("sesiones_log")
+}
+
+// SPEC-241 (002-PI-144): registro inmutable de aceptación de consentimiento informado.
+model AuditConsentimiento {
+  id                  String   @id @default(cuid())
+  usuarioId           String
+  version             String
+  documentoTipo       String
+  documentoHash       String
+  aceptadoEn          DateTime @default(now())
+  ip                  String
+  userAgent           String?
+  esRepresentanteLegal Boolean @default(false)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, aceptadoEn])
+  @@index([version])
+  @@map("audit_consentimientos")
+}
+
 model Tenant {
   id       String   @id @default(cuid())
   nombre   String
@@ -378,12 +821,31 @@ model Tenant {
   colegio  Colegio?
 }
 
+// SPEC-210 (002-PI-110): Plan enriquecido. El campo `precio` es legacy del
+// placeholder original; la lógica nueva usa `precioBaseUSD`.
 model Plan {
-  id          String   @id @default(cuid())
-  nombre      String
-  descripcion String?
-  precio      Float
-  creadoEn    DateTime @default(now())
+  id                String       @id @default(cuid())
+  nombre            String
+  tipoTitular       TipoTitular
+  duracion          DuracionPlan
+  anio              Int
+  precioBaseUSD     Float
+  precioBaseCOP     Float?
+  esFreemium        Boolean      @default(false)
+  usosMaximosPorCliente Int?
+  descuentoAnualPct Float?
+  activo            Boolean      @default(true)
+  descripcion       String?
+  precio            Float? // legacy placeholder; no usar en lógica nueva
+  creadoPorAdminId  String
+  createdAt         DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(6)
+
+  creadoPor     Usuario       @relation(fields: [creadoPorAdminId], references: [id], name: "PlanesCreados")
+  suscripciones Suscripcion[]
+
+  @@unique([tipoTitular, duracion, anio])
+  @@index([activo, anio])
 }
 
 model Subscription {
@@ -406,6 +868,190 @@ model BillingCycle {
   creadoEn       DateTime @default(now())
 }
 
+// ============================================
+// MÓDULO DE PAGOS (SPEC-210 · 002-PI-110)
+// ============================================
+
+model Suscripcion {
+  id                   String            @id @default(cuid())
+  tipoTitular          TipoTitular
+  colegioId            String?
+  usuarioId            String?
+  estado               EstadoSuscripcion
+  planActualId         String
+  contratoPDFUrl       String?
+  fechaInicio          DateTime          @db.Timestamptz(6)
+  fechaFin             DateTime          @db.Timestamptz(6)
+  fechaCorteProgramado DateTime?         @db.Timestamptz(6)
+  esFreemium           Boolean           @default(false)
+  freemiumFechaFin     DateTime?         @db.Timestamptz(6)
+  codigoReferidoPropio String            @unique
+  codigoReferidoUsado  String?
+  monedaLocal          String            @default("COP")
+  paisCliente          String            @default("CO")
+  suspendidaEn         DateTime?         @db.Timestamptz(6)
+  canceladaEn          DateTime?         @db.Timestamptz(6)
+  canceladaPorUsuario  Boolean?
+  motivoCancelacion    String?
+  createdAt            DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @db.Timestamptz(6)
+
+  // SPEC-244/245 (002-PI-147/148): trazabilidad de origen y pago manual.
+  origen                OrigenSuscripcion @default(SOLICITADA_CLIENTE)
+  autorizadoPorAdminId  String?
+  autorizadoEn          DateTime?         @db.Timestamptz(6)
+  metodoPagoManual      MetodoPagoManual?
+  referenciaPagoManual  String?
+  montoRealPagado       Float?
+  fechaPagoReal         DateTime?         @db.Timestamptz(6)
+
+  colegio               Colegio?            @relation(fields: [colegioId], references: [id])
+  usuario               Usuario?            @relation(fields: [usuarioId], references: [id])
+  autorizadoPor         Usuario?            @relation(fields: [autorizadoPorAdminId], references: [id], name: "SuscripcionesAutorizadasPorAdmin")
+  planActual            Plan                @relation(fields: [planActualId], references: [id])
+  pagos                 Pago[]
+  bonosAplicados        BonoAplicado[]
+  referidosCodigoPropio CodigoReferidoUso[] @relation("CodigoPropio")
+  referidosUsados       CodigoReferidoUso[] @relation("Referida")
+  // SPEC-220 (002-PI-121): snapshots mensuales del score de valor.
+  scoreClientes         ScoreCliente[]
+
+  @@index([estado, fechaFin])
+  @@index([tipoTitular, estado])
+  // SPEC-213 (002-PI-113): índices del worker de vigencia (activas por vencer + freemium; en gracia por cortar).
+  @@index([estado, fechaFin, esFreemium])
+  @@index([estado, fechaCorteProgramado])
+  // SPEC-218 (002-PI-118): widget de crecimiento por país de la analítica dinero-vs-valor.
+  @@index([estado, paisCliente, monedaLocal, createdAt])
+  // SPEC-217 (002-PI-117): corte de freemiums vencidos por el worker y verificación de histórico por titular.
+  @@index([esFreemium, freemiumFechaFin])
+  @@index([usuarioId, esFreemium])
+  @@index([colegioId, esFreemium])
+}
+
+model Pago {
+  id                    String       @id @default(cuid())
+  suscripcionId         String
+  duracionCubierta      DuracionPlan
+  montoBaseUSD          Float
+  descuentoAplicadoUSD  Float        @default(0)
+  montoNetoUSD          Float
+  tasaCambioAplicada    Float
+  montoLocalPagado      Float
+  monedaLocal           String
+  metodoDeclarado       MetodoPago
+  comprobanteAdjuntoUrl String
+  comprobanteMimeType   String
+  comprobanteHashSha256 String
+  fechaReporte          DateTime     @db.Timestamptz(6)
+  fechaAutorizacion     DateTime?    @db.Timestamptz(6)
+  estado                EstadoPago
+  motivoRechazo         String?
+  autorizadoPorAdminId  String?
+  codigoReferidoUsado   String?
+  // SPEC-212 (002-PI-112): campos aditivos de reembolso.
+  montoReembolsoUSD     Float?
+  motivoReembolso       String?
+  referenciaReembolso   String?
+  // SPEC-211 (002-PI-111): notas opcionales del cliente al reportar la renovación.
+  notasCliente          String?
+  createdAt             DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime     @updatedAt @db.Timestamptz(6)
+
+  suscripcion    Suscripcion    @relation(fields: [suscripcionId], references: [id])
+  autorizadoPor  Usuario?       @relation(fields: [autorizadoPorAdminId], references: [id], name: "PagosAutorizados")
+  bonosAplicados BonoAplicado[]
+
+  @@index([suscripcionId, createdAt])
+  @@index([estado, fechaReporte])
+  // SPEC-218 (002-PI-118): KPIs de recaudo mes a mes de la analítica dinero-vs-valor.
+  @@index([estado, createdAt, monedaLocal])
+}
+
+model BonoPromocional {
+  id                          String       @id @default(cuid())
+  nombre                      String       @unique
+  tipo                        TipoBono
+  valor                       Float
+  vigenciaInicio              DateTime     @db.Timestamptz(6)
+  vigenciaFin                 DateTime     @db.Timestamptz(6)
+  usosMaximosTotales          Int?
+  usosMaximosPorCliente       Int          @default(1)
+  aplicaANuevos               Boolean      @default(true)
+  aplicaARenovaciones         Boolean      @default(false)
+  aplicaSoloA                 TipoTitular?
+  combinableConCodigoPersonal Boolean      @default(false)
+  activo                      Boolean      @default(true)
+  descripcion                 String?
+  creadoPorAdminId            String
+  // SPEC-246 (002-PI-149): origen, beneficiario y transferibilidad del cupón.
+  origen                      OrigenBono   @default(PROMOCION_ADMIN)
+  beneficiarioUsuarioId       String?
+  transferible                Boolean      @default(true)
+  createdAt                   DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt                   DateTime     @updatedAt @db.Timestamptz(6)
+
+  creadoPor   Usuario        @relation(fields: [creadoPorAdminId], references: [id], name: "BonosCreados")
+  beneficiario Usuario?      @relation(fields: [beneficiarioUsuarioId], references: [id], name: "BonosBeneficiario")
+  usos        BonoAplicado[]
+
+  @@index([activo, vigenciaInicio, vigenciaFin])
+}
+
+model BonoAplicado {
+  id            String   @id @default(cuid())
+  bonoId        String
+  suscripcionId String
+  pagoId        String?
+  aplicadoEn    DateTime @default(now()) @db.Timestamptz(6)
+  descuentoUSD  Float
+
+  bono        BonoPromocional @relation(fields: [bonoId], references: [id])
+  suscripcion Suscripcion     @relation(fields: [suscripcionId], references: [id])
+  pago        Pago?           @relation(fields: [pagoId], references: [id])
+
+  @@index([bonoId, aplicadoEn])
+}
+
+model CodigoReferidoUso {
+  id                      String    @id @default(cuid())
+  codigoReferidoUsuarioId String
+  suscripcionReferidaId   String
+  fechaRegistro           DateTime  @default(now()) @db.Timestamptz(6)
+  fechaActivacion         DateTime? @db.Timestamptz(6)
+  recompensaOtorgada      Boolean   @default(false)
+  recompensaOtorgadaEn    DateTime? @db.Timestamptz(6)
+  tipoRecompensa          String?
+  anio                    Int
+  requiereRevisionAdmin   Boolean   @default(false)
+  revisadaPorAdminId      String?
+  revisionOK              Boolean?
+
+  referidor   Suscripcion @relation(fields: [codigoReferidoUsuarioId], references: [id], name: "CodigoPropio")
+  referida    Suscripcion @relation(fields: [suscripcionReferidaId], references: [id], name: "Referida")
+  revisadaPor Usuario?    @relation(fields: [revisadaPorAdminId], references: [id], name: "ReferidosRevisados")
+
+  @@unique([codigoReferidoUsuarioId, suscripcionReferidaId])
+  @@index([codigoReferidoUsuarioId, anio])
+}
+
+model TasaCambio {
+  id                  String     @id @default(cuid())
+  monedaOrigen        String
+  monedaDestino       String
+  tasa                Float
+  fecha               DateTime   @db.Timestamptz(6)
+  fuente              FuenteTasa
+  apiUrl              String?
+  ingresadoPorAdminId String?
+  motivoManual        String?
+  createdAt           DateTime   @default(now()) @db.Timestamptz(6)
+
+  ingresadoPor Usuario? @relation(fields: [ingresadoPorAdminId], references: [id], name: "TasasIngresadas")
+
+  @@index([monedaDestino, fecha])
+}
+
 model Colegio {
   id                               String              @id @default(cuid())
   nombre                           String
@@ -425,15 +1071,32 @@ model Colegio {
   creadoEn                         DateTime            @default(now())
   actualizadoEn                    DateTime            @updatedAt
 
-  pais         Pais          @relation(fields: [paisId], references: [id])
-  departamento Departamento? @relation(fields: [departamentoId], references: [id])
-  ciudad       Ciudad        @relation(fields: [ciudadId], references: [id])
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  admin        Usuario?
-  cursos       Curso[]
-  alumnos      Alumno[]
-  alertas      AlertaColegio[]
-  auditLogs    AuditLog[]
+  pais                     Pais                       @relation(fields: [paisId], references: [id])
+  departamento             Departamento?              @relation(fields: [departamentoId], references: [id])
+  ciudad                   Ciudad                     @relation(fields: [ciudadId], references: [id])
+  tenant                   Tenant                     @relation(fields: [tenantId], references: [id])
+  admin                    Usuario?
+  comiteConvivencia        Usuario?                   @relation(name: "ComiteConvivenciaColegio")
+  cursos                   Curso[]
+  estudiantes              Estudiante[]
+  profesores               Profesor[]
+  alertas                  AlertaColegio[]
+  solicitudesComite        SolicitudComite[]
+  patrones                 PatronInstitucional[]
+  preferenciasAvisos       PreferenciaAlertaColegio[]
+  registrosAvisos          RegistroAvisoColegio[]
+  seguimientosCaso         SeguimientoCaso[]
+  notasSeguimiento         NotaSeguimiento[]
+  auditLogs                AuditLog[]
+  sesionesCarga            CargaRosterSesion[]
+  Materia                  Materia[]
+  CursoMateria             CursoMateria[]
+  identificadoresAcudiente IdentificadorAcudiente[]
+  identificadoresProfesor  IdentificadorProfesor[]
+  onboarding               OnboardingColegio?
+  notificacionesInApp      NotificacionInApp[]
+  // SPEC-210 (002-PI-110): módulo de pagos.
+  suscripciones            Suscripcion[]
 
   @@index([paisId])
   @@index([departamentoId])
@@ -441,75 +1104,418 @@ model Colegio {
   @@index([estado])
 }
 
-model Curso {
-  id          String   @id @default(cuid())
-  colegioId   String
-  nombre      String
-  grado       String?
-  anioLectivo String?
-  estado      String   @default("activo")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// SPEC-169 (Fase G): onboarding "Activa tu protección" — fila única por colegio.
+// El progreso real se calcula sobre cursos, estudiantes, profesores, acudientes e
+// identificadores activos; aquí solo se guarda estado, paso visible y timestamp.
+model OnboardingColegio {
+  id            String    @id @default(cuid())
+  colegioId     String    @unique
+  estado        String    @default("activo") // activo | omitido | completado
+  pasoActual    Int       @default(1)
+  completadoEn  DateTime?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
 
-  colegio Colegio  @relation(fields: [colegioId], references: [id])
-  alumnos Alumno[]
+  colegio Colegio @relation(fields: [colegioId], references: [id])
 
-  @@index([colegioId, estado])
-  @@unique([colegioId, nombre, grado, anioLectivo])
+  @@index([estado])
 }
 
-model Alumno {
+// SPEC-169 (Fase G): notificaciones in-app dirigidas al SCHOOL_ADMIN del colegio.
+// Estados implícitos por leidaEn / archivadaEn; nunca almacena texto del reporte.
+model NotificacionInApp {
+  id            String    @id @default(cuid())
+  colegioId     String
+  usuarioId     String
+  tipo          String // ALERTA_NUEVA | ALERTA_GESTIONADA | ALERTA_ESCALADA | SISTEMA
+  titulo        String
+  mensaje       String
+  entidadId     String?
+  leidaEn       DateTime?
+  archivadaEn   DateTime?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([colegioId, usuarioId, archivadaEn, leidaEn, creadoEn])
+  @@index([colegioId, usuarioId, archivadaEn, creadoEn])
+  @@index([colegioId, entidadId, tipo])
+}
+
+model Curso {
+  id                String   @id @default(cuid())
+  colegioId         String
+  nombre            String
+  grado             String?
+  anioLectivo       String?
+  estado            String   @default("activo")
+  profesorTitularId String? // SPEC-145: aditivo; existentes quedan NULL (no se retro-asigna)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  colegio         Colegio        @relation(fields: [colegioId], references: [id])
+  profesorTitular Profesor?      @relation(fields: [profesorTitularId], references: [id])
+  estudiantes     Estudiante[]
+  CursoMateria    CursoMateria[]
+
+  @@unique([colegioId, nombre, grado, anioLectivo])
+  @@index([colegioId, estado])
+}
+
+// SPEC-145 (brief §7.2): modelo Profesor mínimo — nombre, apellidos, email?,
+// teléfono?, estado. Baja = soft delete (estado "inactivo"), nunca borrado físico.
+model Profesor {
   id        String   @id @default(cuid())
-  cursoId   String
   colegioId String
   nombre    String
+  apellidos String
+  email     String?
+  telefono  String?
   estado    String   @default("activo")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  curso           Curso               @relation(fields: [cursoId], references: [id])
-  colegio         Colegio             @relation(fields: [colegioId], references: [id])
-  identificadores IdentificadorAlumno[]
+  colegio             Colegio                 @relation(fields: [colegioId], references: [id])
+  cursos              Curso[]
+  CursoMateria        CursoMateria[]
+  identificadoresProf IdentificadorProfesor[]
+
+  @@index([colegioId, estado])
+}
+
+// SPEC-162: catálogo de materias configurable por colegio.
+model Materia {
+  id            String   @id @default(cuid())
+  colegioId     String
+  nombre        String
+  estado        String   @default("activo")
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio      Colegio        @relation(fields: [colegioId], references: [id])
+  CursoMateria CursoMateria[]
+
+  @@unique([colegioId, nombre])
+  @@index([colegioId, estado])
+}
+
+// SPEC-162: vínculo Curso × Materia × Profesor. Resuelve materia configurable
+// y profesor multi-curso sin tocar Curso ni Estudiante.cursoId.
+model CursoMateria {
+  id            String   @id @default(cuid())
+  colegioId     String
+  cursoId       String
+  materiaId     String
+  profesorId    String?
+  estado        String   @default("activo")
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio  Colegio   @relation(fields: [colegioId], references: [id])
+  curso    Curso     @relation(fields: [cursoId], references: [id])
+  materia  Materia   @relation(fields: [materiaId], references: [id])
+  profesor Profesor? @relation(fields: [profesorId], references: [id])
+
+  @@unique([cursoId, materiaId])
+  @@index([colegioId, estado])
+  @@index([cursoId, estado])
+  @@index([profesorId])
+}
+
+// SPEC-144: modelo Estudiante (antes Alumno; tabla física "Alumno" conservada).
+// Obligatorios al alta (validación API, no BD): nombre + apellidos. El default ""
+// de apellidos existe SOLO para el backfill de históricos (D4).
+model Estudiante {
+  id              String   @id @default(cuid())
+  cursoId         String
+  colegioId       String
+  nombre          String
+  apellidos       String   @default("")
+  documentoTipo   String? // set cerrado en Zod (D3): RC|TI|CC|CE|PASAPORTE|OTRO
+  documentoNumero String?
+  estado          String   @default("activo")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  curso           Curso                     @relation(fields: [cursoId], references: [id])
+  colegio         Colegio                   @relation(fields: [colegioId], references: [id])
+  identificadores IdentificadorEstudiante[]
+  acudientes      AcudienteEstudiante[]
+  observaciones   EstudianteObservacion[]
 
   @@index([cursoId, estado])
   @@index([colegioId, estado])
+  @@map("Alumno")
 }
 
-model IdentificadorAlumno {
-  id               String                  @id @default(cuid())
-  alumnoId         String
+// SPEC-144 (D1) / SPEC-163: acudiente del estudiante — tabla hija, máximo 2 por
+// estudiante (orden 1|2). PII de un tercero: NUNCA se consulta por id suelto;
+// siempre a través del estudiante ya acotado por colegioId (patrón E-1/SPEC-134).
+// SPEC-163: estado (activo/inactivo) como baja lógica aditiva.
+model AcudienteEstudiante {
+  id           String   @id @default(cuid())
+  estudianteId String
+  orden        Int // 1 = principal, 2 = secundario
+  nombre       String
+  relacion     String // "madre" | "padre" | "tía" | … (texto libre corto)
+  telefono     String?
+  email        String?
+  estado       String   @default("activo") // activo | inactivo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  estudiante      Estudiante               @relation(fields: [estudianteId], references: [id])
+  identificadores IdentificadorAcudiente[]
+
+  @@unique([estudianteId, orden, estado])
+  @@index([estudianteId, estado])
+}
+
+// SPEC-163 (FR-001): identificadores tipados de un acudiente para matching de
+// alertas (Fase C). colegioId denormalizado para validación de tenant y queries
+// rápidas (patrón E-1/SPEC-134). Baja lógica por estado.
+model IdentificadorAcudiente {
+  id           String   @id @default(cuid())
+  acudienteId  String
+  colegioId    String
+  tipo         String
+  valor        String
+  plataformaId String?
+  estado       String   @default("activo") // activo | inactivo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  acudiente  AcudienteEstudiante @relation(fields: [acudienteId], references: [id])
+  colegio    Colegio             @relation(fields: [colegioId], references: [id])
+  plataforma Plataforma?         @relation(fields: [plataformaId], references: [id])
+  alertas    AlertaColegio[]
+
+  @@unique([acudienteId, tipo, valor, plataformaId])
+  @@index([colegioId, estado])
+  @@index([acudienteId, estado])
+  @@index([valor])
+}
+
+// SPEC-164: identificadores tipados de un profesor (teléfono, email, nick/usuario
+// en plataforma). Soft delete por estado; no borrado físico.
+model IdentificadorProfesor {
+  id           String   @id @default(cuid())
+  profesorId   String
+  colegioId    String
+  tipo         String
+  valor        String
+  plataformaId String?
+  estado       String   @default("activo") // activo | inactivo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profesor   Profesor        @relation(fields: [profesorId], references: [id])
+  colegio    Colegio         @relation(fields: [colegioId], references: [id])
+  plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
+  alertas    AlertaColegio[]
+
+  @@unique([profesorId, tipo, valor, plataformaId])
+  @@index([colegioId, estado])
+  @@index([profesorId, estado])
+  @@index([valor])
+}
+
+// SPEC-150 (FR-001): observación especial del estudiante — la marca auditable
+// (Ley 1581). Soft delete estilo Reporte: desmarcar CONSERVA la fila con
+// quién/cuándo (activa=false + desactivadaEn/desactivadaPorId), nunca borra el
+// histórico. colegioId denormalizado para acotar SIEMPRE por tenant (patrón
+// E-1/SPEC-134); creadaPorId/desactivadaPorId son ids de Usuario sin FK (el
+// actor puede desactivarse después sin romper el respaldo).
+model EstudianteObservacion {
+  id               String    @id @default(cuid())
+  estudianteId     String
+  colegioId        String
+  activa           Boolean   @default(true)
+  motivo           String?
+  creadaPorId      String
+  desactivadaEn    DateTime?
+  desactivadaPorId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+
+  @@index([estudianteId, activa])
+}
+
+model IdentificadorEstudiante {
+  id               String                     @id @default(cuid())
+  estudianteId     String                     @map("alumnoId")
   tipo             String
   valor            String
   plataformaId     String?
-  etiquetaRelacion EtiquetaRelacionAlumno @default(ALUMNO)
-  estado           String                  @default("activo")
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
+  etiquetaRelacion EtiquetaRelacionEstudiante @default(ESTUDIANTE)
+  estado           String                     @default("activo")
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
 
-  alumno     Alumno      @relation(fields: [alumnoId], references: [id])
-  plataforma Plataforma? @relation(fields: [plataformaId], references: [id])
+  estudiante Estudiante      @relation(fields: [estudianteId], references: [id])
+  plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
-  @@unique([alumnoId, valor, tipo, plataformaId])
-  @@index([alumnoId, estado])
+  @@unique([estudianteId, valor, tipo, plataformaId])
+  @@index([estudianteId, estado])
+  @@map("IdentificadorAlumno")
 }
 
+// SPEC-165: alerta extendida a estudiante/profesor/acudiente. Una sola FK
+// poblada según tipoSujeto; constraint única por tipo evita duplicados.
 model AlertaColegio {
-  id                    String   @id @default(cuid())
-  colegioId             String
-  reporteId             String
-  identificadorAlumnoId String
-  estado                String   @default("nueva") // nueva | vista | gestionada
-  creadoEn              DateTime @default(now())
-  actualizadoEn         DateTime @updatedAt
+  id                        String   @id @default(cuid())
+  colegioId                 String
+  reporteId                 String
+  identificadorEstudianteId String?  @map("identificadorAlumnoId")
+  identificadorProfesorId   String?
+  identificadorAcudienteId  String?
+  tipoSujeto                String   @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE
+  estado                    String   @default("nueva") // nueva | vista | gestionada | escalada | cerrada
+  prioridad                 String   @default("media") // alta | media | baja
+  vencimientoSla            DateTime @db.Timestamptz(6)
+  asignadoAId               String?
+  // SPEC-142 (F6): fila agregada que ESTA alerta aportó (idempotencia + reversa
+  // exacta en baja). Nullable: las alertas previas a F6 no aportan al agregado.
+  patronInstitucionalId     String?
+  creadoEn                  DateTime @default(now()) @db.Timestamptz(6)
+  actualizadoEn             DateTime @updatedAt @db.Timestamptz(6)
 
-  colegio             Colegio            @relation(fields: [colegioId], references: [id])
-  reporte             Reporte            @relation(fields: [reporteId], references: [id])
-  identificadorAlumno IdentificadorAlumno @relation(fields: [identificadorAlumnoId], references: [id])
+  colegio                 Colegio                  @relation(fields: [colegioId], references: [id])
+  reporte                 Reporte                  @relation(fields: [reporteId], references: [id])
+  identificadorEstudiante IdentificadorEstudiante? @relation(fields: [identificadorEstudianteId], references: [id])
+  identificadorProfesor   IdentificadorProfesor?   @relation(fields: [identificadorProfesorId], references: [id])
+  identificadorAcudiente  IdentificadorAcudiente?  @relation(fields: [identificadorAcudienteId], references: [id])
+  patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
+  asignadoA               Usuario?                 @relation(fields: [asignadoAId], references: [id])
+  seguimiento             SeguimientoCaso?
+  // SPEC-168: una alerta escalada genera una única solicitud al Comité de Convivencia.
+  solicitudComite         SolicitudComite?
 
-  @@unique([colegioId, reporteId, identificadorAlumnoId])
+  @@unique([colegioId, reporteId, identificadorEstudianteId])
+  @@unique([colegioId, reporteId, identificadorProfesorId])
+  @@unique([colegioId, reporteId, identificadorAcudienteId])
   @@index([colegioId, estado])
+  @@index([colegioId, prioridad, vencimientoSla])
+  @@index([colegioId, asignadoAId])
   @@index([reporteId])
+  @@index([tipoSujeto])
+}
+
+// SPEC-142 (F6): patrón institucional agregado por (colegio, grado, conducta,
+// plataforma, trimestre). SIN PII por construcción (FR-002): nunca identificador,
+// reporteId, alumnoId, nombres ni textos — solo conteos por dimensiones.
+// El k-anonimato (k=3) se aplica en LECTURA, no aquí.
+model PatronInstitucional {
+  id            String            @id @default(cuid())
+  colegioId     String
+  periodo       String // trimestre calendario de Reporte.creadoEn: "2026-Q3"
+  grado         String // snapshot de Curso.grado; sentinel "Sin grado registrado"
+  conducta      CategoriaConducta
+  plataformaId  String
+  conteo        Int               @default(0)
+  creadoEn      DateTime          @default(now())
+  actualizadoEn DateTime          @updatedAt
+
+  colegio    Colegio         @relation(fields: [colegioId], references: [id])
+  plataforma Plataforma      @relation(fields: [plataformaId], references: [id])
+  alertas    AlertaColegio[]
+
+  @@unique([colegioId, periodo, grado, conducta, plataformaId])
+  @@index([colegioId, periodo])
+  @@map("patrones_institucionales")
+}
+
+// SPEC-149 (FR-001): preferencias de avisos por email del colegio. UNA fila por
+// (colegio, tipoEvento); sin fila rigen los defaults del pipeline (todo
+// habilitado, destino = email del SCHOOL_ADMIN, N=3/7d curso, M=2/30d
+// estudiante, resumen habilitado). tipoEvento es String con valores cerrados
+// (mismo patrón que AlertaColegio.estado): REPORTE_NUEVO | UMBRAL_CURSO |
+// ESTUDIANTE_REPETIDO | RESUMEN_SEMANAL. `umbral` y `ventanaDias` solo aplican
+// a UMBRAL_CURSO y ESTUDIANTE_REPETIDO.
+model PreferenciaAlertaColegio {
+  id            String   @id @default(cuid())
+  colegioId     String
+  tipoEvento    String // REPORTE_NUEVO | UMBRAL_CURSO | ESTUDIANTE_REPETIDO | RESUMEN_SEMANAL
+  habilitado    Boolean  @default(true)
+  emailDestino  String?
+  umbral        Int?
+  ventanaDias   Int?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@unique([colegioId, tipoEvento])
+}
+
+// SPEC-149 (FR-001): bitácora de avisos del colegio — LA idempotencia por
+// constraint: @@unique([colegioId, tipoEvento, entidadId, dia]). Un mismo
+// evento/entidad/día = UNA fila = UN email como máximo; el duplicado es no-op.
+// ENVIADO solo se marca tras el 200 del proveedor (un FALLIDO no consume la
+// idempotencia y pg-boss puede reintentar). estado es String con valores
+// cerrados: ENVIADO | OMITIDO | PENDIENTE_DIGEST | FALLIDO. `entidadId` es el
+// id de la entidad del evento (reporteId, cursoId, estudianteId) o "semanal"
+// para el resumen. `dia` es la fecha del evento en día calendario (DATE).
+model RegistroAvisoColegio {
+  id            String   @id @default(cuid())
+  colegioId     String
+  tipoEvento    String // REPORTE_NUEVO | UMBRAL_CURSO | ESTUDIANTE_REPETIDO | RESUMEN_SEMANAL
+  entidadId     String
+  dia           DateTime @db.Date
+  estado        String // ENVIADO | OMITIDO | PENDIENTE_DIGEST | FALLIDO
+  detalle       String?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio Colegio @relation(fields: [colegioId], references: [id])
+
+  @@unique([colegioId, tipoEvento, entidadId, dia])
+  @@index([colegioId, estado])
+}
+
+// SPEC-159 (FR-001): seguimiento del caso del colegio — 1:1 con la alerta
+// (alertaId único), nace LAZY con la primera nota de la bitácora (spec,
+// Assumptions). estado es String con valores cerrados (mismo patrón que
+// AlertaColegio.estado): en_seguimiento | cerrado. En esta versión no hay
+// flujo de cierre manual: queda derivado de la alerta gestionada.
+model SeguimientoCaso {
+  id            String   @id @default(cuid())
+  colegioId     String
+  alertaId      String   @unique
+  estado        String   @default("en_seguimiento") // en_seguimiento | cerrado
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  colegio Colegio           @relation(fields: [colegioId], references: [id])
+  alerta  AlertaColegio     @relation(fields: [alertaId], references: [id])
+  notas   NotaSeguimiento[]
+
+  @@index([colegioId, estado])
+}
+
+// SPEC-159 (FR-001): nota de la bitácora — "lo actuado", INMUTABLE por
+// construcción (no existe PATCH ni DELETE: respaldo forense, Ley 1581). Texto
+// plano 1..1000 chars (Zod en el endpoint; React escapa al renderizar).
+// colegioId denormalizado del seguimiento: tenant obligatorio por
+// construcción (E-1) sin pasar por el join.
+model NotaSeguimiento {
+  id            String   @id @default(cuid())
+  seguimientoId String
+  colegioId     String
+  texto         String
+  autorId       String
+  creadoEn      DateTime @default(now())
+
+  seguimiento SeguimientoCaso @relation(fields: [seguimientoId], references: [id])
+  colegio     Colegio         @relation(fields: [colegioId], references: [id])
+  autor       Usuario         @relation(fields: [autorId], references: [id])
+
+  @@index([seguimientoId, creadoEn])
 }
 
 // ============================================
@@ -524,12 +1530,15 @@ model Plataforma {
   esActiva  Boolean  @default(true)
   creadoEn  DateTime @default(now())
 
-  reportes                Reporte[]
-  identificadores         IdentificadorReportado[]
-  alertasSuscripcion      AlertaSuscripcion[]
-  apelaciones             ApelacionIdentificador[]
-  identificadoresContacto IdentificadorContacto[]
-  identificadoresAlumno IdentificadorAlumno[]
+  reportes                  Reporte[]
+  identificadores           IdentificadorReportado[]
+  alertasSuscripcion        AlertaSuscripcion[]
+  identificadoresContacto   IdentificadorContacto[]
+  identificadoresEstudiante IdentificadorEstudiante[]
+  identificadoresAcudiente  IdentificadorAcudiente[]
+  identificadoresProfesor   IdentificadorProfesor[]
+  apelaciones               Apelacion[]
+  patronesInstitucionales   PatronInstitucional[]
 
   @@index([clave])
   @@index([esActiva])
@@ -570,14 +1579,20 @@ model Departamento {
 }
 
 model Ciudad {
-  id             String   @id @default(cuid())
-  nombre         String
-  paisId         String
-  departamentoId String?
-  lat            Float?
-  lng            Float?
-  esActivo       Boolean  @default(true)
-  creadoEn       DateTime @default(now())
+  id                String   @id @default(cuid())
+  nombre            String
+  paisId            String
+  departamentoId    String?
+  lat               Float?
+  lng               Float?
+  esActivo          Boolean  @default(true)
+  creadoEn          DateTime @default(now())
+  // SPEC-115 (catálogo geográfico GeoNames): clave estable del UPSERT y apoyo a la
+  // búsqueda en servidor. nombreNormalizado = NFD sin diacríticos, minúsculas
+  // (src/lib/normalizar.ts); poblacion ordena los resultados del buscador.
+  geonameId         Int?     @unique
+  nombreNormalizado String   @default("")
+  poblacion         Int?
 
   pais         Pais          @relation(fields: [paisId], references: [id])
   departamento Departamento? @relation(fields: [departamentoId], references: [id])
@@ -588,6 +1603,7 @@ model Ciudad {
   @@index([paisId])
   @@index([departamentoId])
   @@index([esActivo])
+  @@index([paisId, nombreNormalizado])
 }
 
 model Reporte {
@@ -606,6 +1622,10 @@ model Reporte {
   esAnonimo                  Boolean            @default(true)
   edadVictima                Int?
   usuarioId                  String?
+  // SPEC-295 (002-PI-196 · I-146): rol del origen del reporte. NULL para
+  // anónimos (histórico y nuevos). "PARENT" cuando el padre autenticado
+  // reporta desde /dashboard/padre/reportar. Fase 2 puede migrar a enum.
+  origenRol                  String?
   operadorId                 String?
   comiteId                   String?
   reporteOrigenId            String?
@@ -642,8 +1662,13 @@ model Reporte {
   ciudadRel                Ciudad?             @relation(fields: [ciudadId], references: [id])
   transiciones             TransicionReporte[]
   reintentos               ReintentoReporte[]
+  pasosProcesamiento       PasoProcesamiento[]
   solicitudComite          SolicitudComite?
   alertasColegio           AlertaColegio[]
+  eventoMatchDisparado     EventoMatch?
+  // SPEC-230 (002-PI-130): relación inversa para EventoExpediente.
+  // Autorizado por ZEUS: no modifica columnas de la tabla reportes.
+  eventos                  EventoExpediente[]
 
   @@index([identificador, plataformaId])
   @@index([estado])
@@ -660,24 +1685,34 @@ model Reporte {
 }
 
 model SolicitudComite {
-  id         String    @id @default(cuid())
-  reporteId  String    @unique
-  numero     String    @unique
-  estado     String    @default("PENDIENTE")
-  comiteId   String?
-  operadorId String?
-  motivo     String    @db.Text
-  resolucion String?   @db.Text
-  creadoEn   DateTime  @default(now())
-  resueltoEn DateTime?
+  id              String    @id @default(cuid())
+  reporteId       String    @unique
+  numero          String    @unique
+  estado          String    @default("PENDIENTE")
+  comiteId        String?
+  operadorId      String?
+  // SPEC-168: escalamiento colegio-scoped al Comité de Convivencia.
+  colegioId       String?
+  alertaColegioId String?   @unique
+  creadoPorId     String?
+  motivo          String    @db.Text
+  resolucion      String?   @db.Text
+  creadoEn        DateTime  @default(now())
+  resueltoEn      DateTime?
 
-  reporte  Reporte  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
-  comite   Usuario? @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
-  operador Usuario? @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
+  reporte   Reporte        @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  comite    Usuario?       @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
+  operador  Usuario?       @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
+  colegio   Colegio?       @relation(fields: [colegioId], references: [id])
+  alerta    AlertaColegio? @relation(fields: [alertaColegioId], references: [id])
+  creadoPor Usuario?       @relation(fields: [creadoPorId], references: [id], name: "SolicitudesCreadasPorColegio")
 
   @@index([estado])
   @@index([comiteId])
   @@index([operadorId])
+  @@index([colegioId])
+  @@index([alertaColegioId])
+  @@index([creadoPorId])
   @@index([creadoEn])
 }
 
@@ -715,6 +1750,23 @@ model ReintentoReporte {
   @@index([creadoEn])
 }
 
+// Spec 096-US3: traza de pasos del pipeline (guardas, deduplicación, RAG, métricas).
+// Escritura best-effort; onDelete Cascade para no dejar pasos huérfanos (disputas Ley 1581).
+model PasoProcesamiento {
+  id         String   @id @default(cuid())
+  reporteId  String
+  etapa      String
+  veredicto  String?
+  detalle    Json?
+  latenciaMs Int?
+  creadoEn   DateTime @default(now())
+
+  reporte Reporte @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+
+  @@index([reporteId, creadoEn])
+  @@map("pasos_procesamiento")
+}
+
 model FuenteReporte {
   id                   String   @id @default(cuid())
   reporteId            String   @unique
@@ -741,7 +1793,12 @@ model IdentificadorReportado {
   totalReportes         Int       @default(0)
   reportesAutenticados  Int       @default(0)
   reportesAnonimos      Int       @default(0)
+  // SPEC-131 (BL-5): contadores APROBADOS (predicado único spec 089/D-08), base de la
+  // decisión de visibilidad pública. Escritor único: recalcularYGuardarScore.
+  reportesAprobados     Int       @default(0)
+  autenticadosAprobados Int       @default(0)
   esVisiblePublicamente Boolean   @default(false)
+  ocultoPorComiteEn     DateTime?
   score                 Int       @default(0)
   scoreAnonimo          Int       @default(0)
   scoreAutenticado      Int       @default(0)
@@ -751,8 +1808,8 @@ model IdentificadorReportado {
   creadoEn              DateTime  @default(now())
   actualizadoEn         DateTime  @updatedAt
 
-  plataforma  Plataforma               @relation(fields: [plataformaId], references: [id])
-  apelaciones ApelacionIdentificador[]
+  plataforma   Plataforma    @relation(fields: [plataformaId], references: [id])
+  eventosMatch EventoMatch[]
 
   @@unique([identificador, plataformaId])
   @@index([esVisiblePublicamente])
@@ -760,38 +1817,97 @@ model IdentificadorReportado {
   @@index([score])
 }
 
-model ApelacionIdentificador {
-  id                    String          @id @default(cuid())
-  identificador         String
-  plataformaId          String
-  tokenAcceso           String          @unique
-  estado                EstadoApelacion @default(RECIBIDA)
-  motivoSolicitud       String
-  evidenciaUrl          String?
-  respuestaAdmin        String?
-  adminId               String?
-  operadorId            String?
-  tipoVerificacion      String // SMS | NICK
-  contacto              String?
-  smsCodigoHash         String?
-  smsVerificado         Boolean         @default(false)
-  smsIntentos           Int             @default(0)
-  pausaHasta            DateTime?
-  visibilidadRestaurada Boolean         @default(false)
-  derechoApelar         Boolean         @default(true)
-  notaRehabilitacion    String?
-  creadoEn              DateTime        @default(now())
-  actualizadoEn         DateTime        @updatedAt
+// SPEC-139 (F5): evento de match — un reporte APROBADO (D-08) sobre un identificador
+// que ya tenía ≥1 aprobado de OTRO denunciante (huella S-1 o usuarioId).
+// Solo metadatos agregados: NUNCA usuarioId, huellas ni textos (FR-009).
+// Entidad global (sin tenant): el match cruza tenants como la consulta pública.
+model EventoMatch {
+  id                    String   @id @default(cuid())
+  identificadorId       String
+  reporteNuevoId        String   @unique
+  conteoAcumulado       Int
+  ciudades              String[]
+  conductasCoincidentes String[]
+  interCiudad           Boolean  @default(false)
+  creadoEn              DateTime @default(now())
 
-  plataforma             Plataforma             @relation(fields: [plataformaId], references: [id])
-  admin                  Usuario?               @relation(fields: [adminId], references: [id])
-  operador               Usuario?               @relation(fields: [operadorId], references: [id], name: "ApelacionesOperador")
-  identificadorReportado IdentificadorReportado @relation(fields: [identificador, plataformaId], references: [identificador, plataformaId])
+  identificador IdentificadorReportado @relation(fields: [identificadorId], references: [id])
+  reporteNuevo  Reporte                @relation(fields: [reporteNuevoId], references: [id])
 
-  @@index([identificador, plataformaId])
+  @@index([identificadorId])
+  @@index([interCiudad])
+  @@index([creadoEn])
+  @@map("eventos_match")
+}
+
+// SPEC-110: apelación del identificador reportado (reemplazo del módulo eliminado en SPEC-109).
+// Flujo: apelante autenticado -> bandeja del comité -> resolución humana motivada.
+// Reglas duras: apelar NO cambia visibilidad; el apelante NO ve contenido de reportes.
+model Apelacion {
+  id                   String          @id @default(cuid())
+  numero               String          @unique
+  usuarioId            String
+  identificador        String
+  plataformaId         String
+  motivo               String          @db.Text
+  esRepresentante      Boolean         @default(false)
+  acreditacion         String?         @db.Text
+  estado               EstadoApelacion @default(RECIBIDA)
+  comiteId             String?
+  asignadoEn           DateTime?
+  plazoRespuestaEn     DateTime
+  decision             String?
+  motivacionResolucion String?         @db.Text
+  quitoVisibilidad     Boolean         @default(false)
+  resueltoPorId        String?
+  resueltoEn           DateTime?
+  creadoEn             DateTime        @default(now())
+  actualizadoEn        DateTime        @updatedAt
+
+  usuario     Usuario              @relation("ApelacionesUsuario", fields: [usuarioId], references: [id])
+  plataforma  Plataforma           @relation(fields: [plataformaId], references: [id])
+  comite      Usuario?             @relation("ApelacionesAsignadasComite", fields: [comiteId], references: [id])
+  resueltoPor Usuario?             @relation("ApelacionesResueltas", fields: [resueltoPorId], references: [id])
+  documentos  DocumentoApelacion[]
+
+  @@index([usuarioId])
   @@index([estado])
-  @@index([tokenAcceso])
-  @@index([operadorId])
+  @@index([identificador, plataformaId])
+  @@index([creadoEn])
+  @@index([resueltoEn])
+}
+
+model DocumentoApelacion {
+  id             String    @id @default(cuid())
+  apelacionId    String
+  nombreOriginal String
+  rutaArchivo    String
+  hashSha256     String
+  tamanoBytes    Int
+  mimeType       String
+  eliminadoEn    DateTime?
+  creadoEn       DateTime  @default(now())
+
+  apelacion Apelacion                  @relation(fields: [apelacionId], references: [id], onDelete: Cascade)
+  accesos   AccesoDocumentoApelacion[]
+
+  @@index([apelacionId])
+  @@index([eliminadoEn])
+}
+
+model AccesoDocumentoApelacion {
+  id          String   @id @default(cuid())
+  documentoId String
+  usuarioId   String
+  ipAddress   String
+  userAgent   String
+  accedidoEn  DateTime @default(now())
+
+  documento DocumentoApelacion @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+  usuario   Usuario            @relation(fields: [usuarioId], references: [id])
+
+  @@index([documentoId])
+  @@index([usuarioId])
 }
 
 model ContactoConfianza {
@@ -867,8 +1983,8 @@ model ClasificacionIA {
   posibleAgresorPar     Boolean           @default(false)
   creadoEn              DateTime          @default(now())
 
-  reporte    Reporte          @relation(fields: [reporteId], references: [id], onDelete: Cascade)
-  correccion CorreccionAdmin?
+  reporte      Reporte                    @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  correccion   CorreccionAdmin?
   rubricaVotos ClasificacionRubricaVoto[]
 
   @@index([categoria])
@@ -944,88 +2060,6 @@ model RateLimit {
   @@index([scope, identifier, windowStart])
 }
 
-enum CasoEvalFuente {
-  SEMILLA
-  MANUAL_ADMIN
-  PRODUCCION_ANONIMIZADO
-}
-
-model CasoEval {
-  id                 String         @id @default(cuid())
-  texto              String         @db.Text
-  categoriaEsperada  String
-  secundariaEsperada String?
-  ruido              Boolean        @default(false)
-  fuente             CasoEvalFuente @default(SEMILLA)
-  activo             Boolean        @default(true)
-  fixtureVersion     Int            @default(1)
-  creadoPorId        String?
-  creadoEn           DateTime       @default(now())
-
-  creadoPor  Usuario?        @relation(fields: [creadoPorId], references: [id])
-  resultados EvalResultado[]
-
-  @@index([categoriaEsperada])
-  @@index([fuente])
-  @@index([activo])
-  @@index([fixtureVersion])
-}
-
-enum EvalRunEstado {
-  PENDIENTE
-  EN_PROGRESO
-  COMPLETADA
-  FALLIDA
-  CANCELADA
-}
-
-model EvalRun {
-  id             String        @id @default(cuid())
-  tipo           String        @default("f7")
-  fixtureVersion Int
-  estado         EvalRunEstado @default(PENDIENTE)
-  iniciadoEn     DateTime      @default(now())
-  finalizadoEn   DateTime?
-  resultadoJson  Json?
-  error          String?       @db.Text
-  creadoPorId    String?
-
-  // Spec 014 — Laboratorio de experimentos
-  nombre         String?
-  notas          String? @db.Text
-  configSnapshot Json?
-  progresoCasos  Int     @default(0)
-  progresoTotal  Int     @default(0)
-
-  creadoPor  Usuario?        @relation(fields: [creadoPorId], references: [id])
-  resultados EvalResultado[]
-
-  @@index([estado])
-  @@index([fixtureVersion])
-  @@index([creadoPorId])
-}
-
-model EvalResultado {
-  id            String   @id @default(cuid())
-  experimentoId String
-  casoEvalId    String
-  esperado      String
-  predicho      String
-  confianza     Float
-  estadoFinal   String
-  correcto      Boolean
-  latenciaMs    Int
-  creadoEn      DateTime @default(now())
-
-  experimento EvalRun  @relation(fields: [experimentoId], references: [id], onDelete: Cascade)
-  casoEval    CasoEval @relation(fields: [casoEvalId], references: [id], onDelete: Cascade)
-
-  @@index([experimentoId])
-  @@index([casoEvalId])
-  @@index([correcto])
-  @@index([esperado])
-}
-
 model SimulacionRun {
   id           String              @id @default(cuid())
   modelo       String
@@ -1048,19 +2082,57 @@ model SimulacionRun {
 }
 
 model SimulacionReporte {
-  id                String        @id @default(cuid())
-  simulacionRunId   String
-  simulacionRun     SimulacionRun @relation(fields: [simulacionRunId], references: [id], onDelete: Cascade)
-  reporteId         String        @unique
-  indice            Int
-  categoriaEsperada String?
+  id                 String        @id @default(cuid())
+  simulacionRunId    String
+  simulacionRun      SimulacionRun @relation(fields: [simulacionRunId], references: [id], onDelete: Cascade)
+  reporteId          String        @unique
+  indice             Int
+  categoriaEsperada  String?
   secundariaEsperada String?
-  createdAt         DateTime      @default(now())
+  createdAt          DateTime      @default(now())
 
   @@index([simulacionRunId])
   @@index([indice])
   @@index([reporteId])
   @@map("simulacion_reportes")
+}
+
+// SPEC-184 (002-PI-079): bloqueo persistente de IPs por ipHash.
+model BlockList {
+  id            String    @id @default(cuid())
+  ipHash        String    @unique @map("ipHash")
+  ipOriginal    String?   @map("ipOriginal")
+  motivo        String    @map("motivo")
+  expiraEn      DateTime? @map("expiraEn")
+  creadoPorId   String    @map("creadoPorId")
+  creadoEn      DateTime  @default(now()) @map("creadoEn")
+  actualizadoEn DateTime  @updatedAt @map("actualizadoEn")
+
+  creadoPor Usuario @relation(fields: [creadoPorId], references: [id])
+
+  @@index([ipHash])
+  @@map("block_list")
+}
+
+// SPEC-184 (002-PI-079): corrida del simulador de abusos (reportes reales).
+model SimulacionAbusoRun {
+  id             String   @id @default(cuid())
+  escenario      String
+  totalReportes  Int
+  progreso       Int      @default(0)
+  estado         String   @default("PENDIENTE") // PENDIENTE | EN_PROGRESO | COMPLETADA | CANCELADA | FALLIDA
+  configJson     Json?
+  resultadosJson Json?
+  nota           String?  @db.VarChar(200)
+  creadoPorId    String
+  creadoEn       DateTime @default(now())
+  actualizadoEn  DateTime @updatedAt
+
+  creadoPor Usuario @relation(fields: [creadoPorId], references: [id])
+
+  @@index([estado])
+  @@index([creadoPorId])
+  @@map("simulacion_abuso_runs")
 }
 
 model ModuloPermisible {
@@ -1099,15 +2171,690 @@ model PermisoModulo {
 }
 
 model ClasificacionRubricaVoto {
-  id                String   @id @default(cuid())
+  id                String          @id @default(cuid())
   clasificacionIAId String
   clasificacionIA   ClasificacionIA @relation(fields: [clasificacionIAId], references: [id], onDelete: Cascade)
   modelo            String
   categoria         String
   cumple            Boolean
   preguntasJson     Json
-  creadoEn          DateTime @default(now())
+  creadoEn          DateTime        @default(now())
 
   @@index([clasificacionIAId])
   @@map("clasificacion_rubrica_votos")
+}
+
+// SPEC-132 (S-4): sesión de carga masiva — el roster de alumnos vive server-side
+// con TTL; el token de confirmación firma SOLO el id de esta sesión (sin PII).
+model CargaRosterSesion {
+  id        String   @id @default(cuid())
+  colegioId String
+  filas     Json
+  creadoEn  DateTime @default(now())
+  expiraEn  DateTime
+
+  colegio Colegio @relation(fields: [colegioId], references: [id], onDelete: Cascade)
+
+  @@index([expiraEn])
+}
+
+// SPEC-160 (002-PI-059): marcado quirúrgico de entidades demo para purga idempotente.
+// La purga borra EXCLUSIVAMENTE por registros de esta tabla (por id); los prefijos
+// DEMO-/RPT-DEMO- y los emails @innovadataco.com son defensa en profundidad.
+model DemoMarcado {
+  id        String   @id @default(cuid())
+  entidad   String // nombre de la tabla Prisma/BD: Colegio, Curso, Estudiante, Usuario, Reporte, AuditLog, ...
+  entidadId String
+  metadata  Json? // { corrida: string, script: string, notas?: string }
+  creadoEn  DateTime @default(now())
+
+  @@unique([entidad, entidadId])
+  @@index([entidad])
+  @@index([entidadId])
+  @@map("demo_marcado")
+}
+
+// SPEC-171 (Pilar B, I-51): probes de salud de infraestructura (append-only,
+// retención corta; los escribe scripts/monitor-probes.mjs).
+// SPEC-186 (002-PI-081): añade metodo para distinguir PING / PIGGYBACK / SMOKE.
+model HealthProbe {
+  id         String   @id @default(cuid())
+  senal      String // app | worker | bd | ollama_ping | ollama_smoke | tailscale
+  ok         Boolean
+  latenciaMs Int      @default(0)
+  detalle    String?
+  metodo     String?  @default("SMOKE") // PING | PIGGYBACK | SMOKE
+  creadoEn   DateTime @default(now())
+
+  @@index([senal, creadoEn])
+}
+
+// SPEC-171: incidente de infraestructura abierto tras doble rojo (re-probe).
+// Se resuelve solo cuando el probe vuelve a verde. Email con throttle por senal.
+model IncidenteInfra {
+  id            String    @id @default(cuid())
+  senal         String // misma nomenclatura que HealthProbe.senal
+  estado        String    @default("ABIERTO") // ABIERTO | RESUELTO
+  inicio        DateTime  @default(now())
+  fin           DateTime?
+  detalle       String?
+  ultimoEmailEn DateTime?
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  @@index([senal, estado])
+}
+
+// SPEC-193 (Fase 1): bitácora de logs de workers y servicios.
+// No almacena PII ni texto de reportes; retención acotada por purga explícita.
+model WorkerLog {
+  id           String   @id @default(cuid())
+  servicio     String
+  nivel        NivelLog
+  mensaje      String   @db.VarChar(500)
+  contextoJson Json?
+  creadoEn     DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([servicio, creadoEn(sort: Desc)], name: "idx_worker_logs_servicio_creado")
+  @@index([nivel, creadoEn(sort: Desc)], name: "idx_worker_logs_nivel_creado")
+  @@index([creadoEn(sort: Desc)], name: "idx_worker_logs_creado")
+  @@map("worker_logs")
+}
+
+// SPEC-172 (Pilar D.5): snapshot semanal de la deriva del motor en producción
+// por categoría (tasa de corrección humana confirmada vs accuracy del banco
+// curado). Lo escribe el job semanal y el recálculo bajo demanda; el tablero
+// solo lee (cero groupBys pesados por carga).
+model DerivaMotorSnapshot {
+  id             String   @id @default(cuid())
+  semanaInicio   DateTime // lunes 00:00 America/Bogota de la semana medida
+  categoria      String // CategoriaConducta
+  total          Int // clasificaciones de producción en la ventana
+  correcciones   Int // correcciones humanas confirmadas en la ventana
+  tasaCorreccion Float // correcciones / total (0 si total = 0)
+  accuracyBanco  Float? // recall por categoría del último SimulacionRun COMPLETADA (null = sin baseline)
+  brechaPp       Float? // tasaCorreccion − (1 − accuracyBanco), en puntos porcentuales (null = sin baseline)
+  alertada       Boolean  @default(false)
+  creadoEn       DateTime @default(now())
+
+  @@unique([semanaInicio, categoria])
+  @@index([semanaInicio])
+}
+
+// SPEC-230 (002-PI-130): expediente que agrupa eventos sobre un identificador
+// reportado, visto/desde la perspectiva del padre/tutor.
+model Expediente {
+  id                              String           @id @default(cuid())
+  padreUsuarioId                  String
+  identificadorReportado          String
+  plataformaId                    String?
+  fechaApertura                   DateTime         @db.Timestamptz(6)
+  fechaCierre                     DateTime?        @db.Timestamptz(6)
+  fechaEscalado                   DateTime?        @db.Timestamptz(6)
+  estado                          EstadoExpediente
+  scoreGravedadActual             ScoreGravedad    @default(VERDE)
+  categoriasDominantesJson        Json?
+  numEventos                      Int              @default(0)
+  ultimoEventoEn                  DateTime?        @db.Timestamptz(6)
+  autoCerradoPorInactividad       Boolean          @default(false)
+  expedienteRelacionadoAnteriorId String?
+  patronesDetectadosJson          Json?
+  createdAt                       DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt                       DateTime         @updatedAt @db.Timestamptz(6)
+
+  padre                  Usuario?             @relation(fields: [padreUsuarioId], references: [id])
+  eventos                EventoExpediente[]
+  // SPEC-234 (002-PI-134): informes consolidados y patrones N1 del expediente.
+  informes               InformeConsolidado[]
+  patrones               PatronExpediente[]
+  expedienteAnterior     Expediente?          @relation("ExpedienteRelacionado", fields: [expedienteRelacionadoAnteriorId], references: [id])
+  expedientesPosteriores Expediente[]         @relation("ExpedienteRelacionado")
+  // SPEC-238 (002-PI-mega-cola): aclaración padre-comité (máx. una por expediente).
+  aclaracion             AclaracionExpediente?
+  // SPEC-239 (002-PI-mega-cola): SLA efectivo y marca de escalamiento a ROJO.
+  slaEfectivoHoras       Int?
+  fechaEscaladoRojoEn    DateTime?            @db.Timestamptz(6)
+
+  @@index([padreUsuarioId, estado])
+  @@index([identificadorReportado])
+  @@index([estado, updatedAt(sort: Desc)])
+  // SPEC-236 (002-PI-mega-cola): barridos del worker (auto-cierre por inactividad, SLA).
+  @@index([estado, ultimoEventoEn])
+  // SPEC-239 (002-PI-mega-cola): vigilancia del SLA 12h de expedientes ROJO.
+  @@index([scoreGravedadActual, estado, fechaEscaladoRojoEn])
+}
+
+// SPEC-230 (002-PI-130): evento dentro de un expediente padre.
+model EventoExpediente {
+  id                     String   @id @default(cuid())
+  expedienteId           String
+  ordenSecuencial        Int
+  reporteId              String?
+  fechaEvento            DateTime @db.Timestamptz(6)
+  texto                  String   @db.Text
+  categoriaDetectada     String?
+  confianzaClasificacion Float?
+  plataforma             String?
+  adjuntosMetaJson       Json?
+  createdAt              DateTime @default(now()) @db.Timestamptz(6)
+
+  expediente Expediente @relation(fields: [expedienteId], references: [id])
+  reporte    Reporte?   @relation(fields: [reporteId], references: [id])
+
+  @@unique([expedienteId, ordenSecuencial])
+  @@index([expedienteId, fechaEvento(sort: Desc)])
+}
+
+// SPEC-234 (002-PI-134): informe consolidado de un expediente padre. Resultado
+// inmutable de la compilación; cada versión conserva el estado del expediente en
+// un momento dado. NUNCA incluye texto original de reportes.
+model InformeConsolidado {
+  id                             String             @id @default(cuid())
+  expedienteId                   String
+  versionSecuencial              Int
+  scoreValor                     Float
+  scoreGravedad                  ScoreGravedad
+  categoriasDetectadasJson       Json
+  patronesDetectadosJson         Json?
+  senalComunitariaJson           Json?
+  resumenTextoGenerado           String             @db.Text
+  pdfUrl                         String?
+  pdfHash                        String?            @unique
+  pdfGeneradoEn                  DateTime?          @db.Timestamptz(6)
+  generadoPorId                  String?
+  tipoRevision                   TipoRevisionComite @default(CONSOLIDACION_EXPEDIENTE)
+  guiaAccionCategoriaIdPrincipal String?
+  estadoAprobacion               String             @default("PENDIENTE_COMITE")
+  aprobadoPorMiembrosJson        Json?
+  correccionesJson               Json?
+  nivelConfianza                 Float?
+  // SPEC-237 (002-PI-mega-cola): motivo de devolución al área de origen.
+  motivoDevolucion               String?            @db.Text
+  createdAt                      DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt                      DateTime           @updatedAt @db.Timestamptz(6)
+
+  expediente  Expediente @relation(fields: [expedienteId], references: [id])
+  generadoPor Usuario?   @relation(fields: [generadoPorId], references: [id])
+  // SPEC-238 (002-PI-mega-cola): aclaraciones vinculadas a este informe.
+  aclaraciones AclaracionExpediente[]
+
+  @@unique([expedienteId, versionSecuencial])
+  @@index([expedienteId, createdAt(sort: Desc)])
+  @@index([estadoAprobacion])
+  @@map("informes_consolidados")
+}
+
+// SPEC-234 (002-PI-134): caché de agregados comunitarios por identificador reportado.
+// Solo conteos agregados; nunca textos, nombres ni datos re-identificables.
+model SenalComunitariaCache {
+  identificadorReportado    String   @id
+  totalExpedientesActivos   Int      @default(0)
+  totalExpedientesCerrados  Int      @default(0)
+  totalExpedientesEscalados Int      @default(0)
+  categoriasFrecuenciaJson  Json
+  primeraAparicionEn        DateTime @db.Timestamptz(6)
+  ultimaAparicionEn         DateTime @db.Timestamptz(6)
+  paisesJson                Json
+  ciudadesJson              Json
+  plataformasJson           Json
+  invalidado                Boolean  @default(false)
+  actualizadoEn             DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([ultimaAparicionEn(sort: Desc)])
+  @@map("senal_comunitaria_cache")
+}
+
+// SPEC-234 (002-PI-134): patrón N1 detectado dentro de un expediente padre.
+model PatronExpediente {
+  id                String               @id @default(cuid())
+  expedienteId      String
+  tipoPatron        TipoPatronExpediente
+  severidad         String // "BAJA" | "MEDIA" | "ALTA"
+  nivelConfianza    Float
+  descripcionTexto  String               @db.Text
+  datosContextoJson Json
+  detectadoEn       DateTime             @db.Timestamptz(6)
+  createdAt         DateTime             @default(now()) @db.Timestamptz(6)
+
+  expediente Expediente @relation(fields: [expedienteId], references: [id])
+
+  @@index([expedienteId, severidad])
+  @@index([expedienteId, tipoPatron])
+  @@map("patrones_expediente")
+}
+
+// SPEC-235 (002-PI-135): guía de acción parametrizable por categoría de riesgo.
+// El contenido es editorial, validado por el comité y publicado de forma atómica.
+// La unicidad de una guía ACTIVA por categoría se garantiza con un índice único
+// parcial SQL (ver migración aditiva); Prisma no modela índices condicionales.
+model GuiaAccionCategoria {
+  id                    String           @id @default(cuid())
+  categoria             String
+  versionSecuencial     Int
+  tituloEmocional       String
+  subtitulo             String?
+  categoriaBadgeTexto   String
+  pasosJson             Json
+  calloutTitulo         String?
+  calloutTexto          String?
+  botonesAccionJson     Json
+  piePagina             String?
+  estado                EstadoGuiaAccion
+  aprobadaPorComiteJson Json             @default("[]")
+  creadaPorAdminId      String
+  createdAt             DateTime         @default(now()) @db.Timestamptz(6)
+  publicadaEn           DateTime?        @db.Timestamptz(6)
+  reemplazadaEn         DateTime?        @db.Timestamptz(6)
+
+  creadaPor Usuario @relation(fields: [creadaPorAdminId], references: [id])
+
+  @@index([categoria, estado])
+  @@index([estado])
+  @@index([creadaPorAdminId])
+  @@map("GuiaAccionCategoria")
+}
+
+// ============================================
+// MÓDULO DE NOTIFICACIONES (SPEC-201)
+// ============================================
+
+enum EstadoNotificacion {
+  ENCOLADA
+  ENVIANDO
+  ENVIADA
+  ABIERTA
+  CLICADA
+  FALLIDA
+  REINTENTANDO
+  CANCELADA
+}
+
+enum CanalNotificacion {
+  EMAIL
+  IN_APP
+}
+
+// SPEC-201 (BRIEF §5.1): cola + auditoría de envíos individuales.
+// El campo `proveedorId` es la clave de idempotencia de webhooks (Resend).
+model Notificacion {
+  id                    String             @id @default(cuid())
+  evento                String
+  destinatarioUsuarioId String?
+  destinatarioEmail     String
+  plantillaClave        String
+  canal                 CanalNotificacion
+  variables             Json
+  sujetoTipo            String?
+  sujetoId              String?
+  enviarEn              DateTime?          @db.Timestamptz(6)
+  estado                EstadoNotificacion @default(ENCOLADA)
+  intentos              Int                @default(0)
+  ultimoError           String?
+  proveedorId           String?
+  sentAt                DateTime?          @db.Timestamptz(6)
+  deliveredAt           DateTime?          @db.Timestamptz(6)
+  openedAt              DateTime?          @db.Timestamptz(6)
+  clickedAt             DateTime?          @db.Timestamptz(6)
+  bouncedAt             DateTime?          @db.Timestamptz(6)
+  canceladoEn           DateTime?          @db.Timestamptz(6)
+  motivoCancelacion     String?
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+
+  @@index([estado, enviarEn])
+  @@index([destinatarioUsuarioId, createdAt(sort: Desc)])
+  @@index([evento, createdAt(sort: Desc)])
+  @@index([proveedorId])
+  @@map("notificaciones")
+}
+
+// SPEC-201 (BRIEF §5.2): plantillas Markdown por canal.
+model NotificacionPlantilla {
+  id              String            @id @default(cuid())
+  clave           String            @unique
+  canal           CanalNotificacion
+  asunto          String?
+  cuerpoMarkdown  String
+  variablesSchema Json              @default("{}")
+  version         Int               @default(1)
+  activa          Boolean           @default(true)
+  creadaPor       String?
+  actualizadaPor  String?
+  createdAt       DateTime          @default(now()) @db.Timestamptz(6)
+  actualizadoEn   DateTime          @updatedAt @db.Timestamptz(6)
+
+  @@map("notificacion_plantillas")
+}
+
+// SPEC-201 (BRIEF §5.3): reglas programables de disparo.
+model NotificacionRegla {
+  id             String            @id @default(cuid())
+  evento         String
+  rol            String
+  offset         String
+  canal          CanalNotificacion
+  plantillaClave String
+  obligatoria    Boolean           @default(false)
+  activa         Boolean           @default(true)
+  createdAt      DateTime          @default(now()) @db.Timestamptz(6)
+  actualizadaPor String?
+  actualizadaEn  DateTime          @updatedAt @db.Timestamptz(6)
+
+  @@index([evento, activa])
+  // SPEC-247 (002-PI-150): dedup de reglas por clave canónica (evento, canal, plantillaClave).
+  @@unique([evento, canal, plantillaClave])
+  @@map("notificacion_reglas")
+}
+
+// SPEC-201 (BRIEF §5.4): preferencias de opt-out del usuario final.
+// La clave `eventoRegla` es "evento.canal" (ej: "reporte.resuelto.email").
+model NotificacionPreferencia {
+  id          String   @id @default(cuid())
+  usuarioId   String
+  eventoRegla String
+  habilitado  Boolean  @default(true)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([usuarioId, eventoRegla])
+  @@index([usuarioId])
+  @@map("notificacion_preferencias")
+}
+
+// SPEC-201 (BRIEF §5.5): destinos con bounces reiterados.
+model NotificacionContactoBloqueado {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  bounceCount       Int       @default(1)
+  ultimoBounce      DateTime  @db.Timestamptz(6)
+  motivo            String
+  bloqueadoEn       DateTime  @default(now()) @db.Timestamptz(6)
+  notificadoAdminEn DateTime? @db.Timestamptz(6)
+
+  @@index([email])
+  @@map("notificacion_contactos_bloqueados")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPEC-220 (002-PI-121): dominio Análisis dinero-vs-valor. Score de valor por
+// cliente (snapshot mensual con pesos congelados) + tablas base que consumen
+// SPEC-221 (motor de reglas), SPEC-223 (digest) y SPEC-225 (anomalías).
+// Sin PII por construcción: conteos, pesos, plantillas y metadatos; nunca texto
+// de reportes ni datos de menores.
+
+enum ModoRegla {
+  RECOMIENDA
+  EJECUTA
+}
+
+enum EstadoRecomendacion {
+  PENDIENTE
+  APLICADA
+  IGNORADA
+  EXPIRADA
+}
+
+// SPEC-220 (FR-001): snapshot mensual del score de valor de una suscripción.
+// `periodo` = "YYYY-MM" en mes calendario America/Bogota. Los `peso*` son el
+// snapshot de los pesos usados en el cálculo (auditoría del histórico).
+model ScoreCliente {
+  id                 String   @id @default(cuid())
+  suscripcionId      String
+  periodo            String // "YYYY-MM" mes calendario America/Bogota
+  componenteReportes Int      @default(0)
+  componenteCasos    Int      @default(0)
+  componenteAlertas  Int      @default(0)
+  componenteSesiones Int      @default(0)
+  pesoReportes       Float
+  pesoCasos          Float
+  pesoAlertas        Float
+  pesoSesiones       Float
+  scoreTotal         Float
+  percentilEnCohorte Float?
+  calculadoEn        DateTime @default(now()) @db.Timestamptz(6)
+
+  suscripcion Suscripcion @relation(fields: [suscripcionId], references: [id], onDelete: Cascade)
+
+  @@unique([suscripcionId, periodo])
+  @@index([periodo, scoreTotal(sort: Desc)])
+  @@map("score_clientes")
+}
+
+// SPEC-220 (FR-002): definición de una regla de recomendación. La lógica del
+// motor corresponde a SPEC-221/224; aquí solo vive la estructura.
+model ReglaRecomendacion {
+  id                     String    @id @default(cuid())
+  clave                  String    @unique // ej: "vencimiento.T_menos_7"
+  nombre                 String
+  descripcion            String
+  categoria              String // "renovacion" | "churn" | "crecimiento" | "anomalia"
+  sqlQuery               String
+  plantillaRecomendacion String // markdown con {{variables}}
+  modo                   ModoRegla @default(RECOMIENDA)
+  accionEjecutable       String?
+  accionParametros       Json?
+  prioridad              Int       @default(50) // 0=baja, 100=alta
+  umbralMinimo           Float?
+  frecuenciaMin          Int       @default(60)
+  activa                 Boolean   @default(true)
+  creadaPorAdminId       String
+  createdAt              DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(6)
+  // SPEC-221 (002-PI-122): última corrida del motor; gobierna la cadencia por frecuenciaMin.
+  ultimaEvaluacionEn     DateTime? @db.Timestamptz(6)
+
+  creadaPor       Usuario         @relation(fields: [creadaPorAdminId], references: [id])
+  recomendaciones Recomendacion[]
+  // SPEC-224 (002-PI-125): versionado auditable; historial de snapshots previos.
+  version                Int                            @default(1)
+  historial              ReglaRecomendacionHistorial[]
+
+  @@index([activa, prioridad(sort: Desc)])
+  @@map("reglas_recomendacion")
+}
+
+// SPEC-220 (FR-003): instancia generada de una regla. `sujetoTipo`/`sujetoId`
+// son polimórficos sin FK (patrón deliberado del brief §5.4; la integridad la
+// garantiza la capa de servicio en las SPECs consumidoras).
+model Recomendacion {
+  id                  String              @id @default(cuid())
+  reglaId             String
+  titulo              String
+  descripcion         String
+  categoria           String
+  prioridad           Int
+  sujetoTipo          String? // "Suscripcion" | "Colegio" | "Usuario" (polimórfico, sin FK)
+  sujetoId            String?
+  datosContexto       Json
+  accionSugerida      String?
+  accionParametros    Json?
+  estado              EstadoRecomendacion @default(PENDIENTE)
+  generadaEn          DateTime            @default(now()) @db.Timestamptz(6)
+  resueltaEn          DateTime?           @db.Timestamptz(6)
+  resueltaPorAdminId  String?
+  motivoResolucion    String?
+  expiraEn            DateTime            @db.Timestamptz(6)
+  ejecutadaAutomatica Boolean             @default(false)
+
+  regla       ReglaRecomendacion @relation(fields: [reglaId], references: [id])
+  resueltaPor Usuario?           @relation(fields: [resueltaPorAdminId], references: [id])
+  // SPEC-226 (002-PI-mega-cola): trazabilidad de acciones ejecutadas (aditivo).
+  ejecuciones EjecucionAccion[]
+
+  @@index([estado, prioridad(sort: Desc), generadaEn(sort: Desc)])
+  @@index([sujetoId])
+  // SPEC-221 (002-PI-122): dedup del motor por (regla, sujeto) en PENDIENTE + barrido de expiración.
+  @@index([reglaId, sujetoId, estado])
+  @@index([expiraEn])
+  @@map("recomendaciones")
+}
+
+// SPEC-220 (FR-004): resumen semanal generado para un admin. Lógica en SPEC-223.
+model DigestSemanal {
+  id             String    @id @default(cuid())
+  periodo        String // "2026-W34" ISO week America/Bogota
+  destinatarioId String
+  generadoEn     DateTime  @default(now()) @db.Timestamptz(6)
+  enviadoEn      DateTime? @db.Timestamptz(6)
+  top5Decisiones Json
+  kpisSemana     Json
+  kpisVsPrevia   Json
+  enlacePanel    String
+  estado         String // "generado" | "enviado" | "fallido" (valores cerrados, patrón AlertaColegio.estado)
+
+  destinatario Usuario @relation(fields: [destinatarioId], references: [id])
+
+  @@unique([periodo, destinatarioId])
+  @@map("digest_semanal")
+}
+
+// SPEC-220 (FR-005): anomalía detectada por reglas. Lógica en SPEC-225.
+model Anomalia {
+  id                 String    @id @default(cuid())
+  tipo               String // "PAGO_ATRASADO_CLIENTE_HISTORICAMENTE_PUNTUAL" | "CRECIMIENTO_ANOMALO_CIUDAD" | "USO_CAIDO_ABRUPTO" | ...
+  sujetoTipo         String?
+  sujetoId           String?
+  severidad          String // "BAJA" | "MEDIA" | "ALTA" (valores cerrados)
+  descripcion        String
+  datosContexto      Json
+  detectadaEn        DateTime  @default(now()) @db.Timestamptz(6)
+  resueltaEn         DateTime? @db.Timestamptz(6)
+  resueltaPorAdminId String?
+
+  resueltaPor Usuario? @relation(fields: [resueltaPorAdminId], references: [id])
+
+  @@index([tipo, detectadaEn(sort: Desc)])
+  @@index([severidad, detectadaEn(sort: Desc)])
+  // SPEC-225: acelera la deduplicación por anomalía abierta (resueltaEn IS NULL).
+  @@index([resueltaEn])
+  @@map("anomalias")
+}
+
+// SPEC-238 (002-PI-mega-cola): aclaración padre-comité (1 iteración máx).
+// El padre pide UNA aclaración antes de aprobar; el comité responde y el
+// expediente vuelve a EN_APROBACION_PADRE. Si el comité no responde dentro del
+// SLA (padre.comite.sla_horas_normal), el worker la cierra forzosamente.
+// `estado` es String (no enum) según brief §7.4: PENDIENTE | RESPONDIDA |
+// CERRADA_FORZOSAMENTE. NUNCA se loguean solicitudTexto/respuestaTexto.
+model AclaracionExpediente {
+  id                   String    @id @default(cuid())
+  expedienteId         String    @unique
+  informeConsolidadoId String
+  solicitadaEn         DateTime  @default(now()) @db.Timestamptz(6)
+  solicitudTexto       String    @db.Text
+  respondidaEn         DateTime? @db.Timestamptz(6)
+  respondidaPor        String?
+  respuestaTexto       String?   @db.Text
+  estado               String
+  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
+
+  expediente           Expediente         @relation(fields: [expedienteId], references: [id])
+  informeConsolidado   InformeConsolidado @relation(fields: [informeConsolidadoId], references: [id])
+  respondidaPorUsuario Usuario?           @relation(fields: [respondidaPor], references: [id])
+
+  @@index([expedienteId])
+  @@index([informeConsolidadoId])
+  @@index([estado])
+  @@index([solicitadaEn])
+  @@map("aclaracion_expediente")
+}
+
+// SPEC-239 (002-PI-mega-cola): relación del contacto de emergencia con el menor.
+enum RelacionContactoEmergencia {
+  MADRE
+  PADRE
+  TUTOR
+  HERMANO
+  OTRO
+}
+
+// SPEC-239 (002-PI-mega-cola): contacto de emergencia administrado por el padre.
+// El comité solo los lee (activos, por prioridad) para disparar la notificación
+// urgente al activar la emergencia de un expediente ROJO. Baja lógica (`activo`)
+// para conservar trazabilidad de activaciones históricas (D3). `telefono` se
+// valida E.164 en la capa API (Zod). NUNCA se loguea en AuditLog.
+model ContactoEmergencia {
+  id             String                     @id @default(cuid())
+  padreUsuarioId String
+  nombre         String
+  relacion       RelacionContactoEmergencia
+  telefono       String
+  email          String?
+  prioridad      Int
+  activo         Boolean                    @default(true)
+  createdAt      DateTime                   @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime                   @updatedAt @db.Timestamptz(6)
+
+  padre Usuario @relation(fields: [padreUsuarioId], references: [id])
+
+  @@index([padreUsuarioId, prioridad])
+  @@map("contactos_emergencia")
+}
+
+// SPEC-224 (002-PI-125): versionado auditable de reglas de recomendación.
+// Snapshot JSON completo del estado ANTERIOR de la regla; se inserta en la
+// misma transacción que el update (atomicidad). Solo configuración de reglas
+// (SQL, plantillas, umbrales): nunca datos de reportes ni de personas.
+model ReglaRecomendacionHistorial {
+  id                 String   @id @default(cuid())
+  reglaId            String
+  version            Int
+  snapshot           Json
+  motivo             String
+  cambiadoPorAdminId String
+  creadoEn           DateTime @default(now()) @db.Timestamptz(6)
+
+  regla       ReglaRecomendacion @relation(fields: [reglaId], references: [id])
+  cambiadoPor Usuario            @relation(fields: [cambiadoPorAdminId], references: [id])
+
+  @@unique([reglaId, version])
+  @@index([reglaId, creadoEn(sort: Desc)])
+  @@map("regla_recomendacion_historial")
+}
+
+// ── SPEC-226 (002-PI-mega-cola): ejecución de acciones automáticas ──
+// Trazabilidad y rollback de cada acción disparada por una regla en modo
+// EJECUTA (o aplicada manualmente por un admin). `parametros` es snapshot
+// deliberado: si la regla se edita después, la ejecución histórica conserva
+// con qué parámetros actuó. `resultado` guarda solo ids de dominio (bono,
+// notificaciones programadas, operador): nunca textos de reportes ni PII.
+enum TipoAccionEjecutable {
+  CREAR_BONO
+  ENVIAR_NOTIFICACION
+  ASIGNAR_OPERADOR
+  CREAR_ALERTA
+}
+
+enum EstadoEjecucion {
+  EJECUTADA
+  REVERTIDA
+  FALLIDA
+}
+
+enum OrigenEjecucion {
+  AUTOMATICA
+  MANUAL_ADMIN
+}
+
+model EjecucionAccion {
+  id                  String               @id @default(cuid())
+  recomendacionId     String
+  reglaId             String
+  tipoAccion          TipoAccionEjecutable
+  parametros          Json
+  estado              EstadoEjecucion
+  resultado           Json?
+  motivoFallo         String?
+  origenEjecucion     OrigenEjecucion
+  ejecutadaPorAdminId String?
+  ejecutadaEn         DateTime             @default(now()) @db.Timestamptz(6)
+  revertidaEn         DateTime?            @db.Timestamptz(6)
+  revertidaPorAdminId String?
+  motivoReversion     String?
+  createdAt           DateTime             @default(now()) @db.Timestamptz(6)
+
+  recomendacion Recomendacion @relation(fields: [recomendacionId], references: [id])
+
+  @@index([recomendacionId])
+  @@index([reglaId, ejecutadaEn])
+  @@index([estado, ejecutadaEn])
+  @@map("ejecuciones_accion")
 }

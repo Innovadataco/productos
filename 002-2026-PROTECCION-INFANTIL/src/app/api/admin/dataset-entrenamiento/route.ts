@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { clampPageSize, clampPage } from "@/lib/pagination";
+import { DatasetEntrenamientoRepository } from "@/lib/dal/repositories/dataset-entrenamiento";
 
 function requireAdmin(user: { rol: string }) {
     if (String(user.rol) !== "ADMIN") {
@@ -34,23 +34,12 @@ export async function GET(request: Request) {
         // Regla dura: los consumidores del dataset solo pueden acceder a registros
         // cuyo texto haya sido anonimizado. El conteo total sigue visible para
         // métricas de cobertura, pero el listado filtra los no anonimizados.
+        // E-8: las consultas viven en el repo; la ruta no toca prisma.
+        const repo = new DatasetEntrenamientoRepository();
         const [items, total, anonimizados] = await Promise.all([
-            prisma.datasetEntrenamiento.findMany({
-                where: { textoAnonimizado: true },
-                orderBy: { creadoEn: "desc" },
-                skip,
-                take: pageSize,
-                include: {
-                    correccion: {
-                        select: {
-                            categoriaOriginal: true,
-                            categoriaCorregida: true,
-                        },
-                    },
-                },
-            }),
-            prisma.datasetEntrenamiento.count(),
-            prisma.datasetEntrenamiento.count({ where: { textoAnonimizado: true } }),
+            repo.listarAnonimizadosPaginados({ skip, take: pageSize }),
+            repo.contarTodos(),
+            repo.contarAnonimizados(),
         ]);
 
         return NextResponse.json({

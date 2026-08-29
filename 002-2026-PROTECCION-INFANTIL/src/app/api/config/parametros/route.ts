@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { RolUsuario } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { clampPageSize, clampPage } from "@/lib/pagination";
+import { ConfiguracionService } from "@/lib/dal/services/configuracion";
 
 export async function GET(request: Request) {
     try {
@@ -15,32 +15,10 @@ export async function GET(request: Request) {
         const page = clampPage(searchParams.get("page"));
         const pageSize = clampPageSize(searchParams.get("pageSize"));
 
-        const where = categoria ? { categoria: categoria as never } : {};
+        // SPEC-053: la consulta y el saneado de secretos viven en el DAL; la ruta no toca prisma.
+        const resultado = await new ConfiguracionService().listar({ categoria, page, pageSize });
 
-        const [items, total] = await Promise.all([
-            prisma.parametroSistema.findMany({
-                where,
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                orderBy: { categoria: "asc" },
-            }),
-            prisma.parametroSistema.count({ where }),
-        ]);
-
-        const sanitizedItems = items.map((p) => ({
-            ...p,
-            valor: p.esSecreto ? null : p.valor,
-        }));
-
-        return NextResponse.json({
-            items: sanitizedItems,
-            pagination: {
-                page,
-                pageSize,
-                total,
-                totalPages: Math.ceil(total / pageSize),
-            },
-        });
+        return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
