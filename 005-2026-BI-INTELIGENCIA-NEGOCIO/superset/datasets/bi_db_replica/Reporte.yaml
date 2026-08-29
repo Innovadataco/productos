@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: a3dac1fc-67e5-5509-b27a-87ece4bcdbac
   - column_name: estado
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 69811b39-7ac7-5727-90de-969b8b506618
   - column_name: prioridadAlta
     verbose_name: null
     type: BOOLEAN
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: fee149bd-217c-54d8-936d-35452c1608e3
   - column_name: eliminado
     verbose_name: null
     type: BOOLEAN
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: fa5ec633-18ed-53a6-9516-4d7cf75bc6d6
   - column_name: tenantId
     verbose_name: null
     type: VARCHAR
@@ -67,7 +63,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: c3b2cf84-0cfa-52d9-bed1-02a353f7e6f8
   - column_name: plataformaId
     verbose_name: null
     type: VARCHAR
@@ -77,7 +72,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: b3a32250-7675-5128-91c4-9efd6a6b0674
   - column_name: numeroSeguimiento
     verbose_name: null
     type: VARCHAR
@@ -87,7 +81,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 6aa80571-a7e1-5e48-9720-995f814dc880
   - column_name: creadoEn
     verbose_name: null
     type: TIMESTAMP
@@ -97,7 +90,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 20334488-8aba-5fa3-bc88-1ff88aa59853
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -106,4 +98,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: 065fe8cb-5832-5323-8376-71a0997a5235

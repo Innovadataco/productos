@@ -20,6 +20,3 @@ query_context: "{\"datasource\": {\"uuid\": \"55db0c80-af92-5888-8c29-569716b98a
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null
-tags:
-  - bi-mvp
-  - comercial

@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 9cfbc523-6ca3-57ca-bef6-e10bf8514f64
   - column_name: action
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 49086bbe-acca-5174-aa8f-aa61b5aaaf2e
   - column_name: user_id
     verbose_name: null
     type: BIGINT
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: c3301192-f5d9-5764-af62-94234df7e2f1
   - column_name: dashboard_id
     verbose_name: null
     type: BIGINT
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 9bc39181-146c-569b-9c09-92333bdb92ba
   - column_name: slice_id
     verbose_name: null
     type: BIGINT
@@ -67,7 +63,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: e1d94b95-08d6-5610-8cb1-cefc843815be
   - column_name: dttm
     verbose_name: null
     type: TIMESTAMP
@@ -77,7 +72,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: ed3734e5-e316-5f15-b7a9-a127347c6aa7
   - column_name: json
     verbose_name: null
     type: TEXT
@@ -87,7 +81,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 258974ce-1f33-5c86-ae62-aee97640e4b5
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -96,4 +89,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: a74a4f88-aee3-5e63-8718-fd283dab2147

@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 6aa2a736-99fa-55f0-83e6-db7508853d5d
   - column_name: estado
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 94e768e3-1b35-5139-bf6a-104d626580cd
   - column_name: comiteId
     verbose_name: null
     type: VARCHAR
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: efafbded-674a-5d9a-af5e-142ba5ad7200
   - column_name: creadoEn
     verbose_name: null
     type: TIMESTAMP
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: a0d90e1d-53d2-5451-bd9e-7d39c9eadadc
   - column_name: resueltoEn
     verbose_name: null
     type: TIMESTAMP
@@ -67,7 +63,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 40f99726-0345-5cd8-8052-3d9e46398f17
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -76,4 +71,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: 4866e812-84d9-5b59-a25b-930bbbb8cb0b

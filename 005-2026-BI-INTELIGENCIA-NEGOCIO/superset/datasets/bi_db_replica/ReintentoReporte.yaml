@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: b15aa463-7b79-5643-beab-ad9f98d093c2
   - column_name: reporteId
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 550b9882-2e6e-5983-b5c2-ec4da116058d
   - column_name: intento
     verbose_name: null
     type: INTEGER
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: cfcc7da7-913d-509e-9394-ba723fd7d606
   - column_name: exitoso
     verbose_name: null
     type: BOOLEAN
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: c506d21c-0b7f-5e79-8907-08347c41f980
   - column_name: creadoEn
     verbose_name: null
     type: TIMESTAMP
@@ -67,7 +63,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: d8a20efa-f250-5678-9d04-bd94b6f41420
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -76,4 +71,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: 93dc4861-7a66-5688-9fe6-f4855cf221cb

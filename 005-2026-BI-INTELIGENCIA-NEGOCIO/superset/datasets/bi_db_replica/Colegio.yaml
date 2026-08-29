@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 3ea17c0e-1d9d-52e9-b63a-dbcfd3b23553
   - column_name: nombre
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 6505c4a7-0686-54c7-868f-d9353b1ba792
   - column_name: estado
     verbose_name: null
     type: VARCHAR
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 3ce69ea0-c8fa-5a25-85d1-0c77fddf9b4e
   - column_name: tenantId
     verbose_name: null
     type: VARCHAR
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: ff2830d9-0ddf-5cdf-8cd3-cb208b3dba0d
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -66,4 +62,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: 4215dd71-2944-5ca3-b055-017d0c81769e

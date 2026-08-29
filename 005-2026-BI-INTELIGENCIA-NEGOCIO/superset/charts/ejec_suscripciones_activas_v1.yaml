@@ -20,6 +20,3 @@ query_context: "{\"datasource\": {\"uuid\": \"13fe285a-459f-5e3c-8c24-b94fb236aa
 cache_timeout: 900
 is_managed_externally: true
 external_url: null
-tags:
-  - bi-mvp
-  - ejecutivo

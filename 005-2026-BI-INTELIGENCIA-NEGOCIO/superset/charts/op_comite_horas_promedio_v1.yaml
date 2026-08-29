@@ -20,6 +20,3 @@ query_context: "{\"datasource\": {\"uuid\": \"c30c3b31-0c3a-5011-baef-9ea44e98d3
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null
-tags:
-  - bi-mvp
-  - operativo

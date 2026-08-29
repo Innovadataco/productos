@@ -20,6 +20,3 @@ query_context: "{\"datasource\": {\"uuid\": \"512df11c-2611-5f38-a63c-9e6cbf3e5f
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null
-tags:
-  - bi-mvp
-  - motor_ia
