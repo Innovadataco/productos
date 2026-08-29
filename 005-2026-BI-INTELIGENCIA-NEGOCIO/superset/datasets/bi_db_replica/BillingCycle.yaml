@@ -1,0 +1,99 @@
+table_name: BillingCycle
+uuid: a15e0d8f-ec1e-5b0e-8b04-d6da7ef3769b
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: creadoEn
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.BillingCycle."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: id
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: false
+    filterable: true
+    expression: null
+    description: null
+    uuid: 5e58e24e-f869-51d8-9025-e91d197ec90a
+  - column_name: subscriptionId
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 2a844922-dc84-5224-85c6-8559068c1d64
+  - column_name: monto
+    verbose_name: null
+    type: DOUBLE PRECISION
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: b6e88247-8dd1-5b54-9eb1-3c140f3d2867
+  - column_name: estado
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 7b60325f-6b7f-5a8b-909b-7625ca670f0d
+  - column_name: periodoInicio
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 9a12fa52-38f7-598d-98c2-0af59c45b2a4
+  - column_name: periodoFin
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 4d863342-6632-5a48-aa09-fccbf244c6cb
+  - column_name: creadoEn
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 0ec8b1fb-f033-55cd-9666-f86b7c230566
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: dbb78d24-b354-5b0c-b95c-2ea4a3555558

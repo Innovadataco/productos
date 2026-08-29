@@ -1,0 +1,25 @@
+slice_name: 4 · Errores Superset 24 h
+viz_type: big_number_total
+uuid: 73b11b70-1ddd-5b37-a7d6-04885065bf5b
+version: 1.0.0
+dataset_uuid: d473ea33-3bff-520f-b6f2-3a74bcf888c1
+description: Chart del dashboard 'salud' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
+params:
+  viz_type: big_number_total
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metric:
+    expressionType: SQL
+    sqlExpression: "SELECT count(*) FROM logs WHERE dttm >= NOW() - INTERVAL '24 hours' AND action IN ('log', 'error')"
+    label: valor
+    hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"d473ea33-3bff-520f-b6f2-3a74bcf888c1\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) FROM logs WHERE dttm >= NOW() - INTERVAL '24 hours' AND action IN ('log', 'error')\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 900
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - salud

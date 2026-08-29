@@ -1,0 +1,25 @@
+slice_name: "5 · Uso de cascada (7 d · %)"
+viz_type: big_number_total
+uuid: dac72bae-d15a-56b6-8548-92951be0a84c
+version: 1.0.0
+dataset_uuid: c9f282db-83b4-56a4-b846-9e9b0fa35c7e
+description: Chart del dashboard 'motor_ia' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
+params:
+  viz_type: big_number_total
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metric:
+    expressionType: SQL
+    sqlExpression: "SELECT ROUND(100.0 * count(*) FILTER (WHERE \"usoCascada\" = true) / NULLIF(count(*), 0), 2) AS pct_cascada FROM \"ClasificacionIA\" WHERE \"creadoEn\" >= NOW() - INTERVAL '7 days'"
+    label: valor
+    hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"c9f282db-83b4-56a4-b846-9e9b0fa35c7e\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT ROUND(100.0 * count(*) FILTER (WHERE \\\"usoCascada\\\" = true) / NULLIF(count(*), 0), 2) AS pct_cascada FROM \\\"ClasificacionIA\\\" WHERE \\\"creadoEn\\\" >= NOW() - INTERVAL '7 days'\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 1800
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - motor_ia

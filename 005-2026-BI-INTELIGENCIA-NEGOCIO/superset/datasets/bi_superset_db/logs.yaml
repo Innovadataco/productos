@@ -1,0 +1,99 @@
+table_name: logs
+uuid: d473ea33-3bff-520f-b6f2-3a74bcf888c1
+version: 1.0.0
+database_uuid: 14e9eff1-7374-5206-a644-c0440ec49c67
+schema: public
+main_dttm_col: dttm
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_superset_db.public.logs."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: id
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: false
+    filterable: true
+    expression: null
+    description: null
+    uuid: 9cfbc523-6ca3-57ca-bef6-e10bf8514f64
+  - column_name: action
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 49086bbe-acca-5174-aa8f-aa61b5aaaf2e
+  - column_name: user_id
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: c3301192-f5d9-5764-af62-94234df7e2f1
+  - column_name: dashboard_id
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 9bc39181-146c-569b-9c09-92333bdb92ba
+  - column_name: slice_id
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: e1d94b95-08d6-5610-8cb1-cefc843815be
+  - column_name: dttm
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: ed3734e5-e316-5f15-b7a9-a127347c6aa7
+  - column_name: json
+    verbose_name: null
+    type: TEXT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 258974ce-1f33-5c86-ae62-aee97640e4b5
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: a74a4f88-aee3-5e63-8718-fd283dab2147

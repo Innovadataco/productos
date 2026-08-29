@@ -1,0 +1,25 @@
+slice_name: 6 · Top 5 colegios (mes)
+viz_type: bar
+uuid: c0018cec-58bb-5ad2-a0b6-802b45ccf755
+version: 1.0.0
+dataset_uuid: 6b6f513c-cb2a-5145-9666-6bdc1b3432d3
+description: Chart del dashboard 'ejecutivo' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
+params:
+  viz_type: bar
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metrics:
+    - expressionType: SQL
+      sqlExpression: "SELECT c.nombre AS colegio, count(*) AS reportes FROM \"Reporte\" r INNER JOIN \"Colegio\" c ON c.\"tenantId\" = r.\"tenantId\" WHERE r.\"creadoEn\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND r.\"eliminado\" = false GROUP BY c.nombre ORDER BY reportes DESC LIMIT 5"
+      label: valor
+      hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"6b6f513c-cb2a-5145-9666-6bdc1b3432d3\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT c.nombre AS colegio, count(*) AS reportes FROM \\\"Reporte\\\" r INNER JOIN \\\"Colegio\\\" c ON c.\\\"tenantId\\\" = r.\\\"tenantId\\\" WHERE r.\\\"creadoEn\\\" >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AND r.\\\"eliminado\\\" = false GROUP BY c.nombre ORDER BY reportes DESC LIMIT 5\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 3600
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - ejecutivo

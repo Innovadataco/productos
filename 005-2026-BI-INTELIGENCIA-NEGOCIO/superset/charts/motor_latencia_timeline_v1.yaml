@@ -1,0 +1,25 @@
+slice_name: 7 · Latencia motor timeline (72 h · por hora · por modelo)
+viz_type: line
+uuid: 888c9ce9-4d07-55f9-8cb9-755e18060e33
+version: 1.0.0
+dataset_uuid: c9f282db-83b4-56a4-b846-9e9b0fa35c7e
+description: Chart del dashboard 'motor_ia' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
+params:
+  viz_type: line
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metrics:
+    - expressionType: SQL
+      sqlExpression: "SELECT date_trunc('hour', \"creadoEn\") AS hora, \"modeloUsado\", percentile_cont(0.5)  WITHIN GROUP (ORDER BY \"latenciaMs\") AS p50_ms, percentile_cont(0.95) WITHIN GROUP (ORDER BY \"latenciaMs\") AS p95_ms FROM \"ClasificacionIA\" WHERE \"creadoEn\" >= NOW() - INTERVAL '3 days' GROUP BY hora, \"modeloUsado\" ORDER BY hora"
+      label: serie
+      hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"c9f282db-83b4-56a4-b846-9e9b0fa35c7e\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT date_trunc('hour', \\\"creadoEn\\\") AS hora, \\\"modeloUsado\\\", percentile_cont(0.5)  WITHIN GROUP (ORDER BY \\\"latenciaMs\\\") AS p50_ms, percentile_cont(0.95) WITHIN GROUP (ORDER BY \\\"latenciaMs\\\") AS p95_ms FROM \\\"ClasificacionIA\\\" WHERE \\\"creadoEn\\\" >= NOW() - INTERVAL '3 days' GROUP BY hora, \\\"modeloUsado\\\" ORDER BY hora\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 900
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - motor_ia

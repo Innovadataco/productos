@@ -1,0 +1,25 @@
+slice_name: 2 · Solicitudes comité pendientes
+viz_type: big_number_total
+uuid: 7d97ac97-b0c5-572f-ae5d-9dde36bec77f
+version: 1.0.0
+dataset_uuid: c30c3b31-0c3a-5011-baef-9ea44e98d32e
+description: Chart del dashboard 'operativo' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
+params:
+  viz_type: big_number_total
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metric:
+    expressionType: SQL
+    sqlExpression: "SELECT count(*) AS comite_pendientes FROM \"SolicitudComite\" WHERE estado = 'PENDIENTE'"
+    label: valor
+    hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"c30c3b31-0c3a-5011-baef-9ea44e98d32e\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT count(*) AS comite_pendientes FROM \\\"SolicitudComite\\\" WHERE estado = 'PENDIENTE'\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 900
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - operativo

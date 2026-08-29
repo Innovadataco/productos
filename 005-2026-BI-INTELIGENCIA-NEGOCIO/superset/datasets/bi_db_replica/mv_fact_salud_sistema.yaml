@@ -1,0 +1,79 @@
+table_name: mv_fact_salud_sistema
+uuid: d228f999-b7b3-5b92-ac81-d6e67bf06a0f
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: dia
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.mv_fact_salud_sistema."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: dia
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 0fa47da5-b04f-592b-9acd-d8b06c14e592
+  - column_name: accion
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 634365d6-eced-5737-af84-2e1396495617
+  - column_name: total_eventos_audit
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 14ac498c-45e9-5a7e-b610-67c728cb8243
+  - column_name: total_alertas_colegio
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 63c567ce-2b18-5bbc-b4c8-2224b5cbd565
+  - column_name: total_alertas_suscripcion
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: cb61c3c8-520d-5b81-973a-12e878c0cd52
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: 6e66f289-af98-59a2-9119-693e50489095

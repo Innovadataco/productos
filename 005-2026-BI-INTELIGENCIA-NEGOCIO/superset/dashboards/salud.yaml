@@ -1,0 +1,120 @@
+dashboard_title: SALUD
+uuid: e53a5751-0903-5199-b8d3-76311e6b8136
+version: 1.0.0
+description: Salud del sistema BI (Fábrica) · 8 KPIs · 4 placeholder · SPEC-023
+css: null
+slug: salud
+published: true
+position:
+  DASHBOARD_VERSION_KEY: v2
+  CHART-salud_lag_replica_v1:
+    type: CHART
+    id: CHART-salud_lag_replica_v1
+    meta:
+      uuid: af483da2-469d-5b79-a7de-86011d34b6fe
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: salud_lag_replica_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-salud_consultas_vanna_24h_v1:
+    type: CHART
+    id: CHART-salud_consultas_vanna_24h_v1
+    meta:
+      uuid: 2da94fc3-b5c4-5c7b-8473-980745b943c0
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: salud_consultas_vanna_24h_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-salud_precision_vanna_v1:
+    type: CHART
+    id: CHART-salud_precision_vanna_v1
+    meta:
+      uuid: 90e8d873-0bd2-5136-87db-79d69137a008
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: salud_precision_vanna_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-salud_errores_superset_24h_v1:
+    type: CHART
+    id: CHART-salud_errores_superset_24h_v1
+    meta:
+      uuid: 73b11b70-1ddd-5b37-a7d6-04885065bf5b
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: salud_errores_superset_24h_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-salud_uptime_servicios_v1:
+    type: CHART
+    id: CHART-salud_uptime_servicios_v1
+    meta:
+      uuid: 20afbeba-4f91-549b-baef-45fa3c3e2e6a
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: salud_uptime_servicios_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-salud_cache_hit_vanna_v1:
+    type: CHART
+    id: CHART-salud_cache_hit_vanna_v1
+    meta:
+      uuid: eb060f49-e77f-5ff4-895a-c8c992b6f2ae
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: salud_cache_hit_vanna_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-salud_reintentos_reporte_v1:
+    type: CHART
+    id: CHART-salud_reintentos_reporte_v1
+    meta:
+      uuid: 7d049ee9-da85-5166-8a07-1d10a0f14877
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: salud_reintentos_reporte_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+  CHART-salud_rate_limits_hoy_v1:
+    type: CHART
+    id: CHART-salud_rate_limits_hoy_v1
+    meta:
+      uuid: 153c79d5-1822-5eb0-954a-303adfd65557
+      chartId: null
+      width: 6
+      height: 30
+      sliceName: salud_rate_limits_hoy_v1
+    parents:
+      - ROOT_ID
+      - GRID_ID
+metadata:
+  refresh_frequency: 300
+  color_scheme: supersetColors
+  shared_label_colors: {}
+  cross_filters_enabled: true
+  label_colors: {}
+  timed_refresh_immune_slices: []
+  expanded_slices: {}
+  chart_configuration: {}
+certified_by: Fábrica BI-2
+certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
+is_managed_externally: true
+tags:
+  - bi-mvp
+  - salud

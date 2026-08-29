@@ -1,0 +1,15 @@
+database_name: bi-superset-db
+sqlalchemy_uri: "postgresql+psycopg2://superset_reader:XXXXXXXXXXXX@bi-superset-db:5432/superset"
+password: null
+uuid: 14e9eff1-7374-5206-a644-c0440ec49c67
+version: 1.0.0
+cache_timeout: null
+expose_in_sqllab: false
+allow_run_async: false
+allow_ctas: false
+allow_cvas: false
+allow_dml: false
+allow_csv_upload: false
+impersonate_user: false
+extra: "{\"metadata_params\": {}, \"engine_params\": {}}"
+masked_encrypted_extra: "{}"

@@ -1,0 +1,79 @@
+table_name: CorreccionAdmin
+uuid: 512df11c-2611-5f38-a63c-9e6cbf3e5f8e
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: creadoEn
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.CorreccionAdmin."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: id
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: false
+    filterable: true
+    expression: null
+    description: null
+    uuid: f869c0b3-1548-544c-8c50-4a7fc1b80c49
+  - column_name: clasificacionId
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: a596617f-a7f9-5b23-b208-0aaab7c47dce
+  - column_name: categoriaOriginal
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 012bf874-09fb-5362-9d16-1d6a4adaa803
+  - column_name: categoriaCorregida
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: e7a56401-0497-5a41-ae28-52159799fb4d
+  - column_name: creadoEn
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 3a63d71a-7cde-572a-9ca5-607d4b2e9080
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: 022730bb-d21b-5870-8fef-42052647c7c2

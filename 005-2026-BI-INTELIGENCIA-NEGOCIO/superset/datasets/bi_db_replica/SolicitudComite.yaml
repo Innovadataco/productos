@@ -1,0 +1,79 @@
+table_name: SolicitudComite
+uuid: c30c3b31-0c3a-5011-baef-9ea44e98d32e
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: creadoEn
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.SolicitudComite."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: id
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: false
+    filterable: true
+    expression: null
+    description: null
+    uuid: 6aa2a736-99fa-55f0-83e6-db7508853d5d
+  - column_name: estado
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 94e768e3-1b35-5139-bf6a-104d626580cd
+  - column_name: comiteId
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: efafbded-674a-5d9a-af5e-142ba5ad7200
+  - column_name: creadoEn
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: a0d90e1d-53d2-5451-bd9e-7d39c9eadadc
+  - column_name: resueltoEn
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 40f99726-0345-5cd8-8052-3d9e46398f17
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: 4866e812-84d9-5b59-a25b-930bbbb8cb0b

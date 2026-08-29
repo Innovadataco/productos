@@ -1,0 +1,25 @@
+slice_name: 1 · Lag réplica (s)
+viz_type: big_number_total
+uuid: af483da2-469d-5b79-a7de-86011d34b6fe
+version: 1.0.0
+dataset_uuid: d228f999-b7b3-5b92-ac81-d6e67bf06a0f
+description: Chart del dashboard 'salud' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
+params:
+  viz_type: big_number_total
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metric:
+    expressionType: SQL
+    sqlExpression: "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp()))::numeric, 1) AS lag_segundos"
+    label: valor
+    hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"d228f999-b7b3-5b92-ac81-d6e67bf06a0f\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp()))::numeric, 1) AS lag_segundos\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 60
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - salud

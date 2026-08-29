@@ -1,0 +1,159 @@
+table_name: mv_fact_reporte_diario
+uuid: 814e243d-6748-54ab-a842-b4531f3ea6b0
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: dia
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.mv_fact_reporte_diario."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: dia
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: b03fa935-b686-5681-8863-bda28ab19eba
+  - column_name: pais
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: dae5abf1-5bdf-5902-b4d3-9a52d3dc9f56
+  - column_name: ciudad
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: f595fd3c-2e9b-58aa-b84f-cf6c05ec0ee3
+  - column_name: estado
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: affd2712-0f85-5dc2-b084-9f23f9ebdd94
+  - column_name: categoria
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: dba3af2d-bb4b-5b45-93c1-71726de59f3f
+  - column_name: prioridad_alta
+    verbose_name: null
+    type: BOOLEAN
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 67f2421f-55cf-53f5-a985-24d86f0537be
+  - column_name: es_rafaga
+    verbose_name: null
+    type: BOOLEAN
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 3a3914cc-ccf6-5343-8eb8-8b52b44bd146
+  - column_name: es_anonimo
+    verbose_name: null
+    type: BOOLEAN
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: dcf3ef63-342c-5f47-9d4e-623de7dd67a1
+  - column_name: total_reportes
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 848d8ccf-edae-5244-9a6e-a5e0621d2f33
+  - column_name: total_clasificados
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: afb32eb6-fde6-564e-95a1-65738c8b89b7
+  - column_name: total_corregidos
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 75b1b59f-bd48-5429-a8a6-48c4ac696458
+  - column_name: confianza_promedio
+    verbose_name: null
+    type: DOUBLE PRECISION
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 2ed0a489-0e23-5987-872c-4b93fc498358
+  - column_name: latencia_ms_promedio
+    verbose_name: null
+    type: DOUBLE PRECISION
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: fe532f05-58aa-527e-9476-35cdf5365e96
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: e540d6cf-f693-52f0-8332-bbda09d478e0

@@ -1,0 +1,109 @@
+table_name: Reporte
+uuid: 6b6f513c-cb2a-5145-9666-6bdc1b3432d3
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: creadoEn
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.Reporte."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: id
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: false
+    filterable: true
+    expression: null
+    description: null
+    uuid: a3dac1fc-67e5-5509-b27a-87ece4bcdbac
+  - column_name: estado
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 69811b39-7ac7-5727-90de-969b8b506618
+  - column_name: prioridadAlta
+    verbose_name: null
+    type: BOOLEAN
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: fee149bd-217c-54d8-936d-35452c1608e3
+  - column_name: eliminado
+    verbose_name: null
+    type: BOOLEAN
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: fa5ec633-18ed-53a6-9516-4d7cf75bc6d6
+  - column_name: tenantId
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: c3b2cf84-0cfa-52d9-bed1-02a353f7e6f8
+  - column_name: plataformaId
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: b3a32250-7675-5128-91c4-9efd6a6b0674
+  - column_name: numeroSeguimiento
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: false
+    filterable: true
+    expression: null
+    description: null
+    uuid: 6aa80571-a7e1-5e48-9720-995f814dc880
+  - column_name: creadoEn
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 20334488-8aba-5fa3-bc88-1ff88aa59853
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: 065fe8cb-5832-5323-8376-71a0997a5235

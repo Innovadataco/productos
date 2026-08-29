@@ -1,0 +1,25 @@
+slice_name: 5 · Actividad sistema (placeholder de uptime hasta INSTRUCTIVO-008)
+viz_type: line
+uuid: 20afbeba-4f91-549b-baef-45fa3c3e2e6a
+version: 1.0.0
+dataset_uuid: d228f999-b7b3-5b92-ac81-d6e67bf06a0f
+description: Chart del dashboard 'salud' · fuente SQL en spec.md.
+certified_by: Fábrica BI-2
+certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
+params:
+  viz_type: line
+  adhoc_filters: []
+  extra_form_data: {}
+  dashboards: []
+  metrics:
+    - expressionType: SQL
+      sqlExpression: "SELECT dia, SUM(total_eventos_audit) AS eventos_audit FROM mv_fact_salud_sistema WHERE dia >= (NOW() AT TIME ZONE 'America/Bogota')::date - 7 GROUP BY dia ORDER BY dia"
+      label: serie
+      hasCustomLabel: true
+query_context: "{\"datasource\": {\"uuid\": \"d228f999-b7b3-5b92-ac81-d6e67bf06a0f\", \"type\": \"table\"}, \"force\": false, \"queries\": [{\"custom_form_data\": {}, \"extras\": {\"having\": \"\", \"where\": \"\"}, \"annotation_layers\": [], \"row_limit\": 10000, \"orderby\": [], \"sql\": \"SELECT dia, SUM(total_eventos_audit) AS eventos_audit FROM mv_fact_salud_sistema WHERE dia >= (NOW() AT TIME ZONE 'America/Bogota')::date - 7 GROUP BY dia ORDER BY dia\"}], \"result_format\": \"json\", \"result_type\": \"full\"}"
+cache_timeout: 900
+is_managed_externally: true
+external_url: null
+tags:
+  - bi-mvp
+  - salud

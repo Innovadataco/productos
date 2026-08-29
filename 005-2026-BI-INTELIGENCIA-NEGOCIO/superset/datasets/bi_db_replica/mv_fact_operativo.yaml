@@ -1,0 +1,89 @@
+table_name: mv_fact_operativo
+uuid: 5852d98a-9cef-5a25-a9e6-554dc828eb6b
+version: 1.0.0
+database_uuid: e3a2448a-359d-5ce5-806c-98cddf2adc1d
+schema: public
+main_dttm_col: dia
+description: "Dataset físico para dashboards BI (SPEC-019..023). Fuente: bi_db_replica.public.mv_fact_operativo."
+default_endpoint: null
+offset: 0
+cache_timeout: null
+catalog: null
+sql: null
+params: null
+template_params: null
+filter_select_enabled: true
+fetch_values_predicate: null
+extra: null
+normalize_columns: false
+always_filter_main_dttm: false
+columns:
+  - column_name: dia
+    verbose_name: null
+    type: TIMESTAMP
+    is_dttm: true
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 206f256e-b1df-5c86-a9f5-d1b08182ed51
+  - column_name: estado_anterior
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: cf9650c6-18b2-5733-b551-d29d1f370747
+  - column_name: estado_nuevo
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 7687a176-a6d8-54b7-b186-4b8901d06140
+  - column_name: responsable_tipo
+    verbose_name: null
+    type: VARCHAR
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 63396512-79dd-5e3d-997c-5c0a6a28aeb5
+  - column_name: total_transiciones
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 51e5fa15-f45c-58f1-9ed9-0da113698f47
+  - column_name: total_solicitudes_comite
+    verbose_name: null
+    type: BIGINT
+    is_dttm: false
+    is_active: true
+    groupby: true
+    filterable: true
+    expression: null
+    description: null
+    uuid: 2f061c56-27e0-5915-b350-e3304bffcebd
+metrics:
+  - metric_name: count
+    verbose_name: Filas
+    metric_type: count
+    expression: "COUNT(*)"
+    description: Conteo de filas.
+    d3format: ",d"
+    extra: null
+    uuid: cf61416d-3f05-5602-ada9-635dd8283c48
