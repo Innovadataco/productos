@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-29
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: User description: "Semáforo por hijo/familiar del círculo de confianza (verde/ámbar/rojo)"
 
@@ -59,6 +59,13 @@ Como frontend del área del padre, quiero consumir el cálculo del semáforo des
 - **FR-006**: El componente `SemaforoCirculo` DEBE recibir los datos y renderizar tarjetas con nombre del contacto, color, conteo de reportes y categoría dominante (si aplica).
 - **FR-007**: El cálculo DEBE ser determinista y basado únicamente en queries a la BD; PROHIBIDO usar LLM.
 
+### Impacto en arquitectura:
+
+- **Nueva API Route**: `GET /api/padre/circulo-confianza/semaforo` en la capa de API del rol PARENT.
+- **Nueva lógica de dominio**: `src/lib/padre/semaforo.ts` centraliza el cálculo del color por contacto, reutilizando el repositorio DAL y `obtenerGruposCategoria`; sin LLM ni servicios externos.
+- **Nuevos componentes UI**: `SemaforoCirculo` y `SemaforoItem` bajo `src/components/modules/padre/`, consumidos desde el home padre (SPEC-304).
+- **Datos**: solo lectura sobre `ContactoConfianza`, `IdentificadorContacto`, `Reporte` y `Expediente`; sin migraciones destructivas.
+
 ### Key Entities
 
 - **ContactoConfianza**: contacto del círculo del padre. Atributos relevantes: `id`, `usuarioId`, `etiqueta`, `activo`.
@@ -81,3 +88,30 @@ Como frontend del área del padre, quiero consumir el cálculo del semáforo des
 - El tope de contactos (`circulo.max_contactos`) rige la cardinalidad máxima esperada.
 - Las categorías de riesgo alto se obtienen del grupo de categorías existente (`obtenerGruposCategoria`) o de un parámetro de sistema (`padre.semaforo.categorias_alto`).
 - El padre ya tiene contactos creados a través del flujo de círculo de confianza existente (SPEC-135).
+
+## Implementation *(added at close)*
+
+### Decisiones técnicas
+
+- **Capa DAL**: se creó `src/lib/dal/repositories/semaforo-repository.ts` para centralizar las queries de contactos, identificadores, reportes visibles y expedientes abiertos.
+- **Lógica pura**: `src/lib/padre/semaforo.ts` calcula el color determinista con reglas simples: verde sin reportes, ámbar en revisión humana, rojo para clasificados con alto riesgo / 3+ reportes en 30 días / expediente rojo.
+- **API**: `GET /api/padre/circulo-confianza/semaforo` responde `{ items: [...] }` con rol PARENT exclusivamente.
+- **UI**: `SemaforoCirculo` + `SemaforoItem` reutilizan `GlassCard` y los tokens de color (`pino`, `ambar`, `rubi`). Ordenan por severidad descendente.
+
+### Archivos creados/modificados
+
+- `src/lib/dal/repositories/semaforo-repository.ts`
+- `src/lib/padre/semaforo.ts`
+- `src/lib/padre/semaforo.test.ts`
+- `src/app/api/padre/circulo-confianza/semaforo/route.ts`
+- `src/app/api/padre/circulo-confianza/semaforo/route.test.ts`
+- `src/components/modules/padre/SemaforoItem.tsx`
+- `src/components/modules/padre/SemaforoItem.test.tsx`
+- `src/components/modules/padre/SemaforoCirculo.tsx`
+- `src/components/modules/padre/SemaforoCirculo.test.tsx`
+- `specs/305-semaforo-circulo-confianza/{spec,plan,tasks}.md`
+
+### Deuda técnica / notas
+
+- La integración en `src/app/dashboard/padre/page.tsx` se deja para SPEC-304 (home dashboard proactivo).
+- El parámetro `padre.semaforo.grupos_alto_riesgo` permite customizar grupos de alto riesgo; el fallback usa `contacto_sexual` y `amenazas_extorsion`.
