@@ -1,3 +1,5 @@
+import type { MotivoIngresoSpam } from "@/lib/spam/motivo-ingreso";
+
 export const VENTANAS = [7, 30, 90] as const;
 export type VentanaDias = (typeof VENTANAS)[number];
 
@@ -12,7 +14,8 @@ export type SpamReporteItem = {
     operadorId: string | null;
     asignadoA: { id: string; nombre: string | null; email: string } | null;
     clasificacion: { categoria: string; confianza: number } | null;
-    confianzaSpam: number;
+    confianzaSpam: number | null;
+    motivoIngreso: MotivoIngresoSpam;
 };
 
 export type Analitica = {

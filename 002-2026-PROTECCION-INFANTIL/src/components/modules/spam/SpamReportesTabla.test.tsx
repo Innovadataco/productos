@@ -16,6 +16,7 @@ const reporteBase: SpamReporteItem = {
     asignadoA: { id: "op1", nombre: "Ana", email: "ana@example.com" },
     clasificacion: { categoria: "CONTACTO_INSISTENTE", confianza: 0.8 },
     confianzaSpam: 0.92,
+    motivoIngreso: "spam_confianza_alta",
 };
 
 describe("SpamReportesTabla", () => {
@@ -72,6 +73,73 @@ describe("SpamReportesTabla", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Revisar" }));
         expect(onReview).toHaveBeenCalledWith("r1");
+    });
+
+    it("muestra porcentaje y badge para spam_dominancia", () => {
+        render(
+            <SpamReportesTabla
+                reportes={[{ ...reporteBase, confianzaSpam: 0.33, motivoIngreso: "spam_dominancia" }]}
+                loading={false}
+                page={1}
+                totalPages={1}
+                total={1}
+                onReview={vi.fn()}
+                onPageChange={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText("33.0%")).toBeTruthy();
+        expect(screen.getByText("Dominancia de otra categoría")).toBeTruthy();
+    });
+
+    it("muestra 'Regla determinística' sin porcentaje para spam_publicitario_deterministico", () => {
+        render(
+            <SpamReportesTabla
+                reportes={[{ ...reporteBase, confianzaSpam: null, motivoIngreso: "spam_publicitario_deterministico" }]}
+                loading={false}
+                page={1}
+                totalPages={1}
+                total={1}
+                onReview={vi.fn()}
+                onPageChange={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText("Regla determinística")).toBeTruthy();
+        expect(screen.queryByText(/NaN/)).toBeNull();
+    });
+
+    it("muestra guión sin porcentaje para motivo desconocido", () => {
+        render(
+            <SpamReportesTabla
+                reportes={[{ ...reporteBase, confianzaSpam: null, motivoIngreso: "desconocido" }]}
+                loading={false}
+                page={1}
+                totalPages={1}
+                total={1}
+                onReview={vi.fn()}
+                onPageChange={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText("Sin datos suficientes")).toBeTruthy();
+        expect(screen.queryByText(/NaN/)).toBeNull();
+    });
+
+    it("defense-in-depth: confianzaSpam null en spam_confianza_alta no rompe con NaN%", () => {
+        render(
+            <SpamReportesTabla
+                reportes={[{ ...reporteBase, confianzaSpam: null, motivoIngreso: "spam_confianza_alta" }]}
+                loading={false}
+                page={1}
+                totalPages={1}
+                total={1}
+                onReview={vi.fn()}
+                onPageChange={vi.fn()}
+            />
+        );
+
+        expect(screen.queryByText(/NaN/)).toBeNull();
     });
 
     it("muestra guión cuando no hay operador asignado", () => {
