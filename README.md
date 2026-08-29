@@ -25,3 +25,5 @@ productos/
 2. Sin ACTA-VALIDACION no hay merge.
 3. No subir secrets, API keys ni datos sensibles.
 4. Documentar cambios de arquitectura.
+
+<!-- SPEC-300 test acid SC-001: PR README-only para verificar que pi-gate y bi-gate aparecen como checks y reportan verde trivial en un PR que no toca paths de ningún producto. Post-verify, línea removible. -->
