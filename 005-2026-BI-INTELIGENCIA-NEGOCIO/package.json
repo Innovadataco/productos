@@ -9,6 +9,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test:unit": "node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run tests/unit",
+    "test:integration:bi": "node --import tsx ./node_modules/vitest/vitest.mjs run --config vitest.integration.config.ts tests/integration/bi",
+    "e2e:bi:preparar": "bash scripts/e2e/preparar-entorno-integracion.sh",
+    "e2e:bi:limpiar": "bash scripts/e2e/limpiar-entorno-integracion.sh",
     "ratchets:check": "bash scripts/ratchets/run-all.sh"
   },
   "prisma": {
