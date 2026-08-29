@@ -185,6 +185,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/notificaciones/offset.test.ts",
     "src/lib/notificaciones/quiet-hours.test.ts",
     "src/lib/notificaciones/renderer.test.ts",
+    // SPEC-302 (002-PI-208): logger estructurado del motor — todo mockeado, sin BD.
+    "src/lib/notificaciones/motor-logger.test.ts",
     "src/lib/param-encryption.test.ts",
     "src/lib/pagos/api-helpers.test.ts",
     "src/lib/pagos/bono-aplicacion.service.test.ts",

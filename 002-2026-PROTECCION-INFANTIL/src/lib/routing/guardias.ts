@@ -38,6 +38,9 @@ export const GUARDIAS_ACCESO = {
         "/api/reportes",
         "/api/estadisticas-publicas",
         "/api/health",
+        // SPEC-302 (002-PI-208): señal de monitoreo del motor de notificaciones,
+        // mismo trato que /api/health — consumida por curl externo (tabla §6b).
+        "/api/monitor/notif",
         // SPEC-017 · SPEC-286: /docs y /api/docs son semi-públicos; el gate real
         // vive en la propia página. /consulta ya no existe (SPEC-286).
         "/docs",

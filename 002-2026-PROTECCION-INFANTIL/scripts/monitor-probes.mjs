@@ -32,6 +32,7 @@ import {
     probeOllamaSmoke,
     probeTailscale,
     probeIndices,
+    probeNotifPendientesVencidas,
 } from "../src/lib/monitoreo/probes.ts";
 import { registrarProbe, evaluarSenal, confirmarRojo } from "../src/lib/monitoreo/incidentes.ts";
 import { revisarSlaSpam } from "../src/lib/spam/sla.ts";
@@ -55,7 +56,13 @@ const TICK_MS = 5000;
 const LIMPIEZA_CADA_MS = 60 * 60 * 1000;
 const SLA_SPAM_INTERVALO_MS = 15 * 60 * 1000;
 // SPEC-251 (I-49): se agrega "indices" al pool de señales del monitor.
-const SENALES = ["app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices", ...SENALES_TICK_VIDA];
+// SPEC-302 (002-PI-208 · I-147): "notif_pendientes_vencidas" — cola de
+// notificaciones ENCOLADA vencida (worker vivo ≠ cola avanzando).
+const SENALES = [
+    "app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices",
+    "notif_pendientes_vencidas",
+    ...SENALES_TICK_VIDA,
+];
 
 // --- Advisory lock (instancia única, patrón de worker-reportes.mjs) ---
 const { Client } = pg;
@@ -160,6 +167,8 @@ async function correrProbe(senal, config) {
             case "tailscale": return await probeTailscale({ url: config.tailscaleUrl });
             // SPEC-251 (I-49): guardián de índices. NUNCA reinicia nada.
             case "indices": return await probeIndices();
+            // SPEC-302 (002-PI-208 · I-147): cola de notificaciones vencida.
+            case "notif_pendientes_vencidas": return await probeNotifPendientesVencidas();
             default:
                 // SPEC-291: 7 señales por tick-vida (workers propios).
                 if (SENALES_TICK_VIDA.includes(senal)) {

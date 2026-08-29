@@ -17,6 +17,7 @@ import { ClasificacionIARepository } from "../dal/repositories/clasificacion-ia.
 import { getParametroSistema } from "../parametros.ts";
 import { leerHeartbeatWorker } from "../worker-heartbeat.ts";
 import { leerAntiguedadTickSeg } from "./tick-vida.ts";
+import { contarPendientesVencidas } from "../notificaciones/metricas.ts";
 
 // SPEC-291 (002-PI-191): 7 nuevas señales por tick-vida (workers y app propios).
 export const SENALES_TICK_VIDA = [
@@ -37,6 +38,7 @@ const NOMBRE_CONTENEDOR_POR_SENAL: Record<SenalTickVida, string> = {
 
 export const SENALES_MONITOREO = [
     "app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices",
+    "notif_pendientes_vencidas",
     ...SENALES_TICK_VIDA,
 ] as const;
 export type SenalMonitoreo = (typeof SENALES_MONITOREO)[number];
@@ -314,6 +316,34 @@ export async function probeIndices({
             ok: false,
             latenciaMs: Date.now() - inicio,
             detalle: `error verificando índices: ${mensajeError(error)}`,
+            metodo: "PING",
+        };
+    }
+}
+
+/**
+ * SPEC-302 (002-PI-208 · R-022 §1.3 punto a): rojo si hay notificaciones
+ * ENCOLADAs con `enviarEn` vencido hace más de `umbralMinutos` — señal
+ * temprana de un worker atascado (patrón I-147), independiente del tick-vida
+ * (que solo detecta que el proceso está vivo, no que la cola avanza).
+ */
+export async function probeNotifPendientesVencidas({
+    umbralMinutos = 15,
+}: { umbralMinutos?: number } = {}): Promise<ResultadoProbe> {
+    const inicio = Date.now();
+    try {
+        const pendientes = await contarPendientesVencidas(umbralMinutos);
+        return {
+            ok: pendientes === 0,
+            latenciaMs: Date.now() - inicio,
+            detalle: pendientes === 0 ? "0 pendientes vencidas" : `${pendientes} pendientes vencidas (>${umbralMinutos}min)`,
+            metodo: "PING",
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            latenciaMs: Date.now() - inicio,
+            detalle: `error contando pendientes vencidas: ${mensajeError(error)}`,
             metodo: "PING",
         };
     }

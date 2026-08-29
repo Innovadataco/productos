@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 429 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3003 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 430 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3010 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -310,6 +310,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/interno/expediente/[id]/transicionar` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/monitor/notif` | api | permitir | permite | sí |
 | `/api/notificaciones` | api | permitir | permite | sí |
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
@@ -744,6 +745,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/interno/expediente/[id]/transicionar` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/monitor/notif` | api | permitir | permite | sí |
 | `/api/notificaciones` | api | permitir | permite | sí |
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
@@ -1178,6 +1180,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/interno/expediente/[id]/transicionar` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/monitor/notif` | api | permitir | permite | sí |
 | `/api/notificaciones` | api | permitir | permite | sí |
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
@@ -1612,6 +1615,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/interno/expediente/[id]/transicionar` | api | HTTP 403 | no permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/monitor/notif` | api | HTTP 403 | no permite | sí |
 | `/api/notificaciones` | api | permitir | permite | sí |
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
@@ -2046,6 +2050,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/interno/expediente/[id]/transicionar` | api | HTTP 403 | no permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/monitor/notif` | api | HTTP 403 | no permite | sí |
 | `/api/notificaciones` | api | permitir | permite | sí |
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
@@ -2480,6 +2485,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/interno/expediente/[id]/transicionar` | api | permitir | permite | sí |
 | `/api/me` | api | permitir | permite | sí |
 | `/api/me/colegio` | api | permitir | permite | sí |
+| `/api/monitor/notif` | api | permitir | permite | sí |
 | `/api/notificaciones` | api | permitir | permite | sí |
 | `/api/notificaciones/[id]` | api | permitir | permite | sí |
 | `/api/notificaciones/preferencias` | api | permitir | permite | sí |
@@ -2914,6 +2920,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/interno/expediente/[id]/transicionar` | api | HTTP 401 | permite | **NO** |
 | `/api/me` | api | HTTP 401 | permite | **NO** |
 | `/api/me/colegio` | api | HTTP 401 | permite | **NO** |
+| `/api/monitor/notif` | api | permitir | permite | sí |
 | `/api/notificaciones` | api | HTTP 401 | permite | **NO** |
 | `/api/notificaciones/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/notificaciones/preferencias` | api | HTTP 401 | permite | **NO** |
