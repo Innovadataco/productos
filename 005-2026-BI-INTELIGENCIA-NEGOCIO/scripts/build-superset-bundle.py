@@ -44,6 +44,30 @@ IMPORT_VERSION = "1.0.0"
 DB_REPLICA = "bi_db_replica"
 DB_SUPERSET = "bi_superset_db"
 
+# ────────────────────────────────────────────────────────────────────────────
+# Certificación · SOLO se llenan después de que Fábrica BI-2 haya emitido
+# REVISO explícito sobre el commit exacto que produce este bundle. Mientras
+# no exista ese REVISO, deben quedar como None — no autoafirmar aprobación
+# en el generador.
+#
+# Regla de proceso (Fábrica 2026-08-29 01:2x COT · nota post-REVISO a5114e60f):
+#   1. Autor: escribe/actualiza CHARTS, DATASETS, DASHBOARDS con CERTIFIED_BY = None.
+#   2. Push y solicitud de auditoría.
+#   3. Fábrica emite REVISO explícito sobre el commit exacto.
+#   4. Autor: en ese mismo turno actualiza CERTIFIED_BY / CERTIFIED_DETAILS
+#      citando el hash y timestamp del REVISO recibido.
+#   5. Regenera y commitea con los campos poblados.
+#
+# ⚠ Nunca dejar valores hardcodeados aquí en ciclos donde el bundle cambia
+#   pero el REVISO aplica al commit anterior. Al modificar el bundle,
+#   volver estas dos variables a None hasta que llegue REVISO fresco.
+# ────────────────────────────────────────────────────────────────────────────
+CERTIFIED_BY: str | None = "Fábrica BI-2"
+CERTIFIED_DETAILS: str | None = (
+    "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · "
+    "compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
+)
+
 
 def det_uuid(path: str) -> str:
     """UUID determinista por path. Estable entre re-corridas."""
@@ -850,10 +874,8 @@ def write_charts() -> None:
                 "description": (
                     f"Chart del dashboard '{chart['dashboard']}' · fuente SQL en spec.md."
                 ),
-                "certified_by": "Fábrica BI-2",
-                "certification_details": (
-                    "Aprobado en compuerta §4 · SPEC-019..023 · F3C 2026-08-29"
-                ),
+                "certified_by": CERTIFIED_BY,
+                "certification_details": CERTIFIED_DETAILS,
                 "params": params,
                 "query_context": query_context(chart["sql"], dataset_uuid),
                 "cache_timeout": chart["refresh"],
@@ -928,10 +950,8 @@ def write_dashboards() -> None:
                 "published": True,
                 "position": position,
                 "metadata": metadata,
-                "certified_by": "Fábrica BI-2",
-                "certification_details": (
-                    "Aprobado compuerta §4 · SPEC-019..023 · F3C 2026-08-29"
-                ),
+                "certified_by": CERTIFIED_BY,
+                "certification_details": CERTIFIED_DETAILS,
                 "is_managed_externally": True,
                 "tags": ["bi-mvp", slug],
             },

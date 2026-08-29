@@ -5,7 +5,7 @@ version: 1.0.0
 dataset_uuid: 13fe285a-459f-5e3c-8c24-b94fb236aaeb
 description: Chart del dashboard 'operativo' · fuente SQL en spec.md.
 certified_by: Fábrica BI-2
-certification_details: Aprobado en compuerta §4 · SPEC-019..023 · F3C 2026-08-29
+certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
 params:
   viz_type: table
   adhoc_filters: []
