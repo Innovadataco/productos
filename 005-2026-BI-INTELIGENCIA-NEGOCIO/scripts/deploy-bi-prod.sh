@@ -59,7 +59,10 @@ echo "⬆️  Levantando servicios..."
 docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} up -d
 
 echo "==> Migraciones (aditivas)"
-docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-next npx prisma migrate deploy
+# Pin explícito (mismo bug I-09 de mv-schema-check.sh): npx sin pin resuelve
+# "latest" del registro npm (hoy prisma@8.0.0-rc.12, roto) en vez del devDependency
+# instalado en el build. Versión BI real: package.json -> devDependencies.prisma.
+docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-next npx --yes prisma@6.19.3 migrate deploy
 
 echo "==> Seed idempotente (catálogo BI)"
 docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} exec -T bi-next npm run seed
