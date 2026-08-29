@@ -20,6 +20,3 @@ query_context: "{\"datasource\": {\"uuid\": \"4783b36e-e6e1-5970-8329-268db54311
 cache_timeout: 3600
 is_managed_externally: true
 external_url: null
-tags:
-  - bi-mvp
-  - salud

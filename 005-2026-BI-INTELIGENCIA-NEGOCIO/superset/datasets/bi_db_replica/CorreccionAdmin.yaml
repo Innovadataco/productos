@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: f869c0b3-1548-544c-8c50-4a7fc1b80c49
   - column_name: clasificacionId
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: a596617f-a7f9-5b23-b208-0aaab7c47dce
   - column_name: categoriaOriginal
     verbose_name: null
     type: VARCHAR
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 012bf874-09fb-5362-9d16-1d6a4adaa803
   - column_name: categoriaCorregida
     verbose_name: null
     type: VARCHAR
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: e7a56401-0497-5a41-ae28-52159799fb4d
   - column_name: creadoEn
     verbose_name: null
     type: TIMESTAMP
@@ -67,7 +63,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 3a63d71a-7cde-572a-9ca5-607d4b2e9080
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -76,4 +71,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: 022730bb-d21b-5870-8fef-42052647c7c2

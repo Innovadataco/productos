@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 74c782e7-b9e5-5901-9d05-53ab72847f73
   - column_name: nombre
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 443094ea-558f-5195-b12a-43bcf4188929
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -46,4 +44,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: be60e510-adc0-5f6a-b479-95f210b3e8c3

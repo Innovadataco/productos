@@ -135,11 +135,21 @@ def write_yaml(path: Path, obj: dict) -> None:
 
 
 def write_metadata() -> None:
+    # `type` debe matchear el comando de import que se usará:
+    #   - `superset import-dashboards -p bundle.zip -u admin` → type=Dashboard
+    #     (comando canónico · trae dashboards + charts + datasets + databases en cascada)
+    #   - `superset import-datasources` → type=SqlaTable
+    #   - `superset import-database` → type=Database
+    #   - API `/api/v1/assets/import/` → type=assets
+    #
+    # Usamos "Dashboard" porque el operador ejecuta `import-dashboards` en el
+    # VPS (Fábrica BI-2 · I-19 · 2026-08-29). Verificado contra Superset 4.1.4
+    # real: cada CLI hace validate_metadata_type() sobre este campo.
     write_yaml(
         BASE / "metadata.yaml",
         {
             "version": IMPORT_VERSION,
-            "type": "assets",
+            "type": "Dashboard",
             "timestamp": "2026-08-29T00:00:00+00:00",
         },
     )
@@ -171,12 +181,19 @@ def write_databases() -> None:
             "allow_cvas": False,
             "allow_dml": False,
             "allow_csv_upload": False,
-            "impersonate_user": False,
-            "extra": (
-                "{\"metadata_params\": {}, \"engine_params\": {}, "
-                "\"schemas_allowed_for_csv_upload\": []}"
-            ),
-            "masked_encrypted_extra": "{}",
+            # `extra` es fields.Nested(ImportV1DatabaseExtraSchema), NO String.
+            # Serializarlo como string JSON hace que Superset 4.1.4 crashee en
+            # fix_schemas_allowed_for_csv_upload con "AttributeError: 'str' object
+            # has no attribute 'get'" (I-19 · verificado contra Superset 4.1.4
+            # schemas.py · 2026-08-29 11:1x COT).
+            # `impersonate_user` y `masked_encrypted_extra` NO aceptados por
+            # ImportV1DatabaseSchema en 4.1.4 (Unknown field · verificado con
+            # `schema.load()` real contra la imagen apache/superset:4.1.4).
+            "extra": {
+                "metadata_params": {},
+                "engine_params": {},
+                "schemas_allowed_for_csv_upload": [],
+            },
         },
     )
 
@@ -197,9 +214,11 @@ def write_databases() -> None:
             "allow_cvas": False,
             "allow_dml": False,
             "allow_csv_upload": False,
-            "impersonate_user": False,
-            "extra": "{\"metadata_params\": {}, \"engine_params\": {}}",
-            "masked_encrypted_extra": "{}",
+            # Ver nota en bi_db_replica.yaml sobre I-19 y Unknown fields en 4.1.4.
+            "extra": {
+                "metadata_params": {},
+                "engine_params": {},
+            },
         },
     )
 
@@ -407,6 +426,10 @@ def write_datasets() -> None:
                 "extra": None,
                 "normalize_columns": False,
                 "always_filter_main_dttm": False,
+                # `uuid` no es aceptado en ImportV1ColumnSchema/MetricSchema en
+                # Superset 4.1.4 (Unknown field · verificado con schema.load()
+                # real). Los objetos hijos se identifican por column_name /
+                # metric_name dentro del dataset.
                 "columns": [
                     {
                         "column_name": name,
@@ -418,7 +441,6 @@ def write_datasets() -> None:
                         "filterable": True,
                         "expression": None,
                         "description": None,
-                        "uuid": det_uuid(f"datasets/{db}/{table}/columns/{name}"),
                     }
                     for name, ctype, is_dttm, groupby in cols
                 ],
@@ -431,7 +453,6 @@ def write_datasets() -> None:
                         "description": "Conteo de filas.",
                         "d3format": ",d",
                         "extra": None,
-                        "uuid": det_uuid(f"datasets/{db}/{table}/metrics/count"),
                     }
                 ],
             },
@@ -881,7 +902,8 @@ def write_charts() -> None:
                 "cache_timeout": chart["refresh"],
                 "is_managed_externally": True,
                 "external_url": None,
-                "tags": ["bi-mvp", chart["dashboard"]],
+                # `tags` no aceptado en ImportV1ChartSchema 4.1.4 · usar la UI
+                # de tags de Superset post-import si Fábrica los quiere.
             },
         )
 
@@ -953,7 +975,8 @@ def write_dashboards() -> None:
                 "certified_by": CERTIFIED_BY,
                 "certification_details": CERTIFIED_DETAILS,
                 "is_managed_externally": True,
-                "tags": ["bi-mvp", slug],
+                # `tags` no aceptado en ImportV1DashboardSchema 4.1.4 · usar
+                # la UI de tags post-import.
             },
         )
 

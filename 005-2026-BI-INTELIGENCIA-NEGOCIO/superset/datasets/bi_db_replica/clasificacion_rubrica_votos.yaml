@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: f686fec6-5b64-572b-95e9-edbededeb8ac
   - column_name: clasificacionIAId
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 401c110f-2ff1-5228-8237-aea045b7dd66
   - column_name: modelo
     verbose_name: null
     type: VARCHAR
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 0db91ea2-586f-5bf5-9d57-034c042349eb
   - column_name: categoria
     verbose_name: null
     type: VARCHAR
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 4e175a2f-c63c-51d4-8011-bf8350ee9d73
   - column_name: cumple
     verbose_name: null
     type: BOOLEAN
@@ -67,7 +63,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 965d26a8-ffea-579e-b610-53d2052e6cbb
   - column_name: creadoEn
     verbose_name: null
     type: TIMESTAMP
@@ -77,7 +72,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 82aa5d94-d86c-54e6-ba23-4983b895e60c
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -86,4 +80,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: c2baf2f0-634e-5d92-9bcc-bbb385004ec3

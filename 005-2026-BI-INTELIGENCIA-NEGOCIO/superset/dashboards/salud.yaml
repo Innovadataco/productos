@@ -115,6 +115,3 @@ metadata:
 certified_by: Fábrica BI-2
 certification_details: "REVISO sobre commit a5114e60f · 2026-08-29 01:2x COT · compuerta §4 SPEC-019..023 cumplida · candado 14 pendiente para VPS post-deploy"
 is_managed_externally: true
-tags:
-  - bi-mvp
-  - salud

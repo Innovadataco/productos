@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 06fc568a-e44a-50b8-af37-23039018493d
   - column_name: usuarioId
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 123044e2-92d1-5a40-9eb7-9ff3733a6973
   - column_name: estado
     verbose_name: null
     type: VARCHAR
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: f65ca780-b1f1-5d71-8dd3-24b47496ab9a
   - column_name: fuenteCache
     verbose_name: null
     type: BOOLEAN
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: ffb4188f-cb90-5913-9d9b-cb79e117bd02
   - column_name: latenciaMs
     verbose_name: null
     type: INTEGER
@@ -67,7 +63,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 2a206028-13f5-519d-9488-992e2c3277ab
   - column_name: error
     verbose_name: null
     type: TEXT
@@ -77,7 +72,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: cb6b8af8-43cf-5647-b557-406abdd00235
   - column_name: creadoEn
     verbose_name: null
     type: TIMESTAMP
@@ -87,7 +81,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: f26ed0f1-3ce7-53d1-a784-5a049bcf49f1
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -96,4 +89,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: 504fe71a-de32-53aa-bb33-153bd5b4b96a

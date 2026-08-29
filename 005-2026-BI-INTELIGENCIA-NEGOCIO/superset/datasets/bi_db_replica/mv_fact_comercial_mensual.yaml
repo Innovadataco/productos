@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 5c739382-4cbc-564c-9175-7af6011c1937
   - column_name: plan_nombre
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 2040d168-4628-5f61-b4b2-9c52e790c3f6
   - column_name: ciclo_estado
     verbose_name: null
     type: VARCHAR
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 148983f3-822c-5e82-a882-f3f0b89bd494
   - column_name: total_ciclos
     verbose_name: null
     type: BIGINT
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 1960cda2-a055-5d06-aaf7-f0031773c575
   - column_name: monto_total
     verbose_name: null
     type: DOUBLE PRECISION
@@ -67,7 +63,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 4745bd28-0746-59c8-8f21-956632db844c
   - column_name: monto_promedio
     verbose_name: null
     type: DOUBLE PRECISION
@@ -77,7 +72,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: a703b852-b04c-5d1e-a28f-087ca90c24e1
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -86,4 +80,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: c4604eb2-a29d-54a4-a797-c07b8250c157

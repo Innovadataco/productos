@@ -27,7 +27,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 57dfb49f-3356-5ba8-a8cd-16d10623f7ae
   - column_name: tenantId
     verbose_name: null
     type: VARCHAR
@@ -37,7 +36,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 98d250da-c4c4-5d63-8c43-496d3299c421
   - column_name: planId
     verbose_name: null
     type: VARCHAR
@@ -47,7 +45,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: af27ad30-8534-5a22-ba9e-155fb2b9481e
   - column_name: estado
     verbose_name: null
     type: VARCHAR
@@ -57,7 +54,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 37900291-45ad-54d3-9d92-4b8945ce2c50
   - column_name: iniciaEn
     verbose_name: null
     type: TIMESTAMP
@@ -67,7 +63,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 85227715-acba-5cc4-858c-5fa9ce441b90
   - column_name: terminaEn
     verbose_name: null
     type: TIMESTAMP
@@ -77,7 +72,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: a9812d41-0e63-5624-8e3f-3564b5b37c1a
   - column_name: creadoEn
     verbose_name: null
     type: TIMESTAMP
@@ -87,7 +81,6 @@ columns:
     filterable: true
     expression: null
     description: null
-    uuid: 1a76a915-2950-50e3-af2f-a7ede7985187
 metrics:
   - metric_name: count
     verbose_name: Filas
@@ -96,4 +89,3 @@ metrics:
     description: Conteo de filas.
     d3format: ",d"
     extra: null
-    uuid: e00358e7-142a-50ab-8256-7e4a8a2db240

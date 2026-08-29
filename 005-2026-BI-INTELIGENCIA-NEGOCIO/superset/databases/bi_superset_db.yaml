@@ -10,6 +10,6 @@ allow_ctas: false
 allow_cvas: false
 allow_dml: false
 allow_csv_upload: false
-impersonate_user: false
-extra: "{\"metadata_params\": {}, \"engine_params\": {}}"
-masked_encrypted_extra: "{}"
+extra:
+  metadata_params: {}
+  engine_params: {}
