@@ -1,6 +1,6 @@
 # Índice maestro de especificaciones
 
-> Última actualización: **2026-08-24** (mega-lote 002-PI: SPEC-211/213/215/217/218/220-227/233/236-239 planeadas; ver `specs/233-busqueda-por-identificador/`, `specs/220-modelo-analisis-score/` y `specs/236-motor-estados-worker-eventos/`).
+> Última actualización: **2026-08-29** (radicación A-50 · Home Padre Proactivo: SPEC-304/305/306/307/308 planeadas).
 > Cruce con el ESTADO-SPECS de gestión (snapshot 2026-07-29: 72/26/9/3): la lectura directa de headers da **62/36/11/1**.
 > Deltas explicados: (a) 053 y 017 pasaron de Planeada a Implementada (002-PI-046); (b) las 10 specs del clúster
 > 085–095, que el snapshot contó como CERRADA, tienen header literal `FINALIZADO (pendiente ACTA-VALIDACION de ZEUS → CERRADA)`
@@ -10,11 +10,11 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **216** |
+| **Total de specs** | **221** |
 | **Cerradas (CERRADA)** | **62** |
 | **Finalizadas (FINALIZADO)** | **37** |
 | **Implementadas (IMPLEMENTADO)** | **52** |
-| **Pendientes (PLANEADO)** | **31** |
+| **Pendientes (PLANEADO)** | **36** |
 ## Backlog activo (no cerradas)
 
 | Nº | Nombre | Estado |
@@ -445,6 +445,11 @@
 | [227](227-historial-recomendaciones/spec.md) | SPEC-227 — Historial de recomendaciones y métricas de tuning (002-PI-128) | 🔵 Planeado |
 | [233](233-busqueda-por-identificador/spec.md) | SPEC-233 — Vista búsqueda por identificador padre + admin (002-PI-133) | 🔵 Planeado |
 | [241](241-consentimiento-modal-audit/spec.md) | SPEC-241 · Consentimiento informado + modal legal + AuditConsentimiento (002-PI-144) | 🟢 Implementado |
+| [304](304-home-padre-proactivo/spec.md) | SPEC-304 · Home dashboard proactivo del área padre (A-50) | 🔵 Planeado |
+| [305](305-semaforo-circulo-confianza/spec.md) | SPEC-305 · Semáforo por hijo/familiar del círculo de confianza (A-50) | 🔵 Planeado |
+| [306](306-timeline-eventos-circulo/spec.md) | SPEC-306 · Timeline eventos del círculo de confianza (A-50) | 🔵 Planeado |
+| [307](307-sugerencia-proactiva-padre/spec.md) | SPEC-307 · Sugerencia proactiva para padres (A-50) | 🔵 Planeado |
+| [308](308-notificacion-enriquecida-circulo/spec.md) | SPEC-308 · Notificación enriquecida del círculo de confianza (A-50) | 🔵 Planeado |
 
 ## Incidencias de calidad de datos
 
