@@ -1,25 +1,17 @@
-export type BadgeVariant = "default" | "success" | "warning" | "danger" | "info" | "neutral";
+import type { ReactNode } from "react";
 
-interface BadgeProps {
-    children: React.ReactNode;
-    variant?: BadgeVariant;
-    className?: string;
-}
+type Tono = "verde" | "amarillo" | "rojo" | "gris";
 
-const variantClasses: Record<BadgeVariant, string> = {
-    default: "bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300",
-    success: "bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300",
-    warning: "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300",
-    danger: "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300",
-    info: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300",
-    neutral: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+const STYLES: Record<Tono, string> = {
+    verde: "bg-emerald-100 text-emerald-800",
+    amarillo: "bg-amber-100 text-amber-800",
+    rojo: "bg-red-100 text-red-800",
+    gris: "bg-slate-100 text-slate-700",
 };
 
-export function Badge({ children, variant = "default", className = "" }: BadgeProps) {
+export function Badge({ tono, children }: { tono: Tono; children: ReactNode }) {
     return (
-        <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${variantClasses[variant]} ${className}`}
-        >
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STYLES[tono]}`}>
             {children}
         </span>
     );

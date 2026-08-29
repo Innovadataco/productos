@@ -1,0 +1,42 @@
+# SPEC-014 · compose para tests de integración locales.
+# Postgres + bi-vanna en puertos alternos (55432/58001) para no chocar con dev.
+# Ollama sigue en Mac Studio (Tailscale) por OLLAMA_BASE_URL.
+
+services:
+  bi-test-db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: bi
+      POSTGRES_PASSWORD: bi
+      POSTGRES_DB: bi_test
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - bi-test-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bi -d bi_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  bi-vanna-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.vanna
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://100.91.87.86:11435}
+      LLM_MODELS_JURADO: ${LLM_MODELS_JURADO:-qwen2.5:14b,gemma2:27b,aya-expanse:32b}
+      KEEP_ALIVE_H: ${KEEP_ALIVE_H:-24}
+    ports:
+      - "127.0.0.1:58001:8001"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request as u; u.urlopen('http://localhost:8001/health').read()"
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+volumes:
+  bi-test-db-data:
